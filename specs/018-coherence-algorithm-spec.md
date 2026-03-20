@@ -11,9 +11,42 @@ Formalize the coherence score algorithm from docs/concepts/COHERENCE-ALGORITHM-S
 - [x] Document pitfalls: gaming prevention, contribution-type balance
 - [x] Add weights stub (all equal or placeholder) — actual weights are decision gate
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 008
+
+## Task Card
+
+```yaml
+goal: Formalize the coherence score algorithm from docs/concepts/COHERENCE-ALGORITHM-SKETCH.
+files_allowed:
+  - docs/concepts/COHERENCE-ALGORITHM-SKETCH.md
+  - specs/018-coherence-algorithm-spec.md
+done_when:
+  - Document inputs: contributor_diversity, dependency_health, activity_cadence, documentation_quality, community_respons...
+  - Document output: score 0.0–1.0 per project
+  - Document pitfalls: gaming prevention, contribution-type balance
+  - Add weights stub (all equal or placeholder) — actual weights are decision gate
+commands:
+  - python3 -m pytest api/tests/test_cc_scoring.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (implemented in spec 020)
 
 GET /api/projects/{ecosystem}/{name}/coherence returns `{"score": 0.0–1.0, "components": {...}}`. Path matches project lookup from spec 008.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Files to Create/Modify
 
@@ -41,6 +74,28 @@ GET /api/projects/{ecosystem}/{name}/coherence returns `{"score": 0.0–1.0, "co
 
 - Actual weight values require human approval
 - Coherence formula changes require needs-decision
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Invalid input**: Return 422 with field-level validation errors.
+- **Resource not found**: Return 404 with descriptive message.
+- **Database unavailable**: Return 503; client should retry with exponential backoff (initial 1s, max 30s).
+- **Concurrent modification**: Last write wins; no optimistic locking required for MVP.
+- **Timeout**: Operations exceeding 30s return 504; safe to retry.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add integration tests for error edge cases.
+
 
 ## Verification
 

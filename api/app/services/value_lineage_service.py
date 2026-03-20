@@ -41,8 +41,8 @@ class LineageLinkRecord(Base):
     contributors_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     investments_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     estimated_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 class UsageEventRecord(Base):
@@ -53,7 +53,7 @@ class UsageEventRecord(Base):
     source: Mapped[str] = mapped_column(String, nullable=False)
     metric: Mapped[str] = mapped_column(String, nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    captured_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 # ---------------------------------------------------------------------------
@@ -103,13 +103,14 @@ def _record_to_event(rec: UsageEventRecord) -> UsageEvent:
 
 
 DEFAULT_STAGE_WEIGHTS: dict[str, float] = {
-    "idea": 0.1,
-    "research": 0.2,
-    "spec": 0.2,
-    "spec_upgrade": 0.15,
-    "implementation": 0.5,
-    "review": 0.2,
+    "idea": 0.07,
+    "research": 0.15,
+    "spec": 0.15,
+    "spec_upgrade": 0.11,
+    "implementation": 0.37,
+    "review": 0.15,
 }
+# Sum = 1.0 (normalized from original 1.35, preserving relative ratios)
 
 # Backward-compatible alias for older call sites and docs.
 DEFAULT_ROLE_WEIGHTS = DEFAULT_STAGE_WEIGHTS

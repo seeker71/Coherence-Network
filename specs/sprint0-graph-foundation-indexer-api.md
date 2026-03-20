@@ -194,6 +194,30 @@ Organization:
 - [ ] Approval required for API endpoint design and naming conventions
 - [ ] Approval required for database connection and configuration approach
 
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Invalid input**: Return 422 with field-level validation errors.
+- **Resource not found**: Return 404 with descriptive message.
+- **Database unavailable**: Return 503; client should retry with exponential backoff (initial 1s, max 30s).
+- **Concurrent modification**: Last write wins; no optimistic locking required for MVP.
+- **Timeout**: Operations exceeding 30s return 504; safe to retry.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add integration tests for error edge cases.
+
+
+
+
 ## Verification
 
 ```bash

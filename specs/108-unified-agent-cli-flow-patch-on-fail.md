@@ -12,10 +12,46 @@ Ensure every agent provider CLI (aider/claude, cursor, openclaw) can run the ful
 - [ ] On failed review, pipeline context carries patch guidance forward to the next `impl`/`heal` task without destructive truncation.
 - [ ] Review may emit `SPEC_VERIFICATION_IMPROVEMENT` when verification steps are ambiguous, so spec verification can be tightened in follow-up.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 005, 026, 300
+
+## Task Card
+
+```yaml
+goal: Ensure every agent provider CLI (aider/claude, cursor, openclaw) can run the full delivery flow locally and remotely: generate spec from idea, implement a spec, run tests, review implementation against spec verification, and—when verification fails—produce enough structured information to create a patch so the next step can fix the implementation without discarding work.
+files_allowed:
+  - specs/108-unified-agent-cli-flow-patch-on-fail.md
+  - .cursor/skills/spec-guard/SKILL.md
+  - api/scripts/project_manager.py
+  - docs/AGENT-DEBUGGING.md
+done_when:
+  - Every executor (`claude`, `cursor`, `codex`, `gemini`) supports `spec`, `impl`, `test`, `review`, and `heal` task typ...
+  - The flow executes end-to-end (`idea -> spec -> impl -> test -> review`) for local and remote runner modes with no tas...
+  - `review` failure output includes structured `VERIFICATION_RESULT`, `FILES_TO_CHANGE`, and `PATCH_GUIDANCE` blocks tha...
+  - On failed review, pipeline context carries patch guidance forward to the next `impl`/`heal` task without destructive ...
+  - Review may emit `SPEC_VERIFICATION_IMPROVEMENT` when verification steps are ambiguous, so spec verification can be ti...
+commands:
+  - cd api && pytest -q tests/test_agent.py tests/test_agent_executor_policy.py tests/test_openclaw_executor_integration.py -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 - No new API endpoints. Existing `POST /api/agent/tasks`, `GET /api/agent/tasks`, `PATCH /api/agent/tasks/{id}`, and execute/pickup endpoints remain unchanged.
 - Task `context` may carry `spec_ref`, `idea_id`, `last_review_output`, or `patch_guidance` for downstream tasks; structure is convention for pipeline and agents, not a new API schema.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Files to Create/Modify
 
@@ -31,6 +67,21 @@ Ensure every agent provider CLI (aider/claude, cursor, openclaw) can run the ful
 - **Project manager**: After a review task completes with status failed or output indicating FAIL, the next impl task created by project_manager receives direction/context that includes the review output (or PATCH_GUIDANCE) sufficient for patch-oriented fix (e.g. test that state or direction length/carry-over is improved where applicable).
 - **Automated verification references**: `api/tests/test_agent_executor_policy.py`, `api/tests/test_agent_integration_api.py`, `api/tests/test_agent_execute_endpoint.py`.
 - **Manual verification**: Run one local matrix flow and one host-runner flow, then confirm usage page reflects non-zero successes and failure metadata with patch guidance context.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
 
 ## Verification
 

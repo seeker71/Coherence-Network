@@ -13,3 +13,23 @@
 10. specs/002-agent-orchestration-api.md — Any remaining agent API items
 11. Add or improve tests for existing API endpoints per specs
 12. Review and improve docs/AGENT-DEBUGGING.md and docs/MODEL-ROUTING.md
+
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add end-to-end browser tests for critical paths.
+
+## Acceptance Tests
+
+See `api/tests/test_backlog_cursor.py` for test cases covering this spec's requirements.
+

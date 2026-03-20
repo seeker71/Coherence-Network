@@ -38,6 +38,17 @@ Response must include:
 - `cd api && pytest -q tests/test_agent_visibility_api.py -k "orchestration_guidance"`
 - `cd api && ruff check app/services/agent_service.py app/routers/agent.py tests/test_agent_visibility_api.py`
 
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
+
+
+
 ## Verification
 
 ```bash

@@ -12,6 +12,36 @@ Ensure consistent error response format across the API for client reliability an
 - [x] **400 bad request**: `{ "detail": "human-readable message" }`.
 - [x] Unhandled exceptions return 500 with `{ "detail": "Internal server error" }` (no stack trace or internal details).
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 010, 014
+
+## Task Card
+
+```yaml
+goal: Ensure consistent error response format across the API for client reliability and debugging.
+files_allowed:
+  - api/app/main.py
+  - api/app/models/error.py
+  - api/app/routers/agent.py
+  - api/app/routers/projects.py
+  - api/app/routers/import_stack.py
+  - api/tests/test_agent.py
+done_when:
+  - Error schema: Simple errors (400, 404, 500) use `{ "detail": "human-readable message" }` (detail is a string).
+  - 422 validation: Pydantic/request validation failures use FastAPI default format — keep as-is; `detail` is an array of...
+  - 404 consistency: Every 404 response has the same shape (`{ "detail": string }`); message is resource-specific but con...
+  - 400 bad request: `{ "detail": "human-readable message" }`.
+  - Unhandled exceptions return 500 with `{ "detail": "Internal server error" }` (no stack trace or internal details).
+commands:
+  - cd api && python -m pytest api/tests/test_agent.py -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### Error Response Schema
@@ -71,6 +101,14 @@ Used for Pydantic request body/query/path validation failures. Do not override F
 { "detail": "Internal server error" }
 ```
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Data Model
 
 ```yaml
@@ -108,6 +146,28 @@ ValidationErrorDetail:
 - 404 responses have no extra top-level keys (only `detail`).
 
 **Contract tests:** `api/tests/test_api_error_handling.py` — defines 422 validation shape, 404 consistency (only `detail` key), and error schema for 400/404/500. Additional 009-related tests in `api/tests/test_agent.py` and `api/tests/test_health.py`; all must pass.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Invalid input**: Return 422 with field-level validation errors.
+- **Resource not found**: Return 404 with descriptive message.
+- **Database unavailable**: Return 503; client should retry with exponential backoff (initial 1s, max 30s).
+- **Concurrent modification**: Last write wins; no optimistic locking required for MVP.
+- **Timeout**: Operations exceeding 30s return 504; safe to retry.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add integration tests for error edge cases.
+
 
 ## Verification (iteration 2)
 

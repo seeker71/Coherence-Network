@@ -19,3 +19,44 @@ One work item per line. Orchestrator processes in order. Prefix with spec filena
 14. Add or improve tests for existing API endpoints per specs
 15. Review and improve docs/AGENT-DEBUGGING.md and docs/MODEL-ROUTING.md
 16. specs/007-meta-pipeline-backlog.md items 13-18 — Execute measured production improvements from docs/system_audit/pipeline_improvement_snapshot_2026-02-19.json
+
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 001, 002, 003, 004, 007
+
+## Task Card
+
+```yaml
+goal: Implement the functionality described in this spec
+files_allowed:
+  - # TBD — determine from implementation
+done_when:
+  - All requirements implemented and tests pass
+commands:
+  - cd api && python -m pytest tests/ -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add end-to-end browser tests for critical paths.
+
+## Acceptance Tests
+
+See `api/tests/test_backlog.py` for test cases covering this spec's requirements.
+

@@ -112,6 +112,17 @@ PublicValidationGateRun:
 - `api/tests/test_inventory_api.py::test_flow_row_for_public_validation_gates_tracks_process_and_validation`
 - Manual: `cd web && npm run build`, then load `/gates` in staging/public and confirm per-profile cards display the API payload with timestamps and evidence links.
 
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
+
+
+
 ## Verification
 
 ```bash

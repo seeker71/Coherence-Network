@@ -13,6 +13,30 @@ Keep the spec→implementation→test mapping accurate and complete. This spec d
 - [ ] **Format** — Conventions follow existing SPEC-COVERAGE: Status Summary table (Spec | Present | Spec'd | Tested | Notes), optional detail sections with (Requirement | Implementation | Test), Files and See also as used elsewhere. Use [specs/TEMPLATE.md](TEMPLATE.md) only as structural reference for *this* spec document; SPEC-COVERAGE.md keeps its current doc structure.
 - [ ] **Exclusions** — TEMPLATE.md, test/backlog-only files (e.g. test-backlog-cursor.md), and duplicate/alias filenames (e.g. 007-meta-pipeline-backlog vs 007-sprint-0-landing) are handled consistently: one canonical entry per logical spec (e.g. one row for "007 Sprint 0 Landing" from 007-sprint-0-landing.md).
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 006, 007, 008, 027
+
+## Task Card
+
+```yaml
+goal: Keep the spec→implementation→test mapping accurate and complete.
+files_allowed:
+  - docs/SPEC-COVERAGE.md
+done_when:
+  - 007 and 008 — `docs/SPEC-COVERAGE.md` has a Status Summary row and a detailed section for each:
+  - New specs — Every other spec in `specs/` that describes a feature (numbered specs and any additional feature specs) h...
+  - Format — Conventions follow existing SPEC-COVERAGE: Status Summary table (Spec | Present | Spec'd | Tested | Notes), ...
+  - Exclusions — TEMPLATE.md, test/backlog-only files (e.g. test-backlog-cursor.md), and duplicate/alias filenames (e.g. ...
+commands:
+  - python3 -m pytest api/tests/test_spec_coverage_validation.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## Files to Create/Modify
 
 - `docs/SPEC-COVERAGE.md` — Add or expand Status Summary rows and detail sections for 007, 008, and any spec missing from the document.
@@ -39,6 +63,22 @@ Keep the spec→implementation→test mapping accurate and complete. This spec d
 ## Decision Gates
 
 - None. Documentation-only change.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

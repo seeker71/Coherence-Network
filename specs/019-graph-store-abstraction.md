@@ -13,6 +13,39 @@ Unblock Sprint 1 (spec 008) without Neo4j by introducing a GraphStore abstractio
 - [x] Tests use in-memory store (no external DB)
 - [ ] Future: Neo4j adapter implements same interface
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 008, 024
+
+## Task Card
+
+```yaml
+goal: Unblock Sprint 1 (spec 008) without Neo4j by introducing a GraphStore abstraction with an in-memory backend.
+files_allowed:
+  - api/app/adapters/__init__.py
+  - api/app/adapters/graph_store.py
+  - api/app/services/indexer_service.py
+  - api/app/routers/projects.py
+  - api/app/models/project.py
+  - api/app/main.py
+  - api/scripts/index_npm.py
+  - api/tests/test_projects.py
+  - specs/008-sprint-1-graph-foundation.md
+done_when:
+  - `GraphStore` protocol/interface: `get_project()`, `search()`, `upsert_project()`, `add_dependency()`, `count_projects()`
+  - In-memory implementation: dict-based projects + edges; optional JSON persistence for restart
+  - Indexer writes to GraphStore (deps.dev + npm registry); `--target N` grows by deps; no Neo4j
+  - `GET /api/projects/{ecosystem}/{name}` and `GET /api/search?q={query}` use GraphStore
+  - Tests use in-memory store (no external DB)
+commands:
+  - python3 -m pytest api/tests/test_projects.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## GraphStore Interface (Python)
 
 ```python
@@ -56,6 +89,14 @@ ProjectSummary (for search results):
 ### `GET /api/search?q={query}`
 
 **Response 200** — `{"results": [...], "total": N}`. Search by name/description substring.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Files to Create/Modify
 
@@ -102,6 +143,28 @@ ProjectSummary (for search results):
 
 - deps.dev API: no key required for basic usage (rate limits apply)
 - Adding httpx: already a dependency
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add end-to-end browser tests for critical paths.
+
 
 ## Verification
 

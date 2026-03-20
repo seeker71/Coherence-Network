@@ -24,8 +24,8 @@ class CommitEvidenceRecord(Base):
     source_file: Mapped[str] = mapped_column(String, nullable=False, default="", index=True)
     record_fingerprint: Mapped[str] = mapped_column(String, nullable=False, unique=True, index=True)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 

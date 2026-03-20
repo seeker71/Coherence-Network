@@ -17,6 +17,56 @@ Implement a project manager orchestrator that automates the full spec-driven cyc
 - [x] **PM complete**: Running the project manager with `--dry-run` exits 0 and logs deterministic preview (backlog index, phase, next item). Running with `--once` and API available completes one cycle without unhandled exception; state advances or remains consistent.
 - [x] **E2E smoke test**: A test runs the project manager in a mode that verifies end-to-end behavior (e.g. subprocess `--dry-run` exit 0, or `--once` with live API) and asserts no crash and consistent state. Test lives in `api/tests/` and is run by CI.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 006
+
+## Task Card
+
+```yaml
+goal: Implement a project manager orchestrator that automates the full spec-driven cycle: find the next work item, design (spec), implement, test, review, and validate against the spec until all passes, then advance to the next task.
+files_allowed:
+  - api/scripts/project_manager.py
+  - specs/005-backlog.md
+  - docs/AGENT-ARCHITECTURE.md
+  - api/tests/test_project_manager_pipeline.py
+done_when:
+  - Orchestrator finds the next task from a backlog (specs/, docs/PLAN.md, or config)
+  - For each task, runs phases in order: spec → impl → test → review
+  - After review, validates: pytest passes and review output indicates pass
+  - If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations
+  - If validation passes: advances to next task, starts with spec phase
+commands:
+  - cd api && python -m pytest api/tests/test_project_manager_pipeline.py -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
+
 ## Verification (PM complete)
 
 - **Dry-run**: `python api/scripts/project_manager.py --dry-run` must exit 0; output reflects current state and what would be done (no HTTP calls).
@@ -47,6 +97,14 @@ No new API endpoints. Uses existing:
 - `GET /api/agent/tasks?status=needs_decision` — check if blocked
 - `GET /api/agent/tasks/{id}` — poll task until completed/failed/needs_decision
 - `GET /api/health` — used at startup to verify API reachable
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model
 

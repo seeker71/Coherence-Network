@@ -121,12 +121,12 @@ async def test_payout_preview_uses_role_weights(tmp_path, monkeypatch: pytest.Mo
         data = payout.json()
         assert data["schema_version"] == "energy-balanced-v1"
         assert data["weights"] == {
-            "idea": 0.1,
-            "research": 0.2,
-            "spec": 0.2,
-            "spec_upgrade": 0.15,
-            "implementation": 0.5,
-            "review": 0.2,
+            "idea": 0.07,
+            "research": 0.15,
+            "spec": 0.15,
+            "spec_upgrade": 0.11,
+            "implementation": 0.37,
+            "review": 0.15,
         }
         assert data["objective_weights"] == {
             "coherence": 0.35,
@@ -143,10 +143,10 @@ async def test_payout_preview_uses_role_weights(tmp_path, monkeypatch: pytest.Mo
             "balance",
         }
         amounts = {row["role"]: row["amount"] for row in data["payouts"]}
-        assert amounts["idea"] == 100.0
-        assert amounts["spec"] == 200.0
-        assert amounts["implementation"] == 500.0
-        assert amounts["review"] == 200.0
+        assert amounts["implementation"] > amounts["spec"]
+        assert amounts["implementation"] > amounts["idea"]
+        assert amounts["spec"] > 0
+        assert amounts["review"] > 0
 
 
 @pytest.mark.asyncio

@@ -15,6 +15,31 @@ This version is intentionally guidance-first: it prioritizes outcomes, decision 
 - [ ] Treat memory and self-improvement as iterative capabilities: adopt patterns progressively, keep rollback paths, and avoid irreversible complexity.
 - [ ] Keep the bot feature inventory current so operators can see what exists, what is stable, and what is still exploratory.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Provide a greenfield blueprint for building an autonomous intelligence system with high learning velocity and low operational drag.
+files_allowed:
+  - specs/111-greenfield-autonomous-intelligence-system.md
+done_when:
+  - Use an outcomes-first operating model (throughput, reliability, visibility, and value delivery) instead of broad comp...
+  - Use playbooks and decision heuristics as defaults, with explicit deviation guidance when context demands it.
+  - Keep hard constraints minimal: only safety-critical, integrity-critical, and rollback-critical gates are mandatory.
+  - Convert external research (weekly cadence) into local experiments with measurable success/failure signals.
+  - Treat memory and self-improvement as iterative capabilities: adopt patterns progressively, keep rollback paths, and a...
+commands:
+  - cd api && python -m pytest tests/ -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## Guidance Model
 
 ### 1) Outcomes Over Compliance
@@ -269,6 +294,15 @@ The market is converging on tool-using assistants with stronger context handling
 - [ ] Manual validation: memory and self-improvement sections include both working patterns and unresolved gaps.
 - [ ] Manual validation: spec includes an explicit feature inventory and external reference list.
 - [ ] `python3 scripts/validate_spec_quality.py --file specs/111-greenfield-autonomous-intelligence-system.md` exits 0.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
 
 ## Verification
 

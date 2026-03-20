@@ -14,6 +14,35 @@ Manage assets (code, models, content, data) that receive contributions. Assets a
 - [x] All responses are Pydantic models (JSON-serialized)
 - [x] Assets have unique UUID identifiers
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Manage assets (code, models, content, data) that receive contributions.
+files_allowed:
+  - api/app/routers/assets.py
+  - api/app/models/asset.py
+  - api/app/adapters/graph_store.py
+  - api/tests/test_assets.py
+  - specs/052-assets-api.md
+done_when:
+  - POST /api/assets — Create new asset
+  - GET /api/assets/{id} — Retrieve asset by ID (404 if not found)
+  - GET /api/assets — List all assets with pagination (limit parameter)
+  - Asset types: CODE, MODEL, CONTENT, DATA
+  - total_cost auto-updates when contributions are recorded
+commands:
+  - python3 -m pytest api/tests/test_assets.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### `POST /api/assets`
@@ -117,6 +146,14 @@ Manage assets (code, models, content, data) that receive contributions. Assets a
 
 Results sorted by `created_at` descending (newest first).
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Data Model
 
 ```yaml
@@ -166,6 +203,28 @@ All 3 tests passing.
 ## Decision Gates
 
 None — implementation already complete and tested.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Invalid input**: Return 422 with field-level validation errors.
+- **Resource not found**: Return 404 with descriptive message.
+- **Database unavailable**: Return 503; client should retry with exponential backoff (initial 1s, max 30s).
+- **Concurrent modification**: Last write wins; no optimistic locking required for MVP.
+- **Timeout**: Operations exceeding 30s return 504; safe to retry.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add integration tests for error edge cases.
+
 
 ## Verification
 

@@ -26,6 +26,36 @@ Portfolio-based idea tracking and prioritization using free energy scoring. Enab
 - [x] Ideas stored in structured DB registry with machine-readable metadata
 - [x] Portfolio summary with aggregated metrics
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Portfolio-based idea tracking and prioritization using free energy scoring.
+files_allowed:
+  - api/app/routers/ideas.py
+  - api/app/services/idea_service.py
+  - api/app/services/idea_registry_service.py
+  - api/app/models/idea.py
+  - api/tests/test_ideas.py
+  - specs/053-ideas-prioritization.md
+done_when:
+  - GET /api/ideas — List ideas ranked by free energy score with portfolio summary
+  - GET /api/ideas/{id} — Retrieve individual idea with score (404 if not found)
+  - PATCH /api/ideas/{id} — Update idea validation fields (404 if not found)
+  - GET /api/ideas/storage — Report structured storage backend and row counts
+  - Filter support for unvalidated ideas only
+commands:
+  - | Ideas test suite | `cd api && pytest -q tests/test_ideas.py` | Exit code 0; "passed" in output | Non-zero exit; failures or errors listed |
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### `GET /api/ideas`
@@ -204,6 +234,14 @@ Portfolio-based idea tracking and prioritization using free energy scoring. Enab
 }
 ```
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Scoring Algorithm
 
 ### Free Energy Score
@@ -309,6 +347,21 @@ See `api/tests/test_ideas.py`:
 - [x] `test_ideas_storage_endpoint_reports_structured_backend` — Storage metadata endpoint and DB bootstrap validation
 
 All 4 tests passing.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
 
 ## Verification
 

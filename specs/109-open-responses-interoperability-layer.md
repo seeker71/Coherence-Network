@@ -10,9 +10,43 @@ Reduce provider lock-in and simplify model routing by introducing a normalized O
 - [ ] Ensure at least two providers can execute through the same normalized interface without task-level prompt rewrites.
 - [ ] Persist route and model evidence for each normalized call so operator audits can verify actual execution path.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Reduce provider lock-in and simplify model routing by introducing a normalized Open Responses interface in the agent execution path, so task execution can move across providers without per-provider payload rewrites.
+files_allowed:
+  - api/app/services/agent_service.py
+  - api/app/services/provider_usage_service.py
+  - api/app/models/schemas.py
+  - api/tests/test_agent.py
+done_when:
+  - Add a provider-agnostic request/response adapter that can map current task execution payloads to Open Responses-compa...
+  - Ensure at least two providers can execute through the same normalized interface without task-level prompt rewrites.
+  - Persist route and model evidence for each normalized call so operator audits can verify actual execution path.
+commands:
+  - cd api && python -m pytest api/tests/test_agent.py -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 N/A - no external API route changes required for initial adapter rollout.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -38,6 +72,21 @@ NormalizedResponseCall:
 - `cd api && pytest -v tests/test_agent.py -k \"route or provider\"`
 - `cd api && pytest -v tests/test_inventory_api.py -k endpoint_traceability`
 - Manual validation: create two tasks with different providers and confirm normalized schema markers in runtime evidence output.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Invalid input**: Return 422 with field-level validation errors.
+- **Resource not found**: Return 404 with descriptive message.
+- **Database unavailable**: Return 503; client should retry with exponential backoff (initial 1s, max 30s).
+- **Concurrent modification**: Last write wins; no optimistic locking required for MVP.
+- **Timeout**: Operations exceeding 30s return 504; safe to retry.
+
 
 ## Verification
 

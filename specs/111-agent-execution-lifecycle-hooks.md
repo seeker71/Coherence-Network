@@ -15,9 +15,45 @@ Adopt a hook-first execution pattern for Coherence agent tasks so task lifecycle
 - [ ] Add JSONL retention control to cap lifecycle audit growth.
 - [ ] Include actionable lifecycle guidance in summary output (for example: no subscribers enabled, paid guard blocks, high failure ratio).
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Adopt a hook-first execution pattern for Coherence agent tasks so task lifecycle transitions are emitted through a consistent internal interface.
+files_allowed:
+  - api/app/services/agent_execution_hooks.py
+  - api/app/services/agent_execution_task_flow.py
+  - api/app/routers/agent.py
+  - api/tests/test_agent_execute_endpoint.py
+done_when:
+  - Add an execution lifecycle hook surface that can dispatch named lifecycle events for a task.
+  - Ensure hook listener failures never break task execution or change task terminal status.
+  - Emit lifecycle telemetry events during task execution (`claimed`, `execution_started`, `finalized`, plus block/valida...
+  - Add configurable lifecycle subscribers (`runtime` and `jsonl`) that can be enabled/disabled via environment setting.
+  - Add a compact lifecycle summary query endpoint for recent lifecycle events.
+commands:
+  - cd api && pytest -q tests/test_agent_execute_endpoint.py -k "lifecycle or hook_error or lifecycle_summary"
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 N/A - no public API route changes in this spec.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -47,6 +83,21 @@ AgentExecutionLifecycleEvent:
 - `cd api && pytest -q tests/test_agent_execute_endpoint.py -k "lifecycle_jsonl"`
 - `cd api && pytest -q tests/test_agent_execute_endpoint.py -k "lifecycle_source_override or lifecycle_jsonl_retention"`
 - `cd api && pytest -q tests/test_agent_execute_endpoint.py -k "lifecycle_guidance"`
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
 
 ## Verification
 

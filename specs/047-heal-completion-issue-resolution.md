@@ -11,6 +11,31 @@ When a heal task completes and the related monitor condition clears on the next 
 - [ ] **Optional auto-resolve in monitor_issues.json**: When configured (e.g. env `MONITOR_PERSIST_RESOLVED=1` or equivalent), when a condition clears the monitor persists the resolution in `monitor_issues.json` by appending a resolved entry (condition, issue id if available, resolved_at, heal_task_id if any) to a `resolved` array in that file; the array is capped (e.g. last 50 entries) to avoid unbounded growth. GET /api/agent/monitor-issues continues to return the file content, so the response may include `resolved` when present.
 - [ ] Open issues in `monitor_issues.json` remain the current list of issues (conditions currently firing). Resolved entries are for audit/recent-resolution visibility only and do not change the semantics of `issues` or `resolved_since_last`.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 007, 114, 115
+
+## Task Card
+
+```yaml
+goal: When a heal task completes and the related monitor condition clears on the next check, the pipeline must record that resolution for effectiveness measurement and, optionally, persist the resolution in monitor_issues.
+files_allowed:
+  - api/scripts/monitor_pipeline.py
+  - docs/PIPELINE-MONITORING-AUTOMATED.md
+done_when:
+  - When the monitor runs and a previously reported condition is no longer present, the monitor records a resolution (exi...
+  - When recording resolution for a condition that had an associated `heal_task_id` on the previous run, the monitor must...
+  - Optional auto-resolve in monitor_issues.json: When configured (e.g. env `MONITOR_PERSIST_RESOLVED=1` or equivalent), ...
+  - Open issues in `monitor_issues.json` remain the current list of issues (conditions currently firing). Resolved entrie...
+commands:
+  - python3 -m pytest api/tests/test_auto_heal_service.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `GET /api/agent/monitor-issues`
@@ -28,6 +53,14 @@ When `monitor_issues.json` is missing or invalid, response remains `{ "issues": 
 ### Resolution record (monitor_resolutions.jsonl)
 
 Each line is JSON: `{ "condition": string, "resolved_at": string (ISO8601 UTC), "heal_task_id": string (optional) }`. No change to existing format.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -77,6 +110,28 @@ See `api/tests/test_agent.py` (and any new tests for monitor resolution / option
 - [007-meta-pipeline-backlog.md](007-meta-pipeline-backlog.md) — Item 2 (this spec); Item 5 (heal task effectiveness tracking / heal_resolved_count).
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — GET /api/agent/monitor-issues, GET /api/agent/effectiveness.
 - [docs/PIPELINE-MONITORING-AUTOMATED.md](../docs/PIPELINE-MONITORING-AUTOMATED.md) — Monitor flow, resolution tracking, issue shape.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

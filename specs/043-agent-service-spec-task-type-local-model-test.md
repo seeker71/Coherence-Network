@@ -12,6 +12,29 @@ Ensure that the agent service routes the `spec` and `test` task_types to a local
 - [ ] **Test → local test**: A test in `api/tests/test_agent.py` calls `GET /api/agent/route?task_type=test` and asserts response status code is 200 and that the returned `model` indicates a local model (e.g. contains "ollama", "glm", or "qwen"). Test name: `test_test_tasks_route_to_local`.
 - [ ] **Contract**: Both tests document that `spec` and `test` task_types are routed to local tier per the routing table in [002-agent-orchestration-api.md](002-agent-orchestration-api.md) (spec | test | impl | review → local; heal → claude).
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 005, 006, 010, 044
+
+## Task Card
+
+```yaml
+goal: Ensure that the agent service routes the `spec` and `test` task_types to a local model (Ollama) so the pipeline and API contract (spec 002, 005) are enforced by explicit tests.
+files_allowed:
+  - api/tests/test_agent.py
+done_when:
+  - Spec → local test: A test in `api/tests/test_agent.py` calls `GET /api/agent/route?task_type=spec` and asserts respon...
+  - Test → local test: A test in `api/tests/test_agent.py` calls `GET /api/agent/route?task_type=test` and asserts respon...
+  - Contract: Both tests document that `spec` and `test` task_types are routed to local tier per the routing table in [00...
+commands:
+  - python3 -m pytest api/tests/test_agent_execution_model_resolution.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `GET /api/agent/route?task_type=spec`
@@ -48,6 +71,14 @@ Same shape as above: `task_type`, `model`, `command_template`, `tier`, `executor
 
 **Response 422** — Missing or invalid task_type (covered by other specs).
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Data Model (if applicable)
 
 Routing is implemented in `api/app/services/agent_service.py`; task_type → model mapping is defined in [002-agent-orchestration-api.md](002-agent-orchestration-api.md) and docs/MODEL-ROUTING.md. No new data model; test only.
@@ -81,6 +112,28 @@ None. Adding or expanding these tests does not require new dependencies or API c
 - [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — spec/test/impl/review use local models
 - [010-request-validation.md](010-request-validation.md) — task_type enum
 - [044-agent-service-test-task-type-local-model-test.md](044-agent-service-test-task-type-local-model-test.md) — parallel spec for test task_type → local
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

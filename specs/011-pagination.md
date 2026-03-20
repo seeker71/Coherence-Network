@@ -14,6 +14,33 @@ Add explicit pagination (limit/offset) to GET /api/agent/tasks so clients can pa
 - [x] Tasks returned in descending order by created_at (newest first)
 - [x] Invalid limit (e.g. 0 or >100) or offset (e.g. <0) returns 422
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 010
+
+## Task Card
+
+```yaml
+goal: Add explicit pagination (limit/offset) to GET /api/agent/tasks so clients can page through large task lists.
+files_allowed:
+  - api/app/routers/agent.py
+  - api/app/services/agent_service.py
+  - api/tests/test_agent.py
+done_when:
+  - `limit`: int, default 20, min 1, max 100 (already exists)
+  - `offset`: int, default 0, min 0 — skip N tasks
+  - Response includes `total` (total matching count before pagination)
+  - Tasks returned in descending order by created_at (newest first)
+  - Invalid limit (e.g. 0 or >100) or offset (e.g. <0) returns 422
+commands:
+  - python3 -m pytest api/tests/test_ideas.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `GET /api/agent/tasks`
@@ -51,6 +78,14 @@ Add explicit pagination (limit/offset) to GET /api/agent/tasks so clients can pa
 ```
 
 **Response 422** — Invalid query params (e.g. limit=0, limit=101, offset=-1). See [010-request-validation.md](010-request-validation.md).
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -101,6 +136,28 @@ See `api/tests/test_agent.py`. All of the following must pass:
 ## Decision Gates (if any)
 
 None.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

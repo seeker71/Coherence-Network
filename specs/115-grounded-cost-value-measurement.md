@@ -182,6 +182,21 @@ attribute to).
 5. Tests verify exact computed values against known inputs — no mocks,
    no self-reported scores.
 
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Acceptance Tests
+
+See `api/tests/test_grounded_cost_value_measurement.py` for test cases covering this spec's requirements.
+
+
+
+
 ## Verification
 
 - Unit tests with exact assertions on `compute_grounded_cost` and

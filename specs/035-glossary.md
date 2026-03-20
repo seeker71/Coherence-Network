@@ -21,9 +21,41 @@ Provide a single reference for Coherence Network terminology so agents and human
   - **Spec-driven** — workflow: spec defines requirements → tests written → implementation makes tests pass.
 - [ ] Definitions stay consistent with AGENTS.md, CLAUDE.md, and agent API (e.g. task_type values match API).
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 005, 006
+
+## Task Card
+
+```yaml
+goal: Provide a single reference for Coherence Network terminology so agents and humans share consistent definitions for pipeline, backlog, coherence, task types, and related concepts.
+files_allowed:
+  - docs/GLOSSARY.md
+done_when:
+  - `docs/GLOSSARY.md` exists and is the canonical glossary.
+  - Format: Table or equivalent (Term | Definition) so terms are scannable; optional short intro line (e.g. "Glossary — C...
+  - Required terms (each has a clear, one- or two-sentence definition):
+  - Definitions stay consistent with AGENTS.md, CLAUDE.md, and agent API (e.g. task_type values match API).
+commands:
+  - python3 -m pytest api/tests/test_glossary.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 N/A — documentation only.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -48,6 +80,28 @@ N/A.
 - [006 Overnight Backlog](006-overnight-backlog.md) — item 15: Add docs/GLOSSARY.md (coherence, task_type, pipeline, backlog, etc.)
 - [002 Agent Orchestration API](002-agent-orchestration-api.md) — task_type, direction, status values
 - [005 Project Manager Pipeline](005-project-manager-pipeline.md) — pipeline, backlog, project manager
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add deployment smoke tests post-release.
+
 
 ## Verification
 

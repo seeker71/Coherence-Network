@@ -16,6 +16,33 @@ Tighten request validation so invalid input is rejected early with clear, consis
 - [x] **Pydantic** — Use `Field(..., min_length=..., max_length=...)` and `ge`/`le` where applicable; enums as `str` Enum for JSON schema
 - [x] **PATCH body** — At least one field required; empty body or all optional fields null/absent → 400
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 009, 011
+
+## Task Card
+
+```yaml
+goal: Tighten request validation so invalid input is rejected early with clear, consistent 422 (or 400) responses.
+files_allowed:
+  - api/app/models/agent.py
+  - api/app/routers/agent.py
+  - api/tests/test_agent.py
+done_when:
+  - task_type — Enum: `spec` | `test` | `impl` | `review` | `heal`; any other value → 422
+  - direction — String, min length 1, max length 5000; empty or missing or over limit → 422
+  - direction — Optional refinement: strip leading/trailing whitespace before length check so that whitespace-only is rej...
+  - status (PATCH) — Enum: `pending` | `running` | `completed` | `failed` | `needs_decision`; invalid → 422
+  - progress_pct (PATCH) — If present: integer only, 0–100 inclusive; wrong type or out of range → 422
+commands:
+  - python3 -m pytest api/tests/test_api_error_handling.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `POST /api/agent/tasks`
@@ -66,6 +93,14 @@ Tighten request validation so invalid input is rejected early with clear, consis
 ### List/attention endpoints
 
 - `limit`: 1–100, default 20; `offset`: ≥ 0, default 0; invalid → 422 (already in spec 002).
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -150,6 +185,28 @@ None.
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — agent API and edge-case table
 - [009-api-error-handling.md](009-api-error-handling.md) — error response format
 - [011-pagination.md](011-pagination.md) — limit/offset validation
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

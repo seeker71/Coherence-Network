@@ -15,6 +15,35 @@ Calculate fair value distribution among contributors based on their contribution
 - [x] Returns 404 when asset not found
 - [x] Async execution for future scaling
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Calculate fair value distribution among contributors based on their contributions weighted by coherence scores.
+files_allowed:
+  - api/app/routers/distributions.py
+  - api/app/services/distribution_engine.py
+  - api/app/models/distribution.py
+  - api/tests/test_distributions.py
+  - specs/049-distribution-engine.md
+done_when:
+  - POST /api/distributions — Trigger distribution for an asset
+  - Distribution algorithm: proportional to (cost_amount × (0.5 + coherence_score))
+  - Coherence weighting: higher coherence = higher payout multiplier
+  - Handles zero contributions (empty payout list)
+  - Handles zero weighted cost (empty payout list)
+commands:
+  - python3 -m pytest api/tests/test_distributions.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### `POST /api/distributions`
@@ -87,6 +116,14 @@ Calculate fair value distribution among contributors based on their contribution
 }
 ```
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Data Model
 
 ```yaml
@@ -134,6 +171,28 @@ All 4 tests passing.
 ## Decision Gates
 
 None — implementation already complete and tested.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add deployment smoke tests post-release.
+
 
 ## Verification
 
