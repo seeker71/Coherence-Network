@@ -266,9 +266,9 @@ function TasksPageContent() {
   return (
     <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl space-y-4">
-        <section className="rounded-2xl border border-border/70 bg-card/60 p-5 sm:p-7 space-y-3">
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
           <p className="text-sm text-muted-foreground">Work view</p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Work That Is Moving</h1>
+          <h1 className="text-3xl md:text-4xl font-light tracking-tight">Work That Is Moving</h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
             See what is active, what is blocked, what finished recently, and open one work card when you need to update it.
           </p>
@@ -276,47 +276,47 @@ function TasksPageContent() {
             {statusFilter || typeFilter || taskIdFilter ? "Showing a filtered work view." : "Showing active and past work cards."}
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href="/today" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+            <Link href="/today" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
               Today
             </Link>
-            <Link href="/ideas" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+            <Link href="/ideas" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
               Ideas
             </Link>
-            <Link href="/flow" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+            <Link href="/flow" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
               Progress
             </Link>
-            <Link href="/demo" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+            <Link href="/demo" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
               Demo
             </Link>
           </div>
         </section>
 
         <section className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Work cards in view</p>
-            <p className="text-xl font-semibold">{filteredRows.length}</p>
+            <p className="text-2xl font-light text-primary">{filteredRows.length}</p>
           </div>
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Ready to start</p>
-            <p className="text-xl font-semibold">{readyCount}</p>
+            <p className="text-2xl font-light text-primary">{readyCount}</p>
           </div>
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">In progress</p>
-            <p className="text-xl font-semibold">{activeCount}</p>
+            <p className="text-2xl font-light text-primary">{activeCount}</p>
           </div>
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Needs attention</p>
-            <p className="text-xl font-semibold">{blockedCount}</p>
+            <p className="text-2xl font-light text-primary">{blockedCount}</p>
           </div>
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Finished</p>
-            <p className="text-xl font-semibold">{finishedCount}</p>
+            <p className="text-2xl font-light text-primary">{finishedCount}</p>
           </div>
         </section>
 
         {taskIdFilter ? (
-          <section className="rounded-xl border p-4 space-y-2">
-            <h2 className="text-lg font-semibold">Selected Work Card</h2>
+          <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">
+            <h2 className="text-xl font-medium">Selected Work Card</h2>
             <p className="text-sm text-muted-foreground">{selectedSummary}</p>
           </section>
         ) : null}

@@ -132,47 +132,14 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
   const filteredRegistry = specFilter ? registry.filter((s) => s.spec_id === specFilter) : registry;
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
-        </Link>
-        <Link href="/contribute" className="text-muted-foreground hover:text-foreground">
-          Contribute
-        </Link>
-        <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
-          Ideas
-        </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
-        </Link>
-        <Link href="/flow" className="text-muted-foreground hover:text-foreground">
-          Flow
-        </Link>
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
-          Contributors
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          Contributions
-        </Link>
-        <Link href="/assets" className="text-muted-foreground hover:text-foreground">
-          Assets
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
-        </Link>
-        <Link href="/gates" className="text-muted-foreground hover:text-foreground">
-          Gates
-        </Link>
-      </div>
-
-      <h1 className="text-2xl font-bold">Specs</h1>
-      <p className="text-muted-foreground">
-        Feature plans with direct links to idea context, delivery workflow, and implementation proof.
-      </p>
+    <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto space-y-6">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
+        <p className="text-sm text-muted-foreground">Specs</p>
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight">Feature Specifications</h1>
+        <p className="max-w-3xl text-muted-foreground">
+          Feature plans with direct links to idea context, delivery workflow, and implementation proof.
+        </p>
+      </section>
       {specFilter ? (
         <p className="text-sm text-muted-foreground">
           Spec filter active |{" "}
@@ -182,9 +149,9 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
         </p>
       ) : null}
 
-      <section className="rounded border p-4 space-y-3">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
         <p className="text-sm text-muted-foreground">
-          Total discovered specs: {filteredSpecs.length} | data source: {humanizeSource(source)}
+          {filteredSpecs.length} discovered specs from {humanizeSource(source)}
         </p>
         <ul className="space-y-2 text-sm">
           {filteredSpecs.map((s) => {
@@ -192,7 +159,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
             const ideaIds = relations ? [...relations.ideaIds].sort() : [];
             const contributorIds = relations ? [...relations.contributorIds].sort() : [];
             return (
-              <li key={s.spec_id} className="rounded border p-3 space-y-1">
+              <li key={s.spec_id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
                 <div className="flex justify-between gap-3">
                   <Link
                     href={`/specs/${encodeURIComponent(s.spec_id)}`}
@@ -262,20 +229,20 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
               </li>
             );
           })}
-          {filteredSpecs.length === 0 && <li className="text-muted-foreground">No discovered specs match current filter.</li>}
+          {filteredSpecs.length === 0 && <li className="text-muted-foreground">No data available yet. Once the API is running, results will appear here.</li>}
         </ul>
       </section>
 
-      <section className="rounded border p-4 space-y-3">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
         <p className="text-sm text-muted-foreground">
-          Team-authored specs: {filteredRegistry.length} | create/update via{" "}
+          {filteredRegistry.length} team-authored specs | create or update via{" "}
           <Link href="/contribute" className="underline hover:text-foreground">
             Contribution Console
           </Link>
         </p>
         <ul className="space-y-2 text-sm">
           {filteredRegistry.map((s) => (
-            <li key={s.spec_id} className="rounded border p-3 space-y-1">
+            <li key={s.spec_id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
               <div className="flex justify-between gap-3">
                 <Link
                   href={`/specs/${encodeURIComponent(s.spec_id)}`}
@@ -351,7 +318,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
             </li>
           ))}
           {filteredRegistry.length === 0 && (
-            <li className="text-muted-foreground">No contributor-authored specs match current filter.</li>
+            <li className="text-muted-foreground">No data available yet. Once the API is running, results will appear here.</li>
           )}
         </ul>
       </section>

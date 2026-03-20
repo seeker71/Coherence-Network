@@ -26,6 +26,7 @@ from app.services import (
     telemetry_persistence_service,
 )
 from app.services import runtime_event_store
+from app.services import agent_service_store
 
 
 def test_configured_status_openai_codex_accepts_oauth_session(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
@@ -2046,7 +2047,6 @@ async def test_provider_validation_contract_blocks_without_execution_events(
         assert by_provider["claude"]["validated_execution"] is True
 
 
-@pytest.mark.skip(reason="runtime store isolation: probe events may not be visible when DB enabled in suite")
 @pytest.mark.asyncio
 async def test_provider_validation_run_creates_execution_evidence_and_passes_contract(
     tmp_path,
@@ -2055,6 +2055,8 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("RUNTIME_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setattr(runtime_event_store, "enabled", lambda: False)
 
     required = ["coherence-internal", "openai-codex", "codex", "github", "railway", "claude"]
@@ -2330,13 +2332,14 @@ async def test_provider_auto_heal_run_endpoint_passes_query_arguments(
     }
 
 
-@pytest.mark.skip(reason="daily_system_summary host_failure_observability backfill depends on runtime/friction store isolation")
 def test_daily_summary_backfills_missing_host_failure_observability(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("FRICTION_USE_DB", "0")
+    monkeypatch.delenv("RUNTIME_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
@@ -2344,6 +2347,10 @@ def test_daily_summary_backfills_missing_host_failure_observability(
     agent_service._store_loaded = True
     agent_service._store_loaded_path = str(agent_service._store_path())
     agent_service._store_loaded_test_context = os.getenv("PYTEST_CURRENT_TEST")
+    # Also set on the canonical store module so _ensure_store_loaded() sees it
+    agent_service_store._store_loaded = True
+    agent_service_store._store_loaded_path = agent_service._store_loaded_path
+    agent_service_store._store_loaded_test_context = agent_service._store_loaded_test_context
     now = agent_service._now()
     agent_service._store["task_gap_host_1"] = {
         "id": "task_gap_host_1",
@@ -2659,7 +2666,6 @@ async def test_daily_summary_endpoint_passes_query_arguments(
     assert captured == {"window_hours": 12, "top_n": 5, "force_refresh": True}
 
 
-@pytest.mark.skip(reason="runtime event store isolation: POST events may not be visible to GET report when DB enabled")
 @pytest.mark.asyncio
 async def test_provider_validation_infers_codex_and_openai_codex_from_runtime_event_metadata(
     tmp_path,
@@ -2668,6 +2674,9 @@ async def test_provider_validation_infers_codex_and_openai_codex_from_runtime_ev
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("RUNTIME_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(runtime_event_store, "enabled", lambda: False)
 
     required = ["openai-codex", "codex"]
     monkeypatch.setattr(
@@ -2734,7 +2743,6 @@ async def test_provider_validation_infers_codex_and_openai_codex_from_runtime_ev
         assert rows["codex"]["validated_execution"] is True
 
 
-@pytest.mark.skip(reason="runtime event store isolation: POST events may not be visible to GET report when DB enabled")
 @pytest.mark.asyncio
 async def test_provider_validation_infers_codex_executor_from_runtime_event_metadata(
     tmp_path,
@@ -2743,6 +2751,9 @@ async def test_provider_validation_infers_codex_executor_from_runtime_event_meta
     monkeypatch.setenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", str(tmp_path / "automation_usage.json"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+    monkeypatch.delenv("RUNTIME_DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.setattr(runtime_event_store, "enabled", lambda: False)
 
     required = ["openai-codex", "codex"]
     monkeypatch.setattr(

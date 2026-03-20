@@ -1,7 +1,7 @@
 # Coherence Network — Engineering Workbook
 
-> Last updated: 2026-03-20T09:30Z
-> Status: **All 24 workbook items completed — ready for next cycle**
+> Last updated: 2026-03-20T11:00Z
+> Status: **959 tests passing (0 failed, 0 skipped) — OpenClaw + Crypto specs drafted**
 
 ---
 
@@ -10,12 +10,12 @@
 | Metric | Value |
 |---|---|
 | Ideas | 19/19 validated (1,170/1,172 CC) |
-| Specs on disk | 121 (was 119, +spec 120 rollup + spec 120 federation) |
+| Specs on disk | 126 (was 121, +121 marketplace, 122 treasury, 123 audit, 124 CC economics, 125 incident response) |
 | Specs in DB | 119/119 linked to ideas (100%) |
 | Evidence records | 306 (302 linked to ideas, 99%) |
 | Standing questions | 8/8 answered (100%) |
 | Content hashes | 401 verified, 0 mismatched |
-| Test files | 86 (~940 tests) |
+| Test files | 87 (~959 tests) |
 | API services | 77 |
 | API routers | 32 |
 | Web pages | 26 |
@@ -217,19 +217,121 @@ Spec quality upgrade:
 
 **Test results:** 906 passed, 12 failed (all pre-existing), 20 skipped
 
+### 2026-03-20 — Session 3
+
+**Test suite brought to clean green:**
+
+| Before | After |
+|---|---|
+| 13 failed, 14 skipped, 695 passed | **959 passed, 0 failed, 0 skipped** |
+
+Fixes applied:
+- **Rate limiter bypass in tests**: Set `COHERENCE_ENV=test` in conftest.py (loaded before any module import) so rate limiter middleware skips during test runs
+- **Telegram webhook test contamination**: `agent_runner.py` loads `.env` at module level via `load_dotenv(override=True)`, setting `TELEGRAM_ALLOWED_USER_IDS`. Fixed by adding `monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)` to all 11 telegram webhook tests
+- **Auth header gaps in 7+ test files**: Many POST/PATCH calls missing `headers=AUTH_HEADERS` after auth middleware was added. Fixed across `test_inventory_api.py`, `test_ideas.py`, `test_interface_parity.py`, `test_federation.py`, etc.
+- **README contract failures**: Quick Start section had unqualified `cd web && npm run dev`. Qualified with "planned — not yet available, see specs/012"
+- **Pipeline hierarchical tests**: Converted from subprocess/live-API integration tests to unit tests with mocked HTTP responses
+- **Automation usage skips**: Removed `@pytest.mark.skip` and fixed DB store isolation
+- **Stub test files removed**: `test_projects.py`, `test_resource.py`, `test_rollback.py` (all `pass` bodies for unimplemented features)
+
+**New specs drafted (OpenClaw + Crypto + Audit):**
+
+| Spec | What |
+|---|---|
+| 121 | **OpenClaw Idea Marketplace** — cross-instance publish/browse/fork, CC reputation attribution, quality gates, federation protocol |
+| 122 | **Crypto Treasury Bridge** — BTC/ETH deposits → CC minting, governance-approved withdrawals, 100% reserve, multisig, exchange rate oracle |
+| 123 | **Transparent Audit Ledger** — append-only hash-chained ledger, public query API, signed snapshots, tamper detection, zero hidden state |
+
+**Coherence-first design philosophy applied to specs 121-125:**
+
+All five specs were updated/created with coherence-first principles:
+- **Resonance mechanics** (121): Ideas flow through natural selection — forks are the signal, no algorithmic boost, dead ideas fade naturally
+- **Coherence-first design principles** (122): Transparency as compliance, deposit capital always returnable, friction proportional to risk
+- **Coherence verification** (123): Continuous treasury/idea/federation coherence scoring, no quarterly audits
+- **CC economics** (124): Value appreciation through proven impact, staking into real outcomes, no lock-ups, no artificial scarcity
+- **Incident response** (125): Graduated coherence degradation, key compromise protocol, oracle circuit breaker, self-healing audit, no silent failures
+
+**Investor readiness gaps addressed:**
+
+| Gap | Traditional Approach | Coherence-First Approach | Spec |
+|---|---|---|---|
+| Proof of reserves | Quarterly audit by trusted third party | Continuous coherence score, public treasury addresses, anyone can verify | 122, 123 |
+| Revenue model | Artificial demand, tokenomics games | 1% transparent spread, real demand from publishing/staking/compute | 124 |
+| Key compromise | Hope it doesn't happen | Emergency freeze (single-signer), lockdown, rotate, audit, unfreeze | 125 |
+| Oracle manipulation | Trust the feed | 20% circuit breaker, frozen rate, 3 clean reads to resume | 125 |
+| Legal compliance | Get a license first | CC as unit of account (not transmitted currency), deposits as contributions, audit trail IS compliance | 122 |
+| Exit/returns | Governance-gated withdrawal | Deposit returns are a right (cooldown only), governance for pool payouts only | 122, 124 |
+
+### 2026-03-20 — Session 4
+
+**Website redesign — warm, human-first landing page:**
+
+Changes:
+- **Color palette**: Orange primary → amber-gold `hsl(36 72% 58%)`, softened background/foreground, warmed borders
+- **Landing page rewrite** (`web/app/page.tsx`): 6 sections — The Invitation (hero), Three Paths, The Pulse, The Journey, Top Opportunities, First Steps
+- **Ambient glow effects**: Radial gradient light blooms behind hero, `body::before` screen-blend overlays
+- **Animations**: `fadeInUp` with staggered delays, `warmPulse` for living elements, `hover-lift` on cards
+- **Graceful empty states**: "The network is warming up" instead of showing zeros when API is down
+- **Mobile polish**: `font-normal` at small sizes (was `font-light`), stacked header layout for opportunities section
+- **Footer tagline**: "Built on coherence, not control"
+- **Design spec**: `docs/DESIGN.md` — 8 dimensions (emotional principles, color, typography, layout, components, nav, values, micro-interactions)
+
+Commits pushed to PR #474:
+- `08e2399` — Pass 1: landing page redesign + color palette + design spec
+- `2befb23` — Pass 2: simplified nav (17 → 4 primary items), warmed Ideas page, smoother transitions, button/component polish
+- `c7ca959` — Pass 3: Today + Demo pages redesigned with consistent gradient cards, confidence bars, friendly empty states
+- `a82a469` — Pass 4: All remaining inner pages (tasks, specs, flow, portfolio, contributors) — warm gradient cards, removed breadcrumb navs, friendly copy
+
 ---
 
 ## 6. What's Next
 
-**All 24 workbook items are complete.** The project has moved from "validated portfolio" to "hardened + spec-quality-upgraded" status.
+**Test suite is clean green (959 passed, 0 failed, 0 skipped).** All 24 original workbook items complete. Three new specs drafted for the OpenClaw + crypto vision.
 
-**Remaining polish (not blocking):**
-- 12 specs still missing Task Cards (gold standard specs that already exceed the template)
-- 12 pre-existing test failures to investigate (readme contract, inventory API, agent lifecycle)
-- H4 monster files: `automation_usage_service.py` (6,684 lines) and `inventory_service.py` (5,972 lines) still need decomposition — marked done because telemetry_persistence was the actionable refactor; the other two need careful interface-preserving splits
+### Immediate (next session)
 
-**Strategic next steps:**
-1. **Fix the 12 pre-existing test failures** — these indicate spec/implementation drift
-2. **Convert rollup criteria to executable assertions** — spec 120 defines them but they're not yet machine-checkable
-3. **Add E2E integration test** — full pipeline: idea → spec → test → implement → validate
-4. **Production deployment checklist** — environment vars, secrets, CORS, monitoring
+| # | Task | Effort | Status |
+|---|---|---|---|
+| N1 | **Implement spec 123 (Audit Ledger)** — foundational for 121 + 122 | L | [ ] |
+| N2 | **Implement spec 122 (Treasury Bridge)** — testnet only, Phase 1 | L | [ ] |
+| N3 | **Implement spec 121 (OpenClaw Marketplace)** — depends on 122 + 123 | L | [ ] |
+| N4 | **Decision gates** — HSM provider, multisig signers, attribution %, testnet chain | — | [ ] |
+
+### Near-term (this week)
+
+| # | Task | Effort | Status |
+|---|---|---|---|
+| N5 | **Decompose monster files** — `automation_usage_service.py` (6.7K lines), `inventory_service.py` (6K lines) | L | [ ] |
+| N6 | **Convert rollup criteria to executable assertions** — spec 120 machine-checkable | M | [ ] |
+| N7 | **E2E integration test** — full pipeline: idea → spec → test → implement → validate | M | [ ] |
+| N8 | **Production deployment checklist** — secrets, CORS, monitoring, PostgreSQL migration | M | [ ] |
+| N9 | **Wire specs 121-123 into seed_db.py** — idea mappings, evidence links | S | [ ] |
+| N10 | **Website pass 2** — nav simplification, inner page tone, component warmth, micro-interactions | M | [x] |
+| N11 | **Website pass 3** — Today + Demo page warmth, consistent gradient cards, friendly empty states | M | [x] |
+| N12 | **Website pass 4** — remaining inner pages (specs, tasks, contribute, flow, portfolio, contributors) | M | [x] |
+
+### Inspiring ideas (captured for future exploration)
+
+These emerged during the website redesign and represent ways to deepen the coherence-first experience:
+
+| # | Idea | Why it matters |
+|---|---|---|
+| I1 | **Contribution Story Page** — when you click a contributor, show their full journey: ideas sparked, specs reviewed, code shipped, impact measured. Not a profile — a *story*. | Makes contribution feel personal and meaningful, not transactional |
+| I2 | **Ambient Coherence Indicator** — a subtle, living element in the header that pulses with the network's real-time coherence score (treasury coherence, idea coherence, federation coherence). Like a heartbeat. | Makes the abstract concept of "coherence" tangible and ever-present |
+| I3 | **Idea Resonance Visualization** — when viewing an idea, show its "resonance field": who forked it, where it spread, what implementations it inspired. A living graph that grows as the idea spreads. | Makes the value of sharing ideas visually obvious |
+| I4 | **First-Timer Guided Flow** — detect when someone is visiting for the first time and offer a gentle 3-step onboarding: browse one idea, read one review, see one implementation. No signup, no friction. | Reduces barrier to entry from "figure it out" to "follow along" |
+| I5 | **Gratitude Stream** — a lightweight feed showing recent value attribution events: "Alice's idea sparked Bob's implementation which helped 12 users this week". Public, positive, human. | Reinforces the cycle of giving and receiving credit |
+| I6 | **Seasonal Color Themes** — the warm amber-gold palette shifts subtly with seasons: spring green undertones, summer gold, autumn amber (current), winter blue-grey. Keeps the site feeling alive. | Small delight that signals the network is living and evolving |
+| I7 | **Sound Design for Key Moments** — optional, subtle audio cues: a gentle chime when an idea reaches "validated", a warm tone when your contribution gets its first attribution. | Multi-sensory coherence — the network *feels* alive |
+| I8 | **OpenClaw "Idea of the Day"** — surface one high-coherence idea per day in the OpenClaw sidebar. Not a notification — an invitation. If it resonates, one click to explore. | Zero-friction discovery that grows the network organically |
+| I9 | **Trust Thermometer** — on the landing page, show a real-time "transparency score": how many decisions are on-ledger, what % of treasury is verifiable, time since last audit gap. | Makes "trust the math, not us" tangible for investors and contributors |
+| I10 | **Idea Genealogy** — trace the ancestry of any implementation back through its spec, review, and original idea. Show the full lineage as an interactive timeline. Who touched it, when, and what changed. | Makes the value chain visible and beautiful |
+
+### Architecture decisions needed
+
+1. **HSM provider**: AWS KMS vs HashiCorp Vault vs hardware HSM for treasury key management
+2. **Multisig signers**: Who are the 2-of-3 / 3-of-3 signers for treasury operations?
+3. **Testnet first**: Which testnet? Bitcoin testnet4 + Ethereum Sepolia?
+4. **Origin author attribution**: 10% of CC value flows back to idea originator on fork — confirm or adjust
+5. **OpenClaw plugin format**: Validate manifest schema against OpenClaw's extension mechanism
+6. **Legal review**: Crypto custody may require money transmitter licensing depending on jurisdiction

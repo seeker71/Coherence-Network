@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
 import {
   buildRuntimeSummarySearchParams,
@@ -71,69 +70,31 @@ type OpportunityIdea = IdeaWithScore & {
   estimated_collective_upside: number;
 };
 
-const LANDING_PATHS: Array<{
-  title: string;
-  description: string;
-  links: Array<{ href: string; label: string }>;
-}> = [
+const THREE_PATHS = [
   {
-    title: "Start Exploring",
-    description: "Understand where value and uncertainty are concentrated before picking work.",
-    links: [
-      { href: "/today", label: "Today's priorities" },
-      { href: "/demo", label: "MVP demo path" },
-      { href: "/ideas", label: "High-upside ideas" },
-      { href: "/search", label: "Project search" },
-      { href: "/flow", label: "System flow map" },
-    ],
+    title: "Share an Insight",
+    description:
+      "You noticed something. A pattern, a gap, a better way. Publish it \u2014 even a two-sentence idea can spark something real.",
+    href: "/ideas",
+    label: "Share an idea",
   },
   {
-    title: "Contribute With Context",
-    description: "Use one guided contribution chain so each change maps to measurable system value.",
-    links: [
-      { href: "/contribute", label: "Contribution console" },
-      { href: "/portfolio", label: "Portfolio governance" },
-      { href: "/tasks", label: "Execution tasks" },
-    ],
+    title: "Build Something Real",
+    description:
+      "Pick up an idea someone shared. Spec it, test it, ship it. Your work stays connected to the insight that inspired it.",
+    href: "/tasks",
+    label: "Find work",
   },
   {
-    title: "Operate Reliably",
-    description: "Monitor runtime, automation, and deployment gates without hunting across pages.",
-    links: [
-      { href: "/usage", label: "Runtime usage" },
-      { href: "/automation", label: "Automation readiness" },
-      { href: "/gates", label: "Gate status" },
-    ],
+    title: "Back What Matters",
+    description:
+      "Stake your belief in ideas that resonate. When they create real value, the credit traces back to everyone involved.",
+    href: "/contribute",
+    label: "Contribute",
   },
 ];
 
-const ADVANCED_SURFACES: Array<{ href: string; label: string }> = [
-  { href: "/specs", label: "Specs" },
-  { href: "/friction", label: "Friction" },
-  { href: "/contributors", label: "Contributors" },
-  { href: "/contributions", label: "Contributions" },
-  { href: "/assets", label: "Assets" },
-  { href: "/agent", label: "Agent" },
-  { href: "/api-coverage", label: "API Coverage" },
-  { href: "/import", label: "Import" },
-  { href: "/api-health", label: "API Health" },
-  { href: "/remote-ops", label: "Remote Ops" },
-];
-
-const WELCOME_SIGNALS: Array<{ label: string; value: string }> = [
-  {
-    label: "Always visible",
-    value: "Home and the core actions to explore, collaborate, and ship",
-  },
-  {
-    label: "In menus",
-    value: "Specialized pages for deeper operational and governance work",
-  },
-  {
-    label: "For deep work",
-    value: "Context links stay nearby without crowding the page",
-  },
-];
+const FLOW_STEPS = ["Idea", "Review", "Spec", "Build", "Ship", "Impact"];
 
 export const revalidate = 90;
 
@@ -194,242 +155,230 @@ export default async function Home() {
     .sort((a, b) => b.estimated_collective_upside - a.estimated_collective_upside)
     .slice(0, 5);
 
-  const topAchievements = (inventoryData?.implementation_usage?.lineage_links ?? [])
-    .filter((row) => row.valuation && row.valuation.event_count > 0)
-    .sort((a, b) => {
-      const aValue = (a.valuation?.measured_value_total ?? 0) + (a.valuation?.roi_ratio ?? 0);
-      const bValue = (b.valuation?.measured_value_total ?? 0) + (b.valuation?.roi_ratio ?? 0);
-      return bValue - aValue;
-    })
-    .slice(0, 5);
-
-  const topRuntimeActivity = (runtimeData?.ideas ?? [])
-    .sort((a, b) => b.event_count - a.event_count)
-    .slice(0, 5);
+  // Retained for future use (achievements section planned for later pass)
+  void inventoryData;
+  void runtimeData;
 
   const summary = ideasData?.summary;
 
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] px-4 md:px-8 py-10">
-      <section className="mx-auto max-w-6xl grid gap-8">
-        <section className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-background to-accent/20 p-6 md:p-10">
-          <div className="absolute -right-12 -top-14 h-44 w-44 rounded-full bg-primary/20 blur-3xl" />
-          <div className="absolute -left-8 bottom-0 h-36 w-36 rounded-full bg-chart-2/20 blur-3xl" />
+    <main className="min-h-[calc(100vh-3.5rem)]">
+      {/* Section 1: THE INVITATION */}
+      <section className="min-h-[80vh] flex flex-col justify-center items-center text-center px-4 py-20 relative">
+        {/* Soft ambient glow */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-primary/10 blur-[120px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-chart-2/8 blur-[100px]" />
+        </div>
 
-          <div className="relative grid gap-5">
-            <p className="text-sm text-muted-foreground">Collaborative open source workspace</p>
-            <h1 className="text-3xl md:text-5xl font-semibold leading-tight tracking-tight max-w-4xl">
-              Find meaningful work, build together, and see real impact.
-            </h1>
-            <p className="max-w-3xl text-muted-foreground">
-              Coherence Network helps people discover where help is needed, connect work across teams, and follow each
-              contribution from intention to outcome.
-            </p>
-
-            <div className="flex flex-wrap gap-3 pt-1">
-              <Button asChild>
-                <Link href="/contribute">Join the Workspace</Link>
-              </Button>
-              <Button asChild variant="secondary">
-                <Link href="/demo">Run MVP Demo</Link>
-              </Button>
-              <Button asChild variant="secondary">
-                <Link href="/ideas">Explore Opportunities</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <a href={`${getApiBase()}/docs`} target="_blank" rel="noopener noreferrer">
-                  Developer Docs
-                </a>
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-sm">
-              <div className="rounded-lg border bg-background/80 p-3">
-                <p className="text-muted-foreground">Ideas tracked</p>
-                <p className="text-xl font-semibold">{formatNumber(summary?.total_ideas)}</p>
-              </div>
-              <div className="rounded-lg border bg-background/80 p-3">
-                <p className="text-muted-foreground">Estimated total potential value</p>
-                <p className="text-xl font-semibold">{formatNumber(summary?.total_potential_value)}</p>
-              </div>
-              <div className="rounded-lg border bg-background/80 p-3">
-                <p className="text-muted-foreground">Remaining value gap</p>
-                <p className="text-xl font-semibold">{formatNumber(summary?.total_value_gap)}</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <article className="rounded-xl border p-5 space-y-3">
-            <p className="text-sm text-muted-foreground">Shared Journey</p>
-            <h2 className="text-xl font-semibold">A clear path from intention to impact</h2>
-            <p className="text-sm text-muted-foreground">
-              Each contribution follows one easy story: identify a need, align on a plan, build it, then see how it helps.
-            </p>
-            <div className="flex flex-wrap gap-2 text-xs">
-              {[
-                "Idea",
-                "Spec",
-                "Process",
-                "Implementation",
-                "Runtime Usage",
-                "Value Attribution",
-              ].map((step) => (
-                <span key={step} className="rounded-full border px-2 py-1 bg-muted/40">
-                  {step}
-                </span>
-              ))}
-            </div>
-          </article>
-
-          <article className="rounded-xl border p-5 space-y-3">
-            <p className="text-sm text-muted-foreground">Getting Started</p>
-            <h2 className="text-xl font-semibold">A calm first path for new contributors</h2>
-            <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-              <li>Set up your profile and share what you like to work on.</li>
-              <li>Choose one idea where your help can create momentum.</li>
-              <li>Ship a change and keep attribution connected to the result.</li>
-            </ol>
-            <div className="flex gap-2 flex-wrap">
-              <Link href="/contribute" className="text-sm underline text-muted-foreground hover:text-foreground">
-                Open contribution console
-              </Link>
-              <Link href="/portfolio" className="text-sm underline text-muted-foreground hover:text-foreground">
-                Open portfolio
-              </Link>
-              <Link href="/tasks" className="text-sm underline text-muted-foreground hover:text-foreground">
-                Open tasks
-              </Link>
-            </div>
-          </article>
-
-          <article className="rounded-xl border bg-background/60 p-5 space-y-3">
-            <p className="text-sm text-muted-foreground">Simple By Default</p>
-            <h2 className="text-xl font-semibold">Keep the essentials visible, tuck depth into menus</h2>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              {WELCOME_SIGNALS.map((signal) => (
-                <p key={signal.label}>
-                  <span className="font-medium text-foreground">{signal.label}:</span> {signal.value}
-                </p>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <article className="rounded-xl border p-5 xl:col-span-2 space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Highest Estimated Collective Benefit</h2>
-              <Link href="/ideas" className="text-sm text-muted-foreground hover:text-foreground underline">
-                View all ideas
-              </Link>
-            </div>
-            {topOpportunityIdeas.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No idea data available right now.</p>
-            ) : (
-              <ul className="space-y-2">
-                {topOpportunityIdeas.map((idea) => (
-                  <li key={idea.id} className="rounded-lg border p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Link href={`/ideas/${encodeURIComponent(idea.id)}`} className="font-medium hover:underline">
-                        {idea.name}
-                      </Link>
-                      <span className="text-xs rounded-full border px-2 py-1 bg-muted/40">{idea.manifestation_status}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">{idea.description}</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      upside score {idea.estimated_collective_upside.toFixed(2)} | value gap {idea.value_gap.toFixed(2)} |
-                      cost est {idea.estimated_cost.toFixed(2)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-
-          <article className="rounded-xl border p-5 space-y-3">
-            <h2 className="text-lg font-semibold">Recent Achievements</h2>
-            {topAchievements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No measured usage achievements yet.</p>
-            ) : (
-              <ul className="space-y-2 text-sm">
-                {topAchievements.map((row) => (
-                  <li key={row.lineage_id} className="rounded-lg border p-3">
-                    <p className="font-medium">{row.idea_id}</p>
-                    <p className="text-xs text-muted-foreground">spec {row.spec_id}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      value {formatNumber(row.valuation?.measured_value_total)} | ROI {formatNumber(row.valuation?.roi_ratio)} |
-                      events {formatNumber(row.valuation?.event_count)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </article>
-        </section>
-
-        <section className="rounded-xl border bg-background/60 p-5 space-y-4">
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <h2 className="text-lg font-semibold">Search Projects</h2>
-            <p className="text-sm text-muted-foreground">
-              Try <code className="rounded bg-muted px-1 py-0.5">react</code>,{" "}
-              <code className="rounded bg-muted px-1 py-0.5">fastapi</code>,{" "}
-              <code className="rounded bg-muted px-1 py-0.5">neo4j</code>
-            </p>
-          </div>
-          <form action="/search" method="GET" className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2">
-            <Input name="q" placeholder="Search projects..." autoComplete="off" className="h-11 bg-background" />
-            <Button type="submit" className="h-11">
-              Search
+        <div className="relative max-w-3xl mx-auto space-y-8 animate-fade-in-up">
+          <h1 className="text-4xl md:text-6xl lg:text-7xl font-normal md:font-light tracking-tight leading-[1.1]">
+            Ideas deserve to<br />
+            <span className="text-primary">become real</span>
+          </h1>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Share what you see. Build what matters. Every contribution traced
+            from thought to impact — openly, fairly, together.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+            <Button asChild className="rounded-full px-8 py-3 text-base">
+              <Link href="/ideas">Start Exploring</Link>
             </Button>
-          </form>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 text-sm">
-            {topRuntimeActivity.map((row) => (
-              <div key={row.idea_id} className="rounded border p-2">
-                <p className="font-medium">{row.idea_id}</p>
-                <p className="text-xs text-muted-foreground">
-                  24h events {formatNumber(row.event_count)} | avg runtime {formatNumber(row.average_runtime_ms)}ms
-                </p>
-              </div>
-            ))}
-            {topRuntimeActivity.length === 0 && (
-              <p className="text-sm text-muted-foreground">No runtime activity captured in the last 24 hours.</p>
-            )}
+            <Link
+              href="/demo"
+              className="text-muted-foreground hover:text-foreground transition-colors duration-300 underline underline-offset-4 py-3"
+            >
+              See how it works
+            </Link>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {LANDING_PATHS.map((path) => (
-            <article key={path.title} className="rounded-lg border bg-background/60 p-4 space-y-3">
-              <h3 className="font-semibold">{path.title}</h3>
-              <p className="text-sm text-muted-foreground">{path.description}</p>
-              <div className="flex flex-wrap gap-2">
-                {path.links.map((link) => (
-                  <Link key={link.href} href={link.href} className="rounded border px-2 py-1 text-sm hover:bg-accent">
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
+      {/* Section 2: THREE PATHS */}
+      <section className="px-4 md:px-8 py-16 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up delay-100">
+          {THREE_PATHS.map((path) => (
+            <article
+              key={path.title}
+              className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 space-y-4"
+            >
+              <h3 className="text-xl font-medium">{path.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {path.description}
+              </p>
+              <Link
+                href={path.href}
+                className="inline-block text-sm text-primary hover:text-foreground transition-colors duration-300"
+              >
+                {path.label} &rarr;
+              </Link>
             </article>
           ))}
-        </section>
-
-        <section className="rounded-xl border bg-background/60 p-4">
-          <details>
-            <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">
-              Advanced surfaces (show all)
-            </summary>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {ADVANCED_SURFACES.map((item) => (
-                <Link key={item.href} href={item.href} className="rounded border px-2 py-1 text-sm hover:bg-accent">
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </details>
-        </section>
+        </div>
       </section>
+
+      {/* Section 3: THE PULSE */}
+      <section className="px-4 md:px-8 py-16 max-w-6xl mx-auto animate-fade-in-up delay-200">
+        <h2 className="text-2xl md:text-3xl font-light text-center mb-10">
+          What&apos;s Happening Now
+        </h2>
+        {summary ? (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-2">
+              <p className="text-3xl md:text-4xl font-light text-primary">
+                {formatNumber(summary.total_ideas)}
+              </p>
+              <p className="text-sm text-muted-foreground">Ideas being explored</p>
+            </div>
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-2">
+              <p className="text-3xl md:text-4xl font-light text-primary">
+                {formatNumber(summary.total_potential_value)}
+              </p>
+              <p className="text-sm text-muted-foreground">Value created together</p>
+            </div>
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-2">
+              <p className="text-3xl md:text-4xl font-light text-primary">
+                {formatNumber(summary.total_value_gap)}
+              </p>
+              <p className="text-sm text-muted-foreground">Remaining opportunity</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-center text-muted-foreground text-sm">
+            The network is warming up. Live metrics appear once the API is connected.
+          </p>
+        )}
+      </section>
+
+      {/* Section 4: THE FLOW */}
+      <section className="px-4 md:px-8 py-16 max-w-4xl mx-auto animate-fade-in-up delay-300">
+        <h2 className="text-2xl md:text-3xl font-light text-center mb-10">
+          The Journey
+        </h2>
+        <div className="flex items-center justify-between relative">
+          {/* Connecting line */}
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-border/60 -translate-y-1/2" />
+          {FLOW_STEPS.map((step, i) => (
+            <div key={step} className="relative flex flex-col items-center gap-2 z-10">
+              <div
+                className={`w-10 h-10 md:w-12 md:h-12 rounded-full border-2 flex items-center justify-center text-xs md:text-sm font-medium ${
+                  i === 0 || i === FLOW_STEPS.length - 1
+                    ? "border-primary bg-primary/20 text-primary"
+                    : "border-border bg-background text-muted-foreground"
+                }`}
+              >
+                {i + 1}
+              </div>
+              <span className="text-xs text-muted-foreground">{step}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Section 5: TOP OPPORTUNITIES */}
+      <section className="px-4 md:px-8 py-16 max-w-6xl mx-auto animate-fade-in-up delay-300">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-8">
+          <h2 className="text-2xl md:text-3xl font-light">
+            Where Help Creates the Most Value
+          </h2>
+          <Link
+            href="/ideas"
+            className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 transition-colors duration-300 shrink-0"
+          >
+            View all ideas
+          </Link>
+        </div>
+        {topOpportunityIdeas.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No ideas loaded yet. Once the API is running, the highest-value opportunities will appear here.
+          </p>
+        ) : (
+          <div className="grid gap-4">
+            {topOpportunityIdeas.map((idea) => (
+              <article
+                key={idea.id}
+                className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 md:p-8"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <Link
+                    href={`/ideas/${encodeURIComponent(idea.id)}`}
+                    className="text-lg font-medium hover:text-primary transition-colors duration-300"
+                  >
+                    {idea.name}
+                  </Link>
+                  <span className="text-xs rounded-full border border-border/40 px-3 py-1 bg-muted/30 text-muted-foreground">
+                    {idea.manifestation_status}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                  {idea.description}
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary/60"
+                      style={{ width: `${Math.min(idea.confidence * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {(idea.confidence * 100).toFixed(0)}% confidence
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Section 6: FIRST STEPS */}
+      <section className="px-4 md:px-8 py-20 max-w-3xl mx-auto text-center animate-fade-in-up delay-400">
+        <p className="text-xl md:text-2xl font-light text-muted-foreground mb-12 leading-relaxed">
+          You don&apos;t need to know everything.<br />
+          Start wherever feels right.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-left">
+          <div className="space-y-2">
+            <Link
+              href="/ideas"
+              className="text-base font-medium hover:text-primary transition-colors duration-300"
+            >
+              Browse ideas
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              Curious? See what people are working on.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Link
+              href="/demo"
+              className="text-base font-medium hover:text-primary transition-colors duration-300"
+            >
+              Watch the demo
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              Want to understand the flow? It takes 5 minutes.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Link
+              href="/contribute"
+              className="text-base font-medium hover:text-primary transition-colors duration-300"
+            >
+              Share your first insight
+            </Link>
+            <p className="text-sm text-muted-foreground">
+              Ready to contribute? No setup needed.
+            </p>
+          </div>
+        </div>
+      </section>
+      {/* Footer note */}
+      <footer className="px-4 md:px-8 py-12 max-w-3xl mx-auto text-center border-t border-border/20">
+        <p className="text-xs text-muted-foreground/70 leading-relaxed">
+          Built on coherence, not control. Every contribution is traced, every
+          decision is visible, and the math always checks out.
+        </p>
+      </footer>
     </main>
   );
 }

@@ -168,36 +168,35 @@ export default async function DemoMvpPage() {
   const questionCount = demoIdea?.open_questions.length ?? 0;
 
   return (
-    <main className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-6xl space-y-6">
-        <section className="rounded-2xl border border-border/70 bg-card/60 p-5 sm:p-8 space-y-4">
+    <main className="min-h-screen px-4 md:px-8 py-10 max-w-6xl mx-auto space-y-8">
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-8 space-y-4">
           <p className="text-sm text-muted-foreground">Guided walkthrough</p>
-          <h1 className="text-3xl font-semibold tracking-tight">See one real-world idea move through the MVP</h1>
+          <h1 className="text-3xl md:text-4xl font-light tracking-tight">See one real-world idea move through the MVP</h1>
           <p className="max-w-3xl text-muted-foreground">
             This example is not a software feature. It is a community project that needs a clear goal, a small next
             step, and visible proof that progress is real.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Link href={ideaHref} className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+            <Link href={ideaHref} className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
               Open sample idea
             </Link>
-            <Link href="/today" className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+            <Link href="/today" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
               Open today view
             </Link>
-            <Link href={taskHref} className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+            <Link href={taskHref} className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
               Open work board
             </Link>
-            <Link href={progressHref} className="rounded border px-3 py-1.5 text-sm hover:bg-accent">
+            <Link href={progressHref} className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
               Open progress
             </Link>
           </div>
         </section>
 
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.1fr,0.9fr]">
-          <article className="rounded-2xl border border-border/70 bg-card/55 p-5 space-y-4">
+          <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Sample story</p>
-              <h2 className="text-2xl font-semibold tracking-tight">
+              <h2 className="text-xl font-medium">
                 {demoIdea?.name || "Sample idea unavailable right now"}
               </h2>
               <p className="text-muted-foreground">
@@ -206,21 +205,21 @@ export default async function DemoMvpPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div className="rounded-xl border border-border/70 bg-background/35 p-3">
+              <div className="rounded-xl border border-border/20 bg-background/40 p-3">
                 <p className="text-muted-foreground">How sure we are today</p>
                 <p className="mt-1 text-lg font-semibold">{demoIdea ? formatConfidence(demoIdea.confidence) : "-"}</p>
               </div>
-              <div className="rounded-xl border border-border/70 bg-background/35 p-3">
+              <div className="rounded-xl border border-border/20 bg-background/40 p-3">
                 <p className="text-muted-foreground">Proof today</p>
                 <p className="mt-1 text-lg font-semibold">
                   {demoIdea ? humanizeManifestationStatus(demoIdea.manifestation_status) : "Not visible yet"}
                 </p>
               </div>
-              <div className="rounded-xl border border-border/70 bg-background/35 p-3">
+              <div className="rounded-xl border border-border/20 bg-background/40 p-3">
                 <p className="text-muted-foreground">Questions still open</p>
                 <p className="mt-1 text-lg font-semibold">{formatCount(questionCount)}</p>
               </div>
-              <div className="rounded-xl border border-border/70 bg-background/35 p-3">
+              <div className="rounded-xl border border-border/20 bg-background/40 p-3">
                 <p className="text-muted-foreground">Best next move</p>
                 <p className="mt-1 text-sm font-medium">{nextMove(demoFlow)}</p>
               </div>
@@ -231,7 +230,7 @@ export default async function DemoMvpPage() {
                 <p className="font-medium">Questions people still need answered</p>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   {demoIdea.open_questions.slice(0, 3).map((question) => (
-                    <li key={question.question} className="rounded-xl border border-border/70 bg-background/35 p-3">
+                    <li key={question.question} className="rounded-xl border border-border/20 bg-background/40 p-3">
                       {question.question}
                     </li>
                   ))}
@@ -240,10 +239,10 @@ export default async function DemoMvpPage() {
             ) : null}
           </article>
 
-          <article className="rounded-2xl border border-border/70 bg-card/55 p-5 space-y-4">
+          <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Follow the path</p>
-              <h2 className="text-2xl font-semibold tracking-tight">What to click, in order</h2>
+              <h2 className="text-xl font-medium">What to click, in order</h2>
               <p className="text-muted-foreground">
                 A first-time viewer should understand the project, the next step, and the proof trail without learning internal terms.
               </p>
@@ -253,11 +252,11 @@ export default async function DemoMvpPage() {
               {STEPS.map((step, index) => {
                 const href = index === 0 || index === 1 ? ideaHref : index === 2 ? taskHref : progressHref;
                 return (
-                  <div key={step.title} className="rounded-xl border border-border/70 bg-background/35 p-4 space-y-2">
+                  <div key={step.title} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
                     <p className="text-sm text-muted-foreground">Step {index + 1}</p>
                     <h3 className="font-medium">{step.title}</h3>
                     <p className="text-sm text-muted-foreground">{step.summary}</p>
-                    <Link href={href} className="inline-flex rounded border px-3 py-1.5 text-sm hover:bg-accent">
+                    <Link href={href} className="inline-flex rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
                       {step.label}
                     </Link>
                   </div>
@@ -268,45 +267,44 @@ export default async function DemoMvpPage() {
         </section>
 
         <section className="grid grid-cols-2 gap-3 text-sm lg:grid-cols-4">
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
             <p className="text-muted-foreground">Story stage</p>
             <p className="mt-1 text-lg font-semibold">{storyStage(demoFlow)}</p>
           </div>
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
             <p className="text-muted-foreground">Short plans linked</p>
             <p className="mt-1 text-xl font-semibold">{formatCount(planCount)}</p>
           </div>
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
             <p className="text-muted-foreground">Work cards linked</p>
             <p className="mt-1 text-xl font-semibold">{formatCount(workCount)}</p>
           </div>
-          <div className="rounded-xl border p-3">
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
             <p className="text-muted-foreground">Visible proof items</p>
             <p className="mt-1 text-xl font-semibold">{formatCount(proofCount)}</p>
           </div>
         </section>
 
-        <section className="rounded-2xl border border-border/70 bg-card/55 p-5 space-y-4">
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-4">
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Live snapshot from this local copy</p>
-            <h2 className="text-2xl font-semibold tracking-tight">What is already moving here</h2>
+            <h2 className="text-xl font-medium">What is already moving here</h2>
           </div>
           <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-            <div className="rounded-xl border border-border/70 bg-background/35 p-3">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
               <p className="text-muted-foreground">Ideas people can explore</p>
               <p className="mt-1 text-xl font-semibold">{formatCount(ideasData?.summary?.total_ideas ?? ideas.length)}</p>
             </div>
-            <div className="rounded-xl border border-border/70 bg-background/35 p-3">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
               <p className="text-muted-foreground">Work cards moving now</p>
               <p className="mt-1 text-xl font-semibold">{formatCount(movingTaskCount)}</p>
             </div>
-            <div className="rounded-xl border border-border/70 bg-background/35 p-3">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
               <p className="text-muted-foreground">Stories with plan and work visible</p>
               <p className="mt-1 text-xl font-semibold">{formatCount(visibleStories)}</p>
             </div>
           </div>
         </section>
-      </div>
     </main>
   );
 }
