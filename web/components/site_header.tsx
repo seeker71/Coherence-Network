@@ -43,9 +43,13 @@ export default function SiteHeader() {
         <div className="flex h-14 items-center gap-4">
           <Link
             href="/"
-            className="font-semibold tracking-tight text-foreground hover:text-primary transition-colors duration-300"
+            className="flex items-center gap-2 font-semibold tracking-tight text-foreground hover:text-primary transition-colors duration-300"
             aria-label="Coherence Network home"
           >
+            <span className="relative flex h-2.5 w-2.5" aria-hidden="true" title="Network heartbeat">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary/80" />
+            </span>
             Coherence Network
           </Link>
 
