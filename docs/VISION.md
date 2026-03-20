@@ -73,6 +73,30 @@ Infrastructure for idea-driven collaboration across domains. Research, open sour
 
 Each step is independently valuable. Each step is testable before the next begins.
 
+## The OpenClaw Integration
+
+Coherence Network doesn't ask developers to visit a website. It lives **inside OpenClaw** — the tool they're already using to write code.
+
+```
+/coherence publish "Standardize API error responses"   → capture the insight
+/coherence browse --relevant-to=current-project        → discover relevant ideas
+/coherence review idea-7f3a "Add retry-after header"   → improve an idea
+/coherence fork idea-7f3a --adapt-to=my-project        → build on someone's insight
+/coherence next                                         → find the highest-value work
+/coherence stake idea-7f3a 50                           → back an idea with CC
+```
+
+**Why this matters:**
+- Ideas are captured where they happen — in the editor, during real work, in context
+- No app to install, no website to visit, no signup flow to complete
+- Every OpenClaw instance is a federation node — the network grows with every installation
+- Browse is free (anonymous read). First publish creates your CC account inline
+- Context is automatic: project URL, tech stack, related specs, timing
+
+**The growth flywheel:** More OpenClaw users → more real ideas from real work → better discovery → more builders → more implementations → more proven value → more stakers → more funding → more users wanting access.
+
+The flywheel starts with **idea quality**, not user count. Fifty developers publishing real insights from real work beats fifty thousand users brainstorming in a web app.
+
 ## What Makes This Different
 
 Every other platform asks you to trust *them*. Trust our algorithm. Trust our governance. Trust our treasury.

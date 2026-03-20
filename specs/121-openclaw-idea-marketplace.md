@@ -21,6 +21,66 @@ Ideas flow through the marketplace based on resonance — natural selection by t
 
 5. **Cross-instance resonance** — When an idea published on instance A is forked on instance B and generates value on instance C, the attribution chain is fully traceable across all three instances via the federation protocol. The network's coherence spans instances.
 
+## OpenClaw CLI Integration
+
+Coherence Network lives inside OpenClaw — not as a separate destination, but as commands available where developers already work.
+
+### Slash Commands
+
+| Command | What It Does |
+|---|---|
+| `/coherence publish "<description>"` | Publish an idea from current project context. Auto-attaches tech stack, project URL, and author identity. |
+| `/coherence browse` | Browse marketplace ideas, sorted by evidence-backed coherence score. No algorithmic boost. |
+| `/coherence browse --relevant-to=current-project` | Filter ideas matching current project's tech stack, open specs, and pain points. |
+| `/coherence review <idea-id> "<review>"` | Add a review to an idea. Records as evidence in value lineage. |
+| `/coherence fork <idea-id>` | Fork an idea into your project. Creates local spec stub and test scaffolding. |
+| `/coherence fork <idea-id> --adapt-to=<context>` | Fork with adaptation notes for a different ecosystem/stack. |
+| `/coherence next` | Show the highest-value unbuilt idea relevant to your skills and project. |
+| `/coherence stake <idea-id> <amount>` | Stake CC into an idea you believe will create value. |
+| `/coherence status` | Your CC balance, staking positions, attribution earned, and coherence score. |
+| `/coherence lineage <idea-id>` | Trace an idea's full value chain: origin → reviews → forks → implementations → usage. |
+
+### Context Enrichment
+
+When a developer publishes an idea from OpenClaw, the system automatically captures:
+- **Project context**: repository URL, primary language, framework, dependency list
+- **Author identity**: OpenClaw user ID, linked to CC account
+- **Timing context**: what file/function the developer was working on when the insight occurred
+- **Related specs**: any open specs in the current project that relate to the idea
+
+This context makes ideas discoverable. A Python/FastAPI developer publishing an error handling insight is automatically findable by other Python/FastAPI developers browsing for relevant ideas.
+
+### Plugin Manifest
+
+OpenClaw instances discover the Coherence Network via a manifest endpoint:
+
+```
+GET /api/marketplace/manifest
+```
+
+Response:
+```json
+{
+  "name": "coherence-network",
+  "version": "1.0.0",
+  "description": "Idea marketplace with CC attribution",
+  "commands": ["publish", "browse", "review", "fork", "next", "stake", "status", "lineage"],
+  "federation_endpoint": "/api/federation/sync",
+  "auth": "cc-account-or-anonymous-read",
+  "minimum_openclaw_version": "0.9.0"
+}
+```
+
+### Every Instance Is a Node
+
+Each OpenClaw installation running the Coherence plugin is a federation node. Ideas published on any node are available to all nodes through the federation protocol (spec 120). No central server. No single point of failure. The network grows with every installation.
+
+### Anonymous Read, Authenticated Write
+
+- **Browsing** ideas requires no account (read is free, discovery is frictionless)
+- **Publishing, reviewing, forking, staking** requires a CC account (write requires identity for attribution)
+- **First publish creates account** — no separate signup flow. First `/coherence publish` prompts for CC account creation inline
+
 ## Requirements
 
 - [ ] **R1: Idea publishing** -- An authenticated OpenClaw user can publish an existing Idea to the marketplace via `POST /api/marketplace/publish`. The published listing includes the idea's id, name, description, author identity (instance + user), potential_value, estimated_cost, confidence, tags, and a content hash for integrity verification.
