@@ -4,29 +4,29 @@
 @layer base {
   :root {
     color-scheme: dark;
-    --background: 24 28% 10%;
-    --foreground: 34 36% 92%;
-    --card: 24 22% 14%;
-    --card-foreground: 34 32% 92%;
-    --popover: 24 22% 13%;
-    --popover-foreground: 34 34% 92%;
-    --primary: 24 68% 62%;
+    --background: 24 22% 11%;
+    --foreground: 38 30% 90%;
+    --card: 24 20% 14%;
+    --card-foreground: 38 28% 90%;
+    --popover: 24 20% 13%;
+    --popover-foreground: 38 28% 90%;
+    --primary: 36 72% 58%;
     --primary-foreground: 24 28% 11%;
-    --secondary: 27 23% 20%;
-    --secondary-foreground: 34 28% 90%;
-    --muted: 24 18% 18%;
-    --muted-foreground: 30 18% 72%;
-    --accent: 28 29% 24%;
-    --accent-foreground: 34 28% 91%;
+    --secondary: 27 20% 20%;
+    --secondary-foreground: 38 24% 88%;
+    --muted: 24 16% 18%;
+    --muted-foreground: 30 20% 65%;
+    --accent: 28 24% 24%;
+    --accent-foreground: 38 24% 90%;
     --destructive: 3 68% 56%;
     --destructive-foreground: 0 0% 98%;
-    --border: 28 18% 28%;
-    --input: 28 18% 28%;
-    --ring: 24 68% 62%;
-    --chart-1: 20 66% 60%;
-    --chart-2: 165 34% 44%;
-    --chart-3: 45 62% 58%;
-    --chart-4: 10 60% 55%;
+    --border: 28 16% 24%;
+    --input: 28 16% 24%;
+    --ring: 36 72% 58%;
+    --chart-1: 36 72% 58%;
+    --chart-2: 158 30% 45%;
+    --chart-3: 45 65% 72%;
+    --chart-4: 12 60% 65%;
     --chart-5: 198 36% 52%;
     --radius: 0.75rem;
   }
@@ -35,29 +35,29 @@
   }
   :root.dark {
     color-scheme: dark;
-    --background: 24 28% 10%;
-    --foreground: 34 36% 92%;
-    --card: 24 22% 14%;
-    --card-foreground: 34 32% 92%;
-    --popover: 24 22% 13%;
-    --popover-foreground: 34 34% 92%;
-    --primary: 24 68% 62%;
+    --background: 24 22% 11%;
+    --foreground: 38 30% 90%;
+    --card: 24 20% 14%;
+    --card-foreground: 38 28% 90%;
+    --popover: 24 20% 13%;
+    --popover-foreground: 38 28% 90%;
+    --primary: 36 72% 58%;
     --primary-foreground: 24 28% 11%;
-    --secondary: 27 23% 20%;
-    --secondary-foreground: 34 28% 90%;
-    --muted: 24 18% 18%;
-    --muted-foreground: 30 18% 72%;
-    --accent: 28 29% 24%;
-    --accent-foreground: 34 28% 91%;
+    --secondary: 27 20% 20%;
+    --secondary-foreground: 38 24% 88%;
+    --muted: 24 16% 18%;
+    --muted-foreground: 30 20% 65%;
+    --accent: 28 24% 24%;
+    --accent-foreground: 38 24% 90%;
     --destructive: 3 68% 56%;
     --destructive-foreground: 0 0% 98%;
-    --border: 28 18% 28%;
-    --input: 28 18% 28%;
-    --ring: 24 68% 62%;
-    --chart-1: 20 66% 60%;
-    --chart-2: 165 34% 44%;
-    --chart-3: 45 62% 58%;
-    --chart-4: 10 60% 55%;
+    --border: 28 16% 24%;
+    --input: 28 16% 24%;
+    --ring: 36 72% 58%;
+    --chart-1: 36 72% 58%;
+    --chart-2: 158 30% 45%;
+    --chart-3: 45 65% 72%;
+    --chart-4: 12 60% 65%;
     --chart-5: 198 36% 52%;
   }
 }
@@ -94,4 +94,45 @@ body::before {
     radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.05), transparent 76%),
     radial-gradient(460px 300px at 54% 32%, hsl(36 96% 76% / 0.06), transparent 74%);
   mix-blend-mode: screen;
+}
+
+/* Gentle scroll reveal animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out both;
+}
+
+/* Staggered delays for sections */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+
+/* Warm pulse for living elements */
+@keyframes warmPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-warm-pulse {
+  animation: warmPulse 3s ease-in-out infinite;
+}
+
+/* Gentle hover lift */
+.hover-lift {
+  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px hsl(36 72% 58% / 0.08);
 }
