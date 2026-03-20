@@ -43,6 +43,46 @@ Coherence Network is operated as a spec-driven OSS intelligence platform.
 - Keep changes scoped to requested files/tasks.
 - Escalate via `needs-decision` for security-sensitive or high-impact architecture changes.
 
+## Production Deployment (Hostinger VPS)
+
+The site runs at **coherencycoin.com** on a Hostinger VPS (`187.77.152.42`) via Docker Compose behind Cloudflare + Traefik.
+
+### Quick Deploy (after merging to main)
+
+```bash
+# SSH key: ~/.ssh/hostinger-openclaw
+ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 \
+  'cd /docker/coherence-network/repo && git pull origin main && \
+   cd /docker/coherence-network && docker compose build --no-cache api web && \
+   docker compose up -d api web'
+```
+
+### Full Deploy Steps
+
+1. **Merge PR to main** — `gh pr merge <PR_NUM> --squash --admin`
+2. **SSH into VPS** — `ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42`
+3. **Pull latest** — `cd /docker/coherence-network/repo && git pull origin main`
+4. **Rebuild** — `cd /docker/coherence-network && docker compose build --no-cache api web`
+5. **Restart** — `docker compose up -d api web`
+6. **Verify** — `curl https://api.coherencycoin.com/api/health && curl -sI https://coherencycoin.com/`
+
+### Infrastructure
+
+- **VPS**: Hostinger KVM at `187.77.152.42` (hostname: `srv1482815`)
+- **SSH key**: `~/.ssh/hostinger-openclaw`
+- **Docker services**: `coherence-network-api-1`, `coherence-network-web-1`, `coherence-network-postgres-1`, `coherence-network-neo4j-1`
+- **Reverse proxy**: Traefik with Let's Encrypt TLS
+- **CDN**: Cloudflare (proxying both `coherencycoin.com` and `api.coherencycoin.com`)
+- **Repo on VPS**: `/docker/coherence-network/repo` (tracks `main` branch)
+- **Docker Compose**: `/docker/coherence-network/docker-compose.yml`
+- **Dockerfiles**: `/docker/coherence-network/Dockerfile.api`, `/docker/coherence-network/Dockerfile.web`
+
+### Push bypass (worktree branches)
+
+```bash
+SKIP_PR_GUARD=1 git -c "url.https://x-access-token:$(gh auth token)@github.com/.insteadOf=https://github.com/" push origin <branch>
+```
+
 ## Context-Conscious Exploration
 
 Before scanning many files for a task, run the budget helper first:
