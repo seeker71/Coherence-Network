@@ -43,3 +43,9 @@ ideas -> specs -> processes/routes -> implementations -> contributors/contributi
   - `GET https://coherence-network-production.up.railway.app/api/inventory/page-lineage`
   - `GET https://coherence-network-production.up.railway.app/api/value-lineage/links`
   - `GET https://coherence-network.vercel.app/portfolio` and links to the new pages return 200
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_runtime_drift_check.py -x -v
+```

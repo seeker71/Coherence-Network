@@ -15,6 +15,8 @@ from app.services import commit_evidence_service
 from app.services import inventory_service
 from app.services import route_registry_service
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 @pytest.mark.asyncio
 async def test_system_lineage_inventory_includes_core_sections(
@@ -44,7 +46,7 @@ async def test_system_lineage_inventory_includes_core_sections(
             "id": "portfolio-governance", "name": "Portfolio governance",
             "description": "Unified idea portfolio governance",
             "potential_value": 82.0, "estimated_cost": 10.0, "confidence": 0.75,
-        })
+        }, headers=AUTH_HEADERS)
 
         unique_email = f"urs.muff.{uuid4().hex[:8]}@proton.me"
         contributor = await client.post(
@@ -72,7 +74,7 @@ async def test_system_lineage_inventory_includes_core_sections(
         )
         assert contribution.status_code == 201
 
-        created = await client.post("/api/value-lineage/links", json=link_payload)
+        created = await client.post("/api/value-lineage/links", json=link_payload, headers=AUTH_HEADERS)
         assert created.status_code == 201
         lineage_id = created.json()["id"]
 
@@ -340,7 +342,7 @@ async def test_next_highest_roi_task_generation_from_answered_questions(
             "open_questions": [
                 {"question": "What next step improves value?", "value_to_whole": 10.0, "estimated_cost": 1.0}
             ],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed.status_code == 201
 
         ideas = await client.get("/api/ideas")
@@ -477,7 +479,7 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/api/value-lineage/links", json=link_payload)
+        created = await client.post("/api/value-lineage/links", json=link_payload, headers=AUTH_HEADERS)
         assert created.status_code == 201
         lineage_id = created.json()["id"]
 
@@ -764,7 +766,7 @@ async def test_sync_implementation_request_questions_creates_tasks_without_dupli
                 {"question": "Can we implement public contributor registration flow?", "value_to_whole": 22.0, "estimated_cost": 2.0},
                 {"question": "Which indicator should we monitor next?", "value_to_whole": 10.0, "estimated_cost": 2.0},
             ],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed.status_code == 201
         created = await client.post("/api/inventory/questions/sync-implementation-tasks")
         assert created.status_code == 200
@@ -810,7 +812,7 @@ async def test_sync_implementation_request_questions_sanitizes_api_key_language(
                     "measured_delta": 3.0,
                 }
             ],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed.status_code == 201
         created = await client.post("/api/inventory/questions/sync-implementation-tasks")
         assert created.status_code == 200
@@ -984,7 +986,7 @@ async def test_next_highest_roi_task_skips_duplicate_when_active_task_exists(
             "open_questions": [
                 {"question": "What endpoint should we track next?", "value_to_whole": 10.0, "estimated_cost": 1.0}
             ],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed.status_code == 201
 
         ideas = await client.get("/api/ideas")
@@ -1047,7 +1049,7 @@ async def test_flow_inventory_exposes_interdependencies_and_prioritizes_unblock_
             "open_questions": [
                 {"question": "How do we unblock the chain first?", "value_to_whole": 20.0, "estimated_cost": 2.0}
             ],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed1.status_code == 201
         seed2 = await client.post("/api/ideas", json={
             "id": "idea-lower-unblock", "name": "Lower unblock value",
@@ -1058,7 +1060,7 @@ async def test_flow_inventory_exposes_interdependencies_and_prioritizes_unblock_
             "manifestation_status": "none",
             "interfaces": ["machine:api"],
             "open_questions": [],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed2.status_code == 201
         resp = await client.get("/api/inventory/flow")
         assert resp.status_code == 200
@@ -1108,7 +1110,7 @@ async def test_next_unblock_task_endpoint_creates_task_and_avoids_active_duplica
             "manifestation_status": "none",
             "interfaces": ["machine:api"],
             "open_questions": [],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed.status_code == 201
         suggest = await client.post("/api/inventory/flow/next-unblock-task")
         assert suggest.status_code == 200
@@ -1153,7 +1155,7 @@ async def test_next_unblock_task_defaults_to_actionable_ideas_only(
             "manifestation_status": "none",
             "interfaces": ["machine:commit-evidence"],
             "open_questions": [],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed1.status_code == 201
         seed2 = await client.post("/api/ideas", json={
             "id": "human-actionable-idea", "name": "Human actionable idea",
@@ -1164,7 +1166,7 @@ async def test_next_unblock_task_defaults_to_actionable_ideas_only(
             "manifestation_status": "none",
             "interfaces": ["human:web", "machine:api"],
             "open_questions": [],
-        })
+        }, headers=AUTH_HEADERS)
         assert seed2.status_code == 201
         default_resp = await client.post("/api/inventory/flow/next-unblock-task")
         assert default_resp.status_code == 200
@@ -1416,13 +1418,13 @@ async def test_proactive_questions_endpoint_derives_questions_from_recent_eviden
             "description": "Unified idea portfolio governance",
             "potential_value": 82.0, "estimated_cost": 10.0, "confidence": 0.75,
             "interfaces": ["machine:api"],
-        })
+        }, headers=AUTH_HEADERS)
         await client.post("/api/ideas", json={
             "id": "oss-interface-alignment", "name": "OSS interface alignment",
             "description": "Align OSS interfaces with public validation",
             "potential_value": 60.0, "estimated_cost": 8.0, "confidence": 0.7,
             "interfaces": ["human:web", "machine:api"],
-        })
+        }, headers=AUTH_HEADERS)
 
     proactive_a = {
         "date": "2026-02-16",
@@ -1473,7 +1475,7 @@ async def test_sync_proactive_questions_adds_missing_questions_without_duplicate
             "description": "Unified idea portfolio governance",
             "potential_value": 82.0, "estimated_cost": 10.0, "confidence": 0.75,
             "interfaces": ["machine:api"],
-        })
+        }, headers=AUTH_HEADERS)
 
     process_gap_payload = {
         "date": "2026-02-16",

@@ -235,3 +235,9 @@ Verifies the full inbound path (webhook → record_webhook → [optional: parse_
 ## Decision Gates
 
 - Agent runner: run in same process as API or separate? Recommend separate (script) for MVP.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_telegram_adapter.py -x -v
+```

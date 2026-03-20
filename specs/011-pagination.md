@@ -101,3 +101,9 @@ See `api/tests/test_agent.py`. All of the following must pass:
 ## Decision Gates (if any)
 
 None.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_ideas.py -x -v
+```

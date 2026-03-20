@@ -81,3 +81,9 @@ None. Adding or expanding these tests does not require new dependencies or API c
 - [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — spec/test/impl/review use local models
 - [010-request-validation.md](010-request-validation.md) — task_type enum
 - [044-agent-service-test-task-type-local-model-test.md](044-agent-service-test-task-type-local-model-test.md) — parallel spec for test task_type → local
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_agent_execution_model_resolution.py -x -v
+```

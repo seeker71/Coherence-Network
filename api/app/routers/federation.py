@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.middleware.auth import require_api_key
 from app.models.federation import (
     FederatedInstance,
     FederatedPayload,
@@ -15,7 +16,7 @@ router = APIRouter()
 
 
 @router.post("/federation/instances", response_model=FederatedInstance, status_code=201)
-async def register_instance(instance: FederatedInstance) -> FederatedInstance:
+async def register_instance(instance: FederatedInstance, _key: str = Depends(require_api_key)) -> FederatedInstance:
     """Register a remote Coherence instance."""
     return federation_service.register_instance(instance)
 
@@ -36,7 +37,7 @@ async def get_instance(instance_id: str) -> FederatedInstance:
 
 
 @router.post("/federation/sync", response_model=FederationSyncResult)
-async def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
+async def receive_payload(payload: FederatedPayload, _key: str = Depends(require_api_key)) -> FederationSyncResult:
     """Receive a federated payload from a remote instance."""
     return federation_service.receive_payload(payload)
 

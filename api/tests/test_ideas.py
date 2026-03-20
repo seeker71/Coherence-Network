@@ -10,6 +10,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 
 @pytest.mark.asyncio
 async def test_list_ideas_returns_ranked_scores_and_summary(
@@ -26,7 +28,7 @@ async def test_list_ideas_returns_ranked_scores_and_summary(
             "potential_value": 50.0,
             "estimated_cost": 10.0,
             "confidence": 0.8,
-        })
+        }, headers=AUTH_HEADERS)
         assert created.status_code == 201
 
         resp = await client.get("/api/ideas")
@@ -50,7 +52,7 @@ async def test_get_idea_by_id_and_404(monkeypatch: pytest.MonkeyPatch, tmp_path:
         await client.post("/api/ideas", json={
             "id": "get-test", "name": "Get Test", "description": "d",
             "potential_value": 10.0, "estimated_cost": 5.0,
-        })
+        }, headers=AUTH_HEADERS)
         found = await client.get("/api/ideas/get-test")
         missing = await client.get("/api/ideas/does-not-exist")
 
@@ -76,7 +78,7 @@ async def test_get_idea_returns_known_derived_runtime_idea(
             "estimated_cost": 16.0,
             "confidence": 0.95,
             "interfaces": ["machine:api", "machine:automation", "human:operators"],
-        })
+        }, headers=AUTH_HEADERS)
         assert created.status_code == 201
 
         derived = await client.get("/api/ideas/coherence-network-agent-pipeline")
@@ -107,6 +109,7 @@ async def test_list_ideas_can_hide_internal_system_generated_ideas(
                 "interfaces": ["machine:commit-evidence"],
                 "open_questions": [],
             },
+            headers=AUTH_HEADERS,
         )
         assert created.status_code == 201
         assert created.json()["open_questions"] == []
@@ -176,11 +179,11 @@ async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/api/ideas", json=create_payload)
+        created = await client.post("/api/ideas", json=create_payload, headers=AUTH_HEADERS)
         assert created.status_code == 201
         assert created.json()["id"] == idea_id
 
-        duplicate = await client.post("/api/ideas", json=create_payload)
+        duplicate = await client.post("/api/ideas", json=create_payload, headers=AUTH_HEADERS)
         assert duplicate.status_code == 409
 
         add_question = await client.post(
@@ -190,6 +193,7 @@ async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp
                 "value_to_whole": 12.0,
                 "estimated_cost": 1.0,
             },
+            headers=AUTH_HEADERS,
         )
         assert add_question.status_code == 200
 
@@ -200,6 +204,7 @@ async def test_create_idea_and_add_question(monkeypatch: pytest.MonkeyPatch, tmp
                 "value_to_whole": 12.0,
                 "estimated_cost": 1.0,
             },
+            headers=AUTH_HEADERS,
         )
         assert add_question_duplicate.status_code == 409
 
@@ -212,7 +217,7 @@ async def test_patch_idea_updates_fields(monkeypatch: pytest.MonkeyPatch, tmp_pa
         await client.post("/api/ideas", json={
             "id": "patch-test", "name": "Patch Test", "description": "d",
             "potential_value": 50.0, "estimated_cost": 10.0,
-        })
+        }, headers=AUTH_HEADERS)
 
         patched = await client.patch(
             "/api/ideas/patch-test",
@@ -222,6 +227,7 @@ async def test_patch_idea_updates_fields(monkeypatch: pytest.MonkeyPatch, tmp_pa
                 "confidence": 0.75,
                 "manifestation_status": "validated",
             },
+            headers=AUTH_HEADERS,
         )
 
         refetched = await client.get("/api/ideas/patch-test")
@@ -247,7 +253,7 @@ async def test_answer_idea_question_persists_answer(
             "open_questions": [
                 {"question": "What route is canonical?", "value_to_whole": 10.0, "estimated_cost": 1.0}
             ],
-        })
+        }, headers=AUTH_HEADERS)
 
         answered = await client.post(
             "/api/ideas/answer-test/questions/answer",
@@ -256,6 +262,7 @@ async def test_answer_idea_question_persists_answer(
                 "answer": "Canonical route set is /api/inventory/routes/canonical",
                 "measured_delta": 3.5,
             },
+            headers=AUTH_HEADERS,
         )
         assert answered.status_code == 200
         refetched = await client.get("/api/ideas/answer-test")
@@ -279,7 +286,7 @@ async def test_ideas_storage_endpoint_reports_structured_backend(
         await client.post("/api/ideas", json={
             "id": "storage-test", "name": "Storage Test", "description": "d",
             "potential_value": 10.0, "estimated_cost": 5.0,
-        })
+        }, headers=AUTH_HEADERS)
         storage = await client.get("/api/ideas/storage")
         assert storage.status_code == 200
 
@@ -348,7 +355,7 @@ async def test_create_idea_persists_to_db(
             "potential_value": 30.0,
             "estimated_cost": 5.0,
             "confidence": 0.7,
-        })
+        }, headers=AUTH_HEADERS)
         assert created.status_code == 201
 
         from app.services import idea_service
@@ -373,7 +380,7 @@ async def test_ideas_cards_endpoint_returns_paginated_card_feed(
         await client.post("/api/ideas", json={
             "id": "cards-test", "name": "Cards Test", "description": "d",
             "potential_value": 40.0, "estimated_cost": 8.0,
-        })
+        }, headers=AUTH_HEADERS)
         response = await client.get(
             "/api/ideas/cards",
             params={"limit": 10, "state": "all", "sort": "attention_desc"},
@@ -451,9 +458,10 @@ async def test_ideas_cards_defaults_include_internal_and_allow_actionable_filter
                 **base_payload,
                 "interfaces": ["machine:commit-evidence"],
             },
+            headers=AUTH_HEADERS,
         )
         assert create_internal.status_code == 201
-        create_external = await client.post("/api/ideas", json={"id": external_id, **base_payload})
+        create_external = await client.post("/api/ideas", json={"id": external_id, **base_payload}, headers=AUTH_HEADERS)
         assert create_external.status_code == 201
 
         defaults = await client.get("/api/ideas/cards", params={"limit": 200})

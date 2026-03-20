@@ -48,3 +48,9 @@ N/A.
 - [006 Overnight Backlog](006-overnight-backlog.md) — item 15: Add docs/GLOSSARY.md (coherence, task_type, pipeline, backlog, etc.)
 - [002 Agent Orchestration API](002-agent-orchestration-api.md) — task_type, direction, status values
 - [005 Project Manager Pipeline](005-project-manager-pipeline.md) — pipeline, backlog, project manager
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_glossary.py -x -v
+```

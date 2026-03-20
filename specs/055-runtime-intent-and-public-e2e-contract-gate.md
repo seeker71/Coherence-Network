@@ -25,3 +25,9 @@ Fail CI when a runtime feature/fix intent is declared without actual API/Web run
 ## Validation
 - `cd api && .venv/bin/pytest -q tests/test_commit_evidence_validation.py`
 - `python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_runtime-intent-gate.json`
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_validate_pr_to_public.py -x -v
+```

@@ -199,14 +199,28 @@ def load_ideas() -> list[Idea]:
         return out
 
 
-def save_ideas(ideas: list[Idea], bootstrap_source: str | None = None) -> None:
-    ensure_schema()
-    with _session() as session:
-        session.query(IdeaQuestionRecord).delete()
-        session.query(IdeaRecord).delete()
-
-        for position, idea in enumerate(ideas):
-            idea_row = IdeaRecord(
+def _upsert_idea_in_session(session: Session, idea: Idea, position: int) -> None:
+    """Upsert a single idea and its questions within an existing session."""
+    existing = session.get(IdeaRecord, idea.id)
+    if existing is not None:
+        existing.position = position
+        existing.name = idea.name
+        existing.description = idea.description
+        existing.potential_value = float(idea.potential_value)
+        existing.actual_value = float(idea.actual_value)
+        existing.estimated_cost = float(idea.estimated_cost)
+        existing.actual_cost = float(idea.actual_cost)
+        existing.resistance_risk = float(idea.resistance_risk)
+        existing.confidence = float(idea.confidence)
+        existing.manifestation_status = idea.manifestation_status.value
+        existing.interfaces_json = json.dumps(idea.interfaces)
+        existing.idea_type = idea.idea_type.value if idea.idea_type else "standalone"
+        existing.parent_idea_id = idea.parent_idea_id
+        existing.child_idea_ids_json = json.dumps(idea.child_idea_ids or [])
+        existing.value_basis_json = json.dumps(idea.value_basis) if idea.value_basis else None
+    else:
+        session.add(
+            IdeaRecord(
                 id=idea.id,
                 position=position,
                 name=idea.name,
@@ -224,29 +238,62 @@ def save_ideas(ideas: list[Idea], bootstrap_source: str | None = None) -> None:
                 child_idea_ids_json=json.dumps(idea.child_idea_ids or []),
                 value_basis_json=json.dumps(idea.value_basis) if idea.value_basis else None,
             )
-            session.add(idea_row)
+        )
 
-            seen_questions: set[str] = set()
-            for q_position, question in enumerate(idea.open_questions):
-                key = question.question.strip().lower()
-                if not key or key in seen_questions:
-                    continue
-                seen_questions.add(key)
-                session.add(
-                    IdeaQuestionRecord(
-                        idea_id=idea.id,
-                        position=q_position,
-                        question=question.question,
-                        value_to_whole=float(question.value_to_whole),
-                        estimated_cost=float(question.estimated_cost),
-                        answer=question.answer,
-                        measured_delta=(
-                            float(question.measured_delta)
-                            if question.measured_delta is not None
-                            else None
-                        ),
-                    )
-                )
+    # Upsert questions: delete existing, re-insert deduped list
+    session.query(IdeaQuestionRecord).filter(
+        IdeaQuestionRecord.idea_id == idea.id
+    ).delete()
+
+    seen_questions: set[str] = set()
+    for q_position, question in enumerate(idea.open_questions):
+        key = question.question.strip().lower()
+        if not key or key in seen_questions:
+            continue
+        seen_questions.add(key)
+        session.add(
+            IdeaQuestionRecord(
+                idea_id=idea.id,
+                position=q_position,
+                question=question.question,
+                value_to_whole=float(question.value_to_whole),
+                estimated_cost=float(question.estimated_cost),
+                answer=question.answer,
+                measured_delta=(
+                    float(question.measured_delta)
+                    if question.measured_delta is not None
+                    else None
+                ),
+            )
+        )
+
+
+def save_single_idea(idea: Idea, position: int = 0) -> None:
+    """Upsert a single idea and its questions."""
+    ensure_schema()
+    with _session() as session:
+        _upsert_idea_in_session(session, idea, position)
+
+
+def save_ideas(ideas: list[Idea], bootstrap_source: str | None = None) -> None:
+    ensure_schema()
+    with _session() as session:
+        incoming_ids = {idea.id for idea in ideas}
+
+        # Delete ideas no longer in the list
+        existing_ids_rows = session.query(IdeaRecord.id).all()
+        stale_ids = {row[0] for row in existing_ids_rows} - incoming_ids
+        if stale_ids:
+            session.query(IdeaQuestionRecord).filter(
+                IdeaQuestionRecord.idea_id.in_(stale_ids)
+            ).delete(synchronize_session=False)
+            session.query(IdeaRecord).filter(
+                IdeaRecord.id.in_(stale_ids)
+            ).delete(synchronize_session=False)
+
+        # Upsert each idea
+        for position, idea in enumerate(ideas):
+            _upsert_idea_in_session(session, idea, position)
 
         if bootstrap_source is not None:
             row = session.get(RegistryMetaRecord, "bootstrap_source")

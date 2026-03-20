@@ -11,6 +11,8 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.services.idea_service import _softmax_weights, select_idea
 
+AUTH_HEADERS = {"X-API-Key": "dev-key"}
+
 client = TestClient(app)
 
 
@@ -97,7 +99,7 @@ class TestSelectIdea:
             },
         ]
         for idea in ideas:
-            resp = client.post("/api/ideas", json=idea)
+            resp = client.post("/api/ideas", json=idea, headers=AUTH_HEADERS)
             assert resp.status_code in (200, 201, 409), f"Failed to seed {idea['id']}: {resp.text}"
 
     def test_seed_gives_reproducible_pick(self):
@@ -178,11 +180,11 @@ class TestSelectEndpoint:
             {"id": "ep-idea-1", "name": "EP Idea 1", "description": "d", "potential_value": 50, "estimated_cost": 5, "confidence": 0.9},
             {"id": "ep-idea-2", "name": "EP Idea 2", "description": "d", "potential_value": 100, "estimated_cost": 10, "confidence": 0.7},
         ]:
-            client.post("/api/ideas", json=idea)
+            client.post("/api/ideas", json=idea, headers=AUTH_HEADERS)
 
     def test_select_endpoint_returns_result(self):
         self._seed()
-        resp = client.post("/api/ideas/select?method=marginal_cc&temperature=1.0&seed=42")
+        resp = client.post("/api/ideas/select?method=marginal_cc&temperature=1.0&seed=42", headers=AUTH_HEADERS)
         assert resp.status_code == 200
         data = resp.json()
         assert "selected" in data
@@ -194,15 +196,15 @@ class TestSelectEndpoint:
 
     def test_select_deterministic_via_seed(self):
         self._seed()
-        r1 = client.post("/api/ideas/select?method=free_energy&seed=99").json()
-        r2 = client.post("/api/ideas/select?method=free_energy&seed=99").json()
+        r1 = client.post("/api/ideas/select?method=free_energy&seed=99", headers=AUTH_HEADERS).json()
+        r2 = client.post("/api/ideas/select?method=free_energy&seed=99", headers=AUTH_HEADERS).json()
         assert r1["selected"]["id"] == r2["selected"]["id"]
 
     def test_select_with_exclude(self):
         self._seed()
-        top = client.post("/api/ideas/select?temperature=0&seed=0").json()
+        top = client.post("/api/ideas/select?temperature=0&seed=0", headers=AUTH_HEADERS).json()
         top_id = top["selected"]["id"]
-        r = client.post(f"/api/ideas/select?temperature=0&seed=0&exclude={top_id}").json()
+        r = client.post(f"/api/ideas/select?temperature=0&seed=0&exclude={top_id}", headers=AUTH_HEADERS).json()
         assert r["selected"]["id"] != top_id
 
     def test_list_ideas_includes_selection_weight(self):

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from app.middleware.auth import require_api_key
 from app.models.value_lineage import (
     LineageLink,
     LineageLinkCreate,
@@ -21,7 +22,7 @@ router = APIRouter()
 
 
 @router.post("/value-lineage/links", response_model=LineageLink, status_code=201)
-async def create_link(payload: LineageLinkCreate) -> LineageLink:
+async def create_link(payload: LineageLinkCreate, _key: str = Depends(require_api_key)) -> LineageLink:
     return value_lineage_service.create_link(payload)
 
 
@@ -44,7 +45,7 @@ async def get_link(lineage_id: str) -> LineageLink:
     response_model=UsageEvent,
     status_code=201,
 )
-async def add_usage_event(lineage_id: str, payload: UsageEventCreate) -> UsageEvent:
+async def add_usage_event(lineage_id: str, payload: UsageEventCreate, _key: str = Depends(require_api_key)) -> UsageEvent:
     event = value_lineage_service.add_usage_event(lineage_id, payload)
     if event is None:
         raise HTTPException(status_code=404, detail="Lineage link not found")
@@ -60,7 +61,7 @@ async def get_valuation(lineage_id: str) -> LineageValuation:
 
 
 @router.post("/value-lineage/links/{lineage_id}/payout-preview", response_model=PayoutPreview)
-async def payout_preview(lineage_id: str, payload: PayoutPreviewRequest) -> PayoutPreview:
+async def payout_preview(lineage_id: str, payload: PayoutPreviewRequest, _key: str = Depends(require_api_key)) -> PayoutPreview:
     report = value_lineage_service.payout_preview(lineage_id, payload.payout_pool)
     if report is None:
         raise HTTPException(status_code=404, detail="Lineage link not found")
@@ -68,5 +69,5 @@ async def payout_preview(lineage_id: str, payload: PayoutPreviewRequest) -> Payo
 
 
 @router.post("/value-lineage/minimum-e2e-flow", response_model=MinimumE2EFlowResponse)
-async def run_minimum_e2e_flow() -> MinimumE2EFlowResponse:
+async def run_minimum_e2e_flow(_key: str = Depends(require_api_key)) -> MinimumE2EFlowResponse:
     return value_lineage_service.run_minimum_e2e_flow()

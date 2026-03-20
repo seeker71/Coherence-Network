@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -153,8 +153,8 @@ def upsert_record(payload: dict[str, Any], *, source_file: str) -> bool:
                 commit_scope=commit_scope,
                 date_value=date_value,
                 payload_json=serialized,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
             )
             session.add(row)
             return True
@@ -162,7 +162,7 @@ def upsert_record(payload: dict[str, Any], *, source_file: str) -> bool:
         row.commit_scope = commit_scope
         row.date_value = date_value
         row.payload_json = serialized
-        row.updated_at = datetime.utcnow()
+        row.updated_at = datetime.now(timezone.utc)
         session.add(row)
         return True
 

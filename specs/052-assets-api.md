@@ -166,3 +166,9 @@ All 3 tests passing.
 ## Decision Gates
 
 None — implementation already complete and tested.
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_assets.py -x -v
+```

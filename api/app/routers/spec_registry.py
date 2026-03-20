@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
+from app.middleware.auth import require_api_key
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryEntry, SpecRegistryUpdate
 from app.services import spec_registry_service
 
@@ -63,7 +64,7 @@ async def get_spec(spec_id: str) -> SpecRegistryEntry:
 
 
 @router.post("/spec-registry", response_model=SpecRegistryEntry, status_code=201)
-async def create_spec(data: SpecRegistryCreate) -> SpecRegistryEntry:
+async def create_spec(data: SpecRegistryCreate, _key: str = Depends(require_api_key)) -> SpecRegistryEntry:
     created = spec_registry_service.create_spec(data)
     if created is None:
         raise HTTPException(status_code=409, detail="Spec already exists")
@@ -71,7 +72,7 @@ async def create_spec(data: SpecRegistryCreate) -> SpecRegistryEntry:
 
 
 @router.patch("/spec-registry/{spec_id}", response_model=SpecRegistryEntry)
-async def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry:
+async def update_spec(spec_id: str, data: SpecRegistryUpdate, _key: str = Depends(require_api_key)) -> SpecRegistryEntry:
     if all(
         value is None
         for value in (

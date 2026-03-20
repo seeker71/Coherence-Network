@@ -193,3 +193,9 @@ Organization:
 - [ ] Approval required for indexer data source selection and processing approach
 - [ ] Approval required for API endpoint design and naming conventions
 - [ ] Approval required for database connection and configuration approach
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_health.py -x -v
+```

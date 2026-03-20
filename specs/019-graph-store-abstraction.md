@@ -102,3 +102,9 @@ ProjectSummary (for search results):
 
 - deps.dev API: no key required for basic usage (rate limits apply)
 - Adding httpx: already a dependency
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_projects.py -x -v
+```

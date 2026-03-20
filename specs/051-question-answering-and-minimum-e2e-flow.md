@@ -43,3 +43,8 @@ Runs a full minimum E2E flow and returns generated lineage id, usage event id, v
 - `api/tests/test_ideas.py`
 - `api/tests/test_value_lineage.py`
 
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_cursor_e2e.py -x -v
+```

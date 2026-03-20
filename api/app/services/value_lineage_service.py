@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import json
 import math
-import os
 from collections import defaultdict
+from contextlib import contextmanager
 from datetime import datetime, timezone
-from pathlib import Path
 from uuid import uuid4
 
+from sqlalchemy import DateTime, Float, String, Text
+from sqlalchemy.orm import Mapped, Session, mapped_column
+
 from app.models.value_lineage import (
+    LineageContributors,
     LineageInvestment,
     LineageLink,
     LineageLinkCreate,
@@ -21,6 +24,83 @@ from app.models.value_lineage import (
     UsageEvent,
     UsageEventCreate,
 )
+from app.services import unified_db as _udb
+from app.services.unified_db import Base
+
+# ---------------------------------------------------------------------------
+# ORM models
+# ---------------------------------------------------------------------------
+
+class LineageLinkRecord(Base):
+    __tablename__ = "value_lineage_links"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    idea_id: Mapped[str] = mapped_column(String, nullable=False)
+    spec_id: Mapped[str] = mapped_column(String, nullable=False)
+    implementation_refs_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    contributors_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    investments_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    estimated_cost: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+class UsageEventRecord(Base):
+    __tablename__ = "value_lineage_usage_events"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    lineage_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    source: Mapped[str] = mapped_column(String, nullable=False)
+    metric: Mapped[str] = mapped_column(String, nullable=False)
+    value: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    captured_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+
+
+# ---------------------------------------------------------------------------
+# DB helpers
+# ---------------------------------------------------------------------------
+
+def _ensure_schema() -> None:
+    _udb.ensure_schema()
+
+
+@contextmanager
+def _session() -> Session:
+    with _udb.session() as s:
+        yield s
+
+
+def _ensure_utc(dt: datetime) -> datetime:
+    """Ensure a datetime is timezone-aware (UTC)."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _record_to_link(rec: LineageLinkRecord) -> LineageLink:
+    return LineageLink(
+        id=rec.id,
+        idea_id=rec.idea_id,
+        spec_id=rec.spec_id,
+        implementation_refs=json.loads(rec.implementation_refs_json),
+        contributors=LineageContributors(**json.loads(rec.contributors_json)),
+        investments=[LineageInvestment(**i) for i in json.loads(rec.investments_json)],
+        estimated_cost=rec.estimated_cost,
+        created_at=_ensure_utc(rec.created_at),
+        updated_at=_ensure_utc(rec.updated_at),
+    )
+
+
+def _record_to_event(rec: UsageEventRecord) -> UsageEvent:
+    return UsageEvent(
+        id=rec.id,
+        lineage_id=rec.lineage_id,
+        source=rec.source,
+        metric=rec.metric,
+        value=rec.value,
+        captured_at=_ensure_utc(rec.captured_at),
+    )
+
 
 DEFAULT_STAGE_WEIGHTS: dict[str, float] = {
     "idea": 0.1,
@@ -215,93 +295,58 @@ def _build_payout_rows(
     return payouts
 
 
-def _default_path() -> Path:
-    logs_dir = Path(__file__).resolve().parents[2] / "logs"
-    return logs_dir / "value_lineage.json"
-
-
-def _path() -> Path:
-    configured = os.getenv("VALUE_LINEAGE_PATH")
-    return Path(configured) if configured else _default_path()
-
-
-def _ensure_store() -> None:
-    path = _path()
-    if path.exists():
-        return
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"links": [], "events": []}, indent=2), encoding="utf-8")
-
-
-def _read_store() -> dict:
-    _ensure_store()
-    path = _path()
-    try:
-        with path.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return {"links": [], "events": []}
-    if not isinstance(data, dict):
-        return {"links": [], "events": []}
-    links = data.get("links") if isinstance(data.get("links"), list) else []
-    events = data.get("events") if isinstance(data.get("events"), list) else []
-    return {"links": links, "events": events}
-
-
-def _write_store(data: dict) -> None:
-    path = _path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-
 def checkpoint() -> dict[str, object]:
-    path = _path()
-    data = _read_store()
-    links_raw = data.get("links") if isinstance(data.get("links"), list) else []
-    events_raw = data.get("events") if isinstance(data.get("events"), list) else []
-    max_link_updated_at: datetime | None = None
-    max_event_captured_at: datetime | None = None
-
-    for raw in links_raw:
-        try:
-            link = LineageLink(**raw)
-        except Exception:
-            continue
-        if max_link_updated_at is None or link.updated_at > max_link_updated_at:
-            max_link_updated_at = link.updated_at
-
-    for raw in events_raw:
-        try:
-            event = UsageEvent(**raw)
-        except Exception:
-            continue
-        if max_event_captured_at is None or event.captured_at > max_event_captured_at:
-            max_event_captured_at = event.captured_at
-
-    try:
-        stat = path.stat()
-        size = int(stat.st_size)
-        mtime_ns = int(stat.st_mtime_ns)
-    except OSError:
-        size = 0
-        mtime_ns = 0
+    _ensure_schema()
+    with _session() as s:
+        link_count = s.query(LineageLinkRecord).count()
+        event_count = s.query(UsageEventRecord).count()
+        max_link_updated_at: datetime | None = None
+        max_event_captured_at: datetime | None = None
+        last_link = (
+            s.query(LineageLinkRecord)
+            .order_by(LineageLinkRecord.updated_at.desc())
+            .first()
+        )
+        if last_link:
+            max_link_updated_at = last_link.updated_at
+        last_event = (
+            s.query(UsageEventRecord)
+            .order_by(UsageEventRecord.captured_at.desc())
+            .first()
+        )
+        if last_event:
+            max_event_captured_at = last_event.captured_at
 
     return {
-        "path": str(path),
-        "link_count": len(links_raw),
-        "event_count": len(events_raw),
+        "path": _udb.database_url(),
+        "link_count": link_count,
+        "event_count": event_count,
         "max_link_updated_at": max_link_updated_at.isoformat() if max_link_updated_at else None,
         "max_event_captured_at": max_event_captured_at.isoformat() if max_event_captured_at else None,
-        "file_size": size,
-        "file_mtime_ns": mtime_ns,
+        "file_size": 0,
+        "file_mtime_ns": 0,
     }
 
 
 def create_link(payload: LineageLinkCreate) -> LineageLink:
+    _ensure_schema()
     now = datetime.now(timezone.utc)
-    link = LineageLink(
-        id=f"lnk_{uuid4().hex[:12]}",
+    link_id = f"lnk_{uuid4().hex[:12]}"
+    rec = LineageLinkRecord(
+        id=link_id,
+        idea_id=payload.idea_id,
+        spec_id=payload.spec_id,
+        implementation_refs_json=json.dumps(payload.implementation_refs),
+        contributors_json=json.dumps(payload.contributors.model_dump(mode="json")),
+        investments_json=json.dumps([i.model_dump(mode="json") for i in payload.investments]),
+        estimated_cost=round(float(payload.estimated_cost), 4),
+        created_at=now,
+        updated_at=now,
+    )
+    with _session() as s:
+        s.add(rec)
+    return LineageLink(
+        id=link_id,
         idea_id=payload.idea_id,
         spec_id=payload.spec_id,
         implementation_refs=payload.implementation_refs,
@@ -311,83 +356,80 @@ def create_link(payload: LineageLinkCreate) -> LineageLink:
         created_at=now,
         updated_at=now,
     )
-    data = _read_store()
-    data["links"].append(link.model_dump(mode="json"))
-    _write_store(data)
-    return link
 
 
 def get_link(lineage_id: str) -> LineageLink | None:
-    data = _read_store()
-    for raw in data["links"]:
-        try:
-            link = LineageLink(**raw)
-        except Exception:
-            continue
-        if link.id == lineage_id:
-            return link
-    return None
+    _ensure_schema()
+    with _session() as s:
+        rec = s.query(LineageLinkRecord).filter_by(id=lineage_id).first()
+        if rec is None:
+            return None
+        return _record_to_link(rec)
 
 
 def list_links(limit: int = 200) -> list[LineageLink]:
-    data = _read_store()
-    out: list[LineageLink] = []
-    for raw in data["links"]:
-        try:
-            out.append(LineageLink(**raw))
-        except Exception:
-            continue
-    out.sort(key=lambda x: x.updated_at, reverse=True)
-    return out[: max(1, min(limit, 2000))]
+    _ensure_schema()
+    effective_limit = max(1, min(limit, 2000))
+    with _session() as s:
+        recs = (
+            s.query(LineageLinkRecord)
+            .order_by(LineageLinkRecord.updated_at.desc())
+            .limit(effective_limit)
+            .all()
+        )
+        return [_record_to_link(r) for r in recs]
 
 
 def add_usage_event(lineage_id: str, payload: UsageEventCreate) -> UsageEvent | None:
-    link = get_link(lineage_id)
-    if link is None:
-        return None
-    event = UsageEvent(
-        id=f"evt_{uuid4().hex[:12]}",
+    _ensure_schema()
+    now = datetime.now(timezone.utc)
+    event_id = f"evt_{uuid4().hex[:12]}"
+    with _session() as s:
+        link_rec = s.query(LineageLinkRecord).filter_by(id=lineage_id).first()
+        if link_rec is None:
+            return None
+        link_rec.updated_at = now
+        rec = UsageEventRecord(
+            id=event_id,
+            lineage_id=lineage_id,
+            source=payload.source,
+            metric=payload.metric,
+            value=round(float(payload.value), 4),
+            captured_at=now,
+        )
+        s.add(rec)
+    return UsageEvent(
+        id=event_id,
         lineage_id=lineage_id,
         source=payload.source,
         metric=payload.metric,
         value=round(float(payload.value), 4),
-        captured_at=datetime.now(timezone.utc),
+        captured_at=now,
     )
-    data = _read_store()
-    updated_links = []
-    for raw in data["links"]:
-        if raw.get("id") == lineage_id:
-            raw["updated_at"] = datetime.now(timezone.utc).isoformat()
-        updated_links.append(raw)
-    data["links"] = updated_links
-    data["events"].append(event.model_dump(mode="json"))
-    _write_store(data)
-    return event
 
 
 def _lineage_events(lineage_id: str) -> list[UsageEvent]:
-    data = _read_store()
-    out: list[UsageEvent] = []
-    for raw in data["events"]:
-        try:
-            ev = UsageEvent(**raw)
-        except Exception:
-            continue
-        if ev.lineage_id == lineage_id:
-            out.append(ev)
-    return out
+    _ensure_schema()
+    with _session() as s:
+        recs = (
+            s.query(UsageEventRecord)
+            .filter_by(lineage_id=lineage_id)
+            .all()
+        )
+        return [_record_to_event(r) for r in recs]
 
 
 def list_usage_events(limit: int = 500) -> list[UsageEvent]:
-    data = _read_store()
-    out: list[UsageEvent] = []
-    for raw in data["events"]:
-        try:
-            out.append(UsageEvent(**raw))
-        except Exception:
-            continue
-    out.sort(key=lambda x: x.captured_at, reverse=True)
-    return out[: max(1, min(limit, 5000))]
+    _ensure_schema()
+    effective_limit = max(1, min(limit, 5000))
+    with _session() as s:
+        recs = (
+            s.query(UsageEventRecord)
+            .order_by(UsageEventRecord.captured_at.desc())
+            .limit(effective_limit)
+            .all()
+        )
+        return [_record_to_event(r) for r in recs]
 
 
 def valuation(lineage_id: str) -> LineageValuation | None:

@@ -37,3 +37,8 @@ Creates a task in the agent task store and returns task metadata.
 - `api/app/routers/inventory.py`
 - `api/tests/test_inventory_api.py`
 
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_ideas.py -x -v
+```

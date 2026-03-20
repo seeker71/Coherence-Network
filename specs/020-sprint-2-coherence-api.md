@@ -76,3 +76,9 @@ Only 2 of 8 components currently use real data: `downstream_impact`, `dependency
 
 - Weight values require human approval (spec 018)
 - Stub vs real computation: start stub, iterate when data available
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_cc_scoring.py -x -v
+```

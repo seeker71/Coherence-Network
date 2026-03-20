@@ -41,3 +41,9 @@ GET /api/projects/{ecosystem}/{name}/coherence returns `{"score": 0.0–1.0, "co
 
 - Actual weight values require human approval
 - Coherence formula changes require needs-decision
+
+## Verification
+
+```bash
+python3 -m pytest api/tests/test_cc_scoring.py -x -v
+```
