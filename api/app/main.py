@@ -23,6 +23,7 @@ from app.routers import (
     contributions,
     contributors,
     distributions,
+    federation,
     friction,
     gates,
     governance,
@@ -315,6 +316,7 @@ app.include_router(automation_usage.router, prefix="/api", tags=["automation-usa
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])
+app.include_router(federation.router, prefix="/api", tags=["federation"])
 app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])

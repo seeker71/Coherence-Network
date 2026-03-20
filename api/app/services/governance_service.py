@@ -233,6 +233,32 @@ def _apply_change_request(change_request: ChangeRequest) -> dict[str, Any]:
             raise ValueError("spec not found")
         return {"kind": "spec", "id": updated.spec_id, "action": "updated"}
 
+    if request_type == ChangeRequestType.FEDERATION_IMPORT:
+        federation_type = payload.get("federation_type", "unknown")
+        source_instance_id = payload.get("source_instance_id", "unknown")
+        item_data = payload.get("data", {})
+        if federation_type == "lineage_link":
+            from app.models.value_lineage import LineageLinkCreate
+            from app.services import value_lineage_service
+            link = value_lineage_service.create_link(LineageLinkCreate(**item_data))
+            return {"kind": "federation_lineage_link", "id": link.id, "source": source_instance_id, "action": "created"}
+        if federation_type == "usage_event":
+            from app.models.value_lineage import UsageEventCreate
+            from app.services import value_lineage_service
+            lineage_id = item_data.get("lineage_id", "")
+            event = value_lineage_service.add_usage_event(
+                lineage_id,
+                UsageEventCreate(
+                    source=item_data.get("source", "federation"),
+                    metric=item_data.get("metric", "federated_event"),
+                    value=float(item_data.get("value", 0.0)),
+                ),
+            )
+            if event is None:
+                raise ValueError(f"lineage link '{lineage_id}' not found for federated usage event")
+            return {"kind": "federation_usage_event", "id": event.id, "source": source_instance_id, "action": "created"}
+        return {"kind": "federation_import", "federation_type": federation_type, "source": source_instance_id, "action": "stored"}
+
     raise ValueError(f"unsupported request_type: {request_type}")
 
 
