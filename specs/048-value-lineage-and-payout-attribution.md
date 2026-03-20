@@ -14,6 +14,39 @@ Create a verifiable, machine-readable chain from **idea -> research -> spec crea
 - [ ] All artifacts are persisted in a durable local store for auditability.
 - [ ] Missing lineage id returns 404 with `{ "detail": "Lineage link not found" }`.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 115
+
+## Task Card
+
+```yaml
+goal: Create a verifiable, machine-readable chain from **idea -> research -> spec creation/upgrade -> implementation -> usage/value signals -> payout preview** so contributors can be rewarded based on measurable system value and energy-balanced contribution quality.
+files_allowed:
+  - api/app/models/value_lineage.py
+  - api/app/services/value_lineage_service.py
+  - api/app/routers/value_lineage.py
+  - api/app/main.py
+  - api/tests/test_value_lineage.py
+  - api/app/services/release_gate_service.py
+  - api/tests/test_release_gate_service.py
+  - api/app/routers/gates.py
+  - web/app/gates/page.tsx
+done_when:
+  - API supports creating and fetching a lineage link that binds idea/spec/implementation references, contributor roles, ...
+  - API supports appending usage/value events to a lineage link.
+  - API exposes valuation summary for a lineage link (measured value, estimated cost, ROI ratio, event count).
+  - API supports payout preview from valuation using explicit stage weights and returns per-contributor attribution.
+  - Payout preview applies optimization objectives for coherence, energy flow, awareness, friction relief, and stage-bala...
+commands:
+  - cd api && pytest -q tests/test_value_lineage.py
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### `POST /api/value-lineage/links`
@@ -242,6 +275,14 @@ Compute payout attribution for contributors.
 }
 ```
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Data Model
 
 ```yaml
@@ -309,6 +350,21 @@ UsageEvent:
 - `api/tests/test_value_lineage.py::test_lineage_404_contract` validates not-found behavior and detail contract.
 - `api/tests/test_inventory_api.py::test_system_lineage_inventory_includes_core_sections` validates inventory reporting includes value-lineage core sections.
 - `api/tests/test_release_gate_service.py::test_evaluate_public_deploy_contract_report_live_shape` validates the public deploy contract includes `railway_value_lineage_e2e`.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
 
 ## Verification
 

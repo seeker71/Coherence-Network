@@ -13,6 +13,33 @@ Implement the core metrics slice of spec 026: persist one metric record per comp
 - [ ] **GET /api/agent/metrics** — Returns 200 with aggregates over a rolling window (e.g. 7 days): success_rate (completed, failed, total, rate), execution_time (p50_seconds, p95_seconds), by_task_type, by_model. Empty or zeroed structure when no metrics exist.
 - [ ] **No persistence on other statuses** — Do not record metrics for pending, running, or needs_decision.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 007
+
+## Task Card
+
+```yaml
+goal: Implement the core metrics slice of spec 026: persist one metric record per completed or failed agent task, and expose aggregates via `GET /api/agent/metrics` so the pipeline can be measured and improved (success rate, execution time, breakdowns by task_type and model).
+files_allowed:
+  - api/app/services/metrics_service.py
+  - api/app/routers/agent.py
+  - api/scripts/agent_runner.py
+  - api/app/models/metrics.py
+done_when:
+  - Persist on completion — When a task reaches status `completed` or `failed`, append one task metric record (task_id, t...
+  - Metrics store — Persist records in a single append-only store (e.g. JSONL at `api/logs/metrics.jsonl`). One JSON obje...
+  - GET /api/agent/metrics — Returns 200 with aggregates over a rolling window (e.g. 7 days): success_rate (completed, fa...
+  - No persistence on other statuses — Do not record metrics for pending, running, or needs_decision.
+commands:
+  - python3 -m pytest api/tests/test_agent_task_persistence.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `GET /api/agent/metrics`
@@ -38,6 +65,14 @@ Implement the core metrics slice of spec 026: persist one metric record per comp
 When no metrics exist (or window is empty), return the same shape with zeros/empty objects (e.g. `"total": 0`, `"rate": 0.0`, `"by_task_type": {}`, `"by_model": {}`).
 
 **Response 4xx/5xx** — Not required for Phase 1; endpoint may return 200 with empty structure on read/aggregation errors if desired.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -84,6 +119,28 @@ TaskMetricRecord:
 - [026-pipeline-observability-and-auto-review.md](026-pipeline-observability-and-auto-review.md) — Parent spec; Phases 2–6.
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — Agent API; GET /api/agent/metrics listed there.
 - [007-meta-pipeline-backlog.md](007-meta-pipeline-backlog.md) — Backlog item: Implement spec 026 Phase 1.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

@@ -43,8 +43,8 @@ class ChangeRequestRecord(Base):
     approvals: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     rejections: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     applied_result_json: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 class ChangeRequestVoteRecord(Base):
@@ -56,7 +56,7 @@ class ChangeRequestVoteRecord(Base):
     voter_type: Mapped[str] = mapped_column(String, nullable=False)
     decision: Mapped[str] = mapped_column(String, nullable=False)
     rationale: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 from app.services import unified_db as _udb

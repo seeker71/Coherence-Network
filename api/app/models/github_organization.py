@@ -5,7 +5,7 @@ Represents organizations fetched from GitHub API for coherence analysis.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -19,7 +19,7 @@ class GitHubOrganization(BaseModel):
     type: str  # "Organization" or "User"
     name: Optional[str] = None
     avatar_url: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: Optional[datetime] = None
 
 

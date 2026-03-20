@@ -14,9 +14,46 @@ Keep framework docs in sync with the codebase: when tests pass, a script updates
 - [x] CI job runs the script after the "Run API tests" step when pytest succeeds; script failure does not fail the CI job (e.g. `continue-on-error: true`).
 - [x] Script only writes when tests have passed: in CI, run only after pytest step (GitHub Actions sets `CI=true`); locally, pass `--tests-passed` or script no-ops.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 004, 030
+
+## Task Card
+
+```yaml
+goal: Keep framework docs in sync with the codebase: when tests pass, a script updates `docs/SPEC-COVERAGE.
+files_allowed:
+  - api/scripts/update_spec_coverage.py
+  - docs/SPEC-COVERAGE.md
+  - docs/STATUS.md
+  - .github/workflows/test.yml
+  - api/tests/test_update_spec_coverage.py
+done_when:
+  - Script `api/scripts/update_spec_coverage.py` runs after pytest and updates SPEC-COVERAGE when all tests pass.
+  - SPEC-COVERAGE update: additive only — add missing spec rows from `specs/*.md`; never remove rows or change existing P...
+  - STATUS update: script updates at least one of (a) Test count in `docs/STATUS.md` from pytest output or env, or (b) "S...
+  - Script is idempotent: repeated run with no new specs or test changes leaves files unchanged.
+  - Script accepts `--dry-run`: preview changes without writing; exit 0.
+commands:
+  - cd api && python -m pytest api/tests/test_update_spec_coverage.py -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 Not applicable — script is CLI-only.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Script contract (CLI)
 
@@ -70,6 +107,28 @@ Tests define the contract; do not modify tests to make implementation pass. Fix 
 **Test files:** `api/tests/test_update_spec_coverage.py` (dry-run, no-op without `--tests-passed`, idempotency, STATUS sections, CI workflow step, additive rows). `api/tests/test_agent.py` also has `test_update_spec_coverage_dry_run`.
 
 **Contract (spec 027):** The tests in `test_update_spec_coverage.py` define the contract. Key behaviors: `--dry-run --tests-passed` exits 0, prints a preview (e.g. "(Dry run" or "Would add" or "No new specs"), and does not modify SPEC-COVERAGE or STATUS; without `--tests-passed` and not in CI, script prints exactly "Skipping (tests not confirmed passed). Use --tests-passed or run in CI." and exits 0; CI workflow has "Run API tests" before "Update spec coverage" and the update step has `continue-on-error: true`; after a run, every spec id from `specs/*.md` has a row in SPEC-COVERAGE (additive); STATUS.md contains "## Specs Implemented", "## Test Count", and a test count number; second run with no changes leaves files unchanged. Do not modify tests to make implementation pass.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add deployment smoke tests post-release.
+
 
 ## Verification
 

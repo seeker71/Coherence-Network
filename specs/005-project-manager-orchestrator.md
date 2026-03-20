@@ -44,6 +44,14 @@ constraints:
 
 N/A - no API contract changes in this spec. Orchestrator uses existing POST/GET agent tasks and GET /api/health.
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Data Model (if applicable)
 
 Orchestrator state file `api/logs/project_manager_state.json`: backlog_index (int), current_task_id (str or null), phase (spec|impl|test|review), iteration (int), blocked (bool).
@@ -59,6 +67,12 @@ Orchestrator state file `api/logs/project_manager_state.json`: backlog_index (in
 
 - `api/tests/test_project_manager.py` - run project_manager --dry-run and assert exit 0; optionally --once with API and assert state file valid and exit 0.
 - Manual: run `python3 api/scripts/project_manager.py --once --verbose` with API and backlog; confirm one cycle completes and state advances or pauses on needs_decision.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
 
 ## Verification
 

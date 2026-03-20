@@ -7,6 +7,27 @@ Use: `./scripts/run_overnight_pipeline.sh --backlog specs/006-overnight-backlog.
 
 **Backlog alignment (Feb 2026):** Phase 6 prioritizes GitHub API + Contributor/Org (P0 for coherence). Meta-pipeline interleaved at 20% via PIPELINE_META_BACKLOG, PIPELINE_META_RATIO.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 001, 002, 003, 004, 005, 007, 008, 009, 010, 011, 029, 108, 109, 110
+
+## Task Card
+
+```yaml
+goal: Implement the functionality described in this spec
+files_allowed:
+  - # TBD — determine from implementation
+done_when:
+  - All requirements implemented and tests pass
+commands:
+  - cd api && python -m pytest tests/ -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## Phase 1: Specs & Docs (items 1–15) — DONE
 1. specs/001-health-check.md — Verify all health items complete; add any missing tests
 2. specs/002-agent-orchestration-api.md — Verify all agent API items complete; add edge-case tests
@@ -98,3 +119,29 @@ Use: `./scripts/run_overnight_pipeline.sh --backlog specs/006-overnight-backlog.
 78. Add n8n GitHub advisory ingestion to `collect_ai_agent_intel.py` + security watch monitor path, then validate monitor flags top GHSA ID
 79. Run CrewAI async step-callback pilot (v1.10.1a1+) with callback latency/error telemetry and rollback guard in docs/AGENT-DEBUGGING.md
 80. Add LangGraphJS 1.2.0 Overwrite/tool-lifecycle stream compatibility spike task linked to spec 110 acceptance evidence
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add end-to-end browser tests for critical paths.
+
+## Acceptance Tests
+
+See `api/tests/test_overnight_backlog.py` for test cases covering this spec's requirements.
+

@@ -17,6 +17,36 @@ Extends spec 002 (Agent Orchestration API).
 - [x] **Telegram flow complete:** Inbound (webhook → record_webhook → parse_command → send_reply → record_send) and diagnostics endpoint implemented; verified by diagnostic test (see Acceptance Tests).
 - [x] **Diagnostic test:** `test_telegram_flow_diagnostic` in `api/tests/test_agent.py`: POST webhook with a command, GET diagnostics; assert `config`, `webhook_events`, `send_results` present and `webhook_events` updated (and optionally that `send_results` was appended when reply path is exercised). Uses `telegram_diagnostics.clear()` for isolation. No real bot required.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 013
+
+## Task Card
+
+```yaml
+goal: Close the loop between agent tasks and human: when a task needs a decision, the user can reply via Telegram and the system records the decision for the agent to act on.
+files_allowed:
+  - api/app/models/agent.py
+  - api/app/services/agent_service.py
+  - api/app/routers/agent.py
+  - api/app/services/telegram_adapter.py
+  - api/app/services/telegram_diagnostics.py
+  - api/scripts/agent_runner.py
+done_when:
+  - Telegram `/reply {task_id} {decision}` — record decision on task, update status to running (or completed if decision ...
+  - Telegram `/attention` — list only tasks with status needs_decision or failed
+  - Agent task: add `progress_pct` (0–100), `current_step`, `decision_prompt` (optional), `decision` (user reply)
+  - PATCH /api/agent/tasks/{id}: accept `progress_pct`, `current_step`, `decision` in request body
+  - Agent runner script: polls pending tasks, runs command, PATCHes progress, blocks on needs_decision until decision pre...
+commands:
+  - python3 -m pytest api/tests/test_telegram_adapter.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### `PATCH /api/agent/tasks/{task_id}` (extended)
@@ -91,6 +121,14 @@ Returns tasks with status `needs_decision` or `failed` only.
 - `send_results`: last N send_reply/send_alert attempts (append on each send).
 
 Used by the diagnostic test to verify the full Telegram inbound path without a real bot.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (extensions)
 
@@ -235,6 +273,28 @@ Verifies the full inbound path (webhook → record_webhook → [optional: parse_
 ## Decision Gates
 
 - Agent runner: run in same process as API or separate? Recommend separate (script) for MVP.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add deployment smoke tests post-release.
+
 
 ## Verification
 

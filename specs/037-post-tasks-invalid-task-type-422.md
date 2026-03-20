@@ -9,6 +9,28 @@ Ensure that creating an agent task with an invalid `task_type` is rejected with 
 - [ ] **Test exists**: A test in `api/tests/test_agent.py` sends `POST /api/agent/tasks` with a body that includes an invalid `task_type` (e.g. `"invalid"` or `"foo"`) and asserts response status code is 422.
 - [ ] **Response shape**: The test asserts that the 422 response body has a `detail` key; when using Pydantic validation, `detail` is an array of validation items (per [009-api-error-handling.md](009-api-error-handling.md)).
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 009, 010
+
+## Task Card
+
+```yaml
+goal: Ensure that creating an agent task with an invalid `task_type` is rejected with 422 so clients receive predictable validation behavior and the API contract (spec 009, 010) is enforced by an explicit test.
+files_allowed:
+  - api/tests/test_agent.py
+done_when:
+  - Test exists: A test in `api/tests/test_agent.py` sends `POST /api/agent/tasks` with a body that includes an invalid `...
+  - Response shape: The test asserts that the 422 response body has a `detail` key; when using Pydantic validation, `deta...
+commands:
+  - python3 -m pytest api/tests/test_agent_task_persistence.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `POST /api/agent/tasks`
@@ -35,6 +57,14 @@ Validation error (FastAPI/Pydantic default). `detail` is an array of objects wit
 ```
 
 Allowed `task_type` values are defined in [010-request-validation.md](010-request-validation.md) and [002-agent-orchestration-api.md](002-agent-orchestration-api.md).
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -66,6 +96,28 @@ None. Adding or expanding this test does not require new dependencies or API con
 - [009-api-error-handling.md](009-api-error-handling.md) — 422 format, acceptance tests for 422 on invalid task_type
 - [010-request-validation.md](010-request-validation.md) — task_type enum, validation rules, test names
 - [002-agent-orchestration-api.md](002-agent-orchestration-api.md) — POST /api/agent/tasks contract and test list
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

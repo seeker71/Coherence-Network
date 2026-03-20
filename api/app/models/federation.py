@@ -16,7 +16,7 @@ class FederatedInstance(BaseModel):
     public_key: Optional[str] = None  # For future signature verification
     registered_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     last_sync_at: Optional[str] = None
-    trust_level: float = Field(default=0.5, ge=0.0, le=1.0, description="0=untrusted, 1=fully trusted")
+    trust_level: str = Field(default="pending", description="Trust level: unknown, pending, verified, trusted")
 
 
 class FederatedPayload(BaseModel):

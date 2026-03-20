@@ -4,6 +4,27 @@ Work that improves the pipeline itself. Runs through the same spec→impl→test
 
 **Full automation priority (Feb 2026):** Items 1–5 close meta-level gaps; items 6+ are general pipeline improvement.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 027, 045, 047, 114
+
+## Task Card
+
+```yaml
+goal: Implement the functionality described in this spec
+files_allowed:
+  - # TBD — determine from implementation
+done_when:
+  - All requirements implemented and tests pass
+commands:
+  - cd api && python -m pytest tests/ -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## Items
 
 ### Full Automation (Prioritized)
@@ -43,3 +64,23 @@ Evidence snapshot and hypothesis tests: [docs/system_audit/pipeline_improvement_
 22. **Cycle time compression:** Track wall-clock time from idea selection to PASS review. A/B test prompt sequencing. Baseline: ~15 min (cycle 2). Target: <10 min for straightforward specs.
 23. **Spec reuse detection:** Before writing a new spec, check if existing specs cover >50% of requirements. Measure: `specs_with_reuse_detected / total_new_specs`. Target: detect overlap in >30% of cases.
 24. **Error pattern library:** When `classify_error` sees a new pattern 3+ times, auto-add to pattern library and create root-cause spec. Measure: `unique_categories_resolved / total_unique`. Target: 80% of recurring errors have remediation within 1 week.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
+## Acceptance Tests
+
+See `api/tests/test_meta_pipeline_backlog.py` for test cases covering this spec's requirements.
+

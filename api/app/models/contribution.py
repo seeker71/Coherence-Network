@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -21,6 +21,6 @@ class ContributionCreate(ContributionBase):
 class Contribution(ContributionBase):
     id: UUID = Field(default_factory=uuid4)
     coherence_score: float = Field(ge=0.0, le=1.0)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(from_attributes=True)

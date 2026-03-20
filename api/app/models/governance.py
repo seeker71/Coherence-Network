@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 from uuid import uuid4
@@ -44,7 +44,7 @@ class ChangeRequestVote(BaseModel):
     voter_type: ActorType
     decision: VoteDecision
     rationale: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ChangeRequestCreate(BaseModel):
@@ -78,5 +78,5 @@ class ChangeRequest(BaseModel):
     rejections: int = Field(default=0, ge=0)
     applied_result: Optional[dict[str, Any]] = None
     votes: list[ChangeRequestVote] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

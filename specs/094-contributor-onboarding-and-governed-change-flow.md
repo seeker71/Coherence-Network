@@ -45,6 +45,51 @@ Enable a new human contributor to register, propose idea/spec/question updates, 
 7. `/contribute` is reachable from root navigation and onboarding.
 8. Local API tests and web build pass.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Implement the functionality described in this spec
+files_allowed:
+  - # TBD — determine from implementation
+done_when:
+  - New contributor can register from web and appear in contributor list.
+  - Human can submit change requests for:
+  - Change request stores proposer attribution and vote attribution.
+  - Human or machine reviewer can cast yes/no vote via API and web.
+  - Approved request auto-applies by default and records apply result.
+commands:
+  - - `pytest -q tests/test_ideas.py tests/test_spec_registry_api.py tests/test_governance_api.py tests/test_inventory_api.py`
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add deployment smoke tests post-release.
+
+## Acceptance Tests
+
+See `api/tests/test_contributor_onboarding_and_governed_change_flow.py` for test cases covering this spec's requirements.
+
+
 ## Verification
 
 - API tests:

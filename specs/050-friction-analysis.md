@@ -14,6 +14,34 @@ Track and analyze friction events (bugs, blockers, bottlenecks) to identify syst
 - [x] Supports filtering by status (pending, resolved, ignored)
 - [x] Report includes: total_events, by_status, by_category, ignored_lines
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 115
+
+## Task Card
+
+```yaml
+goal: Track and analyze friction events (bugs, blockers, bottlenecks) to identify systemic issues and measure effectiveness.
+files_allowed:
+  - api/app/routers/friction.py
+  - api/app/services/friction_service.py
+  - api/tests/test_friction_api.py
+  - specs/050-friction-analysis.md
+done_when:
+  - GET /api/friction/events — List friction events with optional status filter
+  - POST /api/friction/events — Record new friction event
+  - GET /api/friction/report — Aggregated friction report with time window
+  - GET /api/friction/entry-points — Unified friction entry points from monitor issues, failed-task cost, and CI failure ...
+  - Events stored in append-only log (api/logs/friction.jsonl)
+commands:
+  - cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/pytest -q tests/test_friction_api.py
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### `GET /api/friction/events`
@@ -66,6 +94,14 @@ Track and analyze friction events (bugs, blockers, bottlenecks) to identify syst
 }
 ```
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Files to Create/Modify
 
 - `api/app/routers/friction.py` (implemented)
@@ -80,6 +116,21 @@ Track and analyze friction events (bugs, blockers, bottlenecks) to identify syst
 - [x] `api/tests/test_friction_api.py::test_friction_entry_points_merges_sources` — Verify unified entry-point aggregation
 
 All tests passing.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
 
 ## Verification
 

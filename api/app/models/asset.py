@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from uuid import UUID, uuid4
@@ -27,6 +27,6 @@ class AssetCreate(AssetBase):
 class Asset(AssetBase):
     id: UUID = Field(default_factory=uuid4)
     total_cost: Decimal = Decimal("0.00")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(from_attributes=True)

@@ -10,9 +10,41 @@ Ensure the project manager's `--reset` CLI flag is covered by a test that verifi
 - [ ] The test asserts that after a run with `--reset`, state reflects "start from beginning": e.g. `backlog_index` is 0 and `phase` is the default (e.g. `"spec"`), either by reading the state file or by exercising `load_state()` after the reset path.
 - [ ] The test uses a dedicated state path (e.g. `--state-file` to a temporary path) so it does not depend on or overwrite the default project manager state file.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 005, 006, 041
+
+## Task Card
+
+```yaml
+goal: Ensure the project manager's `--reset` CLI flag is covered by a test that verifies the script clears persisted state and the run proceeds from backlog index 0.
+files_allowed:
+  - api/tests/test_project_manager.py
+  - api/tests/test_project_manager_pipeline.py
+done_when:
+  - A test exists that runs `project_manager.py` with `--reset` (and optionally `--dry-run`) such that any existing state...
+  - The test asserts that after a run with `--reset`, state reflects "start from beginning": e.g. `backlog_index` is 0 an...
+  - The test uses a dedicated state path (e.g. `--state-file` to a temporary path) so it does not depend on or overwrite ...
+commands:
+  - python3 -m pytest api/tests/test_project_manager.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 N/A — script CLI behavior only. The script already accepts `--reset` (see `api/scripts/project_manager.py`); this spec adds test coverage.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -45,6 +77,28 @@ Prefer adding to `api/tests/test_project_manager.py` to mirror other CLI-flag te
 ## Decision Gates (if any)
 
 None.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

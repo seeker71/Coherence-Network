@@ -98,6 +98,21 @@ Each phase is independently deployable and backward compatible.
 - [ ] Schema migration tooling (alembic or manual versioning)
 - [ ] Drop legacy env vars after transition period
 
+## Failure and Retry Behavior
+
+- **Invalid input**: Return 422 with field-level validation errors.
+- **Resource not found**: Return 404 with descriptive message.
+- **Database unavailable**: Return 503; client should retry with exponential backoff (initial 1s, max 30s).
+- **Concurrent modification**: Last write wins; no optimistic locking required for MVP.
+- **Timeout**: Operations exceeding 30s return 504; safe to retry.
+
+## Acceptance Tests
+
+See `api/tests/test_unified_sqlite_store.py` for test cases covering this spec's requirements.
+
+
+
+
 ## Verification
 
 ```bash

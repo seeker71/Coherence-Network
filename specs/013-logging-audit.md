@@ -15,6 +15,37 @@ Standardize logging across the API and scripts so ops can diagnose issues, logs 
 - [ ] Structured logging: API may optionally emit JSON log lines (one JSON object per line) when LOG_FORMAT=json; format defined below
 - [ ] Log rotation: file handlers use RotatingFileHandler with documented maxBytes and backupCount; task logs (task_{id}.log) remain under cleanup_temp/scripts
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 014
+
+## Task Card
+
+```yaml
+goal: Standardize logging across the API and scripts so ops can diagnose issues, logs are safe for production (no secrets), and log volume is bounded via levels and rotation.
+files_allowed:
+  - api/app/main.py
+  - api/app/routers/agent.py
+  - api/app/services/telegram_adapter.py
+  - api/scripts/agent_runner.py
+  - api/scripts/project_manager.py
+  - api/scripts/overnight_orchestrator.py
+  - docs/RUNBOOK.md
+done_when:
+  - All log locations documented in docs/RUNBOOK.md
+  - No API keys, tokens, or secrets logged (mask or omit)
+  - Log levels: DEBUG (verbose/detail), INFO (normal flow), WARNING (recoverable), ERROR (failures); level configurable v...
+  - Scripts use consistent format: `%(asctime)s %(levelname)s %(message)s` for file handlers
+  - Unhandled exceptions: log.exception() in main.py
+commands:
+  - cd api && python -m pytest tests/ -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## Log Levels (usage)
 
 | Level    | Use for |
@@ -94,3 +125,23 @@ Example line:
 ## Decision gates
 
 - Adding a new pip dependency solely for JSON logging: needs-decision (stdlib only preferred).
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
+## Acceptance Tests
+
+See `api/tests/test_logging_audit.py` for test cases covering this spec's requirements.
+

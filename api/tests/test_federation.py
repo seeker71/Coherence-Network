@@ -41,7 +41,7 @@ def test_register_instance_and_list(client):
     assert resp.status_code == 201
     body = resp.json()
     assert body["instance_id"] == "remote-1"
-    assert body["trust_level"] == 0.5
+    assert body["trust_level"] == "pending"
 
     resp2 = client.get("/api/federation/instances")
     assert resp2.status_code == 200

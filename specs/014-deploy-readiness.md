@@ -15,6 +15,33 @@ Define minimum checklist for deploying the API and web to a hosted environment (
 - [x] Production deployment: Railway (API) + Vercel (web)
 - [x] Verification script: scripts/verify_web_api_deploy.sh
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 001, 009
+
+## Task Card
+
+```yaml
+goal: Define minimum checklist for deploying the API and web to a hosted environment (e.
+files_allowed:
+  - docs/DEPLOY.md
+  - api/app/main.py
+  - docs/SETUP.md
+done_when:
+  - GET /api/health — liveness (returns 200)
+  - GET /api/ready — readiness (returns 200; placeholder for DB checks when added)
+  - Environment: all required vars documented in .env.example
+  - No hardcoded secrets; use env vars
+  - CORS: configurable via ALLOWED_ORIGINS in main.py
+commands:
+  - cd api && python -m pytest tests/ -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## Deploy Checklist (Documentation)
 
 Create or update docs to include:
@@ -46,13 +73,27 @@ Returns 200, JSON `{"status": "ok", "service": "coherence-contribution-network",
 ### GET /api/ready
 Returns 200, JSON `{"status": "ready"}` — future: check DB connectivity
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Production Deployment Status
 
 ### Live Environments
 - **API**: https://coherence-network-production.up.railway.app (Railway)
 - **Web**: https://coherence-network.vercel.app (Vercel)
 
-### Verification
+### Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Verification
 ```bash
 ./scripts/verify_web_api_deploy.sh
 ```
@@ -67,6 +108,22 @@ Checks:
 
 - GET /api/health, /api/ready, /api/version return 200
 - docs/DEPLOY.md exists and lists env vars and checklist
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add deployment smoke tests post-release.
+
 
 ## Out of Scope
 

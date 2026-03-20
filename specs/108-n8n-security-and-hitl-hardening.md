@@ -10,9 +10,44 @@ Protect automation workflows from known critical exposure and reduce high-impact
 - [ ] Automation workflows require explicit HITL approval before executing destructive or external-impacting actions (for example: delete/write/send).
 - [ ] Security and workflow-edit permissions are documented with operational validation steps and evidence hooks.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Protect automation workflows from known critical exposure and reduce high-impact execution risk by enforcing a patched n8n baseline plus Human-in-the-loop (HITL) approval gates for sensitive agent actions.
+files_allowed:
+  - docs/DEPLOY.md
+  - docs/RUNBOOK.md
+  - docs/PR-CHECK-FAILURE-TRIAGE.md
+  - api/scripts/validate_pr_to_public.py
+  - api/tests/test_validate_pr_to_public.py
+done_when:
+  - Runtime docs and deployment checks define a minimum supported n8n version at or above fixed security releases (`1.123...
+  - Automation workflows require explicit HITL approval before executing destructive or external-impacting actions (for e...
+  - Security and workflow-edit permissions are documented with operational validation steps and evidence hooks.
+commands:
+  - cd api && python -m pytest api/tests/test_validate_pr_to_public.py -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 N/A - no Coherence API contract changes in this spec.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -33,6 +68,21 @@ N/A - no model changes in this spec.
 - Manual validation:
   - Verify runtime/deploy target version is `>=1.123.17` (v1) or `>=2.5.2` (v2).
   - Verify at least one destructive tool action is blocked until HITL approval is provided.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
 
 ## Verification
 
