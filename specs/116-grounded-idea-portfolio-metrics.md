@@ -118,6 +118,21 @@ Bulk endpoint `GET /api/ideas/grounded-metrics` returns metrics for all ideas.
 6. Tests verify exact computed values from known inputs — no mocks for service APIs,
    only real service method contracts.
 
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Acceptance Tests
+
+See `api/tests/test_grounded_idea_portfolio_metrics.py` for test cases covering this spec's requirements.
+
+
+
+
 ## Verification
 
 - Unit tests with exact assertions on all metric computations

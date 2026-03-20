@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -25,7 +25,7 @@ class AutomationUsageSnapshotRecord(Base):
     provider: Mapped[str] = mapped_column(String, nullable=False, index=True)
     collected_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 class FrictionEventRecord(Base):
@@ -36,7 +36,7 @@ class FrictionEventRecord(Base):
     timestamp: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="open")
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 class ExternalToolUsageEventRecord(Base):
@@ -53,7 +53,7 @@ class ExternalToolUsageEventRecord(Base):
     duration_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     occurred_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
 
 
 class TaskMetricRecord(Base):
@@ -67,4 +67,4 @@ class TaskMetricRecord(Base):
     duration_seconds: Mapped[float | None] = mapped_column(nullable=True)
     occurred_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))

@@ -135,6 +135,31 @@ Migrate in-memory data stores (GraphStore and AgentTask storage) to PostgreSQL f
   - [ ] Run before enabling dual-write mode
   - [ ] Idempotent (safe to run multiple times)
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Migrate in-memory data stores (GraphStore and AgentTask storage) to PostgreSQL for production scalability, data persistence, and multi-instance support.
+files_allowed:
+  - # TBD — determine from implementation
+done_when:
+  - PostgreSQL schemas defined for all in-memory stores
+  - Projects table with (ecosystem, name) unique constraint
+  - Project dependencies table (graph edges) with foreign keys
+  - Contributors table with UUID primary keys
+  - Assets table with UUID primary keys
+commands:
+  - python3 -m pytest api/tests/test_metrics_db_migration.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 No new API endpoints. Existing endpoints continue to work unchanged.
@@ -168,6 +193,14 @@ No new API endpoints. Existing endpoints continue to work unchanged.
   }
 }
 ```
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model
 
@@ -350,6 +383,28 @@ class AgentTask(BaseModel):
 - [PostgreSQL best practices](https://wiki.postgresql.org/wiki/Don%27t_Do_This)
 - [FastAPI with databases](https://fastapi.tiangolo.com/advanced/async-sql-databases/)
 - See detailed implementation plan: `docs/POSTGRESQL-MIGRATION.md`
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

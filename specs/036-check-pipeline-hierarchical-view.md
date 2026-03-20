@@ -14,6 +14,31 @@ Operators need a single command that shows pipeline health in a clear hierarchy:
 - [ ] Add optional flag `--hierarchical` to explicitly enable this view; default human-readable output is hierarchical. Add `--flat` to preserve legacy flat output (Goal/PM/Tasks/Artifacts order still allowed but sections not strictly layered).
 - [ ] With `--json`, when hierarchical view is requested (default or `--hierarchical`), include in the JSON a top-level key `hierarchical` (or merge layer_0_goal, layer_1_orchestration, layer_2_execution, layer_3_attention from status-report when available) so script consumers get the same structure.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 007, 026, 032
+
+## Task Card
+
+```yaml
+goal: Operators need a single command that shows pipeline health in a clear hierarchy: goal progress first, then orchestration (PM), then task execution, then artifact health.
+files_allowed:
+  - api/scripts/check_pipeline.py
+done_when:
+  - When run without `--json`, `check_pipeline.py` prints a hierarchical view: Goal → PM/Orchestration → Tasks → Artifact...
+  - Goal section: Use `GET /api/agent/status-report` when available (from monitor-written file); show layer_0_goal status...
+  - PM / Orchestration section: Show layer_1_orchestration from status-report when available; else derive from pipeline-s...
+  - Tasks section: Running, pending (with wait times), recent completed (with duration) — current pipeline-status content...
+  - Artifacts section: Recent task outputs / artifact health — e.g. recent_completed tasks with output_len and optional o...
+commands:
+  - python3 -m pytest api/tests/test_check_pipeline_hierarchical.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 No new API. Uses existing:
@@ -21,6 +46,14 @@ No new API. Uses existing:
 - `GET /api/agent/status-report` — hierarchical report (layer_0_goal … layer_3_attention) when monitor has written it.
 - `GET /api/agent/pipeline-status` — running, pending, recent_completed, project_manager, attention, etc.
 - `GET /api/agent/effectiveness` — goal_proximity, throughput, success_rate (fallback when status-report missing).
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -49,6 +82,28 @@ N/A. Script aggregates existing API responses and prints (or emits JSON) in hier
 - [PIPELINE-EFFICIENCY-PLAN.md](../docs/PIPELINE-EFFICIENCY-PLAN.md) — §4.3 Hierarchical view, §7 Phase 3.
 - [032-attention-heuristics-pipeline-status.md](032-attention-heuristics-pipeline-status.md) — attention flags.
 - [026-pipeline-observability-and-auto-review.md](026-pipeline-observability-and-auto-review.md) — goal status and dashboard.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

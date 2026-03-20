@@ -10,9 +10,40 @@ Preserve canonical `specs/024-pypi-indexing.md` references used in specs/docs wh
 - [ ] Point readers to the current implementation/coverage source for PyPI indexing.
 - [ ] Keep this alias doc documentation-only, with no runtime behavior changes.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 019, 034
+
+## Task Card
+
+```yaml
+goal: Preserve canonical `specs/024-pypi-indexing.
+files_allowed:
+  - specs/024-pypi-indexing.md
+done_when:
+  - Provide a canonical spec path at `specs/024-pypi-indexing.md`.
+  - Point readers to the current implementation/coverage source for PyPI indexing.
+  - Keep this alias doc documentation-only, with no runtime behavior changes.
+commands:
+  - cd api && python -m pytest tests/ -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 N/A - no API contract changes in this spec.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -26,6 +57,21 @@ N/A - no model changes in this spec.
 
 - Manual validation: open `specs/024-pypi-indexing.md` and confirm it links to PyPI indexing coverage in `docs/SPEC-COVERAGE.md`.
 - Manual validation: run docs/spec markdown link integrity scan and confirm no missing target for `024-pypi-indexing.md` references.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Invalid input**: Return 422 with field-level validation errors.
+- **Resource not found**: Return 404 with descriptive message.
+- **Database unavailable**: Return 503; client should retry with exponential backoff (initial 1s, max 30s).
+- **Concurrent modification**: Last write wins; no optimistic locking required for MVP.
+- **Timeout**: Operations exceeding 30s return 504; safe to retry.
+
 
 ## Verification
 

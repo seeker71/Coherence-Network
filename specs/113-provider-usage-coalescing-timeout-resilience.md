@@ -56,6 +56,17 @@ N/A - no model schema changes.
 - `api/tests/test_automation_usage_api.py::test_automation_usage_endpoint_coalesces_provider_families`
 - `api/tests/test_automation_usage_api.py::test_automation_usage_endpoint_times_out_to_snapshot_fallback`
 
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+
+
+
 ## Verification
 
 ```bash

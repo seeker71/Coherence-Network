@@ -15,6 +15,33 @@ Provide a simple health endpoint so we can verify the API is running and validat
 - [x] Response contains exactly the specified top-level keys (no extra keys)
 - [x] All response fields (status, version, timestamp) are strings
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 007, 009, 014
+
+## Task Card
+
+```yaml
+goal: Provide a simple health endpoint so we can verify the API is running and validate the spec→test→impl pipeline.
+files_allowed:
+  - api/app/main.py
+  - api/app/routers/health.py
+  - api/tests/test_health.py
+done_when:
+  - GET /api/health returns 200
+  - Response is valid JSON (Content-Type application/json; body parses as JSON)
+  - Response includes required fields: status, version, timestamp
+  - status is the string `"ok"`
+  - version is a semantic-version-like string (MAJOR.MINOR.PATCH matching `\d+\.\d+\.\d+`)
+commands:
+  - python3 -m pytest api/tests/test_health.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### `GET /api/health`
@@ -40,6 +67,14 @@ Provide a simple health endpoint so we can verify the API is running and validat
 **Response 5xx**
 
 Not defined by this spec. Unhandled server errors are covered by [009-api-error-handling.md](009-api-error-handling.md).
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model
 
@@ -94,6 +129,28 @@ None.
 - [014-deploy-readiness.md](014-deploy-readiness.md) — health probes for deploy
 - [007-sprint-0-landing.md](007-sprint-0-landing.md) — root includes health URL
 - [009-api-error-handling.md](009-api-error-handling.md) — 500 and error shapes
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

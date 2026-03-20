@@ -79,6 +79,12 @@ List the exact tests (or manual flow) that prove the requirements:
 - `api/tests/test_resource.py::test_get_resource_200`
 - `api/tests/test_resource.py::test_get_resource_404`
 
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
 ## Verification
 
 Provide executable commands used to validate this spec before phase advancement:

@@ -13,6 +13,34 @@ Surface pipeline health signals so operators and automation can detect stuck run
 - [ ] Heuristic thresholds (stuck minutes, consecutive failure count, success-rate window and minimum sample) are configurable (env or config) with documented defaults.
 - [ ] `check_pipeline.py --attention` prints attention flags in human-readable form (spec 027).
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 007, 027
+
+## Task Card
+
+```yaml
+goal: Surface pipeline health signals so operators and automation can detect stuck runs, repeated failures, and low success rate without inspecting logs.
+files_allowed:
+  - api/app/services/agent_service.py
+  - api/app/routers/agent.py
+  - api/scripts/check_pipeline.py
+  - api/tests/test_agent.py
+done_when:
+  - `GET /api/agent/pipeline-status` returns an `attention` object with boolean flags and a `flags` list (spec 002, 027).
+  - Stuck: `attention.stuck` is true when there are pending tasks, no running task, and the longest pending wait time exc...
+  - Repeated failures: `attention.repeated_failures` is true when the three most recently completed tasks (by completion ...
+  - Low success rate: `attention.low_success_rate` is true when metrics over the rolling window (e.g. 7 days) have at lea...
+  - Heuristic thresholds (stuck minutes, consecutive failure count, success-rate window and minimum sample) are configura...
+commands:
+  - python3 -m pytest api/tests/test_agent_pipeline_status_diagnostics_api.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `GET /api/agent/pipeline-status`
@@ -36,6 +64,14 @@ Existing response; `attention` object is required:
 - `repeated_failures`: true if last N completed tasks are all failed (N = 3 by default).
 - `low_success_rate`: true if windowed success rate is below threshold when sample size is sufficient.
 - `flags`: list of string names of raised conditions (e.g. `["stuck"]`, `["repeated_failures", "low_success_rate"]`), empty when none.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -83,6 +119,28 @@ When metrics are unavailable (e.g. no metrics_service), `low_success_rate` remai
 - [027 Fully Automated Pipeline](027-fully-automated-pipeline.md) — Phase 3 monitor attention, Phase 4 auto-fix.
 - [007 Meta-pipeline backlog](007-meta-pipeline-backlog.md) — item 4: attention heuristics.
 - [PIPELINE-ATTENTION](../docs/PIPELINE-ATTENTION.md) — operational checklist.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Verification
 

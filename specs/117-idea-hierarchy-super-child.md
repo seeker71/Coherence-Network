@@ -76,6 +76,21 @@ ranked = [row for row in answered
 6. Tests verify: super-ideas excluded from pickup, child-ideas ranked normally,
    standalone backward compat
 
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Acceptance Tests
+
+See `api/tests/test_idea_hierarchy_super_child.py` for test cases covering this spec's requirements.
+
+
+
+
 ## Verification
 
 - Unit tests for model validation

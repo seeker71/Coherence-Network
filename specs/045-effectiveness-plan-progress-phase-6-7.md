@@ -12,6 +12,32 @@ Measure progress toward PLAN.md goals by exposing Phase 6 and Phase 7 completion
 - [ ] **Data source:** Completion is computed from PM state (`backlog_index` in project_manager_state.json or project_manager_state_overnight.json) and total counts per phase from parsing 006-overnight-backlog.md (or equivalent backlog file).
 - [ ] **Test:** A test in `api/tests/test_agent.py` calls GET /api/agent/effectiveness and asserts response includes `plan_progress` with `phase_6` and `phase_7`, each having `completed` (int), `total` (int), and that Phase 6 total is 2 and Phase 7 total is 17 when 006 is used (or equivalent when backlog changes).
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: 002, 006, 007
+
+## Task Card
+
+```yaml
+goal: Measure progress toward PLAN.
+files_allowed:
+  - api/app/services/effectiveness_service.py
+  - api/tests/test_agent.py
+done_when:
+  - plan_progress present: GET /api/agent/effectiveness returns a `plan_progress` object (existing behavior retained).
+  - Phase 6/7 completion: `plan_progress` includes Phase 6 and Phase 7 completion derived from PM state and backlog (006)...
+  - Phase boundaries: Phase 6 = Product-Critical (backlog items 56–57 per 006). Phase 7 = Remaining Specs & Polish (items...
+  - Data source: Completion is computed from PM state (`backlog_index` in project_manager_state.json or project_manager_s...
+  - Test: A test in `api/tests/test_agent.py` calls GET /api/agent/effectiveness and asserts response includes `plan_prog...
+commands:
+  - cd api && python -m pytest api/tests/test_agent.py -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `GET /api/agent/effectiveness`
@@ -52,6 +78,14 @@ Existing fields (throughput, success_rate, issues, progress, goal_proximity, hea
 
 When backlog file is missing or unparseable, `plan_progress` may omit `phase_6`/`phase_7` or set totals to 0; `index`, `total`, `pct`, `state_file` behavior remains best-effort as today.
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Data Model (if applicable)
 
 ```yaml
@@ -80,6 +114,28 @@ Phase boundaries (006): Phase 6 = items 56–57 (inclusive). Phase 7 = items 58�
 ## Acceptance Tests
 
 See `api/tests/test_agent.py`. Test name suggestion: `test_effectiveness_plan_progress_includes_phase_6_and_phase_7`. All existing effectiveness tests must continue to pass.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
 
 ## Out of Scope
 

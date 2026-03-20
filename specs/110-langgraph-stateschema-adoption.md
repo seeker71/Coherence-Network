@@ -10,9 +10,43 @@ Improve determinism and validation quality in graph-based agent orchestration by
 - [ ] Validate graph state transitions against JSON Schema before and after critical nodes.
 - [ ] Emit actionable error context when schema validation fails so retries/heal paths can trigger with clear causes.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Improve determinism and validation quality in graph-based agent orchestration by adopting explicit StateSchema/JSON Schema contracts for runtime state transitions.
+files_allowed:
+  - api/app/services/agent_service.py
+  - api/app/models/schemas.py
+  - api/tests/test_agent.py
+  - docs/AGENT-ARCHITECTURE.md
+done_when:
+  - Define a canonical StateSchema for agent graph state with explicit required/optional fields.
+  - Validate graph state transitions against JSON Schema before and after critical nodes.
+  - Emit actionable error context when schema validation fails so retries/heal paths can trigger with clear causes.
+commands:
+  - cd api && python -m pytest api/tests/test_agent.py -q
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 N/A - no public API route changes in this spec.
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -41,6 +75,21 @@ AgentGraphState:
 
 - `cd api && pytest -v tests/test_agent.py -k \"schema or state\"`
 - Manual validation: execute one valid task and one intentionally malformed task context; verify deterministic schema-failure diagnostics.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
+- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
+- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
+- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
+- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
+
 
 ## Verification
 

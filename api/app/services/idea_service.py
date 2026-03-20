@@ -509,7 +509,7 @@ def _ensure_tracked_idea_entries(ideas: list[Idea]) -> tuple[list[Idea], bool]:
     return ideas, changed
 
 
-def _read_ideas(*, persist_ensures: bool = True) -> list[Idea]:
+def _read_ideas(*, persist_ensures: bool = False) -> list[Idea]:
     """Load ideas from DB, discover new ones from runtime, cache.
 
     When persist_ensures=False (e.g. guard/invariant runs), no writes are made.
@@ -864,7 +864,7 @@ def create_idea(
     manifestation_status: ManifestationStatus | None = None,
     value_basis: dict[str, str] | None = None,
 ) -> IdeaWithScore | None:
-    ideas = _read_ideas()
+    ideas = _read_ideas(persist_ensures=True)
     if any(existing.id == idea_id for existing in ideas):
         return None
 
@@ -906,7 +906,7 @@ def add_question(
     value_to_whole: float,
     estimated_cost: float,
 ) -> tuple[IdeaWithScore | None, bool]:
-    ideas = _read_ideas()
+    ideas = _read_ideas(persist_ensures=True)
     updated: Idea | None = None
     updated_idx: int = -1
     added = False
@@ -954,7 +954,7 @@ def update_idea(
     manifestation_status. Internal services may also adjust potential_value and
     estimated_cost for ROI normalization/calibration flows.
     """
-    ideas = _read_ideas()
+    ideas = _read_ideas(persist_ensures=True)
     updated: Idea | None = None
     updated_idx: int = -1
 
@@ -991,7 +991,7 @@ def answer_question(
     answer: str,
     measured_delta: float | None = None,
 ) -> tuple[IdeaWithScore | None, bool]:
-    ideas = _read_ideas()
+    ideas = _read_ideas(persist_ensures=True)
     updated: Idea | None = None
     updated_idx: int = -1
     question_found = False

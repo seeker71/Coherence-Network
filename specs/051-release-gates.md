@@ -13,6 +13,31 @@ Automated checks for deployment readiness. Validates that PRs meet quality gates
 - [x] Supports polling with timeout for async CI completion
 - [x] Returns detailed reports with pass/fail reasons
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Automated checks for deployment readiness.
+files_allowed:
+  - # TBD — determine from implementation
+done_when:
+  - GET /api/gates/pr-to-public — Check if PR is ready for merge to production
+  - GET /api/gates/merged-contract — Verify merged change meets contract (CI, approvals, deploy)
+  - GET /api/gates/main-head — Get current main branch status
+  - Integrates with GitHub API for PR status, checks, approvals
+  - Supports polling with timeout for async CI completion
+commands:
+  - python3 -m pytest api/tests/test_gates_api.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract
 
 ### `GET /api/gates/pr-to-public`
@@ -78,6 +103,14 @@ Automated checks for deployment readiness. Validates that PRs meet quality gates
 
 **Response 502**: When GitHub API unavailable
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Files
 
 - `api/app/routers/gates.py` (implemented)
@@ -92,6 +125,28 @@ Automated checks for deployment readiness. Validates that PRs meet quality gates
 - [x] `test_gate_main_head_502_when_unavailable`
 
 All tests passing.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Add deployment smoke tests post-release.
+
 
 ## Verification
 

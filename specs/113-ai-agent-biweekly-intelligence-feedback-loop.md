@@ -106,6 +106,17 @@ IntelligenceDigest:
 - `cd api && python3 scripts/collect_ai_agent_intel.py --window-days 14 --output ../docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json`
 - `cd api && python3 scripts/build_ai_agent_improvement_plan.py --intel ../docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json --output ../docs/system_audit/ai_agent_10_point_plan_2026-02-28.json`
 
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
+
+
+
 ## Verification
 
 ```bash

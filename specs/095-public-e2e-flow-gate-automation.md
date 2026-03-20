@@ -10,6 +10,33 @@ The system currently allows changes to pass when technical checks are green but 
 - [ ] Require each journey to be machine-verifiable (API evidence) and human-verifiable (web path evidence) before contributor acknowledgment is marked passed.
 - [ ] Persist E2E validation evidence (journey id, endpoints/pages checked, observed status, timestamps, commit sha, environment) and expose it via API/web.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: The system currently allows changes to pass when technical checks are green but real public user journeys are not validated end to end.
+files_allowed:
+  - specs/095-public-e2e-flow-gate-automation.md
+  - .github/workflows/change-contract.yml
+  - api/app/services/release_gate_service.py
+  - api/app/routers/gates.py
+  - web/app/gates/page.tsx
+done_when:
+  - Define minimum required public E2E journeys per merge class (`runtime_feature`, `runtime_fix`, `process_only`, `docs_...
+  - Require each journey to be machine-verifiable (API evidence) and human-verifiable (web path evidence) before contribu...
+  - Persist E2E validation evidence (journey id, endpoints/pages checked, observed status, timestamps, commit sha, enviro...
+commands:
+  - cd api && pytest -q tests/test_release_gate_service.py tests/test_gates_api.py
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `POST /api/gates/public-deploy-contract`
@@ -39,6 +66,14 @@ The system currently allows changes to pass when technical checks are green but 
 ```
 
 If not applicable, write: `N/A - no API contract changes in this spec.`
+
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
 
 ## Data Model (if applicable)
 
@@ -71,6 +106,21 @@ PublicE2EJourneyEvidence:
 - `api/tests/test_release_gate_service.py::test_evaluate_public_deploy_contract_allows_docs_only_minimal_profile`
 - `api/tests/test_gates_api.py::test_public_contract_response_includes_journey_evidence`
 - Manual validation: load `/gates` on public web and verify journey-level evidence is visible and matches API payload.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
 
 ## Verification
 

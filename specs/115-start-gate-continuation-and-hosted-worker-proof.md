@@ -39,6 +39,17 @@ No API shape changes are required in this spec.
 - `python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict`
 - Manual validation: confirm before/after artifact deltas in `docs/system_audit/hosted_worker_low_level_delta_2026-02-28.md` and `docs/system_audit/start_gate_output_delta_2026-02-28.md`.
 
+## Failure and Retry Behavior
+
+- **Gate failure**: CI gate blocks merge; author must fix and re-push.
+- **Flaky test**: Re-run up to 2 times before marking as genuine failure.
+- **Rollback behavior**: Failed deployments automatically roll back to last known-good state.
+- **Infrastructure failure**: CI runner unavailable triggers alert; jobs re-queue on recovery.
+- **Timeout**: CI jobs exceeding 15 minutes are killed and marked failed; safe to re-trigger.
+
+
+
+
 ## Verification
 
 ```bash

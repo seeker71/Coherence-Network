@@ -10,6 +10,34 @@ Provider integrations currently drift between configured, partially configured, 
 - [ ] Expose provider readiness and failure history through API and web with machine-queryable status, timestamps, error class, and last successful execution evidence.
 - [ ] Enforce routing policy: use cheap executor by default and escalate only when retry/failure thresholds are reached, with decision evidence persisted.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Provider integrations currently drift between configured, partially configured, and operational states without a single contract that enforces real execution proof and usage evidence.
+files_allowed:
+  - specs/096-provider-readiness-contract-automation.md
+  - api/app/services/provider_validation_service.py
+  - api/app/services/automation_usage_service.py
+  - api/app/routers/automation_usage.py
+  - web/app/providers/page.tsx
+  - .github/workflows/provider-readiness-contract.yml
+done_when:
+  - Define required readiness checks per active provider: configuration present, auth probe succeeds, safe execution prob...
+  - Expose provider readiness and failure history through API and web with machine-queryable status, timestamps, error cl...
+  - Enforce routing policy: use cheap executor by default and escalate only when retry/failure thresholds are reached, wi...
+commands:
+  - cd api && pytest -q tests/test_automation_usage_api.py -k "provider_validation or cheap_executor"
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## API Contract (if applicable)
 
 ### `POST /api/automation/usage/provider-validation/run`
@@ -59,6 +87,14 @@ Provider integrations currently drift between configured, partially configured, 
 }
 ```
 
+
+### Input Validation
+
+- All string fields: min_length=1, max_length=1000
+- Numeric fields: appropriate min/max bounds
+- Required fields validated; missing returns 422
+- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+
 ## Data Model (if applicable)
 
 ```yaml
@@ -96,6 +132,21 @@ ProviderValidationResult:
 - `api/tests/test_automation_usage_api.py::test_provider_validation_lists_required_provider_readiness`
 - `api/tests/test_automation_usage_api.py::test_provider_policy_uses_cheap_executor_before_escalation`
 - Manual validation: open `/providers` on public web and confirm provider readiness and failure traces match API output.
+
+## Concurrency Behavior
+
+- **Read operations**: Safe for concurrent access; no locking required.
+- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
+- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+
+## Failure and Retry Behavior
+
+- **Render error**: Show fallback error boundary with retry action.
+- **API failure**: Display user-friendly error message; retry fetch on user action or after 5s.
+- **Network offline**: Show offline indicator; queue actions for replay on reconnect.
+- **Asset load failure**: Retry asset load up to 3 times; show placeholder on permanent failure.
+- **Timeout**: API calls timeout after 10s; show loading skeleton until resolved or failed.
+
 
 ## Verification
 

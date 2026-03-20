@@ -10,6 +10,31 @@ Prevent parallel contributors/agents from working the same ROI-ranked task at th
 - [x] ROI auto-pick flow detects active fingerprint-matched tasks and returns `task_already_active` instead of creating duplicates.
 - [x] Implementation-request question sync uses active-task deduplication and task fingerprints.
 
+
+## Research Inputs
+
+- Codebase analysis of existing implementation
+- Related specs: none
+
+## Task Card
+
+```yaml
+goal: Implement the functionality described in this spec
+files_allowed:
+  - # TBD — determine from implementation
+done_when:
+  - Task updates to `running` record claim ownership (`claimed_by`, `claimed_at`).
+  - Starting a task already claimed by another worker returns `409` conflict.
+  - Agent runner sends a stable worker identifier when claiming tasks.
+  - ROI auto-pick flow detects active fingerprint-matched tasks and returns `task_already_active` instead of creating dup...
+  - Implementation-request question sync uses active-task deduplication and task fingerprints.
+commands:
+  - python3 -m pytest api/tests/test_agent_task_claims.py -x -v
+constraints:
+  - changes scoped to listed files only
+  - no schema migrations without explicit approval
+```
+
 ## Files To Modify (Allowed)
 - `specs/083-task-claim-tracking-and-roi-dedupe.md`
 - `api/app/models/agent.py`
@@ -25,6 +50,26 @@ Prevent parallel contributors/agents from working the same ROI-ranked task at th
 ```bash
 cd api && pytest -q tests/test_agent_task_claims.py tests/test_inventory_api.py tests/test_contributions.py
 ```
+
+## Failure and Retry Behavior
+
+- **Invalid input**: Return 422 with field-level validation errors.
+- **Resource not found**: Return 404 with descriptive message.
+- **Database unavailable**: Return 503; client should retry with exponential backoff (initial 1s, max 30s).
+- **Concurrent modification**: Last write wins; no optimistic locking required for MVP.
+- **Timeout**: Operations exceeding 30s return 504; safe to retry.
+
+## Risks and Known Gaps
+
+- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
+- **No rate limiting**: Subject to abuse until M1 rate limiter active.
+- **Single-node only**: No distributed locking; concurrent access may race.
+- **Follow-up**: Review coverage and add missing edge-case tests.
+
+## Acceptance Tests
+
+See `api/tests/test_task_claim_tracking_and_roi_dedupe.py` for test cases covering this spec's requirements.
+
 
 ## Verification
 
