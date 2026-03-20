@@ -829,6 +829,15 @@ def create_idea(
     confidence: float = 0.5,
     interfaces: list[str] | None = None,
     open_questions: list[IdeaQuestionCreate] | None = None,
+    *,
+    actual_value: float | None = None,
+    actual_cost: float | None = None,
+    resistance_risk: float | None = None,
+    idea_type: IdeaType | None = None,
+    parent_idea_id: str | None = None,
+    child_idea_ids: list[str] | None = None,
+    manifestation_status: ManifestationStatus | None = None,
+    value_basis: dict[str, str] | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas()
     if any(existing.id == idea_id for existing in ideas):
@@ -839,12 +848,16 @@ def create_idea(
         name=name,
         description=description,
         potential_value=potential_value,
-        actual_value=0.0,
+        actual_value=actual_value if actual_value is not None else 0.0,
         estimated_cost=estimated_cost,
-        actual_cost=0.5,   # Design/description cost floor (0.5 CC)
-        resistance_risk=2.5,  # Unknown ideas assume moderate risk
+        actual_cost=actual_cost if actual_cost is not None else 0.5,   # Design/description cost floor (0.5 CC)
+        resistance_risk=resistance_risk if resistance_risk is not None else 2.5,  # Unknown ideas assume moderate risk
         confidence=max(0.0, min(confidence, 1.0)),
-        manifestation_status=ManifestationStatus.NONE,
+        manifestation_status=manifestation_status or ManifestationStatus.NONE,
+        idea_type=idea_type or IdeaType.STANDALONE,
+        parent_idea_id=parent_idea_id,
+        child_idea_ids=child_idea_ids or [],
+        value_basis=value_basis,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(

@@ -121,6 +121,15 @@ class IdeaCreate(BaseModel):
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     interfaces: list[str] = Field(default_factory=list)
     open_questions: list[IdeaQuestionCreate] = Field(default_factory=list)
+    # Optional fields for full-fidelity seeding
+    actual_value: Optional[float] = Field(default=None, ge=0.0)
+    actual_cost: Optional[float] = Field(default=None, ge=0.0)
+    resistance_risk: Optional[float] = Field(default=None, ge=0.0)
+    idea_type: Optional[IdeaType] = None
+    parent_idea_id: Optional[str] = None
+    child_idea_ids: Optional[list[str]] = None
+    manifestation_status: Optional[ManifestationStatus] = None
+    value_basis: Optional[dict[str, str]] = None
 
 
 class IdeaQuestionAnswerUpdate(BaseModel):
