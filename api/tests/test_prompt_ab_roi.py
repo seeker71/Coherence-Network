@@ -84,23 +84,27 @@ def test_variant_blocked_after_three_zeros(tmp_path) -> None:
     assert stats["blocked_variants"] == 1
     assert stats["active_variants"] == 0
 
-    # When only blocked variants available, select_variant returns None
+    # When only blocked variants available, select_variant still returns one
+    # (probe weight) — blocked slots get retried periodically, not permanently excluded
     result = prompt_ab_roi_service.select_variant(
         "impl", ["bad_variant"], store_path=sp,
     )
-    assert result is None
+    assert result == "bad_variant"  # only option, gets probe weight
 
-    # With a good variant that HAS measurements (not relying on fallback path),
-    # blocked variant is never selected
+    # With a good variant, blocked variant is rarely selected (probe weight ~2%)
     for _ in range(5):
         prompt_ab_roi_service.record_prompt_outcome(
             "good_variant", "impl", value_score=0.9, resource_cost=1.0, store_path=sp,
         )
-    for _ in range(50):
+    choices = []
+    for _ in range(100):
         chosen = prompt_ab_roi_service.select_variant(
             "impl", ["bad_variant", "good_variant"], store_path=sp,
         )
-        assert chosen == "good_variant"
+        choices.append(chosen)
+    good_pct = choices.count("good_variant") / len(choices)
+    # Good variant should dominate (>85%), blocked gets tiny probe weight
+    assert good_pct > 0.85, f"good_variant selected only {good_pct:.0%} of the time"
 
 
 def test_exploration_boost_with_measured_data(tmp_path) -> None:

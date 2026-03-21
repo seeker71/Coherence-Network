@@ -89,12 +89,16 @@ class SlotSelector:
         config_version: str = "",
         task_id: str | None = None,
         raw_signals: dict | None = None,
+        error_class: str | None = None,
+        duration_s: float | None = None,
     ) -> dict:
         """Record an outcome measurement for a slot.
 
         value_score: 0.0-1.0 (higher = better outcome)
         resource_cost: >0 (tokens, time, dollars — lower = cheaper)
         config_version: must match the slot's current config version
+        error_class: categorized failure reason (e.g. "cli_args", "timeout", "auth", "rate_limit")
+        duration_s: wall-clock seconds for root-cause analysis
         """
         if not (0.0 <= value_score <= 1.0):
             raise ValueError(f"value_score must be in [0.0, 1.0], got {value_score}")
@@ -110,6 +114,10 @@ class SlotSelector:
             "config_version": config_version,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+        if error_class:
+            measurement["error_class"] = error_class
+        if duration_s is not None:
+            measurement["duration_s"] = duration_s
         # Store task_type for backward compat (legacy callers filter on it)
         if self._task_type_filter:
             measurement["task_type"] = self._task_type_filter
@@ -161,18 +169,51 @@ class SlotSelector:
     # ── Thompson Sampling ────────────────────────────────────────────
 
     @staticmethod
+    def _is_blocked(records: list[dict], cooldown_hours: float = 1.0) -> bool:
+        """A slot is blocked if its last 3 measurements are all failures.
+
+        But blocking is temporary — after cooldown_hours, the slot gets a
+        probe attempt (small weight) to see if the issue was fixed.
+        """
+        n = len(records)
+        if n < 3:
+            return False
+
+        # Check last 3 (not first 3) — recent failures matter more
+        last_three = records[-3:]
+        if not all(r["value_score"] == 0.0 for r in last_three):
+            return False
+
+        # Blocked, but check cooldown
+        last_ts = records[-1].get("timestamp", "")
+        if last_ts:
+            try:
+                last_time = datetime.fromisoformat(last_ts.replace("Z", "+00:00"))
+                elapsed = (datetime.now(timezone.utc) - last_time).total_seconds() / 3600
+                if elapsed >= cooldown_hours:
+                    return False  # cooldown expired, allow probe
+            except (ValueError, TypeError):
+                pass
+
+        return True
+
+    @staticmethod
     def _compute_weights(
         slots: list[str],
         slot_data: dict[str, list[dict]],
     ) -> dict[str, float]:
-        """Compute Thompson Sampling weights. Blocked slots (3 initial zeros) get weight 0."""
+        """Compute Thompson Sampling weights.
+
+        Blocked slots get a tiny probe weight (0.02) instead of zero,
+        so they're periodically retested after cooldown.
+        """
         weights: dict[str, float] = {}
         for sid in slots:
             records = slot_data.get(sid, [])
             n = len(records)
 
-            # Blocked: first 3 measurements all zero value
-            if n >= 3 and all(r["value_score"] == 0.0 for r in records[:3]):
+            if SlotSelector._is_blocked(records):
+                weights[sid] = 0.02  # tiny probe weight, not zero
                 continue
 
             if n < 5:
@@ -255,36 +296,53 @@ class SlotSelector:
         for sid in slots_to_report:
             records = slot_data.get(sid, [])
             n = len(records)
+            successes = sum(1 for r in records if r["value_score"] > 0)
+            failures = n - successes
             total_value = sum(r["value_score"] for r in records)
             total_cost = sum(r["resource_cost"] for r in records)
             mean_value = total_value / n if n > 0 else 0.0
             mean_cost = total_cost / n if n > 0 else 0.0
             roi = total_value / total_cost if total_cost > 0 else 0.0
 
-            blocked = n >= 3 and all(r["value_score"] == 0.0 for r in records[:3])
+            blocked = self._is_blocked(records)
             if blocked:
                 blocked_count += 1
 
+            # Error class breakdown
+            error_classes: dict[str, int] = {}
+            for r in records:
+                ec = r.get("error_class")
+                if ec:
+                    error_classes[ec] = error_classes.get(ec, 0) + 1
+
+            # Duration stats
+            durations = [r["duration_s"] for r in records if "duration_s" in r]
+            mean_duration = sum(durations) / len(durations) if durations else 0.0
+
             slots[sid] = {
                 "sample_count": n,
+                "successes": successes,
+                "failures": failures,
                 "mean_value": round(mean_value, 4),
                 "mean_cost": round(mean_cost, 4),
+                "mean_duration_s": round(mean_duration, 1),
                 "roi": round(roi, 4),
                 "blocked": blocked,
+                "error_classes": error_classes,
                 "selection_probability": 0.0,
             }
 
-        # Compute selection probabilities
+        # Compute selection probabilities (all slots, including blocked with probe weight)
+        weights = self._compute_weights(slots_to_report, slot_data)
+        total_weight = sum(weights.values())
+        if total_weight > 0:
+            for sid in weights:
+                if sid in slots:
+                    slots[sid]["selection_probability"] = round(
+                        weights[sid] / total_weight, 4
+                    )
+
         active = [s for s in slots_to_report if not slots.get(s, {}).get("blocked")]
-        if active:
-            weights = self._compute_weights(active, slot_data)
-            total_weight = sum(weights.values())
-            if total_weight > 0:
-                for sid in weights:
-                    if sid in slots:
-                        slots[sid]["selection_probability"] = round(
-                            weights[sid] / total_weight, 4
-                        )
 
         return {
             "decision_point": self.decision_point,
