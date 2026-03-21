@@ -128,7 +128,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Coherence Contribution Network API",
-    version="1.0.0",
+    version=health.HEALTH_VERSION,
     description="Spec-driven OSS intelligence platform for contribution tracking, coherence scoring, and fair attribution.",
     contact={"name": "Coherence Network", "url": "https://github.com/coherence-network"},
     lifespan=lifespan,

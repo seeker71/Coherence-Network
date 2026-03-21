@@ -18,6 +18,17 @@ async def test_root_redirects_to_docs():
 
 
 @pytest.mark.asyncio
+async def test_version_endpoint():
+    """GET /api/version returns 200 with the version from setup.py."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/version")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "version" in data
+        assert data["version"] == "1.0.0"
+
+
+@pytest.mark.asyncio
 async def test_health_returns_ok():
     """GET /api/health returns 200 with status ok."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
