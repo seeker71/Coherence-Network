@@ -67,37 +67,109 @@ def _detect_providers() -> dict[str, dict]:
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
-        # -y is required: without it, tool calls block waiting for interactive
-        # approval that never comes in headless mode (root cause of all timeouts)
-        # See: github.com/google-gemini/gemini-cli/issues/12362
+        # -y is required: without it, tool calls block on approval (issue #12362)
         "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
-        # ollama: local LLM inference (if running)
-        "ollama": {"cmd": ["ollama", "run", "llama3.1"], "append_prompt": True, "check": _check_ollama},
+        # cursor agent -p: Cursor's headless agent mode
+        "cursor": {"cmd": ["agent", "-p"], "append_prompt": True, "check_binary": "agent"},
+        # ollama-local: local LLM (best available model)
+        "ollama-local": {
+            "cmd": ["ollama", "run"], "append_prompt": True,
+            "check": _check_ollama_local, "model_select": _select_ollama_model,
+        },
+        # ollama-cloud: ollama cloud models (glm-5, etc.)
+        "ollama-cloud": {
+            "cmd": ["ollama", "run"], "append_prompt": True,
+            "check": _check_ollama_cloud, "model_select": _select_ollama_cloud_model,
+        },
     }
     for name, spec in cli_specs.items():
-        binary = spec["cmd"][0]
+        binary = spec.pop("check_binary", None) or spec["cmd"][0]
         if not shutil.which(binary):
-            log.debug("Provider not found: %s", name)
+            log.debug("Provider not found: %s (%s)", name, binary)
             continue
-        # Optional health check (e.g., ollama needs server running)
+        # Optional health check
         checker = spec.pop("check", None)
         if checker and not checker():
             log.info("Provider skipped (not ready): %s", name)
             continue
+        # Optional model selection (e.g., ollama picks best available model)
+        model_selector = spec.pop("model_select", None)
+        if model_selector:
+            model = model_selector()
+            if not model:
+                log.info("Provider skipped (no model): %s", name)
+                continue
+            spec["cmd"].append(model)
+            log.info("Provider detected: %s model=%s", name, model)
+        else:
+            log.info("Provider detected: %s (%s)", name, shutil.which(binary))
         providers[name] = spec
-        log.info("Provider detected: %s (%s)", name, shutil.which(binary))
     return providers
 
 
-def _check_ollama() -> bool:
-    """Check if ollama server is running and has a model available."""
+def _check_ollama_local() -> bool:
+    """Check if ollama server is running with local models."""
     try:
         result = subprocess.run(
             ["ollama", "list"], capture_output=True, text=True, timeout=5,
         )
-        return result.returncode == 0 and len(result.stdout.strip().split("\n")) > 1
+        if result.returncode != 0:
+            return False
+        # At least one non-cloud model
+        lines = result.stdout.strip().split("\n")[1:]  # skip header
+        return any(":cloud" not in line for line in lines if line.strip())
     except Exception:
         return False
+
+
+def _check_ollama_cloud() -> bool:
+    """Check if ollama has cloud models available."""
+    try:
+        result = subprocess.run(
+            ["ollama", "list"], capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode != 0:
+            return False
+        return any(":cloud" in line for line in result.stdout.split("\n"))
+    except Exception:
+        return False
+
+
+def _select_ollama_model() -> str | None:
+    """Select the best available local ollama model."""
+    try:
+        result = subprocess.run(
+            ["ollama", "list"], capture_output=True, text=True, timeout=5,
+        )
+        lines = result.stdout.strip().split("\n")[1:]  # skip header
+        local_models = []
+        for line in lines:
+            name = line.split()[0] if line.strip() else ""
+            if name and ":cloud" not in name:
+                local_models.append(name)
+        # Prefer larger/newer models
+        preferred = ["llama3.3:70b", "qwen2.5:72b", "deepseek-r1:32b", "dolphin-mixtral:8x22b-v2.9-q6_K"]
+        for pref in preferred:
+            if pref in local_models:
+                return pref
+        return local_models[0] if local_models else None
+    except Exception:
+        return None
+
+
+def _select_ollama_cloud_model() -> str | None:
+    """Select the best available ollama cloud model."""
+    try:
+        result = subprocess.run(
+            ["ollama", "list"], capture_output=True, text=True, timeout=5,
+        )
+        for line in result.stdout.split("\n"):
+            parts = line.split()
+            if parts and ":cloud" in parts[0]:
+                return parts[0]
+        return None
+    except Exception:
+        return None
 
 
 PROVIDERS: dict[str, dict] = {}  # populated at startup
@@ -276,13 +348,18 @@ def execute_with_provider(provider: str, prompt: str) -> tuple[bool, str, float]
     """Run prompt through a provider CLI. Returns (success, output, duration)."""
     spec = PROVIDERS[provider]
     cmd = list(spec["cmd"])
-    if spec.get("append_prompt"):
+    stdin_input = None
+
+    if spec.get("stdin_prompt"):
+        # ollama-style: prompt via stdin
+        stdin_input = prompt
+    elif spec.get("append_prompt"):
         cmd.append(prompt)
 
     start = time.time()
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True,
+            cmd, capture_output=True, text=True, input=stdin_input,
             timeout=_TASK_TIMEOUT[0], cwd=str(_REPO_DIR),
         )
         duration = time.time() - start
