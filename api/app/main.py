@@ -37,6 +37,7 @@ from app.routers import (
 )
 from app.routers import agent_grounded_metrics_routes
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.request_duration import RequestDurationMiddleware
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 
@@ -346,6 +347,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(RequestDurationMiddleware, threshold_seconds=1.0)
 app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
 
 # Initialize graph store based on environment

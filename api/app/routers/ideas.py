@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.middleware.auth import require_api_key
 
 from app.models.idea import (
+    GovernanceHealth,
     IdeaCreate,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
@@ -94,6 +95,14 @@ async def list_idea_card_changes(
         include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
     )
+
+
+@router.get("/ideas/health", response_model=GovernanceHealth)
+async def get_governance_health(
+    window_days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
+) -> GovernanceHealth:
+    """Portfolio governance effectiveness snapshot (spec 126)."""
+    return idea_service.compute_governance_health(window_days=window_days)
 
 
 @router.get("/ideas/selection-ab/stats")

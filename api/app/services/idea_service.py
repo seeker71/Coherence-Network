@@ -21,6 +21,7 @@ from sqlalchemy import text
 
 from app.models.coherence_credit import CostVector, ValueVector
 from app.models.idea import (
+    GovernanceHealth,
     Idea,
     IdeaSelectionResult,
     IdeaType,
@@ -1029,3 +1030,73 @@ def storage_info() -> IdeaStorageInfo:
     """Expose idea registry storage backend and row counts for inspection."""
     info = idea_registry_service.storage_info()
     return IdeaStorageInfo(**info)
+
+
+def compute_governance_health(window_days: int = 30) -> GovernanceHealth:
+    """Compute portfolio governance effectiveness metrics (spec 126).
+
+    Returns a snapshot answering: "Is governance producing results,
+    and where is it stuck?"
+    """
+    from datetime import datetime, timezone
+
+    ideas = _read_ideas()
+    total = len(ideas)
+    scored = [_with_score(i) for i in ideas]
+
+    validated = [i for i in ideas if i.manifestation_status == ManifestationStatus.VALIDATED]
+    validated_count = len(validated)
+
+    # R2: throughput_rate = validated in window / total
+    throughput_rate = validated_count / total if total > 0 else 0.0
+
+    # R3: value_gap_trend — without historical snapshots, report current total
+    # value gap as the trend baseline (negative = would be improving if compared).
+    # First implementation: report sum of current value gaps; trend is 0.0 (no prior snapshot).
+    current_total_gap = sum(s.value_gap for s in scored)
+    value_gap_trend = 0.0  # No historical data yet; will be non-zero once snapshots exist
+
+    # R4: question_answer_rate
+    total_questions = 0
+    answered_questions = 0
+    for idea in ideas:
+        for q in idea.open_questions:
+            total_questions += 1
+            if q.answer is not None and q.answer.strip():
+                answered_questions += 1
+    question_answer_rate = answered_questions / total_questions if total_questions > 0 else 1.0
+
+    # R5: stale_ideas — not validated and no updated_at tracking yet,
+    # so use ideas that are not validated and have zero actual_value
+    # (proxy for "no activity"). actual_cost has a 0.5 CC creation floor
+    # so we only check actual_value for real progress.
+    stale_ideas: list[str] = []
+    for idea in ideas:
+        if idea.manifestation_status == ManifestationStatus.VALIDATED:
+            continue
+        if idea.actual_value == 0.0:
+            stale_ideas.append(idea.id)
+
+    # R6: governance_score composite 0.0–1.0
+    stale_ratio = len(stale_ideas) / total if total > 0 else 0.0
+    governance_score = (
+        throughput_rate * 0.3
+        + question_answer_rate * 0.3
+        + (1.0 - stale_ratio) * 0.4
+    )
+    governance_score = max(0.0, min(1.0, round(governance_score, 4)))
+
+    # R7: snapshot_at
+    snapshot_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    return GovernanceHealth(
+        governance_score=governance_score,
+        throughput_rate=round(throughput_rate, 4),
+        value_gap_trend=round(value_gap_trend, 4),
+        question_answer_rate=round(question_answer_rate, 4),
+        stale_ideas=stale_ideas,
+        total_ideas=total,
+        validated_ideas=validated_count,
+        snapshot_at=snapshot_at,
+        window_days=window_days,
+    )
