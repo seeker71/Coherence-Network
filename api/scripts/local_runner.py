@@ -128,9 +128,17 @@ def select_provider(task_type: str) -> str:
 
 
 def classify_error(output: str) -> str:
-    """Classify failure reason from output for root-cause analysis."""
+    """Classify failure reason from output for root-cause analysis.
+
+    Blind timeouts (zero output) are the highest priority — they cost
+    everything and return nothing, not even diagnostic information.
+    """
     lower = output.lower()
+    if "blind timeout" in lower:
+        return "blind_timeout"  # worst case: cost with zero value, zero diagnostics
     if "timeout" in lower:
+        if "partial stdout" in lower or "partial stderr" in lower:
+            return "timeout_with_output"  # at least we have something to diagnose
         return "timeout"
     if "unexpected argument" in lower or "unrecognized" in lower:
         return "cli_args"
@@ -278,13 +286,29 @@ def execute_with_provider(provider: str, prompt: str) -> tuple[bool, str, float]
         output = result.stdout or result.stderr or "(no output)"
         return result.returncode == 0, output, duration
 
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as e:
         duration = time.time() - start
-        return False, f"TIMEOUT after {duration:.0f}s (limit={_TASK_TIMEOUT[0]}s)", duration
+        # Capture whatever partial output exists — this is diagnostic value
+        partial_stdout = getattr(e, "stdout", None) or ""
+        partial_stderr = getattr(e, "stderr", None) or ""
+        diagnostic = f"TIMEOUT after {duration:.0f}s (limit={_TASK_TIMEOUT[0]}s)\n"
+        if partial_stdout:
+            diagnostic += f"--- partial stdout ({len(partial_stdout)} chars) ---\n{partial_stdout[-2000:]}\n"
+        if partial_stderr:
+            diagnostic += f"--- partial stderr ({len(partial_stderr)} chars) ---\n{partial_stderr[-2000:]}\n"
+        if not partial_stdout and not partial_stderr:
+            # Blind timeout — zero diagnostic value. This MUST bubble up.
+            diagnostic += (
+                "BLIND TIMEOUT: no output captured. Priority gap — cannot root-cause.\n"
+                f"Provider: {provider}\n"
+                f"Cmd: {' '.join(str(c)[:50] for c in cmd)}\n"
+            )
+            log.error("BLIND_TIMEOUT provider=%s cmd=%s — needs investigation", provider, cmd[0])
+        return False, diagnostic, duration
 
     except Exception as e:
         duration = time.time() - start
-        return False, f"Error: {e}", duration
+        return False, f"Error: {type(e).__name__}: {e}", duration
 
 
 def run_one(task: dict, dry_run: bool = False) -> bool:
@@ -358,6 +382,24 @@ def run_all_pending(dry_run: bool = False) -> dict:
     stats = get_provider_stats()
     if stats:
         log.info("PROVIDER STATS: %s", json.dumps(stats, indent=2, default=str))
+
+    # Surface blind spots — these are the highest priority issues
+    all_blind_spots = []
+    for task_type, st in stats.items():
+        for bs in st.get("blind_spots", []):
+            bs["task_type"] = task_type
+            all_blind_spots.append(bs)
+
+    if all_blind_spots:
+        log.warning("=" * 60)
+        log.warning("BLIND SPOTS — priority issues (cost with zero diagnostic value):")
+        for bs in all_blind_spots:
+            log.warning(
+                "  [%s] %s/%s: %d blind failures out of %d total — %s",
+                bs["priority"], bs["task_type"], bs["slot"],
+                bs["blind_failures"], bs["total_failures"], bs["action"],
+            )
+        log.warning("=" * 60)
 
     return results
 
