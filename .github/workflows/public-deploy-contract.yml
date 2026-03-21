@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   schedule:
-    # Every 2 hours (was */30 min; reduced to limit Railway API/redeploy frequency for ToS)
     - cron: "0 */2 * * *"
   workflow_dispatch:
 
@@ -21,21 +20,13 @@ jobs:
       actions: write
     env:
       MVP_LOCAL_ONLY_VALIDATION: ${{ vars.MVP_LOCAL_ONLY_VALIDATION || '1' }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-      RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
-      RAILWAY_API_SERVICE: ${{ secrets.RAILWAY_API_SERVICE || secrets.RAILWAY_SERVICE }}
-      RAILWAY_WEB_SERVICE: ${{ secrets.RAILWAY_WEB_SERVICE }}
-      RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
-      PUBLIC_DEPLOY_API_BASE: ${{ vars.PUBLIC_DEPLOY_API_BASE || 'https://coherence-network-production.up.railway.app' }}
-      PUBLIC_DEPLOY_WEB_BASE: ${{ vars.PUBLIC_DEPLOY_WEB_BASE || 'https://coherence-web-production.up.railway.app' }}
+      PUBLIC_DEPLOY_API_BASE: ${{ vars.PUBLIC_DEPLOY_API_BASE || 'https://api.coherencycoin.com' }}
+      PUBLIC_DEPLOY_WEB_BASE: ${{ vars.PUBLIC_DEPLOY_WEB_BASE || 'https://coherencycoin.com' }}
       PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA: ${{ vars.PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA || '1' }}
       PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA: ${{ vars.PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA || '1' }}
       PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS: ${{ vars.PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS || '8' }}
       PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS: ${{ vars.PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS || '60' }}
       PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS: ${{ vars.PUBLIC_DEPLOY_CONTRACT_BLOCK_THRESHOLD_SECONDS || '600' }}
-      PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS || vars.PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS || '8' }}
-      PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS || vars.PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS || '60' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,11 +34,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-
-      - name: Set up Node.js (Railway CLI runtime)
-        uses: actions/setup-node@v6
-        with:
-          node-version: "20"
 
       - name: Install API dependencies
         run: |
@@ -72,169 +58,10 @@ jobs:
           echo "exit_code=$code" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Install Railway CLI
-        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.validate.outputs.exit_code != '0' }}
-        run: |
-          if [ -z "${RAILWAY_TOKEN:-}" ]; then
-            echo "RAILWAY_TOKEN not configured, skipping CLI install."
-            exit 0
-          fi
-          npm install -g @railway/cli
-
-      - name: Trigger Railway redeploy
-        id: railway_redeploy
-        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.validate.outputs.exit_code != '0' }}
-        run: |
-          set +e
-          if [ -z "${RAILWAY_TOKEN:-}" ] || [ -z "${RAILWAY_PROJECT_ID:-}" ] || [ -z "${RAILWAY_ENVIRONMENT:-}" ]; then
-            echo "attempted=false" >> "$GITHUB_OUTPUT"
-            echo "reason=missing_railway_context_secrets" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          api_service="${RAILWAY_API_SERVICE:-${RAILWAY_SERVICE:-}}"
-          web_service="${RAILWAY_WEB_SERVICE:-}"
-          attempted_any=0
-          failures=0
-          attempted_services=""
-          note=""
-
-          redeploy_one() {
-            label="$1"
-            service="$2"
-            link_file="railway_link_${label}.json"
-            redeploy_file="railway_redeploy_${label}.json"
-            if [ -z "$service" ]; then
-              return 0
-            fi
-            attempted_any=1
-            if [ -n "$attempted_services" ]; then
-              attempted_services="${attempted_services},${label}"
-            else
-              attempted_services="${label}"
-            fi
-            railway link --project "$RAILWAY_PROJECT_ID" --environment "$RAILWAY_ENVIRONMENT" --service "$service" --json > "$link_file"
-            link_code=$?
-            if [ "$link_code" -ne 0 ]; then
-              failures=$((failures + 1))
-              printf '{"error":"railway_link_failed","service":"%s","exit_code":%s}\n' "$service" "$link_code" > "$link_file"
-              return 0
-            fi
-            railway redeploy --service "$service" --yes --json > "$redeploy_file"
-            redeploy_code=$?
-            if [ "$redeploy_code" -ne 0 ]; then
-              failures=$((failures + 1))
-              printf '{"error":"railway_redeploy_failed","service":"%s","exit_code":%s}\n' "$service" "$redeploy_code" > "$redeploy_file"
-            fi
-            return 0
-          }
-
-          if [ -z "$api_service" ] && [ -z "$web_service" ]; then
-            echo "attempted=false" >> "$GITHUB_OUTPUT"
-            echo "reason=missing_railway_service_secret" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          redeploy_one "api" "$api_service"
-          if [ -n "$web_service" ] && [ "$web_service" != "$api_service" ]; then
-            redeploy_one "web" "$web_service"
-          elif [ -n "$web_service" ]; then
-            note="web_service_matches_api_service"
-          fi
-
-          reason="redeploy_triggered"
-          if [ "$attempted_any" -eq 0 ]; then
-            echo "attempted=false" >> "$GITHUB_OUTPUT"
-            echo "reason=no_redeploy_attempted" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if [ "$failures" -gt 0 ]; then
-            reason="redeploy_triggered_with_failures"
-          fi
-
-          jq -n \
-            --arg reason "$reason" \
-            --arg services "$attempted_services" \
-            --arg note "$note" \
-            --arg api_service "$api_service" \
-            --arg web_service "$web_service" \
-            --argjson attempted true \
-            --argjson failures "$failures" \
-            '{
-              attempted: $attempted,
-              reason: $reason,
-              services: ($services | split(",") | map(select(length > 0))),
-              note: $note,
-              api_service: $api_service,
-              web_service: $web_service,
-              failures: $failures
-            }' > railway_redeploy.json
-          cat railway_redeploy.json
-
-          echo "attempted=true" >> "$GITHUB_OUTPUT"
-          echo "reason=${reason}" >> "$GITHUB_OUTPUT"
-          echo "services=${attempted_services}" >> "$GITHUB_OUTPUT"
-          echo "note=${note}" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Re-validate after Railway redeploy
-        id: revalidate
-        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.validate.outputs.exit_code != '0' && steps.railway_redeploy.outputs.attempted == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_MAX_ATTEMPTS || vars.PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS || '8' }}
-          PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS: ${{ vars.PUBLIC_DEPLOY_REVALIDATE_SLEEP_SECONDS || vars.PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS || '60' }}
-        run: |
-          set +e
-          code=2
-          previous_fail_sig=""
-          unchanged_fail_count=0
-          max_attempts="${PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS:-8}"
-          sleep_seconds="${PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS:-60}"
-
-          for i in $(seq 1 "$max_attempts"); do
-            cd api
-            python scripts/validate_public_deploy_contract.py \
-              --repo "${{ github.repository }}" \
-              --branch main \
-              --api-base "${PUBLIC_DEPLOY_API_BASE}" \
-              --web-base "${PUBLIC_DEPLOY_WEB_BASE}" \
-              --json > ../public_deploy_contract_report.json
-            code=$?
-            cd ..
-            cat public_deploy_contract_report.json
-            if [ "$code" -eq 0 ]; then
-              break
-            fi
-
-            fail_sig="$(jq -c '.failing_checks // []' public_deploy_contract_report.json)"
-            if [ "$fail_sig" = "$previous_fail_sig" ]; then
-              unchanged_fail_count=$((unchanged_fail_count + 1))
-            else
-              unchanged_fail_count=1
-              previous_fail_sig="$fail_sig"
-            fi
-
-            if [ "$unchanged_fail_count" -ge 4 ]; then
-              echo "Fail-fast: failing_checks stable for 4 attempts (${fail_sig})."
-              break
-            fi
-
-            sleep "$sleep_seconds"
-          done
-          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
-          exit 0
-
       - name: Select effective contract result
         id: outcome
         run: |
-          final="${{ steps.validate.outputs.exit_code }}"
-          if [ -n "${{ steps.revalidate.outputs.exit_code }}" ]; then
-            final="${{ steps.revalidate.outputs.exit_code }}"
-          fi
-          echo "exit_code=$final" >> "$GITHUB_OUTPUT"
-          echo "initial_exit_code=${{ steps.validate.outputs.exit_code }}" >> "$GITHUB_OUTPUT"
-          echo "revalidated_exit_code=${{ steps.revalidate.outputs.exit_code }}" >> "$GITHUB_OUTPUT"
+          echo "exit_code=${{ steps.validate.outputs.exit_code }}" >> "$GITHUB_OUTPUT"
 
       - name: Upload public deploy report
         if: always()
@@ -242,16 +69,6 @@ jobs:
         with:
           name: public_deploy_contract_report_${{ github.sha }}
           path: public_deploy_contract_report.json
-
-      - name: Upload Railway redeploy artifacts
-        if: ${{ always() && steps.railway_redeploy.outputs.attempted == 'true' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: railway_redeploy_artifacts_${{ github.sha }}
-          path: |
-            railway_redeploy.json
-            railway_link_*.json
-            railway_redeploy_*.json
 
       - name: Create or update deploy drift issue
         if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' }}
@@ -269,12 +86,7 @@ jobs:
               `- Expected SHA: \`${report.expected_sha || 'unknown'}\``,
               `- Result: \`${report.result || 'blocked'}\``,
               `- Reason: ${report.reason || 'n/a'}`,
-              `- Initial exit code: \`${"${{ steps.outcome.outputs.initial_exit_code }}"}\``,
-              `- Revalidated exit code: \`${"${{ steps.outcome.outputs.revalidated_exit_code }}"}\``,
-              `- Railway redeploy attempted: \`${"${{ steps.railway_redeploy.outputs.attempted || 'false' }}"}\``,
-              `- Railway redeploy note: \`${"${{ steps.railway_redeploy.outputs.reason || 'n/a' }}"}\``,
-              `- Railway redeploy services: \`${"${{ steps.railway_redeploy.outputs.services || 'none' }}"}\``,
-              `- Railway redeploy detail: \`${"${{ steps.railway_redeploy.outputs.note || 'n/a' }}"}\``,
+              `- Exit code: \`${"${{ steps.outcome.outputs.exit_code }}"}\``,
               '',
               'Failing checks:',
               ...(Array.isArray(report.failing_checks) && report.failing_checks.length
