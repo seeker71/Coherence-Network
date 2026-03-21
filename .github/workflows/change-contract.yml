@@ -94,14 +94,19 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
+            const fs = require('fs');
             const prNumber = Number("${{ steps.contract.outputs.pr_number }}");
             const contributor = "${{ steps.contract.outputs.contributor }}";
             const approvals = "${{ steps.contract.outputs.approvals }}";
             const approvers = JSON.parse('${{ steps.contract.outputs.unique_approvers }}');
+            let report = {};
+            try {
+              report = JSON.parse(fs.readFileSync('contract_report.json', 'utf8'));
+            } catch (e) {}
             const isLocalOnly = Boolean(report.public_validation && report.public_validation.skipped === true);
             const validationLine = isLocalOnly
               ? "- Public validation: local-only mode enabled (hosted provider checks skipped)"
-              : "- Public validation: passed on Railway API + Railway web endpoints";
+              : "- Public validation: passed on Hostinger VPS (api.coherencycoin.com + coherencycoin.com)";
             const body = [
               "✅ **Change Contract Passed**",
               "",

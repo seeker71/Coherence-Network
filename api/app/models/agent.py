@@ -232,6 +232,18 @@ class RouteResponse(BaseModel):
     is_paid_provider: Optional[bool] = None
 
 
+class TaskExecutionProvider(BaseModel):
+    """Task execution provider available for agent tasks."""
+
+    id: str
+
+
+class TaskExecutionProviderList(BaseModel):
+    """Available task execution providers."""
+
+    providers: List[TaskExecutionProvider]
+
+
 class NormalizedResponseCall(BaseModel):
     """Provider-agnostic Open Responses-compatible task call envelope."""
 

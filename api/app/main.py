@@ -3,9 +3,9 @@ from __future__ import annotations
 import logging
 import os
 import time
-import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,6 +31,7 @@ from app.routers import (
     health,
     ideas,
     inventory,
+    providers,
     spec_registry,
     runtime,
     value_lineage,
@@ -338,7 +339,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
                 request_id = value
                 break
         if not request_id:
-            request_id = str(uuid.uuid4())
+            request_id = str(uuid4())
         request.state.request_id = request_id
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
@@ -434,6 +435,7 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
+app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.

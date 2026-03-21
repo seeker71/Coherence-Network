@@ -9,15 +9,15 @@ from pathlib import Path
 
 import pytest
 
-from api.app.models.coherence_credit import (
+from app.models.coherence_credit import (
     CostVector,
     ExchangeRate,
     ExchangeRateConfig,
     ProviderRate,
     ValueVector,
 )
-from api.app.models.idea import Idea
-from api.app.services import coherence_credit_service as ccs
+from app.models.idea import Idea
+from app.services import coherence_credit_service as ccs
 
 
 # ---------------------------------------------------------------------------

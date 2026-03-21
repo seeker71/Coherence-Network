@@ -613,6 +613,22 @@ COMMAND_TEMPLATES: dict[TaskType, str] = {
 }
 
 
+def list_available_task_execution_providers() -> list[str]:
+    """Return available task execution providers in deterministic order."""
+    configured = list(routing_service.EXECUTOR_VALUES)
+    candidates = configured if configured else ["claude", "cursor", "codex", "gemini", "openrouter"]
+    providers: list[str] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        normalized = _normalize_executor(candidate, default="")
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        if _executor_available(normalized):
+            providers.append(normalized)
+    return providers
+
+
 def _cursor_command_template(task_type: TaskType) -> str:
     return routing_service.cursor_command_template(task_type)
 
