@@ -344,12 +344,28 @@ class SlotSelector:
 
         active = [s for s in slots_to_report if not slots.get(s, {}).get("blocked")]
 
+        # Surface blind spots — undiagnosable failures that need priority attention
+        blind_spots = []
+        for sid in slots_to_report:
+            slot_info = slots.get(sid, {})
+            errors = slot_info.get("error_classes", {})
+            blind_count = errors.get("blind_timeout", 0) + errors.get("empty_output", 0)
+            if blind_count > 0:
+                blind_spots.append({
+                    "slot": sid,
+                    "blind_failures": blind_count,
+                    "total_failures": slot_info.get("failures", 0),
+                    "priority": "HIGH" if blind_count >= 2 else "MEDIUM",
+                    "action": "Root-cause needed: these failures cost compute but produce zero diagnostic value",
+                })
+
         return {
             "decision_point": self.decision_point,
             "slots": slots,
             "total_measurements": len(measurements),
             "active_slots": len(active),
             "blocked_slots": blocked_count,
+            "blind_spots": blind_spots,
         }
 
     def weakest_slot(
