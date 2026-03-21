@@ -1,6 +1,7 @@
 """Agent status-report and pipeline-status routes."""
 
 import json
+import logging
 import os
 
 from fastapi import APIRouter
@@ -16,6 +17,8 @@ from app.routers.agent_monitor_helpers import (
     timestamp_is_fresh,
 )
 from app.services import agent_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -55,6 +58,7 @@ async def get_status_report() -> dict:
 
         effectiveness = _get_effectiveness()
     except Exception:
+        logger.warning("Effectiveness service import/call failed", exc_info=True)
         effectiveness = None
 
     fallback_report = build_fallback_status_report(
@@ -99,6 +103,7 @@ async def get_pipeline_status() -> dict:
             with open(state_file, encoding="utf-8") as f:
                 status["project_manager"] = json.load(f)
         except Exception:
+            logger.warning("Failed to read project manager state from %s", state_file, exc_info=True)
             status["project_manager"] = None
     else:
         status["project_manager"] = None
@@ -112,6 +117,7 @@ async def get_pipeline_status() -> dict:
                     lines = f.readlines()
                 status["running"][0]["live_tail"] = [ln.rstrip() for ln in lines[-20:] if ln.strip()]
             except Exception:
+                logger.warning("Failed to read task log for live_tail from %s", log_path, exc_info=True)
                 status["running"][0]["live_tail"] = None
         else:
             status["running"][0]["live_tail"] = None

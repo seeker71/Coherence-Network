@@ -1,6 +1,7 @@
 """Agent fatal issues, monitor issues, metrics, effectiveness, collective-health routes."""
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 
@@ -10,6 +11,7 @@ from app.routers import agent_monitor_helpers
 from app.routers.agent_monitor_helpers import resolve_monitor_issues_payload
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("/fatal-issues")
@@ -24,6 +26,7 @@ async def get_fatal_issues() -> dict:
             data = json.load(f)
         return {"fatal": True, **data}
     except Exception:
+        logger.warning("Failed to read fatal issues from %s", path, exc_info=True)
         return {"fatal": False}
 
 
@@ -53,6 +56,7 @@ async def get_metrics(
 
         data = get_aggregates(window_days=window_days)
     except ImportError:
+        logger.warning("metrics_service not available, returning empty metrics", exc_info=True)
         data = {
             "success_rate": {"completed": 0, "failed": 0, "total": 0, "rate": 0.0},
             "execution_time": {"p50_seconds": 0, "p95_seconds": 0},
@@ -81,6 +85,7 @@ async def get_effectiveness() -> dict:
 
         return _get()
     except ImportError:
+        logger.warning("effectiveness_service not available, returning empty effectiveness", exc_info=True)
         return {
             "throughput": {"completed_7d": 0, "tasks_per_day": 0},
             "success_rate": 0.0,
@@ -102,6 +107,7 @@ async def get_collective_health(
 
         return _get(window_days=window_days)
     except ImportError:
+        logger.warning("collective_health_service not available, returning empty scorecard", exc_info=True)
         return {
             "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "window_days": window_days,

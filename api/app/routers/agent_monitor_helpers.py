@@ -1,12 +1,15 @@
 """Monitor and status-report helpers for agent routes. No routes."""
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from typing import Any
 
 from app.routers.agent_helpers import issue_priority_map
 from app.services import agent_service
+
+logger = logging.getLogger(__name__)
 
 
 def agent_logs_dir() -> str:
@@ -82,6 +85,7 @@ def read_json_dict(path: str) -> dict[str, Any] | None:
         if isinstance(payload, dict):
             return payload
     except Exception:
+        logger.warning("Failed to read JSON dict from %s", path, exc_info=True)
         return None
     return None
 
@@ -267,6 +271,7 @@ def resolve_monitor_issues_payload(logs_dir: str, *, now: datetime) -> dict[str,
         reason = "stale_monitor_issues_file"
         prior_last_check = raw_payload.get("last_check")
 
+    logger.warning("Monitor issues payload unavailable (%s), returning derived fallback", reason)
     status = agent_service.get_pipeline_status()
     return derived_monitor_payload(
         status,

@@ -8,11 +8,14 @@ REST wrapper with:
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 from typing import Any, Optional
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class GitHubClient:
@@ -55,6 +58,7 @@ class GitHubClient:
         if rem_i == 0 and reset_i:
             now = int(time.time())
             delay = max(0, reset_i - now) + 1
+            logger.info("GitHub rate limit hit, sleeping %d seconds", delay)
             time.sleep(delay)
 
     def _request(self, method: str, url: str, headers: dict[str, str] | None = None) -> httpx.Response:
@@ -67,6 +71,7 @@ class GitHubClient:
 
         # If 403 is rate-limit, back off until reset then retry once.
         if r.status_code == 403 and r.headers.get("X-RateLimit-Remaining") == "0":
+            logger.warning("GitHub 403 rate limit, retrying after sleep")
             self._sleep_for_rate_limit_if_needed(r)
             with httpx.Client(timeout=self._timeout, headers=h) as client:
                 r = client.request(method, url)

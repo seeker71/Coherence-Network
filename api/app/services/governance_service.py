@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -26,6 +27,8 @@ from app.models.idea import IdeaCreate, IdeaQuestionAnswerUpdate, IdeaQuestionCr
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryUpdate
 from app.services import idea_service, spec_registry_service
 from app.services.unified_db import Base
+
+logger = logging.getLogger(__name__)
 
 
 class ChangeRequestRecord(Base):
@@ -89,6 +92,7 @@ def _default_required_approvals() -> int:
     try:
         value = int(raw)
     except ValueError:
+        logger.warning("Invalid CHANGE_REQUEST_MIN_APPROVALS value %r, defaulting to 1", raw)
         return 1
     return max(1, min(value, 10))
 
@@ -97,6 +101,7 @@ def _load_payload(raw: str) -> dict[str, Any]:
     try:
         data = json.loads(raw)
     except (TypeError, json.JSONDecodeError):
+        logger.warning("Failed to parse governance payload JSON", exc_info=True)
         return {}
     if isinstance(data, dict):
         return data
@@ -109,6 +114,7 @@ def _parse_applied_result(raw: str | None) -> dict[str, Any] | None:
     try:
         data = json.loads(raw)
     except json.JSONDecodeError:
+        logger.warning("Failed to parse applied_result JSON", exc_info=True)
         return None
     if isinstance(data, dict):
         return data

@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import fcntl
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+
+logger = logging.getLogger(__name__)
 
 from app.models.agent import AgentTaskCreate, TaskType
 from app.services.failed_task_diagnostics_service import classify_error
@@ -150,6 +153,7 @@ def maybe_create_heal_task(
             if elapsed < cooldown:
                 return None
         except (KeyError, ValueError):
+            logger.warning("Invalid cooldown record, skipping", exc_info=True)
             continue
         break  # only check most recent for this category
 
