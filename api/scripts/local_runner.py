@@ -55,10 +55,10 @@ _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
 # ── Provider registry (auto-detected) ───────────────────────────────
 
 def _detect_providers() -> dict[str, dict]:
-    """Auto-detect available provider CLIs on this machine.
+    """Auto-detect available providers on this machine.
 
-    Every provider is just a CLI that takes a prompt and produces output.
-    No provider is special — all are treated equally by Thompson Sampling.
+    Every provider is equal — CLI or API, all treated the same by Thompson Sampling.
+    CLIs are detected by binary presence; API providers by reachability.
     """
     providers = {}
     cli_specs = {
@@ -104,6 +104,12 @@ def _detect_providers() -> dict[str, dict]:
         else:
             log.info("Provider detected: %s (%s)", name, shutil.which(binary))
         providers[name] = spec
+
+    # API-based providers (no CLI binary needed)
+    if _check_openrouter():
+        providers["openrouter"] = {"api": True, "model": "openrouter/auto"}
+        log.info("Provider detected: openrouter (API, free tier)")
+
     return providers
 
 
@@ -170,6 +176,37 @@ def _select_ollama_cloud_model() -> str | None:
         return None
     except Exception:
         return None
+
+
+def _check_openrouter() -> bool:
+    """Check if OpenRouter API is reachable (free tier, no key required)."""
+    try:
+        result = subprocess.run(
+            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
+             "https://openrouter.ai/api/v1/models"],
+            capture_output=True, text=True, timeout=10,
+        )
+        return result.stdout.strip() == "200"
+    except Exception:
+        return False
+
+
+def _run_openrouter(prompt: str, cwd: str, timeout: int) -> tuple[bool, str, float]:
+    """Execute via OpenRouter API (free tier). Returns (success, output, duration)."""
+    start = time.time()
+    try:
+        sys.path.insert(0, str(_API_DIR))
+        from app.services.openrouter_client import chat_completion
+        content, usage, meta = chat_completion(
+            model="openrouter/auto",  # auto-routes to best free model
+            prompt=prompt,
+            timeout_s=float(timeout),
+        )
+        duration = time.time() - start
+        return True, content, duration
+    except Exception as e:
+        duration = time.time() - start
+        return False, f"OpenRouter error: {e}", duration
 
 
 PROVIDERS: dict[str, dict] = {}  # populated at startup
@@ -345,8 +382,13 @@ Output a summary: files created/modified, validation results, errors encountered
 
 
 def execute_with_provider(provider: str, prompt: str) -> tuple[bool, str, float]:
-    """Run prompt through a provider CLI. Returns (success, output, duration)."""
+    """Run prompt through a provider (CLI or API). Returns (success, output, duration)."""
     spec = PROVIDERS[provider]
+
+    # API-based providers (openrouter)
+    if spec.get("api"):
+        return _run_openrouter(prompt, str(_REPO_DIR), _TASK_TIMEOUT[0])
+
     cmd = list(spec["cmd"])
     stdin_input = None
 
