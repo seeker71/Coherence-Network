@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 def _default_registry() -> dict:
@@ -52,6 +55,7 @@ def get_canonical_routes() -> dict:
                 data = json.load(f)
             base = data if isinstance(data, dict) else _default_registry()
         except (OSError, json.JSONDecodeError):
+            logger.warning("Route registry load failed, using defaults", exc_info=True)
             base = _default_registry()
 
     return {

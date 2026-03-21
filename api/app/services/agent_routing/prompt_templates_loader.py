@@ -1,10 +1,11 @@
 """Load direction templates and role-wrapper lines from config. No prompt data in code.
 
-Supports A/B prompt variants:
-  - variant "a" = prompt_templates.json (original)
-  - variant "b" = prompt_templates_b.json (prompt-master optimized)
-  - Selection via Thompson Sampling (prompt_ab_roi_service)
-  - Override: PROMPT_VARIANT=a|b environment variable
+Prompt variant slots (a, b, c):
+  - Each slot is a config file: prompt_templates.json, prompt_templates_b.json, prompt_templates_c.json
+  - Selection via Thompson Sampling — no implicit default, data determines ranking
+  - Each config has a "version" field; measurements from a stale version are ignored
+  - To test a new candidate: replace the weakest slot's config file (bump version)
+  - Override: PROMPT_VARIANT=a|b|c environment variable
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import random
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +25,7 @@ _CACHE: dict[str, dict[str, Any]] = {}  # keyed by variant_id
 
 _DIRECTION_SNIPPET_MAX = 2000
 
-_VARIANT_IDS = ["a", "b"]
+_VARIANT_SLOTS = ["a", "b", "c"]
 
 
 def _config_path(variant: str = "a") -> Path:
@@ -44,29 +46,57 @@ def _config_path(variant: str = "a") -> Path:
     return Path(__file__).resolve().parents[2] / "config" / filename
 
 
+def _config_version(variant: str) -> str:
+    """Read the version field from a variant's config file. Returns '' if missing."""
+    path = _config_path(variant)
+    if not path.exists():
+        return ""
+    try:
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+        return str(data.get("version", ""))
+    except (OSError, json.JSONDecodeError):
+        return ""
+
+
 def _active_variant() -> str:
-    """Determine which prompt variant to use. Order: env override → A/B selection → default 'a'."""
+    """Determine which prompt variant to use. Order: env override → Thompson Sampling → uniform random.
+
+    There is no implicit default — selection always comes from the probability curve.
+    """
     env_variant = os.environ.get("PROMPT_VARIANT", "").strip().lower()
-    if env_variant in _VARIANT_IDS:
+    if env_variant in _VARIANT_SLOTS:
         return env_variant
 
-    # A/B selection via Thompson Sampling (lazy import to avoid circular deps)
-    try:
-        from app.services.prompt_ab_roi_service import select_variant
-        available = [v for v in _VARIANT_IDS if _config_path(v).exists()]
-        if len(available) > 1:
-            selected = select_variant("direction_template", available)
-            if selected:
-                return selected
-    except Exception:
-        pass
+    available = [v for v in _VARIANT_SLOTS if _config_path(v).exists()]
+    if not available:
+        return "a"  # no config files at all — nothing to sample
 
-    return "a"
+    if len(available) == 1:
+        return available[0]  # only one variant exists
+
+    # Build version map so TS can filter stale measurements
+    version_map = {v: _config_version(v) for v in available}
+
+    # Thompson Sampling across all available slots (lazy import to avoid circular deps)
+    try:
+        from app.services.slot_selection_service import SlotSelector
+        selector = SlotSelector("prompt_template")
+        selected = selector.select(available, version_map=version_map)
+        if selected:
+            return selected
+    except Exception:
+        logger.warning("Thompson Sampling failed, falling back to uniform random", exc_info=True)
+
+    # All variants blocked or TS error — uniform random, never a hardcoded default
+    return random.choice(available)
 
 
 def _load(variant: str | None = None) -> dict[str, Any]:
+    """Load config for a variant. If variant is None, Thompson Sampling picks fresh each call."""
     vid = variant or _active_variant()
     if vid in _CACHE:
+        # Config data is cached, but variant *selection* happens fresh each call
         return _CACHE[vid]
 
     path = _config_path(vid)
@@ -75,16 +105,16 @@ def _load(variant: str | None = None) -> dict[str, Any]:
         if vid != "a":
             logger.warning("Prompt variant '%s' not found at %s, falling back to 'a'", vid, path)
             return _load("a")
-        _CACHE[vid] = _empty_cache()
+        _CACHE[vid] = _empty_cache(vid)
         return _CACHE[vid]
     try:
         with path.open(encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError):
-        _CACHE[vid] = _empty_cache()
+        _CACHE[vid] = _empty_cache(vid)
         return _CACHE[vid]
     if not isinstance(data, dict):
-        _CACHE[vid] = _empty_cache()
+        _CACHE[vid] = _empty_cache(vid)
         return _CACHE[vid]
     templates = data.get("direction_templates") if isinstance(data.get("direction_templates"), dict) else {}
     role_wrapper = data.get("role_wrapper") if isinstance(data.get("role_wrapper"), dict) else {}
@@ -92,6 +122,7 @@ def _load(variant: str | None = None) -> dict[str, Any]:
     cli_flow = data.get("cli_flow_directions") if isinstance(data.get("cli_flow_directions"), dict) else {}
     _CACHE[vid] = {
         "variant_id": vid,
+        "config_version": str(data.get("version", "")),
         "direction_templates": templates,
         "role_wrapper": role_wrapper,
         "unblock_direction": unblock,
@@ -103,8 +134,10 @@ def _load(variant: str | None = None) -> dict[str, Any]:
     return _CACHE[vid]
 
 
-def _empty_cache() -> dict[str, Any]:
+def _empty_cache(variant_id: str = "a") -> dict[str, Any]:
     return {
+        "variant_id": variant_id,
+        "config_version": "",
         "direction_templates": {},
         "role_wrapper": {"common": [], "by_task_type": {}},
         "unblock_direction": {},
@@ -121,9 +154,39 @@ def reset_prompt_templates_cache() -> None:
 
 
 def get_active_variant_id() -> str:
-    """Return the variant ID currently in use (for A/B measurement recording)."""
+    """Return the variant ID currently in use (for measurement recording)."""
     data = _load()
     return data.get("variant_id", "a")
+
+
+def get_active_variant_version() -> str:
+    """Return the config version of the active variant (for measurement recording)."""
+    data = _load()
+    return data.get("config_version", "")
+
+
+def weakest_slot() -> str | None:
+    """Return the slot with the worst Thompson Sampling performance, or None if <2 slots exist.
+
+    Use this to decide which slot to replace when introducing a new candidate.
+    """
+    available = [v for v in _VARIANT_SLOTS if _config_path(v).exists()]
+    if len(available) < 2:
+        # Only 0-1 slots occupied — return first empty slot instead
+        for s in _VARIANT_SLOTS:
+            if s not in available:
+                return s
+        return None
+
+    version_map = {v: _config_version(v) for v in available}
+
+    try:
+        from app.services.slot_selection_service import SlotSelector
+        selector = SlotSelector("prompt_template")
+        return selector.weakest_slot(available, _VARIANT_SLOTS, version_map=version_map)
+    except Exception:
+        # No data — return last available slot
+        return available[-1]
 
 
 def get_direction_template(phase: str, *, iteration: int = 1) -> str:

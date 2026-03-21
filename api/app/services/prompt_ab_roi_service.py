@@ -1,23 +1,23 @@
+"""Backward-compatible wrapper around SlotSelector for prompt variant selection.
+
+All new code should use SlotSelector directly. This module exists so existing
+callers (grounded_measurement_service, tests, etc.) don't break.
+"""
 from __future__ import annotations
 
-import fcntl
-import json
-import random
-from datetime import datetime, timezone
 from pathlib import Path
 
-
-def _default_store_path() -> Path:
-    """Return default path for measurement storage."""
-    return Path(__file__).resolve().parents[2] / "logs" / "prompt_ab_measurements.json"
+from app.services.slot_selection_service import SlotSelector
 
 
-def _load_measurements(store_path: Path) -> list[dict]:
-    """Load measurements from JSON file."""
-    if not store_path.exists():
-        return []
-    with open(store_path, "r") as f:
-        return json.load(f)
+def _selector(task_type: str, store_path: Path | None = None) -> SlotSelector:
+    # When store_path is overridden, multiple task_types may share one file,
+    # so we need task_type_filter to scope measurements
+    return SlotSelector(
+        task_type,
+        store_path=store_path,
+        task_type_filter=task_type if store_path else None,
+    )
 
 
 def record_prompt_outcome(
@@ -26,122 +26,48 @@ def record_prompt_outcome(
     value_score: float,
     resource_cost: float,
     *,
+    config_version: str = "",
     store_path: Path | None = None,
     task_id: str | None = None,
     raw_signals: dict | None = None,
 ) -> dict:
-    """Record a single prompt outcome measurement.
+    """Record a prompt outcome. Delegates to SlotSelector.
 
-    When called from grounded_measurement_service, task_id and raw_signals
-    provide the observable data that produced value_score and resource_cost.
+    Returns a dict with both slot_id and variant_id keys for backward compatibility.
     """
-    if not (0.0 <= value_score <= 1.0):
-        raise ValueError(f"value_score must be in [0.0, 1.0], got {value_score}")
-    if resource_cost <= 0:
-        raise ValueError(f"resource_cost must be > 0, got {resource_cost}")
-
-    store = store_path or _default_store_path()
-    store.parent.mkdir(parents=True, exist_ok=True)
-
-    measurement: dict = {
-        "variant_id": variant_id,
-        "task_type": task_type,
-        "value_score": value_score,
-        "resource_cost": resource_cost,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    if task_id is not None:
-        measurement["task_id"] = task_id
-    if raw_signals is not None:
-        measurement["raw_signals"] = raw_signals
-
-    with open(store, "a+" if store.exists() else "w+") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
-        try:
-            f.seek(0)
-            content = f.read().strip()
-            measurements: list[dict] = json.loads(content) if content else []
-            measurements.append(measurement)
-            f.seek(0)
-            f.truncate()
-            json.dump(measurements, f, indent=2)
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
-
-    return measurement
+    result = _selector(task_type, store_path).record(
+        variant_id,
+        value_score,
+        resource_cost,
+        config_version=config_version,
+        task_id=task_id,
+        raw_signals=raw_signals,
+    )
+    # Backward compat: existing callers expect variant_id and task_type keys
+    result["variant_id"] = result.get("slot_id", variant_id)
+    result["task_type"] = task_type
+    return result
 
 
 def get_variant_stats(
     store_path: Path | None = None,
     task_type: str | None = None,
+    version_map: dict[str, str] | None = None,
 ) -> dict:
-    """Compute per-variant statistics with Thompson Sampling probabilities."""
-    store = store_path or _default_store_path()
-    measurements = _load_measurements(store)
-    if task_type:
-        measurements = [m for m in measurements if m.get("task_type") == task_type]
-
-    # Group by variant_id
-    variant_data: dict[str, list[dict]] = {}
-    for m in measurements:
-        vid = m["variant_id"]
-        variant_data.setdefault(vid, []).append(m)
-
-    variants: dict[str, dict] = {}
-    blocked_count = 0
-
-    for vid, records in variant_data.items():
-        n = len(records)
-        total_value = sum(r["value_score"] for r in records)
-        total_cost = sum(r["resource_cost"] for r in records)
-        mean_value = total_value / n if n > 0 else 0.0
-        mean_cost = total_cost / n if n > 0 else 0.0
-        roi = total_value / total_cost if total_cost > 0 else 0.0
-
-        # Blocked: first 3 measurements all have value_score == 0.0
-        blocked = False
-        if n >= 3:
-            first_three = records[:3]
-            if all(r["value_score"] == 0.0 for r in first_three):
-                blocked = True
-
-        if blocked:
-            blocked_count += 1
-
-        variants[vid] = {
-            "sample_count": n,
-            "mean_value": mean_value,
-            "mean_cost": mean_cost,
-            "roi": roi,
-            "blocked": blocked,
-            "selection_probability": 0.0,
-        }
-
-    # Compute Thompson Sampling weights for non-blocked variants
-    active_variants = {k: v for k, v in variants.items() if not v["blocked"]}
-
-    if active_variants:
-        weights: dict[str, float] = {}
-        for vid, stats in active_variants.items():
-            n = stats["sample_count"]
-            if n < 5:
-                weights[vid] = 0.2
-            else:
-                total_value = stats["mean_value"] * n
-                alpha = 1.0 + total_value
-                beta = 1.0 + (n - total_value)
-                weights[vid] = random.betavariate(alpha, beta)
-
-        total_weight = sum(weights.values())
-        if total_weight > 0:
-            for vid in active_variants:
-                variants[vid]["selection_probability"] = weights[vid] / total_weight
-
+    """Get per-variant stats. Delegates to SlotSelector."""
+    # When task_type is None, don't filter — read all measurements
+    selector = SlotSelector(
+        task_type or "default",
+        store_path=store_path,
+        task_type_filter=task_type if (store_path and task_type) else None,
+    )
+    st = selector.stats(version_map=version_map)
+    # Remap keys for backward compatibility
     return {
-        "variants": variants,
-        "total_measurements": len(measurements),
-        "active_variants": len(active_variants),
-        "blocked_variants": blocked_count,
+        "variants": st.get("slots", {}),
+        "total_measurements": st.get("total_measurements", 0),
+        "active_variants": st.get("active_slots", 0),
+        "blocked_variants": st.get("blocked_slots", 0),
     }
 
 
@@ -150,64 +76,9 @@ def select_variant(
     available_variants: list[str],
     *,
     store_path: Path | None = None,
+    version_map: dict[str, str] | None = None,
 ) -> str | None:
-    """Select a variant using Thompson Sampling with exploration boost.
-
-    Returns None if all available variants are blocked.
-    """
-    if not available_variants:
-        raise ValueError("available_variants must not be empty")
-
-    store = store_path or _default_store_path()
-    measurements = _load_measurements(store)
-    # Filter by task_type for scoped selection
-    measurements = [m for m in measurements if m.get("task_type") == task_type]
-
-    # Group by variant_id
-    variant_data: dict[str, list[dict]] = {}
-    for m in measurements:
-        vid = m["variant_id"]
-        variant_data.setdefault(vid, []).append(m)
-
-    # Fallback: no measurements for any available variant
-    has_any = any(v in variant_data for v in available_variants)
-    if not has_any:
-        return random.choice(available_variants)
-
-    # Compute weights
-    weights: dict[str, float] = {}
-    for vid in available_variants:
-        records = variant_data.get(vid, [])
-        n = len(records)
-
-        # Blocked check: first 3 measurements all zero
-        if n >= 3:
-            first_three = records[:3]
-            if all(r["value_score"] == 0.0 for r in first_three):
-                continue  # skip blocked
-
-        if n < 5:
-            weights[vid] = 0.2
-        else:
-            total_value = sum(r["value_score"] for r in records)
-            alpha = 1.0 + total_value
-            beta = 1.0 + (n - total_value)
-            weights[vid] = random.betavariate(alpha, beta)
-
-    # If all blocked, return None — caller must handle
-    if not weights:
-        return None
-
-    # Weighted selection
-    variant_ids = list(weights.keys())
-    variant_weights = [weights[v] for v in variant_ids]
-    total = sum(variant_weights)
-    probabilities = [w / total for w in variant_weights]
-
-    r = random.random()
-    cumulative = 0.0
-    for vid, p in zip(variant_ids, probabilities):
-        cumulative += p
-        if r <= cumulative:
-            return vid
-    return variant_ids[-1]
+    """Select a variant. Delegates to SlotSelector."""
+    return _selector(task_type, store_path).select(
+        available_variants, version_map=version_map
+    )

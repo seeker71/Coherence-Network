@@ -8,9 +8,12 @@ Secrets (tokens, DB URLs) typically stay in env.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _CACHE: dict[str, Any] | None = None
 
@@ -34,6 +37,7 @@ def _load_raw() -> dict[str, Any]:
         with path.open(encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError):
+        logger.warning("Config file load failed, using empty defaults", exc_info=True)
         _CACHE = {}
         return _CACHE
     _CACHE = data if isinstance(data, dict) else {}

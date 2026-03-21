@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from app.models.spec_registry import SpecRegistryUpdate
 from app.services import agent_execution_completion as completion_service
@@ -75,7 +78,7 @@ def _apply_value_attribution(
                 estimated_cost=estimated_cost,
             )
         except Exception:
-            pass
+            logger.warning("Idea value attribution update failed for idea_id=%s", idea_id, exc_info=True)
 
     if spec_id:
         update = SpecRegistryUpdate(
@@ -87,7 +90,7 @@ def _apply_value_attribution(
         try:
             execution_service.spec_registry_service.update_spec(spec_id, update)
         except Exception:
-            pass
+            logger.warning("Spec registry update failed for spec_id=%s", spec_id, exc_info=True)
 
 
 def _cost_overrun_blocked(

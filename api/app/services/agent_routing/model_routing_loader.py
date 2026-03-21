@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
 from app.models.agent import TaskType
+
+logger = logging.getLogger(__name__)
 
 _CACHE: dict[str, Any] | None = None
 
@@ -42,6 +45,7 @@ def _load() -> dict[str, Any]:
         with path.open(encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError):
+        logger.warning("Model routing config load failed", exc_info=True)
         _CACHE = _empty_cache()
         return _CACHE
     if not isinstance(data, dict):
@@ -155,7 +159,10 @@ def get_fallback_model(executor: str, current_model: str) -> str | None:
     if idx + 1 >= len(chain):
         return None
     next_model = chain[idx + 1]
-    return str(next_model).strip() if next_model else None
+    fallback_model = str(next_model).strip() if next_model else None
+    if fallback_model:
+        logger.info("model_fallback executor=%s from=%s to=%s", executor, current_model, fallback_model)
+    return fallback_model
 
 
 def get_openrouter_model_for_task_type(task_type: TaskType) -> str:
@@ -163,3 +170,49 @@ def get_openrouter_model_for_task_type(task_type: TaskType) -> str:
     key = task_type.value if hasattr(task_type, "value") else str(task_type)
     by_type = _load().get("openrouter_models_by_task_type") or {}
     return str(by_type.get(key) or "openrouter/free").strip()
+
+
+# ── Measurement recording & data-driven suggestion ─────────────────
+
+
+def record_model_selection(task_type: str, executor: str, model: str) -> None:
+    """Log which model was selected for observability. Non-blocking, fire-and-forget."""
+    logger.info("model_selected task_type=%s executor=%s model=%s", task_type, executor, model)
+
+
+def record_model_outcome(
+    task_type: str,
+    executor: str,
+    model: str,
+    success: bool,
+    token_cost: float,
+    duration_seconds: float,
+) -> None:
+    """Record model outcome for data-driven optimization."""
+    try:
+        from app.services.slot_selection_service import SlotSelector
+
+        selector = SlotSelector(f"model_{executor}_{task_type}")
+        selector.record(
+            slot_id=model,
+            value_score=1.0 if success else 0.0,
+            resource_cost=max(token_cost, 0.01),
+        )
+    except Exception:
+        logger.debug("Model outcome recording failed", exc_info=True)
+
+
+def suggest_model(task_type: str, executor: str, available_models: list[str]) -> str | None:
+    """Suggest a model based on historical outcomes. Returns None if insufficient data.
+
+    Callers should fall back to config-driven routing when this returns None.
+    """
+    if len(available_models) < 2:
+        return None
+    try:
+        from app.services.slot_selection_service import SlotSelector
+
+        selector = SlotSelector(f"model_{executor}_{task_type}")
+        return selector.select(available_models)
+    except Exception:
+        return None

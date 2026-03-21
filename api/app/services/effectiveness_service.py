@@ -1,10 +1,13 @@
 """Pipeline effectiveness: throughput, issue resolution, goal proximity. Composes metrics + monitor data."""
 
 import json
+import logging
 import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PROJECT_ROOT = os.path.dirname(_api_dir)
@@ -41,7 +44,7 @@ def _plan_progress() -> dict[str, Any]:
                     state_file = p
                     break
             except (json.JSONDecodeError, ValueError, TypeError):
-                pass
+                logger.warning("Failed to parse PM state from %s", p, exc_info=True)
     total = 0
     if os.path.isfile(BACKLOG_FILE):
         with open(BACKLOG_FILE, encoding="utf-8") as f:
@@ -106,7 +109,7 @@ def get_effectiveness() -> dict[str, Any]:
             issues = data.get("issues") or []
             issues_open = len(issues)
         except Exception:
-            pass
+            logger.warning("Failed to read monitor issues from %s", ISSUES_FILE, exc_info=True)
 
     resolved_7d = 0
     heal_resolved_count = 0
@@ -126,9 +129,10 @@ def get_effectiveness() -> dict[str, Any]:
                             if rec.get("heal_task_id"):
                                 heal_resolved_count += 1
                     except (ValueError, KeyError, json.JSONDecodeError):
+                        logger.debug("Skipping corrupt JSONL line in resolutions file", exc_info=True)
                         continue
         except Exception:
-            pass
+            logger.warning("Failed to read resolutions file %s", RESOLUTIONS_FILE, exc_info=True)
 
     # Throughput: tasks/day over 7d
     days = max(1, WINDOW_DAYS)

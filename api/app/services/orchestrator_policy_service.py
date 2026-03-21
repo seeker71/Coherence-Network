@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_POLICY: dict[str, Any] = {
     "version": "default",
@@ -120,6 +123,7 @@ def _load_raw_policy() -> dict[str, Any]:
         with path.open(encoding="utf-8") as f:
             payload = json.load(f)
     except (OSError, json.JSONDecodeError):
+        logger.warning("Orchestrator policy load failed", exc_info=True)
         return dict(_DEFAULT_POLICY)
     if not isinstance(payload, dict):
         return dict(_DEFAULT_POLICY)

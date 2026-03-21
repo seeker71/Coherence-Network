@@ -1,6 +1,7 @@
 """Health check endpoint (spec 001)."""
 
 from datetime import datetime, timezone
+import logging
 import os
 from typing import Annotated
 
@@ -11,6 +12,7 @@ from app.services import persistence_contract_service
 from app.services import unified_db
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 HEALTH_VERSION = "1.0.0"
 SERVICE_STARTED_AT = datetime.now(timezone.utc)
@@ -114,7 +116,7 @@ async def ready(request: Request):
             sess.execute(_text("SELECT 1"))
         db_connected = True
     except Exception:
-        pass
+        logger.warning("DB connectivity check failed", exc_info=True)
     return ReadyResponse(
         status="ready",
         version=HEALTH_VERSION,

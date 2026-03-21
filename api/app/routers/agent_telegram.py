@@ -232,7 +232,7 @@ def _load_monitor_issues() -> dict[str, Any]:
         if isinstance(payload, dict):
             return payload
     except Exception:
-        pass
+        logger.warning("Failed to load monitor issues from %s", path, exc_info=True)
     return {"issues": [], "last_check": None}
 
 def _load_status_report() -> dict[str, Any]:
@@ -245,7 +245,7 @@ def _load_status_report() -> dict[str, Any]:
         if isinstance(payload, dict):
             return payload
     except Exception:
-        pass
+        logger.warning("Failed to load status report from %s", path, exc_info=True)
     return {}
 
 def _orphan_threshold_seconds() -> int:

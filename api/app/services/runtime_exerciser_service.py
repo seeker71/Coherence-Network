@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 import time
 from datetime import datetime, timezone
@@ -12,6 +13,8 @@ import httpx
 from fastapi.routing import APIRoute
 
 from app.services import value_lineage_service
+
+logger = logging.getLogger(__name__)
 
 
 _EXERCISER_QUERY_DEFAULTS: dict[str, dict[str, str]] = {
@@ -51,7 +54,7 @@ def _sample_path_value(param_name: str) -> str:
                 if value:
                     return value
         except Exception:
-            pass
+            logger.info("Sample path value unavailable for task_id", exc_info=True)
         return "task_missing"
     if key == "lineage_id":
         try:
@@ -59,7 +62,7 @@ def _sample_path_value(param_name: str) -> str:
             if rows:
                 return rows[0].id
         except Exception:
-            pass
+            logger.info("Sample path value unavailable for lineage_id", exc_info=True)
         return "lineage_missing"
     if key == "spec_id":
         try:
@@ -69,7 +72,7 @@ def _sample_path_value(param_name: str) -> str:
             if rows:
                 return rows[0].spec_id
         except Exception:
-            pass
+            logger.info("Sample path value unavailable for spec_id", exc_info=True)
         return "spec_missing"
     if key == "idea_id":
         return "portfolio-governance"

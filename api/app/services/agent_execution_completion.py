@@ -85,6 +85,27 @@ def complete_success(
     except Exception:
         _log.debug("grounded measurement recording skipped", exc_info=True)
 
+    # Record model outcome for data-driven slot selection
+    try:
+        from app.services.agent_routing.model_routing_loader import record_model_outcome
+
+        _task_type = str(task.get("task_type") or task.get("type") or "unknown")
+        _executor = str(task.get("executor") or "unknown")  # TODO: pass executor explicitly if available
+        _model = str(task.get("model") or model or "unknown")
+        _token_cost = float(actual_cost_usd) if actual_cost_usd is not None else 1.0  # TODO: use real token count when available
+        _duration_s = elapsed_ms / 1000.0
+
+        record_model_outcome(
+            task_type=_task_type,
+            executor=_executor,
+            model=_model,
+            success=True,
+            token_cost=_token_cost,
+            duration_seconds=_duration_s,
+        )
+    except Exception:
+        _log.debug("model outcome recording skipped (success)", exc_info=True)
+
     return {"ok": True, "status": "completed", "elapsed_ms": elapsed_ms, "model": model}
 
 
@@ -146,5 +167,26 @@ def complete_failure(
         )
     except Exception:
         _log.debug("grounded measurement recording skipped", exc_info=True)
+
+    # Record model outcome for data-driven slot selection
+    try:
+        from app.services.agent_routing.model_routing_loader import record_model_outcome
+
+        _task_type = str(task.get("task_type") or task.get("type") or "unknown")
+        _executor = str(task.get("executor") or "unknown")  # TODO: pass executor explicitly if available
+        _model = str(task.get("model") or model or "unknown")
+        _token_cost = float(actual_cost_usd) if actual_cost_usd is not None else 1.0  # TODO: use real token count when available
+        _duration_s = elapsed_ms / 1000.0
+
+        record_model_outcome(
+            task_type=_task_type,
+            executor=_executor,
+            model=_model,
+            success=False,
+            token_cost=_token_cost,
+            duration_seconds=_duration_s,
+        )
+    except Exception:
+        _log.debug("model outcome recording skipped (failure)", exc_info=True)
 
     return {"ok": False, "status": "failed", "elapsed_ms": elapsed_ms, "model": model}

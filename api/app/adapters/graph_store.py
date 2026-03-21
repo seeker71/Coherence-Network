@@ -11,6 +11,7 @@ All money uses Decimal. Store is in-memory with optional JSON persistence.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from decimal import Decimal
 from typing import Optional, Protocol
@@ -23,6 +24,8 @@ from app.models.github_contributor import GitHubContributor
 from app.models.github_organization import GitHubOrganization
 from app.models.project import Project, ProjectSummary
 from app.services.contributor_hygiene import is_test_contributor_email, normalize_contributor_email
+
+logger = logging.getLogger(__name__)
 
 
 def _key(ecosystem: str, name: str) -> tuple[str, str]:
@@ -203,7 +206,7 @@ class InMemoryGraphStore:
                     self._github_contributes_to.append((edge[0], (edge[1][0], edge[1][1])))
 
         except (json.JSONDecodeError, IOError, KeyError, ValueError):
-            pass
+            logger.warning("Graph cache deserialization failed", exc_info=True)
 
     def _recompute_dependency_counts(self) -> None:
         counts: dict[tuple[str, str], int] = {k: 0 for k in self._projects}

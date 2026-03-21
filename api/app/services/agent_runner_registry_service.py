@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 import tempfile
@@ -18,6 +19,8 @@ except ImportError:  # pragma: no cover - non-posix fallback
 from sqlalchemy import DateTime, Integer, String, Text, create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
+
+logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -288,14 +291,14 @@ def _write_local(payload: dict[str, Any]) -> None:
             try:
                 os.fsync(tmp.fileno())
             except OSError:
-                pass
+                logger.warning("Heartbeat write failed: fsync error", exc_info=True)
         os.replace(tmp_name, path)
     finally:
         try:
             if os.path.exists(tmp_name):
                 os.unlink(tmp_name)
         except OSError:
-            pass
+            logger.warning("Heartbeat write failed: cleanup error for %s", tmp_name, exc_info=True)
 
 
 def _normalized_heartbeat(

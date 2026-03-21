@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 from fastapi import APIRouter, BackgroundTasks, Query, Request
@@ -11,6 +12,8 @@ from app.services import agent_service
 from app.services import inventory_service
 from app.services import page_lineage_service
 from app.services import route_registry_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -78,6 +81,7 @@ def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTas
                 agent_service.update_task(task_id, context=context_patch)
             background_tasks.add_task(agent_execution_service.execute_task, task_id)
         except Exception:
+            logger.warning("Task auto-execution failed, skipping", exc_info=True)
             continue
 
 
