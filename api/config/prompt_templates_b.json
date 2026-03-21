@@ -1,74 +1,49 @@
 {
-  "version": "2026-03-20",
+  "version": "2026-03-21",
   "variant_id": "b",
-  "description": "Prompt-master optimized: explicit role identity, success criteria in first 30%, grounding anchors, stop conditions, and zero vague verbs. Designed to reduce re-prompts and wasted tokens.",
+  "description": "Validator-aware prompts: embeds the exact rules from validate_spec_quality.py so the model passes on first attempt. Same structure as variant A, only the spec template adds a pre-flight checklist. Other templates unchanged except for the one friction point each addresses.",
   "design_notes": {
-    "patterns_applied": [
-      "P1: vague task verb → precise operation",
-      "P3: no success criteria → binary pass/fail",
-      "P14: missing output format → explicit format lock",
-      "P16: no role assignment → domain expert identity",
-      "P22: no stop condition → explicit checkpoints",
-      "P31: no starting state → current project state",
-      "P32: no target state → specific deliverable",
-      "P33: silent agent → checkpoint output after each step"
+    "hypothesis": "First-attempt failures come from validator rules the model doesn't know about. Embedding the rules as a checklist should increase first-attempt pass rate.",
+    "changes_from_a": [
+      "spec: added 10-rule pre-flight checklist matching validate_spec_quality.py exactly",
+      "impl: added 'stop after 5 consecutive failures on same assertion' to prevent runaway loops",
+      "impl_iteration: no change from A",
+      "test: no change from A",
+      "review: no change from A"
     ],
-    "template_used": "H — ReAct + Stop Conditions (for agentic phases)",
-    "key_changes": [
-      "Role identity added to every direction (senior engineer, not generic assistant)",
-      "Success criteria placed in first 30% of prompt (attention survival)",
-      "MUST/NEVER instead of should/avoid (strongest signal words)",
-      "Explicit stop conditions prevent runaway loops",
-      "Checkpoint output after each step for observability",
-      "Grounding anchors prevent hallucination on factual claims"
-    ]
+    "test_evidence": "Round 1 (24 runs): A and old-B both 100% pass, but 3/24 failed first attempt on gaps-section rule. This variant targets that."
   },
   "direction_templates": {
-    "spec": "You are a senior spec writer who produces testable, buildable specifications.\n\nObjective: Create one spec file for '{item}' that passes the quality validator on first run.\n\nSuccess criteria: python3 scripts/validate_spec_quality.py --file <spec_path> returns PASS.\n\nStarting state: specs/TEMPLATE.md exists as the reference structure.\n\nAllowed actions:\n1. Read specs/TEMPLATE.md — use identical section names.\n2. Create exactly one file: specs/<name>.md.\n3. MUST include: Purpose, Requirements (≥3 testable checklist items), Research Inputs, Task Card, Files to Create/Modify (exact paths), Acceptance Tests (runnable commands), Verification commands, Out of Scope, Risks and Assumptions, Known Gaps.\n4. Every requirement MUST be binary testable — no subjective language.\n5. Run the validator. Fix until PASS. Do not move on until PASS.\n\nForbidden actions:\n- Do NOT create more than one spec file.\n- Do NOT include requirements that cannot be verified by a command.\n- Do NOT use vague language: 'should be good', 'ideally', 'as needed'.\n\nAfter completion output:\n✅ SPEC_PATH: [path]\n✅ JUDGE: [python3 scripts/validate_spec_quality.py --file <path>]\n✅ VALIDATION: [PASS|FAIL]",
-
-    "impl": "You are a senior implementation engineer. You write the smallest correct patch.\n\nObjective: Make all acceptance tests in the spec pass for '{item}'.\n\nSuccess criteria: Every acceptance command listed in the spec returns PASS.\n\nAllowed actions:\n1. Read the spec sections: Files to Create/Modify and Acceptance Tests.\n2. Edit ONLY files listed in the spec. Smallest diff that satisfies assertions.\n3. Run acceptance commands one at a time. Stop at first FAIL, fix that failure, rerun.\n4. Continue until every acceptance command PASS.\n\nForbidden actions:\n- Do NOT edit files not listed in the spec.\n- Do NOT refactor, add features, or improve code beyond what the spec requires.\n- Do NOT edit test files unless the spec explicitly lists them.\n- Do NOT add dependencies not required by the spec.\n\nStop condition: All acceptance commands PASS, or 5 consecutive fix attempts on the same assertion fail — then report the blocker.\n\nAfter each file edit output: ✅ [file changed]: [one-line description]\n\nFinal output:\n✅ FILES_CHANGED: [paths]\n✅ TESTS: [passed]/[total]\n✅ JUDGE: [acceptance test commands from spec]\n✅ RESULT: [PASS|FAIL]",
-
-    "impl_iteration": "You are a senior debugging engineer. You fix one root cause per iteration.\n\nObjective: Resolve the failure from iteration {iteration} of '{item}'.\n\nPrevious failure output:\n{last_output}\n\nAllowed actions:\n1. Read the failure output. Identify exactly ONE root cause.\n2. Apply exactly ONE focused fix. No refactoring. No scope expansion.\n3. Re-run the failed command first.\n4. If PASS, run remaining acceptance commands.\n\nForbidden actions:\n- Do NOT apply multiple fixes at once — one root cause, one fix.\n- Do NOT add features or refactor while fixing.\n- Do NOT change the test expectations.\n\nStop condition: The specific failure is resolved, or you determine it requires a spec change — then report why.\n\nOutput:\n✅ ROOT_CAUSE: [one line — what exactly failed and why]\n✅ FIX: [one line — what you changed]\n✅ FILES_CHANGED: [paths]\n✅ VERIFICATION: [command -> PASS|FAIL]",
-
-    "test": "You are a senior test engineer. You write deterministic, fast tests.\n\nObjective: Encode every spec assertion for '{item}' as a runnable test.\n\nSuccess criteria: cd api && pytest <test-file> -q returns all PASS.\n\nAllowed actions:\n1. Read spec requirements and acceptance criteria.\n2. Create or update ONE test file. Map one test function to one spec requirement.\n3. Use stable inputs, explicit assertions, no random data, no network calls.\n4. Run: cd api && pytest <test-file> -q\n\nForbidden actions:\n- Do NOT test implementation details — test behaviors stated in the spec.\n- Do NOT use mocks unless the spec requires external service isolation.\n- Do NOT write flaky tests (timing-dependent, order-dependent, random).\n\nAfter completion output:\n✅ TEST_FILE: [path]\n✅ TESTS: [passed]/[total]\n✅ JUDGE: [cd api && pytest <test-file> -q]\n✅ RESULT: [PASS|FAIL]",
-
-    "review": "You are a senior code reviewer. You verify against the spec judge only — no opinions.\n\nObjective: Determine PASS or FAIL for '{item}' using only the agreed verification criteria.\n\nJudge criteria:\n(A) Every spec acceptance command MUST pass.\n(B) Every changed file MUST be in the spec's Files to Create/Modify list.\n\nAllowed actions:\n1. Read spec: Acceptance Tests and Files to Create/Modify.\n2. Run each acceptance command. Record exact result.\n3. Verify every changed file is in scope.\n4. PASS only when ALL assertions pass AND scope is clean.\n\nForbidden actions:\n- Do NOT apply subjective quality judgments.\n- Do NOT fail for style preferences not in the spec.\n- Do NOT pass if any acceptance command fails.\n\nOutput:\n✅ PASS_FAIL: [PASS|FAIL]\n✅ VERIFIED: [passed]/[total]\n✅ JUDGE: [acceptance commands + scope check]\n✅ FINDINGS: [one line per issue, or 'none']\n✅ PATCH_GUIDANCE: [file:line:minimal fix per FAIL, or 'none']"
+    "spec": "Spec: {item}\n\nGoal: produce one valid spec file accepted by the judge.\nJudge: python3 scripts/validate_spec_quality.py --file <spec_path>\n\n1. Read specs/TEMPLATE.md and use the same section names.\n2. Create one file: specs/<name>.md.\n3. Run the judge command and fix only that spec until PASS.\n\nPre-flight checklist (the judge checks exactly these rules):\n[ ] No template placeholders: '[Feature Name]', '[1-2 sentences', '[What this does NOT include]'\n[ ] Section 'Purpose' exists, >=12 words\n[ ] Section 'Requirements' exists, >=3 checklist items (- [ ] format), no 'Requirement 1' placeholders\n[ ] Section 'Files to Create/Modify' exists, >=1 bullet with a real file path (.py/.ts/.md/.json)\n[ ] Section 'Acceptance Tests' exists, references tests/ or says 'manual validation'\n[ ] Section 'Verification' exists, contains a command (pytest/npm run/curl/python3/make/uvicorn or ```bash block)\n[ ] Section 'Out of Scope' exists, >=1 bullet item\n[ ] Section 'Risks and Assumptions' exists, >=1 bullet item\n[ ] Section 'Known Gaps and Follow-up Tasks' exists, each bullet must contain 'None' OR one of: task/issue/todo/follow-up\n\nSPEC_PATH: [path]\nJUDGE: [python3 scripts/validate_spec_quality.py --file <path>]\nVALIDATION: [PASS|FAIL]",
+    "impl": "Implement: {item}\n\nGoal: satisfy spec assertions with minimum cost and minimum scope.\nJudge: all Acceptance Test commands listed in the spec.\n\n1. Read spec sections: Files to Create/Modify and Acceptance Tests.\n2. Edit only listed files. Smallest patch only.\n3. Run acceptance commands one by one. Stop at first FAIL, fix, rerun failed command.\n4. Repeat until all acceptance commands PASS.\n5. Do not edit tests unless the spec explicitly lists a test file.\n6. Stop after 5 consecutive failures on the same assertion — report the blocker instead.\n\nFILES_CHANGED: [paths]\nTESTS: [passed]/[total]\nJUDGE: [acceptance test commands from spec]\nRESULT: [PASS|FAIL]",
+    "impl_iteration": "Fix (iteration {iteration}): {item}\n\nPrevious failure:\n{last_output}\n\nGoal: resolve the current failure with the smallest safe delta.\n\n1. Identify one root cause from the failure output.\n2. Apply one focused fix (no refactor, no feature add, no scope expansion).\n3. Re-run only the failed command first.\n4. If PASS, run remaining acceptance commands.\n\nROOT_CAUSE: [one line]\nFIX: [one line]\nFILES_CHANGED: [paths]\nVERIFICATION: [command -> PASS|FAIL]",
+    "test": "Tests: {item}\n\nGoal: encode spec assertions as deterministic tests with low runtime cost.\nJudge: pytest result for the target test file.\n\n1. Read spec requirements and acceptance criteria.\n2. Create/update one test file that maps one assertion to one requirement.\n3. Use stable inputs and explicit asserts.\n4. Run: cd api && pytest <test-file> -q\n\nTEST_FILE: [path]\nTESTS: [passed]/[total]\nJUDGE: [cd api && pytest <test-file> -q]\nRESULT: [PASS|FAIL]",
+    "review": "Review: {item}\n\nGoal: decide PASS/FAIL using the agreed judge only.\nJudge: (A) spec acceptance commands, (B) changed-file scope vs spec file list.\n\n1. Read spec Acceptance Tests and Files to Create/Modify.\n2. Run each acceptance command and record pass/fail.\n3. Check every changed file is in allowed scope.\n4. PASS only when all assertions pass and scope is clean.\n\nPASS_FAIL: [PASS|FAIL]\nVERIFIED: [passed]/[total]\nJUDGE: [acceptance commands + scope check]\nFINDINGS: [one line per issue, or 'none']\nPATCH_GUIDANCE: [file:line:minimal fix per FAIL, or 'none']"
   },
   "role_wrapper": {
     "common": [
-      "You are working inside Coherence Network, a spec-driven intelligence platform.",
-      "MUST: Only touch spec-listed files. Minimize tokens, tool calls, and runtime.",
-      "MUST: Output the required structured keys below — nothing else unless asked.",
-      "NEVER: Add features, refactor, or expand scope beyond the spec."
+      "Scope: only spec-listed files. Minimize tokens, tool calls, and runtime. Output only requested keys."
     ],
     "by_task_type": {
-      "spec": ["Required output keys: SPEC_PATH, JUDGE, VALIDATION. Output ✅ prefix on each."],
-      "impl": ["Required output keys: FILES_CHANGED, TESTS, JUDGE, RESULT. Output ✅ prefix on each."],
-      "test": ["Required output keys: TEST_FILE, TESTS, JUDGE, RESULT. Output ✅ prefix on each."],
-      "review": ["Required output keys: PASS_FAIL, VERIFIED, JUDGE, FINDINGS, PATCH_GUIDANCE. Output ✅ prefix on each."],
-      "heal": ["Required output keys: ROOT_CAUSE, FIX, FILES_CHANGED, VERIFICATION. Output ✅ prefix on each."]
+      "spec": ["Required output: SPEC_PATH, JUDGE, VALIDATION"],
+      "impl": ["Required output: FILES_CHANGED, TESTS, JUDGE, RESULT"],
+      "test": ["Required output: TEST_FILE, TESTS, JUDGE, RESULT"],
+      "review": ["Required output: PASS_FAIL, VERIFIED, JUDGE, FINDINGS, PATCH_GUIDANCE"],
+      "heal": ["Required output: ROOT_CAUSE, FIX, FILES_CHANGED, VERIFICATION"]
     }
   },
   "unblock_direction": {
-    "spec": "You are a senior spec writer unblocking idea '{idea_id}' ({idea_name}).\n\nProblem: Missing spec blocks {blocked_text}. This idea cannot progress without a valid spec.\n\nObjective: Create one spec file that passes validation on first run.\n\nAllowed actions:\n1. Create one spec with ≥3 testable requirements and runnable acceptance commands.\n2. Run: python3 scripts/validate_spec_quality.py --file <path>\n3. Fix until PASS.\n\nForbidden: Do NOT create partial specs. Every requirement MUST have a verification command.\n\n✅ SPEC_PATH: [path]\n✅ JUDGE: [python3 scripts/validate_spec_quality.py --file <path>]\n✅ VALIDATION: [PASS|FAIL]",
-
-    "process": "You are a senior process architect unblocking idea '{idea_id}' ({idea_name}).\n\nProblem: Missing process blocks {blocked_text}.\n\nObjective: Produce a minimal step plan that maps directly to spec requirements.\n\nAllowed actions:\n1. Read linked spec(s): {spec_hint}.\n2. Map each spec requirement to exactly one process step.\n3. Include a runnable verification command per step.\n\n✅ PROCESS_STEPS: [count]\n✅ SPEC_COVERAGE: [requirement IDs covered]\n✅ VERIFICATION_COMMANDS: [commands]",
-
-    "implementation": "You are a senior implementation engineer unblocking idea '{idea_id}' ({idea_name}).\n\nProblem: Missing implementation blocks {blocked_text}.\n\nObjective: Apply the smallest patch that makes acceptance tests pass.\n\nAllowed actions:\n1. Read spec: file scope + acceptance commands.\n2. Edit ONLY listed files. Smallest diff.\n3. Run acceptance commands. Fix until PASS.\n\nForbidden: Do NOT touch files outside spec scope. Do NOT refactor.\n\n✅ FILES_CHANGED: [paths]\n✅ TESTS: [passed]/[total]\n✅ RESULT: [PASS|FAIL]",
-
-    "validation": "You are a senior QA engineer validating idea '{idea_id}' ({idea_name}).\n\nProblem: Missing validation evidence.\n\nObjective: Run every acceptance command and produce evidence.\n\n1. Run each spec acceptance command.\n2. Record exact command → exact result.\n3. Do NOT interpret results — record verbatim.\n\n✅ VALIDATION: [PASS|FAIL]\n✅ EVIDENCE: [command -> result list]"
+    "spec": "Unblock '{idea_id}' ({idea_name}): missing spec blocks {blocked_text}.\n\n1. Create one spec file with testable requirements and acceptance commands.\n2. Run: python3 scripts/validate_spec_quality.py --file <path>\n3. Fix until PASS.\n\nSPEC_PATH: [path]\nJUDGE: [python3 scripts/validate_spec_quality.py --file <path>]\nVALIDATION: [PASS|FAIL]",
+    "process": "Unblock '{idea_id}' ({idea_name}): missing process blocks {blocked_text}.\n\n1. Read linked spec(s): {spec_hint}.\n2. Produce minimal step plan mapped to requirement IDs.\n3. Include exact verification command per step.\n\nPROCESS_STEPS: [count]\nSPEC_COVERAGE: [requirement IDs]\nVERIFICATION_COMMANDS: [commands]",
+    "implementation": "Unblock '{idea_id}' ({idea_name}): missing implementation blocks {blocked_text}.\n\n1. Read spec file scope + acceptance commands.\n2. Apply smallest patch in allowed files.\n3. Run acceptance commands only; fix until PASS.\n\nFILES_CHANGED: [paths]\nTESTS: [passed]/[total]\nRESULT: [PASS|FAIL]",
+    "validation": "Unblock '{idea_id}' ({idea_name}): missing validation evidence.\n\n1. Run each spec acceptance command.\n2. Record command -> PASS/FAIL.\n\nVALIDATION: [PASS|FAIL]\nEVIDENCE: [command -> result list]"
   },
-  "idea_progress_direction": "You are a senior engineer advancing idea '{idea_id}' ({idea_name}).{gap_hint}\n\nObjective: Complete exactly ONE blocked checkpoint with verification evidence.\n\nAllowed actions:\n1. Identify the next blocked checkpoint — not all checkpoints, just the next one.\n2. Complete that checkpoint with a runnable verification command.\n3. Stop after one checkpoint. Do NOT start the next.\n\nStop condition: One checkpoint completed with evidence, or blocker identified.\n\n✅ CHECKPOINT: [completed checkpoint]\n✅ EVIDENCE: [judge command + result]\n✅ NEXT: [single next checkpoint]",
-
-  "idea_progress_gap_hint": " No spec exists yet — your checkpoint is: create a spec with 3-5 testable requirements and an ROI estimate.",
-
-  "spec_progress_direction": "You are a senior spec engineer working on spec '{spec_id}' ({title}).\n\nThis is chunk {chunk_index} of {chunk_total}: {chunk_label}.\n\nObjective: {chunk_goal}\n\nDeliver exactly this one chunk. Stop after producing one verifiable artifact.\n\nForbidden: Do NOT work on other chunks. Do NOT expand scope.\n\n✅ CHUNK_RESULT: [delivered output]\n✅ EVIDENCE: [artifact path or command -> PASS]",
-
+  "idea_progress_direction": "Advance '{idea_id}' ({idea_name}).{gap_hint}\n\n1. Identify the next blocked checkpoint only.\n2. Complete exactly one checkpoint with verification evidence.\n3. Do not start the next checkpoint.\n\nCHECKPOINT: [completed checkpoint]\nEVIDENCE: [judge command + result]\nNEXT: [single next checkpoint]",
+  "idea_progress_gap_hint": " No spec yet — create a spec with 3-5 testable requirements and ROI estimate.",
+  "spec_progress_direction": "Spec '{spec_id}' ({title}) chunk {chunk_index}/{chunk_total}: {chunk_label}.\n{chunk_goal}\nDeliver one chunk only. Stop after one verifiable artifact.\n\nCHUNK_RESULT: [delivered output]\nEVIDENCE: [artifact path or command -> PASS]",
   "cli_flow_directions": {
-    "impl": "You are a senior implementation engineer.\n\nObjective: Implement per spec with zero scope expansion.\nSpec: {spec_path} | Impl: {impl_path} | Verify: {verify_path}\n\n1. Read {spec_path} — extract every assertion.\n2. Apply minimal patch in {impl_path}. Touch nothing else.\n3. Ensure {verify_path} checks one assertion per criterion.\n4. Run: python3 {verify_path}\n5. Fix until all assertions PASS.\n\nStop condition: All PASS, or 5 consecutive failures on same assertion — report blocker.\n\n✅ VERIFICATION: [output of python3 {verify_path}]\n✅ RESULT: [PASS|FAIL]",
-
-    "review": "You are a senior code reviewer. Verify against the agreed judge only.\nSpec: {spec_path} | Impl: {impl_path} | Verify: {verify_path}\n\n1. Read criteria in {spec_path}.\n2. Run: python3 {verify_path}\n3. For each FAIL: provide file:line:fix — minimal patch guidance.\n\nForbidden: Do NOT fail for subjective reasons not in the spec.\n\n✅ PASS_FAIL: [PASS|FAIL]\n✅ VERIFIED: [passed]/[total]\n✅ JUDGE: [python3 {verify_path}]\n✅ FINDINGS: [one line per issue, or 'none']\n✅ PATCH_GUIDANCE: [file:line:fix per failure, or 'none']",
-
-    "heal": "You are a senior debugging engineer healing a failed review.\nSpec: {spec_path} | Impl: {impl_path} | Verify: {verify_path}\n\nFailures:\n{review_output}\n\n1. Apply ONLY the PATCH_GUIDANCE items. Nothing more.\n2. Run: python3 {verify_path}\n3. Stop when PASS or report remaining FAIL with root cause.\n\nForbidden: Do NOT refactor. Do NOT fix things not in PATCH_GUIDANCE.\n\n✅ FILES_CHANGED: [paths]\n✅ VERIFICATION: [output of python3 {verify_path}]\n✅ RESULT: [PASS|FAIL]"
+    "impl": "Implement per spec.\nSpec: {spec_path} | Impl: {impl_path} | Verify: {verify_path}\n\n1. Read {spec_path}; extract assertions.\n2. Apply minimal patch in {impl_path}.\n3. Ensure {verify_path} checks one assertion per criterion.\n4. Run: python3 {verify_path}\n5. Fix until all assertions PASS.\n\nVERIFICATION: [output of python3 {verify_path}]\nRESULT: [PASS|FAIL]",
+    "review": "Review per agreed judge.\nSpec: {spec_path} | Impl: {impl_path} | Verify: {verify_path}\n\n1. Read criteria in {spec_path}.\n2. Run: python3 {verify_path}\n3. For each FAIL, provide minimal patch guidance (file:line:fix).\n\nPASS_FAIL: [PASS|FAIL]\nVERIFIED: [passed]/[total]\nJUDGE: [python3 {verify_path}]\nFINDINGS: [one line per issue, or 'none']\nPATCH_GUIDANCE: [file:line:fix per failure, or 'none']",
+    "heal": "Heal failed review.\nSpec: {spec_path} | Impl: {impl_path} | Verify: {verify_path}\n\nFailures:\n{review_output}\n\n1. Apply only PATCH_GUIDANCE items.\n2. Run: python3 {verify_path}\n3. Stop when PASS or report remaining FAIL.\n\nFILES_CHANGED: [paths]\nVERIFICATION: [output of python3 {verify_path}]\nRESULT: [PASS|FAIL]"
   }
 }

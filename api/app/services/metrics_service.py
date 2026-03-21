@@ -1,10 +1,13 @@
 """Task metrics: persistence and aggregation. Spec 026 Phase 1."""
 
 import json
+import logging
 import os
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import Any, List
+
+logger = logging.getLogger(__name__)
 
 from app.services import telemetry_persistence_service
 
@@ -197,4 +200,5 @@ def get_aggregates(window_days: int | None = None) -> dict[str, Any]:
             out["window_days"] = days
         return out
     except Exception:
+        logger.warning("Metrics aggregation failed", exc_info=True)
         return _empty_aggregates()

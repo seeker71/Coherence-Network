@@ -536,7 +536,7 @@ async def capture_runtime_metrics(request: Request, call_next):
                 )
             except Exception:
                 # Telemetry should not affect request success.
-                pass
+                logger.debug("Telemetry recording failed", exc_info=True)
 
             if elapsed_ms >= slow_threshold_ms or log_all_requests or status_code >= 500:
                     reason_text = ", ".join(reasons) if reasons else "unspecified"

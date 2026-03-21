@@ -1683,7 +1683,7 @@ def _supplement_spec_candidates_from_discovery(
                         }
                     )
             except Exception:
-                pass
+                logger.warning("Spec seed creation failed for spec_id=%s", spec_id, exc_info=True)
 
         supplemental.append(
             {
@@ -2285,7 +2285,7 @@ def _read_commit_evidence_records(limit: int = 400) -> list[dict[str, Any]]:
         if rows:
             return rows
     except Exception:
-        pass
+        logger.warning("DB evidence cache update failed", exc_info=True)
 
     # Bootstrap: no DB records yet — try files then github
     evidence_dir = _commit_evidence_dir()

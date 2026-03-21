@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,8 @@ from typing import Any
 
 from app.models.friction import FrictionEvent
 from app.services import metrics_service, telemetry_persistence_service
+
+logger = logging.getLogger(__name__)
 
 
 def _default_path() -> Path:
@@ -77,6 +80,8 @@ def load_events(path: Path | None = None) -> tuple[list[FrictionEvent], int]:
                 ignored += 1
                 continue
         events.sort(key=lambda e: e.timestamp, reverse=True)
+        if ignored > 0:
+            logger.warning("Ignored %d FrictionEvent deserialization failures from DB events", ignored)
         return events, ignored
     path = path or friction_file_path()
     if not path.exists():
@@ -96,6 +101,8 @@ def load_events(path: Path | None = None) -> tuple[list[FrictionEvent], int]:
             ignored += 1
             continue
     events.sort(key=lambda e: e.timestamp, reverse=True)
+    if ignored > 0:
+        logger.warning("Ignored %d FrictionEvent deserialization failures from %s", ignored, path)
     return events, ignored
 
 
