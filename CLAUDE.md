@@ -85,11 +85,19 @@ SKIP_PR_GUARD=1 git -c "url.https://x-access-token:$(gh auth token)@github.com/.
 
 ## API Keys & Provider Credentials
 
-Keys are stored locally in `api/.env` (gitignored) and on the VPS at `/docker/coherence-network/repo/api/.env`.
-Never commit keys to git — only hints about where to find them.
+**Canonical keystore**: `~/.coherence-network/keys.json` (mode 600, not in git).
+This survives `.env` replacements. Code loads from keystore first, `.env` as fallback.
 
-- **OpenRouter**: `OPENROUTER_API_KEY=sk-or-v1-62dc...` in `api/.env`. Free tier: 26 models, 20 req/min.
-  Management key also in `api/.env` as `OPENROUTER_MANAGEMENT_KEY=sk-or-v1-890e...`.
+```json
+// ~/.coherence-network/keys.json structure:
+{
+  "openrouter": { "api_key": "sk-or-v1-...", "management_key": "sk-or-v1-..." }
+}
+```
+
+- **OpenRouter**: `api_key` starts with `sk-or-v1-62dc...`. Free tier: 26 models, 20 req/min.
+- **VPS copy**: `/docker/coherence-network/repo/api/.env` has `OPENROUTER_API_KEY=` as env var fallback.
+- Never commit full keys to git.
 
 ## Context-Conscious Exploration
 
