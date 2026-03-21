@@ -66,8 +66,10 @@ def _detect_providers() -> dict[str, dict]:
         "claude": {"cmd": ["claude", "--print", "--dangerously-skip-permissions"], "append_prompt": True},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
-        # gemini -s -p <prompt>: sandbox + non-interactive headless mode
-        "gemini": {"cmd": ["gemini", "-s", "-p"], "append_prompt": True},
+        # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
+        # -y is required: without it, tool calls block waiting for interactive
+        # approval that never comes in headless mode (root cause of all timeouts)
+        "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
         # ollama: local LLM inference (if running)
         "ollama": {"cmd": ["ollama", "run", "llama3.1"], "append_prompt": True, "check": _check_ollama},
     }

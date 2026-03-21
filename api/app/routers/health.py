@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 import logging
 import os
+import ast
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Request
@@ -14,7 +15,27 @@ from app.services import unified_db
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-HEALTH_VERSION = "1.0.0"
+
+def _get_api_version() -> str:
+    """Read API version from setup.py in the api directory."""
+    try:
+        # Resolve the path to setup.py relative to this file
+        setup_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "setup.py")
+        if os.path.exists(setup_path):
+            with open(setup_path, "r") as f:
+                tree = ast.parse(f.read())
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "setup":
+                        for keyword in node.keywords:
+                            if keyword.arg == "version":
+                                return str(ast.literal_eval(keyword.value))
+    except Exception as e:
+        logger.warning(f"Failed to load version from setup.py: {e}")
+    
+    return "1.0.0"  # Fallback
+
+
+HEALTH_VERSION = _get_api_version()
 SERVICE_STARTED_AT = datetime.now(timezone.utc)
 _DEPLOY_SHA_ENV_KEYS = (
     "RAILWAY_GIT_COMMIT_SHA",
