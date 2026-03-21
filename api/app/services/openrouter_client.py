@@ -6,11 +6,30 @@ from background workers in production.
 
 from __future__ import annotations
 
+import json
 import os
 import time
+from pathlib import Path
 from typing import Any
 
 import httpx
+
+_KEYSTORE = Path.home() / ".coherence-network" / "keys.json"
+
+
+def _load_key(provider: str, key_name: str) -> str:
+    """Load a key from ~/.coherence-network/keys.json.
+
+    This is the canonical key storage — survives .env replacements.
+    Falls back to empty string if keystore doesn't exist.
+    """
+    try:
+        if _KEYSTORE.exists():
+            data = json.loads(_KEYSTORE.read_text())
+            return str(data.get(provider, {}).get(key_name, ""))
+    except (json.JSONDecodeError, OSError):
+        pass
+    return ""
 
 
 class OpenRouterError(RuntimeError):
@@ -31,7 +50,7 @@ def chat_completion(
 
     meta includes: status_code, elapsed_ms, provider_request_id, response_id.
     """
-    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip() or _load_key("openrouter", "api_key")
 
     url = os.getenv("OPENROUTER_CHAT_URL", "https://openrouter.ai/api/v1/chat/completions").strip()
     if not url:
