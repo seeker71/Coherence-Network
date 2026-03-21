@@ -144,3 +144,16 @@ class IdeaStorageInfo(BaseModel):
     idea_count: int = Field(ge=0)
     question_count: int = Field(ge=0)
     bootstrap_source: str = Field(min_length=1)
+
+
+class GovernanceHealth(BaseModel):
+    """Portfolio governance effectiveness snapshot (spec 126)."""
+    governance_score: float = Field(ge=0.0, le=1.0)
+    throughput_rate: float = Field(ge=0.0, le=1.0)
+    value_gap_trend: float = Field(description="Negative = improving")
+    question_answer_rate: float = Field(ge=0.0, le=1.0)
+    stale_ideas: list[str] = Field(default_factory=list)
+    total_ideas: int = Field(ge=0)
+    validated_ideas: int = Field(ge=0)
+    snapshot_at: str = Field(description="ISO 8601 UTC timestamp")
+    window_days: int = Field(default=30, ge=1)
