@@ -32,24 +32,21 @@ def chat_completion(
     meta includes: status_code, elapsed_ms, provider_request_id, response_id.
     """
     api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        raise OpenRouterError("OPENROUTER_API_KEY is not configured")
 
     url = os.getenv("OPENROUTER_CHAT_URL", "https://openrouter.ai/api/v1/chat/completions").strip()
     if not url:
         raise OpenRouterError("OPENROUTER_CHAT_URL is empty")
 
     headers: dict[str, str] = {
-        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
+        # Referer and title help OpenRouter attribute traffic and are
+        # recommended even without an API key.
+        "HTTP-Referer": (os.getenv("OPENROUTER_HTTP_REFERER") or os.getenv("PUBLIC_APP_URL") or "https://coherencycoin.com").strip(),
+        "X-Title": (os.getenv("OPENROUTER_X_TITLE") or "Coherence-Network").strip(),
     }
-    # Optional, but recommended by OpenRouter to attribute traffic.
-    referer = (os.getenv("OPENROUTER_HTTP_REFERER") or os.getenv("PUBLIC_APP_URL") or "").strip()
-    title = (os.getenv("OPENROUTER_X_TITLE") or "Coherence-Network").strip()
-    if referer:
-        headers["HTTP-Referer"] = referer
-    if title:
-        headers["X-Title"] = title
+    # API key is optional — free models work without one (with rate limits)
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
 
     payload: dict[str, Any] = {
         "model": model,
