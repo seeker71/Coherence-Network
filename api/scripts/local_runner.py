@@ -66,8 +66,9 @@ def _detect_providers() -> dict[str, dict]:
         "claude": {"cmd": ["claude", "--print", "--dangerously-skip-permissions"], "append_prompt": True},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
-        # gemini -p --sandbox: non-interactive headless mode with sandboxing
-        "gemini": {"cmd": ["gemini", "-p", "-s"], "append_prompt": True},
+        # gemini -s -p <prompt>: sandbox + non-interactive headless mode
+        # -p must be last before the prompt since it takes the next arg as its value
+        "gemini": {"cmd": ["gemini", "-s", "-p"], "append_prompt": True},
         # cursor: IDE-based, no headless CLI mode — skip
     }
     for name, spec in cli_specs.items():
