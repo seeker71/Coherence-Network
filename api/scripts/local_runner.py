@@ -57,8 +57,8 @@ _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
 def _detect_providers() -> dict[str, dict]:
     """Auto-detect available provider CLIs on this machine.
 
-    Each provider spec defines how to invoke it in non-interactive/headless mode.
-    Only providers that support headless execution are included.
+    Every provider is just a CLI that takes a prompt and produces output.
+    No provider is special — all are treated equally by Thompson Sampling.
     """
     providers = {}
     cli_specs = {
@@ -67,17 +67,34 @@ def _detect_providers() -> dict[str, dict]:
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -s -p <prompt>: sandbox + non-interactive headless mode
-        # -p must be last before the prompt since it takes the next arg as its value
         "gemini": {"cmd": ["gemini", "-s", "-p"], "append_prompt": True},
-        # cursor: IDE-based, no headless CLI mode — skip
+        # ollama: local LLM inference (if running)
+        "ollama": {"cmd": ["ollama", "run", "llama3.1"], "append_prompt": True, "check": _check_ollama},
     }
     for name, spec in cli_specs.items():
-        if shutil.which(spec["cmd"][0]):
-            providers[name] = spec
-            log.info("Provider detected: %s (%s)", name, shutil.which(spec["cmd"][0]))
-        else:
+        binary = spec["cmd"][0]
+        if not shutil.which(binary):
             log.debug("Provider not found: %s", name)
+            continue
+        # Optional health check (e.g., ollama needs server running)
+        checker = spec.pop("check", None)
+        if checker and not checker():
+            log.info("Provider skipped (not ready): %s", name)
+            continue
+        providers[name] = spec
+        log.info("Provider detected: %s (%s)", name, shutil.which(binary))
     return providers
+
+
+def _check_ollama() -> bool:
+    """Check if ollama server is running and has a model available."""
+    try:
+        result = subprocess.run(
+            ["ollama", "list"], capture_output=True, text=True, timeout=5,
+        )
+        return result.returncode == 0 and len(result.stdout.strip().split("\n")) > 1
+    except Exception:
+        return False
 
 
 PROVIDERS: dict[str, dict] = {}  # populated at startup
