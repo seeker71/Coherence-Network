@@ -33,6 +33,7 @@ from app.services.agent_service_executor import (
     AGENT_BY_TASK_TYPE,
     GUARD_AGENTS_BY_TASK_TYPE,
     get_integration_gaps,
+    list_available_task_execution_providers,
     get_route,
 )
 

@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from api.app.models.coherence_credit import (
+from app.models.coherence_credit import (
     CostVector,
     ExchangeRate,
     ExchangeRateConfig,

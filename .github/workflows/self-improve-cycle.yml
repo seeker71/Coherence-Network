@@ -16,7 +16,7 @@ jobs:
       contents: read
       issues: write
     env:
-      SELF_IMPROVE_API_URL: ${{ vars.SELF_IMPROVE_API_URL || 'https://coherence-network-production.up.railway.app' }}
+      SELF_IMPROVE_API_URL: ${{ vars.SELF_IMPROVE_API_URL || 'https://api.coherencycoin.com' }}
       SELF_IMPROVE_USAGE_THRESHOLD_RATIO: ${{ vars.SELF_IMPROVE_USAGE_THRESHOLD_RATIO || '0.15' }}
       SELF_IMPROVE_STAGE_TIMEOUT_SECONDS: ${{ vars.SELF_IMPROVE_STAGE_TIMEOUT_SECONDS || '300' }}
       SELF_IMPROVE_ATTEMPT_WALL_TIMEOUT_SECONDS: ${{ vars.SELF_IMPROVE_ATTEMPT_WALL_TIMEOUT_SECONDS || '900' }}

@@ -27,10 +27,6 @@ jobs:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
       CURSOR_CLI_MODEL: ${{ vars.CURSOR_CLI_MODEL }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
-      RAILWAY_ENVIRONMENT: ${{ secrets.RAILWAY_ENVIRONMENT }}
-      RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
       AUTOMATION_REQUIRED_PROVIDERS: ${{ vars.AUTOMATION_REQUIRED_PROVIDERS }}
       AUTOMATION_PROVIDER_VALIDATION_REQUIRED: ${{ vars.AUTOMATION_PROVIDER_VALIDATION_REQUIRED }}
     steps:
@@ -62,7 +58,7 @@ jobs:
           if [ -z "${REQUIRED// /}" ]; then
             # Keep the contract meaningful even when repo variables are unset.
             # Default to providers that are expected to be configured in CI.
-            REQUIRED="coherence-internal,github,railway,claude-code"
+            REQUIRED="coherence-internal,github,claude-code"
           fi
           python scripts/check_provider_readiness.py \
             --required-providers "$REQUIRED" \
