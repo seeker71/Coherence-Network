@@ -72,25 +72,25 @@ type OpportunityIdea = IdeaWithScore & {
 
 const THREE_PATHS = [
   {
-    title: "Share an Insight",
+    title: "Notice Something",
     description:
-      "You noticed something. A pattern, a gap, a better way. Publish it \u2014 even a two-sentence idea can spark something real.",
-    href: "/ideas",
-    label: "Share an idea",
-  },
-  {
-    title: "Build Something Real",
-    description:
-      "Pick up an idea someone shared. Spec it, test it, ship it. Your work stays connected to the insight that inspired it.",
-    href: "/tasks",
-    label: "Find work",
-  },
-  {
-    title: "Back What Matters",
-    description:
-      "Stake your belief in ideas that resonate. When they create real value, the credit traces back to everyone involved.",
+      "A two-sentence thought can change everything. Share what you see and let it find the people who care about the same thing.",
     href: "/contribute",
-    label: "Contribute",
+    label: "Share a thought",
+  },
+  {
+    title: "Join the Flow",
+    description:
+      "Ideas are evolving right now. See what has momentum, ask a question, write a spec, or just watch it unfold.",
+    href: "/resonance",
+    label: "See what\u2019s alive",
+  },
+  {
+    title: "Invest Your Attention",
+    description:
+      "When you put energy behind an idea, real work happens. Your belief becomes compute, specs, implementations \u2014 and the credit traces back.",
+    href: "/invest",
+    label: "Back an idea",
   },
 ];
 
@@ -163,7 +163,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)]">
-      {/* Section 1: THE INVITATION */}
+      {/* Section 1: THE QUESTION */}
       <section className="min-h-[80vh] flex flex-col justify-center items-center text-center px-4 py-20 relative">
         {/* Soft ambient glow */}
         <div className="absolute inset-0 pointer-events-none">
@@ -171,26 +171,35 @@ export default async function Home() {
           <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-chart-2/8 blur-[100px]" />
         </div>
 
-        <div className="relative max-w-3xl mx-auto space-y-8 animate-fade-in-up">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-normal md:font-light tracking-tight leading-[1.1]">
-            Ideas deserve to<br />
-            <span className="text-primary">become real</span>
+        <div className="relative max-w-2xl mx-auto space-y-10 animate-fade-in-up">
+          <h1 className="text-3xl md:text-5xl lg:text-6xl font-normal md:font-light tracking-tight leading-[1.15]">
+            What idea are you holding?
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Share what you see. Build what matters. Every contribution traced
-            from thought to impact — openly, fairly, together.
+          <p className="text-base md:text-lg text-muted-foreground max-w-xl mx-auto leading-relaxed">
+            A pattern you noticed. A gap that needs filling. A better way.
+            Share it — someone out there is looking for exactly this.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-            <Button asChild className="rounded-full px-8 py-3 text-base">
-              <Link href="/ideas">Start Exploring</Link>
-            </Button>
-            <Link
-              href="/demo"
-              className="text-muted-foreground hover:text-foreground transition-colors duration-300 underline underline-offset-4 py-3"
-            >
-              See how it works
-            </Link>
-          </div>
+
+          {/* The text box */}
+          <form action="/api/share" method="GET" className="space-y-4">
+            <textarea
+              name="idea"
+              rows={3}
+              placeholder="I think there should be a way to..."
+              className="w-full rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm px-6 py-4 text-base md:text-lg placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 resize-none transition-all duration-300"
+            />
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild className="rounded-full px-8 py-3 text-base">
+                <Link href="/contribute">Share your idea</Link>
+              </Button>
+              <Link
+                href="/resonance"
+                className="text-muted-foreground hover:text-foreground transition-colors duration-300 underline underline-offset-4 py-3 text-sm"
+              >
+                or see what others are working on
+              </Link>
+            </div>
+          </form>
         </div>
       </section>
 
@@ -330,53 +339,25 @@ export default async function Home() {
         )}
       </section>
 
-      {/* Section 6: FIRST STEPS */}
-      <section className="px-4 md:px-8 py-20 max-w-3xl mx-auto text-center animate-fade-in-up delay-400">
-        <p className="text-xl md:text-2xl font-light text-muted-foreground mb-12 leading-relaxed">
+      {/* Section 6: THE GENTLE TAP */}
+      <section className="px-4 md:px-8 py-20 max-w-2xl mx-auto text-center animate-fade-in-up delay-400">
+        <p className="text-xl md:text-2xl font-light text-muted-foreground leading-relaxed">
+          You don&apos;t need permission.<br />
           You don&apos;t need to know everything.<br />
-          Start wherever feels right.
+          You just need one thought worth sharing.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-left">
-          <div className="space-y-2">
-            <Link
-              href="/ideas"
-              className="text-base font-medium hover:text-primary transition-colors duration-300"
-            >
-              Browse ideas
-            </Link>
-            <p className="text-sm text-muted-foreground">
-              Curious? See what people are working on.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Link
-              href="/demo"
-              className="text-base font-medium hover:text-primary transition-colors duration-300"
-            >
-              Watch the demo
-            </Link>
-            <p className="text-sm text-muted-foreground">
-              Want to understand the flow? It takes 5 minutes.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Link
-              href="/contribute"
-              className="text-base font-medium hover:text-primary transition-colors duration-300"
-            >
-              Share your first insight
-            </Link>
-            <p className="text-sm text-muted-foreground">
-              Ready to contribute? No setup needed.
-            </p>
-          </div>
-        </div>
       </section>
-      {/* Footer note */}
+      {/* Footer */}
       <footer className="px-4 md:px-8 py-12 max-w-3xl mx-auto text-center border-t border-border/20">
-        <p className="text-xs text-muted-foreground/70 leading-relaxed">
-          Built on coherence, not control. Every contribution is traced, every
-          decision is visible, and the math always checks out.
+        <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground/60 mb-4">
+          <Link href="/resonance" className="hover:text-foreground transition-colors">Resonance</Link>
+          <Link href="/ideas" className="hover:text-foreground transition-colors">Ideas</Link>
+          <Link href="/invest" className="hover:text-foreground transition-colors">Invest</Link>
+          <Link href="/flow" className="hover:text-foreground transition-colors">Flow</Link>
+          <Link href="/automation" className="hover:text-foreground transition-colors">Automation</Link>
+        </div>
+        <p className="text-xs text-muted-foreground/50 leading-relaxed">
+          Ideas into realization — through attention, curiosity, and collaboration.
         </p>
       </footer>
     </main>
