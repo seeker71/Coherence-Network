@@ -8,7 +8,9 @@ from app.middleware.auth import require_api_key
 
 from app.models.idea import (
     GovernanceHealth,
+    IdeaCountResponse,
     IdeaCreate,
+    IdeaShowcaseResponse,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
     IdeaQuestionAnswerUpdate,
@@ -105,6 +107,12 @@ async def get_governance_health(
     return idea_service.compute_governance_health(window_days=window_days)
 
 
+@router.get("/ideas/showcase", response_model=IdeaShowcaseResponse)
+async def list_ideas_showcase() -> IdeaShowcaseResponse:
+    """Funder-facing idea summaries with ask, budget, proof, and status."""
+    return idea_service.list_showcase_ideas()
+
+
 @router.get("/ideas/selection-ab/stats")
 async def get_selection_ab_stats() -> dict:
     return idea_selection_ab_service.get_comparison()
@@ -135,6 +143,11 @@ async def select_idea(
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/ideas/count", response_model=IdeaCountResponse)
+async def count_ideas() -> IdeaCountResponse:
+    return idea_service.count_ideas()
 
 
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)

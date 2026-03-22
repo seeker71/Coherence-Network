@@ -90,6 +90,17 @@ class IdeaSummary(BaseModel):
     total_value_gap: float = Field(ge=0.0)
 
 
+class IdeaCountByStatus(BaseModel):
+    none: int = Field(ge=0)
+    partial: int = Field(ge=0)
+    validated: int = Field(ge=0)
+
+
+class IdeaCountResponse(BaseModel):
+    total: int = Field(ge=0)
+    by_status: IdeaCountByStatus
+
+
 class PaginationInfo(BaseModel):
     total: int = Field(ge=0)
     limit: int = Field(ge=1)
@@ -102,6 +113,25 @@ class IdeaPortfolioResponse(BaseModel):
     ideas: list[IdeaWithScore]
     summary: IdeaSummary
     pagination: PaginationInfo | None = None
+
+
+class IdeaShowcaseBudget(BaseModel):
+    estimated_cost_cc: float = Field(ge=0.0)
+    spent_cost_cc: float = Field(ge=0.0)
+    remaining_cost_cc: float = Field(ge=0.0)
+
+
+class IdeaShowcaseItem(BaseModel):
+    idea_id: str = Field(min_length=1)
+    title: str = Field(min_length=1)
+    clear_ask: str = Field(min_length=1)
+    budget: IdeaShowcaseBudget
+    early_proof: str = Field(min_length=1)
+    current_status: ManifestationStatus
+
+
+class IdeaShowcaseResponse(BaseModel):
+    ideas: list[IdeaShowcaseItem]
 
 
 class IdeaUpdate(BaseModel):

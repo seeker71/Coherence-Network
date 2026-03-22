@@ -45,6 +45,86 @@ async def test_list_ideas_returns_ranked_scores_and_summary(
 
 
 @pytest.mark.asyncio
+async def test_ideas_showcase_returns_funder_facing_items_with_realized_value_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        with_value = await client.post(
+            "/api/ideas",
+            json={
+                "id": "showcase-ready",
+                "name": "Showcase Ready",
+                "description": "Proof-first idea for external funders.",
+                "potential_value": 90.0,
+                "actual_value": 20.0,
+                "estimated_cost": 30.0,
+                "actual_cost": 9.0,
+                "confidence": 0.8,
+                "manifestation_status": "partial",
+                "open_questions": [
+                    {
+                        "question": "What proof exists?",
+                        "value_to_whole": 12.0,
+                        "estimated_cost": 2.0,
+                    }
+                ],
+            },
+            headers=AUTH_HEADERS,
+        )
+        assert with_value.status_code == 201
+
+        without_value = await client.post(
+            "/api/ideas",
+            json={
+                "id": "showcase-not-ready",
+                "name": "Showcase Not Ready",
+                "description": "Not yet proven.",
+                "potential_value": 40.0,
+                "actual_value": 0.0,
+                "estimated_cost": 15.0,
+                "actual_cost": 0.5,
+                "confidence": 0.7,
+            },
+            headers=AUTH_HEADERS,
+        )
+        assert without_value.status_code == 201
+
+        internal_with_value = await client.post(
+            "/api/ideas",
+            json={
+                "id": "showcase-internal",
+                "name": "Internal showcase item",
+                "description": "Internal idea should be hidden from funders.",
+                "potential_value": 30.0,
+                "actual_value": 10.0,
+                "estimated_cost": 8.0,
+                "actual_cost": 3.0,
+                "confidence": 0.6,
+                "interfaces": ["machine:commit-evidence"],
+                "open_questions": [],
+            },
+            headers=AUTH_HEADERS,
+        )
+        assert internal_with_value.status_code == 201
+
+        showcase = await client.get("/api/ideas/showcase")
+
+    assert showcase.status_code == 200
+    payload = showcase.json()
+    assert "ideas" in payload
+    assert len(payload["ideas"]) == 1
+    item = payload["ideas"][0]
+    assert item["idea_id"] == "showcase-ready"
+    assert "clear_ask" in item and item["clear_ask"]
+    assert "budget" in item
+    assert item["budget"]["remaining_cost_cc"] == 21.0
+    assert "early_proof" in item and item["early_proof"]
+    assert item["current_status"] == "partial"
+
+
+@pytest.mark.asyncio
 async def test_get_idea_by_id_and_404(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
 
