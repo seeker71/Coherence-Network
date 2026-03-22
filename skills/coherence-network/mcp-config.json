@@ -5,7 +5,7 @@
       "args": ["api/mcp_server.py"],
       "cwd": "${COHERENCE_NETWORK_DIR}",
       "env": {
-        "COHERENCE_API_BASE": "https://api.coherencycoin.com"
+        "COHERENCE_API_BASE": "${COHERENCE_HUB_URL:-https://api.coherencycoin.com}"
       }
     }
   }

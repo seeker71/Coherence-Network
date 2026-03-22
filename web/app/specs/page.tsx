@@ -104,6 +104,7 @@ function humanizeSource(value: string): string {
 
 async function loadSpecs(): Promise<{ source: string; items: SpecItem[]; registry: SpecRegistryEntry[]; flowItems: FlowItem[] }> {
   const API = getApiBase();
+  // 86400 seconds = 24 hours — fetch specs and flow data from the last day
   const [inventoryRes, registryRes, flowRes] = await Promise.all([
     fetch(`${API}/api/inventory/system-lineage?runtime_window_seconds=86400`, { cache: "no-store" }),
     fetch(`${API}/api/spec-registry`, { cache: "no-store" }),
@@ -254,6 +255,8 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
                 <span className="text-muted-foreground">updated {s.updated_at}</span>
               </div>
               <p className="text-muted-foreground">{s.summary}</p>
+              {/* ROI values: estimated_roi = potential_value / estimated_cost, actual_roi = actual_value / actual_cost.
+                 Values are displayed with 2 decimal places. No threshold filtering is applied here. */}
               <p className="text-xs text-muted-foreground">
                 value potential {s.potential_value.toFixed(2)} | value actual {s.actual_value.toFixed(2)} | value_gap{" "}
                 {s.value_gap.toFixed(2)} | cost est {s.estimated_cost.toFixed(2)} | cost actual {s.actual_cost.toFixed(2)} | cost_gap{" "}
