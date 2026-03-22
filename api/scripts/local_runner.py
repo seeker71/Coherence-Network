@@ -229,14 +229,38 @@ def _run_openrouter(prompt: str, cwd: str, timeout: int) -> tuple[bool, str, flo
         return False, f"OpenRouter error: {e}", duration
 
 
+# Providers with tool/file access (can actually create/modify files)
+_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor"}
+# Providers that are text-only (no file access — good for review, bad for impl/spec/test)
+_TEXT_ONLY_PROVIDERS = {"ollama-local", "ollama-cloud", "openrouter"}
+
 PROVIDERS: dict[str, dict] = {}  # populated at startup
 
 
+def _provider_has_tools(provider: str) -> bool:
+    """Does this provider have tool/file access?"""
+    return provider in _TOOL_PROVIDERS
+
+
 def select_provider(task_type: str) -> str:
-    """Select provider via Thompson Sampling based on task outcome data."""
+    """Select provider via Thompson Sampling based on task outcome data.
+
+    File-producing tasks (spec, impl, test) only consider tool-capable providers.
+    Text-output tasks (review, heal) consider all providers.
+    """
     available = list(PROVIDERS.keys())
     if not available:
         raise RuntimeError("No providers available")
+
+    # File-producing tasks need tool-capable providers
+    if task_type in ("spec", "impl", "test"):
+        tool_available = [p for p in available if p in _TOOL_PROVIDERS]
+        if tool_available:
+            available = tool_available
+            log.info("PROVIDER_FILTER task=%s restricted to tool-capable: %s", task_type, available)
+        else:
+            log.warning("No tool-capable providers available for %s task, using all", task_type)
+
     if len(available) == 1:
         return available[0]
 
@@ -519,9 +543,49 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
 
     # Execute
     prompt = build_prompt(task)
+
+    # Snapshot repo state before execution (to detect actual file changes)
+    pre_diff = ""
+    try:
+        pre_result = subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True,
+            timeout=5, cwd=str(_REPO_DIR),
+        )
+        pre_diff = pre_result.stdout.strip()
+    except Exception:
+        pass
+
     log.info("EXECUTING task=%s type=%s provider=%s", task_id, task_type, provider)
 
     success, output, duration = execute_with_provider(provider, prompt, task_type)
+
+    # Post-execution validation: did file-producing tasks actually produce files?
+    if success and task_type in ("spec", "impl", "test"):
+        try:
+            post_result = subprocess.run(
+                ["git", "status", "--porcelain"], capture_output=True, text=True,
+                timeout=5, cwd=str(_REPO_DIR),
+            )
+            post_diff = post_result.stdout.strip()
+            new_changes = set(post_diff.splitlines()) - set(pre_diff.splitlines())
+            has_tool_access = _provider_has_tools(provider)
+
+            if not new_changes and not has_tool_access:
+                # Provider without tools claimed success but produced no files
+                success = False
+                output = (
+                    f"FALSE POSITIVE: {provider} has no tool/file access but reported "
+                    f"success for {task_type} task. No file changes detected.\n"
+                    f"Output was text-only (hallucinated implementation).\n---\n{output}"
+                )
+                log.warning(
+                    "FALSE_POSITIVE task=%s provider=%s type=%s — no tools, no file changes",
+                    task_id, provider, task_type,
+                )
+            elif new_changes:
+                log.info("VERIFIED task=%s files_changed=%d", task_id, len(new_changes))
+        except Exception:
+            pass  # don't fail the task over validation errors
 
     # Save task log
     task_log = _LOG_DIR / f"task_{task_id}.log"
