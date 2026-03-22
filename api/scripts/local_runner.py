@@ -422,13 +422,36 @@ Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md convention
 Output a summary: files created/modified, validation results, errors encountered."""
 
 
-def execute_with_provider(provider: str, prompt: str) -> tuple[bool, str, float]:
+def get_timeout_for(provider: str, task_type: str) -> int:
+    """Get data-driven timeout for a provider+task_type combination.
+
+    Uses 2.5x the p90 duration from measurement data. Falls back to
+    the configured default if no data exists. Floor 60s, cap 600s.
+    """
+    if HAS_SERVICES:
+        try:
+            selector = SlotSelector(f"provider_{task_type}")
+            stats = selector.stats([provider])
+            slot = stats.get("slots", {}).get(provider, {})
+            suggested = slot.get("suggested_timeout_s", 0)
+            if suggested > 0:
+                timeout = int(suggested)
+                log.info("TIMEOUT_DATA provider=%s task=%s timeout=%ds (2.5x p90=%.0fs)",
+                         provider, task_type, timeout, slot.get("p90_duration_s", 0))
+                return timeout
+        except Exception:
+            pass
+    return _TASK_TIMEOUT[0]
+
+
+def execute_with_provider(provider: str, prompt: str, task_type: str = "unknown") -> tuple[bool, str, float]:
     """Run prompt through a provider (CLI or API). Returns (success, output, duration)."""
     spec = PROVIDERS[provider]
+    timeout = get_timeout_for(provider, task_type)
 
     # API-based providers (openrouter)
     if spec.get("api"):
-        return _run_openrouter(prompt, str(_REPO_DIR), _TASK_TIMEOUT[0])
+        return _run_openrouter(prompt, str(_REPO_DIR), timeout)
 
     cmd = list(spec["cmd"])
     stdin_input = None
@@ -443,7 +466,7 @@ def execute_with_provider(provider: str, prompt: str) -> tuple[bool, str, float]
     try:
         result = subprocess.run(
             cmd, capture_output=True, text=True, input=stdin_input,
-            timeout=_TASK_TIMEOUT[0], cwd=str(_REPO_DIR),
+            timeout=timeout, cwd=str(_REPO_DIR),
         )
         duration = time.time() - start
         output = result.stdout or result.stderr or "(no output)"
@@ -454,7 +477,7 @@ def execute_with_provider(provider: str, prompt: str) -> tuple[bool, str, float]
         # Capture whatever partial output exists — this is diagnostic value
         partial_stdout = getattr(e, "stdout", None) or ""
         partial_stderr = getattr(e, "stderr", None) or ""
-        diagnostic = f"TIMEOUT after {duration:.0f}s (limit={_TASK_TIMEOUT[0]}s)\n"
+        diagnostic = f"TIMEOUT after {duration:.0f}s (limit={timeout}s)\n"
         if partial_stdout:
             diagnostic += f"--- partial stdout ({len(partial_stdout)} chars) ---\n{partial_stdout[-2000:]}\n"
         if partial_stderr:
@@ -498,7 +521,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     prompt = build_prompt(task)
     log.info("EXECUTING task=%s type=%s provider=%s", task_id, task_type, provider)
 
-    success, output, duration = execute_with_provider(provider, prompt)
+    success, output, duration = execute_with_provider(provider, prompt, task_type)
 
     # Save task log
     task_log = _LOG_DIR / f"task_{task_id}.log"
