@@ -28,11 +28,16 @@ type Contribution = {
   };
 };
 
+type CoherenceScoreResponse = {
+  score: number;
+};
+
 function ContributionsPageContent() {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<Contribution[]>([]);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [liveCoherenceScore, setLiveCoherenceScore] = useState<number | null>(null);
 
   const contributorFilter = useMemo(
     () => (searchParams.get("contributor_id") || "").trim(),
@@ -47,11 +52,18 @@ function ContributionsPageContent() {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/api/contributions`, { cache: "no-store" });
-      const json = await res.json();
-      if (!res.ok) throw new Error(JSON.stringify(json));
-      const data = json?.items ?? (Array.isArray(json) ? json : []);
+      const [contribRes, coherenceRes] = await Promise.all([
+        fetch(`${API_URL}/api/contributions`, { cache: "no-store" }),
+        fetch(`${API_URL}/api/coherence/score`, { cache: "no-store" }),
+      ]);
+      const contribJson = await contribRes.json();
+      if (!contribRes.ok) throw new Error(JSON.stringify(contribJson));
+      const data = contribJson?.items ?? (Array.isArray(contribJson) ? contribJson : []);
+      const coherenceJson = coherenceRes.ok ? ((await coherenceRes.json()) as CoherenceScoreResponse) : null;
       setRows(data);
+      setLiveCoherenceScore(
+        coherenceJson && Number.isFinite(coherenceJson.score) ? Number(coherenceJson.score) : null,
+      );
       setStatus("ok");
     } catch (e) {
       setStatus("error");
@@ -157,6 +169,8 @@ function ContributionsPageContent() {
                 {(() => {
                   const cost = effectiveCost(c);
                   const commitHash = c.metadata?.commit_hash;
+                  const displayCoherence = c.coherence_score > 0 ? c.coherence_score : liveCoherenceScore;
+                  const coherenceSource = c.coherence_score > 0 ? "row" : "live";
                   return (
                     <>
                 <div className="flex justify-between gap-3">
@@ -178,7 +192,9 @@ function ContributionsPageContent() {
                   >
                     {c.asset_id}
                   </Link>{" "}
-                  | cost {cost.effective.toFixed(2)} | coherence {c.coherence_score}
+                  | cost {cost.effective.toFixed(2)} | coherence{" "}
+                  {displayCoherence !== null ? displayCoherence.toFixed(2) : "n/a"}{" "}
+                  <span className="text-muted-foreground/70">({coherenceSource})</span>
                 </div>
                 {cost.normalized !== null && Math.abs(cost.raw - cost.normalized) >= 0.01 && (
                   <div className="text-xs text-muted-foreground">

@@ -154,6 +154,41 @@ type NetworkStatsResponse = {
   total_measurements: number;
 };
 
+type FederationNodeCapabilities = {
+  executors?: string[];
+  tools?: string[];
+  hardware?: {
+    cpu_count?: number;
+    memory_total_gb?: number | null;
+    gpu_available?: boolean;
+    gpu_type?: string | null;
+  };
+  models_by_executor?: Record<string, string[]>;
+  probed_at?: string;
+};
+
+type FederationNode = {
+  node_id: string;
+  hostname: string;
+  os_type: string;
+  providers: string[];
+  capabilities: FederationNodeCapabilities;
+  registered_at: string;
+  last_seen_at: string;
+  status: string;
+};
+
+type FleetCapabilitiesResponse = {
+  total_nodes: number;
+  executors: Record<string, { node_count: number; node_ids: string[] }>;
+  tools: Record<string, { node_count: number }>;
+  hardware_summary: {
+    total_cpus: number;
+    total_memory_gb: number;
+    gpu_capable_nodes: number;
+  };
+};
+
 type ProviderValidationRow = {
   provider: string;
   configured: boolean;
@@ -182,9 +217,12 @@ async function loadAutomationData(): Promise<{
   validation: ProviderValidationResponse;
   execStats: ProviderExecStatsResponse | null;
   networkStats: NetworkStatsResponse | null;
+  federationNodes: FederationNode[];
+  fleetCapabilities: FleetCapabilitiesResponse | null;
 }> {
   const api = getApiBase();
-  const [usageRes, alertsRes, readinessRes, validationRes, execStatsRes, networkStatsRes] = await Promise.all([
+  const [usageRes, alertsRes, readinessRes, validationRes, execStatsRes, networkStatsRes, federationNodesRes, fleetCapsRes] =
+    await Promise.all([
     fetch(`${api}/api/automation/usage?force_refresh=true`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }),
@@ -193,6 +231,8 @@ async function loadAutomationData(): Promise<{
     }),
     fetch(`${api}/api/providers/stats`, { cache: "no-store" }).catch(() => null),
     fetch(`${api}/api/federation/nodes/stats`, { cache: "no-store" }).catch(() => null),
+    fetch(`${api}/api/federation/nodes`, { cache: "no-store" }).catch(() => null),
+    fetch(`${api}/api/federation/nodes/capabilities`, { cache: "no-store" }).catch(() => null),
   ]);
   if (!usageRes.ok) {
     throw new Error(`automation usage HTTP ${usageRes.status}`);
@@ -214,6 +254,14 @@ async function loadAutomationData(): Promise<{
   if (networkStatsRes && networkStatsRes.ok) {
     networkStats = (await networkStatsRes.json()) as NetworkStatsResponse;
   }
+  let federationNodes: FederationNode[] = [];
+  if (federationNodesRes && federationNodesRes.ok) {
+    federationNodes = (await federationNodesRes.json()) as FederationNode[];
+  }
+  let fleetCapabilities: FleetCapabilitiesResponse | null = null;
+  if (fleetCapsRes && fleetCapsRes.ok) {
+    fleetCapabilities = (await fleetCapsRes.json()) as FleetCapabilitiesResponse;
+  }
   return {
     usage: (await usageRes.json()) as AutomationUsageResponse,
     alerts: (await alertsRes.json()) as UsageAlertResponse,
@@ -221,11 +269,14 @@ async function loadAutomationData(): Promise<{
     validation: (await validationRes.json()) as ProviderValidationResponse,
     execStats,
     networkStats,
+    federationNodes,
+    fleetCapabilities,
   };
 }
 
 export default async function AutomationPage() {
-  const { usage, alerts, readiness, validation, execStats, networkStats } = await loadAutomationData();
+  const { usage, alerts, readiness, validation, execStats, networkStats, federationNodes, fleetCapabilities } =
+    await loadAutomationData();
   const providers = [...usage.providers].sort((a, b) => a.provider.localeCompare(b.provider));
 
   return (
@@ -537,6 +588,67 @@ export default async function AutomationPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </section>
+      )}
+
+      {(fleetCapabilities || federationNodes.length > 0) && (
+        <section className="rounded border p-4 space-y-3 text-sm">
+          <h2 className="font-semibold">Federation Node Capability Discovery</h2>
+          {fleetCapabilities && (
+            <>
+              <p className="text-muted-foreground">
+                nodes {fleetCapabilities.total_nodes} | total_cpu {fleetCapabilities.hardware_summary.total_cpus} | total_memory_gb{" "}
+                {fleetCapabilities.hardware_summary.total_memory_gb} | gpu_nodes {fleetCapabilities.hardware_summary.gpu_capable_nodes}
+              </p>
+              <p className="text-muted-foreground">
+                executors{" "}
+                {Object.entries(fleetCapabilities.executors)
+                  .map(([name, data]) => `${name}(${data.node_count})`)
+                  .join(", ") || "none"}
+              </p>
+              <p className="text-muted-foreground">
+                tools{" "}
+                {Object.entries(fleetCapabilities.tools)
+                  .map(([name, data]) => `${name}(${data.node_count})`)
+                  .join(", ") || "none"}
+              </p>
+            </>
+          )}
+          <div className="space-y-2">
+            {federationNodes
+              .sort((a, b) => a.hostname.localeCompare(b.hostname))
+              .map((node) => (
+                <div key={node.node_id} className="rounded border p-2 space-y-1">
+                  <p className="font-medium">
+                    {node.hostname} <span className="text-muted-foreground">({node.os_type})</span>
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    ID: {node.node_id} | status: {node.status} | last_seen: {new Date(node.last_seen_at).toLocaleString()}
+                  </p>
+                  <p>
+                    executors:{" "}
+                    {node.capabilities?.executors && node.capabilities.executors.length > 0
+                      ? node.capabilities.executors.join(", ")
+                      : "none"}
+                  </p>
+                  <p>
+                    tools:{" "}
+                    {node.capabilities?.tools && node.capabilities.tools.length > 0 ? node.capabilities.tools.join(", ") : "none"}
+                  </p>
+                  {node.capabilities?.models_by_executor && Object.keys(node.capabilities.models_by_executor).length > 0 && (
+                    <ul className="text-muted-foreground text-xs space-y-0.5">
+                      {Object.entries(node.capabilities.models_by_executor)
+                        .sort(([a], [b]) => a.localeCompare(b))
+                        .map(([executor, models]) => (
+                          <li key={`${node.node_id}-${executor}`}>
+                            models[{executor}]: {models.join(", ")}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
           </div>
         </section>
       )}
