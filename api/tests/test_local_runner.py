@@ -54,6 +54,52 @@ def test_select_provider_filters_to_tool_capable_for_test_tasks(monkeypatch: pyt
     assert selected == "codex"
 
 
+def test_openrouter_chat_completion_uses_free_model_and_referer(monkeypatch: pytest.MonkeyPatch) -> None:
+    request: dict[str, Any] = {}
+
+    def _post(
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        json: dict[str, Any] | None = None,
+        timeout: float | None = None,
+    ) -> _DummyResponse:
+        request["url"] = url
+        request["headers"] = headers or {}
+        request["json"] = json or {}
+        request["timeout"] = timeout
+        return _DummyResponse(
+            200,
+            {"choices": [{"message": {"content": "hello from openrouter"}}]},
+        )
+
+    monkeypatch.setattr(local_runner.httpx, "post", _post)
+
+    content = local_runner._openrouter_chat_completion("Say hello", timeout_s=8.0)
+
+    assert content == "hello from openrouter"
+    assert request["url"] == "https://openrouter.ai/api/v1/chat/completions"
+    assert request["headers"]["HTTP-Referer"] == "https://coherencycoin.com"
+    assert request["json"]["model"] == "nvidia/nemotron-nano-12b-v2-vl:free"
+    assert request["json"]["messages"][0]["content"] == "Say hello"
+    assert request["timeout"] == 8.0
+
+
+def test_check_openrouter_uses_simple_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, Any] = {}
+
+    def _chat(prompt: str, timeout_s: float) -> str:
+        seen["prompt"] = prompt
+        seen["timeout_s"] = timeout_s
+        return "ok"
+
+    monkeypatch.setattr(local_runner, "_openrouter_chat_completion", _chat)
+
+    assert local_runner._check_openrouter() is True
+    assert seen["prompt"] == "Reply with: ok"
+    assert seen["timeout_s"] == 10.0
+
+
 def test_run_one_marks_false_positive_when_text_only_provider_reports_success(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -67,6 +113,7 @@ def test_run_one_marks_false_positive_when_text_only_provider_reports_success(
     monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, "all done", 1.2))
     monkeypatch.setattr(local_runner, "record_provider_outcome", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(local_runner, "PROVIDERS", {"openrouter": {"api": True}})
+    monkeypatch.setattr(local_runner, "api", lambda *_args, **_kwargs: task | {"status": "running"})
 
     class _GitStatus:
         def __init__(self, output: str) -> None:
@@ -105,7 +152,6 @@ def test_get_timeout_for_uses_data_driven_slot_timeout(monkeypatch: pytest.Monke
             return {
                 "slots": {
                     "codex": {
-                        "suggested_timeout_s": 222,
                         "p90_duration_s": 88,
                     }
                 }
@@ -114,9 +160,13 @@ def test_get_timeout_for_uses_data_driven_slot_timeout(monkeypatch: pytest.Monke
     monkeypatch.setattr(local_runner, "HAS_SERVICES", True)
     monkeypatch.setattr(local_runner, "SlotSelector", _Selector)
 
-    timeout = local_runner.get_timeout_for("codex", "test")
+    timeout = local_runner.get_timeout_for(
+        "codex",
+        "test",
+        {"level": "complex"},
+    )
 
-    assert timeout == 222
+    assert timeout == 352
 
 
 def test_get_timeout_for_falls_back_when_no_data(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -125,7 +175,7 @@ def test_get_timeout_for_falls_back_when_no_data(monkeypatch: pytest.MonkeyPatch
             pass
 
         def stats(self, _providers: list[str]) -> dict[str, Any]:
-            return {"slots": {"codex": {"suggested_timeout_s": 0}}}
+            return {"slots": {"codex": {"p90_duration_s": 0}}}
 
     monkeypatch.setattr(local_runner, "HAS_SERVICES", True)
     monkeypatch.setattr(local_runner, "SlotSelector", _Selector)
@@ -134,3 +184,270 @@ def test_get_timeout_for_falls_back_when_no_data(monkeypatch: pytest.MonkeyPatch
     timeout = local_runner.get_timeout_for("codex", "test")
 
     assert timeout == 345
+
+
+def test_estimate_task_complexity_simple() -> None:
+    task = {
+        "id": "task-simple",
+        "task_type": "review",
+        "direction": "Review wording in docs.",
+    }
+
+    estimate = local_runner.estimate_task_complexity(task)
+
+    assert estimate["level"] == "simple"
+    assert estimate["timeout_multiplier"] == 2.0
+    assert estimate["file_mentions"] == 0
+
+
+def test_estimate_task_complexity_complex() -> None:
+    task = {
+        "id": "task-complex",
+        "task_type": "impl",
+        "direction": (
+            "Update `api/scripts/local_runner.py` and `api/tests/test_local_runner.py`, "
+            "then align `api/app/services/agent_service_crud.py` and "
+            "`api/app/models/agent.py` with task complexity metadata for scheduling."
+        ),
+    }
+
+    estimate = local_runner.estimate_task_complexity(task)
+
+    assert estimate["level"] == "complex"
+    assert estimate["timeout_multiplier"] == 4.0
+    assert estimate["file_mentions"] >= 4
+
+
+def test_run_one_stores_complexity_estimate_before_execution(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    task = {
+        "id": "task-cx-1",
+        "task_type": "impl",
+        "direction": "Implement changes in `api/scripts/local_runner.py` and `api/tests/test_local_runner.py`.",
+    }
+    patch_calls: list[tuple[str, str, dict[str, Any] | None]] = []
+    completion: dict[str, Any] = {}
+
+    monkeypatch.setattr(local_runner, "_LOG_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
+    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "codex")
+    monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
+    monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, "done", 0.6))
+    monkeypatch.setattr(local_runner, "record_provider_outcome", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(local_runner, "PROVIDERS", {"codex": {"cmd": ["codex"]}})
+
+    class _GitStatus:
+        def __init__(self, output: str) -> None:
+            self.stdout = output
+
+    monkeypatch.setattr(local_runner.subprocess, "run", lambda *_args, **_kwargs: _GitStatus(" M api/scripts/local_runner.py"))
+
+    def _api(method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        patch_calls.append((method, path, body))
+        if method == "PATCH" and path == "/api/agent/tasks/task-cx-1":
+            return task | {"status": "running", "context": body.get("context") if body else {}}
+        return None
+
+    monkeypatch.setattr(local_runner, "api", _api)
+
+    def _complete(task_id: str, output: str, success: bool, context_patch: dict[str, Any] | None = None) -> bool:
+        completion["task_id"] = task_id
+        completion["success"] = success
+        completion["context_patch"] = context_patch
+        return True
+
+    monkeypatch.setattr(local_runner, "complete_task", _complete)
+
+    ok = local_runner.run_one(task, dry_run=False)
+
+    assert ok is True
+    assert patch_calls[0][0] == "PATCH"
+    assert patch_calls[0][1] == "/api/agent/tasks/task-cx-1"
+    assert "complexity_estimate" in (patch_calls[0][2] or {}).get("context", {})
+    assert completion["context_patch"]["complexity_estimate"]["level"] in {"simple", "complex"}
+
+
+def test_run_one_timeout_saves_partial_patch_and_creates_resume_task(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    task = {
+        "id": "task-timeout-1",
+        "task_type": "impl",
+        "direction": "Implement timeout handling.",
+        "context": {"task_agent": "dev-engineer"},
+    }
+    completion: dict[str, Any] = {}
+
+    monkeypatch.setattr(local_runner, "_LOG_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_RESUME_MODE", [True])
+    monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
+    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "codex")
+    monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
+    monkeypatch.setattr(
+        local_runner,
+        "execute_with_provider",
+        lambda *_args, **_kwargs: (False, "TIMEOUT after 300s (limit=300s)", 300.0),
+    )
+    monkeypatch.setattr(local_runner, "record_provider_outcome", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(local_runner, "PROVIDERS", {"codex": {"cmd": ["codex"]}})
+
+    status_calls = iter(
+        [
+            [],
+            [" M api/scripts/local_runner.py"],
+        ]
+    )
+    diff_calls = iter(
+        [
+            "",
+            "diff --git a/api/scripts/local_runner.py b/api/scripts/local_runner.py\n+partial work\n",
+            "diff --git a/api/scripts/local_runner.py b/api/scripts/local_runner.py\n+partial work\n",
+        ]
+    )
+    monkeypatch.setattr(local_runner, "_git_status_lines", lambda: next(status_calls))
+    monkeypatch.setattr(local_runner, "_git_diff_for_paths", lambda _paths=None: next(diff_calls))
+    monkeypatch.setattr(local_runner, "_create_resume_task", lambda *_args, **_kwargs: "task-resume-1")
+
+    def _complete_with_status(
+        task_id: str,
+        output: str,
+        status: str,
+        context_patch: dict[str, Any] | None = None,
+        error_category: str = "execution_error",
+    ) -> bool:
+        completion["task_id"] = task_id
+        completion["output"] = output
+        completion["status"] = status
+        completion["context_patch"] = context_patch
+        completion["error_category"] = error_category
+        return True
+
+    monkeypatch.setattr(local_runner, "_complete_task_with_status", _complete_with_status)
+
+    ok = local_runner.run_one(task, dry_run=False)
+
+    assert ok is False
+    assert completion["task_id"] == "task-timeout-1"
+    assert completion["status"] == "timed_out"
+    assert completion["error_category"] == "timeout"
+    assert completion["context_patch"]["resume_task_id"] == "task-resume-1"
+    assert completion["context_patch"]["partial_patch_path"]
+    patch_path = tmp_path / "partial_task_task-timeout-1.patch"
+    assert patch_path.exists()
+    assert "partial work" in patch_path.read_text()
+
+
+def test_build_prompt_includes_resume_patch_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(local_runner, "_RESUME_MODE", [True])
+    prompt = local_runner.build_prompt(
+        {
+            "id": "task-resume-2",
+            "task_type": "impl",
+            "direction": "Continue implementation",
+            "context": {
+                "task_agent": "dev-engineer",
+                "resume_patch_path": "api/logs/partial_task_task-timeout-1.patch",
+            },
+        }
+    )
+
+    assert "Resume context:" in prompt
+    assert "api/logs/partial_task_task-timeout-1.patch" in prompt
+
+
+def test_post_task_hook_enqueues_next_phase_and_sets_partial(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, str, dict[str, Any] | None]] = []
+
+    def _api(method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        calls.append((method, path, body))
+        if method == "GET" and path == "/api/ideas/idea-1/tasks":
+            return {
+                "idea_id": "idea-1",
+                "groups": [
+                    {
+                        "task_type": "spec",
+                        "count": 1,
+                        "status_counts": {
+                            "pending": 0,
+                            "running": 0,
+                            "completed": 1,
+                            "failed": 0,
+                            "needs_decision": 0,
+                        },
+                    }
+                ],
+            }
+        if method == "GET" and path == "/api/ideas/idea-1":
+            return {"id": "idea-1", "name": "Idea One"}
+        if method == "POST" and path == "/api/agent/tasks":
+            return {"id": "task-next-1"}
+        if method == "PATCH" and path == "/api/ideas/idea-1":
+            return {"id": "idea-1", "manifestation_status": "partial"}
+        return None
+
+    monkeypatch.setattr(local_runner, "api", _api)
+
+    local_runner._run_phase_auto_advance_hook(
+        {
+            "id": "task-spec-1",
+            "task_type": "spec",
+            "context": {"idea_id": "idea-1"},
+        }
+    )
+
+    assert ("GET", "/api/ideas/idea-1/tasks", None) in calls
+    create_calls = [row for row in calls if row[0] == "POST" and row[1] == "/api/agent/tasks"]
+    assert len(create_calls) == 1
+    assert create_calls[0][2]["task_type"] == "impl"
+    assert create_calls[0][2]["context"]["auto_phase_advance_source"] == "local_runner_post_task_hook"
+    assert (
+        "PATCH",
+        "/api/ideas/idea-1",
+        {"manifestation_status": "partial"},
+    ) in calls
+
+
+def test_post_task_hook_marks_validated_after_review_phase(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, str, dict[str, Any] | None]] = []
+
+    def _api(method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        calls.append((method, path, body))
+        if method == "GET" and path == "/api/ideas/idea-2/tasks":
+            return {
+                "idea_id": "idea-2",
+                "groups": [
+                    {
+                        "task_type": "review",
+                        "count": 2,
+                        "status_counts": {
+                            "pending": 0,
+                            "running": 0,
+                            "completed": 2,
+                            "failed": 0,
+                            "needs_decision": 0,
+                        },
+                    }
+                ],
+            }
+        if method == "PATCH" and path == "/api/ideas/idea-2":
+            return {"id": "idea-2", "manifestation_status": "validated"}
+        return None
+
+    monkeypatch.setattr(local_runner, "api", _api)
+
+    local_runner._run_phase_auto_advance_hook(
+        {
+            "id": "task-review-1",
+            "task_type": "review",
+            "context": {"idea_id": "idea-2"},
+        }
+    )
+
+    create_calls = [row for row in calls if row[0] == "POST" and row[1] == "/api/agent/tasks"]
+    assert create_calls == []
+    assert (
+        "PATCH",
+        "/api/ideas/idea-2",
+        {"manifestation_status": "validated"},
+    ) in calls

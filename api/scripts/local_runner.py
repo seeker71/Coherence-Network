@@ -18,6 +18,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,7 +41,6 @@ if str(_API_DIR) not in sys.path:
     sys.path.insert(0, str(_API_DIR))
 
 try:
-    from app.services.openrouter_client import chat_completion
     from app.services.slot_selection_service import SlotSelector
     HAS_SERVICES = True
 except ImportError:
@@ -62,6 +62,10 @@ log = logging.getLogger("local_runner")
 API_BASE = os.environ.get("AGENT_API_BASE", "https://api.coherencycoin.com")
 WORKER_ID = f"{socket.gethostname()}:{os.getpid()}"
 _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
+_RESUME_MODE = [False]
+_OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+_OPENROUTER_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
+_OPENROUTER_REFERER = "https://coherencycoin.com"
 
 
 # ── Provider registry (auto-detected) ───────────────────────────────
@@ -118,10 +122,14 @@ def _detect_providers() -> dict[str, dict]:
         providers[name] = spec
 
     # API-based providers (no CLI binary needed)
-    # OpenRouter requires a valid API key — check keystore + env
+    # OpenRouter free-tier provider (no API key required)
     if _check_openrouter():
-        providers["openrouter"] = {"api": True, "model": "openrouter/auto"}
-        log.info("Provider detected: openrouter (API)")
+        providers["openrouter"] = {
+            "api": True,
+            "model": _OPENROUTER_MODEL,
+            "tool_capable": False,
+        }
+        log.info("Provider detected: openrouter (API free tier)")
 
     return providers
 
@@ -192,36 +200,78 @@ def _select_ollama_cloud_model() -> str | None:
 
 
 def _check_openrouter() -> bool:
-    """Check if OpenRouter API is reachable with a valid key.
-
-    Tries a minimal chat completion to verify the key works.
-    Keys are loaded from ~/.coherence-network/keys.json first, then env.
-    """
-    if not HAS_SERVICES:
-        return False
+    """Check if OpenRouter free-tier API is reachable with a simple prompt."""
     try:
-        content, _, _ = chat_completion(
-            model="nvidia/nemotron-nano-12b-v2-vl:free",
-            prompt="hi",
-            timeout_s=10.0,
-        )
+        content = _openrouter_chat_completion("Reply with: ok", timeout_s=10.0)
         return bool(content)
     except Exception as e:
         log.debug("OpenRouter check failed: %s", e)
         return False
 
 
+def _parse_openrouter_message_content(payload: dict[str, Any]) -> str:
+    """Parse OpenRouter `choices[0].message.content` into plain text."""
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        raise ValueError("OpenRouter response missing choices")
+    first_choice = choices[0] if isinstance(choices[0], dict) else {}
+    message = first_choice.get("message") if isinstance(first_choice, dict) else {}
+    if not isinstance(message, dict):
+        raise ValueError("OpenRouter response missing message")
+
+    content = message.get("content")
+    if isinstance(content, str):
+        parsed = content.strip()
+        if parsed:
+            return parsed
+        raise ValueError("OpenRouter response content is empty")
+
+    # Some providers may return segmented content blocks.
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if not isinstance(block, dict):
+                continue
+            text = block.get("text")
+            if isinstance(text, str) and text.strip():
+                parts.append(text.strip())
+        if parts:
+            return "\n".join(parts)
+
+    raise ValueError("OpenRouter response content is missing or unsupported")
+
+
+def _openrouter_chat_completion(prompt: str, timeout_s: float) -> str:
+    """Call OpenRouter free-tier chat completions and return text content."""
+    headers = {
+        "Content-Type": "application/json",
+        "HTTP-Referer": _OPENROUTER_REFERER,
+    }
+    body = {
+        "model": _OPENROUTER_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    response = httpx.post(
+        _OPENROUTER_URL,
+        headers=headers,
+        json=body,
+        timeout=timeout_s,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(
+            f"OpenRouter HTTP {response.status_code}: {response.text[:200]}"
+        )
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError("OpenRouter response is not a JSON object")
+    return _parse_openrouter_message_content(payload)
+
+
 def _run_openrouter(prompt: str, cwd: str, timeout: int) -> tuple[bool, str, float]:
     """Execute via OpenRouter API (free tier). Returns (success, output, duration)."""
-    if not HAS_SERVICES:
-        return False, "Services not available", 0.0
     start = time.time()
     try:
-        content, usage, meta = chat_completion(
-            model="openrouter/auto",  # auto-routes to best free model
-            prompt=prompt,
-            timeout_s=float(timeout),
-        )
+        content = _openrouter_chat_completion(prompt, timeout_s=float(timeout))
         duration = time.time() - start
         return True, content, duration
     except Exception as e:
@@ -239,6 +289,9 @@ PROVIDERS: dict[str, dict] = {}  # populated at startup
 
 def _provider_has_tools(provider: str) -> bool:
     """Does this provider have tool/file access?"""
+    spec = PROVIDERS.get(provider) or {}
+    if "tool_capable" in spec:
+        return bool(spec.get("tool_capable"))
     return provider in _TOOL_PROVIDERS
 
 
@@ -254,7 +307,7 @@ def select_provider(task_type: str) -> str:
 
     # File-producing tasks need tool-capable providers
     if task_type in ("spec", "impl", "test"):
-        tool_available = [p for p in available if p in _TOOL_PROVIDERS]
+        tool_available = [p for p in available if _provider_has_tools(p)]
         if tool_available:
             available = tool_available
             log.info("PROVIDER_FILTER task=%s restricted to tool-capable: %s", task_type, available)
@@ -353,6 +406,14 @@ def get_provider_stats() -> dict:
 
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
+_PHASE_SEQUENCE = ("spec", "impl", "test", "review")
+_NEXT_PHASE: dict[str, str | None] = {
+    "spec": "impl",
+    "impl": "test",
+    "test": "review",
+    "review": None,
+}
+
 def api(method: str, path: str, body: dict | None = None) -> dict | list | None:
     """Call the API via httpx."""
     url = f"{API_BASE}{path}"
@@ -425,6 +486,133 @@ def complete_task(task_id: str, output: str, success: bool, context_patch: dict 
     return False
 
 
+def _complete_task_with_status(
+    task_id: str,
+    output: str,
+    status: str,
+    context_patch: dict | None = None,
+    error_category: str = "execution_error",
+) -> bool:
+    body: dict[str, Any] = {"status": status, "output": output[:50000]}
+    if context_patch:
+        body["context"] = context_patch
+    if status != "completed":
+        body["error_summary"] = output[:500]
+        body["error_category"] = error_category
+    result = api("PATCH", f"/api/agent/tasks/{task_id}", body)
+    if result:
+        log.info("REPORTED task=%s status=%s", task_id, status)
+        return True
+    log.error("REPORT FAILED task=%s status=%s", task_id, status)
+    return False
+
+
+def _idea_id_from_task(task: dict[str, Any]) -> str:
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    for key in ("idea_id", "origin_idea_id", "primary_idea_id", "tracking_idea_id"):
+        value = str(context.get(key) or "").strip()
+        if value:
+            return value
+    for key in ("idea_ids", "tracked_idea_ids", "related_idea_ids"):
+        values = context.get(key)
+        if not isinstance(values, list):
+            continue
+        for item in values:
+            value = str(item or "").strip()
+            if value:
+                return value
+    return ""
+
+
+def _task_group_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> dict[str, Any] | None:
+    groups = idea_tasks_payload.get("groups")
+    if not isinstance(groups, list):
+        return None
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        task_type = str(group.get("task_type") or "").strip().lower()
+        if task_type == phase:
+            return group
+    return None
+
+
+def _phase_fully_completed(idea_tasks_payload: dict[str, Any], phase: str) -> bool:
+    group = _task_group_for_phase(idea_tasks_payload, phase)
+    if not group:
+        return False
+    status_counts = group.get("status_counts")
+    if not isinstance(status_counts, dict):
+        status_counts = {}
+    pending = int(status_counts.get("pending", 0) or 0)
+    running = int(status_counts.get("running", 0) or 0)
+    failed = int(status_counts.get("failed", 0) or 0)
+    needs_decision = int(status_counts.get("needs_decision", 0) or 0)
+    completed = int(status_counts.get("completed", 0) or 0)
+    return completed > 0 and pending == 0 and running == 0 and failed == 0 and needs_decision == 0
+
+
+def _has_any_tasks_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> bool:
+    group = _task_group_for_phase(idea_tasks_payload, phase)
+    if not group:
+        return False
+    return int(group.get("count", 0) or 0) > 0
+
+
+def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
+    task_type = str(task.get("task_type") or "").strip().lower()
+    if task_type not in _PHASE_SEQUENCE:
+        return
+
+    idea_id = _idea_id_from_task(task)
+    if not idea_id:
+        return
+
+    idea_tasks_payload = api("GET", f"/api/ideas/{idea_id}/tasks")
+    if not isinstance(idea_tasks_payload, dict):
+        return
+    if not _phase_fully_completed(idea_tasks_payload, task_type):
+        return
+
+    next_phase = _NEXT_PHASE.get(task_type)
+    if next_phase and not _has_any_tasks_for_phase(idea_tasks_payload, next_phase):
+        idea_payload = api("GET", f"/api/ideas/{idea_id}")
+        idea_name = str((idea_payload or {}).get("name") or idea_id) if isinstance(idea_payload, dict) else idea_id
+        direction = (
+            f"Idea phase auto-advancement for '{idea_name}' ({idea_id}). "
+            f"All '{task_type}' tasks are complete; execute the next '{next_phase}' phase."
+        )
+        created = api(
+            "POST",
+            "/api/agent/tasks",
+            {
+                "direction": direction,
+                "task_type": next_phase,
+                "context": {
+                    "idea_id": idea_id,
+                    "auto_phase_advanced_from": task_type,
+                    "auto_phase_advance_source": "local_runner_post_task_hook",
+                },
+            },
+        )
+        if not isinstance(created, dict):
+            log.warning(
+                "AUTO_PHASE enqueue failed idea_id=%s from=%s to=%s",
+                idea_id,
+                task_type,
+                next_phase,
+            )
+
+    manifestation_status = "validated" if next_phase is None else "partial"
+    updated = api(
+        "PATCH",
+        f"/api/ideas/{idea_id}",
+        {"manifestation_status": manifestation_status},
+    )
+    if not isinstance(updated, dict):
+        log.warning("AUTO_PHASE manifestation update failed idea_id=%s status=%s", idea_id, manifestation_status)
+
+
 # ── Execution ────────────────────────────────────────────────────────
 
 def build_prompt(task: dict) -> str:
@@ -433,7 +621,7 @@ def build_prompt(task: dict) -> str:
     context = task.get("context", {}) or {}
     agent = context.get("task_agent", "dev-engineer")
 
-    return f"""You are acting as a {agent} for the Coherence Network project.
+    prompt = f"""You are acting as a {agent} for the Coherence Network project.
 
 Task type: {task_type}
 Task ID: {task.get('id', 'unknown')}
@@ -444,34 +632,234 @@ Direction:
 Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
 
 Output a summary: files created/modified, validation results, errors encountered."""
+    if _RESUME_MODE[0] and isinstance(context, dict):
+        resume_patch_path = str(context.get("resume_patch_path") or "").strip()
+        if resume_patch_path:
+            prompt += (
+                "\n\nResume context:\n"
+                f"- A partial patch from a timed-out run is available at `{resume_patch_path}`.\n"
+                "- Apply this patch first with `git apply --reject \"<patch_path>\"` "
+                "or `git apply \"<patch_path>\"`, then continue from that state."
+            )
+    return prompt
 
 
-def get_timeout_for(provider: str, task_type: str) -> int:
+def _git_status_lines() -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=str(_REPO_DIR),
+        )
+    except Exception:
+        return []
+    return [line for line in result.stdout.splitlines() if line.strip()]
+
+
+def _status_line_path(line: str) -> str:
+    if len(line) < 4:
+        return ""
+    path_part = line[3:]
+    if " -> " in path_part:
+        path_part = path_part.split(" -> ", 1)[1]
+    return path_part.strip().strip('"')
+
+
+def _status_paths(lines: list[str]) -> set[str]:
+    paths: set[str] = set()
+    for line in lines:
+        path = _status_line_path(line)
+        if path:
+            paths.add(path)
+    return paths
+
+
+def _git_diff_for_paths(paths: set[str] | None = None) -> str:
+    tracked_cmd = ["git", "diff", "--binary"]
+    if paths:
+        tracked_cmd.extend(["--", *sorted(paths)])
+    try:
+        tracked_result = subprocess.run(
+            tracked_cmd,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=str(_REPO_DIR),
+        )
+        tracked_diff = tracked_result.stdout
+    except Exception:
+        tracked_diff = ""
+
+    if not paths:
+        return tracked_diff
+
+    untracked_patches: list[str] = []
+    for rel_path in sorted(paths):
+        try:
+            listed = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard", "--", rel_path],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                cwd=str(_REPO_DIR),
+            )
+            if not listed.stdout.strip():
+                continue
+            abs_path = _REPO_DIR / rel_path
+            untracked = subprocess.run(
+                ["git", "diff", "--binary", "--no-index", "--", "/dev/null", str(abs_path)],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                cwd=str(_REPO_DIR),
+            )
+            if untracked.stdout.strip():
+                untracked_patches.append(untracked.stdout)
+        except Exception:
+            continue
+    if untracked_patches:
+        return tracked_diff + "".join(untracked_patches)
+    return tracked_diff
+
+
+def _create_resume_task(task: dict[str, Any], patch_rel_path: str, timeout_output: str) -> str | None:
+    task_id = str(task.get("id") or "").strip()
+    task_type = str(task.get("task_type") or "impl").strip() or "impl"
+    original_direction = str(task.get("direction") or "").strip()
+    base_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    resume_context = dict(base_context or {})
+    resume_context.update(
+        {
+            "resume_from_task_id": task_id,
+            "resume_patch_path": patch_rel_path,
+            "resume_reason": "timed_out",
+            "resume_source": "local_runner_timeout_resume",
+            "timed_out_output": timeout_output[:4000],
+        }
+    )
+    resume_direction = (
+        f"Resume timed-out task {task_id}.\n"
+        f"Apply patch at `{patch_rel_path}` and continue from where it left off.\n\n"
+        f"Original direction:\n{original_direction}"
+    )
+    created = api(
+        "POST",
+        "/api/agent/tasks",
+        {
+            "direction": resume_direction,
+            "task_type": task_type,
+            "context": resume_context,
+        },
+    )
+    if isinstance(created, dict):
+        resume_id = str(created.get("id") or "").strip()
+        if resume_id:
+            return resume_id
+    return None
+
+
+def estimate_task_complexity(task: dict[str, Any]) -> dict[str, Any]:
+    """Estimate task complexity from direction length, task type, and file mentions."""
+    direction = str(task.get("direction") or "")
+    task_type = str(task.get("task_type") or "unknown").strip().lower()
+    normalized = " ".join(direction.split())
+    direction_length = len(normalized)
+
+    # Path-like references (supports backticked and plain paths).
+    file_like_matches = re.findall(
+        r"(?:`([^`]+)`|([A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)+))",
+        direction,
+    )
+    file_mentions: set[str] = set()
+    for quoted, plain in file_like_matches:
+        candidate = (quoted or plain).strip()
+        if "/" in candidate:
+            file_mentions.add(candidate)
+    file_mention_count = len(file_mentions)
+
+    task_type_weight = {
+        "review": 0,
+        "spec": 1,
+        "test": 1,
+        "heal": 1,
+        "impl": 2,
+    }.get(task_type, 1)
+
+    length_weight = 0
+    if direction_length >= 600:
+        length_weight = 2
+    elif direction_length >= 220:
+        length_weight = 1
+
+    files_weight = 0
+    if file_mention_count >= 5:
+        files_weight = 2
+    elif file_mention_count >= 2:
+        files_weight = 1
+
+    score = task_type_weight + length_weight + files_weight
+    complexity = "complex" if score >= 4 else "simple"
+    multiplier = 4.0 if complexity == "complex" else 2.0
+    return {
+        "level": complexity,
+        "score": score,
+        "timeout_multiplier": multiplier,
+        "direction_length": direction_length,
+        "task_type": task_type,
+        "file_mentions": file_mention_count,
+    }
+
+
+def get_timeout_for(provider: str, task_type: str, complexity_estimate: dict[str, Any] | None = None) -> int:
     """Get data-driven timeout for a provider+task_type combination.
 
-    Uses 2.5x the p90 duration from measurement data. Falls back to
-    the configured default if no data exists. Floor 60s, cap 600s.
+    Uses a complexity-adjusted multiplier over p90 duration:
+    - simple tasks: 2x p90
+    - complex tasks: 4x p90
+    Falls back to the configured default if no p90 data exists.
     """
+    multiplier = 2.0
+    if isinstance(complexity_estimate, dict):
+        raw_level = str(complexity_estimate.get("level") or "").strip().lower()
+        if raw_level == "complex":
+            multiplier = 4.0
+        elif raw_level == "simple":
+            multiplier = 2.0
+
     if HAS_SERVICES:
         try:
             selector = SlotSelector(f"provider_{task_type}")
             stats = selector.stats([provider])
             slot = stats.get("slots", {}).get(provider, {})
-            suggested = slot.get("suggested_timeout_s", 0)
-            if suggested > 0:
-                timeout = int(suggested)
-                log.info("TIMEOUT_DATA provider=%s task=%s timeout=%ds (2.5x p90=%.0fs)",
-                         provider, task_type, timeout, slot.get("p90_duration_s", 0))
+            p90_duration = float(slot.get("p90_duration_s", 0) or 0)
+            if p90_duration > 0:
+                timeout = int(max(60, min(600, p90_duration * multiplier)))
+                log.info(
+                    "TIMEOUT_DATA provider=%s task=%s complexity=%s timeout=%ds (%.1fx p90=%.0fs)",
+                    provider,
+                    task_type,
+                    (complexity_estimate or {}).get("level", "simple"),
+                    timeout,
+                    multiplier,
+                    p90_duration,
+                )
                 return timeout
         except Exception:
             pass
     return _TASK_TIMEOUT[0]
 
 
-def execute_with_provider(provider: str, prompt: str, task_type: str = "unknown") -> tuple[bool, str, float]:
+def execute_with_provider(
+    provider: str,
+    prompt: str,
+    task_type: str = "unknown",
+    complexity_estimate: dict[str, Any] | None = None,
+) -> tuple[bool, str, float]:
     """Run prompt through a provider (CLI or API). Returns (success, output, duration)."""
     spec = PROVIDERS[provider]
-    timeout = get_timeout_for(provider, task_type)
+    timeout = get_timeout_for(provider, task_type, complexity_estimate)
 
     # API-based providers (openrouter)
     if spec.get("api"):
@@ -534,30 +922,42 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             return False
         task = claimed
 
+    complexity_estimate = estimate_task_complexity(task)
+
+    if not dry_run:
+        updated = api(
+            "PATCH",
+            f"/api/agent/tasks/{task_id}",
+            {"context": {"complexity_estimate": complexity_estimate}},
+        )
+        if isinstance(updated, dict):
+            task = updated
+
     # Select provider (data-driven)
     provider = select_provider(task_type)
 
     if dry_run:
-        log.info("DRY RUN task=%s type=%s provider=%s", task_id, task_type, provider)
+        log.info(
+            "DRY RUN task=%s type=%s provider=%s complexity=%s files=%d length=%d",
+            task_id,
+            task_type,
+            provider,
+            complexity_estimate["level"],
+            complexity_estimate["file_mentions"],
+            complexity_estimate["direction_length"],
+        )
         return True
 
     # Execute
     prompt = build_prompt(task)
 
     # Snapshot repo state before execution (to detect actual file changes)
-    pre_diff = ""
-    try:
-        pre_result = subprocess.run(
-            ["git", "status", "--porcelain"], capture_output=True, text=True,
-            timeout=5, cwd=str(_REPO_DIR),
-        )
-        pre_diff = pre_result.stdout.strip()
-    except Exception:
-        pass
+    pre_status_lines = _git_status_lines()
+    pre_patch = _git_diff_for_paths()
 
     log.info("EXECUTING task=%s type=%s provider=%s", task_id, task_type, provider)
 
-    success, output, duration = execute_with_provider(provider, prompt, task_type)
+    success, output, duration = execute_with_provider(provider, prompt, task_type, complexity_estimate)
 
     # Post-execution validation: did file-producing tasks actually produce files?
     if success and task_type in ("spec", "impl", "test"):
@@ -567,7 +967,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                 timeout=5, cwd=str(_REPO_DIR),
             )
             post_diff = post_result.stdout.strip()
-            new_changes = set(post_diff.splitlines()) - set(pre_diff.splitlines())
+            new_changes = set(post_diff.splitlines()) - set(pre_status_lines)
             has_tool_access = _provider_has_tools(provider)
 
             if not new_changes and not has_tool_access:
@@ -599,12 +999,60 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     # Record outcome for Thompson Sampling (with error classification)
     record_provider_outcome(task_type, provider, success, duration, output)
 
-    # Report to API
-    complete_task(task_id, output, success, {
+    completion_status = "completed" if success else "failed"
+    completion_error_category = "execution_error"
+    completion_context: dict[str, Any] = {
         "worker_id": WORKER_ID,
         "provider": provider,
         "duration_s": round(duration, 1),
-    })
+        "complexity_estimate": complexity_estimate,
+    }
+
+    if not success:
+        error_class = classify_error(output)
+        if error_class in {"timeout", "timeout_with_output", "blind_timeout"}:
+            completion_status = "timed_out"
+            completion_error_category = "timeout"
+
+            post_status_lines = _git_status_lines()
+            post_patch = _git_diff_for_paths()
+            new_status_lines = set(post_status_lines) - set(pre_status_lines)
+            changed_paths = _status_paths(list(new_status_lines))
+
+            if pre_patch != post_patch:
+                if not changed_paths:
+                    changed_paths = _status_paths(post_status_lines)
+                patch_body = _git_diff_for_paths(changed_paths) if changed_paths else post_patch
+                if patch_body.strip():
+                    partial_patch_path = _LOG_DIR / f"partial_task_{task_id}.patch"
+                    partial_patch_path.write_text(patch_body)
+                    try:
+                        patch_rel_path = str(partial_patch_path.relative_to(_REPO_DIR))
+                    except ValueError:
+                        patch_rel_path = str(partial_patch_path)
+                    completion_context["partial_patch_path"] = patch_rel_path
+                    log.info("TIMEOUT partial patch saved task=%s path=%s", task_id, patch_rel_path)
+                    if _RESUME_MODE[0]:
+                        resume_task_id = _create_resume_task(task, patch_rel_path, output)
+                        if resume_task_id:
+                            completion_context["resume_task_id"] = resume_task_id
+                            log.info("TIMEOUT resume task created source=%s resume=%s", task_id, resume_task_id)
+                        else:
+                            log.warning("TIMEOUT resume task create failed source=%s", task_id)
+
+    # Report to API
+    if completion_status == "completed":
+        reported = complete_task(task_id, output, success, completion_context)
+    else:
+        reported = _complete_task_with_status(
+            task_id,
+            output,
+            completion_status,
+            completion_context,
+            error_category=completion_error_category,
+        )
+    if success and reported:
+        _run_phase_auto_advance_hook(task)
 
     log.info("OUTCOME task=%s type=%s provider=%s success=%s duration=%.1fs",
              task_id, task_type, provider, success, duration)
@@ -661,10 +1109,16 @@ def main():
     parser.add_argument("--interval", type=int, default=30, help="Poll interval (seconds)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would run")
     parser.add_argument("--timeout", type=int, default=_TASK_TIMEOUT[0], help="Task timeout (seconds)")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Enable timed-out task resume flow (save patch + enqueue resume task)",
+    )
     parser.add_argument("--stats", action="store_true", help="Show provider stats and exit")
     args = parser.parse_args()
 
     _TASK_TIMEOUT[0] = args.timeout
+    _RESUME_MODE[0] = bool(args.resume)
 
     # Detect providers
     global PROVIDERS
