@@ -21,6 +21,7 @@ from sqlalchemy import text
 
 from app.models.coherence_credit import CostVector, ValueVector
 from app.models.idea import (
+    IDEA_STAGE_ORDER,
     GovernanceHealth,
     Idea,
     IdeaCountByStatus,
@@ -29,8 +30,10 @@ from app.models.idea import (
     IdeaShowcaseItem,
     IdeaShowcaseResponse,
     IdeaSelectionResult,
+    IdeaStage,
     IdeaType,
     PaginationInfo,
+    ProgressDashboard,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
     IdeaQuestion,
@@ -38,6 +41,7 @@ from app.models.idea import (
     IdeaStorageInfo,
     IdeaWithScore,
     ManifestationStatus,
+    StageBucket,
 )
 from app.services import idea_registry_service
 from app.services import commit_evidence_service
@@ -1166,3 +1170,145 @@ def list_showcase_ideas() -> IdeaShowcaseResponse:
         )
 
     return IdeaShowcaseResponse(ideas=showcase_items)
+
+
+# ---------------------------------------------------------------------------
+# Idea lifecycle stage management (spec 138)
+# ---------------------------------------------------------------------------
+
+_STAGE_TO_MANIFESTATION: dict[IdeaStage, ManifestationStatus | None] = {
+    IdeaStage.SPECCED: ManifestationStatus.PARTIAL,
+    IdeaStage.IMPLEMENTING: ManifestationStatus.PARTIAL,
+    IdeaStage.COMPLETE: ManifestationStatus.VALIDATED,
+}
+
+# Task type → target stage after that task type completes for the idea.
+_TASK_TYPE_TARGET_STAGE: dict[str, IdeaStage] = {
+    "spec": IdeaStage.SPECCED,
+    "impl": IdeaStage.IMPLEMENTING,
+    "test": IdeaStage.TESTING,
+    "review": IdeaStage.REVIEWING,
+}
+
+
+def _sync_manifestation_status(idea: Idea) -> None:
+    """Update manifestation_status to stay in sync with stage (R9)."""
+    new_ms = _STAGE_TO_MANIFESTATION.get(idea.stage)
+    if new_ms is not None:
+        idea.manifestation_status = new_ms
+
+
+def advance_idea_stage(idea_id: str) -> tuple[IdeaWithScore | None, str | None]:
+    """Advance an idea to the next sequential stage.
+
+    Returns (updated_idea, error_detail). error_detail is None on success.
+    """
+    ideas = _read_ideas(persist_ensures=True)
+    target_idea: Idea | None = None
+    target_idx: int = -1
+    for idx, idea in enumerate(ideas):
+        if idea.id == idea_id:
+            target_idea = idea
+            target_idx = idx
+            break
+
+    if target_idea is None:
+        return None, "not_found"
+
+    current_stage = target_idea.stage
+    if current_stage == IdeaStage.COMPLETE:
+        return _with_score(target_idea), "already_complete"
+
+    current_index = IDEA_STAGE_ORDER.index(current_stage)
+    next_stage = IDEA_STAGE_ORDER[current_index + 1]
+
+    target_idea.stage = next_stage
+    _sync_manifestation_status(target_idea)
+    ideas[target_idx] = target_idea
+    _write_single_idea(target_idea, position=target_idx)
+    return _with_score(target_idea), None
+
+
+def set_idea_stage(idea_id: str, stage: IdeaStage) -> tuple[IdeaWithScore | None, str | None]:
+    """Explicitly set an idea's stage (admin override).
+
+    Returns (updated_idea, error_detail).
+    """
+    ideas = _read_ideas(persist_ensures=True)
+    target_idea: Idea | None = None
+    target_idx: int = -1
+    for idx, idea in enumerate(ideas):
+        if idea.id == idea_id:
+            target_idea = idea
+            target_idx = idx
+            break
+
+    if target_idea is None:
+        return None, "not_found"
+
+    target_idea.stage = stage
+    _sync_manifestation_status(target_idea)
+    ideas[target_idx] = target_idea
+    _write_single_idea(target_idea, position=target_idx)
+    return _with_score(target_idea), None
+
+
+def auto_advance_for_task(idea_id: str, task_type: str) -> None:
+    """Best-effort auto-advance: if a task of the given type completes, advance the idea.
+
+    Does nothing if the idea is already at or past the target stage.
+    """
+    target_stage = _TASK_TYPE_TARGET_STAGE.get(task_type)
+    if target_stage is None:
+        return
+
+    ideas = _read_ideas(persist_ensures=True)
+    target_idea: Idea | None = None
+    target_idx: int = -1
+    for idx, idea in enumerate(ideas):
+        if idea.id == idea_id:
+            target_idea = idea
+            target_idx = idx
+            break
+
+    if target_idea is None:
+        return
+
+    current_index = IDEA_STAGE_ORDER.index(target_idea.stage)
+    target_index = IDEA_STAGE_ORDER.index(target_stage)
+
+    # Only advance forward, never regress
+    if current_index >= target_index:
+        return
+
+    target_idea.stage = target_stage
+    _sync_manifestation_status(target_idea)
+    ideas[target_idx] = target_idea
+    _write_single_idea(target_idea, position=target_idx)
+
+
+def compute_progress_dashboard() -> ProgressDashboard:
+    """Compute per-stage idea counts and completion percentage."""
+    ideas = _read_ideas(persist_ensures=False)
+    by_stage: dict[str, StageBucket] = {}
+    for stage in IDEA_STAGE_ORDER:
+        by_stage[stage.value] = StageBucket()
+
+    for idea in ideas:
+        stage_val = idea.stage.value if idea.stage else "none"
+        if stage_val not in by_stage:
+            by_stage[stage_val] = StageBucket()
+        by_stage[stage_val].count += 1
+        by_stage[stage_val].idea_ids.append(idea.id)
+
+    total = len(ideas)
+    complete_count = by_stage.get("complete", StageBucket()).count
+    completion_pct = round(complete_count / total, 4) if total > 0 else 0.0
+
+    from datetime import datetime, timezone
+    return ProgressDashboard(
+        total_ideas=total,
+        completion_pct=completion_pct,
+        by_stage=by_stage,
+        snapshot_at=datetime.now(timezone.utc).isoformat(),
+    )

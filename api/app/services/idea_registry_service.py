@@ -20,7 +20,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.pool import NullPool
 
-from app.models.idea import Idea, IdeaQuestion, IdeaType, ManifestationStatus
+from app.models.idea import Idea, IdeaQuestion, IdeaStage, IdeaType, ManifestationStatus
 from app.services.unified_db import Base
 
 
@@ -42,6 +42,7 @@ class IdeaRecord(Base):
     idea_type: Mapped[str] = mapped_column(String, nullable=False, default="standalone")
     parent_idea_id: Mapped[str | None] = mapped_column(String, nullable=True, default=None)
     child_idea_ids_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    stage: Mapped[str] = mapped_column(String, nullable=False, default="none", server_default="none")
     value_basis_json: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
 
     questions: Mapped[list["IdeaQuestionRecord"]] = relationship(
@@ -116,8 +117,31 @@ def _session() -> Session:
         yield s
 
 
+_STAGE_COLUMN_MIGRATED: dict[str, bool] = {}
+
+
+def _migrate_add_stage_column() -> None:
+    """Add the 'stage' column to idea_registry_ideas if it doesn't exist yet."""
+    url = _udb.database_url()
+    if _STAGE_COLUMN_MIGRATED.get(url):
+        return
+    try:
+        with _session() as session:
+            from sqlalchemy import text as _text, inspect as _inspect
+            insp = _inspect(session.bind)
+            columns = {c["name"] for c in insp.get_columns("idea_registry_ideas")}
+            if "stage" not in columns:
+                session.execute(_text(
+                    "ALTER TABLE idea_registry_ideas ADD COLUMN stage VARCHAR NOT NULL DEFAULT 'none'"
+                ))
+    except Exception:
+        pass  # Table may not exist yet; create_all will handle it
+    _STAGE_COLUMN_MIGRATED[url] = True
+
+
 def ensure_schema() -> None:
     _udb.ensure_schema()
+    _migrate_add_stage_column()
 
 
 def _load_interfaces(raw: str) -> list[str]:
@@ -167,6 +191,12 @@ def load_ideas() -> list[Idea]:
             except (json.JSONDecodeError, AttributeError):
                 pass
 
+            # Parse stage safely
+            try:
+                idea_stage = IdeaStage(getattr(row, "stage", "none") or "none")
+            except (ValueError, AttributeError):
+                idea_stage = IdeaStage.NONE
+
             out.append(
                 Idea(
                     id=row.id,
@@ -179,6 +209,7 @@ def load_ideas() -> list[Idea]:
                     resistance_risk=float(row.resistance_risk),
                     confidence=float(row.confidence),
                     manifestation_status=ManifestationStatus(row.manifestation_status),
+                    stage=idea_stage,
                     interfaces=_load_interfaces(row.interfaces_json),
                     idea_type=idea_type,
                     parent_idea_id=getattr(row, "parent_idea_id", None),
@@ -217,6 +248,7 @@ def _upsert_idea_in_session(session: Session, idea: Idea, position: int) -> None
         existing.idea_type = idea.idea_type.value if idea.idea_type else "standalone"
         existing.parent_idea_id = idea.parent_idea_id
         existing.child_idea_ids_json = json.dumps(idea.child_idea_ids or [])
+        existing.stage = idea.stage.value if idea.stage else "none"
         existing.value_basis_json = json.dumps(idea.value_basis) if idea.value_basis else None
     else:
         session.add(
@@ -232,6 +264,7 @@ def _upsert_idea_in_session(session: Session, idea: Idea, position: int) -> None
                 resistance_risk=float(idea.resistance_risk),
                 confidence=float(idea.confidence),
                 manifestation_status=idea.manifestation_status.value,
+                stage=idea.stage.value if idea.stage else "none",
                 interfaces_json=json.dumps(idea.interfaces),
                 idea_type=idea.idea_type.value if idea.idea_type else "standalone",
                 parent_idea_id=idea.parent_idea_id,
