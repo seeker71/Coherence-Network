@@ -117,6 +117,15 @@ async def list_ideas_showcase() -> IdeaShowcaseResponse:
     return idea_service.list_showcase_ideas()
 
 
+@router.get("/ideas/resonance")
+async def get_resonance(
+    window_hours: int = Query(24, ge=1, le=720),
+    limit: int = Query(20, ge=1, le=100),
+) -> list[dict]:
+    """Return ideas with recent activity, sorted by most-recent-activity-first."""
+    return idea_service.get_resonance_feed(window_hours=window_hours, limit=limit)
+
+
 @router.get("/ideas/selection-ab/stats")
 async def get_selection_ab_stats() -> dict:
     return idea_selection_ab_service.get_comparison()
@@ -182,6 +191,36 @@ async def set_idea_stage(idea_id: str, body: StageSetRequest, _key: str = Depend
     if error == "not_found":
         raise HTTPException(status_code=404, detail="Idea not found")
     return result
+
+
+@router.post("/ideas/{idea_id}/fork", status_code=201)
+async def fork_idea_endpoint(
+    idea_id: str,
+    forker_id: str = Query(..., min_length=1),
+    adaptation_notes: str | None = Query(default=None),
+    _key: str = Depends(require_api_key),
+) -> dict:
+    """Fork an existing idea, creating a new idea with lineage link."""
+    try:
+        return idea_service.fork_idea(
+            source_idea_id=idea_id,
+            forker_id=forker_id,
+            adaptation_notes=adaptation_notes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/ideas/{idea_id}/activity")
+async def get_idea_activity_endpoint(
+    idea_id: str,
+    limit: int = Query(20, ge=1, le=100),
+) -> list[dict]:
+    """Return activity events for an idea."""
+    try:
+        return idea_service.get_idea_activity(idea_id=idea_id, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
 
 
 @router.get("/ideas/{idea_id}/tasks", response_model=IdeaTasksResponse)

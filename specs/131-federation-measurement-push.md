@@ -6,22 +6,22 @@ Nodes push aggregated measurement summaries to the federation hub so operators g
 
 ## Requirements
 
-- [ ] POST `/api/federation/nodes/{node_id}/measurements` accepts a batch of measurement summaries and stores them in `node_measurement_summaries`.
-- [ ] Each summary contains: `node_id`, `decision_point`, `slot_id`, `period_start`, `period_end`, `sample_count`, `successes`, `failures`, `mean_duration_s`, `mean_value_score`, `error_classes_json`, `pushed_at`.
-- [ ] Hub validates that `node_id` in the path matches every summary's `node_id`; rejects with 422 on mismatch.
-- [ ] Hub validates that `sample_count == successes + failures` for each summary; rejects with 422 on mismatch.
-- [ ] Hub rejects empty summary batches with 422.
-- [ ] Hub returns 201 with the count of stored summaries on success.
-- [ ] A client-side push function reads all SlotSelector JSON files from the local store directory, groups measurements by `(decision_point, slot_id)`, filters to only measurements recorded after `last_push` timestamp, computes aggregated summaries, and POSTs them to the hub.
-- [ ] `last_push` timestamp is persisted in `~/.coherence-network/last_push.json` as `{"last_push_utc": "<ISO 8601>"}` and updated only after a successful push.
-- [ ] If the hub is unreachable or returns a non-2xx status, the push function logs a warning and returns without raising — local execution continues uninterrupted.
-- [ ] `mean_value_score` is the arithmetic mean of `value_score` across filtered measurements for that `(decision_point, slot_id)` pair.
-- [ ] `mean_duration_s` is the arithmetic mean of `duration_s` values (only measurements that include `duration_s`); null if none have it.
-- [ ] `successes` counts measurements with `value_score > 0.0`; `failures` counts measurements with `value_score == 0.0`.
-- [ ] `error_classes_json` is a JSON object mapping each `error_class` string to its occurrence count (e.g. `{"timeout": 3, "rate_limit": 1}`); empty object `{}` if no errors.
-- [ ] `period_start` is the earliest measurement timestamp in the group; `period_end` is the latest.
-- [ ] GET `/api/federation/nodes/{node_id}/measurements` returns stored summaries for the given node, with optional `decision_point` query filter and `limit`/`offset` pagination (default limit 100).
-- [ ] PostgreSQL migration creates `node_measurement_summaries` table with appropriate indexes on `(node_id, decision_point)` and `pushed_at`.
+- [x] POST `/api/federation/nodes/{node_id}/measurements` accepts a batch of measurement summaries and stores them in `node_measurement_summaries`.
+- [x] Each summary contains: `node_id`, `decision_point`, `slot_id`, `period_start`, `period_end`, `sample_count`, `successes`, `failures`, `mean_duration_s`, `mean_value_score`, `error_classes_json`, `pushed_at`.
+- [x] Hub validates that `node_id` in the path matches every summary's `node_id`; rejects with 422 on mismatch.
+- [x] Hub validates that `sample_count == successes + failures` for each summary; rejects with 422 on mismatch.
+- [x] Hub rejects empty summary batches with 422.
+- [x] Hub returns 201 with the count of stored summaries on success.
+- [x] A client-side push function reads all SlotSelector JSON files from the local store directory, groups measurements by `(decision_point, slot_id)`, filters to only measurements recorded after `last_push` timestamp, computes aggregated summaries, and POSTs them to the hub.
+- [x] `last_push` timestamp is persisted in `~/.coherence-network/last_push.json` as `{"last_push_utc": "<ISO 8601>"}` and updated only after a successful push.
+- [x] If the hub is unreachable or returns a non-2xx status, the push function logs a warning and returns without raising — local execution continues uninterrupted.
+- [x] `mean_value_score` is the arithmetic mean of `value_score` across filtered measurements for that `(decision_point, slot_id)` pair.
+- [x] `mean_duration_s` is the arithmetic mean of `duration_s` values (only measurements that include `duration_s`); null if none have it.
+- [x] `successes` counts measurements with `value_score > 0.0`; `failures` counts measurements with `value_score == 0.0`.
+- [x] `error_classes_json` is a JSON object mapping each `error_class` string to its occurrence count (e.g. `{"timeout": 3, "rate_limit": 1}`); empty object `{}` if no errors.
+- [x] `period_start` is the earliest measurement timestamp in the group; `period_end` is the latest.
+- [x] GET `/api/federation/nodes/{node_id}/measurements` returns stored summaries for the given node, with optional `decision_point` query filter and `limit`/`offset` pagination (default limit 100).
+- [x] PostgreSQL migration creates `node_measurement_summaries` table with appropriate indexes on `(node_id, decision_point)` and `pushed_at`.
 
 ## Research Inputs (Required)
 
