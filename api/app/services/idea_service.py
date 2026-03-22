@@ -1287,6 +1287,204 @@ def auto_advance_for_task(idea_id: str, task_type: str) -> None:
     _write_single_idea(target_idea, position=target_idx)
 
 
+def get_resonance_feed(window_hours: int = 24, limit: int = 20) -> list[dict]:
+    """Return ideas with recent activity, sorted by most-recent-activity-first.
+
+    Activity is determined by governance change requests updated within the
+    window and ideas whose questions were recently answered.  When governance
+    data is not easily queryable per-idea we fall back to returning recently
+    active governance-referenced ideas merged with recently modified ideas.
+    """
+    from datetime import datetime, timedelta, timezone
+    from app.services import governance_service
+
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=max(1, window_hours))
+
+    # Gather idea IDs referenced by recent governance change requests
+    idea_activity: dict[str, datetime] = {}
+    try:
+        change_requests = governance_service.list_change_requests(limit=500)
+        for cr in change_requests:
+            cr_updated = cr.updated_at
+            if cr_updated.tzinfo is None:
+                cr_updated = cr_updated.replace(tzinfo=timezone.utc)
+            if cr_updated < cutoff:
+                continue
+            payload = cr.payload or {}
+            # Extract idea_id from payload (used by update / question CRs)
+            idea_id = payload.get("idea_id") or payload.get("id")
+            if isinstance(idea_id, str) and idea_id.strip():
+                existing_ts = idea_activity.get(idea_id)
+                if existing_ts is None or cr_updated > existing_ts:
+                    idea_activity[idea_id] = cr_updated
+    except Exception:
+        pass
+
+    ideas = _read_ideas(persist_ensures=False)
+
+    # Build lookup
+    idea_map: dict[str, Idea] = {idea.id: idea for idea in ideas}
+
+    # Also consider ideas that have recently answered questions (proxy for
+    # updated_at since Idea model lacks that field).  We include all ideas
+    # that already appeared via governance plus any with answered questions.
+    for idea in ideas:
+        if idea.id in idea_activity:
+            continue
+        for q in idea.open_questions:
+            if q.answer and str(q.answer).strip():
+                # No timestamp on answers; include at cutoff time as fallback
+                idea_activity.setdefault(idea.id, cutoff)
+                break
+
+    # Sort by recency
+    sorted_ids = sorted(idea_activity.keys(), key=lambda iid: idea_activity[iid], reverse=True)
+
+    feed: list[dict] = []
+    for idea_id in sorted_ids:
+        if len(feed) >= max(1, limit):
+            break
+        idea = idea_map.get(idea_id)
+        if idea is None:
+            continue
+        scored = _with_score(idea)
+        feed.append({
+            "idea_id": idea.id,
+            "name": idea.name,
+            "last_activity_at": idea_activity[idea_id].isoformat(),
+            "free_energy_score": scored.free_energy_score,
+            "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
+        })
+
+    return feed
+
+
+def fork_idea(source_idea_id: str, forker_id: str, adaptation_notes: str | None = None) -> dict:
+    """Fork an existing idea, creating a new idea with lineage link."""
+    from uuid import uuid4
+    from app.models.value_lineage import LineageLinkCreate, LineageContributors
+
+    source = get_idea(source_idea_id)
+    if source is None:
+        raise ValueError(f"Source idea '{source_idea_id}' not found")
+
+    short_uuid = uuid4().hex[:8]
+    fork_id = f"fork-{source_idea_id}-{short_uuid}"
+    description = source.description
+    if adaptation_notes:
+        description = description + "\n\n" + adaptation_notes
+
+    created = create_idea(
+        idea_id=fork_id,
+        name=f"Fork of: {source.name}",
+        description=description,
+        potential_value=source.potential_value,
+        estimated_cost=source.estimated_cost,
+        confidence=round(max(0.0, min(source.confidence * 0.8, 1.0)), 4),
+        parent_idea_id=source_idea_id,
+        manifestation_status=ManifestationStatus.NONE,
+    )
+    if created is None:
+        raise ValueError("Failed to create forked idea (duplicate ID)")
+
+    # Create value lineage link: source -> fork
+    link = value_lineage_service.create_link(
+        LineageLinkCreate(
+            idea_id=fork_id,
+            spec_id=f"fork-lineage-{fork_id}",
+            implementation_refs=[f"forked-from-{source_idea_id}"],
+            contributors=LineageContributors(research=forker_id),
+            estimated_cost=source.estimated_cost,
+        )
+    )
+
+    return {
+        "idea": created.model_dump(),
+        "lineage_link_id": link.id,
+        "source_idea_id": source_idea_id,
+    }
+
+
+def get_idea_activity(idea_id: str, limit: int = 20) -> list[dict]:
+    """Return activity events for an idea."""
+    from datetime import datetime, timezone
+    from app.services import governance_service
+
+    idea = get_idea(idea_id)
+    if idea is None:
+        raise ValueError(f"Idea '{idea_id}' not found")
+
+    events: list[dict] = []
+
+    # Check governance change requests referencing this idea
+    try:
+        change_requests = governance_service.list_change_requests(limit=500)
+        for cr in change_requests:
+            payload = cr.payload or {}
+            ref_id = payload.get("idea_id") or payload.get("id")
+            if ref_id != idea_id:
+                continue
+            cr_updated = cr.updated_at
+            if cr_updated.tzinfo is None:
+                cr_updated = cr_updated.replace(tzinfo=timezone.utc)
+            events.append({
+                "type": "change_request",
+                "timestamp": cr_updated.isoformat(),
+                "summary": f"Change request '{cr.title}' ({cr.status})",
+                "contributor_id": cr.proposer_id,
+            })
+    except Exception:
+        pass
+
+    # Check questions for answers
+    for q in idea.open_questions:
+        if q.answer and str(q.answer).strip():
+            events.append({
+                "type": "question_answered",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "summary": f"Question answered: {q.question[:80]}",
+                "contributor_id": None,
+            })
+        else:
+            events.append({
+                "type": "question_added",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "summary": f"Question: {q.question[:80]}",
+                "contributor_id": None,
+            })
+
+    # Check stage
+    if idea.stage and idea.stage.value != "none":
+        events.append({
+            "type": "stage_advanced",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "summary": f"Idea at stage: {idea.stage.value}",
+            "contributor_id": None,
+        })
+
+    # Check value lineage for recorded value
+    try:
+        lineage_links = value_lineage_service.list_links(limit=500)
+        for link in lineage_links:
+            if link.idea_id == idea_id:
+                link_updated = link.updated_at
+                if link_updated.tzinfo is None:
+                    link_updated = link_updated.replace(tzinfo=timezone.utc)
+                events.append({
+                    "type": "value_recorded",
+                    "timestamp": link_updated.isoformat(),
+                    "summary": f"Value lineage link: {link.id}",
+                    "contributor_id": None,
+                })
+    except Exception:
+        pass
+
+    # Sort by timestamp descending, limit
+    events.sort(key=lambda e: e["timestamp"], reverse=True)
+    return events[:max(1, limit)]
+
+
 def compute_progress_dashboard() -> ProgressDashboard:
     """Compute per-stage idea counts and completion percentage."""
     ideas = _read_ideas(persist_ensures=False)
