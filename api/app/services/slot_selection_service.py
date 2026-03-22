@@ -201,20 +201,23 @@ class SlotSelector:
     def _compute_weights(
         slots: list[str],
         slot_data: dict[str, list[dict]],
+        *,
+        recency_window: int = 5,
+        recency_weight: float = 0.6,
     ) -> dict[str, float]:
-        """Compute Thompson Sampling weights using Beta distribution.
+        """Compute Thompson Sampling weights using Beta distribution with recency bias.
 
-        Every slot uses Beta(alpha, beta) — even zero-sample slots.
-        The prior (alpha=1, beta=1) is uniform, so unseen slots get a fair
-        random draw. As data accumulates, the distribution tightens around
-        the true success rate. This means:
+        Every slot uses Beta(alpha, beta). Recent performance (last N runs)
+        is weighted more heavily than historical, so the system reacts quickly
+        to provider improvements or degradation.
+
+        Weight formula: recency_weight * last_N_rate + (1 - recency_weight) * all_time_rate
+        This blended rate feeds into the Beta distribution parameters.
+
         - 0 samples: uniform random (fair exploration)
-        - 2 samples, 2 successes: high draw, biased toward selection
-        - 2 samples, 0 successes: low draw, naturally deprioritized
-        - 13 samples, 12 successes: tight distribution near 92%
-
-        Blocked slots get a tiny probe weight (0.02) instead of zero,
-        so they're periodically retested after cooldown.
+        - 2/2 recent successes: high draw, quickly favored
+        - Recent failures after historical success: draw drops fast
+        - Blocked slots (last 3 all failures): tiny probe weight (0.02)
         """
         weights: dict[str, float] = {}
         for sid in slots:
@@ -225,10 +228,28 @@ class SlotSelector:
                 weights[sid] = 0.02  # tiny probe weight, not zero
                 continue
 
-            total_value = sum(r["value_score"] for r in records)
-            # Beta(1 + successes, 1 + failures) — uniform prior
-            alpha = 1.0 + total_value
-            beta_param = 1.0 + (n - total_value)
+            if n == 0:
+                # No data — uniform prior
+                weights[sid] = random.betavariate(1.0, 1.0)
+                continue
+
+            # All-time rate
+            all_time_value = sum(r["value_score"] for r in records)
+            all_time_rate = all_time_value / n
+
+            # Recent rate (last recency_window runs)
+            recent = records[-recency_window:]
+            recent_value = sum(r["value_score"] for r in recent)
+            recent_rate = recent_value / len(recent)
+
+            # Blend: recent data matters more than historical
+            blended_rate = recency_weight * recent_rate + (1 - recency_weight) * all_time_rate
+
+            # Convert blended rate to Beta parameters scaled by sample count
+            # Use effective_n to control distribution width (more data = tighter)
+            effective_n = min(n, 20)  # cap to prevent over-concentration
+            alpha = 1.0 + blended_rate * effective_n
+            beta_param = 1.0 + (1 - blended_rate) * effective_n
             weights[sid] = random.betavariate(alpha, beta_param)
 
         return weights
@@ -325,6 +346,19 @@ class SlotSelector:
             # Duration stats
             durations = [r["duration_s"] for r in records if "duration_s" in r]
             mean_duration = sum(durations) / len(durations) if durations else 0.0
+            max_duration = max(durations) if durations else 0.0
+            p90_duration = sorted(durations)[int(len(durations) * 0.9)] if durations else 0.0
+
+            # Last N stats for recency awareness
+            last_5 = records[-5:]
+            last_5_successes = sum(1 for r in last_5 if r["value_score"] > 0)
+            last_5_rate = last_5_successes / len(last_5) if last_5 else 0.0
+
+            # Data-driven timeout: 2.5x p90 with floor of 60s, cap at 600s
+            if p90_duration > 0:
+                suggested_timeout = max(60.0, min(600.0, p90_duration * 2.5))
+            else:
+                suggested_timeout = 300.0  # default when no data
 
             slots[sid] = {
                 "sample_count": n,
@@ -333,6 +367,11 @@ class SlotSelector:
                 "mean_value": round(mean_value, 4),
                 "mean_cost": round(mean_cost, 4),
                 "mean_duration_s": round(mean_duration, 1),
+                "max_duration_s": round(max_duration, 1),
+                "p90_duration_s": round(p90_duration, 1),
+                "suggested_timeout_s": round(suggested_timeout, 0),
+                "last_5_rate": round(last_5_rate, 4),
+                "last_5_count": len(last_5),
                 "roi": round(roi, 4),
                 "blocked": blocked,
                 "error_classes": error_classes,

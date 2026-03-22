@@ -138,6 +138,12 @@ async def get_provider_stats() -> dict:
                 "message": f"{sid} last-5 success rate {int(last_5_rate * 100)}% < {int(_ATTENTION_THRESHOLD * 100)}% threshold",
             })
 
+        # Duration percentiles for data-driven timeouts
+        durations = sorted([r["duration_s"] for r in records if "duration_s" in r])
+        p90_dur = durations[int(len(durations) * 0.9)] if durations else 0.0
+        max_dur = durations[-1] if durations else 0.0
+        suggested_timeout = max(60.0, min(600.0, p90_dur * 2.5)) if p90_dur > 0 else 300.0
+
         providers[sid] = {
             "total_runs": total_runs,
             "successes": successes,
@@ -146,6 +152,9 @@ async def get_provider_stats() -> dict:
             "last_5_rate": last_5_rate,
             "last_5_runs": last_5_runs,
             "avg_duration_s": _avg_duration(records),
+            "p90_duration_s": round(p90_dur, 1),
+            "max_duration_s": round(max_dur, 1),
+            "suggested_timeout_s": round(suggested_timeout, 0),
             "selection_probability": avg_probs.get(sid, 0.0),
             "blocked": blocked,
             "needs_attention": needs_attention,
