@@ -10,6 +10,7 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
+from app.services import federation_service
 from app.services.slot_selection_service import SlotSelector
 
 router = APIRouter(prefix="/api/providers", tags=["providers"])
@@ -184,4 +185,50 @@ async def get_provider_stats() -> dict:
             "attention_needed": attention_count,
             "total_measurements": total_measurements,
         },
+    }
+
+
+@router.get("/stats/network")
+async def get_network_provider_stats(window_days: int = 7) -> dict:
+    """Network-wide provider stats from federation nodes.
+
+    Shaped to be compatible with /api/providers/stats response plus a `nodes` field.
+    """
+    agg = federation_service.get_aggregated_node_stats(window_days=window_days)
+
+    # Reshape providers to match /api/providers/stats format
+    providers: dict[str, dict] = {}
+    attention_count = 0
+    alerts = agg.get("alerts", [])
+
+    for sid, pdata in agg.get("providers", {}).items():
+        needs_attention = pdata["overall_success_rate"] < _ATTENTION_THRESHOLD
+        if needs_attention:
+            attention_count += 1
+        providers[sid] = {
+            "total_runs": pdata["total_samples"],
+            "successes": pdata["total_successes"],
+            "failures": pdata["total_failures"],
+            "success_rate": pdata["overall_success_rate"],
+            "avg_duration_s": pdata["avg_duration_s"],
+            "node_count": pdata["node_count"],
+            "per_node": pdata["per_node"],
+            "needs_attention": needs_attention,
+        }
+
+    total_measurements = agg.get("total_measurements", 0)
+    healthy_count = len(providers) - attention_count
+
+    return {
+        "providers": providers,
+        "task_types": agg.get("task_types", {}),
+        "alerts": alerts,
+        "summary": {
+            "total_providers": len(providers),
+            "healthy_providers": healthy_count,
+            "attention_needed": attention_count,
+            "total_measurements": total_measurements,
+        },
+        "nodes": agg.get("nodes", {}),
+        "window_days": agg.get("window_days", window_days),
     }

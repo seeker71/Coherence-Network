@@ -123,6 +123,37 @@ type ProviderExecStatsResponse = {
   summary: ProviderExecStatsSummary;
 };
 
+type NetworkNodeInfo = {
+  hostname: string;
+  os_type: string;
+  status: string;
+  last_seen_at: string;
+};
+
+type NetworkProviderNode = {
+  success_rate: number;
+  samples: number;
+  avg_duration_s: number;
+};
+
+type NetworkProvider = {
+  node_count: number;
+  total_samples: number;
+  total_successes: number;
+  total_failures: number;
+  overall_success_rate: number;
+  avg_duration_s: number;
+  per_node: Record<string, NetworkProviderNode>;
+};
+
+type NetworkStatsResponse = {
+  nodes: Record<string, NetworkNodeInfo>;
+  providers: Record<string, NetworkProvider>;
+  alerts: Array<{ provider: string; message: string }>;
+  window_days: number;
+  total_measurements: number;
+};
+
 type ProviderValidationRow = {
   provider: string;
   configured: boolean;
@@ -150,9 +181,10 @@ async function loadAutomationData(): Promise<{
   readiness: ProviderReadinessResponse;
   validation: ProviderValidationResponse;
   execStats: ProviderExecStatsResponse | null;
+  networkStats: NetworkStatsResponse | null;
 }> {
   const api = getApiBase();
-  const [usageRes, alertsRes, readinessRes, validationRes, execStatsRes] = await Promise.all([
+  const [usageRes, alertsRes, readinessRes, validationRes, execStatsRes, networkStatsRes] = await Promise.all([
     fetch(`${api}/api/automation/usage?force_refresh=true`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }),
@@ -160,6 +192,7 @@ async function loadAutomationData(): Promise<{
       cache: "no-store",
     }),
     fetch(`${api}/api/providers/stats`, { cache: "no-store" }).catch(() => null),
+    fetch(`${api}/api/federation/nodes/stats`, { cache: "no-store" }).catch(() => null),
   ]);
   if (!usageRes.ok) {
     throw new Error(`automation usage HTTP ${usageRes.status}`);
@@ -177,17 +210,22 @@ async function loadAutomationData(): Promise<{
   if (execStatsRes && execStatsRes.ok) {
     execStats = (await execStatsRes.json()) as ProviderExecStatsResponse;
   }
+  let networkStats: NetworkStatsResponse | null = null;
+  if (networkStatsRes && networkStatsRes.ok) {
+    networkStats = (await networkStatsRes.json()) as NetworkStatsResponse;
+  }
   return {
     usage: (await usageRes.json()) as AutomationUsageResponse,
     alerts: (await alertsRes.json()) as UsageAlertResponse,
     readiness: (await readinessRes.json()) as ProviderReadinessResponse,
     validation: (await validationRes.json()) as ProviderValidationResponse,
     execStats,
+    networkStats,
   };
 }
 
 export default async function AutomationPage() {
-  const { usage, alerts, readiness, validation, execStats } = await loadAutomationData();
+  const { usage, alerts, readiness, validation, execStats, networkStats } = await loadAutomationData();
   const providers = [...usage.providers].sort((a, b) => a.provider.localeCompare(b.provider));
 
   return (
@@ -430,6 +468,78 @@ export default async function AutomationPage() {
           ))}
         </ul>
       </section>
+
+      {networkStats && (Object.keys(networkStats.nodes).length > 0 || networkStats.total_measurements > 0) && (
+        <section className="rounded border p-4 space-y-3 text-sm">
+          <h2 className="font-semibold">Federation Network — Provider Stats by Node</h2>
+          <p className="text-muted-foreground">
+            {Object.keys(networkStats.nodes).length} node(s) | {networkStats.total_measurements} measurements | {networkStats.window_days}d window
+          </p>
+
+          {networkStats.alerts.length > 0 && (
+            <div className="rounded border border-amber-500/50 bg-amber-500/10 p-3 space-y-1">
+              {networkStats.alerts.map((a, i) => (
+                <p key={i} className="text-amber-600 dark:text-amber-400">{a.provider}: {a.message}</p>
+              ))}
+            </div>
+          )}
+
+          {/* Node list */}
+          <div className="space-y-2">
+            {Object.entries(networkStats.nodes).map(([nodeId, node]) => (
+              <div key={nodeId} className="rounded border p-2">
+                <p className="font-medium">
+                  <span className={`inline-block w-2 h-2 rounded-full mr-2 ${node.status === "online" ? "bg-green-500" : "bg-gray-400"}`} />
+                  {node.hostname} <span className="text-muted-foreground">({node.os_type})</span>
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  ID: {nodeId} | Last seen: {new Date(node.last_seen_at).toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {/* Provider table per node */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="py-1 pr-3">Provider</th>
+                  <th className="py-1 pr-3 text-right">Runs</th>
+                  <th className="py-1 pr-3 text-right">Rate</th>
+                  <th className="py-1 pr-3 text-right">Avg Speed</th>
+                  {Object.keys(networkStats.nodes).map((nodeId) => (
+                    <th key={nodeId} className="py-1 pr-3 text-right">{networkStats.nodes[nodeId].hostname.split(".")[0]}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(networkStats.providers)
+                  .sort(([, a], [, b]) => b.total_samples - a.total_samples)
+                  .map(([provider, data]) => (
+                  <tr key={provider} className="border-b border-border/50">
+                    <td className="py-1 pr-3 font-medium">{provider}</td>
+                    <td className="py-1 pr-3 text-right">{data.total_samples}</td>
+                    <td className={`py-1 pr-3 text-right ${data.overall_success_rate < 0.5 ? "text-red-500" : data.overall_success_rate < 0.8 ? "text-amber-500" : "text-green-500"}`}>
+                      {(data.overall_success_rate * 100).toFixed(0)}%
+                    </td>
+                    <td className="py-1 pr-3 text-right text-muted-foreground">{data.avg_duration_s.toFixed(0)}s</td>
+                    {Object.keys(networkStats.nodes).map((nodeId) => {
+                      const nodeData = data.per_node[nodeId];
+                      if (!nodeData) return <td key={nodeId} className="py-1 pr-3 text-right text-muted-foreground">—</td>;
+                      return (
+                        <td key={nodeId} className={`py-1 pr-3 text-right ${nodeData.success_rate < 0.5 ? "text-red-500" : nodeData.success_rate < 0.8 ? "text-amber-500" : ""}`}>
+                          {(nodeData.success_rate * 100).toFixed(0)}% <span className="text-muted-foreground">({nodeData.samples})</span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="rounded border p-4 space-y-3 text-sm">
         <h2 className="font-semibold">Capacity Alerts</h2>
