@@ -299,6 +299,7 @@ def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
             governance_created += 1
             result.accepted += 1
         except Exception as exc:
+            logger.warning("Federation lineage_link import failed", exc_info=True)
             result.errors.append(f"lineage_link error: {exc}")
 
     # 3. Create governance requests for usage events
@@ -321,6 +322,7 @@ def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
             governance_created += 1
             result.accepted += 1
         except Exception as exc:
+            logger.warning("Federation usage_event import failed", exc_info=True)
             result.errors.append(f"usage_event error: {exc}")
 
     result.governance_requests_created = governance_created
@@ -408,6 +410,7 @@ def register_or_update_node(data: FederationNodeRegisterRequest) -> tuple[Federa
                 registered_at=datetime.fromisoformat(existing.registered_at.replace("Z", "+00:00")),
                 last_seen_at=datetime.fromisoformat(now_iso.replace("Z", "+00:00")),
             )
+            logger.info("Registered node %s (updated)", data.node_id)
             return resp, False
         else:
             rec = FederationNodeRecord(
@@ -427,6 +430,7 @@ def register_or_update_node(data: FederationNodeRegisterRequest) -> tuple[Federa
                 registered_at=datetime.fromisoformat(now_iso.replace("Z", "+00:00")),
                 last_seen_at=datetime.fromisoformat(now_iso.replace("Z", "+00:00")),
             )
+            logger.info("Registered node %s (created)", data.node_id)
             return resp, True
 
 
@@ -445,6 +449,7 @@ def heartbeat_node(
             return None
         rec.last_seen_at = now_iso
         rec.status = status
+        logger.debug("Heartbeat from %s", node_id)
         capabilities_refreshed = False
         if refresh_capabilities and capabilities is not None:
             rec.capabilities_json = json.dumps(capabilities)
@@ -498,6 +503,7 @@ def get_fleet_capability_summary() -> FleetCapabilitySummary:
         try:
             node_caps = json.loads(rec.capabilities_json or "{}")
         except json.JSONDecodeError:
+            logger.debug("Malformed capabilities_json for node %s", rec.node_id, exc_info=True)
             node_caps = {}
 
         executors = node_caps.get("executors", [])
@@ -648,6 +654,9 @@ def store_measurement_summaries(node_id: str, summaries: list[dict]) -> dict:
             s.add(rec)
             stored += 1
 
+    total_stored = stored + duplicates_replaced
+    logger.info("Stored %d measurements from %s (skipped=%d, replaced=%d)",
+                total_stored, node_id, duplicates_skipped, duplicates_replaced)
     return {
         "stored": stored,
         "duplicates_skipped": duplicates_skipped,
@@ -1109,6 +1118,7 @@ def compute_and_store_strategies() -> list[dict]:
                 s.flush()
                 st["id"] = rec.id
 
+    logger.info("Computed %d strategies", len(new_strategies))
     return new_strategies
 
 

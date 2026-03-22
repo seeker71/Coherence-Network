@@ -13,9 +13,17 @@ Keys are configured via environment variables:
 import os
 from fastapi import Header, HTTPException, Depends
 
-_API_KEY = os.environ.get("COHERENCE_API_KEY", "dev-key")
-_ADMIN_KEY = os.environ.get("COHERENCE_ADMIN_KEY", "dev-admin")
-_PRODUCTION = os.environ.get("COHERENCE_ENV", "development") == "production"
+from app.services import config_service
+
+_API_KEY = config_service.get_key("coherence", "api_key") or os.environ.get("COHERENCE_API_KEY", "dev-key")
+_ADMIN_KEY = config_service.get_key("coherence", "admin_key") or os.environ.get("COHERENCE_ADMIN_KEY", "dev-admin")
+_PRODUCTION = config_service.is_production()
+
+# Fail-fast: refuse to start in production with default keys
+if _PRODUCTION and _API_KEY == "dev-key":
+    raise RuntimeError("COHERENCE_API_KEY must be set for production (not 'dev-key')")
+if _PRODUCTION and _ADMIN_KEY == "dev-admin":
+    raise RuntimeError("COHERENCE_ADMIN_KEY must be set for production (not 'dev-admin')")
 
 
 def require_api_key(x_api_key: str = Header(None, alias="X-API-Key")) -> str:

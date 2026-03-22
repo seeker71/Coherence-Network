@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import { formatUsd, humanizeManifestationStatus } from "@/lib/humanize";
+import { InvestBalanceSection } from "./InvestBalanceSection";
 
 export const metadata: Metadata = {
   title: "Invest",
@@ -29,15 +30,6 @@ type IdeaPortfolioResponse = {
   ideas: IdeaWithScore[];
 };
 
-type LedgerBalance = {
-  total: number;
-  by_type?: Record<string, number>;
-};
-
-type LedgerResponse = {
-  balance: LedgerBalance;
-};
-
 function stageIcon(status: string): string {
   const s = status.trim().toLowerCase();
   if (s === "validated") return "\u2705";
@@ -54,20 +46,6 @@ async function loadIdeas(): Promise<IdeaWithScore[]> {
     return data.ideas ?? [];
   } catch {
     return [];
-  }
-}
-
-async function loadBalance(contributorId: string): Promise<LedgerBalance | null> {
-  try {
-    const API = getApiBase();
-    const res = await fetch(`${API}/api/contributions/ledger/${encodeURIComponent(contributorId)}`, {
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data: LedgerResponse = await res.json();
-    return data.balance ?? null;
-  } catch {
-    return null;
   }
 }
 
@@ -88,8 +66,7 @@ function stakeDescription(cost: number): string {
 }
 
 export default async function InvestPage() {
-  const CONTRIBUTOR_ID = "urs-muff";
-  const [ideas, balance] = await Promise.all([loadIdeas(), loadBalance(CONTRIBUTOR_ID)]);
+  const ideas = await loadIdeas();
 
   const sorted = [...ideas].sort((a, b) => computeRoi(b) - computeRoi(a));
 
@@ -105,15 +82,7 @@ export default async function InvestPage() {
         </p>
       </header>
 
-      <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5">
-        <p className="text-sm font-medium text-primary">Your CC Balance</p>
-        <p className="mt-1 text-2xl font-light text-foreground">
-          {balance ? `${balance.total.toFixed(1)} CC` : "Unavailable"}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground/60">
-          Contributor: {CONTRIBUTOR_ID}
-        </p>
-      </section>
+      <InvestBalanceSection />
 
       {sorted.length === 0 ? (
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center">

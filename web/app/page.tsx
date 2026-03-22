@@ -93,6 +93,19 @@ async function loadCoherenceScore(): Promise<CoherenceScoreResponse | null> {
   return fetchJsonOrNull<CoherenceScoreResponse>(`${getApiBase()}/api/coherence/score`, {}, 5000);
 }
 
+async function loadNodeCount(): Promise<number> {
+  try {
+    const data = await fetchJsonOrNull<Array<{ node_id: string }>>(
+      `${getApiBase()}/api/federation/nodes`,
+      {},
+      5000,
+    );
+    return Array.isArray(data) ? data.length : 1;
+  } catch {
+    return 1;
+  }
+}
+
 function formatNumber(value: number | undefined): string {
   if (typeof value !== "number" || Number.isNaN(value)) return "0";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
@@ -115,15 +128,14 @@ function timeAgo(iso: string): string {
 }
 
 export default async function Home() {
-  const [ideasData, resonanceItems, coherenceScore] = await Promise.all([
+  const [ideasData, resonanceItems, coherenceScore, nodeCount] = await Promise.all([
     loadIdeas(),
     loadResonance(),
     loadCoherenceScore(),
+    loadNodeCount(),
   ]);
 
   const summary = ideasData?.summary;
-  // Count unique contributors from contribution ledger, not idea count
-  const nodeCount = 1; // Will come from /api/federation/nodes when more nodes join
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)]">

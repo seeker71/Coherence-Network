@@ -146,8 +146,16 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
           <FlowItemCard key={item.idea_id} item={item} />
         ))}
         {filteredItems.length === 0 ? (
-          <article className="rounded-xl border border-border/20 bg-background/40 p-4 text-sm text-muted-foreground">
-            No data available yet. Once the API is running, results will appear here.
+          <article className="rounded-xl border border-border/20 bg-background/40 p-6 text-center space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Run some tasks to see pipeline activity. Start by sharing an idea on the home page.
+            </p>
+            <Link
+              href="/"
+              className="inline-block text-sm text-primary hover:text-foreground transition-colors underline underline-offset-4"
+            >
+              Share an idea
+            </Link>
           </article>
         ) : null}
       </section>

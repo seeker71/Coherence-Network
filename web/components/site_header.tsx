@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { ActiveNavLink } from "./active_nav_link";
 
 /** Primary nav — action-oriented items for most visitors. */
 const PRIMARY_NAV = [
@@ -54,24 +55,17 @@ export default function SiteHeader() {
 
           <nav className="hidden md:flex items-center gap-1 text-sm" aria-label="Primary navigation">
             {PRIMARY_NAV.map((n) => (
-              <Link
+              <ActiveNavLink
                 key={n.href}
                 href={n.href}
-                className="rounded-lg px-3 py-1.5 text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
-              >
-                {n.label}
-              </Link>
+                label={n.label}
+              />
             ))}
-            <Link
+            <ActiveNavLink
               href={HEARTBEAT_NAV.href}
-              className="rounded-lg px-3 py-1.5 text-primary/80 hover:text-primary hover:bg-accent/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 flex items-center gap-1.5"
-            >
-              <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary/80" />
-              </span>
-              {HEARTBEAT_NAV.label}
-            </Link>
+              label={HEARTBEAT_NAV.label}
+              isHeartbeat
+            />
           </nav>
 
           <div className="flex-1" />

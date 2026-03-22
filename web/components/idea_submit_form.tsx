@@ -25,7 +25,7 @@ export function IdeaSubmitForm() {
       .slice(0, 60);
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_BASE || "https://api.coherencycoin.com";
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
       const resp = await fetch(`${apiBase}/api/ideas`, {
         method: "POST",
         headers: {
