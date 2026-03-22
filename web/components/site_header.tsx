@@ -2,29 +2,27 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 
-/** Primary nav — the 4 things most visitors want. */
+/** Primary nav — action-oriented items for most visitors. */
 const PRIMARY_NAV = [
   { href: "/ideas", label: "Ideas" },
   { href: "/invest", label: "Invest" },
   { href: "/contribute", label: "Contribute" },
-  { href: "/tasks", label: "Work" },
-  { href: "/flow", label: "Progress" },
 ];
 
-/** Discover section — broader exploration. */
-const DISCOVER_NAV = [
-  { href: "/today", label: "Today" },
-  { href: "/demo", label: "Demo" },
-  { href: "/search", label: "Search" },
-  { href: "/portfolio", label: "Portfolio" },
+/** Always visible — the heartbeat of the network. */
+const HEARTBEAT_NAV = { href: "/resonance", label: "Resonance" };
+
+/** Secondary nav — deeper exploration for power users. */
+const SECONDARY_NAV = [
   { href: "/specs", label: "Specs" },
-  { href: "/contributors", label: "People" },
-];
-
-/** Tools — for power users and operators. */
-const TOOL_NAV = [
   { href: "/usage", label: "Usage" },
   { href: "/automation", label: "Automation" },
+  { href: "/flow", label: "Flow" },
+  { href: "/tasks", label: "Work" },
+  { href: "/today", label: "Today" },
+  { href: "/search", label: "Search" },
+  { href: "/portfolio", label: "Portfolio" },
+  { href: "/contributors", label: "People" },
   { href: "/remote-ops", label: "Remote Ops" },
   { href: "/agent", label: "Agent" },
   { href: "/friction", label: "Friction" },
@@ -64,11 +62,21 @@ export default function SiteHeader() {
                 {n.label}
               </Link>
             ))}
+            <Link
+              href={HEARTBEAT_NAV.href}
+              className="rounded-lg px-3 py-1.5 text-primary/80 hover:text-primary hover:bg-accent/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 flex items-center gap-1.5"
+            >
+              <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary/80" />
+              </span>
+              {HEARTBEAT_NAV.label}
+            </Link>
           </nav>
 
           <div className="flex-1" />
 
-          {/* Desktop "More" dropdown — discover + tools */}
+          {/* Desktop "More" dropdown — secondary pages */}
           <details className="relative hidden md:block group">
             <summary
               className="list-none cursor-pointer rounded-lg border border-border/50 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-border transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
@@ -78,43 +86,26 @@ export default function SiteHeader() {
               More
             </summary>
             <div className="absolute right-0 mt-2 w-72 rounded-xl border border-border/50 bg-popover/95 backdrop-blur-md p-4 shadow-xl">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Discover</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {DISCOVER_NAV.map((n) => (
-                      <Link
-                        key={n.href}
-                        href={n.href}
-                        className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        {n.label}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-                <div className="border-t border-border/30" />
-                <div className="space-y-2">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Tools</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {TOOL_NAV.map((n) => (
-                      <Link
-                        key={n.href}
-                        href={n.href}
-                        className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        {n.label}
-                      </Link>
-                    ))}
-                    <a
-                      href={`${apiBase}/docs`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+              <div className="space-y-2">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Explore</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {SECONDARY_NAV.map((n) => (
+                    <Link
+                      key={n.href}
+                      href={n.href}
                       className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
                     >
-                      API Docs
-                    </a>
-                  </div>
+                      {n.label}
+                    </Link>
+                  ))}
+                  <a
+                    href={`${apiBase}/docs`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-lg border border-border/30 px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 hover:border-border/60 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    API Docs
+                  </a>
                 </div>
               </div>
             </div>
@@ -143,20 +134,19 @@ export default function SiteHeader() {
                     {n.label}
                   </Link>
                 ))}
+                <Link
+                  href={HEARTBEAT_NAV.href}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-primary/80 hover:text-primary hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary/80" />
+                  </span>
+                  {HEARTBEAT_NAV.label}
+                </Link>
                 <div className="border-t border-border/30 my-2" />
-                <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Discover</p>
-                {DISCOVER_NAV.map((n) => (
-                  <Link
-                    key={n.href}
-                    href={n.href}
-                    className="block rounded-lg px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {n.label}
-                  </Link>
-                ))}
-                <div className="border-t border-border/30 my-2" />
-                <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">Tools</p>
-                {TOOL_NAV.map((n) => (
+                <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">More</p>
+                {SECONDARY_NAV.map((n) => (
                   <Link
                     key={n.href}
                     href={n.href}
