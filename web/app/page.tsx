@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { IdeaSubmitForm } from "@/components/idea_submit_form";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
 
@@ -142,26 +143,8 @@ export default async function Home() {
             Share it — someone out there is looking for exactly this.
           </p>
 
-          {/* The text box */}
-          <form action="/api/share" method="GET" className="space-y-4">
-            <textarea
-              name="idea"
-              rows={3}
-              placeholder="I think there should be a way to..."
-              className="w-full rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm px-6 py-4 text-base md:text-lg placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 resize-none transition-all duration-300"
-            />
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button asChild className="rounded-full px-8 py-3 text-base">
-                <Link href="/contribute">Share your idea</Link>
-              </Button>
-              <Link
-                href="/resonance"
-                className="text-muted-foreground hover:text-foreground transition-colors duration-300 underline underline-offset-4 py-3 text-sm"
-              >
-                or see what others are working on
-              </Link>
-            </div>
-          </form>
+          {/* The text box — submits directly to the API */}
+          <IdeaSubmitForm />
         </div>
       </section>
 
