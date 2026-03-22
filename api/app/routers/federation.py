@@ -89,7 +89,7 @@ async def list_nodes():
 # ---------------------------------------------------------------------------
 
 @router.get("/federation/nodes/stats")
-async def get_aggregated_node_stats(window_days: int = Query(7, ge=1, le=365)):
+async def get_aggregated_node_stats(window_days: int | None = Query(default=None, ge=1, le=365)):
     """Return aggregated provider stats across all federation nodes."""
     return federation_service.get_aggregated_node_stats(window_days=window_days)
 
