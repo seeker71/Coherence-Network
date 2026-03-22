@@ -32,6 +32,7 @@ type IdeaWithScore = {
   confidence: number;
   resistance_risk: number;
   manifestation_status: string;
+  stage?: string;
   interfaces: string[];
   open_questions: IdeaQuestion[];
   free_energy_score: number;
@@ -50,11 +51,100 @@ type IdeasResponse = {
   };
 };
 
+type StageBucket = {
+  count: number;
+  idea_ids: string[];
+};
+
+type ProgressDashboard = {
+  total_ideas: number;
+  completion_pct: number;
+  by_stage: Record<string, StageBucket>;
+  snapshot_at: string;
+};
+
+const STAGE_ORDER = [
+  "none",
+  "specced",
+  "implementing",
+  "testing",
+  "reviewing",
+  "complete",
+] as const;
+
+type StageName = (typeof STAGE_ORDER)[number];
+
+const STAGE_LABEL: Record<StageName, string> = {
+  none: "Backlog",
+  specced: "Specced",
+  implementing: "Implementing",
+  testing: "Testing",
+  reviewing: "Reviewing",
+  complete: "Complete",
+};
+
+const AUTO_ADVANCE_TRIGGERS: Array<{
+  taskType: string;
+  movesTo: StageName;
+  detail: string;
+}> = [
+  { taskType: "spec", movesTo: "specced", detail: "Task completion moves from backlog to specced." },
+  { taskType: "impl", movesTo: "implementing", detail: "Task completion starts active implementation." },
+  { taskType: "test", movesTo: "testing", detail: "Task completion moves work into verification." },
+  { taskType: "review", movesTo: "reviewing", detail: "Task completion pushes to review readiness." },
+];
+
 async function loadIdeas(): Promise<IdeasResponse> {
   const API = getApiBase();
   const res = await fetch(`${API}/api/ideas`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as IdeasResponse;
+}
+
+function emptyStageBucket(): StageBucket {
+  return { count: 0, idea_ids: [] };
+}
+
+function buildFallbackProgress(ideas: IdeaWithScore[]): ProgressDashboard {
+  const byStage: Record<string, StageBucket> = {};
+  for (const stage of STAGE_ORDER) {
+    byStage[stage] = emptyStageBucket();
+  }
+  for (const idea of ideas) {
+    const stage = (idea.stage ?? "none").toLowerCase();
+    if (!(stage in byStage)) {
+      continue;
+    }
+    byStage[stage].count += 1;
+    byStage[stage].idea_ids.push(idea.id);
+  }
+  const totalIdeas = ideas.length;
+  const completionPct = totalIdeas > 0 ? byStage.complete.count / totalIdeas : 0;
+  return {
+    total_ideas: totalIdeas,
+    completion_pct: completionPct,
+    by_stage: byStage,
+    snapshot_at: new Date().toISOString(),
+  };
+}
+
+async function loadProgressDashboard(ideas: IdeaWithScore[]): Promise<ProgressDashboard> {
+  const API = getApiBase();
+  const res = await fetch(`${API}/api/ideas/progress`, { cache: "no-store" });
+  if (!res.ok) {
+    return buildFallbackProgress(ideas);
+  }
+  const payload = (await res.json()) as ProgressDashboard;
+  const byStage: Record<string, StageBucket> = {};
+  for (const stage of STAGE_ORDER) {
+    byStage[stage] = payload.by_stage[stage] ?? emptyStageBucket();
+  }
+  return {
+    total_ideas: payload.total_ideas,
+    completion_pct: payload.completion_pct,
+    by_stage: byStage,
+    snapshot_at: payload.snapshot_at,
+  };
 }
 
 function stageIndicator(status: string): string {
@@ -74,8 +164,10 @@ function whatItNeeds(idea: IdeaWithScore): string {
 
 export default async function IdeasPage() {
   const data = await loadIdeas();
+  const progress = await loadProgressDashboard(data.ideas);
 
   const ideas = [...data.ideas].sort((a, b) => b.free_energy_score - a.free_energy_score);
+  const completionPct = Math.round(Math.max(0, Math.min(progress.completion_pct, 1)) * 100);
 
   return (
     <main className="min-h-screen px-4 md:px-8 py-8 max-w-5xl mx-auto space-y-8">
@@ -101,6 +193,96 @@ export default async function IdeasPage() {
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
           <p className="text-sm text-muted-foreground">Remaining opportunity</p>
           <p className="text-2xl font-light text-primary">{formatUsd(data.summary.total_value_gap)}</p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-5">
+        <div className="space-y-1">
+          <h2 className="text-xl font-medium tracking-tight">Idea lifecycle dashboard</h2>
+          <p className="text-sm text-muted-foreground">
+            Track stage transitions, automatic advancement triggers, and phase-level progress.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Portfolio completion</span>
+            <span>{completionPct}% complete</span>
+          </div>
+          <div className="h-2.5 rounded-full bg-muted/40 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-primary/50 to-primary/90 transition-all duration-500"
+              style={{ width: `${Math.max(completionPct, 2)}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <article className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
+            <h3 className="text-sm font-medium">Stage transitions</h3>
+            <ol className="space-y-2 text-sm">
+              {STAGE_ORDER.map((stage, idx) => {
+                const next = STAGE_ORDER[idx + 1];
+                const bucket = progress.by_stage[stage] ?? emptyStageBucket();
+                return (
+                  <li key={stage} className="flex items-center justify-between gap-2">
+                    <span className="text-muted-foreground">
+                      {STAGE_LABEL[stage]}
+                      {next ? ` -> ${STAGE_LABEL[next]}` : " (terminal)"}
+                    </span>
+                    <span className="text-xs rounded-full border border-border/40 px-2 py-0.5 bg-muted/30">
+                      {bucket.count}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+          </article>
+
+          <article className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
+            <h3 className="text-sm font-medium">Auto-advancement triggers</h3>
+            <ul className="space-y-2 text-sm">
+              {AUTO_ADVANCE_TRIGGERS.map((trigger) => (
+                <li key={trigger.taskType} className="space-y-1">
+                  <p>
+                    <span className="font-medium">{trigger.taskType}</span>
+                    {" "}
+                    task -> <span className="text-primary">{STAGE_LABEL[trigger.movesTo]}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">{trigger.detail}</p>
+                </li>
+              ))}
+            </ul>
+          </article>
+        </div>
+
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium">Progress by phase</h3>
+          <ul className="space-y-2">
+            {STAGE_ORDER.map((stage) => {
+              const bucket = progress.by_stage[stage] ?? emptyStageBucket();
+              const pct = progress.total_ideas > 0
+                ? Math.round((bucket.count / progress.total_ideas) * 100)
+                : 0;
+              return (
+                <li key={stage} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{STAGE_LABEL[stage]}</span>
+                    <span>{bucket.count} ideas ({pct}%)</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary/65"
+                      style={{ width: `${Math.max(pct, 2)}%` }}
+                    />
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            Snapshot: {new Date(progress.snapshot_at).toLocaleString()}
+          </p>
         </div>
       </section>
 

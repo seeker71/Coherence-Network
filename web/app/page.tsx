@@ -43,6 +43,13 @@ type ResonanceItem = {
   activity_type?: string;
 };
 
+type CoherenceScoreResponse = {
+  score: number;
+  signals_with_data: number;
+  total_signals: number;
+  computed_at: string;
+};
+
 const HOW_IT_WORKS = [
   {
     icon: "\uD83D\uDCA1",
@@ -81,9 +88,18 @@ async function loadResonance(): Promise<ResonanceItem[]> {
   }
 }
 
+async function loadCoherenceScore(): Promise<CoherenceScoreResponse | null> {
+  return fetchJsonOrNull<CoherenceScoreResponse>(`${getApiBase()}/api/coherence/score`, {}, 5000);
+}
+
 function formatNumber(value: number | undefined): string {
   if (typeof value !== "number" || Number.isNaN(value)) return "0";
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
+}
+
+function formatCoherenceScore(value: number | undefined): string {
+  if (typeof value !== "number" || Number.isNaN(value)) return "0.00";
+  return value.toFixed(2);
 }
 
 function timeAgo(iso: string): string {
@@ -98,9 +114,10 @@ function timeAgo(iso: string): string {
 }
 
 export default async function Home() {
-  const [ideasData, resonanceItems] = await Promise.all([
+  const [ideasData, resonanceItems, coherenceScore] = await Promise.all([
     loadIdeas(),
     loadResonance(),
+    loadCoherenceScore(),
   ]);
 
   const summary = ideasData?.summary;
@@ -150,7 +167,7 @@ export default async function Home() {
 
       {/* Section 2: PULSE — quiet proof of life */}
       <section className="px-4 md:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-100">
-        {summary ? (
+        {summary || coherenceScore ? (
           <div className="flex flex-wrap justify-center gap-8 md:gap-12 text-center">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2 w-2" aria-hidden="true">
@@ -158,7 +175,7 @@ export default async function Home() {
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
               </span>
               <span className="text-sm text-muted-foreground">
-                <span className="text-foreground font-medium">{formatNumber(summary.total_ideas)}</span> ideas alive
+                <span className="text-foreground font-medium">{formatNumber(summary?.total_ideas)}</span> ideas alive
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -167,7 +184,7 @@ export default async function Home() {
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-2/60" />
               </span>
               <span className="text-sm text-muted-foreground">
-                <span className="text-foreground font-medium">{formatNumber(summary.total_actual_value)}</span> value created
+                <span className="text-foreground font-medium">{formatNumber(summary?.total_actual_value)}</span> value created
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -177,6 +194,18 @@ export default async function Home() {
               </span>
               <span className="text-sm text-muted-foreground">
                 <span className="text-foreground font-medium">{formatNumber(contributors)}</span> contributors
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" style={{ animationDelay: "1.5s" }} />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
+              </span>
+              <span className="text-sm text-muted-foreground">
+                <span className="text-foreground font-medium">{formatCoherenceScore(coherenceScore?.score)}</span> coherence
+                {coherenceScore && (
+                  <span className="text-muted-foreground/70"> ({coherenceScore.signals_with_data}/{coherenceScore.total_signals} signals)</span>
+                )}
               </span>
             </div>
           </div>
