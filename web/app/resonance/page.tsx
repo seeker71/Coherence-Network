@@ -90,74 +90,75 @@ export default async function ResonancePage() {
   );
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-12">
-      <header className="mb-10">
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+    <main className="mx-auto max-w-4xl px-4 md:px-8 py-8">
+      <header className="mb-8">
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight mb-2">
           Resonance
         </h1>
-        <p className="mt-2 text-lg text-stone-500 dark:text-stone-400">
-          Ideas actively evolving right now. Where attention flows, realization
-          follows.
+        <p className="text-muted-foreground max-w-2xl leading-relaxed">
+          This is the heartbeat of the network. Every question asked, every spec
+          written, every contribution — it shows up here.
         </p>
       </header>
 
       {itemsWithActivity.length === 0 ? (
-        <div className="rounded-xl border border-stone-200 bg-stone-50 p-8 text-center dark:border-stone-700 dark:bg-stone-800/50">
-          <p className="text-stone-500 dark:text-stone-400">
-            No recent activity. Ideas are waiting for attention.
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center">
+          <p className="text-muted-foreground mb-3">
+            The network is quiet right now. Be the first to share an idea.
           </p>
           <Link
-            href="/ideas"
-            className="mt-3 inline-block text-amber-600 hover:text-amber-500"
+            href="/"
+            className="text-primary hover:text-foreground transition-colors underline underline-offset-4"
           >
-            Browse ideas &rarr;
+            Share an idea &rarr;
           </Link>
         </div>
       ) : (
-        <div className="space-y-6">
-          {itemsWithActivity.map((item) => (
+        <div className="space-y-4">
+          {itemsWithActivity.map((item, idx) => (
             <article
               key={item.idea_id}
-              className="group rounded-xl border border-stone-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-stone-700 dark:bg-stone-800/60"
+              className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 animate-fade-in-up"
+              style={{ animationDelay: `${idx * 0.05}s` }}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <Link
                     href={`/ideas/${item.idea_id}`}
-                    className="text-lg font-medium text-stone-900 hover:text-amber-600 dark:text-stone-100 dark:hover:text-amber-400"
+                    className="text-lg font-medium hover:text-primary transition-colors duration-300"
                   >
                     {statusIcon(item.manifestation_status)} {item.name}
                   </Link>
-                  <div className="mt-1 flex items-center gap-3 text-sm text-stone-500 dark:text-stone-400">
+                  <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
                     <span>
                       Energy: {item.free_energy_score?.toFixed(1) || "?"}
                     </span>
                     <span>&middot;</span>
                     <span>
-                      Last active: {timeAgo(item.last_activity_at)}
+                      {timeAgo(item.last_activity_at)}
                     </span>
                   </div>
                 </div>
                 <Link
                   href={`/ideas/${item.idea_id}`}
-                  className="shrink-0 rounded-lg bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                  className="shrink-0 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
                 >
                   Join
                 </Link>
               </div>
 
               {item.activity && item.activity.length > 0 && (
-                <div className="mt-4 space-y-1.5 border-t border-stone-100 pt-3 dark:border-stone-700">
+                <div className="mt-4 space-y-1.5 border-t border-border/20 pt-3">
                   {item.activity.slice(0, 3).map((event, i) => (
                     <div
                       key={i}
-                      className="flex items-start gap-2 text-sm text-stone-600 dark:text-stone-400"
+                      className="flex items-start gap-2 text-sm text-muted-foreground"
                     >
                       <span className="shrink-0">
                         {activityIcon(event.type)}
                       </span>
                       <span className="flex-1">{event.summary}</span>
-                      <span className="shrink-0 text-xs text-stone-400 dark:text-stone-500">
+                      <span className="shrink-0 text-xs text-muted-foreground/60">
                         {timeAgo(event.timestamp)}
                       </span>
                     </div>
@@ -169,23 +170,15 @@ export default async function ResonancePage() {
         </div>
       )}
 
-      <footer className="mt-12 text-center text-sm text-stone-400 dark:text-stone-500">
-        <p>
-          This feed shows temporal activity &mdash; what people are working on
-          right now. No algorithm, no ranking. Just attention flowing to ideas.
-        </p>
-        <div className="mt-4 flex justify-center gap-4">
-          <Link href="/ideas" className="hover:text-amber-500">
-            All ideas
-          </Link>
-          <Link href="/contribute" className="hover:text-amber-500">
-            Contribute
-          </Link>
-          <Link href="/flow" className="hover:text-amber-500">
-            Pipeline
-          </Link>
+      {/* Where to go next */}
+      <nav className="mt-12 py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/ideas" className="text-muted-foreground hover:text-foreground transition-colors">All ideas</Link>
+          <Link href="/contribute" className="text-muted-foreground hover:text-foreground transition-colors">Contribute</Link>
+          <Link href="/invest" className="text-muted-foreground hover:text-foreground transition-colors">Invest</Link>
         </div>
-      </footer>
+      </nav>
     </main>
   );
 }
