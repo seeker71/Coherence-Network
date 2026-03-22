@@ -199,6 +199,53 @@ def _select_ollama_cloud_model() -> str | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Cursor model selection — data-driven via SlotSelector
+# ---------------------------------------------------------------------------
+
+# Tiers: map complexity → candidate models (cheapest to most capable)
+_CURSOR_MODEL_TIERS = {
+    "simple": [
+        "gpt-5.4-mini-low",         # cheapest — trivial tasks
+        "gpt-5.4-nano-medium",      # fast nano
+        "claude-4.6-sonnet-medium", # sonnet for simple coding
+    ],
+    "medium": [
+        "gpt-5.3-codex",            # default codex — good balance
+        "claude-4.6-sonnet-medium-thinking",  # sonnet with thinking
+        "gpt-5.4-medium",           # gpt-5.4 standard
+    ],
+    "complex": [
+        "claude-4.6-opus-high-thinking",  # opus with thinking — best for hard tasks
+        "gpt-5.3-codex-high",       # codex high compute
+        "gpt-5.4-high",             # gpt-5.4 high
+    ],
+}
+
+
+def _select_cursor_model(task_type: str, complexity: str = "medium") -> str:
+    """Select cursor model via SlotSelector — data determines which model wins.
+
+    Each complexity tier has candidate models. SlotSelector("cursor_model_{tier}")
+    picks based on measured success rates. New models get exploration boost.
+    """
+    tier = complexity if complexity in _CURSOR_MODEL_TIERS else "medium"
+    candidates = _CURSOR_MODEL_TIERS[tier]
+
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from app.services.slot_selection_service import SlotSelector
+        selector = SlotSelector(f"cursor_model_{tier}")
+        selected = selector.select(candidates)
+        if selected:
+            return selected
+    except Exception:
+        pass
+
+    # Fallback: first candidate in tier
+    return candidates[0]
+
+
 def _check_openrouter() -> bool:
     """Check if OpenRouter free-tier API is reachable with a simple prompt."""
     try:
@@ -383,6 +430,23 @@ def record_provider_outcome(
         )
         log.info("RECORDED task_type=%s provider=%s success=%s duration=%.1fs error_class=%s",
                  task_type, provider, success, duration, error_class)
+
+        # Record cursor model outcome for per-model learning
+        if provider == "cursor":
+            spec = PROVIDERS.get("cursor", {})
+            model = spec.get("_selected_model")
+            tier = spec.get("_model_tier", "medium")
+            if model:
+                model_selector = SlotSelector(f"cursor_model_{tier}")
+                model_selector.record(
+                    slot_id=model,
+                    value_score=1.0 if success else 0.0,
+                    resource_cost=max(duration, 0.1),
+                    error_class=error_class,
+                    duration_s=duration,
+                )
+                log.info("CURSOR_MODEL_RECORDED tier=%s model=%s success=%s duration=%.1fs",
+                         tier, model, success, duration)
     except Exception:
         log.warning("Failed to record provider outcome", exc_info=True)
 
@@ -867,6 +931,23 @@ def execute_with_provider(
 
     cmd = list(spec["cmd"])
     stdin_input = None
+
+    # Per-task model selection for cursor
+    if provider == "cursor" and complexity_estimate:
+        complexity = complexity_estimate.get("level", "medium")
+        model = _select_cursor_model(task_type, complexity)
+        cmd = ["agent", "--model", model, "-p"]
+        log.info("CURSOR_MODEL task=%s complexity=%s model=%s", task_type, complexity, model)
+
+        # Record model selection for SlotSelector learning
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+            from app.services.slot_selection_service import SlotSelector
+            # Store selected model in spec for post-task recording
+            spec["_selected_model"] = model
+            spec["_model_tier"] = complexity
+        except Exception:
+            pass
 
     if spec.get("stdin_prompt"):
         # ollama-style: prompt via stdin

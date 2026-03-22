@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -61,9 +61,29 @@ class FederationNodeRegisterResponse(BaseModel):
     last_seen_at: datetime
 
 
+class NodeCapabilities(BaseModel):
+    """Auto-discovered capability manifest for a federation node."""
+
+    executors: list[str] = Field(default_factory=list)
+    tools: list[str] = Field(default_factory=list)
+    hardware: dict = Field(default_factory=dict)
+    models_by_executor: dict[str, list[str]] = Field(default_factory=dict)
+    probed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class FleetCapabilitySummary(BaseModel):
+    """Aggregated fleet capability summary across registered nodes."""
+
+    total_nodes: int = 0
+    executors: dict = Field(default_factory=dict)
+    tools: dict = Field(default_factory=dict)
+    hardware_summary: dict = Field(default_factory=dict)
+
+
 class FederationNodeHeartbeatRequest(BaseModel):
     """Request body for POST /api/federation/nodes/{node_id}/heartbeat."""
     status: str = "online"
+    capabilities: NodeCapabilities | dict | None = None
 
 
 class FederationNodeHeartbeatResponse(BaseModel):
@@ -71,6 +91,7 @@ class FederationNodeHeartbeatResponse(BaseModel):
     node_id: str
     status: str
     last_seen_at: datetime
+    capabilities_refreshed: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -101,6 +122,8 @@ class MeasurementPushResponse(BaseModel):
     """Response after storing measurement summaries."""
     stored: int
     node_id: str
+    duplicates_skipped: int = 0
+    duplicates_replaced: int = 0
 
 
 class MeasurementSummaryStored(MeasurementSummary):
@@ -146,3 +169,27 @@ class FederationStrategyListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class FederationStrategyEffectivenessReportRequest(BaseModel):
+    """Node-reported outcome after acting on a strategy broadcast."""
+    node_id: str = Field(min_length=1)
+    was_applied: bool = True
+    baseline_value_score: float = Field(ge=0.0, le=1.0)
+    outcome_value_score: float = Field(ge=0.0, le=1.0)
+    observed_at: Optional[datetime] = None
+    context_json: dict = Field(default_factory=dict)
+
+
+class FederationStrategyEffectivenessReportResponse(BaseModel):
+    """Recorded effectiveness outcome for one acted-on strategy."""
+    strategy_id: int
+    strategy_type: str
+    strategy_target: str
+    node_id: str
+    was_applied: bool
+    baseline_value_score: float
+    outcome_value_score: float
+    improvement_score: float
+    improved: bool
+    recorded_at: datetime

@@ -19,15 +19,17 @@ from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
-from sqlalchemy import DateTime, Float, Integer, String, Text, Index, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, Index, func
 from sqlalchemy.orm import Mapped, Session, mapped_column
 from sqlalchemy.types import JSON
 
 from app.models.federation import (
     FederatedInstance,
     FederatedPayload,
+    FleetCapabilitySummary,
     FederationNodeRegisterRequest,
     FederationNodeRegisterResponse,
+    FederationStrategyEffectivenessReportRequest,
     FederationNodeHeartbeatResponse,
     FederationSyncResult,
     VALID_STRATEGY_TYPES,
@@ -103,6 +105,7 @@ class NodeMeasurementSummaryRecord(Base):
     mean_value_score: Mapped[float] = mapped_column(Float, nullable=False)
     error_classes_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     pushed_at: Mapped[str] = mapped_column(String, nullable=False)
+    dedup_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
 
     __table_args__ = (
         Index("idx_nms_node_dp", "node_id", "decision_point"),
@@ -124,6 +127,29 @@ class NodeStrategyBroadcastRecord(Base):
     __table_args__ = (
         Index("idx_nsb_strategy_type_created_at", "strategy_type", "created_at"),
         Index("idx_nsb_expires_at", "expires_at"),
+    )
+
+
+class NodeStrategyEffectivenessRecord(Base):
+    """Outcome tracking for acted-on strategy broadcasts."""
+    __tablename__ = "node_strategy_effectiveness"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    strategy_broadcast_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    strategy_type: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    strategy_target: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    node_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    was_applied: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    baseline_value_score: Mapped[float] = mapped_column(Float, nullable=False)
+    outcome_value_score: Mapped[float] = mapped_column(Float, nullable=False)
+    improvement_score: Mapped[float] = mapped_column(Float, nullable=False)
+    observed_at: Mapped[str] = mapped_column(String, nullable=False)
+    context_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("idx_nse_strategy_type_target", "strategy_type", "strategy_target"),
+        Index("idx_nse_created_at", "created_at"),
     )
 
 
@@ -404,7 +430,12 @@ def register_or_update_node(data: FederationNodeRegisterRequest) -> tuple[Federa
             return resp, True
 
 
-def heartbeat_node(node_id: str, status: str = "online") -> FederationNodeHeartbeatResponse | None:
+def heartbeat_node(
+    node_id: str,
+    status: str = "online",
+    capabilities: dict | None = None,
+    refresh_capabilities: bool = False,
+) -> FederationNodeHeartbeatResponse | None:
     """Update last_seen_at and status for a node. Returns None if not found."""
     _ensure_schema()
     now_iso = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
@@ -414,10 +445,18 @@ def heartbeat_node(node_id: str, status: str = "online") -> FederationNodeHeartb
             return None
         rec.last_seen_at = now_iso
         rec.status = status
+        capabilities_refreshed = False
+        if refresh_capabilities and capabilities is not None:
+            rec.capabilities_json = json.dumps(capabilities)
+            executors = capabilities.get("executors", [])
+            if isinstance(executors, list):
+                rec.providers_json = json.dumps(executors)
+            capabilities_refreshed = True
         return FederationNodeHeartbeatResponse(
             node_id=rec.node_id,
             status=rec.status,
             last_seen_at=datetime.fromisoformat(now_iso.replace("Z", "+00:00")),
+            capabilities_refreshed=capabilities_refreshed,
         )
 
 
@@ -439,6 +478,69 @@ def list_nodes() -> list[dict]:
             }
             for r in recs
         ]
+
+
+def get_fleet_capability_summary() -> FleetCapabilitySummary:
+    """Aggregate executor/tool/hardware availability across all nodes."""
+    _ensure_schema()
+    with _session() as s:
+        recs = s.query(FederationNodeRecord).all()
+
+    total_nodes = len(recs)
+    executor_map: dict[str, dict[str, object]] = {}
+    tool_map: dict[str, dict[str, int]] = {}
+    total_cpus = 0
+    total_memory_gb = 0.0
+    gpu_capable_nodes = 0
+
+    for rec in recs:
+        node_caps: dict = {}
+        try:
+            node_caps = json.loads(rec.capabilities_json or "{}")
+        except json.JSONDecodeError:
+            node_caps = {}
+
+        executors = node_caps.get("executors", [])
+        if isinstance(executors, list):
+            for executor in executors:
+                key = str(executor)
+                bucket = executor_map.setdefault(key, {"node_count": 0, "node_ids": []})
+                bucket["node_count"] = int(bucket.get("node_count", 0)) + 1
+                node_ids = bucket.get("node_ids", [])
+                if isinstance(node_ids, list):
+                    node_ids.append(rec.node_id)
+                    bucket["node_ids"] = node_ids
+
+        tools = node_caps.get("tools", [])
+        if isinstance(tools, list):
+            for tool in tools:
+                key = str(tool)
+                bucket = tool_map.setdefault(key, {"node_count": 0})
+                bucket["node_count"] = int(bucket.get("node_count", 0)) + 1
+
+        hardware = node_caps.get("hardware", {})
+        if isinstance(hardware, dict):
+            cpu_count = hardware.get("cpu_count")
+            if isinstance(cpu_count, int):
+                total_cpus += cpu_count
+
+            memory_total_gb = hardware.get("memory_total_gb")
+            if isinstance(memory_total_gb, (int, float)):
+                total_memory_gb += float(memory_total_gb)
+
+            if hardware.get("gpu_available") is True:
+                gpu_capable_nodes += 1
+
+    return FleetCapabilitySummary(
+        total_nodes=total_nodes,
+        executors=executor_map,
+        tools=tool_map,
+        hardware_summary={
+            "total_cpus": total_cpus,
+            "total_memory_gb": round(total_memory_gb, 2),
+            "gpu_capable_nodes": gpu_capable_nodes,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -477,12 +579,57 @@ def compute_local_valuation(remote_links: list, remote_events: list) -> dict:
 # Measurement summary storage (Spec 131)
 # ---------------------------------------------------------------------------
 
-def store_measurement_summaries(node_id: str, summaries: list[dict]) -> int:
-    """Bulk-insert measurement summaries for a node. Returns count stored."""
+def _compute_dedup_key(node_id: str, decision_point: str, slot_id: str,
+                       period_start: str, period_end: str) -> str:
+    """Deterministic SHA-256 hash of the measurement's natural key."""
+    raw = f"{node_id}|{decision_point}|{slot_id}|{period_start}|{period_end}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def store_measurement_summaries(node_id: str, summaries: list[dict]) -> dict:
+    """Bulk-insert measurement summaries with deduplication and conflict resolution.
+
+    Returns a dict with keys: stored, duplicates_skipped, duplicates_replaced.
+
+    Conflict resolution: when a summary with the same dedup_key already exists,
+    the incoming summary replaces it only if it has a higher sample_count
+    (more data = more accurate aggregate). Otherwise it is skipped.
+    """
     _ensure_schema()
     now_iso = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    stored = 0
+    duplicates_skipped = 0
+    duplicates_replaced = 0
+
     with _session() as s:
         for sm in summaries:
+            dedup_key = _compute_dedup_key(
+                node_id,
+                sm["decision_point"],
+                sm["slot_id"],
+                sm["period_start"],
+                sm["period_end"],
+            )
+            existing = (
+                s.query(NodeMeasurementSummaryRecord)
+                .filter_by(dedup_key=dedup_key)
+                .first()
+            )
+            if existing is not None:
+                if sm["sample_count"] > existing.sample_count:
+                    # Replace: incoming has more samples
+                    existing.sample_count = sm["sample_count"]
+                    existing.successes = sm["successes"]
+                    existing.failures = sm["failures"]
+                    existing.mean_duration_s = sm.get("mean_duration_s")
+                    existing.mean_value_score = sm["mean_value_score"]
+                    existing.error_classes_json = json.dumps(sm.get("error_classes_json", {}))
+                    existing.pushed_at = now_iso
+                    duplicates_replaced += 1
+                else:
+                    duplicates_skipped += 1
+                continue
+
             rec = NodeMeasurementSummaryRecord(
                 node_id=node_id,
                 decision_point=sm["decision_point"],
@@ -496,9 +643,16 @@ def store_measurement_summaries(node_id: str, summaries: list[dict]) -> int:
                 mean_value_score=sm["mean_value_score"],
                 error_classes_json=json.dumps(sm.get("error_classes_json", {})),
                 pushed_at=now_iso,
+                dedup_key=dedup_key,
             )
             s.add(rec)
-    return len(summaries)
+            stored += 1
+
+    return {
+        "stored": stored,
+        "duplicates_skipped": duplicates_skipped,
+        "duplicates_replaced": duplicates_replaced,
+    }
 
 
 def get_aggregated_node_stats(window_days: int | None = None) -> dict:
@@ -721,6 +875,101 @@ def list_measurement_summaries(
 _DEFAULT_STRATEGY_TTL = timedelta(hours=24)
 
 
+def _extract_strategy_target(strategy_type: str, payload_json: str) -> str:
+    """Normalize strategy payload into a deterministic target key."""
+    payload: dict = {}
+    try:
+        payload = json.loads(payload_json) if payload_json else {}
+    except json.JSONDecodeError:
+        payload = {}
+
+    if strategy_type == "provider_recommendation":
+        return str(payload.get("recommended_provider", "unknown"))
+    if strategy_type == "provider_warning":
+        return str(payload.get("warned_provider", "unknown"))
+    if strategy_type == "prompt_variant_winner":
+        task_type = str(payload.get("task_type", "unknown"))
+        winning_variant = str(payload.get("winning_variant", "unknown"))
+        return f"{task_type}:{winning_variant}"
+    return "unknown"
+
+
+def _get_effectiveness_summary() -> dict[tuple[str, str], dict]:
+    """Aggregate acted-on strategy outcomes for feedback-aware computation."""
+    _ensure_schema()
+    with _session() as s:
+        recs = (
+            s.query(NodeStrategyEffectivenessRecord)
+            .filter(NodeStrategyEffectivenessRecord.was_applied.is_(True))
+            .all()
+        )
+
+    summary: dict[tuple[str, str], dict] = {}
+    for rec in recs:
+        key = (rec.strategy_type, rec.strategy_target)
+        bucket = summary.setdefault(
+            key,
+            {"sample_count": 0, "improvement_sum": 0.0, "improved_count": 0},
+        )
+        bucket["sample_count"] += 1
+        bucket["improvement_sum"] += float(rec.improvement_score)
+        if rec.improvement_score > 0:
+            bucket["improved_count"] += 1
+
+    for bucket in summary.values():
+        sample_count = max(1, int(bucket["sample_count"]))
+        bucket["avg_improvement"] = round(bucket["improvement_sum"] / sample_count, 4)
+        bucket["positive_rate"] = round(bucket["improved_count"] / sample_count, 4)
+    return summary
+
+
+def record_strategy_effectiveness(
+    strategy_id: int,
+    report: FederationStrategyEffectivenessReportRequest,
+) -> dict:
+    """Record post-action effectiveness for a strategy broadcast."""
+    _ensure_schema()
+    now_iso = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    observed_at = report.observed_at or datetime.now(tz=timezone.utc)
+    observed_iso = observed_at.isoformat().replace("+00:00", "Z")
+
+    with _session() as s:
+        strategy = s.query(NodeStrategyBroadcastRecord).filter_by(id=strategy_id).first()
+        if strategy is None:
+            raise ValueError("strategy not found")
+
+        strategy_target = _extract_strategy_target(strategy.strategy_type, strategy.payload_json)
+        improvement_score = round(report.outcome_value_score - report.baseline_value_score, 4)
+
+        rec = NodeStrategyEffectivenessRecord(
+            strategy_broadcast_id=strategy_id,
+            strategy_type=strategy.strategy_type,
+            strategy_target=strategy_target,
+            node_id=report.node_id,
+            was_applied=report.was_applied,
+            baseline_value_score=report.baseline_value_score,
+            outcome_value_score=report.outcome_value_score,
+            improvement_score=improvement_score,
+            observed_at=observed_iso,
+            context_json=json.dumps(report.context_json),
+            created_at=now_iso,
+        )
+        s.add(rec)
+
+        return {
+            "strategy_id": strategy_id,
+            "strategy_type": strategy.strategy_type,
+            "strategy_target": strategy_target,
+            "node_id": report.node_id,
+            "was_applied": report.was_applied,
+            "baseline_value_score": report.baseline_value_score,
+            "outcome_value_score": report.outcome_value_score,
+            "improvement_score": improvement_score,
+            "improved": improvement_score > 0,
+            "recorded_at": observed_iso,
+        }
+
+
 def compute_and_store_strategies() -> list[dict]:
     """Compute strategy broadcasts from aggregated node stats and store them.
 
@@ -746,21 +995,35 @@ def compute_and_store_strategies() -> list[dict]:
     now_iso = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
     expires_iso = (datetime.now(tz=timezone.utc) + _DEFAULT_STRATEGY_TTL).isoformat().replace("+00:00", "Z")
 
+    feedback_summary = _get_effectiveness_summary()
     new_strategies: list[dict] = []
 
     for provider, pdata in providers.items():
         node_count = pdata.get("node_count", 0)
         success_rate = pdata.get("overall_success_rate", 0.0)
         total_samples = pdata.get("total_samples", 0)
+        feedback_key = ("provider_recommendation", provider)
+        feedback = feedback_summary.get(feedback_key)
+        if feedback and feedback["sample_count"] >= 3 and feedback["avg_improvement"] < -0.05:
+            continue
 
         # provider_recommendation: >90% success across 3+ nodes
         if success_rate > 0.9 and node_count >= 3:
+            confidence = float(success_rate)
+            if feedback:
+                confidence = max(0.0, min(1.0, confidence * (1.0 + feedback["avg_improvement"])))
             payload = {
                 "recommended_provider": provider,
-                "confidence": round(success_rate, 3),
+                "confidence": round(confidence, 3),
                 "node_count": node_count,
                 "total_samples": total_samples,
             }
+            if feedback:
+                payload["effectiveness_feedback"] = {
+                    "sample_count": feedback["sample_count"],
+                    "avg_improvement": feedback["avg_improvement"],
+                    "positive_rate": feedback["positive_rate"],
+                }
             new_strategies.append({
                 "strategy_type": "provider_recommendation",
                 "payload_json": json.dumps(payload),
@@ -771,12 +1034,19 @@ def compute_and_store_strategies() -> list[dict]:
 
         # provider_warning: <50% success across multiple (2+) nodes
         if success_rate < 0.5 and node_count >= 2:
+            warning_feedback = feedback_summary.get(("provider_warning", provider))
             payload = {
                 "warned_provider": provider,
                 "success_rate": round(success_rate, 3),
                 "node_count": node_count,
                 "total_samples": total_samples,
             }
+            if warning_feedback:
+                payload["effectiveness_feedback"] = {
+                    "sample_count": warning_feedback["sample_count"],
+                    "avg_improvement": warning_feedback["avg_improvement"],
+                    "positive_rate": warning_feedback["positive_rate"],
+                }
             new_strategies.append({
                 "strategy_type": "provider_warning",
                 "payload_json": json.dumps(payload),
@@ -801,11 +1071,21 @@ def compute_and_store_strategies() -> list[dict]:
                         best_rate = rate
                         best_provider = prov
                 if best_provider and best_rate > 0.0:
+                    target = f"{tt}:{best_provider}"
+                    winner_feedback = feedback_summary.get(("prompt_variant_winner", target))
+                    if winner_feedback and winner_feedback["sample_count"] >= 3 and winner_feedback["avg_improvement"] < -0.05:
+                        continue
                     payload = {
                         "task_type": tt,
                         "winning_variant": best_provider,
                         "success_rate": round(best_rate, 3),
                     }
+                    if winner_feedback:
+                        payload["effectiveness_feedback"] = {
+                            "sample_count": winner_feedback["sample_count"],
+                            "avg_improvement": winner_feedback["avg_improvement"],
+                            "positive_rate": winner_feedback["positive_rate"],
+                        }
                     new_strategies.append({
                         "strategy_type": "prompt_variant_winner",
                         "payload_json": json.dumps(payload),
@@ -826,6 +1106,8 @@ def compute_and_store_strategies() -> list[dict]:
                     expires_at=st["expires_at"],
                 )
                 s.add(rec)
+                s.flush()
+                st["id"] = rec.id
 
     return new_strategies
 

@@ -63,7 +63,7 @@ def _summary(
 # ---------------------------------------------------------------------------
 
 def test_post_summaries_201(client):
-    """Valid batch returns 201 with stored count."""
+    """Valid batch returns 201 with stored count and dedup fields."""
     resp = client.post(
         "/api/federation/nodes/node-alpha/measurements",
         json={"summaries": [_summary()]},
@@ -72,6 +72,8 @@ def test_post_summaries_201(client):
     body = resp.json()
     assert body["stored"] == 1
     assert body["node_id"] == "node-alpha"
+    assert body["duplicates_skipped"] == 0
+    assert body["duplicates_replaced"] == 0
 
 
 def test_post_node_id_mismatch_422(client):
@@ -305,3 +307,135 @@ def test_push_hub_unreachable_no_exception(tmp_path, caplog):
             ok = push_to_hub("http://unreachable:9999", "n", [{"fake": "summary"}])
     assert ok is False
     assert any("unreachable" in r.message.lower() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# Deduplication and conflict resolution tests
+# ---------------------------------------------------------------------------
+
+def test_duplicate_same_sample_count_skipped(client):
+    """Pushing the exact same summary twice skips the duplicate."""
+    s = _summary()
+    resp1 = client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [s]},
+    )
+    assert resp1.status_code == 201
+    assert resp1.json()["stored"] == 1
+
+    resp2 = client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [s]},
+    )
+    assert resp2.status_code == 201
+    body2 = resp2.json()
+    assert body2["stored"] == 0
+    assert body2["duplicates_skipped"] == 1
+    assert body2["duplicates_replaced"] == 0
+
+    # Only one row in DB
+    get_resp = client.get("/api/federation/nodes/node-alpha/measurements")
+    assert get_resp.json()["total"] == 1
+
+
+def test_duplicate_lower_sample_count_skipped(client):
+    """Incoming summary with fewer samples is skipped."""
+    s_high = _summary(sample_count=20, successes=15, failures=5, mean_value_score=0.8)
+    client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [s_high]},
+    )
+
+    s_low = _summary(sample_count=5, successes=4, failures=1, mean_value_score=0.9)
+    resp = client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [s_low]},
+    )
+    assert resp.json()["duplicates_skipped"] == 1
+    assert resp.json()["stored"] == 0
+
+    # DB still has original high-sample summary
+    get_resp = client.get("/api/federation/nodes/node-alpha/measurements")
+    stored = get_resp.json()["summaries"][0]
+    assert stored["sample_count"] == 20
+    assert stored["mean_value_score"] == 0.8
+
+
+def test_duplicate_higher_sample_count_replaces(client):
+    """Incoming summary with more samples replaces the existing one."""
+    s_low = _summary(sample_count=5, successes=4, failures=1, mean_value_score=0.9)
+    client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [s_low]},
+    )
+
+    s_high = _summary(sample_count=20, successes=15, failures=5, mean_value_score=0.75)
+    resp = client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [s_high]},
+    )
+    body = resp.json()
+    assert body["stored"] == 0
+    assert body["duplicates_replaced"] == 1
+    assert body["duplicates_skipped"] == 0
+
+    # DB now has the higher-sample summary
+    get_resp = client.get("/api/federation/nodes/node-alpha/measurements")
+    assert get_resp.json()["total"] == 1
+    stored = get_resp.json()["summaries"][0]
+    assert stored["sample_count"] == 20
+    assert stored["mean_value_score"] == 0.75
+
+
+def test_different_nodes_same_period_not_deduplicated(client):
+    """Two different nodes measuring the same provider/period are both stored."""
+    s_alpha = _summary(node_id="node-alpha")
+    s_beta = _summary(node_id="node-beta")
+
+    resp_a = client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [s_alpha]},
+    )
+    assert resp_a.json()["stored"] == 1
+
+    resp_b = client.post(
+        "/api/federation/nodes/node-beta/measurements",
+        json={"summaries": [s_beta]},
+    )
+    assert resp_b.json()["stored"] == 1
+    assert resp_b.json()["duplicates_skipped"] == 0
+
+
+def test_different_slots_same_period_not_deduplicated(client):
+    """Same node, same period, different slot_ids are stored separately."""
+    s1 = _summary(slot_id="provider-a")
+    s2 = _summary(slot_id="provider-b")
+    resp = client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [s1, s2]},
+    )
+    assert resp.json()["stored"] == 2
+    assert resp.json()["duplicates_skipped"] == 0
+
+
+def test_mixed_batch_dedup(client):
+    """Batch with some new, some duplicate summaries returns correct counts."""
+    # Seed an existing summary
+    client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": [_summary(slot_id="existing")]},
+    )
+
+    # Push batch: one duplicate (same slot, same period), one new
+    batch = [
+        _summary(slot_id="existing"),   # duplicate - skip
+        _summary(slot_id="brand-new"),  # new - store
+    ]
+    resp = client.post(
+        "/api/federation/nodes/node-alpha/measurements",
+        json={"summaries": batch},
+    )
+    body = resp.json()
+    assert body["stored"] == 1
+    assert body["duplicates_skipped"] == 1
+    assert body["duplicates_replaced"] == 0

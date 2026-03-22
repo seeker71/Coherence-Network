@@ -12,6 +12,8 @@ import socket
 from pathlib import Path
 from uuid import getnode
 
+from app.services.capability_probe import CapabilityProbe
+
 
 IDENTITY_DIR = Path.home() / ".coherence-network"
 IDENTITY_FILE = IDENTITY_DIR / "node_id"
@@ -49,10 +51,11 @@ def get_node_metadata() -> dict:
     """Return metadata about the current node."""
     os_map = {"Darwin": "macos", "Windows": "windows", "Linux": "linux"}
     os_type = os_map.get(platform.system(), "linux")
+    capabilities = CapabilityProbe.probe()
     return {
         "node_id": get_or_create_node_id(),
         "hostname": socket.gethostname(),
         "os_type": os_type,
-        "providers": [],
-        "capabilities": {},
+        "providers": capabilities.executors,
+        "capabilities": capabilities.model_dump(mode="json"),
     }

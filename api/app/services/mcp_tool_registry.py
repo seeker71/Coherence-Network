@@ -266,8 +266,8 @@ def push_measurements_handler(arguments: dict[str, Any]) -> Any:
     summaries = arguments.get("summaries", [])
     if not isinstance(summaries, list):
         return {"error": "summaries must be a list"}
-    count = federation_service.store_measurement_summaries(node_id, summaries)
-    return {"stored": count, "node_id": node_id}
+    result = federation_service.store_measurement_summaries(node_id, summaries)
+    return {"node_id": node_id, **result}
 
 
 def record_usage_handler(arguments: dict[str, Any]) -> Any:

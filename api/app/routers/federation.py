@@ -8,9 +8,13 @@ from app.middleware.auth import require_api_key
 from app.models.federation import (
     FederatedInstance,
     FederatedPayload,
+    FleetCapabilitySummary,
     FederationNodeHeartbeatRequest,
+    FederationNodeHeartbeatResponse,
     FederationNodeRegisterRequest,
     FederationNodeRegisterResponse,
+    FederationStrategyEffectivenessReportRequest,
+    FederationStrategyEffectivenessReportResponse,
     FederationStrategyListResponse,
     FederationSyncResult,
     MeasurementListResponse,
@@ -69,10 +73,26 @@ async def register_node(body: FederationNodeRegisterRequest):
     return JSONResponse(content=resp.model_dump(mode="json"), status_code=status_code)
 
 
-@router.post("/federation/nodes/{node_id}/heartbeat")
-async def heartbeat_node(node_id: str, body: FederationNodeHeartbeatRequest):
+@router.post("/federation/nodes/{node_id}/heartbeat", response_model=FederationNodeHeartbeatResponse)
+async def heartbeat_node(
+    node_id: str,
+    body: FederationNodeHeartbeatRequest,
+    refresh_capabilities: bool = Query(default=False),
+):
     """Refresh liveness for a previously registered node."""
-    result = federation_service.heartbeat_node(node_id, status=body.status)
+    capabilities_payload = None
+    if body.capabilities is not None:
+        capabilities_payload = (
+            body.capabilities.model_dump(mode="json")
+            if hasattr(body.capabilities, "model_dump")
+            else body.capabilities
+        )
+    result = federation_service.heartbeat_node(
+        node_id,
+        status=body.status,
+        capabilities=capabilities_payload,
+        refresh_capabilities=refresh_capabilities,
+    )
     if result is None:
         raise HTTPException(status_code=404, detail="Node not found")
     return result
@@ -82,6 +102,12 @@ async def heartbeat_node(node_id: str, body: FederationNodeHeartbeatRequest):
 async def list_nodes():
     """List all registered federation nodes."""
     return federation_service.list_nodes()
+
+
+@router.get("/federation/nodes/capabilities", response_model=FleetCapabilitySummary)
+async def get_fleet_capabilities():
+    """Return aggregated fleet capability coverage."""
+    return federation_service.get_fleet_capability_summary()
 
 
 # ---------------------------------------------------------------------------
@@ -120,8 +146,13 @@ async def post_measurement_summaries(node_id: str, body: MeasurementPushRequest)
                 ),
             )
     summaries_dicts = [s.model_dump(mode="json") for s in body.summaries]
-    stored = federation_service.store_measurement_summaries(node_id, summaries_dicts)
-    return MeasurementPushResponse(stored=stored, node_id=node_id)
+    result = federation_service.store_measurement_summaries(node_id, summaries_dicts)
+    return MeasurementPushResponse(
+        stored=result["stored"],
+        node_id=node_id,
+        duplicates_skipped=result["duplicates_skipped"],
+        duplicates_replaced=result["duplicates_replaced"],
+    )
 
 
 @router.get(
@@ -190,3 +221,20 @@ async def compute_strategies():
     """Trigger computation of new strategy broadcasts from current data."""
     new_strategies = federation_service.compute_and_store_strategies()
     return {"computed": len(new_strategies), "strategies": new_strategies}
+
+
+@router.post(
+    "/federation/strategies/{strategy_id}/effectiveness",
+    response_model=FederationStrategyEffectivenessReportResponse,
+    status_code=201,
+)
+async def report_strategy_effectiveness(
+    strategy_id: int,
+    body: FederationStrategyEffectivenessReportRequest,
+):
+    """Record whether acting on a strategy improved outcome metrics."""
+    try:
+        report = federation_service.record_strategy_effectiveness(strategy_id=strategy_id, report=body)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return FederationStrategyEffectivenessReportResponse(**report)

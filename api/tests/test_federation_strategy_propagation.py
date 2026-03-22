@@ -305,3 +305,69 @@ def test_empty_data_returns_empty_strategies(client):
     body2 = resp2.json()
     assert body2["strategies"] == []
     assert body2["total"] == 0
+
+
+def test_strategy_effectiveness_report_tracks_improvement(client):
+    """Acted-on strategy reports compute and persist improvement score."""
+    _seed_high_success_provider(client)
+    compute = client.post("/api/federation/strategies/compute")
+    assert compute.status_code == 200
+    recommendation = next(
+        s for s in compute.json()["strategies"]
+        if s["strategy_type"] == "provider_recommendation"
+    )
+
+    report = client.post(
+        f"/api/federation/strategies/{recommendation['id']}/effectiveness",
+        json={
+            "node_id": "node-aabbccdd001100",
+            "was_applied": True,
+            "baseline_value_score": 0.40,
+            "outcome_value_score": 0.65,
+            "context_json": {"decision_point": "provider_code_gen"},
+        },
+    )
+    assert report.status_code == 201
+    body = report.json()
+    assert body["strategy_id"] == recommendation["id"]
+    assert body["was_applied"] is True
+    assert body["improved"] is True
+    assert body["improvement_score"] == pytest.approx(0.25, abs=1e-6)
+    assert body["strategy_type"] == "provider_recommendation"
+    assert body["strategy_target"] == "openrouter/deepseek-v3"
+
+
+def test_strategy_computation_uses_effectiveness_feedback(client):
+    """Consistently negative outcomes suppress re-broadcast of same recommendation."""
+    _seed_high_success_provider(client)
+    first = client.post("/api/federation/strategies/compute")
+    assert first.status_code == 200
+    recommendation = next(
+        s for s in first.json()["strategies"]
+        if s["strategy_type"] == "provider_recommendation"
+    )
+
+    # Three negative outcomes are enough to suppress this strategy target.
+    for idx in range(3):
+        r = client.post(
+            f"/api/federation/strategies/{recommendation['id']}/effectiveness",
+            json={
+                "node_id": f"node-aabbccdd0011{idx:02d}",
+                "was_applied": True,
+                "baseline_value_score": 0.70,
+                "outcome_value_score": 0.40,
+                "context_json": {"reason": "regressed"},
+            },
+        )
+        assert r.status_code == 201
+
+    second = client.post("/api/federation/strategies/compute")
+    assert second.status_code == 200
+    second_recommendations = [
+        s for s in second.json()["strategies"]
+        if s["strategy_type"] == "provider_recommendation"
+    ]
+    assert all(
+        json.loads(s["payload_json"]).get("recommended_provider") != "openrouter/deepseek-v3"
+        for s in second_recommendations
+    )
