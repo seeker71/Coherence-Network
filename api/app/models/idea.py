@@ -16,6 +16,25 @@ class ManifestationStatus(str, Enum):
     VALIDATED = "validated"
 
 
+class IdeaStage(str, Enum):
+    NONE = "none"
+    SPECCED = "specced"
+    IMPLEMENTING = "implementing"
+    TESTING = "testing"
+    REVIEWING = "reviewing"
+    COMPLETE = "complete"
+
+
+IDEA_STAGE_ORDER: list[IdeaStage] = [
+    IdeaStage.NONE,
+    IdeaStage.SPECCED,
+    IdeaStage.IMPLEMENTING,
+    IdeaStage.TESTING,
+    IdeaStage.REVIEWING,
+    IdeaStage.COMPLETE,
+]
+
+
 class IdeaType(str, Enum):
     SUPER = "super"           # Strategic goal; never picked up for direct work
     CHILD = "child"           # Actionable sub-idea; can be picked up
@@ -52,6 +71,7 @@ class Idea(BaseModel):
     idea_type: IdeaType = IdeaType.STANDALONE
     parent_idea_id: Optional[str] = None
     child_idea_ids: list[str] = Field(default_factory=list)
+    stage: IdeaStage = IdeaStage.NONE
     value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
@@ -140,6 +160,7 @@ class IdeaUpdate(BaseModel):
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
     confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     manifestation_status: Optional[ManifestationStatus] = None
+    stage: Optional[IdeaStage] = None
 
 
 class IdeaCreate(BaseModel):
@@ -159,6 +180,7 @@ class IdeaCreate(BaseModel):
     parent_idea_id: Optional[str] = None
     child_idea_ids: Optional[list[str]] = None
     manifestation_status: Optional[ManifestationStatus] = None
+    stage: Optional[IdeaStage] = None
     value_basis: Optional[dict[str, str]] = None
 
 
@@ -187,3 +209,44 @@ class GovernanceHealth(BaseModel):
     validated_ideas: int = Field(ge=0)
     snapshot_at: str = Field(description="ISO 8601 UTC timestamp")
     window_days: int = Field(default=30, ge=1)
+
+
+class IdeaTaskStatusCounts(BaseModel):
+    """Status breakdown for tasks of a given type."""
+    pending: int = 0
+    running: int = 0
+    completed: int = 0
+    failed: int = 0
+    needs_decision: int = 0
+
+
+class IdeaTaskGroup(BaseModel):
+    """Tasks of a single type linked to an idea."""
+    task_type: str
+    count: int
+    status_counts: IdeaTaskStatusCounts
+    tasks: list[dict]
+
+
+class IdeaTasksResponse(BaseModel):
+    """All tasks linked to an idea, grouped by type."""
+    idea_id: str
+    total: int
+    groups: list[IdeaTaskGroup]
+
+
+class StageSetRequest(BaseModel):
+    """Body for POST /api/ideas/{idea_id}/stage."""
+    stage: IdeaStage
+
+
+class StageBucket(BaseModel):
+    count: int = 0
+    idea_ids: list[str] = Field(default_factory=list)
+
+
+class ProgressDashboard(BaseModel):
+    total_ideas: int = 0
+    completion_pct: float = 0.0
+    by_stage: dict[str, StageBucket] = Field(default_factory=dict)
+    snapshot_at: str = Field(description="ISO 8601 UTC timestamp")

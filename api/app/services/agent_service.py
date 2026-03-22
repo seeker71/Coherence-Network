@@ -46,6 +46,7 @@ from app.services.agent_service_list import (
     get_review_summary,
     get_task_count,
     list_tasks,
+    list_tasks_for_idea,
 )
 
 # Completion / idea_id
