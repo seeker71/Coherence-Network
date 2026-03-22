@@ -526,13 +526,17 @@ def get_aggregated_node_stats(window_days: int | None = None) -> dict:
             }
 
         # Fetch measurement summaries within window
-        summaries = (
-            s.query(NodeMeasurementSummaryRecord)
+        summary_rows = (
+            s.query(NodeMeasurementSummaryRecord, FederationNodeRecord)
+            .outerjoin(
+                FederationNodeRecord,
+                NodeMeasurementSummaryRecord.node_id == FederationNodeRecord.node_id,
+            )
             .filter(NodeMeasurementSummaryRecord.pushed_at >= cutoff)
             .all()
         )
 
-    if not summaries:
+    if not summary_rows:
         return {
             "nodes": nodes,
             "providers": {},
@@ -550,10 +554,27 @@ def get_aggregated_node_stats(window_days: int | None = None) -> dict:
 
     total_measurements = 0
 
-    for sm in summaries:
+    for sm, node_rec in summary_rows:
         provider = sm.slot_id
         node_id = sm.node_id
         total_measurements += sm.sample_count
+
+        # Ensure nodes that appear in measurements are represented.
+        if node_id not in nodes:
+            if node_rec is not None:
+                nodes[node_id] = {
+                    "hostname": node_rec.hostname,
+                    "os_type": node_rec.os_type,
+                    "status": node_rec.status,
+                    "last_seen_at": node_rec.last_seen_at,
+                }
+            else:
+                nodes[node_id] = {
+                    "hostname": "",
+                    "os_type": "",
+                    "status": "unknown",
+                    "last_seen_at": "",
+                }
 
         provider_node_data.setdefault(provider, {}).setdefault(node_id, []).append(sm)
 

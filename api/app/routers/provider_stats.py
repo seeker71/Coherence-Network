@@ -198,7 +198,7 @@ async def get_provider_stats() -> dict:
 
 
 @router.get("/stats/network")
-async def get_network_provider_stats(window_days: int = 7) -> dict:
+async def get_network_provider_stats(window_days: int | None = None) -> dict:
     """Network-wide provider stats from federation nodes.
 
     Shaped to be compatible with /api/providers/stats response plus a `nodes` field.
