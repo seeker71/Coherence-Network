@@ -202,7 +202,16 @@ class SlotSelector:
         slots: list[str],
         slot_data: dict[str, list[dict]],
     ) -> dict[str, float]:
-        """Compute Thompson Sampling weights.
+        """Compute Thompson Sampling weights using Beta distribution.
+
+        Every slot uses Beta(alpha, beta) — even zero-sample slots.
+        The prior (alpha=1, beta=1) is uniform, so unseen slots get a fair
+        random draw. As data accumulates, the distribution tightens around
+        the true success rate. This means:
+        - 0 samples: uniform random (fair exploration)
+        - 2 samples, 2 successes: high draw, biased toward selection
+        - 2 samples, 0 successes: low draw, naturally deprioritized
+        - 13 samples, 12 successes: tight distribution near 92%
 
         Blocked slots get a tiny probe weight (0.02) instead of zero,
         so they're periodically retested after cooldown.
@@ -216,13 +225,11 @@ class SlotSelector:
                 weights[sid] = 0.02  # tiny probe weight, not zero
                 continue
 
-            if n < 5:
-                weights[sid] = 0.2  # exploration boost
-            else:
-                total_value = sum(r["value_score"] for r in records)
-                alpha = 1.0 + total_value
-                beta = 1.0 + (n - total_value)
-                weights[sid] = random.betavariate(alpha, beta)
+            total_value = sum(r["value_score"] for r in records)
+            # Beta(1 + successes, 1 + failures) — uniform prior
+            alpha = 1.0 + total_value
+            beta_param = 1.0 + (n - total_value)
+            weights[sid] = random.betavariate(alpha, beta_param)
 
         return weights
 
