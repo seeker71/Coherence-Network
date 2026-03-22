@@ -11,10 +11,27 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
-try:
+import sys
+
+if sys.platform == "win32":
+    import msvcrt
+
+    def _lock(f):
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+    def _unlock(f):
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+else:
     import fcntl
-except ImportError:  # pragma: no cover - non-posix fallback
-    fcntl = None
+
+    def _lock(f):
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+
+    def _unlock(f):
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 from sqlalchemy import DateTime, Integer, String, Text, create_engine, inspect
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -69,13 +86,11 @@ def _local_file_lock():
     lock_path = _fallback_lock_path()
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+", encoding="utf-8") as lock_file:
-        if fcntl is not None:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        _lock(lock_file)
         try:
             yield
         finally:
-            if fcntl is not None:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            _unlock(lock_file)
 
 
 def _database_url() -> str:

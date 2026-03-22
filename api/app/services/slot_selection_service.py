@@ -18,12 +18,32 @@ Usage:
 """
 from __future__ import annotations
 
-import fcntl
 import json
 import logging
 import random
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+if sys.platform == "win32":
+    import msvcrt
+
+    def _lock(f):
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+    def _unlock(f):
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+else:
+    import fcntl
+
+    def _lock(f):
+        fcntl.flock(f, fcntl.LOCK_EX)
+
+    def _unlock(f):
+        fcntl.flock(f, fcntl.LOCK_UN)
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +147,7 @@ class SlotSelector:
             measurement["raw_signals"] = raw_signals
 
         with open(self.store_path, "a+" if self.store_path.exists() else "w+") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
+            _lock(f)
             try:
                 f.seek(0)
                 content = f.read().strip()
@@ -137,7 +157,7 @@ class SlotSelector:
                 f.truncate()
                 json.dump(measurements, f, indent=2)
             finally:
-                fcntl.flock(f, fcntl.LOCK_UN)
+                _unlock(f)
 
         return measurement
 
