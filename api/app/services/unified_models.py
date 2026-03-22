@@ -60,5 +60,7 @@ from app.services.value_lineage_service import (  # noqa: F401
 # ---------------------------------------------------------------------------
 from app.services.federation_service import (  # noqa: F401
     FederatedInstanceRecord,
+    FederationNodeRecord,
     FederationSyncHistoryRecord,
+    NodeMeasurementSummaryRecord,
 )
