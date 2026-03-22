@@ -5,6 +5,7 @@ import { getApiBase } from "@/lib/api";
 /** Primary nav — the 4 things most visitors want. */
 const PRIMARY_NAV = [
   { href: "/ideas", label: "Ideas" },
+  { href: "/invest", label: "Invest" },
   { href: "/contribute", label: "Contribute" },
   { href: "/tasks", label: "Work" },
   { href: "/flow", label: "Progress" },
