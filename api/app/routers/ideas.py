@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
 from app.middleware.auth import require_api_key
 
@@ -206,6 +207,26 @@ async def fork_idea_endpoint(
             source_idea_id=idea_id,
             forker_id=forker_id,
             adaptation_notes=adaptation_notes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+class StakeRequest(BaseModel):
+    contributor_id: str
+    amount_cc: float
+    rationale: str | None = None
+
+
+@router.post("/ideas/{idea_id}/stake")
+async def stake_on_idea(idea_id: str, body: StakeRequest, _key: str = Depends(require_api_key)) -> dict:
+    """Stake CC on an idea (requires API key)."""
+    try:
+        return idea_service.stake_on_idea(
+            idea_id=idea_id,
+            contributor_id=body.contributor_id,
+            amount_cc=body.amount_cc,
+            rationale=body.rationale,
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

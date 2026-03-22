@@ -1,0 +1,209 @@
+"""Contribution Ledger — append-only persistent record of all contributor resources.
+
+Every resource a contributor puts into the system is recorded here. Records are
+never deleted or updated. The ledger uses the unified SQLite store (same pattern
+as federation_service.py).
+"""
+
+from __future__ import annotations
+
+import json
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from uuid import uuid4
+
+from sqlalchemy import DateTime, Float, String, Text
+from sqlalchemy.orm import Mapped, Session, mapped_column
+
+from app.services import unified_db as _udb
+from app.services.unified_db import Base
+
+
+# ---------------------------------------------------------------------------
+# ORM model
+# ---------------------------------------------------------------------------
+
+class ContributionLedgerRecord(Base):
+    __tablename__ = "contribution_ledger"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    contributor_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    contribution_type: Mapped[str] = mapped_column(String, nullable=False)
+    idea_id: Mapped[str] = mapped_column(String, nullable=True)
+    amount_cc: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    metadata_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+# ---------------------------------------------------------------------------
+# DB helpers
+# ---------------------------------------------------------------------------
+
+def _ensure_schema() -> None:
+    _udb.ensure_schema()
+
+
+@contextmanager
+def _session() -> Session:
+    with _udb.session() as s:
+        yield s
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+
+VALID_CONTRIBUTION_TYPES = {"compute", "attention", "direction", "stake", "infrastructure", "code"}
+
+
+def record_contribution(
+    contributor_id: str,
+    contribution_type: str,
+    amount_cc: float,
+    idea_id: str | None = None,
+    metadata: dict | None = None,
+) -> dict:
+    """Record a single contribution. Returns the record as a dict."""
+    _ensure_schema()
+    if contribution_type not in VALID_CONTRIBUTION_TYPES:
+        raise ValueError(f"Invalid contribution type: {contribution_type}")
+
+    record_id = f"clr_{uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    meta_json = json.dumps(metadata or {})
+
+    rec = ContributionLedgerRecord(
+        id=record_id,
+        contributor_id=contributor_id,
+        contribution_type=contribution_type,
+        idea_id=idea_id,
+        amount_cc=round(float(amount_cc), 4),
+        metadata_json=meta_json,
+        recorded_at=now,
+    )
+    with _session() as s:
+        s.add(rec)
+
+    return {
+        "id": record_id,
+        "contributor_id": contributor_id,
+        "contribution_type": contribution_type,
+        "idea_id": idea_id,
+        "amount_cc": round(float(amount_cc), 4),
+        "metadata_json": meta_json,
+        "recorded_at": now.isoformat(),
+    }
+
+
+def get_contributor_balance(contributor_id: str) -> dict:
+    """Return total CC by contribution type + grand total for a contributor."""
+    _ensure_schema()
+    with _session() as s:
+        recs = (
+            s.query(ContributionLedgerRecord)
+            .filter_by(contributor_id=contributor_id)
+            .all()
+        )
+
+    totals_by_type: dict[str, float] = {}
+    grand_total = 0.0
+    for rec in recs:
+        totals_by_type.setdefault(rec.contribution_type, 0.0)
+        totals_by_type[rec.contribution_type] += rec.amount_cc
+        grand_total += rec.amount_cc
+
+    return {
+        "contributor_id": contributor_id,
+        "totals_by_type": {k: round(v, 4) for k, v in totals_by_type.items()},
+        "grand_total": round(grand_total, 4),
+    }
+
+
+def get_contributor_history(contributor_id: str, limit: int = 50) -> list[dict]:
+    """Return contribution records for a contributor, newest first."""
+    _ensure_schema()
+    effective_limit = max(1, min(limit, 500))
+    with _session() as s:
+        recs = (
+            s.query(ContributionLedgerRecord)
+            .filter_by(contributor_id=contributor_id)
+            .order_by(ContributionLedgerRecord.recorded_at.desc())
+            .limit(effective_limit)
+            .all()
+        )
+
+    return [
+        {
+            "id": rec.id,
+            "contributor_id": rec.contributor_id,
+            "contribution_type": rec.contribution_type,
+            "idea_id": rec.idea_id,
+            "amount_cc": rec.amount_cc,
+            "metadata_json": rec.metadata_json,
+            "recorded_at": rec.recorded_at.isoformat() if rec.recorded_at else None,
+        }
+        for rec in recs
+    ]
+
+
+def get_idea_investments(idea_id: str) -> list[dict]:
+    """Return all contributions for a specific idea."""
+    _ensure_schema()
+    with _session() as s:
+        recs = (
+            s.query(ContributionLedgerRecord)
+            .filter_by(idea_id=idea_id)
+            .order_by(ContributionLedgerRecord.recorded_at.desc())
+            .all()
+        )
+
+    return [
+        {
+            "id": rec.id,
+            "contributor_id": rec.contributor_id,
+            "contribution_type": rec.contribution_type,
+            "idea_id": rec.idea_id,
+            "amount_cc": rec.amount_cc,
+            "metadata_json": rec.metadata_json,
+            "recorded_at": rec.recorded_at.isoformat() if rec.recorded_at else None,
+        }
+        for rec in recs
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Founding contributions (idempotent one-time migration)
+# ---------------------------------------------------------------------------
+
+def record_founding_contributions(contributor_id: str = "urs-muff") -> list[dict]:
+    """Record the resources already contributed by the founding contributor.
+
+    Idempotent: checks if founding contributions already exist before inserting.
+    """
+    _ensure_schema()
+
+    # Check if already recorded
+    with _session() as s:
+        existing = (
+            s.query(ContributionLedgerRecord)
+            .filter_by(contributor_id=contributor_id)
+            .filter(ContributionLedgerRecord.metadata_json.contains('"founding": true'))
+            .first()
+        )
+        if existing is not None:
+            return []
+
+    contributions = [
+        ("compute", None, 28.0, {"tasks": 92, "success_rate": 0.93, "hours": 2.8, "founding": True}),
+        ("direction", None, 50.0, {"specs_created": 50, "ideas_created": 13, "founding": True}),
+        ("code", None, 62.0, {"commits": 62, "session": "2026-03-21/22", "founding": True}),
+        ("infrastructure", None, 30.0, {"vps": "hostinger", "node": "mac-m4", "providers": 6, "founding": True}),
+    ]
+
+    results = []
+    for ctype, idea_id, amount, meta in contributions:
+        result = record_contribution(contributor_id, ctype, amount, idea_id, meta)
+        results.append(result)
+    return results

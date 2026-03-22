@@ -107,10 +107,11 @@ DEFAULT_STAGE_WEIGHTS: dict[str, float] = {
     "research": 0.15,
     "spec": 0.15,
     "spec_upgrade": 0.11,
-    "implementation": 0.37,
+    "implementation": 0.26,
     "review": 0.15,
+    "staker": 0.11,
 }
-# Sum = 1.0 (normalized from original 1.35, preserving relative ratios)
+# Sum = 1.0 (implementation reduced from 0.37 to 0.26 to make room for staker)
 
 # Backward-compatible alias for older call sites and docs.
 DEFAULT_ROLE_WEIGHTS = DEFAULT_STAGE_WEIGHTS
