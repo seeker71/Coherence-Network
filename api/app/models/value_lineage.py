@@ -7,7 +7,7 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-LineageStage = Literal["idea", "research", "spec", "spec_upgrade", "implementation", "review"]
+LineageStage = Literal["idea", "research", "spec", "spec_upgrade", "implementation", "review", "staker"]
 
 
 class LineageContributors(BaseModel):

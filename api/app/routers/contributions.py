@@ -229,6 +229,45 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
     )
 
 
+# ---------------------------------------------------------------------------
+# Contribution Ledger endpoints (CC staking / resource tracking)
+# ---------------------------------------------------------------------------
+
+from app.services import contribution_ledger_service
+
+
+@router.get(
+    "/contributions/ledger/{contributor_id}",
+    summary="Get contributor CC balance and history",
+)
+async def get_contributor_ledger(contributor_id: str, limit: int = Query(50, ge=1, le=500)) -> dict:
+    """Return contributor balance (total CC by type) and recent history."""
+    balance = contribution_ledger_service.get_contributor_balance(contributor_id)
+    history = contribution_ledger_service.get_contributor_history(contributor_id, limit=limit)
+    return {
+        "balance": balance,
+        "history": history,
+    }
+
+
+@router.get(
+    "/contributions/ledger/{contributor_id}/ideas",
+    summary="List ideas a contributor has invested in",
+)
+async def get_contributor_idea_investments(contributor_id: str) -> dict:
+    """Return ideas this contributor has invested CC into, grouped by idea."""
+    history = contribution_ledger_service.get_contributor_history(contributor_id, limit=500)
+    idea_records = [r for r in history if r.get("idea_id")]
+    # Group by idea_id
+    by_idea: dict[str, list[dict]] = {}
+    for rec in idea_records:
+        by_idea.setdefault(rec["idea_id"], []).append(rec)
+    return {
+        "contributor_id": contributor_id,
+        "ideas": by_idea,
+    }
+
+
 def calculate_coherence_from_github_metadata(metadata: dict) -> float:
     """Calculate coherence score from GitHub commit metadata."""
     score = 0.5  # Baseline

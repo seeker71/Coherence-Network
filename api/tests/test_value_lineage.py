@@ -125,8 +125,9 @@ async def test_payout_preview_uses_role_weights(tmp_path, monkeypatch: pytest.Mo
             "research": 0.15,
             "spec": 0.15,
             "spec_upgrade": 0.11,
-            "implementation": 0.37,
+            "implementation": 0.26,
             "review": 0.15,
+            "staker": 0.11,
         }
         assert data["objective_weights"] == {
             "coherence": 0.35,

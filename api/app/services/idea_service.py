@@ -995,6 +995,89 @@ def update_idea(
     return _with_score(updated)
 
 
+def stake_on_idea(idea_id: str, contributor_id: str, amount_cc: float, rationale: str | None = None) -> dict:
+    """Stake CC on an idea — records contribution, increases potential_value, adds lineage investment."""
+    from app.models.value_lineage import LineageLinkCreate, LineageContributors, LineageInvestment
+    from app.services import contribution_ledger_service
+
+    # 1. Verify idea exists
+    idea = get_idea(idea_id)
+    if idea is None:
+        raise ValueError(f"Idea not found: {idea_id}")
+
+    # 2. Record contribution via ledger
+    stake_meta = {"rationale": rationale} if rationale else {}
+    stake_record = contribution_ledger_service.record_contribution(
+        contributor_id=contributor_id,
+        contribution_type="stake",
+        amount_cc=amount_cc,
+        idea_id=idea_id,
+        metadata=stake_meta,
+    )
+
+    # 3. Increase the idea's potential_value by amount_cc * 0.5
+    new_potential = (idea.potential_value or 0.0) + (amount_cc * 0.5)
+    updated_idea = update_idea(idea_id, potential_value=new_potential)
+
+    # 4. Add a value lineage investment with role="staker"
+    #    Find existing lineage link for this idea, or create one
+    all_links = value_lineage_service.list_links(limit=2000)
+    idea_link = None
+    for link in all_links:
+        if link.idea_id == idea_id:
+            idea_link = link
+            break
+
+    if idea_link is None:
+        # Create a new lineage link for this idea
+        idea_link = value_lineage_service.create_link(
+            LineageLinkCreate(
+                idea_id=idea_id,
+                spec_id=f"stake-lineage-{idea_id}",
+                implementation_refs=[],
+                contributors=LineageContributors(),
+                investments=[
+                    LineageInvestment(
+                        stage="staker",
+                        contributor=contributor_id,
+                        energy_units=amount_cc,
+                        coherence_score=0.7,
+                        awareness_score=0.7,
+                        friction_score=0.3,
+                    ),
+                ],
+                estimated_cost=0.0,
+            )
+        )
+    else:
+        # Append investment to existing link
+        existing_investments = list(idea_link.investments)
+        existing_investments.append(
+            LineageInvestment(
+                stage="staker",
+                contributor=contributor_id,
+                energy_units=amount_cc,
+                coherence_score=0.7,
+                awareness_score=0.7,
+                friction_score=0.3,
+            )
+        )
+        # Update the link record in DB
+        with value_lineage_service._session() as s:
+            rec = s.query(value_lineage_service.LineageLinkRecord).filter_by(id=idea_link.id).first()
+            if rec is not None:
+                import json as _json
+                from datetime import datetime as _dt, timezone as _tz
+                rec.investments_json = _json.dumps([i.model_dump(mode="json") for i in existing_investments])
+                rec.updated_at = _dt.now(_tz.utc)
+
+    return {
+        "idea": updated_idea.model_dump(mode="json") if updated_idea else None,
+        "stake_record": stake_record,
+        "lineage_id": idea_link.id if idea_link else None,
+    }
+
+
 def answer_question(
     idea_id: str,
     question: str,
