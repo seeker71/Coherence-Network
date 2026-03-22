@@ -11,10 +11,12 @@ from app.models.federation import (
     FederationNodeHeartbeatRequest,
     FederationNodeRegisterRequest,
     FederationNodeRegisterResponse,
+    FederationStrategyListResponse,
     FederationSyncResult,
     MeasurementListResponse,
     MeasurementPushRequest,
     MeasurementPushResponse,
+    VALID_STRATEGY_TYPES,
 )
 from app.services import federation_service
 
@@ -83,6 +85,16 @@ async def list_nodes():
 
 
 # ---------------------------------------------------------------------------
+# Aggregated node stats (Spec 133)
+# ---------------------------------------------------------------------------
+
+@router.get("/federation/nodes/stats")
+async def get_aggregated_node_stats(window_days: int = Query(7, ge=1, le=365)):
+    """Return aggregated provider stats across all federation nodes."""
+    return federation_service.get_aggregated_node_stats(window_days=window_days)
+
+
+# ---------------------------------------------------------------------------
 # Measurement summaries (Spec 131)
 # ---------------------------------------------------------------------------
 
@@ -136,3 +148,45 @@ async def get_measurement_summaries(
         limit=limit,
         offset=offset,
     )
+
+
+# ---------------------------------------------------------------------------
+# Strategy broadcasts (Spec 134)
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/federation/strategies",
+    response_model=FederationStrategyListResponse,
+)
+async def get_strategies(
+    strategy_type: str | None = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+):
+    """Return active (non-expired) federation strategy broadcasts."""
+    if strategy_type is not None and strategy_type not in VALID_STRATEGY_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "invalid strategy_type; expected one of: "
+                "provider_recommendation, prompt_variant_winner, provider_warning"
+            ),
+        )
+    rows, total = federation_service.list_active_strategies(
+        strategy_type=strategy_type,
+        limit=limit,
+        offset=offset,
+    )
+    return FederationStrategyListResponse(
+        strategies=rows,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.post("/federation/strategies/compute", status_code=200)
+async def compute_strategies():
+    """Trigger computation of new strategy broadcasts from current data."""
+    new_strategies = federation_service.compute_and_store_strategies()
+    return {"computed": len(new_strategies), "strategies": new_strategies}

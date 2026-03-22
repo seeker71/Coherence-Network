@@ -13,7 +13,8 @@ import hmac
 import json
 import logging
 from contextlib import contextmanager
-from datetime import datetime, timezone
+import os
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,7 @@ from app.models.federation import (
     FederationNodeRegisterResponse,
     FederationNodeHeartbeatResponse,
     FederationSyncResult,
+    VALID_STRATEGY_TYPES,
 )
 from app.models.governance import (
     ActorType,
@@ -105,6 +107,23 @@ class NodeMeasurementSummaryRecord(Base):
     __table_args__ = (
         Index("idx_nms_node_dp", "node_id", "decision_point"),
         Index("idx_nms_pushed_at", "pushed_at"),
+    )
+
+
+class NodeStrategyBroadcastRecord(Base):
+    """Hub strategy broadcasts for federation advisory guidance (Spec 134)."""
+    __tablename__ = "node_strategy_broadcasts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    strategy_type: Mapped[str] = mapped_column(String, nullable=False)
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False)
+    source_node_id: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    expires_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("idx_nsb_strategy_type_created_at", "strategy_type", "created_at"),
+        Index("idx_nsb_expires_at", "expires_at"),
     )
 
 
@@ -482,6 +501,157 @@ def store_measurement_summaries(node_id: str, summaries: list[dict]) -> int:
     return len(summaries)
 
 
+def get_aggregated_node_stats(window_days: int | None = None) -> dict:
+    """Aggregate cross-node measurement summaries into fleet-wide provider stats.
+
+    Returns a dict with keys: nodes, providers, task_types, alerts, window_days,
+    total_measurements.
+    """
+    if window_days is None:
+        window_days = int(os.environ.get("FEDERATION_STATS_WINDOW_DAYS", "7"))
+
+    _ensure_schema()
+    cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=window_days)).isoformat().replace("+00:00", "Z")
+
+    with _session() as s:
+        # Fetch nodes
+        node_recs = s.query(FederationNodeRecord).all()
+        nodes: dict[str, dict] = {}
+        for nr in node_recs:
+            nodes[nr.node_id] = {
+                "hostname": nr.hostname,
+                "os_type": nr.os_type,
+                "status": nr.status,
+                "last_seen_at": nr.last_seen_at,
+            }
+
+        # Fetch measurement summaries within window
+        summaries = (
+            s.query(NodeMeasurementSummaryRecord)
+            .filter(NodeMeasurementSummaryRecord.pushed_at >= cutoff)
+            .all()
+        )
+
+    if not summaries:
+        return {
+            "nodes": nodes,
+            "providers": {},
+            "task_types": {},
+            "alerts": [],
+            "window_days": window_days,
+            "total_measurements": 0,
+        }
+
+    # Aggregate per provider (slot_id)
+    # provider -> {node_id -> list[summary]}
+    provider_node_data: dict[str, dict[str, list]] = {}
+    # task_type -> provider -> list[summary]
+    task_type_data: dict[str, dict[str, list]] = {}
+
+    total_measurements = 0
+
+    for sm in summaries:
+        provider = sm.slot_id
+        node_id = sm.node_id
+        total_measurements += sm.sample_count
+
+        provider_node_data.setdefault(provider, {}).setdefault(node_id, []).append(sm)
+
+        # Extract task_type from decision_point: "provider_spec" -> "spec"
+        dp = sm.decision_point
+        if dp.startswith("provider_"):
+            task_type = dp[len("provider_"):]
+        else:
+            task_type = dp
+        task_type_data.setdefault(task_type, {}).setdefault(provider, []).append(sm)
+
+    # Build providers response
+    providers: dict[str, dict] = {}
+    alerts: list[dict] = []
+
+    for provider, node_map in sorted(provider_node_data.items()):
+        total_samples = 0
+        total_successes = 0
+        total_failures = 0
+        weighted_duration_sum = 0.0
+        duration_sample_count = 0
+        per_node: dict[str, dict] = {}
+
+        for nid, sms in sorted(node_map.items()):
+            n_samples = sum(sm.sample_count for sm in sms)
+            n_successes = sum(sm.successes for sm in sms)
+            n_failures = sum(sm.failures for sm in sms)
+            n_dur_sum = 0.0
+            n_dur_count = 0
+            for sm in sms:
+                if sm.mean_duration_s is not None:
+                    n_dur_sum += sm.mean_duration_s * sm.sample_count
+                    n_dur_count += sm.sample_count
+
+            total_samples += n_samples
+            total_successes += n_successes
+            total_failures += n_failures
+            weighted_duration_sum += n_dur_sum
+            duration_sample_count += n_dur_count
+
+            per_node[nid] = {
+                "success_rate": round(n_successes / n_samples, 3) if n_samples > 0 else 0.0,
+                "samples": n_samples,
+                "avg_duration_s": round(n_dur_sum / n_dur_count, 1) if n_dur_count > 0 else 0.0,
+            }
+
+        overall_success_rate = round(total_successes / total_samples, 3) if total_samples > 0 else 0.0
+        avg_duration_s = round(weighted_duration_sum / duration_sample_count, 1) if duration_sample_count > 0 else 0.0
+
+        providers[provider] = {
+            "node_count": len(node_map),
+            "total_samples": total_samples,
+            "total_successes": total_successes,
+            "total_failures": total_failures,
+            "overall_success_rate": overall_success_rate,
+            "avg_duration_s": avg_duration_s,
+            "per_node": per_node,
+        }
+
+        if overall_success_rate < 0.5:
+            alerts.append({
+                "provider": provider,
+                "metric": "overall_success_rate",
+                "value": overall_success_rate,
+                "threshold": 0.5,
+                "message": f"{provider} network-wide success rate {int(overall_success_rate * 100)}% < 50% threshold",
+            })
+
+    # Build task_types response
+    task_types: dict[str, dict] = {}
+    for tt, provider_map in sorted(task_type_data.items()):
+        tt_providers: dict[str, dict] = {}
+        for provider, sms in sorted(provider_map.items()):
+            t_samples = sum(sm.sample_count for sm in sms)
+            t_successes = sum(sm.successes for sm in sms)
+            t_dur_sum = 0.0
+            t_dur_count = 0
+            for sm in sms:
+                if sm.mean_duration_s is not None:
+                    t_dur_sum += sm.mean_duration_s * sm.sample_count
+                    t_dur_count += sm.sample_count
+            tt_providers[provider] = {
+                "total_samples": t_samples,
+                "success_rate": round(t_successes / t_samples, 3) if t_samples > 0 else 0.0,
+                "avg_duration_s": round(t_dur_sum / t_dur_count, 1) if t_dur_count > 0 else 0.0,
+            }
+        task_types[tt] = {"providers": tt_providers}
+
+    return {
+        "nodes": nodes,
+        "providers": providers,
+        "task_types": task_types,
+        "alerts": alerts,
+        "window_days": window_days,
+        "total_measurements": total_measurements,
+    }
+
+
 def list_measurement_summaries(
     node_id: str,
     decision_point: str | None = None,
@@ -517,6 +687,164 @@ def list_measurement_summaries(
                 "mean_value_score": r.mean_value_score,
                 "error_classes_json": json.loads(r.error_classes_json),
                 "pushed_at": r.pushed_at,
+            }
+            for r in recs
+        ]
+        return rows, total
+
+
+# ---------------------------------------------------------------------------
+# Strategy broadcast computation and retrieval (Spec 134)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_STRATEGY_TTL = timedelta(hours=24)
+
+
+def compute_and_store_strategies() -> list[dict]:
+    """Compute strategy broadcasts from aggregated node stats and store them.
+
+    Generates:
+    - provider_recommendation: provider with >90% success across 3+ nodes
+    - provider_warning: provider with <50% success across multiple nodes
+    - prompt_variant_winner: if prompt measurement data exists
+
+    Returns list of newly created strategy dicts.
+    """
+    _ensure_schema()
+
+    try:
+        stats = get_aggregated_node_stats()
+    except Exception:
+        logger.warning("get_aggregated_node_stats unavailable; returning empty strategies")
+        return []
+
+    providers = stats.get("providers", {})
+    if not providers:
+        return []
+
+    now_iso = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    expires_iso = (datetime.now(tz=timezone.utc) + _DEFAULT_STRATEGY_TTL).isoformat().replace("+00:00", "Z")
+
+    new_strategies: list[dict] = []
+
+    for provider, pdata in providers.items():
+        node_count = pdata.get("node_count", 0)
+        success_rate = pdata.get("overall_success_rate", 0.0)
+        total_samples = pdata.get("total_samples", 0)
+
+        # provider_recommendation: >90% success across 3+ nodes
+        if success_rate > 0.9 and node_count >= 3:
+            payload = {
+                "recommended_provider": provider,
+                "confidence": round(success_rate, 3),
+                "node_count": node_count,
+                "total_samples": total_samples,
+            }
+            new_strategies.append({
+                "strategy_type": "provider_recommendation",
+                "payload_json": json.dumps(payload),
+                "source_node_id": "hub",
+                "created_at": now_iso,
+                "expires_at": expires_iso,
+            })
+
+        # provider_warning: <50% success across multiple (2+) nodes
+        if success_rate < 0.5 and node_count >= 2:
+            payload = {
+                "warned_provider": provider,
+                "success_rate": round(success_rate, 3),
+                "node_count": node_count,
+                "total_samples": total_samples,
+            }
+            new_strategies.append({
+                "strategy_type": "provider_warning",
+                "payload_json": json.dumps(payload),
+                "source_node_id": "hub",
+                "created_at": now_iso,
+                "expires_at": expires_iso,
+            })
+
+    # prompt_variant_winner: check if prompt measurement data exists
+    # Look for task_types that indicate prompt template measurements
+    task_types = stats.get("task_types", {})
+    for tt, tt_data in task_types.items():
+        if "prompt" in tt.lower():
+            tt_providers = tt_data.get("providers", {})
+            if tt_providers:
+                # Pick provider with highest success rate in this prompt task type
+                best_provider = None
+                best_rate = 0.0
+                for prov, prov_data in tt_providers.items():
+                    rate = prov_data.get("success_rate", 0.0)
+                    if rate > best_rate:
+                        best_rate = rate
+                        best_provider = prov
+                if best_provider and best_rate > 0.0:
+                    payload = {
+                        "task_type": tt,
+                        "winning_variant": best_provider,
+                        "success_rate": round(best_rate, 3),
+                    }
+                    new_strategies.append({
+                        "strategy_type": "prompt_variant_winner",
+                        "payload_json": json.dumps(payload),
+                        "source_node_id": "hub",
+                        "created_at": now_iso,
+                        "expires_at": expires_iso,
+                    })
+
+    # Persist all new strategies
+    if new_strategies:
+        with _session() as s:
+            for st in new_strategies:
+                rec = NodeStrategyBroadcastRecord(
+                    strategy_type=st["strategy_type"],
+                    payload_json=st["payload_json"],
+                    source_node_id=st["source_node_id"],
+                    created_at=st["created_at"],
+                    expires_at=st["expires_at"],
+                )
+                s.add(rec)
+
+    return new_strategies
+
+
+def list_active_strategies(
+    strategy_type: str | None = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple[list[dict], int]:
+    """Return non-expired strategy broadcasts, newest first.
+
+    Returns (rows, total).
+    """
+    _ensure_schema()
+    now_iso = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
+    effective_limit = max(1, min(limit, 500))
+
+    with _session() as s:
+        q = s.query(NodeStrategyBroadcastRecord).filter(
+            NodeStrategyBroadcastRecord.expires_at > now_iso,
+        )
+        if strategy_type is not None:
+            q = q.filter(NodeStrategyBroadcastRecord.strategy_type == strategy_type)
+
+        total = q.count()
+        recs = (
+            q.order_by(NodeStrategyBroadcastRecord.created_at.desc())
+            .offset(offset)
+            .limit(effective_limit)
+            .all()
+        )
+        rows = [
+            {
+                "id": r.id,
+                "strategy_type": r.strategy_type,
+                "payload_json": r.payload_json,
+                "source_node_id": r.source_node_id,
+                "created_at": r.created_at,
+                "expires_at": r.expires_at,
+                "advisory_only": True,
             }
             for r in recs
         ]

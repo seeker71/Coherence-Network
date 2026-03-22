@@ -63,4 +63,5 @@ from app.services.federation_service import (  # noqa: F401
     FederationNodeRecord,
     FederationSyncHistoryRecord,
     NodeMeasurementSummaryRecord,
+    NodeStrategyBroadcastRecord,
 )

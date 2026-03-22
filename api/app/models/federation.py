@@ -116,3 +116,33 @@ class MeasurementListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+# ---------------------------------------------------------------------------
+# Strategy broadcast models (Spec 134)
+# ---------------------------------------------------------------------------
+
+VALID_STRATEGY_TYPES = frozenset({
+    "provider_recommendation",
+    "prompt_variant_winner",
+    "provider_warning",
+})
+
+
+class FederationStrategyBroadcast(BaseModel):
+    """A single federation strategy broadcast."""
+    id: int
+    strategy_type: str
+    payload_json: str
+    source_node_id: str
+    created_at: datetime
+    expires_at: datetime
+    advisory_only: bool = True
+
+
+class FederationStrategyListResponse(BaseModel):
+    """Paginated list of active strategy broadcasts."""
+    strategies: list[FederationStrategyBroadcast]
+    total: int
+    limit: int
+    offset: int
