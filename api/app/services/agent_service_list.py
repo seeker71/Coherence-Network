@@ -200,3 +200,61 @@ def get_review_summary() -> dict[str, Any]:
         by_status[s] = by_status.get(s, 0) + 1
     needs = [t for t in items if t["status"] in (TaskStatus.NEEDS_DECISION, TaskStatus.FAILED)]
     return {"by_status": by_status, "needs_attention": needs, "total": len(items)}
+
+
+def _resolve_task_idea_id(task: dict[str, Any]) -> str:
+    """Resolve the idea_id for a task using its context dict."""
+    from app.services.agent_service_completion_tracking import resolve_runtime_idea_id_for_task
+    return resolve_runtime_idea_id_for_task(task)
+
+
+def list_tasks_for_idea(idea_id: str) -> dict[str, Any]:
+    """Return all tasks linked to an idea, grouped by type with status counts."""
+    all_tasks, _total, _backfill = list_tasks(limit=5000, offset=0)
+
+    matched: list[dict[str, Any]] = []
+    for task in all_tasks:
+        resolved = _resolve_task_idea_id(task)
+        if resolved == idea_id:
+            matched.append(task)
+
+    groups_map: dict[str, list[dict[str, Any]]] = {}
+    for task in matched:
+        tt = task["task_type"]
+        tt_val = tt.value if hasattr(tt, "value") else str(tt)
+        groups_map.setdefault(tt_val, []).append(task)
+
+    type_order = ["spec", "impl", "test", "review", "heal"]
+    groups: list[dict[str, Any]] = []
+    for tt in type_order:
+        tasks_in_group = groups_map.pop(tt, [])
+        if not tasks_in_group:
+            continue
+        status_counts: dict[str, int] = {}
+        for t in tasks_in_group:
+            s = t["status"].value if hasattr(t["status"], "value") else str(t["status"])
+            status_counts[s] = status_counts.get(s, 0) + 1
+        groups.append({
+            "task_type": tt,
+            "count": len(tasks_in_group),
+            "status_counts": status_counts,
+            "tasks": tasks_in_group,
+        })
+    # Any remaining types not in type_order
+    for tt, tasks_in_group in sorted(groups_map.items()):
+        status_counts = {}
+        for t in tasks_in_group:
+            s = t["status"].value if hasattr(t["status"], "value") else str(t["status"])
+            status_counts[s] = status_counts.get(s, 0) + 1
+        groups.append({
+            "task_type": tt,
+            "count": len(tasks_in_group),
+            "status_counts": status_counts,
+            "tasks": tasks_in_group,
+        })
+
+    return {
+        "idea_id": idea_id,
+        "total": len(matched),
+        "groups": groups,
+    }

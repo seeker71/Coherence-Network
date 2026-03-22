@@ -241,6 +241,16 @@ def record_completion_tracking_event(task: dict[str, Any]) -> None:
     if failure_metadata:
         metadata.update(failure_metadata)
 
+    # Auto-advance idea stage on successful task completion (spec 138)
+    if final_status == "completed" and runtime_idea_id != "coherence-network-agent-pipeline":
+        task_type_str = str(task.get("task_type") or "").strip().lower()
+        if task_type_str:
+            try:
+                from app.services import idea_service
+                idea_service.auto_advance_for_task(runtime_idea_id, task_type_str)
+            except Exception:
+                pass  # Best-effort; don't fail the completion event
+
     mutable_context = dict(task_context) if isinstance(task_context, dict) else {}
     try:
         from app.services import runtime_service

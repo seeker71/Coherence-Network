@@ -11,15 +11,19 @@ from app.models.idea import (
     IdeaCountResponse,
     IdeaCreate,
     IdeaShowcaseResponse,
+    IdeaStage,
     IdeaPortfolioResponse,
     IdeaQuestionCreate,
     IdeaQuestionAnswerUpdate,
     IdeaSelectionResult,
     IdeaStorageInfo,
+    IdeaTasksResponse,
     IdeaUpdate,
     IdeaWithScore,
+    ProgressDashboard,
+    StageSetRequest,
 )
-from app.services import idea_service, idea_selection_ab_service, inventory_service
+from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service
 
 router = APIRouter()
 
@@ -150,6 +154,45 @@ async def count_ideas() -> IdeaCountResponse:
     return idea_service.count_ideas()
 
 
+@router.get("/ideas/progress", response_model=ProgressDashboard)
+async def get_progress_dashboard() -> ProgressDashboard:
+    """Per-stage idea counts and completion percentage (spec 138)."""
+    return idea_service.compute_progress_dashboard()
+
+
+@router.post("/ideas/{idea_id}/advance", response_model=IdeaWithScore)
+async def advance_idea_stage(idea_id: str, _key: str = Depends(require_api_key)) -> IdeaWithScore:
+    """Advance an idea to the next sequential stage (spec 138)."""
+    result, error = idea_service.advance_idea_stage(idea_id)
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Idea not found")
+    if error == "already_complete":
+        raise HTTPException(status_code=409, detail="Idea is already complete")
+    return result
+
+
+@router.post("/ideas/{idea_id}/stage", response_model=IdeaWithScore)
+async def set_idea_stage(idea_id: str, body: StageSetRequest, _key: str = Depends(require_api_key)) -> IdeaWithScore:
+    """Set an explicit stage for an idea (admin override, spec 138)."""
+    try:
+        IdeaStage(body.stage)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid stage value")
+    result, error = idea_service.set_idea_stage(idea_id, body.stage)
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.get("/ideas/{idea_id}/tasks", response_model=IdeaTasksResponse)
+async def list_idea_tasks(idea_id: str) -> IdeaTasksResponse:
+    """Return all tasks linked to an idea, grouped by type with status counts."""
+    idea = idea_service.get_idea(idea_id)
+    if idea is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return agent_service.list_tasks_for_idea(idea_id)
+
+
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
 async def get_idea(idea_id: str) -> IdeaWithScore:
     idea = idea_service.get_idea(idea_id)
@@ -192,9 +235,14 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
             data.actual_cost,
             data.confidence,
             data.manifestation_status,
+            data.stage,
         )
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
+
+    # Handle stage update via dedicated set_idea_stage for sync logic
+    if data.stage is not None:
+        idea_service.set_idea_stage(idea_id, data.stage)
 
     updated = idea_service.update_idea(
         idea_id=idea_id,
