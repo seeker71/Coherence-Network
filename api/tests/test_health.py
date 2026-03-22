@@ -29,6 +29,18 @@ async def test_version_endpoint():
 
 
 @pytest.mark.asyncio
+async def test_ping_returns_pong_and_timestamp():
+    """GET /api/ping returns pong true with a UTC timestamp."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get("/api/ping")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["pong"] is True
+        assert isinstance(data["timestamp"], str)
+        assert data["timestamp"]
+
+
+@pytest.mark.asyncio
 async def test_health_returns_ok():
     """GET /api/health returns 200 with status ok."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

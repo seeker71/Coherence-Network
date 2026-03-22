@@ -23,6 +23,11 @@ from app.models.coherence_credit import CostVector, ValueVector
 from app.models.idea import (
     GovernanceHealth,
     Idea,
+    IdeaCountByStatus,
+    IdeaCountResponse,
+    IdeaShowcaseBudget,
+    IdeaShowcaseItem,
+    IdeaShowcaseResponse,
     IdeaSelectionResult,
     IdeaType,
     PaginationInfo,
@@ -1026,6 +1031,17 @@ def list_tracked_idea_ids() -> list[str]:
     return _tracked_idea_ids()
 
 
+def count_ideas() -> IdeaCountResponse:
+    """Return total idea count and breakdown by manifestation status."""
+    ideas = _read_ideas()
+    by_status = IdeaCountByStatus(
+        none=sum(1 for i in ideas if i.manifestation_status == ManifestationStatus.NONE),
+        partial=sum(1 for i in ideas if i.manifestation_status == ManifestationStatus.PARTIAL),
+        validated=sum(1 for i in ideas if i.manifestation_status == ManifestationStatus.VALIDATED),
+    )
+    return IdeaCountResponse(total=len(ideas), by_status=by_status)
+
+
 def storage_info() -> IdeaStorageInfo:
     """Expose idea registry storage backend and row counts for inspection."""
     info = idea_registry_service.storage_info()
@@ -1100,3 +1116,53 @@ def compute_governance_health(window_days: int = 30) -> GovernanceHealth:
         snapshot_at=snapshot_at,
         window_days=window_days,
     )
+
+
+def list_showcase_ideas() -> IdeaShowcaseResponse:
+    """Return funder-facing showcase ideas with proof and budget context."""
+    ideas = _read_ideas(persist_ensures=False)
+    visible = [
+        idea
+        for idea in ideas
+        if idea.actual_value > 0.0 and not is_internal_idea_id(idea.id, idea.interfaces)
+    ]
+    ranked = sorted(visible, key=lambda row: row.actual_value, reverse=True)
+
+    showcase_items: list[IdeaShowcaseItem] = []
+    for idea in ranked:
+        remaining_cost = max((idea.estimated_cost or 0.0) - (idea.actual_cost or 0.0), 0.0)
+        value_gap = max((idea.potential_value or 0.0) - (idea.actual_value or 0.0), 0.0)
+        ask = (
+            f"Close {round(value_gap, 2)} CC of remaining value with "
+            f"{round(remaining_cost, 2)} CC additional budget."
+        )
+
+        proof_notes = [
+            str(question.answer).strip()
+            for question in idea.open_questions
+            if question.answer and str(question.answer).strip()
+        ]
+        if proof_notes:
+            early_proof = proof_notes[0]
+        else:
+            early_proof = (
+                f"Measured {round(idea.actual_value, 2)} CC realized so far "
+                f"at {round(idea.actual_cost, 2)} CC spent."
+            )
+
+        showcase_items.append(
+            IdeaShowcaseItem(
+                idea_id=idea.id,
+                title=idea.name,
+                clear_ask=ask,
+                budget=IdeaShowcaseBudget(
+                    estimated_cost_cc=round(idea.estimated_cost, 4),
+                    spent_cost_cc=round(idea.actual_cost, 4),
+                    remaining_cost_cc=round(remaining_cost, 4),
+                ),
+                early_proof=early_proof,
+                current_status=idea.manifestation_status,
+            )
+        )
+
+    return IdeaShowcaseResponse(ideas=showcase_items)
