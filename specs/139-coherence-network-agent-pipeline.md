@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The project currently requires manual orchestration to move ideas through the development pipeline — an operator must identify which ideas are highest-ROI, create tasks, monitor execution, and advance idea stages. This spec defines a persistent background loop ("agent pipeline") that continuously selects the highest-ROI pending ideas from the portfolio, generates and executes tasks via `local_runner.py`, and auto-advances ideas through lifecycle stages (none → specced → implementing → testing → reviewing → complete). This eliminates operator toil, maximizes throughput on high-value work, and keeps the portfolio moving 24/7.
+The project currently requires manual orchestration to move ideas through the development pipeline — an operator must identify which opportunities are highest-ROI, create tasks, monitor execution, and advance idea stages. This spec defines a persistent background loop ("agent pipeline") that continuously selects the highest-ROI pending task candidate from the portfolio, generates and executes work via `local_runner.py`, and auto-advances ideas through lifecycle stages (none → specced → implementing → testing → reviewing → complete). This eliminates operator toil, maximizes throughput on high-value work, and keeps the portfolio moving 24/7.
 
 ## Requirements
 
@@ -13,7 +13,7 @@ The project currently requires manual orchestration to move ideas through the de
 - [ ] R5: On successful task completion, the pipeline calls the idea auto-advance endpoint (`POST /api/ideas/{idea_id}/advance`) to move the idea to the next stage per spec 138.
 - [ ] R6: On task failure, the pipeline logs the failure, records the error classification (timeout, auth, rate_limit, etc.), and applies a configurable retry policy: up to 3 retries with exponential backoff (2s, 8s, 32s). After max retries, the idea is marked with `needs_attention: true` and skipped until manual intervention.
 - [ ] R6a: Slot allocation for each selected task uses the existing `SlotSelector` integration path so pipeline execution shares the same capacity and claim semantics as other local runs.
-- [ ] R7: The pipeline exposes a `GET /api/pipeline/status` endpoint returning: `{ running: bool, uptime_seconds: int, current_idea_id: str|null, cycle_count: int, ideas_advanced: int, tasks_completed: int, tasks_failed: int, last_cycle_at: str }`.
+- [ ] R7: The pipeline exposes a `GET /api/pipeline/status` endpoint returning runtime state and counters including `current_task_type`, `current_slot`, and `last_outcome_id`.
 - [ ] R8: The pipeline supports graceful shutdown via SIGINT/SIGTERM — it finishes the current task before exiting and persists state to `api/logs/agent_pipeline_state.json`.
 - [ ] R9: The pipeline skips ideas that already have a RUNNING or PENDING task (prevents duplicate work).
 - [ ] R10: The pipeline logs each cycle to `api/logs/agent_pipeline.log` with structured JSON entries: `{ timestamp, cycle, idea_id, task_type, provider, status, duration_ms }`.
