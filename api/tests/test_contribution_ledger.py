@@ -143,9 +143,9 @@ async def test_stake_endpoint(tmp_path, monkeypatch):
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert data["stake_record"]["contributor_id"] == "frank"
-        assert data["stake_record"]["amount_cc"] == 10.0
-        assert data["lineage_id"] is not None
+        assert data["stake"]["contributor"] == "frank"
+        assert data["stake"]["amount_cc"] == 10.0
+        assert "tasks_created" in data
 
 
 @pytest.mark.asyncio

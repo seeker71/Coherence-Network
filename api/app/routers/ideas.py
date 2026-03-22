@@ -24,7 +24,7 @@ from app.models.idea import (
     ProgressDashboard,
     StageSetRequest,
 )
-from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service
+from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service
 
 router = APIRouter()
 
@@ -220,16 +220,25 @@ class StakeRequest(BaseModel):
 
 @router.post("/ideas/{idea_id}/stake")
 async def stake_on_idea(idea_id: str, body: StakeRequest, _key: str = Depends(require_api_key)) -> dict:
-    """Stake CC on an idea (requires API key)."""
+    """Stake CC on an idea and trigger compute tasks (requires API key)."""
     try:
-        return idea_service.stake_on_idea(
+        return stake_compute_service.execute_stake(
             idea_id=idea_id,
-            contributor_id=body.contributor_id,
+            staker_id=body.contributor_id,
             amount_cc=body.amount_cc,
             rationale=body.rationale,
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/ideas/{idea_id}/progress")
+async def get_idea_progress(idea_id: str) -> dict:
+    """Show idea progress: stage, tasks by phase, CC staked/spent, contributors."""
+    result = stake_compute_service.get_idea_progress(idea_id)
+    if result.get("error") == "not_found":
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
 
 
 @router.get("/ideas/{idea_id}/activity")

@@ -82,6 +82,26 @@ type LoadIdeaResult =
   | { kind: "not_found" }
   | { kind: "error"; details: string };
 
+type StakeRecord = {
+  contributor_id: string;
+  amount_cc: number;
+  contribution_type: string;
+  idea_id?: string;
+  timestamp?: string;
+};
+
+type InvestmentData = {
+  contributor_id: string;
+  ideas: Record<string, StakeRecord[]>;
+};
+
+type ActivityEvent = {
+  type: string;
+  timestamp: string;
+  summary: string;
+  contributor_id?: string | null;
+};
+
 type LoadFlowResult = {
   flow: FlowItem | null;
   details: string | null;
@@ -189,6 +209,58 @@ async function loadFlowForIdea(ideaId: string): Promise<LoadFlowResult> {
   };
 }
 
+async function loadIdeaStakes(ideaId: string): Promise<StakeRecord[]> {
+  // Aggregate stakes from all contributors by scanning the flow contributors
+  // and checking their ledger entries for this idea.
+  // For now, try to get stakes from flow contributors' ledger data.
+  try {
+    const API = getApiBase();
+    // Use a broad search — check known contributors' idea investments
+    // The /contributions endpoint lists all contributions; filter for stakes on this idea.
+    const res = await fetch(`${API}/api/contributions?limit=500`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const items: StakeRecord[] = (data?.items ?? (Array.isArray(data) ? data : []))
+      .filter((r: StakeRecord) => r.idea_id === ideaId && r.contribution_type === "stake");
+    return items;
+  } catch {
+    return [];
+  }
+}
+
+async function loadIdeaActivity(ideaId: string): Promise<ActivityEvent[]> {
+  try {
+    const API = getApiBase();
+    const res = await fetch(`${API}/api/ideas/${encodeURIComponent(ideaId)}/activity?limit=20`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : data.events ?? [];
+  } catch {
+    return [];
+  }
+}
+
+function activityIcon(type: string): string {
+  if (type === "change_request") return "\uD83D\uDCDD";
+  if (type === "question_answered") return "\uD83D\uDCA1";
+  if (type === "question_added") return "\u2753";
+  if (type === "stage_advanced") return "\uD83D\uDE80";
+  if (type === "value_recorded") return "\uD83D\uDCCA";
+  if (type === "lineage_link") return "\uD83D\uDD17";
+  return "\u2022";
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return "just now";
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default async function IdeaDetailPage({ params }: { params: Promise<{ idea_id: string }> }) {
   const resolved = await params;
   const ideaId = decodeURIComponent(resolved.idea_id);
@@ -224,7 +296,11 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
   }
 
   const idea = ideaResult.idea;
-  const flowResult = await loadFlowForIdea(ideaId);
+  const [flowResult, stakes, activity] = await Promise.all([
+    loadFlowForIdea(ideaId),
+    loadIdeaStakes(ideaId),
+    loadIdeaActivity(ideaId),
+  ]);
   const flow = flowResult.flow;
   const apiBase = getApiBase();
   const linkedPlanIds = flow?.spec.spec_ids ?? [];
@@ -313,6 +389,81 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
           <p className="text-muted-foreground">How sure we are</p>
           <p className="text-lg font-semibold">{formatConfidence(idea.confidence)}</p>
         </div>
+      </section>
+
+      <section className="rounded-xl border border-amber-200 bg-amber-50/30 p-4 space-y-3 text-sm dark:border-amber-800/40 dark:bg-amber-950/10">
+        <h2 className="font-semibold text-amber-900 dark:text-amber-200">Investment</h2>
+        <p className="text-amber-800/70 dark:text-amber-300/70">
+          CC staked on this idea and what it produced.
+        </p>
+        {stakes.length > 0 ? (
+          <>
+            <div className="rounded-lg border border-amber-200/60 bg-white/60 p-3 dark:border-amber-800/30 dark:bg-stone-800/40">
+              <p className="text-xs text-amber-700/70 dark:text-amber-400/70">Total CC Staked</p>
+              <p className="text-lg font-semibold text-amber-900 dark:text-amber-100">
+                {stakes.reduce((sum, s) => sum + (s.amount_cc || 0), 0).toFixed(1)} CC
+              </p>
+            </div>
+            <ul className="space-y-1.5">
+              {stakes.map((s, i) => (
+                <li
+                  key={`${s.contributor_id}-${i}`}
+                  className="flex items-center justify-between rounded-lg border border-amber-200/40 bg-white/40 px-3 py-2 dark:border-amber-800/20 dark:bg-stone-800/30"
+                >
+                  <span className="text-amber-900 dark:text-amber-200">
+                    {s.contributor_id}
+                  </span>
+                  <span className="font-medium text-amber-700 dark:text-amber-400">
+                    {(s.amount_cc || 0).toFixed(1)} CC
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className="text-amber-700/60 dark:text-amber-400/60">
+            No CC staked on this idea yet.
+          </p>
+        )}
+        <div className="flex items-center gap-2 pt-1">
+          <p className="text-xs text-amber-700/60 dark:text-amber-400/60">
+            Work cards: {flow?.process.task_ids.length ?? 0} created
+          </p>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-stone-200 bg-white p-4 space-y-3 text-sm dark:border-stone-700 dark:bg-stone-800/60">
+        <h2 className="font-semibold">Activity</h2>
+        {activity.length > 0 ? (
+          <div className="relative space-y-0">
+            {activity.map((event, i) => (
+              <div key={i} className="relative flex gap-3 pb-4 last:pb-0">
+                <div className="flex flex-col items-center">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs dark:bg-stone-700">
+                    {activityIcon(event.type)}
+                  </span>
+                  {i < activity.length - 1 && (
+                    <div className="mt-1 w-px flex-1 bg-stone-200 dark:bg-stone-700" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                  <p className="text-stone-800 dark:text-stone-200">{event.summary}</p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500">
+                    <span>{timeAgo(event.timestamp)}</span>
+                    {event.contributor_id && (
+                      <>
+                        <span>&middot;</span>
+                        <span>{event.contributor_id}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground">No activity recorded yet.</p>
+        )}
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">
