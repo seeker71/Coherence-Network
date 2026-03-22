@@ -367,6 +367,109 @@ async def test_create_idea_persists_to_db(
         assert "test-persist" in ids
 
 
+def test_idea_registry_loads_ideas_sorted_by_position(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'ideas.db'}")
+
+    from app.models.idea import Idea
+    from app.services import idea_registry_service, idea_service
+
+    idea_service._invalidate_ideas_cache()
+
+    ideas_in_position_order = [
+        Idea(
+            id="idea-third",
+            name="Idea Third",
+            description="Third in the registry order",
+            potential_value=10.0,
+            estimated_cost=5.0,
+            confidence=0.5,
+        ),
+        Idea(
+            id="idea-first",
+            name="Idea First",
+            description="First in the registry order",
+            potential_value=10.0,
+            estimated_cost=5.0,
+            confidence=0.5,
+        ),
+        Idea(
+            id="idea-second",
+            name="Idea Second",
+            description="Second in the registry order",
+            potential_value=10.0,
+            estimated_cost=5.0,
+            confidence=0.5,
+        ),
+    ]
+
+    idea_registry_service.save_ideas(ideas_in_position_order)
+    loaded = idea_registry_service.load_ideas()
+
+    assert [idea.id for idea in loaded] == [idea.id for idea in ideas_in_position_order]
+
+
+def test_idea_registry_pagination_returns_expected_slice(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'ideas.db'}")
+
+    from app.models.idea import Idea
+    from app.services import idea_registry_service, idea_service
+
+    idea_service._invalidate_ideas_cache()
+
+    ordered_ids = [
+        "idea-one",
+        "idea-two",
+        "idea-three",
+        "idea-four",
+        "idea-five",
+    ]
+    idea_registry_service.save_ideas(
+        [
+            Idea(
+                id=idea_id,
+                name=f"Name {idea_id}",
+                description=f"Description {idea_id}",
+                potential_value=10.0,
+                estimated_cost=5.0,
+                confidence=0.5,
+            )
+            for idea_id in ordered_ids
+        ]
+    )
+
+    page_one = idea_service.list_ideas(
+        limit=2,
+        offset=1,
+        sort_method="free_energy",
+        read_only_guard=True,
+    )
+    assert [idea.id for idea in page_one.ideas] == ordered_ids[1:3]
+    assert page_one.pagination is not None
+    assert page_one.pagination.total == 5
+    assert page_one.pagination.limit == 2
+    assert page_one.pagination.offset == 1
+    assert page_one.pagination.returned == 2
+    assert page_one.pagination.has_more is True
+
+    page_two = idea_service.list_ideas(
+        limit=2,
+        offset=4,
+        sort_method="free_energy",
+        read_only_guard=True,
+    )
+    assert [idea.id for idea in page_two.ideas] == ordered_ids[4:5]
+    assert page_two.pagination is not None
+    assert page_two.pagination.total == 5
+    assert page_two.pagination.returned == 1
+    assert page_two.pagination.has_more is False
+
+
 @pytest.mark.asyncio
 async def test_ideas_cards_endpoint_returns_paginated_card_feed(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
