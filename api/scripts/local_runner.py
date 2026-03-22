@@ -27,12 +27,24 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import httpx
+
 # Resolve paths
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _API_DIR = _SCRIPT_DIR.parent
 _REPO_DIR = _API_DIR.parent
 _LOG_DIR = _API_DIR / "logs"
-sys.path.insert(0, str(_API_DIR))
+
+# Ensure the app package is importable
+if str(_API_DIR) not in sys.path:
+    sys.path.insert(0, str(_API_DIR))
+
+try:
+    from app.services.openrouter_client import chat_completion
+    from app.services.slot_selection_service import SlotSelector
+    HAS_SERVICES = True
+except ImportError:
+    HAS_SERVICES = False
 
 # Logging
 _LOG_DIR.mkdir(exist_ok=True)
@@ -71,14 +83,14 @@ def _detect_providers() -> dict[str, dict]:
         "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
         # cursor agent -p: Cursor's headless agent mode
         "cursor": {"cmd": ["agent", "-p"], "append_prompt": True, "check_binary": "agent"},
-        # ollama-local: local LLM (best available model)
+        # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
-            "cmd": ["ollama", "run"], "append_prompt": True,
+            "cmd": ["ollama", "run"], "stdin_prompt": True,
             "check": _check_ollama_local, "model_select": _select_ollama_model,
         },
-        # ollama-cloud: ollama cloud models (glm-5, etc.)
+        # ollama-cloud: ollama cloud models (glm-5, etc.) via stdin
         "ollama-cloud": {
-            "cmd": ["ollama", "run"], "append_prompt": True,
+            "cmd": ["ollama", "run"], "stdin_prompt": True,
             "check": _check_ollama_cloud, "model_select": _select_ollama_cloud_model,
         },
     }
@@ -106,9 +118,10 @@ def _detect_providers() -> dict[str, dict]:
         providers[name] = spec
 
     # API-based providers (no CLI binary needed)
+    # OpenRouter requires a valid API key — check keystore + env
     if _check_openrouter():
         providers["openrouter"] = {"api": True, "model": "openrouter/auto"}
-        log.info("Provider detected: openrouter (API, free tier)")
+        log.info("Provider detected: openrouter (API)")
 
     return providers
 
@@ -179,24 +192,31 @@ def _select_ollama_cloud_model() -> str | None:
 
 
 def _check_openrouter() -> bool:
-    """Check if OpenRouter API is reachable (free tier, no key required)."""
+    """Check if OpenRouter API is reachable with a valid key.
+
+    Tries a minimal chat completion to verify the key works.
+    Keys are loaded from ~/.coherence-network/keys.json first, then env.
+    """
+    if not HAS_SERVICES:
+        return False
     try:
-        result = subprocess.run(
-            ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
-             "https://openrouter.ai/api/v1/models"],
-            capture_output=True, text=True, timeout=10,
+        content, _, _ = chat_completion(
+            model="nvidia/nemotron-nano-12b-v2-vl:free",
+            prompt="hi",
+            timeout_s=10.0,
         )
-        return result.stdout.strip() == "200"
-    except Exception:
+        return bool(content)
+    except Exception as e:
+        log.debug("OpenRouter check failed: %s", e)
         return False
 
 
 def _run_openrouter(prompt: str, cwd: str, timeout: int) -> tuple[bool, str, float]:
     """Execute via OpenRouter API (free tier). Returns (success, output, duration)."""
+    if not HAS_SERVICES:
+        return False, "Services not available", 0.0
     start = time.time()
     try:
-        sys.path.insert(0, str(_API_DIR))
-        from app.services.openrouter_client import chat_completion
         content, usage, meta = chat_completion(
             model="openrouter/auto",  # auto-routes to best free model
             prompt=prompt,
@@ -220,16 +240,16 @@ def select_provider(task_type: str) -> str:
     if len(available) == 1:
         return available[0]
 
-    try:
-        from app.services.slot_selection_service import SlotSelector
-        selector = SlotSelector(f"provider_{task_type}")
-        selected = selector.select(available)
-        if selected:
-            log.info("PROVIDER_SELECT task_type=%s selected=%s from=%s (Thompson Sampling)",
-                     task_type, selected, available)
-            return selected
-    except Exception:
-        log.warning("Thompson Sampling failed for provider selection, using round-robin", exc_info=True)
+    if HAS_SERVICES:
+        try:
+            selector = SlotSelector(f"provider_{task_type}")
+            selected = selector.select(available)
+            if selected:
+                log.info("PROVIDER_SELECT task_type=%s selected=%s from=%s (Thompson Sampling)",
+                         task_type, selected, available)
+                return selected
+        except Exception:
+            log.warning("Thompson Sampling failed for provider selection, using fallback", exc_info=True)
 
     # Fallback: simple rotation based on time
     import hashlib
@@ -271,10 +291,11 @@ def record_provider_outcome(
     task_type: str, provider: str, success: bool, duration: float, output: str = "",
 ):
     """Record provider outcome with error classification for root-cause analysis."""
-    error_class = None if success else classify_error(output)
+    if not HAS_SERVICES:
+        return
 
+    error_class = None if success else classify_error(output)
     try:
-        from app.services.slot_selection_service import SlotSelector
         selector = SlotSelector(f"provider_{task_type}")
         selector.record(
             slot_id=provider,
@@ -291,8 +312,9 @@ def record_provider_outcome(
 
 def get_provider_stats() -> dict:
     """Get current provider selection stats for all task types."""
+    if not HAS_SERVICES:
+        return {}
     try:
-        from app.services.slot_selection_service import SlotSelector
         available = list(PROVIDERS.keys())
         stats = {}
         for task_type in ["spec", "test", "impl", "review", "heal"]:
@@ -305,23 +327,42 @@ def get_provider_stats() -> dict:
 
 # ── API calls ────────────────────────────────────────────────────────
 
+_HTTP_CLIENT = httpx.Client(timeout=30.0)
+
 def api(method: str, path: str, body: dict | None = None) -> dict | list | None:
-    """Call the API via curl."""
+    """Call the API via httpx."""
     url = f"{API_BASE}{path}"
-    cmd = ["curl", "-s", "-X", method, url, "-H", "Content-Type: application/json"]
-    if body:
-        cmd += ["-d", json.dumps(body)]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        if not result.stdout.strip():
-            log.error("API %s %s → empty response", method, path)
+        if method == "GET":
+            resp = _HTTP_CLIENT.get(url)
+        elif method == "POST":
+            resp = _HTTP_CLIENT.post(url, json=body)
+        elif method == "PATCH":
+            resp = _HTTP_CLIENT.patch(url, json=body)
+        elif method == "PUT":
+            resp = _HTTP_CLIENT.put(url, json=body)
+        elif method == "DELETE":
+            resp = _HTTP_CLIENT.delete(url)
+        else:
+            log.error("Unsupported API method: %s", method)
             return None
-        return json.loads(result.stdout)
+
+        if resp.status_code >= 400:
+            log.error("API %s %s → status %d: %s", method, path, resp.status_code, resp.text[:200])
+            return None
+
+        if not resp.text.strip():
+            return None
+
+        return resp.json()
+    except httpx.HTTPError as e:
+        log.error("API %s %s network error: %s", method, path, e)
+        return None
     except json.JSONDecodeError:
-        log.error("API %s %s → bad JSON: %s", method, path, result.stdout[:200])
+        log.error("API %s %s → bad JSON: %s", method, path, resp.text[:200])
         return None
     except Exception as e:
-        log.error("API %s %s failed: %s", method, path, e)
+        log.error("API %s %s unexpected error: %s", method, path, e)
         return None
 
 

@@ -4304,9 +4304,114 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
                     "provider observed in runtime usage but key/config is missing or provider checks are failing"
                 )
                 snapshot.notes = list(dict.fromkeys(snapshot.notes))
+        # Enrich with SlotSelector execution outcomes (single source of truth)
+        _enrich_with_execution_stats(snapshot)
         snapshot = _finalize_snapshot(snapshot)
         _store_snapshot(snapshot)
     return providers
+
+
+def _enrich_with_execution_stats(snapshot: ProviderUsageSnapshot) -> None:
+    """Add execution success rate and last-5 metrics from SlotSelector.
+
+    SlotSelector is the single source of truth for execution outcomes.
+    This enriches automation_usage snapshots without duplicating tracking.
+    """
+    try:
+        from app.services.slot_selection_service import SlotSelector
+    except ImportError:
+        return
+
+    provider = _normalize_provider_name(snapshot.provider)
+    # Provider name mapping: automation_usage names → SlotSelector slot_id names
+    provider_aliases = {
+        "openai": "codex", "openai-codex": "codex", "claude-code": "claude",
+    }
+    slot_name = provider_aliases.get(provider, provider)
+
+    total_runs = 0
+    total_successes = 0
+    all_durations: list[float] = []
+    all_errors: dict[str, int] = {}
+    last_5_scores: list[float] = []
+
+    for task_type in ["spec", "impl", "test", "review", "heal"]:
+        selector = SlotSelector(f"provider_{task_type}")
+        try:
+            measurements = selector._load_measurements(selector._task_type_filter)
+        except Exception:
+            continue
+        slot_records = [m for m in measurements if m.get("slot_id") == slot_name]
+        for r in slot_records:
+            total_runs += 1
+            if r.get("value_score", 0) > 0:
+                total_successes += 1
+            if "duration_s" in r:
+                all_durations.append(r["duration_s"])
+            ec = r.get("error_class")
+            if ec:
+                all_errors[ec] = all_errors.get(ec, 0) + 1
+            last_5_scores.append(r.get("value_score", 0))
+
+    if total_runs == 0:
+        return
+
+    # Last 5 only
+    last_5 = last_5_scores[-5:]
+    success_rate = total_successes / total_runs
+    last_5_rate = sum(last_5) / len(last_5) if last_5 else 0.0
+
+    # Add execution metrics
+    snapshot.metrics.append(_metric(
+        id="execution_success_rate",
+        label="Execution success rate",
+        unit="ratio",
+        used=round(success_rate, 3),
+        window="all_time",
+        validation_state="validated",
+        validation_detail=f"From {total_runs} task executions via SlotSelector.",
+        evidence_source="runtime_events",
+    ))
+    snapshot.metrics.append(_metric(
+        id="execution_last_5_rate",
+        label="Last 5 success rate",
+        unit="ratio",
+        used=round(last_5_rate, 3),
+        window="last_5",
+        validation_state="validated",
+        validation_detail=f"From last {len(last_5)} executions. Alert if < 0.5.",
+        evidence_source="runtime_events",
+    ))
+    if all_durations:
+        avg_dur = sum(all_durations) / len(all_durations)
+        snapshot.metrics.append(_metric(
+            id="execution_avg_duration_s",
+            label="Avg execution duration",
+            unit="seconds",
+            used=round(avg_dur, 1),
+            window="all_time",
+            validation_state="validated",
+            validation_detail=f"Mean of {len(all_durations)} execution durations.",
+            evidence_source="runtime_events",
+        ))
+
+    # Update raw data
+    snapshot.raw["execution_stats"] = {
+        "total_runs": total_runs,
+        "successes": total_successes,
+        "failures": total_runs - total_successes,
+        "success_rate": round(success_rate, 3),
+        "last_5_rate": round(last_5_rate, 3),
+        "avg_duration_s": round(sum(all_durations) / len(all_durations), 1) if all_durations else None,
+        "error_breakdown": all_errors,
+    }
+
+    # Flag attention needed
+    if last_5_rate < 0.5 and len(last_5) >= 3:
+        snapshot.status = "degraded"
+        snapshot.notes.append(
+            f"Last-5 execution success rate {last_5_rate:.0%} is below 50% threshold"
+        )
 
 
 def _provider_limit_telemetry_state(snapshot: ProviderUsageSnapshot) -> dict[str, Any]:

@@ -17,6 +17,51 @@ import {
   ViewPerformanceSection,
 } from "./sections";
 
+type ProviderStatsEntry = {
+  total_runs: number;
+  successes: number;
+  failures: number;
+  success_rate: number;
+  last_5_rate: number;
+  avg_duration_s: number;
+  selection_probability: number;
+  blocked: boolean;
+  needs_attention: boolean;
+  error_breakdown: Record<string, number>;
+};
+
+type ProviderStatsAlert = {
+  provider: string;
+  metric: string;
+  value: number;
+  threshold: number;
+  message: string;
+};
+
+type ProviderStatsSummary = {
+  total_providers: number;
+  healthy_providers: number;
+  attention_needed: number;
+  total_measurements: number;
+};
+
+type ProviderStatsResponse = {
+  providers: Record<string, ProviderStatsEntry>;
+  task_types: Record<string, { providers: Record<string, ProviderStatsEntry> }>;
+  alerts: ProviderStatsAlert[];
+  summary: ProviderStatsSummary;
+};
+
+async function loadProviderStats(api: string): Promise<ProviderStatsResponse | null> {
+  try {
+    const res = await fetch(`${api}/api/providers/stats`, { next: { revalidate: 60 } });
+    if (!res.ok) return null;
+    return (await res.json()) as ProviderStatsResponse;
+  } catch {
+    return null;
+  }
+}
+
 export const revalidate = 60;
 
 export default async function UsagePage({ searchParams }: { searchParams: UsageSearchParams }) {
@@ -29,10 +74,11 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
   const offset = (page - 1) * pageSize;
 
   const API = getApiBase();
-  const [runtimeSlice, dailySummaryResult, viewPerformance] = await Promise.all([
+  const [runtimeSlice, dailySummaryResult, viewPerformance, providerStats] = await Promise.all([
     loadRuntimeSlice(API, pageSize, offset),
     loadDailySummary(API),
     loadViewPerformance(API),
+    loadProviderStats(API),
   ]);
 
   const runtime = runtimeSlice.runtime;
@@ -118,6 +164,79 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
         />
 
         <ViewPerformanceSection viewRows={viewRows} />
+
+        <section className="space-y-3 rounded border p-4">
+          <h2 className="text-lg font-semibold tracking-tight">Provider Health</h2>
+          {providerStats ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {providerStats.summary.healthy_providers}/{providerStats.summary.total_providers} providers healthy, {providerStats.summary.total_measurements} measurements
+              </p>
+              {providerStats.alerts.length > 0 && (
+                <ul className="space-y-1">
+                  {providerStats.alerts.map((alert, i) => (
+                    <li
+                      key={`prov-alert-${alert.provider}-${alert.metric}-${i}`}
+                      className={`rounded px-3 py-1.5 text-sm font-medium ${
+                        alert.value < alert.threshold * 0.5
+                          ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      }`}
+                    >
+                      {alert.message}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+                      <th className="pb-2 pr-4">Provider</th>
+                      <th className="pb-2 pr-4">Overall Rate</th>
+                      <th className="pb-2 pr-4">Last 5</th>
+                      <th className="pb-2 pr-4">Avg Speed</th>
+                      <th className="pb-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(providerStats.providers)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([name, entry]) => (
+                        <tr key={`prov-row-${name}`} className="border-b border-border/30">
+                          <td className="py-1.5 pr-4 font-medium">{name}</td>
+                          <td className="py-1.5 pr-4">{(entry.success_rate * 100).toFixed(0)}%</td>
+                          <td
+                            className={`py-1.5 pr-4 ${
+                              entry.last_5_rate < 0.5
+                                ? "text-red-600 dark:text-red-400"
+                                : entry.last_5_rate < 0.8
+                                  ? "text-amber-600 dark:text-amber-400"
+                                  : ""
+                            }`}
+                          >
+                            {(entry.last_5_rate * 100).toFixed(0)}%
+                          </td>
+                          <td className="py-1.5 pr-4">{entry.avg_duration_s.toFixed(1)}s</td>
+                          <td className="py-1.5">
+                            {entry.blocked ? (
+                              <span className="text-red-600 dark:text-red-400">blocked</span>
+                            ) : entry.needs_attention ? (
+                              <span className="text-amber-600 dark:text-amber-400">attention</span>
+                            ) : (
+                              <span className="text-green-600 dark:text-green-400">ok</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">No data available.</p>
+          )}
+        </section>
       </div>
     </main>
   );

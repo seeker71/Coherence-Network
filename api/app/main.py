@@ -37,6 +37,7 @@ from app.routers import (
     value_lineage,
 )
 from app.routers import agent_grounded_metrics_routes
+from app.routers import provider_stats
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_duration import RequestDurationMiddleware
 from app.models.runtime import RuntimeEventCreate
@@ -437,6 +438,7 @@ app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
+app.include_router(provider_stats.router)
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
