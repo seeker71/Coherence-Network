@@ -33,10 +33,25 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import quote
-try:
+if sys.platform == "win32":
+    import msvcrt
+
+    def _lock(f):
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+    def _unlock(f):
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+else:
     import fcntl
-except ImportError:  # pragma: no cover - non-posix fallback
-    fcntl = None
+
+    def _lock(f):
+        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+
+    def _unlock(f):
+        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _api_dir)
@@ -2511,13 +2526,11 @@ def _run_records_file_lock():
     os.makedirs(os.path.dirname(RUN_RECORDS_FILE), exist_ok=True)
     lock_path = f"{RUN_RECORDS_FILE}.lock"
     with open(lock_path, "a+", encoding="utf-8") as lock_file:
-        if fcntl is not None:
-            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        _lock(lock_file)
         try:
             yield
         finally:
-            if fcntl is not None:
-                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            _unlock(lock_file)
 
 
 def _record_run_update(run_id: str, patch: dict[str, Any]) -> None:
