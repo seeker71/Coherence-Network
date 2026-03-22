@@ -2,12 +2,32 @@
 
 from __future__ import annotations
 
-import fcntl
 import json
 import logging
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+
+if sys.platform == "win32":
+    import msvcrt
+
+    def _lock(f):
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+    def _unlock(f):
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
+        except OSError:
+            pass
+else:
+    import fcntl
+
+    def _lock(f):
+        fcntl.flock(f, fcntl.LOCK_EX)
+
+    def _unlock(f):
+        fcntl.flock(f, fcntl.LOCK_UN)
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +114,7 @@ def _load_records(store_path: Path) -> list[dict]:
 def _save_record(record: dict, store_path: Path) -> None:
     store_path.parent.mkdir(parents=True, exist_ok=True)
     with open(store_path, "a+" if store_path.exists() else "w+") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+        _lock(f)
         try:
             f.seek(0)
             content = f.read().strip()
@@ -104,7 +124,7 @@ def _save_record(record: dict, store_path: Path) -> None:
             f.truncate()
             json.dump(records, f, indent=2)
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+            _unlock(f)
 
 
 def maybe_create_heal_task(
