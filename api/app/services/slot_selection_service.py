@@ -205,7 +205,7 @@ class SlotSelector:
         recency_window: int = 5,
         recency_weight: float = 0.6,
     ) -> dict[str, float]:
-        """Compute Thompson Sampling weights using Beta distribution with recency bias.
+        """Compute Thompson Sampling samples using Beta distribution with recency bias.
 
         Every slot uses Beta(alpha, beta). Recent performance (last N runs)
         is weighted more heavily than historical, so the system reacts quickly
@@ -217,7 +217,7 @@ class SlotSelector:
         - 0 samples: uniform random (fair exploration)
         - 2/2 recent successes: high draw, quickly favored
         - Recent failures after historical success: draw drops fast
-        - Blocked slots (last 3 all failures): tiny probe weight (0.02)
+        - Blocked slots (last 3 all failures): tiny random probe weight [0.01, 0.02]
         """
         weights: dict[str, float] = {}
         for sid in slots:
@@ -225,7 +225,8 @@ class SlotSelector:
             n = len(records)
 
             if SlotSelector._is_blocked(records):
-                weights[sid] = 0.02  # tiny probe weight, not zero
+                # Tiny random probe weight to ensure variety when multiple slots are blocked
+                weights[sid] = 0.01 + random.random() * 0.01
                 continue
 
             if n == 0:
@@ -262,8 +263,8 @@ class SlotSelector:
     ) -> str | None:
         """Select a slot using Thompson Sampling.
 
-        Returns None only if all slots are blocked (3 initial zeros).
-        Uniform random when no measurements exist.
+        Returns a slot ID from available_slots. Uniform random when no
+        measurements exist. Uses argmax of Beta samples for selection.
         """
         if not available_slots:
             raise ValueError("available_slots/available_variants must not be empty")
@@ -283,22 +284,8 @@ class SlotSelector:
 
         weights = self._compute_weights(available_slots, slot_data)
 
-        if not weights:
-            return None  # all blocked
-
-        # Weighted random selection
-        slot_ids = list(weights.keys())
-        slot_weights = [weights[s] for s in slot_ids]
-        total = sum(slot_weights)
-        probabilities = [w / total for w in slot_weights]
-
-        r = random.random()
-        cumulative = 0.0
-        for sid, p in zip(slot_ids, probabilities):
-            cumulative += p
-            if r <= cumulative:
-                return sid
-        return slot_ids[-1]
+        # Standard Thompson Sampling: pick the slot with the highest sample
+        return max(weights, key=weights.get)
 
     # ── Stats & slot management ──────────────────────────────────────
 

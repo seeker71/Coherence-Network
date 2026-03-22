@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import hashlib
 import os
 import socket
@@ -121,20 +122,38 @@ def test_register_node_updates_existing_record(client):
 # ---------------------------------------------------------------------------
 
 def test_heartbeat_updates_last_seen(client):
-    payload = _make_node_payload()
-    reg_resp = client.post("/api/federation/nodes", json=payload)
-    assert reg_resp.status_code == 201
-    original_last_seen = reg_resp.json()["last_seen_at"]
+    from app.services import federation_service
 
-    hb_resp = client.post(
-        "/api/federation/nodes/a1b2c3d4e5f60789/heartbeat",
-        json={"status": "online"},
-    )
+    register_ts = datetime(2026, 3, 21, 15, 0, 0, tzinfo=timezone.utc)
+    heartbeat_ts = datetime(2026, 3, 21, 15, 5, 0, tzinfo=timezone.utc)
+
+    class _ControlledDatetime(datetime):
+        _now_values = iter([register_ts, heartbeat_ts])
+
+        @classmethod
+        def now(cls, tz=None):
+            return next(cls._now_values)
+
+    payload = _make_node_payload()
+    with patch.object(federation_service, "datetime", _ControlledDatetime):
+        reg_resp = client.post("/api/federation/nodes", json=payload)
+        assert reg_resp.status_code == 201
+        original_last_seen = reg_resp.json()["last_seen_at"]
+
+        hb_resp = client.post(
+            "/api/federation/nodes/a1b2c3d4e5f60789/heartbeat",
+            json={"status": "online"},
+        )
+
     assert hb_resp.status_code == 200
     body = hb_resp.json()
     assert body["node_id"] == "a1b2c3d4e5f60789"
     assert body["status"] == "online"
-    assert "last_seen_at" in body
+    assert body["last_seen_at"] != original_last_seen
+
+    original_last_seen_dt = datetime.fromisoformat(original_last_seen.replace("Z", "+00:00"))
+    updated_last_seen_dt = datetime.fromisoformat(body["last_seen_at"].replace("Z", "+00:00"))
+    assert updated_last_seen_dt > original_last_seen_dt
 
 
 def test_heartbeat_unknown_node_404(client):

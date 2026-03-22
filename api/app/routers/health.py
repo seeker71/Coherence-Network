@@ -105,10 +105,25 @@ class ReadyResponse(_BaseHealthResponse):
     db_connected: Annotated[bool, Field(description="Whether the database is reachable")] = False
 
 
+class PingResponse(BaseModel):
+    """GET /api/ping response."""
+
+    model_config = ConfigDict(extra="forbid")
+    pong: Annotated[bool, Field(description="Always true when API is reachable")]
+    timestamp: Annotated[str, Field(description="ISO8601 UTC")]
+
+
 @router.get("/version")
 async def version():
     """Return API version (lightweight, for dashboards)."""
     return {"version": HEALTH_VERSION}
+
+
+@router.get("/ping", response_model=PingResponse)
+async def ping():
+    """Lightweight liveness ping with current UTC timestamp."""
+    now = datetime.now(timezone.utc)
+    return PingResponse(pong=True, timestamp=_iso_utc(now))
 
 
 @router.get("/ready", response_model=ReadyResponse)
