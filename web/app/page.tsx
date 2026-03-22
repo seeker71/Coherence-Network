@@ -122,7 +122,8 @@ export default async function Home() {
   ]);
 
   const summary = ideasData?.summary;
-  const contributors = (ideasData?.ideas ?? []).length;
+  // Count unique contributors from contribution ledger, not idea count
+  const nodeCount = 1; // Will come from /api/federation/nodes when more nodes join
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)]">
@@ -176,7 +177,7 @@ export default async function Home() {
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-3/60" />
               </span>
               <span className="text-sm text-muted-foreground">
-                <span className="text-foreground font-medium">{formatNumber(contributors)}</span> contributors
+                <span className="text-foreground font-medium">{nodeCount}</span>{" "}node{nodeCount !== 1 ? "s" : ""}
               </span>
             </div>
             <div className="flex items-center gap-2">
