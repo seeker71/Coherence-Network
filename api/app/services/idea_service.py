@@ -9,6 +9,7 @@ and writes back only genuinely new discoveries.
 from __future__ import annotations
 
 import json
+import logging
 import math
 import os
 import random
@@ -16,6 +17,8 @@ import re
 import threading
 import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from sqlalchemy import text
 
@@ -185,6 +188,7 @@ def _tracked_idea_ids_from_store(max_files: int = 400) -> list[str]:
     try:
         db_rows = commit_evidence_service.list_records(limit=max(1, max_files))
     except Exception:
+        logger.warning("commit_evidence_service unavailable", exc_info=True)
         db_rows = []
     out: set[str] = set()
     for row in db_rows:
@@ -287,6 +291,7 @@ def _discover_registry_domain_idea_ids() -> list[str]:
     try:
         spec_rows = spec_registry_service.list_specs(limit=2000, offset=0)
     except Exception:
+        logger.warning("spec_registry_service unavailable during idea discovery", exc_info=True)
         spec_rows = []
     for row in spec_rows:
         idea_id = str(getattr(row, "idea_id", "") or "").strip()
@@ -297,6 +302,7 @@ def _discover_registry_domain_idea_ids() -> list[str]:
     try:
         lineage_rows = value_lineage_service.list_links(limit=2000)
     except Exception:
+        logger.warning("value_lineage_service unavailable during idea discovery", exc_info=True)
         lineage_rows = []
     for row in lineage_rows:
         idea_id = str(getattr(row, "idea_id", "") or "").strip()
@@ -323,6 +329,7 @@ def _discover_registry_domain_idea_ids() -> list[str]:
             summary_offset=0,
         )
     except Exception:
+        logger.warning("runtime_service unavailable during idea discovery", exc_info=True)
         runtime_rows = []
     for row in runtime_rows:
         idea_id = str(getattr(row, "idea_id", "") or "").strip()
@@ -356,6 +363,7 @@ def _contribution_metadata_idea_ids() -> list[str]:
                 )
             )
     except Exception:
+        logger.warning("DB query for contribution metadata failed", exc_info=True)
         return []
 
     discovered: set[str] = set()
@@ -449,7 +457,7 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
                 }
                 break
     except Exception:
-        pass
+        logger.warning("Failed to load seed metadata for derived idea %s", idea_id, exc_info=True)
     name = str(metadata.get("name") or _humanize_idea_id(idea_id))
     description = str(
         metadata.get("description")
@@ -852,6 +860,7 @@ def get_idea(idea_id: str) -> IdeaWithScore | None:
     # portfolio store yet. Expose them so UI links remain walkable.
     if idea_id in _KNOWN_INTERNAL_IDEA_IDS:
         return _with_score(_derived_idea_for_id(idea_id))
+    logger.info("Idea not found: %s", idea_id)
     return None
 
 
@@ -989,6 +998,7 @@ def update_idea(
         break
 
     if updated is None:
+        logger.info("Idea not found for update: %s", idea_id)
         return None
 
     _write_single_idea(updated, position=updated_idx)
@@ -1402,7 +1412,7 @@ def get_resonance_feed(window_hours: int = 24, limit: int = 20) -> list[dict]:
                 if existing_ts is None or cr_updated > existing_ts:
                     idea_activity[idea_id] = cr_updated
     except Exception:
-        pass
+        logger.warning("governance_service unavailable for idea activity", exc_info=True)
 
     ideas = _read_ideas(persist_ensures=False)
 
@@ -1518,7 +1528,7 @@ def get_idea_activity(idea_id: str, limit: int = 20) -> list[dict]:
                 "contributor_id": cr.proposer_id,
             })
     except Exception:
-        pass
+        logger.warning("governance_service unavailable for idea timeline", exc_info=True)
 
     # Check questions for answers
     for q in idea.open_questions:
@@ -1561,7 +1571,7 @@ def get_idea_activity(idea_id: str, limit: int = 20) -> list[dict]:
                     "contributor_id": None,
                 })
     except Exception:
-        pass
+        logger.warning("value_lineage_service unavailable for idea timeline", exc_info=True)
 
     # Sort by timestamp descending, limit
     events.sort(key=lambda e: e["timestamp"], reverse=True)

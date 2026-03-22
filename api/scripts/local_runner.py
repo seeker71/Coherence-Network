@@ -59,13 +59,21 @@ logging.basicConfig(
 log = logging.getLogger("local_runner")
 
 # Config
-API_BASE = os.environ.get("AGENT_API_BASE", "https://api.coherencycoin.com")
+try:
+    from app.services.config_service import get_hub_url
+    API_BASE = os.environ.get("AGENT_API_BASE") or get_hub_url()
+except ImportError:
+    API_BASE = os.environ.get("AGENT_API_BASE", os.environ.get("COHERENCE_HUB_URL", "https://api.coherencycoin.com"))
 WORKER_ID = f"{socket.gethostname()}:{os.getpid()}"
 _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
 _RESUME_MODE = [False]
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 _OPENROUTER_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
-_OPENROUTER_REFERER = "https://coherencycoin.com"
+try:
+    from app.services.config_service import get_hub_url as _get_hub
+    _OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER") or _get_hub().replace("/api", "").rstrip("/").replace("api.", "")
+except ImportError:
+    _OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER", "https://coherencycoin.com")
 
 
 # ── Provider registry (auto-detected) ───────────────────────────────
@@ -240,7 +248,7 @@ def _select_cursor_model(task_type: str, complexity: str = "medium") -> str:
         if selected:
             return selected
     except Exception:
-        pass
+        log.warning("SlotSelector failed for model selection", exc_info=True)
 
     # Fallback: first candidate in tier
     return candidates[0]

@@ -147,11 +147,11 @@ async function loadProgressDashboard(ideas: IdeaWithScore[]): Promise<ProgressDa
   };
 }
 
-function stageIndicator(status: string): string {
+function stageIndicator(status: string): { emoji: string; label: string } {
   const s = status.trim().toLowerCase();
-  if (s === "validated") return "\u2705";
-  if (s === "partial") return "\uD83D\uDD28";
-  return "\uD83D\uDCCB";
+  if (s === "validated") return { emoji: "\u2705", label: "Complete" };
+  if (s === "partial") return { emoji: "\uD83D\uDD28", label: "In progress" };
+  return { emoji: "\uD83D\uDCCB", label: "Not started" };
 }
 
 function whatItNeeds(idea: IdeaWithScore): string {
@@ -305,8 +305,8 @@ export default async function IdeasPage() {
                     {index + 1}. {idea.name}
                   </Link>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm" title={humanizeManifestationStatus(idea.manifestation_status)}>
-                      {stageIndicator(idea.manifestation_status)}
+                    <span className="text-sm" title={humanizeManifestationStatus(idea.manifestation_status)} aria-label={stageIndicator(idea.manifestation_status).label} role="img">
+                      {stageIndicator(idea.manifestation_status).emoji}
                     </span>
                     <span className="text-xs rounded-full border border-border/40 px-3 py-1 bg-muted/30 text-muted-foreground">
                       {humanizeManifestationStatus(idea.manifestation_status)}

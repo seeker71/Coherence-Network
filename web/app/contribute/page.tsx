@@ -296,41 +296,59 @@ export default function ContributePage() {
         let approved requests auto-apply.
       </p>
 
-      <section className="rounded border p-4 space-y-3">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
         <h2 className="font-semibold">1) Register Contributor</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
-          <input
-            className="rounded border px-3 py-2 bg-background"
-            placeholder="Name"
-            value={newContributorName}
-            onChange={(e) => setNewContributorName(e.target.value)}
-          />
-          <input
-            className="rounded border px-3 py-2 bg-background"
-            placeholder="Email"
-            value={newContributorEmail}
-            onChange={(e) => setNewContributorEmail(e.target.value)}
-          />
-          <select
-            className="rounded border px-3 py-2 bg-background"
-            value={newContributorType}
-            onChange={(e) => setNewContributorType(e.target.value as "HUMAN" | "SYSTEM")}
-          >
-            <option value="HUMAN">HUMAN</option>
-            <option value="SYSTEM">SYSTEM</option>
-          </select>
-          <button
-            type="button"
-            className="rounded border px-3 py-2 hover:bg-accent"
-            onClick={() => void registerContributor()}
-            disabled={busy === "register"}
-          >
-            {busy === "register" ? "Registering…" : "Register"}
-          </button>
+          <div className="space-y-1">
+            <label htmlFor="contributor-name" className="text-xs text-muted-foreground">Name</label>
+            <input
+              id="contributor-name"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
+              placeholder="Name"
+              value={newContributorName}
+              onChange={(e) => setNewContributorName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="contributor-email" className="text-xs text-muted-foreground">Email</label>
+            <input
+              id="contributor-email"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
+              placeholder="Email"
+              value={newContributorEmail}
+              onChange={(e) => setNewContributorEmail(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <label htmlFor="contributor-type" className="text-xs text-muted-foreground">Type</label>
+            <select
+              id="contributor-type"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
+              value={newContributorType}
+              onChange={(e) => setNewContributorType(e.target.value as "HUMAN" | "SYSTEM")}
+            >
+              <option value="HUMAN">HUMAN</option>
+              <option value="SYSTEM">SYSTEM</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground invisible">Action</label>
+            <button
+              type="button"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent"
+              onClick={() => {
+                if (!newContributorName.trim() || !newContributorEmail.trim()) return;
+                void registerContributor();
+              }}
+              disabled={busy === "register" || !newContributorName.trim() || !newContributorEmail.trim()}
+            >
+              {busy === "register" ? "Registering…" : "Register"}
+            </button>
+          </div>
         </div>
       </section>
 
-      <section className="rounded border p-4 space-y-3">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
         <h2 className="font-semibold">2) Select Proposer and Reviewer</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
           <select
@@ -365,21 +383,39 @@ export default function ContributePage() {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <article className="rounded border p-4 space-y-3">
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
           <h3 className="font-semibold">3a) Idea Create Request</h3>
           <div className="grid grid-cols-1 gap-2 text-sm">
-            <input className="rounded border px-3 py-2 bg-background" placeholder="idea_id" value={ideaCreateId} onChange={(e) => setIdeaCreateId(e.target.value)} />
-            <input className="rounded border px-3 py-2 bg-background" placeholder="name" value={ideaCreateName} onChange={(e) => setIdeaCreateName(e.target.value)} />
-            <textarea className="rounded border px-3 py-2 bg-background" rows={3} placeholder="description" value={ideaCreateDescription} onChange={(e) => setIdeaCreateDescription(e.target.value)} />
+            <div className="space-y-1">
+              <label htmlFor="idea-create-id" className="text-xs text-muted-foreground">Idea ID</label>
+              <input id="idea-create-id" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="idea_id" value={ideaCreateId} onChange={(e) => setIdeaCreateId(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="idea-create-name" className="text-xs text-muted-foreground">Name</label>
+              <input id="idea-create-name" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="name" value={ideaCreateName} onChange={(e) => setIdeaCreateName(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="idea-create-desc" className="text-xs text-muted-foreground">Description</label>
+              <textarea id="idea-create-desc" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" rows={3} placeholder="description" value={ideaCreateDescription} onChange={(e) => setIdeaCreateDescription(e.target.value)} />
+            </div>
             <div className="grid grid-cols-3 gap-2">
-              <input className="rounded border px-3 py-2 bg-background" placeholder="potential_value" value={ideaCreatePotential} onChange={(e) => setIdeaCreatePotential(e.target.value)} />
-              <input className="rounded border px-3 py-2 bg-background" placeholder="estimated_cost" value={ideaCreateCost} onChange={(e) => setIdeaCreateCost(e.target.value)} />
-              <input className="rounded border px-3 py-2 bg-background" placeholder="confidence" value={ideaCreateConfidence} onChange={(e) => setIdeaCreateConfidence(e.target.value)} />
+              <div className="space-y-1">
+                <label htmlFor="idea-create-potential" className="text-xs text-muted-foreground">Potential value</label>
+                <input id="idea-create-potential" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="potential_value" value={ideaCreatePotential} onChange={(e) => setIdeaCreatePotential(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="idea-create-cost" className="text-xs text-muted-foreground">Estimated cost</label>
+                <input id="idea-create-cost" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="estimated_cost" value={ideaCreateCost} onChange={(e) => setIdeaCreateCost(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label htmlFor="idea-create-confidence" className="text-xs text-muted-foreground">Confidence</label>
+                <input id="idea-create-confidence" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="confidence" value={ideaCreateConfidence} onChange={(e) => setIdeaCreateConfidence(e.target.value)} />
+              </div>
             </div>
             <button
               type="button"
-              className="rounded border px-3 py-2 hover:bg-accent"
-              disabled={busy === "idea_create"}
+              className="rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent"
+              disabled={busy === "idea_create" || !ideaCreateName.trim() || !ideaCreateDescription.trim()}
               onClick={() =>
                 void createRequest("idea_create", `Create idea ${ideaCreateId}`, {
                   id: ideaCreateId.trim(),
@@ -397,7 +433,7 @@ export default function ContributePage() {
           </div>
         </article>
 
-        <article className="rounded border p-4 space-y-3">
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
           <h3 className="font-semibold">3b) Idea Update Request</h3>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <select className="rounded border px-3 py-2 bg-background" value={ideaUpdateId} onChange={(e) => setIdeaUpdateId(e.target.value)}>
@@ -433,7 +469,7 @@ export default function ContributePage() {
           </div>
         </article>
 
-        <article className="rounded border p-4 space-y-3">
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
           <h3 className="font-semibold">3c) Question Request (Add or Answer)</h3>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <select className="rounded border px-3 py-2 bg-background" value={questionIdeaId} onChange={(e) => setQuestionIdeaId(e.target.value)}>
@@ -497,7 +533,7 @@ export default function ContributePage() {
           </div>
         </article>
 
-        <article className="rounded border p-4 space-y-3">
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
           <h3 className="font-semibold">3d) Spec Create / Update Requests</h3>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <input className="rounded border px-3 py-2 bg-background" placeholder="new spec_id" value={specCreateId} onChange={(e) => setSpecCreateId(e.target.value)} />
@@ -606,7 +642,7 @@ export default function ContributePage() {
         </article>
       </section>
 
-      <section className="rounded border p-4 space-y-3">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
         <h2 className="font-semibold">4) Review Queue (Human or Machine Yes/No)</h2>
         <p className="text-sm text-muted-foreground">
           Default policy is one approval required. When contributor volume grows, increase `CHANGE_REQUEST_MIN_APPROVALS`.

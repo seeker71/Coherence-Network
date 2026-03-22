@@ -550,8 +550,9 @@ export default async function AutomationPage() {
             ))}
           </div>
 
-          {/* Provider table per node */}
-          <div className="overflow-x-auto">
+          {/* Provider table per node — stacks vertically on mobile */}
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b text-muted-foreground">
@@ -588,6 +589,45 @@ export default async function AutomationPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          {/* Mobile stacked cards */}
+          <div className="md:hidden space-y-3">
+            {Object.entries(networkStats.providers)
+              .sort(([, a], [, b]) => b.total_samples - a.total_samples)
+              .map(([provider, data]) => (
+              <div key={provider} className="rounded border border-border/50 p-3 space-y-1">
+                <p className="font-medium">{provider}</p>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <p className="text-muted-foreground">Runs</p>
+                    <p>{data.total_samples}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Rate</p>
+                    <p className={data.overall_success_rate < 0.5 ? "text-red-500" : data.overall_success_rate < 0.8 ? "text-amber-500" : "text-green-500"}>
+                      {(data.overall_success_rate * 100).toFixed(0)}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Avg Speed</p>
+                    <p>{data.avg_duration_s.toFixed(0)}s</p>
+                  </div>
+                </div>
+                {Object.keys(networkStats.nodes).map((nodeId) => {
+                  const nodeData = data.per_node[nodeId];
+                  if (!nodeData) return null;
+                  return (
+                    <p key={nodeId} className="text-xs">
+                      <span className="text-muted-foreground">{networkStats.nodes[nodeId].hostname.split(".")[0]}:</span>{" "}
+                      <span className={nodeData.success_rate < 0.5 ? "text-red-500" : nodeData.success_rate < 0.8 ? "text-amber-500" : ""}>
+                        {(nodeData.success_rate * 100).toFixed(0)}%
+                      </span>{" "}
+                      <span className="text-muted-foreground">({nodeData.samples})</span>
+                    </p>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </section>
       )}
