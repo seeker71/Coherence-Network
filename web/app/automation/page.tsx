@@ -88,6 +88,41 @@ type ProviderReadinessResponse = {
   providers: ProviderReadinessRow[];
 };
 
+type ProviderExecStatsEntry = {
+  total_runs: number;
+  successes: number;
+  failures: number;
+  success_rate: number;
+  last_5_rate: number;
+  avg_duration_s: number;
+  selection_probability: number;
+  blocked: boolean;
+  needs_attention: boolean;
+  error_breakdown: Record<string, number>;
+};
+
+type ProviderExecStatsAlert = {
+  provider: string;
+  metric: string;
+  value: number;
+  threshold: number;
+  message: string;
+};
+
+type ProviderExecStatsSummary = {
+  total_providers: number;
+  healthy_providers: number;
+  attention_needed: number;
+  total_measurements: number;
+};
+
+type ProviderExecStatsResponse = {
+  providers: Record<string, ProviderExecStatsEntry>;
+  task_types: Record<string, { providers: Record<string, ProviderExecStatsEntry> }>;
+  alerts: ProviderExecStatsAlert[];
+  summary: ProviderExecStatsSummary;
+};
+
 type ProviderValidationRow = {
   provider: string;
   configured: boolean;
@@ -114,15 +149,17 @@ async function loadAutomationData(): Promise<{
   alerts: UsageAlertResponse;
   readiness: ProviderReadinessResponse;
   validation: ProviderValidationResponse;
+  execStats: ProviderExecStatsResponse | null;
 }> {
   const api = getApiBase();
-  const [usageRes, alertsRes, readinessRes, validationRes] = await Promise.all([
+  const [usageRes, alertsRes, readinessRes, validationRes, execStatsRes] = await Promise.all([
     fetch(`${api}/api/automation/usage?force_refresh=true`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }),
     fetch(`${api}/api/automation/usage/provider-validation?runtime_window_seconds=86400&min_execution_events=1&force_refresh=true`, {
       cache: "no-store",
     }),
+    fetch(`${api}/api/providers/stats`, { cache: "no-store" }).catch(() => null),
   ]);
   if (!usageRes.ok) {
     throw new Error(`automation usage HTTP ${usageRes.status}`);
@@ -136,16 +173,21 @@ async function loadAutomationData(): Promise<{
   if (!validationRes.ok) {
     throw new Error(`automation provider validation HTTP ${validationRes.status}`);
   }
+  let execStats: ProviderExecStatsResponse | null = null;
+  if (execStatsRes && execStatsRes.ok) {
+    execStats = (await execStatsRes.json()) as ProviderExecStatsResponse;
+  }
   return {
     usage: (await usageRes.json()) as AutomationUsageResponse,
     alerts: (await alertsRes.json()) as UsageAlertResponse,
     readiness: (await readinessRes.json()) as ProviderReadinessResponse,
     validation: (await validationRes.json()) as ProviderValidationResponse,
+    execStats,
   };
 }
 
 export default async function AutomationPage() {
-  const { usage, alerts, readiness, validation } = await loadAutomationData();
+  const { usage, alerts, readiness, validation, execStats } = await loadAutomationData();
   const providers = [...usage.providers].sort((a, b) => a.provider.localeCompare(b.provider));
 
   return (
@@ -237,6 +279,64 @@ export default async function AutomationPage() {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="rounded border p-4 space-y-3 text-sm">
+        <h2 className="font-semibold">Provider Execution Stats</h2>
+        {execStats ? (
+          <>
+            <p className="text-muted-foreground">
+              {execStats.summary.healthy_providers}/{execStats.summary.total_providers} healthy | {execStats.summary.attention_needed} need attention | {execStats.summary.total_measurements} measurements
+            </p>
+            <ul className="space-y-2">
+              {Object.entries(execStats.providers)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([name, entry]) => (
+                  <li
+                    key={`exec-${name}`}
+                    className={`rounded border p-2 ${entry.blocked ? "border-red-500/50 bg-red-500/5" : ""}`}
+                  >
+                    <p>
+                      <span className="font-medium">{name}</span>
+                      {entry.blocked && <span className="ml-2 text-red-600 dark:text-red-400 font-medium">[BLOCKED]</span>}
+                      {" "}| overall {(entry.success_rate * 100).toFixed(0)}%
+                      {" "}| last_5{" "}
+                      <span
+                        className={
+                          entry.last_5_rate < 0.5
+                            ? "text-red-600 dark:text-red-400"
+                            : entry.last_5_rate < 0.8
+                              ? "text-amber-600 dark:text-amber-400"
+                              : ""
+                        }
+                      >
+                        {(entry.last_5_rate * 100).toFixed(0)}%
+                      </span>
+                      {" "}| runs {entry.total_runs} ({entry.successes}ok {entry.failures}fail)
+                      {" "}| avg {entry.avg_duration_s.toFixed(1)}s
+                    </p>
+                    <p className="text-muted-foreground">
+                      selection_probability {(entry.selection_probability * 100).toFixed(1)}%
+                      {entry.needs_attention && (
+                        <span className="ml-2 text-amber-600 dark:text-amber-400">needs attention</span>
+                      )}
+                    </p>
+                    {Object.keys(entry.error_breakdown).length > 0 && (
+                      <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                        {Object.entries(entry.error_breakdown).map(([errClass, count]) => (
+                          <li key={`exec-err-${name}-${errClass}`}>
+                            error: {errClass} x{count}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+            </ul>
+          </>
+        ) : (
+          <p className="text-muted-foreground">No data available.</p>
+        )}
       </section>
 
       <section className="rounded border p-4 space-y-3 text-sm">
