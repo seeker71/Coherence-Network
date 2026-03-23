@@ -7,28 +7,33 @@
  * Zero dependencies. Node 18+ required.
  */
 
-import { listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea } from "../lib/commands/ideas.mjs";
+import { listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea } from "../lib/commands/ideas.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
-import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity } from "../lib/commands/identity.mjs";
+import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
 const COMMANDS = {
   ideas:      () => listIdeas(args),
-  idea:       () => showIdea(args),
+  idea:       () => handleIdea(args),
   share:      () => shareIdea(),
   stake:      () => stakeOnIdea(args),
   fork:       () => forkIdea(args),
   specs:      () => listSpecs(args),
   spec:       () => showSpec(args),
-  contribute: () => contribute(),
+  contribute: () => contribute(args),
   status:     () => showStatus(),
   resonance:  () => showResonance(),
   identity:   () => handleIdentity(args),
   help:       () => showHelp(),
 };
+
+async function handleIdea(args) {
+  if (args[0] === "create") return createIdea(args.slice(1));
+  return showIdea(args);
+}
 
 async function handleIdentity(args) {
   const sub = args[0];
@@ -38,6 +43,7 @@ async function handleIdentity(args) {
     case "unlink": return unlinkIdentity(subArgs);
     case "lookup": return lookupIdentity(subArgs);
     case "setup":  return setupIdentity();
+    case "set":    return setIdentity(subArgs);
     default:       return showIdentity();
   }
 }
@@ -51,20 +57,23 @@ function showHelp() {
 \x1b[1mExplore:\x1b[0m
   ideas [limit]           Browse ideas by ROI
   idea <id>               View idea detail
+  idea create <id> <name> [--desc "..." --value N --cost N --parent <id>]
   specs [limit]           List feature specs
   spec <id>               View spec detail
   resonance               What's alive right now
   status                  Network health + node info
 
 \x1b[1mContribute:\x1b[0m
-  share                   Submit a new idea
+  share                   Submit a new idea (interactive)
+  contribute              Record contribution (interactive)
+  contribute --type code --cc 5 --idea <id> --desc "what I did"
   stake <id> <cc>         Stake CC on an idea
   fork <id>               Fork an idea
-  contribute              Record any contribution
 
 \x1b[1mIdentity:\x1b[0m
   identity                Show your linked accounts
   identity setup          Guided onboarding
+  identity set <id>       Set identity non-interactively
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity

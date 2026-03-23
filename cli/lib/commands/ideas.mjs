@@ -136,3 +136,44 @@ export async function forkIdea(args) {
     console.log("Fork failed.");
   }
 }
+
+/**
+ * Non-interactive idea creation for agents and scripts.
+ *
+ * Usage: cc idea create <id> <name> [--desc "..."] [--value N] [--cost N] [--parent <id>]
+ */
+export async function createIdea(args) {
+  if (args.length < 2) {
+    console.log("Usage: cc idea create <id> <name> [--desc \"...\"] [--value N] [--cost N] [--parent <id>]");
+    return;
+  }
+
+  const id = args[0];
+  const name = args[1];
+  const flags = {};
+  for (let i = 2; i < args.length; i++) {
+    if (args[i] === "--desc" && args[i + 1]) flags.desc = args[++i];
+    else if (args[i] === "--value" && args[i + 1]) flags.value = parseFloat(args[++i]);
+    else if (args[i] === "--cost" && args[i + 1]) flags.cost = parseFloat(args[++i]);
+    else if (args[i] === "--parent" && args[i + 1]) flags.parent = args[++i];
+    else if (args[i] === "--confidence" && args[i + 1]) flags.confidence = parseFloat(args[++i]);
+  }
+
+  const body = {
+    id,
+    name,
+    description: flags.desc || name,
+    potential_value: flags.value || 50,
+    estimated_cost: flags.cost || 5,
+    confidence: flags.confidence || 0.5,
+  };
+  if (flags.parent) body.parent_idea_id = flags.parent;
+
+  const result = await post("/api/ideas", body);
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Idea created: ${result.id || id}`);
+  } else {
+    console.log("Failed to create idea.");
+    process.exit(1);
+  }
+}

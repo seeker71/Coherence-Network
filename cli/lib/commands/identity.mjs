@@ -86,6 +86,18 @@ export async function lookupIdentity(args) {
   }
 }
 
+export async function setIdentity(args) {
+  const id = args[0];
+  if (!id) {
+    console.log("Usage: cc identity set <contributor_id>");
+    console.log("Sets the contributor identity non-interactively (for agents and scripts).");
+    return;
+  }
+  const { saveConfig } = await import("../config.mjs");
+  saveConfig({ contributor_id: id });
+  console.log(`\x1b[32m✓\x1b[0m Identity set to: ${id}`);
+}
+
 export async function setupIdentity() {
   // Force re-run onboarding
   await ensureIdentity();
