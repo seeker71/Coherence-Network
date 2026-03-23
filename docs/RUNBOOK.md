@@ -497,6 +497,50 @@ find api/logs -name 'task_*.log' -mtime +7 -delete
 
 Or use `api/scripts/cleanup_temp.py` if it supports log cleanup.
 
+## Idea Tracking — Every Idea Gets Recorded
+
+**Rule: When a new idea comes up in any conversation, session, or PR — it MUST be recorded in the system as an actual idea before the session ends.**
+
+Ideas are the atomic unit of the Coherence Network. If an idea isn't in the system, it doesn't exist for tracking, attribution, or value lineage.
+
+### How to record an idea
+
+```bash
+# Via CLI
+cc share
+
+# Via API
+curl -s https://api.coherencycoin.com/api/ideas -X POST \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "kebab-case-id",
+    "name": "Human-readable name",
+    "description": "What this idea does and why it matters",
+    "potential_value": 50,
+    "estimated_cost": 5,
+    "confidence": 0.5,
+    "manifestation_status": "none",
+    "parent_idea_id": "parent-id-if-applicable"
+  }'
+```
+
+### When to update an idea
+
+- **When implementation starts:** PATCH `manifestation_status` → `"partial"`
+- **When implementation ships:** PATCH `manifestation_status` → `"validated"`, set `actual_value` and `actual_cost`
+- **When a sub-idea is created:** Set `parent_idea_id` on the child to link the hierarchy
+
+### Checklist (end of every session)
+
+1. Were any new ideas discussed? → Record them via `POST /api/ideas`
+2. Were any existing ideas implemented? → Update status via `PATCH /api/ideas/{id}`
+3. Do new ideas have parent relationships? → Set `parent_idea_id`
+4. Are all ideas discoverable via `cc ideas`? → Verify
+
+### API key requirement
+
+Read operations (GET) work without a key. Write operations (POST, PATCH) require `X-API-Key` header on the production API. For local dev, no key is needed.
+
 ## See also
 
 - [AGENTS.md](../AGENTS.md) — Commands, agent API, pipeline scripts
