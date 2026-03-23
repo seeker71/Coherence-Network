@@ -10,8 +10,8 @@ function countLabel(value: number): string {
 
 export function FlowTopContributors({ rows }: Props) {
   return (
-    <section className="rounded border p-4 space-y-2">
-      <h2 className="font-semibold">People Showing Up Most Often</h2>
+    <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2">
+      <h2 className="text-xl font-semibold">People Showing Up Most Often</h2>
       <p className="text-sm text-muted-foreground">
         Useful when you want to see who already has context around the ideas in this view.
       </p>

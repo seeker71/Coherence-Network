@@ -270,8 +270,8 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
   }
   if (ideaResult.kind === "error") {
     return (
-      <main className="min-h-screen p-8 max-w-4xl mx-auto space-y-4">
-        <h1 className="text-2xl font-bold">Idea Details Unavailable</h1>
+      <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto space-y-8">
+        <h1 className="text-3xl font-bold tracking-tight">Idea Details Unavailable</h1>
         <p className="text-muted-foreground">
           Could not load this idea from upstream right now.
         </p>
@@ -311,30 +311,17 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
   const measuredValueTotal = flow?.contributions.measured_value_total ?? 0;
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
+    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-8">
       <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/today" className="text-muted-foreground hover:text-foreground">
-          Today
-        </Link>
-        <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
+        <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">
           Ideas
         </Link>
-        <Link href="/specs" className="text-muted-foreground hover:text-foreground">
-          Plans
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Work
-        </Link>
-        <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="text-muted-foreground hover:text-foreground">
-          Progress
-        </Link>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="text-muted-foreground">{idea.name}</span>
       </div>
 
       <div className="space-y-2">
-        <h1 className="text-2xl font-bold">{idea.name}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{idea.name}</h1>
         <p className="max-w-3xl text-muted-foreground">{idea.description}</p>
         <p className="text-sm text-muted-foreground">
           Current proof level: {humanizeManifestationStatus(idea.manifestation_status)}
@@ -371,27 +358,27 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         </p>
       ) : null}
 
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-        <div className="rounded border p-3">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6">
           <p className="text-muted-foreground">How real it is</p>
           <p className="text-lg font-semibold">{humanizeManifestationStatus(idea.manifestation_status)}</p>
         </div>
-        <div className="rounded border p-3">
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6">
           <p className="text-muted-foreground">Best time to work on this</p>
           <p className="text-lg font-semibold">{humanizeIdeaPriority(idea.free_energy_score)}</p>
           <p className="text-xs text-muted-foreground">{explainIdeaPriority(idea.free_energy_score)}</p>
         </div>
-        <div className="rounded border p-3">
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6">
           <p className="text-muted-foreground">Value still available</p>
           <p className="text-lg font-semibold">{formatUsd(idea.value_gap)}</p>
         </div>
-        <div className="rounded border p-3">
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6">
           <p className="text-muted-foreground">How sure we are</p>
           <p className="text-lg font-semibold">{formatConfidence(idea.confidence)}</p>
         </div>
       </section>
 
-      <section className="rounded-xl border border-amber-200 bg-amber-50/30 p-4 space-y-3 text-sm dark:border-amber-800/40 dark:bg-amber-950/10">
+      <section className="rounded-2xl border border-amber-200 bg-amber-50/30 p-6 space-y-3 text-sm dark:border-amber-800/40 dark:bg-amber-950/10">
         <h2 className="font-semibold text-amber-900 dark:text-amber-200">Investment</h2>
         <p className="text-amber-800/70 dark:text-amber-300/70">
           CC staked on this idea and what it produced.
@@ -432,23 +419,23 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         </div>
       </section>
 
-      <section className="rounded-xl border border-stone-200 bg-white p-4 space-y-3 text-sm dark:border-stone-700 dark:bg-stone-800/60">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
         <h2 className="font-semibold">Activity</h2>
         {activity.length > 0 ? (
           <div className="relative space-y-0">
             {activity.map((event, i) => (
               <div key={i} className="relative flex gap-3 pb-4 last:pb-0">
                 <div className="flex flex-col items-center">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs dark:bg-stone-700">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted/60 text-xs">
                     {activityIcon(event.type)}
                   </span>
                   {i < activity.length - 1 && (
-                    <div className="mt-1 w-px flex-1 bg-stone-200 dark:bg-stone-700" />
+                    <div className="mt-1 w-px flex-1 bg-border/40" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1 pt-0.5">
-                  <p className="text-stone-800 dark:text-stone-200">{event.summary}</p>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-stone-400 dark:text-stone-500">
+                  <p className="text-foreground">{event.summary}</p>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{timeAgo(event.timestamp)}</span>
                     {event.contributor_id && (
                       <>
@@ -466,14 +453,14 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         )}
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Where This Idea Already Shows Up</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+        <h2 className="text-xl font-semibold">Where This Idea Already Shows Up</h2>
         <p className="text-muted-foreground">
           Use this as a quick sense of what is already planned, moving, or producing proof.
         </p>
         {flow ? (
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="rounded border p-3 space-y-2">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
               <p className="font-medium">Plans</p>
               <p className="text-muted-foreground">
                 {linkedPlanIds.length > 0
@@ -500,7 +487,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
                 </div>
               ) : null}
             </div>
-            <div className="rounded border p-3 space-y-2">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
               <p className="font-medium">Work cards</p>
               <p className="text-muted-foreground">
                 {linkedTaskIds.length > 0
@@ -527,7 +514,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
                 </div>
               ) : null}
             </div>
-            <div className="rounded border p-3 space-y-2">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
               <p className="font-medium">Files and saved results</p>
               <p className="text-muted-foreground">
                 {linkedRefs.length > 0
@@ -556,7 +543,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
                 </div>
               ) : null}
             </div>
-            <div className="rounded border p-3 space-y-2">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
               <p className="font-medium">People and proof</p>
               <p className="text-muted-foreground">
                 {contributorCount} people or agents touched this idea. {usageEventsCount} usage
@@ -577,13 +564,13 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         )}
       </section>
 
-      <section className="rounded border p-4 space-y-3">
-        <h2 className="font-semibold">Questions Still To Answer</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+        <h2 className="text-xl font-semibold">Questions Still To Answer</h2>
         {idea.open_questions.length === 0 && <p className="text-sm text-muted-foreground">Nothing open right now.</p>}
         <ul className="space-y-2 text-sm">
           {idea.open_questions.map((q) => {
             return (
-              <li key={q.question} className="rounded border p-3 space-y-1">
+              <li key={q.question} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
                 <p className="font-medium">{q.question}</p>
                 <p className="text-muted-foreground">
                   Why this matters {formatUsd(q.value_to_whole)} | Expected work {formatUsd(q.estimated_cost)}
@@ -599,8 +586,8 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         </ul>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Raw Records</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+        <h2 className="text-xl font-semibold">Raw Records</h2>
         <p className="text-muted-foreground">Most people can ignore this section. Use it only when you need the underlying records.</p>
         <ul className="space-y-1">
           <li>
@@ -635,6 +622,16 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
           </li>
         </ul>
       </section>
+
+      {/* Where to go next */}
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">All Ideas</Link>
+          <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`} className="text-amber-600 dark:text-amber-400 hover:underline">Progress</Link>
+          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
+        </div>
+      </nav>
     </main>
   );
 }

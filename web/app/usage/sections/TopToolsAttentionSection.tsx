@@ -12,10 +12,10 @@ export function TopToolsAttentionSection({
   recoveryStreakTarget,
 }: TopToolsAttentionSectionProps) {
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
-      <h2 className="font-semibold">Top Tool Usage + Attention (24h)</h2>
+    <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+      <h2 className="text-xl font-semibold">Top Tool Usage + Attention (24h)</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded-xl border border-border/30 bg-background/40 p-3">
           <p className="font-medium mb-2">Top tools</p>
           <ul className="space-y-1">
             {topTools.map((tool) => (
@@ -33,7 +33,7 @@ export function TopToolsAttentionSection({
             ) : null}
           </ul>
         </div>
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded-xl border border-border/30 bg-background/40 p-3">
           <p className="font-medium mb-2">Top attention areas</p>
           <ul className="space-y-1">
             {topAttentionRows.map((row) => (

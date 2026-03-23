@@ -303,8 +303,8 @@ def _slow_route_reasons(
     return ordered
 
 # Configure CORS
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
-allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
+from app.services.config_service import get_cors_origins
+allowed_origins = get_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,

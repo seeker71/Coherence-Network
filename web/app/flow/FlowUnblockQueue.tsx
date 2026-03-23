@@ -49,14 +49,14 @@ export function FlowUnblockQueue({ flow }: Props) {
   const queue = flow.unblock_queue.slice(0, 12);
 
   return (
-    <section className="rounded border p-4 space-y-3">
-      <h2 className="font-semibold">Best Places To Unstick Progress</h2>
+    <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+      <h2 className="text-xl font-semibold">Best Places To Unstick Progress</h2>
       <p className="text-sm text-muted-foreground">
         Start with the ideas where a small step is most likely to reopen useful progress.
       </p>
       <ul className="space-y-2 text-sm">
         {queue.map((row) => (
-          <li key={row.task_fingerprint} className="rounded border p-3 space-y-2">
+          <li key={row.task_fingerprint} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <Link href={`/flow?idea_id=${encodeURIComponent(row.idea_id)}`} className="font-medium underline hover:text-foreground">
                 {humanIdeaName(row.idea_name || row.idea_id)}
