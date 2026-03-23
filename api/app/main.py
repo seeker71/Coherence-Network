@@ -146,8 +146,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Coherence Contribution Network API",
     version=health.HEALTH_VERSION,
-    description="Spec-driven OSS intelligence platform for contribution tracking, coherence scoring, and fair attribution.",
-    contact={"name": "Coherence Network", "url": "https://github.com/coherence-network"},
+    description=(
+        "Open intelligence platform that traces every idea from inception to payout — "
+        "with fair attribution, coherence scoring, and federated trust.\n\n"
+        "**Ecosystem:** "
+        "[Web](https://coherencycoin.com) · "
+        "[API Docs](https://api.coherencycoin.com/docs) · "
+        "[CLI (`npm i -g coherence-cli`)](https://www.npmjs.com/package/coherence-cli) · "
+        "[MCP Server](https://www.npmjs.com/package/coherence-mcp-server) · "
+        "[GitHub](https://github.com/seeker71/Coherence-Network) · "
+        "[OpenClaw Skill](https://clawhub.com/skills/coherence-network)"
+    ),
+    contact={"name": "Coherence Network", "url": "https://github.com/seeker71/Coherence-Network"},
     lifespan=lifespan,
     openapi_tags=[
         {"name": "health", "description": "Liveness and readiness probes"},
