@@ -2,7 +2,7 @@ name: Self Improve Cycle
 
 on:
   schedule:
-    - cron: "0 */8 * * *"
+    - cron: "37 10 * * *"  # daily (was every 8h)
   workflow_dispatch:
 
 concurrency:

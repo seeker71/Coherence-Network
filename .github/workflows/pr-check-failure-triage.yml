@@ -2,7 +2,7 @@ name: PR Check Failure Triage
 
 on:
   schedule:
-    - cron: "23 */6 * * *"
+    - cron: "53 9 * * *"  # daily (was every 6h)
   workflow_dispatch:
 
 concurrency:
