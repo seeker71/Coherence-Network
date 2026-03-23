@@ -1254,6 +1254,60 @@ def _count_active_tasks() -> int:
     return len(pending) + r_count
 
 
+_STALE_TASK_THRESHOLD_SECONDS = _TASK_TIMEOUT[0] * 2  # 2x timeout = definitely stuck
+
+
+def _reap_stale_tasks() -> int:
+    """Find and time-out tasks stuck in 'running' beyond the stale threshold.
+
+    When a node crashes mid-task, the task stays 'running' forever.
+    This reaper runs each cycle and cleans up orphaned tasks so they
+    don't block capacity. Returns the number of tasks reaped.
+    """
+    running = api("GET", "/api/agent/tasks?status=running&limit=50")
+    if not running:
+        return 0
+    tasks = running if isinstance(running, list) else running.get("tasks", [])
+    if not tasks:
+        return 0
+
+    reaped = 0
+    threshold = max(_STALE_TASK_THRESHOLD_SECONDS, 600)  # At least 10 minutes
+
+    for task in tasks:
+        created = task.get("created_at", "")
+        if not created:
+            continue
+        try:
+            from datetime import datetime as _dt, timezone as _tz
+            dt = _dt.fromisoformat(created.replace("Z", "+00:00"))
+            age_seconds = (_dt.now(_tz.utc) - dt).total_seconds()
+        except Exception:
+            continue
+
+        if age_seconds < threshold:
+            continue
+
+        task_id = task.get("id", "")
+        age_min = int(age_seconds / 60)
+        log.warning("REAPER: task %s stuck running for %dm (threshold=%ds) — marking timed_out",
+                     task_id[:20], age_min, threshold)
+
+        result = api("PATCH", f"/api/agent/tasks/{task_id}", {
+            "status": "timed_out",
+            "output": f"Reaped by stale task reaper: running for {age_min}m with no heartbeat",
+            "error_summary": f"Node went offline — task stuck running for {age_min} minutes",
+            "error_category": "stale_task_reaped",
+        })
+        if result:
+            reaped += 1
+            log.info("REAPER: reaped %s → timed_out", task_id[:20])
+
+    if reaped:
+        log.info("REAPER: cleaned up %d stale tasks", reaped)
+    return reaped
+
+
 def _seed_task_from_open_idea() -> bool:
     """Generate a task from the highest-ROI open idea when the queue is empty.
 
