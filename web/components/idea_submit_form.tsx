@@ -1,13 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export function IdeaSubmitForm() {
   const [idea, setIdea] = useState("");
+  const [contributorName, setContributorName] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [createdId, setCreatedId] = useState<string | null>(null);
+
+  // Load saved contributor name from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("coherence_contributor_id");
+      if (saved) setContributorName(saved);
+    } catch {
+      // localStorage not available
+    }
+  }, []);
+
+  // Persist contributor name when it changes
+  useEffect(() => {
+    try {
+      if (contributorName.trim()) {
+        localStorage.setItem("coherence_contributor_id", contributorName.trim());
+      }
+    } catch {
+      // localStorage not available
+    }
+  }, [contributorName]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,22 +47,25 @@ export function IdeaSubmitForm() {
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+      const body: Record<string, unknown> = {
+        id: slug || `idea-${Date.now()}`,
+        name: idea.slice(0, 120),
+        description: idea,
+        potential_value: 50,
+        estimated_cost: 10,
+        resistance_risk: 3,
+        confidence: 0.6,
+        manifestation_status: "none",
+      };
+      if (contributorName.trim()) {
+        body.contributor_id = contributorName.trim();
+      }
       const resp = await fetch(`${apiBase}/api/ideas`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-API-Key": "dev-key",
         },
-        body: JSON.stringify({
-          id: slug || `idea-${Date.now()}`,
-          name: idea.slice(0, 120),
-          description: idea,
-          potential_value: 50,
-          estimated_cost: 10,
-          resistance_risk: 3,
-          confidence: 0.6,
-          manifestation_status: "none",
-        }),
+        body: JSON.stringify(body),
       });
 
       if (resp.ok) {
@@ -98,6 +123,13 @@ export function IdeaSubmitForm() {
         rows={3}
         placeholder="I think there should be a way to..."
         className="w-full rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm px-6 py-4 text-base md:text-lg placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 resize-none transition-all duration-300"
+      />
+      <input
+        type="text"
+        value={contributorName}
+        onChange={(e) => setContributorName(e.target.value)}
+        placeholder="Your name (optional)"
+        className="w-full max-w-xs mx-auto block rounded-full border border-border/30 bg-card/40 px-4 py-2 text-sm text-muted-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/20 transition-all duration-300"
       />
       <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
         <Button

@@ -9,6 +9,7 @@ const PRIMARY_NAV = [
   { href: "/invest", label: "Invest" },
   { href: "/treasury", label: "Treasury" },
   { href: "/contribute", label: "Contribute" },
+  { href: "/identity", label: "Identity" },
 ];
 
 /** Always visible — the heartbeat of the network. */

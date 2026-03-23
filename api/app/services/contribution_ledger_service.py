@@ -55,7 +55,13 @@ def _session() -> Session:
 # Public API
 # ---------------------------------------------------------------------------
 
-VALID_CONTRIBUTION_TYPES = {"compute", "attention", "direction", "stake", "infrastructure", "code", "deposit"}
+# These are common types, but any string is valid — the ledger records whatever
+# the contributor says they did.
+SUGGESTED_TYPES = [
+    "compute", "code", "direction", "infrastructure", "attention", "stake",
+    "deposit", "research", "promotion", "design", "question", "review",
+    "testing", "documentation", "mentoring", "feedback",
+]
 
 
 def record_contribution(
@@ -67,8 +73,6 @@ def record_contribution(
 ) -> dict:
     """Record a single contribution. Returns the record as a dict."""
     _ensure_schema()
-    if contribution_type not in VALID_CONTRIBUTION_TYPES:
-        raise ValueError(f"Invalid contribution type: {contribution_type}")
 
     record_id = f"clr_{uuid4().hex[:12]}"
     now = datetime.now(timezone.utc)
