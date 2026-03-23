@@ -9,6 +9,7 @@ const PRIMARY_NAV = [
   { href: "/invest", label: "Invest" },
   { href: "/treasury", label: "Treasury" },
   { href: "/contribute", label: "Contribute" },
+  { href: "/tasks", label: "Tasks" },
   { href: "/identity", label: "Identity" },
 ];
 
