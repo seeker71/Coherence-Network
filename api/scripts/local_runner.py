@@ -1355,59 +1355,91 @@ def _reap_stale_tasks() -> int:
 
 
 def _seed_task_from_open_idea() -> bool:
-    """Generate a task from the highest-ROI open idea when the queue is empty.
+    """Generate a task from an open idea when the queue is empty.
 
-    Called when no pending tasks exist. Picks an idea that has no active tasks,
-    determines the next lifecycle phase, and creates a seed task. Returns True
-    if a task was created.
+    Smart seeding:
+    1. Skip ideas that already have pending/running tasks
+    2. Skip validated ideas
+    3. Weighted random selection (not always highest FE) for diversity
+    4. Check existing task history to determine correct next phase
+    5. Always link idea_id for phase advancement
     """
+    import random as _random
+
     # Capacity check
     active = _count_active_tasks()
     if active >= _MAX_PENDING_TASKS:
         log.info("SEED: at capacity (%d/%d) — skipping", active, _MAX_PENDING_TASKS)
         return False
 
-    # Get open ideas (none or partial status)
+    # Get open ideas
     all_ideas = api("GET", "/api/ideas?limit=200")
     if not all_ideas:
         return False
     ideas = all_ideas.get("ideas", all_ideas) if isinstance(all_ideas, dict) else all_ideas
-    open_ideas = [
+
+    # Get active task idea_ids to avoid duplicates
+    active_idea_ids: set[str] = set()
+    for status_q in ("pending", "running"):
+        tasks_data = api("GET", f"/api/agent/tasks?status={status_q}&limit=100")
+        if tasks_data:
+            task_list = tasks_data if isinstance(tasks_data, list) else tasks_data.get("tasks", [])
+            for t in task_list:
+                ctx = t.get("context") if isinstance(t.get("context"), dict) else {}
+                tid = str(ctx.get("idea_id") or "").strip()
+                if tid:
+                    active_idea_ids.add(tid)
+
+    # Filter: open ideas without active tasks
+    candidates = [
         i for i in ideas
         if i.get("manifestation_status") in ("none", "partial", None)
+        and i.get("id", "") not in active_idea_ids
     ]
-    if not open_ideas:
-        log.info("SEED: no open ideas — all validated!")
+    if not candidates:
+        log.info("SEED: no eligible ideas (all validated or already have active tasks)")
         return False
 
-    # Sort by free_energy_score (highest ROI first)
-    open_ideas.sort(key=lambda i: float(i.get("free_energy_score", 0) or 0), reverse=True)
-    idea = open_ideas[0]
+    # Weighted random selection from top 10 by free-energy (diversity)
+    candidates.sort(key=lambda i: float(i.get("free_energy_score", 0) or 0), reverse=True)
+    top = candidates[:10]
+    weights = [max(float(i.get("free_energy_score", 0) or 0), 0.1) for i in top]
+    idea = _random.choices(top, weights=weights, k=1)[0]
     idea_id = idea.get("id", "unknown")
     idea_name = idea.get("name", idea_id)
 
-    # Determine task type from lifecycle stage
-    stage = (idea.get("stage") or "none").lower()
-    if stage in ("none", "research"):
-        task_type = "spec"
-    elif stage in ("spec", "specification"):
-        task_type = "test"
-    elif stage in ("test", "testing"):
-        task_type = "impl"
-    elif stage in ("implementation", "impl"):
-        task_type = "review"
-    else:
-        task_type = "spec"
+    # Check existing task history for this idea to determine next phase
+    task_type = "spec"  # default
+    idea_tasks = api("GET", f"/api/ideas/{idea_id}/tasks")
+    if isinstance(idea_tasks, dict):
+        groups = idea_tasks.get("groups", [])
+        completed_phases = set()
+        for g in groups if isinstance(groups, list) else []:
+            if not isinstance(g, dict):
+                continue
+            phase = g.get("task_type", "")
+            status_counts = g.get("status_counts", {})
+            if int(status_counts.get("completed", 0)) > 0:
+                completed_phases.add(phase)
 
-    # Build direction from idea description + open questions
+        if "review" in completed_phases:
+            # All phases done — this idea should be validated, skip it
+            log.info("SEED: idea '%s' has completed review — marking validated", idea_name[:30])
+            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "validated"})
+            return False
+        elif "impl" in completed_phases:
+            task_type = "review"
+        elif "test" in completed_phases:
+            task_type = "impl"
+        elif "spec" in completed_phases:
+            task_type = "test"
+
+    # Build direction
     desc = idea.get("description", "")
     questions = idea.get("open_questions", [])
     q_text = ""
     if questions:
-        q_lines = []
-        for q in questions[:3]:
-            qt = q.get("question", q) if isinstance(q, dict) else str(q)
-            q_lines.append(f"- {qt}")
+        q_lines = [f"- {(q.get('question', q) if isinstance(q, dict) else str(q))}" for q in questions[:3]]
         q_text = "\n\nOpen questions to address:\n" + "\n".join(q_lines)
 
     direction = (
@@ -1422,7 +1454,7 @@ def _seed_task_from_open_idea() -> bool:
             "idea_id": idea_id,
             "idea_name": idea_name,
             "seed_generated": True,
-            "seed_source": "local_runner_idle_queue",
+            "seed_source": "local_runner_smart_seed",
         },
         "target_state": f"{task_type.title()} completed for: {idea_name}",
         "success_evidence": f"{task_type} artifact exists and meets quality criteria",
@@ -1430,9 +1462,9 @@ def _seed_task_from_open_idea() -> bool:
     })
 
     if isinstance(result, dict) and result.get("id"):
-        log.info("SEED: created %s task %s for idea '%s' (FE=%.2f)",
-                 task_type, result["id"], idea_name,
-                 float(idea.get("free_energy_score", 0) or 0))
+        log.info("SEED: created %s task %s for idea '%s' (FE=%.2f, candidates=%d)",
+                 task_type, result["id"][:16], idea_name[:40],
+                 float(idea.get("free_energy_score", 0) or 0), len(candidates))
         return True
 
     log.warning("SEED: failed to create task for idea '%s'", idea_name)
