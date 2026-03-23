@@ -1378,6 +1378,77 @@ def run_all_pending(dry_run: bool = False) -> dict:
     return results
 
 
+def _check_for_updates_and_restart() -> bool:
+    """Check if origin/main has new commits; if so, pull and re-exec.
+
+    Returns True if the process is about to be replaced (caller should exit).
+    Returns False if no update was needed.
+    """
+    try:
+        # Fetch latest from origin (quiet, no merge)
+        fetch = subprocess.run(
+            ["git", "fetch", "origin", "main", "--quiet"],
+            capture_output=True, text=True, timeout=15,
+            cwd=str(_REPO_DIR),
+        )
+        if fetch.returncode != 0:
+            log.debug("SELF-UPDATE: git fetch failed: %s", fetch.stderr.strip())
+            return False
+
+        # Compare local HEAD with origin/main
+        local_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+            cwd=str(_REPO_DIR),
+        ).stdout.strip()
+
+        remote_sha = subprocess.run(
+            ["git", "rev-parse", "origin/main"],
+            capture_output=True, text=True, timeout=5,
+            cwd=str(_REPO_DIR),
+        ).stdout.strip()
+
+        if local_sha == remote_sha:
+            return False
+
+        log.info("SELF-UPDATE: new commits detected (local=%s remote=%s)", local_sha[:8], remote_sha[:8])
+
+        # Check for uncommitted changes that would block pull
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True, text=True, timeout=5,
+            cwd=str(_REPO_DIR),
+        )
+        if status.stdout.strip():
+            log.warning("SELF-UPDATE: uncommitted changes — stashing before pull")
+            subprocess.run(
+                ["git", "stash", "--include-untracked"],
+                capture_output=True, text=True, timeout=10,
+                cwd=str(_REPO_DIR),
+            )
+
+        # Pull latest
+        pull = subprocess.run(
+            ["git", "pull", "origin", "main", "--ff-only"],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(_REPO_DIR),
+        )
+        if pull.returncode != 0:
+            log.warning("SELF-UPDATE: git pull failed: %s", pull.stderr.strip())
+            return False
+
+        log.info("SELF-UPDATE: pulled latest → %s. Re-executing runner...", remote_sha[:8])
+
+        # Re-exec this script with the same arguments
+        os.execv(sys.executable, [sys.executable] + sys.argv)
+        # This line is never reached — os.execv replaces the process
+        return True
+
+    except Exception as e:
+        log.debug("SELF-UPDATE: check failed: %s", e)
+        return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="Task runner — data-driven provider selection")
     parser.add_argument("--task", help="Run a specific task ID")
@@ -1396,6 +1467,11 @@ def main():
         action="store_true",
         help="Do not pass --dangerously-skip-permissions to claude (requires manual approval)",
     )
+    parser.add_argument(
+        "--no-self-update",
+        action="store_true",
+        help="Disable automatic git pull + re-exec on new commits",
+    )
     args = parser.parse_args()
 
     _TASK_TIMEOUT[0] = args.timeout
@@ -1409,8 +1485,9 @@ def main():
         log.error("No provider CLIs found. Install claude, codex, cursor, or gemini.")
         sys.exit(1)
 
-    log.info("Runner starting: api=%s worker=%s timeout=%ds providers=%s",
-             API_BASE, WORKER_ID, _TASK_TIMEOUT[0], list(PROVIDERS.keys()))
+    log.info("Runner starting: api=%s worker=%s timeout=%ds providers=%s self_update=%s",
+             API_BASE, WORKER_ID, _TASK_TIMEOUT[0], list(PROVIDERS.keys()),
+             "off" if args.no_self_update else "on")
 
     if args.stats:
         stats = get_provider_stats()
@@ -1429,11 +1506,17 @@ def main():
         log.info("Polling every %ds (Ctrl+C to stop)", args.interval)
         try:
             while True:
+                # Self-update: check for new commits before each cycle
+                if not args.no_self_update:
+                    _check_for_updates_and_restart()
                 run_all_pending(dry_run=args.dry_run)
                 time.sleep(args.interval)
         except KeyboardInterrupt:
             log.info("Stopped")
     else:
+        # Single run: check for updates first
+        if not args.no_self_update:
+            _check_for_updates_and_restart()
         results = run_all_pending(dry_run=args.dry_run)
         sys.exit(0 if results["failed"] == 0 else 1)
 
