@@ -72,6 +72,15 @@ from app.services.federation_service import (  # noqa: F401
 )
 
 # ---------------------------------------------------------------------------
+# Postgres graph-store models (contributions, contributors, assets)
+# ---------------------------------------------------------------------------
+from app.adapters.postgres_models import (  # noqa: F401
+    ContributionModel,
+    ContributorModel,
+    AssetModel,
+)
+
+# ---------------------------------------------------------------------------
 # Contributor Identity models
 # ---------------------------------------------------------------------------
 from app.services.contributor_identity_service import ContributorIdentityRecord  # noqa: F401
