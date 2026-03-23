@@ -59,9 +59,7 @@ def _session() -> Session:
 # Supported providers
 # ---------------------------------------------------------------------------
 
-SUPPORTED_PROVIDERS = [
-    "github", "google", "ethereum", "bitcoin", "email", "x", "name",
-]
+from app.services.identity_providers import SUPPORTED_PROVIDERS  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from app.services import contributor_identity_service
 from app.services.config_service import get_config
+from app.services.identity_providers import registry_as_dict
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,12 @@ def _get_oauth_config(provider: str) -> dict:
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
+@router.get("/providers", summary="List all supported identity providers")
+async def list_providers() -> dict:
+    """Return all supported identity providers grouped by category."""
+    return {"categories": registry_as_dict()}
+
 
 @router.post("/link", summary="Link an identity to a contributor")
 async def link_identity(body: LinkIdentityRequest) -> dict:

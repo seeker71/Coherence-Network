@@ -2,12 +2,19 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "api",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+      "port": 8000,
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/stupefied-dhawan/api"
+    },
+    {
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "autoPort": true,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/jolly-curran/web"
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/stupefied-dhawan/web"
     }
   ]
 }
