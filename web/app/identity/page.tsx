@@ -17,40 +17,14 @@ type Identity = {
   metadata_json: string;
 };
 
-const PROVIDERS = [
-  {
-    key: "github",
-    label: "GitHub",
-    placeholder: "your-username",
-    description: "Developer identity on GitHub",
-    canOAuth: true,
-  },
-  {
-    key: "ethereum",
-    label: "Ethereum",
-    placeholder: "0x...",
-    description: "Ethereum wallet address",
-    canVerify: true,
-  },
-  {
-    key: "bitcoin",
-    label: "Bitcoin",
-    placeholder: "bc1... or 1... or 3...",
-    description: "Bitcoin address for receiving value",
-  },
-  {
-    key: "x",
-    label: "X / Twitter",
-    placeholder: "@handle",
-    description: "Your X handle",
-  },
-  {
-    key: "email",
-    label: "Email",
-    placeholder: "you@example.com",
-    description: "Contact email",
-  },
-] as const;
+type ProviderInfo = {
+  key: string;
+  label: string;
+  placeholder: string;
+  category: string;
+  canOAuth?: boolean;
+  canVerify?: boolean;
+};
 
 function StatusDot({ verified, linked }: { verified: boolean; linked: boolean }) {
   if (!linked) {
@@ -71,9 +45,23 @@ function StatusDot({ verified, linked }: { verified: boolean; linked: boolean })
 export default function IdentityPage() {
   const [name, setName] = useState("");
   const [identities, setIdentities] = useState<Identity[]>([]);
+  const [providers, setProviders] = useState<Record<string, ProviderInfo[]>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: "ok" | "error" } | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  // Load providers from API
+  useEffect(() => {
+    fetch(`${API}/api/identity/providers`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.categories) setProviders(data.categories);
+      })
+      .catch(() => {
+        // Fallback — empty registry, page still works
+      });
+  }, []);
 
   // Load name from localStorage
   useEffect(() => {
@@ -190,6 +178,21 @@ export default function IdentityPage() {
   const getLinked = (provider: string): Identity | undefined =>
     identities.find((i) => i.provider === provider);
 
+  const hasLinkedInCategory = (providerList: ProviderInfo[]): boolean =>
+    providerList.some((p) => !!getLinked(p.key));
+
+  const toggleCategory = (cat: string) =>
+    setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
+
+  // Default-open categories: those with links, plus Social and Professional
+  const isCategoryOpen = (cat: string, providerList: ProviderInfo[]): boolean => {
+    if (collapsed[cat] !== undefined) return !collapsed[cat];
+    if (cat === "Social" || cat === "Professional") return true;
+    return hasLinkedInCategory(providerList);
+  };
+
+  const categories = Object.entries(providers);
+
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <header>
@@ -237,77 +240,98 @@ export default function IdentityPage() {
         </div>
       </section>
 
-      {/* Link Accounts */}
-      <section className="space-y-4">
+      {/* Link Accounts — categorized */}
+      <section className="space-y-6">
         <h2 className="text-lg font-semibold">Link accounts</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {PROVIDERS.map((p) => {
-            const linked = getLinked(p.key);
-            return (
-              <div
-                key={p.key}
-                className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3"
+        {categories.map(([cat, providerList]) => {
+          const open = isCategoryOpen(cat, providerList);
+          const linkedCount = providerList.filter((p) => !!getLinked(p.key)).length;
+          return (
+            <div key={cat}>
+              <button
+                onClick={() => toggleCategory(cat)}
+                className="flex w-full items-center justify-between py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <StatusDot verified={linked?.verified ?? false} linked={!!linked} />
-                    <h3 className="font-medium">{p.label}</h3>
-                  </div>
-                  {linked && (
-                    <button
-                      onClick={() => unlinkProvider(p.key)}
-                      disabled={busy === p.key}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Unlink
-                    </button>
-                  )}
+                <span>
+                  {cat}
+                  <span className="ml-2 text-xs text-muted-foreground/60">
+                    {linkedCount > 0 && `${linkedCount} linked`}
+                  </span>
+                </span>
+                <span className="text-xs">{open ? "\u25B2" : "\u25BC"}</span>
+              </button>
+              {open && (
+                <div className="grid gap-4 sm:grid-cols-2 mt-2">
+                  {providerList.map((p) => {
+                    const linked = getLinked(p.key);
+                    return (
+                      <div
+                        key={p.key}
+                        className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <StatusDot verified={linked?.verified ?? false} linked={!!linked} />
+                            <h3 className="font-medium">{p.label}</h3>
+                          </div>
+                          {linked && (
+                            <button
+                              onClick={() => unlinkProvider(p.key)}
+                              disabled={busy === p.key}
+                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Unlink
+                            </button>
+                          )}
+                        </div>
+                        {linked ? (
+                          <div className="rounded-xl bg-muted/30 px-3 py-2 text-sm">
+                            <span className="font-mono text-foreground/80">{linked.provider_id}</span>
+                            {linked.verified && (
+                              <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                                verified
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {p.canOAuth && p.key === "github" && (
+                              <button
+                                onClick={startGitHubOAuth}
+                                disabled={!name.trim() || busy === "github-oauth"}
+                                className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-2 text-sm hover:bg-muted/40 disabled:opacity-40 transition-colors"
+                              >
+                                {busy === "github-oauth" ? "Redirecting..." : "Connect with GitHub"}
+                              </button>
+                            )}
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={inputs[p.key] || ""}
+                                onChange={(e) =>
+                                  setInputs((prev) => ({ ...prev, [p.key]: e.target.value }))
+                                }
+                                placeholder={p.placeholder}
+                                className="flex-1 rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                              />
+                              <button
+                                onClick={() => linkProvider(p.key)}
+                                disabled={!name.trim() || !inputs[p.key]?.trim() || busy === p.key}
+                                className="rounded-xl bg-primary/80 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary disabled:opacity-40 transition-colors"
+                              >
+                                {busy === p.key ? "..." : "Link"}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <p className="text-xs text-muted-foreground">{p.description}</p>
-                {linked ? (
-                  <div className="rounded-xl bg-muted/30 px-3 py-2 text-sm">
-                    <span className="font-mono text-foreground/80">{linked.provider_id}</span>
-                    {linked.verified && (
-                      <span className="ml-2 inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                        verified
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {p.key === "github" && (
-                      <button
-                        onClick={startGitHubOAuth}
-                        disabled={!name.trim() || busy === "github-oauth"}
-                        className="w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-2 text-sm hover:bg-muted/40 disabled:opacity-40 transition-colors"
-                      >
-                        {busy === "github-oauth" ? "Redirecting..." : "Connect with GitHub"}
-                      </button>
-                    )}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={inputs[p.key] || ""}
-                        onChange={(e) =>
-                          setInputs((prev) => ({ ...prev, [p.key]: e.target.value }))
-                        }
-                        placeholder={p.placeholder}
-                        className="flex-1 rounded-xl border border-border/50 bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
-                      <button
-                        onClick={() => linkProvider(p.key)}
-                        disabled={!name.trim() || !inputs[p.key]?.trim() || busy === p.key}
-                        className="rounded-xl bg-primary/80 px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary disabled:opacity-40 transition-colors"
-                      >
-                        {busy === p.key ? "..." : "Link"}
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              )}
+            </div>
+          );
+        })}
       </section>
 
       {/* Legend */}

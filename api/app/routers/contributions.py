@@ -237,8 +237,15 @@ from app.services import contribution_ledger_service
 
 
 class OpenContributionRequest(BaseModel):
-    """Open contribution recording — anyone can record what they did."""
-    contributor_id: str
+    """Open contribution recording — anyone can record what they did.
+
+    Identify yourself by contributor_id OR by provider+provider_id (e.g.
+    provider="github", provider_id="alice-dev"). The system resolves the
+    identity automatically.
+    """
+    contributor_id: str | None = None
+    provider: str | None = None
+    provider_id: str | None = None
     type: str
     amount_cc: float = 1.0
     idea_id: str | None = None
@@ -253,16 +260,49 @@ class OpenContributionRequest(BaseModel):
 async def record_open_contribution(body: OpenContributionRequest) -> dict:
     """Record any contribution. No API key needed.
 
-    Anyone can record what they did — wrote a blog post, shared on social media,
-    ran a workshop, mentored someone. The system records it. No gatekeeping.
+    Identify yourself by contributor_id OR by provider+provider_id.
+    If using a provider identity that hasn't been seen before, a pending
+    contributor is created automatically — no registration needed.
     """
+    from app.services import contributor_identity_service
+
+    contributor_id = body.contributor_id
+
+    # Resolve via provider identity if contributor_id not given
+    if not contributor_id and body.provider and body.provider_id:
+        found = contributor_identity_service.find_contributor_by_identity(
+            body.provider, body.provider_id,
+        )
+        if found:
+            contributor_id = found
+        else:
+            # Auto-create a pending identity
+            contributor_id = f"{body.provider}:{body.provider_id}"
+            contributor_identity_service.link_identity(
+                contributor_id=contributor_id,
+                provider=body.provider,
+                provider_id=body.provider_id,
+                display_name=body.provider_id,
+                verified=False,
+            )
+
+    if not contributor_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide contributor_id OR provider+provider_id",
+        )
+
     try:
         return contribution_ledger_service.record_contribution(
-            contributor_id=body.contributor_id,
+            contributor_id=contributor_id,
             contribution_type=body.type,
             amount_cc=body.amount_cc,
             idea_id=body.idea_id,
-            metadata=body.metadata,
+            metadata={
+                **body.metadata,
+                **({"identity_provider": body.provider, "identity_id": body.provider_id}
+                   if body.provider else {}),
+            },
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
