@@ -305,7 +305,7 @@ def _store_message(msg_dict: dict[str, Any]) -> dict[str, Any]:
         from app.services.federation_service import NodeMessageRecord
         from app.services import unified_db as _udb
 
-        with _udb.get_session() as session:
+        with _udb.session() as session:
             record = NodeMessageRecord(
                 id=msg_dict["id"],
                 from_node=msg_dict["from_node"],
@@ -335,7 +335,7 @@ def _query_messages(
         from app.services import unified_db as _udb
         from sqlalchemy import or_
 
-        with _udb.get_session() as session:
+        with _udb.session() as session:
             q = session.query(NodeMessageRecord).filter(
                 or_(
                     NodeMessageRecord.to_node == node_id,
@@ -376,7 +376,7 @@ def _mark_messages_read(node_id: str, msg_ids: set[str]) -> None:
         from app.services.federation_service import NodeMessageRecord
         from app.services import unified_db as _udb
 
-        with _udb.get_session() as session:
+        with _udb.session() as session:
             for rec in session.query(NodeMessageRecord).filter(NodeMessageRecord.id.in_(msg_ids)):
                 read_by = json.loads(rec.read_by_json) if rec.read_by_json else []
                 if node_id not in read_by:
