@@ -25,14 +25,13 @@
 | Service | Platform | URL | Status |
 |---------|----------|-----|--------|
 | API | Railway (previous) | https://coherence-network-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-03-09) |
-| Web | Railway web (previous) | https://coherence-web-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-03-09) |
+| Web | Vercel (current) | https://coherence-network.vercel.app | ✅ Active / Migration Target |
 
 ### Deployment Health
 - API health endpoint: ❌ Not reachable on previous Railway URL (HTTP 404)
-- API ready endpoint: ❌ Not reachable on previous Railway URL (HTTP 404)
-- Web root: ❌ Not reachable on previous Railway URL (HTTP 404)
-- Web API health page: ❌ Not reachable on previous Railway URL (HTTP 404)
-- CORS configuration: ⚙️ Pending new hosting cutover
+- Web root: ✅ Reachable on Vercel
+- Web API health page: ⚠️ Likely failing due to blocked API
+- CORS configuration: ⚙️ Pending new hosting cutover for API
 
 ## Specs Implemented (Selected)
 
@@ -54,7 +53,7 @@ See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md
 
 ## Non-Software MVP Track
 
-- Current highest-ROI item: mission and scope definition (`in progress`).
+- Current highest-ROI item: 30-day OKRs and dashboard metrics (Objective 1).
 - Status + continuation plan: [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md).
 - OKRs + operations docs:
   - [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md) (`30-Day OKRs (v1)`)

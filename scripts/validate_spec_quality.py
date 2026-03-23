@@ -29,12 +29,20 @@ SECTION_ALIASES = {
         "risks / assumptions",
         "risks",
         "assumptions",
+        "risks and known gaps",
     },
-    "gaps": {"known gaps and follow-up tasks", "known gaps", "gap follow-ups"},
+    "gaps": {
+        "known gaps and follow-up tasks",
+        "known gaps",
+        "gap follow-ups",
+        "risks and known gaps",
+    },
 }
 
 
 def _normalize_heading(title: str) -> str:
+    # Remove everything in parentheses to handle "Verification (CI complete)" etc.
+    title = re.sub(r"\(.*?\)", "", title)
     cleaned = re.sub(r"[^a-z0-9\s/_-]", "", title.lower()).strip()
     cleaned = re.sub(r"\s+", " ", cleaned)
     return cleaned
@@ -62,6 +70,10 @@ def _find_section(sections: list[tuple[str, str]], aliases: set[str]) -> str | N
     for title, body in sections:
         if title in normalized_aliases:
             return body
+        # Allow partial match if title starts with an alias (e.g. "Verification CI complete")
+        for alias in normalized_aliases:
+            if title.startswith(alias + " ") or title.endswith(" " + alias):
+                return body
     return None
 
 
@@ -94,6 +106,9 @@ def _looks_like_path(text: str) -> bool:
 def _looks_like_test_reference(text: str) -> bool:
     lowered = text.lower()
     if "manual validation" in lowered:
+        return True
+    # If it contains a test command like pytest, it's a test reference
+    if _contains_command(text):
         return True
     return bool(re.search(r"tests?/|test_[a-z0-9_]+\.py|\.spec\.", lowered))
 
