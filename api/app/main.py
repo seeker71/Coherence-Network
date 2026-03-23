@@ -43,6 +43,7 @@ from app.routers import (
 )
 from app.routers import agent_grounded_metrics_routes
 from app.routers import provider_stats
+from app.routers import service_registry_router
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_duration import RequestDurationMiddleware
 from app.models.runtime import RuntimeEventCreate
@@ -174,6 +175,40 @@ async def lifespan(app: FastAPI):
                 _startup_logger.warning("Failed to record startup friction events", exc_info=True)
     except Exception:
         _startup_logger.warning("api_startup_cache_warm_failed", exc_info=True)
+
+    # -- Service Registry: discover, register, and initialize contracts --
+    try:
+        from app.services.service_registry import ServiceRegistry
+        from app.services.contracts.idea_contract import IdeaServiceContract
+        from app.services.contracts.agent_contract import AgentServiceContract
+        from app.services.contracts.runtime_contract import RuntimeServiceContract
+        from app.services.contracts.inventory_contract import InventoryServiceContract
+        from app.services.contracts.federation_contract import FederationServiceContract
+
+        registry = ServiceRegistry()
+        registry.register(IdeaServiceContract())
+        registry.register(AgentServiceContract())
+        registry.register(RuntimeServiceContract())
+        registry.register(InventoryServiceContract())
+        registry.register(FederationServiceContract())
+
+        await registry.initialize_all()
+
+        missing = registry.validate_dependencies()
+        if missing:
+            _startup_logger.warning("service_registry_missing_deps: %s", missing)
+
+        app.state.service_registry = registry
+        metrics = registry.startup_metrics()
+        _startup_logger.info(
+            "service_registry_ready discovered=%d registered=%d initialized=%d failed=%d",
+            metrics["discovered"],
+            metrics["registered"],
+            metrics["initialized"],
+            metrics["failed"],
+        )
+    except Exception:
+        _startup_logger.warning("service_registry_setup_failed", exc_info=True)
 
     yield
     # shutdown: nothing needed currently
@@ -506,6 +541,7 @@ app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["i
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
 app.include_router(contributor_identity.router, tags=["identity"])
 app.include_router(provider_stats.router)
+app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
