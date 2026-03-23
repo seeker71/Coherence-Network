@@ -1,0 +1,35 @@
+{
+  "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
+  "name": "coherence-mcp-server",
+  "version": "0.2.0",
+  "description": "MCP server for the Coherence Network — 20 typed tools for AI agents to browse ideas, trace value chains, link identities, and record contributions.",
+  "repository": "https://github.com/seeker71/Coherence-Network",
+  "homepage": "https://coherencycoin.com",
+  "license": "MIT",
+  "authors": ["coherence-network"],
+  "categories": ["collaboration", "project-management", "open-source"],
+  "tags": ["ideas", "collaboration", "investment", "federation", "coherence", "open-source", "value-attribution"],
+  "packages": [
+    {
+      "registry": "npm",
+      "name": "coherence-mcp-server",
+      "version": "0.2.0"
+    }
+  ],
+  "tools": [
+    {"name": "list_ideas", "description": "Browse ideas sorted by free energy score"},
+    {"name": "get_idea", "description": "Get idea details including tasks and progress"},
+    {"name": "create_idea", "description": "Share a new idea"},
+    {"name": "list_specs", "description": "Browse registered specs"},
+    {"name": "list_nodes", "description": "List federation compute nodes"},
+    {"name": "get_coherence_score", "description": "Get coherence score with signal breakdown"},
+    {"name": "ask_question", "description": "Ask a question on an idea"},
+    {"name": "stake", "description": "Invest CC in an idea (triggers compute tasks)"},
+    {"name": "record_contribution", "description": "Record a contribution to the network"},
+    {"name": "list_tasks", "description": "List agent tasks by status"},
+    {"name": "get_resonance", "description": "Get recent network activity"},
+    {"name": "link_identity", "description": "Link an external identity to a contributor"},
+    {"name": "get_portfolio", "description": "Get idea portfolio summary"},
+    {"name": "get_provider_stats", "description": "Get provider execution statistics"}
+  ]
+}
