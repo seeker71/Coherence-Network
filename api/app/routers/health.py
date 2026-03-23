@@ -102,7 +102,10 @@ class _BaseHealthResponse(BaseModel):
 
 class HealthResponse(_BaseHealthResponse):
     """GET /api/health response."""
-    pass
+    schema_ok: Annotated[
+        bool,
+        Field(description="True if core tables (contributions, contributors, assets) exist"),
+    ] = True
 
 
 class ReadyResponse(_BaseHealthResponse):
@@ -189,6 +192,19 @@ async def persistence_contract(request: Request):
     return persistence_contract_service.evaluate(request.app)
 
 
+def _check_schema() -> bool:
+    """Validate that core tables (contributions, contributors, assets) exist."""
+    try:
+        from sqlalchemy import text as _text
+        with unified_db.session() as sess:
+            for table in ("contributions", "contributors", "assets"):
+                sess.execute(_text(f"SELECT 1 FROM {table} LIMIT 1"))
+        return True
+    except Exception:
+        logger.warning("Schema check: one or more core tables missing", exc_info=True)
+        return False
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health():
     """Return API health status."""
@@ -204,6 +220,8 @@ async def health():
     except Exception:
         logger.warning("Integrity check failed", exc_info=True)
 
+    schema_ok = _check_schema()
+
     return HealthResponse(
         status="ok",
         version=HEALTH_VERSION,
@@ -214,4 +232,5 @@ async def health():
         deployed_sha=deployed_sha,
         deployed_sha_source=deployed_sha_source,
         integrity_compromised=integrity_compromised,
+        schema_ok=schema_ok,
     )
