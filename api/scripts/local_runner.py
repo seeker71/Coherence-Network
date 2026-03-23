@@ -1623,7 +1623,6 @@ def main():
                 if not args.no_self_update:
                     _check_for_updates_and_restart()
                 _poll_messages()
-                _reap_stale_tasks()
                 run_all_pending(dry_run=args.dry_run)
                 time.sleep(args.interval)
         except KeyboardInterrupt:
