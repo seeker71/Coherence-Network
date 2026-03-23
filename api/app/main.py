@@ -98,13 +98,26 @@ async def lifespan(app: FastAPI):
         contributor_payload_rows: list[dict] = []
         contribution_payload_rows: list[dict] = []
         asset_payload_rows: list[dict] = []
+        startup_errors: list[str] = []
         if store is not None:
-            contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=2000)]
-            contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=2000)]
-            asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=2000)]
-            contributor_rows = len(contributor_payload_rows)
-            contribution_rows = len(contribution_payload_rows)
-            asset_rows = len(asset_payload_rows)
+            try:
+                contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=2000)]
+                contributor_rows = len(contributor_payload_rows)
+            except Exception:
+                _startup_logger.error("startup: contributors table missing or unreadable", exc_info=True)
+                startup_errors.append("contributors_table_missing")
+            try:
+                contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=2000)]
+                contribution_rows = len(contribution_payload_rows)
+            except Exception:
+                _startup_logger.error("startup: contributions table missing or unreadable", exc_info=True)
+                startup_errors.append("contributions_table_missing")
+            try:
+                asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=2000)]
+                asset_rows = len(asset_payload_rows)
+            except Exception:
+                _startup_logger.error("startup: assets table missing or unreadable", exc_info=True)
+                startup_errors.append("assets_table_missing")
         try:
             flow_payload = inventory_service.build_spec_process_implementation_validation_flow(
                 runtime_window_seconds=86400,
@@ -136,6 +149,28 @@ async def lifespan(app: FastAPI):
             asset_rows,
             flow_items,
         )
+        # Record friction events for any DB table failures detected at startup
+        if startup_errors:
+            try:
+                from app.models.friction import FrictionEvent as _FE
+                from app.services import friction_service as _fs
+                for err_label in startup_errors:
+                    evt = _FE(
+                        id=f"fric_{uuid4().hex[:12]}",
+                        timestamp=datetime.now(timezone.utc),
+                        stage="startup",
+                        block_type="missing_table",
+                        severity="high",
+                        owner="api_startup",
+                        unblock_condition=f"Ensure {err_label.replace('_', ' ')} exists; run DB migrations or restart.",
+                        energy_loss_estimate=1.0,
+                        cost_of_delay=0.0,
+                        status="open",
+                        notes=f"Startup detected: {err_label}",
+                    )
+                    _fs.append_event(evt)
+            except Exception:
+                _startup_logger.warning("Failed to record startup friction events", exc_info=True)
     except Exception:
         _startup_logger.warning("api_startup_cache_warm_failed", exc_info=True)
 
