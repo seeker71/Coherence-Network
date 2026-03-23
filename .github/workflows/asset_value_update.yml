@@ -2,7 +2,7 @@ name: Update External Asset Values
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+    - cron: '22 7 * * *'  # daily (was every 6h)
   workflow_dispatch:  # Manual trigger
 
 jobs:

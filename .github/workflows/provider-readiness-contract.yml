@@ -2,7 +2,7 @@ name: Provider Readiness Contract
 
 on:
   schedule:
-    - cron: "0 */6 * * *"
+    - cron: "43 8 * * *"  # daily (was every 6h)
   workflow_dispatch:
     inputs:
       strict:
