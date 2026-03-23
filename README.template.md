@@ -1,17 +1,10 @@
-<!-- AUTO-GENERATED from README.template.md. Edit the template, not this file. -->
 # Coherence Network
 
 [![Thread Gates](https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml/badge.svg)](https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml)
 
 An open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust.
 
-```
-Idea → Research → Spec → Implementation → Review → Usage → Payout
-       ↑                                                    ↓
-       └────────── coherence scores at every stage ─────────┘
-```
-
-Every stage is scored for **coherence** (0.0–1.0) — measuring test coverage, documentation quality, and implementation simplicity. Contributors are paid proportionally to the energy they invested and the coherence they achieved.
+<!-- include: docs/shared/lifecycle-diagram.md -->
 
 ## Your first 5 minutes
 
@@ -114,26 +107,13 @@ curl -s https://api.coherencycoin.com/api/federation/nodes | python3 -m json.too
 
 ## The five pillars
 
-| Pillar | In practice |
-|--------|-------------|
-| **Traceability** | Every unit of value is traceable from idea through spec, implementation, usage, and payout. Nothing is lost. |
-| **Trust** | Coherence scores (0.0–1.0) replace subjective judgement with measurable quality. |
-| **Freedom** | Fork any idea. Run your own node. Vote on governance. No gatekeepers. |
-| **Uniqueness** | Every idea, spec, and contribution is uniquely identified, scored, and ranked. |
-| **Collaboration** | Multi-contributor attribution with coherence-weighted payouts. Fair by design. |
+<!-- include: docs/shared/five-pillars.md -->
 
 ## Ecosystem
 
 Every part of the network links to every other. Jump in wherever makes sense.
 
-| Surface | What it is | Link |
-|---------|-----------|------|
-| **Web** | Browse ideas, specs, contributors, and value chains visually | [coherencycoin.com](https://coherencycoin.com) |
-| **API** | 100+ endpoints with full OpenAPI docs — the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
-| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | 20 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
-| **OpenClaw Skill** | Auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
-| **Join the Network** | Run a node and contribute compute | [JOIN-NETWORK.md](docs/JOIN-NETWORK.md) |
+<!-- include: docs/shared/ecosystem-table.md -->
 
 ## Tech stack
 

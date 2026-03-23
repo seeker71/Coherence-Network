@@ -1,4 +1,3 @@
-<!-- AUTO-GENERATED from SKILL.template.md. Edit the template, not this file. -->
 ---
 name: coherence-network
 description: "Coherence Network: an open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust. Works out of the box with the public API at api.coherencycoin.com (no local node required). Install the CLI with `npm i -g coherence-cli` for the fastest path. Use this skill to: browse and rank ideas by ROI and free-energy score, search feature specs with implementation summaries, trace full value lineage (idea→spec→implementation→usage→payout), inspect contributor ledgers and coherence-weighted payouts, fork and stake on ideas, explore cross-instance federation and governance voting, surface friction signals and runtime telemetry, track idea progress and showcase validated work, or pick the next highest-ROI task automatically. Triggers on: coherence network, ideas, specs, lineage, contributions, assets, traceability, trust, freedom, uniqueness, collaboration, portfolio, ROI, coherence score, fair attribution, value chain, payout, governance, federation, friction, staking, forking, resonance, showcase, cc cli, coherence cli."
@@ -62,13 +61,7 @@ Both approaches hit the same API. Use whichever fits your context.
 
 ## How it works
 
-```
-Idea → Research → Spec → Implementation → Review → Usage → Payout
-       ↑                                                    ↓
-       └────────── coherence scores at every stage ─────────┘
-```
-
-Every stage is scored for **coherence** (0.0–1.0) — measuring test coverage, documentation quality, and implementation simplicity. Contributors are paid proportionally to the energy they invested and the coherence they achieved.
+<!-- include: docs/shared/lifecycle-diagram.md -->
 
 ## Ideas — the portfolio engine
 
