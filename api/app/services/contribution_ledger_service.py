@@ -100,19 +100,18 @@ def record_contribution(
 def get_contributor_balance(contributor_id: str) -> dict:
     """Return total CC by contribution type + grand total for a contributor."""
     _ensure_schema()
+    totals_by_type: dict[str, float] = {}
+    grand_total = 0.0
     with _session() as s:
         recs = (
             s.query(ContributionLedgerRecord)
             .filter_by(contributor_id=contributor_id)
             .all()
         )
-
-    totals_by_type: dict[str, float] = {}
-    grand_total = 0.0
-    for rec in recs:
-        totals_by_type.setdefault(rec.contribution_type, 0.0)
-        totals_by_type[rec.contribution_type] += rec.amount_cc
-        grand_total += rec.amount_cc
+        for rec in recs:
+            totals_by_type.setdefault(rec.contribution_type, 0.0)
+            totals_by_type[rec.contribution_type] += rec.amount_cc
+            grand_total += rec.amount_cc
 
     return {
         "contributor_id": contributor_id,
@@ -133,19 +132,18 @@ def get_contributor_history(contributor_id: str, limit: int = 50) -> list[dict]:
             .limit(effective_limit)
             .all()
         )
-
-    return [
-        {
-            "id": rec.id,
-            "contributor_id": rec.contributor_id,
-            "contribution_type": rec.contribution_type,
-            "idea_id": rec.idea_id,
-            "amount_cc": rec.amount_cc,
-            "metadata_json": rec.metadata_json,
-            "recorded_at": rec.recorded_at.isoformat() if rec.recorded_at else None,
-        }
-        for rec in recs
-    ]
+        return [
+            {
+                "id": rec.id,
+                "contributor_id": rec.contributor_id,
+                "contribution_type": rec.contribution_type,
+                "idea_id": rec.idea_id,
+                "amount_cc": rec.amount_cc,
+                "metadata_json": rec.metadata_json,
+                "recorded_at": rec.recorded_at.isoformat() if rec.recorded_at else None,
+            }
+            for rec in recs
+        ]
 
 
 def get_idea_investments(idea_id: str) -> list[dict]:
@@ -158,19 +156,18 @@ def get_idea_investments(idea_id: str) -> list[dict]:
             .order_by(ContributionLedgerRecord.recorded_at.desc())
             .all()
         )
-
-    return [
-        {
-            "id": rec.id,
-            "contributor_id": rec.contributor_id,
-            "contribution_type": rec.contribution_type,
-            "idea_id": rec.idea_id,
-            "amount_cc": rec.amount_cc,
-            "metadata_json": rec.metadata_json,
-            "recorded_at": rec.recorded_at.isoformat() if rec.recorded_at else None,
-        }
-        for rec in recs
-    ]
+        return [
+            {
+                "id": rec.id,
+                "contributor_id": rec.contributor_id,
+                "contribution_type": rec.contribution_type,
+                "idea_id": rec.idea_id,
+                "amount_cc": rec.amount_cc,
+                "metadata_json": rec.metadata_json,
+                "recorded_at": rec.recorded_at.isoformat() if rec.recorded_at else None,
+            }
+            for rec in recs
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -192,8 +189,8 @@ def record_founding_contributions(contributor_id: str = "urs-muff") -> list[dict
             .filter(ContributionLedgerRecord.metadata_json.contains('"founding": true'))
             .first()
         )
-        if existing is not None:
-            return []
+    if existing is not None:
+        return []
 
     contributions = [
         ("compute", None, 28.0, {"tasks": 92, "success_rate": 0.93, "hours": 2.8, "founding": True}),
