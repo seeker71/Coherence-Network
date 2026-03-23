@@ -16,6 +16,7 @@ const HEARTBEAT_NAV = { href: "/resonance", label: "Resonance" };
 
 /** Secondary nav — deeper exploration for power users. */
 const SECONDARY_NAV = [
+  { href: "/blog", label: "Blog" },
   { href: "/specs", label: "Specs" },
   { href: "/usage", label: "Usage" },
   { href: "/automation", label: "Automation" },
