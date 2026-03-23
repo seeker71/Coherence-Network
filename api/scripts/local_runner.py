@@ -523,17 +523,18 @@ _NEXT_PHASE: dict[str, str | None] = {
 def api(method: str, path: str, body: dict | None = None) -> dict | list | None:
     """Call the API via httpx."""
     url = f"{API_BASE}{path}"
+    headers = {"X-Api-Key": os.environ.get("AGENT_API_KEY", "dev-key")}
     try:
         if method == "GET":
-            resp = _HTTP_CLIENT.get(url)
+            resp = _HTTP_CLIENT.get(url, headers=headers)
         elif method == "POST":
-            resp = _HTTP_CLIENT.post(url, json=body)
+            resp = _HTTP_CLIENT.post(url, json=body, headers=headers)
         elif method == "PATCH":
-            resp = _HTTP_CLIENT.patch(url, json=body)
+            resp = _HTTP_CLIENT.patch(url, json=body, headers=headers)
         elif method == "PUT":
-            resp = _HTTP_CLIENT.put(url, json=body)
+            resp = _HTTP_CLIENT.put(url, json=body, headers=headers)
         elif method == "DELETE":
-            resp = _HTTP_CLIENT.delete(url)
+            resp = _HTTP_CLIENT.delete(url, headers=headers)
         else:
             log.error("Unsupported API method: %s", method)
             return None
