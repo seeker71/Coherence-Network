@@ -1,18 +1,20 @@
-"""SQLAlchemy ORM models and declarative Base for PostgreSQL contribution tracking."""
+"""SQLAlchemy ORM models for contribution tracking.
+
+Uses the shared unified_db Base so tables are created alongside all other
+models during schema initialization.  Column types are portable across
+PostgreSQL and SQLite (String IDs instead of PG_UUID).
+"""
 
 from __future__ import annotations
 
 from sqlalchemy import Column, DateTime, JSON, Numeric, String
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
+from app.services.unified_db import Base
 
 
 class ContributorModel(Base):
     __tablename__ = "contributors"
 
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    id = Column(String, primary_key=True)
     type = Column(String, nullable=False)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=True, index=True)
@@ -24,7 +26,7 @@ class ContributorModel(Base):
 class AssetModel(Base):
     __tablename__ = "assets"
 
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
+    id = Column(String, primary_key=True)
     type = Column(String, nullable=False)
     description = Column(String, nullable=False, index=True)
     total_cost = Column(Numeric(precision=20, scale=2), default=0)
@@ -34,9 +36,9 @@ class AssetModel(Base):
 class ContributionModel(Base):
     __tablename__ = "contributions"
 
-    id = Column(PG_UUID(as_uuid=True), primary_key=True)
-    contributor_id = Column(PG_UUID(as_uuid=True), nullable=False, index=True)
-    asset_id = Column(PG_UUID(as_uuid=True), nullable=False, index=True)
+    id = Column(String, primary_key=True)
+    contributor_id = Column(String, nullable=False, index=True)
+    asset_id = Column(String, nullable=False, index=True)
     cost_amount = Column(Numeric(precision=20, scale=2), nullable=False)
     coherence_score = Column(Numeric(precision=3, scale=2), nullable=False)
     timestamp = Column(DateTime, nullable=False, index=True)

@@ -12,7 +12,8 @@ from uuid import UUID
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
-from app.adapters.postgres_models import AssetModel, Base, ContributionModel, ContributorModel
+from app.adapters.postgres_models import AssetModel, ContributionModel, ContributorModel
+from app.services.unified_db import Base
 from app.models.asset import Asset
 from app.models.contribution import Contribution
 from app.models.contributor import Contributor
@@ -21,7 +22,6 @@ from app.services.contributor_hygiene import is_test_contributor_email, normaliz
 
 __all__ = [
     "AssetModel",
-    "Base",
     "ContributionModel",
     "ContributorModel",
     "PostgresGraphStore",
