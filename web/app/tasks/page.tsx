@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { useLiveRefresh } from "@/lib/live_refresh";
@@ -36,10 +36,32 @@ type IdeasLookupResponse = {
   }>;
 };
 
+type ActivityEvent = {
+  task_id: string;
+  node_id: string;
+  node_name: string;
+  provider: string;
+  event_type: string;
+  data: Record<string, unknown>;
+  timestamp: string;
+};
+
+function elapsed(timestamp: string): string {
+  const ms = Date.now() - new Date(timestamp).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return "just now";
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s elapsed`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ${s % 60}s elapsed`;
+  return `${Math.floor(m / 60)}h ${m % 60}m elapsed`;
+}
+
 function TasksPageContent() {
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<AgentTask[]>([]);
   const [totalTasks, setTotalTasks] = useState<number>(0);
+  const [activeTasks, setActiveTasks] = useState<ActivityEvent[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([]);
   const [selectedTask, setSelectedTask] = useState<AgentTask | null>(null);
   const [selectedTaskLog, setSelectedTaskLog] = useState<string>("");
   const [selectedTaskEvents, setSelectedTaskEvents] = useState<RuntimeEvent[]>([]);
@@ -68,9 +90,11 @@ function TasksPageContent() {
       });
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("task_type", typeFilter);
-      const [tasksResponse, ideasResponse] = await Promise.all([
+      const [tasksResponse, ideasResponse, activeResponse, activityResponse] = await Promise.all([
         fetchWithTimeout(`/api/agent/tasks?${params.toString()}`),
         fetchWithTimeout("/api/ideas?limit=500"),
+        fetchWithTimeout("/api/agent/tasks/active").catch(() => null),
+        fetchWithTimeout("/api/agent/tasks/activity?limit=30").catch(() => null),
       ]);
       const json = (await tasksResponse.json()) as TaskListResponse;
       if (!tasksResponse.ok) throw new Error(JSON.stringify(json));
@@ -96,6 +120,20 @@ function TasksPageContent() {
         setIdeaNamesById(names);
       } else {
         setIdeaNamesById({});
+      }
+
+      // Active tasks and recent activity
+      if (activeResponse && activeResponse.ok) {
+        const activePayload = (await activeResponse.json()) as ActivityEvent[];
+        setActiveTasks(Array.isArray(activePayload) ? activePayload : []);
+      } else {
+        setActiveTasks([]);
+      }
+      if (activityResponse && activityResponse.ok) {
+        const activityPayload = (await activityResponse.json()) as ActivityEvent[];
+        setRecentActivity(Array.isArray(activityPayload) ? activityPayload : []);
+      } else {
+        setRecentActivity([]);
       }
 
       if (!taskIdFilter) {
@@ -164,6 +202,16 @@ function TasksPageContent() {
   }, [offset, pageSize, statusFilter, taskIdFilter, typeFilter]);
 
   useLiveRefresh(loadRows);
+
+  // Auto-refresh every 10 seconds for live task visibility
+  const loadRowsRef = useRef(loadRows);
+  loadRowsRef.current = loadRows;
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      void loadRowsRef.current();
+    }, 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const filteredRows = useMemo(() => {
     return rows.filter((row) => {
@@ -313,6 +361,69 @@ function TasksPageContent() {
             <p className="text-2xl font-light text-primary">{finishedCount}</p>
           </div>
         </section>
+
+        {activeTasks.length > 0 && (
+          <section className="rounded-2xl border border-amber-500/30 bg-gradient-to-b from-amber-500/5 to-card/30 p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/60" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
+              </span>
+              <h2 className="text-lg font-medium">Active Now</h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {activeTasks.map((task) => (
+                <Link
+                  key={task.task_id}
+                  href={`/tasks/${encodeURIComponent(task.task_id)}`}
+                  className="rounded-xl border border-amber-500/20 bg-card/60 p-4 space-y-2 hover:border-amber-500/40 transition-all duration-200"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="relative flex h-2 w-2 mt-1.5 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/50" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+                    </span>
+                    <span className="text-sm font-medium text-foreground line-clamp-2">
+                      {String(task.data?.task_type || task.event_type || "Working")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Node: {task.node_name || "unknown"} | Provider: {task.provider || "unknown"} | {elapsed(task.timestamp)}
+                  </p>
+                  <p className="text-xs text-amber-500/80">Watch live →</p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {recentActivity.length > 0 && !taskIdFilter && (
+          <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
+            <h2 className="text-lg font-medium">Recent Activity</h2>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {recentActivity.slice().reverse().map((event, i) => (
+                <div key={event.timestamp + i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className={`inline-flex h-1.5 w-1.5 rounded-full shrink-0 ${
+                    event.event_type === "completed" ? "bg-green-400" :
+                    event.event_type === "failed" || event.event_type === "timeout" ? "bg-red-400" :
+                    event.event_type === "executing" ? "bg-amber-400" :
+                    "bg-muted-foreground/40"
+                  }`} />
+                  <Link
+                    href={`/tasks/${encodeURIComponent(event.task_id)}`}
+                    className="hover:text-foreground transition-colors"
+                  >
+                    <span className="font-mono">{event.task_id.slice(0, 8)}</span>
+                  </Link>
+                  <span>{event.event_type}</span>
+                  {event.node_name && <span>on {event.node_name}</span>}
+                  {event.provider && <span>via {event.provider}</span>}
+                  <span className="ml-auto tabular-nums">{new Date(event.timestamp).toLocaleTimeString()}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {taskIdFilter ? (
           <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">
