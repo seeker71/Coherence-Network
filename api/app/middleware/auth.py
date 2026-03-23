@@ -13,11 +13,11 @@ Keys are configured via environment variables:
 import os
 from fastapi import Header, HTTPException, Depends
 
-from app.services import config_service
+from app.services.config_service import get_api_key, is_production
 
-_API_KEY = config_service.get_key("coherence", "api_key") or os.environ.get("COHERENCE_API_KEY", "dev-key")
-_ADMIN_KEY = config_service.get_key("coherence", "admin_key") or os.environ.get("COHERENCE_ADMIN_KEY", "dev-admin")
-_PRODUCTION = config_service.is_production()
+_API_KEY = get_api_key()
+_ADMIN_KEY = os.environ.get("COHERENCE_ADMIN_KEY", "") or "dev-admin"
+_PRODUCTION = is_production()
 
 # Fail-fast: refuse to start in production with default keys
 if _PRODUCTION and _API_KEY == "dev-key":

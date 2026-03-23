@@ -7,8 +7,8 @@ type QualityAwarenessSectionProps = {
 export function QualityAwarenessSection({ qualityAwareness }: QualityAwarenessSectionProps) {
   const summary = qualityAwareness.summary;
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
-      <h2 className="font-semibold">Code Quality Awareness (Guidance)</h2>
+    <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+      <h2 className="text-xl font-semibold">Code Quality Awareness (Guidance)</h2>
       <p className="text-muted-foreground">
         intent {qualityAwareness.intent_focus.join(", ")} | severity {summary.severity} | risk score {summary.risk_score}{" "}
         | status {qualityAwareness.status}
@@ -19,7 +19,7 @@ export function QualityAwarenessSection({ qualityAwareness }: QualityAwarenessSe
         {summary.long_functions}
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded-xl border border-border/30 bg-background/40 p-3">
           <p className="font-medium mb-2">Hotspots</p>
           <ul className="space-y-1">
             {qualityAwareness.hotspots.slice(0, 6).map((row, idx) => (
@@ -40,7 +40,7 @@ export function QualityAwarenessSection({ qualityAwareness }: QualityAwarenessSe
             ) : null}
           </ul>
         </div>
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded-xl border border-border/30 bg-background/40 p-3">
           <p className="font-medium mb-2">Guidance</p>
           <ul className="space-y-1">
             {qualityAwareness.guidance.map((row) => (
@@ -54,7 +54,7 @@ export function QualityAwarenessSection({ qualityAwareness }: QualityAwarenessSe
           </ul>
         </div>
       </div>
-      <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+      <div className="rounded-xl border border-border/30 bg-background/40 p-3">
         <p className="font-medium mb-2">Recommended self-improvement tasks</p>
         <ul className="space-y-1">
           {qualityAwareness.recommended_tasks.slice(0, 3).map((task) => (

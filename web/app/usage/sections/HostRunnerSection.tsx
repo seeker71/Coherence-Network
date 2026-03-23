@@ -19,8 +19,8 @@ export function HostRunnerSection({
 }: HostRunnerSectionProps) {
   const toolUsage = dailySummary.tool_usage ?? { worker_events: 0 };
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
-      <h2 className="font-semibold">Host Runner (24h)</h2>
+    <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+      <h2 className="text-xl font-semibold">Host Runner (24h)</h2>
       <p className="text-muted-foreground">
         runs {dailySummary.host_runner.total_runs} | failed {dailySummary.host_runner.failed_runs} | completed{" "}
         {dailySummary.host_runner.completed_runs} | tool events {toolUsage.worker_events} | tool failures(raw){" "}
@@ -31,7 +31,7 @@ export function HostRunnerSection({
         {hostTaskTypeRows.map(([taskType, counts]) => (
           <li
             key={taskType}
-            className="rounded-lg border border-border/70 bg-background/45 p-2 flex flex-wrap justify-between gap-2"
+            className="rounded-lg border border-border/30 bg-background/40 p-2 flex flex-wrap justify-between gap-2"
           >
             <span className="font-medium">{taskType}</span>
             <span className="text-muted-foreground">
@@ -45,7 +45,7 @@ export function HostRunnerSection({
         ) : null}
       </ul>
       {dailySummary.contract_gaps.length > 0 ? (
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded-xl border border-border/30 bg-background/40 p-3">
           <p className="font-medium mb-1">Telemetry Contract Gaps</p>
           <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
             {dailySummary.contract_gaps.map((gap) => (

@@ -162,7 +162,7 @@ export default async function Home() {
       </section>
 
       {/* Section 2: PULSE — quiet proof of life */}
-      <section className="px-4 md:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-100">
+      <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-100">
         {summary || coherenceScore ? (
           <div className="flex flex-wrap justify-center gap-8 md:gap-12 text-center">
             <div className="flex items-center gap-2">
@@ -213,7 +213,7 @@ export default async function Home() {
       </section>
 
       {/* Section 3: HOW IT WORKS — 3 steps with connecting lines */}
-      <section className="px-4 md:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-200">
+      <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
           {/* Connecting lines (desktop only) */}
           <div className="hidden md:block absolute top-10 left-[calc(33.3%+0.75rem)] right-[calc(33.3%+0.75rem)] h-px bg-border/40" />
@@ -232,12 +232,12 @@ export default async function Home() {
       </section>
 
       {/* Section 4: LIVE FEED PREVIEW — 3 most recent resonance items */}
-      <section className="px-4 md:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-300">
+      <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-300">
         <h2 className="text-lg font-medium text-center mb-6 text-muted-foreground">
           Recent activity
         </h2>
         {resonanceItems.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {resonanceItems.slice(0, 3).map((item) => (
               <Link
                 key={item.idea_id}
@@ -272,7 +272,7 @@ export default async function Home() {
       </section>
 
       {/* Section 5: EXPLORE NUDGE */}
-      <section className="px-4 md:px-8 py-8 max-w-2xl mx-auto text-center animate-fade-in-up delay-400">
+      <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-2xl mx-auto text-center animate-fade-in-up delay-400">
         <Button asChild className="rounded-full px-8 py-3 text-base bg-primary hover:bg-primary/90">
           <Link href="/ideas">Explore Ideas &rarr;</Link>
         </Button>
@@ -287,7 +287,7 @@ export default async function Home() {
       </section>
 
       {/* Section 6: THE GENTLE TAP */}
-      <section className="px-4 md:px-8 py-16 max-w-2xl mx-auto text-center">
+      <section className="px-4 sm:px-6 lg:px-8 py-16 max-w-2xl mx-auto text-center">
         <p className="text-xl md:text-2xl font-light text-muted-foreground leading-relaxed">
           You don&apos;t need permission.<br />
           You don&apos;t need to know everything.<br />
@@ -296,7 +296,7 @@ export default async function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="px-4 md:px-8 py-12 max-w-3xl mx-auto text-center border-t border-border/20">
+      <footer className="px-4 sm:px-6 lg:px-8 py-12 max-w-3xl mx-auto text-center border-t border-border/20">
         <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground/60 mb-4">
           <Link href="/resonance" className="hover:text-foreground transition-colors">Resonance</Link>
           <Link href="/ideas" className="hover:text-foreground transition-colors">Ideas</Link>

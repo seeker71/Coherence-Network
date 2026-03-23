@@ -84,43 +84,43 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
     .slice(0, 8);
 
   return (
-    <main className="min-h-screen px-4 md:px-8 py-10 max-w-6xl mx-auto space-y-6">
+    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Flow</h1>
+        <p className="text-muted-foreground max-w-2xl leading-relaxed">
+          The pipeline transforms ideas into working code, step by step. See what is planned, what work is moving, and where progress is getting stuck.
+        </p>
+      </div>
+
       {pipelineHealth ? (
-        <div className="flex items-center gap-2 rounded-lg border border-border/30 bg-card/40 px-4 py-2 text-sm">
+        <div className="flex items-center gap-2 rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 px-5 py-3 text-sm">
           {pipelineHealth.alerts.length > 0 ? (
             <>
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-amber-500" />
-              <span className="text-amber-600 dark:text-amber-400">
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
                 {pipelineHealth.summary.attention_needed} provider{pipelineHealth.summary.attention_needed !== 1 ? "s" : ""} need attention
               </span>
-              <Link href="/automation" className="ml-auto text-muted-foreground underline hover:text-foreground">
+              <span className="text-muted-foreground">
+                ({pipelineHealth.summary.healthy_providers}/{pipelineHealth.summary.total_providers} healthy)
+              </span>
+              <Link href="/automation" className="ml-auto text-amber-600 dark:text-amber-400 hover:underline">
                 Details
               </Link>
             </>
           ) : (
             <>
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
-              <span className="text-green-600 dark:text-green-400">All providers healthy</span>
-              <Link href="/automation" className="ml-auto text-muted-foreground underline hover:text-foreground">
+              <span className="text-green-600 dark:text-green-400 font-medium">All providers healthy</span>
+              <span className="text-muted-foreground">
+                ({pipelineHealth.summary.total_providers} provider{pipelineHealth.summary.total_providers !== 1 ? "s" : ""}, {pipelineHealth.summary.total_measurements} measurements)
+              </span>
+              <Link href="/automation" className="ml-auto text-amber-600 dark:text-amber-400 hover:underline">
                 Details
               </Link>
             </>
           )}
         </div>
       ) : null}
-
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
-        <p className="text-sm text-muted-foreground">Progress view</p>
-        <h1 className="text-3xl md:text-4xl font-light tracking-tight">How Ideas Are Moving</h1>
-        <p className="max-w-3xl text-muted-foreground">
-          See what is planned, what work is moving, what proof is visible, and where progress is getting stuck.
-        </p>
-        <div className="flex flex-wrap gap-2 text-sm">
-          <span className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground">Plan</span>
-          <span className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground">Work</span>
-          <span className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground">Proof</span>
-        </div>
-      </section>
 
       {ideaFilter || specFilter || contributorFilter ? (
         <p className="text-sm text-muted-foreground">
@@ -159,6 +159,16 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
           </article>
         ) : null}
       </section>
+
+      {/* Where to go next */}
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">Ideas</Link>
+          <Link href="/specs" className="text-amber-600 dark:text-amber-400 hover:underline">Specs</Link>
+          <Link href="/usage" className="text-amber-600 dark:text-amber-400 hover:underline">Usage</Link>
+        </div>
+      </nav>
     </main>
   );
 }

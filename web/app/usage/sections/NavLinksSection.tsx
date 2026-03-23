@@ -16,13 +16,13 @@ const NAV_LINKS = [
 
 export function NavLinksSection() {
   return (
-    <section className="rounded-xl border border-border/70 bg-card/50 px-3 py-3">
+    <section className="rounded-xl border border-border/30 bg-card/50 px-3 py-3">
       <div className="flex flex-wrap items-center gap-2">
         {NAV_LINKS.map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className="inline-flex items-center rounded-full border border-border/70 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
+            className="inline-flex items-center rounded-full border border-border/30 bg-background/55 px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
           >
             {link.label}
           </Link>

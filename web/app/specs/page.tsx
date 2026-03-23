@@ -133,14 +133,13 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
   const filteredRegistry = specFilter ? registry.filter((s) => s.spec_id === specFilter) : registry;
 
   return (
-    <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto space-y-6">
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
-        <p className="text-sm text-muted-foreground">Specs</p>
-        <h1 className="text-3xl md:text-4xl font-light tracking-tight">Feature Specifications</h1>
-        <p className="max-w-3xl text-muted-foreground">
-          Feature plans with direct links to idea context, delivery workflow, and implementation proof.
+    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Feature Specifications</h1>
+        <p className="text-muted-foreground max-w-2xl leading-relaxed">
+          Specs are the blueprints. They define what gets built and how to verify it worked. Each spec links back to an idea, its delivery workflow, and the implementation proof.
         </p>
-      </section>
+      </div>
       {specFilter ? (
         <p className="text-sm text-muted-foreground">
           Spec filter active |{" "}
@@ -325,6 +324,16 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
           )}
         </ul>
       </section>
+
+      {/* Where to go next */}
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">Ideas</Link>
+          <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">Flow</Link>
+          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
+        </div>
+      </nav>
     </main>
   );
 }
