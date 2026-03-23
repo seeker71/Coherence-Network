@@ -71,9 +71,9 @@ export default async function InvestPage() {
   const sorted = [...ideas].sort((a, b) => computeRoi(b) - computeRoi(a));
 
   return (
-    <main className="mx-auto max-w-4xl px-4 md:px-8 py-8">
-      <header className="mb-8">
-        <h1 className="text-3xl md:text-4xl font-light tracking-tight mb-2">
+    <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">
           Invest
         </h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
@@ -160,12 +160,12 @@ export default async function InvestPage() {
       )}
 
       {/* Where to go next */}
-      <nav className="mt-12 py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
         <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/ideas" className="text-muted-foreground hover:text-foreground transition-colors">All ideas</Link>
-          <Link href="/contribute" className="text-muted-foreground hover:text-foreground transition-colors">Contribute</Link>
-          <Link href="/resonance" className="text-muted-foreground hover:text-foreground transition-colors">Resonance</Link>
+          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">All ideas</Link>
+          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
+          <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">Resonance</Link>
         </div>
       </nav>
     </main>

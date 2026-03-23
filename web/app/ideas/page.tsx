@@ -170,9 +170,9 @@ export default async function IdeasPage() {
   const completionPct = Math.round(Math.max(0, Math.min(progress.completion_pct, 1)) * 100);
 
   return (
-    <main className="min-h-screen px-4 md:px-8 py-8 max-w-5xl mx-auto space-y-8">
+    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl md:text-4xl font-light tracking-tight mb-2">
+        <h1 className="text-3xl font-bold tracking-tight mb-2">
           Ideas
         </h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
@@ -181,7 +181,7 @@ export default async function IdeasPage() {
         </p>
       </div>
 
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
           <p className="text-sm text-muted-foreground">Total ideas</p>
           <p className="text-2xl font-light text-primary">{data.summary.total_ideas}</p>
@@ -198,7 +198,7 @@ export default async function IdeasPage() {
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-5">
         <div className="space-y-1">
-          <h2 className="text-xl font-medium tracking-tight">Idea lifecycle dashboard</h2>
+          <h2 className="text-xl font-semibold">Idea lifecycle dashboard</h2>
           <p className="text-sm text-muted-foreground">
             Track stage transitions, automatic advancement triggers, and phase-level progress.
           </p>
@@ -247,7 +247,7 @@ export default async function IdeasPage() {
                   <p>
                     <span className="font-medium">{trigger.taskType}</span>
                     {" "}
-                    task -> <span className="text-primary">{STAGE_LABEL[trigger.movesTo]}</span>
+                    {"task → "}<span className="text-primary">{STAGE_LABEL[trigger.movesTo]}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">{trigger.detail}</p>
                 </li>
@@ -379,12 +379,12 @@ export default async function IdeasPage() {
       </section>
 
       {/* Where to go next */}
-      <nav className="py-8 text-center space-y-2" aria-label="Where to go next">
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
         <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/resonance" className="text-muted-foreground hover:text-foreground transition-colors">Resonance</Link>
-          <Link href="/invest" className="text-muted-foreground hover:text-foreground transition-colors">Invest</Link>
-          <Link href="/contribute" className="text-muted-foreground hover:text-foreground transition-colors">Contribute</Link>
+          <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">Resonance</Link>
+          <Link href="/invest" className="text-amber-600 dark:text-amber-400 hover:underline">Invest</Link>
+          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
         </div>
       </nav>
     </main>

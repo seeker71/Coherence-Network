@@ -21,8 +21,8 @@ export function RuntimeCostSection({
   nextHref,
 }: RuntimeCostSectionProps) {
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
-      <h2 className="font-semibold">Runtime Cost by Idea</h2>
+    <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+      <h2 className="text-xl font-semibold">Runtime Cost by Idea</h2>
       <p className="text-muted-foreground">window_seconds {runtime.window_seconds} | page {page}</p>
       <div className="flex gap-3 text-muted-foreground">
         {hasPrevious ? (
@@ -42,7 +42,7 @@ export function RuntimeCostSection({
       </div>
       <ul className="space-y-2">
         {ideas.map((row) => (
-          <li key={row.idea_id} className="flex justify-between rounded-lg border border-border/70 bg-background/45 p-2">
+          <li key={row.idea_id} className="flex justify-between rounded-lg border border-border/30 bg-background/40 p-2">
             <Link href={`/ideas/${encodeURIComponent(row.idea_id)}`} className="underline hover:text-foreground">
               {row.idea_id}
             </Link>

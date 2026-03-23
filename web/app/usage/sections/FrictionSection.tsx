@@ -7,11 +7,11 @@ type FrictionSectionProps = {
 
 export function FrictionSection({ friction }: FrictionSectionProps) {
   return (
-    <section className="rounded-2xl border border-border/70 bg-card/60 p-4 shadow-sm space-y-2 text-sm">
-      <h2 className="font-semibold">Friction (24h)</h2>
+    <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+      <h2 className="text-xl font-semibold">Friction (24h)</h2>
       <p className="text-muted-foreground">total_events {friction.total_events} | open {friction.open_events}</p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded-xl border border-border/30 bg-background/40 p-3">
           <p className="font-medium mb-2">Top block types</p>
           <ul className="space-y-1">
             {friction.top_block_types.slice(0, 8).map((row) => (
@@ -24,7 +24,7 @@ export function FrictionSection({ friction }: FrictionSectionProps) {
             ))}
           </ul>
         </div>
-        <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+        <div className="rounded-xl border border-border/30 bg-background/40 p-3">
           <p className="font-medium mb-2">Top stages</p>
           <ul className="space-y-1">
             {friction.top_stages.slice(0, 8).map((row) => (
@@ -36,7 +36,7 @@ export function FrictionSection({ friction }: FrictionSectionProps) {
           </ul>
         </div>
       </div>
-      <div className="rounded-xl border border-border/70 bg-background/45 p-3">
+      <div className="rounded-xl border border-border/30 bg-background/40 p-3">
         <p className="font-medium mb-2">Top entry points</p>
         <ul className="space-y-1">
           {friction.entry_points.slice(0, 8).map((row) => (

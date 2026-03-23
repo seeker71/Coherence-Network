@@ -224,11 +224,11 @@ async function loadAutomationData(): Promise<{
   const [usageRes, alertsRes, readinessRes, validationRes, execStatsRes, networkStatsRes, federationNodesRes, fleetCapsRes] =
     await Promise.all([
     fetch(`${api}/api/automation/usage?force_refresh=true`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }),
-    fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }),
+    fetch(`${api}/api/automation/usage/alerts?threshold_ratio=0.2`, { cache: "no-store" }).catch(() => null),
+    fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }).catch(() => null),
     fetch(`${api}/api/automation/usage/provider-validation?runtime_window_seconds=86400&min_execution_events=1&force_refresh=true`, {
       cache: "no-store",
-    }),
+    }).catch(() => null),
     fetch(`${api}/api/providers/stats`, { cache: "no-store" }).catch(() => null),
     fetch(`${api}/api/federation/nodes/stats`, { cache: "no-store" }).catch(() => null),
     fetch(`${api}/api/federation/nodes`, { cache: "no-store" }).catch(() => null),
@@ -237,15 +237,7 @@ async function loadAutomationData(): Promise<{
   if (!usageRes.ok) {
     throw new Error(`automation usage HTTP ${usageRes.status}`);
   }
-  if (!alertsRes.ok) {
-    throw new Error(`automation alerts HTTP ${alertsRes.status}`);
-  }
-  if (!readinessRes.ok) {
-    throw new Error(`automation readiness HTTP ${readinessRes.status}`);
-  }
-  if (!validationRes.ok) {
-    throw new Error(`automation provider validation HTTP ${validationRes.status}`);
-  }
+  // alerts, readiness, validation are optional — graceful degradation
   let execStats: ProviderExecStatsResponse | null = null;
   if (execStatsRes && execStatsRes.ok) {
     execStats = (await execStatsRes.json()) as ProviderExecStatsResponse;
@@ -264,9 +256,9 @@ async function loadAutomationData(): Promise<{
   }
   return {
     usage: (await usageRes.json()) as AutomationUsageResponse,
-    alerts: (await alertsRes.json()) as UsageAlertResponse,
-    readiness: (await readinessRes.json()) as ProviderReadinessResponse,
-    validation: (await validationRes.json()) as ProviderValidationResponse,
+    alerts: alertsRes?.ok ? ((await alertsRes.json()) as UsageAlertResponse) : { alerts: [], generated_at: "" },
+    readiness: readinessRes?.ok ? ((await readinessRes.json()) as ProviderReadinessResponse) : { providers: [], ready: true, generated_at: "" },
+    validation: validationRes?.ok ? ((await validationRes.json()) as ProviderValidationResponse) : { providers: [], generated_at: "" },
     execStats,
     networkStats,
     federationNodes,
@@ -280,38 +272,25 @@ export default async function AutomationPage() {
   const providers = [...usage.providers].sort((a, b) => a.provider.localeCompare(b.provider));
 
   return (
-    <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
-        </Link>
-        <Link href="/agent" className="text-muted-foreground hover:text-foreground">
-          Agent
-        </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
-        </Link>
+    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Automation Capacity</h1>
+        <p className="text-muted-foreground max-w-2xl leading-relaxed">
+          A live view of provider adapters, capacity metrics, and threshold alerts. Use this to plan automation runs and spot bottlenecks early.
+        </p>
       </div>
 
-      <h1 className="text-2xl font-bold">Automation Capacity</h1>
-      <p className="text-muted-foreground">
-        Real provider adapter usage, normalized capacity metrics, and threshold alerts for automation planning.
-      </p>
-
-      <section className="rounded border p-4 text-sm space-y-2">
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 text-sm space-y-2">
         <p className="text-muted-foreground">
-          providers {usage.tracked_providers} | unavailable {usage.unavailable_providers.length} | alerts {alerts.alerts.length}
+          providers {usage.tracked_providers} | unavailable {(usage?.unavailable_providers?.length ?? 0)} | alerts {(alerts?.alerts?.length ?? 0)}
         </p>
         <p className="text-muted-foreground">
-          required_providers {readiness.required_providers.length} | all_required_ready {readiness.all_required_ready ? "yes" : "no"} |
-          blocking {readiness.blocking_issues.length}
+          {"required_providers "}{readiness?.required_providers?.length ?? 0}{" | all_required_ready "}{readiness?.all_required_ready ? "yes" : "no"}{" | "}
+          {"blocking "}{readiness?.blocking_issues?.length ?? 0}
         </p>
         <p className="text-muted-foreground">
-          validation_required {validation.required_providers.length} | all_required_validated {validation.all_required_validated ? "yes" : "no"} |
-          blocking {validation.blocking_issues.length}
+          {"validation_required "}{validation?.required_providers?.length ?? 0}{" | all_required_validated "}{validation?.all_required_validated ? "yes" : "no"}{" | "}
+          {"blocking "}{validation?.blocking_issues?.length ?? 0}
         </p>
         {usage.limit_coverage && (
           <p className="text-muted-foreground">
@@ -323,8 +302,8 @@ export default async function AutomationPage() {
       </section>
 
       {usage.limit_coverage && (
-        <section className="rounded border p-4 space-y-2 text-sm">
-          <h2 className="font-semibold">Usage Limit Coverage</h2>
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+          <h2 className="text-xl font-semibold">Usage Limit Coverage</h2>
           {usage.limit_coverage.providers_missing_limit_metrics.length > 0 && (
             <p className="text-muted-foreground">
               missing_limit_metrics {usage.limit_coverage.providers_missing_limit_metrics.join(", ")}
@@ -338,12 +317,12 @@ export default async function AutomationPage() {
         </section>
       )}
 
-      <section className="rounded border p-4 space-y-3 text-sm">
-        <h2 className="font-semibold">Provider Validation Contract</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+        <h2 className="text-xl font-semibold">Provider Validation Contract</h2>
         <p className="text-muted-foreground">
           runtime_window_seconds {validation.runtime_window_seconds} | min_execution_events {validation.min_execution_events}
         </p>
-        {validation.blocking_issues.length > 0 && (
+        {(validation?.blocking_issues?.length ?? 0) > 0 && (
           <ul className="space-y-1 text-destructive">
             {validation.blocking_issues.map((item) => (
               <li key={`validation-block-${item}`}>{item}</li>
@@ -352,7 +331,7 @@ export default async function AutomationPage() {
         )}
         <ul className="space-y-2">
           {validation.providers.map((provider) => (
-            <li key={`validation-${provider.provider}`} className="rounded border p-2">
+            <li key={`validation-${provider.provider}`} className="rounded-xl border border-border/20 bg-background/40 p-3">
               <p>
                 {provider.provider} | configured {provider.configured ? "yes" : "no"} | readiness {provider.readiness_status} | usage_events{" "}
                 {provider.usage_events} | successful_events {provider.successful_events} | validated_execution{" "}
@@ -370,8 +349,8 @@ export default async function AutomationPage() {
         </ul>
       </section>
 
-      <section className="rounded border p-4 space-y-3 text-sm">
-        <h2 className="font-semibold">Provider Execution Stats</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+        <h2 className="text-xl font-semibold">Provider Execution Stats</h2>
         {execStats ? (
           <>
             <p className="text-muted-foreground">
@@ -383,7 +362,7 @@ export default async function AutomationPage() {
                 .map(([name, entry]) => (
                   <li
                     key={`exec-${name}`}
-                    className={`rounded border p-2 ${entry.blocked ? "border-red-500/50 bg-red-500/5" : ""}`}
+                    className={`rounded-xl border p-3 ${entry.blocked ? "border-red-500/50 bg-red-500/5" : "border-border/20 bg-background/40"}`}
                   >
                     <p>
                       <span className="font-medium">{name}</span>
@@ -428,16 +407,16 @@ export default async function AutomationPage() {
         )}
       </section>
 
-      <section className="rounded border p-4 space-y-3 text-sm">
-        <h2 className="font-semibold">Provider Readiness</h2>
-        {readiness.blocking_issues.length > 0 && (
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+        <h2 className="text-xl font-semibold">Provider Readiness</h2>
+        {(readiness?.blocking_issues?.length ?? 0) > 0 && (
           <ul className="space-y-1 text-destructive">
             {readiness.blocking_issues.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </ul>
         )}
-        {readiness.recommendations.length > 0 && (
+        {(readiness?.recommendations?.length ?? 0) > 0 && (
           <ul className="space-y-1 text-muted-foreground">
             {readiness.recommendations.map((item) => (
               <li key={item}>{item}</li>
@@ -446,7 +425,7 @@ export default async function AutomationPage() {
         )}
         <ul className="space-y-2">
           {readiness.providers.map((provider) => (
-            <li key={`ready-${provider.provider}`} className="rounded border p-2">
+            <li key={`ready-${provider.provider}`} className="rounded-xl border border-border/20 bg-background/40 p-3">
               <p>
                 {provider.provider} | status {provider.status} | required {provider.required ? "yes" : "no"} | configured{" "}
                 {provider.configured ? "yes" : "no"} | severity {provider.severity}
@@ -459,11 +438,11 @@ export default async function AutomationPage() {
         </ul>
       </section>
 
-      <section className="rounded border p-4 space-y-3 text-sm">
-        <h2 className="font-semibold">Provider Usage</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+        <h2 className="text-xl font-semibold">Provider Usage</h2>
         <ul className="space-y-3">
           {providers.map((provider) => (
-            <li key={provider.id} className="rounded border p-3 space-y-2">
+            <li key={provider.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
               <p className="font-medium">
                 {provider.provider} | status {provider.status} | kind {provider.kind}
               </p>
@@ -521,14 +500,14 @@ export default async function AutomationPage() {
       </section>
 
       {networkStats && (Object.keys(networkStats.nodes).length > 0 || networkStats.total_measurements > 0) && (
-        <section className="rounded border p-4 space-y-3 text-sm">
-          <h2 className="font-semibold">Federation Network — Provider Stats by Node</h2>
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+          <h2 className="text-xl font-semibold">Federation Network — Provider Stats by Node</h2>
           <p className="text-muted-foreground">
             {Object.keys(networkStats.nodes).length} node(s) | {networkStats.total_measurements} measurements | {networkStats.window_days}d window
           </p>
 
           {networkStats.alerts.length > 0 && (
-            <div className="rounded border border-amber-500/50 bg-amber-500/10 p-3 space-y-1">
+            <div className="rounded-xl border border-amber-500/50 bg-amber-500/10 p-4 space-y-1">
               {networkStats.alerts.map((a, i) => (
                 <p key={i} className="text-amber-600 dark:text-amber-400">{a.provider}: {a.message}</p>
               ))}
@@ -538,7 +517,7 @@ export default async function AutomationPage() {
           {/* Node list */}
           <div className="space-y-2">
             {Object.entries(networkStats.nodes).map(([nodeId, node]) => (
-              <div key={nodeId} className="rounded border p-2">
+              <div key={nodeId} className="rounded-xl border border-border/20 bg-background/40 p-3">
                 <p className="font-medium">
                   <span className={`inline-block w-2 h-2 rounded-full mr-2 ${node.status === "online" ? "bg-green-500" : "bg-gray-400"}`} />
                   {node.hostname} <span className="text-muted-foreground">({node.os_type})</span>
@@ -555,7 +534,7 @@ export default async function AutomationPage() {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b text-muted-foreground">
+                <tr className="border-b border-border/30 text-muted-foreground">
                   <th className="py-1 pr-3">Provider</th>
                   <th className="py-1 pr-3 text-right">Runs</th>
                   <th className="py-1 pr-3 text-right">Rate</th>
@@ -569,7 +548,7 @@ export default async function AutomationPage() {
                 {Object.entries(networkStats.providers)
                   .sort(([, a], [, b]) => b.total_samples - a.total_samples)
                   .map(([provider, data]) => (
-                  <tr key={provider} className="border-b border-border/50">
+                  <tr key={provider} className="border-b border-border/30">
                     <td className="py-1 pr-3 font-medium">{provider}</td>
                     <td className="py-1 pr-3 text-right">{data.total_samples}</td>
                     <td className={`py-1 pr-3 text-right ${data.overall_success_rate < 0.5 ? "text-red-500" : data.overall_success_rate < 0.8 ? "text-amber-500" : "text-green-500"}`}>
@@ -595,7 +574,7 @@ export default async function AutomationPage() {
             {Object.entries(networkStats.providers)
               .sort(([, a], [, b]) => b.total_samples - a.total_samples)
               .map(([provider, data]) => (
-              <div key={provider} className="rounded border border-border/50 p-3 space-y-1">
+              <div key={provider} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
                 <p className="font-medium">{provider}</p>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div>
@@ -633,8 +612,8 @@ export default async function AutomationPage() {
       )}
 
       {(fleetCapabilities || federationNodes.length > 0) && (
-        <section className="rounded border p-4 space-y-3 text-sm">
-          <h2 className="font-semibold">Federation Node Capability Discovery</h2>
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+          <h2 className="text-xl font-semibold">Federation Node Capability Discovery</h2>
           {fleetCapabilities && (
             <>
               <p className="text-muted-foreground">
@@ -659,7 +638,7 @@ export default async function AutomationPage() {
             {federationNodes
               .sort((a, b) => a.hostname.localeCompare(b.hostname))
               .map((node) => (
-                <div key={node.node_id} className="rounded border p-2 space-y-1">
+                <div key={node.node_id} className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
                   <p className="font-medium">
                     {node.hostname} <span className="text-muted-foreground">({node.os_type})</span>
                   </p>
@@ -693,21 +672,31 @@ export default async function AutomationPage() {
         </section>
       )}
 
-      <section className="rounded border p-4 space-y-3 text-sm">
-        <h2 className="font-semibold">Capacity Alerts</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+        <h2 className="text-xl font-semibold">Capacity Alerts</h2>
         <p className="text-muted-foreground">threshold_ratio {alerts.threshold_ratio}</p>
         <ul className="space-y-2">
           {alerts.alerts.map((alert) => (
-            <li key={alert.id} className="rounded border p-2 flex justify-between gap-3">
+            <li key={alert.id} className="rounded-xl border border-border/20 bg-background/40 p-3 flex justify-between gap-3">
               <span>
                 {alert.provider} | {alert.metric_id} | {alert.severity}
               </span>
               <span className="text-muted-foreground">{alert.message}</span>
             </li>
           ))}
-          {alerts.alerts.length === 0 && <li className="text-muted-foreground">No capacity alerts.</li>}
+          {(alerts?.alerts?.length ?? 0) === 0 && <li className="text-muted-foreground">No capacity alerts.</li>}
         </ul>
       </section>
+
+      {/* Where to go next */}
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/usage" className="text-amber-600 dark:text-amber-400 hover:underline">Usage</Link>
+          <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">Flow</Link>
+          <Link href="/specs" className="text-amber-600 dark:text-amber-400 hover:underline">Specs</Link>
+        </div>
+      </nav>
     </main>
   );
 }

@@ -281,23 +281,17 @@ export default function ContributePage() {
   }
 
   return (
-    <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">← Home</Link>
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">Contributors</Link>
-        <Link href="/ideas" className="text-muted-foreground hover:text-foreground">Ideas</Link>
-        <Link href="/specs" className="text-muted-foreground hover:text-foreground">Specs</Link>
-        <Link href="/flow" className="text-muted-foreground hover:text-foreground">Flow</Link>
+    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Contribute</h1>
+        <p className="text-muted-foreground max-w-2xl leading-relaxed">
+          Every contribution moves the network forward. Register, propose changes, and review what others have submitted. Approved requests apply automatically.
+        </p>
       </div>
 
-      <h1 className="text-2xl font-bold">Contribution Console</h1>
-      <p className="text-muted-foreground">
-        Human flow: register as contributor, submit change requests (idea/spec/question), review with yes/no votes, and
-        let approved requests auto-apply.
-      </p>
-
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
-        <h2 className="font-semibold">1) Register Contributor</h2>
+        <h2 className="text-xl font-semibold">Register as a Contributor</h2>
+        <p className="text-sm text-muted-foreground">Create your identity in the network so your contributions are tracked and credited.</p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
           <div className="space-y-1">
             <label htmlFor="contributor-name" className="text-xs text-muted-foreground">Name</label>
@@ -348,11 +342,12 @@ export default function ContributePage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
-        <h2 className="font-semibold">2) Select Proposer and Reviewer</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+        <h2 className="text-xl font-semibold">Select Proposer and Reviewer</h2>
+        <p className="text-sm text-muted-foreground">Choose who is proposing changes and who will review them. This determines attribution and vote authority.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
           <select
-            className="rounded border px-3 py-2 bg-background"
+            className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
             value={proposerId}
             onChange={(e) => setProposerId(e.target.value)}
           >
@@ -362,7 +357,7 @@ export default function ContributePage() {
             ))}
           </select>
           <select
-            className="rounded border px-3 py-2 bg-background"
+            className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
             value={reviewerId}
             onChange={(e) => setReviewerId(e.target.value)}
           >
@@ -372,7 +367,7 @@ export default function ContributePage() {
             ))}
           </select>
           <select
-            className="rounded border px-3 py-2 bg-background"
+            className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
             value={reviewerType}
             onChange={(e) => setReviewerType(e.target.value as "human" | "machine")}
           >
@@ -383,8 +378,9 @@ export default function ContributePage() {
       </section>
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
-          <h3 className="font-semibold">3a) Idea Create Request</h3>
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h3 className="text-xl font-semibold">Create an Idea</h3>
+          <p className="text-sm text-muted-foreground">Submit a new idea to the network. It starts as a proposal and gets reviewed before going live.</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <div className="space-y-1">
               <label htmlFor="idea-create-id" className="text-xs text-muted-foreground">Idea ID</label>
@@ -433,26 +429,27 @@ export default function ContributePage() {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
-          <h3 className="font-semibold">3b) Idea Update Request</h3>
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h3 className="text-xl font-semibold">Update an Idea</h3>
+          <p className="text-sm text-muted-foreground">Adjust values, cost, confidence, or status of an existing idea as new information emerges.</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
-            <select className="rounded border px-3 py-2 bg-background" value={ideaUpdateId} onChange={(e) => setIdeaUpdateId(e.target.value)}>
+            <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={ideaUpdateId} onChange={(e) => setIdeaUpdateId(e.target.value)}>
               <option value="">Select idea</option>
               {ideas.map((item) => (
                 <option key={item.id} value={item.id}>{item.id}</option>
               ))}
             </select>
             <div className="grid grid-cols-2 gap-2">
-              <input className="rounded border px-3 py-2 bg-background" placeholder="actual_value (optional)" value={ideaUpdateValue} onChange={(e) => setIdeaUpdateValue(e.target.value)} />
-              <input className="rounded border px-3 py-2 bg-background" placeholder="actual_cost (optional)" value={ideaUpdateCost} onChange={(e) => setIdeaUpdateCost(e.target.value)} />
+              <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="actual_value (optional)" value={ideaUpdateValue} onChange={(e) => setIdeaUpdateValue(e.target.value)} />
+              <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="actual_cost (optional)" value={ideaUpdateCost} onChange={(e) => setIdeaUpdateCost(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <input className="rounded border px-3 py-2 bg-background" placeholder="confidence (optional)" value={ideaUpdateConfidence} onChange={(e) => setIdeaUpdateConfidence(e.target.value)} />
-              <input className="rounded border px-3 py-2 bg-background" placeholder="manifestation_status (none|partial|validated)" value={ideaUpdateStatus} onChange={(e) => setIdeaUpdateStatus(e.target.value)} />
+              <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="confidence (optional)" value={ideaUpdateConfidence} onChange={(e) => setIdeaUpdateConfidence(e.target.value)} />
+              <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="manifestation_status (none|partial|validated)" value={ideaUpdateStatus} onChange={(e) => setIdeaUpdateStatus(e.target.value)} />
             </div>
             <button
               type="button"
-              className="rounded border px-3 py-2 hover:bg-accent"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent transition-colors"
               disabled={busy === "idea_update"}
               onClick={() =>
                 void createRequest("idea_update", `Update idea ${ideaUpdateId}`, {
@@ -469,23 +466,24 @@ export default function ContributePage() {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
-          <h3 className="font-semibold">3c) Question Request (Add or Answer)</h3>
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h3 className="text-xl font-semibold">Questions</h3>
+          <p className="text-sm text-muted-foreground">Ask questions that need answering before an idea can move forward, or provide answers to existing ones.</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
-            <select className="rounded border px-3 py-2 bg-background" value={questionIdeaId} onChange={(e) => setQuestionIdeaId(e.target.value)}>
+            <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={questionIdeaId} onChange={(e) => setQuestionIdeaId(e.target.value)}>
               <option value="">Select idea for new question</option>
               {ideas.map((item) => (
                 <option key={item.id} value={item.id}>{item.id}</option>
               ))}
             </select>
-            <input className="rounded border px-3 py-2 bg-background" placeholder="question text" value={questionText} onChange={(e) => setQuestionText(e.target.value)} />
+            <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="question text" value={questionText} onChange={(e) => setQuestionText(e.target.value)} />
             <div className="grid grid-cols-2 gap-2">
-              <input className="rounded border px-3 py-2 bg-background" placeholder="value_to_whole" value={questionValue} onChange={(e) => setQuestionValue(e.target.value)} />
-              <input className="rounded border px-3 py-2 bg-background" placeholder="estimated_cost" value={questionCost} onChange={(e) => setQuestionCost(e.target.value)} />
+              <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="value_to_whole" value={questionValue} onChange={(e) => setQuestionValue(e.target.value)} />
+              <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="estimated_cost" value={questionCost} onChange={(e) => setQuestionCost(e.target.value)} />
             </div>
             <button
               type="button"
-              className="rounded border px-3 py-2 hover:bg-accent"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent transition-colors"
               disabled={busy === "idea_add_question"}
               onClick={() =>
                 void createRequest("idea_add_question", `Add question to ${questionIdeaId}`, {
@@ -501,23 +499,23 @@ export default function ContributePage() {
           </div>
 
           <div className="border-t pt-3 grid grid-cols-1 gap-2 text-sm">
-            <select className="rounded border px-3 py-2 bg-background" value={answerIdeaId} onChange={(e) => setAnswerIdeaId(e.target.value)}>
+            <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={answerIdeaId} onChange={(e) => setAnswerIdeaId(e.target.value)}>
               <option value="">Select idea for answer</option>
               {ideas.map((item) => (
                 <option key={item.id} value={item.id}>{item.id}</option>
               ))}
             </select>
-            <select className="rounded border px-3 py-2 bg-background" value={answerQuestion} onChange={(e) => setAnswerQuestion(e.target.value)}>
+            <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={answerQuestion} onChange={(e) => setAnswerQuestion(e.target.value)}>
               <option value="">Select question</option>
               {answerQuestions.map((item) => (
                 <option key={item.question} value={item.question}>{item.question}</option>
               ))}
             </select>
-            <textarea className="rounded border px-3 py-2 bg-background" rows={3} placeholder="answer text" value={answerText} onChange={(e) => setAnswerText(e.target.value)} />
-            <input className="rounded border px-3 py-2 bg-background" placeholder="measured_delta (optional)" value={answerDelta} onChange={(e) => setAnswerDelta(e.target.value)} />
+            <textarea className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" rows={3} placeholder="answer text" value={answerText} onChange={(e) => setAnswerText(e.target.value)} />
+            <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="measured_delta (optional)" value={answerDelta} onChange={(e) => setAnswerDelta(e.target.value)} />
             <button
               type="button"
-              className="rounded border px-3 py-2 hover:bg-accent"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent transition-colors"
               disabled={busy === "idea_answer_question"}
               onClick={() =>
                 void createRequest("idea_answer_question", `Answer question in ${answerIdeaId}`, {
@@ -533,40 +531,41 @@ export default function ContributePage() {
           </div>
         </article>
 
-        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
-          <h3 className="font-semibold">3d) Spec Create / Update Requests</h3>
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h3 className="text-xl font-semibold">Specs</h3>
+          <p className="text-sm text-muted-foreground">Create or update a feature specification. Specs define what gets built and link to ideas for context.</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
-            <input className="rounded border px-3 py-2 bg-background" placeholder="new spec_id" value={specCreateId} onChange={(e) => setSpecCreateId(e.target.value)} />
-            <input className="rounded border px-3 py-2 bg-background" placeholder="new spec title" value={specCreateTitle} onChange={(e) => setSpecCreateTitle(e.target.value)} />
-            <textarea className="rounded border px-3 py-2 bg-background" rows={3} placeholder="new spec summary" value={specCreateSummary} onChange={(e) => setSpecCreateSummary(e.target.value)} />
-            <input className="rounded border px-3 py-2 bg-background" placeholder="related idea_id (optional)" value={specCreateIdeaId} onChange={(e) => setSpecCreateIdeaId(e.target.value)} />
+            <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="new spec_id" value={specCreateId} onChange={(e) => setSpecCreateId(e.target.value)} />
+            <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="new spec title" value={specCreateTitle} onChange={(e) => setSpecCreateTitle(e.target.value)} />
+            <textarea className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" rows={3} placeholder="new spec summary" value={specCreateSummary} onChange={(e) => setSpecCreateSummary(e.target.value)} />
+            <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="related idea_id (optional)" value={specCreateIdeaId} onChange={(e) => setSpecCreateIdeaId(e.target.value)} />
             <input
-              className="rounded border px-3 py-2 bg-background"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
               placeholder="potential_value (default 0)"
               value={specCreatePotentialValue}
               onChange={(e) => setSpecCreatePotentialValue(e.target.value)}
             />
             <input
-              className="rounded border px-3 py-2 bg-background"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
               placeholder="estimated_cost (default 0)"
               value={specCreateEstimatedCost}
               onChange={(e) => setSpecCreateEstimatedCost(e.target.value)}
             />
             <input
-              className="rounded border px-3 py-2 bg-background"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
               placeholder="actual_value (default 0)"
               value={specCreateActualValue}
               onChange={(e) => setSpecCreateActualValue(e.target.value)}
             />
             <input
-              className="rounded border px-3 py-2 bg-background"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
               placeholder="actual_cost (default 0)"
               value={specCreateActualCost}
               onChange={(e) => setSpecCreateActualCost(e.target.value)}
             />
             <button
               type="button"
-              className="rounded border px-3 py-2 hover:bg-accent"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent transition-colors"
               disabled={busy === "spec_create"}
               onClick={() =>
                 void createRequest("spec_create", `Create spec ${specCreateId}`, {
@@ -587,41 +586,41 @@ export default function ContributePage() {
           </div>
 
           <div className="border-t pt-3 grid grid-cols-1 gap-2 text-sm">
-            <select className="rounded border px-3 py-2 bg-background" value={specUpdateId} onChange={(e) => setSpecUpdateId(e.target.value)}>
+            <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={specUpdateId} onChange={(e) => setSpecUpdateId(e.target.value)}>
               <option value="">Select spec</option>
               {specs.map((item) => (
                 <option key={item.spec_id} value={item.spec_id}>{item.spec_id}</option>
               ))}
             </select>
-            <input className="rounded border px-3 py-2 bg-background" placeholder="updated title (optional)" value={specUpdateTitle} onChange={(e) => setSpecUpdateTitle(e.target.value)} />
-            <textarea className="rounded border px-3 py-2 bg-background" rows={3} placeholder="updated summary (optional)" value={specUpdateSummary} onChange={(e) => setSpecUpdateSummary(e.target.value)} />
+            <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="updated title (optional)" value={specUpdateTitle} onChange={(e) => setSpecUpdateTitle(e.target.value)} />
+            <textarea className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" rows={3} placeholder="updated summary (optional)" value={specUpdateSummary} onChange={(e) => setSpecUpdateSummary(e.target.value)} />
             <input
-              className="rounded border px-3 py-2 bg-background"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
               placeholder="potential_value (optional)"
               value={specUpdatePotentialValue}
               onChange={(e) => setSpecUpdatePotentialValue(e.target.value)}
             />
             <input
-              className="rounded border px-3 py-2 bg-background"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
               placeholder="estimated_cost (optional)"
               value={specUpdateEstimatedCost}
               onChange={(e) => setSpecUpdateEstimatedCost(e.target.value)}
             />
             <input
-              className="rounded border px-3 py-2 bg-background"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
               placeholder="actual_value (optional)"
               value={specUpdateActualValue}
               onChange={(e) => setSpecUpdateActualValue(e.target.value)}
             />
             <input
-              className="rounded border px-3 py-2 bg-background"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
               placeholder="actual_cost (optional)"
               value={specUpdateActualCost}
               onChange={(e) => setSpecUpdateActualCost(e.target.value)}
             />
             <button
               type="button"
-              className="rounded border px-3 py-2 hover:bg-accent"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent transition-colors"
               disabled={busy === "spec_update"}
               onClick={() =>
                 void createRequest("spec_update", `Update spec ${specUpdateId}`, {
@@ -642,14 +641,14 @@ export default function ContributePage() {
         </article>
       </section>
 
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-3">
-        <h2 className="font-semibold">4) Review Queue (Human or Machine Yes/No)</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+        <h2 className="text-xl font-semibold">Review Queue</h2>
         <p className="text-sm text-muted-foreground">
           Default policy is one approval required. When contributor volume grows, increase `CHANGE_REQUEST_MIN_APPROVALS`.
         </p>
         <ul className="space-y-3 text-sm">
           {changeRequests.map((row) => (
-            <li key={row.id} className="rounded border p-3 space-y-2">
+            <li key={row.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-medium">
                   {REQUEST_TYPE_LABELS[row.request_type] ?? row.request_type}: {row.title}
@@ -670,14 +669,14 @@ export default function ContributePage() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2">
                 <input
-                  className="rounded border px-3 py-2 bg-background"
+                  className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
                   placeholder="vote rationale (optional)"
                   value={voteNotes[row.id] || ""}
                   onChange={(e) => setVoteNotes((prev) => ({ ...prev, [row.id]: e.target.value }))}
                 />
                 <button
                   type="button"
-                  className="rounded border px-3 py-2 hover:bg-accent"
+                  className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent transition-colors"
                   disabled={busy === `vote-${row.id}-yes`}
                   onClick={() => void vote(row.id, "yes")}
                 >
@@ -685,7 +684,7 @@ export default function ContributePage() {
                 </button>
                 <button
                   type="button"
-                  className="rounded border px-3 py-2 hover:bg-accent"
+                  className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent transition-colors"
                   disabled={busy === `vote-${row.id}-no`}
                   onClick={() => void vote(row.id, "no")}
                 >
@@ -700,8 +699,9 @@ export default function ContributePage() {
         </ul>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Machine API</h2>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+        <h2 className="text-xl font-semibold">Machine API</h2>
+        <p className="text-sm text-muted-foreground">All actions above are also available via the API for automated workflows.</p>
         <p>Register contributor: <code>POST /api/contributors</code></p>
         <p>Submit change request: <code>POST /api/governance/change-requests</code></p>
         <p>Vote yes/no: <code>POST /api/governance/change-requests/&lt;id&gt;/votes</code></p>
@@ -711,6 +711,16 @@ export default function ContributePage() {
       {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
       {status === "error" && <p className="text-destructive">Error: {error}</p>}
       {error && status !== "error" && <p className="text-destructive">Error: {error}</p>}
+
+      {/* Where to go next */}
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">Ideas</Link>
+          <Link href="/specs" className="text-amber-600 dark:text-amber-400 hover:underline">Specs</Link>
+          <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">Resonance</Link>
+        </div>
+      </nav>
     </main>
   );
 }

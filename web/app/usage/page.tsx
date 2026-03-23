@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { getApiBase } from "@/lib/api";
 import {
   DEFAULT_DAILY_SUMMARY,
@@ -114,14 +116,14 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
   const nextHref = `/usage?page=${page + 1}&page_size=${pageSize}`;
 
   return (
-    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-7xl space-y-4">
-        <section className="space-y-1 px-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Usage In Motion
+    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8">
+      <div className="mx-auto w-full max-w-7xl space-y-8">
+        <section className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Usage
           </h1>
-          <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            Runtime telemetry + friction summary, rendered with operational context for fast triage.
+          <p className="max-w-2xl text-muted-foreground leading-relaxed">
+            A transparent view of how resources flow through the network. Runtime telemetry, friction signals, and provider health in one place.
           </p>
           {warnings.length > 0 ? (
             <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
@@ -132,41 +134,8 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
 
         <NavLinksSection />
 
-        <FrictionSection friction={friction} />
-
-        <HostRunnerSection
-          dailySummary={dailySummary}
-          workerFailedRaw={workerFailedRaw}
-          workerFailedRecoverable={workerFailedRecoverable}
-          workerFailedActive={workerFailedActive}
-          recoveryStreakTarget={recoveryStreakTarget}
-          hostTaskTypeRows={hostTaskTypeRows}
-        />
-
-        <QualityAwarenessSection qualityAwareness={qualityAwareness} />
-
-        <ProvidersSection providerRows={providerRows} />
-
-        <TopToolsAttentionSection
-          topTools={topTools}
-          topAttentionRows={topAttentionRows}
-          recoveryStreakTarget={recoveryStreakTarget}
-        />
-
-        <RuntimeCostSection
-          ideas={ideas}
-          runtime={runtime}
-          page={page}
-          hasPrevious={hasPrevious}
-          hasNext={hasNext}
-          previousHref={previousHref}
-          nextHref={nextHref}
-        />
-
-        <ViewPerformanceSection viewRows={viewRows} />
-
-        <section className="space-y-3 rounded border p-4">
-          <h2 className="text-lg font-semibold tracking-tight">Provider Health</h2>
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h2 className="text-xl font-semibold">Provider Health</h2>
           {providerStats ? (
             <>
               <p className="text-sm text-muted-foreground">
@@ -177,7 +146,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
                   {providerStats.alerts.map((alert, i) => (
                     <li
                       key={`prov-alert-${alert.provider}-${alert.metric}-${i}`}
-                      className={`rounded px-3 py-1.5 text-sm font-medium ${
+                      className={`rounded-xl px-3 py-1.5 text-sm font-medium ${
                         alert.value < alert.threshold * 0.5
                           ? "bg-red-500/10 text-red-600 dark:text-red-400"
                           : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
@@ -188,10 +157,11 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
                   ))}
                 </ul>
               )}
-              <div className="overflow-x-auto">
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <tr className="border-b border-border/30 text-left text-xs uppercase tracking-wider text-muted-foreground">
                       <th className="pb-2 pr-4">Provider</th>
                       <th className="pb-2 pr-4">Overall Rate</th>
                       <th className="pb-2 pr-4">Last 5</th>
@@ -232,11 +202,80 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
                   </tbody>
                 </table>
               </div>
+              {/* Mobile stacked cards */}
+              <div className="md:hidden space-y-2">
+                {Object.entries(providerStats.providers)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([name, entry]) => (
+                    <div key={`prov-mobile-${name}`} className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
+                      <p className="font-medium text-sm">{name}</p>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <p className="text-muted-foreground">Overall</p>
+                          <p>{(entry.success_rate * 100).toFixed(0)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Last 5</p>
+                          <p className={entry.last_5_rate < 0.5 ? "text-red-600 dark:text-red-400" : entry.last_5_rate < 0.8 ? "text-amber-600 dark:text-amber-400" : ""}>
+                            {(entry.last_5_rate * 100).toFixed(0)}%
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Status</p>
+                          <p>{entry.blocked ? "blocked" : entry.needs_attention ? "attention" : "ok"}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </>
           ) : (
-            <p className="text-sm text-muted-foreground">No data available.</p>
+            <p className="text-sm text-muted-foreground">Provider stats are not available right now. Check back once the API is connected.</p>
           )}
         </section>
+
+        <FrictionSection friction={friction} />
+
+        <HostRunnerSection
+          dailySummary={dailySummary}
+          workerFailedRaw={workerFailedRaw}
+          workerFailedRecoverable={workerFailedRecoverable}
+          workerFailedActive={workerFailedActive}
+          recoveryStreakTarget={recoveryStreakTarget}
+          hostTaskTypeRows={hostTaskTypeRows}
+        />
+
+        <QualityAwarenessSection qualityAwareness={qualityAwareness} />
+
+        <ProvidersSection providerRows={providerRows} />
+
+        <TopToolsAttentionSection
+          topTools={topTools}
+          topAttentionRows={topAttentionRows}
+          recoveryStreakTarget={recoveryStreakTarget}
+        />
+
+        <RuntimeCostSection
+          ideas={ideas}
+          runtime={runtime}
+          page={page}
+          hasPrevious={hasPrevious}
+          hasNext={hasNext}
+          previousHref={previousHref}
+          nextHref={nextHref}
+        />
+
+        <ViewPerformanceSection viewRows={viewRows} />
+
+        {/* Where to go next */}
+        <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+          <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+          <div className="flex flex-wrap justify-center gap-4 text-sm">
+            <Link href="/automation" className="text-amber-600 dark:text-amber-400 hover:underline">Automation</Link>
+            <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">Flow</Link>
+            <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">Ideas</Link>
+          </div>
+        </nav>
       </div>
     </main>
   );

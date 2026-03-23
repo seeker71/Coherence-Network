@@ -83,7 +83,7 @@ export function FlowItemCard({ item }: Props) {
   const displayName = humanIdeaName(item.idea_name || item.idea_id);
 
   return (
-    <article className="rounded border p-4 space-y-4">
+    <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="font-semibold text-lg">
@@ -97,11 +97,11 @@ export function FlowItemCard({ item }: Props) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2 text-sm">
-          <Link href={`/ideas/${encodeURIComponent(item.idea_id)}`} className="rounded border px-3 py-1.5 hover:bg-accent">
+          <Link href={`/ideas/${encodeURIComponent(item.idea_id)}`} className="rounded-xl border border-border/30 px-3 py-1.5 hover:bg-accent transition-colors">
             Open idea
           </Link>
           {firstTaskId ? (
-            <Link href={`/tasks?task_id=${encodeURIComponent(firstTaskId)}`} className="rounded border px-3 py-1.5 hover:bg-accent">
+            <Link href={`/tasks?task_id=${encodeURIComponent(firstTaskId)}`} className="rounded-xl border border-border/30 px-3 py-1.5 hover:bg-accent transition-colors">
               Open latest work
             </Link>
           ) : null}
@@ -109,15 +109,15 @@ export function FlowItemCard({ item }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs">
-        <span className="rounded border px-2 py-1">{trackedLabel(item.spec.tracked, "Plan")}</span>
-        <span className="rounded border px-2 py-1">{trackedLabel(item.process.tracked, "Work")}</span>
-        <span className="rounded border px-2 py-1">{trackedLabel(item.implementation.tracked, "Results")}</span>
-        <span className="rounded border px-2 py-1">{trackedLabel(item.validation.tracked, "Checks")}</span>
-        <span className="rounded border px-2 py-1">{trackedLabel(item.contributors.tracked, "People")}</span>
+        <span className="rounded-xl border border-border/30 px-2 py-1">{trackedLabel(item.spec.tracked, "Plan")}</span>
+        <span className="rounded-xl border border-border/30 px-2 py-1">{trackedLabel(item.process.tracked, "Work")}</span>
+        <span className="rounded-xl border border-border/30 px-2 py-1">{trackedLabel(item.implementation.tracked, "Results")}</span>
+        <span className="rounded-xl border border-border/30 px-2 py-1">{trackedLabel(item.validation.tracked, "Checks")}</span>
+        <span className="rounded-xl border border-border/30 px-2 py-1">{trackedLabel(item.contributors.tracked, "People")}</span>
       </div>
 
       <div className="grid grid-cols-1 gap-3 text-sm xl:grid-cols-2">
-        <div className="rounded border p-3 space-y-2">
+        <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
           <p className="font-medium">What Is Already In Place</p>
           <p className="text-muted-foreground">
             {countLabel(item.spec.count, "plan")} linked | {countLabel(item.process.task_ids.length, "work card")} linked | {linkItemsLabel(item.assets.count)} to files or saved outputs
@@ -177,7 +177,7 @@ export function FlowItemCard({ item }: Props) {
           </p>
         </div>
 
-        <div className="rounded border p-3 space-y-2">
+        <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
           <p className="font-medium">What Still Needs Attention</p>
           <p className="text-muted-foreground">
             {item.interdependencies.blocked
@@ -191,7 +191,7 @@ export function FlowItemCard({ item }: Props) {
           </p>
         </div>
 
-        <div className="rounded border p-3 space-y-2">
+        <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
           <p className="font-medium">Proof And Results</p>
           <p className="text-muted-foreground">
             Recent activity {countLabel(item.implementation.runtime_events_count, "update")} | Usage signals {countLabel(item.contributions.usage_events_count, "signal")}
@@ -217,7 +217,7 @@ export function FlowItemCard({ item }: Props) {
           </p>
         </div>
 
-        <div className="rounded border p-3 space-y-2">
+        <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
           <p className="font-medium">People Involved</p>
           <p className="text-muted-foreground">
             {countLabel(item.contributors.total_unique, "person")} linked to this idea.
