@@ -279,6 +279,18 @@ def get_treasury_config() -> dict:
     })
 
 
+def get_oauth_config(provider: str) -> dict:
+    """Return OAuth config for a provider (github, google, etc.).
+
+    Config structure in ~/.coherence-network/config.json:
+      {"oauth": {"github": {"client_id": "", "client_secret": ""}, ...}}
+
+    Returns empty dict if not configured.
+    """
+    config = get_config()
+    return config.get("oauth", {}).get(provider, {})
+
+
 def reset_config_cache():
     global _CACHE
     _CACHE = None

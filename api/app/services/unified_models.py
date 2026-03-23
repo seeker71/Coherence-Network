@@ -70,3 +70,8 @@ from app.services.federation_service import (  # noqa: F401
     NodeMeasurementSummaryRecord,
     NodeStrategyBroadcastRecord,
 )
+
+# ---------------------------------------------------------------------------
+# Contributor Identity models
+# ---------------------------------------------------------------------------
+from app.services.contributor_identity_service import ContributorIdentityRecord  # noqa: F401

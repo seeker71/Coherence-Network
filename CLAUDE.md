@@ -95,9 +95,9 @@ This survives `.env` replacements. Code loads from keystore first, `.env` as fal
 }
 ```
 
-- **OpenRouter**: `api_key` starts with `sk-or-v1-62dc...`. Free tier: 26 models, 20 req/min.
-- **VPS copy**: `/docker/coherence-network/repo/api/.env` has `OPENROUTER_API_KEY=` as env var fallback.
-- Never commit full keys to git.
+- **OpenRouter**: Free tier: 26 models, 20 req/min. Key stored in keystore only.
+- **VPS**: Keys loaded from keystore or env vars as fallback.
+- **Never commit keys to git** — use `~/.coherence-network/keys.json` (mode 600).
 
 ## Context-Conscious Exploration
 
