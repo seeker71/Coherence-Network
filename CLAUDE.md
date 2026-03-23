@@ -42,6 +42,7 @@ Coherence Network is operated as a spec-driven OSS intelligence platform.
 - Every changed feature spec must include explicit `Verification`, `Risks and Assumptions`, and `Known Gaps and Follow-up Tasks` sections.
 - Keep changes scoped to requested files/tasks.
 - Escalate via `needs-decision` for security-sensitive or high-impact architecture changes.
+- **Every new idea discussed in a session MUST be recorded via `POST /api/ideas` before the session ends.** Ideas are the atomic unit — if it's not in the system, it doesn't exist for tracking, attribution, or value lineage. See `docs/RUNBOOK.md` § "Idea Tracking" for the full protocol.
 
 ## Production Deployment (Hostinger VPS)
 
