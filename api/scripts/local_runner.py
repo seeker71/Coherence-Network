@@ -90,7 +90,10 @@ def _detect_providers() -> dict[str, dict]:
     providers = {}
     cli_specs = {
         # claude --print: non-interactive, prints output
-        "claude": {"cmd": ["claude", "--print"], "append_prompt": True, "needs_skip_permissions": True},
+        # --dangerously-skip-permissions: bypass all permission checks
+        # --permission-mode bypassPermissions: belt-and-suspenders for auto mode
+        # --bare: skip hooks/LSP/plugins that can cause interactive prompts
+        "claude": {"cmd": ["claude", "--print", "--bare"], "append_prompt": True, "needs_skip_permissions": True},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
@@ -312,6 +315,16 @@ def _openrouter_chat_completion(prompt: str, timeout_s: float) -> str:
         "HTTP-Referer": _OPENROUTER_REFERER,
     }
     api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    # Fall back to keystore (~/.coherence-network/keys.json)
+    if not api_key:
+        ks_path = os.path.join(os.path.expanduser("~"), ".coherence-network", "keys.json")
+        if os.path.exists(ks_path):
+            try:
+                with open(ks_path) as _kf:
+                    _ks = json.load(_kf)
+                api_key = _ks.get("openrouter", {}).get("api_key", "")
+            except Exception:
+                pass
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     body = {
