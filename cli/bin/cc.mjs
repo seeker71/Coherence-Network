@@ -12,6 +12,7 @@ import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
+import { listNodes, sendMessage, readMessages } from "../lib/commands/nodes.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -27,6 +28,10 @@ const COMMANDS = {
   status:     () => showStatus(),
   resonance:  () => showResonance(),
   identity:   () => handleIdentity(args),
+  nodes:      () => listNodes(),
+  msg:        () => sendMessage(args),
+  messages:   () => readMessages(args),
+  inbox:      () => readMessages(args),
   help:       () => showHelp(),
 };
 
@@ -77,6 +82,11 @@ function showHelp() {
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity
+
+\x1b[1mFederation:\x1b[0m
+  nodes                   List federation nodes
+  msg <node|broadcast> <text>  Send message to a node
+  inbox                   Read your messages
 
 \x1b[1mProviders:\x1b[0m
   github, x, discord, telegram, mastodon, bluesky, linkedin, reddit,
