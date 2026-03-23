@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -16,12 +17,45 @@ import {
 import IdeaDsssSpecBuilder from "@/components/ideas/IdeaDsssSpecBuilder";
 import IdeaProgressEditor from "@/components/ideas/IdeaProgressEditor";
 import IdeaTaskQuickCreate from "@/components/ideas/IdeaTaskQuickCreate";
+import IdeaShare from "@/components/idea_share";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const FETCH_TIMEOUT_MS = 6000;
 const FETCH_RETRY_DELAY_MS = 250;
 const FETCH_RETRY_ATTEMPTS = 3;
 export const revalidate = 90;
+
+const BASE_URL = "https://coherencycoin.com";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ idea_id: string }>;
+}): Promise<Metadata> {
+  const resolved = await params;
+  const ideaId = decodeURIComponent(resolved.idea_id);
+  const result = await loadIdea(ideaId);
+  if (result.kind !== "ok") {
+    return { title: "Idea" };
+  }
+  const idea = result.idea;
+  const ideaUrl = `${BASE_URL}/ideas/${encodeURIComponent(idea.id)}`;
+  return {
+    title: idea.name,
+    description: idea.description.slice(0, 300),
+    openGraph: {
+      title: idea.name,
+      description: idea.description.slice(0, 300),
+      url: ideaUrl,
+      type: "article",
+    },
+    twitter: {
+      card: "summary",
+      title: idea.name,
+      description: idea.description.slice(0, 200),
+    },
+  };
+}
 
 type IdeaQuestion = {
   question: string;
@@ -326,6 +360,14 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         <p className="text-sm text-muted-foreground">
           Current proof level: {humanizeManifestationStatus(idea.manifestation_status)}
         </p>
+        <IdeaShare
+          ideaId={idea.id}
+          name={idea.name}
+          description={idea.description}
+          valueGap={idea.value_gap}
+          status={humanizeManifestationStatus(idea.manifestation_status)}
+          url={`${BASE_URL}/ideas/${encodeURIComponent(idea.id)}`}
+        />
       </div>
 
       <IdeaProgressEditor

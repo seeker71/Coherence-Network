@@ -7,6 +7,7 @@ import {
   formatUsd,
   humanizeManifestationStatus,
 } from "@/lib/humanize";
+import { IdeaCopyLink } from "@/components/idea_share";
 
 export const metadata: Metadata = {
   title: "Ideas",
@@ -257,7 +258,7 @@ export default async function IdeasPage() {
                     {formatConfidence(idea.confidence)} confidence
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex flex-wrap items-center gap-4 text-sm">
                   <Link
                     href={`/ideas/${encodeURIComponent(idea.id)}`}
                     className="text-primary hover:text-foreground transition-colors duration-300"
@@ -270,6 +271,7 @@ export default async function IdeasPage() {
                   >
                     View progress
                   </Link>
+                  <IdeaCopyLink url={`https://coherencycoin.com/ideas/${encodeURIComponent(idea.id)}`} />
                 </div>
               </article>
             );
