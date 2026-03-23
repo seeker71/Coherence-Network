@@ -196,96 +196,6 @@ export default async function IdeasPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-5">
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold">Idea lifecycle dashboard</h2>
-          <p className="text-sm text-muted-foreground">
-            Track stage transitions, automatic advancement triggers, and phase-level progress.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Portfolio completion</span>
-            <span>{completionPct}% complete</span>
-          </div>
-          <div className="h-2.5 rounded-full bg-muted/40 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-primary/50 to-primary/90 transition-all duration-500"
-              style={{ width: `${Math.max(completionPct, 2)}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <article className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
-            <h3 className="text-sm font-medium">Stage transitions</h3>
-            <ol className="space-y-2 text-sm">
-              {STAGE_ORDER.map((stage, idx) => {
-                const next = STAGE_ORDER[idx + 1];
-                const bucket = progress.by_stage[stage] ?? emptyStageBucket();
-                return (
-                  <li key={stage} className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">
-                      {STAGE_LABEL[stage]}
-                      {next ? ` -> ${STAGE_LABEL[next]}` : " (terminal)"}
-                    </span>
-                    <span className="text-xs rounded-full border border-border/40 px-2 py-0.5 bg-muted/30">
-                      {bucket.count}
-                    </span>
-                  </li>
-                );
-              })}
-            </ol>
-          </article>
-
-          <article className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
-            <h3 className="text-sm font-medium">Auto-advancement triggers</h3>
-            <ul className="space-y-2 text-sm">
-              {AUTO_ADVANCE_TRIGGERS.map((trigger) => (
-                <li key={trigger.taskType} className="space-y-1">
-                  <p>
-                    <span className="font-medium">{trigger.taskType}</span>
-                    {" "}
-                    {"task → "}<span className="text-primary">{STAGE_LABEL[trigger.movesTo]}</span>
-                  </p>
-                  <p className="text-xs text-muted-foreground">{trigger.detail}</p>
-                </li>
-              ))}
-            </ul>
-          </article>
-        </div>
-
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium">Progress by phase</h3>
-          <ul className="space-y-2">
-            {STAGE_ORDER.map((stage) => {
-              const bucket = progress.by_stage[stage] ?? emptyStageBucket();
-              const pct = progress.total_ideas > 0
-                ? Math.round((bucket.count / progress.total_ideas) * 100)
-                : 0;
-              return (
-                <li key={stage} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{STAGE_LABEL[stage]}</span>
-                    <span>{bucket.count} ideas ({pct}%)</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary/65"
-                      style={{ width: `${Math.max(pct, 2)}%` }}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="text-xs text-muted-foreground">
-            Snapshot: {new Date(progress.snapshot_at).toLocaleString()}
-          </p>
-        </div>
-      </section>
-
       <section className="space-y-4">
         <div className="space-y-3">
           {ideas.map((idea, index) => {
@@ -313,13 +223,13 @@ export default async function IdeasPage() {
                     </span>
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <p className="text-sm text-foreground/80 leading-relaxed">
                   {idea.description}
                 </p>
 
                 {/* Value gap bar */}
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center justify-between text-xs text-foreground/70">
                     <span>Value realized</span>
                     <span>{formatUsd(idea.actual_value)} / {formatUsd(idea.potential_value)}</span>
                   </div>
@@ -366,6 +276,95 @@ export default async function IdeasPage() {
           })}
         </div>
       </section>
+
+      {/* Lifecycle dashboard — collapsible, default closed */}
+      <details className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30">
+        <summary className="cursor-pointer p-5 md:p-6 text-sm font-medium text-foreground hover:text-primary transition-colors select-none">
+          Show lifecycle details ({completionPct}% complete)
+        </summary>
+        <div className="px-5 md:px-6 pb-5 md:pb-6 space-y-5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Portfolio completion</span>
+              <span>{completionPct}% complete</span>
+            </div>
+            <div className="h-2.5 rounded-full bg-muted/40 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary/50 to-primary/90 transition-all duration-500"
+                style={{ width: `${Math.max(completionPct, 2)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <article className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
+              <h3 className="text-sm font-medium text-foreground">Stage transitions</h3>
+              <ol className="space-y-2 text-sm">
+                {STAGE_ORDER.map((stage, idx) => {
+                  const next = STAGE_ORDER[idx + 1];
+                  const bucket = progress.by_stage[stage] ?? emptyStageBucket();
+                  return (
+                    <li key={stage} className="flex items-center justify-between gap-2">
+                      <span className="text-foreground">
+                        {STAGE_LABEL[stage]}
+                        {next ? ` -> ${STAGE_LABEL[next]}` : " (terminal)"}
+                      </span>
+                      <span className="text-xs rounded-full border border-border/40 px-2 py-0.5 bg-muted/30 text-foreground">
+                        {bucket.count}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </article>
+
+            <article className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
+              <h3 className="text-sm font-medium text-foreground">Auto-advancement triggers</h3>
+              <ul className="space-y-2 text-sm">
+                {AUTO_ADVANCE_TRIGGERS.map((trigger) => (
+                  <li key={trigger.taskType} className="space-y-1">
+                    <p className="text-foreground">
+                      <span className="font-medium">{trigger.taskType}</span>
+                      {" "}
+                      {"task \u2192 "}<span className="text-primary">{STAGE_LABEL[trigger.movesTo]}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">{trigger.detail}</p>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-foreground">Progress by phase</h3>
+            <ul className="space-y-2">
+              {STAGE_ORDER.map((stage) => {
+                const bucket = progress.by_stage[stage] ?? emptyStageBucket();
+                const pct = progress.total_ideas > 0
+                  ? Math.round((bucket.count / progress.total_ideas) * 100)
+                  : 0;
+                return (
+                  <li key={stage} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs text-foreground">
+                      <span>{STAGE_LABEL[stage]}</span>
+                      <span>{bucket.count} ideas ({pct}%)</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary/65"
+                        style={{ width: `${Math.max(pct, 2)}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="text-xs text-muted-foreground">
+              Snapshot: {new Date(progress.snapshot_at).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      </details>
 
       {/* Bottom nudge */}
       <section className="py-8 text-center border-t border-border/20">

@@ -1,6 +1,4 @@
-const USD_FORMAT = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
+const CC_FORMAT = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
@@ -9,7 +7,7 @@ const DECIMAL_FORMAT = new Intl.NumberFormat("en-US", {
 });
 
 export function formatUsd(value: number): string {
-  return USD_FORMAT.format(Number.isFinite(value) ? value : 0);
+  return `${CC_FORMAT.format(Number.isFinite(value) ? value : 0)} CC`;
 }
 
 export function formatDecimal(value: number, digits = 2): string {

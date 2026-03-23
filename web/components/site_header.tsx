@@ -7,6 +7,7 @@ import { ActiveNavLink } from "./active_nav_link";
 const PRIMARY_NAV = [
   { href: "/ideas", label: "Ideas" },
   { href: "/invest", label: "Invest" },
+  { href: "/treasury", label: "Treasury" },
   { href: "/contribute", label: "Contribute" },
 ];
 
