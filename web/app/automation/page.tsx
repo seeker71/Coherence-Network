@@ -256,9 +256,9 @@ async function loadAutomationData(): Promise<{
   }
   return {
     usage: (await usageRes.json()) as AutomationUsageResponse,
-    alerts: alertsRes?.ok ? ((await alertsRes.json()) as UsageAlertResponse) : { alerts: [], generated_at: "" },
-    readiness: readinessRes?.ok ? ((await readinessRes.json()) as ProviderReadinessResponse) : { providers: [], ready: true, generated_at: "" },
-    validation: validationRes?.ok ? ((await validationRes.json()) as ProviderValidationResponse) : { providers: [], generated_at: "" },
+    alerts: alertsRes?.ok ? ((await alertsRes.json()) as UsageAlertResponse) : ({ alerts: [], generated_at: "" } as unknown as UsageAlertResponse),
+    readiness: readinessRes?.ok ? ((await readinessRes.json()) as ProviderReadinessResponse) : ({ providers: [], ready: true, generated_at: "" } as unknown as ProviderReadinessResponse),
+    validation: validationRes?.ok ? ((await validationRes.json()) as ProviderValidationResponse) : ({ providers: [], generated_at: "" } as unknown as ProviderValidationResponse),
     execStats,
     networkStats,
     federationNodes,
