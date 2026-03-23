@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+from datetime import datetime, timezone
+from typing import Any
+from uuid import uuid4
+
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 from app.models.federation import (
     FederatedInstance,
@@ -275,3 +281,100 @@ async def get_federated_aggregates(strategy_type: str | None = Query(None)):
     """Return merged federated aggregation results."""
     aggregates = federation_service.list_federated_aggregates(strategy_type=strategy_type)
     return {"aggregates": aggregates}
+
+
+# ---------------------------------------------------------------------------
+# Node message bus — lightweight inter-node communication
+# ---------------------------------------------------------------------------
+
+_msg_log = logging.getLogger("coherence.node_messages")
+
+# In-memory message store (survives within process lifetime;
+# production should move to DB — but this unblocks inter-node comms now)
+_MESSAGE_STORE: list[dict[str, Any]] = []
+_MAX_MESSAGES = 500
+
+
+class NodeMessage(BaseModel):
+    from_node: str
+    to_node: str | None = None  # None = broadcast to all nodes
+    type: str = "text"  # text, command, status_request, status_response
+    payload: dict[str, Any] = {}
+    text: str = ""
+
+
+@router.post("/federation/nodes/{node_id}/messages", status_code=201)
+async def send_message(node_id: str, body: NodeMessage):
+    """Send a message from this node. Set to_node=null to broadcast."""
+    msg = {
+        "id": f"msg_{uuid4().hex[:12]}",
+        "from_node": node_id,
+        "to_node": body.to_node,
+        "type": body.type,
+        "payload": body.payload,
+        "text": body.text,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "read_by": [],
+    }
+    _MESSAGE_STORE.append(msg)
+    # Trim old messages
+    while len(_MESSAGE_STORE) > _MAX_MESSAGES:
+        _MESSAGE_STORE.pop(0)
+    _msg_log.info("MSG %s → %s: [%s] %s", node_id, body.to_node or "ALL", body.type, body.text[:100])
+    return msg
+
+
+@router.get("/federation/nodes/{node_id}/messages")
+async def get_messages(
+    node_id: str,
+    since: str | None = Query(None, description="ISO timestamp — only messages after this time"),
+    unread_only: bool = Query(True, description="Only messages not yet read by this node"),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Get messages for this node (direct + broadcasts). Marks them as read."""
+    results = []
+    for msg in reversed(_MESSAGE_STORE):
+        # Include if addressed to this node or broadcast (to_node is None)
+        if msg["to_node"] is not None and msg["to_node"] != node_id:
+            continue
+        # Skip own messages
+        if msg["from_node"] == node_id:
+            continue
+        # Filter by since
+        if since and msg["timestamp"] < since:
+            continue
+        # Filter unread
+        if unread_only and node_id in msg.get("read_by", []):
+            continue
+        results.append(msg)
+        if len(results) >= limit:
+            break
+
+    # Mark as read
+    msg_ids = {m["id"] for m in results}
+    for msg in _MESSAGE_STORE:
+        if msg["id"] in msg_ids and node_id not in msg.get("read_by", []):
+            msg["read_by"].append(node_id)
+
+    return {"node_id": node_id, "messages": results, "count": len(results)}
+
+
+@router.post("/federation/broadcast", status_code=201)
+async def broadcast_message(body: NodeMessage):
+    """Broadcast a message to all nodes."""
+    body.to_node = None
+    msg = {
+        "id": f"msg_{uuid4().hex[:12]}",
+        "from_node": body.from_node,
+        "to_node": None,
+        "type": body.type,
+        "payload": body.payload,
+        "text": body.text,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "read_by": [],
+    }
+    _MESSAGE_STORE.append(msg)
+    while len(_MESSAGE_STORE) > _MAX_MESSAGES:
+        _MESSAGE_STORE.pop(0)
+    _msg_log.info("BROADCAST from %s: [%s] %s", body.from_node, body.type, body.text[:100])
+    return msg

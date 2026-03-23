@@ -1378,6 +1378,56 @@ def run_all_pending(dry_run: bool = False) -> dict:
     return results
 
 
+def _poll_messages() -> None:
+    """Check for inter-node messages and handle commands."""
+    result = api("GET", f"/api/federation/nodes/{_NODE_ID}/messages?unread_only=true&limit=20")
+    if not isinstance(result, dict):
+        return
+    messages = result.get("messages", [])
+    if not messages:
+        return
+
+    for msg in messages:
+        msg_type = msg.get("type", "text")
+        from_node = msg.get("from_node", "?")[:16]
+        text = msg.get("text", "")
+        payload = msg.get("payload", {})
+
+        if msg_type == "text":
+            log.info("MSG from %s: %s", from_node, text[:200])
+
+        elif msg_type == "command":
+            cmd = payload.get("command", text)
+            log.info("CMD from %s: %s", from_node, cmd)
+            if cmd == "status":
+                # Reply with our status
+                status_payload = {
+                    "node_id": _NODE_ID,
+                    "hostname": _NODE_NAME,
+                    "os": platform.system(),
+                    "providers": list(PROVIDERS.keys()) if PROVIDERS else [],
+                    "uptime": "running",
+                }
+                api("POST", f"/api/federation/nodes/{_NODE_ID}/messages", {
+                    "from_node": _NODE_ID,
+                    "to_node": from_node,
+                    "type": "status_response",
+                    "payload": status_payload,
+                    "text": f"Status from {_NODE_NAME}: online with {len(PROVIDERS or {})} providers",
+                })
+            elif cmd == "pull":
+                log.info("CMD: remote pull request — will update on next cycle")
+                # The self-update check will handle this
+            else:
+                log.info("CMD: unknown command '%s' — ignoring", cmd)
+
+        elif msg_type == "status_response":
+            log.info("STATUS from %s: %s", from_node, text[:200])
+
+        else:
+            log.info("MSG [%s] from %s: %s", msg_type, from_node, text[:100])
+
+
 def _check_for_updates_and_restart() -> bool:
     """Check if origin/main has new commits; if so, pull and re-exec.
 
@@ -1509,6 +1559,8 @@ def main():
                 # Self-update: check for new commits before each cycle
                 if not args.no_self_update:
                     _check_for_updates_and_restart()
+                # Check for inter-node messages
+                _poll_messages()
                 run_all_pending(dry_run=args.dry_run)
                 time.sleep(args.interval)
         except KeyboardInterrupt:
