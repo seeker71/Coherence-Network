@@ -288,9 +288,6 @@ async def get_federated_aggregates(strategy_type: str | None = Query(None)):
 
 _msg_log = logging.getLogger("coherence.node_messages")
 
-# In-memory message store (survives within process lifetime;
-# production should move to DB — but this unblocks inter-node comms now)
-_MESSAGE_STORE: list[dict[str, Any]] = []
 _MAX_MESSAGES = 500
 
 
@@ -300,6 +297,94 @@ class NodeMessage(BaseModel):
     type: str = "text"  # text, command, status_request, status_response
     payload: dict[str, Any] = {}
     text: str = ""
+
+
+def _store_message(msg_dict: dict[str, Any]) -> dict[str, Any]:
+    """Persist a message to PostgreSQL. Falls back to fire-and-forget on DB error."""
+    try:
+        from app.services.federation_service import NodeMessageRecord
+        from app.services import unified_db as _udb
+
+        with _udb.get_session() as session:
+            record = NodeMessageRecord(
+                id=msg_dict["id"],
+                from_node=msg_dict["from_node"],
+                to_node=msg_dict.get("to_node"),
+                type=msg_dict.get("type", "text"),
+                text=msg_dict.get("text", ""),
+                payload_json=json.dumps(msg_dict.get("payload", {})),
+                timestamp=msg_dict["timestamp"],
+                read_by_json="[]",
+            )
+            session.add(record)
+            session.commit()
+    except Exception as e:
+        _msg_log.warning("Failed to persist message %s: %s", msg_dict.get("id"), e)
+    return msg_dict
+
+
+def _query_messages(
+    node_id: str,
+    since: str | None = None,
+    unread_only: bool = True,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """Query messages from PostgreSQL for a specific node."""
+    try:
+        from app.services.federation_service import NodeMessageRecord
+        from app.services import unified_db as _udb
+        from sqlalchemy import or_
+
+        with _udb.get_session() as session:
+            q = session.query(NodeMessageRecord).filter(
+                or_(
+                    NodeMessageRecord.to_node == node_id,
+                    NodeMessageRecord.to_node.is_(None),  # broadcasts
+                ),
+                NodeMessageRecord.from_node != node_id,  # skip own messages
+            )
+            if since:
+                q = q.filter(NodeMessageRecord.timestamp > since)
+            q = q.order_by(NodeMessageRecord.timestamp.desc()).limit(limit)
+
+            results = []
+            for rec in q.all():
+                read_by = json.loads(rec.read_by_json) if rec.read_by_json else []
+                if unread_only and node_id in read_by:
+                    continue
+                results.append({
+                    "id": rec.id,
+                    "from_node": rec.from_node,
+                    "to_node": rec.to_node,
+                    "type": rec.type,
+                    "text": rec.text,
+                    "payload": json.loads(rec.payload_json) if rec.payload_json else {},
+                    "timestamp": rec.timestamp,
+                    "read_by": read_by,
+                })
+            return results
+    except Exception as e:
+        _msg_log.warning("Failed to query messages for %s: %s", node_id, e)
+        return []
+
+
+def _mark_messages_read(node_id: str, msg_ids: set[str]) -> None:
+    """Mark messages as read by this node in PostgreSQL."""
+    if not msg_ids:
+        return
+    try:
+        from app.services.federation_service import NodeMessageRecord
+        from app.services import unified_db as _udb
+
+        with _udb.get_session() as session:
+            for rec in session.query(NodeMessageRecord).filter(NodeMessageRecord.id.in_(msg_ids)):
+                read_by = json.loads(rec.read_by_json) if rec.read_by_json else []
+                if node_id not in read_by:
+                    read_by.append(node_id)
+                    rec.read_by_json = json.dumps(read_by)
+            session.commit()
+    except Exception as e:
+        _msg_log.warning("Failed to mark messages read for %s: %s", node_id, e)
 
 
 @router.post("/federation/nodes/{node_id}/messages", status_code=201)
@@ -315,10 +400,7 @@ async def send_message(node_id: str, body: NodeMessage):
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "read_by": [],
     }
-    _MESSAGE_STORE.append(msg)
-    # Trim old messages
-    while len(_MESSAGE_STORE) > _MAX_MESSAGES:
-        _MESSAGE_STORE.pop(0)
+    _store_message(msg)
     _msg_log.info("MSG %s → %s: [%s] %s", node_id, body.to_node or "ALL", body.type, body.text[:100])
     return msg
 
@@ -331,29 +413,11 @@ async def get_messages(
     limit: int = Query(50, ge=1, le=200),
 ):
     """Get messages for this node (direct + broadcasts). Marks them as read."""
-    results = []
-    for msg in reversed(_MESSAGE_STORE):
-        # Include if addressed to this node or broadcast (to_node is None)
-        if msg["to_node"] is not None and msg["to_node"] != node_id:
-            continue
-        # Skip own messages
-        if msg["from_node"] == node_id:
-            continue
-        # Filter by since
-        if since and msg["timestamp"] < since:
-            continue
-        # Filter unread
-        if unread_only and node_id in msg.get("read_by", []):
-            continue
-        results.append(msg)
-        if len(results) >= limit:
-            break
+    results = _query_messages(node_id, since=since, unread_only=unread_only, limit=limit)
 
     # Mark as read
     msg_ids = {m["id"] for m in results}
-    for msg in _MESSAGE_STORE:
-        if msg["id"] in msg_ids and node_id not in msg.get("read_by", []):
-            msg["read_by"].append(node_id)
+    _mark_messages_read(node_id, msg_ids)
 
     return {"node_id": node_id, "messages": results, "count": len(results)}
 
@@ -361,7 +425,6 @@ async def get_messages(
 @router.post("/federation/broadcast", status_code=201)
 async def broadcast_message(body: NodeMessage):
     """Broadcast a message to all nodes."""
-    body.to_node = None
     msg = {
         "id": f"msg_{uuid4().hex[:12]}",
         "from_node": body.from_node,
@@ -372,8 +435,6 @@ async def broadcast_message(body: NodeMessage):
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "read_by": [],
     }
-    _MESSAGE_STORE.append(msg)
-    while len(_MESSAGE_STORE) > _MAX_MESSAGES:
-        _MESSAGE_STORE.pop(0)
+    _store_message(msg)
     _msg_log.info("BROADCAST from %s: [%s] %s", body.from_node, body.type, body.text[:100])
     return msg
