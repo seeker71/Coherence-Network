@@ -1,4 +1,3 @@
-<!-- AUTO-GENERATED from README.template.md. Edit the template, not this file. -->
 # coherence-cli
 
 **Every idea deserves a trail. Every contributor deserves credit.**
@@ -20,13 +19,7 @@ Most ideas die in the gap between "great thought" and "shipped thing." The peopl
 
 Coherence Network changes that. It tracks the full lifecycle:
 
-```
-Idea → Research → Spec → Implementation → Review → Usage → Payout
-       ↑                                                    ↓
-       └────────── coherence scores at every stage ─────────┘
-```
-
-Every stage is scored for **coherence** (0.0–1.0) — measuring test coverage, documentation quality, and implementation simplicity. Contributors are paid proportionally to the energy they invested and the coherence they achieved.
+<!-- include: docs/shared/lifecycle-diagram.md -->
 
 `cc` gives you direct access to all of it from your terminal.
 
@@ -74,14 +67,7 @@ cc identity lookup github alice-dev  # Find anyone by their handle
 
 **Supported providers:**
 
-| Category | Providers |
-|----------|-----------|
-| **Social** | X, Discord, Telegram, Mastodon, Bluesky, Reddit, YouTube, Twitch, Instagram, TikTok, Fediverse |
-| **Developer** | GitHub, GitLab, Bitbucket, npm, crates.io, PyPI, Hacker News, Stack Overflow |
-| **Crypto / Web3** | Ethereum, Bitcoin, Solana, Cosmos, Nostr, ENS, Lens |
-| **Professional** | LinkedIn, ORCID |
-| **Identity** | Email, Google, Apple, Microsoft, DID, Keybase, PGP |
-| **Platform** | OpenClaw |
+<!-- include: docs/shared/identity-providers.md -->
 
 You don't need to register anywhere. Just link a provider and start contributing — your work is attributed to your identity across the entire network.
 
@@ -89,13 +75,7 @@ You don't need to register anywhere. Just link a provider and start contributing
 
 ## How coherence scoring works
 
-Every contribution and every idea is scored on a 0.0–1.0 scale:
-
-- **1.0** — Tests pass, docs are clear, implementation is simple, value is proven
-- **0.5** — Partial coverage, some gaps, work in progress
-- **0.0** — No tests, no docs, no evidence of value
-
-The score isn't a grade — it's a signal. It tells you and the network how much energy has been invested and how much trust the work has earned. Payouts are weighted by coherence, so higher-quality contributions earn proportionally more.
+<!-- include: docs/shared/coherence-scoring.md -->
 
 ---
 
