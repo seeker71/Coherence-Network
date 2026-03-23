@@ -5,6 +5,7 @@ import io
 import json
 import os
 from dataclasses import dataclass
+import sys
 import importlib.util
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
@@ -421,6 +422,7 @@ def test_run_one_task_claude_oauth_mode_strips_api_key_env(monkeypatch, tmp_path
     assert captured_env.get("CLAUDE_CONFIG_DIR", "") != ""
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.geteuid not available on Windows")
 def test_prepare_non_root_execution_for_command_enables_demote_on_root(monkeypatch):
     monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
     monkeypatch.setattr(
@@ -442,6 +444,7 @@ def test_prepare_non_root_execution_for_command_enables_demote_on_root(monkeypat
     assert env["PATH"].startswith("/home/runner/.local/bin:")
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.geteuid not available on Windows")
 def test_prepare_non_root_execution_for_command_filters_root_paths(monkeypatch):
     monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
     monkeypatch.setattr(
@@ -460,6 +463,7 @@ def test_prepare_non_root_execution_for_command_filters_root_paths(monkeypatch):
     assert "/root/.local/bin" not in env["PATH"]
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.geteuid not available on Windows")
 def test_prepare_non_root_execution_for_command_noop_when_not_root(monkeypatch):
     monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 1000)
     env = {"PATH": "/usr/bin"}
@@ -472,6 +476,7 @@ def test_prepare_non_root_execution_for_command_noop_when_not_root(monkeypatch):
     assert preexec is None
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.geteuid not available on Windows")
 def test_prepare_non_root_execution_for_command_fails_when_no_user(monkeypatch):
     monkeypatch.setattr(agent_runner.os, "geteuid", lambda: 0)
     monkeypatch.setattr(
@@ -489,6 +494,7 @@ def test_prepare_non_root_execution_for_command_fails_when_no_user(monkeypatch):
     assert preexec is None
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="pwd not available on Windows")
 def test_resolve_non_root_exec_user_skips_low_uid_candidates(monkeypatch):
     class _PwdRow:
         def __init__(self, name: str, uid: int, gid: int, home: str, shell: str):
@@ -519,6 +525,7 @@ def test_resolve_non_root_exec_user_skips_low_uid_candidates(monkeypatch):
     assert home == "/home/app"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="pwd not available on Windows")
 def test_resolve_non_root_exec_user_auto_discover_skips_system_users(monkeypatch):
     class _PwdRow:
         def __init__(self, name: str, uid: int, gid: int, home: str, shell: str):
@@ -551,6 +558,7 @@ def test_resolve_non_root_exec_user_auto_discover_skips_system_users(monkeypatch
     assert home == "/home/app"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.geteuid not available on Windows")
 def test_auto_create_non_root_exec_user_creates_account_when_missing(monkeypatch):
     class _PwdRow:
         def __init__(self, name: str, uid: int, gid: int, home: str):
@@ -697,6 +705,7 @@ def test_ensure_cli_for_command_skips_install_when_cli_present(monkeypatch):
     assert install_called["value"] is False
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="os.geteuid not available on Windows")
 def test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI", "1")
     monkeypatch.setenv("AGENT_RUNNER_AUTO_INSTALL_CLI_IN_TESTS", "1")
@@ -744,6 +753,7 @@ def test_ensure_cli_for_command_does_not_promote_cursor_binary_when_root(monkeyp
     assert "/usr/local/bin/agent" not in detail
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix paths not available on Windows tests")
 def test_resolve_node_binary_prefers_non_shim_candidate(monkeypatch):
     monkeypatch.setattr(
         agent_runner.shutil,
@@ -770,6 +780,7 @@ def test_resolve_node_binary_prefers_non_shim_candidate(monkeypatch):
     assert resolved == "/bin/node"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix paths not available on Windows tests")
 def test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary(monkeypatch):
     monkeypatch.setattr(
         agent_runner.shutil,
@@ -792,6 +803,7 @@ def test_resolve_node_binary_falls_back_to_shim_when_no_concrete_binary(monkeypa
     assert resolved == "/mise/shims/node"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix paths not available on Windows tests")
 def test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_system_ca(monkeypatch, tmp_path):
     shim_path = tmp_path / "node"
     monkeypatch.setenv("AGENT_RUNNER_CURSOR_NODE_SHIM_PATH", str(shim_path))
@@ -813,6 +825,7 @@ def test_ensure_cursor_node_shim_writes_compat_wrapper_when_node_lacks_use_syste
     assert os.access(shim_path, os.X_OK)
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix paths not available on Windows tests")
 def test_cursor_node_shim_path_uses_realpath_target(monkeypatch):
     monkeypatch.delenv("AGENT_RUNNER_CURSOR_NODE_SHIM_PATH", raising=False)
     monkeypatch.setattr(
@@ -824,6 +837,7 @@ def test_cursor_node_shim_path_uses_realpath_target(monkeypatch):
     assert shim_path == "/usr/local/bin/node"
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Unix paths not available on Windows tests")
 def test_resolve_cursor_cli_binary_prefers_path_with_runtime_layout(monkeypatch, tmp_path):
     bad_dir = tmp_path / "bad"
     good_dir = tmp_path / "good"
@@ -1139,7 +1153,8 @@ def test_configure_cursor_cli_environment_bootstraps_oauth_session_from_b64(monk
     assert "OPENAI_API_BASE" not in env
     assert "OPENAI_BASE_URL" not in env
     target = env.get("AGENT_CURSOR_OAUTH_SESSION_FILE") or ""
-    assert target.endswith("/.config/cagent/auth.json")
+    assert target.replace("\\", "/").endswith("/.config/cagent/auth.json")
+
     assert env.get("CURSOR_CONFIG_DIR") == str(Path(target).parent)
     loaded = json.loads(Path(target).read_text(encoding="utf-8"))
     assert loaded.get("refreshToken") == "cursor-refresh-token"
@@ -1181,7 +1196,8 @@ def test_configure_claude_cli_environment_bootstraps_oauth_session_from_b64(monk
     assert "ANTHROPIC_BASE_URL" not in env
     assert "CLAUDE_CODE_OAUTH_TOKEN" not in env
     target = env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE") or ""
-    assert target.endswith("/.claude/.credentials.json")
+    assert target.replace("\\", "/").endswith("/.claude/.credentials.json")
+
     assert env.get("CLAUDE_CONFIG_DIR") == str(Path(target).parent)
     loaded = json.loads(Path(target).read_text(encoding="utf-8"))
     assert loaded.get("refreshToken") == "claude-refresh-token"
@@ -1223,13 +1239,13 @@ def test_configure_gemini_cli_environment_bootstraps_oauth_session_from_b64(monk
     assert "GEMINI_API_KEY" not in env
     assert "GOOGLE_API_KEY" not in env
     target = env.get("AGENT_GEMINI_OAUTH_CREDS_FILE") or ""
-    assert target.endswith("/.gemini/oauth_creds.json")
+    assert target.replace("\\", "/").endswith("/.gemini/oauth_creds.json")
     loaded = json.loads(Path(target).read_text(encoding="utf-8"))
     assert loaded.get("refresh_token") == "gemini-refresh-token"
     assert loaded.get("access_token") == "gemini-access-token"
     assert "apiKey" not in loaded
     settings_target = env.get("AGENT_GEMINI_SETTINGS_FILE") or ""
-    assert settings_target.endswith("/.gemini/settings.json")
+    assert settings_target.replace("\\", "/").endswith("/.gemini/settings.json")
     settings = json.loads(Path(settings_target).read_text(encoding="utf-8"))
     security = settings.get("security") if isinstance(settings, dict) else {}
     auth_settings = security.get("auth") if isinstance(security, dict) else {}
@@ -1292,7 +1308,8 @@ def test_configure_codex_cli_environment_bootstraps_oauth_session_from_b64(monke
     bootstrap_detail = str(auth.get("oauth_session_bootstrap_detail") or "")
     assert bootstrap_detail.startswith("oauth_session_bootstrapped:")
     target = env.get("AGENT_CODEX_OAUTH_SESSION_FILE") or ""
-    assert target.endswith("/.codex/auth.json")
+    assert target.replace("\\", "/").endswith("/.codex/auth.json")
+
     loaded = json.loads(Path(target).read_text(encoding="utf-8"))
     assert loaded.get("refresh_token") == "refresh-token-value"
     assert loaded.get("access_token") == "access-token-value"

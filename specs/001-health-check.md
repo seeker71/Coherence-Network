@@ -144,12 +144,16 @@ None.
 - **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
 - **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
 
-## Risks and Known Gaps
+## Risks and Assumptions
 
 - **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
 - **No rate limiting**: Subject to abuse until M1 rate limiter active.
 - **Single-node only**: No distributed locking; concurrent access may race.
-- **Follow-up**: Add distributed locking for multi-worker pipelines.
+
+## Known Gaps and Follow-up Tasks
+
+- **Follow-up task**: Add distributed locking for multi-worker pipelines.
+- **None** at spec time.
 
 
 ## Verification

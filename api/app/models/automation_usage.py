@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 ProviderKind = Literal["internal", "github", "openai", "custom"]
 ProviderStatus = Literal["ok", "degraded", "unavailable"]
-UnitType = Literal["tokens", "requests", "minutes", "usd", "tasks", "hours", "gb"]
+UnitType = Literal["tokens", "requests", "minutes", "seconds", "usd", "tasks", "hours", "gb", "ratio"]
 AlertSeverity = Literal["info", "warning", "critical"]
 DataSource = Literal["provider_api", "provider_cli", "runtime_events", "configuration_only", "unknown"]
 

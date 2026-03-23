@@ -1177,6 +1177,7 @@ async def test_execute_task_fails_on_cost_limit_and_posts_friction(
 async def test_execution_updates_cost_value_targets(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    seeded_db,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
