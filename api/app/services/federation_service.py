@@ -877,8 +877,13 @@ def list_measurement_summaries(
             .limit(effective_limit)
             .all()
         )
-        rows = [
-            {
+        rows = []
+        for r in recs:
+            try:
+                error_classes = json.loads(r.error_classes_json) if r.error_classes_json else {}
+            except (json.JSONDecodeError, TypeError):
+                error_classes = {}
+            rows.append({
                 "id": r.id,
                 "node_id": r.node_id,
                 "decision_point": r.decision_point,
@@ -890,11 +895,9 @@ def list_measurement_summaries(
                 "failures": r.failures,
                 "mean_duration_s": r.mean_duration_s,
                 "mean_value_score": r.mean_value_score,
-                "error_classes_json": json.loads(r.error_classes_json),
+                "error_classes_json": error_classes,
                 "pushed_at": r.pushed_at,
-            }
-            for r in recs
-        ]
+            })
         return rows, total
 
 
