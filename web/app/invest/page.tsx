@@ -85,15 +85,15 @@ export default async function InvestPage() {
       <InvestBalanceSection />
 
       {sorted.length === 0 ? (
-        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center">
-          <p className="text-muted-foreground mb-3">
-            No ideas available right now.
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
+          <p className="text-lg text-muted-foreground">
+            No ideas yet. Be the first to share one.
           </p>
           <Link
-            href="/ideas"
-            className="text-primary hover:text-foreground transition-colors underline underline-offset-4"
+            href="/"
+            className="inline-block text-primary hover:text-foreground transition-colors underline underline-offset-4"
           >
-            Browse ideas &rarr;
+            Share an idea &rarr;
           </Link>
         </div>
       ) : (

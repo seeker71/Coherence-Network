@@ -60,6 +60,17 @@ async def lifespan(app: FastAPI):
             "Set ALLOWED_ORIGINS to your production domain(s)."
         )
 
+    # -- Ensure all DB tables exist (non-destructive) --
+    try:
+        from app.services.unified_models import Base as _UnifiedBase
+        from app.services.unified_db import engine as _get_engine
+        _eng = _get_engine()
+        if _eng:
+            _UnifiedBase.metadata.create_all(_eng, checkfirst=True)
+            _startup_logger.info("DB tables ensured via unified_models.Base")
+    except Exception:
+        _startup_logger.warning("DB table creation skipped", exc_info=True)
+
     # -- Prime hot caches (migrated from @app.on_event('startup')) --
     try:
         startup_begin = time.perf_counter()

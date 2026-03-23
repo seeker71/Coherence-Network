@@ -113,7 +113,7 @@ export function TreasuryDepositForm() {
   return (
     <div className="space-y-6">
       {/* Wallet addresses */}
-      {info && (
+      {info && (info.eth_address || info.btc_address) ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {info.eth_address && (
             <div className="rounded-xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-2">
@@ -122,7 +122,7 @@ export function TreasuryDepositForm() {
                 <code className="flex-1 truncate text-sm text-foreground/80">{info.eth_address}</code>
                 <button
                   onClick={() => copyAddress(info.eth_address, "eth")}
-                  className="shrink-0 rounded-lg border border-border/40 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-all duration-200"
+                  className="shrink-0 rounded-lg border border-border/40 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-all duration-200 min-h-[44px]"
                 >
                   {copied === "eth" ? "Copied" : "Copy"}
                 </button>
@@ -136,7 +136,7 @@ export function TreasuryDepositForm() {
                 <code className="flex-1 truncate text-sm text-foreground/80">{info.btc_address}</code>
                 <button
                   onClick={() => copyAddress(info.btc_address, "btc")}
-                  className="shrink-0 rounded-lg border border-border/40 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-all duration-200"
+                  className="shrink-0 rounded-lg border border-border/40 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-all duration-200 min-h-[44px]"
                 >
                   {copied === "btc" ? "Copied" : "Copy"}
                 </button>
@@ -144,7 +144,17 @@ export function TreasuryDepositForm() {
             </div>
           )}
         </div>
-      )}
+      ) : !info ? (
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
+          <p className="text-lg text-muted-foreground">Treasury not configured yet. Check back soon.</p>
+          <a
+            href="/invest"
+            className="inline-block text-primary hover:text-foreground transition-colors underline underline-offset-4 text-sm"
+          >
+            Stake CC on ideas directly &rarr;
+          </a>
+        </div>
+      ) : null}
 
       {/* Conversion rates */}
       {info && (
