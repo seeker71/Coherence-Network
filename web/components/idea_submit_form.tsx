@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export function IdeaSubmitForm() {
   const [idea, setIdea] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [createdId, setCreatedId] = useState<string | null>(null);
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,11 +46,8 @@ export function IdeaSubmitForm() {
       if (resp.ok) {
         const data = await resp.json();
         setCreatedId(data.id);
+        setIdea("");
         setStatus("success");
-        // Redirect to the idea page after a moment
-        setTimeout(() => {
-          router.push(`/ideas/${data.id}`);
-        }, 2000);
       } else {
         setStatus("error");
       }
@@ -60,14 +56,33 @@ export function IdeaSubmitForm() {
     }
   }
 
-  if (status === "success") {
+  if (status === "success" && createdId) {
     return (
       <div className="space-y-4 text-center animate-fade-in-up">
-        <div className="text-4xl">✨</div>
-        <p className="text-lg">Your idea is alive.</p>
-        <p className="text-muted-foreground text-sm">
-          Taking you there now...
-        </p>
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30">
+          <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <p className="text-lg font-medium">Your idea is live!</p>
+        <Link
+          href={`/ideas/${encodeURIComponent(createdId)}`}
+          className="inline-flex items-center gap-1 text-primary hover:text-foreground transition-colors underline underline-offset-4"
+        >
+          View it &rarr;
+        </Link>
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("idle");
+              setCreatedId(null);
+            }}
+            className="text-sm text-muted-foreground/60 hover:text-foreground transition-colors underline underline-offset-4"
+          >
+            Share another idea
+          </button>
+        </div>
       </div>
     );
   }
@@ -76,18 +91,29 @@ export function IdeaSubmitForm() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <textarea
         value={idea}
-        onChange={(e) => setIdea(e.target.value)}
+        onChange={(e) => {
+          setIdea(e.target.value);
+          if (status === "error") setStatus("idle");
+        }}
         rows={3}
         placeholder="I think there should be a way to..."
         className="w-full rounded-2xl border border-border/40 bg-card/60 backdrop-blur-sm px-6 py-4 text-base md:text-lg placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40 resize-none transition-all duration-300"
       />
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+      <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
         <Button
           type="submit"
           disabled={!idea.trim() || status === "submitting"}
-          className="rounded-full px-8 py-3 text-base"
+          className="w-full sm:w-auto rounded-full px-8 py-3 text-base min-h-[44px]"
         >
-          {status === "submitting" ? "Sharing..." : "Share your idea"}
+          {status === "submitting" ? (
+            <span className="inline-flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Sharing...
+            </span>
+          ) : "Share your idea"}
         </Button>
         <a
           href="/resonance"
@@ -97,9 +123,12 @@ export function IdeaSubmitForm() {
         </a>
       </div>
       {status === "error" && (
-        <p className="text-sm text-red-400 text-center">
-          Something went wrong. Try again?
-        </p>
+        <div className="flex items-center justify-center gap-2 text-sm text-amber-600 dark:text-amber-400 text-center">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span>Something went wrong. Try again?</span>
+        </div>
       )}
     </form>
   );

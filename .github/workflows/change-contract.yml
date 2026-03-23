@@ -102,8 +102,10 @@ jobs:
             let report = {};
             try {
               report = JSON.parse(fs.readFileSync('contract_report.json', 'utf8'));
-            } catch (e) {}
-            const isLocalOnly = Boolean(report.public_validation && report.public_validation.skipped === true);
+            } catch (e) {
+              console.log('Could not read contract_report.json:', e.message);
+            }
+            const isLocalOnly = Boolean(report && report.public_validation && report.public_validation.skipped === true);
             const validationLine = isLocalOnly
               ? "- Public validation: local-only mode enabled (hosted provider checks skipped)"
               : "- Public validation: passed on Hostinger VPS (api.coherencycoin.com + coherencycoin.com)";

@@ -198,6 +198,17 @@ export default async function IdeasPage() {
       </section>
 
       <section className="space-y-4">
+        {ideas.length === 0 ? (
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
+            <p className="text-lg text-muted-foreground">No ideas yet. Be the first to share one.</p>
+            <Link
+              href="/"
+              className="inline-block text-primary hover:text-foreground transition-colors underline underline-offset-4"
+            >
+              Share an idea &rarr;
+            </Link>
+          </div>
+        ) : (
         <div className="space-y-3">
           {ideas.map((idea, index) => {
             const valueGapPct = idea.potential_value > 0
@@ -277,6 +288,7 @@ export default async function IdeasPage() {
             );
           })}
         </div>
+        )}
       </section>
 
       {/* Lifecycle dashboard — collapsible, default closed */}
