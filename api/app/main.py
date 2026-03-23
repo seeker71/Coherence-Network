@@ -35,6 +35,7 @@ from app.routers import (
     providers,
     spec_registry,
     runtime,
+    treasury,
     value_lineage,
 )
 from app.routers import agent_grounded_metrics_routes
@@ -440,6 +441,7 @@ app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
+app.include_router(treasury.router, prefix="/api", tags=["treasury"])
 app.include_router(provider_stats.router)
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.

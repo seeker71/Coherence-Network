@@ -268,6 +268,17 @@ def get_key(provider, key_name):
     return get_config().get("keys", {}).get(provider, {}).get(key_name, "")
 
 
+def get_treasury_config() -> dict:
+    """Load treasury config from ~/.coherence-network/config.json"""
+    config = get_config()
+    return config.get("treasury", {
+        "eth_address": "",
+        "btc_address": "",
+        "cc_per_eth": 1000.0,
+        "cc_per_btc": 10000.0,
+    })
+
+
 def reset_config_cache():
     global _CACHE
     _CACHE = None
