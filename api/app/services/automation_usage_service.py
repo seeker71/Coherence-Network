@@ -53,6 +53,22 @@ _ENDPOINT_CACHE_MAX_STALE_SECONDS = 7 * 24 * 60 * 60
 _ENDPOINT_CACHE_DEFAULT_TTL_SECONDS = 180.0
 _ENDPOINT_CACHE_REFRESH_FUTURES: dict[str, Future[Any]] = {}
 _ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
+def invalidate_cache() -> None:
+    """Clear cached overview — useful for testing."""
+    with _CACHE_REFRESH_LOCK:
+        _CACHE["expires_at"] = 0.0
+        _CACHE["overview"] = None
+    _RUNTIME_EVENTS_WINDOW_CACHE.clear()
+    _CODEX_PROVIDER_USAGE_CACHE["expires_at"] = 0.0
+    _CODEX_PROVIDER_USAGE_CACHE["payload"] = None
+    _RUNNER_PROVIDER_TELEMETRY_CACHE["expires_at"] = 0.0
+    _RUNNER_PROVIDER_TELEMETRY_CACHE["rows"] = []
+    _CURSOR_CLI_CONTEXT_CACHE["expires_at"] = 0.0
+    _CURSOR_CLI_CONTEXT_CACHE["payload"] = {}
+    _CLAUDE_CLI_CONTEXT_CACHE["expires_at"] = 0.0
+    _CLAUDE_CLI_CONTEXT_CACHE["payload"] = {}
+
+
 def _automation_endpoint_cache_max_workers() -> int:
     env_val = os.getenv("AUTOMATION_ENDPOINT_CACHE_MAX_WORKERS")
     if env_val is not None:

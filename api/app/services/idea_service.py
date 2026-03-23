@@ -46,6 +46,8 @@ from app.models.idea import (
     ManifestationStatus,
     StageBucket,
 )
+from app.models.audit_ledger import AuditEntryCreate, AuditEntryType
+from app.services import audit_ledger_service
 from app.services import idea_registry_service
 from app.services import commit_evidence_service
 from app.services import runtime_service
@@ -980,18 +982,46 @@ def update_idea(
     for idx, idea in enumerate(ideas):
         if idea.id != idea_id:
             continue
-        if actual_value is not None:
+        
+        # Track changes for audit ledger
+        changes = []
+        if actual_value is not None and actual_value != idea.actual_value:
+            changes.append(("actual_value", idea.actual_value, actual_value))
             idea.actual_value = actual_value
-        if actual_cost is not None:
+        if actual_cost is not None and actual_cost != idea.actual_cost:
+            changes.append(("actual_cost", idea.actual_cost, actual_cost))
             idea.actual_cost = actual_cost
-        if confidence is not None:
+        if confidence is not None and confidence != idea.confidence:
+            changes.append(("confidence", idea.confidence, confidence))
             idea.confidence = confidence
-        if manifestation_status is not None:
+        if manifestation_status is not None and manifestation_status != idea.manifestation_status:
+            changes.append(("manifestation_status", idea.manifestation_status.value, manifestation_status.value))
             idea.manifestation_status = manifestation_status
-        if potential_value is not None:
+        if potential_value is not None and potential_value != idea.potential_value:
+            changes.append(("potential_value", idea.potential_value, float(potential_value)))
             idea.potential_value = max(0.0, float(potential_value))
-        if estimated_cost is not None:
+        if estimated_cost is not None and estimated_cost != idea.estimated_cost:
+            changes.append(("estimated_cost", idea.estimated_cost, float(estimated_cost)))
             idea.estimated_cost = max(0.0, float(estimated_cost))
+        
+        for field, old_val, new_val in changes:
+            if os.getenv("DEBUG_AUDIT"):
+                print(f"DEBUG: update_idea creating audit entry for {field}: {old_val} -> {new_val}")
+            audit_ledger_service.append_entry(
+                AuditEntryCreate(
+                    entry_type=AuditEntryType.VALUATION_CHANGE,
+                    sender_id="SYSTEM",
+                    receiver_id="SYSTEM",
+                    reason=f"Updated {field} for idea {idea_id}",
+                    reference_id=idea_id,
+                    metadata={
+                        "field": field,
+                        "old_value": old_val,
+                        "new_value": new_val,
+                    },
+                )
+            )
+            
         ideas[idx] = idea
         updated = idea
         updated_idx = idx

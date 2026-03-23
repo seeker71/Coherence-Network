@@ -65,6 +65,83 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 056 Commit-Derived Traceability Report | ✓ | ✓ | ✓ | derives idea/spec/implementation references from commit evidence + SHA |
 | 100 Automation Provider Usage and Readiness API | ✓ | ✓ | ✓ | automation usage/snapshots/alerts/subscription-estimator/readiness endpoints |
 | 113 Public Validation Gates API | — | ✓ | — | Spec-only coverage; API + flow linkage pending implementation |
+| 049 Distribution Engin | ? | ? | ? | Pending |
+| 049 System Lineage Inventory And Runtime Telemetr | ? | ? | ? | Pending |
+| 050 Canonical Route Registry And Runtime Mappin | ? | ? | ? | Pending |
+| 050 Friction Analysi | ? | ? | ? | Pending |
+| 051 Question Answering And Minimum E2E Flo | ? | ? | ? | Pending |
+| 051 Release Gate | ? | ? | ? | Pending |
+| 052 Assets Ap | ? | ? | ? | Pending |
+| 052 Portfolio Cockpit U | ? | ? | ? | Pending |
+| 053 Ideas Prioritizatio | ? | ? | ? | Pending |
+| 053 Standing Questions Roi And Next Task Generatio | ? | ? | ? | Pending |
+| 072 Public Walkable Flow Parit | ? | ? | ? | Pending |
+| 073 Walkable Flow Runtime Mismatch Fixe | ? | ? | ? | Pending |
+| 074 Tool Failure Awarenes | ? | ? | ? | Pending |
+| 075 Web Ideas Specs Usage Page | ? | ? | ? | Pending |
+| 076 Ui Alignment Overhau | ? | ? | ? | Pending |
+| 080 Persistent Store Test Contributor Guar | ? | ? | ? | Pending |
+| 081 Implementation Request Question Task Syn | ? | ? | ? | Pending |
+| 082 Landing Page Contributor Onboardin | ? | ? | ? | Pending |
+| 083 Task Claim Tracking And Roi Dedup | ? | ? | ? | Pending |
+| 084 Live Gate Tests Without Mock | ? | ? | ? | Pending |
+| 085 Tracked Count Parity And Source Discover | ? | ? | ? | Pending |
+| 086 Normalize Github Commit Cost Estimatio | ? | ? | ? | Pending |
+| 087 Legacy Commit Cost Ui Normalizatio | ? | ? | ? | Pending |
+| 088 Spec Process Implementation Validation Flo | ? | ? | ? | Pending |
+| 089 Endpoint Traceability Coverag | ? | ? | ? | Pending |
+| 091 Web Live Refresh And Link Parit | ? | ? | ? | Pending |
+| 092 Web Refresh Reliability And Route Completenes | ? | ? | ? | Pending |
+| 093 Web Theme Auto Detectio | ? | ? | ? | Pending |
+| 094 Contributor Onboarding And Governed Change Flo | ? | ? | ? | Pending |
+| 095 Public E2E Flow Gate Automatio | ? | ? | ? | Pending |
+| 096 Provider Readiness Contract Automatio | ? | ? | ? | Pending |
+| 104 Nonblocking Monitoring Workflow | ? | ? | ? | Pending |
+| 105 Disable Vercel Pr Deployment | ? | ? | ? | Pending |
+| 106 External Tools Audit Stabilit | ? | ? | ? | Pending |
+| 107 Runtime Telemetry Db Precedenc | ? | ? | ? | Pending |
+| 108 N8N Security And Hitl Hardenin | ? | ? | ? | Pending |
+| 108 Unified Agent Cli Flow Patch On Fai | ? | ? | ? | Pending |
+| 109 Open Responses Interoperability Laye | ? | ? | ? | Pending |
+| 110 Langgraph Stateschema Adoptio | ? | ? | ? | Pending |
+| 111 Agent Execution Lifecycle Hook | ? | ? | ? | Pending |
+| 111 Greenfield Autonomous Intelligence Syste | ? | ? | ? | Pending |
+| 112 Orchestration Guidance Awarenes | ? | ? | ? | Pending |
+| 112 Prompt Ab Roi Measuremen | ? | ? | ? | Pending |
+| 114 Auto Heal From Diagnostic | ? | ? | ? | Pending |
+| 114 Collective Coherence Resonance Flow Friction Healt | ? | ? | ? | Pending |
+| 114 Mvp Cost And Acceptance Proo | ? | ? | ? | Pending |
+| 115 Grounded Cost Value Measuremen | ? | ? | ? | Pending |
+| 115 Start Gate Continuation And Hosted Worker Proo | ? | ? | ? | Pending |
+| 116 Grounded Idea Portfolio Metric | ? | ? | ? | Pending |
+| 117 Idea Hierarchy Super Chil | ? | ? | ? | Pending |
+| 118 Unified Sqlite Stor | ? | ? | ? | Pending |
+| 119 Coherence Credit Internal Currenc | ? | ? | ? | Pending |
+| 120 Minimum Federation Laye | ? | ? | ? | Pending |
+| 120 Super Idea Rollup Criteri | ? | ? | ? | Pending |
+| 121 Openclaw Idea Marketplac | ? | ? | ? | Pending |
+| 122 Crypto Treasury Bridg | ? | ? | ? | Pending |
+| 123 Transparent Audit Ledge | ? | ? | ? | Pending |
+| 124 Cc Economics And Value Coherenc | ? | ? | ? | Pending |
+| 125 Incident Response And Self Healin | ? | ? | ? | Pending |
+| 126 Portfolio Governance Effectivenes | ? | ? | ? | Pending |
+| 127 Cross Task Outcome Correlatio | ? | ? | ? | Pending |
+| 128 Contributor Leaderboard Ap | ? | ? | ? | Pending |
+| 129 Idea Tagging Syste | ? | ? | ? | Pending |
+| 130 Api Request Logging Middlewar | ? | ? | ? | Pending |
+| 131 Federation Measurement Pus | ? | ? | ? | Pending |
+| 132 Federation Node Identit | ? | ? | ? | Pending |
+| 133 Federation Aggregated Visibilit | ? | ? | ? | Pending |
+| 134 Federation Strategy Propagatio | ? | ? | ? | Pending |
+| 135 Provider Health Alertin | ? | ? | ? | Pending |
+| 136 Data Driven Timeout Dashboar | ? | ? | ? | Pending |
+| 137 Node Capability Discover | ? | ? | ? | Pending |
+| 138 Idea Lifecycle Managemen | ? | ? | ? | Pending |
+| 139 Coherence Network Agent Pipelin | ? | ? | ? | Pending |
+| 140 Oss Interface Alignmen | ? | ? | ? | Pending |
+| 141 Community Project Funder Match Showcase Pag | ? | ? | ? | Pending |
+| 142 Federation Measurement Push Verificatio | ? | ? | ? | Pending |
+| 143 Federated Instance Aggregatio | ? | ? | ? | Pending |
 **Present:** Implemented. **Missing:** Not implemented. **Shortcuts:** See below.
 
 ---

@@ -6,13 +6,13 @@ Track: non-software idea execution using Coherence as the operating system.
 
 ## Current Focus
 
-`NEXT ROI ITEM (in progress)`: Craft mission and scope.
+`NEXT ROI ITEM`: OKRs and dashboard metrics (Objectives 1-3).
 
-### Mission (v1)
+### Mission (v1.0) — FINALIZED
 
 Build a trusted marketplace that connects aligned investors/funders with pilot projects, while running a conservative income sleeve that extends runway during build-out.
 
-### Scope (v1)
+### Scope (v1.0) — FINALIZED
 
 In scope for MVP phase:
 - Attract and qualify 3-5 pilot projects.
@@ -63,7 +63,7 @@ Objective 3: Build financial discipline while MVP planning progresses.
 
 | Item | Status | Next move |
 |---|---|---|
-| Craft mission and scope | In progress | Finalize wording, then freeze version `v1` |
+| Craft mission and scope | Done | Frozen at `v1.0` |
 | Set up project workspace | Done | Keep docs updated in this repo |
 | Outline first OKRs and metrics | Ready | Define objective + KR targets next |
 | Identify/contact potential partners | Ready | Build target list template and first outreach batch |
