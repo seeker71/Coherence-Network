@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { formatUsd } from "@/lib/humanize";
 
 export const metadata: Metadata = {
   title: "Resonance",
@@ -23,6 +24,14 @@ type ActivityEvent = {
   timestamp: string;
   summary: string;
   contributor_id?: string;
+};
+
+type FallbackIdea = {
+  id: string;
+  name: string;
+  manifestation_status: string;
+  value_gap: number;
+  free_energy_score: number;
 };
 
 async function loadResonance(): Promise<ResonanceItem[]> {
@@ -78,6 +87,21 @@ function activityIcon(type: string): string {
   return "\u2022";
 }
 
+async function loadFallbackIdeas(): Promise<FallbackIdea[]> {
+  try {
+    const API = getApiBase();
+    const res = await fetch(`${API}/api/ideas?limit=60`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const ideas: FallbackIdea[] = data.ideas ?? [];
+    return [...ideas]
+      .sort((a, b) => (b.free_energy_score ?? 0) - (a.free_energy_score ?? 0))
+      .slice(0, 5);
+  } catch {
+    return [];
+  }
+}
+
 export default async function ResonancePage() {
   const items = await loadResonance();
 
@@ -102,17 +126,7 @@ export default async function ResonancePage() {
       </header>
 
       {itemsWithActivity.length === 0 ? (
-        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center">
-          <p className="text-muted-foreground mb-3">
-            The network is quiet right now. Be the first to share an idea.
-          </p>
-          <Link
-            href="/"
-            className="text-primary hover:text-foreground transition-colors underline underline-offset-4"
-          >
-            Share an idea &rarr;
-          </Link>
-        </div>
+        <FallbackIdeasSection />
       ) : (
         <div className="space-y-4">
           {itemsWithActivity.map((item, idx) => (
@@ -180,5 +194,62 @@ export default async function ResonancePage() {
         </div>
       </nav>
     </main>
+  );
+}
+
+async function FallbackIdeasSection() {
+  const ideas = await loadFallbackIdeas();
+
+  if (ideas.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center">
+        <p className="text-muted-foreground mb-3">
+          The network is quiet right now. Be the first to share an idea.
+        </p>
+        <Link
+          href="/"
+          className="text-primary hover:text-foreground transition-colors underline underline-offset-4"
+        >
+          Share an idea &rarr;
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground text-center">
+        No recent resonance activity. Here are the most active ideas:
+      </p>
+      {ideas.map((idea, idx) => (
+        <article
+          key={idea.id}
+          className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 animate-fade-in-up"
+          style={{ animationDelay: `${idx * 0.05}s` }}
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Link
+                href={`/ideas/${encodeURIComponent(idea.id)}`}
+                className="text-lg font-medium text-foreground hover:text-primary transition-colors duration-300"
+              >
+                {statusIcon(idea.manifestation_status)} {idea.name}
+              </Link>
+              <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+                <span>Value gap: {formatUsd(idea.value_gap)}</span>
+                <span>&middot;</span>
+                <span>{idea.manifestation_status}</span>
+              </div>
+            </div>
+            <Link
+              href={`/ideas/${encodeURIComponent(idea.id)}`}
+              className="shrink-0 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+            >
+              Learn more
+            </Link>
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
