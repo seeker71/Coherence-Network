@@ -165,7 +165,6 @@ async def post_measurement_summaries(node_id: str, body: MeasurementPushRequest)
 
 @router.get(
     "/federation/nodes/{node_id}/measurements",
-    response_model=MeasurementListResponse,
 )
 async def get_measurement_summaries(
     node_id: str,
