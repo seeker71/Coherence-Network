@@ -21,7 +21,7 @@ class _DummyResponse:
 def test_claim_and_complete_task_with_mocked_api_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, dict[str, Any] | None]] = []
 
-    def _patch(url: str, json: dict[str, Any] | None = None) -> _DummyResponse:
+    def _patch(url: str, json: dict[str, Any] | None = None, **kwargs: Any) -> _DummyResponse:
         calls.append((url, json))
         if json and json.get("status") == "running":
             return _DummyResponse(200, {"id": "task-1", "status": "running", "task_type": "test"})
