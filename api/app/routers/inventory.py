@@ -5,10 +5,11 @@ from __future__ import annotations
 import logging
 import os
 
-from fastapi import APIRouter, BackgroundTasks, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Body, Query, Request
 
 from app.adapters.graph_store import GraphStore
 from app.services import agent_service
+from app.services import commit_evidence_registry_service
 from app.services import inventory_service
 from app.services import page_lineage_service
 from app.services import route_registry_service
@@ -354,3 +355,41 @@ async def commit_evidence_inventory(
     limit: int = Query(50, ge=1, le=500),
 ) -> dict:
     return inventory_service.build_commit_evidence_inventory(limit=limit)
+
+
+@router.post("/inventory/commit-evidence")
+async def post_commit_evidence(
+    body: dict = Body(...),
+) -> dict:
+    """Accept a batch of commit records from external tools."""
+    commits = body.get("commits")
+    if not isinstance(commits, list):
+        return {"stored": 0, "duplicates_skipped": 0, "error": "commits must be a list"}
+
+    stored = 0
+    duplicates_skipped = 0
+    for entry in commits:
+        if not isinstance(entry, dict):
+            continue
+        payload = {
+            "date": entry.get("date", ""),
+            "commit_scope": entry.get("message", ""),
+            "change_files": [],
+            "idea_ids": [],
+            "spec_ids": [],
+            "task_ids": [],
+            "thread_branch": "",
+            "sha": entry.get("sha", ""),
+            "author": entry.get("author", ""),
+            "message": entry.get("message", ""),
+        }
+        source_key = f"git-commit:{entry.get('sha', '')}"
+        changed = commit_evidence_registry_service.upsert_record(
+            payload, source_file=source_key
+        )
+        if changed:
+            stored += 1
+        else:
+            duplicates_skipped += 1
+
+    return {"stored": stored, "duplicates_skipped": duplicates_skipped}
