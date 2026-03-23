@@ -197,14 +197,17 @@ async def set_idea_stage(idea_id: str, body: StageSetRequest, _key: str = Depend
 @router.post("/ideas/{idea_id}/fork", status_code=201)
 async def fork_idea_endpoint(
     idea_id: str,
-    forker_id: str = Query(..., min_length=1),
+    forker_id: str | None = Query(default=None, min_length=1),
+    provider: str | None = Query(default=None),
+    provider_id: str | None = Query(default=None),
     adaptation_notes: str | None = Query(default=None),
 ) -> dict:
-    """Fork an existing idea, creating a new idea with lineage link."""
+    """Fork an existing idea. Identify by forker_id or provider+provider_id."""
+    resolved_id = _resolve_contributor(forker_id, provider, provider_id)
     try:
         return idea_service.fork_idea(
             source_idea_id=idea_id,
-            forker_id=forker_id,
+            forker_id=resolved_id,
             adaptation_notes=adaptation_notes,
         )
     except ValueError as exc:
@@ -212,18 +215,40 @@ async def fork_idea_endpoint(
 
 
 class StakeRequest(BaseModel):
-    contributor_id: str
+    contributor_id: str | None = None
+    provider: str | None = None
+    provider_id: str | None = None
     amount_cc: float
     rationale: str | None = None
 
 
+def _resolve_contributor(contributor_id: str | None, provider: str | None, provider_id: str | None) -> str:
+    """Resolve contributor from direct ID or provider identity."""
+    if contributor_id:
+        return contributor_id
+    if provider and provider_id:
+        from app.services import contributor_identity_service
+        found = contributor_identity_service.find_contributor_by_identity(provider, provider_id)
+        if found:
+            return found
+        # Auto-create pending identity
+        cid = f"{provider}:{provider_id}"
+        contributor_identity_service.link_identity(
+            contributor_id=cid, provider=provider, provider_id=provider_id,
+            display_name=provider_id, verified=False,
+        )
+        return cid
+    raise HTTPException(status_code=422, detail="Provide contributor_id OR provider+provider_id")
+
+
 @router.post("/ideas/{idea_id}/stake")
 async def stake_on_idea(idea_id: str, body: StakeRequest) -> dict:
-    """Stake CC on an idea and trigger compute tasks. Contributor name required, no API key needed."""
+    """Stake CC on an idea. Identify by contributor_id or provider+provider_id."""
+    staker_id = _resolve_contributor(body.contributor_id, body.provider, body.provider_id)
     try:
         return stake_compute_service.execute_stake(
             idea_id=idea_id,
-            staker_id=body.contributor_id,
+            staker_id=staker_id,
             amount_cc=body.amount_cc,
             rationale=body.rationale,
         )
