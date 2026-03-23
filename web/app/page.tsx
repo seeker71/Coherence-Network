@@ -137,17 +137,22 @@ export default async function Home() {
 
   const summary = ideasData?.summary;
 
+  // Fallback: if resonance feed is empty, show top 3 ideas by selection weight
+  const topIdeas = resonanceItems.length === 0 && ideasData?.ideas
+    ? [...ideasData.ideas].sort((a, b) => (b.free_energy_score ?? 0) - (a.free_energy_score ?? 0)).slice(0, 3)
+    : [];
+
   return (
     <main className="min-h-[calc(100vh-3.5rem)]">
       {/* Section 1: HERO — THE QUESTION */}
-      <section className="min-h-[80vh] flex flex-col justify-center items-center text-center px-4 py-20 relative">
+      <section className="flex flex-col justify-center items-center text-center px-4 pt-12 pb-6 relative">
         {/* Soft ambient glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-primary/10 blur-[120px]" />
           <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-chart-2/8 blur-[100px]" />
         </div>
 
-        <div className="relative max-w-2xl mx-auto space-y-10 animate-fade-in-up">
+        <div className="relative max-w-2xl mx-auto space-y-6 animate-fade-in-up">
           <h1 className="text-3xl md:text-5xl lg:text-6xl font-normal md:font-light tracking-tight leading-[1.15]">
             What idea are you holding?
           </h1>
@@ -156,64 +161,46 @@ export default async function Home() {
             Share it — someone out there is looking for exactly this.
           </p>
 
+          {/* Pulse stats — visible without scrolling */}
+          {(summary || coherenceScore) && (
+            <div className="flex flex-wrap justify-center gap-6 md:gap-10 text-center">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  <span className="text-foreground font-medium">{formatNumber(summary?.total_ideas)}</span> ideas alive
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-2/40" style={{ animationDelay: "0.5s" }} />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-2/60" />
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  <span className="text-foreground font-medium">{formatNumber(summary?.total_actual_value)}</span> value created
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-3/40" style={{ animationDelay: "1s" }} />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-3/60" />
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  <span className="text-foreground font-medium">{nodeCount}</span>{" "}node{nodeCount !== 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* The text box — submits directly to the API */}
           <IdeaSubmitForm />
         </div>
       </section>
 
-      {/* Section 2: PULSE — quiet proof of life */}
-      <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-100">
-        {summary || coherenceScore ? (
-          <div className="flex flex-wrap justify-center gap-8 md:gap-12 text-center">
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
-              </span>
-              <span className="text-sm text-muted-foreground">
-                <span className="text-foreground font-medium">{formatNumber(summary?.total_ideas)}</span> ideas alive
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-2/40" style={{ animationDelay: "0.5s" }} />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-2/60" />
-              </span>
-              <span className="text-sm text-muted-foreground">
-                <span className="text-foreground font-medium">{formatNumber(summary?.total_actual_value)}</span> value created
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-3/40" style={{ animationDelay: "1s" }} />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-3/60" />
-              </span>
-              <span className="text-sm text-muted-foreground">
-                <span className="text-foreground font-medium">{nodeCount}</span>{" "}node{nodeCount !== 1 ? "s" : ""}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" style={{ animationDelay: "1.5s" }} />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
-              </span>
-              <span className="text-sm text-muted-foreground">
-                <span className="text-foreground font-medium">{formatCoherenceScore(coherenceScore?.score)}</span> coherence
-                {coherenceScore && (
-                  <span className="text-muted-foreground/70"> ({coherenceScore.signals_with_data}/{coherenceScore.total_signals} signals)</span>
-                )}
-              </span>
-            </div>
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground/60 text-sm">
-            The network is warming up. Live metrics appear once the API is connected.
-          </p>
-        )}
-      </section>
-
-      {/* Section 3: HOW IT WORKS — 3 steps with connecting lines */}
-      <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-200">
+      {/* Section 2: HOW IT WORKS — 3 steps with connecting lines */}
+      <section className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto animate-fade-in-up delay-100">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
           {/* Connecting lines (desktop only) */}
           <div className="hidden md:block absolute top-10 left-[calc(33.3%+0.75rem)] right-[calc(33.3%+0.75rem)] h-px bg-border/40" />
@@ -231,10 +218,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Section 4: LIVE FEED PREVIEW — 3 most recent resonance items */}
-      <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto animate-fade-in-up delay-300">
+      {/* Section 3: LIVE FEED PREVIEW — recent resonance or top ideas fallback */}
+      <section className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto animate-fade-in-up delay-200">
         <h2 className="text-lg font-medium text-center mb-6 text-muted-foreground">
-          Recent activity
+          {resonanceItems.length > 0 ? "Recent activity" : "Active ideas"}
         </h2>
         {resonanceItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -244,7 +231,7 @@ export default async function Home() {
                 href={`/ideas/${encodeURIComponent(item.idea_id)}`}
                 className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2 block"
               >
-                <p className="text-sm font-medium line-clamp-1">{item.name}</p>
+                <p className="text-sm font-medium text-foreground line-clamp-1">{item.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {item.activity_type ? item.activity_type.replace(/_/g, " ") : item.manifestation_status}
                 </p>
@@ -254,18 +241,36 @@ export default async function Home() {
               </Link>
             ))}
           </div>
+        ) : topIdeas.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {topIdeas.map((idea) => (
+              <Link
+                key={idea.id}
+                href={`/ideas/${encodeURIComponent(idea.id)}`}
+                className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2 block"
+              >
+                <p className="text-sm font-medium text-foreground line-clamp-1">{idea.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {idea.manifestation_status}
+                </p>
+                <p className="text-xs text-muted-foreground/60">
+                  {formatNumber(idea.value_gap)} CC remaining
+                </p>
+              </Link>
+            ))}
+          </div>
         ) : (
           <p className="text-center text-sm text-muted-foreground/60">
             No recent activity yet. Be the first to share an idea.
           </p>
         )}
-        {resonanceItems.length > 0 && (
+        {(resonanceItems.length > 0 || topIdeas.length > 0) && (
           <p className="text-center mt-4">
             <Link
-              href="/resonance"
+              href={resonanceItems.length > 0 ? "/resonance" : "/ideas"}
               className="text-xs text-muted-foreground/60 hover:text-foreground transition-colors underline underline-offset-4"
             >
-              See all activity
+              {resonanceItems.length > 0 ? "See all activity" : "See all ideas"}
             </Link>
           </p>
         )}

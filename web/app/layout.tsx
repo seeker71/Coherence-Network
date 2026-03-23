@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
-import PageContextLinks from "@/components/page_context_links";
+
 import SiteHeader from "@/components/site_header";
 import LiveUpdatesController from "@/components/live_updates_controller";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
@@ -50,7 +50,6 @@ export default function RootLayout({
         <RuntimeBeacon />
         <SiteHeader />
         <LiveUpdatesController />
-        <PageContextLinks />
         <main id="main-content">
           {children}
         </main>
