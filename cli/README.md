@@ -1,3 +1,4 @@
+<!-- AUTO-GENERATED from README.template.md. Edit the template, not this file. -->
 # coherence-cli
 
 **Every idea deserves a trail. Every contributor deserves credit.**

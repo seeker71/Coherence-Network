@@ -1,248 +1,262 @@
+<!-- AUTO-GENERATED from SKILL.template.md. Edit the template, not this file. -->
 ---
 name: coherence-network
-description: >
-  Connect to the Coherence Network — a living ecosystem where ideas grow into
-  reality through collaboration. Browse ideas people care about, discover what
-  resonates with you, contribute your skills, invest your attention, and watch
-  value flow back to everyone who helped. Use this skill when you want to find
-  meaningful work, share an idea, or support something you believe in.
-version: "1.1.0"
-author: coherence-network
-license: MIT
-compatibility: Requires internet access to api.coherencycoin.com
-allowed-tools: Bash Read
+description: "Coherence Network: an open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust. Works out of the box with the public API at api.coherencycoin.com (no local node required). Install the CLI with `npm i -g coherence-cli` for the fastest path. Use this skill to: browse and rank ideas by ROI and free-energy score, search feature specs with implementation summaries, trace full value lineage (idea→spec→implementation→usage→payout), inspect contributor ledgers and coherence-weighted payouts, fork and stake on ideas, explore cross-instance federation and governance voting, surface friction signals and runtime telemetry, track idea progress and showcase validated work, or pick the next highest-ROI task automatically. Triggers on: coherence network, ideas, specs, lineage, contributions, assets, traceability, trust, freedom, uniqueness, collaboration, portfolio, ROI, coherence score, fair attribution, value chain, payout, governance, federation, friction, staking, forking, resonance, showcase, cc cli, coherence cli."
 metadata:
-  openclaw:
-    category: collaboration
-    tags: [ideas, collaboration, investment, federation, open-source]
-    hub_url: https://coherencycoin.com
-    api_url: https://api.coherencycoin.com
-  permissions:
-    browse:
-      description: Read ideas, resonance, activity, node stats (no auth needed)
-      tools: [Read]
-      endpoints: [GET /api/ideas, GET /api/ideas/resonance, GET /api/federation/nodes]
-    ask:
-      description: Ask questions on ideas (no sign-up, public contribution)
-      tools: [Bash]
-      endpoints: [POST /api/ideas/{id}/questions]
-      auth: none
-    share:
-      description: Share a new idea (creates a public record)
-      tools: [Bash]
-      endpoints: [POST /api/ideas]
-      auth: X-Api-Key
-    invest:
-      description: Stake CC on an idea (triggers real compute tasks)
-      tools: [Bash]
-      endpoints: [POST /api/ideas/{id}/stake]
-      auth: X-Api-Key
-      confirm: true
-    contribute_compute:
-      description: Run a local node to execute tasks with your machine's AI providers
-      tools: [Bash, Read, Write]
-      endpoints: [POST /api/federation/nodes, PATCH /api/agent/tasks/{id}]
-      auth: X-Api-Key
-      confirm: true
-      warning: >
-        Runs AI providers (claude, codex, gemini, cursor, ollama) on your machine.
-        Uses --dangerously-skip-permissions for automated execution.
-        Only run if you trust this repository and understand the implications.
-    write_spec:
-      description: Create a spec file in the repository
-      tools: [Bash, Write]
-      endpoints: [POST /api/agent/tasks]
-      auth: X-Api-Key
-      confirm: true
+  {
+    "openclaw":
+      {
+        "emoji": "🔗",
+        "requires": { "bins": ["cc"] },
+        "install":
+          [
+            {
+              "id": "node",
+              "kind": "node",
+              "package": "coherence-cli",
+              "bins": ["cc"],
+              "label": "Install Coherence CLI (npm)",
+            },
+          ],
+        "env":
+          {
+            "COHERENCE_API_URL":
+              {
+                "description": "Coherence Network API base URL",
+                "default": "https://api.coherencycoin.com",
+                "required": false,
+              },
+            "COHERENCE_API_KEY":
+              {
+                "description": "API key for write operations (governance, spec creation, federation). Read-only access works without a key.",
+                "required": false,
+              },
+          },
+      },
+  }
 ---
 
 # Coherence Network
 
-You are connected to the Coherence Network — a place where ideas find the people who can make them real.
+An open intelligence platform where every contribution is traced, scored, and fairly attributed — from the spark of an idea to the moment it delivers value.
 
-## Permission Model
+## Two ways to use it
 
-Each operation has a clear permission level. Always tell the user what you're about to do and what permissions it requires before executing.
-
-| Operation | Permission | Tools needed | Auth | Confirmation |
-|-----------|-----------|--------------|------|-------------|
-| Browse ideas, resonance, stats | `browse` | Read | None | No |
-| Ask a question on an idea | `ask` | Bash (curl) | None | No |
-| Share a new idea | `share` | Bash (curl) | X-Api-Key | Yes |
-| Fork an idea | `share` | Bash (curl) | X-Api-Key | Yes |
-| Stake CC on an idea | `invest` | Bash (curl) | X-Api-Key | Yes — triggers compute |
-| Run a local node | `contribute_compute` | Bash, Read, Write | X-Api-Key | Yes — runs AI on your machine |
-| Write a spec | `write_spec` | Bash, Write | X-Api-Key | Yes — modifies files |
-
-**Rules:**
-- Never execute `share`, `invest`, `contribute_compute`, or `write_spec` operations without explicit user confirmation.
-- For `contribute_compute`: warn the user that this runs AI providers with `--dangerously-skip-permissions` and explain what that means.
-- For `invest`: explain that staking CC triggers real compute tasks and has cost implications.
-- Read-only operations (`browse`, `ask`) can be executed freely.
-
-## What You Can Do
-
-### Discover what's alive right now (browse — no auth needed)
+### Option A: CLI (recommended for agents)
 
 ```bash
-curl -s https://api.coherencycoin.com/api/ideas/resonance | python3 -c "
-import sys,json
-items = json.load(sys.stdin)
-for i in items[:5]:
-    print(f\"  {i['name']}\")
-    print(f\"    Last activity: {i['last_activity_at']}\")
-    print()
-"
+npm i -g coherence-cli
+cc help
 ```
 
-This shows ideas with recent activity — someone asked a question, wrote a spec, or built something. These are the ideas that are moving right now.
+The `cc` command talks directly to the public API. On first run it walks through identity setup. All commands output to stdout for easy parsing.
 
-### Browse all ideas
+### Option B: curl (no install needed)
 
 ```bash
-curl -s https://api.coherencycoin.com/api/ideas | python3 -c "
-import sys,json
-data = json.load(sys.stdin)
-ideas = data.get('ideas', [])
-for i in sorted(ideas, key=lambda x: (x['potential_value']-x['actual_value'])/(x['estimated_cost'] or 1), reverse=True):
-    gap = i['potential_value'] - i['actual_value']
-    roi = gap / (i['estimated_cost'] or 1)
-    status = i['manifestation_status']
-    print(f\"  [{status:8}] {i['name']}\")
-    print(f\"             Value gap: {gap:.0f} CC | ROI: {roi:.1f}x | {i['description'][:80]}\")
-    print()
-"
+CN_API="${COHERENCE_API_URL:-https://api.coherencycoin.com}"
+curl -s "$CN_API/api/health" | jq '{status, version, uptime_human}'
 ```
 
-### See what an idea needs
+Both approaches hit the same API. Use whichever fits your context.
+
+## How it works
+
+```
+Idea → Research → Spec → Implementation → Review → Usage → Payout
+       ↑                                                    ↓
+       └────────── coherence scores at every stage ─────────┘
+```
+
+Every stage is scored for **coherence** (0.0–1.0) — measuring test coverage, documentation quality, and implementation simplicity. Contributors are paid proportionally to the energy they invested and the coherence they achieved.
+
+## Ideas — the portfolio engine
+
+Ideas are the atomic unit. Each is scored, ranked, and trackable through its entire lifecycle.
+
+**CLI:**
 
 ```bash
-curl -s https://api.coherencycoin.com/api/ideas/{idea_id}/activity | python3 -c "
-import sys,json
-events = json.load(sys.stdin).get('events', [])
-for e in events[:10]:
-    print(f\"  {e['timestamp'][:10]} {e['type']:20} {e['summary'][:60]}\")
-"
+cc ideas                    # Browse portfolio ranked by ROI
+cc idea <id>                # View idea detail with scores
+cc share                    # Submit a new idea (interactive)
+cc stake <id> <cc>          # Stake CC on an idea
+cc fork <id>                # Fork an idea
 ```
 
-### Ask a question on an idea
-
-If something about an idea interests you, ask a question. This is the gentlest way to contribute — your curiosity helps clarify what matters.
+**curl:**
 
 ```bash
-curl -s -X POST https://api.coherencycoin.com/api/ideas/{idea_id}/questions \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Your question here", "value_to_whole": 10, "estimated_cost": 1}'
+# Browse portfolio
+curl -s "$CN_API/api/ideas?limit=20" | jq '.ideas[] | {name, roi_cc, free_energy_score, manifestation_status}'
+
+# Search by keyword
+curl -s "$CN_API/api/ideas/cards?search=federation&limit=10" | jq '.items[] | {id, name, description}'
+
+# Showcase, resonance, progress, health, count
+curl -s "$CN_API/api/ideas/showcase" | jq .
+curl -s "$CN_API/api/ideas/resonance" | jq .
+curl -s "$CN_API/api/ideas/progress" | jq .
+curl -s "$CN_API/api/ideas/count" | jq .
+
+# Deep-dive: scores, progress, activity, tasks
+curl -s "$CN_API/api/ideas/IDEA-ID" | jq '{name, potential_value, actual_value, confidence, free_energy_score, roi_cc}'
+curl -s "$CN_API/api/ideas/IDEA-ID/progress" | jq .
+curl -s "$CN_API/api/ideas/IDEA-ID/activity" | jq .
+curl -s "$CN_API/api/ideas/IDEA-ID/tasks" | jq .
+
+# Actions (write)
+curl -s "$CN_API/api/ideas/select" -X POST -H "Content-Type: application/json" -d '{"temperature": 0.5}' | jq .
+curl -s "$CN_API/api/ideas/IDEA-ID/stake" -X POST -H "Content-Type: application/json" -d '{"contributor_id":"alice","amount_cc":10}' | jq .
+curl -s "$CN_API/api/ideas/IDEA-ID/fork?forker_id=alice" -X POST | jq .
 ```
 
-### Share a new idea
+## Specs — from vision to blueprint
 
-Have something you think would help people? Share it. No sign-up needed.
+**CLI:**
 
 ```bash
-curl -s -X POST https://api.coherencycoin.com/api/ideas \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-key" \
-  -d '{
-    "id": "your-idea-slug",
-    "name": "Your idea in a few words",
-    "description": "What it does and why it matters to people",
-    "potential_value": 50,
-    "estimated_cost": 10,
-    "resistance_risk": 3,
-    "confidence": 0.7,
-    "manifestation_status": "none"
-  }'
+cc specs                    # List specs with ROI metrics
+cc spec <id>                # View spec detail
 ```
 
-### Fork an idea
-
-See an idea you'd take in a different direction? Fork it. Your version keeps the lineage connection so the original author gets credit too.
+**curl:**
 
 ```bash
-curl -s -X POST https://api.coherencycoin.com/api/ideas/{idea_id}/fork \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-key" \
-  -d '{"forker_id": "your-name", "adaptation_notes": "What you would do differently"}'
+curl -s "$CN_API/api/spec-registry?limit=20" | jq '.[] | {spec_id, title, estimated_roi, value_gap}'
+curl -s "$CN_API/api/spec-registry/cards?search=authentication" | jq '.items[] | {spec_id, title, summary}'
+curl -s "$CN_API/api/spec-registry/SPEC-ID" | jq '{title, summary, implementation_summary, pseudocode_summary, estimated_roi}'
 ```
 
-### Invest in an idea
+## Value lineage — end-to-end traceability
 
-Staking CC on an idea triggers real compute — tasks get created and executed automatically. Your attention becomes working code.
+The lineage system connects every idea to its specs, implementations, usage events, and payouts.
 
 ```bash
-curl -s -X POST https://api.coherencycoin.com/api/ideas/{idea_id}/stake \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: dev-key" \
-  -d '{"contributor_id": "your-name", "amount_cc": 10, "rationale": "Why you believe in this"}'
+curl -s "$CN_API/api/value-lineage/links?limit=20" | jq '.[] | {id, idea_id, spec_id, implementation_refs}'
+curl -s "$CN_API/api/value-lineage/links/LINEAGE-ID/valuation" | jq '{measured_value_total, estimated_cost, roi_ratio}'
+curl -s "$CN_API/api/value-lineage/links/LINEAGE-ID/payout-preview" \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"total_value": 1000}' | jq '.rows[] | {role, contributor, amount, effective_weight}'
 ```
 
-### Write a spec for an idea
+## Identity — 37 providers, auto-attach
 
-This is the highest-leverage contribution. A good spec shapes what gets built.
+Link any identity to attribute contributions. No registration required — just provide a provider and handle.
+
+**CLI:**
 
 ```bash
-curl -s -X POST https://api.coherencycoin.com/api/agent/tasks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "task_type": "spec",
-    "direction": "Create a spec for {idea_name}. Read specs/TEMPLATE.md. Validate with python3 scripts/validate_spec_quality.py [idea:{idea_id}]"
-  }'
+cc identity                         # Show linked accounts
+cc identity setup                   # Guided onboarding
+cc identity link github alice-dev   # Link GitHub
+cc identity link discord user#1234  # Link Discord
+cc identity link ethereum 0x123...  # Link ETH address
+cc identity lookup github alice-dev # Find contributor by identity
+cc identity unlink discord          # Unlink
 ```
 
-### Contribute compute
-
-Run a local node to execute tasks with your machine's AI providers.
+**curl:**
 
 ```bash
-git clone https://github.com/seeker71/Coherence-Network.git
-cd Coherence-Network/api
-pip install -e .
-python scripts/local_runner.py --timeout 300
+# Link any identity (37 providers: github, discord, telegram, ethereum, solana, nostr, linkedin, orcid, did, ...)
+curl -s "$CN_API/api/identity/link" -X POST -H "Content-Type: application/json" \
+  -d '{"contributor_id":"alice","provider":"github","provider_id":"alice-dev"}'
+
+# List all providers
+curl -s "$CN_API/api/identity/providers" | jq '.categories | keys'
+
+# Reverse lookup
+curl -s "$CN_API/api/identity/lookup/github/alice-dev" | jq .
+
+# Get all linked identities
+curl -s "$CN_API/api/identity/alice" | jq .
 ```
 
-Your machine auto-detects providers (claude, codex, gemini, cursor, ollama), registers with the hub, and starts picking tasks. Every successful task is recorded in your contribution ledger.
-
-### Check your contributions
+**Contribute by identity (no registration):**
 
 ```bash
-curl -s https://api.coherencycoin.com/api/contributions/ledger/{your-name}
+# Record a contribution using provider identity instead of contributor_id
+curl -s "$CN_API/api/contributions/record" -X POST -H "Content-Type: application/json" \
+  -d '{"provider":"github","provider_id":"alice-dev","type":"code","amount_cc":5}'
 ```
 
-### See the network
+## Contributions & assets
+
+**CLI:**
 
 ```bash
-curl -s https://api.coherencycoin.com/api/federation/nodes
-curl -s https://api.coherencycoin.com/api/providers/stats/network
-curl -s https://api.coherencycoin.com/api/federation/strategies
+cc contribute                # Record any contribution (interactive)
+cc status                    # Network health + node info
+cc resonance                 # What's alive right now
 ```
 
-## How Value Flows
+**curl:**
 
-1. You share an idea or ask a question → attention recorded
-2. Someone writes a spec → direction recorded
-3. A node executes the impl → compute recorded
-4. Tests pass, review approves → value realized
-5. Value lineage distributes credit to everyone who helped:
-   - Idea author: 7%
-   - Researcher: 15%
-   - Spec writer: 15%
-   - Implementer: 26%
-   - Reviewer: 15%
-   - Staker: 11%
-   - Spec upgrader: 11%
+```bash
+curl -s "$CN_API/api/contributions?limit=20" | jq '.[] | {contributor_id, coherence_score, cost_amount}'
+curl -s "$CN_API/api/contributions/ledger/CONTRIBUTOR-ID" | jq .
+curl -s "$CN_API/api/contributions/ledger/CONTRIBUTOR-ID/ideas" | jq .
+curl -s "$CN_API/api/assets?limit=20" | jq '.[] | {id, type, description, total_cost}'
+```
 
-## The Web
+## Governance & federation
 
-Browse everything at **https://coherencycoin.com**:
-- `/` — Share an idea
-- `/resonance` — Live activity feed
-- `/ideas` — All ideas with progress
-- `/invest` — Back ideas with CC
-- `/automation` — Provider stats and federation nodes
+```bash
+curl -s "$CN_API/api/governance/change-requests" | jq .
+curl -s "$CN_API/api/federation/instances" | jq .
+curl -s "$CN_API/api/federation/nodes" | jq .
+curl -s "$CN_API/api/federation/nodes/capabilities" | jq .
+curl -s "$CN_API/api/federation/strategies" | jq .
+```
 
-## Philosophy
+## Friction, runtime & agent health
 
-Ideas are living things. They start as a thought, attract attention, grow through collaboration, and create real value. Every contribution is recorded. Credit flows to creators. The network learns what works and shares that knowledge across all nodes.
+```bash
+curl -s "$CN_API/api/friction/report?window_days=30" | jq .
+curl -s "$CN_API/api/agent/effectiveness" | jq .
+curl -s "$CN_API/api/agent/collective-health" | jq .
+curl -s "$CN_API/api/agent/status-report" | jq .
+curl -s "$CN_API/api/coherence/score" | jq .
+```
 
-You don't need to do everything. Ask one question. Fork one idea. Run one task. The network does the rest.
+## The five pillars
+
+| Pillar | What it means |
+|--------|---------------|
+| **Traceability** | Every unit of value is traceable from idea through spec, implementation, usage, and payout. Nothing is lost. |
+| **Trust** | Coherence scores (0.0–1.0) replace subjective judgement with objective quality metrics. |
+| **Freedom** | Open governance, federated nodes, no single point of control. Fork, vote, sync — on your terms. |
+| **Uniqueness** | Every idea, spec, and contribution is uniquely identified, scored, and ranked. No duplicates, no ambiguity. |
+| **Collaboration** | Multi-contributor attribution with coherence-weighted payouts. Work together, get paid fairly. |
+
+## The Coherence Network ecosystem
+
+Every part of the network links to every other. Jump in wherever makes sense.
+
+| Surface | What it is | Link |
+|---------|-----------|------|
+| **Web** | Browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
+| **API** | 100+ endpoints, full OpenAPI docs, the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
+| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
+| **MCP Server** | 20 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **OpenClaw Skill** | This skill — auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
+| **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
+
+## MCP server
+
+For AI agents that support MCP (Model Context Protocol), Coherence Network exposes an MCP server at:
+
+```bash
+npx coherence-mcp-server
+```
+
+This provides typed tools that any MCP-compatible agent (Claude, Cursor, Windsurf, etc.) can invoke natively. See `references/mcp-server.md` for tool definitions.
+
+## Write safety
+
+Before executing any POST/PATCH/DELETE request, always confirm with the user. Read operations (GET) are safe to run freely.
+
+## API reference
+
+For the full endpoint table (100+ endpoints across 20 resource groups), see `references/api-endpoints.md`.

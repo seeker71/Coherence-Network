@@ -1,3 +1,4 @@
+<!-- AUTO-GENERATED from README.template.md. Edit the template, not this file. -->
 # coherence-mcp-server
 
 **Give your AI agent native access to every idea, spec, contributor, and value chain in the Coherence Network.**

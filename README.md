@@ -1,3 +1,4 @@
+<!-- AUTO-GENERATED from README.template.md. Edit the template, not this file. -->
 # Coherence Network
 
 [![Thread Gates](https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml/badge.svg)](https://github.com/seeker71/Coherence-Network/actions/workflows/thread-gates.yml)
