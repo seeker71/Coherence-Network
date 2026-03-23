@@ -65,6 +65,8 @@ try:
 except ImportError:
     API_BASE = os.environ.get("AGENT_API_BASE", os.environ.get("COHERENCE_HUB_URL", "https://api.coherencycoin.com"))
 WORKER_ID = f"{socket.gethostname()}:{os.getpid()}"
+_NODE_ID = f"{socket.gethostname()}:{os.getpid()}"
+_NODE_NAME = socket.gethostname()
 _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
 _RESUME_MODE = [False]
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -521,6 +523,24 @@ def api(method: str, path: str, body: dict | None = None) -> dict | list | None:
     except Exception as e:
         log.error("API %s %s unexpected error: %s", method, path, e)
         return None
+
+
+def _post_activity(task_id: str, event_type: str, data: dict):
+    """Fire-and-forget activity post to the API."""
+    try:
+        httpx.post(
+            f"{API_BASE}/api/agent/tasks/{task_id}/activity",
+            json={
+                "node_id": _NODE_ID,
+                "node_name": _NODE_NAME,
+                "provider": data.get("provider", ""),
+                "event_type": event_type,
+                "data": data,
+            },
+            timeout=5.0,
+        )
+    except Exception:
+        pass  # never block execution
 
 
 def list_pending() -> list[dict]:
@@ -1010,6 +1030,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             log.warning("SKIP task=%s (claim failed)", task_id)
             return False
         task = claimed
+        _post_activity(task_id, "claimed", {"task_type": task_type})
 
     complexity_estimate = estimate_task_complexity(task)
 
@@ -1045,6 +1066,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     pre_patch = _git_diff_for_paths()
 
     log.info("EXECUTING task=%s type=%s provider=%s", task_id, task_type, provider)
+    _post_activity(task_id, "executing", {"provider": provider, "task_type": task_type})
 
     success, output, duration = execute_with_provider(provider, prompt, task_type, complexity_estimate)
 
@@ -1142,6 +1164,13 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         )
     if success and reported:
         _run_phase_auto_advance_hook(task)
+
+    # Post completion activity
+    _post_activity(
+        task_id,
+        "completed" if success else ("timeout" if completion_status == "timed_out" else "failed"),
+        {"provider": provider, "task_type": task_type, "duration_s": round(duration, 1), "output_preview": output[:200] if output else ""},
+    )
 
     log.info("OUTCOME task=%s type=%s provider=%s success=%s duration=%.1fs",
              task_id, task_type, provider, success, duration)
