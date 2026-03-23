@@ -113,6 +113,25 @@ class NodeMeasurementSummaryRecord(Base):
     )
 
 
+class NodeMessageRecord(Base):
+    """Persistent inter-node messages (replaces in-memory _MESSAGE_STORE)."""
+    __tablename__ = "node_messages"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    from_node: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    to_node: Mapped[str | None] = mapped_column(String, nullable=True)  # None = broadcast
+    type: Mapped[str] = mapped_column(String, nullable=False, default="text")
+    text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    payload_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    timestamp: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    read_by_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+
+    __table_args__ = (
+        Index("idx_nm_to_node", "to_node"),
+        Index("idx_nm_timestamp", "timestamp"),
+    )
+
+
 class NodeStrategyBroadcastRecord(Base):
     """Hub strategy broadcasts for federation advisory guidance (Spec 134)."""
     __tablename__ = "node_strategy_broadcasts"
