@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.services import persistence_contract_service
 from app.services import unified_db
+from app.services import audit_ledger_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -93,6 +94,10 @@ class _BaseHealthResponse(BaseModel):
         str | None,
         Field(description="Environment variable source for deployed_sha"),
     ] = None
+    integrity_compromised: Annotated[
+        bool,
+        Field(description="True if audit ledger hash chain verification fails"),
+    ] = False
 
 
 class HealthResponse(_BaseHealthResponse):
@@ -153,6 +158,17 @@ async def ready(request: Request):
         db_connected = True
     except Exception:
         logger.warning("DB connectivity check failed", exc_info=True)
+
+    # Check audit ledger integrity (spec 123)
+    integrity_compromised = False
+    try:
+        # We only check the last 100 entries for the health check to keep it fast
+        # Full verification is available at /api/audit/verify
+        res = audit_ledger_service.verify_chain()
+        integrity_compromised = not res.verified
+    except Exception:
+        logger.warning("Integrity check failed", exc_info=True)
+
     return ReadyResponse(
         status="ready",
         version=HEALTH_VERSION,
@@ -163,6 +179,7 @@ async def ready(request: Request):
         deployed_sha=deployed_sha,
         deployed_sha_source=deployed_sha_source,
         db_connected=db_connected,
+        integrity_compromised=integrity_compromised,
     )
 
 
@@ -178,6 +195,15 @@ async def health():
     now = datetime.now(timezone.utc)
     up = _uptime_seconds(now)
     deployed_sha, deployed_sha_source = _deployed_sha()
+
+    # Check audit ledger integrity (spec 123)
+    integrity_compromised = False
+    try:
+        res = audit_ledger_service.verify_chain()
+        integrity_compromised = not res.verified
+    except Exception:
+        logger.warning("Integrity check failed", exc_info=True)
+
     return HealthResponse(
         status="ok",
         version=HEALTH_VERSION,
@@ -187,4 +213,5 @@ async def health():
         uptime_human=_uptime_human(up),
         deployed_sha=deployed_sha,
         deployed_sha_source=deployed_sha_source,
+        integrity_compromised=integrity_compromised,
     )

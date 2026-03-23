@@ -20,6 +20,9 @@ from app.models.federation import (
     MeasurementPushRequest,
     MeasurementPushResponse,
     VALID_STRATEGY_TYPES,
+    FederatedAggregationRequest,
+    FederatedAggregationResponse,
+    FederatedAggregationListResponse,
 )
 from app.services import federation_service
 
@@ -237,3 +240,38 @@ async def report_strategy_effectiveness(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return FederationStrategyEffectivenessReportResponse(**report)
+
+
+# ---------------------------------------------------------------------------
+# Federated Instance Aggregation (Spec 143)
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/federation/instances/{node_id}/aggregate",
+    response_model=FederatedAggregationResponse,
+    status_code=202,
+)
+async def post_federated_aggregation(node_id: str, body: FederatedAggregationRequest):
+    """Submit partner instance aggregation payload for trust-gated merge."""
+    if body.envelope.node_id != node_id:
+        raise HTTPException(status_code=422, detail="node_id mismatch between path and envelope")
+    
+    try:
+        result = federation_service.ingest_federated_aggregation(node_id, body.model_dump(mode="json"))
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        
+    if result.get("status") == "duplicate":
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content=result, status_code=409)
+        
+    return result
+
+
+@router.get("/federation/aggregates", response_model=FederatedAggregationListResponse)
+async def get_federated_aggregates(strategy_type: str | None = Query(None)):
+    """Return merged federated aggregation results."""
+    aggregates = federation_service.list_federated_aggregates(strategy_type=strategy_type)
+    return {"aggregates": aggregates}

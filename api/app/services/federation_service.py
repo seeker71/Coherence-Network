@@ -153,6 +153,27 @@ class NodeStrategyEffectivenessRecord(Base):
     )
 
 
+class FederatedAggregationRecord(Base):
+    """Submissions for federated aggregation merging (Spec 143)."""
+    __tablename__ = "federation_aggregations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    node_id: Mapped[str] = mapped_column(String, nullable=False)
+    strategy_type: Mapped[str] = mapped_column(String, nullable=False)
+    window_start: Mapped[str] = mapped_column(String, nullable=False)
+    window_end: Mapped[str] = mapped_column(String, nullable=False)
+    sample_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    metrics_json: Mapped[str] = mapped_column(Text, nullable=False)
+    payload_hash: Mapped[str] = mapped_column(String, nullable=False)
+    sent_at: Mapped[str] = mapped_column(String, nullable=False)
+    received_at: Mapped[str] = mapped_column(String, nullable=False)
+
+    __table_args__ = (
+        Index("idx_fed_agg_node_hash_sent", "node_id", "payload_hash", "sent_at", unique=True),
+        Index("idx_fed_agg_strategy_window", "strategy_type", "window_start", "window_end"),
+    )
+
+
 # ---------------------------------------------------------------------------
 # DB helpers
 # ---------------------------------------------------------------------------
@@ -1039,6 +1060,7 @@ def compute_and_store_strategies() -> list[dict]:
                 "source_node_id": "hub",
                 "created_at": now_iso,
                 "expires_at": expires_iso,
+                "advisory_only": True,
             })
 
         # provider_warning: <50% success across multiple (2+) nodes
@@ -1062,6 +1084,7 @@ def compute_and_store_strategies() -> list[dict]:
                 "source_node_id": "hub",
                 "created_at": now_iso,
                 "expires_at": expires_iso,
+                "advisory_only": True,
             })
 
     # prompt_variant_winner: check if prompt measurement data exists
@@ -1101,6 +1124,7 @@ def compute_and_store_strategies() -> list[dict]:
                         "source_node_id": "hub",
                         "created_at": now_iso,
                         "expires_at": expires_iso,
+                        "advisory_only": True,
                     })
 
     # Persist all new strategies
@@ -1162,3 +1186,143 @@ def list_active_strategies(
             for r in recs
         ]
         return rows, total
+
+
+# ---------------------------------------------------------------------------
+# Federated Instance Aggregation (Spec 143)
+# ---------------------------------------------------------------------------
+
+def ingest_federated_aggregation(node_id: str, data: dict) -> dict:
+    """Ingest a partner instance aggregation payload."""
+    _ensure_schema()
+    
+    # 1. Trust verification
+    if not check_trust_level(node_id, required_level="verified"):
+        raise PermissionError("node trust verification failed")
+    
+    envelope = data.get("envelope", {})
+    payload = data.get("payload", {})
+    
+    # 2. Duplicate check
+    payload_hash = envelope.get("payload_hash")
+    sent_at = envelope.get("sent_at")
+    
+    with _session() as s:
+        existing = s.query(FederatedAggregationRecord).filter_by(
+            node_id=node_id,
+            payload_hash=payload_hash,
+            sent_at=sent_at
+        ).first()
+        if existing:
+            return {"status": "duplicate", "dedupe": True, "merge_key": f"{payload['strategy_type']}:{sent_at}"}
+
+        # 3. Store record
+        rec = FederatedAggregationRecord(
+            node_id=node_id,
+            strategy_type=payload["strategy_type"],
+            window_start=payload["window_start"],
+            window_end=payload["window_end"],
+            sample_count=payload["sample_count"],
+            metrics_json=json.dumps(payload["metrics"]),
+            payload_hash=payload_hash,
+            sent_at=sent_at,
+            received_at=datetime.now(timezone.utc).isoformat()
+        )
+        s.add(rec)
+        
+    return {
+        "status": "accepted",
+        "merge_key": f"{payload['strategy_type']}:{sent_at}",
+        "trust_tier": "verified",
+        "dedupe": False
+    }
+
+
+def list_federated_aggregates(strategy_type: str | None = None) -> list[dict]:
+    """Retrieve and merge federated aggregation results."""
+    _ensure_schema()
+    with _session() as s:
+        query = s.query(FederatedAggregationRecord)
+        if strategy_type:
+            query = query.filter_by(strategy_type=strategy_type)
+        recs = query.all()
+    
+    # Group by (strategy_type, window_start, window_end)
+    groups = {}
+    for r in recs:
+        key = (r.strategy_type, r.window_start, r.window_end)
+        groups.setdefault(key, []).append(r)
+    
+    results = []
+    for (stype, wstart, wend), items in groups.items():
+        if stype == "provider_recommendation":
+            merge_strategy = "weighted_mean"
+            merged_metrics = _merge_weighted_mean(items)
+        elif stype == "prompt_variant_winner":
+            merge_strategy = "majority_vote"
+            merged_metrics = _merge_majority_vote(items)
+        else:
+            merge_strategy = "warning_union"
+            merged_metrics = _merge_warning_union(items)
+            
+        results.append({
+            "strategy_type": stype,
+            "merge_strategy": merge_strategy,
+            "value": merged_metrics,
+            "metrics": merged_metrics,
+            "source_nodes": list(set(r.node_id for r in items)),
+            "sample_count": sum(r.sample_count for r in items),
+            "window_start": wstart,
+            "window_end": wend
+        })
+    return results
+
+
+def _merge_weighted_mean(items: list[FederatedAggregationRecord]) -> dict:
+    total_samples = sum(r.sample_count for r in items)
+    if total_samples == 0: return {}
+    
+    providers = {}
+    for r in items:
+        m = json.loads(r.metrics_json)
+        p = m.get("provider", "unknown")
+        sr = m.get("success_rate", 0.0)
+        dur = m.get("avg_duration_s", 0.0)
+        
+        data = providers.setdefault(p, {"sr_sum": 0.0, "dur_sum": 0.0, "samples": 0})
+        data["sr_sum"] += sr * r.sample_count
+        data["dur_sum"] += dur * r.sample_count
+        data["samples"] += r.sample_count
+    
+    if not providers: return {}
+    best_p = next(iter(providers))
+    best_data = providers[best_p]
+    
+    return {
+        "provider": best_p,
+        "success_rate": round(best_data["sr_sum"] / best_data["samples"], 3),
+        "avg_duration_s": round(best_data["dur_sum"] / best_data["samples"], 1)
+    }
+
+def _merge_majority_vote(items: list[FederatedAggregationRecord]) -> dict:
+    votes = {}
+    for r in items:
+        m = json.loads(r.metrics_json)
+        variant = m.get("winning_variant", "unknown")
+        votes[variant] = votes.get(variant, 0) + 1
+    
+    if not votes: return {}
+    max_v = max(votes.values())
+    winners = [v for v, count in votes.items() if count == max_v]
+    winners.sort() 
+    return {"winning_variant": winners[0], "votes": max_v}
+
+def _merge_warning_union(items: list[FederatedAggregationRecord]) -> dict:
+    all_warnings = []
+    for r in items:
+        try:
+            m = json.loads(r.metrics_json)
+        except:
+            m = {}
+        all_warnings.append({"node_id": r.node_id, "warning": m})
+    return {"warnings": all_warnings}

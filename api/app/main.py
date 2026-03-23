@@ -21,6 +21,7 @@ from app.routers import (
     agent,
     automation_usage,
     assets,
+    audit,
     coherence,
     contributions,
     contributor_identity,
@@ -437,6 +438,7 @@ async def reset_database(x_admin_key: str = Header(None)):
 # Resource routers (canonical)
 app.include_router(contributors.router, prefix="/api", tags=["contributors"])
 app.include_router(assets.router, prefix="/api", tags=["assets"])
+app.include_router(audit.router, prefix="/api", tags=["audit"])
 app.include_router(contributions.router, prefix="/api", tags=["contributions"])
 app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])

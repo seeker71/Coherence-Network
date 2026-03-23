@@ -25,7 +25,8 @@ from app.models.governance import (
 )
 from app.models.idea import IdeaCreate, IdeaQuestionAnswerUpdate, IdeaQuestionCreate, IdeaUpdate
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryUpdate
-from app.services import idea_service, spec_registry_service
+from app.models.audit_ledger import AuditEntryCreate, AuditEntryType
+from app.services import audit_ledger_service, idea_service, spec_registry_service
 from app.services.unified_db import Base
 
 logger = logging.getLogger(__name__)
@@ -361,12 +362,45 @@ def _upsert_vote(session: Session, change_request_id: str, data: ChangeRequestVo
                 created_at=now,
             )
         )
+        # Record in audit ledger
+        audit_ledger_service.append_entry(
+            AuditEntryCreate(
+                entry_type=AuditEntryType.GOVERNANCE_VOTE,
+                sender_id=data.voter_id,
+                receiver_id="GOVERNANCE",
+                reason=f"Vote {data.decision.value} on change request {change_request_id}",
+                reference_id=change_request_id,
+                metadata={
+                    "decision": data.decision.value,
+                    "rationale": data.rationale,
+                    "voter_type": data.voter_type.value,
+                },
+            ),
+            session_override=session,
+        )
         return
     existing_vote.decision = data.decision.value
     existing_vote.voter_type = data.voter_type.value
     existing_vote.rationale = data.rationale
     existing_vote.created_at = now
     session.add(existing_vote)
+    # Update audit ledger
+    audit_ledger_service.append_entry(
+        AuditEntryCreate(
+            entry_type=AuditEntryType.GOVERNANCE_VOTE,
+            sender_id=data.voter_id,
+            receiver_id="GOVERNANCE",
+            reason=f"Updated vote to {data.decision.value} on change request {change_request_id}",
+            reference_id=change_request_id,
+            metadata={
+                "decision": data.decision.value,
+                "rationale": data.rationale,
+                "voter_type": data.voter_type.value,
+                "update": True,
+            },
+        ),
+        session_override=session,
+    )
 
 
 def _collect_vote_counts(
@@ -405,8 +439,40 @@ def _apply_approved_change_request(change_request_id: str, request: ChangeReques
         if error is None:
             row.status = ChangeRequestStatus.APPLIED.value
             row.applied_result_json = json.dumps(result)
+            # Record decision in audit ledger
+            audit_ledger_service.append_entry(
+                AuditEntryCreate(
+                    entry_type=AuditEntryType.GOVERNANCE_DECISION,
+                    sender_id="GOVERNANCE",
+                    receiver_id=row.proposer_id,
+                    reason=f"Approved and applied change request {change_request_id}: {row.title}",
+                    reference_id=change_request_id,
+                    metadata={
+                        "request_type": row.request_type,
+                        "result": result,
+                        "status": "APPLIED",
+                    },
+                ),
+                session_override=session,
+            )
         else:
             row.applied_result_json = json.dumps({"error": error})
+            # Record failure in audit ledger
+            audit_ledger_service.append_entry(
+                AuditEntryCreate(
+                    entry_type=AuditEntryType.GOVERNANCE_DECISION,
+                    sender_id="GOVERNANCE",
+                    receiver_id=row.proposer_id,
+                    reason=f"Failed to apply change request {change_request_id}: {error}",
+                    reference_id=change_request_id,
+                    metadata={
+                        "request_type": row.request_type,
+                        "error": error,
+                        "status": "FAILED",
+                    },
+                ),
+                session_override=session,
+            )
         row.updated_at = datetime.now(timezone.utc)
         session.add(row)
         session.flush()

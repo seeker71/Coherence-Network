@@ -423,7 +423,15 @@ def _coerce_runtime_event_rows(payload: Any, *, limit: int) -> list[RuntimeEvent
 
 def _invalidate_runtime_events_cache() -> None:
     _RUNTIME_EVENTS_CACHE["expires_at"] = 0.0
-    _RUNTIME_EVENTS_CACHE["cache_key"] = ""
+    _RUNTIME_EVENTS_CACHE["rows"] = []
+
+    try:
+        from app.services import automation_usage_service
+
+        automation_usage_service.invalidate_cache()
+    except (ImportError, Exception):
+        pass
+
     _RUNTIME_EVENTS_CACHE["rows"] = []
 
 

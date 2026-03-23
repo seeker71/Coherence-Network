@@ -15,7 +15,9 @@ import base64
 import logging
 import math
 import os
-import pwd
+import sys
+if sys.platform != "win32":
+    import pwd
 import socket
 import shlex
 import shutil
@@ -3276,6 +3278,8 @@ def _non_root_auto_create_enabled() -> bool:
 
 
 def _auto_create_non_root_exec_user(*, min_uid: int, preferred_user: str = "") -> tuple[str, int, int, str]:
+    if sys.platform == "win32":
+        return "", -1, -1, ""
     try:
         if os.geteuid() != 0:
             return "", -1, -1, ""

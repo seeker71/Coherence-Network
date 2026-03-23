@@ -36,9 +36,17 @@ _LIVE_CHANGE_CACHE: dict[str, Any] = {
 _LIVE_CHANGE_CACHE_TTL_SECONDS = 5.0
 
 
-def invalidate_runtime_events_cache() -> None:
+def _invalidate_runtime_events_cache() -> None:
     _RUNTIME_EVENTS_CACHE["expires_at"] = 0.0
-    _RUNTIME_EVENTS_CACHE["cache_key"] = ""
+    _RUNTIME_EVENTS_CACHE["rows"] = []
+
+    try:
+        from app.services import automation_usage_service
+
+        automation_usage_service.invalidate_cache()
+    except (ImportError, Exception):
+        pass
+
     _RUNTIME_EVENTS_CACHE["rows"] = []
 
 
@@ -139,7 +147,7 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
         data = runtime_store.read_store()
         data["events"].append(event.model_dump(mode="json"))
         runtime_store.write_store(data)
-    invalidate_runtime_events_cache()
+    _invalidate_runtime_events_cache()
     return event
 
 

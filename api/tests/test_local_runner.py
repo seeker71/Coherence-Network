@@ -132,8 +132,15 @@ def test_run_one_marks_false_positive_when_text_only_provider_reports_success(
         completion["context_patch"] = context_patch
         return True
 
-    monkeypatch.setattr(local_runner, "complete_task", _complete)
+    def _complete_status(task_id: str, output: str, status: str, context_patch: dict[str, Any] | None = None, error_category: str = "execution_error") -> bool:
+        completion["task_id"] = task_id
+        completion["output"] = output
+        completion["success"] = (status == "completed")
+        completion["context_patch"] = context_patch
+        return True
 
+    monkeypatch.setattr(local_runner, "complete_task", _complete)
+    monkeypatch.setattr(local_runner, "_complete_task_with_status", _complete_status)
     ok = local_runner.run_one(task, dry_run=False)
 
     assert ok is False
@@ -207,7 +214,9 @@ def test_estimate_task_complexity_complex() -> None:
         "direction": (
             "Update `api/scripts/local_runner.py` and `api/tests/test_local_runner.py`, "
             "then align `api/app/services/agent_service_crud.py` and "
-            "`api/app/models/agent.py` with task complexity metadata for scheduling."
+            "`api/app/models/agent.py` with task complexity metadata for scheduling. "
+            "Additionally, ensure all validation paths are covered by adding more "
+            "robust error handling and logging throughout the implementation."
         ),
     }
 
