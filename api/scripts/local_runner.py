@@ -1225,11 +1225,121 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     return success
 
 
+_MAX_PENDING_TASKS = 5  # Capacity cap for seed generation
+_SEED_TASK_TYPES = ("spec", "test", "impl", "review")
+
+
+def _count_active_tasks() -> int:
+    """Count pending + running tasks (capacity check for seed generation)."""
+    pending = list_pending()
+    running = api("GET", "/api/agent/tasks?status=running&limit=100")
+    r_count = 0
+    if isinstance(running, list):
+        r_count = len(running)
+    elif isinstance(running, dict):
+        r_count = len(running.get("tasks", []))
+    return len(pending) + r_count
+
+
+def _seed_task_from_open_idea() -> bool:
+    """Generate a task from the highest-ROI open idea when the queue is empty.
+
+    Called when no pending tasks exist. Picks an idea that has no active tasks,
+    determines the next lifecycle phase, and creates a seed task. Returns True
+    if a task was created.
+    """
+    # Capacity check
+    active = _count_active_tasks()
+    if active >= _MAX_PENDING_TASKS:
+        log.info("SEED: at capacity (%d/%d) — skipping", active, _MAX_PENDING_TASKS)
+        return False
+
+    # Get open ideas (none or partial status)
+    all_ideas = api("GET", "/api/ideas?limit=200")
+    if not all_ideas:
+        return False
+    ideas = all_ideas.get("ideas", all_ideas) if isinstance(all_ideas, dict) else all_ideas
+    open_ideas = [
+        i for i in ideas
+        if i.get("manifestation_status") in ("none", "partial", None)
+    ]
+    if not open_ideas:
+        log.info("SEED: no open ideas — all validated!")
+        return False
+
+    # Sort by free_energy_score (highest ROI first)
+    open_ideas.sort(key=lambda i: float(i.get("free_energy_score", 0) or 0), reverse=True)
+    idea = open_ideas[0]
+    idea_id = idea.get("id", "unknown")
+    idea_name = idea.get("name", idea_id)
+
+    # Determine task type from lifecycle stage
+    stage = (idea.get("stage") or "none").lower()
+    if stage in ("none", "research"):
+        task_type = "spec"
+    elif stage in ("spec", "specification"):
+        task_type = "test"
+    elif stage in ("test", "testing"):
+        task_type = "impl"
+    elif stage in ("implementation", "impl"):
+        task_type = "review"
+    else:
+        task_type = "spec"
+
+    # Build direction from idea description + open questions
+    desc = idea.get("description", "")
+    questions = idea.get("open_questions", [])
+    q_text = ""
+    if questions:
+        q_lines = []
+        for q in questions[:3]:
+            qt = q.get("question", q) if isinstance(q, dict) else str(q)
+            q_lines.append(f"- {qt}")
+        q_text = "\n\nOpen questions to address:\n" + "\n".join(q_lines)
+
+    direction = (
+        f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}\n\n"
+        f"Follow the project's CLAUDE.md conventions. Work in the repository."
+    )
+
+    result = api("POST", "/api/agent/tasks", {
+        "direction": direction,
+        "task_type": task_type,
+        "context": {
+            "idea_id": idea_id,
+            "idea_name": idea_name,
+            "seed_generated": True,
+            "seed_source": "local_runner_idle_queue",
+        },
+        "target_state": f"{task_type.title()} completed for: {idea_name}",
+        "success_evidence": f"{task_type} artifact exists and meets quality criteria",
+        "abort_evidence": f"Cannot make progress — blocked or unclear requirements",
+    })
+
+    if isinstance(result, dict) and result.get("id"):
+        log.info("SEED: created %s task %s for idea '%s' (FE=%.2f)",
+                 task_type, result["id"], idea_name,
+                 float(idea.get("free_energy_score", 0) or 0))
+        return True
+
+    log.warning("SEED: failed to create task for idea '%s'", idea_name)
+    return False
+
+
 def run_all_pending(dry_run: bool = False) -> dict:
     tasks = list_pending()
     if not tasks:
         log.info("No pending tasks")
-        return {"total": 0, "success": 0, "failed": 0}
+        # Seed a new task from an open idea when the queue is empty
+        if not dry_run:
+            _seed_task_from_open_idea()
+            # Re-check after seeding
+            tasks = list_pending()
+            if not tasks:
+                return {"total": 0, "success": 0, "failed": 0}
+            log.info("Seeded task — now have %d pending", len(tasks))
+        else:
+            return {"total": 0, "success": 0, "failed": 0}
 
     log.info("Found %d pending tasks", len(tasks))
     results = {"total": len(tasks), "success": 0, "failed": 0}
