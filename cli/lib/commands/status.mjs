@@ -31,6 +31,19 @@ export async function showStatus() {
   const running = taskList(runningData);
   const completed = taskList(completedData);
 
+  /** Extract a human-readable name from a task */
+  function _taskName(t) {
+    const ctx = t.context || {};
+    if (ctx.idea_name) return ctx.idea_name.slice(0, 45);
+    if (t.direction) {
+      // Extract the idea name from "Write a spec for: <name>." pattern
+      const match = t.direction.match(/for:\s*(.+?)[\.\n]/);
+      if (match) return match[1].slice(0, 45);
+      return t.direction.slice(0, 45);
+    }
+    return t.id?.slice(0, 20) || "?";
+  }
+
   console.log();
   console.log("\x1b[1m  COHERENCE NETWORK STATUS\x1b[0m");
   console.log(`  ${"─".repeat(50)}`);
@@ -65,11 +78,18 @@ export async function showStatus() {
   if (Array.isArray(nodes) && nodes.length > 0) {
     const now = Date.now();
     const alive = nodes.filter((n) => {
-      const last = n.last_heartbeat || n.registered_at || "";
+      const last = n.last_seen_at || n.last_heartbeat || n.registered_at || "";
       if (!last) return false;
       return now - new Date(last).getTime() < 600_000; // 10 min
     });
     console.log(`  Nodes:       ${nodes.length} registered (${alive.length} live)`);
+    for (const n of nodes) {
+      const last = n.last_seen_at || n.last_heartbeat || n.registered_at || "";
+      const ago = last ? Math.round((now - new Date(last).getTime()) / 60000) : 9999;
+      const icon = ago < 10 ? "\x1b[32m●\x1b[0m" : ago < 60 ? "\x1b[33m●\x1b[0m" : "\x1b[31m○\x1b[0m";
+      const agoStr = ago < 60 ? `${ago}m` : `${Math.round(ago / 60)}h`;
+      console.log(`    ${icon} ${(n.hostname || n.node_id || "?").slice(0, 20).padEnd(22)} ${(n.os_type || "?").padEnd(8)} ${agoStr} ago`);
+    }
   }
 
   // Pipeline
@@ -81,10 +101,10 @@ export async function showStatus() {
 
   if (running.length > 0) {
     for (const t of running.slice(0, 3)) {
-      const ctx = t.context || {};
-      const name = ctx.idea_name || t.direction?.slice(0, 40) || t.id?.slice(0, 16) || "?";
+      const name = _taskName(t);
       const age = t.created_at ? Math.round((Date.now() - new Date(t.created_at).getTime()) / 60000) : 0;
-      console.log(`    \x1b[33m▸\x1b[0m ${t.task_type || "?"}  ${age}m  ${name}`);
+      const ageColor = age > 15 ? "\x1b[31m" : age > 5 ? "\x1b[33m" : "\x1b[32m";
+      console.log(`    \x1b[33m▸\x1b[0m ${(t.task_type || "?").padEnd(6)} ${ageColor}${age}m\x1b[0m  ${name}`);
     }
     if (running.length > 3) console.log(`    ... and ${running.length - 3} more`);
   }
@@ -93,8 +113,7 @@ export async function showStatus() {
   if (completed.length > 0) {
     console.log(`  Recent:      last ${completed.length} completed`);
     for (const t of completed.slice(0, 3)) {
-      const ctx = t.context || {};
-      const name = ctx.idea_name || t.id?.slice(0, 16) || "?";
+      const name = _taskName(t);
       console.log(`    \x1b[32m✓\x1b[0m ${t.task_type || "?"}  ${name}`);
     }
   }
