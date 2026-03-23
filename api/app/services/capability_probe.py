@@ -42,7 +42,8 @@ class CapabilityProbe:
         """Return keys whose command is available, with bounded timeouts."""
         available: list[str] = []
         lock = threading.Lock()
-        with ThreadPoolExecutor(max_workers=min(_MAX_WORKERS, max(1, len(mapping)))) as pool:
+        pool = ThreadPoolExecutor(max_workers=min(_MAX_WORKERS, max(1, len(mapping))))
+        try:
             futures: dict[str, Future[bool]] = {
                 name: pool.submit(cls._check_command_available, command)
                 for name, command in mapping.items()
@@ -56,10 +57,10 @@ class CapabilityProbe:
                     if future.result(timeout=timeout):
                         with lock:
                             available.append(name)
-                except TimeoutError:
+                except (TimeoutError, Exception):
                     continue
-                except Exception:
-                    continue
+        finally:
+            pool.shutdown(wait=False)
         return sorted(available)
 
     @staticmethod

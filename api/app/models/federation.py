@@ -193,3 +193,56 @@ class FederationStrategyEffectivenessReportResponse(BaseModel):
     improvement_score: float
     improved: bool
     recorded_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Federated Instance Aggregation models (Spec 143)
+# ---------------------------------------------------------------------------
+
+class FederatedAggregationEnvelope(BaseModel):
+    """Secure protocol envelope for partner instance aggregation payloads."""
+    schema_version: str = Field(default="v1")
+    node_id: str = Field(min_length=1)
+    sent_at: datetime
+    payload_hash: str
+    signature: str
+
+
+class FederatedAggregationPayload(BaseModel):
+    """Content for federated aggregation merging."""
+    strategy_type: str = Field(description="provider_recommendation | prompt_variant_winner | provider_warning")
+    window_start: datetime
+    window_end: datetime
+    sample_count: int = Field(ge=1)
+    metrics: dict
+
+
+class FederatedAggregationRequest(BaseModel):
+    """Request body for POST /api/federation/instances/{node_id}/aggregate."""
+    envelope: FederatedAggregationEnvelope
+    payload: FederatedAggregationPayload
+
+
+class FederatedAggregationResponse(BaseModel):
+    """Response for aggregation ingestion."""
+    status: str = "accepted"
+    merge_key: str
+    trust_tier: str
+    dedupe: bool = False
+
+
+class FederatedAggregationMergeResult(BaseModel):
+    """A merged aggregation result across multiple nodes."""
+    strategy_type: str
+    merge_strategy: str
+    value: dict
+    metrics: dict  # Included for convenience in UI/API
+    source_nodes: list[str]
+    sample_count: int
+    window_start: datetime
+    window_end: datetime
+
+
+class FederatedAggregationListResponse(BaseModel):
+    """Response for GET /api/federation/aggregates."""
+    aggregates: list[FederatedAggregationMergeResult]

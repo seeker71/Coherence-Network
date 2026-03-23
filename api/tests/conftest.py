@@ -89,16 +89,25 @@ else:
 def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     """Reset unified DB engine and service caches between tests.
 
-    Each test gets a clean engine so env-var changes take effect.
+    Each test gets a clean engine and a unique, isolated SQLite database
+    in tmp_path so env-var changes take effect and state never leaks.
     """
     from app.services import (
         agent_service,
+        automation_usage_service,
         idea_service,
         unified_db,
     )
 
+    # Use an isolated DB for each test
+    db_file = tmp_path / "test_coherence.db"
+    os.environ["DATABASE_URL"] = f"sqlite+pysqlite:///{db_file}"
+    os.environ["IDEA_PORTFOLIO_PATH"] = str(tmp_path / "ideas.json")
+    os.environ["AGENT_TASKS_USE_DB"] = "0"
+
     # Reset the unified engine — all services delegate to this
     unified_db.reset_engine()
+    unified_db.ensure_schema()
 
     agent_service._store.clear()
     agent_service._store_loaded = False
@@ -108,7 +117,22 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     idea_service._TRACKED_IDEA_CACHE["expires_at"] = 0.0
     idea_service._TRACKED_IDEA_CACHE["idea_ids"] = []
     idea_service._TRACKED_IDEA_CACHE["cache_key"] = ""
+    idea_service._invalidate_ideas_cache()
 
-    # Clear DB env vars so each test starts from default (local sqlite)
-    for key in ("DATABASE_URL", "IDEA_COMMIT_EVIDENCE_DIR"):
-        os.environ.pop(key, None)
+    automation_usage_service.invalidate_cache()
+
+
+@pytest.fixture
+def seeded_db(tmp_path: Path) -> None:
+    """Provide a seeded database for tests that expect initial data."""
+    from app.services import unified_db
+    unified_db.ensure_schema()
+
+    try:
+        REPO_ROOT = Path(__file__).resolve().parents[2]
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+        from scripts import seed_db
+        seed_db.seed_ideas()
+    except Exception as e:
+        print(f"Warning: failed to seed test database: {e}")

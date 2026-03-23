@@ -165,7 +165,17 @@ def _claim_task(task_id: str, worker_id: str) -> tuple[bool, str | None]:
 def _task_route_is_paid(task: dict[str, Any]) -> bool:
     ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
     route_decision = ctx.get("route_decision") if isinstance(ctx.get("route_decision"), dict) else {}
-    return bool(route_decision.get("is_paid_provider"))
+    if route_decision.get("is_paid_provider") is not None:
+        return bool(route_decision.get("is_paid_provider"))
+
+    # Fallback: classify based on executor/model
+    executor = str(ctx.get("executor") or "").strip().lower()
+    model = str(task.get("model") or ctx.get("model_override") or "").strip().lower()
+    command = str(ctx.get("command") or "").strip().lower()
+
+    from app.services.agent_routing.provider_classification import classify_provider
+    _, _, is_paid = classify_provider(executor=executor, model=model, command=command, worker_id=None)
+    return is_paid
 
 
 def _task_route_provider(task: dict[str, Any]) -> str:

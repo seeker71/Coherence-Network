@@ -69,11 +69,12 @@ _NODE_ID = f"{socket.gethostname()}:{os.getpid()}"
 _NODE_NAME = socket.gethostname()
 _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
 _RESUME_MODE = [False]
+_SKIP_PERMISSIONS = [True]  # --dangerously-skip-permissions for claude; operators can disable
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 _OPENROUTER_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
 try:
     from app.services.config_service import get_hub_url as _get_hub
-    _OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER") or _get_hub().replace("/api", "").rstrip("/").replace("api.", "")
+    _OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER") or _get_hub().replace("://api.", "://").rstrip("/")
 except ImportError:
     _OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER", "https://coherencycoin.com")
 
@@ -89,7 +90,7 @@ def _detect_providers() -> dict[str, dict]:
     providers = {}
     cli_specs = {
         # claude --print: non-interactive, prints output
-        "claude": {"cmd": ["claude", "--print", "--dangerously-skip-permissions"], "append_prompt": True},
+        "claude": {"cmd": ["claude", "--print"], "append_prompt": True, "needs_skip_permissions": True},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
@@ -110,9 +111,15 @@ def _detect_providers() -> dict[str, dict]:
     }
     for name, spec in cli_specs.items():
         binary = spec.pop("check_binary", None) or spec["cmd"][0]
-        if not shutil.which(binary):
+        resolved = shutil.which(binary)
+        if not resolved:
             log.debug("Provider not found: %s (%s)", name, binary)
             continue
+        # Replace bare command with resolved path (Windows needs .CMD/.EXE path)
+        spec["cmd"][0] = resolved
+        # Add --dangerously-skip-permissions for providers that need it (e.g. claude)
+        if spec.pop("needs_skip_permissions", False) and _SKIP_PERMISSIONS[0]:
+            spec["cmd"].insert(1, "--dangerously-skip-permissions")
         # Optional health check
         checker = spec.pop("check", None)
         if checker and not checker():
@@ -128,7 +135,7 @@ def _detect_providers() -> dict[str, dict]:
             spec["cmd"].append(model)
             log.info("Provider detected: %s model=%s", name, model)
         else:
-            log.info("Provider detected: %s (%s)", name, shutil.which(binary))
+            log.info("Provider detected: %s (%s)", name, resolved)
         providers[name] = spec
 
     # API-based providers (no CLI binary needed)
@@ -154,7 +161,7 @@ def _check_ollama_local() -> bool:
             return False
         # At least one non-cloud model
         lines = result.stdout.strip().split("\n")[1:]  # skip header
-        return any(":cloud" not in line for line in lines if line.strip())
+        return any("cloud" not in line.split()[0] if line.strip() else False for line in lines)
     except Exception:
         return False
 
@@ -167,7 +174,7 @@ def _check_ollama_cloud() -> bool:
         )
         if result.returncode != 0:
             return False
-        return any(":cloud" in line for line in result.stdout.split("\n"))
+        return any("cloud" in line.split()[0] if line.strip() else False for line in result.stdout.split("\n"))
     except Exception:
         return False
 
@@ -182,7 +189,7 @@ def _select_ollama_model() -> str | None:
         local_models = []
         for line in lines:
             name = line.split()[0] if line.strip() else ""
-            if name and ":cloud" not in name:
+            if name and "cloud" not in name:
                 local_models.append(name)
         # Prefer larger/newer models
         preferred = ["llama3.3:70b", "qwen2.5:72b", "deepseek-r1:32b", "dolphin-mixtral:8x22b-v2.9-q6_K"]
@@ -202,7 +209,7 @@ def _select_ollama_cloud_model() -> str | None:
         )
         for line in result.stdout.split("\n"):
             parts = line.split()
-            if parts and ":cloud" in parts[0]:
+            if parts and "cloud" in parts[0]:
                 return parts[0]
         return None
     except Exception:
@@ -299,11 +306,14 @@ def _parse_openrouter_message_content(payload: dict[str, Any]) -> str:
 
 
 def _openrouter_chat_completion(prompt: str, timeout_s: float) -> str:
-    """Call OpenRouter free-tier chat completions and return text content."""
+    """Call OpenRouter chat completions and return text content."""
     headers = {
         "Content-Type": "application/json",
         "HTTP-Referer": _OPENROUTER_REFERER,
     }
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     body = {
         "model": _OPENROUTER_MODEL,
         "messages": [{"role": "user", "content": prompt}],
@@ -391,6 +401,28 @@ def select_provider(task_type: str) -> str:
     selected = available[h % len(available)]
     log.info("PROVIDER_SELECT task_type=%s selected=%s (fallback)", task_type, selected)
     return selected
+
+
+def _kill_process_tree(pid: int) -> None:
+    """Kill a process and all its children. Required on Windows where .CMD wrappers
+    spawn child processes that survive normal termination."""
+    if sys.platform == "win32":
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                capture_output=True, timeout=10,
+            )
+        except Exception:
+            pass
+    else:
+        import signal
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGTERM)
+        except Exception:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except Exception:
+                pass
 
 
 def classify_error(output: str) -> str:
@@ -491,17 +523,18 @@ _NEXT_PHASE: dict[str, str | None] = {
 def api(method: str, path: str, body: dict | None = None) -> dict | list | None:
     """Call the API via httpx."""
     url = f"{API_BASE}{path}"
+    headers = {"X-Api-Key": os.environ.get("AGENT_API_KEY", "dev-key")}
     try:
         if method == "GET":
-            resp = _HTTP_CLIENT.get(url)
+            resp = _HTTP_CLIENT.get(url, headers=headers)
         elif method == "POST":
-            resp = _HTTP_CLIENT.post(url, json=body)
+            resp = _HTTP_CLIENT.post(url, json=body, headers=headers)
         elif method == "PATCH":
-            resp = _HTTP_CLIENT.patch(url, json=body)
+            resp = _HTTP_CLIENT.patch(url, json=body, headers=headers)
         elif method == "PUT":
-            resp = _HTTP_CLIENT.put(url, json=body)
+            resp = _HTTP_CLIENT.put(url, json=body, headers=headers)
         elif method == "DELETE":
-            resp = _HTTP_CLIENT.delete(url)
+            resp = _HTTP_CLIENT.delete(url, headers=headers)
         else:
             log.error("Unsupported API method: %s", method)
             return None
@@ -926,8 +959,8 @@ def get_timeout_for(provider: str, task_type: str, complexity_estimate: dict[str
             stats = selector.stats([provider])
             slot = stats.get("slots", {}).get(provider, {})
             p90_duration = float(slot.get("p90_duration_s", 0) or 0)
-            if p90_duration > 0:
-                timeout = int(max(60, min(600, p90_duration * multiplier)))
+            if p90_duration > 5:  # Ignore suspiciously low p90 (likely from broken runs)
+                timeout = int(max(120, min(600, p90_duration * multiplier)))
                 log.info(
                     "TIMEOUT_DATA provider=%s task=%s complexity=%s timeout=%ds (%.1fx p90=%.0fs)",
                     provider,
@@ -964,7 +997,8 @@ def execute_with_provider(
     if provider == "cursor" and complexity_estimate:
         complexity = complexity_estimate.get("level", "medium")
         model = _select_cursor_model(task_type, complexity)
-        cmd = ["agent", "--model", model, "-p"]
+        agent_bin = shutil.which("agent") or "agent"
+        cmd = [agent_bin, "--model", model, "-p"]
         log.info("CURSOR_MODEL task=%s complexity=%s model=%s", task_type, complexity, model)
 
         # Record model selection for SlotSelector learning
@@ -984,34 +1018,48 @@ def execute_with_provider(
         cmd.append(prompt)
 
     start = time.time()
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, input=stdin_input,
-            timeout=timeout, cwd=str(_REPO_DIR),
-        )
-        duration = time.time() - start
-        output = result.stdout or result.stderr or "(no output)"
-        return result.returncode == 0, output, duration
 
-    except subprocess.TimeoutExpired as e:
-        duration = time.time() - start
-        # Capture whatever partial output exists — this is diagnostic value
-        partial_stdout = getattr(e, "stdout", None) or ""
-        partial_stderr = getattr(e, "stderr", None) or ""
-        diagnostic = f"TIMEOUT after {duration:.0f}s (limit={timeout}s)\n"
-        if partial_stdout:
-            diagnostic += f"--- partial stdout ({len(partial_stdout)} chars) ---\n{partial_stdout[-2000:]}\n"
-        if partial_stderr:
-            diagnostic += f"--- partial stderr ({len(partial_stderr)} chars) ---\n{partial_stderr[-2000:]}\n"
-        if not partial_stdout and not partial_stderr:
-            # Blind timeout — zero diagnostic value. This MUST bubble up.
-            diagnostic += (
-                "BLIND TIMEOUT: no output captured. Priority gap — cannot root-cause.\n"
-                f"Provider: {provider}\n"
-                f"Cmd: {' '.join(str(c)[:50] for c in cmd)}\n"
+    # On Windows, .CMD scripts spawn child processes that survive subprocess.run timeout.
+    # Use Popen with CREATE_NEW_PROCESS_GROUP so we can kill the entire tree.
+    creation_flags = 0
+    if sys.platform == "win32":
+        creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
+
+    try:
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE if stdin_input else None,
+            text=True, encoding="utf-8", errors="replace",
+            cwd=str(_REPO_DIR), creationflags=creation_flags,
+        )
+        try:
+            stdout, stderr = proc.communicate(
+                input=stdin_input, timeout=timeout,
             )
-            log.error("BLIND_TIMEOUT provider=%s cmd=%s — needs investigation", provider, cmd[0])
-        return False, diagnostic, duration
+            duration = time.time() - start
+            output = stdout or stderr or "(no output)"
+            return proc.returncode == 0, output, duration
+        except subprocess.TimeoutExpired:
+            # Kill entire process tree on timeout
+            _kill_process_tree(proc.pid)
+            stdout, stderr = proc.communicate(timeout=5)
+            duration = time.time() - start
+
+            partial_stdout = stdout or ""
+            partial_stderr = stderr or ""
+            diagnostic = f"TIMEOUT after {duration:.0f}s (limit={timeout}s)\n"
+            if partial_stdout:
+                diagnostic += f"--- partial stdout ({len(partial_stdout)} chars) ---\n{partial_stdout[-2000:]}\n"
+            if partial_stderr:
+                diagnostic += f"--- partial stderr ({len(partial_stderr)} chars) ---\n{partial_stderr[-2000:]}\n"
+            if not partial_stdout and not partial_stderr:
+                diagnostic += (
+                    "BLIND TIMEOUT: no output captured. Priority gap — cannot root-cause.\n"
+                    f"Provider: {provider}\n"
+                    f"Cmd: {' '.join(str(c)[:50] for c in cmd)}\n"
+                )
+                log.error("BLIND_TIMEOUT provider=%s cmd=%s — needs investigation", provider, cmd[0])
+            return False, diagnostic, duration
 
     except Exception as e:
         duration = time.time() - start
@@ -1134,7 +1182,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                 if not changed_paths:
                     changed_paths = _status_paths(post_status_lines)
                 patch_body = _git_diff_for_paths(changed_paths) if changed_paths else post_patch
-                if patch_body.strip():
+                if patch_body and patch_body.strip():
                     partial_patch_path = _LOG_DIR / f"partial_task_{task_id}.patch"
                     partial_patch_path.write_text(patch_body)
                     try:
@@ -1233,10 +1281,16 @@ def main():
         help="Enable timed-out task resume flow (save patch + enqueue resume task)",
     )
     parser.add_argument("--stats", action="store_true", help="Show provider stats and exit")
+    parser.add_argument(
+        "--no-skip-permissions",
+        action="store_true",
+        help="Do not pass --dangerously-skip-permissions to claude (requires manual approval)",
+    )
     args = parser.parse_args()
 
     _TASK_TIMEOUT[0] = args.timeout
     _RESUME_MODE[0] = bool(args.resume)
+    _SKIP_PERMISSIONS[0] = not args.no_skip_permissions
 
     # Detect providers
     global PROVIDERS
