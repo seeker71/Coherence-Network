@@ -199,7 +199,6 @@ async def fork_idea_endpoint(
     idea_id: str,
     forker_id: str = Query(..., min_length=1),
     adaptation_notes: str | None = Query(default=None),
-    _key: str = Depends(require_api_key),
 ) -> dict:
     """Fork an existing idea, creating a new idea with lineage link."""
     try:
@@ -219,8 +218,8 @@ class StakeRequest(BaseModel):
 
 
 @router.post("/ideas/{idea_id}/stake")
-async def stake_on_idea(idea_id: str, body: StakeRequest, _key: str = Depends(require_api_key)) -> dict:
-    """Stake CC on an idea and trigger compute tasks (requires API key)."""
+async def stake_on_idea(idea_id: str, body: StakeRequest) -> dict:
+    """Stake CC on an idea and trigger compute tasks. Contributor name required, no API key needed."""
     try:
         return stake_compute_service.execute_stake(
             idea_id=idea_id,
@@ -271,7 +270,7 @@ async def get_idea(idea_id: str) -> IdeaWithScore:
 
 
 @router.post("/ideas", response_model=IdeaWithScore, status_code=201)
-async def create_idea(data: IdeaCreate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
+async def create_idea(data: IdeaCreate) -> IdeaWithScore:
     created = idea_service.create_idea(
         idea_id=data.id,
         name=data.name,
@@ -326,7 +325,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
 
 
 @router.post("/ideas/{idea_id}/questions", response_model=IdeaWithScore)
-async def add_idea_question(idea_id: str, data: IdeaQuestionCreate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
+async def add_idea_question(idea_id: str, data: IdeaQuestionCreate) -> IdeaWithScore:
     updated, added = idea_service.add_question(
         idea_id=idea_id,
         question=data.question,
@@ -341,7 +340,7 @@ async def add_idea_question(idea_id: str, data: IdeaQuestionCreate, _key: str = 
 
 
 @router.post("/ideas/{idea_id}/questions/answer", response_model=IdeaWithScore)
-async def answer_idea_question(idea_id: str, data: IdeaQuestionAnswerUpdate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
+async def answer_idea_question(idea_id: str, data: IdeaQuestionAnswerUpdate) -> IdeaWithScore:
     updated, question_found = idea_service.answer_question(
         idea_id=idea_id,
         question=data.question,

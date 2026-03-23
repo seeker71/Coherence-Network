@@ -23,6 +23,7 @@ from app.routers import (
     assets,
     coherence,
     contributions,
+    contributor_identity,
     contributors,
     distributions,
     federation,
@@ -163,6 +164,7 @@ app = FastAPI(
         {"name": "friction", "description": "Pipeline friction signals"},
         {"name": "automation-usage", "description": "Provider readiness and usage tracking"},
         {"name": "value-lineage", "description": "Value attribution tracing"},
+        {"name": "identity", "description": "Contributor identity linking and verification"},
     ],
 )
 logger = logging.getLogger("coherence.api.slow")
@@ -453,6 +455,7 @@ app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
+app.include_router(contributor_identity.router, tags=["identity"])
 app.include_router(provider_stats.router)
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.

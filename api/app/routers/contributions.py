@@ -236,6 +236,38 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
 from app.services import contribution_ledger_service
 
 
+class OpenContributionRequest(BaseModel):
+    """Open contribution recording — anyone can record what they did."""
+    contributor_id: str
+    type: str
+    amount_cc: float = 1.0
+    idea_id: str | None = None
+    metadata: dict = {}
+
+
+@router.post(
+    "/contributions/record",
+    status_code=201,
+    summary="Record any contribution (open, no API key needed)",
+)
+async def record_open_contribution(body: OpenContributionRequest) -> dict:
+    """Record any contribution. No API key needed.
+
+    Anyone can record what they did — wrote a blog post, shared on social media,
+    ran a workshop, mentored someone. The system records it. No gatekeeping.
+    """
+    try:
+        return contribution_ledger_service.record_contribution(
+            contributor_id=body.contributor_id,
+            contribution_type=body.type,
+            amount_cc=body.amount_cc,
+            idea_id=body.idea_id,
+            metadata=body.metadata,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
 @router.get(
     "/contributions/ledger/{contributor_id}",
     summary="Get contributor CC balance and history",

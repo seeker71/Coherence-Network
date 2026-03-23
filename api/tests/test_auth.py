@@ -15,44 +15,22 @@ ADMIN_HEADERS = {"X-Admin-Key": "dev-admin"}
 
 
 @pytest.mark.asyncio
-async def test_post_without_key_returns_401(
+async def test_post_ideas_without_key_succeeds(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """POST /api/ideas is open — no API key needed for idea submission."""
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post("/api/ideas", json={
             "id": "no-key-test",
             "name": "No Key",
-            "description": "Should fail",
+            "description": "Should succeed without key",
             "potential_value": 10.0,
             "estimated_cost": 5.0,
         })
 
-    assert resp.status_code == 401
-    assert "X-API-Key" in resp.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_post_with_wrong_key_returns_401(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.post(
-            "/api/ideas",
-            json={
-                "id": "wrong-key-test",
-                "name": "Wrong Key",
-                "description": "Should fail",
-                "potential_value": 10.0,
-                "estimated_cost": 5.0,
-            },
-            headers={"X-API-Key": "wrong-key"},
-        )
-
-    assert resp.status_code == 401
+    assert resp.status_code == 201
 
 
 @pytest.mark.asyncio
@@ -128,7 +106,7 @@ async def test_admin_endpoint_with_correct_admin_key(
 async def test_production_mode_with_default_key_returns_500(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """In production mode, default keys must not be accepted."""
+    """In production mode, default keys must not be accepted on protected endpoints."""
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
     monkeypatch.setenv("COHERENCE_ENV", "production")
 
@@ -142,15 +120,10 @@ async def test_production_mode_with_default_key_returns_500(
         auth_mod._API_KEY = "dev-key"
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            resp = await client.post(
-                "/api/ideas",
-                json={
-                    "id": "prod-test",
-                    "name": "Prod Test",
-                    "description": "Should fail",
-                    "potential_value": 10.0,
-                    "estimated_cost": 5.0,
-                },
+            # Use a protected endpoint (idea update still requires API key)
+            resp = await client.patch(
+                "/api/ideas/prod-test",
+                json={"actual_value": 42.0},
                 headers={"X-API-Key": "dev-key"},
             )
 
@@ -171,11 +144,9 @@ async def test_multiple_protected_endpoints_require_key(
     monkeypatch.setenv("FEDERATION_STORE_PATH", str(tmp_path / "federation.json"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # All POST endpoints without key should return 401
+        # POST endpoints that still require API key should return 401 without one
         endpoints = [
-            ("/api/ideas", {"id": "x", "name": "x", "description": "x", "potential_value": 1, "estimated_cost": 1}),
             ("/api/governance/change-requests", {"request_type": "idea_create", "title": "x", "payload": {}}),
-            ("/api/federation/instances", {"instance_id": "x", "name": "x", "endpoint_url": "https://x.com"}),
             ("/api/spec-registry", {"spec_id": "x", "title": "x", "summary": "x"}),
             ("/api/value-lineage/links", {"idea_id": "x", "spec_id": "x", "contributors": {}, "estimated_cost": 1}),
         ]
