@@ -2,15 +2,27 @@
 
 [![Test](https://github.com/seeker71/Coherence-Network/actions/workflows/test.yml/badge.svg)](https://github.com/seeker71/Coherence-Network/actions/workflows/test.yml)
 
-Coherence Network is an execution-focused platform for open-source ecosystem intelligence.
+Coherence Network is an open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust.
 
-## Current Scope
+## Ecosystem
 
-The repository is currently focused on:
+Every part of the network is connected. Jump in wherever makes sense.
 
-- building and operating the OSS graph + coherence API,
-- maintaining spec-driven delivery (spec → test → implement → CI → review),
-- improving autonomous pipeline reliability, monitoring, and recovery.
+| Surface | What it is | Link |
+|---------|-----------|------|
+| **Web** | Browse ideas, specs, contributors, and value chains visually | [coherencycoin.com](https://coherencycoin.com) |
+| **API** | 100+ endpoints with full OpenAPI docs — the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
+| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
+| **MCP Server** | 20 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **OpenClaw Skill** | Auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
+| **Join the Network** | Run a node and contribute compute | [JOIN-NETWORK.md](docs/JOIN-NETWORK.md) |
+
+## Current Focus
+
+- Building and operating the OSS graph + coherence API
+- Spec-driven delivery (spec → test → implement → CI → review)
+- Autonomous pipeline reliability, monitoring, and recovery
+- Federated identity (37 providers) and contributor attribution
 
 ## Tech Stack
 
