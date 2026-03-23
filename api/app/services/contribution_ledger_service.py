@@ -55,7 +55,7 @@ def _session() -> Session:
 # Public API
 # ---------------------------------------------------------------------------
 
-VALID_CONTRIBUTION_TYPES = {"compute", "attention", "direction", "stake", "infrastructure", "code"}
+VALID_CONTRIBUTION_TYPES = {"compute", "attention", "direction", "stake", "infrastructure", "code", "deposit"}
 
 
 def record_contribution(
