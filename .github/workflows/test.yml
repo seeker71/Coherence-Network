@@ -1,10 +1,7 @@
 name: Test
 
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
+  workflow_dispatch:  # manual only — disabled, thread-gates covers the same suite
 
 jobs:
   test:
