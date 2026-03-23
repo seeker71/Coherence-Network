@@ -645,6 +645,51 @@ def _complete_task_with_status(
     return False
 
 
+def _auto_record_contribution(task: dict[str, Any], provider: str, duration: float) -> None:
+    """Auto-record a contribution when a task completes successfully.
+
+    Maps task_type to contribution_type:
+      spec → docs, test → code, impl → code, review → review, heal → code
+    CC amount is based on task complexity and duration.
+    """
+    try:
+        task_type = task.get("task_type", "unknown")
+        idea_id = _idea_id_from_task(task)
+
+        type_map = {"spec": "docs", "test": "code", "impl": "code", "review": "review", "heal": "code"}
+        contribution_type = type_map.get(task_type, "other")
+
+        # CC amount: base by type + duration bonus
+        base_cc = {"spec": 3, "test": 5, "impl": 8, "review": 2, "heal": 3}.get(task_type, 2)
+        duration_bonus = min(duration / 60, 5)  # up to 5 CC for long tasks
+        amount_cc = round(base_cc + duration_bonus, 1)
+
+        body = {
+            "contributor_id": _NODE_ID,
+            "type": contribution_type,
+            "amount_cc": amount_cc,
+            "metadata": {
+                "description": f"Task {task.get('id', '?')[:20]} ({task_type}) completed by {provider} on {_NODE_NAME}",
+                "task_id": task.get("id", ""),
+                "task_type": task_type,
+                "provider": provider,
+                "duration_s": round(duration, 1),
+                "auto_recorded": True,
+            },
+        }
+        if idea_id:
+            body["idea_id"] = idea_id
+
+        result = api("POST", "/api/contributions/record", body)
+        if result:
+            log.info("AUTO_CONTRIBUTION recorded %.1f CC (%s) for task %s idea=%s",
+                     amount_cc, contribution_type, task.get("id", "?")[:16], idea_id or "none")
+        else:
+            log.warning("AUTO_CONTRIBUTION failed for task %s", task.get("id", "?")[:16])
+    except Exception as e:
+        log.warning("AUTO_CONTRIBUTION error: %s", e)
+
+
 def _idea_id_from_task(task: dict[str, Any]) -> str:
     context = task.get("context") if isinstance(task.get("context"), dict) else {}
     for key in ("idea_id", "origin_idea_id", "primary_idea_id", "tracking_idea_id"):
@@ -1225,6 +1270,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         )
     if success and reported:
         _run_phase_auto_advance_hook(task)
+        _auto_record_contribution(task, provider, duration)
 
     # Post completion activity
     _post_activity(
