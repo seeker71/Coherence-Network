@@ -152,9 +152,25 @@ def _is_transient_internal_idea_id(idea_id: str) -> bool:
     return any(pattern.match(normalized_id) for pattern in TRANSIENT_INTERNAL_ID_PATTERNS)
 
 
+_SCHEMA_ARTIFACT_IDS = frozenset({
+    "string", "string?", "string|null", "number", "boolean", "integer",
+    "object", "array", "null", "type", "required", "properties",
+    "properties:", "tracked:", "added_properties:",
+})
+
+
 def _canonical_discovered_idea_id(idea_id: str) -> str | None:
-    normalized_id = str(idea_id or "").strip().lower()
+    normalized_id = str(idea_id or "").strip().lower().rstrip("])}\"'")
     if not normalized_id or normalized_id == "unmapped":
+        return None
+    # Reject schema/YAML artifacts that aren't real idea IDs
+    if normalized_id in _SCHEMA_ARTIFACT_IDS:
+        return None
+    # Reject IDs that are clearly not slugs (contain special chars)
+    if any(c in normalized_id for c in "?[]{}|;:\"'<>"):
+        return None
+    # Reject very short IDs (likely parsing noise)
+    if len(normalized_id) < 4:
         return None
     for pattern, target_id in DISCOVERED_INTERNAL_ID_ALIASES:
         if pattern.match(normalized_id):

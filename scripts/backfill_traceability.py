@@ -73,7 +73,7 @@ def _extract_idea_refs_from_spec(content: str) -> list[str]:
     ]:
         for m in re.finditer(pattern, content, re.IGNORECASE):
             ref = m.group(1).strip().rstrip(",;)\"'")
-            noise = {"None", "null", "N/A", "string", "string|null", "properties:", "tracked:", "added_properties:", "type", "object", "array"}
+            noise = {"None", "null", "N/A", "string", "string?", "string|null", "properties:", "tracked:", "added_properties:", "type", "object", "array", "number", "boolean", "integer", "required"}
             if len(ref) > 3 and ref not in noise and not ref.startswith("http"):
                 refs.add(ref)
     return list(refs)
