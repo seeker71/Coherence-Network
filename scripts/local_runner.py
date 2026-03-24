@@ -110,16 +110,26 @@ def _get_mac_address() -> str:
 
 
 def _generate_node_id() -> str:
-    """Stable 16-char node ID from hostname + OS.
+    """Stable, persistent node ID — same algorithm as api/scripts/local_runner.py.
 
-    Previous implementation used MAC address which changes between wifi/ethernet
-    interfaces, creating duplicate node registrations. Hostname + OS is stable
-    across network changes on the same machine.
+    Persisted to ~/.coherence-network/node_id so it never changes.
+    Generated from hostname:os_type on first run.
     """
+    id_file = Path(os.path.expanduser("~")) / ".coherence-network" / "node_id"
+    if id_file.exists():
+        stored = id_file.read_text().strip()
+        if stored:
+            return stored
+
     hostname = socket.gethostname()
     os_type = _detect_os_type()
     raw = f"{hostname}:{os_type}"
-    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+    node_id = hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+    id_file.parent.mkdir(parents=True, exist_ok=True)
+    id_file.write_text(node_id)
+    log.info("NODE_ID generated and persisted: %s → %s", raw, node_id)
+    return node_id
 
 
 def _detect_os_type() -> str:
