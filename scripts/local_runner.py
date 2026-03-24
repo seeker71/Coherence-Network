@@ -148,11 +148,18 @@ def heartbeat(node_id: str, providers: list[str]) -> bool:
     return False
 
 
+# Track last-pushed sample counts per (decision_point, slot_id) to send deltas only.
+_last_pushed_samples: dict[str, int] = {}
+
+
 def push_measurements(node_id: str) -> int:
     """Push local slot measurements to the federation hub.
 
     Reads from api/logs/slot_measurements/ and aggregates into
     MeasurementSummary payloads per (decision_point, slot_id).
+
+    Only sends deltas (new samples since last push) to avoid inflating
+    cumulative counts on the stats endpoint.
     """
     measurements_dir = _API_DIR / "logs" / "slot_measurements"
     if not measurements_dir.exists():
@@ -177,21 +184,31 @@ def push_measurements(node_id: str) -> int:
             by_slot.setdefault(slot_id, []).append(entry)
 
         for slot_id, entries in by_slot.items():
-            successes = sum(1 for e in entries if e.get("value_score", 0) >= 0.5)
-            failures = len(entries) - successes
-            durations = [e["duration_s"] for e in entries if "duration_s" in e]
+            total_count = len(entries)
+            tracker_key = f"{decision_point}|{slot_id}"
+            last_count = _last_pushed_samples.get(tracker_key, 0)
+            delta = total_count - last_count
+
+            if delta <= 0:
+                continue
+
+            # Only compute stats over the new (delta) entries
+            new_entries = entries[last_count:]
+            successes = sum(1 for e in new_entries if e.get("value_score", 0) >= 0.5)
+            failures = len(new_entries) - successes
+            durations = [e["duration_s"] for e in new_entries if "duration_s" in e]
             mean_duration = sum(durations) / len(durations) if durations else None
-            value_scores = [e.get("value_score", 0) for e in entries]
+            value_scores = [e.get("value_score", 0) for e in new_entries]
             mean_value = sum(value_scores) / len(value_scores) if value_scores else 0.0
 
             error_classes: dict[str, int] = {}
-            for e in entries:
+            for e in new_entries:
                 ec = e.get("error_class")
                 if ec:
                     error_classes[ec] = error_classes.get(ec, 0) + 1
 
             timestamps = []
-            for e in entries:
+            for e in new_entries:
                 ts = e.get("timestamp")
                 if ts:
                     try:
@@ -208,23 +225,34 @@ def push_measurements(node_id: str) -> int:
                 "slot_id": slot_id,
                 "period_start": period_start.isoformat(),
                 "period_end": period_end.isoformat(),
-                "sample_count": len(entries),
+                "sample_count": delta,
                 "successes": successes,
                 "failures": failures,
                 "mean_duration_s": mean_duration,
                 "mean_value_score": round(mean_value, 4),
                 "error_classes_json": error_classes,
+                "_total_count": total_count,  # internal: for updating tracker on success
+                "_tracker_key": tracker_key,  # internal: for updating tracker on success
             })
 
     if not summaries:
         return 0
 
+    # Strip internal keys before sending
+    payload_summaries = [
+        {k: v for k, v in s.items() if not k.startswith("_")}
+        for s in summaries
+    ]
+
     result = _api("POST", f"/api/federation/nodes/{node_id}/measurements", {
-        "summaries": summaries,
+        "summaries": payload_summaries,
     })
     if result:
-        stored = result.get("stored", len(summaries))
-        log.info("MEASUREMENTS PUSHED node_id=%s count=%d stored=%d", node_id, len(summaries), stored)
+        # Update tracker only after successful push
+        for s in summaries:
+            _last_pushed_samples[s["_tracker_key"]] = s["_total_count"]
+        stored = result.get("stored", len(payload_summaries))
+        log.info("MEASUREMENTS PUSHED node_id=%s count=%d stored=%d", node_id, len(payload_summaries), stored)
         return stored
     log.warning("MEASUREMENT PUSH FAILED node_id=%s", node_id)
     return 0
