@@ -375,6 +375,21 @@ def _process_node_messages(node_id: str) -> int:
             processed += 1
         elif msg_type == "text":
             log.info("MSG_TEXT from=%s: %s", from_node, text[:200])
+            # Send ack back
+            _api("POST", f"/api/federation/nodes/{node_id}/messages", {
+                "from_node": node_id,
+                "to_node": from_node,
+                "type": "ack",
+                "text": f"Received: {text[:80]}",
+                "payload": {"in_reply_to": msg_id, "ack": True},
+            })
+            processed += 1
+        elif msg_type == "ack":
+            # Don't ack an ack
+            log.info("MSG_ACK from=%s: %s", from_node, text[:100])
+            processed += 1
+        elif msg_type == "command_response":
+            log.info("MSG_REPLY from=%s: %s", from_node, text[:200])
             processed += 1
         else:
             log.info("MSG_UNKNOWN type=%s from=%s", msg_type, from_node)
