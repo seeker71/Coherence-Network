@@ -15,9 +15,11 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import logging
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -65,8 +67,9 @@ try:
 except ImportError:
     API_BASE = os.environ.get("AGENT_API_BASE", os.environ.get("COHERENCE_HUB_URL", "https://api.coherencycoin.com"))
 WORKER_ID = f"{socket.gethostname()}:{os.getpid()}"
-_NODE_ID = f"{socket.gethostname()}:{os.getpid()}"
 _NODE_NAME = socket.gethostname()
+# Persistent node ID — hash of hostname so it survives restarts
+_NODE_ID = hashlib.sha256(socket.gethostname().encode()).hexdigest()[:16]
 _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
 _RESUME_MODE = [False]
 _SKIP_PERMISSIONS = [True]  # --dangerously-skip-permissions for claude; operators can disable
@@ -1605,6 +1608,49 @@ def run_all_pending(dry_run: bool = False) -> dict:
     return results
 
 
+def _register_node() -> None:
+    """Register this worker node with the federation API on startup."""
+    providers = list(_detect_providers().keys())
+    tools = []
+    for tool in ["python", "python3", "node", "npm", "docker", "git", "pip", "cargo", "go"]:
+        if shutil.which(tool):
+            tools.append(tool)
+
+    payload = {
+        "node_id": _NODE_ID,
+        "hostname": _NODE_NAME,
+        "os_type": "windows" if sys.platform == "win32" else "macos" if sys.platform == "darwin" else "linux",
+        "providers": providers,
+        "capabilities": {
+            "executors": providers,
+            "tools": tools,
+            "hardware": {
+                "platform": platform.platform(),
+                "processor": platform.processor(),
+                "python": platform.python_version(),
+            },
+        },
+    }
+    result = api("POST", "/api/federation/nodes", payload)
+    if result:
+        log.info("NODE_REGISTERED id=%s hostname=%s providers=%s", _NODE_ID, _NODE_NAME, providers)
+    else:
+        log.warning("NODE_REGISTER_FAILED id=%s — will retry on next heartbeat", _NODE_ID)
+
+
+def _send_heartbeat() -> None:
+    """Update node liveness so other nodes and the UI can see we're active."""
+    result = api("PATCH", f"/api/federation/nodes/{_NODE_ID}", {
+        "last_seen_at": datetime.now(timezone.utc).isoformat(),
+        "status": "online",
+    })
+    if result:
+        log.debug("HEARTBEAT sent for node %s", _NODE_ID)
+    else:
+        # PATCH might not exist — try PUT or re-register
+        _register_node()
+
+
 def _poll_messages() -> None:
     """Check for inter-node messages and handle commands."""
     result = api("GET", f"/api/federation/nodes/{_NODE_ID}/messages?unread_only=true&limit=20")
@@ -1777,6 +1823,8 @@ def main():
 
     if args.loop:
         log.info("Polling every %ds (Ctrl+C to stop)", args.interval)
+        _register_node()
+        _heartbeat_counter = [0]
         try:
             while True:
                 # Self-update: check for new commits before each cycle
@@ -1784,6 +1832,10 @@ def main():
                     _check_for_updates_and_restart()
                 _poll_messages()
                 run_all_pending(dry_run=args.dry_run)
+                # Heartbeat every 4 cycles (~60s at 15s interval)
+                _heartbeat_counter[0] += 1
+                if _heartbeat_counter[0] % 4 == 0:
+                    _send_heartbeat()
                 time.sleep(args.interval)
         except KeyboardInterrupt:
             log.info("Stopped")
