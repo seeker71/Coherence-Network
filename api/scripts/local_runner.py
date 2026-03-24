@@ -83,7 +83,31 @@ except ImportError:
 WORKER_ID = f"{socket.gethostname()}:{os.getpid()}"
 _NODE_NAME = socket.gethostname()
 # Persistent node ID — hash of hostname so it survives restarts
-_NODE_ID = hashlib.sha256(socket.gethostname().encode()).hexdigest()[:16]
+def _stable_node_id() -> str:
+    """Generate a stable, persistent node ID.
+
+    Uses hostname + OS type (same as outer runner). Persisted to
+    ~/.coherence-network/node_id so it never changes even if hostname changes.
+    """
+    id_file = Path.home() / ".coherence-network" / "node_id"
+    if id_file.exists():
+        stored = id_file.read_text().strip()
+        if stored:
+            return stored
+
+    # Generate from hostname + OS (matches scripts/local_runner.py)
+    hostname = socket.gethostname()
+    os_type = "windows" if sys.platform == "win32" else "macos" if sys.platform == "darwin" else "linux"
+    raw = f"{hostname}:{os_type}"
+    node_id = hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+    # Persist
+    id_file.parent.mkdir(parents=True, exist_ok=True)
+    id_file.write_text(node_id)
+    return node_id
+
+
+_NODE_ID = _stable_node_id()
 _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
 _RESUME_MODE = [False]
 _SKIP_PERMISSIONS = [True]  # --dangerously-skip-permissions for claude; operators can disable
