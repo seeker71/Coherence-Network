@@ -155,7 +155,56 @@ Payouts are weighted by coherence. Higher-quality work earns proportionally more
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `COHERENCE_API_URL` | `https://api.coherencycoin.com` | API base URL. Override to point at a local node. |
-| `COHERENCE_API_KEY` | *(none)* | Required for write operations (governance, spec creation, federation). Reads work without a key. |
+| `COHERENCE_API_KEY` | *(none)* | API key for write operations. See below for what requires a key and how to get one. |
+
+### What requires an API key?
+
+**No key needed (read-only):** Browse ideas, search specs, view lineage, check contributor ledgers, see federation nodes, read coherence scores, view governance proposals.
+
+**Key needed (write operations):** Update idea status, record contributions, link identities, create specs, vote on governance proposals, manage federation nodes, submit news sources.
+
+Most users start without a key — exploring ideas, reading specs, checking who's contributing. You only need a key when you're ready to actively contribute.
+
+### How to get an API key
+
+Run the interactive setup:
+
+```bash
+npx coherence-cli
+# then: cc setup
+```
+
+This walks you through:
+1. Choose a contributor name
+2. Link an identity (GitHub, Discord, Ethereum, etc.)
+3. The system generates an API key tied to your identity
+
+Your key is stored locally in `~/.coherence-network/config.json` and used automatically by both the CLI and MCP server.
+
+**Manual setup** (if you already have a key):
+
+```bash
+export COHERENCE_API_KEY="your-key-here"
+npx coherence-mcp-server
+```
+
+Or in your MCP config:
+
+```json
+{
+  "mcpServers": {
+    "coherence-network": {
+      "command": "npx",
+      "args": ["coherence-mcp-server"],
+      "env": {
+        "COHERENCE_API_KEY": "your-key-here"
+      }
+    }
+  }
+}
+```
+
+Source code: [github.com/seeker71/Coherence-Network/mcp-server](https://github.com/seeker71/Coherence-Network/tree/main/mcp-server)
 
 ---
 
