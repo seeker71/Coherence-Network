@@ -123,6 +123,37 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 
 ---
 
+## CLI equivalent
+
+The Coherence CLI (`npm i -g coherence-cli`) provides the same capabilities as the MCP tools, plus additional commands. Here is the mapping:
+
+| MCP Tool | CLI Command |
+|----------|------------|
+| `coherence_list_ideas` | `cc ideas` |
+| `coherence_get_idea` | `cc idea <id>` |
+| `coherence_idea_progress` | `cc idea <id>` (includes progress) |
+| `coherence_select_idea` | `cc ideas` (with temperature flag) |
+| `coherence_showcase` | `cc ideas` (showcase view) |
+| `coherence_resonance` | `cc resonance` |
+| `coherence_list_specs` | `cc specs` |
+| `coherence_get_spec` | `cc spec <id>` |
+| `coherence_list_lineage` | `cc lineage` |
+| `coherence_lineage_valuation` | `cc lineage <id> valuation` |
+| `coherence_list_providers` | `cc providers` |
+| `coherence_link_identity` | `cc identity link <provider> <handle>` |
+| `coherence_lookup_identity` | `cc identity lookup <provider> <handle>` |
+| `coherence_get_identities` | `cc identity` |
+| `coherence_record_contribution` | `cc contribute` |
+| `coherence_contributor_ledger` | `cc contributor <id> contributions` |
+| `coherence_status` | `cc status` |
+| `coherence_friction_report` | `cc friction` |
+| `coherence_list_change_requests` | `cc governance` |
+| `coherence_list_federation_nodes` | `cc nodes` |
+
+The CLI also includes additional commands not available via MCP: `cc news`, `cc treasury`, `cc assets`, `cc services`, `cc trace`, `cc diag`, and more. Run `cc help` for the full list of 54 commands.
+
+---
+
 ## Example conversations
 
 Once connected, you can ask your agent things like:
