@@ -12,7 +12,7 @@ function truncate(str, len) {
 export async function listAssets(args) {
   const limit = parseInt(args[0]) || 20;
   const raw = await get("/api/assets", { limit });
-  const data = Array.isArray(raw) ? raw : raw?.assets;
+  const data = Array.isArray(raw) ? raw : (raw?.items || raw?.assets);
   if (!data || !Array.isArray(data)) {
     console.log("Could not fetch assets.");
     return;

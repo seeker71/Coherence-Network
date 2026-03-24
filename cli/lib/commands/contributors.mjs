@@ -12,7 +12,7 @@ function truncate(str, len) {
 export async function listContributors(args) {
   const limit = parseInt(args[0]) || 20;
   const raw = await get("/api/contributors", { limit });
-  const data = Array.isArray(raw) ? raw : raw?.contributors;
+  const data = Array.isArray(raw) ? raw : (raw?.items || raw?.contributors);
   if (!data || !Array.isArray(data)) {
     console.log("Could not fetch contributors.");
     return;
