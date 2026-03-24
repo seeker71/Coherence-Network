@@ -100,7 +100,7 @@ def _detect_providers() -> dict[str, dict]:
         # -y is required: without it, tool calls block on approval (issue #12362)
         "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
         # cursor agent -p: Cursor's headless agent mode
-        "cursor": {"cmd": ["agent", "-p"], "append_prompt": True, "check_binary": "agent"},
+        "cursor": {"cmd": ["agent", "-p", "--force"], "append_prompt": True, "check_binary": "agent"},
         # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
@@ -223,22 +223,20 @@ def _select_ollama_cloud_model() -> str | None:
 # Cursor model selection — data-driven via SlotSelector
 # ---------------------------------------------------------------------------
 
-# Tiers: map complexity → candidate models (cheapest to most capable)
+# Tiers: map complexity → Cursor model selection
+# Use Cursor's own tier system: 'auto' (default), 'premium' (best available)
+# Keep gpt models for codex, claude models for claude, and let Cursor
+# handle its own model routing internally via auto/premium.
 _CURSOR_MODEL_TIERS = {
     "simple": [
-        "gpt-5.4-mini-low",         # cheapest — trivial tasks
-        "gpt-5.4-nano-medium",      # fast nano
-        "claude-4.6-sonnet-medium", # sonnet for simple coding
+        "auto",                     # let Cursor pick — cheapest path
     ],
     "medium": [
-        "gpt-5.3-codex",            # default codex — good balance
-        "claude-4.6-sonnet-medium-thinking",  # sonnet with thinking
-        "gpt-5.4-medium",           # gpt-5.4 standard
+        "auto",                     # let Cursor pick — balanced
     ],
     "complex": [
-        "claude-4.6-opus-high-thinking",  # opus with thinking — best for hard tasks
-        "gpt-5.3-codex-high",       # codex high compute
-        "gpt-5.4-high",             # gpt-5.4 high
+        "premium",                  # Cursor's best model tier
+        "auto",                     # fallback if premium unavailable
     ],
 }
 
