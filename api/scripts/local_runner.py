@@ -866,6 +866,8 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                             if len(t_output) < 50:
                                 empty_phases.add(phase)
 
+        log.info("VALIDATION_GATE idea=%s completed_phases=%s empty_phases=%s",
+                 idea_id, sorted(completed_phases), sorted(empty_phases))
         missing = required_phases - completed_phases
         if missing:
             log.warning(
