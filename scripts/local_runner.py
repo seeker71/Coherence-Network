@@ -167,7 +167,7 @@ def register_node(node_id: str, providers: list[str]) -> bool:
             "git": NODE_GIT,
         },
     }
-    result = _api("POST", "/api/federation/nodes", body)
+    result = _api("POST", "/api/federation/nodes?refresh_capabilities=true", body)
     if result:
         log.info("NODE REGISTERED node_id=%s sha=%s origin=%s up_to_date=%s",
                  node_id, NODE_GIT.get("local_sha"), NODE_GIT.get("origin_sha"),
