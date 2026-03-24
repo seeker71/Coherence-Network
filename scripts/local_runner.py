@@ -152,13 +152,18 @@ def _api(method: str, path: str, body: dict | None = None) -> dict | list | None
         else:
             return None
         if resp.status_code >= 400:
-            log.error("API %s %s → %d: %s", method, path, resp.status_code, resp.text[:200])
+            if resp.status_code in (404, 409):
+                log.info("API %s %s → %d (expected)", method, path, resp.status_code)
+            elif resp.status_code >= 500 or resp.status_code == 429:
+                log.warning("API %s %s → %d (server/rate): %s", method, path, resp.status_code, resp.text[:100])
+            else:
+                log.error("API %s %s → %d: %s", method, path, resp.status_code, resp.text[:200])
             return None
         if not resp.text.strip():
             return None
         return resp.json()
     except Exception as e:
-        log.error("API %s %s error: %s", method, path, e)
+        log.warning("API %s %s network error: %s", method, path, e)
         return None
 
 
