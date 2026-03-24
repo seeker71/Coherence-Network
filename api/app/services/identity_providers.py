@@ -66,6 +66,11 @@ PROVIDER_REGISTRY: dict[str, list[ProviderInfo]] = {
         ProviderInfo("pgp", "PGP", "key fingerprint", "Identity"),
         ProviderInfo("fediverse", "Fediverse", "user@instance", "Identity"),
     ],
+    "Agent": [
+        ProviderInfo("agent", "AI Agent", "provider.model (e.g. anthropic.claude-opus-4-6)", "Agent"),
+        ProviderInfo("openrouter", "OpenRouter", "openrouter/model-name", "Agent"),
+        ProviderInfo("ollama", "Ollama (local)", "model:tag (e.g. llama3.3:70b)", "Agent"),
+    ],
     "Custom": [
         ProviderInfo("openclaw", "OpenClaw", "node ID or handle", "Custom"),
     ],
