@@ -3,15 +3,23 @@
 Limits requests per IP per minute. Uses a sliding window counter.
 Write endpoints (POST/PUT/PATCH/DELETE) get a tighter limit than reads.
 For production, replace with Redis-backed limiter.
+
+NOTE: Returns JSONResponse directly instead of raising HTTPException because
+Starlette's BaseHTTPMiddleware wraps pre-call_next exceptions in ExceptionGroups,
+turning 429s into 500s.  Returning a response avoids the ASGI double-send bug.
 """
+import json
+import logging
 import os
 import time
 from collections import defaultdict
 
-from fastapi import Request, HTTPException
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 _TESTING = os.environ.get("COHERENCE_ENV", "development") in ("test", "testing")
+_log = logging.getLogger("coherence.rate_limit")
 
 # Per-IP limits — generous defaults; excitement is not abuse
 WINDOW_SECONDS = 60
@@ -21,6 +29,17 @@ BURST_WINDOW_SECONDS = 1
 BURST_LIMIT = 10           # Allow 10 requests in 1 second before throttling
 
 _WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+_429_BODY = {"detail": "Too many requests. Please wait a moment."}
+
+
+def _rate_limited_response(client_ip: str, reason: str, retry_after: int = 5) -> JSONResponse:
+    _log.warning("RATE_LIMITED ip=%s reason=%s retry_after=%ds", client_ip, reason, retry_after)
+    return JSONResponse(
+        status_code=429,
+        content=_429_BODY,
+        headers={"Retry-After": str(retry_after)},
+    )
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -44,10 +63,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             t for t in self._burst_counters[client_ip] if t > burst_window
         ]
         if len(self._burst_counters[client_ip]) >= BURST_LIMIT:
-            raise HTTPException(
-                status_code=429,
-                detail="Too many requests. Please wait a moment.",
-            )
+            return _rate_limited_response(client_ip, "burst", retry_after=2)
         self._burst_counters[client_ip].append(now)
 
         is_write = request.method in _WRITE_METHODS
@@ -57,20 +73,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 t for t in self._write_counters[client_ip] if t > window
             ]
             if len(self._write_counters[client_ip]) >= MAX_WRITE_REQUESTS:
-                raise HTTPException(
-                    status_code=429,
-                    detail="Too many requests. Please wait a moment.",
-                )
+                return _rate_limited_response(client_ip, "write_rpm", retry_after=10)
             self._write_counters[client_ip].append(now)
         else:
             self._read_counters[client_ip] = [
                 t for t in self._read_counters[client_ip] if t > window
             ]
             if len(self._read_counters[client_ip]) >= MAX_READ_REQUESTS:
-                raise HTTPException(
-                    status_code=429,
-                    detail="Too many requests. Please wait a moment.",
-                )
+                return _rate_limited_response(client_ip, "read_rpm", retry_after=5)
             self._read_counters[client_ip].append(now)
 
         return await call_next(request)
