@@ -1,8 +1,8 @@
 name: Change Contract
 
 on:
-  push:
-    branches: [main]
+  # push: # DISABLED — too noisy, use workflow_dispatch
+    # branches: [main]
   workflow_dispatch:
     inputs:
       sha:
