@@ -1443,21 +1443,33 @@ def _seed_task_from_open_idea() -> bool:
     task_type = "spec"  # default
     idea_tasks = api("GET", f"/api/ideas/{idea_id}/tasks")
     if isinstance(idea_tasks, dict):
+        total_tasks = idea_tasks.get("total", 0)
         groups = idea_tasks.get("groups", [])
-        completed_phases = set()
+        completed_phases: set[str] = set()
+        phase_counts: dict[str, int] = {}
         for g in groups if isinstance(groups, list) else []:
             if not isinstance(g, dict):
                 continue
             phase = g.get("task_type", "")
             status_counts = g.get("status_counts", {})
-            if int(status_counts.get("completed", 0)) > 0:
+            completed = int(status_counts.get("completed", 0))
+            total_for_phase = int(status_counts.get("pending", 0)) + int(status_counts.get("running", 0)) + completed + int(status_counts.get("failed", 0))
+            phase_counts[phase] = total_for_phase
+            if completed > 0:
                 completed_phases.add(phase)
 
+        # Cap: if any single phase has 3+ tasks, this idea is over-served — skip it
+        max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
+        if max_phase_tasks >= 3:
+            log.info("SEED: idea '%s' over-served (%d tasks in one phase) — marking validated",
+                     idea_name[:30], max_phase_tasks)
+            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "validated"})
+            return _seed_task_from_open_idea()  # retry with next idea
+
         if "review" in completed_phases:
-            # All phases done — this idea should be validated, skip it
             log.info("SEED: idea '%s' has completed review — marking validated", idea_name[:30])
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "validated"})
-            return False
+            return _seed_task_from_open_idea()  # retry with next idea
         elif "impl" in completed_phases:
             task_type = "review"
         elif "test" in completed_phases:
