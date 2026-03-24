@@ -79,23 +79,32 @@ def _extract_idea_refs_from_spec(content: str) -> list[str]:
     return list(refs)
 
 
-def _match_spec_to_idea_by_name(spec_title: str, ideas: list[dict]) -> str | None:
-    """Try to match a spec title to an idea name by keyword overlap."""
-    if not spec_title:
-        return None
-    title_words = set(re.findall(r"[a-z]+", spec_title.lower()))
-    title_words -= {"spec", "the", "and", "for", "with", "from", "into", "this", "that", "are", "not"}
+def _match_spec_to_idea_by_content(spec_content: str, ideas: list[dict], min_score: float = 0.3) -> tuple[str | None, float]:
+    """Match a spec to an idea by keyword overlap on full content.
+
+    Returns (idea_id, score) or (None, 0.0).
+    """
+    stopwords = {"this", "that", "with", "from", "into", "which", "should", "would",
+                 "could", "each", "every", "when", "then", "than", "more", "also",
+                 "need", "ideas", "spec", "idea", "endpoint", "returns", "status",
+                 "response", "test", "file", "data", "will", "must", "have", "been",
+                 "does", "make", "like", "only", "used", "using", "based"}
+    spec_words = set(re.findall(r"[a-z]{4,}", spec_content[:3000].lower())) - stopwords
 
     best_match = None
-    best_score = 0
+    best_score = 0.0
     for idea in ideas:
-        idea_words = set(re.findall(r"[a-z]+", (idea.get("name", "") + " " + idea.get("description", "")).lower()))
-        overlap = len(title_words & idea_words)
-        score = overlap / max(len(title_words), 1)
-        if score > best_score and score >= 0.4 and overlap >= 3:
+        idea_text = (idea.get("name", "") + " " + idea.get("description", "")).lower()
+        idea_words = set(re.findall(r"[a-z]{4,}", idea_text)) - stopwords
+        overlap = len(spec_words & idea_words)
+        score = overlap / max(len(idea_words), 1) if overlap >= 5 else 0.0
+        if score > best_score:
             best_score = score
             best_match = idea.get("id")
-    return best_match
+
+    if best_score >= min_score and best_match:
+        return best_match, best_score
+    return None, 0.0
 
 
 def scan_specs(ideas: list[dict]) -> list[dict]:
@@ -114,12 +123,16 @@ def scan_specs(ideas: list[dict]) -> list[dict]:
 
         # Try explicit idea references first
         idea_refs = _extract_idea_refs_from_spec(content)
+        method = "explicit" if idea_refs else "none"
+        match_score = 1.0 if idea_refs else 0.0
 
-        # Fall back to name matching
+        # Fall back to content-based matching
         if not idea_refs:
-            matched = _match_spec_to_idea_by_name(title, ideas)
+            matched, score = _match_spec_to_idea_by_content(content, ideas)
             if matched:
                 idea_refs = [matched]
+                method = "content_match"
+                match_score = score
 
         results.append({
             "spec_file": spec_file.name,
@@ -127,7 +140,8 @@ def scan_specs(ideas: list[dict]) -> list[dict]:
             "spec_num": spec_num,
             "title": title[:60],
             "idea_refs": idea_refs,
-            "method": "explicit" if _extract_idea_refs_from_spec(content) else ("name_match" if idea_refs else "none"),
+            "method": method,
+            "match_score": match_score,
         })
     return results
 

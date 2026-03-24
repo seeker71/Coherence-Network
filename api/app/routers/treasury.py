@@ -1,3 +1,4 @@
+# Implements: spec-122 (crypto treasury bridge)
 """Treasury endpoints — crypto deposit recording and CC conversion."""
 
 from __future__ import annotations

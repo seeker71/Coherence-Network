@@ -74,6 +74,7 @@ async def sync_history(limit: int = Query(200, ge=1, le=1000)) -> list[dict]:
 # ---------------------------------------------------------------------------
 
 @router.post("/federation/nodes", response_model=FederationNodeRegisterResponse)
+@traces_to(spec="132", idea="federation-node-identity", description="Register a federation node")
 async def register_node(body: FederationNodeRegisterRequest):
     """Register or update a federation node."""
     from fastapi.responses import JSONResponse

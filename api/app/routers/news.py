@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.middleware.auth import require_api_key
+from app.middleware.traceability import traces_to
 from app.services import news_ingestion_service
 from app.services import news_resonance_service
 from app.services import idea_service
@@ -45,6 +46,7 @@ class NewsSourceUpdate(BaseModel):
 
 
 @router.get("/news/sources")
+@traces_to(spec="151", idea="configurable-news-sources", description="List all configured news sources")
 async def list_news_sources(active_only: bool = Query(False)):
     """List all configured news sources."""
     sources = news_ingestion_service.list_sources(active_only=active_only)
@@ -101,6 +103,7 @@ def _ideas_as_dicts(ideas) -> list[dict]:
 
 
 @router.get("/news/feed")
+@traces_to(spec="151", idea="configurable-news-sources", description="Fetch news from configured RSS sources")
 async def get_news_feed(
     limit: int = Query(50, ge=1, le=200),
     source: Optional[str] = Query(None, description="Filter by source name"),
