@@ -34,6 +34,14 @@ type FallbackIdea = {
   free_energy_score: number;
 };
 
+type NewsItem = {
+  title: string;
+  description: string;
+  url: string;
+  published_at: string | null;
+  source: string;
+};
+
 async function loadResonance(): Promise<ResonanceItem[]> {
   try {
     const API = getApiBase();
@@ -87,6 +95,20 @@ function activityIcon(type: string): string {
   return "\u2022";
 }
 
+async function loadNewsFeed(): Promise<NewsItem[]> {
+  try {
+    const API = getApiBase();
+    const res = await fetch(`${API}/api/news/feed?limit=10`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.items) ? data.items : [];
+  } catch {
+    return [];
+  }
+}
+
 async function loadFallbackIdeas(): Promise<FallbackIdea[]> {
   try {
     const API = getApiBase();
@@ -103,7 +125,10 @@ async function loadFallbackIdeas(): Promise<FallbackIdea[]> {
 }
 
 export default async function ResonancePage() {
-  const items = await loadResonance();
+  const [items, newsItems] = await Promise.all([
+    loadResonance(),
+    loadNewsFeed(),
+  ]);
 
   // Load activity for top items
   const itemsWithActivity = await Promise.all(
@@ -182,6 +207,47 @@ export default async function ResonancePage() {
             </article>
           ))}
         </div>
+      )}
+
+      {/* News Feed */}
+      {newsItems.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold text-foreground">News Feed</h2>
+          <p className="text-sm text-muted-foreground">
+            Latest headlines from across the network&rsquo;s sources.
+          </p>
+          <div className="space-y-3">
+            {newsItems.map((news, idx) => (
+              <article
+                key={`${news.url}-${idx}`}
+                className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 animate-fade-in-up"
+                style={{ animationDelay: `${idx * 0.04}s` }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={news.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-base font-medium text-foreground hover:text-primary transition-colors duration-300"
+                    >
+                      {news.title}
+                    </a>
+                    <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+                      <span className="font-medium">{news.source}</span>
+                      {news.published_at && (
+                        <>
+                          <span>&middot;</span>
+                          <span>{timeAgo(news.published_at)}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Where to go next */}
