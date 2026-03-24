@@ -782,10 +782,46 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
     if next_phase and not _has_any_tasks_for_phase(idea_tasks_payload, next_phase):
         idea_payload = api("GET", f"/api/ideas/{idea_id}")
         idea_name = str((idea_payload or {}).get("name") or idea_id) if isinstance(idea_payload, dict) else idea_id
-        direction = (
-            f"Idea phase auto-advancement for '{idea_name}' ({idea_id}). "
-            f"All '{task_type}' tasks are complete; execute the next '{next_phase}' phase."
-        )
+        idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
+
+        # Phase-specific direction with quality requirements
+        if next_phase == "review":
+            direction = (
+                f"Review and verify '{idea_name}' ({idea_id}).\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"REVIEW CHECKLIST — all must pass:\n"
+                f"1. Does the feature exist in the codebase? Check for actual files/code.\n"
+                f"2. Does the API endpoint work? Test with curl against https://api.coherencycoin.com\n"
+                f"3. If web-facing: does the page render correctly at https://coherencycoin.com?\n"
+                f"4. Are there tests? Do they pass?\n"
+                f"5. Is the code deployed to production (VPS)?\n\n"
+                f"If ANY check fails, output REVIEW_FAILED with specific failures.\n"
+                f"If ALL checks pass, output REVIEW_PASSED with evidence.\n"
+                f"Do NOT pass a review for code that doesn't exist or isn't deployed."
+            )
+        elif next_phase == "test":
+            direction = (
+                f"Write tests for '{idea_name}' ({idea_id}).\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"Write actual test code (pytest) that verifies the feature works.\n"
+                f"Tests must be runnable. Include both unit tests and an integration test\n"
+                f"that hits the API endpoint if applicable.\n"
+                f"Follow the project's CLAUDE.md conventions."
+            )
+        elif next_phase == "impl":
+            direction = (
+                f"Implement '{idea_name}' ({idea_id}).\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"Write the actual code that makes this feature work.\n"
+                f"Follow the project's CLAUDE.md conventions. Work in the repository.\n"
+                f"The implementation must be complete enough to deploy and use."
+            )
+        else:
+            direction = (
+                f"Execute the '{next_phase}' phase for '{idea_name}' ({idea_id}).\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"Follow the project's CLAUDE.md conventions. Work in the repository."
+            )
         created = api(
             "POST",
             "/api/agent/tasks",
@@ -810,9 +846,11 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
     # Determine manifestation status with validation gate
     if next_phase is None:
         # All phases should be complete — verify before marking validated
+        # ALSO verify that completed tasks had meaningful output (not empty)
         required_phases = {"spec", "test", "impl", "review"}
         idea_tasks_check = api("GET", f"/api/ideas/{idea_id}/tasks")
         completed_phases = set()
+        empty_phases = set()
         if isinstance(idea_tasks_check, dict):
             for g in (idea_tasks_check.get("groups") or []):
                 if not isinstance(g, dict):
@@ -821,6 +859,12 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 sc = g.get("status_counts", {})
                 if int(sc.get("completed", 0)) > 0:
                     completed_phases.add(phase)
+                    # Check if the completed tasks actually had output
+                    for t in (g.get("tasks") or []):
+                        if t.get("status") == "completed":
+                            t_output = (t.get("output") or "").strip()
+                            if len(t_output) < 50:
+                                empty_phases.add(phase)
 
         missing = required_phases - completed_phases
         if missing:
@@ -829,9 +873,16 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 idea_id, sorted(missing), sorted(completed_phases),
             )
             manifestation_status = "partial"
+        elif empty_phases:
+            log.warning(
+                "VALIDATION_GATE idea=%s blocked: phases with empty output %s — "
+                "these need re-execution with meaningful results",
+                idea_id, sorted(empty_phases),
+            )
+            manifestation_status = "partial"
         else:
             log.info(
-                "VALIDATION_GATE idea=%s passed: all phases complete %s",
+                "VALIDATION_GATE idea=%s passed: all phases complete with output %s",
                 idea_id, sorted(completed_phases),
             )
             manifestation_status = "validated"
@@ -1319,6 +1370,17 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     # Record outcome for Thompson Sampling (with error classification)
     record_provider_outcome(task_type, provider, success, duration, output)
 
+    # ── Quality gate: empty or trivially short output is NOT success ──
+    _MIN_OUTPUT_CHARS = 50  # minimum chars for a meaningful response
+    output_stripped = (output or "").strip()
+    if success and len(output_stripped) < _MIN_OUTPUT_CHARS:
+        log.warning(
+            "QUALITY_GATE task=%s provider=%s — output too short (%d chars < %d min). "
+            "Marking as failed, not completed.",
+            task_id, provider, len(output_stripped), _MIN_OUTPUT_CHARS,
+        )
+        success = False
+
     completion_status = "completed" if success else "failed"
     completion_error_category = "execution_error"
     completion_context: dict[str, Any] = {
@@ -1375,8 +1437,12 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             error_category=completion_error_category,
         )
     if success and reported:
-        _run_phase_auto_advance_hook(task)
-        _auto_record_contribution(task, provider, duration)
+        # Only advance phases if the task produced meaningful output
+        if len(output_stripped) >= _MIN_OUTPUT_CHARS:
+            _run_phase_auto_advance_hook(task)
+            _auto_record_contribution(task, provider, duration)
+        else:
+            log.warning("SKIP_ADVANCE task=%s — output too short for phase advancement", task_id)
 
     # Post completion activity
     _post_activity(
@@ -1562,7 +1628,14 @@ def _seed_task_from_open_idea() -> bool:
 
     direction = (
         f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}\n\n"
-        f"Follow the project's CLAUDE.md conventions. Work in the repository."
+        f"REQUIREMENTS:\n"
+        f"- Your output MUST be substantial (not empty or trivially short)\n"
+        f"- For spec: write a detailed specification with goal, files, acceptance criteria\n"
+        f"- For impl: write actual code that implements the feature\n"
+        f"- For test: write runnable pytest tests\n"
+        f"- For review: verify the feature exists, works, and is deployed\n"
+        f"- Follow the project's CLAUDE.md conventions. Work in the repository.\n"
+        f"- If you cannot complete the task, explain WHY in detail (don't return empty)."
     )
 
     result = api("POST", "/api/agent/tasks", {
