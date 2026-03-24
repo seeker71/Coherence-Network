@@ -58,6 +58,39 @@ API_KEY = os.environ.get("COHERENCE_API_KEY", "dev-key")
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
 
+def _get_git_info() -> dict[str, str]:
+    """Get git version info for this node."""
+    repo = str(Path(__file__).resolve().parent.parent)
+    info = {"local_sha": "unknown", "origin_sha": "unknown", "branch": "unknown", "dirty": "unknown"}
+    try:
+        # Local HEAD
+        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5, cwd=repo)
+        if r.returncode == 0:
+            info["local_sha"] = r.stdout.strip()
+        # Fetch origin to get latest
+        subprocess.run(["git", "fetch", "origin", "main", "--quiet"], capture_output=True, timeout=15, cwd=repo)
+        # origin/main SHA
+        r = subprocess.run(["git", "rev-parse", "--short", "origin/main"], capture_output=True, text=True, timeout=5, cwd=repo)
+        if r.returncode == 0:
+            info["origin_sha"] = r.stdout.strip()
+        # Branch
+        r = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, timeout=5, cwd=repo)
+        if r.returncode == 0:
+            info["branch"] = r.stdout.strip()
+        # Dirty?
+        r = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, timeout=5, cwd=repo)
+        info["dirty"] = "yes" if r.stdout.strip() else "no"
+        # Behind?
+        info["up_to_date"] = "yes" if info["local_sha"] == info["origin_sha"] else "no"
+    except Exception:
+        pass
+    return info
+
+
+NODE_GIT = _get_git_info()
+NODE_SHA = NODE_GIT.get("local_sha", "unknown")
+
+
 # ── Node identity ─────────────────────────────────────────────────────
 
 def _get_mac_address() -> str:
@@ -134,11 +167,14 @@ def register_node(node_id: str, providers: list[str]) -> bool:
                 "processor": platform.processor(),
                 "python": platform.python_version(),
             },
+            "git": NODE_GIT,
         },
     }
     result = _api("POST", "/api/federation/nodes", body)
     if result:
-        log.info("NODE REGISTERED node_id=%s status=%s", node_id, result.get("status"))
+        log.info("NODE REGISTERED node_id=%s sha=%s origin=%s up_to_date=%s",
+                 node_id, NODE_GIT.get("local_sha"), NODE_GIT.get("origin_sha"),
+                 NODE_GIT.get("up_to_date"))
         return True
     log.warning("NODE REGISTRATION FAILED node_id=%s (hub may be unreachable)", node_id)
     return False
@@ -819,6 +855,9 @@ def main():
     log.info("  node_id:   %s", node_id)
     log.info("  hostname:  %s", socket.gethostname())
     log.info("  os:        %s", _detect_os_type())
+    log.info("  sha:       %s (origin/main: %s) %s",
+             NODE_GIT.get("local_sha"), NODE_GIT.get("origin_sha"),
+             "✓ up-to-date" if NODE_GIT.get("up_to_date") == "yes" else "⚠ BEHIND origin/main")
     log.info("  providers: %s", provider_names)
     log.info("  api:       %s", API_BASE)
     log.info("  timeout:   %ds", args.timeout)

@@ -119,7 +119,16 @@ export async function listNodes() {
 
     const ago = ageMin < 1 ? "now" : ageMin < 60 ? `${ageMin}m ago` : `${Math.floor(ageMin / 60)}h ago`;
 
-    console.log(`  ${dot} ${icon}  \x1b[1m${node.hostname || "?"}\x1b[0m  ${ago}`);
+    // Git version from capabilities
+    const git = node.capabilities?.git || {};
+    const sha = git.local_sha || "?";
+    const originSha = git.origin_sha || "?";
+    const upToDate = git.up_to_date === "yes";
+    const versionTag = upToDate
+      ? `\x1b[32m${sha}\x1b[0m`
+      : `\x1b[31m${sha} (origin: ${originSha})\x1b[0m`;
+
+    console.log(`  ${dot} ${icon}  \x1b[1m${node.hostname || "?"}\x1b[0m  ${ago}  sha:${versionTag}`);
     console.log(`     ${providers.join(", ")}`);
     console.log(`     id: ${node.node_id}`);
     console.log();
