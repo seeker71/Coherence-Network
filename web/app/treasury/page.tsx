@@ -44,7 +44,7 @@ export default function TreasuryPage() {
             your contribution.
           </li>
         </ol>
-        <p className="text-xs text-muted-foreground/60">
+        <p className="text-xs text-muted-foreground/80">
           Deposits are recorded on an append-only ledger. The actual crypto
           transfer happens on-chain; this system records the transaction hash for
           verification.
@@ -53,7 +53,7 @@ export default function TreasuryPage() {
 
       <TreasuryDepositForm />
 
-      <footer className="text-center text-sm text-muted-foreground/60 pt-4">
+      <footer className="text-center text-sm text-muted-foreground/80 pt-4">
         <Link
           href="/invest"
           className="text-primary hover:text-foreground transition-colors underline underline-offset-4"

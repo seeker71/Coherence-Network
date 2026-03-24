@@ -129,15 +129,15 @@ export default async function InvestPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                   <div>
-                    <p className="text-xs text-muted-foreground/60">Value gap</p>
+                    <p className="text-xs text-muted-foreground/80">Value gap</p>
                     <p className="font-medium">{formatUsd(idea.value_gap)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground/60">Est. cost</p>
+                    <p className="text-xs text-muted-foreground/80">Est. cost</p>
                     <p className="text-muted-foreground">{formatUsd(idea.estimated_cost)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground/60">ROI</p>
+                    <p className="text-xs text-muted-foreground/80">ROI</p>
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden max-w-[80px]">
                         <div
@@ -150,7 +150,7 @@ export default async function InvestPage() {
                   </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground/60">
+                <p className="text-xs text-muted-foreground/80">
                   {stakeDescription(idea.estimated_cost)}
                 </p>
               </div>
@@ -161,7 +161,7 @@ export default async function InvestPage() {
 
       {/* Where to go next */}
       <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
-        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">Where to go next</p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
           <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">All ideas</Link>
           <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>

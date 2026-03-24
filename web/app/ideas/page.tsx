@@ -393,7 +393,7 @@ export default async function IdeasPage() {
 
       {/* Where to go next */}
       <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
-        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Where to go next</p>
+        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">Where to go next</p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
           <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">Resonance</Link>
           <Link href="/invest" className="text-amber-600 dark:text-amber-400 hover:underline">Invest</Link>

@@ -240,7 +240,7 @@ export default async function TodayPrioritiesPage() {
                       {formatConfidence(idea.confidence)}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground/80">
+                  <p className="text-xs text-muted-foreground">
                     {humanizeIdeaPriority(idea.free_energy_score)} &middot; {proofLabel(idea.manifestation_status)} &middot; {formatUsd(idea.value_gap)} available
                   </p>
                   <div className="flex flex-wrap gap-4 text-sm">
@@ -281,7 +281,7 @@ export default async function TodayPrioritiesPage() {
                     {humanizeStatus(task.status)} {workTypeLabel(task.task_type)}
                   </Link>
                   <p className="text-sm text-muted-foreground leading-relaxed">{shortText(task.direction, 140)}</p>
-                  <p className="text-xs text-muted-foreground/80">
+                  <p className="text-xs text-muted-foreground">
                     Idea: {task.ideaName}
                     {task.ideaId ? (
                       <>
