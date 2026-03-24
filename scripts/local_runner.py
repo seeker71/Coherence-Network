@@ -81,6 +81,18 @@ def _get_git_info() -> dict[str, str]:
         info["up_to_date"] = "yes" if info["local_sha"] == info["origin_sha"] else "no"
     except Exception as e:
         info["error"] = str(e)
+    # Debug: write git info to a temp file so we can diagnose launchd issues
+    try:
+        Path("/tmp/coherence-git-debug.txt").write_text(
+            f"repo={info.get('repo')}\n"
+            f"local_sha={info.get('local_sha')}\n"
+            f"origin_sha={info.get('origin_sha')}\n"
+            f"error={info.get('error','none')}\n"
+            f"git_binary={git}\n"
+            f"git_exists={os.path.exists(git) if isinstance(git, str) else 'N/A'}\n"
+        )
+    except Exception:
+        pass
     return info
 
 
