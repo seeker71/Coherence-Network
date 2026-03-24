@@ -784,7 +784,37 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 next_phase,
             )
 
-    manifestation_status = "validated" if next_phase is None else "partial"
+    # Determine manifestation status with validation gate
+    if next_phase is None:
+        # All phases should be complete — verify before marking validated
+        required_phases = {"spec", "test", "impl", "review"}
+        idea_tasks_check = api("GET", f"/api/ideas/{idea_id}/tasks")
+        completed_phases = set()
+        if isinstance(idea_tasks_check, dict):
+            for g in (idea_tasks_check.get("groups") or []):
+                if not isinstance(g, dict):
+                    continue
+                phase = g.get("task_type", "")
+                sc = g.get("status_counts", {})
+                if int(sc.get("completed", 0)) > 0:
+                    completed_phases.add(phase)
+
+        missing = required_phases - completed_phases
+        if missing:
+            log.warning(
+                "VALIDATION_GATE idea=%s blocked: missing phases %s (completed: %s)",
+                idea_id, sorted(missing), sorted(completed_phases),
+            )
+            manifestation_status = "partial"
+        else:
+            log.info(
+                "VALIDATION_GATE idea=%s passed: all phases complete %s",
+                idea_id, sorted(completed_phases),
+            )
+            manifestation_status = "validated"
+    else:
+        manifestation_status = "partial"
+
     updated = api(
         "PATCH",
         f"/api/ideas/{idea_id}",
