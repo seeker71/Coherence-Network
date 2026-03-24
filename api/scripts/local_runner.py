@@ -586,11 +586,20 @@ def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> 
             return api(method, path, body, _retries + 1)
 
         if resp.status_code >= 400:
-            # Downgrade expected errors from ERROR to INFO
+            # Log level by severity:
+            # - 409: INFO (expected race condition)
+            # - 404: WARNING (resource missing, not actionable by client)
+            # - 500-599: WARNING (server issue, client can't fix, retry handled above)
+            # - Other 4xx: ERROR (client bug — needs fixing)
             if resp.status_code == 409:
                 log.info("API %s %s → 409 (already claimed, expected race)", method, path)
+            elif resp.status_code == 404:
+                log.warning("API %s %s → 404 (resource not found)", method, path)
+            elif resp.status_code >= 500:
+                log.warning("API %s %s → %d (server error, not retryable after %d attempts): %s",
+                            method, path, resp.status_code, _retries, resp.text[:100])
             else:
-                log.error("API %s %s → status %d: %s", method, path, resp.status_code, resp.text[:200])
+                log.error("API %s %s → %d: %s", method, path, resp.status_code, resp.text[:200])
             return None
 
         if not resp.text.strip():
@@ -598,10 +607,10 @@ def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> 
 
         return resp.json()
     except httpx.HTTPError as e:
-        log.error("API %s %s network error: %s", method, path, e)
+        log.warning("API %s %s network error (transient): %s", method, path, e)
         return None
     except json.JSONDecodeError:
-        log.error("API %s %s → bad JSON: %s", method, path, resp.text[:200])
+        log.warning("API %s %s → bad JSON response: %s", method, path, resp.text[:200])
         return None
     except Exception as e:
         log.error("API %s %s unexpected error: %s", method, path, e)
