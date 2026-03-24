@@ -52,10 +52,32 @@ export async function sendCommand(args) {
   });
 
   if (result?.id) {
-    console.log(`\x1b[32m✓\x1b[0m Command sent (msg ${result.id.slice(0, 12)})`);
-    console.log(
-      "  Node will execute on next poll cycle (~2 min) and reply.",
-    );
+    const msgId = result.id;
+    console.log(`\x1b[32m✓\x1b[0m Command sent (msg ${msgId.slice(0, 12)})`);
+    console.log("  Waiting for reply (up to 3 min)...");
+
+    // Poll for reply
+    const deadline = Date.now() + 180_000;
+    const pollInterval = 10_000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, pollInterval));
+      process.stdout.write(".");
+
+      const inbox = await get(
+        `/api/federation/nodes/${myNodeId}/messages?unread_only=false&limit=20`,
+      );
+      const reply = inbox?.messages?.find(
+        (m) =>
+          (m.type === "command_response" || m.type === "ack") &&
+          m.payload?.in_reply_to === msgId,
+      );
+      if (reply) {
+        console.log(`\n\x1b[32m✓\x1b[0m Reply from ${node.hostname}:`);
+        console.log(`  ${reply.text}`);
+        return;
+      }
+    }
+    console.log("\n\x1b[33m⏱\x1b[0m No reply within 3 min. Check later: cc inbox");
   } else {
     console.log("\x1b[31m✗\x1b[0m Failed to send command");
   }
@@ -142,15 +164,45 @@ export async function sendMessage(args) {
       console.log("\x1b[31m✗\x1b[0m Failed to broadcast");
     }
   } else {
+    // Resolve target name to node_id
+    const targetNode = Array.isArray(nodes)
+      ? nodes.find(
+          (n) =>
+            n.node_id?.startsWith(targetOrBroadcast) ||
+            n.hostname?.toLowerCase().includes(targetOrBroadcast.toLowerCase()),
+        )
+      : null;
+    const toNodeId = targetNode?.node_id || targetOrBroadcast;
+    const toName = targetNode?.hostname || targetOrBroadcast.slice(0, 12);
+
     const result = await post(`/api/federation/nodes/${myNodeId}/messages`, {
       from_node: myNodeId,
-      to_node: targetOrBroadcast,
+      to_node: toNodeId,
       type: "text",
       text,
       payload: {},
     });
-    if (result) {
-      console.log(`\x1b[32m✓\x1b[0m Message sent to ${targetOrBroadcast.slice(0, 12)}: ${text.slice(0, 60)}`);
+    if (result?.id) {
+      const msgId = result.id;
+      console.log(`\x1b[32m✓\x1b[0m Message sent to ${toName}: ${text.slice(0, 60)}`);
+      console.log("  Waiting for ack (up to 3 min)...");
+
+      const deadline = Date.now() + 180_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 10_000));
+        process.stdout.write(".");
+        const inbox = await get(
+          `/api/federation/nodes/${myNodeId}/messages?unread_only=false&limit=20`,
+        );
+        const ack = inbox?.messages?.find(
+          (m) => m.type === "ack" && m.payload?.in_reply_to === msgId,
+        );
+        if (ack) {
+          console.log(`\n\x1b[32m✓\x1b[0m Acknowledged by ${toName}`);
+          return;
+        }
+      }
+      console.log("\n\x1b[33m⏱\x1b[0m No ack within 3 min. Node may be offline. Check: cc inbox");
     } else {
       console.log("\x1b[31m✗\x1b[0m Failed to send message");
     }
