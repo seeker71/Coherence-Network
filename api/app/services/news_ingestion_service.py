@@ -1,28 +1,130 @@
-"""News ingestion service: fetches RSS feeds and caches results."""
+"""News ingestion service: fetches RSS feeds and caches results.
+
+Sources are loaded from config/news-sources.json (configurable via API).
+Falls back to a minimal default set if the config file is missing.
+"""
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from pathlib import Path
 from typing import Optional
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
-FEED_SOURCES: list[dict[str, str]] = [
-    {"name": "Hacker News", "url": "https://news.ycombinator.com/rss"},
-    {"name": "TechCrunch", "url": "https://techcrunch.com/feed/"},
-    {"name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index"},
-    {"name": "The Guardian Tech", "url": "https://www.theguardian.com/technology/rss"},
-    {"name": "Reddit r/programming", "url": "https://www.reddit.com/r/programming/.rss"},
+# ---------------------------------------------------------------------------
+# Source configuration — loaded from config file, editable via API
+# ---------------------------------------------------------------------------
+
+_CONFIG_PATH = Path(os.environ.get(
+    "NEWS_SOURCES_CONFIG",
+    str(Path(__file__).resolve().parent.parent.parent.parent / "config" / "news-sources.json"),
+))
+
+_DEFAULT_SOURCES: list[dict] = [
+    {"id": "hackernews", "name": "Hacker News", "type": "rss", "url": "https://news.ycombinator.com/rss", "categories": ["technology", "programming"], "is_active": True, "update_interval_minutes": 60, "priority": 1},
+    {"id": "techcrunch", "name": "TechCrunch", "type": "rss", "url": "https://techcrunch.com/feed/", "categories": ["technology", "startups"], "is_active": True, "update_interval_minutes": 60, "priority": 2},
+    {"id": "arstechnica", "name": "Ars Technica", "type": "rss", "url": "https://feeds.arstechnica.com/arstechnica/index", "categories": ["technology", "science"], "is_active": True, "update_interval_minutes": 60, "priority": 3},
 ]
 
+
+def _load_sources() -> list[dict]:
+    """Load news sources from config file, falling back to defaults."""
+    if _CONFIG_PATH.exists():
+        try:
+            sources = json.loads(_CONFIG_PATH.read_text())
+            active = [s for s in sources if s.get("is_active", True)]
+            logger.info("Loaded %d news sources (%d active) from %s", len(sources), len(active), _CONFIG_PATH)
+            return sources
+        except Exception as e:
+            logger.warning("Failed to load %s: %s — using defaults", _CONFIG_PATH, e)
+    return list(_DEFAULT_SOURCES)
+
+
+def _save_sources(sources: list[dict]) -> None:
+    """Persist news sources to config file."""
+    _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _CONFIG_PATH.write_text(json.dumps(sources, indent=2))
+    logger.info("Saved %d news sources to %s", len(sources), _CONFIG_PATH)
+
+
+# Module-level source list — reloaded on mutation
+_sources: list[dict] = _load_sources()
+
 CACHE_TTL_SECONDS = 900  # 15 minutes
+
+
+# ---------------------------------------------------------------------------
+# Source CRUD — used by the API router
+# ---------------------------------------------------------------------------
+
+def list_sources(active_only: bool = False) -> list[dict]:
+    """Return all configured news sources."""
+    if active_only:
+        return [s for s in _sources if s.get("is_active", True)]
+    return list(_sources)
+
+
+def get_source(source_id: str) -> dict | None:
+    """Get a single source by ID."""
+    for s in _sources:
+        if s.get("id") == source_id:
+            return dict(s)
+    return None
+
+
+def add_source(source: dict) -> dict:
+    """Add a new news source. Returns the created source."""
+    global _sources
+    # Validate required fields
+    if not source.get("id") or not source.get("url"):
+        raise ValueError("Source must have 'id' and 'url'")
+    if any(s["id"] == source["id"] for s in _sources):
+        raise ValueError(f"Source '{source['id']}' already exists")
+    # Set defaults
+    source.setdefault("name", source["id"])
+    source.setdefault("type", "rss")
+    source.setdefault("categories", [])
+    source.setdefault("ontology_levels", [])
+    source.setdefault("is_active", True)
+    source.setdefault("update_interval_minutes", 60)
+    source.setdefault("priority", 50)
+    _sources.append(source)
+    _save_sources(_sources)
+    return source
+
+
+def update_source(source_id: str, updates: dict) -> dict | None:
+    """Update a news source. Returns the updated source."""
+    global _sources
+    for i, s in enumerate(_sources):
+        if s.get("id") == source_id:
+            s.update(updates)
+            s["id"] = source_id  # prevent ID change
+            _sources[i] = s
+            _save_sources(_sources)
+            return dict(s)
+    return None
+
+
+def remove_source(source_id: str) -> bool:
+    """Remove a news source. Returns True if found and removed."""
+    global _sources
+    before = len(_sources)
+    _sources = [s for s in _sources if s.get("id") != source_id]
+    if len(_sources) < before:
+        _save_sources(_sources)
+        return True
+    return False
 
 
 @dataclass
@@ -107,24 +209,25 @@ def _parse_rss(xml_text: str, source_name: str) -> list[NewsItem]:
 
 
 async def fetch_feeds(force_refresh: bool = False) -> list[NewsItem]:
-    """Fetch all RSS feeds, using cache if fresh."""
+    """Fetch all active RSS feeds, using cache if fresh."""
     global _cached_items, _cache_timestamp
 
     now = time.time()
     if not force_refresh and _cached_items and (now - _cache_timestamp) < CACHE_TTL_SECONDS:
         return list(_cached_items)
 
+    active_sources = [s for s in _sources if s.get("is_active", True) and s.get("type") == "rss"]
     all_items: list[NewsItem] = []
     async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-        for source in FEED_SOURCES:
+        for source in active_sources:
             try:
                 resp = await client.get(source["url"], headers={"User-Agent": "CoherenceNetwork/1.0"})
                 resp.raise_for_status()
-                parsed = _parse_rss(resp.text, source["name"])
+                parsed = _parse_rss(resp.text, source.get("name", source["id"]))
                 all_items.extend(parsed)
-                logger.info("Fetched %d items from %s", len(parsed), source["name"])
+                logger.info("Fetched %d items from %s", len(parsed), source.get("name", source["id"]))
             except Exception as exc:
-                logger.warning("Failed to fetch %s: %s", source["name"], exc)
+                logger.warning("Failed to fetch %s: %s", source.get("name", source["id"]), exc)
 
     # Sort by published_at descending (items without dates go last)
     all_items.sort(
