@@ -11,6 +11,8 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from app.middleware.traceability import traces_to
+
 from app.models.federation import (
     FederatedInstance,
     FederatedPayload,
