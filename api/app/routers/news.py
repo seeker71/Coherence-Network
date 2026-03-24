@@ -1,17 +1,90 @@
-"""News feed and resonance matching API routes."""
+"""News feed, resonance matching, and source configuration API routes."""
 
 from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 
+from app.middleware.auth import require_api_key
 from app.services import news_ingestion_service
 from app.services import news_resonance_service
 from app.services import idea_service
 from app.services import contribution_ledger_service
 
 router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# Source configuration CRUD
+# ---------------------------------------------------------------------------
+
+
+class NewsSourceCreate(BaseModel):
+    id: str
+    name: str | None = None
+    type: str = "rss"
+    url: str
+    categories: list[str] = []
+    ontology_levels: list[str] = []
+    is_active: bool = True
+    update_interval_minutes: int = 60
+    priority: int = 50
+
+
+class NewsSourceUpdate(BaseModel):
+    name: str | None = None
+    url: str | None = None
+    type: str | None = None
+    categories: list[str] | None = None
+    ontology_levels: list[str] | None = None
+    is_active: bool | None = None
+    update_interval_minutes: int | None = None
+    priority: int | None = None
+
+
+@router.get("/news/sources")
+async def list_news_sources(active_only: bool = Query(False)):
+    """List all configured news sources."""
+    sources = news_ingestion_service.list_sources(active_only=active_only)
+    return {"count": len(sources), "sources": sources}
+
+
+@router.get("/news/sources/{source_id}")
+async def get_news_source(source_id: str):
+    """Get a single news source by ID."""
+    source = news_ingestion_service.get_source(source_id)
+    if not source:
+        raise HTTPException(404, f"Source not found: {source_id}")
+    return source
+
+
+@router.post("/news/sources", status_code=201)
+async def add_news_source(body: NewsSourceCreate, _key: str = Depends(require_api_key)):
+    """Add a new news source."""
+    try:
+        return news_ingestion_service.add_source(body.model_dump())
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.patch("/news/sources/{source_id}")
+async def update_news_source(source_id: str, body: NewsSourceUpdate, _key: str = Depends(require_api_key)):
+    """Update a news source."""
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    result = news_ingestion_service.update_source(source_id, updates)
+    if not result:
+        raise HTTPException(404, f"Source not found: {source_id}")
+    return result
+
+
+@router.delete("/news/sources/{source_id}")
+async def remove_news_source(source_id: str, _key: str = Depends(require_api_key)):
+    """Remove a news source."""
+    if not news_ingestion_service.remove_source(source_id):
+        raise HTTPException(404, f"Source not found: {source_id}")
+    return {"status": "removed", "id": source_id}
 
 
 def _ideas_as_dicts(ideas) -> list[dict]:
