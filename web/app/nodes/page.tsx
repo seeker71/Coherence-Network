@@ -182,7 +182,7 @@ export default async function NodesPage() {
         className="py-8 text-center space-y-2 border-t border-border/20"
         aria-label="Where to go next"
       >
-        <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">
+        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">
           Where to go next
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">

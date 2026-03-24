@@ -254,7 +254,7 @@ export default function IdentityPage() {
               >
                 <span>
                   {cat}
-                  <span className="ml-2 text-xs text-muted-foreground/60">
+                  <span className="ml-2 text-xs text-muted-foreground/80">
                     {linkedCount > 0 && `${linkedCount} linked`}
                   </span>
                 </span>
@@ -335,7 +335,7 @@ export default function IdentityPage() {
       </section>
 
       {/* Legend */}
-      <footer className="flex items-center gap-6 text-xs text-muted-foreground/60 pt-4">
+      <footer className="flex items-center gap-6 text-xs text-muted-foreground/80 pt-4">
         <span className="flex items-center gap-1.5">
           <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" /> Verified
         </span>

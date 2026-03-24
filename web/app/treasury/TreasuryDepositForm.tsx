@@ -117,7 +117,7 @@ export function TreasuryDepositForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           {info.eth_address && (
             <div className="rounded-xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">ETH Treasury Wallet</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">ETH Treasury Wallet</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 truncate text-sm text-foreground/80">{info.eth_address}</code>
                 <button
@@ -131,7 +131,7 @@ export function TreasuryDepositForm() {
           )}
           {info.btc_address && (
             <div className="rounded-xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">BTC Treasury Wallet</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">BTC Treasury Wallet</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 truncate text-sm text-foreground/80">{info.btc_address}</code>
                 <button

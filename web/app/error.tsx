@@ -40,7 +40,7 @@ export default function GlobalError({
         </a>
       </div>
       {isFetchError && (
-        <p className="text-xs text-muted-foreground/60 max-w-sm mx-auto">
+        <p className="text-xs text-muted-foreground/80 max-w-sm mx-auto">
           Start the API with <code className="text-muted-foreground font-mono">cd api && uvicorn app.main:app</code> and
           then try again.
         </p>
