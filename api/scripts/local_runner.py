@@ -857,8 +857,13 @@ Direction:
 Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
 
 Output a summary: files created/modified, validation results, errors encountered."""
-    if _RESUME_MODE[0] and isinstance(context, dict):
+    # Resume from checkpoint — either from explicit resume mode or from reaper retry
+    if isinstance(context, dict):
         resume_patch_path = str(context.get("resume_patch_path") or "").strip()
+        checkpoint_summary = str(context.get("checkpoint_summary") or "").strip()
+        retried_from = str(context.get("retried_from") or "").strip()
+        failed_provider = str(context.get("failed_provider") or "").strip()
+
         if resume_patch_path:
             prompt += (
                 "\n\nResume context:\n"
@@ -866,6 +871,25 @@ Output a summary: files created/modified, validation results, errors encountered
                 "- Apply this patch first with `git apply --reject \"<patch_path>\"` "
                 "or `git apply \"<patch_path>\"`, then continue from that state."
             )
+        if checkpoint_summary:
+            prompt += (
+                "\n\nCheckpoint from previous attempt:\n"
+                f"{checkpoint_summary}\n"
+                "Continue from this point. Do not redo work already completed."
+            )
+        if retried_from and not resume_patch_path and not checkpoint_summary:
+            prompt += (
+                f"\n\nThis is a retry of a previous task that timed out (provider: {failed_provider})."
+                " The previous attempt may have made partial progress — check git status for any"
+                " uncommitted changes before starting fresh."
+            )
+
+    # Instruct agent to write checkpoint files periodically
+    prompt += (
+        "\n\nIMPORTANT: Every 5-7 minutes of work, write a brief checkpoint to"
+        " `.task-checkpoint.md` in the repo root with: (1) what you completed so far,"
+        " (2) what remains, (3) any blockers. This allows work to be resumed if interrupted."
+    )
     return prompt
 
 

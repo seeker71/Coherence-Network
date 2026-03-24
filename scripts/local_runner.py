@@ -335,7 +335,39 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
                  task_id[:16], task_type, int(age_min), failed_provider, retry_count, idea_name[:40])
         reaped += 1
 
-        # Retry logic: create a new task for the same idea+phase with a different provider hint
+        # Capture checkpoint from worktree if it exists
+        checkpoint_summary = ""
+        resume_patch_path = ""
+        slug = task_id[:16]
+        wt_path = _WORKTREE_BASE / f"task-{slug}"
+        if wt_path.exists():
+            # Read checkpoint file
+            checkpoint_file = wt_path / ".task-checkpoint.md"
+            if checkpoint_file.exists():
+                try:
+                    checkpoint_summary = checkpoint_file.read_text(errors="replace")[:2000]
+                    log.info("REAPER: captured checkpoint for %s (%d chars)", slug, len(checkpoint_summary))
+                except Exception:
+                    pass
+
+            # Save git diff as a patch for resume
+            import subprocess as _sp
+            try:
+                diff_result = _sp.run(
+                    ["git", "diff", "HEAD"],
+                    capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+                )
+                if diff_result.stdout.strip():
+                    patch_dir = Path(__file__).resolve().parent.parent / "api" / "task_patches"
+                    patch_dir.mkdir(parents=True, exist_ok=True)
+                    patch_file = patch_dir / f"task_{task_id}.patch"
+                    patch_file.write_text(diff_result.stdout)
+                    resume_patch_path = str(patch_file)
+                    log.info("REAPER: saved %d-byte patch for %s", len(diff_result.stdout), slug)
+            except Exception:
+                pass
+
+        # Retry logic: create a new task for the same idea+phase with checkpoint context
         if idea_id and retry_count < _MAX_RETRIES_PER_IDEA_PHASE:
             direction = t.get("direction", ctx.get("direction", ""))
             if not direction:
@@ -346,6 +378,10 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
             retry_ctx["retried_from"] = task_id
             retry_ctx["failed_provider"] = failed_provider
             retry_ctx["seed_source"] = "reaper_retry"
+            if checkpoint_summary:
+                retry_ctx["checkpoint_summary"] = checkpoint_summary
+            if resume_patch_path:
+                retry_ctx["resume_patch_path"] = resume_patch_path
 
             retry_result = _api("POST", "/api/agent/tasks", {
                 "direction": direction,
