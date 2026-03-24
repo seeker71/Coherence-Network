@@ -269,12 +269,17 @@ def push_measurements(node_id: str) -> int:
     return 0
 
 
-def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
-    """Time out tasks stuck in 'running' state beyond max_age_minutes.
+_MAX_RETRIES_PER_IDEA_PHASE = 2
 
-    These are tasks where the executing node crashed or lost connectivity
-    mid-execution and never reported back. Without reaping, they block
-    pipeline capacity forever.
+
+def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
+    """Time out stale tasks, diagnose the failure, and retry with a different provider.
+
+    For each reaped task:
+    1. Mark as timed_out with diagnosis
+    2. Check retry count for this idea+phase
+    3. If under limit, create a retry task with a different provider hint
+    4. If over limit, record a friction event
     """
     tasks_data = _api("GET", "/api/agent/tasks?status=running&limit=100")
     if not tasks_data:
@@ -294,20 +299,77 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
         except Exception:
             continue
 
-        if age_min > max_age_minutes:
-            task_id = t.get("id", "")
-            result = _api("PATCH", f"/api/agent/tasks/{task_id}", {
-                "status": "timed_out",
-                "output": f"Reaped: stuck running for {int(age_min)}m (threshold {max_age_minutes}m)",
-                "error_summary": f"Stale task reaper: {int(age_min)}m > {max_age_minutes}m threshold",
-                "error_category": "stale_task_reaped",
+        if age_min <= max_age_minutes:
+            continue
+
+        task_id = t.get("id", "")
+        task_type = t.get("task_type", "spec")
+        ctx = t.get("context", {}) or {}
+        idea_id = ctx.get("idea_id", "")
+        idea_name = ctx.get("idea_name", idea_id or task_id[:20])
+        failed_provider = ctx.get("provider", "unknown")
+        retry_count = int(ctx.get("retry_count", 0))
+
+        # Diagnose: check if we have a task log with partial output
+        diagnosis = f"Stuck running for {int(age_min)}m (threshold {max_age_minutes}m)"
+        log_path = Path(__file__).resolve().parent.parent / "api" / "task_logs" / f"task_{task_id}.log"
+        if log_path.exists():
+            try:
+                log_content = log_path.read_text(errors="replace")[-500:]
+                if "error" in log_content.lower() or "timeout" in log_content.lower():
+                    diagnosis += f" | Partial log: {log_content[-200:]}"
+            except Exception:
+                pass
+
+        # Reap the task
+        result = _api("PATCH", f"/api/agent/tasks/{task_id}", {
+            "status": "timed_out",
+            "output": f"Reaped: {diagnosis}",
+            "error_summary": diagnosis[:500],
+            "error_category": "stale_task_reaped",
+        })
+        if not result:
+            continue
+
+        log.info("REAPER: timed out %s (%s, %dm, provider=%s, retries=%d) — %s",
+                 task_id[:16], task_type, int(age_min), failed_provider, retry_count, idea_name[:40])
+        reaped += 1
+
+        # Retry logic: create a new task for the same idea+phase with a different provider hint
+        if idea_id and retry_count < _MAX_RETRIES_PER_IDEA_PHASE:
+            direction = t.get("direction", ctx.get("direction", ""))
+            if not direction:
+                direction = f"Retry: {task_type} for {idea_name}. Previous attempt timed out after {int(age_min)}m."
+
+            retry_ctx = dict(ctx)
+            retry_ctx["retry_count"] = retry_count + 1
+            retry_ctx["retried_from"] = task_id
+            retry_ctx["failed_provider"] = failed_provider
+            retry_ctx["seed_source"] = "reaper_retry"
+
+            retry_result = _api("POST", "/api/agent/tasks", {
+                "direction": direction,
+                "task_type": task_type,
+                "context": retry_ctx,
+                "target_state": t.get("target_state", f"{task_type.title()} completed for: {idea_name}"),
             })
-            if result:
-                ctx = t.get("context", {}) or {}
-                idea = ctx.get("idea_name", task_id[:20])
-                log.info("REAPER: timed out %s (%s, %dm old) — %s",
-                         task_id[:16], t.get("task_type", "?"), int(age_min), idea[:40])
-                reaped += 1
+            if retry_result and retry_result.get("id"):
+                log.info("REAPER: retried %s → %s (attempt %d/%d, excluding provider %s)",
+                         task_id[:16], retry_result["id"][:16], retry_count + 1,
+                         _MAX_RETRIES_PER_IDEA_PHASE, failed_provider)
+            else:
+                log.warning("REAPER: retry failed for %s", task_id[:16])
+        elif idea_id:
+            log.warning("REAPER: max retries reached for %s (%s/%s) — recording friction",
+                        idea_name[:30], task_type, idea_id[:20])
+            # Record friction event
+            _api("POST", "/api/friction/events", {
+                "stage": task_type,
+                "block_type": "repeated_timeout",
+                "severity": "high",
+                "owner": "reaper",
+                "notes": f"Task for '{idea_name}' timed out {retry_count + 1} times. Last provider: {failed_provider}.",
+            })
 
     if reaped:
         log.info("REAPER: cleaned %d stale tasks", reaped)
