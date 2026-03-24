@@ -1714,6 +1714,23 @@ def run_all_pending(dry_run: bool = False) -> dict:
     return results
 
 
+def _get_git_sha() -> tuple[str, str]:
+    """Return (local_sha, origin_sha) or ('unknown', 'unknown')."""
+    try:
+        local = subprocess.run(
+            ["git", "rev-parse", "HEAD"], capture_output=True, text=True, timeout=5
+        ).stdout.strip() or "unknown"
+    except Exception:
+        local = "unknown"
+    try:
+        remote = subprocess.run(
+            ["git", "rev-parse", "origin/main"], capture_output=True, text=True, timeout=5
+        ).stdout.strip() or "unknown"
+    except Exception:
+        remote = "unknown"
+    return local, remote
+
+
 def _register_node() -> None:
     """Register this worker node with the federation API on startup."""
     providers = list(_detect_providers().keys())
@@ -1722,11 +1739,15 @@ def _register_node() -> None:
         if shutil.which(tool):
             tools.append(tool)
 
+    local_sha, origin_sha = _get_git_sha()
+
     payload = {
         "node_id": _NODE_ID,
         "hostname": _NODE_NAME,
         "os_type": "windows" if sys.platform == "win32" else "macos" if sys.platform == "darwin" else "linux",
         "providers": providers,
+        "local_sha": local_sha,
+        "origin_sha": origin_sha,
         "capabilities": {
             "executors": providers,
             "tools": tools,
@@ -1739,21 +1760,24 @@ def _register_node() -> None:
     }
     result = api("POST", "/api/federation/nodes", payload)
     if result:
-        log.info("NODE_REGISTERED id=%s hostname=%s providers=%s", _NODE_ID, _NODE_NAME, providers)
+        log.info("NODE_REGISTERED id=%s hostname=%s sha=%s providers=%s", _NODE_ID, _NODE_NAME, local_sha[:8], providers)
     else:
         log.warning("NODE_REGISTER_FAILED id=%s — will retry on next heartbeat", _NODE_ID)
 
 
 def _send_heartbeat() -> None:
     """Update node liveness so other nodes and the UI can see we're active."""
+    local_sha, origin_sha = _get_git_sha()
     result = api("PATCH", f"/api/federation/nodes/{_NODE_ID}", {
         "last_seen_at": datetime.now(timezone.utc).isoformat(),
         "status": "online",
+        "local_sha": local_sha,
+        "origin_sha": origin_sha,
     })
     if result:
-        log.debug("HEARTBEAT sent for node %s", _NODE_ID)
+        log.debug("HEARTBEAT sent for node %s sha=%s", _NODE_ID, local_sha[:8])
     else:
-        # PATCH might not exist — try PUT or re-register
+        # PATCH might not exist — re-register (which includes SHA)
         _register_node()
 
 
