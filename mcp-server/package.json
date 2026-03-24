@@ -1,7 +1,7 @@
 {
   "name": "coherence-mcp-server",
-  "version": "0.2.0",
-  "description": "MCP server for the Coherence Network — 20 typed tools for AI agents to browse ideas, trace value chains, link identities, and record contributions. Works with Claude, Cursor, Windsurf, and any MCP client.",
+  "version": "0.3.1",
+  "description": "MCP server for the Coherence Network \u2014 20 typed tools for AI agents to browse ideas, trace value chains, link identities, and record contributions. Works with Claude, Cursor, Windsurf, and any MCP client.",
   "type": "module",
   "bin": {
     "coherence-mcp-server": "index.mjs"
