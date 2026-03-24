@@ -1127,12 +1127,40 @@ def execute_with_provider(
             return proc.returncode == 0, output, duration
         except subprocess.TimeoutExpired:
             # Kill entire process tree on timeout
+            log.warning("TIMEOUT provider=%s after %ds — killing process tree (pid=%d)",
+                        provider, timeout, proc.pid)
             _kill_process_tree(proc.pid)
-            stdout, stderr = proc.communicate(timeout=5)
-            duration = time.time() - start
 
-            partial_stdout = stdout or ""
-            partial_stderr = stderr or ""
+            # Try to collect partial output — but with a HARD deadline.
+            # communicate() can hang forever if child processes keep pipe handles open
+            # even after taskkill /F /T, so we use a watchdog thread.
+            partial_stdout = ""
+            partial_stderr = ""
+            try:
+                stdout, stderr = proc.communicate(timeout=10)
+                partial_stdout = stdout or ""
+                partial_stderr = stderr or ""
+            except subprocess.TimeoutExpired:
+                # communicate() itself timed out — pipes still held by orphan children.
+                # Force-close our end and move on.
+                log.warning("PIPE_HANG provider=%s — communicate() blocked 10s after kill, "
+                            "force-closing pipes", provider)
+                try:
+                    proc.stdout.close()
+                except Exception:
+                    pass
+                try:
+                    proc.stderr.close()
+                except Exception:
+                    pass
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+                # Second kill attempt — catch any stragglers
+                _kill_process_tree(proc.pid)
+
+            duration = time.time() - start
             diagnostic = f"TIMEOUT after {duration:.0f}s (limit={timeout}s)\n"
             if partial_stdout:
                 diagnostic += f"--- partial stdout ({len(partial_stdout)} chars) ---\n{partial_stdout[-2000:]}\n"
