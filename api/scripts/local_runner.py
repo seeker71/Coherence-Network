@@ -2264,6 +2264,16 @@ def _check_for_updates_and_restart() -> bool:
 
         log.info("SELF-UPDATE: pulled latest → %s. Re-executing runner...", remote_sha[:8])
 
+        # Notify the network about the update
+        try:
+            api("POST", f"/api/federation/nodes/{_NODE_ID}/heartbeat", {
+                "status": "updating",
+                "local_sha": remote_sha[:10],
+                "message": f"Self-update: {local_sha[:8]} → {remote_sha[:8]}. Restarting.",
+            })
+        except Exception:
+            pass  # best-effort notification
+
         # Re-exec this script with the same arguments
         os.execv(sys.executable, [sys.executable] + sys.argv)
         # This line is never reached — os.execv replaces the process
