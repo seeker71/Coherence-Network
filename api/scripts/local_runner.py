@@ -5,6 +5,10 @@ Provider selection is data-driven — SlotSelector("provider_{task_type}") picks
 based on measured success rates. No hardcoded routing. New providers get
 exploration boost, failures reduce selection probability.
 
+OpenRouter free tier: 26 curated ``:free`` models; SlotSelector(
+``openrouter_free_model_{task_type}``) chooses among them; rolling 20 RPM
+limiter (``OPENROUTER_FREE_RPM``) before each HTTP call.
+
 Available providers are auto-detected from installed CLIs.
 
 Usage:
@@ -44,9 +48,19 @@ if str(_API_DIR) not in sys.path:
 
 try:
     from app.services.slot_selection_service import SlotSelector
+    from app.services.openrouter_free_tier import (
+        OPENROUTER_FREE_MODELS,
+        OPENROUTER_HEALTHCHECK_MODEL,
+        wait_openrouter_rate_limit,
+    )
     HAS_SERVICES = True
 except ImportError:
     HAS_SERVICES = False
+    OPENROUTER_HEALTHCHECK_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
+    OPENROUTER_FREE_MODELS = (OPENROUTER_HEALTHCHECK_MODEL,)
+
+    def wait_openrouter_rate_limit() -> None:
+        return
 
 # Logging
 _LOG_DIR.mkdir(exist_ok=True)
@@ -74,7 +88,6 @@ _TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
 _RESUME_MODE = [False]
 _SKIP_PERMISSIONS = [True]  # --dangerously-skip-permissions for claude; operators can disable
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
-_OPENROUTER_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
 try:
     from app.services.config_service import get_hub_url as _get_hub
     _OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER") or _get_hub().replace("://api.", "://").rstrip("/")
@@ -145,14 +158,17 @@ def _detect_providers() -> dict[str, dict]:
         providers[name] = spec
 
     # API-based providers (no CLI binary needed)
-    # OpenRouter free-tier provider (no API key required)
+    # OpenRouter free-tier provider (no API key required for :free models)
     if _check_openrouter():
         providers["openrouter"] = {
             "api": True,
-            "model": _OPENROUTER_MODEL,
+            "models": list(OPENROUTER_FREE_MODELS),
             "tool_capable": False,
         }
-        log.info("Provider detected: openrouter (API free tier)")
+        log.info(
+            "Provider detected: openrouter (API free tier, %d models, Thompson Sampling per task_type)",
+            len(OPENROUTER_FREE_MODELS),
+        )
 
     return providers
 
@@ -267,10 +283,30 @@ def _select_cursor_model(task_type: str, complexity: str = "medium") -> str:
     return candidates[0]
 
 
+def _select_openrouter_model(task_type: str) -> str:
+    """Pick a free OpenRouter model via SlotSelector — per task_type Thompson Sampling."""
+    candidates = list(OPENROUTER_FREE_MODELS)
+    if not candidates:
+        return OPENROUTER_HEALTHCHECK_MODEL
+    try:
+        if HAS_SERVICES:
+            selector = SlotSelector(f"openrouter_free_model_{task_type}")
+            selected = selector.select(candidates)
+            if selected:
+                return selected
+    except Exception:
+        log.warning("SlotSelector failed for OpenRouter model selection", exc_info=True)
+    return candidates[0]
+
+
 def _check_openrouter() -> bool:
     """Check if OpenRouter free-tier API is reachable with a simple prompt."""
     try:
-        content = _openrouter_chat_completion("Reply with: ok", timeout_s=10.0)
+        content = _openrouter_chat_completion(
+            "Reply with: ok",
+            timeout_s=10.0,
+            model=OPENROUTER_HEALTHCHECK_MODEL,
+        )
         return bool(content)
     except Exception as e:
         log.debug("OpenRouter check failed: %s", e)
@@ -309,8 +345,15 @@ def _parse_openrouter_message_content(payload: dict[str, Any]) -> str:
     raise ValueError("OpenRouter response content is missing or unsupported")
 
 
-def _openrouter_chat_completion(prompt: str, timeout_s: float) -> str:
+def _openrouter_chat_completion(
+    prompt: str,
+    timeout_s: float,
+    *,
+    model: str | None = None,
+) -> str:
     """Call OpenRouter chat completions and return text content."""
+    resolved_model = model or (OPENROUTER_FREE_MODELS[0] if OPENROUTER_FREE_MODELS else OPENROUTER_HEALTHCHECK_MODEL)
+    wait_openrouter_rate_limit()
     headers = {
         "Content-Type": "application/json",
         "HTTP-Referer": _OPENROUTER_REFERER,
@@ -329,7 +372,7 @@ def _openrouter_chat_completion(prompt: str, timeout_s: float) -> str:
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     body = {
-        "model": _OPENROUTER_MODEL,
+        "model": resolved_model,
         "messages": [{"role": "user", "content": prompt}],
     }
     response = httpx.post(
@@ -348,11 +391,11 @@ def _openrouter_chat_completion(prompt: str, timeout_s: float) -> str:
     return _parse_openrouter_message_content(payload)
 
 
-def _run_openrouter(prompt: str, cwd: str, timeout: int) -> tuple[bool, str, float]:
+def _run_openrouter(prompt: str, cwd: str, timeout: int, model: str) -> tuple[bool, str, float]:
     """Execute via OpenRouter API (free tier). Returns (success, output, duration)."""
     start = time.time()
     try:
-        content = _openrouter_chat_completion(prompt, timeout_s=float(timeout))
+        content = _openrouter_chat_completion(prompt, timeout_s=float(timeout), model=model)
         duration = time.time() - start
         return True, content, duration
     except Exception as e:
@@ -522,6 +565,28 @@ def record_provider_outcome(
                 )
                 log.info("CURSOR_MODEL_RECORDED tier=%s model=%s success=%s duration=%.1fs",
                          tier, model, success, duration)
+
+        # OpenRouter: free model per task_type (Thompson Sampling over OPENROUTER_FREE_MODELS)
+        if provider == "openrouter":
+            spec = PROVIDERS.get("openrouter", {})
+            model = spec.get("_selected_model")
+            if model:
+                or_selector = SlotSelector(f"openrouter_free_model_{task_type}")
+                or_selector.record(
+                    slot_id=model,
+                    value_score=1.0 if success else 0.0,
+                    resource_cost=max(duration, 0.1),
+                    error_class=error_class,
+                    duration_s=duration,
+                    raw_signals={"openrouter_model": model},
+                )
+                log.info(
+                    "OPENROUTER_MODEL_RECORDED task_type=%s model=%s success=%s duration=%.1fs",
+                    task_type,
+                    model,
+                    success,
+                    duration,
+                )
     except Exception:
         log.warning("Failed to record provider outcome", exc_info=True)
 
@@ -537,6 +602,24 @@ def get_provider_stats() -> dict:
             selector = SlotSelector(f"provider_{task_type}")
             stats[task_type] = selector.stats(available)
         return stats
+    except Exception:
+        return {}
+
+
+def get_openrouter_free_model_stats() -> dict:
+    """Thompson Sampling stats for each task_type × free model (local runner telemetry).
+
+    Proof path: JSON files under ``api/logs/slot_measurements/openrouter_free_model_<task_type>.json``.
+    """
+    if not HAS_SERVICES:
+        return {}
+    try:
+        models = list(OPENROUTER_FREE_MODELS)
+        out: dict[str, Any] = {}
+        for task_type in ["spec", "test", "impl", "review", "heal"]:
+            selector = SlotSelector(f"openrouter_free_model_{task_type}")
+            out[task_type] = selector.stats(models)
+        return out
     except Exception:
         return {}
 
@@ -769,6 +852,53 @@ def _task_group_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> dic
     return None
 
 
+def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]:
+    """Check if an idea's claimed interfaces actually exist on production.
+
+    Returns a list of failure descriptions. Empty list = all verified.
+    Checks API endpoints (non-404) and web pages (non-404).
+    Only checks if the idea description mentions specific endpoints or pages.
+    """
+    import re
+    failures = []
+    desc = str(idea_payload.get("description") or "")
+    interfaces = idea_payload.get("interfaces") or []
+
+    # Extract API paths from description (e.g., /api/concepts, /api/edges)
+    api_paths = re.findall(r'/api/[\w/{}]+', desc)
+    # Deduplicate and remove templated paths
+    api_paths = list(set(p.split("{")[0].rstrip("/") for p in api_paths))
+
+    # Check each claimed API endpoint
+    API_BASE = os.environ.get("PUBLIC_DEPLOY_API_BASE", "https://api.coherencycoin.com")
+    for path in api_paths[:5]:  # limit to 5 checks
+        try:
+            resp = httpx.get(f"{API_BASE}{path}", timeout=5)
+            if resp.status_code == 404:
+                failures.append(f"API {path} → 404")
+        except Exception:
+            pass  # network error is not a validation failure
+
+    # Check web pages if human:web is in interfaces
+    if "human:web" in interfaces:
+        web_paths = re.findall(r'Web:.*?/([\w-]+)\s', desc)
+        WEB_BASE = os.environ.get("PUBLIC_DEPLOY_WEB_BASE", "https://coherencycoin.com")
+        for page in web_paths[:3]:
+            try:
+                resp = httpx.get(f"{WEB_BASE}/{page}", timeout=5, follow_redirects=True)
+                if resp.status_code == 404:
+                    failures.append(f"Web /{page} → 404")
+            except Exception:
+                pass
+
+    if failures:
+        log.info("PRODUCTION_CHECK idea=%s failures=%s", idea_id, failures)
+    elif api_paths:
+        log.info("PRODUCTION_CHECK idea=%s passed (%d endpoints checked)", idea_id, len(api_paths))
+
+    return failures
+
+
 def _phase_fully_completed(idea_tasks_payload: dict[str, Any], phase: str) -> bool:
     group = _task_group_for_phase(idea_tasks_payload, phase)
     if not group:
@@ -911,11 +1041,20 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             )
             manifestation_status = "partial"
         else:
-            log.info(
-                "VALIDATION_GATE idea=%s passed: all phases complete with output %s",
-                idea_id, sorted(completed_phases),
-            )
-            manifestation_status = "validated"
+            # Production verification: check if claimed interfaces actually exist
+            prod_failures = _verify_production_interfaces(idea_id, idea_payload if isinstance(idea_payload, dict) else {})
+            if prod_failures:
+                log.warning(
+                    "VALIDATION_GATE idea=%s blocked: production verification failed — %s",
+                    idea_id, prod_failures,
+                )
+                manifestation_status = "partial"
+            else:
+                log.info(
+                    "VALIDATION_GATE idea=%s VALIDATED: all phases complete, output verified, production checked %s",
+                    idea_id, sorted(completed_phases),
+                )
+                manifestation_status = "validated"
     else:
         manifestation_status = "partial"
 
@@ -1202,7 +1341,10 @@ def execute_with_provider(
 
     # API-based providers (openrouter)
     if spec.get("api"):
-        return _run_openrouter(prompt, str(_REPO_DIR), timeout)
+        model = _select_openrouter_model(task_type)
+        spec["_selected_model"] = model
+        log.info("OPENROUTER_MODEL task=%s model=%s", task_type, model)
+        return _run_openrouter(prompt, str(_REPO_DIR), timeout, model)
 
     cmd = list(spec["cmd"])
     stdin_input = None
@@ -1419,6 +1561,11 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         "duration_s": round(duration, 1),
         "complexity_estimate": complexity_estimate,
     }
+    if provider == "openrouter":
+        om = (PROVIDERS.get("openrouter") or {}).get("_selected_model")
+        if om:
+            completion_context["openrouter_model"] = om
+            completion_context["openrouter_free_model_slots"] = len(OPENROUTER_FREE_MODELS)
 
     if not success:
         error_class = classify_error(output)
