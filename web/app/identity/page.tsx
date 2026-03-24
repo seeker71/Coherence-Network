@@ -26,6 +26,60 @@ type ProviderInfo = {
   canVerify?: boolean;
 };
 
+const STATIC_PROVIDERS: Record<string, ProviderInfo[]> = {
+  Social: [
+    { key: "github", label: "GitHub", placeholder: "username", category: "Social", canOAuth: true },
+    { key: "x", label: "X (Twitter)", placeholder: "@handle", category: "Social" },
+    { key: "discord", label: "Discord", placeholder: "username#0000 or user ID", category: "Social" },
+    { key: "telegram", label: "Telegram", placeholder: "@username", category: "Social" },
+    { key: "mastodon", label: "Mastodon", placeholder: "user@instance.social", category: "Social" },
+    { key: "bluesky", label: "Bluesky", placeholder: "handle.bsky.social", category: "Social" },
+    { key: "linkedin", label: "LinkedIn", placeholder: "profile slug or URL", category: "Social" },
+    { key: "reddit", label: "Reddit", placeholder: "u/username", category: "Social" },
+    { key: "youtube", label: "YouTube", placeholder: "channel ID or @handle", category: "Social" },
+    { key: "twitch", label: "Twitch", placeholder: "username", category: "Social" },
+    { key: "instagram", label: "Instagram", placeholder: "@handle", category: "Social" },
+    { key: "tiktok", label: "TikTok", placeholder: "@handle", category: "Social" },
+  ],
+  Developer: [
+    { key: "gitlab", label: "GitLab", placeholder: "username", category: "Developer" },
+    { key: "bitbucket", label: "Bitbucket", placeholder: "username", category: "Developer" },
+    { key: "npm", label: "npm", placeholder: "npm username", category: "Developer" },
+    { key: "crates", label: "crates.io", placeholder: "crates.io username", category: "Developer" },
+    { key: "pypi", label: "PyPI", placeholder: "PyPI username", category: "Developer" },
+    { key: "hackernews", label: "Hacker News", placeholder: "HN username", category: "Developer" },
+    { key: "stackoverflow", label: "Stack Overflow", placeholder: "user ID", category: "Developer" },
+  ],
+  "Crypto / Web3": [
+    { key: "ethereum", label: "Ethereum", placeholder: "0x address", category: "Crypto / Web3", canVerify: true },
+    { key: "bitcoin", label: "Bitcoin", placeholder: "BTC address", category: "Crypto / Web3" },
+    { key: "solana", label: "Solana", placeholder: "SOL address", category: "Crypto / Web3" },
+    { key: "cosmos", label: "Cosmos", placeholder: "cosmos1... address", category: "Crypto / Web3" },
+    { key: "nostr", label: "Nostr", placeholder: "npub or hex pubkey", category: "Crypto / Web3" },
+    { key: "ens", label: "ENS", placeholder: "name.eth", category: "Crypto / Web3" },
+    { key: "lens", label: "Lens Protocol", placeholder: "handle.lens", category: "Crypto / Web3" },
+  ],
+  Professional: [
+    { key: "email", label: "Email", placeholder: "you@example.com", category: "Professional" },
+    { key: "google", label: "Google", placeholder: "Google email", category: "Professional", canOAuth: true },
+    { key: "apple", label: "Apple", placeholder: "Apple ID email", category: "Professional" },
+    { key: "microsoft", label: "Microsoft", placeholder: "Microsoft email", category: "Professional" },
+    { key: "orcid", label: "ORCID", placeholder: "0000-0000-0000-0000", category: "Professional" },
+  ],
+  Identity: [
+    { key: "name", label: "Display Name", placeholder: "Your name", category: "Identity" },
+    { key: "did", label: "DID (W3C)", placeholder: "did:method:identifier", category: "Identity" },
+    { key: "keybase", label: "Keybase", placeholder: "username", category: "Identity" },
+    { key: "pgp", label: "PGP", placeholder: "key fingerprint", category: "Identity" },
+    { key: "fediverse", label: "Fediverse", placeholder: "user@instance", category: "Identity" },
+  ],
+  Agent: [
+    { key: "agent", label: "AI Agent", placeholder: "provider.model", category: "Agent" },
+    { key: "openrouter", label: "OpenRouter", placeholder: "openrouter/model-name", category: "Agent" },
+    { key: "ollama", label: "Ollama (local)", placeholder: "model:tag", category: "Agent" },
+  ],
+};
+
 function StatusDot({ verified, linked }: { verified: boolean; linked: boolean }) {
   if (!linked) {
     return (
@@ -51,15 +105,19 @@ export default function IdentityPage() {
   const [message, setMessage] = useState<{ text: string; type: "ok" | "error" } | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  // Load providers from API
+  // Load providers from API, fall back to static list
   useEffect(() => {
     fetch(`${API}/api/identity/providers`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.categories) setProviders(data.categories);
+        if (data.categories && Object.keys(data.categories).length > 0) {
+          setProviders(data.categories);
+        } else {
+          setProviders(STATIC_PROVIDERS);
+        }
       })
       .catch(() => {
-        // Fallback — empty registry, page still works
+        setProviders(STATIC_PROVIDERS);
       });
   }, []);
 
