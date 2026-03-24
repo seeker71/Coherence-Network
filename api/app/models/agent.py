@@ -196,6 +196,7 @@ class AgentTaskListItem(BaseModel):
     task_type: TaskType
     status: TaskStatus
     model: str
+    context: Optional[Dict[str, Any]] = None
     error_summary: Optional[str] = None
     error_category: Optional[str] = None
     progress_pct: Optional[int] = None
