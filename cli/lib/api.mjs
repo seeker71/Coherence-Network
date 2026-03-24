@@ -51,6 +51,21 @@ export async function post(path, body) {
   }
 }
 
+export async function patch(path, body) {
+  try {
+    const res = await fetch(buildUrl(path), {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function del(path) {
   try {
     const res = await fetch(buildUrl(path), {

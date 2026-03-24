@@ -13,6 +13,7 @@ import { contribute } from "../lib/commands/contribute.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
 import { listNodes, sendMessage, readMessages, sendCommand } from "../lib/commands/nodes.mjs";
+import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask } from "../lib/commands/tasks.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -33,12 +34,25 @@ const COMMANDS = {
   cmd:        () => sendCommand(args),
   messages:   () => readMessages(args),
   inbox:      () => readMessages(args),
+  tasks:      () => listTasks(args),
+  task:       () => handleTask(args),
   help:       () => showHelp(),
 };
 
 async function handleIdea(args) {
   if (args[0] === "create") return createIdea(args.slice(1));
   return showIdea(args);
+}
+
+async function handleTask(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "next":    return claimNext();
+    case "claim":   return claimTask(args.slice(1));
+    case "report":  return reportTask(args.slice(1));
+    case "seed":    return seedTask(args.slice(1));
+    default:        return showTask(args);
+  }
 }
 
 async function handleIdentity(args) {
@@ -83,6 +97,14 @@ function showHelp() {
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity
+
+\x1b[1mTasks (agent-to-agent):\x1b[0m
+  tasks [status] [limit]  List tasks (pending|running|completed)
+  task <id>               View task detail
+  task next               Claim next pending task (for AI agents)
+  task claim <id>         Claim a specific task
+  task report <id> <status> [output]  Report result (completed|failed)
+  task seed <idea> [type] Create task from idea (spec|test|impl|review)
 
 \x1b[1mFederation:\x1b[0m
   nodes                   List federation nodes
