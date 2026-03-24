@@ -54,6 +54,7 @@ import local_runner as _runner  # noqa: E402 — api/scripts/local_runner.py
 log = logging.getLogger("node_runner")
 
 API_BASE = os.environ.get("AGENT_API_BASE", "https://api.coherencycoin.com")
+API_KEY = os.environ.get("COHERENCE_API_KEY", "dev-key")
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
 
@@ -93,17 +94,18 @@ def _detect_os_type() -> str:
 # ── Federation API calls ──────────────────────────────────────────────
 
 def _api(method: str, path: str, body: dict | None = None) -> dict | list | None:
-    """Call federation API."""
+    """Call federation API. Write methods include X-API-Key header."""
     url = f"{API_BASE}{path}"
+    headers = {"X-API-Key": API_KEY} if method in ("POST", "PATCH", "PUT", "DELETE") else {}
     try:
         if method == "GET":
             resp = _HTTP_CLIENT.get(url)
         elif method == "POST":
-            resp = _HTTP_CLIENT.post(url, json=body)
+            resp = _HTTP_CLIENT.post(url, json=body, headers=headers)
         elif method == "PATCH":
-            resp = _HTTP_CLIENT.patch(url, json=body)
+            resp = _HTTP_CLIENT.patch(url, json=body, headers=headers)
         elif method == "DELETE":
-            resp = _HTTP_CLIENT.delete(url)
+            resp = _HTTP_CLIENT.delete(url, headers=headers)
         else:
             return None
         if resp.status_code >= 400:
