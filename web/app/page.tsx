@@ -235,7 +235,7 @@ export default async function Home() {
                 <p className="text-xs text-muted-foreground">
                   {item.activity_type ? item.activity_type.replace(/_/g, " ") : item.manifestation_status}
                 </p>
-                <p className="text-xs text-muted-foreground/80">
+                <p className="text-xs text-muted-foreground">
                   {timeAgo(item.last_activity_at)}
                 </p>
               </Link>
@@ -253,14 +253,14 @@ export default async function Home() {
                 <p className="text-xs text-muted-foreground">
                   {idea.manifestation_status}
                 </p>
-                <p className="text-xs text-muted-foreground/80">
+                <p className="text-xs text-muted-foreground">
                   {formatNumber(idea.value_gap)} CC remaining
                 </p>
               </Link>
             ))}
           </div>
         ) : (
-          <p className="text-center text-sm text-muted-foreground/80">
+          <p className="text-center text-sm text-muted-foreground">
             No recent activity yet. Be the first to share an idea.
           </p>
         )}
@@ -268,7 +268,7 @@ export default async function Home() {
           <p className="text-center mt-4">
             <Link
               href={resonanceItems.length > 0 ? "/resonance" : "/ideas"}
-              className="text-xs text-muted-foreground/80 hover:text-foreground transition-colors underline underline-offset-4"
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
             >
               {resonanceItems.length > 0 ? "See all activity" : "See all ideas"}
             </Link>
@@ -284,7 +284,7 @@ export default async function Home() {
         <p className="mt-3">
           <Link
             href="/resonance"
-            className="text-sm text-muted-foreground/80 hover:text-foreground transition-colors underline underline-offset-4"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
           >
             or browse the resonance feed
           </Link>
@@ -302,13 +302,13 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="px-4 sm:px-6 lg:px-8 py-12 max-w-3xl mx-auto text-center border-t border-border/20">
-        <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground/80 mb-4">
+        <div className="flex flex-wrap justify-center gap-6 text-sm text-muted-foreground mb-4">
           <Link href="/resonance" className="hover:text-foreground transition-colors">Resonance</Link>
           <Link href="/ideas" className="hover:text-foreground transition-colors">Ideas</Link>
           <Link href="/invest" className="hover:text-foreground transition-colors">Invest</Link>
           <Link href="/contribute" className="hover:text-foreground transition-colors">Contribute</Link>
         </div>
-        <p className="text-xs text-muted-foreground/50 leading-relaxed">
+        <p className="text-xs text-muted-foreground/70 leading-relaxed">
           Ideas into realization — through attention, curiosity, and collaboration.
         </p>
       </footer>
