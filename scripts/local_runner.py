@@ -457,8 +457,7 @@ def _process_node_messages(node_id: str) -> int:
         log.info("MSG_RECEIVED id=%s type=%s from=%s text=%s",
                  msg_id[:16], msg_type, from_node, text[:80])
 
-        # Mark as read
-        _api("PATCH", f"/api/federation/nodes/{node_id}/messages/{msg_id}", {"read": True})
+        # Note: GET /messages already marks them as read — no separate PATCH needed
 
         if msg_type == "command":
             response = _execute_node_command(node_id, payload, text)
