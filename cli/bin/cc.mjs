@@ -31,9 +31,15 @@ async function checkForUpdate() {
     const latest = data.version;
     if (latest && latest !== LOCAL_VERSION && latest > LOCAL_VERSION) {
       console.log(
-        `\n\x1b[33m  Update available: ${LOCAL_VERSION} → ${latest}\x1b[0m` +
-        `\n  Run: npm i -g coherence-cli@${latest}\n`,
+        `\n\x1b[33m  Update available: ${LOCAL_VERSION} → ${latest} — auto-updating...\x1b[0m`,
       );
+      const { execSync } = await import("node:child_process");
+      try {
+        execSync(`npm i -g coherence-cli@${latest}`, { stdio: "pipe" });
+        console.log(`\x1b[32m  ✓ Updated to v${latest}\x1b[0m\n`);
+      } catch {
+        console.log(`\x1b[31m  ✗ Auto-update failed. Run: npm i -g coherence-cli@${latest}\x1b[0m\n`);
+      }
     }
   } catch {
     // Silent — don't block the CLI for a version check
