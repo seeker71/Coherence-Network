@@ -531,8 +531,8 @@ _NEXT_PHASE: dict[str, str | None] = {
     "review": None,
 }
 
-def api(method: str, path: str, body: dict | None = None) -> dict | list | None:
-    """Call the API via httpx."""
+def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> dict | list | None:
+    """Call the API via httpx. Auto-retries on 429 with backoff."""
     url = f"{API_BASE}{path}"
     headers = {"X-Api-Key": os.environ.get("AGENT_API_KEY", "dev-key")}
     try:
@@ -549,6 +549,14 @@ def api(method: str, path: str, body: dict | None = None) -> dict | list | None:
         else:
             log.error("Unsupported API method: %s", method)
             return None
+
+        # Rate limited — back off and retry (up to 3 times)
+        if resp.status_code == 429 and _retries < 3:
+            retry_after = int(resp.headers.get("Retry-After", "5"))
+            log.warning("RATE_LIMITED %s %s — backing off %ds (retry %d/3)",
+                        method, path, retry_after, _retries + 1)
+            time.sleep(retry_after)
+            return api(method, path, body, _retries + 1)
 
         if resp.status_code >= 400:
             log.error("API %s %s → status %d: %s", method, path, resp.status_code, resp.text[:200])
@@ -570,9 +578,9 @@ def api(method: str, path: str, body: dict | None = None) -> dict | list | None:
 
 
 def _post_activity(task_id: str, event_type: str, data: dict):
-    """Fire-and-forget activity post to the API."""
+    """Post activity event — log failures, never block execution."""
     try:
-        httpx.post(
+        resp = httpx.post(
             f"{API_BASE}/api/agent/tasks/{task_id}/activity",
             json={
                 "node_id": _NODE_ID,
@@ -583,8 +591,11 @@ def _post_activity(task_id: str, event_type: str, data: dict):
             },
             timeout=5.0,
         )
-    except Exception:
-        pass  # never block execution
+        if resp.status_code >= 400:
+            log.warning("ACTIVITY_FAIL task=%s event=%s status=%d body=%s",
+                        task_id, event_type, resp.status_code, resp.text[:200])
+    except Exception as exc:
+        log.warning("ACTIVITY_ERROR task=%s event=%s error=%s", task_id, event_type, exc)
 
 
 def list_pending() -> list[dict]:
@@ -1257,8 +1268,8 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                 )
             elif new_changes:
                 log.info("VERIFIED task=%s files_changed=%d", task_id, len(new_changes))
-        except Exception:
-            pass  # don't fail the task over validation errors
+        except Exception as exc:
+            log.warning("VALIDATION_ERROR task=%s error=%s", task_id, exc)
 
     # Save task log
     task_log = _LOG_DIR / f"task_{task_id}.log"
