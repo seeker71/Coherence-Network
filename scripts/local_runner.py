@@ -66,10 +66,15 @@ def _get_mac_address() -> str:
 
 
 def _generate_node_id() -> str:
-    """16-char SHA256 hash of hostname + MAC address (spec 132)."""
+    """Stable 16-char node ID from hostname + OS.
+
+    Previous implementation used MAC address which changes between wifi/ethernet
+    interfaces, creating duplicate node registrations. Hostname + OS is stable
+    across network changes on the same machine.
+    """
     hostname = socket.gethostname()
-    mac = _get_mac_address()
-    raw = f"{hostname}:{mac}"
+    os_type = _detect_os_type()
+    raw = f"{hostname}:{os_type}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
