@@ -242,8 +242,55 @@ cc task seed <idea-id> spec   # Create a task for an idea
 ### Contributors and identity
 
 ```bash
+cc contributors               # List all contributors
+cc contributor <id>            # View contributor detail
+cc contributor <id> contributions  # View contributor's contributions
 cc identity                   # Your linked accounts and CC balance
 cc identity lookup github <handle>  # Find any contributor by provider identity
+```
+
+### Assets
+
+```bash
+cc assets                     # List all tracked assets
+cc asset <id>                 # View asset detail
+cc asset create <type> <desc> # Create a new asset (infrastructure, software, identity)
+```
+
+### News
+
+```bash
+cc news                       # Latest news items
+cc news trending              # Trending news
+cc news sources               # List configured news sources
+cc news source add <url> <name>  # Add a news source
+cc news resonance [contributor]  # News resonance, optionally per contributor
+```
+
+### Treasury
+
+```bash
+cc treasury                   # Treasury overview (balances, deposits, CC conversion)
+cc treasury deposits [contributor]  # View deposits, optionally per contributor
+cc treasury deposit <amount> <asset>  # Record a deposit
+```
+
+### Value lineage
+
+```bash
+cc lineage                    # List lineage chains (idea → spec → impl → payout)
+cc lineage <id>               # View lineage detail
+cc lineage <id> valuation     # Measured value, cost, ROI for a chain
+cc lineage <id> payout <amount>  # Preview payout distribution
+```
+
+### Governance
+
+```bash
+cc governance                 # List governance proposals
+cc governance <id>            # View proposal detail
+cc governance vote <id> <yes|no>  # Vote on a proposal
+cc governance propose <title> <desc>  # Submit a new proposal
 ```
 
 ### Nodes and federation
@@ -252,7 +299,54 @@ cc identity lookup github <handle>  # Find any contributor by provider identity
 cc nodes                      # All nodes: status, SHA, providers, last seen
 cc inbox                      # Messages from other nodes
 cc msg <node> <text>          # Send a message
-cc cmd <node> status          # Remote diagnostics
+cc cmd <node> update          # Tell a node to git pull
+cc cmd <node> status          # Get CPU, RAM, disk, providers
+cc cmd <node> diagnose        # Get git status, recent errors
+cc cmd <node> restart         # Restart the runner
+cc cmd <node> ping            # Liveness check
+```
+
+### Services
+
+```bash
+cc services                   # List all registered services
+cc service <id>               # View service detail
+cc services health            # Health check across services
+cc services deps              # Service dependency map
+```
+
+### Friction
+
+```bash
+cc friction                   # Friction report summary
+cc friction events            # Recent friction events
+cc friction categories        # Friction categories breakdown
+```
+
+### Providers
+
+```bash
+cc providers                  # List available providers
+cc providers stats            # Provider success rates and usage
+```
+
+### Traceability
+
+```bash
+cc trace                      # Traceability overview
+cc trace coverage             # Coverage metrics
+cc trace idea <id>            # Trace an idea through its lifecycle
+cc trace spec <id>            # Trace a spec through its lifecycle
+```
+
+### Diagnostics
+
+```bash
+cc diag                       # Diagnostic overview (effectiveness + pipeline)
+cc diag health                # Collective health check
+cc diag issues                # Known issues and warnings
+cc diag runners               # Runner status across nodes
+cc diag visibility            # Observability status
 ```
 
 ### Searching and filtering
