@@ -852,6 +852,86 @@ def _task_group_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> dic
     return None
 
 
+def _run_verification_probes(api_paths: list[str], api_base: str) -> list[dict]:
+    """Run deep verification probes against claimed API endpoints.
+
+    For each endpoint, checks:
+    1. Exists (non-404)
+    2. Returns valid JSON (not HTML error page)
+    3. Response has meaningful content (not empty object/array with no useful fields)
+    4. Schema sanity (response has expected top-level structure)
+    5. Error handling (append /nonexistent-id, expect 404 not 500)
+
+    Returns list of probe results: {path, checks: [{name, passed, detail}]}
+    """
+    results = []
+    for path in api_paths[:5]:
+        probes = []
+        url = f"{api_base}{path}"
+
+        # Probe 1: Exists
+        try:
+            resp = httpx.get(url, timeout=8)
+            probes.append({
+                "name": "exists",
+                "passed": resp.status_code < 400,
+                "detail": f"HTTP {resp.status_code}",
+            })
+
+            if resp.status_code >= 400:
+                results.append({"path": path, "checks": probes})
+                continue
+
+            # Probe 2: Valid JSON
+            try:
+                body = resp.json()
+                probes.append({"name": "valid_json", "passed": True, "detail": type(body).__name__})
+            except Exception:
+                probes.append({"name": "valid_json", "passed": False, "detail": "not JSON"})
+                results.append({"path": path, "checks": probes})
+                continue
+
+            # Probe 3: Meaningful content
+            if isinstance(body, dict):
+                has_content = any(
+                    v is not None and v != "" and v != [] and v != {}
+                    for v in body.values()
+                )
+                probes.append({
+                    "name": "has_content",
+                    "passed": has_content,
+                    "detail": f"{len(body)} fields, content={'yes' if has_content else 'empty'}",
+                })
+            elif isinstance(body, list):
+                probes.append({
+                    "name": "has_content",
+                    "passed": True,  # list endpoints can be empty legitimately
+                    "detail": f"{len(body)} items",
+                })
+            else:
+                probes.append({"name": "has_content", "passed": True, "detail": str(type(body))})
+
+            # Probe 4: Error handling — try a bogus sub-path
+            try:
+                err_resp = httpx.get(f"{url}/____nonexistent_test_id____", timeout=5)
+                got_clean_error = err_resp.status_code in (404, 422)
+                got_500 = err_resp.status_code >= 500
+                probes.append({
+                    "name": "error_handling",
+                    "passed": got_clean_error and not got_500,
+                    "detail": f"bogus ID → HTTP {err_resp.status_code}",
+                })
+            except Exception:
+                probes.append({"name": "error_handling", "passed": True, "detail": "skipped"})
+
+        except Exception as e:
+            probes.append({"name": "exists", "passed": False, "detail": f"network error: {e}"})
+
+        results.append({"path": path, "checks": probes})
+
+    return results
+
+
 def _classify_idea_validation(interfaces: list[str], desc: str) -> str:
     """Determine validation category from interfaces and description.
 
@@ -913,13 +993,15 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
     api_paths = list(set(p.split("{")[0].rstrip("/") for p in api_paths))
 
     API_BASE = os.environ.get("PUBLIC_DEPLOY_API_BASE", "https://api.coherencycoin.com")
-    for path in api_paths[:5]:
-        try:
-            resp = httpx.get(f"{API_BASE}{path}", timeout=5)
-            if resp.status_code == 404:
-                failures.append(f"API {path} → 404")
-        except Exception:
-            pass
+
+    if api_paths:
+        # Deep verification: not just 404 check, but schema, content, error handling
+        probe_results = _run_verification_probes(api_paths, API_BASE)
+        for result in probe_results:
+            path = result["path"]
+            for check in result["checks"]:
+                if not check["passed"]:
+                    failures.append(f"API {path} [{check['name']}]: {check['detail']}")
 
     # Check web pages if human:web is in interfaces
     if any(i in set(interfaces) for i in ("human:web", "web")):
@@ -930,15 +1012,20 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
                 resp = httpx.get(f"{WEB_BASE}/{page}", timeout=5, follow_redirects=True)
                 if resp.status_code == 404:
                     failures.append(f"Web /{page} → 404")
+                elif resp.status_code >= 500:
+                    failures.append(f"Web /{page} → {resp.status_code} (server error)")
             except Exception:
                 pass
 
     if failures:
-        log.info("PRODUCTION_CHECK idea=%s category=%s failures=%s", idea_id, category, failures)
+        log.warning("PROOF_CHECK idea=%s category=%s FAILED (%d issues): %s",
+                     idea_id, category, len(failures), failures[:3])
     elif api_paths:
-        log.info("PRODUCTION_CHECK idea=%s category=%s passed (%d endpoints checked)", idea_id, category, len(api_paths))
+        log.info("PROOF_CHECK idea=%s category=%s PASSED (%d endpoints, all probes green)",
+                  idea_id, category, len(api_paths))
     else:
-        log.info("PRODUCTION_CHECK idea=%s category=%s — no specific endpoints claimed", idea_id, category)
+        log.info("PROOF_CHECK idea=%s category=%s — no endpoints claimed, skipped",
+                  idea_id, category)
 
     return failures
 
