@@ -482,6 +482,180 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
         return f"Unknown command: {command}. Safe commands: {', '.join(_SAFE_COMMANDS.keys())}"
 
 
+# ── Parallel worktree execution ───────────────────────────────────────
+
+_MAX_PARALLEL = int(os.environ.get("CC_MAX_PARALLEL", "3"))
+_WORKTREE_BASE = Path(__file__).resolve().parent.parent / ".worktrees"
+
+
+def _create_worktree(task_id: str) -> Path | None:
+    """Create a git worktree for isolated task execution."""
+    import subprocess as _sp
+    slug = task_id[:16]
+    wt_path = _WORKTREE_BASE / f"task-{slug}"
+    branch = f"task/{slug}"
+    try:
+        _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
+        _sp.run(
+            ["git", "worktree", "add", "-b", branch, str(wt_path), "HEAD"],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(Path(__file__).resolve().parent.parent),
+        )
+        if wt_path.exists():
+            log.info("WORKTREE_CREATED task=%s path=%s", slug, wt_path)
+            return wt_path
+    except Exception as e:
+        log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
+    return None
+
+
+def _cleanup_worktree(task_id: str) -> None:
+    """Remove a worktree after task completion."""
+    import subprocess as _sp
+    slug = task_id[:16]
+    wt_path = _WORKTREE_BASE / f"task-{slug}"
+    branch = f"task/{slug}"
+    try:
+        _sp.run(
+            ["git", "worktree", "remove", "--force", str(wt_path)],
+            capture_output=True, text=True, timeout=30,
+            cwd=str(Path(__file__).resolve().parent.parent),
+        )
+        _sp.run(
+            ["git", "branch", "-D", branch],
+            capture_output=True, text=True, timeout=10,
+            cwd=str(Path(__file__).resolve().parent.parent),
+        )
+        log.info("WORKTREE_CLEANED task=%s", slug)
+    except Exception as e:
+        log.warning("WORKTREE_CLEANUP_FAILED task=%s error=%s", slug, e)
+
+
+def _merge_worktree(task_id: str) -> bool:
+    """Merge worktree branch back to main if it has changes."""
+    import subprocess as _sp
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    repo_root = str(Path(__file__).resolve().parent.parent)
+    try:
+        # Check if branch has commits ahead of HEAD
+        result = _sp.run(
+            ["git", "log", f"HEAD..{branch}", "--oneline"],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+        if not result.stdout.strip():
+            return False  # No new commits
+        # Merge
+        merge = _sp.run(
+            ["git", "merge", "--no-ff", branch, "-m", f"Merge task {slug}"],
+            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        )
+        if merge.returncode == 0:
+            log.info("WORKTREE_MERGED task=%s", slug)
+            return True
+        else:
+            # Abort failed merge
+            _sp.run(["git", "merge", "--abort"], capture_output=True, timeout=10, cwd=repo_root)
+            log.warning("WORKTREE_MERGE_CONFLICT task=%s", slug)
+            return False
+    except Exception as e:
+        log.warning("WORKTREE_MERGE_FAILED task=%s error=%s", slug, e)
+        return False
+
+
+def _run_task_in_worktree(task: dict, wt_path: Path) -> bool:
+    """Execute a single task inside a worktree directory."""
+    task_id = task["id"]
+    # Temporarily override the runner's repo dir
+    original_repo = _runner._REPO_DIR
+    try:
+        _runner._REPO_DIR = wt_path
+        return _runner.run_one(task, dry_run=False)
+    except Exception as e:
+        log.error("WORKTREE_EXEC_FAILED task=%s error=%s", task_id[:16], e)
+        return False
+    finally:
+        _runner._REPO_DIR = original_repo
+
+
+def run_parallel(dry_run: bool = False) -> dict:
+    """Claim and execute up to N tasks in parallel using worktrees.
+
+    Falls back to sequential execution if worktree creation fails.
+    """
+    import concurrent.futures
+
+    # Get pending tasks
+    pending = _api("GET", "/api/agent/tasks?status=pending&limit=10")
+    if not pending:
+        return {"completed": 0, "failed": 0}
+
+    task_list = pending if isinstance(pending, list) else pending.get("tasks", [])
+    if not task_list:
+        return {"completed": 0, "failed": 0}
+
+    # Claim up to N tasks — one per idea (never run two phases of the same idea)
+    claimed = []
+    claimed_idea_ids: set[str] = set()
+    for task in task_list[:_MAX_PARALLEL * 2]:  # check more than N in case some share ideas
+        ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+        idea_id = ctx.get("idea_id", "")
+        if idea_id and idea_id in claimed_idea_ids:
+            log.info("PARALLEL_SKIP_DUPE task=%s idea=%s (already claimed)", task["id"][:16], idea_id[:20])
+            continue
+        result = _api("PATCH", f"/api/agent/tasks/{task['id']}", {"status": "running"})
+        if result and result.get("status") == "running":
+            claimed.append(result)
+            if idea_id:
+                claimed_idea_ids.add(idea_id)
+            log.info("PARALLEL_CLAIMED task=%s type=%s idea=%s", task["id"][:16], task.get("task_type"), idea_id[:20])
+        if len(claimed) >= _MAX_PARALLEL:
+            break
+
+    if not claimed:
+        return {"completed": 0, "failed": 0}
+
+    if len(claimed) == 1:
+        # Single task — run sequentially (no worktree overhead)
+        ok = _runner.run_one(claimed[0], dry_run=dry_run)
+        return {"completed": 1 if ok else 0, "failed": 0 if ok else 1}
+
+    log.info("PARALLEL_START tasks=%d max=%d", len(claimed), _MAX_PARALLEL)
+
+    # Create worktrees and execute in parallel
+    results = {"completed": 0, "failed": 0}
+    futures = {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_PARALLEL) as pool:
+        for task in claimed:
+            wt = _create_worktree(task["id"])
+            if wt:
+                future = pool.submit(_run_task_in_worktree, task, wt)
+                futures[future] = task
+            else:
+                # Fallback: run in main repo (sequential)
+                log.warning("PARALLEL_FALLBACK task=%s (worktree failed)", task["id"][:16])
+                ok = _runner.run_one(task, dry_run=dry_run)
+                results["completed" if ok else "failed"] += 1
+
+        for future in concurrent.futures.as_completed(futures, timeout=600):
+            task = futures[future]
+            try:
+                ok = future.result()
+                results["completed" if ok else "failed"] += 1
+                # Merge changes back
+                if ok:
+                    _merge_worktree(task["id"])
+            except Exception as e:
+                log.error("PARALLEL_ERROR task=%s error=%s", task["id"][:16], e)
+                results["failed"] += 1
+            finally:
+                _cleanup_worktree(task["id"])
+
+    log.info("PARALLEL_DONE completed=%d failed=%d", results["completed"], results["failed"])
+    return results
+
+
 # ── Main entry point ──────────────────────────────────────────────────
 
 def main():
@@ -501,6 +675,7 @@ def main():
     parser.add_argument("--resume", action="store_true", help="Enable timeout resume flow")
     parser.add_argument("--stats", action="store_true", help="Show provider stats and exit")
     parser.add_argument("--no-register", action="store_true", help="Skip node registration")
+    parser.add_argument("--parallel", type=int, default=0, help="Max parallel tasks via worktrees (0=sequential)")
     args = parser.parse_args()
 
     # Configure the underlying runner
@@ -553,8 +728,17 @@ def main():
         msg_interval = 120  # check messages every 2 minutes
         last_msg_check = 0.0
         try:
+            use_parallel = args.parallel > 0
+            if use_parallel:
+                global _MAX_PARALLEL
+                _MAX_PARALLEL = args.parallel
+                log.info("PARALLEL MODE: up to %d tasks via worktrees", _MAX_PARALLEL)
+
             while True:
-                results = _runner.run_all_pending(dry_run=args.dry_run)
+                if use_parallel:
+                    results = run_parallel(dry_run=args.dry_run)
+                else:
+                    results = _runner.run_all_pending(dry_run=args.dry_run)
 
                 if not args.dry_run:
                     # Push measurements after each batch
