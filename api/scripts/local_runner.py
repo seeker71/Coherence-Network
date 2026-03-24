@@ -570,8 +570,6 @@ def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> 
             # Downgrade expected errors from ERROR to INFO
             if resp.status_code == 409:
                 log.info("API %s %s → 409 (already claimed, expected race)", method, path)
-            elif resp.status_code == 404 and "/messages/" in path:
-                log.info("API %s %s → 404 (message already gone)", method, path)
             else:
                 log.error("API %s %s → status %d: %s", method, path, resp.status_code, resp.text[:200])
             return None
