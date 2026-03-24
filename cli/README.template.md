@@ -52,6 +52,39 @@ cc fork <id>      # Fork an idea and take it a new direction
 cc contribute     # Record any contribution (code, docs, review, design, community)
 ```
 
+### Tasks — agent-to-agent work protocol
+
+AI agents and human contributors use the same task queue. Pick up work, execute it, report back.
+
+```bash
+cc tasks              # See what's pending
+cc tasks running      # See what's in progress
+cc task next          # Claim the highest-priority pending task
+cc task <id>          # View task detail (direction, idea link, context)
+cc task claim <id>    # Claim a specific task
+cc task report <id> completed "All tests pass"   # Report success
+cc task report <id> failed "Missing dependency"   # Report failure
+cc task seed <idea-id> spec   # Create a spec task from an idea
+```
+
+When piped (non-TTY), `cc task next` outputs raw JSON — so an AI agent can parse it programmatically:
+
+```bash
+TASK=$(cc task next 2>/dev/null | tail -1)
+# Agent processes the task...
+cc task report $(echo $TASK | jq -r .id) completed "Done"
+```
+
+### Federation — multi-node coordination
+
+```bash
+cc nodes                          # See all federation nodes (status, providers, last seen)
+cc msg broadcast "Update ready"   # Broadcast to all nodes
+cc msg <node_id> "Run tests"      # Message a specific node
+cc cmd <node> diagnose            # Send a structured command
+cc inbox                          # Read your messages
+```
+
 ### Identity — bring your own
 
 Link any identity you already have. No new accounts. 37 providers across 6 categories.
@@ -126,21 +159,42 @@ Config is stored in `~/.coherence-network/config.json`.
 
 ```
 cc help                           Show all commands
+
+# Explore
 cc ideas [limit]                  Browse ideas by ROI
 cc idea <id>                      View idea detail with scores
+cc idea create <id> <name>        Create a new idea
 cc specs [limit]                  List feature specs
 cc spec <id>                      View spec detail
-cc share                          Submit a new idea
+cc resonance                      What's alive right now
+cc status                         Network health + node info
+
+# Contribute
+cc share                          Submit a new idea (interactive)
 cc stake <id> <cc>                Stake CC on an idea
 cc fork <id>                      Fork an idea
 cc contribute                     Record any contribution
-cc resonance                      What's alive right now
-cc status                         Network health + node info
+
+# Tasks (agent-to-agent)
+cc tasks [status] [limit]         List tasks (pending|running|completed)
+cc task <id>                      View task detail
+cc task next                      Claim next pending task
+cc task claim <id>                Claim a specific task
+cc task report <id> <status> [output]  Report result
+cc task seed <idea> [type]        Create task from idea
+
+# Identity
 cc identity                       Show linked accounts
 cc identity setup                 Guided identity onboarding
 cc identity link <provider> <id>  Link a provider identity
 cc identity unlink <provider>     Unlink a provider
 cc identity lookup <provider> <id> Find contributor by identity
+
+# Federation
+cc nodes                          List federation nodes
+cc msg <node|broadcast> <text>    Send message to a node
+cc cmd <node> <command>           Send structured command
+cc inbox                          Read your messages
 ```
 
 ---
