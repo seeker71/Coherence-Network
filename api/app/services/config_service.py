@@ -86,13 +86,13 @@ def _detect_node_id() -> str:
 
 
 def _detect_cors_origins(environment: str) -> list[str]:
-    """Auto CORS origins based on environment."""
-    if environment == "production":
-        return [
-            "https://coherencycoin.com",
-            "https://www.coherencycoin.com",
-        ]
-    return ["http://localhost:3000"]
+    """Auto CORS origins — always include production + dev for safety."""
+    return [
+        "https://coherencycoin.com",
+        "https://www.coherencycoin.com",
+        "http://localhost:3000",
+        "http://localhost:3001",
+    ]
 
 
 def _load_keystore() -> dict:
