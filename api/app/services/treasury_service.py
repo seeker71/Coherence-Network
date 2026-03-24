@@ -24,10 +24,13 @@ logger = logging.getLogger(__name__)
 DEFAULT_ETH_ADDRESS = ""  # to be set by owner
 DEFAULT_BTC_ADDRESS = ""  # to be set by owner
 
-CC_PER_ETH = 1000.0   # 1 ETH = 1000 CC
-CC_PER_BTC = 10000.0   # 1 BTC = 10000 CC
+# DEPRECATED: Static rates are exploitable. Market-driven rates coming.
+# These are placeholder fallbacks only — not used for real deposits.
+# See idea: market-driven-exchange-rates
+CC_PER_ETH = 0.0   # Disabled — must use live oracle rate
+CC_PER_BTC = 0.0   # Disabled — must use live oracle rate
 
-VALID_ASSETS = {"eth", "btc"}
+VALID_ASSETS = {"eth", "btc", "usdc"}
 
 
 # ---------------------------------------------------------------------------
@@ -60,13 +63,19 @@ def _rate_for_asset(asset: str) -> float:
 # ---------------------------------------------------------------------------
 
 def get_treasury_info() -> dict:
-    """Return treasury wallet addresses and current conversion rates."""
+    """Return treasury wallet addresses and current conversion rates.
+
+    Rates of 0.0 mean "market rate not available — deposits use live oracle pricing."
+    Static hardcoded rates were removed to prevent exchange rate gaming.
+    """
     tc = get_treasury_config()
     return {
         "eth_address": tc.get("eth_address", DEFAULT_ETH_ADDRESS),
         "btc_address": tc.get("btc_address", DEFAULT_BTC_ADDRESS),
         "cc_per_eth": float(tc.get("cc_per_eth", CC_PER_ETH)),
         "cc_per_btc": float(tc.get("cc_per_btc", CC_PER_BTC)),
+        "rate_source": "static_disabled" if CC_PER_ETH == 0.0 else "static_config",
+        "rate_note": "Market-driven oracle rates coming — static rates disabled to prevent gaming",
     }
 
 
