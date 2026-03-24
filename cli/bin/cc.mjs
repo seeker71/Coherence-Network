@@ -7,6 +7,7 @@
  * Zero dependencies. Node 18+ required.
  */
 
+import { createRequire } from "node:module";
 import { listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea } from "../lib/commands/ideas.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
@@ -14,6 +15,32 @@ import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
 import { listNodes, sendMessage, readMessages, sendCommand } from "../lib/commands/nodes.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask } from "../lib/commands/tasks.mjs";
+
+// Version check — non-blocking, runs in background
+const require = createRequire(import.meta.url);
+const pkg = require("../package.json");
+const LOCAL_VERSION = pkg.version;
+
+async function checkForUpdate() {
+  try {
+    const resp = await fetch("https://registry.npmjs.org/coherence-cli/latest", {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const latest = data.version;
+    if (latest && latest !== LOCAL_VERSION && latest > LOCAL_VERSION) {
+      console.log(
+        `\n\x1b[33m  Update available: ${LOCAL_VERSION} → ${latest}\x1b[0m` +
+        `\n  Run: npm i -g coherence-cli@${latest}\n`,
+      );
+    }
+  } catch {
+    // Silent — don't block the CLI for a version check
+  }
+}
+
+const updateCheck = checkForUpdate();
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -36,6 +63,8 @@ const COMMANDS = {
   inbox:      () => readMessages(args),
   tasks:      () => listTasks(args),
   task:       () => handleTask(args),
+  update:     () => selfUpdate(),
+  version:    () => console.log(`cc v${LOCAL_VERSION}`),
   help:       () => showHelp(),
 };
 
@@ -65,6 +94,29 @@ async function handleIdentity(args) {
     case "setup":  return setupIdentity();
     case "set":    return setIdentity(subArgs);
     default:       return showIdentity();
+  }
+}
+
+async function selfUpdate() {
+  const { execSync } = await import("node:child_process");
+  console.log(`Current: v${LOCAL_VERSION}`);
+  console.log("Checking npm for latest version...");
+  try {
+    const resp = await fetch("https://registry.npmjs.org/coherence-cli/latest", {
+      signal: AbortSignal.timeout(5000),
+    });
+    const data = await resp.json();
+    const latest = data.version;
+    if (latest === LOCAL_VERSION) {
+      console.log(`\x1b[32m✓\x1b[0m Already on latest version (${LOCAL_VERSION})`);
+      return;
+    }
+    console.log(`Updating ${LOCAL_VERSION} → ${latest}...`);
+    execSync(`npm i -g coherence-cli@${latest}`, { stdio: "inherit" });
+    console.log(`\x1b[32m✓\x1b[0m Updated to v${latest}`);
+  } catch (e) {
+    console.error(`\x1b[31m✗\x1b[0m Update failed: ${e.message}`);
+    console.log("  Manual: npm i -g coherence-cli@latest");
   }
 }
 
@@ -109,7 +161,13 @@ function showHelp() {
 \x1b[1mFederation:\x1b[0m
   nodes                   List federation nodes
   msg <node|broadcast> <text>  Send message to a node
+  cmd <node> <command>    Remote command (update|status|diagnose|restart|ping)
   inbox                   Read your messages
+
+\x1b[1mSystem:\x1b[0m
+  update                  Self-update to latest npm version
+  version                 Show current version
+  help                    Show this help
 
 \x1b[1mProviders:\x1b[0m
   github, x, discord, telegram, mastodon, bluesky, linkedin, reddit,
