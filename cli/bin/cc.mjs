@@ -15,6 +15,7 @@ import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
 import { listNodes, sendMessage, readMessages, sendCommand } from "../lib/commands/nodes.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask } from "../lib/commands/tasks.mjs";
+import { setup } from "../lib/commands/setup.mjs";
 
 // Version check — non-blocking, runs in background
 const require = createRequire(import.meta.url);
@@ -69,6 +70,7 @@ const COMMANDS = {
   inbox:      () => readMessages(args),
   tasks:      () => listTasks(args),
   task:       () => handleTask(args),
+  setup:      () => setup(args),
   update:     () => selfUpdate(),
   version:    () => console.log(`cc v${LOCAL_VERSION}`),
   help:       () => showHelp(),
