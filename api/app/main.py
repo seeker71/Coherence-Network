@@ -38,6 +38,7 @@ from app.routers import (
     providers,
     spec_registry,
     runtime,
+    traceability,
     treasury,
     value_lineage,
 )
@@ -536,6 +537,7 @@ app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(news.router, prefix="/api", tags=["news"])
+app.include_router(traceability.router, prefix="/api", tags=["traceability"])
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])

@@ -1,4 +1,7 @@
-"""Idea portfolio API routes."""
+"""Idea portfolio API routes.
+
+Implements: spec-053 (portfolio governance), spec-126 (idea lifecycle)
+"""
 
 from __future__ import annotations
 
@@ -6,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
 from app.middleware.auth import require_api_key
+from app.middleware.traceability import traces_to
 
 from app.models.idea import (
     GovernanceHealth,
@@ -30,6 +34,7 @@ router = APIRouter()
 
 
 @router.get("/ideas", response_model=IdeaPortfolioResponse)
+@traces_to(spec="053", idea="portfolio-governance", description="Browse the idea portfolio ranked by ROI")
 async def list_ideas(
     only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
     include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
