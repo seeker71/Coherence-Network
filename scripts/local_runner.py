@@ -61,29 +61,26 @@ _HTTP_CLIENT = httpx.Client(timeout=30.0)
 def _get_git_info() -> dict[str, str]:
     """Get git version info for this node."""
     repo = str(Path(__file__).resolve().parent.parent)
-    info = {"local_sha": "unknown", "origin_sha": "unknown", "branch": "unknown", "dirty": "unknown"}
+    info = {"local_sha": "unknown", "origin_sha": "unknown", "branch": "unknown", "dirty": "unknown", "repo": repo}
+    git = "/usr/bin/git"  # Use absolute path — launchd may not have git on PATH
+    if not os.path.exists(git):
+        git = "git"  # Fallback
     try:
-        # Local HEAD
-        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5, cwd=repo)
+        r = subprocess.run([git, "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5, cwd=repo)
         if r.returncode == 0:
             info["local_sha"] = r.stdout.strip()
-        # Fetch origin to get latest
-        subprocess.run(["git", "fetch", "origin", "main", "--quiet"], capture_output=True, timeout=15, cwd=repo)
-        # origin/main SHA
-        r = subprocess.run(["git", "rev-parse", "--short", "origin/main"], capture_output=True, text=True, timeout=5, cwd=repo)
+        subprocess.run([git, "fetch", "origin", "main", "--quiet"], capture_output=True, timeout=15, cwd=repo)
+        r = subprocess.run([git, "rev-parse", "--short", "origin/main"], capture_output=True, text=True, timeout=5, cwd=repo)
         if r.returncode == 0:
             info["origin_sha"] = r.stdout.strip()
-        # Branch
-        r = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True, timeout=5, cwd=repo)
+        r = subprocess.run([git, "branch", "--show-current"], capture_output=True, text=True, timeout=5, cwd=repo)
         if r.returncode == 0:
             info["branch"] = r.stdout.strip()
-        # Dirty?
-        r = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, timeout=5, cwd=repo)
+        r = subprocess.run([git, "status", "--porcelain"], capture_output=True, text=True, timeout=5, cwd=repo)
         info["dirty"] = "yes" if r.stdout.strip() else "no"
-        # Behind?
         info["up_to_date"] = "yes" if info["local_sha"] == info["origin_sha"] else "no"
-    except Exception:
-        pass
+    except Exception as e:
+        info["error"] = str(e)
     return info
 
 
