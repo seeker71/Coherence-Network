@@ -852,35 +852,77 @@ def _task_group_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> dic
     return None
 
 
+def _classify_idea_validation(interfaces: list[str], desc: str) -> str:
+    """Determine validation category from interfaces and description.
+
+    Returns: 'network-api', 'network-web', 'network-cli', 'infrastructure',
+             'external', 'research', 'community'
+    """
+    iface_set = set(interfaces or [])
+
+    # Network ideas: have machine:api, human:web, machine:cli, machine:mcp
+    has_api = any(i in iface_set for i in ("machine:api", "api"))
+    has_web = any(i in iface_set for i in ("human:web", "web"))
+    has_cli = any(i in iface_set for i in ("machine:cli", "cli"))
+    has_ci = any(i in iface_set for i in ("machine:ci", "ci"))
+
+    if has_api or has_web or has_cli:
+        return "network"
+    if has_ci:
+        return "infrastructure"
+    if any(i.startswith("external:") for i in iface_set):
+        return "external"
+
+    # No interfaces claimed — check description for clues
+    desc_lower = desc.lower()
+    if "/api/" in desc_lower or "endpoint" in desc_lower:
+        return "network"
+    if "web page" in desc_lower or "ui " in desc_lower or "page " in desc_lower:
+        return "network"
+
+    # Default: no specific production check needed
+    return "general"
+
+
 def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]:
     """Check if an idea's claimed interfaces actually exist on production.
 
     Returns a list of failure descriptions. Empty list = all verified.
-    Checks API endpoints (non-404) and web pages (non-404).
-    Only checks if the idea description mentions specific endpoints or pages.
+
+    Validation is category-aware:
+    - network: check API endpoints (non-404) and web pages (non-404)
+    - infrastructure: check CI workflow exists or health endpoint
+    - external: no production check (contributor provides evidence)
+    - general: no production check (spec completeness is sufficient)
     """
     import re
-    failures = []
     desc = str(idea_payload.get("description") or "")
     interfaces = idea_payload.get("interfaces") or []
 
+    category = _classify_idea_validation(interfaces, desc)
+
+    if category not in ("network",):
+        # Non-network ideas: no production endpoint check
+        log.info("PRODUCTION_CHECK idea=%s category=%s — skipped (not network)", idea_id, category)
+        return []
+
+    failures = []
+
     # Extract API paths from description (e.g., /api/concepts, /api/edges)
     api_paths = re.findall(r'/api/[\w/{}]+', desc)
-    # Deduplicate and remove templated paths
     api_paths = list(set(p.split("{")[0].rstrip("/") for p in api_paths))
 
-    # Check each claimed API endpoint
     API_BASE = os.environ.get("PUBLIC_DEPLOY_API_BASE", "https://api.coherencycoin.com")
-    for path in api_paths[:5]:  # limit to 5 checks
+    for path in api_paths[:5]:
         try:
             resp = httpx.get(f"{API_BASE}{path}", timeout=5)
             if resp.status_code == 404:
                 failures.append(f"API {path} → 404")
         except Exception:
-            pass  # network error is not a validation failure
+            pass
 
     # Check web pages if human:web is in interfaces
-    if "human:web" in interfaces:
+    if any(i in set(interfaces) for i in ("human:web", "web")):
         web_paths = re.findall(r'Web:.*?/([\w-]+)\s', desc)
         WEB_BASE = os.environ.get("PUBLIC_DEPLOY_WEB_BASE", "https://coherencycoin.com")
         for page in web_paths[:3]:
@@ -892,9 +934,11 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
                 pass
 
     if failures:
-        log.info("PRODUCTION_CHECK idea=%s failures=%s", idea_id, failures)
+        log.info("PRODUCTION_CHECK idea=%s category=%s failures=%s", idea_id, category, failures)
     elif api_paths:
-        log.info("PRODUCTION_CHECK idea=%s passed (%d endpoints checked)", idea_id, len(api_paths))
+        log.info("PRODUCTION_CHECK idea=%s category=%s passed (%d endpoints checked)", idea_id, category, len(api_paths))
+    else:
+        log.info("PRODUCTION_CHECK idea=%s category=%s — no specific endpoints claimed", idea_id, category)
 
     return failures
 
@@ -1803,6 +1847,31 @@ def _seed_task_from_open_idea() -> bool:
         q_lines = [f"- {(q.get('question', q) if isinstance(q, dict) else str(q))}" for q in questions[:3]]
         q_text = "\n\nOpen questions to address:\n" + "\n".join(q_lines)
 
+    # Determine validation category for the spec
+    ifaces = idea.get("interfaces") or []
+    has_api = any(i in ifaces for i in ("machine:api", "api"))
+    has_web = any(i in ifaces for i in ("human:web", "web"))
+    has_cli = any(i in ifaces for i in ("machine:cli", "cli"))
+
+    validation_guidance = ""
+    if has_api or has_web or has_cli or "/api/" in desc.lower():
+        validation_guidance = (
+            f"\n\nVALIDATION (network idea):\n"
+            f"- The spec MUST list specific API endpoints (e.g., GET /api/concepts)\n"
+            f"- The spec MUST list specific web pages (e.g., /concepts) if web-facing\n"
+            f"- The spec MUST list specific CLI commands (e.g., cc concepts) if CLI-facing\n"
+            f"- The idea is only validated when these endpoints/pages/commands exist on production\n"
+            f"- Include a 'Verification' section with curl commands to test each endpoint\n"
+        )
+    else:
+        validation_guidance = (
+            f"\n\nVALIDATION (external/general idea):\n"
+            f"- The spec MUST include specific acceptance criteria that can be checked\n"
+            f"- Include evidence requirements: what proves this idea is realized?\n"
+            f"- For external ideas: evidence URL, screenshot, or contributor attestation\n"
+            f"- For research ideas: spec completeness and peer review sufficiency\n"
+        )
+
     direction = (
         f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}\n\n"
         f"REQUIREMENTS:\n"
@@ -1813,6 +1882,7 @@ def _seed_task_from_open_idea() -> bool:
         f"- For review: verify the feature exists, works, and is deployed\n"
         f"- Follow the project's CLAUDE.md conventions. Work in the repository.\n"
         f"- If you cannot complete the task, explain WHY in detail (don't return empty)."
+        f"{validation_guidance}"
     )
 
     result = api("POST", "/api/agent/tasks", {
