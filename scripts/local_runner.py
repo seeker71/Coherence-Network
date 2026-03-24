@@ -324,6 +324,164 @@ def _detect_tools() -> list[str]:
     return tools
 
 
+# ── Remote node messaging ────────────────────────────────────────────
+
+# Safe commands that can be executed remotely without confirmation.
+_SAFE_COMMANDS = {
+    "update": "git pull origin main",
+    "status": None,  # handled inline
+    "diagnose": None,  # handled inline
+    "restart": None,  # handled inline
+    "ping": None,  # handled inline
+}
+
+
+def _process_node_messages(node_id: str) -> int:
+    """Check for messages addressed to this node and execute safe commands.
+
+    Returns number of messages processed.
+    """
+    data = _api("GET", f"/api/federation/nodes/{node_id}/messages?unread_only=true&limit=10")
+    if not data:
+        return 0
+    messages = data.get("messages", [])
+    if not messages:
+        return 0
+
+    processed = 0
+    for msg in messages:
+        msg_id = msg.get("id", "?")
+        msg_type = msg.get("type", "text")
+        from_node = msg.get("from_node", "?")[:16]
+        text = msg.get("text", "")
+        payload = msg.get("payload", {}) or {}
+
+        log.info("MSG_RECEIVED id=%s type=%s from=%s text=%s",
+                 msg_id[:16], msg_type, from_node, text[:80])
+
+        # Mark as read
+        _api("PATCH", f"/api/federation/nodes/{node_id}/messages/{msg_id}", {"read": True})
+
+        if msg_type == "command":
+            response = _execute_node_command(node_id, payload, text)
+            # Send response back
+            _api("POST", f"/api/federation/nodes/{node_id}/messages", {
+                "from_node": node_id,
+                "to_node": from_node,
+                "type": "command_response",
+                "text": response,
+                "payload": {"in_reply_to": msg_id},
+            })
+            processed += 1
+        elif msg_type == "text":
+            log.info("MSG_TEXT from=%s: %s", from_node, text[:200])
+            processed += 1
+        else:
+            log.info("MSG_UNKNOWN type=%s from=%s", msg_type, from_node)
+
+    if processed:
+        log.info("MSG_PROCESSED %d messages", processed)
+    return processed
+
+
+def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
+    """Execute a safe command received from another node.
+
+    Returns a response string describing the result.
+    """
+    import subprocess as _sp
+    import shutil
+
+    command = payload.get("command", "").strip().lower()
+
+    if command == "update":
+        # Git pull and report what changed
+        try:
+            result = _sp.run(
+                ["git", "pull", "origin", "main"],
+                capture_output=True, text=True, timeout=60,
+                cwd=str(Path(__file__).resolve().parent.parent),
+            )
+            output = (result.stdout + result.stderr).strip()
+            if result.returncode == 0:
+                log.info("CMD_UPDATE: success — %s", output[:200])
+                return f"Update successful: {output[:300]}"
+            else:
+                log.warning("CMD_UPDATE: failed — %s", output[:200])
+                return f"Update failed (exit {result.returncode}): {output[:300]}"
+        except Exception as e:
+            return f"Update error: {e}"
+
+    elif command == "status":
+        # Collect node status
+        import psutil
+        providers = _detect_providers() if callable(globals().get("_detect_providers")) else []
+        try:
+            cpu = psutil.cpu_percent(interval=1)
+            mem = psutil.virtual_memory()
+            disk = psutil.disk_usage("/")
+            status_lines = [
+                f"Node: {socket.gethostname()} ({sys.platform})",
+                f"CPU: {cpu}% | RAM: {mem.percent}% ({mem.available // (1024**3)}GB free)",
+                f"Disk: {disk.percent}% ({disk.free // (1024**3)}GB free)",
+                f"Python: {sys.version.split()[0]}",
+                f"Providers: {providers}",
+                f"PID: {os.getpid()}",
+            ]
+            return "\n".join(status_lines)
+        except ImportError:
+            return f"Node: {socket.gethostname()} ({sys.platform}), PID: {os.getpid()}"
+
+    elif command == "diagnose":
+        # Run diagnostics: check git status, runner health, recent errors
+        lines = [f"=== Diagnostics for {socket.gethostname()} ==="]
+        try:
+            git_status = _sp.run(
+                ["git", "status", "--short"],
+                capture_output=True, text=True, timeout=10,
+                cwd=str(Path(__file__).resolve().parent.parent),
+            )
+            lines.append(f"Git status: {git_status.stdout.strip()[:200] or 'clean'}")
+
+            git_log = _sp.run(
+                ["git", "log", "--oneline", "-5"],
+                capture_output=True, text=True, timeout=10,
+                cwd=str(Path(__file__).resolve().parent.parent),
+            )
+            lines.append(f"Recent commits:\n{git_log.stdout.strip()}")
+
+            # Check for recent errors in runner log
+            err_log = Path("/tmp/coherence-runner.err")
+            if err_log.exists():
+                recent_errors = [
+                    l for l in err_log.read_text().splitlines()[-50:]
+                    if "ERROR" in l or "WARNING" in l
+                ][-5:]
+                if recent_errors:
+                    lines.append("Recent errors:\n" + "\n".join(recent_errors))
+                else:
+                    lines.append("No recent errors")
+        except Exception as e:
+            lines.append(f"Diagnostic error: {e}")
+        return "\n".join(lines)
+
+    elif command == "restart":
+        log.info("CMD_RESTART: received restart command — will exit for launchd/systemd to restart")
+        # Reply first, then exit — the service manager restarts us
+        response = "Restart acknowledged. Exiting for service manager to restart."
+        # Schedule exit after a short delay so the response gets sent
+        import threading
+        threading.Timer(2.0, lambda: os._exit(0)).start()
+        return response
+
+    elif command == "ping":
+        return f"pong from {socket.gethostname()} at {datetime.now(timezone.utc).isoformat()}"
+
+    else:
+        log.warning("CMD_UNKNOWN: %s (not in safe command list)", command)
+        return f"Unknown command: {command}. Safe commands: {', '.join(_SAFE_COMMANDS.keys())}"
+
+
 # ── Main entry point ──────────────────────────────────────────────────
 
 def main():
@@ -392,6 +550,8 @@ def main():
         last_heartbeat = 0.0
         reap_interval = 600  # reap stale tasks every 10 minutes
         last_reap = 0.0
+        msg_interval = 120  # check messages every 2 minutes
+        last_msg_check = 0.0
         try:
             while True:
                 results = _runner.run_all_pending(dry_run=args.dry_run)
@@ -411,6 +571,11 @@ def main():
                     if now - last_reap > reap_interval:
                         _reap_stale_tasks(max_age_minutes=15)
                         last_reap = now
+
+                    # Check and execute messages from other nodes
+                    if now - last_msg_check > msg_interval:
+                        _process_node_messages(node_id)
+                        last_msg_check = now
 
                 time.sleep(args.interval)
         except KeyboardInterrupt:

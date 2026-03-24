@@ -12,7 +12,7 @@ import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
-import { listNodes, sendMessage, readMessages } from "../lib/commands/nodes.mjs";
+import { listNodes, sendMessage, readMessages, sendCommand } from "../lib/commands/nodes.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -30,6 +30,7 @@ const COMMANDS = {
   identity:   () => handleIdentity(args),
   nodes:      () => listNodes(),
   msg:        () => sendMessage(args),
+  cmd:        () => sendCommand(args),
   messages:   () => readMessages(args),
   inbox:      () => readMessages(args),
   help:       () => showHelp(),

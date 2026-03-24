@@ -1,9 +1,65 @@
 /**
- * Federation node commands: nodes, msg, broadcast
+ * Federation node commands: nodes, msg, cmd, broadcast
  */
 
 import { get, post } from "../api.mjs";
 import { hostname } from "node:os";
+
+/**
+ * Send a remote command to a node.
+ * Usage: cc cmd <node_id_or_name> <command> [...args]
+ * Commands: update, status, diagnose, restart, ping
+ */
+export async function sendCommand(args) {
+  if (args.length < 2) {
+    console.log("Usage: cc cmd <node_id_or_name> <command>");
+    console.log("Commands: update, status, diagnose, restart, ping");
+    return;
+  }
+
+  const [target, command, ...cmdArgs] = args;
+
+  // Resolve target: could be node_id prefix or hostname
+  const nodes = await get("/api/federation/nodes");
+  const node = nodes?.find(
+    (n) =>
+      n.node_id?.startsWith(target) ||
+      n.hostname?.toLowerCase().includes(target.toLowerCase()),
+  );
+  if (!node) {
+    console.log(`Node not found: ${target}`);
+    console.log("Available nodes:");
+    for (const n of nodes || []) {
+      console.log(`  ${n.node_id?.slice(0, 12)}  ${n.hostname}`);
+    }
+    return;
+  }
+
+  const myNodeId = nodes?.find(
+    (n) => n.hostname === hostname(),
+  )?.node_id || "unknown";
+
+  console.log(
+    `Sending \x1b[1m${command}\x1b[0m to \x1b[1m${node.hostname}\x1b[0m (${node.node_id?.slice(0, 12)})...`,
+  );
+
+  const result = await post(`/api/federation/nodes/${myNodeId}/messages`, {
+    from_node: myNodeId,
+    to_node: node.node_id,
+    type: "command",
+    text: `Remote command: ${command} ${cmdArgs.join(" ")}`.trim(),
+    payload: { command, args: cmdArgs },
+  });
+
+  if (result?.id) {
+    console.log(`\x1b[32m✓\x1b[0m Command sent (msg ${result.id.slice(0, 12)})`);
+    console.log(
+      "  Node will execute on next poll cycle (~2 min) and reply.",
+    );
+  } else {
+    console.log("\x1b[31m✗\x1b[0m Failed to send command");
+  }
+}
 
 export async function listNodes() {
   const nodes = await get("/api/federation/nodes");
