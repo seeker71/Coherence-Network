@@ -728,14 +728,27 @@ def get_aggregated_node_stats(window_days: int | None = None) -> dict:
                 "last_seen_at": nr.last_seen_at,
             }
 
-        # Fetch measurement summaries within window
+        # Fetch measurement summaries within window, deduplicated: for each
+        # (node_id, decision_point, slot_id) keep only the most recent row
+        # (highest id) to avoid counting cumulative/overlapping pushes.
+        latest_ids_subq = (
+            s.query(func.max(NodeMeasurementSummaryRecord.id).label("max_id"))
+            .filter(NodeMeasurementSummaryRecord.pushed_at >= cutoff)
+            .group_by(
+                NodeMeasurementSummaryRecord.node_id,
+                NodeMeasurementSummaryRecord.decision_point,
+                NodeMeasurementSummaryRecord.slot_id,
+            )
+            .subquery()
+        )
+
         summary_rows = (
             s.query(NodeMeasurementSummaryRecord, FederationNodeRecord)
             .outerjoin(
                 FederationNodeRecord,
                 NodeMeasurementSummaryRecord.node_id == FederationNodeRecord.node_id,
             )
-            .filter(NodeMeasurementSummaryRecord.pushed_at >= cutoff)
+            .filter(NodeMeasurementSummaryRecord.id == latest_ids_subq.c.max_id)
             .all()
         )
 
