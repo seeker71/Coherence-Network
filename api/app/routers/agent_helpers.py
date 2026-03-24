@@ -145,7 +145,12 @@ def requeue_terminal_task_for_execute(task_id: str, task: dict[str, Any]) -> dic
 
 
 def task_to_item(task: dict) -> dict:
-    """Convert stored task to list item (no command/output)."""
+    """Convert stored task to list item (no command/output).
+
+    IMPORTANT: context MUST be included — it carries idea_id which is
+    required for task-to-idea linkage. Without it, list_tasks_for_idea()
+    returns empty results and ideas get falsely marked as validated.
+    """
     ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
     return {
         "id": task["id"],
@@ -153,6 +158,7 @@ def task_to_item(task: dict) -> dict:
         "task_type": task["task_type"],
         "status": task["status"],
         "model": task["model"],
+        "context": ctx or None,
         "progress_pct": task.get("progress_pct"),
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
