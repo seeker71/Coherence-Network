@@ -578,82 +578,94 @@ def _run_task_in_worktree(task: dict, wt_path: Path) -> bool:
         _runner._REPO_DIR = original_repo
 
 
-def run_parallel(dry_run: bool = False) -> dict:
-    """Claim and execute up to N tasks in parallel using worktrees.
+_active_idea_ids: set[str] = set()
+_active_lock = __import__("threading").Lock()
 
-    Falls back to sequential execution if worktree creation fails.
-    """
-    import concurrent.futures
 
-    # Get pending tasks
-    pending = _api("GET", "/api/agent/tasks?status=pending&limit=10")
-    if not pending:
-        return {"completed": 0, "failed": 0}
+def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
+    """Independent worker thread: claim one task, execute, repeat."""
+    while not _shutdown_event.is_set():
+        try:
+            # Get a pending task
+            pending = _api("GET", "/api/agent/tasks?status=pending&limit=5")
+            if not pending:
+                _shutdown_event.wait(10)
+                continue
 
-    task_list = pending if isinstance(pending, list) else pending.get("tasks", [])
-    if not task_list:
-        return {"completed": 0, "failed": 0}
+            task_list = pending if isinstance(pending, list) else pending.get("tasks", [])
+            if not task_list:
+                _shutdown_event.wait(10)
+                continue
 
-    # Claim up to N tasks — one per idea (never run two phases of the same idea)
-    claimed = []
-    claimed_idea_ids: set[str] = set()
-    for task in task_list[:_MAX_PARALLEL * 2]:  # check more than N in case some share ideas
-        ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
-        idea_id = ctx.get("idea_id", "")
-        if idea_id and idea_id in claimed_idea_ids:
-            log.info("PARALLEL_SKIP_DUPE task=%s idea=%s (already claimed)", task["id"][:16], idea_id[:20])
-            continue
-        result = _api("PATCH", f"/api/agent/tasks/{task['id']}", {"status": "running"})
-        if result and result.get("status") == "running":
-            claimed.append(result)
-            if idea_id:
-                claimed_idea_ids.add(idea_id)
-            log.info("PARALLEL_CLAIMED task=%s type=%s idea=%s", task["id"][:16], task.get("task_type"), idea_id[:20])
-        if len(claimed) >= _MAX_PARALLEL:
-            break
+            # Find a task for an idea we're not already working on
+            task = None
+            for candidate in task_list:
+                ctx = candidate.get("context") if isinstance(candidate.get("context"), dict) else {}
+                idea_id = ctx.get("idea_id", "")
+                with _active_lock:
+                    if idea_id and idea_id in _active_idea_ids:
+                        continue
+                    # Try to claim
+                    result = _api("PATCH", f"/api/agent/tasks/{candidate['id']}", {"status": "running"})
+                    if result and result.get("status") == "running":
+                        if idea_id:
+                            _active_idea_ids.add(idea_id)
+                        task = result
+                        break
 
-    if not claimed:
-        return {"completed": 0, "failed": 0}
+            if not task:
+                _shutdown_event.wait(15)
+                continue
 
-    if len(claimed) == 1:
-        # Single task — run sequentially (no worktree overhead)
-        ok = _runner.run_one(claimed[0], dry_run=dry_run)
-        return {"completed": 1 if ok else 0, "failed": 0 if ok else 1}
+            task_id = task["id"]
+            ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+            idea_id = ctx.get("idea_id", "")
+            log.info("WORKER[%d] CLAIMED task=%s type=%s idea=%s",
+                     worker_id, task_id[:16], task.get("task_type"), (idea_id or "?")[:20])
 
-    log.info("PARALLEL_START tasks=%d max=%d", len(claimed), _MAX_PARALLEL)
-
-    # Create worktrees and execute in parallel
-    results = {"completed": 0, "failed": 0}
-    futures = {}
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=_MAX_PARALLEL) as pool:
-        for task in claimed:
-            wt = _create_worktree(task["id"])
-            if wt:
-                future = pool.submit(_run_task_in_worktree, task, wt)
-                futures[future] = task
-            else:
-                # Fallback: run in main repo (sequential)
-                log.warning("PARALLEL_FALLBACK task=%s (worktree failed)", task["id"][:16])
-                ok = _runner.run_one(task, dry_run=dry_run)
-                results["completed" if ok else "failed"] += 1
-
-        for future in concurrent.futures.as_completed(futures, timeout=600):
-            task = futures[future]
+            # Create worktree and execute
+            wt = _create_worktree(task_id)
             try:
-                ok = future.result()
-                results["completed" if ok else "failed"] += 1
-                # Merge changes back
-                if ok:
-                    _merge_worktree(task["id"])
-            except Exception as e:
-                log.error("PARALLEL_ERROR task=%s error=%s", task["id"][:16], e)
-                results["failed"] += 1
-            finally:
-                _cleanup_worktree(task["id"])
+                if wt:
+                    ok = _run_task_in_worktree(task, wt)
+                    if ok:
+                        _merge_worktree(task_id)
+                else:
+                    # Fallback: sequential in main repo (only if no other workers active)
+                    log.warning("WORKER[%d] FALLBACK task=%s (no worktree)", worker_id, task_id[:16])
+                    ok = _runner.run_one(task, dry_run=dry_run)
 
-    log.info("PARALLEL_DONE completed=%d failed=%d", results["completed"], results["failed"])
-    return results
+                status = "completed" if ok else "failed"
+                log.info("WORKER[%d] %s task=%s", worker_id, status.upper(), task_id[:16])
+            except Exception as e:
+                log.error("WORKER[%d] ERROR task=%s: %s", worker_id, task_id[:16], e)
+            finally:
+                if wt:
+                    _cleanup_worktree(task_id)
+                with _active_lock:
+                    _active_idea_ids.discard(idea_id)
+
+        except Exception as e:
+            log.error("WORKER[%d] LOOP_ERROR: %s", worker_id, e)
+            _shutdown_event.wait(30)
+
+
+_shutdown_event = __import__("threading").Event()
+
+
+def run_parallel_workers(num_workers: int, dry_run: bool = False) -> None:
+    """Start N independent worker threads that each claim and execute tasks."""
+    import threading
+
+    log.info("PARALLEL_WORKERS starting %d workers", num_workers)
+    threads = []
+    for i in range(num_workers):
+        t = threading.Thread(target=_worker_loop, args=(i, dry_run), daemon=True, name=f"worker-{i}")
+        t.start()
+        threads.append(t)
+        log.info("WORKER[%d] started", i)
+
+    return threads
 
 
 # ── Main entry point ──────────────────────────────────────────────────
@@ -732,13 +744,15 @@ def main():
             if use_parallel:
                 global _MAX_PARALLEL
                 _MAX_PARALLEL = args.parallel
-                log.info("PARALLEL MODE: up to %d tasks via worktrees", _MAX_PARALLEL)
+                log.info("PARALLEL MODE: %d independent worker threads", _MAX_PARALLEL)
+                worker_threads = run_parallel_workers(_MAX_PARALLEL, dry_run=args.dry_run)
 
             while True:
-                if use_parallel:
-                    results = run_parallel(dry_run=args.dry_run)
-                else:
+                if not use_parallel:
                     results = _runner.run_all_pending(dry_run=args.dry_run)
+                else:
+                    # Workers run independently — main loop handles housekeeping only
+                    results = {"completed": 0, "failed": 0}
 
                 if not args.dry_run:
                     # Push measurements after each batch
