@@ -7,89 +7,62 @@
  * Zero dependencies. Node 18+ required.
  */
 
-import { createRequire } from "node:module";
 import { listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea } from "../lib/commands/ideas.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
-import { listNodes, sendMessage, readMessages, sendCommand } from "../lib/commands/nodes.mjs";
-import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask } from "../lib/commands/tasks.mjs";
-import { setup } from "../lib/commands/setup.mjs";
-
-// Version check — non-blocking, runs in background
-const require = createRequire(import.meta.url);
-const pkg = require("../package.json");
-const LOCAL_VERSION = pkg.version;
-
-async function checkForUpdate() {
-  try {
-    const resp = await fetch("https://registry.npmjs.org/coherence-cli/latest", {
-      signal: AbortSignal.timeout(3000),
-    });
-    if (!resp.ok) return;
-    const data = await resp.json();
-    const latest = data.version;
-    if (latest && latest !== LOCAL_VERSION && latest > LOCAL_VERSION) {
-      console.log(
-        `\n\x1b[33m  Update available: ${LOCAL_VERSION} → ${latest} — auto-updating...\x1b[0m`,
-      );
-      const { execSync } = await import("node:child_process");
-      try {
-        execSync(`npm i -g coherence-cli@${latest}`, { stdio: "pipe" });
-        console.log(`\x1b[32m  ✓ Updated to v${latest}\x1b[0m\n`);
-      } catch {
-        console.log(`\x1b[31m  ✗ Auto-update failed. Run: npm i -g coherence-cli@${latest}\x1b[0m\n`);
-      }
-    }
-  } catch {
-    // Silent — don't block the CLI for a version check
-  }
-}
-
-const updateCheck = checkForUpdate();
+import { listNodes, sendMessage, readMessages } from "../lib/commands/nodes.mjs";
+import { listContributors, showContributor, showContributions } from "../lib/commands/contributors.mjs";
+import { listAssets, showAsset, createAsset } from "../lib/commands/assets.mjs";
+import { showNewsFeed, showTrending, showSources, addSource, showNewsResonance } from "../lib/commands/news.mjs";
+import { showTreasury, showDeposits, makeDeposit } from "../lib/commands/treasury.mjs";
+import { listLinks, showLink, showValuation, payoutPreview } from "../lib/commands/lineage.mjs";
+import { listChangeRequests, showChangeRequest, vote, propose } from "../lib/commands/governance.mjs";
+import { listServices, showService, showServicesHealth, showServicesDeps } from "../lib/commands/services.mjs";
+import { showFrictionReport, listFrictionEvents, showFrictionCategories } from "../lib/commands/friction.mjs";
+import { listProviders, showProviderStats } from "../lib/commands/providers.mjs";
+import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
+import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility } from "../lib/commands/diagnostics.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
 const COMMANDS = {
-  ideas:      () => listIdeas(args),
-  idea:       () => handleIdea(args),
-  share:      () => shareIdea(),
-  stake:      () => stakeOnIdea(args),
-  fork:       () => forkIdea(args),
-  specs:      () => listSpecs(args),
-  spec:       () => showSpec(args),
-  contribute: () => contribute(args),
-  status:     () => showStatus(),
-  resonance:  () => showResonance(),
-  identity:   () => handleIdentity(args),
-  nodes:      () => listNodes(),
-  msg:        () => sendMessage(args),
-  cmd:        () => sendCommand(args),
-  messages:   () => readMessages(args),
-  inbox:      () => readMessages(args),
-  tasks:      () => listTasks(args),
-  task:       () => handleTask(args),
-  setup:      () => setup(args),
-  update:     () => selfUpdate(),
-  version:    () => console.log(`cc v${LOCAL_VERSION}`),
-  help:       () => showHelp(),
+  ideas:         () => listIdeas(args),
+  idea:          () => handleIdea(args),
+  share:         () => shareIdea(),
+  stake:         () => stakeOnIdea(args),
+  fork:          () => forkIdea(args),
+  specs:         () => listSpecs(args),
+  spec:          () => showSpec(args),
+  contribute:    () => contribute(args),
+  status:        () => showStatus(),
+  resonance:     () => showResonance(),
+  identity:      () => handleIdentity(args),
+  nodes:         () => listNodes(),
+  msg:           () => sendMessage(args),
+  messages:      () => readMessages(args),
+  inbox:         () => readMessages(args),
+  contributors:  () => listContributors(args),
+  contributor:   () => handleContributor(args),
+  assets:        () => listAssets(args),
+  asset:         () => handleAsset(args),
+  news:          () => handleNews(args),
+  treasury:      () => handleTreasury(args),
+  lineage:       () => handleLineage(args),
+  governance:    () => handleGovernance(args),
+  services:      () => handleServices(args),
+  service:       () => showService(args),
+  friction:      () => handleFriction(args),
+  providers:     () => handleProviders(args),
+  trace:         () => handleTrace(args),
+  diag:          () => handleDiag(args),
+  help:          () => showHelp(),
 };
 
 async function handleIdea(args) {
   if (args[0] === "create") return createIdea(args.slice(1));
   return showIdea(args);
-}
-
-async function handleTask(args) {
-  const sub = args[0];
-  switch (sub) {
-    case "next":    return claimNext();
-    case "claim":   return claimTask(args.slice(1));
-    case "report":  return reportTask(args.slice(1));
-    case "seed":    return seedTask(args.slice(1));
-    default:        return showTask(args);
-  }
 }
 
 async function handleIdentity(args) {
@@ -105,26 +78,101 @@ async function handleIdentity(args) {
   }
 }
 
-async function selfUpdate() {
-  const { execSync } = await import("node:child_process");
-  console.log(`Current: v${LOCAL_VERSION}`);
-  console.log("Checking npm for latest version...");
-  try {
-    const resp = await fetch("https://registry.npmjs.org/coherence-cli/latest", {
-      signal: AbortSignal.timeout(5000),
-    });
-    const data = await resp.json();
-    const latest = data.version;
-    if (latest === LOCAL_VERSION) {
-      console.log(`\x1b[32m✓\x1b[0m Already on latest version (${LOCAL_VERSION})`);
-      return;
-    }
-    console.log(`Updating ${LOCAL_VERSION} → ${latest}...`);
-    execSync(`npm i -g coherence-cli@${latest}`, { stdio: "inherit" });
-    console.log(`\x1b[32m✓\x1b[0m Updated to v${latest}`);
-  } catch (e) {
-    console.error(`\x1b[31m✗\x1b[0m Update failed: ${e.message}`);
-    console.log("  Manual: npm i -g coherence-cli@latest");
+async function handleContributor(args) {
+  if (args[1] === "contributions") return showContributions(args);
+  return showContributor(args);
+}
+
+async function handleAsset(args) {
+  if (args[0] === "create") return createAsset(args.slice(1));
+  return showAsset(args);
+}
+
+async function handleNews(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "trending":  return showTrending();
+    case "sources":   return showSources();
+    case "source":
+      if (args[1] === "add") return addSource(args.slice(2));
+      return showSources();
+    case "resonance": return showNewsResonance(args.slice(1));
+    default:          return showNewsFeed();
+  }
+}
+
+async function handleTreasury(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "deposits": return showDeposits(args.slice(1));
+    case "deposit":  return makeDeposit(args.slice(1));
+    default:         return showTreasury();
+  }
+}
+
+async function handleLineage(args) {
+  if (!args[0]) return listLinks([]);
+  if (args[1] === "valuation") return showValuation(args);
+  if (args[1] === "payout") return payoutPreview([args[0], args[2]]);
+  // If first arg is a number, treat as limit
+  if (/^\d+$/.test(args[0])) return listLinks(args);
+  return showLink(args);
+}
+
+async function handleGovernance(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "vote":    return vote(args.slice(1));
+    case "propose": return propose(args.slice(1));
+    case undefined: return listChangeRequests();
+    default:        return showChangeRequest(args);
+  }
+}
+
+async function handleServices(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "health": return showServicesHealth();
+    case "deps":   return showServicesDeps();
+    default:       return listServices();
+  }
+}
+
+async function handleFriction(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "events":     return listFrictionEvents(args.slice(1));
+    case "categories": return showFrictionCategories();
+    default:           return showFrictionReport();
+  }
+}
+
+async function handleProviders(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "stats": return showProviderStats();
+    default:      return listProviders();
+  }
+}
+
+async function handleTrace(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "coverage": return showCoverage();
+    case "idea":     return traceIdea(args.slice(1));
+    case "spec":     return traceSpec(args.slice(1));
+    default:         return showTraceability();
+  }
+}
+
+async function handleDiag(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "health":     return showDiagHealth();
+    case "issues":     return showDiagIssues();
+    case "runners":    return showDiagRunners();
+    case "visibility": return showDiagVisibility();
+    default:           return showDiag();
   }
 }
 
@@ -158,31 +206,72 @@ function showHelp() {
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity
 
-\x1b[1mTasks (agent-to-agent):\x1b[0m
-  tasks [status] [limit]  List tasks (pending|running|completed)
-  task <id>               View task detail
-  task next               Claim next pending task (for AI agents)
-  task claim <id>         Claim a specific task
-  task report <id> <status> [output]  Report result (completed|failed)
-  task seed <idea> [type] Create task from idea (spec|test|impl|review)
-
 \x1b[1mFederation:\x1b[0m
   nodes                   List federation nodes
   msg <node|broadcast> <text>  Send message to a node
-  cmd <node> <command>    Remote command (update|status|diagnose|restart|ping)
   inbox                   Read your messages
 
-\x1b[1mSystem:\x1b[0m
-  update                  Self-update to latest npm version
-  version                 Show current version
-  help                    Show this help
+\x1b[1mContributors:\x1b[0m
+  contributors [limit]    List contributors
+  contributor <id>        View contributor detail
+  contributor <id> contributions  View contributions
+
+\x1b[1mAssets:\x1b[0m
+  assets [limit]          List assets
+  asset <id>              View asset detail
+  asset create <type> <desc>  Create an asset
+
+\x1b[1mNews:\x1b[0m
+  news                    News feed
+  news trending           Trending news
+  news sources            List news sources
+  news source add <url> <name>  Add a news source
+  news resonance [contributor]  News resonance
+
+\x1b[1mTreasury:\x1b[0m
+  treasury                Treasury overview
+  treasury deposits <id>  Deposits for contributor
+  treasury deposit <amt> <asset>  Make a deposit
+
+\x1b[1mLineage:\x1b[0m
+  lineage [limit]         Value lineage links
+  lineage <id>            View lineage link
+  lineage <id> valuation  Link valuation
+  lineage <id> payout <amt>  Payout preview
+
+\x1b[1mGovernance:\x1b[0m
+  governance              List change requests
+  governance <id>         View change request
+  governance vote <id> <yes|no>  Vote on change request
+  governance propose <title> <desc>  Create proposal
+
+\x1b[1mServices:\x1b[0m
+  services                List services
+  service <id>            View service detail
+  services health         Services health check
+  services deps           Service dependencies
+
+\x1b[1mFriction:\x1b[0m
+  friction                Friction report
+  friction events [limit] Friction events
+  friction categories     Friction categories
 
 \x1b[1mProviders:\x1b[0m
-  github, x, discord, telegram, mastodon, bluesky, linkedin, reddit,
-  youtube, twitch, instagram, tiktok, gitlab, bitbucket, npm, crates,
-  pypi, hackernews, stackoverflow, ethereum, bitcoin, solana, cosmos,
-  nostr, ens, lens, email, google, apple, microsoft, orcid, did,
-  keybase, pgp, fediverse, openclaw
+  providers               List providers
+  providers stats         Provider statistics
+
+\x1b[1mTraceability:\x1b[0m
+  trace                   Traceability overview
+  trace coverage          Traceability coverage
+  trace idea <id>         Trace an idea
+  trace spec <id>         Trace a spec
+
+\x1b[1mDiagnostics:\x1b[0m
+  diag                    Agent effectiveness + pipeline
+  diag health             Collective health
+  diag issues             Fatal + monitor issues
+  diag runners            Agent runners
+  diag visibility         Agent visibility
 
 \x1b[2mHub: https://api.coherencycoin.com\x1b[0m
 `);
