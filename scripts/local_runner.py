@@ -263,6 +263,51 @@ def push_measurements(node_id: str) -> int:
     return 0
 
 
+def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
+    """Time out tasks stuck in 'running' state beyond max_age_minutes.
+
+    These are tasks where the executing node crashed or lost connectivity
+    mid-execution and never reported back. Without reaping, they block
+    pipeline capacity forever.
+    """
+    tasks_data = _api("GET", "/api/agent/tasks?status=running&limit=100")
+    if not tasks_data:
+        return 0
+
+    task_list = tasks_data if isinstance(tasks_data, list) else tasks_data.get("tasks", [])
+    now = datetime.now(timezone.utc)
+    reaped = 0
+
+    for t in task_list:
+        created = t.get("created_at", "")
+        if not created:
+            continue
+        try:
+            dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            age_min = (now - dt).total_seconds() / 60
+        except Exception:
+            continue
+
+        if age_min > max_age_minutes:
+            task_id = t.get("id", "")
+            result = _api("PATCH", f"/api/agent/tasks/{task_id}", {
+                "status": "timed_out",
+                "output": f"Reaped: stuck running for {int(age_min)}m (threshold {max_age_minutes}m)",
+                "error_summary": f"Stale task reaper: {int(age_min)}m > {max_age_minutes}m threshold",
+                "error_category": "stale_task_reaped",
+            })
+            if result:
+                ctx = t.get("context", {}) or {}
+                idea = ctx.get("idea_name", task_id[:20])
+                log.info("REAPER: timed out %s (%s, %dm old) — %s",
+                         task_id[:16], t.get("task_type", "?"), int(age_min), idea[:40])
+                reaped += 1
+
+    if reaped:
+        log.info("REAPER: cleaned %d stale tasks", reaped)
+    return reaped
+
+
 def _detect_tools() -> list[str]:
     """Detect installed dev tools on this machine."""
     import shutil
@@ -339,6 +384,8 @@ def main():
         log.info("Polling every %ds (Ctrl+C to stop)", args.interval)
         heartbeat_interval = 300  # heartbeat every 5 minutes
         last_heartbeat = 0.0
+        reap_interval = 600  # reap stale tasks every 10 minutes
+        last_reap = 0.0
         try:
             while True:
                 results = _runner.run_all_pending(dry_run=args.dry_run)
@@ -347,11 +394,17 @@ def main():
                     # Push measurements after each batch
                     push_measurements(node_id)
 
-                    # Periodic heartbeat
                     now = time.time()
+
+                    # Periodic heartbeat
                     if now - last_heartbeat > heartbeat_interval:
                         heartbeat(node_id, provider_names)
                         last_heartbeat = now
+
+                    # Reap stale tasks (running > 15 min with no update)
+                    if now - last_reap > reap_interval:
+                        _reap_stale_tasks(max_age_minutes=15)
+                        last_reap = now
 
                 time.sleep(args.interval)
         except KeyboardInterrupt:
