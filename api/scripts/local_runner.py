@@ -1746,8 +1746,6 @@ def _register_node() -> None:
         "hostname": _NODE_NAME,
         "os_type": "windows" if sys.platform == "win32" else "macos" if sys.platform == "darwin" else "linux",
         "providers": providers,
-        "local_sha": local_sha,
-        "origin_sha": origin_sha,
         "capabilities": {
             "executors": providers,
             "tools": tools,
@@ -1755,6 +1753,11 @@ def _register_node() -> None:
                 "platform": platform.platform(),
                 "processor": platform.processor(),
                 "python": platform.python_version(),
+            },
+            "git": {
+                "local_sha": local_sha,
+                "origin_sha": origin_sha,
+                "in_sync": local_sha == origin_sha,
             },
         },
     }
