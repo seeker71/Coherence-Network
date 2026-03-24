@@ -100,6 +100,10 @@ def _api(method: str, path: str, body: dict | None = None) -> dict | list | None
             resp = _HTTP_CLIENT.get(url)
         elif method == "POST":
             resp = _HTTP_CLIENT.post(url, json=body)
+        elif method == "PATCH":
+            resp = _HTTP_CLIENT.patch(url, json=body)
+        elif method == "DELETE":
+            resp = _HTTP_CLIENT.delete(url)
         else:
             return None
         if resp.status_code >= 400:
