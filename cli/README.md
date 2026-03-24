@@ -159,6 +159,35 @@ Every part of the network links to every other. Jump in wherever makes sense for
 
 ---
 
+## API key — what it's for and how to get one
+
+**No key needed for:** Browsing ideas, searching specs, viewing lineage, checking ledgers, reading node status, exploring the network.
+
+**Key needed for:** Updating idea status, recording contributions, linking identities, voting on governance, creating specs, managing federation.
+
+Most people start without a key. You only need one when you're ready to contribute.
+
+### Get a key (interactive)
+
+```bash
+cc setup
+```
+
+This walks you through choosing a name, linking an identity (GitHub, Discord, Ethereum, etc.), and generates a key tied to your identity. Stored in `~/.coherence-network/config.json`.
+
+### Manual setup
+
+```bash
+export COHERENCE_API_KEY=your-key
+```
+
+Or set it permanently:
+
+```bash
+cc identity set myname
+# Key is auto-generated and stored in ~/.coherence-network/config.json
+```
+
 ## Configuration
 
 By default, `cc` talks to the public API at `https://api.coherencycoin.com`. Override with environment variables:
@@ -167,11 +196,87 @@ By default, `cc` talks to the public API at `https://api.coherencycoin.com`. Ove
 # Point to a local node
 export COHERENCE_API_URL=http://localhost:8000
 
-# Enable write operations
+# Set API key for write operations
 export COHERENCE_API_KEY=your-key
 ```
 
 Config is stored in `~/.coherence-network/config.json`.
+
+---
+
+## Search, filter, and CRUD
+
+Every resource in the network is accessible from the CLI. Here's how to find what you need:
+
+### Ideas — the core unit
+
+```bash
+cc ideas                      # Top 20 by free-energy score (ROI × confidence)
+cc ideas 50                   # Top 50
+cc idea <id>                  # Full detail: scores, open questions, children, tasks
+cc idea create <id> <name>    # Create a new idea
+  --desc "..."                #   Description
+  --value 50 --cost 5         #   Potential value and estimated cost
+  --parent <parent-id>        #   Parent idea (fractal hierarchy)
+```
+
+### Specs — blueprints linked to ideas
+
+```bash
+cc specs                      # List specs with ROI and value gap
+cc specs 50                   # More results
+cc spec <id>                  # Full spec: summary, pseudocode, implementation status
+```
+
+### Tasks — the work queue
+
+```bash
+cc tasks                      # All pending tasks
+cc tasks running              # In-progress tasks
+cc tasks completed 20         # Last 20 completed
+cc task <id>                  # Full task: direction, idea link, output, provider
+cc task next                  # Claim the highest-priority task
+cc task seed <idea-id> spec   # Create a task for an idea
+```
+
+### Contributors and identity
+
+```bash
+cc identity                   # Your linked accounts and CC balance
+cc identity lookup github <handle>  # Find any contributor by provider identity
+```
+
+### Nodes and federation
+
+```bash
+cc nodes                      # All nodes: status, SHA, providers, last seen
+cc inbox                      # Messages from other nodes
+cc msg <node> <text>          # Send a message
+cc cmd <node> status          # Remote diagnostics
+```
+
+### Searching and filtering
+
+Most list commands accept a limit. For deeper filtering, use the API directly:
+
+```bash
+# Search ideas by keyword
+curl -s "$CN_API/api/ideas/cards?search=treasury&limit=10" | jq '.items[] | {id, name}'
+
+# Search specs by keyword
+curl -s "$CN_API/api/spec-registry/cards?search=auth&limit=10" | jq '.items[] | {spec_id, title}'
+
+# Filter tasks by type and status
+curl -s "$CN_API/api/agent/tasks?status=completed&task_type=review&limit=10" | jq '.tasks[] | {id, task_type}'
+
+# Contributor ledger
+curl -s "$CN_API/api/contributions/ledger/seeker71" | jq '.balance'
+
+# Ideas by parent (fractal drill-down)
+curl -s "$CN_API/api/ideas/<parent-id>" | jq '.child_idea_ids'
+```
+
+The full API has 215 endpoints across 20 resource groups — see [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) for the complete reference. The CLI covers the most common operations; the API covers everything.
 
 ---
 
