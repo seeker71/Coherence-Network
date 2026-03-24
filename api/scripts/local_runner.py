@@ -553,22 +553,25 @@ def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> 
             log.error("Unsupported API method: %s", method)
             return None
 
-        # Rate limited — back off and retry (up to 3 times)
-        if resp.status_code == 429 and _retries < 3:
-            retry_after = int(resp.headers.get("Retry-After", "5"))
-            log.warning("RATE_LIMITED %s %s — backing off %ds (retry %d/3)",
-                        method, path, retry_after, _retries + 1)
-            time.sleep(retry_after)
+        # Retryable errors — back off and retry (up to 3 times)
+        if resp.status_code in (429, 502, 503, 504) and _retries < 3:
+            if resp.status_code == 429:
+                wait = int(resp.headers.get("Retry-After", "5"))
+                label = "RATE_LIMITED"
+            else:
+                wait = 3 * (_retries + 1)  # 3s, 6s, 9s exponential
+                label = "TRANSIENT"
+            log.warning("%s %s %s → %d — retrying in %ds (%d/3)",
+                        label, method, path, resp.status_code, wait, _retries + 1)
+            time.sleep(wait)
             return api(method, path, body, _retries + 1)
 
         if resp.status_code >= 400:
-            # Downgrade expected/transient errors from ERROR to WARNING/INFO
+            # Downgrade expected errors from ERROR to INFO
             if resp.status_code == 409:
                 log.info("API %s %s → 409 (already claimed, expected race)", method, path)
             elif resp.status_code == 404 and "/messages/" in path:
                 log.info("API %s %s → 404 (message already gone)", method, path)
-            elif resp.status_code in (502, 503, 504):
-                log.warning("API %s %s → %d (transient, will retry)", method, path, resp.status_code)
             else:
                 log.error("API %s %s → status %d: %s", method, path, resp.status_code, resp.text[:200])
             return None
