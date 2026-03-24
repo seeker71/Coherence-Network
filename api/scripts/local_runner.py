@@ -1225,6 +1225,9 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
 
     if not success:
         error_class = classify_error(output)
+        completion_context["failure_reason_bucket"] = error_class
+        completion_context["failure_summary"] = output[:500] if output else "No output captured"
+        completion_context["failure_provider"] = provider
         if error_class in {"timeout", "timeout_with_output", "blind_timeout"}:
             completion_status = "timed_out"
             completion_error_category = "timeout"
