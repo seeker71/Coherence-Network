@@ -1077,16 +1077,32 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         if next_phase == "review":
             direction = (
                 f"Review and verify '{idea_name}' ({idea_id}).\n\n"
-                f"Description: {idea_desc[:300]}\n\n"
-                f"REVIEW CHECKLIST — all must pass:\n"
-                f"1. Does the feature exist in the codebase? Check for actual files/code.\n"
-                f"2. Does the API endpoint work? Test with curl against https://api.coherencycoin.com\n"
-                f"3. If web-facing: does the page render correctly at https://coherencycoin.com?\n"
-                f"4. Are there tests? Do they pass?\n"
-                f"5. Is the code deployed to production (VPS)?\n\n"
-                f"If ANY check fails, output REVIEW_FAILED with specific failures.\n"
-                f"If ALL checks pass, output REVIEW_PASSED with evidence.\n"
-                f"Do NOT pass a review for code that doesn't exist or isn't deployed."
+                f"Description: {idea_desc[:500]}\n\n"
+                f"REVIEW INSTRUCTIONS:\n"
+                f"You are the final gate before this idea is marked as DONE.\n"
+                f"Think of yourself as the person who decides whether to PAY for this work.\n\n"
+                f"1. Find the spec for this idea (check specs/ directory or task history)\n"
+                f"2. Find the 'Verification Scenarios' section in the spec\n"
+                f"3. RUN each verification scenario against PRODUCTION:\n"
+                f"   - API: curl https://api.coherencycoin.com/...\n"
+                f"   - Web: check https://coherencycoin.com/...\n"
+                f"   - CLI: run cc <command>\n"
+                f"4. For EACH scenario, report:\n"
+                f"   - PASS: the exact output matched expectations\n"
+                f"   - FAIL: what was expected vs what actually happened\n\n"
+                f"If the spec has no verification scenarios, output REVIEW_FAILED:\n"
+                f"  'Spec missing verification scenarios — cannot verify without test criteria'\n\n"
+                f"If ANY verification scenario fails, output REVIEW_FAILED with:\n"
+                f"  - Which scenario failed\n"
+                f"  - Expected output\n"
+                f"  - Actual output\n"
+                f"  - Suggested fix\n\n"
+                f"If ALL scenarios pass, output REVIEW_PASSED with:\n"
+                f"  - Each scenario and its actual output as evidence\n"
+                f"  - Confirmation that the feature works on production\n\n"
+                f"Do NOT pass a review based on code reading alone.\n"
+                f"Do NOT pass a review if you cannot run the verification scenarios.\n"
+                f"Do NOT pass a review if endpoints return 404 or 500."
             )
         elif next_phase == "test":
             direction = (
@@ -1940,23 +1956,46 @@ def _seed_task_from_open_idea() -> bool:
     has_web = any(i in ifaces for i in ("human:web", "web"))
     has_cli = any(i in ifaces for i in ("machine:cli", "cli"))
 
-    validation_guidance = ""
+    validation_guidance = (
+        f"\n\nVERIFICATION CONTRACT:\n"
+        f"Think of this spec as a contract. Someone will pay real money for the work.\n"
+        f"The spec must include a 'Verification Scenarios' section with 3-5 specific,\n"
+        f"concrete test scenarios that PROVE the feature works as described.\n\n"
+        f"Each scenario must have:\n"
+        f"- Setup: what state exists before the test\n"
+        f"- Action: exact command or request (curl, cc command, browser action)\n"
+        f"- Expected result: specific output, not vague ('returns data')\n"
+        f"- Edge case: what happens with bad input, missing data, or duplicate request\n\n"
+        f"Example of a GOOD verification scenario:\n"
+        f"  Setup: No concepts exist yet\n"
+        f"  Action: curl -s $API/api/concepts -X POST -d '{{\"id\":\"test\",\"name\":\"Test\"}}'\n"
+        f"  Expected: HTTP 201, response contains {{\"id\":\"test\",\"name\":\"Test\"}}\n"
+        f"  Then: curl -s $API/api/concepts/test returns the same concept\n"
+        f"  Then: curl -s $API/api/concepts returns list containing 'test'\n"
+        f"  Edge: POST same concept again returns 409 (conflict, not duplicate)\n"
+        f"  Edge: GET /api/concepts/nonexistent returns 404 (not 500)\n\n"
+        f"Example of a BAD verification scenario:\n"
+        f"  'Test that the API works' — too vague, no specific input/output\n"
+        f"  'Check the endpoint returns 200' — proves nothing about the feature\n\n"
+        f"The reviewer will RUN these scenarios against production.\n"
+        f"If any scenario fails, the work is not done.\n"
+        f"If the scenarios are too vague to run, the spec is rejected.\n"
+    )
     if has_api or has_web or has_cli or "/api/" in desc.lower():
-        validation_guidance = (
-            f"\n\nVALIDATION (network idea):\n"
-            f"- The spec MUST list specific API endpoints (e.g., GET /api/concepts)\n"
-            f"- The spec MUST list specific web pages (e.g., /concepts) if web-facing\n"
-            f"- The spec MUST list specific CLI commands (e.g., cc concepts) if CLI-facing\n"
-            f"- The idea is only validated when these endpoints/pages/commands exist on production\n"
-            f"- Include a 'Verification' section with curl commands to test each endpoint\n"
+        validation_guidance += (
+            f"\nNETWORK-SPECIFIC:\n"
+            f"- Include the exact API endpoints that must exist (e.g., GET /api/concepts)\n"
+            f"- Include the exact web pages (e.g., /concepts) if web-facing\n"
+            f"- Include the exact CLI commands (e.g., cc concepts) if CLI-facing\n"
+            f"- At least one scenario must test the full create-read-update cycle\n"
+            f"- At least one scenario must test error handling (bad input, missing resource)\n"
         )
     else:
-        validation_guidance = (
-            f"\n\nVALIDATION (external/general idea):\n"
-            f"- The spec MUST include specific acceptance criteria that can be checked\n"
-            f"- Include evidence requirements: what proves this idea is realized?\n"
-            f"- For external ideas: evidence URL, screenshot, or contributor attestation\n"
-            f"- For research ideas: spec completeness and peer review sufficiency\n"
+        validation_guidance += (
+            f"\nEXTERNAL/GENERAL:\n"
+            f"- Include what evidence proves this idea is realized\n"
+            f"- Evidence can be: URL to live feature, screenshot, contributor attestation\n"
+            f"- The evidence must be independently verifiable by any party\n"
         )
 
     direction = (
