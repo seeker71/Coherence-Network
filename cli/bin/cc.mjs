@@ -23,7 +23,8 @@ import { listServices, showService, showServicesHealth, showServicesDeps } from 
 import { showFrictionReport, listFrictionEvents, showFrictionCategories } from "../lib/commands/friction.mjs";
 import { listProviders, showProviderStats } from "../lib/commands/providers.mjs";
 import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
-import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility } from "../lib/commands/diagnostics.mjs";
+import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility, showDiagLive } from "../lib/commands/diagnostics.mjs";
+import { publishDiag, startDiagMode } from "../lib/commands/diag_publish.mjs";
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
@@ -192,6 +193,9 @@ async function handleDiag(args) {
     case "issues":     return showDiagIssues();
     case "runners":    return showDiagRunners();
     case "visibility": return showDiagVisibility();
+    case "live":       return showDiagLive(args.slice(1));
+    case "publish":    return publishDiag(args.slice(1));
+    case "mode":       return startDiagMode(args.slice(1));
     default:           return showDiag();
   }
 }

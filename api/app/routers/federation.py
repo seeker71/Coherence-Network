@@ -536,3 +536,82 @@ async def node_event_stream(node_id: str):
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ── Diagnostic pub/sub channel ──────────────────────────────────────
+
+# Separate from message SSE — diagnostic events are high-frequency and
+# only delivered to subscribers who explicitly opt in.
+_diag_subscribers: dict[str, list[asyncio.Queue]] = {}  # node_id → queues
+_diag_lock = asyncio.Lock()
+
+
+@router.post("/federation/nodes/{node_id}/diag", status_code=201)
+async def publish_diagnostic(node_id: str, body: dict = {}):
+    """Publish a diagnostic event from a node. High-frequency, ephemeral.
+
+    Events are NOT persisted — only delivered to active subscribers.
+    """
+    event = {
+        "node_id": node_id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        **body,
+    }
+
+    # Push to subscribers of this specific node
+    for q in _diag_subscribers.get(node_id, []):
+        try:
+            q.put_nowait(event)
+        except asyncio.QueueFull:
+            pass
+
+    # Also push to wildcard subscribers (listening to all nodes)
+    for q in _diag_subscribers.get("*", []):
+        try:
+            q.put_nowait(event)
+        except asyncio.QueueFull:
+            pass
+
+    return {"ok": True}
+
+
+@router.get("/federation/nodes/{node_id}/diag/stream")
+async def subscribe_diagnostics(node_id: str):
+    """SSE stream for diagnostic events from a node. Use node_id='*' for all nodes.
+
+    Connect: curl -N https://api.coherencycoin.com/api/federation/nodes/*/diag/stream
+    """
+    queue: asyncio.Queue = asyncio.Queue(maxsize=500)
+
+    async with _diag_lock:
+        if node_id not in _diag_subscribers:
+            _diag_subscribers[node_id] = []
+        _diag_subscribers[node_id].append(queue)
+
+    async def event_generator():
+        try:
+            yield f"data: {json.dumps({'event_type': 'subscribed', 'node_id': node_id})}\n\n"
+
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=15)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keepalive\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            async with _diag_lock:
+                if node_id in _diag_subscribers:
+                    try:
+                        _diag_subscribers[node_id].remove(queue)
+                    except ValueError:
+                        pass
+                    if not _diag_subscribers[node_id]:
+                        del _diag_subscribers[node_id]
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"},
+    )
