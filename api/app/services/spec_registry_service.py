@@ -135,6 +135,40 @@ def _safe_ratio(numerator: float, denominator: float) -> float:
     return round(numerator / denominator, 4)
 
 
+def _graph_node_to_spec(node: dict) -> SpecRegistryEntry:
+    """Convert a graph node (type=spec) to a SpecRegistryEntry."""
+    potential_value = float(node.get("potential_value") or 0.0)
+    actual_value = float(node.get("actual_value") or 0.0)
+    estimated_cost = float(node.get("estimated_cost") or 0.0)
+    actual_cost = float(node.get("actual_cost") or 0.0)
+    value_gap = max(potential_value - actual_value, 0.0)
+    cost_gap = actual_cost - estimated_cost
+    spec_id = node.get("spec_id") or node.get("id", "").replace("spec-", "")
+    return SpecRegistryEntry(
+        spec_id=spec_id,
+        title=node.get("name", spec_id),
+        summary=node.get("description", ""),
+        potential_value=potential_value,
+        actual_value=actual_value,
+        estimated_cost=estimated_cost,
+        actual_cost=actual_cost,
+        value_gap=round(value_gap, 4),
+        cost_gap=round(cost_gap, 4),
+        estimated_roi=_safe_ratio(potential_value, estimated_cost),
+        actual_roi=_safe_ratio(actual_value, actual_cost),
+        idea_id=node.get("idea_id"),
+        process_summary=node.get("process_summary"),
+        pseudocode_summary=node.get("pseudocode_summary"),
+        implementation_summary=node.get("implementation_summary"),
+        created_by_contributor_id=node.get("created_by_contributor_id"),
+        updated_by_contributor_id=node.get("updated_by_contributor_id"),
+        created_at=node.get("created_at"),
+        updated_at=node.get("updated_at"),
+        content_path=node.get("content_path"),
+        content_hash=node.get("content_hash"),
+    )
+
+
 def _to_model(row: SpecRegistryRecord) -> SpecRegistryEntry:
     potential_value = float(row.potential_value or 0.0)
     actual_value = float(row.actual_value or 0.0)
@@ -168,121 +202,75 @@ def _to_model(row: SpecRegistryRecord) -> SpecRegistryEntry:
 
 
 def count_specs() -> int:
-    ensure_schema()
-    with _session() as session:
-        return int(session.query(func.count(SpecRegistryRecord.spec_id)).scalar() or 0)
+    from app.services import graph_service
+    return graph_service.count_nodes(type="spec").get("total", 0)
 
 
 def list_specs(limit: int = 200, offset: int = 0) -> list[SpecRegistryEntry]:
+    from app.services import graph_service
     requested_limit = max(1, min(int(limit), 1000))
     requested_offset = max(0, int(offset))
-    cache_key = f"{requested_offset}:{requested_limit}"
-    now = time.time()
-    cached_until = _LIST_SPECS_CACHE.get("expires_at", 0.0)
-    cached_map = _LIST_SPECS_CACHE.get("items_by_limit", {})
-    if (
-        cached_until > now
-        and isinstance(cached_map, dict)
-        and isinstance(cached_map.get(cache_key), list)
-    ):
-        return [row.model_copy(deep=True) for row in cached_map[cache_key]]
-
-    ensure_schema()
-    with _session() as session:
-        rows = (
-            session.query(SpecRegistryRecord)
-            .order_by(SpecRegistryRecord.updated_at.desc(), SpecRegistryRecord.spec_id.asc())
-            .offset(requested_offset)
-            .limit(requested_limit)
-            .all()
-        )
-    payload = [_to_model(row) for row in rows]
-    _LIST_SPECS_CACHE["expires_at"] = now + _LIST_SPECS_CACHE_TTL_SECONDS
-    cached_map[cache_key] = payload
-    _LIST_SPECS_CACHE["items_by_limit"] = cached_map
-    return [row.model_copy(deep=True) for row in payload]
+    result = graph_service.list_nodes(type="spec", limit=requested_limit, offset=requested_offset)
+    return [_graph_node_to_spec(n) for n in result.get("items", [])]
 
 
 def get_spec(spec_id: str) -> SpecRegistryEntry | None:
-    ensure_schema()
-    with _session() as session:
-        row = session.get(SpecRegistryRecord, spec_id)
-        if row is None:
-            return None
-    return _to_model(row)
+    from app.services import graph_service
+    # Try with and without spec- prefix
+    node = graph_service.get_node(f"spec-{spec_id}") or graph_service.get_node(spec_id)
+    if not node or node.get("type") != "spec":
+        return None
+    return _graph_node_to_spec(node)
 
 
 def create_spec(data: SpecRegistryCreate) -> SpecRegistryEntry | None:
-    ensure_schema()
-    now = datetime.now(timezone.utc)
-    with _session() as session:
-        existing = session.get(SpecRegistryRecord, data.spec_id)
-        if existing is not None:
-            return None
-        row = SpecRegistryRecord(
-            spec_id=data.spec_id,
-            title=data.title,
-            summary=data.summary,
-            potential_value=float(data.potential_value),
-            actual_value=float(data.actual_value),
-            estimated_cost=float(data.estimated_cost),
-            actual_cost=float(data.actual_cost),
-            idea_id=data.idea_id,
-            process_summary=data.process_summary,
-            pseudocode_summary=data.pseudocode_summary,
-            implementation_summary=data.implementation_summary,
-            created_by_contributor_id=data.created_by_contributor_id,
-            updated_by_contributor_id=data.created_by_contributor_id,
-            created_at=now,
-            updated_at=now,
-            content_path=getattr(data, "content_path", None),
-            content_hash=getattr(data, "content_hash", None),
-        )
-        session.add(row)
-        session.flush()
-        session.refresh(row)
+    from app.services import graph_service
+    node_id = f"spec-{data.spec_id}"
+    if graph_service.get_node(node_id):
+        return None  # already exists
+    node = graph_service.create_node(
+        id=node_id, type="spec", name=data.title,
+        description=data.summary or "",
+        phase="ice",
+        properties={
+            "spec_id": data.spec_id,
+            "potential_value": float(data.potential_value),
+            "actual_value": float(data.actual_value),
+            "estimated_cost": float(data.estimated_cost),
+            "actual_cost": float(data.actual_cost),
+            "idea_id": data.idea_id,
+            "process_summary": data.process_summary,
+            "pseudocode_summary": data.pseudocode_summary,
+            "implementation_summary": data.implementation_summary,
+            "created_by_contributor_id": data.created_by_contributor_id,
+            "content_path": getattr(data, "content_path", None),
+            "content_hash": getattr(data, "content_hash", None),
+        },
+    )
     _invalidate_spec_cache()
-    return _to_model(row)
+    return _graph_node_to_spec(node) if node else None
 
 
 def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry | None:
-    ensure_schema()
-    with _session() as session:
-        row = session.get(SpecRegistryRecord, spec_id)
-        if row is None:
-            return None
-        if data.title is not None:
-            row.title = data.title
-        if data.summary is not None:
-            row.summary = data.summary
-        if data.potential_value is not None:
-            row.potential_value = float(data.potential_value)
-        if data.actual_value is not None:
-            row.actual_value = float(data.actual_value)
-        if data.estimated_cost is not None:
-            row.estimated_cost = float(data.estimated_cost)
-        if data.actual_cost is not None:
-            row.actual_cost = float(data.actual_cost)
-        if data.idea_id is not None:
-            row.idea_id = data.idea_id
-        if data.process_summary is not None:
-            row.process_summary = data.process_summary
-        if data.pseudocode_summary is not None:
-            row.pseudocode_summary = data.pseudocode_summary
-        if data.implementation_summary is not None:
-            row.implementation_summary = data.implementation_summary
-        if data.updated_by_contributor_id is not None:
-            row.updated_by_contributor_id = data.updated_by_contributor_id
-        if data.content_path is not None:
-            row.content_path = data.content_path
-        if data.content_hash is not None:
-            row.content_hash = data.content_hash
-        row.updated_at = datetime.now(timezone.utc)
-        session.add(row)
-        session.flush()
-        session.refresh(row)
+    from app.services import graph_service
+    node_id = f"spec-{spec_id}"
+    node = graph_service.get_node(node_id)
+    if not node:
+        return None
+    updates = {}
+    if data.title is not None:
+        updates["name"] = data.title
+    if data.summary is not None:
+        updates["description"] = data.summary
+    for field in ["potential_value", "actual_value", "estimated_cost", "actual_cost",
+                   "idea_id", "process_summary", "pseudocode_summary", "implementation_summary",
+                   "updated_by_contributor_id", "content_path", "content_hash"]:
+        val = getattr(data, field, None)
+        if val is not None:
+            updates[field] = float(val) if field.endswith("_value") or field.endswith("_cost") else val
+    updated = graph_service.update_node(node_id, **updates)
     _invalidate_spec_cache()
-    return _to_model(row)
+    return _graph_node_to_spec(updated) if updated else None
 
 
 def build_spec_cards_feed(
