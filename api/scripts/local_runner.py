@@ -164,6 +164,25 @@ except ImportError:
 
 # ── Provider registry (auto-detected) ───────────────────────────────
 
+def _check_claude_auth() -> bool:
+    """Verify Claude CLI is authenticated — not just installed."""
+    try:
+        claude_path = shutil.which("claude")
+        if not claude_path:
+            return False
+        result = subprocess.run(
+            [claude_path, "--print", "--bare", "say ok"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if "not logged in" in result.stdout.lower() or "please run /login" in result.stdout.lower():
+            log.warning("Claude CLI not authenticated — run 'claude /login' to fix. Skipping provider.")
+            return False
+        return result.returncode == 0 and len(result.stdout.strip()) > 0
+    except Exception as exc:
+        log.warning("Claude auth check failed: %s", exc)
+        return False
+
+
 def _detect_providers() -> dict[str, dict]:
     """Auto-detect available providers on this machine.
 
@@ -176,7 +195,7 @@ def _detect_providers() -> dict[str, dict]:
         # --dangerously-skip-permissions: bypass all permission checks
         # --permission-mode bypassPermissions: belt-and-suspenders for auto mode
         # --bare: skip hooks/LSP/plugins that can cause interactive prompts
-        "claude": {"cmd": ["claude", "--print", "--bare"], "append_prompt": True, "needs_skip_permissions": True},
+        "claude": {"cmd": ["claude", "--print", "--bare"], "append_prompt": True, "needs_skip_permissions": True, "check": _check_claude_auth},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
