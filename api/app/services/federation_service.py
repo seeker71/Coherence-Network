@@ -525,6 +525,18 @@ def list_nodes() -> list[dict]:
         ]
 
 
+def delete_node(node_id: str) -> bool:
+    """Remove a federation node by ID. Returns True if deleted."""
+    _ensure_schema()
+    with _session() as s:
+        rec = s.query(FederationNodeRecord).filter_by(node_id=node_id).first()
+        if not rec:
+            return False
+        s.delete(rec)
+        s.commit()
+        return True
+
+
 def get_fleet_capability_summary() -> FleetCapabilitySummary:
     """Aggregate executor/tool/hardware availability across all nodes."""
     _ensure_schema()
