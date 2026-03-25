@@ -24,6 +24,7 @@ import { showFrictionReport, listFrictionEvents, showFrictionCategories } from "
 import { listProviders, showProviderStats } from "../lib/commands/providers.mjs";
 import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
 import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility } from "../lib/commands/diagnostics.mjs";
+import { deploy } from "../lib/commands/deploy.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -57,6 +58,7 @@ const COMMANDS = {
   providers:     () => handleProviders(args),
   trace:         () => handleTrace(args),
   diag:          () => handleDiag(args),
+  deploy:        () => deploy(args),
   help:          () => showHelp(),
 };
 
