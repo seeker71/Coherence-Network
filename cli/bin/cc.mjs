@@ -29,6 +29,13 @@ import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask } from "../lib/commands/tasks.mjs";
+import {
+  showConfig as difConfig, setBaseUrl as difSetBaseUrl,
+  whoami as difWhoami, verify as difVerify, smoke as difSmoke,
+  keyList as difKeyList, keyCreate as difKeyCreate, keyRevoke as difKeyRevoke,
+  keyRotate as difKeyRotate, keyUpdate as difKeyUpdate, keyUse as difKeyUse, keyShow as difKeyShow,
+  showUsage as difUsage, showLimits as difLimits, showFunding as difFunding,
+} from "../lib/commands/dif.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -67,6 +74,7 @@ const COMMANDS = {
   update:        () => update(args),
   deploy:        () => deploy(args),
   listen:        () => listen(args),
+  dif:           () => handleDif(args),
   help:          () => showHelp(),
 };
 
@@ -173,6 +181,34 @@ async function handleProviders(args) {
   switch (sub) {
     case "stats": return showProviderStats();
     default:      return listProviders();
+  }
+}
+
+async function handleDif(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "config":
+      if (subArgs[0] === "set-base-url") return difSetBaseUrl(subArgs.slice(1));
+      return difConfig();
+    case "key":
+      switch (subArgs[0]) {
+        case "list":   return difKeyList();
+        case "create": return difKeyCreate(subArgs.slice(1));
+        case "revoke": return difKeyRevoke(subArgs.slice(1));
+        case "rotate": return difKeyRotate(subArgs.slice(1));
+        case "update": return difKeyUpdate(subArgs.slice(1));
+        case "use":    return difKeyUse(subArgs.slice(1));
+        case "show":   return difKeyShow();
+        default:       return difKeyList();
+      }
+    case "verify":  return difVerify(subArgs);
+    case "smoke":   return difSmoke();
+    case "whoami":  return difWhoami();
+    case "usage":   return difUsage(subArgs);
+    case "limits":  return difLimits();
+    case "funding": return difFunding();
+    default:        return difConfig();
   }
 }
 
