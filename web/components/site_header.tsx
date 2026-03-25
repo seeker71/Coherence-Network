@@ -3,39 +3,33 @@ import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { ActiveNavLink } from "./active_nav_link";
 
-/** Primary nav — action-oriented items for most visitors. */
+/** Primary nav — 5 core actions visible to everyone. */
 const PRIMARY_NAV = [
   { href: "/ideas", label: "Ideas" },
-  { href: "/invest", label: "Invest" },
-  { href: "/treasury", label: "Treasury" },
   { href: "/contribute", label: "Contribute" },
-  { href: "/tasks", label: "Tasks" },
-  { href: "/identity", label: "Identity" },
+  { href: "/resonance", label: "Resonance" },
+  { href: "/tasks", label: "Pipeline" },
+  { href: "/nodes", label: "Nodes" },
 ];
 
 /** Always visible — the heartbeat of the network. */
 const HEARTBEAT_NAV = { href: "/resonance", label: "Resonance" };
 
-/** Secondary nav — deeper exploration for power users. */
+/** Secondary nav — grouped by purpose, accessible via Menu dropdown. */
 const SECONDARY_NAV = [
-  { href: "/blog", label: "Blog" },
-  { href: "/specs", label: "Specs" },
-  { href: "/usage", label: "Usage" },
-  { href: "/automation", label: "Automation" },
-  { href: "/flow", label: "Flow" },
-  { href: "/tasks", label: "Work" },
-  { href: "/today", label: "Today" },
-  { href: "/search", label: "Search" },
-  { href: "/portfolio", label: "Portfolio" },
-  { href: "/contributors", label: "People" },
-  { href: "/remote-ops", label: "Remote Ops" },
-  { href: "/agent", label: "Agent" },
-  { href: "/friction", label: "Friction" },
-  { href: "/gates", label: "Checks" },
-  { href: "/contributions", label: "Contributions" },
+  // Value & investment
+  { href: "/invest", label: "Invest" },
+  { href: "/treasury", label: "Treasury" },
+  { href: "/contributors", label: "Contributors" },
   { href: "/assets", label: "Assets" },
-  { href: "/import", label: "Import" },
-  { href: "/api-health", label: "API Health" },
+  // Knowledge & specs
+  { href: "/specs", label: "Specs" },
+  { href: "/blog", label: "Blog" },
+  { href: "/search", label: "Search" },
+  // Operations (power users)
+  { href: "/automation", label: "Automation" },
+  { href: "/friction", label: "Friction" },
+  { href: "/identity", label: "Identity" },
 ];
 
 export default function SiteHeader() {
