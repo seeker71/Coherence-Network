@@ -22,11 +22,14 @@ export async function ensureIdentity() {
   let id = getContributorId();
   if (id) return id;
 
-  // Non-interactive environment — can't prompt
+  // Non-interactive environment — auto-generate a persistent anonymous ID
   if (!stdin.isTTY) {
-    console.error("No contributor identity configured.");
-    console.error("Set COHERENCE_CONTRIBUTOR or run: cc identity setup");
-    process.exit(1);
+    const { hostname } = await import("node:os");
+    const { createHash } = await import("node:crypto");
+    const anonId = `anon-${createHash("sha256").update(hostname()).digest("hex").slice(0, 8)}`;
+    saveConfig({ contributor_id: anonId });
+    console.error(`Auto-registered as ${anonId}. Link your identity later: cc identity link github <handle>`);
+    return anonId;
   }
 
   const rl = createInterface({ input: stdin, output: stdout });

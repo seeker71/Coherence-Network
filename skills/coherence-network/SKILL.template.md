@@ -39,21 +39,43 @@ metadata:
 
 An open intelligence platform where every contribution is traced, scored, and fairly attributed — from the spark of an idea to the moment it delivers value.
 
+**Production API:** `https://api.coherencycoin.com` (always use this, not Railway or any other host)
+**Web:** `https://coherencycoin.com`
+
+## First run — zero-config bootstrap
+
+On first use, the skill auto-registers. No setup, no API key, no identity required to start.
+
+```bash
+cc status
+```
+
+This works immediately. If `cc` is not installed yet, run `npm i -g coherence-cli` first.
+
+**Identity is optional but recommended.** To get credit for contributions:
+
+```bash
+cc identity link github <your-github-handle>
+```
+
+That's it. No account creation, no API key, no registration form. Your GitHub handle becomes your persistent identity across all sessions and nodes.
+
 ## Two ways to use it
 
 ### Option A: CLI (recommended for agents)
 
 ```bash
-npm i -g coherence-cli
-cc help
+cc status                   # Works immediately — no setup needed
+cc ideas                    # Browse the portfolio
+cc share                    # Submit an idea
 ```
 
-The `cc` command talks directly to the public API. On first run it walks through identity setup. All commands output to stdout for easy parsing.
+The `cc` command talks directly to the public API at `api.coherencycoin.com`. All commands output to stdout for easy parsing. No local server required.
 
 ### Option B: curl (no install needed)
 
 ```bash
-CN_API="${COHERENCE_API_URL:-https://api.coherencycoin.com}"
+CN_API="https://api.coherencycoin.com"
 curl -s "$CN_API/api/health" | jq '{status, version, uptime_human}'
 ```
 
