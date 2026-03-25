@@ -56,46 +56,49 @@ export async function listProviders() {
 }
 
 export async function showProviderStats() {
-  const data = await get("/api/providers/stats");
+  const data = await get("/api/federation/nodes/stats");
   if (!data) {
     console.log("Could not fetch provider stats.");
     return;
   }
 
+  const providers = data.providers || {};
+  const alerts = data.alerts || [];
+  const native = ["claude", "codex", "cursor", "gemini", "ollama-local", "ollama-cloud", "openrouter"];
+
   console.log();
-  console.log(`\x1b[1m  PROVIDER STATS\x1b[0m`);
-  console.log(`  ${"─".repeat(68)}`);
-  if (Array.isArray(data)) {
-    for (const p of data) {
-      const name = (p.name || p.provider || "?").padEnd(22);
-      const successRate = p.success_rate ?? p.rate ?? null;
-      const count = p.count ?? p.total ?? null;
+  console.log(`\x1b[1m  PROVIDER STATS\x1b[0m (${data.window_days || 7}d window)`);
+  console.log(`  ${"─".repeat(72)}`);
+  console.log(`  ${"Provider".padEnd(28)} ${"Rate".padEnd(18)} ${"Samples".padStart(8)} ${"Avg".padStart(6)}`);
+  console.log(`  ${"─".repeat(72)}`);
 
-      let rateStr = "";
-      if (successRate != null) {
-        const pct = (successRate * 100).toFixed(0);
-        rateStr = `${rateBar(successRate)} ${pct}%`.padEnd(22);
+  for (const name of native) {
+    const stats = providers[name];
+    if (!stats) continue;
+    const rate = stats.overall_success_rate ?? 0;
+    const pct = (rate * 100).toFixed(0);
+    const bar = rateBar(rate, 8);
+    const samples = String(stats.total_samples || 0).padStart(8);
+    const avg = stats.avg_duration_s ? `${stats.avg_duration_s.toFixed(0)}s`.padStart(6) : "    -";
+    console.log(`  ${name.padEnd(28)} ${bar} ${pct.padStart(3)}%    ${samples} ${avg}`);
+
+    for (const [mName, mStats] of Object.entries(providers)) {
+      if (mName.startsWith(name + "/") || (name === "cursor" && mName.startsWith("claude-4.6")) || (name === "codex" && mName.startsWith("gpt-5."))) {
+        const mRate = mStats.overall_success_rate ?? 0;
+        const mPct = (mRate * 100).toFixed(0);
+        const mBar = rateBar(mRate, 8);
+        const mSamples = String(mStats.total_samples || 0).padStart(8);
+        const mAvg = mStats.avg_duration_s ? `${mStats.avg_duration_s.toFixed(0)}s`.padStart(6) : "    -";
+        console.log(`    \x1b[2m\u2514 ${mName.padEnd(26)}\x1b[0m ${mBar} ${mPct.padStart(3)}%    ${mSamples} ${mAvg}`);
       }
-
-      const countStr = count != null ? `${String(count).padStart(6)} uses` : "";
-      console.log(`  ${name} ${rateStr} ${countStr}`);
     }
-  } else if (typeof data === "object") {
-    for (const [key, val] of Object.entries(data)) {
-      const name = key.padEnd(22);
-      if (typeof val === "object" && val != null) {
-        const successRate = val.success_rate ?? val.rate ?? null;
-        const count = val.count ?? val.total ?? null;
-        let rateStr = "";
-        if (successRate != null) {
-          const pct = (successRate * 100).toFixed(0);
-          rateStr = `${rateBar(successRate)} ${pct}%`.padEnd(22);
-        }
-        const countStr = count != null ? `${String(count).padStart(6)} uses` : "";
-        console.log(`  ${name} ${rateStr} ${countStr}`);
-      } else {
-        console.log(`  ${name} ${val}`);
-      }
+  }
+
+  if (alerts.length > 0) {
+    console.log();
+    console.log(`  \x1b[1mAlerts\x1b[0m`);
+    for (const a of alerts) {
+      console.log(`  \x1b[31m!\x1b[0m ${a.message || a.provider}`);
     }
   }
   console.log();
