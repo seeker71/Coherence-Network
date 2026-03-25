@@ -216,6 +216,14 @@ function showHelp() {
   contributor <id>        View contributor detail
   contributor <id> contributions  View contributions
 
+\x1b[1mTasks (agent work protocol):\x1b[0m
+  tasks [status] [limit]  List tasks (pending, running, completed)
+  task <id>               View task detail
+  task next               Claim highest-priority pending task
+  task claim <id>         Claim a specific task
+  task report <id> <completed|failed> [output]  Report result
+  task seed <idea> [type] Create task from idea (spec|test|impl|review)
+
 \x1b[1mAssets:\x1b[0m
   assets [limit]          List assets
   asset <id>              View asset detail
@@ -274,6 +282,7 @@ function showHelp() {
   diag visibility         Agent visibility
 
 \x1b[2mHub: https://api.coherencycoin.com\x1b[0m
+\x1b[2mDocs: https://coherencycoin.com\x1b[0m
 `);
 }
 
