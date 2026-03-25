@@ -1181,8 +1181,15 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"2. Are there tests and do they cover the key scenarios?\n"
                 f"3. Code quality: no obvious bugs, proper error handling, follows project conventions\n"
                 f"4. Files are in the right locations per CLAUDE.md\n\n"
+                f"DIF AUTOMATED REVIEW:\n"
+                f"Run DIF verification on ALL changed code files:\n"
+                f"  cc dif verify --language python --file <file.py> --json\n"
+                f"  cc dif verify --language javascript --file <file.mjs> --json\n"
+                f"Include the DIF results as objective evidence in your review.\n"
+                f"DIF trust_signal='concern' or verification<30 = CODE_REVIEW_FAILED.\n"
+                f"DIF trust_signal='positive' with verification>50 = strong evidence for PASSED.\n\n"
                 f"Do NOT check production deployment — that's a separate phase.\n"
-                f"Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED with specific issues."
+                f"Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED with DIF scores + specific issues."
             )
         elif next_phase == "deploy":
             direction = (
@@ -1223,7 +1230,12 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"Write actual test code (pytest) that verifies the feature works.\n"
                 f"Tests must be runnable. Include both unit tests and an integration test\n"
                 f"that hits the API endpoint if applicable.\n"
-                f"Follow the project's CLAUDE.md conventions."
+                f"Follow the project's CLAUDE.md conventions.\n\n"
+                f"CODE QUALITY — DIF verification:\n"
+                f"After writing test files, verify them:\n"
+                f"  cc dif verify --language python --file <test_file.py> --json\n"
+                f"DIF checks test code quality too — low semantic_support means trivial tests.\n"
+                f"Fix any DIF concerns before finishing."
             )
         elif next_phase == "impl":
             direction = (
@@ -1231,7 +1243,18 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"Description: {idea_desc[:300]}\n\n"
                 f"Write the actual code that makes this feature work.\n"
                 f"Follow the project's CLAUDE.md conventions. Work in the repository.\n"
-                f"The implementation must be complete enough to deploy and use."
+                f"The implementation must be complete enough to deploy and use.\n\n"
+                f"CODE QUALITY — DIF verification:\n"
+                f"After writing each code file, verify it with DIF:\n"
+                f"  cc dif verify --language python --file <your_file.py> --json\n"
+                f"  cc dif verify --language javascript --file <your_file.mjs> --json\n"
+                f"Read the DIF output — check:\n"
+                f"  - trust_signal: 'positive' or 'review' is acceptable. 'concern' means fix needed.\n"
+                f"  - scores.verification: >40 is acceptable. <30 means rethink the approach.\n"
+                f"  - scores.semantic_support: >50 means well-known patterns. <20 means unusual code.\n"
+                f"  - top_finding: shows the exact line with the highest anomaly — address it.\n"
+                f"If DIF flags concerns, fix the code and re-verify before finishing.\n"
+                f"Include the final DIF scores in your output as evidence of code quality."
             )
         else:
             direction = (
@@ -2289,6 +2312,12 @@ def _seed_task_from_open_idea() -> bool:
         f"- For review: verify the feature exists, works, and is deployed\n"
         f"- Follow the project's CLAUDE.md conventions. Work in the repository.\n"
         f"- If you cannot complete the task, explain WHY in detail (don't return empty).\n"
+        f"\n"
+        f"CODE QUALITY — DIF (Deep Inspection Framework):\n"
+        f"- After writing any code file (.py, .js, .ts, .mjs), verify it:\n"
+        f"    cc dif verify --language python --file <your_file.py> --json\n"
+        f"- Check: trust_signal (positive/review=ok, concern=fix), verification (>40=ok, <30=fix)\n"
+        f"- Fix any DIF-flagged issues before finishing. Include final DIF scores in your output.\n"
         f"\n"
         f"COMMUNICATION:\n"
         f"- Check `cc inbox` every 5-7 minutes for messages from other nodes\n"
