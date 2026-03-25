@@ -155,79 +155,57 @@ def _load_interfaces(raw: str) -> list[str]:
 
 
 def load_ideas() -> list[Idea]:
-    ensure_schema()
-    with _session() as session:
-        rows = (
-            session.query(IdeaRecord)
-            .options(selectinload(IdeaRecord.questions))
-            .order_by(IdeaRecord.position.asc(), IdeaRecord.id.asc())
-            .all()
-        )
-        out: list[Idea] = []
-        for row in rows:
-            questions = sorted(row.questions, key=lambda q: (q.position, q.id))
-            # Parse idea_type safely
-            try:
-                idea_type = IdeaType(row.idea_type) if row.idea_type else IdeaType.STANDALONE
-            except (ValueError, AttributeError):
-                idea_type = IdeaType.STANDALONE
+    """Load all ideas from graph_nodes."""
+    from app.services import graph_service
+    result = graph_service.list_nodes(type="idea", limit=2000, offset=0)
+    items = result.get("items", [])
+    out: list[Idea] = []
+    for n in items:
+        try:
+            idea_type = IdeaType(n.get("idea_type", "standalone"))
+        except (ValueError, AttributeError):
+            idea_type = IdeaType.STANDALONE
+        try:
+            stage = IdeaStage(n.get("stage", "none") or "none")
+        except (ValueError, AttributeError):
+            stage = IdeaStage.NONE
+        try:
+            status = ManifestationStatus(n.get("manifestation_status", "none") or "none")
+        except (ValueError, AttributeError):
+            status = ManifestationStatus.NONE
 
-            # Parse child_idea_ids from JSON
-            child_idea_ids: list[str] = []
-            try:
-                raw_children = json.loads(row.child_idea_ids_json or "[]")
-                if isinstance(raw_children, list):
-                    child_idea_ids = [x for x in raw_children if isinstance(x, str)]
-            except (json.JSONDecodeError, AttributeError):
-                pass
+        raw_qs = n.get("open_questions") or []
+        questions = []
+        for q in raw_qs:
+            if isinstance(q, dict):
+                questions.append(IdeaQuestion(
+                    question=q.get("question", ""),
+                    value_to_whole=float(q.get("value_to_whole", 0)),
+                    estimated_cost=float(q.get("estimated_cost", 0)),
+                    answer=q.get("answer"),
+                    measured_delta=float(q["measured_delta"]) if q.get("measured_delta") is not None else None,
+                ))
 
-            # Parse value_basis from JSON
-            value_basis: dict[str, str] | None = None
-            try:
-                if row.value_basis_json:
-                    raw_vb = json.loads(row.value_basis_json)
-                    if isinstance(raw_vb, dict):
-                        value_basis = raw_vb
-            except (json.JSONDecodeError, AttributeError):
-                pass
-
-            # Parse stage safely
-            try:
-                idea_stage = IdeaStage(getattr(row, "stage", "none") or "none")
-            except (ValueError, AttributeError):
-                idea_stage = IdeaStage.NONE
-
-            out.append(
-                Idea(
-                    id=row.id,
-                    name=row.name,
-                    description=row.description,
-                    potential_value=float(row.potential_value),
-                    actual_value=float(row.actual_value),
-                    estimated_cost=float(row.estimated_cost),
-                    actual_cost=float(row.actual_cost),
-                    resistance_risk=float(row.resistance_risk),
-                    confidence=float(row.confidence),
-                    manifestation_status=ManifestationStatus(row.manifestation_status),
-                    stage=idea_stage,
-                    interfaces=_load_interfaces(row.interfaces_json),
-                    idea_type=idea_type,
-                    parent_idea_id=getattr(row, "parent_idea_id", None),
-                    child_idea_ids=child_idea_ids,
-                    value_basis=value_basis,
-                    open_questions=[
-                        IdeaQuestion(
-                            question=q.question,
-                            value_to_whole=float(q.value_to_whole),
-                            estimated_cost=float(q.estimated_cost),
-                            answer=q.answer,
-                            measured_delta=float(q.measured_delta) if q.measured_delta is not None else None,
-                        )
-                        for q in questions
-                    ],
-                )
-            )
-        return out
+        out.append(Idea(
+            id=n["id"],
+            name=n.get("name", ""),
+            description=n.get("description", ""),
+            potential_value=float(n.get("potential_value", 0)),
+            actual_value=float(n.get("actual_value", 0)),
+            estimated_cost=float(n.get("estimated_cost", 0)),
+            actual_cost=float(n.get("actual_cost", 0)),
+            resistance_risk=float(n.get("resistance_risk", 1.0)),
+            confidence=float(n.get("confidence", 0.5)),
+            manifestation_status=status,
+            stage=stage,
+            interfaces=n.get("interfaces") or [],
+            idea_type=idea_type,
+            parent_idea_id=n.get("parent_idea_id"),
+            child_idea_ids=n.get("child_idea_ids") or [],
+            value_basis=n.get("value_basis"),
+            open_questions=questions,
+        ))
+    return out
 
 
 def _upsert_idea_in_session(session: Session, idea: Idea, position: int) -> None:
@@ -302,31 +280,49 @@ def _upsert_idea_in_session(session: Session, idea: Idea, position: int) -> None
 
 
 def save_single_idea(idea: Idea, position: int = 0) -> None:
-    """Upsert a single idea and its questions."""
-    ensure_schema()
-    with _session() as session:
-        _upsert_idea_in_session(session, idea, position)
+    """Upsert a single idea into graph_nodes."""
+    from app.services import graph_service
+    props = {
+        "potential_value": idea.potential_value,
+        "actual_value": idea.actual_value,
+        "estimated_cost": idea.estimated_cost,
+        "actual_cost": idea.actual_cost,
+        "resistance_risk": idea.resistance_risk,
+        "confidence": idea.confidence,
+        "manifestation_status": idea.manifestation_status.value if hasattr(idea.manifestation_status, "value") else str(idea.manifestation_status),
+        "stage": idea.stage.value if hasattr(idea.stage, "value") else str(idea.stage),
+        "idea_type": idea.idea_type.value if hasattr(idea.idea_type, "value") else str(idea.idea_type),
+        "parent_idea_id": idea.parent_idea_id,
+        "child_idea_ids": idea.child_idea_ids or [],
+        "interfaces": idea.interfaces or [],
+        "open_questions": [q.model_dump() if hasattr(q, "model_dump") else q for q in (idea.open_questions or [])],
+        "value_basis": idea.value_basis,
+    }
+    if idea.cost_vector:
+        props["cost_vector"] = idea.cost_vector.model_dump() if hasattr(idea.cost_vector, "model_dump") else idea.cost_vector
+    if idea.value_vector:
+        props["value_vector"] = idea.value_vector.model_dump() if hasattr(idea.value_vector, "model_dump") else idea.value_vector
+
+    status = str(props.get("manifestation_status", "none"))
+    phase = "ice" if status == "validated" else "water" if status == "partial" else "gas"
+
+    existing = graph_service.get_node(idea.id)
+    if existing:
+        graph_service.update_node(idea.id, name=idea.name, description=idea.description, phase=phase, properties=props)
+    else:
+        graph_service.create_node(
+            id=idea.id, type="idea", name=idea.name, description=idea.description,
+            phase=phase, properties=props,
+        )
+    # Invalidate idea cache so next read sees the update
+    from app.services import idea_service
+    idea_service._invalidate_ideas_cache()
 
 
 def save_ideas(ideas: list[Idea], bootstrap_source: str | None = None) -> None:
-    ensure_schema()
-    with _session() as session:
-        incoming_ids = {idea.id for idea in ideas}
-
-        # Delete ideas no longer in the list
-        existing_ids_rows = session.query(IdeaRecord.id).all()
-        stale_ids = {row[0] for row in existing_ids_rows} - incoming_ids
-        if stale_ids:
-            session.query(IdeaQuestionRecord).filter(
-                IdeaQuestionRecord.idea_id.in_(stale_ids)
-            ).delete(synchronize_session=False)
-            session.query(IdeaRecord).filter(
-                IdeaRecord.id.in_(stale_ids)
-            ).delete(synchronize_session=False)
-
-        # Upsert each idea
-        for position, idea in enumerate(ideas):
-            _upsert_idea_in_session(session, idea, position)
+    """Bulk upsert ideas into graph_nodes."""
+    for position, idea in enumerate(ideas):
+        save_single_idea(idea, position=position)
 
         if bootstrap_source is not None:
             row = session.get(RegistryMetaRecord, "bootstrap_source")

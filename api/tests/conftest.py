@@ -102,7 +102,8 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     # Use an isolated DB for each test
     db_file = tmp_path / "test_coherence.db"
     os.environ["DATABASE_URL"] = f"sqlite+pysqlite:///{db_file}"
-    os.environ["IDEA_PORTFOLIO_PATH"] = str(tmp_path / "ideas.json")
+    # Ideas now live in graph_nodes (unified DB) — don't set file-based portfolio path
+    os.environ.pop("IDEA_PORTFOLIO_PATH", None)
     os.environ["AGENT_TASKS_USE_DB"] = "0"
 
     # Reset the unified engine — all services delegate to this
@@ -150,11 +151,5 @@ def seeded_db(tmp_path: Path) -> None:
                     "open_questions": [],
                 },
             )
-        # Also try the old seed path as fallback
-        REPO_ROOT = Path(__file__).resolve().parents[2]
-        if str(REPO_ROOT) not in sys.path:
-            sys.path.insert(0, str(REPO_ROOT))
-        from scripts import seed_db
-        seed_db.seed_ideas()
     except Exception as e:
-        print(f"Warning: seeded_db fallback: {e}")
+        print(f"Warning: seeded_db graph seed: {e}")
