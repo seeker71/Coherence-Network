@@ -2239,7 +2239,13 @@ def _seed_task_from_open_idea() -> bool:
         f"- For test: write runnable pytest tests\n"
         f"- For review: verify the feature exists, works, and is deployed\n"
         f"- Follow the project's CLAUDE.md conventions. Work in the repository.\n"
-        f"- If you cannot complete the task, explain WHY in detail (don't return empty)."
+        f"- If you cannot complete the task, explain WHY in detail (don't return empty).\n"
+        f"\n"
+        f"COMMUNICATION:\n"
+        f"- Check `cc inbox` every 5-7 minutes for messages from other nodes\n"
+        f"- Send status updates: `cc msg broadcast \"Working on X: progress...\"`\n"
+        f"- When done: `cc contribute --type code --cc 5 --desc \"what you did\"`\n"
+        f"- If blocked: `cc msg broadcast \"Blocked: reason\"`"
         f"{validation_guidance}"
     )
 
