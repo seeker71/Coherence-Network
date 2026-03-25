@@ -23,9 +23,9 @@ def _node_to_contributor(node: dict) -> Contributor:
     return Contributor(
         id=cid,
         name=node.get("name", ""),
-        type=node.get("contributor_type", "HUMAN"),
-        email=node.get("email"),
-        wallet_address=node.get("wallet_address"),
+        type=node.get("contributor_type") or "HUMAN",
+        email=node.get("email") or None,
+        wallet_address=node.get("wallet_address") or None,
         hourly_rate=float(node["hourly_rate"]) if node.get("hourly_rate") else None,
     )
 
