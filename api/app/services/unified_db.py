@@ -55,16 +55,8 @@ def database_url() -> str:
     configured = os.getenv("DATABASE_URL")
     if configured:
         return str(configured).strip()
-    # IDEA_PORTFOLIO_PATH: test isolation — derive .db from .json path
-    portfolio_path = os.getenv("IDEA_PORTFOLIO_PATH")
-    if portfolio_path:
-        p = Path(portfolio_path)
-        if p.suffix.lower() == ".json":
-            sqlite_path = p.with_suffix(".db")
-        else:
-            sqlite_path = Path(f"{p}.db")
-        sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-        return f"sqlite+pysqlite:///{sqlite_path}"
+    # IDEA_PORTFOLIO_PATH is legacy — ideas now live in graph_nodes (unified DB).
+    # Tests should set DATABASE_URL directly for isolation.
     sqlite_path = _default_sqlite_path()
     sqlite_path.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite+pysqlite:///{sqlite_path}"
@@ -125,11 +117,12 @@ def session() -> Generator[Session, None, None]:
 
 
 def ensure_schema() -> None:
-    """Create all registered tables if they don't exist.
-
-    Call this after all model modules have been imported so Base.metadata
-    has all table definitions.
-    """
+    """Create all registered tables if they don't exist."""
+    # Import unified_models to ensure all table definitions are registered
+    try:
+        from app.services import unified_models  # noqa: F401
+    except ImportError:
+        pass
     eng = engine()
     url = database_url()
     with _SCHEMA_LOCK:
