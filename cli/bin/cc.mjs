@@ -26,6 +26,7 @@ import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/com
 import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility } from "../lib/commands/diagnostics.mjs";
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
+import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask } from "../lib/commands/tasks.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -59,6 +60,8 @@ const COMMANDS = {
   providers:     () => handleProviders(args),
   trace:         () => handleTrace(args),
   diag:          () => handleDiag(args),
+  tasks:         () => listTasks(args),
+  task:          () => handleTask(args),
   deploy:        () => deploy(args),
   listen:        () => listen(args),
   help:          () => showHelp(),
@@ -85,6 +88,17 @@ async function handleIdentity(args) {
 async function handleContributor(args) {
   if (args[1] === "contributions") return showContributions(args);
   return showContributor(args);
+}
+
+async function handleTask(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "next":    return claimNext();
+    case "claim":   return claimTask(args.slice(1));
+    case "report":  return reportTask(args.slice(1));
+    case "seed":    return seedTask(args.slice(1));
+    default:        return showTask(args);
+  }
 }
 
 async function handleAsset(args) {
