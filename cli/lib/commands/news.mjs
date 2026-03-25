@@ -4,30 +4,47 @@
 
 import { get, post } from "../api.mjs";
 
+/** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
   if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
+  if (str.length <= len) return str;
+  const trimmed = str.slice(0, len - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
 }
 
-export async function showNewsFeed() {
+/** Format relative time from ISO string */
+function timeAgo(isoStr) {
+  if (!isoStr) return "";
+  const min = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return `${min}m ago`;
+  if (min < 1440) return `${Math.floor(min / 60)}h ago`;
+  return `${Math.floor(min / 1440)}d ago`;
+}
+
+export async function showNewsFeed(args) {
+  const limit = (args && parseInt(args[0])) || 10;
   const data = await get("/api/news/feed");
-  const items = Array.isArray(data) ? data : data?.items || data?.articles;
-  if (!items || !Array.isArray(items)) {
+  const allItems = Array.isArray(data) ? data : data?.items || data?.articles;
+  if (!allItems || !Array.isArray(allItems)) {
     console.log("Could not fetch news feed.");
     return;
   }
+  const items = allItems.slice(0, limit);
   if (items.length === 0) {
     console.log("No news items.");
     return;
   }
 
   console.log();
-  console.log(`\x1b[1m  NEWS FEED\x1b[0m (${items.length})`);
-  console.log(`  ${"─".repeat(60)}`);
+  console.log(`\x1b[1m  NEWS FEED\x1b[0m (showing ${items.length} of ${allItems.length})`);
+  console.log(`  ${"─".repeat(74)}`);
   for (const item of items) {
-    const title = truncate(item.title || item.headline || "?", 55);
-    const source = item.source ? `\x1b[2m${truncate(item.source, 15)}\x1b[0m` : "";
-    console.log(`  ${title}  ${source}`);
+    const title = truncate(item.title || item.headline || "?", 50).padEnd(52);
+    const source = item.source ? truncate(item.source, 12).padStart(12) : "";
+    const ago = timeAgo(item.published_at || item.created_at || item.timestamp);
+    console.log(`  ${title} \x1b[2m${source.padStart(12)}\x1b[0m  \x1b[2m${ago}\x1b[0m`);
   }
   console.log();
 }

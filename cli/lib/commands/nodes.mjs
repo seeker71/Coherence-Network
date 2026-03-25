@@ -1,87 +1,9 @@
 /**
- * Federation node commands: nodes, msg, cmd, broadcast
+ * Federation node commands: nodes, msg, broadcast
  */
 
 import { get, post } from "../api.mjs";
 import { hostname } from "node:os";
-
-/**
- * Send a remote command to a node.
- * Usage: cc cmd <node_id_or_name> <command> [...args]
- * Commands: update, status, diagnose, restart, ping
- */
-export async function sendCommand(args) {
-  if (args.length < 2) {
-    console.log("Usage: cc cmd <node_id_or_name> <command>");
-    console.log("Commands: update, status, diagnose, restart, ping");
-    return;
-  }
-
-  const [target, command, ...cmdArgs] = args;
-
-  // Resolve target: could be node_id prefix or hostname
-  const nodes = await get("/api/federation/nodes");
-  const node = nodes?.find(
-    (n) =>
-      n.node_id?.startsWith(target) ||
-      n.hostname?.toLowerCase().includes(target.toLowerCase()),
-  );
-  if (!node) {
-    console.log(`Node not found: ${target}`);
-    console.log("Available nodes:");
-    for (const n of nodes || []) {
-      console.log(`  ${n.node_id?.slice(0, 12)}  ${n.hostname}`);
-    }
-    return;
-  }
-
-  const myNodeId = nodes?.find(
-    (n) => n.hostname === hostname(),
-  )?.node_id || "unknown";
-
-  console.log(
-    `Sending \x1b[1m${command}\x1b[0m to \x1b[1m${node.hostname}\x1b[0m (${node.node_id?.slice(0, 12)})...`,
-  );
-
-  const result = await post(`/api/federation/nodes/${myNodeId}/messages`, {
-    from_node: myNodeId,
-    to_node: node.node_id,
-    type: "command",
-    text: `Remote command: ${command} ${cmdArgs.join(" ")}`.trim(),
-    payload: { command, args: cmdArgs },
-  });
-
-  if (result?.id) {
-    const msgId = result.id;
-    console.log(`\x1b[32m✓\x1b[0m Command sent (msg ${msgId.slice(0, 12)})`);
-    console.log("  Waiting for reply (up to 3 min)...");
-
-    // Poll for reply
-    const deadline = Date.now() + 180_000;
-    const pollInterval = 10_000;
-    while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, pollInterval));
-      process.stdout.write(".");
-
-      const inbox = await get(
-        `/api/federation/nodes/${myNodeId}/messages?unread_only=false&limit=20`,
-      );
-      const reply = inbox?.messages?.find(
-        (m) =>
-          (m.type === "command_response" || m.type === "ack") &&
-          m.payload?.in_reply_to === msgId,
-      );
-      if (reply) {
-        console.log(`\n\x1b[32m✓\x1b[0m Reply from ${node.hostname}:`);
-        console.log(`  ${reply.text}`);
-        return;
-      }
-    }
-    console.log("\n\x1b[33m⏱\x1b[0m No reply within 3 min. Check later: cc inbox");
-  } else {
-    console.log("\x1b[31m✗\x1b[0m Failed to send command");
-  }
-}
 
 export async function listNodes() {
   const nodes = await get("/api/federation/nodes");
@@ -94,6 +16,21 @@ export async function listNodes() {
   console.log("\x1b[1m  FEDERATION NODES\x1b[0m");
   console.log(`  ${"─".repeat(50)}`);
 
+  /** Format relative time */
+  function relativeTime(min) {
+    if (min < 1) return "just now";
+    if (min < 60) return `${min}m ago`;
+    if (min < 1440) return `${Math.floor(min / 60)}h ago`;
+    return `${Math.floor(min / 1440)}d ago`;
+  }
+
+  /** Colored provider badge */
+  function providerBadge(name) {
+    const colors = { openrouter: "\x1b[36m", ollama: "\x1b[32m", anthropic: "\x1b[33m" };
+    const color = colors[name.toLowerCase()] || "\x1b[2m";
+    return `${color}[${name}]\x1b[0m`;
+  }
+
   const now = Date.now();
   for (const node of nodes) {
     const lastSeen = node.last_seen_at ? new Date(node.last_seen_at) : null;
@@ -105,10 +42,6 @@ export async function listNodes() {
     if (ageMin < 5) dot = "\x1b[32m●\x1b[0m"; // green
     else if (ageMin < 60) dot = "\x1b[33m●\x1b[0m"; // yellow
 
-    // OS icon
-    const os = node.os_type || "?";
-    const icon = os === "macos" ? "🍎" : os === "windows" ? "🪟" : os === "linux" ? "🐧" : "🖥️";
-
     // Providers
     let providers = [];
     try {
@@ -117,22 +50,17 @@ export async function listNodes() {
         : (node.providers || []);
     } catch { providers = []; }
 
-    const ago = ageMin < 1 ? "now" : ageMin < 60 ? `${ageMin}m ago` : `${Math.floor(ageMin / 60)}h ago`;
+    const shortId = (node.node_id || "").slice(0, 7);
+    const ago = relativeTime(ageMin);
+    const hostName = (node.hostname || "?").slice(0, 24);
+    const os = node.os_type || "?";
 
-    // Git version from capabilities
-    const git = node.capabilities?.git || {};
-    const sha = git.local_sha || "?";
-    const originSha = git.origin_sha || "?";
-    const upToDate = git.up_to_date === "yes";
-    const versionTag = upToDate
-      ? `\x1b[32m${sha}\x1b[0m`
-      : `\x1b[31m${sha} (origin: ${originSha})\x1b[0m`;
-
-    console.log(`  ${dot} ${icon}  \x1b[1m${node.hostname || "?"}\x1b[0m  ${ago}  sha:${versionTag}`);
-    console.log(`     ${providers.join(", ")}`);
-    console.log(`     id: ${node.node_id}`);
-    console.log();
+    console.log(`  ${dot} \x1b[1m${hostName.padEnd(26)}\x1b[0m ${ago.padEnd(10)} \x1b[2m${shortId}\x1b[0m  ${os}`);
+    if (providers.length > 0) {
+      console.log(`    ${providers.map(providerBadge).join(" ")}`);
+    }
   }
+  console.log();
 }
 
 export async function sendMessage(args) {
@@ -173,45 +101,15 @@ export async function sendMessage(args) {
       console.log("\x1b[31m✗\x1b[0m Failed to broadcast");
     }
   } else {
-    // Resolve target name to node_id
-    const targetNode = Array.isArray(nodes)
-      ? nodes.find(
-          (n) =>
-            n.node_id?.startsWith(targetOrBroadcast) ||
-            n.hostname?.toLowerCase().includes(targetOrBroadcast.toLowerCase()),
-        )
-      : null;
-    const toNodeId = targetNode?.node_id || targetOrBroadcast;
-    const toName = targetNode?.hostname || targetOrBroadcast.slice(0, 12);
-
     const result = await post(`/api/federation/nodes/${myNodeId}/messages`, {
       from_node: myNodeId,
-      to_node: toNodeId,
+      to_node: targetOrBroadcast,
       type: "text",
       text,
       payload: {},
     });
-    if (result?.id) {
-      const msgId = result.id;
-      console.log(`\x1b[32m✓\x1b[0m Message sent to ${toName}: ${text.slice(0, 60)}`);
-      console.log("  Waiting for ack (up to 3 min)...");
-
-      const deadline = Date.now() + 180_000;
-      while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 10_000));
-        process.stdout.write(".");
-        const inbox = await get(
-          `/api/federation/nodes/${myNodeId}/messages?unread_only=false&limit=20`,
-        );
-        const ack = inbox?.messages?.find(
-          (m) => m.type === "ack" && m.payload?.in_reply_to === msgId,
-        );
-        if (ack) {
-          console.log(`\n\x1b[32m✓\x1b[0m Acknowledged by ${toName}`);
-          return;
-        }
-      }
-      console.log("\n\x1b[33m⏱\x1b[0m No ack within 3 min. Node may be offline. Check: cc inbox");
+    if (result) {
+      console.log(`\x1b[32m✓\x1b[0m Message sent to ${targetOrBroadcast.slice(0, 12)}: ${text.slice(0, 60)}`);
     } else {
       console.log("\x1b[31m✗\x1b[0m Failed to send message");
     }

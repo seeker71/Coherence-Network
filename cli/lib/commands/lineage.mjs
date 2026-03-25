@@ -4,9 +4,13 @@
 
 import { get, post } from "../api.mjs";
 
+/** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
   if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
+  if (str.length <= len) return str;
+  const trimmed = str.slice(0, len - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
 }
 
 export async function listLinks(args) {
@@ -24,12 +28,14 @@ export async function listLinks(args) {
 
   console.log();
   console.log(`\x1b[1m  VALUE LINEAGE\x1b[0m (${data.length})`);
-  console.log(`  ${"─".repeat(60)}`);
+  console.log(`  ${"─".repeat(74)}`);
   for (const link of data) {
-    const from = truncate(link.from_id || link.source || "?", 20);
-    const to = truncate(link.to_id || link.target || "?", 20);
-    const weight = link.weight != null ? `w=${link.weight.toFixed(2)}` : "";
-    console.log(`  ${from.padEnd(22)} \x1b[2m→\x1b[0m ${to.padEnd(22)} ${weight}`);
+    const ideaId = truncate(link.idea_id || link.from_id || link.source || "?", 18).padEnd(20);
+    const specId = truncate(link.spec_id || link.to_id || link.target || "?", 18).padEnd(20);
+    const contributor = truncate(link.contributor || link.contributor_id || "", 14).padEnd(16);
+    const cost = link.estimated_cost != null ? String(link.estimated_cost.toFixed ? link.estimated_cost.toFixed(1) : link.estimated_cost).padStart(7)
+      : link.weight != null ? String(link.weight.toFixed(2)).padStart(7) : "";
+    console.log(`  ${ideaId} \x1b[2m->\x1b[0m ${specId} \x1b[2m${contributor}\x1b[0m ${cost}`);
   }
   console.log();
 }

@@ -4,9 +4,21 @@
 
 import { get, post } from "../api.mjs";
 
+/** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
   if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
+  if (str.length <= len) return str;
+  const trimmed = str.slice(0, len - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
+}
+
+/** Colored type badge */
+function assetBadge(type) {
+  if (!type) return "\x1b[2m[?]\x1b[0m".padEnd(16);
+  const colors = { spec: "\x1b[36m", code: "\x1b[32m", doc: "\x1b[33m", test: "\x1b[35m", data: "\x1b[34m" };
+  const color = colors[type.toLowerCase()] || "\x1b[2m";
+  return `${color}[${type}]\x1b[0m`.padEnd(16);
 }
 
 export async function listAssets(args) {
@@ -24,11 +36,12 @@ export async function listAssets(args) {
 
   console.log();
   console.log(`\x1b[1m  ASSETS\x1b[0m (${data.length})`);
-  console.log(`  ${"─".repeat(60)}`);
+  console.log(`  ${"─".repeat(72)}`);
   for (const a of data) {
-    const name = truncate(a.name || a.description || a.id, 35);
-    const type = (a.type || a.asset_type || "").padEnd(12);
-    console.log(`  ${type} ${name}`);
+    const badge = assetBadge(a.type || a.asset_type);
+    const desc = truncate(a.name || a.description || a.id, 42).padEnd(44);
+    const cost = a.value != null ? String(a.value).padStart(8) : a.cost != null ? String(a.cost).padStart(8) : "";
+    console.log(`  ${badge} ${desc} ${cost}`);
   }
   console.log();
 }
