@@ -134,7 +134,7 @@ def save_single_idea(idea: Idea, position: int = 0) -> None:
     phase = "ice" if status == "validated" else "water" if status == "partial" else "gas"
 
     if existing:
-        graph_service.update_node(idea.id, phase=phase, **props)
+        graph_service.update_node(idea.id, name=idea.name, description=idea.description, phase=phase, properties=props)
     else:
         graph_service.create_node(
             id=idea.id,
