@@ -20,11 +20,15 @@ def _node_to_contributor(node: dict) -> Contributor:
         cid = UUID(legacy_id) if legacy_id and "-" in legacy_id else uuid4()
     except (ValueError, AttributeError):
         cid = uuid4()
+    email = node.get("email") or ""
+    # Contributor model requires a valid email — use a placeholder if missing
+    if not email or "@" not in email:
+        email = f"{node.get('name', 'unknown')}@coherence.network"
     return Contributor(
         id=cid,
         name=node.get("name", ""),
         type=node.get("contributor_type") or "HUMAN",
-        email=node.get("email") or None,
+        email=email,
         wallet_address=node.get("wallet_address") or None,
         hourly_rate=float(node["hourly_rate"]) if node.get("hourly_rate") else None,
     )
