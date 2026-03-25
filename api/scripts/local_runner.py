@@ -2402,7 +2402,43 @@ def main():
         _register_node()
         _heartbeat_counter = [0]
         try:
+            _handoff_paused_logged = False
+
             while True:
+                # Check if an interactive session (Claude Code, Codex) has taken over
+                _handoff_lock = Path.home() / ".coherence-network" / "executor.lock"
+                if _handoff_lock.exists():
+                    try:
+                        _lock_data = json.loads(_handoff_lock.read_text())
+                        _lock_age = time.time() - _lock_data.get("heartbeat", 0)
+                        _lock_pid = _lock_data.get("pid", 0)
+                        _lock_alive = True
+                        if sys.platform == "win32":
+                            import ctypes
+                            kernel32 = ctypes.windll.kernel32
+                            handle = kernel32.OpenProcess(0x100000, False, _lock_pid)  # SYNCHRONIZE
+                            _lock_alive = handle != 0
+                            if handle:
+                                kernel32.CloseHandle(handle)
+                        else:
+                            try:
+                                os.kill(_lock_pid, 0)
+                            except (OSError, ProcessLookupError):
+                                _lock_alive = False
+                        if _lock_data.get("type") == "interactive" and _lock_age < 300 and _lock_alive:
+                            if not _handoff_paused_logged:
+                                log.info("PAUSED: interactive session '%s' (PID %d) active — runner yielding",
+                                         _lock_data.get("session_id", "?"), _lock_pid)
+                                _handoff_paused_logged = True
+                            time.sleep(args.interval)
+                            continue
+                        elif _lock_data.get("type") == "interactive":
+                            log.info("RESUMED: interactive lock stale/dead — runner resuming")
+                            _handoff_lock.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                _handoff_paused_logged = False
+
                 # Self-update: check for new commits before each cycle
                 if not args.no_self_update:
                     _check_for_updates_and_restart()
