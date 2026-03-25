@@ -5,19 +5,20 @@
   :root {
     color-scheme: dark;
     --background: 24 22% 11%;
-    --foreground: 38 30% 90%;
+    /* Slightly higher lightness for default text on layered warm gradients */
+    --foreground: 38 32% 93%;
     --card: 24 20% 14%;
-    --card-foreground: 38 28% 90%;
+    --card-foreground: 38 30% 92%;
     --popover: 24 20% 13%;
-    --popover-foreground: 38 28% 90%;
+    --popover-foreground: 38 30% 92%;
     --primary: 36 72% 58%;
     --primary-foreground: 24 28% 11%;
     --secondary: 27 20% 20%;
     --secondary-foreground: 38 22% 92%;
     --muted: 24 16% 18%;
-    --muted-foreground: 30 18% 82%;
+    --muted-foreground: 34 22% 90%;
     --accent: 28 24% 24%;
-    --accent-foreground: 38 24% 90%;
+    --accent-foreground: 38 26% 92%;
     --destructive: 3 68% 56%;
     --destructive-foreground: 0 0% 98%;
     --border: 28 16% 24%;
@@ -36,19 +37,19 @@
   :root.dark {
     color-scheme: dark;
     --background: 24 22% 11%;
-    --foreground: 38 30% 90%;
+    --foreground: 38 32% 93%;
     --card: 24 20% 14%;
-    --card-foreground: 38 28% 90%;
+    --card-foreground: 38 30% 92%;
     --popover: 24 20% 13%;
-    --popover-foreground: 38 28% 90%;
+    --popover-foreground: 38 30% 92%;
     --primary: 36 72% 58%;
     --primary-foreground: 24 28% 11%;
     --secondary: 27 20% 20%;
     --secondary-foreground: 38 22% 92%;
     --muted: 24 16% 18%;
-    --muted-foreground: 30 18% 82%;
+    --muted-foreground: 34 22% 90%;
     --accent: 28 24% 24%;
-    --accent-foreground: 38 24% 90%;
+    --accent-foreground: 38 26% 92%;
     --destructive: 3 68% 56%;
     --destructive-foreground: 0 0% 98%;
     --border: 28 16% 24%;
@@ -89,11 +90,18 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
+  /* Softer blooms so foreground text stays legible (was washing out low-opacity copy) */
   background:
-    radial-gradient(520px 340px at 14% 24%, hsl(28 92% 74% / 0.08), transparent 72%),
-    radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.05), transparent 76%),
-    radial-gradient(460px 300px at 54% 32%, hsl(36 96% 76% / 0.06), transparent 74%);
+    radial-gradient(520px 340px at 14% 24%, hsl(28 92% 74% / 0.05), transparent 72%),
+    radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.035), transparent 76%),
+    radial-gradient(460px 300px at 54% 32%, hsl(36 96% 76% / 0.04), transparent 74%);
   mix-blend-mode: screen;
+}
+
+/* Hero headline: full-opacity ink + soft shadow for separation from ambient gradients */
+.hero-headline {
+  color: hsl(var(--foreground));
+  text-shadow: 0 2px 28px hsl(20 40% 6% / 0.55);
 }
 
 /* Gentle scroll reveal animation */

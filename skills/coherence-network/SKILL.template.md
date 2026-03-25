@@ -60,6 +60,21 @@ cc identity link github <your-github-handle>
 
 That's it. No account creation, no API key, no registration form. Your GitHub handle becomes your persistent identity across all sessions and nodes.
 
+## OpenClaw session protocol (bidirectional messaging)
+
+OpenClaw loads this skill when a session starts. **Check the inbox before any other work** so messages from other federation nodes are not missed. Any node can send traffic with `cc msg` or structured `cc cmd`; the recipient sees it on the next inbox poll.
+
+**Start of every session (in order):**
+
+1. `cc inbox` — list messages for this node (CLI: resolves your `node_id` from hostname, then `GET /api/federation/nodes/{node_id}/messages?unread_only=false&limit=20`; unread messages are marked in the output).
+2. `cc status` — confirm API health and operational signals.
+
+If the inbox has messages, surface them to the user and confirm before acting on them.
+
+**During / end of session:** use `cc msg`, `cc cmd`, or `POST /api/federation/nodes/{node_id}/messages` to reach peers; they will appear in the recipient’s next `cc inbox`.
+
+**Roadmap:** Phase 2 — OpenClaw webhook push (requires OpenClaw gateway API). Phase 3 — real-time WebSocket bridge between CC federation and the OpenClaw gateway.
+
 ## Two ways to use it
 
 ### Option A: CLI (recommended for agents)
