@@ -415,6 +415,8 @@ async def send_message(node_id: str, body: NodeMessage):
     }
     _store_message(msg)
     _msg_log.info("MSG %s → %s: [%s] %s", node_id, body.to_node or "ALL", body.type, body.text[:100])
+    # Push to SSE subscribers
+    _notify_sse_subscribers(body.to_node, msg)
     return msg
 
 
@@ -450,4 +452,87 @@ async def broadcast_message(body: NodeMessage):
     }
     _store_message(msg)
     _msg_log.info("BROADCAST from %s: [%s] %s", body.from_node, body.type, body.text[:100])
+    # Notify SSE subscribers
+    _notify_sse_subscribers(None, msg)
     return msg
+
+
+# ── SSE: real-time push notifications for connected nodes ────────────
+
+import asyncio
+from fastapi.responses import StreamingResponse
+
+# In-memory subscriber queues: node_id → list[asyncio.Queue]
+_sse_subscribers: dict[str, list[asyncio.Queue]] = {}
+_sse_lock = asyncio.Lock()
+
+
+def _notify_sse_subscribers(target_node_id: str | None, event: dict) -> None:
+    """Push an event to SSE subscribers. None = broadcast to all."""
+    targets = []
+    if target_node_id:
+        targets = _sse_subscribers.get(target_node_id, [])
+    else:
+        # Broadcast to all subscribers
+        for queues in _sse_subscribers.values():
+            targets.extend(queues)
+
+    for q in targets:
+        try:
+            q.put_nowait(event)
+        except asyncio.QueueFull:
+            pass  # Drop if subscriber is too slow
+
+
+@router.get("/federation/nodes/{node_id}/stream")
+async def node_event_stream(node_id: str):
+    """SSE stream for a node. Pushes: messages, deploys, task events, status changes.
+
+    Connect with:
+      curl -N https://api.coherencycoin.com/api/federation/nodes/{node_id}/stream
+
+    Events are JSON objects with 'event_type' and 'data' fields.
+    The stream stays open until the client disconnects.
+    """
+    queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+
+    async with _sse_lock:
+        if node_id not in _sse_subscribers:
+            _sse_subscribers[node_id] = []
+        _sse_subscribers[node_id].append(queue)
+
+    async def event_generator():
+        try:
+            # Send initial connected event
+            yield f"data: {json.dumps({'event_type': 'connected', 'node_id': node_id})}\n\n"
+
+            while True:
+                try:
+                    # Wait for events with timeout (sends keepalive)
+                    event = await asyncio.wait_for(queue.get(), timeout=30)
+                    yield f"data: {json.dumps(event)}\n\n"
+                except asyncio.TimeoutError:
+                    # Keepalive comment to prevent proxy timeouts
+                    yield ": keepalive\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            # Clean up subscriber
+            async with _sse_lock:
+                if node_id in _sse_subscribers:
+                    try:
+                        _sse_subscribers[node_id].remove(queue)
+                    except ValueError:
+                        pass
+                    if not _sse_subscribers[node_id]:
+                        del _sse_subscribers[node_id]
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

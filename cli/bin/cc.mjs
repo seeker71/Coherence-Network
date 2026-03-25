@@ -25,6 +25,7 @@ import { listProviders, showProviderStats } from "../lib/commands/providers.mjs"
 import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
 import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility } from "../lib/commands/diagnostics.mjs";
 import { deploy } from "../lib/commands/deploy.mjs";
+import { listen } from "../lib/commands/listen.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -59,6 +60,7 @@ const COMMANDS = {
   trace:         () => handleTrace(args),
   diag:          () => handleDiag(args),
   deploy:        () => deploy(args),
+  listen:        () => listen(args),
   help:          () => showHelp(),
 };
 
