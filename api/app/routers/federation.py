@@ -116,6 +116,15 @@ async def list_nodes():
     return federation_service.list_nodes()
 
 
+@router.delete("/federation/nodes/{node_id}", status_code=204)
+async def delete_node(node_id: str):
+    """Remove a stale or duplicate federation node."""
+    ok = federation_service.delete_node(node_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Node not found")
+    return None
+
+
 @router.get("/federation/nodes/capabilities", response_model=FleetCapabilitySummary)
 async def get_fleet_capabilities():
     """Return aggregated fleet capability coverage."""
