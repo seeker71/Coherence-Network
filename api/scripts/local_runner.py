@@ -1727,6 +1727,25 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     # Execute
     prompt = build_prompt(task)
 
+    # Attach control channel (SSE-based real-time steer/checkpoint/abort)
+    control_channel = None
+    task_work_dir = _REPO_DIR  # default; worktree overrides this
+    try:
+        from task_control_channel import TaskControlChannel, inject_control_instructions
+        task_work_dir = Path(os.environ.get("CC_TASK_WORKDIR", str(_REPO_DIR)))
+        control_channel = TaskControlChannel(
+            node_id=_NODE_ID,
+            task_id=task_id,
+            task_dir=task_work_dir,
+            api_base=os.environ.get("AGENT_API_BASE", "https://api.coherencycoin.com"),
+        )
+        control_channel.start()
+        prompt = inject_control_instructions(prompt, task_work_dir)
+    except ImportError:
+        pass  # control channel module not available — run without it
+    except Exception as e:
+        log.warning("CONTROL_CHANNEL setup failed (non-fatal): %s", e)
+
     # Snapshot repo state before execution (to detect actual file changes)
     pre_status_lines = _git_status_lines()
     pre_patch = _git_diff_for_paths()
@@ -1735,6 +1754,13 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     _post_activity(task_id, "executing", {"provider": provider, "task_type": task_type})
 
     success, output, duration = execute_with_provider(provider, prompt, task_type, complexity_estimate)
+
+    # Stop control channel
+    if control_channel:
+        try:
+            control_channel.stop()
+        except Exception:
+            pass
 
     # Post-execution validation: did file-producing tasks actually produce files?
     if success and task_type in ("spec", "impl", "test"):
