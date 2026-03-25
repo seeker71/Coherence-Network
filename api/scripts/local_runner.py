@@ -166,6 +166,14 @@ except ImportError:
 
 def _check_claude_auth() -> bool:
     """Verify Claude CLI is authenticated — not just installed."""
+    # If running inside a Claude Code session, auth is inherited
+    if os.environ.get("CLAUDECODE") == "1":
+        log.info("Claude auth: running inside Claude Code session — auth inherited")
+        return True
+    # If ANTHROPIC_API_KEY is set, Claude CLI will use it
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        log.info("Claude auth: ANTHROPIC_API_KEY set")
+        return True
     try:
         claude_path = shutil.which("claude")
         if not claude_path:
