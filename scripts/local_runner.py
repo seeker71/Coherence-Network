@@ -492,6 +492,7 @@ _SAFE_COMMANDS = {
     "diagnose": None,  # handled inline
     "restart": None,  # handled inline
     "ping": None,  # handled inline
+    "deploy": None,  # handled by _deploy_to_vps()
 }
 
 
@@ -647,12 +648,108 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
         threading.Timer(2.0, lambda: os._exit(0)).start()
         return response
 
+    elif command == "deploy":
+        return _deploy_to_vps()
+
     elif command == "ping":
         return f"pong from {socket.gethostname()} at {datetime.now(timezone.utc).isoformat()}"
 
     else:
         log.warning("CMD_UNKNOWN: %s (not in safe command list)", command)
         return f"Unknown command: {command}. Safe commands: {', '.join(_SAFE_COMMANDS.keys())}"
+
+
+def _deploy_to_vps() -> str:
+    """Deploy latest main to VPS with health gate and automatic rollback.
+
+    Steps:
+    1. SSH to VPS, capture current deployed SHA
+    2. Git pull on VPS
+    3. Docker compose build + up
+    4. Wait 30s for startup
+    5. Health check — if fails, rollback to previous SHA
+    6. Return result
+    """
+    import subprocess as _sp
+
+    SSH_KEY = os.path.expanduser("~/.ssh/hostinger-openclaw")
+    VPS_HOST = "root@187.77.152.42"
+    REPO_DIR = "/docker/coherence-network/repo"
+    COMPOSE_DIR = "/docker/coherence-network"
+
+    if not os.path.exists(SSH_KEY):
+        return "Deploy skipped: SSH key not found at ~/.ssh/hostinger-openclaw"
+
+    def _ssh(cmd: str, timeout: int = 120) -> tuple[int, str]:
+        result = _sp.run(
+            ["ssh", "-i", SSH_KEY, "-o", "LogLevel=QUIET", "-o", "StrictHostKeyChecking=no",
+             VPS_HOST, cmd],
+            capture_output=True, text=True, timeout=timeout,
+        )
+        return result.returncode, (result.stdout + result.stderr).strip()
+
+    log.info("DEPLOY: starting VPS deployment")
+
+    # 1. Capture current SHA for rollback
+    rc, prev_sha = _ssh(f"cd {REPO_DIR} && git rev-parse --short HEAD", timeout=15)
+    if rc != 0:
+        return f"Deploy failed: could not get current VPS SHA: {prev_sha}"
+    prev_sha = prev_sha.strip()[:10]
+    log.info("DEPLOY: current VPS SHA: %s", prev_sha)
+
+    # 2. Git pull
+    rc, pull_output = _ssh(f"cd {REPO_DIR} && git pull origin main --ff-only", timeout=30)
+    if rc != 0:
+        return f"Deploy failed: git pull failed: {pull_output[:200]}"
+
+    new_sha_rc, new_sha = _ssh(f"cd {REPO_DIR} && git rev-parse --short HEAD", timeout=15)
+    new_sha = new_sha.strip()[:10]
+
+    if new_sha == prev_sha:
+        log.info("DEPLOY: VPS already up to date at %s", new_sha)
+        return f"VPS already up to date at {new_sha}"
+
+    log.info("DEPLOY: pulled %s → %s", prev_sha, new_sha)
+
+    # 3. Docker build + up
+    rc, build_output = _ssh(
+        f"cd {COMPOSE_DIR} && docker compose build --no-cache api web && docker compose up -d api web",
+        timeout=300,
+    )
+    if rc != 0:
+        # Rollback
+        log.warning("DEPLOY: build/up failed, rolling back to %s", prev_sha)
+        _ssh(f"cd {REPO_DIR} && git checkout {prev_sha} && cd {COMPOSE_DIR} && docker compose up -d api web", timeout=120)
+        return f"Deploy failed: build error (rolled back to {prev_sha}): {build_output[-200:]}"
+
+    log.info("DEPLOY: containers started, waiting 30s for health check")
+
+    # 4. Wait for startup
+    import time
+    time.sleep(30)
+
+    # 5. Health check
+    try:
+        import httpx
+        health = httpx.get("https://api.coherencycoin.com/api/health", timeout=15)
+        if health.status_code == 200:
+            data = health.json()
+            deployed_sha = str(data.get("deployed_sha", ""))[:10]
+            schema_ok = data.get("schema_ok", False)
+            if schema_ok:
+                log.info("DEPLOY: health check passed — SHA=%s schema_ok=%s", deployed_sha, schema_ok)
+                return f"Deploy successful: {prev_sha} → {new_sha}. Health: OK, schema: OK"
+            else:
+                log.warning("DEPLOY: schema_ok=False, rolling back")
+        else:
+            log.warning("DEPLOY: health check returned %d, rolling back", health.status_code)
+    except Exception as e:
+        log.warning("DEPLOY: health check failed: %s, rolling back", e)
+
+    # 6. Rollback
+    log.warning("DEPLOY: rolling back to %s", prev_sha)
+    _ssh(f"cd {REPO_DIR} && git checkout {prev_sha} && cd {COMPOSE_DIR} && docker compose build --no-cache api web && docker compose up -d api web", timeout=300)
+    return f"Deploy failed health check — rolled back to {prev_sha}"
 
 
 # ── Parallel worktree execution ───────────────────────────────────────
