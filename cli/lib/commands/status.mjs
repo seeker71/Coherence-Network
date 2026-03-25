@@ -5,6 +5,30 @@
 import { get } from "../api.mjs";
 import { getContributorId, getHubUrl } from "../config.mjs";
 import { hostname } from "node:os";
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+function getLocalVersion() {
+  try {
+    const pkg = JSON.parse(readFileSync(join(__dirname, "../../package.json"), "utf8"));
+    return pkg.version;
+  } catch { return "?"; }
+}
+
+async function checkForUpdate(localVersion) {
+  try {
+    const latest = execSync("npm view coherence-cli version", { encoding: "utf8", timeout: 5000 }).trim();
+    if (latest && latest !== localVersion && localVersion !== "?") {
+      return latest;
+    }
+  } catch {}
+  return null;
+}
 
 export async function showStatus() {
   // Fetch everything in parallel
@@ -138,6 +162,15 @@ export async function showStatus() {
     for (const m of (messages.messages || []).slice(0, 3)) {
       console.log(`    from ${(m.from_node || "?").slice(0, 12)}: ${(m.text || "").slice(0, 60)}`);
     }
+  }
+
+  // Version check (non-blocking)
+  const localVersion = getLocalVersion();
+  const latestVersion = await checkForUpdate(localVersion);
+  if (latestVersion) {
+    console.log();
+    console.log(`\x1b[33m  Update available: ${localVersion} → ${latestVersion}\x1b[0m`);
+    console.log(`\x1b[2m  Run: npm i -g coherence-cli@latest\x1b[0m`);
   }
 
   console.log();
