@@ -1,65 +1,142 @@
 /**
  * Deploy command: deploy latest main to VPS (coherencycoin.com)
  *
- * cc deploy         — deploy now (asks the Mac node to run the deploy)
+ * cc deploy         — deploy now (directly if SSH key available, otherwise via node message)
  * cc deploy status  — check what SHA is deployed vs origin/main
  */
 
 import { get, post } from "../api.mjs";
+import { existsSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { homedir, hostname as getHostname } from "node:os";
+import { join } from "node:path";
+
+const SSH_KEY = join(homedir(), ".ssh", "hostinger-openclaw");
+const VPS_HOST = "root@187.77.152.42";
+const REPO_DIR = "/docker/coherence-network/repo";
+const COMPOSE_DIR = "/docker/coherence-network";
+
+function ssh(cmd, timeout = 120000) {
+  return execSync(
+    `ssh -i "${SSH_KEY}" -o LogLevel=QUIET -o StrictHostKeyChecking=no ${VPS_HOST} '${cmd}'`,
+    { encoding: "utf-8", timeout },
+  ).trim();
+}
 
 export async function deploy(args) {
   const sub = args[0];
+  if (sub === "status") return deployStatus();
 
-  if (sub === "status") {
-    return deployStatus();
-  }
-
-  // Deploy = send deploy command to the node that has SSH access to VPS
-  // Any node with ~/.ssh/hostinger-openclaw can deploy
   console.log("\x1b[1m  DEPLOYING TO VPS\x1b[0m");
   console.log(`  ${"─".repeat(50)}`);
-  console.log("  Sending deploy command to Mac node (has SSH key)...");
+
+  // If this machine has SSH key, deploy directly — don't send a message to yourself
+  if (existsSync(SSH_KEY)) {
+    return deployDirect();
+  }
+
+  // No SSH key — ask a node that has one to deploy
+  return deployViaMessage();
+}
+
+async function deployDirect() {
+  console.log("  Deploying directly (SSH key found)...");
   console.log();
 
-  // Find Mac node (the one with SSH access)
+  try {
+    // 1. Capture current SHA
+    const prevSha = ssh(`cd ${REPO_DIR} && git rev-parse --short HEAD`, 15000);
+    console.log(`  Current VPS: ${prevSha}`);
+
+    // 2. Git pull
+    const pullOutput = ssh(`cd ${REPO_DIR} && git pull origin main --ff-only`, 30000);
+    const newSha = ssh(`cd ${REPO_DIR} && git rev-parse --short HEAD`, 15000);
+
+    if (newSha === prevSha) {
+      console.log(`  \x1b[32m✓\x1b[0m VPS already up to date at ${newSha}`);
+      await broadcast(`Deploy: VPS already at ${newSha}, no changes needed.`);
+      return;
+    }
+
+    console.log(`  Pulled: ${prevSha} → ${newSha}`);
+
+    // 3. Build + restart
+    console.log("  Building containers (this may take a minute)...");
+    ssh(`cd ${COMPOSE_DIR} && docker compose build --no-cache api web && docker compose up -d api web`, 300000);
+    console.log("  Containers restarted, waiting 30s for health check...");
+
+    // 4. Wait
+    await new Promise((r) => setTimeout(r, 30000));
+
+    // 5. Health check
+    const health = await get("/api/health");
+    if (health?.status === "ok" && health?.schema_ok) {
+      console.log(`  \x1b[32m✓\x1b[0m Deploy successful: ${prevSha} → ${newSha}`);
+      console.log(`  Health: OK | Schema: OK | Uptime: ${health.uptime_human || "?"}`);
+      await broadcast(`Deploy successful: ${prevSha} → ${newSha}. Health OK, schema OK.`);
+    } else {
+      // Rollback
+      console.log(`  \x1b[31m✗\x1b[0m Health check failed — rolling back to ${prevSha}`);
+      ssh(`cd ${REPO_DIR} && git checkout ${prevSha} && cd ${COMPOSE_DIR} && docker compose build --no-cache api web && docker compose up -d api web`, 300000);
+      console.log(`  Rolled back to ${prevSha}`);
+      await broadcast(`Deploy FAILED health check. Rolled back ${newSha} → ${prevSha}.`);
+    }
+  } catch (e) {
+    console.log(`  \x1b[31m✗\x1b[0m Deploy error: ${e.message}`);
+  }
+}
+
+async function deployViaMessage() {
+  console.log("  No SSH key on this machine — sending deploy command to a node that has one...");
+  console.log();
+
   const nodes = await get("/api/federation/nodes");
   if (!nodes || !Array.isArray(nodes)) {
     console.log("  \x1b[31m✗\x1b[0m Could not fetch nodes");
     return;
   }
 
-  const macNode = nodes.find((n) => n.os_type === "macos");
-  if (!macNode) {
-    console.log("  \x1b[31m✗\x1b[0m No Mac node found (needed for SSH deploy)");
+  // Find any node that might have SSH (prefer macOS)
+  const target = nodes.find((n) => n.os_type === "macos") || nodes[0];
+  if (!target) {
+    console.log("  \x1b[31m✗\x1b[0m No nodes available");
     return;
   }
 
-  // Send deploy command
-  const { hostname } = await import("node:os");
-  const myNodeId = nodes.find((n) => n.hostname === hostname())?.node_id || "cli-user";
+  const myNodeId = nodes.find((n) => n.hostname === getHostname())?.node_id || "cli-user";
 
   const result = await post(`/api/federation/nodes/${myNodeId}/messages`, {
     from_node: myNodeId,
-    to_node: macNode.node_id,
+    to_node: target.node_id,
     type: "command",
     text: "Deploy latest main to VPS",
     payload: { command: "deploy" },
   });
 
   if (result?.id) {
-    console.log(`  \x1b[32m✓\x1b[0m Deploy command sent to ${macNode.hostname}`);
-    console.log(`  The Mac runner will: git pull → docker build → health check → rollback if failed`);
-    console.log(`  Check \x1b[1mcc deploy status\x1b[0m in ~5 min to verify`);
+    console.log(`  \x1b[32m✓\x1b[0m Deploy command sent to ${target.hostname}`);
+    console.log("  Node will deploy on next poll (~2 min). Check: cc deploy status");
   } else {
     console.log("  \x1b[31m✗\x1b[0m Failed to send deploy command");
   }
+}
+
+async function broadcast(text) {
+  try {
+    const nodes = await get("/api/federation/nodes");
+    const myNodeId = nodes?.find((n) => n.hostname === getHostname())?.node_id || "deployer";
+    await post(`/api/federation/broadcast`, {
+      from_node: myNodeId,
+      type: "deploy",
+      text,
+    });
+  } catch { /* best effort */ }
 }
 
 async function deployStatus() {
   console.log("\x1b[1m  DEPLOY STATUS\x1b[0m");
   console.log(`  ${"─".repeat(50)}`);
 
-  // Check VPS health for deployed SHA
   const health = await get("/api/health");
   if (!health) {
     console.log("  \x1b[31m✗\x1b[0m API unreachable");
@@ -67,23 +144,17 @@ async function deployStatus() {
   }
 
   const deployedSha = health.deployed_sha || "unknown";
-  const status = health.status;
-  const schemaOk = health.schema_ok;
-  const uptime = health.uptime_human || "?";
-
-  console.log(`  API:         ${status === "ok" ? "\x1b[32mok\x1b[0m" : "\x1b[31m" + status + "\x1b[0m"}`);
+  console.log(`  API:         ${health.status === "ok" ? "\x1b[32mok\x1b[0m" : "\x1b[31m" + health.status + "\x1b[0m"}`);
   console.log(`  Deployed:    ${deployedSha.slice(0, 10)}`);
-  console.log(`  Schema:      ${schemaOk ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m"}`);
-  console.log(`  Uptime:      ${uptime}`);
+  console.log(`  Schema:      ${health.schema_ok ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m"}`);
+  console.log(`  Uptime:      ${health.uptime_human || "?"}`);
 
-  // Compare with node SHAs
   const nodes = await get("/api/federation/nodes");
   if (nodes && Array.isArray(nodes)) {
     console.log();
     console.log("  Node SHAs:");
     for (const n of nodes) {
-      const caps = n.capabilities || {};
-      const git = caps.git || {};
+      const git = n.capabilities?.git || {};
       const sha = (git.local_sha || "?").slice(0, 10);
       const match = sha === deployedSha.slice(0, 10) ? "\x1b[32m✓\x1b[0m" : "\x1b[33m≠\x1b[0m";
       console.log(`    ${match} ${(n.hostname || "?").padEnd(25)} ${sha}`);
