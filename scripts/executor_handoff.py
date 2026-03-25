@@ -111,7 +111,7 @@ def release() -> None:
 def heartbeat() -> None:
     """Update heartbeat timestamp. Call periodically from interactive session."""
     lock = _read_lock()
-    if lock and lock.get("pid") == os.getpid():
+    if lock and lock.get("type") == "interactive" and _is_pid_alive(lock.get("pid", 0)):
         lock["heartbeat"] = time.time()
         _write_lock(lock)
 
