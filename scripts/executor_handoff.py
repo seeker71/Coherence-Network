@@ -55,12 +55,21 @@ def _is_stale(lock: dict) -> bool:
 
 
 def _is_pid_alive(pid: int) -> bool:
-    """Check if a process is still running."""
-    try:
-        os.kill(pid, 0)
-        return True
-    except (OSError, ProcessLookupError):
-        return False
+    """Check if a process is still running. Cross-platform (macOS + Windows)."""
+    if sys.platform == "win32":
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.OpenProcess(0x100000, False, pid)  # SYNCHRONIZE
+        alive = handle != 0
+        if handle:
+            kernel32.CloseHandle(handle)
+        return alive
+    else:
+        try:
+            os.kill(pid, 0)
+            return True
+        except (OSError, ProcessLookupError):
+            return False
 
 
 def acquire(session_id: str, session_type: str = "interactive") -> bool:
