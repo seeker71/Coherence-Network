@@ -1185,7 +1185,7 @@ async def test_execution_updates_cost_value_targets(
     monkeypatch.setenv("RUNTIME_COST_PER_SECOND", "0.001")
     monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
     monkeypatch.setenv("GOVERNANCE_DATABASE_URL", f"sqlite:///{tmp_path / 'governance.db'}")
-    monkeypatch.setenv("IDEA_REGISTRY_DATABASE_URL", f"sqlite:///{tmp_path / 'ideas.db'}")
+    # Ideas now live in graph_nodes (unified DB), not a separate registry DB
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
     _reset_agent_store()
 

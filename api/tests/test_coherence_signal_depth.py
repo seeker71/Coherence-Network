@@ -80,11 +80,14 @@ async def test_coherence_score_weights_sum_to_one():
 async def test_coherence_score_with_ideas(tmp_path):
     """Score reflects real idea data when ideas exist."""
     import os
-    os.environ["IDEA_PORTFOLIO_PATH"] = str(tmp_path / "ideas.json")
+    # Ideas live in graph_nodes (unified DB), not file-based portfolio
+    os.environ.pop("IDEA_PORTFOLIO_PATH", None)
 
     from app.services import unified_db, idea_service, coherence_signal_depth_service
     unified_db.reset_engine()
+    unified_db.ensure_schema()
     coherence_signal_depth_service.invalidate_cache()
+    idea_service._invalidate_ideas_cache()
     idea_service._TRACKED_IDEA_CACHE["expires_at"] = 0.0
     idea_service._TRACKED_IDEA_CACHE["idea_ids"] = []
     idea_service._TRACKED_IDEA_CACHE["cache_key"] = ""
