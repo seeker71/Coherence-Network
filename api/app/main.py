@@ -44,6 +44,7 @@ from app.routers import (
     value_lineage,
 )
 from app.routers import concepts
+from app.routers import dif_feedback
 from app.routers import graph
 from app.routers import agent_grounded_metrics_routes
 from app.routers import provider_stats
@@ -549,6 +550,7 @@ app.include_router(contributor_identity.router, tags=["identity"])
 app.include_router(provider_stats.router)
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
+app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
