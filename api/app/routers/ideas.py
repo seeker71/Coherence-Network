@@ -81,19 +81,37 @@ async def list_idea_cards(
     min_value_gap: float | None = Query(default=None),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
 ) -> dict:
-    return inventory_service.build_idea_cards_feed(
-        q=q,
-        state=state,
-        attention=attention,
-        sort=sort,
-        cursor=cursor,
-        limit=limit,
-        include_internal_ideas=include_internal_ideas,
-        only_actionable=only_actionable,
-        min_roi=min_roi,
-        min_value_gap=min_value_gap,
-        runtime_window_seconds=runtime_window_seconds,
-    )
+    try:
+        return inventory_service.build_idea_cards_feed(
+            q=q,
+            state=state,
+            attention=attention,
+            sort=sort,
+            cursor=cursor,
+            limit=limit,
+            include_internal_ideas=include_internal_ideas,
+            only_actionable=only_actionable,
+            min_roi=min_roi,
+            min_value_gap=min_value_gap,
+            runtime_window_seconds=runtime_window_seconds,
+        )
+    except Exception:
+        # Fallback: return simple card data from graph when inventory_service fails
+        from app.services import graph_service
+        search = q.lower() if q else None
+        result = graph_service.list_nodes(type="idea", limit=limit, offset=0, search=search)
+        items = []
+        for n in result.get("items", []):
+            items.append({
+                "id": n.get("id"),
+                "name": n.get("name"),
+                "description": (n.get("description") or "")[:200],
+                "manifestation_status": n.get("manifestation_status", "none"),
+                "free_energy_score": n.get("free_energy_score", 0),
+                "roi_cc": n.get("roi_cc", 0),
+                "value_gap": n.get("value_gap", 0),
+            })
+        return {"items": items, "total": result.get("total", len(items)), "cursor": None}
 
 
 @router.get("/ideas/cards/changes")
