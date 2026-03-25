@@ -206,34 +206,38 @@ class TaskControlChannel:
 def inject_control_instructions(prompt: str, task_dir: Path) -> str:
     """Add control channel instructions to the agent's prompt.
 
-    Tells the agent how to read commands and write responses.
+    Uses cc CLI for communication — agents are network participants.
     """
-    control_path = task_dir / ".task-control"
-    response_path = task_dir / ".task-response"
+    instructions = """
 
-    instructions = f"""
+## Real-time network communication
 
-## Real-time control channel
+You are a node in the Coherence Network. Use `cc` to communicate:
 
-A control channel is active for this task. Check for commands periodically:
-
+### Check for messages (do this every 5-7 minutes)
 ```bash
-# Read incoming commands (JSONL format)
-cat {control_path}
+cc inbox
 ```
 
 If you see a command, act on it:
-- `checkpoint` — Write your current progress to `.task-checkpoint.md`
-- `steer` — Adjust your approach based on the payload.direction field
-- `abort` — Stop work, save progress to `.task-checkpoint.md`, exit
-- `ask` — The user is asking a question. Write your answer to the response file.
-- `ping` — Write `{{"type":"pong","task_id":"{task_dir.name}"}}` to the response file
+- `checkpoint` — Write your current progress to `.task-checkpoint.md` and reply with `cc msg <sender> "checkpoint saved"`
+- `steer` — Adjust your approach as directed and reply with `cc msg <sender> "acknowledged, adjusting"`
+- `abort` — Stop work, save progress to `.task-checkpoint.md`, reply with `cc msg <sender> "aborting, progress saved"`, then exit
+- `ask` — Answer the question via `cc msg <sender> "<your answer>"`
 
-To respond, append JSON to:
+### Send status updates
 ```bash
-echo '{{"type":"pong"}}' >> {response_path}
+cc msg broadcast "Working on <idea>: 60% complete, implementing API endpoints"
 ```
 
-Check for commands every 5-7 minutes of work.
+### Report issues
+```bash
+cc msg broadcast "Blocked: missing dependency X, need guidance"
+```
+
+### When done
+```bash
+cc contribute --type code --cc 5 --desc "Implemented <feature>"
+```
 """
     return prompt + instructions
