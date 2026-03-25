@@ -4,9 +4,22 @@
 
 import { get, post } from "../api.mjs";
 
+/** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
   if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
+  if (str.length <= len) return str;
+  const trimmed = str.slice(0, len - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
+}
+
+/** Colored status label */
+function statusLabel(status) {
+  const s = (status || "?").toLowerCase();
+  if (s === "approved") return "\x1b[32mapproved\x1b[0m";
+  if (s === "rejected") return "\x1b[31mrejected\x1b[0m";
+  if (s === "pending")  return "\x1b[33mpending\x1b[0m";
+  return `\x1b[2m${s}\x1b[0m`;
 }
 
 export async function listChangeRequests() {
@@ -23,12 +36,19 @@ export async function listChangeRequests() {
 
   console.log();
   console.log(`\x1b[1m  GOVERNANCE\x1b[0m (${data.length} change requests)`);
-  console.log(`  ${"─".repeat(60)}`);
+  console.log(`  ${"─".repeat(74)}`);
   for (const cr of data) {
     const status = cr.status || "?";
-    const dot = status === "approved" ? "\x1b[32m●\x1b[0m" : status === "rejected" ? "\x1b[31m●\x1b[0m" : "\x1b[33m●\x1b[0m";
-    const title = truncate(cr.title || cr.id, 45);
-    console.log(`  ${dot} ${title.padEnd(47)} ${status}`);
+    const dot = status === "approved" ? "\x1b[32m●\x1b[0m"
+      : status === "rejected" ? "\x1b[31m●\x1b[0m"
+      : "\x1b[33m●\x1b[0m";
+    const title = truncate(cr.title || cr.id, 35).padEnd(37);
+    const proposer = cr.proposer || cr.proposed_by || "";
+    const proposerStr = proposer ? truncate(proposer, 14).padEnd(16) : "".padEnd(16);
+    const votesFor = cr.votes_for != null ? cr.votes_for : 0;
+    const votesAgainst = cr.votes_against != null ? cr.votes_against : 0;
+    const votes = `\x1b[32m+${votesFor}\x1b[0m/\x1b[31m-${votesAgainst}\x1b[0m`;
+    console.log(`  ${dot} ${title} ${proposerStr} ${votes}  ${statusLabel(status)}`);
   }
   console.log();
 }

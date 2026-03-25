@@ -4,9 +4,13 @@
 
 import { get } from "../api.mjs";
 
+/** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
   if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
+  if (str.length <= len) return str;
+  const trimmed = str.slice(0, len - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
 }
 
 export async function listServices() {
@@ -23,12 +27,16 @@ export async function listServices() {
 
   console.log();
   console.log(`\x1b[1m  SERVICES\x1b[0m (${data.length})`);
-  console.log(`  ${"─".repeat(60)}`);
+  console.log(`  ${"─".repeat(68)}`);
   for (const s of data) {
-    const name = truncate(s.name || s.id, 30);
-    const status = s.status || "?";
-    const dot = status === "healthy" || status === "up" ? "\x1b[32m●\x1b[0m" : status === "degraded" ? "\x1b[33m●\x1b[0m" : "\x1b[31m●\x1b[0m";
-    console.log(`  ${dot} ${name.padEnd(32)} ${status}`);
+    const name = truncate(s.name || s.id, 28).padEnd(30);
+    const status = (s.status || "?").toLowerCase();
+    const dot = status === "healthy" || status === "up" ? "\x1b[32m●\x1b[0m"
+      : status === "degraded" ? "\x1b[33m●\x1b[0m"
+      : "\x1b[31m●\x1b[0m";
+    const ver = s.version ? `\x1b[2mv${s.version}\x1b[0m`.padEnd(20) : "\x1b[2m-\x1b[0m".padEnd(20);
+    const caps = s.capabilities ? `${Array.isArray(s.capabilities) ? s.capabilities.length : 0} caps` : "";
+    console.log(`  ${dot} ${name} ${ver} ${caps}`);
   }
   console.log();
 }

@@ -4,9 +4,13 @@
 
 import { get } from "../api.mjs";
 
+/** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
   if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
+  if (str.length <= len) return str;
+  const trimmed = str.slice(0, len - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
 }
 
 export async function showFrictionReport() {
@@ -16,23 +20,53 @@ export async function showFrictionReport() {
     return;
   }
 
+  const total = data.total_friction ?? data.total_events ?? data.event_count ?? 0;
+  const days = data.period_days ?? data.days ?? 7;
+
   console.log();
   console.log(`\x1b[1m  FRICTION REPORT\x1b[0m`);
   console.log(`  ${"─".repeat(50)}`);
-  if (data.total_friction != null) console.log(`  Total:       ${data.total_friction}`);
-  if (data.top_categories && Array.isArray(data.top_categories)) {
-    console.log(`  Top categories:`);
-    for (const c of data.top_categories) {
-      const name = c.name || c.category || "?";
-      const count = c.count != null ? c.count : "?";
-      console.log(`    ${name.padEnd(25)} ${count}`);
+  console.log(`  \x1b[1m${total}\x1b[0m events in \x1b[1m${days}\x1b[0m days`);
+  console.log();
+
+  // Top block types as bar chart
+  const blockTypes = data.top_block_types || data.top_types || [];
+  if (Array.isArray(blockTypes) && blockTypes.length > 0) {
+    console.log(`  \x1b[1mTop Block Types\x1b[0m`);
+    const maxCount = Math.max(...blockTypes.map(b => b.count || 0), 1);
+    for (const b of blockTypes.slice(0, 8)) {
+      const name = (b.name || b.type || "?").padEnd(20);
+      const count = b.count || 0;
+      const barLen = Math.round((count / maxCount) * 20);
+      const bar = "\x1b[33m" + "\u2593".repeat(barLen) + "\u2591".repeat(20 - barLen) + "\x1b[0m";
+      console.log(`  ${name} ${bar} ${String(count).padStart(5)}`);
     }
+    console.log();
   }
-  // Fallback: print all keys
-  const shown = new Set(["total_friction", "top_categories"]);
+
+  // Top categories/stages as colored list
+  const categories = data.top_categories || data.top_stages || [];
+  if (Array.isArray(categories) && categories.length > 0) {
+    console.log(`  \x1b[1mTop Stages\x1b[0m`);
+    const stageColors = ["\x1b[31m", "\x1b[33m", "\x1b[36m", "\x1b[32m", "\x1b[35m"];
+    categories.forEach((c, i) => {
+      const name = c.name || c.category || c.stage || "?";
+      const count = c.count != null ? c.count : "?";
+      const color = stageColors[i % stageColors.length];
+      console.log(`  ${color}●\x1b[0m ${name.padEnd(25)} ${String(count).padStart(5)}`);
+    });
+    console.log();
+  }
+
+  // Remaining keys (excluding already shown)
+  const shown = new Set(["total_friction", "total_events", "event_count", "period_days", "days", "top_categories", "top_stages", "top_block_types", "top_types"]);
   for (const [key, val] of Object.entries(data)) {
     if (!shown.has(key) && val != null) {
-      console.log(`  ${key}: ${JSON.stringify(val)}`);
+      if (typeof val === "object") {
+        console.log(`  \x1b[2m${key}:\x1b[0m ${JSON.stringify(val)}`);
+      } else {
+        console.log(`  \x1b[2m${key}:\x1b[0m ${val}`);
+      }
     }
   }
   console.log();

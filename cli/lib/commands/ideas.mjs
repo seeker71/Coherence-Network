@@ -7,9 +7,19 @@ import { ensureIdentity } from "../identity.mjs";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 
+/** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
   if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
+  if (str.length <= len) return str;
+  const trimmed = str.slice(0, len - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
+}
+
+/** Mini bar: filled vs empty blocks for a score out of max */
+function miniBar(value, max, width = 5) {
+  const filled = Math.round((value / max) * width);
+  return "\u2593".repeat(Math.min(filled, width)) + "\u2591".repeat(width - Math.min(filled, width));
 }
 
 export async function listIdeas(args) {
@@ -28,14 +38,20 @@ export async function listIdeas(args) {
 
   console.log();
   console.log(`\x1b[1m  IDEAS\x1b[0m (${data.length})`);
-  console.log(`  ${"─".repeat(72)}`);
+  console.log(`  ${"─".repeat(74)}`);
   for (const idea of data) {
-    const status = idea.manifestation_status || "NONE";
-    const dot = status === "VALIDATED" ? "\x1b[32m●\x1b[0m" : status === "PARTIAL" ? "\x1b[33m●\x1b[0m" : "\x1b[2m○\x1b[0m";
-    const roi = idea.roi_cc != null ? `ROI ${idea.roi_cc.toFixed(1)}` : "";
-    const fe = idea.free_energy_score != null ? `FE ${idea.free_energy_score.toFixed(2)}` : "";
-    console.log(`  ${dot} ${truncate(idea.name || idea.id, 40).padEnd(42)} ${roi.padEnd(12)} ${fe}`);
+    const status = (idea.manifestation_status || "NONE").toUpperCase();
+    const dot = status === "VALIDATED" ? "\x1b[32m●\x1b[0m"
+      : status === "PARTIAL" ? "\x1b[33m●\x1b[0m"
+      : "\x1b[2m○\x1b[0m";
+    const name = truncate(idea.name || idea.id, 45).padEnd(47);
+    const roi = idea.roi_cc != null ? String(idea.roi_cc.toFixed(1)).padStart(6) : "     -";
+    const fe = idea.free_energy_score != null ? idea.free_energy_score.toFixed(2) : null;
+    const feStr = fe != null ? `${String(fe).padStart(5)} ${miniBar(idea.free_energy_score, 20)}` : "";
+    console.log(`  ${dot} ${name} ${roi}  ${feStr}`);
   }
+  console.log(`  ${"─".repeat(74)}`);
+  console.log(`\x1b[2m  ${"Name".padEnd(49)} ${"ROI".padStart(6)}  ${"FE".padStart(5)}\x1b[0m`);
   console.log();
 }
 
@@ -52,7 +68,7 @@ export async function showIdea(args) {
   }
   console.log();
   console.log(`\x1b[1m  ${data.name || data.id}\x1b[0m`);
-  if (data.description) console.log(`  ${truncate(data.description, 72)}`);
+  if (data.description) console.log(`  \x1b[2m${truncate(data.description, 72)}\x1b[0m`);
   console.log(`  ${"─".repeat(50)}`);
   console.log(`  Status:      ${data.manifestation_status || "NONE"}`);
   console.log(`  Potential:    ${data.potential_value ?? "?"}`);

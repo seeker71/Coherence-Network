@@ -4,9 +4,13 @@
 
 import { get } from "../api.mjs";
 
+/** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
   if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
+  if (str.length <= len) return str;
+  const trimmed = str.slice(0, len - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
 }
 
 export async function listSpecs(args) {
@@ -23,11 +27,15 @@ export async function listSpecs(args) {
 
   console.log();
   console.log(`\x1b[1m  SPECS\x1b[0m (${data.length})`);
-  console.log(`  ${"─".repeat(72)}`);
+  console.log(`  ${"─".repeat(74)}`);
+  console.log(`\x1b[2m  ${"Spec ID".padEnd(22)} ${"Title".padEnd(37)} ${"ROI".padStart(6)} ${"Gap".padStart(5)}\x1b[0m`);
+  console.log(`  ${"─".repeat(74)}`);
   for (const s of data) {
-    const roi = s.estimated_roi != null ? `ROI ${s.estimated_roi.toFixed(1)}` : "";
-    const gap = s.value_gap != null ? `Gap ${s.value_gap.toFixed(0)}` : "";
-    console.log(`  ${(s.spec_id || "").padEnd(8)} ${truncate(s.title || "", 38).padEnd(40)} ${roi.padEnd(12)} ${gap}`);
+    const specId = truncate(s.spec_id || "", 20).padEnd(22);
+    const title = truncate(s.title || "", 35).padEnd(37);
+    const roi = s.estimated_roi != null ? String(s.estimated_roi.toFixed(1)).padStart(6) : "     -";
+    const gap = s.value_gap != null ? String(s.value_gap.toFixed(0)).padStart(5) : "    -";
+    console.log(`  ${specId} ${title} ${roi} ${gap}`);
   }
   console.log();
 }
