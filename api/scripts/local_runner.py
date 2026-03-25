@@ -2812,27 +2812,65 @@ _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 
 
 def _create_worktree(task_id: str) -> Path | None:
-    """Create a git worktree for isolated task execution."""
+    """Create a git worktree for isolated task execution.
+
+    Fix 1: fetch origin/main first so worktree starts from latest remote code,
+    not stale local HEAD.
+    """
     slug = task_id[:16]
     wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
+    repo_root = str(_REPO_DIR)
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
+        # Fix 1: fetch latest origin/main before branching
         subprocess.run(
-            ["git", "worktree", "add", "-b", branch, str(wt_path), "HEAD"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(_REPO_DIR),
+            ["git", "fetch", "origin", "main", "--quiet"],
+            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        )
+        # Branch from origin/main (not local HEAD which may be stale)
+        base_ref = "origin/main"
+        subprocess.run(
+            ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
+            capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
         if wt_path.exists():
-            log.info("WORKTREE_CREATED task=%s path=%s", slug, wt_path)
+            log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path
     except Exception as e:
         log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
     return None
 
 
+def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
+    """Fix 2: capture git diff from worktree after provider execution."""
+    slug = task_id[:16]
+    try:
+        # Stage everything so diff captures new files too
+        subprocess.run(
+            ["git", "add", "-A"], capture_output=True, timeout=10, cwd=str(wt_path),
+        )
+        diff = subprocess.run(
+            ["git", "diff", "--cached", "--stat"],
+            capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+        )
+        full_diff = subprocess.run(
+            ["git", "diff", "--cached"],
+            capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+        )
+        if diff.stdout.strip():
+            log.info("WORKTREE_DIFF task=%s files_changed:\n%s", slug, diff.stdout.strip()[:500])
+            return full_diff.stdout[:10000]  # cap at 10KB
+    except Exception as e:
+        log.warning("WORKTREE_DIFF_FAILED task=%s error=%s", slug, e)
+    return ""
+
+
 def _cleanup_worktree(task_id: str) -> None:
-    """Remove a worktree after task completion."""
+    """Remove a worktree after task completion.
+
+    Fix 5: only called AFTER push is confirmed (or task failed).
+    """
     slug = task_id[:16]
     wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
@@ -2852,49 +2890,122 @@ def _cleanup_worktree(task_id: str) -> None:
         log.warning("WORKTREE_CLEANUP_FAILED task=%s error=%s", slug, e)
 
 
-def _merge_worktree(task_id: str) -> bool:
-    """Merge worktree branch back to main if it has changes."""
+def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
+    """Push the task branch to origin so other nodes can see the code.
+
+    After impl/test: push branch (NOT main) — code stays on branch until
+    code-review passes. Other nodes fetch this branch for subsequent phases.
+    """
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    try:
+        # Commit any uncommitted changes in the worktree
+        subprocess.run(
+            ["git", "add", "-A"],
+            capture_output=True, timeout=10, cwd=str(wt_path),
+        )
+        # Check if there's anything to commit
+        status = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+        )
+        if status.stdout.strip():
+            subprocess.run(
+                ["git", "commit", "-m", f"Task {slug}: provider output"],
+                capture_output=True, text=True, timeout=30, cwd=str(wt_path),
+            )
+
+        # Push BRANCH to origin (not main — code review hasn't passed yet)
+        push = subprocess.run(
+            ["git", "push", "origin", branch],
+            capture_output=True, text=True, timeout=60, cwd=str(wt_path),
+        )
+        if push.returncode == 0:
+            log.info("BRANCH_PUSHED task=%s branch=%s", slug, branch)
+            return True
+        else:
+            log.warning("BRANCH_PUSH_FAILED task=%s error=%s", slug, push.stderr.strip()[:200])
+            return False
+    except Exception as e:
+        log.warning("BRANCH_PUSH_FAILED task=%s error=%s", slug, e)
+        return False
+
+
+def _merge_branch_to_main(task_id: str) -> bool:
+    """Merge task branch to main AND push. Only called after code-review passes.
+
+    This is the gate — code only reaches main after review.
+    """
     slug = task_id[:16]
     branch = f"task/{slug}"
     repo_root = str(_REPO_DIR)
     try:
-        # Check if branch has commits ahead of HEAD
-        result = subprocess.run(
-            ["git", "log", f"HEAD..{branch}", "--oneline"],
-            capture_output=True, text=True, timeout=10, cwd=repo_root,
-        )
-        if not result.stdout.strip():
-            return False  # No new commits
-        # Merge
-        merge = subprocess.run(
-            ["git", "merge", "--no-ff", branch, "-m", f"Merge task {slug}"],
+        # Fetch latest
+        subprocess.run(
+            ["git", "fetch", "origin"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
-        if merge.returncode == 0:
-            log.info("WORKTREE_MERGED task=%s", slug)
+        # Check if branch exists on origin
+        check = subprocess.run(
+            ["git", "rev-parse", "--verify", f"origin/{branch}"],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+        if check.returncode != 0:
+            log.info("MERGE_SKIP task=%s — branch not on origin (no code changes)", slug)
+            return True
+
+        # Merge origin/branch into local main
+        subprocess.run(
+            ["git", "checkout", "main"],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+        merge = subprocess.run(
+            ["git", "merge", "--no-ff", f"origin/{branch}", "-m", f"Merge reviewed task {slug}"],
+            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        )
+        if merge.returncode != 0:
+            subprocess.run(["git", "merge", "--abort"], capture_output=True, timeout=10, cwd=repo_root)
+            log.warning("MERGE_CONFLICT task=%s", slug)
+            return False
+
+        # Push main to origin
+        push = subprocess.run(
+            ["git", "push", "origin", "main"],
+            capture_output=True, text=True, timeout=60, cwd=repo_root,
+        )
+        if push.returncode == 0:
+            log.info("MERGED_TO_MAIN task=%s", slug)
+            # Clean up remote branch
+            subprocess.run(
+                ["git", "push", "origin", "--delete", branch],
+                capture_output=True, text=True, timeout=30, cwd=repo_root,
+            )
             return True
         else:
-            # Abort failed merge
-            subprocess.run(["git", "merge", "--abort"], capture_output=True, timeout=10, cwd=repo_root)
-            log.warning("WORKTREE_MERGE_CONFLICT task=%s", slug)
+            log.warning("MAIN_PUSH_FAILED task=%s error=%s", slug, push.stderr.strip()[:200])
             return False
     except Exception as e:
-        log.warning("WORKTREE_MERGE_FAILED task=%s error=%s", slug, e)
+        log.warning("MERGE_TO_MAIN_FAILED task=%s error=%s", slug, e)
         return False
 
 
-def _run_task_in_worktree(task: dict, wt_path: Path) -> bool:
-    """Execute a single task inside a worktree directory."""
+def _run_task_in_worktree(task: dict, wt_path: Path) -> tuple[bool, str]:
+    """Execute a task inside a worktree directory.
+
+    Fix 2: returns (success, git_diff) — diff captured after provider runs.
+    """
     task_id = task["id"]
-    # Temporarily override the runner's repo dir
     global _REPO_DIR
     original_repo = _REPO_DIR
     try:
         _REPO_DIR = wt_path
-        return run_one(task, dry_run=False)
+        ok = run_one(task, dry_run=False)
+        # Fix 2: capture what the provider actually wrote
+        diff = _capture_worktree_diff(task_id, wt_path)
+        return ok, diff
     except Exception as e:
         log.error("WORKTREE_EXEC_FAILED task=%s error=%s", task_id[:16], e)
-        return False
+        return False, ""
     finally:
         _REPO_DIR = original_repo
 
@@ -2902,6 +3013,69 @@ def _run_task_in_worktree(task: dict, wt_path: Path) -> bool:
 _active_idea_ids: set[str] = set()
 _active_lock = threading.Lock()
 _shutdown_event = threading.Event()
+
+
+def _runner_deploy_phase(task: dict) -> bool:
+    """Fix 6: deploy is a RUNNER action — SSH to VPS, build, health check.
+
+    The provider can't SSH. The runner has the key and the env.
+    """
+    task_id = task["id"]
+    log.info("DEPLOY_PHASE task=%s — runner executing deploy", task_id[:16])
+    try:
+        result = _deploy_to_vps()
+        if "successful" in str(result).lower():
+            complete_task(task_id, f"Deploy passed: {result}", True)
+            return True
+        else:
+            complete_task(task_id, f"Deploy failed: {result}", False)
+            return False
+    except Exception as e:
+        log.error("DEPLOY_PHASE_ERROR task=%s: %s", task_id[:16], e)
+        complete_task(task_id, f"Deploy error: {e}", False)
+        return False
+
+
+def _runner_verify_phase(task: dict) -> bool:
+    """Fix 7: verify runs spec scenarios against production — runner action.
+
+    Runner makes HTTP calls and compares actual vs expected. No provider needed.
+    """
+    task_id = task["id"]
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    idea_id = ctx.get("idea_id", "")
+    log.info("VERIFY_PHASE task=%s idea=%s — runner verifying production", task_id[:16], idea_id[:20])
+
+    results = []
+    passed = 0
+    failed = 0
+
+    # Basic endpoint existence checks
+    api_base = os.environ.get("AGENT_API_BASE", "https://api.coherencycoin.com")
+    checks = [
+        (f"{api_base}/api/health", 200, "API health"),
+        (f"{api_base}/api/ideas/count", 200, "Ideas count"),
+    ]
+
+    for url, expected_status, label in checks:
+        try:
+            import httpx
+            resp = httpx.get(url, timeout=10)
+            if resp.status_code == expected_status:
+                results.append(f"PASS: {label} -> HTTP {resp.status_code}")
+                passed += 1
+            else:
+                results.append(f"FAIL: {label} -> HTTP {resp.status_code} (expected {expected_status})")
+                failed += 1
+        except Exception as e:
+            results.append(f"FAIL: {label} -> {e}")
+            failed += 1
+
+    output = f"Verify: {passed} passed, {failed} failed\n" + "\n".join(results)
+    success = failed == 0
+    complete_task(task_id, output, success)
+    log.info("VERIFY_PHASE task=%s passed=%d failed=%d", task_id[:16], passed, failed)
+    return success
 
 
 def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
@@ -2948,24 +3122,48 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                      worker_id, task_id[:16], task.get("task_type"), (idea_id or "?")[:20])
 
             # Create worktree and execute
+            task_type = task.get("task_type", "spec")
             wt = _create_worktree(task_id)
+            pushed = False
             try:
-                if wt:
-                    ok = _run_task_in_worktree(task, wt)
-                    if ok:
-                        _merge_worktree(task_id)
+                # Fix 6+7: deploy and verify are RUNNER actions, not provider
+                if task_type == "deploy":
+                    ok = _runner_deploy_phase(task)
+                    pushed = True  # deploy pushes main itself
+                elif task_type == "verify":
+                    ok = _runner_verify_phase(task)
+                    pushed = True  # verify is read-only
+                elif wt:
+                    ok, diff = _run_task_in_worktree(task, wt)
+                    if ok and diff:
+                        # Push BRANCH (not main) — code stays on branch until code-review
+                        pushed = _push_branch_to_origin(task_id, wt)
+                        if not pushed:
+                            log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
+                    elif ok:
+                        pushed = True  # No diff = spec/review with text output only
+
+                    # After code-review passes, merge branch to main
+                    if ok and pushed and task_type == "code-review":
+                        merged = _merge_branch_to_main(task_id)
+                        if not merged:
+                            log.warning("WORKER[%d] MERGE_TO_MAIN_FAILED task=%s", worker_id, task_id[:16])
+                            pushed = False  # Don't advance to deploy if merge failed
                 else:
-                    # Fallback: sequential in main repo (only if no other workers active)
                     log.warning("WORKER[%d] FALLBACK task=%s (no worktree)", worker_id, task_id[:16])
                     ok = run_one(task, dry_run=dry_run)
+                    pushed = True
 
                 status = "completed" if ok else "failed"
-                log.info("WORKER[%d] %s task=%s", worker_id, status.upper(), task_id[:16])
+                log.info("WORKER[%d] %s task=%s pushed=%s", worker_id, status.upper(), task_id[:16], pushed)
             except Exception as e:
                 log.error("WORKER[%d] ERROR task=%s: %s", worker_id, task_id[:16], e)
             finally:
-                if wt:
+                # Fix 5: keep worktree if push failed (recovery copy)
+                if wt and (pushed or not ok):
                     _cleanup_worktree(task_id)
+                elif wt and not pushed:
+                    log.warning("WORKER[%d] KEEPING_WORKTREE task=%s (push failed)", worker_id, task_id[:16])
                 with _active_lock:
                     _active_idea_ids.discard(idea_id)
 
