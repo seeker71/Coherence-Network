@@ -55,8 +55,14 @@ def database_url() -> str:
     configured = os.getenv("DATABASE_URL")
     if configured:
         return str(configured).strip()
-    # IDEA_PORTFOLIO_PATH is legacy — ideas now live in graph_nodes (unified DB).
-    # Tests should set DATABASE_URL directly for isolation.
+    # Legacy: IDEA_PORTFOLIO_PATH derives a SQLite path for test isolation.
+    # Ideas now live in graph_nodes but tests still use this for DB isolation.
+    portfolio_path = os.getenv("IDEA_PORTFOLIO_PATH")
+    if portfolio_path:
+        p = Path(portfolio_path)
+        sqlite_path = p.with_suffix(".db") if p.suffix.lower() == ".json" else Path(f"{p}.db")
+        sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+        return f"sqlite+pysqlite:///{sqlite_path}"
     sqlite_path = _default_sqlite_path()
     sqlite_path.parent.mkdir(parents=True, exist_ok=True)
     return f"sqlite+pysqlite:///{sqlite_path}"
@@ -92,6 +98,13 @@ def engine():
     _ENGINE_CACHE["url"] = url
     _ENGINE_CACHE["engine"] = eng
     _ENGINE_CACHE["sessionmaker"] = session_factory
+    # Auto-create tables on new engine (safe: checkfirst=True)
+    try:
+        from app.services import unified_models  # noqa: F401
+        Base.metadata.create_all(bind=eng, checkfirst=True)
+        _SCHEMA_INITIALIZED[url] = True
+    except Exception:
+        pass
     return eng
 
 
