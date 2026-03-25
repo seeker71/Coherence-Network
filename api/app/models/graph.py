@@ -67,7 +67,7 @@ class Node(Base):
     __tablename__ = "graph_nodes"
 
     id: Mapped[str] = mapped_column(String(255), primary_key=True)
-    type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    type: Mapped[str] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False, default="")
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     properties: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
@@ -90,8 +90,6 @@ class Node(Base):
         Index("ix_graph_nodes_type", "type"),
         Index("ix_graph_nodes_type_phase", "type", "phase"),
         Index("ix_graph_nodes_properties", "properties", postgresql_using="gin"),
-        Index("ix_graph_nodes_name_trgm", "name", postgresql_using="gin",
-              postgresql_ops={"name": "gin_trgm_ops"}),
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -120,9 +118,9 @@ class Edge(Base):
     __tablename__ = "graph_edges"
 
     id: Mapped[str] = mapped_column(String(255), primary_key=True)
-    from_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    to_id: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    from_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    to_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[str] = mapped_column(String(100), nullable=False)
     properties: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     strength: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     created_by: Mapped[str] = mapped_column(String(255), nullable=False, default="system")
