@@ -174,3 +174,35 @@ async def find_path(
     if path is None:
         return {"path": None, "message": f"No path found within {max_depth} hops"}
     return {"path": path, "length": len(path)}
+
+
+# ── DIF Feedback endpoints ───────────────────────────────────────────
+
+@router.get("/dif/feedback/stats")
+async def dif_feedback_stats():
+    """Get DIF feedback statistics — true/false positive rates, accuracy."""
+    from app.services import dif_feedback_service
+    return dif_feedback_service.get_stats()
+
+
+@router.get("/dif/feedback/recent")
+async def dif_feedback_recent(limit: int = Query(default=20, ge=1, le=100)):
+    """Get recent DIF feedback entries."""
+    from app.services import dif_feedback_service
+    return dif_feedback_service.get_recent(limit=limit)
+
+
+@router.post("/dif/feedback")
+async def record_dif_feedback(body: dict):
+    """Record a DIF verification result for accuracy tracking."""
+    from app.services import dif_feedback_service
+    return dif_feedback_service.record_verification(
+        task_id=body.get("task_id", ""),
+        task_type=body.get("task_type", ""),
+        file_path=body.get("file_path", ""),
+        language=body.get("language", ""),
+        dif_result=body.get("dif_result", {}),
+        agent_action=body.get("agent_action", "pending"),
+        idea_id=body.get("idea_id", ""),
+        provider=body.get("provider", ""),
+    )
