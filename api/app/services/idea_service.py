@@ -48,7 +48,7 @@ from app.models.idea import (
 )
 from app.models.audit_ledger import AuditEntryCreate, AuditEntryType
 from app.services import audit_ledger_service
-from app.services import idea_registry_service
+from app.services import idea_graph_adapter as idea_registry_service  # Graph-backed
 from app.services import commit_evidence_service
 from app.services import runtime_service
 from app.services import spec_registry_service
