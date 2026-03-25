@@ -15,8 +15,13 @@ router = APIRouter()
 
 def _node_to_contributor(node: dict) -> Contributor:
     """Convert a graph node to a Contributor model."""
+    legacy_id = node.get("legacy_id", "")
+    try:
+        cid = UUID(legacy_id) if legacy_id and "-" in legacy_id else uuid4()
+    except (ValueError, AttributeError):
+        cid = uuid4()
     return Contributor(
-        id=UUID(node.get("legacy_id", node["id"].replace("contributor:", ""))) if "-" in node.get("legacy_id", node["id"]) else uuid4(),
+        id=cid,
         name=node.get("name", ""),
         type=node.get("contributor_type", "HUMAN"),
         email=node.get("email"),
