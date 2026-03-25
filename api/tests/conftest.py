@@ -97,6 +97,7 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
         automation_usage_service,
         idea_service,
         unified_db,
+        unified_models,  # noqa: F401 — ensures all table models are registered
     )
 
     # Use an isolated DB for each test

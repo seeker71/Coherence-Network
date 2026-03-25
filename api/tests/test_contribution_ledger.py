@@ -12,9 +12,10 @@ AUTH_HEADERS = {"X-API-Key": "dev-key"}
 
 def _isolate_db(tmp_path, monkeypatch):
     """Point unified_db at a temp SQLite database for test isolation."""
-    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "test_ideas.json"))
+    monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'test.db'}")
     from app.services import unified_db
     unified_db.reset_engine()
+    unified_db.ensure_schema()
 
 
 def _seed_idea(tmp_path, monkeypatch):
