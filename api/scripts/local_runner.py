@@ -2139,10 +2139,10 @@ def _seed_task_from_open_idea() -> bool:
             if completed > 0:
                 completed_phases.add(phase)
 
-        # Cap: if any single phase has 5+ tasks, this idea is stuck — mark partial, skip
+        # Cap: if any single phase has 10+ tasks, truly stuck — skip to prevent infinite loop
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
-        if max_phase_tasks >= 5:
-            log.info("SEED: idea '%s' stuck (%d tasks in one phase) — marking partial, skipping",
+        if max_phase_tasks >= 10:
+            log.info("SEED: idea '%s' truly stuck (%d tasks in one phase) — marking partial, skipping",
                      idea_name[:30], max_phase_tasks)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
