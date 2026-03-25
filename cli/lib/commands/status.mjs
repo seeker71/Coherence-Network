@@ -6,6 +6,7 @@ import { get } from "../api.mjs";
 import { getContributorId, getHubUrl } from "../config.mjs";
 import { hostname } from "node:os";
 import { execSync } from "node:child_process";
+import { stdin, stdout } from "node:process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -164,13 +165,38 @@ export async function showStatus() {
     }
   }
 
-  // Version check (non-blocking)
+  // Version check + auto-update prompt
   const localVersion = getLocalVersion();
   const latestVersion = await checkForUpdate(localVersion);
   if (latestVersion) {
     console.log();
     console.log(`\x1b[33m  Update available: ${localVersion} → ${latestVersion}\x1b[0m`);
-    console.log(`\x1b[2m  Run: npm i -g coherence-cli@latest\x1b[0m`);
+
+    if (stdin.isTTY) {
+      // Interactive — ask
+      const { createInterface } = await import("node:readline/promises");
+      const rl = createInterface({ input: stdin, output: stdout });
+      const answer = await rl.question("  Update now? (Y/n): ");
+      rl.close();
+      if (!answer || answer.toLowerCase() === "y" || answer.toLowerCase() === "yes") {
+        console.log(`  Updating to ${latestVersion}...`);
+        try {
+          execSync("npm i -g coherence-cli@latest", { stdio: "inherit", timeout: 60000 });
+          console.log(`\x1b[32m  ✓ Updated to ${latestVersion}\x1b[0m`);
+        } catch {
+          console.log(`\x1b[31m  ✗ Update failed. Run manually: npm i -g coherence-cli@latest\x1b[0m`);
+        }
+      }
+    } else {
+      // Non-interactive — auto-update silently
+      console.log(`  Auto-updating to ${latestVersion}...`);
+      try {
+        execSync("npm i -g coherence-cli@latest", { stdio: "pipe", timeout: 60000 });
+        console.log(`\x1b[32m  ✓ Updated to ${latestVersion}\x1b[0m`);
+      } catch {
+        console.log(`\x1b[2m  Auto-update failed. Run: npm i -g coherence-cli@latest\x1b[0m`);
+      }
+    }
   }
 
   console.log();
