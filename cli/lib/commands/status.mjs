@@ -66,7 +66,7 @@ export async function showStatus() {
 
   console.log(`  Hub:         ${getHubUrl()}`);
   console.log(`  Node:        ${hostname()}`);
-  console.log(`  Identity:    ${getContributorId() || "\x1b[33m(not set — run: cc identity set <id>)\x1b[0m"}`);
+  console.log(`  Identity:    ${getContributorId() || "\x1b[2m(anonymous — link with: cc identity link github <handle>)\x1b[0m"}`);
 
   // Ideas
   if (ideas) {
