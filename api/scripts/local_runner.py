@@ -1195,8 +1195,21 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                             if len(t_output) < 50:
                                 empty_phases.add(phase)
 
-        log.info("VALIDATION_GATE idea=%s completed_phases=%s empty_phases=%s",
-                 idea_id, sorted(completed_phases), sorted(empty_phases))
+        # Also check for REVIEW_FAILED in output — review must pass, not just complete
+        failed_phases = set()
+        if isinstance(idea_tasks_check, dict):
+            for g in (idea_tasks_check.get("groups") or []):
+                if not isinstance(g, dict):
+                    continue
+                phase = g.get("task_type", "")
+                for t in (g.get("tasks") or []):
+                    if t.get("status") == "completed":
+                        t_output = (t.get("output") or "").strip().upper()
+                        if "REVIEW_FAILED" in t_output or "SPEC_FAILED" in t_output or "TEST_FAILED" in t_output:
+                            failed_phases.add(phase)
+
+        log.info("VALIDATION_GATE idea=%s completed_phases=%s empty_phases=%s failed_phases=%s",
+                 idea_id, sorted(completed_phases), sorted(empty_phases), sorted(failed_phases))
         missing = required_phases - completed_phases
         if missing:
             log.warning(
@@ -1209,6 +1222,13 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 "VALIDATION_GATE idea=%s blocked: phases with empty output %s — "
                 "these need re-execution with meaningful results",
                 idea_id, sorted(empty_phases),
+            )
+            manifestation_status = "partial"
+        elif failed_phases:
+            log.warning(
+                "VALIDATION_GATE idea=%s blocked: phases with FAILED output %s — "
+                "these need re-execution with passing results",
+                idea_id, sorted(failed_phases),
             )
             manifestation_status = "partial"
         else:
@@ -1947,18 +1967,34 @@ def _seed_task_from_open_idea() -> bool:
             if completed > 0:
                 completed_phases.add(phase)
 
-        # Cap: if any single phase has 3+ tasks, this idea is over-served — skip it
+        # Cap: if any single phase has 5+ tasks, this idea is stuck — mark partial, skip
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
-        if max_phase_tasks >= 3:
-            log.info("SEED: idea '%s' over-served (%d tasks in one phase) — marking validated",
+        if max_phase_tasks >= 5:
+            log.info("SEED: idea '%s' stuck (%d tasks in one phase) — marking partial, skipping",
                      idea_name[:30], max_phase_tasks)
-            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "validated"})
+            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
 
+        # Check if review phase completed AND passed (not REVIEW_FAILED)
         if "review" in completed_phases:
-            log.info("SEED: idea '%s' has completed review — marking validated", idea_name[:30])
-            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "validated"})
-            return _seed_task_from_open_idea()  # retry with next idea
+            # Verify the review actually passed by checking output
+            review_passed = False
+            for g in (idea_tasks.get("groups") or []):
+                if not isinstance(g, dict) or g.get("task_type") != "review":
+                    continue
+                for t in (g.get("tasks") or []):
+                    if t.get("status") == "completed":
+                        t_output = (t.get("output") or "").strip().upper()
+                        if t_output and "REVIEW_FAILED" not in t_output and len(t_output) >= 50:
+                            review_passed = True
+                            break
+
+            if review_passed:
+                log.info("SEED: idea '%s' review PASSED — marking validated", idea_name[:30])
+                api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "validated"})
+            else:
+                log.info("SEED: idea '%s' review completed but FAILED — needs re-review", idea_name[:30])
+                task_type = "review"  # re-run review
         elif "impl" in completed_phases:
             task_type = "review"
         elif "test" in completed_phases:
