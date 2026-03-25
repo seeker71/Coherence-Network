@@ -3137,6 +3137,20 @@ def main():
 
             while True:
                 # 1. Handoff check: yield to interactive sessions
+                # 1. Housekeeping — ALWAYS runs, even when paused
+                if not args.dry_run:
+                    now = time.time()
+
+                    # Heartbeat (keeps node visible in federation)
+                    if now - last_heartbeat > heartbeat_interval:
+                        _send_heartbeat()
+                        last_heartbeat = now
+
+                    # Process messages (interactive session needs to receive commands)
+                    _process_node_messages(_NODE_ID)
+
+                # 2. Check if interactive session has taken over (pause task execution only)
+                _is_paused = False
                 _handoff_lock = Path.home() / ".coherence-network" / "executor.lock"
                 if _handoff_lock.exists():
                     try:
@@ -3157,44 +3171,36 @@ def main():
                             except (OSError, ProcessLookupError):
                                 _lock_alive = False
                         if _lock_data.get("type") == "interactive" and _lock_age < 300 and _lock_alive:
+                            _is_paused = True
                             if not _handoff_paused_logged:
-                                log.info("PAUSED: interactive session '%s' (PID %d) active — runner yielding",
+                                log.info("PAUSED: interactive session '%s' (PID %d) active — yielding task execution (heartbeat + messages continue)",
                                          _lock_data.get("session_id", "?"), _lock_pid)
                                 _handoff_paused_logged = True
-                            time.sleep(args.interval)
-                            continue
                         elif _lock_data.get("type") == "interactive":
                             log.info("RESUMED: interactive lock stale/dead — runner resuming")
                             _handoff_lock.unlink(missing_ok=True)
                     except Exception:
                         pass
-                _handoff_paused_logged = False
+                if not _is_paused:
+                    _handoff_paused_logged = False
 
-                # 2. Self-update: check for new commits before each cycle
+                if _is_paused:
+                    time.sleep(args.interval)
+                    continue
+
+                # 3. Self-update: check for new commits before each cycle
                 if not args.no_self_update:
                     _check_for_updates_and_restart()
-
-                # 3. Process messages from other nodes
-                _process_node_messages(_NODE_ID)
 
                 # 4. Execute tasks (parallel or sequential)
                 if not use_parallel:
                     run_all_pending(dry_run=args.dry_run)
                 # else: workers run independently — main loop handles housekeeping only
 
-                # 5. Housekeeping
+                # 5. Post-execution housekeeping
                 if not args.dry_run:
                     now = time.time()
-
-                    # Push measurements after each batch
                     push_measurements(_NODE_ID)
-
-                    # Periodic heartbeat
-                    if now - last_heartbeat > heartbeat_interval:
-                        _send_heartbeat()
-                        last_heartbeat = now
-
-                    # Reap stale tasks (running > 15 min with no update)
                     if now - last_reap > reap_interval:
                         _reap_stale_tasks(max_age_minutes=15)
                         last_reap = now
