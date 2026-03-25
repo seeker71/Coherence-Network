@@ -1020,7 +1020,35 @@ def main():
                 log.info("PARALLEL MODE: %d independent worker threads", _MAX_PARALLEL)
                 worker_threads = run_parallel_workers(_MAX_PARALLEL, dry_run=args.dry_run)
 
+            _handoff_paused_logged = False
+
             while True:
+                # Check if an interactive session (Claude Code, Codex) has taken over
+                _handoff_lock = Path.home() / ".coherence-network" / "executor.lock"
+                if _handoff_lock.exists():
+                    try:
+                        _lock_data = json.loads(_handoff_lock.read_text())
+                        _lock_age = time.time() - _lock_data.get("heartbeat", 0)
+                        _lock_pid = _lock_data.get("pid", 0)
+                        _lock_alive = True
+                        try:
+                            os.kill(_lock_pid, 0)
+                        except (OSError, ProcessLookupError):
+                            _lock_alive = False
+                        if _lock_data.get("type") == "interactive" and _lock_age < 300 and _lock_alive:
+                            if not _handoff_paused_logged:
+                                log.info("PAUSED: interactive session '%s' (PID %d) active — runner yielding",
+                                         _lock_data.get("session_id", "?"), _lock_pid)
+                                _handoff_paused_logged = True
+                            time.sleep(args.interval)
+                            continue
+                        elif _lock_data.get("type") == "interactive":
+                            log.info("RESUMED: interactive lock stale/dead — runner resuming")
+                            _handoff_lock.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                _handoff_paused_logged = False
+
                 if not use_parallel:
                     results = _runner.run_all_pending(dry_run=args.dry_run)
                 else:
