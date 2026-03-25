@@ -1,0 +1,4362 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Core universal concepts that form the foundation of the U-CORE ontology",
+    "lastUpdated": "2025-09-22T00:00:00Z"
+  },
+  "concepts": [
+    {
+      "id": "activity",
+      "name": "Activity",
+      "description": "Fundamental U-Core concept - processes, actions, or events",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "activity",
+        "process",
+        "action",
+        "event",
+        "behavior"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "learning",
+        "creating",
+        "transforming"
+      ],
+      "axes": [
+        "temporal",
+        "causal",
+        "ucore"
+      ]
+    },
+    {
+      "id": "adaptation",
+      "name": "Adaptation",
+      "description": "The process of change by which an organism or species becomes better suited to its environment.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "adaptation",
+        "adaptive",
+        "adjustment",
+        "evolution"
+      ],
+      "parentConcepts": [
+        "emergence"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "aesthetics",
+      "name": "Aesthetics",
+      "description": "The branch of philosophy that deals with beauty, art, and taste.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "aesthetics",
+        "beauty",
+        "art",
+        "taste"
+      ],
+      "parentConcepts": [
+        "philosophy"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "rational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "agent",
+      "name": "Agent",
+      "description": "Fundamental U-Core concept - entities that can act or cause change",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "agent",
+        "actor",
+        "doer",
+        "cause",
+        "initiator"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "human",
+        "ai",
+        "organization",
+        "system"
+      ],
+      "axes": [
+        "causal",
+        "intentional",
+        "ucore"
+      ]
+    },
+    {
+      "id": "agreement",
+      "name": "Agreement",
+      "description": "Fundamental U-Core concept - mutual understanding or consensus",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "agreement",
+        "consensus",
+        "contract",
+        "understanding",
+        "accord"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "treaty",
+        "covenant",
+        "protocol",
+        "standard"
+      ],
+      "axes": [
+        "social",
+        "contractual",
+        "ucore"
+      ]
+    },
+    {
+      "id": "ai",
+      "name": "Artificial Intelligence",
+      "description": "Intelligence demonstrated by machines, in contrast to natural intelligence displayed by humans.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "ai",
+        "artificial-intelligence",
+        "machine",
+        "automation"
+      ],
+      "parentConcepts": [
+        "agent"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "technological",
+        "cognitive",
+        "ucore"
+      ]
+    },
+    {
+      "id": "amorphous",
+      "name": "Amorphous",
+      "description": "Solid or semi-solid state lacking long-range crystalline order; in 'water_states', includes amorphous ices and gels.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "amorphous",
+        "non-crystalline"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "anthropology",
+      "name": "Anthropology",
+      "description": "The study of humans, human behavior, and societies in the past and present, encompassing cultural, biological, and linguistic dimensions.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "anthropology",
+        "culture",
+        "society",
+        "human",
+        "civilization",
+        "evolution",
+        "diversity"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "cultural-anthropology",
+        "physical-anthropology",
+        "linguistics",
+        "archaeology"
+      ],
+      "axes": [
+        "social",
+        "biological",
+        "epistemological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "api",
+      "name": "API",
+      "description": "A contract of callable operations exposed by software modules.",
+      "typeId": "codex.concept.domain",
+      "level": 2,
+      "keywords": [
+        "api",
+        "endpoint",
+        "contract"
+      ],
+      "parentConcepts": [
+        "module"
+      ],
+      "childConcepts": [
+        "http-endpoint",
+        "message",
+        "schema"
+      ],
+      "axes": [
+        "informational",
+        "relational"
+      ]
+    },
+    {
+      "id": "area",
+      "name": "Area",
+      "description": "The extent or measurement of a surface or piece of land; the amount of space within a two-dimensional boundary.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "area",
+        "surface",
+        "two-dimensional",
+        "extent"
+      ],
+      "parentConcepts": [
+        "space"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spatial",
+        "geometric",
+        "ucore"
+      ]
+    },
+    {
+      "id": "art",
+      "name": "Art",
+      "description": "The expression or application of human creative skill and imagination, typically in a visual form.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "art",
+        "creative",
+        "aesthetic",
+        "expression"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "cognitive",
+        "ucore"
+      ]
+    },
+    {
+      "id": "aspiration",
+      "name": "Aspiration",
+      "description": "A strong desire to achieve something; a hope or ambition.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "aspiration",
+        "ambition",
+        "hope",
+        "desire"
+      ],
+      "parentConcepts": [
+        "intent"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "intentional",
+        "teleological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "atoms",
+      "name": "Atoms",
+      "description": "The basic units of matter, consisting of a nucleus and electrons.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "atoms",
+        "atomic",
+        "nucleus",
+        "electrons"
+      ],
+      "parentConcepts": [
+        "matter"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "physical",
+        "material",
+        "ucore"
+      ]
+    },
+    {
+      "id": "attention",
+      "name": "Attention",
+      "description": "The action of dealing with or taking special care of someone or something; the concentration of mental effort.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "attention",
+        "focus",
+        "concentration",
+        "awareness"
+      ],
+      "parentConcepts": [
+        "consciousness"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "cognitive",
+        "phenomenological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "biodiversity",
+      "name": "Biodiversity",
+      "description": "The variety of life on Earth at all levels, from genes to ecosystems, including the evolutionary, ecological, and cultural processes that sustain life.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "biodiversity",
+        "nature",
+        "species",
+        "diversity",
+        "ecology",
+        "conservation",
+        "life"
+      ],
+      "parentConcepts": [
+        "ecology"
+      ],
+      "childConcepts": [
+        "species-diversity",
+        "genetic-diversity",
+        "ecosystem-diversity"
+      ],
+      "axes": [
+        "biological",
+        "environmental",
+        "emergent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "biology",
+      "name": "Biology",
+      "description": "The branch of science concerned with living organisms and their vital processes.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "biology",
+        "biological",
+        "life",
+        "organisms"
+      ],
+      "parentConcepts": [
+        "science"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "empirical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "bose_einstein",
+      "name": "Bose-Einstein",
+      "description": "Quantum state of matter at near-zero temperature where particles occupy the same ground state (BEC); contextually used to denote extreme-coherence regimes.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "bose",
+        "einstein",
+        "condensate"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "breath-loop",
+      "name": "Breath Loop",
+      "description": "The fundamental spiral pattern of expansion and contraction found in breathing, heartbeats, and all natural cycles. Represents the basic rhythm of life and consciousness.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "breath",
+        "loop",
+        "cycle",
+        "expansion",
+        "contraction",
+        "rhythm",
+        "life"
+      ],
+      "parentConcepts": [
+        "cycle",
+        "rhythm"
+      ],
+      "childConcepts": [
+        "inhalation",
+        "exhalation",
+        "heartbeat",
+        "tidal-cycle"
+      ],
+      "axes": [
+        "biological",
+        "temporal",
+        "rhythmic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "business-domain",
+      "name": "Business",
+      "description": "The organized effort of individuals to produce and sell goods and services for profit, encompassing commerce, trade, and economic enterprise.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "business",
+        "commerce",
+        "enterprise",
+        "trade",
+        "economics",
+        "organization",
+        "profit"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "economics",
+        "entrepreneurship",
+        "finance",
+        "management",
+        "marketing",
+        "trade"
+      ],
+      "axes": [
+        "economic",
+        "social",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "causality",
+      "name": "Causality",
+      "description": "The relationship between cause and effect",
+      "typeId": "codex.concept.fundamental",
+      "level": 2,
+      "keywords": [
+        "causality",
+        "cause",
+        "effect",
+        "influence",
+        "relationship"
+      ],
+      "parentConcepts": [
+        "time",
+        "information"
+      ],
+      "childConcepts": [
+        "determinism",
+        "probability",
+        "emergence"
+      ],
+      "axes": [
+        "causal",
+        "relational"
+      ]
+    },
+    {
+      "id": "chemical",
+      "name": "Chemical",
+      "description": "Relating to chemistry or chemicals; chemical energy is energy stored in the bonds of chemical compounds.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "chemical",
+        "chemistry",
+        "bonds",
+        "compounds"
+      ],
+      "parentConcepts": [
+        "energy"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "energetic",
+        "dynamic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "chemistry",
+      "name": "Chemistry",
+      "description": "The branch of science concerned with the properties and behavior of matter.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "chemistry",
+        "chemical",
+        "molecules",
+        "reactions"
+      ],
+      "parentConcepts": [
+        "science"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "empirical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "class",
+      "name": "Class",
+      "description": "A software construct defining state and behavior; instantiable type.",
+      "typeId": "codex.concept.type",
+      "level": 2,
+      "keywords": [
+        "class",
+        "object",
+        "oop"
+      ],
+      "parentConcepts": [
+        "meta-type"
+      ],
+      "childConcepts": [
+        "method",
+        "field",
+        "property"
+      ],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "climate-science",
+      "name": "Climate Science",
+      "description": "The study of Earth's climate system, including atmospheric processes, climate change, and human impacts on global climate patterns.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "climate",
+        "environment",
+        "atmosphere",
+        "weather",
+        "climate-change",
+        "global-warming",
+        "sustainability"
+      ],
+      "parentConcepts": [
+        "science"
+      ],
+      "childConcepts": [
+        "meteorology",
+        "climatology",
+        "climate-change",
+        "atmospheric-science"
+      ],
+      "axes": [
+        "environmental",
+        "physical",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "clustered",
+      "name": "Clustered",
+      "description": "State characterized by transient molecular clusters or aggregates; in 'water_states', denotes hypothesized water clustering.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "cluster",
+        "clustered"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "colloidal",
+      "name": "Colloidal",
+      "description": "Dispersion state where fine particles are suspended in a medium; in 'water_states', denotes colloidal water systems.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "colloid",
+        "colloidal"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "complexity",
+      "name": "Complexity",
+      "description": "The state of being complex; the quality of being intricate or complicated.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "complexity",
+        "complex",
+        "intricate",
+        "complicated"
+      ],
+      "parentConcepts": [
+        "emergence"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "consciousness",
+      "name": "Consciousness",
+      "description": "The state of being aware and able to think and perceive",
+      "typeId": "codex.concept.fundamental",
+      "level": 1,
+      "keywords": [
+        "awareness",
+        "consciousness",
+        "mind",
+        "perception",
+        "cognition"
+      ],
+      "parentConcepts": [
+        "existence"
+      ],
+      "childConcepts": [
+        "thought",
+        "emotion",
+        "memory",
+        "attention"
+      ],
+      "axes": [
+        "consciousness",
+        "phenomenological"
+      ]
+    },
+    {
+      "id": "consciousness-hologram",
+      "name": "Consciousness Hologram",
+      "description": "The idea that consciousness operates holographically, where each part of the mind contains information about the whole. Each thought reflects the entire pattern of awareness.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "consciousness",
+        "hologram",
+        "mind",
+        "awareness",
+        "pattern",
+        "reflection"
+      ],
+      "parentConcepts": [
+        "holographic-principle",
+        "consciousness"
+      ],
+      "childConcepts": [
+        "collective-consciousness",
+        "universal-mind",
+        "quantum-consciousness"
+      ],
+      "axes": [
+        "consciousness",
+        "metaphysical",
+        "quantum",
+        "ucore"
+      ]
+    },
+    {
+      "id": "contemplation",
+      "name": "Contemplation",
+      "description": "The action of looking thoughtfully at something for a long time; deep reflective thought.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "contemplation",
+        "reflection",
+        "thought",
+        "meditation"
+      ],
+      "parentConcepts": [
+        "spirituality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spiritual",
+        "transcendent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "coordinates",
+      "name": "Coordinates",
+      "description": "A set of values that show an exact position on a map, graph, or other system of measurement.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "coordinates",
+        "position",
+        "location",
+        "reference"
+      ],
+      "parentConcepts": [
+        "space"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spatial",
+        "geometric",
+        "ucore"
+      ]
+    },
+    {
+      "id": "creating",
+      "name": "Creating",
+      "description": "The process of bringing something new into existence through imagination, skill, or effort.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "creating",
+        "creation",
+        "making",
+        "producing"
+      ],
+      "parentConcepts": [
+        "activity"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "temporal",
+        "intentional",
+        "ucore"
+      ]
+    },
+    {
+      "id": "creator",
+      "name": "Creator",
+      "description": "One who creates or brings something new into existence.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "creator",
+        "maker",
+        "author",
+        "inventor"
+      ],
+      "parentConcepts": [
+        "role"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "creative",
+        "productive",
+        "ucore"
+      ]
+    },
+    {
+      "id": "cross-view-synthesis",
+      "name": "Cross-View Synthesis",
+      "description": "The integration of multiple perspectives, belief systems, and worldviews into a coherent whole. Each view contains partial truth that together forms a more complete picture.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "cross-view",
+        "synthesis",
+        "integration",
+        "perspective",
+        "worldview",
+        "truth"
+      ],
+      "parentConcepts": [
+        "integration",
+        "perspective"
+      ],
+      "childConcepts": [
+        "integral-theory",
+        "dialectical-thinking",
+        "multi-perspective"
+      ],
+      "axes": [
+        "epistemological",
+        "philosophical",
+        "integrative",
+        "ucore"
+      ]
+    },
+    {
+      "id": "csharp",
+      "name": "C#",
+      "description": "A modern, object-oriented programming language developed by Microsoft.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "csharp",
+        "c#",
+        "programming",
+        "microsoft"
+      ],
+      "parentConcepts": [
+        "programming-language"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "technological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "cultural-heritage",
+      "name": "Cultural Heritage",
+      "description": "The legacy of physical artifacts and intangible attributes inherited from past generations, maintained in the present, and bestowed for future generations.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "culture",
+        "heritage",
+        "tradition",
+        "history",
+        "legacy",
+        "preservation",
+        "identity"
+      ],
+      "parentConcepts": [
+        "art",
+        "culture"
+      ],
+      "childConcepts": [
+        "traditions",
+        "customs",
+        "monuments",
+        "artifacts"
+      ],
+      "axes": [
+        "social",
+        "temporal",
+        "aesthetic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "culture",
+      "name": "Culture",
+      "description": "The social behavior, institutions, and norms found in human societies, including knowledge, beliefs, arts, laws, customs, and habits.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "culture",
+        "society",
+        "traditions",
+        "customs",
+        "beliefs",
+        "values",
+        "heritage"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "cultural-heritage",
+        "traditions",
+        "customs",
+        "arts"
+      ],
+      "axes": [
+        "social",
+        "aesthetic",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "determinism",
+      "name": "Determinism",
+      "description": "The philosophical doctrine that all events, including human action, are ultimately determined by causes external to the will.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "determinism",
+        "determined",
+        "causality",
+        "fate"
+      ],
+      "parentConcepts": [
+        "causality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "causal",
+        "philosophical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "dialectical-thinking",
+      "name": "Dialectical Thinking",
+      "description": "A mode of thinking that holds opposing ideas in tension and seeks synthesis. Recognizes that truth often emerges from the dynamic interaction of opposites.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "dialectical",
+        "thinking",
+        "opposites",
+        "synthesis",
+        "tension",
+        "dynamic"
+      ],
+      "parentConcepts": [
+        "cross-view-synthesis",
+        "thinking"
+      ],
+      "childConcepts": [
+        "thesis-antithesis-synthesis",
+        "paradox-resolution",
+        "creative-tension"
+      ],
+      "axes": [
+        "philosophical",
+        "cognitive",
+        "integrative",
+        "ucore"
+      ]
+    },
+    {
+      "id": "distance",
+      "name": "Distance",
+      "description": "The amount of space between two points; the extent of space between two objects or places.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "distance",
+        "space",
+        "length",
+        "separation"
+      ],
+      "parentConcepts": [
+        "space"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spatial",
+        "geometric",
+        "ucore"
+      ]
+    },
+    {
+      "id": "ecology",
+      "name": "Ecology",
+      "description": "The branch of biology that studies the relationships between living organisms and their physical environment, including ecosystems and biodiversity.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "ecology",
+        "environment",
+        "ecosystems",
+        "nature",
+        "biodiversity",
+        "conservation",
+        "habitat"
+      ],
+      "parentConcepts": [
+        "biology"
+      ],
+      "childConcepts": [
+        "ecosystems",
+        "biodiversity",
+        "conservation-biology",
+        "ecological-balance"
+      ],
+      "axes": [
+        "biological",
+        "environmental",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "economics",
+      "name": "Economics",
+      "description": "The social science that studies how individuals, businesses, governments, and nations make choices about allocating resources.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "economics",
+        "economy",
+        "business",
+        "finance",
+        "trade",
+        "markets",
+        "resources"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "microeconomics",
+        "macroeconomics",
+        "behavioral-economics",
+        "econometrics"
+      ],
+      "axes": [
+        "economic",
+        "social",
+        "quantitative",
+        "ucore"
+      ]
+    },
+    {
+      "id": "electrical",
+      "name": "Electrical",
+      "description": "Relating to electricity; electrical energy is energy derived from electric potential energy or kinetic energy.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "electrical",
+        "electricity",
+        "electric",
+        "electromagnetic"
+      ],
+      "parentConcepts": [
+        "energy"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "energetic",
+        "dynamic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "emergence",
+      "name": "Emergence",
+      "description": "The arising of novel properties from complex systems",
+      "typeId": "codex.concept.systems",
+      "level": 2,
+      "keywords": [
+        "emergence",
+        "complexity",
+        "systems",
+        "properties",
+        "novel"
+      ],
+      "parentConcepts": [
+        "causality",
+        "information"
+      ],
+      "childConcepts": [
+        "complexity",
+        "self-organization",
+        "adaptation"
+      ],
+      "axes": [
+        "emergent",
+        "systemic"
+      ]
+    },
+    {
+      "id": "emotion",
+      "name": "Emotion",
+      "description": "A natural instinctive state of mind deriving from one's circumstances, mood, or relationships with others.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "emotion",
+        "feeling",
+        "affect",
+        "sentiment"
+      ],
+      "parentConcepts": [
+        "consciousness"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "cognitive",
+        "phenomenological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "energy",
+      "name": "Energy",
+      "description": "The capacity to do work or cause change",
+      "typeId": "codex.concept.fundamental",
+      "level": 1,
+      "keywords": [
+        "energy",
+        "force",
+        "power",
+        "potential",
+        "kinetic"
+      ],
+      "parentConcepts": [
+        "existence"
+      ],
+      "childConcepts": [
+        "thermal",
+        "electrical",
+        "mechanical",
+        "chemical"
+      ],
+      "axes": [
+        "energetic",
+        "dynamic"
+      ]
+    },
+    {
+      "id": "entanglement",
+      "name": "Entanglement",
+      "description": "Non-classical correlation between parts where joint states are inseparable; in 'quantum_dimensions', denotes entangled regimes.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "entanglement"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "entity",
+      "name": "Entity",
+      "description": "Fundamental U-Core concept - anything that exists or can be conceived",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "entity",
+        "being",
+        "thing",
+        "existence",
+        "object"
+      ],
+      "parentConcepts": [
+        "u-core-meta-identity"
+      ],
+      "childConcepts": [
+        "activity",
+        "agent",
+        "resource"
+      ],
+      "axes": [
+        "ontological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "entrepreneurship",
+      "name": "Entrepreneurship",
+      "description": "The activity of setting up and running businesses, taking on financial risks in the hope of profit and innovation.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "entrepreneurship",
+        "business",
+        "startup",
+        "innovation",
+        "enterprise",
+        "venture",
+        "leadership"
+      ],
+      "parentConcepts": [
+        "business"
+      ],
+      "childConcepts": [
+        "startup-development",
+        "business-innovation",
+        "venture-capital",
+        "social-entrepreneurship"
+      ],
+      "axes": [
+        "economic",
+        "creative",
+        "social",
+        "ucore"
+      ]
+    },
+    {
+      "id": "enum",
+      "name": "Enum",
+      "description": "A type consisting of a set of named constants.",
+      "typeId": "codex.concept.type",
+      "level": 2,
+      "keywords": [
+        "enum",
+        "enumeration",
+        "constants"
+      ],
+      "parentConcepts": [
+        "meta-type"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "environmental-conservation",
+      "name": "Environmental Conservation",
+      "description": "The practice of protecting and preserving natural environments, species, and resources for future generations.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "conservation",
+        "environment",
+        "nature",
+        "sustainability",
+        "preservation",
+        "ecology",
+        "protection"
+      ],
+      "parentConcepts": [
+        "ecology"
+      ],
+      "childConcepts": [
+        "habitat-preservation",
+        "species-conservation",
+        "sustainable-practices",
+        "restoration-ecology"
+      ],
+      "axes": [
+        "environmental",
+        "ethical",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "epistemology",
+      "name": "Epistemology",
+      "description": "The branch of philosophy that deals with knowledge, its nature, sources, and validity.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "epistemology",
+        "knowledge",
+        "truth",
+        "belief"
+      ],
+      "parentConcepts": [
+        "philosophy"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "rational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "eternity",
+      "name": "Eternity",
+      "description": "Infinite or unending time; the concept of timelessness or infinite duration.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "eternity",
+        "infinite",
+        "timeless",
+        "perpetual"
+      ],
+      "parentConcepts": [
+        "time"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "temporal",
+        "metaphysical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "ethics",
+      "name": "Ethics",
+      "description": "The branch of philosophy that deals with moral principles and values.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "ethics",
+        "moral",
+        "values",
+        "principles"
+      ],
+      "parentConcepts": [
+        "philosophy"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "rational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "existence",
+      "name": "Existence",
+      "description": "The fundamental state of being or reality",
+      "typeId": "codex.concept.fundamental",
+      "level": 0,
+      "keywords": [
+        "being",
+        "reality",
+        "existence",
+        "is",
+        "entity"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [
+        "consciousness",
+        "matter",
+        "energy",
+        "information"
+      ],
+      "axes": [
+        "ontological",
+        "metaphysical"
+      ]
+    },
+    {
+      "id": "fibonacci-spiral",
+      "name": "Fibonacci Spiral",
+      "description": "A logarithmic spiral that grows by the golden ratio, found in nature from nautilus shells to galaxy arms. Demonstrates the spiral nature of growth and evolution.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "fibonacci",
+        "spiral",
+        "growth",
+        "evolution",
+        "natural",
+        "logarithmic"
+      ],
+      "parentConcepts": [
+        "fractal-pattern",
+        "golden-ratio"
+      ],
+      "childConcepts": [
+        "nautilus-shell",
+        "galaxy-spiral",
+        "plant-growth"
+      ],
+      "axes": [
+        "mathematical",
+        "biological",
+        "cosmological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "field",
+      "name": "Field",
+      "description": "A variable member of a type that stores data.",
+      "typeId": "codex.concept.type",
+      "level": 3,
+      "keywords": [
+        "field",
+        "variable",
+        "data"
+      ],
+      "parentConcepts": [
+        "class",
+        "record"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "fields",
+      "name": "Fields",
+      "description": "Physical quantities that have a value for each point in space and time, such as electromagnetic fields.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "fields",
+        "field-theory",
+        "electromagnetic",
+        "quantum"
+      ],
+      "parentConcepts": [
+        "matter"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "physical",
+        "material",
+        "ucore"
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "Finance",
+      "description": "The management of money, banking, investments, and credit, including personal, corporate, and public finance.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "finance",
+        "money",
+        "investment",
+        "banking",
+        "business",
+        "capital",
+        "financial"
+      ],
+      "parentConcepts": [
+        "economics"
+      ],
+      "childConcepts": [
+        "corporate-finance",
+        "investment-management",
+        "financial-markets",
+        "banking"
+      ],
+      "axes": [
+        "economic",
+        "quantitative",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "fractal-pattern",
+      "name": "Fractal Pattern",
+      "description": "A self-similar pattern that repeats at different scales, where each part contains the structure of the whole. Fundamental to understanding complex systems and natural phenomena.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "fractal",
+        "pattern",
+        "self-similar",
+        "scale",
+        "recursive",
+        "holographic"
+      ],
+      "parentConcepts": [
+        "pattern",
+        "structure"
+      ],
+      "childConcepts": [
+        "mandelbrot-set",
+        "sierpinski-triangle",
+        "golden-ratio",
+        "fibonacci-spiral",
+        "holographic-principle"
+      ],
+      "axes": [
+        "geometric",
+        "mathematical",
+        "emergent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "framework",
+      "name": "Framework",
+      "description": "A software framework that provides a foundation for developing software applications.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "framework",
+        "foundation",
+        "structure",
+        "development"
+      ],
+      "parentConcepts": [
+        "software"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "future",
+      "name": "Future",
+      "description": "The time that is yet to come; events that will happen after the present moment.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "future",
+        "forthcoming",
+        "upcoming",
+        "prospective"
+      ],
+      "parentConcepts": [
+        "time"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "temporal",
+        "chronological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "golden-ratio",
+      "name": "Golden Ratio",
+      "description": "A mathematical constant (φ ≈ 1.618) that appears throughout nature, art, and architecture. Represents the most aesthetically pleasing proportion and appears in spiral patterns.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "golden-ratio",
+        "phi",
+        "proportion",
+        "aesthetic",
+        "spiral",
+        "fibonacci"
+      ],
+      "parentConcepts": [
+        "fractal-pattern",
+        "proportion"
+      ],
+      "childConcepts": [
+        "fibonacci-sequence",
+        "golden-spiral",
+        "sacred-geometry"
+      ],
+      "axes": [
+        "mathematical",
+        "aesthetic",
+        "geometric",
+        "ucore"
+      ]
+    },
+    {
+      "id": "guardian",
+      "name": "Guardian",
+      "description": "One who protects, watches over, or takes care of someone or something.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "guardian",
+        "protector",
+        "caretaker",
+        "custodian"
+      ],
+      "parentConcepts": [
+        "role"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "protective",
+        "social",
+        "ucore"
+      ]
+    },
+    {
+      "id": "hardware",
+      "name": "Hardware",
+      "description": "The physical components of a computer system or other electronic device.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "hardware",
+        "physical",
+        "components",
+        "devices"
+      ],
+      "parentConcepts": [
+        "technology"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "technological",
+        "material",
+        "ucore"
+      ]
+    },
+    {
+      "id": "health-domain",
+      "name": "Health",
+      "description": "A state of complete physical, mental, and social well-being, not merely the absence of disease or infirmity.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "health",
+        "wellness",
+        "wellbeing",
+        "medical",
+        "fitness",
+        "healing",
+        "vitality"
+      ],
+      "parentConcepts": [
+        "existence"
+      ],
+      "childConcepts": [
+        "medicine",
+        "nutrition",
+        "mental-health",
+        "physical-fitness",
+        "holistic-health"
+      ],
+      "axes": [
+        "medical",
+        "physiological",
+        "wellness",
+        "ucore"
+      ]
+    },
+    {
+      "id": "history",
+      "name": "History",
+      "description": "The study of past events, particularly human affairs, their causes, and their consequences on present and future.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "history",
+        "past",
+        "historical",
+        "events",
+        "society",
+        "civilization",
+        "timeline"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "ancient-history",
+        "modern-history",
+        "world-history",
+        "cultural-history"
+      ],
+      "axes": [
+        "temporal",
+        "social",
+        "epistemological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "holistic-health",
+      "name": "Holistic Health",
+      "description": "An approach to health that considers the whole person - body, mind, spirit, and emotions - in the quest for optimal wellness.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "holistic",
+        "health",
+        "wellness",
+        "healing",
+        "integrative",
+        "mind-body",
+        "whole-person"
+      ],
+      "parentConcepts": [
+        "health"
+      ],
+      "childConcepts": [
+        "integrative-medicine",
+        "mind-body-medicine",
+        "complementary-therapies"
+      ],
+      "axes": [
+        "medical",
+        "spiritual",
+        "wellness",
+        "integrative",
+        "ucore"
+      ]
+    },
+    {
+      "id": "holograph",
+      "name": "Holograph",
+      "description": "Holographic principle view where bulk information is encoded on lower-dimensional boundaries; in 'quantum_dimensions', a projection view.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "holograph",
+        "holographic"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "holographic-principle",
+      "name": "Holographic Principle",
+      "description": "The principle that all information in a volume of space can be represented as information on the boundary of that space. Each part contains the whole.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "holographic",
+        "principle",
+        "information",
+        "boundary",
+        "whole",
+        "part"
+      ],
+      "parentConcepts": [
+        "fractal-pattern",
+        "information"
+      ],
+      "childConcepts": [
+        "quantum-holography",
+        "consciousness-hologram",
+        "universe-hologram"
+      ],
+      "axes": [
+        "quantum",
+        "informational",
+        "metaphysical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "http-endpoint",
+      "name": "HTTP Endpoint",
+      "description": "A point of entry in a communication channel when two systems interact.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "http-endpoint",
+        "endpoint",
+        "api",
+        "communication"
+      ],
+      "parentConcepts": [
+        "api"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "human",
+      "name": "Human",
+      "description": "A member of the species Homo sapiens, characterized by advanced cognitive abilities and social organization.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "human",
+        "person",
+        "individual",
+        "homo-sapiens"
+      ],
+      "parentConcepts": [
+        "agent"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "biological",
+        "social",
+        "ucore"
+      ]
+    },
+    {
+      "id": "ice",
+      "name": "Ice",
+      "description": "Solid phase of a substance characterized by an ordered crystalline lattice; in the 'water_states' axis, denotes frozen water forms.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "ice",
+        "solid",
+        "crystalline"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "infinity",
+      "name": "Infinity",
+      "description": "Unbounded growth or extent without finite limit; in 'quantum_dimensions', a formal idealization for asymptotic behaviors.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "infinity",
+        "boundless"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "information",
+      "name": "Information",
+      "description": "Data that has meaning and can be processed or transmitted",
+      "typeId": "codex.concept.fundamental",
+      "level": 1,
+      "keywords": [
+        "information",
+        "data",
+        "knowledge",
+        "meaning",
+        "signal"
+      ],
+      "parentConcepts": [
+        "existence"
+      ],
+      "childConcepts": [
+        "knowledge",
+        "wisdom",
+        "understanding",
+        "learning"
+      ],
+      "axes": [
+        "informational",
+        "cognitive"
+      ]
+    },
+    {
+      "id": "integral-theory",
+      "name": "Integral Theory",
+      "description": "A comprehensive framework that integrates multiple perspectives and disciplines to understand reality. Combines subjective and objective, individual and collective dimensions.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "integral",
+        "theory",
+        "framework",
+        "integration",
+        "comprehensive",
+        "reality"
+      ],
+      "parentConcepts": [
+        "cross-view-synthesis",
+        "philosophy"
+      ],
+      "childConcepts": [
+        "four-quadrants",
+        "levels-of-development",
+        "lines-of-development"
+      ],
+      "axes": [
+        "philosophical",
+        "epistemological",
+        "integrative",
+        "ucore"
+      ]
+    },
+    {
+      "id": "intent",
+      "name": "Intent",
+      "description": "Fundamental U-Core concept - purpose, goal, or aimed direction",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "intent",
+        "purpose",
+        "goal",
+        "aim",
+        "direction"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "vision",
+        "mission",
+        "objective",
+        "aspiration"
+      ],
+      "axes": [
+        "intentional",
+        "teleological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "interface",
+      "name": "Interface",
+      "description": "A contract that defines a set of members without implementation.",
+      "typeId": "codex.concept.type",
+      "level": 2,
+      "keywords": [
+        "interface",
+        "contract",
+        "abstraction"
+      ],
+      "parentConcepts": [
+        "meta-type"
+      ],
+      "childConcepts": [
+        "method",
+        "property"
+      ],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "javascript",
+      "name": "JavaScript",
+      "description": "A high-level, interpreted programming language that is one of the core technologies of the World Wide Web.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "javascript",
+        "js",
+        "programming",
+        "web"
+      ],
+      "parentConcepts": [
+        "programming-language"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "technological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "knowledge",
+      "name": "Knowledge",
+      "description": "Information that has been learned, understood, and can be applied",
+      "typeId": "codex.concept.cognitive",
+      "level": 2,
+      "keywords": [
+        "knowledge",
+        "understanding",
+        "learning",
+        "education",
+        "wisdom"
+      ],
+      "parentConcepts": [
+        "information",
+        "consciousness"
+      ],
+      "childConcepts": [
+        "science",
+        "philosophy",
+        "technology",
+        "art"
+      ],
+      "axes": [
+        "epistemological",
+        "cognitive"
+      ]
+    },
+    {
+      "id": "kw-consciousness",
+      "name": "Consciousness",
+      "description": "Keyword for awareness and subjective experience; distinct from the fundamental concept node, this is a tagging view.",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "consciousness"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "kw-dimensions",
+      "name": "Dimensions",
+      "description": "Keyword for degrees of freedom or coordinates needed to specify a state or position.",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "dimensions"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "kw-matter",
+      "name": "Matter",
+      "description": "Free-standing keyword for physical substance (occupies space, has mass). In axis contexts, tags topics related to matter.",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "matter"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "kw-phase",
+      "name": "Phase",
+      "description": "Keyword for phase/state parameter of a system (physical or signal/oscillatory). In axes, tags phase-related topics.",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "phase"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states",
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "kw-physics",
+      "name": "Physics",
+      "description": "Keyword for the natural sciences that study matter, energy, space, time, and their interactions.",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "physics"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "kw-quantum",
+      "name": "Quantum",
+      "description": "Keyword for phenomena governed by quantum theory (discreteness, superposition, entanglement).",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "quantum"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "kw-reality",
+      "name": "Reality",
+      "description": "Keyword for the totality of that which exists or is experienced, independent of model or belief.",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "reality"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "kw-states",
+      "name": "States",
+      "description": "Keyword for distinct configurations of a system (e.g., phases of matter, modes of operation).",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "states"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "kw-transformation",
+      "name": "Transformation",
+      "description": "Keyword for change of state, structure, or form through processes (e.g., phase change, functional transformation).",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "transformation"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "kw-water",
+      "name": "Water",
+      "description": "Keyword for the substance H₂O across its contexts (physical, biological, symbolic). In axes, tags water-related topics.",
+      "typeId": "codex.concept.keyword",
+      "level": 3,
+      "keywords": [
+        "water"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "lattice_polymorphs",
+      "name": "Lattice Polymorphs",
+      "description": "Family of crystalline forms differing in lattice arrangement (polymorphism); in 'water_states', covers multiple ice polymorphs.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "lattice",
+        "polymorph"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "learner",
+      "name": "Learner",
+      "description": "One who is learning or acquiring knowledge and skills.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "learner",
+        "student",
+        "pupil",
+        "apprentice"
+      ],
+      "parentConcepts": [
+        "role"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "educational",
+        "social",
+        "ucore"
+      ]
+    },
+    {
+      "id": "learning",
+      "name": "Learning",
+      "description": "The process of acquiring knowledge, skills, or understanding through experience, study, or teaching.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "learning",
+        "education",
+        "study",
+        "acquisition"
+      ],
+      "parentConcepts": [
+        "activity"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "temporal",
+        "cognitive",
+        "ucore"
+      ]
+    },
+    {
+      "id": "library",
+      "name": "Library",
+      "description": "A collection of pre-written code that can be used to develop software applications.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "library",
+        "code",
+        "reusable",
+        "components"
+      ],
+      "parentConcepts": [
+        "software"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "line",
+      "name": "Line",
+      "description": "One-dimensional continuum with length but no thickness; in 'quantum_dimensions', a basic spatial degree.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "line"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "liquid",
+      "name": "Liquid",
+      "description": "Fluid phase of a substance with fixed volume and variable shape; in the 'water_states' axis, denotes flowing water states.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "liquid",
+        "fluid"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "literature",
+      "name": "Literature",
+      "description": "Written works, especially those considered of superior or lasting artistic merit, including poetry, prose, and drama.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "literature",
+        "writing",
+        "poetry",
+        "prose",
+        "novels",
+        "drama",
+        "storytelling",
+        "art"
+      ],
+      "parentConcepts": [
+        "art"
+      ],
+      "childConcepts": [
+        "poetry",
+        "fiction",
+        "non-fiction",
+        "drama"
+      ],
+      "axes": [
+        "aesthetic",
+        "cognitive",
+        "creative",
+        "ucore"
+      ]
+    },
+    {
+      "id": "management",
+      "name": "Management",
+      "description": "The process of planning, organizing, leading, and controlling resources to achieve organizational goals effectively and efficiently.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "management",
+        "leadership",
+        "business",
+        "organization",
+        "administration",
+        "strategy",
+        "operations"
+      ],
+      "parentConcepts": [
+        "business"
+      ],
+      "childConcepts": [
+        "strategic-management",
+        "operations-management",
+        "human-resources",
+        "project-management"
+      ],
+      "axes": [
+        "economic",
+        "social",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "mandelbrot-set",
+      "name": "Mandelbrot Set",
+      "description": "A famous fractal set defined by a simple mathematical formula that produces infinitely complex patterns. Demonstrates how simple rules can generate infinite complexity.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "mandelbrot",
+        "fractal",
+        "mathematical",
+        "complex",
+        "infinite"
+      ],
+      "parentConcepts": [
+        "fractal-pattern"
+      ],
+      "childConcepts": [
+        "julia-set",
+        "complex-dynamics"
+      ],
+      "axes": [
+        "mathematical",
+        "geometric",
+        "ucore"
+      ]
+    },
+    {
+      "id": "marketing",
+      "name": "Marketing",
+      "description": "The activity of promoting and selling products or services, including market research, advertising, and understanding consumer behavior.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "marketing",
+        "business",
+        "advertising",
+        "branding",
+        "consumer",
+        "promotion",
+        "sales"
+      ],
+      "parentConcepts": [
+        "business"
+      ],
+      "childConcepts": [
+        "digital-marketing",
+        "brand-management",
+        "consumer-behavior",
+        "market-research"
+      ],
+      "axes": [
+        "economic",
+        "social",
+        "creative",
+        "ucore"
+      ]
+    },
+    {
+      "id": "mathematics",
+      "name": "Mathematics",
+      "description": "The abstract science of number, quantity, and space, either as abstract concepts or as applied to other disciplines.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "mathematics",
+        "mathematical",
+        "numbers",
+        "logic"
+      ],
+      "parentConcepts": [
+        "science"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "empirical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "matter",
+      "name": "Matter",
+      "description": "Physical substance that occupies space and has mass",
+      "typeId": "codex.concept.fundamental",
+      "level": 1,
+      "keywords": [
+        "matter",
+        "substance",
+        "physical",
+        "material",
+        "mass"
+      ],
+      "parentConcepts": [
+        "existence"
+      ],
+      "childConcepts": [
+        "atoms",
+        "molecules",
+        "particles",
+        "fields"
+      ],
+      "axes": [
+        "physical",
+        "material"
+      ]
+    },
+    {
+      "id": "measurement",
+      "name": "Measurement",
+      "description": "Fundamental U-Core concept - quantification or assessment",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "measurement",
+        "metric",
+        "assessment",
+        "evaluation",
+        "quantification"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "progress",
+        "quality",
+        "performance",
+        "value"
+      ],
+      "axes": [
+        "quantitative",
+        "evaluative",
+        "ucore"
+      ]
+    },
+    {
+      "id": "mechanical",
+      "name": "Mechanical",
+      "description": "Relating to machines or machinery; mechanical energy is the sum of potential and kinetic energy.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "mechanical",
+        "machinery",
+        "kinetic",
+        "potential"
+      ],
+      "parentConcepts": [
+        "energy"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "energetic",
+        "dynamic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "medicine",
+      "name": "Medicine",
+      "description": "The science and practice of diagnosing, treating, and preventing disease and injury in humans to maintain and restore health.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "medicine",
+        "health",
+        "healthcare",
+        "treatment",
+        "diagnosis",
+        "healing",
+        "medical"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "clinical-medicine",
+        "surgery",
+        "pharmacology",
+        "medical-research"
+      ],
+      "axes": [
+        "medical",
+        "biological",
+        "ethical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "meditation",
+      "name": "Meditation",
+      "description": "A practice of focused attention and awareness, often used for spiritual or relaxation purposes.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "meditation",
+        "mindfulness",
+        "awareness",
+        "spiritual"
+      ],
+      "parentConcepts": [
+        "spirituality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spiritual",
+        "transcendent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "memory",
+      "name": "Memory",
+      "description": "The faculty by which the mind stores and remembers information.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "memory",
+        "remembering",
+        "recall",
+        "retention"
+      ],
+      "parentConcepts": [
+        "consciousness"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "cognitive",
+        "phenomenological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "mental-health",
+      "name": "Mental Health",
+      "description": "The state of psychological and emotional well-being, including the diagnosis and treatment of mental disorders and promotion of mental wellness.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "mental-health",
+        "psychology",
+        "wellness",
+        "emotional",
+        "psychiatric",
+        "therapy",
+        "wellbeing"
+      ],
+      "parentConcepts": [
+        "health"
+      ],
+      "childConcepts": [
+        "psychiatry",
+        "clinical-psychology",
+        "psychotherapy",
+        "mental-wellness"
+      ],
+      "axes": [
+        "psychological",
+        "medical",
+        "wellness",
+        "ucore"
+      ]
+    },
+    {
+      "id": "mental-space",
+      "name": "Mental Space",
+      "description": "The conceptual or psychological space where thoughts, ideas, and mental processes occur.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "mental-space",
+        "conceptual-space",
+        "psychological-space"
+      ],
+      "parentConcepts": [
+        "place"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spatial",
+        "cognitive",
+        "ucore"
+      ]
+    },
+    {
+      "id": "message",
+      "name": "Message",
+      "description": "A unit of communication between systems or components.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "message",
+        "communication",
+        "data",
+        "signal"
+      ],
+      "parentConcepts": [
+        "api"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "meta-identity",
+      "name": "Meta Identity",
+      "description": "The fundamental identity concept that serves as the root of all identity relationships in the U-CORE ontology. This is the only hard-coded node that represents the core identity principle.",
+      "typeId": "codex.meta/identity",
+      "level": 0,
+      "keywords": [
+        "identity",
+        "self",
+        "core",
+        "meta",
+        "fundamental",
+        "root"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [
+        "entity",
+        "existence",
+        "consciousness"
+      ],
+      "axes": [
+        "ontological",
+        "metaphysical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "meta-type",
+      "name": "Meta Type",
+      "description": "Abstract type describing categories of software constructs (class, record, enum, interface).",
+      "typeId": "codex.concept.type",
+      "level": 1,
+      "keywords": [
+        "type",
+        "meta",
+        "category"
+      ],
+      "parentConcepts": [
+        "software"
+      ],
+      "childConcepts": [
+        "class",
+        "record",
+        "enum",
+        "interface"
+      ],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "metaphysics",
+      "name": "Metaphysics",
+      "description": "The branch of philosophy that deals with the fundamental nature of reality and existence.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "metaphysics",
+        "reality",
+        "existence",
+        "fundamental"
+      ],
+      "parentConcepts": [
+        "philosophy"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "rational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "method",
+      "name": "Method",
+      "description": "A function member of a type that encapsulates behavior.",
+      "typeId": "codex.concept.type",
+      "level": 3,
+      "keywords": [
+        "method",
+        "function",
+        "behavior"
+      ],
+      "parentConcepts": [
+        "class",
+        "interface"
+      ],
+      "childConcepts": [
+        "parameter",
+        "return-type"
+      ],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "mission",
+      "name": "Mission",
+      "description": "A specific task or purpose that one is assigned or chooses to undertake.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "mission",
+        "purpose",
+        "task",
+        "assignment"
+      ],
+      "parentConcepts": [
+        "intent"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "intentional",
+        "teleological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "module",
+      "name": "Module",
+      "description": "A deployable logical unit of functionality within the system.",
+      "typeId": "codex.concept.domain",
+      "level": 2,
+      "keywords": [
+        "module",
+        "component",
+        "service"
+      ],
+      "parentConcepts": [
+        "software"
+      ],
+      "childConcepts": [
+        "api"
+      ],
+      "axes": [
+        "relational",
+        "systemic"
+      ]
+    },
+    {
+      "id": "molecules",
+      "name": "Molecules",
+      "description": "Groups of atoms bonded together, representing the smallest fundamental units of a chemical compound.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "molecules",
+        "molecular",
+        "chemical",
+        "compound"
+      ],
+      "parentConcepts": [
+        "matter"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "physical",
+        "material",
+        "ucore"
+      ]
+    },
+    {
+      "id": "multiverse",
+      "name": "Multiverse",
+      "description": "Hypothesized ensemble of possible universes or branches; in 'quantum_dimensions', denotes many-worlds or modal spaces.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "multiverse"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "music",
+      "name": "Music",
+      "description": "The art of arranging sounds in time to produce composition through melody, harmony, rhythm, and timbre.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "music",
+        "sound",
+        "melody",
+        "rhythm",
+        "harmony",
+        "composition",
+        "art",
+        "expression"
+      ],
+      "parentConcepts": [
+        "art"
+      ],
+      "childConcepts": [
+        "musical-composition",
+        "performance",
+        "musical-theory"
+      ],
+      "axes": [
+        "aesthetic",
+        "creative",
+        "temporal",
+        "ucore"
+      ]
+    },
+    {
+      "id": "mysticism",
+      "name": "Mysticism",
+      "description": "The belief that union with or absorption into the divine or ultimate reality may be achieved through contemplation and self-surrender.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "mysticism",
+        "mystical",
+        "divine",
+        "transcendent"
+      ],
+      "parentConcepts": [
+        "spirituality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spiritual",
+        "transcendent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "nutrition",
+      "name": "Nutrition",
+      "description": "The science of food, nutrients, and their relationship to health, growth, and disease prevention.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "nutrition",
+        "diet",
+        "food",
+        "health",
+        "wellness",
+        "nutrients",
+        "eating"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "dietary-science",
+        "nutritional-biochemistry",
+        "food-science"
+      ],
+      "axes": [
+        "medical",
+        "biological",
+        "wellness",
+        "ucore"
+      ]
+    },
+    {
+      "id": "objective",
+      "name": "Objective",
+      "description": "A specific, measurable goal that one aims to achieve.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "objective",
+        "goal",
+        "target",
+        "aim"
+      ],
+      "parentConcepts": [
+        "intent"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "intentional",
+        "teleological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "obligation",
+      "name": "Obligation",
+      "description": "Fundamental U-Core concept - duties or responsibilities",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "obligation",
+        "duty",
+        "responsibility",
+        "commitment",
+        "bond"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "moral-duty",
+        "legal-obligation",
+        "promise"
+      ],
+      "axes": [
+        "ethical",
+        "binding",
+        "ucore"
+      ]
+    },
+    {
+      "id": "organization",
+      "name": "Organization",
+      "description": "A structured group of people with a particular purpose, such as a business or government department.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "organization",
+        "institution",
+        "group",
+        "collective"
+      ],
+      "parentConcepts": [
+        "agent"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "social",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "paradox-resolution",
+      "name": "Paradox Resolution",
+      "description": "The ability to hold seemingly contradictory truths simultaneously and find resolution at a higher level of understanding. Essential for navigating complex reality.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "paradox",
+        "resolution",
+        "contradiction",
+        "truth",
+        "understanding",
+        "complexity"
+      ],
+      "parentConcepts": [
+        "dialectical-thinking",
+        "understanding"
+      ],
+      "childConcepts": [
+        "quantum-superposition",
+        "wave-particle-duality",
+        "observer-effect"
+      ],
+      "axes": [
+        "philosophical",
+        "quantum",
+        "cognitive",
+        "ucore"
+      ]
+    },
+    {
+      "id": "parameter",
+      "name": "Parameter",
+      "description": "A variable that is passed to a function or method to provide input data.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "parameter",
+        "variable",
+        "input",
+        "argument"
+      ],
+      "parentConcepts": [
+        "method"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "technological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "particles",
+      "name": "Particles",
+      "description": "Small pieces of matter, including subatomic particles and larger particles.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "particles",
+        "particulate",
+        "subatomic",
+        "elementary"
+      ],
+      "parentConcepts": [
+        "matter"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "physical",
+        "material",
+        "ucore"
+      ]
+    },
+    {
+      "id": "past",
+      "name": "Past",
+      "description": "The time that has already occurred; events that have happened before the present moment.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "past",
+        "history",
+        "previous",
+        "former"
+      ],
+      "parentConcepts": [
+        "time"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "temporal",
+        "chronological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "performing-arts",
+      "name": "Performing Arts",
+      "description": "Forms of art where artists use their body, voice, or objects to convey artistic expression, including theater, dance, and music performance.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "performing-arts",
+        "theater",
+        "dance",
+        "performance",
+        "drama",
+        "art",
+        "expression"
+      ],
+      "parentConcepts": [
+        "art"
+      ],
+      "childConcepts": [
+        "theater",
+        "dance",
+        "opera",
+        "musical-theater"
+      ],
+      "axes": [
+        "aesthetic",
+        "creative",
+        "temporal",
+        "embodied",
+        "ucore"
+      ]
+    },
+    {
+      "id": "phase",
+      "name": "Phase",
+      "description": "Dimension 'phase' within the 12 quantum dimensions axis.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "phase"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "philosophy",
+      "name": "Philosophy",
+      "description": "The study of fundamental questions about existence, knowledge, values, and meaning",
+      "typeId": "codex.concept.domain",
+      "level": 3,
+      "keywords": [
+        "philosophy",
+        "wisdom",
+        "ethics",
+        "metaphysics",
+        "logic"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "ethics",
+        "metaphysics",
+        "epistemology",
+        "aesthetics"
+      ],
+      "axes": [
+        "epistemological",
+        "rational"
+      ]
+    },
+    {
+      "id": "physical-fitness",
+      "name": "Physical Fitness",
+      "description": "The state of health and well-being achieved through physical activity, proper nutrition, and adequate rest.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "fitness",
+        "exercise",
+        "physical",
+        "health",
+        "wellness",
+        "training",
+        "strength"
+      ],
+      "parentConcepts": [
+        "health"
+      ],
+      "childConcepts": [
+        "exercise-science",
+        "athletic-training",
+        "kinesiology"
+      ],
+      "axes": [
+        "physiological",
+        "wellness",
+        "embodied",
+        "ucore"
+      ]
+    },
+    {
+      "id": "physical-space",
+      "name": "Physical Space",
+      "description": "The three-dimensional space in which physical objects exist and move.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "physical-space",
+        "material-space",
+        "real-space"
+      ],
+      "parentConcepts": [
+        "place"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spatial",
+        "physical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "physics",
+      "name": "Physics",
+      "description": "The branch of science concerned with the nature and properties of matter and energy.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "physics",
+        "physical",
+        "matter",
+        "energy"
+      ],
+      "parentConcepts": [
+        "science"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "epistemological",
+        "empirical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "place",
+      "name": "Place",
+      "description": "Fundamental U-Core concept - locations or spatial contexts",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "place",
+        "location",
+        "space",
+        "environment",
+        "context"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "physical-space",
+        "virtual-space",
+        "mental-space"
+      ],
+      "axes": [
+        "spatial",
+        "contextual",
+        "ucore"
+      ]
+    },
+    {
+      "id": "plane",
+      "name": "Plane",
+      "description": "Two-dimensional flat manifold extending in length and width; in 'quantum_dimensions', a surface basis.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "plane"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "plasma",
+      "name": "Plasma",
+      "description": "Ionized, electrically conductive state of matter with collective electromagnetic behavior; contextualized in 'water_states' as energized states.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "plasma",
+        "ionized"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "point",
+      "name": "Point",
+      "description": "Abstract zero-dimensional location without extent; in 'quantum_dimensions', a foundational geometric unit.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "point"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "politics",
+      "name": "Politics",
+      "description": "The activities associated with governance, policy-making, and the organization of society through systems of power and authority.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "politics",
+        "government",
+        "governance",
+        "policy",
+        "power",
+        "society",
+        "democracy"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "democracy",
+        "governance",
+        "political-theory",
+        "public-policy"
+      ],
+      "axes": [
+        "social",
+        "ethical",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "present",
+      "name": "Present",
+      "description": "The current moment in time; the time that is happening now.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "present",
+        "now",
+        "current",
+        "contemporary"
+      ],
+      "parentConcepts": [
+        "time"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "temporal",
+        "chronological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "probability",
+      "name": "Probability",
+      "description": "Measure of likelihood on [0,1] governing uncertainty; in 'quantum_dimensions', reflects probabilistic amplitudes.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "probability"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "process",
+      "name": "Process",
+      "description": "A series of actions or steps taken to achieve a particular end.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "process",
+        "procedure",
+        "method",
+        "workflow"
+      ],
+      "parentConcepts": [
+        "technology"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "technological",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "programming-language",
+      "name": "Programming Language",
+      "description": "A formal language comprising a set of instructions used to produce software.",
+      "typeId": "codex.concept.domain",
+      "level": 3,
+      "keywords": [
+        "language",
+        "programming",
+        "syntax",
+        "semantics"
+      ],
+      "parentConcepts": [
+        "software"
+      ],
+      "childConcepts": [
+        "csharp",
+        "javascript",
+        "python"
+      ],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "property",
+      "name": "Property",
+      "description": "A member that provides controlled access to data through accessors.",
+      "typeId": "codex.concept.type",
+      "level": 3,
+      "keywords": [
+        "property",
+        "accessor",
+        "getter",
+        "setter"
+      ],
+      "parentConcepts": [
+        "class",
+        "record",
+        "interface"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "psychology-domain",
+      "name": "Psychology",
+      "description": "The scientific study of mind and behavior, including cognition, emotion, perception, personality, and interpersonal relationships.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "psychology",
+        "mind",
+        "behavior",
+        "cognition",
+        "emotion",
+        "mental",
+        "society"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "cognitive-psychology",
+        "social-psychology",
+        "developmental-psychology",
+        "clinical-psychology"
+      ],
+      "axes": [
+        "psychological",
+        "cognitive",
+        "social",
+        "ucore"
+      ]
+    },
+    {
+      "id": "python",
+      "name": "Python",
+      "description": "A high-level, interpreted programming language known for its simplicity and readability.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "python",
+        "programming",
+        "interpreted",
+        "readable"
+      ],
+      "parentConcepts": [
+        "programming-language"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "technological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "quantum_coherent",
+      "name": "Quantum Coherent",
+      "description": "Regime where quantum phases remain correlated across a system; in 'water_states', denotes proposed coherent water domains.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "quantum",
+        "coherent"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "record",
+      "name": "Record",
+      "description": "A primarily data-centric type with value semantics.",
+      "typeId": "codex.concept.type",
+      "level": 2,
+      "keywords": [
+        "record",
+        "value"
+      ],
+      "parentConcepts": [
+        "meta-type"
+      ],
+      "childConcepts": [
+        "field",
+        "property"
+      ],
+      "axes": [
+        "informational"
+      ]
+    },
+    {
+      "id": "religion",
+      "name": "Religion",
+      "description": "A particular system of faith and worship, typically involving belief in a divine being or beings.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "religion",
+        "faith",
+        "worship",
+        "divine"
+      ],
+      "parentConcepts": [
+        "spirituality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spiritual",
+        "transcendent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "resource",
+      "name": "Resource",
+      "description": "Fundamental U-Core concept - means available for use or support",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "resource",
+        "means",
+        "asset",
+        "material",
+        "support"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "knowledge",
+        "energy",
+        "matter",
+        "time",
+        "space"
+      ],
+      "axes": [
+        "material",
+        "instrumental",
+        "ucore"
+      ]
+    },
+    {
+      "id": "return-type",
+      "name": "Return Type",
+      "description": "The data type that a function or method returns when it completes execution.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "return-type",
+        "output",
+        "result",
+        "type"
+      ],
+      "parentConcepts": [
+        "method"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "technological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "role",
+      "name": "Role",
+      "description": "Fundamental U-Core concept - functions or positions in contexts",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "role",
+        "function",
+        "position",
+        "responsibility",
+        "capacity"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "learner",
+        "teacher",
+        "creator",
+        "guardian"
+      ],
+      "axes": [
+        "social",
+        "functional",
+        "ucore"
+      ]
+    },
+    {
+      "id": "rule",
+      "name": "Rule",
+      "description": "Fundamental U-Core concept - principles or guidelines that govern",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "rule",
+        "principle",
+        "law",
+        "guideline",
+        "constraint"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "natural-law",
+        "social-norm",
+        "logical-rule"
+      ],
+      "axes": [
+        "normative",
+        "regulatory",
+        "ucore"
+      ]
+    },
+    {
+      "id": "schema",
+      "name": "Schema",
+      "description": "A structural representation of data, defining the organization and relationships of information.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "schema",
+        "structure",
+        "data",
+        "organization"
+      ],
+      "parentConcepts": [
+        "api"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "science",
+      "name": "Science",
+      "description": "Systematic study of the natural world through observation and experimentation",
+      "typeId": "codex.concept.domain",
+      "level": 3,
+      "keywords": [
+        "science",
+        "research",
+        "experiment",
+        "hypothesis",
+        "theory"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "physics",
+        "chemistry",
+        "biology",
+        "mathematics"
+      ],
+      "axes": [
+        "epistemological",
+        "empirical"
+      ]
+    },
+    {
+      "id": "self-organization",
+      "name": "Self-Organization",
+      "description": "The process by which a system spontaneously organizes itself without external direction.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "self-organization",
+        "spontaneous",
+        "autonomous",
+        "emergent"
+      ],
+      "parentConcepts": [
+        "emergence"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "ucore"
+      ]
+    },
+    {
+      "id": "sierpinski-triangle",
+      "name": "Sierpinski Triangle",
+      "description": "A fractal triangle that demonstrates self-similarity through recursive subdivision. Each smaller triangle contains the same structure as the whole.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "sierpinski",
+        "triangle",
+        "fractal",
+        "recursive",
+        "self-similar"
+      ],
+      "parentConcepts": [
+        "fractal-pattern"
+      ],
+      "childConcepts": [
+        "pascal-triangle",
+        "chaos-game"
+      ],
+      "axes": [
+        "mathematical",
+        "geometric",
+        "ucore"
+      ]
+    },
+    {
+      "id": "social-justice",
+      "name": "Social Justice",
+      "description": "The concept of fair and just relations between individuals and society, including distribution of wealth, opportunities, and privileges.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "social-justice",
+        "equality",
+        "fairness",
+        "rights",
+        "society",
+        "justice",
+        "equity"
+      ],
+      "parentConcepts": [
+        "ethics",
+        "sociology"
+      ],
+      "childConcepts": [
+        "human-rights",
+        "equality",
+        "equity",
+        "social-change"
+      ],
+      "axes": [
+        "social",
+        "ethical",
+        "political",
+        "ucore"
+      ]
+    },
+    {
+      "id": "sociology",
+      "name": "Sociology",
+      "description": "The scientific study of society, including patterns of social relationships, social interaction, and culture.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "sociology",
+        "society",
+        "social",
+        "culture",
+        "relationships",
+        "community",
+        "groups"
+      ],
+      "parentConcepts": [
+        "knowledge"
+      ],
+      "childConcepts": [
+        "social-structures",
+        "institutions",
+        "social-movements",
+        "cultural-norms"
+      ],
+      "axes": [
+        "social",
+        "epistemological",
+        "empirical",
+        "ucore"
+      ]
+    },
+    {
+      "id": "software",
+      "name": "Software",
+      "description": "Executable logical systems engineered using programming languages and tools.",
+      "typeId": "codex.concept.domain",
+      "level": 2,
+      "keywords": [
+        "software",
+        "program",
+        "code",
+        "application"
+      ],
+      "parentConcepts": [
+        "technology",
+        "knowledge"
+      ],
+      "childConcepts": [
+        "programming-language",
+        "software-system",
+        "library",
+        "framework"
+      ],
+      "axes": [
+        "informational",
+        "relational",
+        "emergent"
+      ]
+    },
+    {
+      "id": "software-system",
+      "name": "Software System",
+      "description": "A collection of software components that work together to provide functionality.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "software-system",
+        "system",
+        "components",
+        "functionality"
+      ],
+      "parentConcepts": [
+        "software"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "informational",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "space",
+      "name": "Space",
+      "description": "The three-dimensional extent in which objects exist and events occur",
+      "typeId": "codex.concept.fundamental",
+      "level": 1,
+      "keywords": [
+        "space",
+        "dimension",
+        "location",
+        "position",
+        "geometry"
+      ],
+      "parentConcepts": [
+        "existence"
+      ],
+      "childConcepts": [
+        "distance",
+        "volume",
+        "area",
+        "coordinates"
+      ],
+      "axes": [
+        "spatial",
+        "geometric",
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "spiral-dynamics",
+      "name": "Spiral Dynamics",
+      "description": "A model of human development and cultural evolution that follows spiral patterns of increasing complexity and consciousness. Each level transcends and includes the previous.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "spiral",
+        "dynamics",
+        "evolution",
+        "consciousness",
+        "development",
+        "cultural"
+      ],
+      "parentConcepts": [
+        "evolution",
+        "consciousness"
+      ],
+      "childConcepts": [
+        "integral-theory",
+        "developmental-stages",
+        "cultural-evolution"
+      ],
+      "axes": [
+        "evolutionary",
+        "consciousness",
+        "social",
+        "ucore"
+      ]
+    },
+    {
+      "id": "spirituality",
+      "name": "Spirituality",
+      "description": "The search for meaning, purpose, and connection to something greater",
+      "typeId": "codex.concept.domain",
+      "level": 3,
+      "keywords": [
+        "spirituality",
+        "meaning",
+        "purpose",
+        "transcendence",
+        "sacred"
+      ],
+      "parentConcepts": [
+        "consciousness",
+        "philosophy"
+      ],
+      "childConcepts": [
+        "meditation",
+        "contemplation",
+        "mysticism",
+        "religion"
+      ],
+      "axes": [
+        "spiritual",
+        "transcendent"
+      ]
+    },
+    {
+      "id": "structured",
+      "name": "Structured",
+      "description": "State exhibiting ordered micro-structure or long-range correlations; in 'water_states', denotes hypothesized structured water regimes.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "structured",
+        "ordered"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "supercritical",
+      "name": "Supercritical",
+      "description": "Fluid state above critical temperature and pressure with blended liquid-gas properties; in 'water_states', denotes supercritical water.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "supercritical"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "system",
+      "name": "System",
+      "description": "A set of interconnected components that work together to achieve a common purpose.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "system",
+        "network",
+        "structure",
+        "framework"
+      ],
+      "parentConcepts": [
+        "agent"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "relational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "teacher",
+      "name": "Teacher",
+      "description": "One who teaches or instructs others in knowledge, skills, or understanding.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "teacher",
+        "instructor",
+        "educator",
+        "mentor"
+      ],
+      "parentConcepts": [
+        "role"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "educational",
+        "social",
+        "ucore"
+      ]
+    },
+    {
+      "id": "technology",
+      "name": "Technology",
+      "description": "Application of scientific knowledge for practical purposes",
+      "typeId": "codex.concept.domain",
+      "level": 3,
+      "keywords": [
+        "technology",
+        "innovation",
+        "engineering",
+        "tools",
+        "systems"
+      ],
+      "parentConcepts": [
+        "knowledge",
+        "science"
+      ],
+      "childConcepts": [
+        "computing",
+        "artificial-intelligence",
+        "robotics",
+        "biotechnology"
+      ],
+      "axes": [
+        "informational",
+        "relational"
+      ]
+    },
+    {
+      "id": "thermal",
+      "name": "Thermal",
+      "description": "Relating to heat or temperature; thermal energy is the internal energy of a system due to its temperature.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "thermal",
+        "heat",
+        "temperature",
+        "thermodynamic"
+      ],
+      "parentConcepts": [
+        "energy"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "energetic",
+        "dynamic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "thought",
+      "name": "Thought",
+      "description": "The process of thinking or the product of thinking; mental activity.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "thought",
+        "thinking",
+        "cognition",
+        "mental"
+      ],
+      "parentConcepts": [
+        "consciousness"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "cognitive",
+        "phenomenological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "time",
+      "name": "Time",
+      "description": "Fundamental U-Core concept - temporal dimension and duration",
+      "typeId": "codex.ucore.base",
+      "level": 0,
+      "keywords": [
+        "time",
+        "temporal",
+        "duration",
+        "sequence",
+        "moment"
+      ],
+      "parentConcepts": [
+        "entity"
+      ],
+      "childConcepts": [
+        "past",
+        "present",
+        "future",
+        "eternity"
+      ],
+      "axes": [
+        "temporal",
+        "chronological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "trade",
+      "name": "Trade",
+      "description": "The exchange of goods and services between individuals, businesses, or nations, including domestic and international commerce.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "trade",
+        "commerce",
+        "business",
+        "exchange",
+        "economics",
+        "import",
+        "export"
+      ],
+      "parentConcepts": [
+        "economics"
+      ],
+      "childConcepts": [
+        "international-trade",
+        "domestic-trade",
+        "e-commerce",
+        "supply-chain"
+      ],
+      "axes": [
+        "economic",
+        "relational",
+        "systemic",
+        "ucore"
+      ]
+    },
+    {
+      "id": "transforming",
+      "name": "Transforming",
+      "description": "The process of changing the form, nature, or structure of something.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "transforming",
+        "change",
+        "conversion",
+        "metamorphosis"
+      ],
+      "parentConcepts": [
+        "activity"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "temporal",
+        "causal",
+        "ucore"
+      ]
+    },
+    {
+      "id": "type-codex.axis.universal",
+      "name": "Axis Type: codex.axis.universal",
+      "description": "General type concept that classifies ontology axis nodes as universal axes; used by meta/type mappings and axis typing.",
+      "typeId": "codex.concept.type",
+      "level": 2,
+      "keywords": [
+        "codex.axis.universal",
+        "axis",
+        "type"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states",
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "understanding",
+      "name": "Understanding",
+      "description": "The ability to understand something; comprehension; the ability to grasp the meaning of something.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "understanding",
+        "comprehension",
+        "grasp",
+        "insight"
+      ],
+      "parentConcepts": [
+        "information"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "cognitive",
+        "informational",
+        "ucore"
+      ]
+    },
+    {
+      "id": "unity",
+      "name": "Unity",
+      "description": "State or principle of oneness and indivisibility; in 'quantum_dimensions', a limit of maximal coherence/symmetry.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "unity",
+        "oneness"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "quantum_dimensions"
+      ]
+    },
+    {
+      "id": "universal-mind",
+      "name": "Universal Mind",
+      "description": "The concept that all individual minds are part of a larger, universal consciousness that contains all information holographically. Each mind reflects the whole.",
+      "typeId": "codex.ucore.base",
+      "level": 2,
+      "keywords": [
+        "universal",
+        "mind",
+        "consciousness",
+        "collective",
+        "holographic",
+        "unity"
+      ],
+      "parentConcepts": [
+        "consciousness-hologram",
+        "consciousness"
+      ],
+      "childConcepts": [
+        "akashic-records",
+        "collective-unconscious",
+        "noosphere"
+      ],
+      "axes": [
+        "consciousness",
+        "metaphysical",
+        "spiritual",
+        "ucore"
+      ]
+    },
+    {
+      "id": "vapor",
+      "name": "Vapor",
+      "description": "Gaseous phase of a substance below critical temperature; in the 'water_states' axis, denotes water in vapor form.",
+      "typeId": "codex.concept.dimension",
+      "level": 3,
+      "keywords": [
+        "vapor",
+        "gas"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [],
+      "axes": [
+        "water_states"
+      ]
+    },
+    {
+      "id": "virtual-space",
+      "name": "Virtual Space",
+      "description": "A computer-simulated environment that can be experienced through digital interfaces.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "virtual-space",
+        "digital-space",
+        "cyberspace"
+      ],
+      "parentConcepts": [
+        "place"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spatial",
+        "digital",
+        "ucore"
+      ]
+    },
+    {
+      "id": "vision",
+      "name": "Vision",
+      "description": "A mental image of what the future could or should be like; a long-term goal or aspiration.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "vision",
+        "goal",
+        "aspiration",
+        "dream"
+      ],
+      "parentConcepts": [
+        "intent"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "intentional",
+        "teleological",
+        "ucore"
+      ]
+    },
+    {
+      "id": "visual-arts",
+      "name": "Visual Arts",
+      "description": "Art forms that create works primarily visual in nature, such as painting, sculpture, photography, and graphic design.",
+      "typeId": "codex.concept.domain",
+      "level": 1,
+      "keywords": [
+        "visual-arts",
+        "painting",
+        "sculpture",
+        "photography",
+        "art",
+        "design",
+        "creativity"
+      ],
+      "parentConcepts": [
+        "art"
+      ],
+      "childConcepts": [
+        "painting",
+        "sculpture",
+        "photography",
+        "graphic-design"
+      ],
+      "axes": [
+        "aesthetic",
+        "creative",
+        "spatial",
+        "ucore"
+      ]
+    },
+    {
+      "id": "volume",
+      "name": "Volume",
+      "description": "The amount of space that a substance or object occupies, or that is enclosed within a container.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "volume",
+        "capacity",
+        "space",
+        "three-dimensional"
+      ],
+      "parentConcepts": [
+        "space"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "spatial",
+        "geometric",
+        "ucore"
+      ]
+    },
+    {
+      "id": "wisdom",
+      "name": "Wisdom",
+      "description": "The quality of having experience, knowledge, and good judgment; the quality of being wise.",
+      "typeId": "codex.ucore.base",
+      "level": 1,
+      "keywords": [
+        "wisdom",
+        "wise",
+        "judgment",
+        "insight"
+      ],
+      "parentConcepts": [
+        "information"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "cognitive",
+        "informational",
+        "ucore"
+      ]
+    }
+  ]
+}
