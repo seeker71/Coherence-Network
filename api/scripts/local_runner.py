@@ -1595,22 +1595,37 @@ def execute_with_provider(
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
             from app.services.slot_selection_service import SlotSelector
-            # Store selected model in spec for post-task recording
             spec["_selected_model"] = model
             spec["_model_tier"] = complexity
         except Exception:
             pass
 
     if spec.get("stdin_prompt"):
-        # ollama-style: prompt via stdin
         stdin_input = prompt
     elif spec.get("append_prompt"):
         cmd.append(prompt)
 
+    # Use ProviderWrapper for process-level control (checkpoint, steer, abort)
+    control_dir = Path(os.environ.get("CC_TASK_WORKDIR", str(_REPO_DIR)))
+    try:
+        from provider_wrapper import ProviderWrapper
+        wrapper = ProviderWrapper(
+            cmd=cmd,
+            cwd=str(_REPO_DIR),
+            timeout=timeout,
+            control_dir=control_dir,
+            stdin_input=stdin_input,
+        )
+        log.info("WRAPPER executing %s (timeout=%ds)", provider, timeout)
+        return wrapper.run()
+    except ImportError:
+        pass  # wrapper not available — fall back to raw subprocess
+    except Exception as e:
+        log.warning("WRAPPER failed (falling back to raw subprocess): %s", e)
+
+    # Fallback: raw subprocess (original behavior)
     start = time.time()
 
-    # On Windows, .CMD scripts spawn child processes that survive subprocess.run timeout.
-    # Use Popen with CREATE_NEW_PROCESS_GROUP so we can kill the entire tree.
     creation_flags = 0
     if sys.platform == "win32":
         creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
