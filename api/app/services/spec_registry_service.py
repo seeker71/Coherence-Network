@@ -268,7 +268,17 @@ def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry | N
         val = getattr(data, field, None)
         if val is not None:
             updates[field] = float(val) if field.endswith("_value") or field.endswith("_cost") else val
-    updated = graph_service.update_node(node_id, **updates)
+    # Separate top-level node fields from properties
+    node_updates = {}
+    prop_updates = {}
+    for k, v in updates.items():
+        if k in ("name", "description", "phase"):
+            node_updates[k] = v
+        else:
+            prop_updates[k] = v
+    if prop_updates:
+        node_updates["properties"] = prop_updates
+    updated = graph_service.update_node(node_id, **node_updates)
     _invalidate_spec_cache()
     return _graph_node_to_spec(updated) if updated else None
 
