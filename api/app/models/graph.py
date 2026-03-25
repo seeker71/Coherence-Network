@@ -28,7 +28,17 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import JSON as _JSON
+
+try:
+    from sqlalchemy.dialects.postgresql import JSONB
+except ImportError:
+    JSONB = _JSON  # type: ignore[misc,assignment]
+
+# Use JSONB on PostgreSQL (indexable), plain JSON on SQLite (tests)
+import os as _os
+
+_PortableJSON = JSONB if "postgresql" in _os.environ.get("DATABASE_URL", "") else _JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.services.unified_db import Base
@@ -70,7 +80,7 @@ class Node(Base):
     type: Mapped[str] = mapped_column(String(50), nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False, default="")
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    properties: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    properties: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict)
     phase: Mapped[str] = mapped_column(
         String(20), nullable=False, default="water",
     )
@@ -121,7 +131,7 @@ class Edge(Base):
     from_id: Mapped[str] = mapped_column(String(255), nullable=False)
     to_id: Mapped[str] = mapped_column(String(255), nullable=False)
     type: Mapped[str] = mapped_column(String(100), nullable=False)
-    properties: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    properties: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict)
     strength: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     created_by: Mapped[str] = mapped_column(String(255), nullable=False, default="system")
     created_at: Mapped[datetime] = mapped_column(

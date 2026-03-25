@@ -129,10 +129,32 @@ def seeded_db(tmp_path: Path) -> None:
     unified_db.ensure_schema()
 
     try:
+        from app.services import graph_service
+        # Seed a minimal test idea into graph_nodes
+        if not graph_service.get_node("test-idea-001"):
+            graph_service.create_node(
+                id="test-idea-001", type="idea",
+                name="Test Idea",
+                description="A test idea for automated tests",
+                phase="gas",
+                properties={
+                    "potential_value": 100.0,
+                    "estimated_cost": 10.0,
+                    "actual_value": 0.0,
+                    "actual_cost": 0.0,
+                    "confidence": 0.5,
+                    "manifestation_status": "none",
+                    "stage": "none",
+                    "idea_type": "standalone",
+                    "interfaces": [],
+                    "open_questions": [],
+                },
+            )
+        # Also try the old seed path as fallback
         REPO_ROOT = Path(__file__).resolve().parents[2]
         if str(REPO_ROOT) not in sys.path:
             sys.path.insert(0, str(REPO_ROOT))
         from scripts import seed_db
         seed_db.seed_ideas()
     except Exception as e:
-        print(f"Warning: failed to seed test database: {e}")
+        print(f"Warning: seeded_db fallback: {e}")
