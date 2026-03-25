@@ -297,3 +297,30 @@ export async function smoke() {
   console.log(`  ${G}Smoke test complete${R}`);
   console.log();
 }
+
+
+// ── cc dif feedback ────────────────────────────────────────────────
+
+export async function showFeedback(args) {
+  const { get } = await import("../api.mjs");
+  const data = await get("/api/graph/dif/feedback/stats");
+  if (!data) { console.log("  Could not fetch DIF feedback stats"); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", Y = "\x1b[33m", RED = "\x1b[31m";
+
+  console.log(`\n${B}  DIF FEEDBACK STATS${R}`);
+  console.log(`  ${"─".repeat(50)}`);
+  console.log(`  Total verifications: ${data.total || 0}`);
+  console.log(`  True positives:      ${G}${data.true_positives || 0}${R}`);
+  console.log(`  False positives:     ${Y}${data.false_positives || 0}${R}`);
+  console.log(`  True negatives:      ${G}${data.true_negatives || 0}${R}`);
+  console.log(`  FP rate:             ${data.false_positive_rate || 0}`);
+  console.log(`  Accuracy:            ${data.accuracy || 0}`);
+  if (data.by_language) {
+    console.log(`  By language:         ${JSON.stringify(data.by_language)}`);
+  }
+  if (data.by_trust_signal) {
+    console.log(`  By trust signal:     ${JSON.stringify(data.by_trust_signal)}`);
+  }
+  console.log();
+}

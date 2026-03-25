@@ -35,6 +35,7 @@ import {
   keyList as difKeyList, keyCreate as difKeyCreate, keyRevoke as difKeyRevoke,
   keyRotate as difKeyRotate, keyUpdate as difKeyUpdate, keyUse as difKeyUse, keyShow as difKeyShow,
   showUsage as difUsage, showLimits as difLimits, showFunding as difFunding,
+  showFeedback as difFeedback,
 } from "../lib/commands/dif.mjs";
 
 const [command, ...args] = process.argv.slice(2);
@@ -207,8 +208,9 @@ async function handleDif(args) {
     case "whoami":  return difWhoami();
     case "usage":   return difUsage(subArgs);
     case "limits":  return difLimits();
-    case "funding": return difFunding();
-    default:        return difConfig();
+    case "funding":  return difFunding();
+    case "feedback": return difFeedback(subArgs);
+    default:         return difConfig();
   }
 }
 
