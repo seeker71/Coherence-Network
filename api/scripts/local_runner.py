@@ -722,11 +722,15 @@ def get_openrouter_free_model_stats() -> dict:
 
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
-_PHASE_SEQUENCE = ("spec", "impl", "test", "review")
+_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "deploy", "verify")
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
-    "test": "review",
+    "test": "code-review",
+    "code-review": "deploy",
+    "deploy": "verify",
+    "verify": None,
+    # Backward compat: old "review" tasks map to code-review
     "review": None,
 }
 
@@ -1168,35 +1172,49 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
 
         # Phase-specific direction with quality requirements
-        if next_phase == "review":
+        if next_phase == "code-review":
             direction = (
-                f"Review and verify '{idea_name}' ({idea_id}).\n\n"
-                f"Description: {idea_desc[:500]}\n\n"
-                f"REVIEW INSTRUCTIONS:\n"
-                f"You are the final gate before this idea is marked as DONE.\n"
-                f"Think of yourself as the person who decides whether to PAY for this work.\n\n"
-                f"1. Find the spec for this idea (check specs/ directory or task history)\n"
-                f"2. Find the 'Verification Scenarios' section in the spec\n"
-                f"3. RUN each verification scenario against PRODUCTION:\n"
-                f"   - API: curl https://api.coherencycoin.com/...\n"
-                f"   - Web: check https://coherencycoin.com/...\n"
-                f"   - CLI: run cc <command>\n"
-                f"4. For EACH scenario, report:\n"
-                f"   - PASS: the exact output matched expectations\n"
-                f"   - FAIL: what was expected vs what actually happened\n\n"
-                f"If the spec has no verification scenarios, output REVIEW_FAILED:\n"
-                f"  'Spec missing verification scenarios — cannot verify without test criteria'\n\n"
-                f"If ANY verification scenario fails, output REVIEW_FAILED with:\n"
-                f"  - Which scenario failed\n"
-                f"  - Expected output\n"
-                f"  - Actual output\n"
-                f"  - Suggested fix\n\n"
-                f"If ALL scenarios pass, output REVIEW_PASSED with:\n"
-                f"  - Each scenario and its actual output as evidence\n"
-                f"  - Confirmation that the feature works on production\n\n"
-                f"Do NOT pass a review based on code reading alone.\n"
-                f"Do NOT pass a review if you cannot run the verification scenarios.\n"
-                f"Do NOT pass a review if endpoints return 404 or 500."
+                f"Code review for '{idea_name}' ({idea_id}).\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"Review the implementation code for:\n"
+                f"1. Does the code match the spec requirements?\n"
+                f"2. Are there tests and do they cover the key scenarios?\n"
+                f"3. Code quality: no obvious bugs, proper error handling, follows project conventions\n"
+                f"4. Files are in the right locations per CLAUDE.md\n\n"
+                f"Do NOT check production deployment — that's a separate phase.\n"
+                f"Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED with specific issues."
+            )
+        elif next_phase == "deploy":
+            direction = (
+                f"Deploy '{idea_name}' ({idea_id}) to production.\n\n"
+                f"1. Verify code is committed and pushed to main\n"
+                f"2. Run: cc deploy (or SSH deploy if cc deploy unavailable)\n"
+                f"3. Verify health check passes: curl https://api.coherencycoin.com/api/health\n"
+                f"4. If deploy fails, report DEPLOY_FAILED with the error\n"
+                f"5. If health check fails after deploy, report DEPLOY_FAILED — rollback needed\n\n"
+                f"Output DEPLOY_PASSED with the deployed SHA or DEPLOY_FAILED with error details."
+            )
+        elif next_phase == "verify":
+            direction = (
+                f"Verify '{idea_name}' ({idea_id}) works on production.\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"Run the spec's verification scenarios against PRODUCTION:\n"
+                f"  - API: curl https://api.coherencycoin.com/...\n"
+                f"  - Web: check https://coherencycoin.com/...\n"
+                f"  - CLI: run cc <command>\n\n"
+                f"For EACH scenario report PASS or FAIL with actual output.\n"
+                f"If ANY scenario fails, output VERIFY_FAILED with details.\n"
+                f"If ALL pass, output VERIFY_PASSED with evidence.\n\n"
+                f"If the feature is publicly broken (404, 500, wrong data),\n"
+                f"this is a HOTFIX priority — note what needs immediate fixing."
+            )
+        elif next_phase == "review":
+            # Legacy — treat as code-review
+            direction = (
+                f"Code review for '{idea_name}' ({idea_id}).\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"Review the implementation for correctness and completeness.\n"
+                f"Output REVIEW_PASSED or REVIEW_FAILED with specific issues."
             )
         elif next_phase == "test":
             direction = (
@@ -1246,7 +1264,10 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
     if next_phase is None:
         # All phases should be complete — verify before marking validated
         # ALSO verify that completed tasks had meaningful output (not empty)
-        required_phases = {"spec", "test", "impl", "review"}
+        # Accept either old (review) or new (code-review + deploy + verify) phase set
+        required_phases = {"spec", "test", "impl"}
+        # Need at least one of: review, code-review, or verify
+        review_phases = {"review", "code-review", "verify"}
         idea_tasks_check = api("GET", f"/api/ideas/{idea_id}/tasks")
         completed_phases = set()
         empty_phases = set()
@@ -1281,7 +1302,8 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         log.info("VALIDATION_GATE idea=%s completed_phases=%s empty_phases=%s failed_phases=%s",
                  idea_id, sorted(completed_phases), sorted(empty_phases), sorted(failed_phases))
         missing = required_phases - completed_phases
-        if missing:
+        has_review = bool(completed_phases & review_phases)
+        if missing or not has_review:
             log.warning(
                 "VALIDATION_GATE idea=%s blocked: missing phases %s (completed: %s)",
                 idea_id, sorted(missing), sorted(completed_phases),
