@@ -129,3 +129,94 @@ export async function showDiagVisibility() {
   }
   console.log();
 }
+
+/**
+ * cc diag live [node_id] — subscribe to real-time diagnostic events from agents.
+ *
+ * Shows: heartbeat, tool usage, reasoning steps, cc ingress/egress, messages.
+ * Use node_id='*' or omit to see all nodes.
+ */
+export async function showDiagLive(args) {
+  const API_BASE = process.env.COHERENCE_API_URL || "https://api.coherencycoin.com";
+  const nodeId = args[0] || "*";
+
+  console.log(`\x1b[1m  DIAGNOSTIC STREAM\x1b[0m`);
+  console.log(`  ${"─".repeat(50)}`);
+  console.log(`  Subscribing to: ${nodeId === "*" ? "all nodes" : nodeId}`);
+  console.log(`  Press Ctrl+C to stop`);
+  console.log();
+
+  const url = `${API_BASE}/api/federation/nodes/${encodeURIComponent(nodeId)}/diag/stream`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "text/event-stream" },
+      signal: AbortSignal.timeout(3600000),
+    });
+
+    if (!response.ok) {
+      console.log(`\x1b[31m✗\x1b[0m HTTP ${response.status}`);
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const event = JSON.parse(line.slice(6));
+          formatDiagEvent(event);
+        } catch {}
+      }
+    }
+  } catch (e) {
+    if (e.name !== "AbortError") {
+      console.log(`\x1b[31m✗\x1b[0m ${e.message}`);
+    }
+  }
+}
+
+function formatDiagEvent(e) {
+  const ts = new Date(e.timestamp || Date.now()).toLocaleTimeString();
+  const node = (e.node_id || "?").slice(0, 8);
+  const type = e.event || e.type || e.event_type || "?";
+
+  const colors = {
+    heartbeat: "\x1b[32m",    // green
+    tool_call: "\x1b[36m",    // cyan
+    tool_result: "\x1b[36m",
+    reasoning: "\x1b[33m",    // yellow
+    cc_cmd: "\x1b[35m",       // magenta
+    cc_msg: "\x1b[35m",
+    msg_received: "\x1b[34m", // blue
+    msg_sent: "\x1b[34m",
+    started: "\x1b[1m",       // bold
+    finished: "\x1b[1m",
+    error: "\x1b[31m",        // red
+    checkpoint: "\x1b[32m",
+    subscribed: "\x1b[2m",    // dim
+  };
+  const color = colors[type] || "\x1b[2m";
+  const reset = "\x1b[0m";
+
+  let detail = "";
+  if (e.tool) detail = ` ${e.tool}`;
+  if (e.text) detail = ` ${e.text.slice(0, 80)}`;
+  if (e.message) detail = ` ${e.message.slice(0, 80)}`;
+  if (e.step) detail = ` step ${e.step}`;
+  if (e.command) detail = ` ${e.command}`;
+  if (e.direction) detail = ` → ${e.direction.slice(0, 60)}`;
+  if (e.output_lines) detail += ` (${e.output_lines} lines)`;
+
+  console.log(`  ${color}${type.padEnd(14)}${reset} \x1b[2m${ts}\x1b[0m \x1b[2m[${node}]\x1b[0m${detail}`);
+}
