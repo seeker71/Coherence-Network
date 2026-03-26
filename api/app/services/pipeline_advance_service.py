@@ -26,6 +26,31 @@ log = logging.getLogger(__name__)
 
 _MAX_RETRIES = 2
 
+import re
+
+def _sanitize_partial_output(output: str) -> str:
+    """Remove machine-specific paths and references from partial output.
+
+    Partial work must be self-contained — a different node or fresh worktree
+    should be able to use it without referencing the original filesystem.
+    """
+    if not output:
+        return output
+    # Remove absolute paths to worktrees, home dirs, tmp dirs
+    output = re.sub(r'/Users/[^\s/]+/[^\s]*\.worktrees/task-[^\s/]*/', '', output)
+    output = re.sub(r'/Users/[^\s/]+/source/Coherence-Network/', '', output)
+    output = re.sub(r'C:\\[^\s]*\\Coherence-Network\\', '', output)
+    output = re.sub(r'/home/[^\s/]+/[^\s]*/', '', output)
+    output = re.sub(r'/tmp/[^\s]*', '/tmp/...', output)
+    output = re.sub(r'/private/tmp/[^\s]*', '/tmp/...', output)
+    # Remove PID references
+    output = re.sub(r'pid[=:]\s*\d{3,}', 'pid=...', output, flags=re.IGNORECASE)
+    # Remove docker container IDs
+    output = re.sub(r'[a-f0-9]{12,64}(?=\s|$|\.)', '...', output)
+    # Collapse multiple blank lines
+    output = re.sub(r'\n{3,}', '\n\n', output)
+    return output.strip()
+
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
@@ -318,17 +343,17 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
     # Reuse the original direction, enriched with partial output
     direction = task.get("direction", "")
     failed_provider = task.get("model", "") or context.get("provider", "")
-    partial_output = (task.get("output") or "").strip()
+    partial_output = _sanitize_partial_output((task.get("output") or "").strip())
 
     if partial_output and len(partial_output) > 20:
-        # Carry partial work forward so the retry doesn't start from scratch
         direction = (
             f"{direction}\n\n"
-            f"--- PARTIAL WORK FROM PREVIOUS ATTEMPT (timed out) ---\n"
+            f"--- PARTIAL WORK FROM PREVIOUS ATTEMPT ---\n"
             f"{partial_output[:3000]}\n"
             f"--- END PARTIAL WORK ---\n\n"
-            f"Continue from the partial work above. Do not start over — "
-            f"pick up where the previous attempt left off and complete the task."
+            f"Continue from the partial work above. Do not start over.\n"
+            f"NOTE: Any file paths from the previous attempt may be invalid. "
+            f"Use paths relative to the repo root (e.g. api/app/..., web/app/..., specs/...)."
         )
 
     task_type_enum = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
