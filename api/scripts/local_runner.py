@@ -2694,21 +2694,52 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
     """
     command = payload.get("command", "").strip().lower()
 
-    if command == "update":
-        # Git pull and report what changed
+    if command in ("update", "checkout-main"):
+        # Switch to main and pull latest — handles nodes stuck on worktree branches
         try:
-            result = subprocess.run(
-                ["git", "pull", "origin", "main"],
-                capture_output=True, text=True, timeout=60,
-                cwd=str(_REPO_DIR),
+            steps = []
+            # First: stash any local changes
+            stash = subprocess.run(
+                ["git", "stash"], capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
             )
-            output = (result.stdout + result.stderr).strip()
-            if result.returncode == 0:
-                log.info("CMD_UPDATE: success -- %s", output[:200])
-                return f"Update successful: {output[:300]}"
+            if "Saved" in stash.stdout:
+                steps.append("stashed local changes")
+            # Switch to main if not already there
+            branch = subprocess.run(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+                capture_output=True, text=True, timeout=5, cwd=str(_REPO_DIR),
+            ).stdout.strip()
+            if branch != "main":
+                checkout = subprocess.run(
+                    ["git", "checkout", "main"],
+                    capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
+                )
+                if checkout.returncode == 0:
+                    steps.append(f"switched from {branch} to main")
+                else:
+                    return f"Checkout main failed: {checkout.stderr.strip()[:200]}"
+            # Pull latest
+            pull = subprocess.run(
+                ["git", "pull", "origin", "main", "--ff-only"],
+                capture_output=True, text=True, timeout=60, cwd=str(_REPO_DIR),
+            )
+            if pull.returncode != 0:
+                # Try reset if ff-only fails
+                subprocess.run(
+                    ["git", "reset", "--hard", "origin/main"],
+                    capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
+                )
+                steps.append("reset to origin/main (ff-only failed)")
             else:
-                log.warning("CMD_UPDATE: failed -- %s", output[:200])
-                return f"Update failed (exit {result.returncode}): {output[:300]}"
+                steps.append("pulled latest main")
+            new_sha = subprocess.run(
+                ["git", "rev-parse", "--short", "HEAD"],
+                capture_output=True, text=True, timeout=5, cwd=str(_REPO_DIR),
+            ).stdout.strip()
+            steps.append(f"now at {new_sha}")
+            summary = " → ".join(steps)
+            log.info("CMD_UPDATE: %s", summary)
+            return f"Update successful: {summary}"
         except Exception as e:
             return f"Update error: {e}"
 
@@ -3377,6 +3408,27 @@ def _check_for_updates_and_restart() -> bool:
                 cwd=str(_REPO_DIR),
             )
 
+        # Ensure we're on main — worktree branches can't ff-only pull main
+        current_branch = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+            cwd=str(_REPO_DIR),
+        ).stdout.strip()
+        if current_branch != "main":
+            log.info("SELF-UPDATE: on branch '%s', switching to main first", current_branch)
+            checkout = subprocess.run(
+                ["git", "checkout", "main"],
+                capture_output=True, text=True, timeout=15,
+                cwd=str(_REPO_DIR),
+            )
+            if checkout.returncode != 0:
+                log.warning("SELF-UPDATE: checkout main failed: %s — trying reset", checkout.stderr.strip())
+                subprocess.run(
+                    ["git", "checkout", "-B", "main", "origin/main"],
+                    capture_output=True, text=True, timeout=15,
+                    cwd=str(_REPO_DIR),
+                )
+
         # Pull latest
         pull = subprocess.run(
             ["git", "pull", "origin", "main", "--ff-only"],
@@ -3384,8 +3436,13 @@ def _check_for_updates_and_restart() -> bool:
             cwd=str(_REPO_DIR),
         )
         if pull.returncode != 0:
-            log.warning("SELF-UPDATE: git pull failed: %s", pull.stderr.strip())
-            return False
+            # ff-only failed — force reset to origin/main
+            log.warning("SELF-UPDATE: ff-only pull failed, resetting to origin/main")
+            subprocess.run(
+                ["git", "reset", "--hard", "origin/main"],
+                capture_output=True, text=True, timeout=15,
+                cwd=str(_REPO_DIR),
+            )
 
         log.info("SELF-UPDATE: pulled latest → %s. Re-executing runner...", remote_sha[:8])
 
