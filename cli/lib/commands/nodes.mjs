@@ -100,8 +100,15 @@ export async function listNodes() {
     const ago = relativeTime(ageMin);
     const hostName = (node.hostname || "?").slice(0, 24);
     const os = node.os_type || "?";
+    const sha = (node.git_sha || "").slice(0, 7);
+    const shaAge = node.git_sha_updated_at
+      ? relativeTime(Math.floor((now - new Date(node.git_sha_updated_at).getTime()) / 60000))
+      : "";
 
     console.log(`  ${dot} \x1b[1m${hostName.padEnd(26)}\x1b[0m ${ago.padEnd(10)} \x1b[2m${shortId}\x1b[0m  ${os}`);
+    if (sha) {
+      console.log(`    sha \x1b[36m${sha}\x1b[0m${shaAge ? ` (updated ${shaAge})` : ""}`);
+    }
     if (providers.length > 0) {
       console.log(`    ${providers.map(providerBadge).join(" ")}`);
     }
