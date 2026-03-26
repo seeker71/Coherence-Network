@@ -215,6 +215,15 @@ async def update_task(
             if data.output:
                 msg += f"\n\nOutput: {data.output[:200]}"
             background_tasks.add_task(telegram_adapter.send_alert, msg)
+    if data.status == TaskStatus.COMPLETED:
+        # Auto-advance: create next phase task (spec→impl→test→review)
+        try:
+            from app.services import pipeline_advance_service
+            advanced = pipeline_advance_service.maybe_advance(task)
+            if advanced:
+                logger.info("Auto-advanced task %s → %s", task_id, advanced.get("id", "?"))
+        except Exception:
+            logger.warning("Auto-advance failed for task %s", task_id, exc_info=True)
     if data.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
         try:
             from app.services.metrics_service import record_task
