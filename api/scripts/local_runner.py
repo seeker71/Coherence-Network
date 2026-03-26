@@ -2023,13 +2023,32 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                     task_id, provider, task_type,
                 )
             elif new_changes:
-                log.info("VERIFIED task=%s files_changed=%d", task_id, len(new_changes))
-                # Push changes and create PR for impl/test tasks
-                if task_type in ("impl", "test"):
-                    pr_url = _push_and_pr(task, task_id, task_type, provider, new_changes, output)
-                    if pr_url:
-                        output += f"\n\nPR: {pr_url}"
-                        log.info("PR_CREATED task=%s url=%s", task_id, pr_url)
+                # Filter out control/checkpoint files — only count real code
+                code_changes = {c for c in new_changes if not any(
+                    skip in _status_line_path(c) for skip in (
+                        ".task-control", ".task-checkpoint", ".codex", ".tmp", "__pycache__",
+                    )
+                )}
+                if code_changes:
+                    log.info("VERIFIED task=%s code_files=%d total_files=%d", task_id, len(code_changes), len(new_changes))
+                    # Push changes and create PR for impl/test tasks
+                    if task_type in ("impl", "test"):
+                        pr_url = _push_and_pr(task, task_id, task_type, provider, code_changes, output)
+                        if pr_url:
+                            output += f"\n\nPR: {pr_url}"
+                            log.info("PR_CREATED task=%s url=%s files=%d", task_id, pr_url, len(code_changes))
+                else:
+                    # Only control files changed — hollow impl
+                    log.warning(
+                        "HOLLOW_IMPL task=%s — only control files changed (%d), no real code. "
+                        "Provider did not write implementation files.",
+                        task_id, len(new_changes),
+                    )
+                    success = False
+                    output = (
+                        f"Hollow impl: {len(new_changes)} files changed but all are control/checkpoint files. "
+                        f"No actual code written. Provider needs tool access to write files.\n---\n{output}"
+                    )
         except Exception as exc:
             log.warning("VALIDATION_ERROR task=%s error=%s", task_id, exc)
 
