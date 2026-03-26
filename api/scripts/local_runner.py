@@ -202,11 +202,9 @@ def _detect_providers() -> dict[str, dict]:
     """
     providers = {}
     cli_specs = {
-        # claude --print: non-interactive, prints output
+        # claude -p: non-interactive via stdin (not --bare which strips OAuth creds)
         # --dangerously-skip-permissions: bypass all permission checks
-        # --permission-mode bypassPermissions: belt-and-suspenders for auto mode
-        # --bare: skip hooks/LSP/plugins that can cause interactive prompts
-        "claude": {"cmd": ["claude", "--print", "--bare"], "append_prompt": True, "needs_skip_permissions": True, "check": _check_claude_auth},
+        "claude": {"cmd": ["claude", "-p"], "stdin_prompt": True, "needs_skip_permissions": True, "check": _check_claude_auth},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
