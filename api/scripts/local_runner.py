@@ -1746,12 +1746,16 @@ def execute_with_provider(
     if sys.platform == "win32":
         creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
 
+    # On Windows, .CMD/.BAT wrappers (npm-installed CLIs) need shell=True
+    use_shell = sys.platform == "win32" and cmd and str(cmd[0]).lower().endswith((".cmd", ".bat"))
+
     try:
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             stdin=subprocess.PIPE if stdin_input else None,
             text=True, encoding="utf-8", errors="replace",
             cwd=str(_REPO_DIR), creationflags=creation_flags,
+            shell=use_shell,
         )
         try:
             stdout, stderr = proc.communicate(
