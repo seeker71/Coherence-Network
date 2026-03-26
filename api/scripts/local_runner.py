@@ -2965,7 +2965,15 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
         )
         if diff.stdout.strip():
             log.info("WORKTREE_DIFF task=%s files_changed:\n%s", slug, diff.stdout.strip()[:500])
-            return full_diff.stdout[:10000]  # cap at 10KB
+            diff_text = full_diff.stdout[:10000]
+            # Guard: reject destructive diffs (more deletions than additions)
+            add_lines = diff_text.count("\n+") - diff_text.count("\n+++")
+            del_lines = diff_text.count("\n-") - diff_text.count("\n---")
+            if del_lines > add_lines * 3 and del_lines > 50:
+                log.warning("DESTRUCTIVE_DIFF task=%s — +%d -%d lines. Provider deleted more than it added. Rejecting.",
+                            slug, add_lines, del_lines)
+                return ""  # Empty diff = no code produced
+            return diff_text
     except Exception as e:
         log.warning("WORKTREE_DIFF_FAILED task=%s error=%s", slug, e)
     return ""
