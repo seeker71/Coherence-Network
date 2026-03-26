@@ -219,8 +219,12 @@ async def update_task(
             worker_id=data.worker_id,
         )
     except agent_service.TaskClaimConflictError as exc:
-        claimed = exc.claimed_by or "another worker"
-        raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
+        if data.decision:
+            # Decisions bypass claim check — resolves the block regardless of who claimed
+            task = agent_service.update_task(task_id, decision=data.decision, context=context_patch if context_patch else None)
+        else:
+            claimed = exc.claimed_by or "another worker"
+            raise HTTPException(status_code=409, detail=f"Task already claimed by {claimed}") from exc
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     runner_update = is_runner_task_update(
