@@ -46,7 +46,15 @@ def log_activity(task_id: str, event_type: str, data: dict[str, Any]) -> dict[st
         if event_type in ("claimed", "executing", "progress"):
             _ACTIVE_TASKS[task_id] = event
         elif event_type in ("completed", "failed", "timeout"):
-            _ACTIVE_TASKS.pop(task_id, None)
+            # Calculate duration from first event to now
+            prev = _ACTIVE_TASKS.pop(task_id, None)
+            if prev:
+                try:
+                    start_ts = datetime.fromisoformat(prev["timestamp"].replace("Z", "+00:00"))
+                    duration_s = (datetime.now(timezone.utc) - start_ts).total_seconds()
+                    event["data"]["duration_s"] = round(duration_s, 1)
+                except Exception:
+                    pass
 
     return event
 
@@ -74,7 +82,43 @@ def get_task_stream(task_id: str) -> list[dict[str, Any]]:
         return list(_TASK_STREAMS.get(task_id, []))
 
 
+_ACTIVE_TTL_SECONDS = 900  # 15 min — if no update in this window, task is stale
+
+
 def get_active_tasks() -> list[dict[str, Any]]:
-    """Get currently executing tasks across all nodes."""
+    """Get currently executing tasks across all nodes.
+
+    Filters out stale entries (no heartbeat in _ACTIVE_TTL_SECONDS).
+    Enriches with idea_id/idea_name from the task store.
+    """
+    now = datetime.now(timezone.utc)
     with _LOCK:
-        return list(_ACTIVE_TASKS.values())
+        active = []
+        stale_ids = []
+        for task_id, event in _ACTIVE_TASKS.items():
+            try:
+                ts = datetime.fromisoformat(event["timestamp"].replace("Z", "+00:00"))
+                age = (now - ts).total_seconds()
+                if age > _ACTIVE_TTL_SECONDS:
+                    stale_ids.append(task_id)
+                    continue
+            except Exception:
+                pass
+            active.append(dict(event))
+        for stale_id in stale_ids:
+            _ACTIVE_TASKS.pop(stale_id, None)
+
+    # Enrich with idea context from task store
+    try:
+        from app.services import agent_service
+        for event in active:
+            task_id = event.get("task_id", "")
+            if task_id and not event.get("data", {}).get("idea_id"):
+                task = agent_service.get_task(task_id)
+                if isinstance(task, dict):
+                    ctx = task.get("context") or {}
+                    event.setdefault("data", {})["idea_id"] = ctx.get("idea_id", "")
+    except Exception:
+        pass
+
+    return active
