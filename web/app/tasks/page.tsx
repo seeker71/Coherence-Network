@@ -434,6 +434,13 @@ function TasksPageContent() {
                   <span>{event.event_type}</span>
                   {event.node_name && <span>on {event.node_name}</span>}
                   {event.provider && <span>via {event.provider}</span>}
+                  {typeof event.data?.duration_s === "number" && (
+                    <span className="text-muted-foreground/70">
+                      {event.data.duration_s < 60
+                        ? `${Math.round(event.data.duration_s)}s`
+                        : `${Math.floor(event.data.duration_s / 60)}m ${Math.round(event.data.duration_s % 60)}s`}
+                    </span>
+                  )}
                   <span className="ml-auto tabular-nums">{new Date(event.timestamp).toLocaleTimeString()}</span>
                 </div>
               ))}
