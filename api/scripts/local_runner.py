@@ -3225,8 +3225,16 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                         pushed = _push_branch_to_origin(task_id, wt)
                         if not pushed:
                             log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
+                    elif ok and task_type in ("spec", "review", "code-review"):
+                        pushed = True  # Text-only phases don't need a diff
+                    elif ok and task_type in ("impl", "test"):
+                        # impl/test MUST produce code — no diff means provider didn't actually write anything
+                        log.warning("WORKER[%d] NO_CODE_PRODUCED task=%s type=%s — marking failed (provider claimed success but wrote no files)",
+                                    worker_id, task_id[:16], task_type)
+                        ok = False
+                        complete_task(task_id, "Provider claimed success but produced no code changes. No git diff detected in worktree.", False)
                     elif ok:
-                        pushed = True  # No diff = spec/review with text output only
+                        pushed = True  # Other phases (heal, etc)
 
                     # After code-review passes, merge branch to main
                     if ok and pushed and task_type == "code-review":
