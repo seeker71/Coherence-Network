@@ -292,8 +292,11 @@ function TasksPageContent() {
     [filteredRows],
   );
   const activeCount = useMemo(
-    () => filteredRows.filter((row) => ["running", "claimed", "in_progress"].includes(row.status)).length,
-    [filteredRows],
+    () => Math.max(
+      activeTasks.length,
+      filteredRows.filter((row) => ["running", "claimed", "in_progress"].includes(row.status)).length,
+    ),
+    [filteredRows, activeTasks],
   );
   const blockedCount = useMemo(
     () => filteredRows.filter((row) => row.status === "failed" || row.status === "needs_decision").length,
@@ -383,14 +386,20 @@ function TasksPageContent() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/50" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
                     </span>
-                    <span className="text-sm font-medium text-foreground line-clamp-2">
-                      {String(task.data?.task_type || task.event_type || "Working")}
-                    </span>
+                    <div>
+                      <span className="text-sm font-medium text-foreground line-clamp-1">
+                        {(() => {
+                          const ideaId = String(task.data?.idea_id || "");
+                          const ideaName = ideaId ? (ideaNamesById[ideaId] || ideaId.replace(/-/g, " ")) : "";
+                          const taskType = String(task.data?.task_type || task.event_type || "working");
+                          return ideaName ? `${taskType}: ${ideaName}` : taskType;
+                        })()}
+                      </span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {task.node_name || "node"} · {task.provider || "agent"} · {elapsed(task.timestamp)}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Node: {task.node_name || "unknown"} | Provider: {task.provider || "unknown"} | {elapsed(task.timestamp)}
-                  </p>
-                  <p className="text-xs text-amber-500/80">Watch live →</p>
                 </Link>
               ))}
             </div>
@@ -413,7 +422,14 @@ function TasksPageContent() {
                     href={`/tasks/${encodeURIComponent(event.task_id)}`}
                     className="hover:text-foreground transition-colors"
                   >
-                    <span className="font-mono">{event.task_id.slice(0, 8)}</span>
+                    {(() => {
+                      const ideaId = String(event.data?.idea_id || "");
+                      const ideaName = ideaId ? (ideaNamesById[ideaId] || ideaId.replace(/-/g, " ")) : "";
+                      const taskType = String(event.data?.task_type || "");
+                      return ideaName
+                        ? <span>{taskType ? `${taskType}: ` : ""}{ideaName}</span>
+                        : <span className="font-mono">{event.task_id.slice(0, 8)}</span>;
+                    })()}
                   </Link>
                   <span>{event.event_type}</span>
                   {event.node_name && <span>on {event.node_name}</span>}
