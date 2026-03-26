@@ -38,6 +38,7 @@ from app.services.agent_routing import (
     repo_question_executor_default,
     resolve_codex_default_model,
 )
+from app.services.agent_routing.model_routing_loader import validate_model_for_executor
 
 
 def route_for_executor(
@@ -70,6 +71,20 @@ def route_for_executor(
     else:
         model, tier = ROUTING[task_type]
         template = default_command_template
+
+    # Guard: reject cross-provider model assignment
+    model_name_only = model.split("/", 1)[-1] if "/" in model else model
+    if not validate_model_for_executor(normalized, model_name_only):
+        import logging
+        logging.getLogger(__name__).warning(
+            "CROSS_PROVIDER_BLOCKED executor=%s model=%s — not in provider catalog",
+            normalized, model,
+        )
+        # Fall back to the executor's default strong model
+        from app.services.agent_routing.model_routing_loader import get_model_for_executor
+        fallback = get_model_for_executor(normalized, "strong")
+        if fallback:
+            model = f"{normalized}/{fallback}" if "/" not in fallback else fallback
 
     provider, billing_provider, is_paid_provider = classify_provider(
         executor=normalized,

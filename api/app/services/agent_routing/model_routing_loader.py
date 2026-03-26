@@ -148,7 +148,11 @@ def get_model_for_executor_and_task_type(executor: str, task_type: TaskType) -> 
 
 
 def get_fallback_model(executor: str, current_model: str) -> str | None:
-    """Next model in this executor's fallback chain after current_model, or None if none. Use on rate-limit/quota errors."""
+    """Next model in this executor's fallback chain after current_model, or None if none.
+
+    Fallback chains MUST stay within the same provider. A claude executor
+    never falls back to an openrouter model, and vice versa.
+    """
     chain = (_load().get("fallback_chains") or {}).get(executor)
     if not isinstance(chain, list) or not chain:
         return None
@@ -161,9 +165,64 @@ def get_fallback_model(executor: str, current_model: str) -> str | None:
         return None
     next_model = chain[idx + 1]
     fallback_model = str(next_model).strip() if next_model else None
+    # Guard: reject cross-provider fallback
+    if fallback_model and not validate_model_for_executor(executor, fallback_model):
+        logger.warning(
+            "model_fallback_rejected executor=%s model=%s — cross-provider fallback blocked",
+            executor, fallback_model,
+        )
+        return None
     if fallback_model:
         logger.info("model_fallback executor=%s from=%s to=%s", executor, current_model, fallback_model)
     return fallback_model
+
+
+# ── Provider model validation ──────────────────────────────────
+
+
+# Each provider's model prefix or known model names.
+# A provider can ONLY run models from its own catalog.
+_PROVIDER_MODEL_PREFIXES: dict[str, list[str]] = {
+    "claude": ["claude-"],
+    "codex": ["gpt-", "o1-", "o3-", "codex-"],
+    "cursor": ["auto", "cursor-"],
+    "gemini": ["gemini-"],
+    "openrouter": ["openrouter/"],
+}
+
+
+def validate_model_for_executor(executor: str, model: str) -> bool:
+    """Check if a model belongs to the executor's catalog.
+
+    Returns True if the model is valid for this executor, False if it's
+    a cross-provider model that this executor cannot run.
+    """
+    normalized_exec = executor.lower().strip()
+    normalized_model = model.lower().strip()
+    if not normalized_model:
+        return True  # Empty model = use provider default
+
+    prefixes = _PROVIDER_MODEL_PREFIXES.get(normalized_exec)
+    if prefixes is None:
+        return True  # Unknown executor — allow anything
+
+    return any(normalized_model.startswith(prefix) for prefix in prefixes)
+
+
+def get_valid_models_for_executor(executor: str) -> list[str]:
+    """Return the list of models this executor can run (from tiers + fallback chains)."""
+    models = set()
+    tiers = (_load().get("tiers_by_executor") or {}).get(executor, {})
+    if isinstance(tiers, dict):
+        for model in tiers.values():
+            if model and validate_model_for_executor(executor, str(model)):
+                models.add(str(model))
+    chain = (_load().get("fallback_chains") or {}).get(executor, [])
+    if isinstance(chain, list):
+        for model in chain:
+            if model and validate_model_for_executor(executor, str(model)):
+                models.add(str(model))
+    return sorted(models)
 
 
 def get_openrouter_model_for_task_type(task_type: TaskType) -> str:

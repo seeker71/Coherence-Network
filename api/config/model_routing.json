@@ -1,16 +1,20 @@
 {
-  "version": "2026-03-05",
-  "description": "Strong/fast tiers per task type, model ids per executor tier, openrouter model per task type, and fallback chains when a model is out of usage. Runners use get_fallback_model(executor, current_model) on rate-limit/quota errors and retry with next in chain.",
+  "version": "2026-03-26",
+  "description": "Provider model registry. Each provider has its own model catalog. Fallback chains stay within the same provider. Task tier determines strong vs fast model selection.",
+
   "openrouter_free_model": "openrouter/free",
-  "auto_execute_default_model": "openrouter/free",
-  "roi_spec_cheap_model": "openai/gpt-4o-mini",
+  "auto_execute_default_model": "",
+  "roi_spec_cheap_model": "gpt-5.3-codex-spark",
+
   "task_type_tier": {
     "spec": "strong",
-    "test": "fast",
-    "impl": "fast",
+    "impl": "strong",
+    "test": "strong",
     "review": "strong",
-    "heal": "strong"
+    "heal": "strong",
+    "code-review": "strong"
   },
+
   "tiers_by_executor": {
     "claude": {
       "strong": "claude-sonnet-4-6",
@@ -27,8 +31,13 @@
     "gemini": {
       "strong": "gemini-2.5-pro",
       "fast": "gemini-2.5-flash"
+    },
+    "openrouter": {
+      "strong": "openrouter/free",
+      "fast": "openrouter/free"
     }
   },
+
   "openrouter_models_by_task_type": {
     "spec": "openrouter/free",
     "test": "openrouter/free",
@@ -36,10 +45,12 @@
     "review": "openrouter/free",
     "heal": "openrouter/free"
   },
+
   "fallback_chains": {
-    "claude": ["claude-sonnet-4-6", "claude-sonnet-4-5", "openrouter/free"],
+    "claude": ["claude-sonnet-4-6", "claude-sonnet-4-5", "claude-3-5-haiku-20241022"],
+    "codex": ["gpt-5.3-codex-spark"],
     "cursor": ["auto"],
-    "gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash-001", "openrouter/free"],
+    "gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash-001"],
     "openrouter": ["openrouter/free"]
   }
 }
