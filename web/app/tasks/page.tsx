@@ -29,6 +29,59 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
+type StatusCounts = {
+  pending: number;
+  running: number;
+  completed: number;
+};
+
+function normalizeStatusCounts(values: Record<string, unknown>): StatusCounts {
+  return {
+    pending: toNumber(values.pending),
+    running: toNumber(values.running),
+    completed: toNumber(values.completed),
+  };
+}
+
+function parseStatusCountsFromPayload(payload: unknown): StatusCounts | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+  const root = payload as Record<string, unknown>;
+  const countsField = root.counts;
+  if (countsField && typeof countsField === "object" && !Array.isArray(countsField)) {
+    return normalizeStatusCounts(countsField as Record<string, unknown>);
+  }
+  const byStatus = root.by_status;
+  if (byStatus && typeof byStatus === "object" && !Array.isArray(byStatus)) {
+    return normalizeStatusCounts(byStatus as Record<string, unknown>);
+  }
+  return null;
+}
+
+function deriveStatusCountsFromRows(rows: AgentTask[]): StatusCounts {
+  const counts: StatusCounts = { pending: 0, running: 0, completed: 0 };
+  for (const row of rows) {
+    switch (row.status) {
+      case "pending":
+      case "queued":
+        counts.pending += 1;
+        break;
+      case "running":
+      case "in_progress":
+      case "claimed":
+        counts.running += 1;
+        break;
+      case "completed":
+        counts.completed += 1;
+        break;
+      default:
+        break;
+    }
+  }
+  return counts;
+}
+
 type IdeasLookupResponse = {
   ideas?: Array<{
     id?: string;
@@ -69,6 +122,8 @@ function TasksPageContent() {
   const [ideaNamesById, setIdeaNamesById] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [statusCounts, setStatusCounts] = useState<StatusCounts | null>(null);
+  const loadRowsRequestId = useRef(0);
 
   const statusFilter = useMemo(() => (searchParams.get("status") || "").trim(), [searchParams]);
   const typeFilter = useMemo(() => (searchParams.get("task_type") || "").trim(), [searchParams]);
@@ -83,6 +138,7 @@ function TasksPageContent() {
   const loadRows = useCallback(async () => {
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
+    const requestId = ++loadRowsRequestId.current;
     try {
       const params = new URLSearchParams({
         limit: String(pageSize),
@@ -90,14 +146,20 @@ function TasksPageContent() {
       });
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("task_type", typeFilter);
-      const [tasksResponse, ideasResponse, activeResponse, activityResponse] = await Promise.all([
+      const [tasksResponse, countResponse, ideasResponse, activeResponse, activityResponse] = await Promise.all([
         fetchWithTimeout(`/api/agent/tasks?${params.toString()}`),
+        fetchWithTimeout("/api/agent/tasks/count").catch(() => null),
         fetchWithTimeout("/api/ideas?limit=500"),
         fetchWithTimeout("/api/agent/tasks/active").catch(() => null),
         fetchWithTimeout("/api/agent/tasks/activity?limit=30").catch(() => null),
       ]);
+      if (requestId !== loadRowsRequestId.current) return;
+      if (!tasksResponse.ok) {
+        let body = "";
+        try { body = await tasksResponse.text(); } catch { body = ""; }
+        throw new Error(`/api/agent/tasks failed (${tasksResponse.status})${body ? `: ${body}` : ""}`);
+      }
       const json = (await tasksResponse.json()) as TaskListResponse;
-      if (!tasksResponse.ok) throw new Error(JSON.stringify(json));
       const taskRows = Array.isArray(json.tasks)
         ? json.tasks
         : Array.isArray(json.items)
@@ -105,9 +167,18 @@ function TasksPageContent() {
           : Array.isArray(json)
             ? json
             : [];
+      let parsedCounts: StatusCounts | null = parseStatusCountsFromPayload(json);
+      if (countResponse && countResponse.ok) {
+        const countPayload = await countResponse.json();
+        const fromCount = parseStatusCountsFromPayload(countPayload);
+        if (fromCount) parsedCounts = fromCount;
+      }
+      if (!parsedCounts) parsedCounts = deriveStatusCountsFromRows(taskRows);
+      if (requestId !== loadRowsRequestId.current) return;
       setRows(taskRows);
       const responseTotal = Number.isFinite(Number(json.total)) ? Number(json.total) : taskRows.length;
       setTotalTasks(Math.max(taskRows.length, responseTotal));
+      setStatusCounts(parsedCounts);
 
       if (ideasResponse.ok) {
         const ideasPayload = (await ideasResponse.json()) as IdeasLookupResponse;
@@ -342,26 +413,36 @@ function TasksPageContent() {
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
+        <section className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5" data-testid="status-counters">
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Work cards in view</p>
-            <p className="text-2xl font-light text-primary">{filteredRows.length}</p>
+            <p className="text-2xl font-light text-primary" data-testid="counter-total">
+              {status === "error" ? <span className="text-muted-foreground/50" title="Unavailable">—</span> : filteredRows.length}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Ready to start</p>
-            <p className="text-2xl font-light text-primary">{readyCount}</p>
+            <p className="text-2xl font-light text-primary" data-testid="counter-pending">
+              {status === "error" ? <span className="text-muted-foreground/50" title="Unavailable">—</span> : (statusCounts?.pending ?? readyCount)}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">In progress</p>
-            <p className="text-2xl font-light text-primary">{activeCount}</p>
+            <p className="text-2xl font-light text-primary" data-testid="counter-running">
+              {status === "error" ? <span className="text-muted-foreground/50" title="Unavailable">—</span> : (statusCounts?.running ?? activeCount)}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Needs attention</p>
-            <p className="text-2xl font-light text-primary">{blockedCount}</p>
+            <p className="text-2xl font-light text-primary" data-testid="counter-blocked">
+              {status === "error" ? <span className="text-muted-foreground/50" title="Unavailable">—</span> : blockedCount}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Finished</p>
-            <p className="text-2xl font-light text-primary">{finishedCount}</p>
+            <p className="text-2xl font-light text-primary" data-testid="counter-completed">
+              {status === "error" ? <span className="text-muted-foreground/50" title="Unavailable">—</span> : (statusCounts?.completed ?? finishedCount)}
+            </p>
           </div>
         </section>
 
@@ -456,7 +537,20 @@ function TasksPageContent() {
         ) : null}
 
         {status === "loading" && <p className="text-muted-foreground">Loading work cards…</p>}
-        {status === "error" && <p className="text-destructive">Error: {error}</p>}
+        {status === "error" && (
+          <section className="rounded-2xl border border-destructive/30 bg-gradient-to-b from-destructive/5 to-card/30 p-5 space-y-3" data-testid="fetch-error">
+            <h2 className="text-lg font-medium text-destructive">Could not load task data</h2>
+            <p className="text-sm text-muted-foreground break-all">{error}</p>
+            <button
+              type="button"
+              onClick={() => void loadRows()}
+              className="rounded-lg border border-border/30 px-4 py-2 text-sm font-medium hover:bg-accent/60 transition-all duration-200"
+              data-testid="retry-button"
+            >
+              Retry
+            </button>
+          </section>
+        )}
 
         {status === "ok" && (
           <>
