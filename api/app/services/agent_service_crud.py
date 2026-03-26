@@ -96,6 +96,12 @@ def _normalize_target_state_contract(
 
 
 def _enforce_openrouter_executor_policy(ctx: dict[str, Any], executor: str) -> str:
+    # Pipeline tasks run on federation nodes, not openrouter
+    if ctx.get("auto_advance_source") or ctx.get("auto_retry_source") or ctx.get("bootstrap_source"):
+        ctx.pop("model_override", None)
+        ctx.pop("executor", None)
+        return "federation"
+
     requested_override_raw = str(ctx.get("model_override") or "").strip()
     requested_override = routing_service.normalize_model_name(requested_override_raw)
     requested_executor = str(executor or "").strip().lower()
