@@ -211,6 +211,19 @@ async def sync_traceability_gap_artifacts(
     return payload
 
 
+@router.get("/pipeline/pulse")
+async def pipeline_pulse(
+    window_days: int = Query(7, ge=1, le=90),
+    task_limit: int = Query(500, ge=10, le=5000),
+) -> dict:
+    """Pipeline self-awareness digest: what's working, what's stuck, what to do next."""
+    from app.services import pipeline_pulse_service
+    return pipeline_pulse_service.compute_pulse(
+        window_days=window_days,
+        task_limit=task_limit,
+    )
+
+
 @router.post("/inventory/gaps/bootstrap-specs")
 async def bootstrap_spec_tasks(
     max_tasks: int = Query(20, ge=1, le=100),
