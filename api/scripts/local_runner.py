@@ -3170,11 +3170,18 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
         # Push BRANCH to origin using direct HTTPS URL with token
         # This avoids git remote-https helper issues in worktrees
         gh_token = ""
-        for gh_cmd in ["gh", "ghx"]:
+        # Use seeker71 profile for push access (ghx.sh resolves this from workspace)
+        gh_env = dict(os.environ)
+        config_base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+        seeker71_config = os.path.join(config_base, "gh-seeker71")
+        if os.path.isdir(seeker71_config):
+            gh_env["GH_CONFIG_DIR"] = seeker71_config
+        for gh_cmd in ["gh"]:
             try:
                 gh_result = subprocess.run(
                     [gh_cmd, "auth", "token"],
                     capture_output=True, text=True, timeout=10,
+                    env=gh_env,
                 )
                 if gh_result.returncode == 0 and gh_result.stdout.strip():
                     gh_token = gh_result.stdout.strip()
