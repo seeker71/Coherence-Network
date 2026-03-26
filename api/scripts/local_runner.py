@@ -151,7 +151,7 @@ def _get_git_info() -> dict[str, str]:
 
 _NODE_GIT = _get_git_info()
 
-_TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "300"))]
+_TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "600"))]  # 10 min default — real code takes time
 _RESUME_MODE = [False]
 _SKIP_PERMISSIONS = [True]  # --dangerously-skip-permissions for claude; operators can disable
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -1624,17 +1624,23 @@ def get_timeout_for(provider: str, task_type: str, complexity_estimate: dict[str
     """Get data-driven timeout for a provider+task_type combination.
 
     Uses a complexity-adjusted multiplier over p90 duration:
-    - simple tasks: 2x p90
-    - complex tasks: 4x p90
+    - simple tasks: 2.5x p90 (min 180s)
+    - complex tasks: 4x p90 (min 300s)
     Falls back to the configured default if no p90 data exists.
+
+    The range is 180-900s. Real code writing on strong providers typically
+    takes 3-8 minutes. The 300s fixed timeout was causing productive
+    providers to time out mid-work.
     """
-    multiplier = 2.0
+    level = "simple"
+    multiplier = 2.5
+    min_timeout = 180
     if isinstance(complexity_estimate, dict):
         raw_level = str(complexity_estimate.get("level") or "").strip().lower()
         if raw_level == "complex":
             multiplier = 4.0
-        elif raw_level == "simple":
-            multiplier = 2.0
+            min_timeout = 300
+            level = "complex"
 
     if HAS_SERVICES:
         try:
@@ -1642,21 +1648,23 @@ def get_timeout_for(provider: str, task_type: str, complexity_estimate: dict[str
             stats = selector.stats([provider])
             slot = stats.get("slots", {}).get(provider, {})
             p90_duration = float(slot.get("p90_duration_s", 0) or 0)
-            if p90_duration > 5:  # Ignore suspiciously low p90 (likely from broken runs)
-                timeout = int(max(120, min(600, p90_duration * multiplier)))
+            if p90_duration > 10:  # Need meaningful duration data (>10s rules out hollow runs)
+                timeout = int(max(min_timeout, min(900, p90_duration * multiplier)))
                 log.info(
                     "TIMEOUT_DATA provider=%s task=%s complexity=%s timeout=%ds (%.1fx p90=%.0fs)",
-                    provider,
-                    task_type,
-                    (complexity_estimate or {}).get("level", "simple"),
-                    timeout,
-                    multiplier,
-                    p90_duration,
+                    provider, task_type, level, timeout, multiplier, p90_duration,
                 )
                 return timeout
         except Exception:
             pass
-    return _TASK_TIMEOUT[0]
+
+    # No data yet — use generous defaults by task type
+    # impl/test need more time (writing code), spec/review need less (writing text)
+    defaults = {"impl": 600, "test": 600, "spec": 480, "review": 360, "code-review": 360}
+    fallback = defaults.get(task_type, _TASK_TIMEOUT[0])
+    if level == "complex":
+        fallback = min(900, int(fallback * 1.5))
+    return fallback
 
 
 def execute_with_provider(
@@ -3225,6 +3233,21 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                         pushed = _push_branch_to_origin(task_id, wt)
                         if not pushed:
                             log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
+                    elif not ok and diff and task_type in ("impl", "test"):
+                        # Timed out but produced real code — save the work, push branch
+                        log.info("WORKER[%d] TIMEOUT_WITH_CODE task=%s type=%s diff=%d bytes — pushing partial work",
+                                 worker_id, task_id[:16], task_type, len(diff))
+                        pushed = _push_branch_to_origin(task_id, wt)
+                        if pushed:
+                            # Record as timed_out (not failed) so retry carries the branch forward
+                            complete_task(
+                                task_id,
+                                f"Timed out but produced code changes (branch pushed). Retry should continue from this branch.",
+                                False,
+                                context_patch={"branch_pushed": True, "diff_size": len(diff), "partial_timeout": True},
+                            )
+                        else:
+                            complete_task(task_id, f"Timed out with {len(diff)} bytes of code, but branch push failed.", False)
                     elif ok and task_type in ("spec", "review", "code-review"):
                         pushed = True  # Text-only phases don't need a diff
                     elif ok and task_type in ("impl", "test"):
