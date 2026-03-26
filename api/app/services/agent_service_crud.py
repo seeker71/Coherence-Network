@@ -379,7 +379,8 @@ def update_task(
     previous_status_value = status_value(task.get("status"))
 
     if decision is not None and task.get("status") == TaskStatus.NEEDS_DECISION:
-        _claim_running_task(task, worker_id)
+        # Decisions bypass claim check — the decision resolves the block
+        task["status"] = TaskStatus.RUNNING
         task["decision"] = decision
 
     if status is not None:
