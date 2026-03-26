@@ -1427,7 +1427,13 @@ Direction:
 
 Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
 
-Output a summary: files created/modified, validation results, errors encountered."""
+Output a summary: files created/modified, validation results, errors encountered.
+
+CRITICAL for impl and test tasks:
+- You MUST write actual files, not just describe what you would do.
+- After writing files, commit your changes: git add <files> && git commit -m "<task_type>(<idea>): <summary>"
+- Do NOT push or create PRs — the runner handles that after you finish.
+- If you cannot write files (no tool access), say so explicitly."""
     # Resume from checkpoint — either from explicit resume mode or from reaper retry
     if isinstance(context, dict):
         resume_patch_path = str(context.get("resume_patch_path") or "").strip()
@@ -1462,6 +1468,102 @@ Output a summary: files created/modified, validation results, errors encountered
         " (2) what remains, (3) any blockers. This allows work to be resumed if interrupted."
     )
     return prompt
+
+
+def _push_and_pr(
+    task: dict, task_id: str, task_type: str, provider: str,
+    new_changes: set[str], output: str,
+) -> str | None:
+    """Push changes to a branch and create a PR for impl/test tasks.
+
+    Returns the PR URL on success, None on failure.
+    """
+    context = task.get("context", {}) or {}
+    idea_id = context.get("idea_id", "unknown")
+    branch = f"worker/{task_type}/{idea_id}/{task_id[:8]}"
+
+    try:
+        cwd = str(_REPO_DIR)
+
+        # Ensure all changes are committed
+        status = subprocess.run(
+            ["git", "status", "--porcelain"], capture_output=True, text=True,
+            timeout=5, cwd=cwd,
+        )
+        uncommitted = [l for l in status.stdout.splitlines() if l.strip() and not l.startswith("?")]
+        if uncommitted:
+            # Stage and commit any uncommitted changes the provider left
+            subprocess.run(["git", "add", "-A"], capture_output=True, timeout=5, cwd=cwd)
+            subprocess.run(
+                ["git", "commit", "-m", f"{task_type}({idea_id}): {task_id[:12]} via {provider}"],
+                capture_output=True, timeout=10, cwd=cwd,
+            )
+
+        # Check if there are commits ahead of origin/main
+        diff_check = subprocess.run(
+            ["git", "log", "origin/main..HEAD", "--oneline"],
+            capture_output=True, text=True, timeout=5, cwd=cwd,
+        )
+        if not diff_check.stdout.strip():
+            log.info("PR_SKIP task=%s — no commits ahead of origin/main", task_id)
+            return None
+
+        # Create branch from current state
+        subprocess.run(
+            ["git", "checkout", "-b", branch], capture_output=True, timeout=5, cwd=cwd,
+        )
+
+        # Push
+        push_result = subprocess.run(
+            ["git", "push", "origin", branch],
+            capture_output=True, text=True, timeout=30, cwd=cwd,
+            shell=(sys.platform == "win32"),
+        )
+        if push_result.returncode != 0:
+            log.warning("PR_PUSH_FAILED task=%s stderr=%s", task_id, push_result.stderr[:200])
+            subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=cwd)
+            subprocess.run(["git", "branch", "-D", branch], capture_output=True, timeout=5, cwd=cwd)
+            return None
+
+        # Create PR
+        idea_name = task.get("direction", "")[:60]
+        pr_title = f"{task_type}({idea_id}): {idea_name}"[:70]
+        pr_body = (
+            f"## Automated {task_type} by {_NODE_NAME} ({provider})\n\n"
+            f"**Idea:** {idea_id}\n"
+            f"**Task:** {task_id}\n"
+            f"**Provider:** {provider}\n"
+            f"**Files changed:** {len(new_changes)}\n\n"
+            f"---\n{output[:500]}"
+        )
+        pr_result = subprocess.run(
+            ["gh", "pr", "create", "--title", pr_title, "--body", pr_body, "--base", "main"],
+            capture_output=True, text=True, timeout=30, cwd=cwd,
+            shell=(sys.platform == "win32"),
+        )
+
+        # Switch back to worker-main and clean up local branch
+        subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=cwd)
+        subprocess.run(["git", "branch", "-D", branch], capture_output=True, timeout=5, cwd=cwd)
+        # Reset worker-main to origin/main (clean slate for next task)
+        subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=cwd)
+
+        if pr_result.returncode == 0:
+            pr_url = pr_result.stdout.strip()
+            return pr_url
+        else:
+            log.warning("PR_CREATE_FAILED task=%s stderr=%s", task_id, pr_result.stderr[:200])
+            return None
+
+    except Exception as exc:
+        log.warning("PR_ERROR task=%s error=%s", task_id, exc)
+        # Try to get back to clean state
+        try:
+            subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=str(_REPO_DIR))
+            subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=str(_REPO_DIR))
+        except Exception:
+            pass
+        return None
 
 
 def _git_status_lines() -> list[str]:
@@ -1922,6 +2024,12 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                 )
             elif new_changes:
                 log.info("VERIFIED task=%s files_changed=%d", task_id, len(new_changes))
+                # Push changes and create PR for impl/test tasks
+                if task_type in ("impl", "test"):
+                    pr_url = _push_and_pr(task, task_id, task_type, provider, new_changes, output)
+                    if pr_url:
+                        output += f"\n\nPR: {pr_url}"
+                        log.info("PR_CREATED task=%s url=%s", task_id, pr_url)
         except Exception as exc:
             log.warning("VALIDATION_ERROR task=%s error=%s", task_id, exc)
 
