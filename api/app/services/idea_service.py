@@ -45,6 +45,7 @@ from app.models.idea import (
     IdeaWithScore,
     ManifestationStatus,
     StageBucket,
+    ValidationCategory,
 )
 from app.models.audit_ledger import AuditEntryCreate, AuditEntryType
 from app.services import audit_ledger_service
@@ -53,6 +54,7 @@ from app.services import commit_evidence_service
 from app.services import runtime_service
 from app.services import spec_registry_service
 from app.services import value_lineage_service
+from app.services.idea_validation_category import infer_validation_category
 
 
 # Known internal idea IDs — these were previously loaded from derived_metadata
@@ -494,6 +496,9 @@ def _idea_to_metadata(idea: Any) -> dict[str, Any]:
         "parent_idea_id": idea.parent_idea_id,
         "child_idea_ids": idea.child_idea_ids or [],
         "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
+        "validation_category": (
+            idea.validation_category.value if idea.validation_category else "network_internal"
+        ),
     }
 
 
@@ -553,6 +558,12 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
     except ValueError:
         status = ManifestationStatus.NONE
 
+    vc_raw = metadata.get("validation_category")
+    try:
+        validation_category = ValidationCategory(vc_raw) if vc_raw else infer_validation_category(interfaces, description)
+    except ValueError:
+        validation_category = infer_validation_category(interfaces, description)
+
     return Idea(
         id=idea_id,
         name=name,
@@ -569,6 +580,7 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
         idea_type=idea_type,
         parent_idea_id=parent_idea_id,
         child_idea_ids=child_idea_ids,
+        validation_category=validation_category,
     )
 
 
@@ -942,10 +954,18 @@ def create_idea(
     child_idea_ids: list[str] | None = None,
     manifestation_status: ManifestationStatus | None = None,
     value_basis: dict[str, str] | None = None,
+    validation_category: ValidationCategory | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas(persist_ensures=True)
     if any(existing.id == idea_id for existing in ideas):
         return None
+
+    iface_list = [x for x in (interfaces or []) if isinstance(x, str) and x.strip()]
+    resolved_category = (
+        validation_category
+        if validation_category is not None
+        else infer_validation_category(iface_list, description)
+    )
 
     idea = Idea(
         id=idea_id,
@@ -962,7 +982,8 @@ def create_idea(
         parent_idea_id=parent_idea_id,
         child_idea_ids=child_idea_ids or [],
         value_basis=value_basis,
-        interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
+        validation_category=resolved_category,
+        interfaces=iface_list,
         open_questions=[
             IdeaQuestion(
                 question=item.question,
@@ -1026,6 +1047,7 @@ def update_idea(
     manifestation_status: ManifestationStatus | None = None,
     potential_value: float | None = None,
     estimated_cost: float | None = None,
+    validation_category: ValidationCategory | None = None,
 ) -> IdeaWithScore | None:
     """Update an idea.
 
@@ -1061,7 +1083,16 @@ def update_idea(
         if estimated_cost is not None and estimated_cost != idea.estimated_cost:
             changes.append(("estimated_cost", idea.estimated_cost, float(estimated_cost)))
             idea.estimated_cost = max(0.0, float(estimated_cost))
-        
+        if validation_category is not None and validation_category != idea.validation_category:
+            changes.append(
+                (
+                    "validation_category",
+                    idea.validation_category.value,
+                    validation_category.value,
+                )
+            )
+            idea.validation_category = validation_category
+
         for field, old_val, new_val in changes:
             if os.getenv("DEBUG_AUDIT"):
                 print(f"DEBUG: update_idea creating audit entry for {field}: {old_val} -> {new_val}")
@@ -1565,6 +1596,7 @@ def fork_idea(source_idea_id: str, forker_id: str, adaptation_notes: str | None 
         confidence=round(max(0.0, min(source.confidence * 0.8, 1.0)), 4),
         parent_idea_id=source_idea_id,
         manifestation_status=ManifestationStatus.NONE,
+        validation_category=source.validation_category,
     )
     if created is None:
         raise ValueError("Failed to create forked idea (duplicate ID)")

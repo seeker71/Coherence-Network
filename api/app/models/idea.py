@@ -41,6 +41,16 @@ class IdeaType(str, Enum):
     STANDALONE = "standalone"  # No parent; backward compatible default
 
 
+class ValidationCategory(str, Enum):
+    """How an idea should be verified (runner + review prompts)."""
+
+    NETWORK_INTERNAL = "network_internal"  # CC API, web, CLI on production
+    EXTERNAL_PROJECT = "external_project"  # Contributor evidence URL / screenshot
+    RESEARCH = "research"  # Spec completeness + peer review
+    COMMUNITY = "community"  # Engagement: contributions, votes, discussions
+    INFRASTRUCTURE = "infrastructure"  # Health checks, uptime
+
+
 class IdeaQuestion(BaseModel):
     question: str = Field(min_length=1)
     value_to_whole: float = Field(ge=0.0)
@@ -72,6 +82,7 @@ class Idea(BaseModel):
     parent_idea_id: Optional[str] = None
     child_idea_ids: list[str] = Field(default_factory=list)
     stage: IdeaStage = IdeaStage.NONE
+    validation_category: ValidationCategory = ValidationCategory.NETWORK_INTERNAL
     value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
@@ -155,12 +166,13 @@ class IdeaShowcaseResponse(BaseModel):
 
 
 class IdeaUpdate(BaseModel):
-    """PATCH body per spec 053: only these four optional fields."""
+    """PATCH body: governance fields plus optional validation_category (idea-validation-categories spec)."""
     actual_value: Optional[float] = Field(default=None, ge=0.0)
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
     confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     manifestation_status: Optional[ManifestationStatus] = None
     stage: Optional[IdeaStage] = None
+    validation_category: Optional[ValidationCategory] = None
 
 
 class IdeaCreate(BaseModel):
@@ -182,6 +194,7 @@ class IdeaCreate(BaseModel):
     manifestation_status: Optional[ManifestationStatus] = None
     stage: Optional[IdeaStage] = None
     value_basis: Optional[dict[str, str]] = None
+    validation_category: Optional[ValidationCategory] = None
 
 
 class IdeaQuestionAnswerUpdate(BaseModel):

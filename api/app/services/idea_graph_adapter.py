@@ -17,6 +17,7 @@ from app.models.idea import (
     IdeaStage,
     IdeaType,
     ManifestationStatus,
+    ValidationCategory,
 )
 from app.services import graph_service
 
@@ -41,6 +42,13 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         stage = IdeaStage(node.get("stage", "none") or "none")
     except (ValueError, KeyError):
         stage = IdeaStage.NONE
+
+    try:
+        validation_category = ValidationCategory(
+            node.get("validation_category", "network_internal") or "network_internal"
+        )
+    except (ValueError, KeyError):
+        validation_category = ValidationCategory.NETWORK_INTERNAL
 
     # Parse open questions
     raw_questions = node.get("open_questions", [])
@@ -82,6 +90,7 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         child_idea_ids=child_ids,
         value_basis=value_basis,
         open_questions=questions,
+        validation_category=validation_category,
     )
 
 
@@ -91,6 +100,7 @@ def _idea_to_properties(idea: Idea) -> dict[str, Any]:
     for field in [
         "potential_value", "actual_value", "estimated_cost", "actual_cost",
         "resistance_risk", "confidence", "manifestation_status", "stage",
+        "validation_category",
         "interfaces", "idea_type", "parent_idea_id", "child_idea_ids",
         "value_basis",
     ]:

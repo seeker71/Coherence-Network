@@ -24,6 +24,19 @@ import time
 
 import httpx
 
+# Repo root: scripts/ -> add parent for api imports when run from dev env
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT / "api") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT / "api"))
+
+from app.services.idea_validation_category import (  # noqa: E402
+    review_prompt_addendum_for_category,
+    spec_phase_category_hint,
+)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)-7s %(message)s",
@@ -124,6 +137,10 @@ def build_task_direction(idea: dict, task_type: str) -> str:
     name = idea.get("name", idea.get("id", "unknown"))
     desc = idea.get("description", "")
     questions = idea.get("open_questions", [])
+    interfaces = idea.get("interfaces") or []
+    if not isinstance(interfaces, list):
+        interfaces = []
+    vc = idea.get("validation_category") or "network_internal"
 
     # Build direction from open questions if available
     question_text = ""
@@ -134,11 +151,21 @@ def build_task_direction(idea: dict, task_type: str) -> str:
             q_list.append(f"- {qt}")
         question_text = "\n\nOpen questions to address:\n" + "\n".join(q_list)
 
+    category_line = spec_phase_category_hint(interfaces, desc)
+    review_extra = review_prompt_addendum_for_category(str(vc))
     directions = {
-        "spec": f"Write a specification for: {name}.\n\n{desc}{question_text}\n\nOutput a spec document in specs/ covering: requirements, API endpoints, data models, and verification criteria.",
+        "spec": (
+            f"Write a specification for: {name}.\n\n{desc}{question_text}\n\n"
+            f"Output a spec document in specs/ covering: requirements, API endpoints, data models, and verification criteria.\n\n"
+            f"{category_line}"
+        ),
         "test": f"Write tests for the spec: {name}.\n\n{desc}\n\nWrite pytest tests in api/tests/ that encode the expected behavior from the spec. Tests should fail until implementation is done.",
         "impl": f"Implement: {name}.\n\n{desc}\n\nImplement the feature to satisfy the existing tests and spec. Follow existing patterns in the codebase.",
-        "review": f"Review the implementation of: {name}.\n\n{desc}\n\nVerify tests pass, check for edge cases, validate against the spec, and confirm coherence score criteria.",
+        "review": (
+            f"Review the implementation of: {name}.\n\n{desc}\n\n"
+            "Verify tests pass, check for edge cases, validate against the spec, and confirm coherence score criteria.\n\n"
+            f"{review_extra}"
+        ),
     }
     return directions.get(task_type, directions["spec"])
 

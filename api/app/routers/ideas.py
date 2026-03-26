@@ -336,6 +336,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         child_idea_ids=data.child_idea_ids,
         manifestation_status=data.manifestation_status,
         value_basis=data.value_basis,
+        validation_category=data.validation_category,
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")
@@ -352,6 +353,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
             data.confidence,
             data.manifestation_status,
             data.stage,
+            data.validation_category,
         )
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
@@ -366,6 +368,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
         actual_cost=data.actual_cost,
         confidence=data.confidence,
         manifestation_status=data.manifestation_status,
+        validation_category=data.validation_category,
     )
     if updated is None:
         raise HTTPException(status_code=404, detail="Idea not found")

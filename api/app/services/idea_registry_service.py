@@ -20,7 +20,7 @@ from sqlalchemy.orm import (
 )
 from sqlalchemy.pool import NullPool
 
-from app.models.idea import Idea, IdeaQuestion, IdeaStage, IdeaType, ManifestationStatus
+from app.models.idea import Idea, IdeaQuestion, IdeaStage, IdeaType, ManifestationStatus, ValidationCategory
 from app.services.unified_db import Base
 
 
@@ -173,6 +173,12 @@ def load_ideas() -> list[Idea]:
             status = ManifestationStatus(n.get("manifestation_status", "none") or "none")
         except (ValueError, AttributeError):
             status = ManifestationStatus.NONE
+        try:
+            validation_category = ValidationCategory(
+                n.get("validation_category", "network_internal") or "network_internal"
+            )
+        except (ValueError, AttributeError):
+            validation_category = ValidationCategory.NETWORK_INTERNAL
 
         raw_qs = n.get("open_questions") or []
         questions = []
@@ -204,6 +210,7 @@ def load_ideas() -> list[Idea]:
             child_idea_ids=n.get("child_idea_ids") or [],
             value_basis=n.get("value_basis"),
             open_questions=questions,
+            validation_category=validation_category,
         ))
     return out
 
@@ -297,6 +304,9 @@ def save_single_idea(idea: Idea, position: int = 0) -> None:
         "interfaces": idea.interfaces or [],
         "open_questions": [q.model_dump() if hasattr(q, "model_dump") else q for q in (idea.open_questions or [])],
         "value_basis": idea.value_basis,
+        "validation_category": (
+            idea.validation_category.value if hasattr(idea.validation_category, "value") else str(idea.validation_category)
+        ),
     }
     if idea.cost_vector:
         props["cost_vector"] = idea.cost_vector.model_dump() if hasattr(idea.cost_vector, "model_dump") else idea.cost_vector
