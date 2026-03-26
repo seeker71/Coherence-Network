@@ -522,34 +522,39 @@ _STRONG_PROVIDERS = {"claude", "codex", "cursor"}
 _TOOL_PROVIDERS = {"claude", "codex", "cursor", "gemini"}  # can produce files
 
 
-def select_provider(task_type: str) -> str:
+def select_provider(task_type: str, task: dict | None = None) -> str:
     """Select provider via Thompson Sampling based on task outcome data.
 
-    Spec and review tasks require strong providers (claude, codex, cursor).
-    File-producing tasks (impl, test) require tool-capable providers.
-    openrouter/free and ollama are only used when strong providers are unavailable.
+    All pipeline phases (spec, impl, test, review) prefer strong providers.
+    openrouter/free is excluded from impl and test (text-only, produces no files).
+    Respects exclude_provider from retry context.
     """
     available = list(PROVIDERS.keys())
     if not available:
         raise RuntimeError("No providers available")
 
-    # Spec and review need strong models — not openrouter/free or ollama
-    if task_type in ("spec", "review"):
+    # Respect exclude_provider from retry context
+    if task:
+        ctx = task.get("context") or {}
+        exclude = ctx.get("exclude_provider", "")
+        if exclude and exclude in available and len(available) > 1:
+            available = [p for p in available if p != exclude]
+            log.info("PROVIDER_EXCLUDE task=%s excluded=%s remaining=%s", task_type, exclude, available)
+
+    # All pipeline phases prefer strong providers when available
+    if task_type in ("spec", "impl", "test", "review", "code-review"):
         strong = [p for p in available if p in _STRONG_PROVIDERS]
         if strong:
             available = strong
             log.info("PROVIDER_TIER task=%s restricted to strong: %s", task_type, available)
         else:
-            log.warning("No strong providers for %s task — falling back to all", task_type)
-
-    # File-producing tasks need tool-capable providers
-    elif task_type in ("impl", "test"):
-        tool_available = [p for p in available if p in _TOOL_PROVIDERS or _provider_has_tools(p)]
-        if tool_available:
-            available = tool_available
-            log.info("PROVIDER_FILTER task=%s restricted to tool-capable: %s", task_type, available)
-        else:
-            log.warning("No tool-capable providers available for %s task, using all", task_type)
+            # At minimum, impl and test need tool-capable providers (not text-only)
+            if task_type in ("impl", "test"):
+                tool_available = [p for p in available if p in _TOOL_PROVIDERS or _provider_has_tools(p)]
+                if tool_available:
+                    available = tool_available
+                    log.info("PROVIDER_FILTER task=%s restricted to tool-capable: %s", task_type, available)
+            log.warning("No strong providers for %s task — using %s", task_type, available)
 
     if len(available) == 1:
         return available[0]
@@ -1816,7 +1821,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             task = updated
 
     # Select provider (data-driven)
-    provider = select_provider(task_type)
+    provider = select_provider(task_type, task=task)
 
     if dry_run:
         log.info(
