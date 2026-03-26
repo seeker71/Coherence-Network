@@ -37,6 +37,13 @@ _NEXT_PHASE: dict[str, str | None] = {
     "heal": None,
 }
 
+# All phases downstream of a given phase — used for cascade invalidation
+_DOWNSTREAM: dict[str, list[str]] = {
+    "spec": ["impl", "test", "code-review", "review"],
+    "impl": ["test", "code-review", "review"],
+    "test": ["code-review", "review"],
+}
+
 _PHASE_TASK_TYPE: dict[str, TaskType] = {
     "spec": TaskType.SPEC,
     "impl": TaskType.IMPL,
@@ -56,6 +63,58 @@ _MIN_OUTPUT_CHARS: dict[str, int] = {
 # Phases that MUST produce code (git diff). Text output alone is not enough.
 _CODE_REQUIRED_PHASES = {"impl", "test"}
 
+<<<<<<< HEAD
+
+def invalidate_downstream(task_type: str, idea_id: str) -> int:
+    """When a phase is reclassified as failed, invalidate its downstream tasks.
+
+    If impl fails, any completed test/review for that idea is also invalid
+    (it was reviewing hollow output). Mark them failed so they get retried
+    after the upstream phase succeeds.
+
+    Returns the number of downstream tasks invalidated.
+    """
+    from app.services import agent_service
+
+    downstream_phases = _DOWNSTREAM.get(task_type, [])
+    if not downstream_phases or not idea_id:
+        return 0
+
+    all_tasks, _total, _backfill = agent_service.list_tasks(limit=500, offset=0)
+    invalidated = 0
+
+    for t in all_tasks:
+        t_type = t.get("task_type", "")
+        if hasattr(t_type, "value"):
+            t_type = t_type.value
+        t_status = t.get("status", "")
+        if hasattr(t_status, "value"):
+            t_status = t_status.value
+        t_idea = (t.get("context") or {}).get("idea_id", "")
+
+        if (t_type in downstream_phases
+                and t_idea == idea_id
+                and t_status in ("completed", "pending", "running")):
+            try:
+                agent_service.update_task(
+                    t.get("id", ""),
+                    status="failed",
+                    output=f"Invalidated: upstream {task_type} was reclassified as failed. This {t_type} was based on hollow upstream output.",
+                    context={
+                        **(t.get("context") or {}),
+                        "cascade_invalidated": True,
+                        "invalidated_by_phase": task_type,
+                    },
+                )
+                invalidated += 1
+                log.info("CASCADE_INVALIDATE %s for idea=%s (upstream %s failed)", t_type, idea_id, task_type)
+            except Exception:
+                pass
+
+    return invalidated
+
+=======
+>>>>>>> origin/main
 
 def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
     """Check if a completed task has meaningful output.
@@ -121,6 +180,10 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
                 output=f"Hollow completion rejected: {reason}",
                 context={**(task.get("context") or {}), "hollow_rejection": True},
             )
+            # Cascade: invalidate downstream tasks built on this hollow output
+            invalidated = invalidate_downstream(task_type_raw, idea_id)
+            if invalidated:
+                log.info("CASCADE_INVALIDATED %d downstream tasks for idea=%s", invalidated, idea_id)
         except Exception:
             pass
         return None
