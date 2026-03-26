@@ -63,6 +63,7 @@ _MIN_OUTPUT_CHARS: dict[str, int] = {
 # Phases that MUST produce code (git diff). Text output alone is not enough.
 _CODE_REQUIRED_PHASES = {"impl", "test"}
 
+<<<<<<< HEAD
 
 def invalidate_downstream(task_type: str, idea_id: str) -> int:
     """When a phase is reclassified as failed, invalidate its downstream tasks.
@@ -112,6 +113,8 @@ def invalidate_downstream(task_type: str, idea_id: str) -> int:
 
     return invalidated
 
+=======
+>>>>>>> origin/main
 
 def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
     """Check if a completed task has meaningful output.
