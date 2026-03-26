@@ -19,6 +19,7 @@ import IdeaProgressEditor from "@/components/ideas/IdeaProgressEditor";
 import IdeaTaskQuickCreate from "@/components/ideas/IdeaTaskQuickCreate";
 import IdeaShare from "@/components/idea_share";
 import { IdeaStakeForm } from "@/components/idea_stake_form";
+import { Button } from "@/components/ui/button";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const FETCH_TIMEOUT_MS = 6000;
@@ -371,6 +372,29 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         />
       </div>
 
+      <section
+        className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-6"
+        aria-label="What to do next on this idea"
+      >
+        <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+          What to do next
+        </h2>
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+          <Button
+            asChild
+            className="rounded-full px-6 py-2.5 text-base bg-primary hover:bg-primary/90"
+          >
+            <Link href="#idea-detail-start-work">Create next work</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-full px-6 py-2.5">
+            <Link href={`/flow?idea_id=${encodeURIComponent(idea.id)}`}>See progress</Link>
+          </Button>
+          <Button asChild variant="outline" className="rounded-full px-6 py-2.5">
+            <Link href="/contribute">Contribute</Link>
+          </Button>
+        </div>
+      </section>
+
       <IdeaProgressEditor
         ideaId={idea.id}
         initialActualValue={idea.actual_value}
@@ -379,11 +403,13 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         initialManifestationStatus={idea.manifestation_status as "none" | "partial" | "validated"}
       />
 
-      <IdeaTaskQuickCreate
-        ideaId={idea.id}
-        ideaName={idea.name}
-        unansweredQuestions={idea.open_questions.filter((question) => !question.answer).map((question) => question.question)}
-      />
+      <div id="idea-detail-start-work" className="scroll-mt-24">
+        <IdeaTaskQuickCreate
+          ideaId={idea.id}
+          ideaName={idea.name}
+          unansweredQuestions={idea.open_questions.filter((question) => !question.answer).map((question) => question.question)}
+        />
+      </div>
 
       <IdeaDsssSpecBuilder
         ideaId={idea.id}
