@@ -3266,9 +3266,16 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                             log.warning("WORKER[%d] MERGE_TO_MAIN_FAILED task=%s", worker_id, task_id[:16])
                             pushed = False  # Don't advance to deploy if merge failed
                 else:
-                    log.warning("WORKER[%d] FALLBACK task=%s (no worktree)", worker_id, task_id[:16])
-                    ok = run_one(task, dry_run=dry_run)
-                    pushed = True
+                    if task_type in ("impl", "test"):
+                        # impl/test MUST run in worktree — no fallback allowed
+                        log.error("WORKER[%d] WORKTREE_REQUIRED task=%s type=%s — cannot run impl/test without worktree, marking failed",
+                                  worker_id, task_id[:16], task_type)
+                        complete_task(task_id, f"Worktree creation failed. impl/test tasks require an isolated worktree to produce code.", False)
+                        ok = False
+                    else:
+                        log.warning("WORKER[%d] FALLBACK task=%s type=%s (no worktree, text-only OK)", worker_id, task_id[:16], task_type)
+                        ok = run_one(task, dry_run=dry_run)
+                        pushed = True
 
                 status = "completed" if ok else "failed"
                 log.info("WORKER[%d] %s task=%s pushed=%s", worker_id, status.upper(), task_id[:16], pushed)
