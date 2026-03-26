@@ -841,7 +841,7 @@ def list_pending() -> list[dict]:
 
 def claim_task(task_id: str) -> dict | None:
     result = api("PATCH", f"/api/agent/tasks/{task_id}", {
-        "status": "running", "claimed_by": WORKER_ID,
+        "status": "running", "worker_id": WORKER_ID,
     })
     if result and result.get("status") == "running":
         log.info("CLAIMED task=%s type=%s", task_id, result.get("task_type"))
@@ -3202,7 +3202,7 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                         continue
                     # Try to claim
                     result = api("PATCH", f"/api/agent/tasks/{candidate['id']}", {
-                        "status": "running", "claimed_by": WORKER_ID,
+                        "status": "running", "worker_id": WORKER_ID,
                     })
                     if result and result.get("status") == "running":
                         if idea_id:
