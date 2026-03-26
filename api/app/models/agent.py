@@ -13,6 +13,11 @@ class TaskType(str, Enum):
     IMPL = "impl"
     REVIEW = "review"
     HEAL = "heal"
+    CODE_REVIEW = "code-review"
+    MERGE = "merge"
+    DEPLOY = "deploy"
+    VERIFY = "verify"
+    REFLECT = "reflect"
 
 
 class TaskStatus(str, Enum):
