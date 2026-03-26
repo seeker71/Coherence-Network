@@ -179,8 +179,10 @@ async def update_task(
     if not task_update_has_fields(data):
         raise HTTPException(status_code=400, detail="At least one field required")
     # Block unknown workers from claiming tasks — only registered nodes or API key holders
+    # Skip guard for decisions (no status change) and completions (task already claimed)
     worker_hint = data.worker_id or ""
-    if data.status == TaskStatus.RUNNING and worker_hint:
+    is_claim = data.status == TaskStatus.RUNNING and not data.decision
+    if is_claim and worker_hint:
         from app.services import federation_service
         try:
             known = federation_service.list_nodes()
