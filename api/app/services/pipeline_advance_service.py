@@ -299,6 +299,7 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
                 "auto_advanced_from": task_type,
                 "auto_advance_source": "pipeline_advance_service",
                 "source_task_id": task.get("id", ""),
+                "executor": "federation",
             },
         ))
         log.info(
@@ -383,6 +384,7 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
                 "failed_provider": failed_provider,
                 "exclude_provider": failed_provider,
                 "auto_retry_source": "pipeline_advance_service",
+                "executor": "federation",
             },
         ))
         log.info(

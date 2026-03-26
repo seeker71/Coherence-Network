@@ -125,8 +125,9 @@ def get_task_type_tier(task_type: TaskType) -> str:
     tier = (_load().get("task_type_tier") or {}).get(key)
     if tier in (_TIER_STRONG, _TIER_FAST):
         return tier
-    # Default: spec/review/heal → strong, test/impl → fast
-    if key in ("spec", "review", "heal"):
+    # Default: spec/impl/test/review/heal → strong (must produce real output)
+    # Only status/heal-check tasks use fast tier
+    if key in ("spec", "impl", "test", "review", "heal", "code-review"):
         return _TIER_STRONG
     return _TIER_FAST
 
