@@ -46,15 +46,22 @@ def test_homepage_readability_css_tokens() -> None:
     assert "hsl(28 92% 74% / 0.05)" in css
 
 
-def test_homepage_readability_page_classes() -> None:
-    """Hero uses .hero-headline; body copy uses /90 or /85 (never below 85)."""
+def test_homepage_readability_contract_files() -> None:
+    """All homepage/footer body lines use text-foreground >= /85 opacity."""
+    for rel_path in ("web/app/page.tsx", "web/components/idea_submit_form.tsx"):
+        filepath = REPO_ROOT / rel_path
+        assert filepath.is_file(), f"Missing {filepath}"
+        content = filepath.read_text(encoding="utf-8")
+        for match in re.findall(r"text-foreground/(\d+)", content):
+            assert int(match) >= 85, (
+                f"Found text-foreground/{match} in {rel_path} (minimum allowed is 85)"
+            )
+
+    # page.tsx specific: hero headline class present, /90 used for body copy
     page_path = REPO_ROOT / "web" / "app" / "page.tsx"
-    assert page_path.is_file(), f"Missing {page_path}"
     content = page_path.read_text(encoding="utf-8")
     assert "hero-headline" in content
     assert "text-foreground/90" in content
-    for match in re.findall(r"text-foreground/(\d+)", content):
-        assert int(match) >= 85, f"Found text-foreground/{match} (minimum allowed is 85)"
 
 
 def test_idea_submit_form_readability() -> None:
