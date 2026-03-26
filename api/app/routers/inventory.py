@@ -224,6 +224,83 @@ async def pipeline_pulse(
     )
 
 
+@router.post("/pipeline/fix-hollow-completions")
+async def fix_hollow_completions(
+    min_output_chars: int = Query(30, ge=1),
+    batch_size: int = Query(200, ge=1, le=1000),
+    dry_run: bool = Query(False),
+) -> dict:
+    """Reclassify hollow completions as broken_provider. Fixes Thompson Sampling data."""
+    from app.services import agent_service
+
+    all_tasks, _total, _backfill = agent_service.list_tasks(limit=batch_size, offset=0)
+    hollow = []
+    for t in all_tasks:
+        status = t.get("status", "")
+        if hasattr(status, "value"):
+            status = status.value
+        if status != "completed":
+            continue
+        output = (t.get("output") or "").strip()
+        if len(output) < min_output_chars:
+            hollow.append(t)
+
+    fixed = 0
+    if not dry_run:
+        for t in hollow:
+            task_id = t.get("id", "")
+            model = t.get("model", "unknown")
+            task_type = t.get("task_type", "")
+            if hasattr(task_type, "value"):
+                task_type = task_type.value
+            try:
+                agent_service.update_task(
+                    task_id,
+                    status="failed",
+                    output=f"Reclassified: hollow completion ({len((t.get('output') or '').strip())} chars). Provider {model} produced no meaningful output.",
+                    context={
+                        **(t.get("context") or {}),
+                        "hollow_reclassified": True,
+                        "original_status": "completed",
+                        "broken_provider": model,
+                    },
+                )
+                # Record failure for Thompson Sampling
+                try:
+                    from app.services.slot_selection_service import SlotSelector
+                    slot = SlotSelector(f"provider_{task_type}")
+                    slot.record(
+                        slot_id=model,
+                        value_score=0.0,
+                        resource_cost=1.0,
+                        error_class="hollow_completion",
+                        duration_s=0.0,
+                    )
+                except Exception:
+                    pass
+                fixed += 1
+            except Exception:
+                pass
+
+    return {
+        "result": "hollow_completions_fixed" if not dry_run else "dry_run",
+        "total_completed_scanned": len([t for t in all_tasks if str(t.get("status","")).replace("TaskStatus.","") == "completed"]),
+        "hollow_found": len(hollow),
+        "fixed": fixed,
+        "dry_run": dry_run,
+        "samples": [
+            {
+                "task_id": t.get("id", "")[:20],
+                "task_type": str(t.get("task_type", "")),
+                "model": t.get("model", "?"),
+                "output_len": len((t.get("output") or "").strip()),
+                "idea_id": (t.get("context") or {}).get("idea_id", ""),
+            }
+            for t in hollow[:10]
+        ],
+    }
+
+
 @router.post("/inventory/gaps/bootstrap-specs")
 async def bootstrap_spec_tasks(
     max_tasks: int = Query(20, ge=1, le=100),
