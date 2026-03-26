@@ -2965,15 +2965,7 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
         )
         if diff.stdout.strip():
             log.info("WORKTREE_DIFF task=%s files_changed:\n%s", slug, diff.stdout.strip()[:500])
-            diff_text = full_diff.stdout[:10000]
-            # Guard: reject destructive diffs (more deletions than additions)
-            add_lines = diff_text.count("\n+") - diff_text.count("\n+++")
-            del_lines = diff_text.count("\n-") - diff_text.count("\n---")
-            if del_lines > add_lines * 3 and del_lines > 50:
-                log.warning("DESTRUCTIVE_DIFF task=%s — +%d -%d lines. Provider deleted more than it added. Rejecting.",
-                            slug, add_lines, del_lines)
-                return ""  # Empty diff = no code produced
-            return diff_text
+            return full_diff.stdout[:10000]
     except Exception as e:
         log.warning("WORKTREE_DIFF_FAILED task=%s error=%s", slug, e)
     return ""
@@ -3280,6 +3272,16 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                     pushed = True  # verify is read-only
                 elif wt:
                     ok, diff = _run_task_in_worktree(task, wt)
+                    # Guard: reject destructive diffs for impl/test (not cleanup/heal)
+                    if diff and task_type in ("impl", "test"):
+                        add_lines = diff.count("\n+") - diff.count("\n+++")
+                        del_lines = diff.count("\n-") - diff.count("\n---")
+                        if del_lines > add_lines * 3 and del_lines > 50:
+                            log.warning("WORKER[%d] DESTRUCTIVE_DIFF task=%s +%d -%d — rejecting",
+                                        worker_id, task_id[:16], add_lines, del_lines)
+                            diff = ""  # Treat as no code produced
+                            ok = False
+                            complete_task(task_id, f"Rejected: diff deletes {del_lines} lines but only adds {add_lines}. Impl must add, not delete.", False)
                     if ok and diff:
                         # Push BRANCH (not main) — code stays on branch until code-review
                         pushed = _push_branch_to_origin(task_id, wt)
