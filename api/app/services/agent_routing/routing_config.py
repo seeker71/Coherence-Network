@@ -21,6 +21,11 @@ ROUTING: dict[TaskType, tuple[str, str]] = {
     TaskType.IMPL: (get_openrouter_model_for_task_type(TaskType.IMPL), "openrouter"),
     TaskType.REVIEW: (get_openrouter_model_for_task_type(TaskType.REVIEW), "openrouter"),
     TaskType.HEAL: (get_openrouter_model_for_task_type(TaskType.HEAL), "openrouter"),
+    TaskType.CODE_REVIEW: (get_openrouter_model_for_task_type(TaskType.REVIEW), "openrouter"),
+    TaskType.MERGE: (get_openrouter_model_for_task_type(TaskType.IMPL), "openrouter"),
+    TaskType.DEPLOY: (get_openrouter_model_for_task_type(TaskType.IMPL), "openrouter"),
+    TaskType.VERIFY: (get_openrouter_model_for_task_type(TaskType.TEST), "openrouter"),
+    TaskType.REFLECT: (get_openrouter_model_for_task_type(TaskType.SPEC), "openrouter"),
 }
 
 CURSOR_MODEL_BY_TYPE: dict[TaskType, str] = _model_by_type("cursor")
