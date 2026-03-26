@@ -178,11 +178,14 @@ def _check_claude_auth() -> bool:
         claude_path = shutil.which("claude")
         if not claude_path:
             return False
+        # Don't use --bare: it skips stored OAuth credentials
         result = subprocess.run(
-            [claude_path, "--print", "--bare", "say ok"],
-            capture_output=True, text=True, timeout=10,
+            [claude_path, "-p", "reply with just OK", "--dangerously-skip-permissions", "--output-format", "text"],
+            capture_output=True, text=True, timeout=15,
+            stdin=subprocess.DEVNULL,
         )
-        if "not logged in" in result.stdout.lower() or "please run /login" in result.stdout.lower():
+        combined = (result.stdout + result.stderr).lower()
+        if "not logged in" in combined or "please run /login" in combined:
             log.warning("Claude CLI not authenticated — run 'claude /login' to fix. Skipping provider.")
             return False
         return result.returncode == 0 and len(result.stdout.strip()) > 0
