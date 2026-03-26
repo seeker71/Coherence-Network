@@ -2365,15 +2365,21 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
     return reaped
 
 
+# Session-level skip cache: ideas we already marked stuck/partial this session.
+# Prevents thrashing the API every 15s on the same stuck ideas.
+_SEEDER_SKIP_CACHE: set[str] = set()
+
+
 def _seed_task_from_open_idea() -> bool:
     """Generate a task from an open idea when the queue is empty.
 
     Smart seeding:
     1. Skip ideas that already have pending/running tasks
     2. Skip validated ideas
-    3. Weighted random selection (not always highest FE) for diversity
-    4. Check existing task history to determine correct next phase
-    5. Always link idea_id for phase advancement
+    3. Skip ideas already marked stuck this session (local cache)
+    4. Weighted random selection (not always highest FE) for diversity
+    5. Check existing task history to determine correct next phase
+    6. Always link idea_id for phase advancement
     """
     import random as _random
 
@@ -2401,14 +2407,16 @@ def _seed_task_from_open_idea() -> bool:
                 if tid:
                     active_idea_ids.add(tid)
 
-    # Filter: open ideas without active tasks
+    # Filter: open ideas without active tasks, not already skipped this session
     candidates = [
         i for i in ideas
         if i.get("manifestation_status") in ("none", "partial", None)
         and i.get("id", "") not in active_idea_ids
+        and i.get("id", "") not in _SEEDER_SKIP_CACHE
     ]
     if not candidates:
-        log.info("SEED: no eligible ideas (all validated or already have active tasks)")
+        skipped = len(_SEEDER_SKIP_CACHE)
+        log.info("SEED: no eligible ideas (all validated, active, or skipped=%d this session)", skipped)
         return False
 
     # Weighted random selection from top 10 by free-energy (diversity)
@@ -2444,8 +2452,9 @@ def _seed_task_from_open_idea() -> bool:
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
         total_tasks = sum(phase_counts.values())
         if max_phase_tasks >= 10:
-            log.info("SEED: idea '%s' truly stuck (%d tasks in one phase) — marking partial, skipping",
+            log.info("SEED: idea '%s' truly stuck (%d tasks in one phase) — skipping this session",
                      idea_name[:30], max_phase_tasks)
+            _SEEDER_SKIP_CACHE.add(idea_id)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
         if total_tasks == 0 and idea.get("manifestation_status") == "partial":
