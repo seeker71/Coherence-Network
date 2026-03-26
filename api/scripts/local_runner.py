@@ -1359,6 +1359,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             {
                 "direction": direction,
                 "task_type": next_phase,
+                "idea_id": idea_id,  # top-level for API linking
                 "context": {
                     "idea_id": idea_id,
                     "auto_phase_advanced_from": task_type,
