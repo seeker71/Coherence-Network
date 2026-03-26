@@ -500,7 +500,11 @@ def _run_openrouter(prompt: str, cwd: str, timeout: int, model: str) -> tuple[bo
 # Providers with tool/file access (can actually create/modify files)
 _TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor"}
 # Providers that are text-only (no file access — good for review, bad for impl/spec/test)
+# Text-only providers cannot create files, run tests, or push branches.
+# They should NEVER be selected for impl, test, or code-producing tasks.
 _TEXT_ONLY_PROVIDERS = {"ollama-local", "ollama-cloud", "openrouter"}
+# Providers that are paused — detected but never selected
+_PAUSED_PROVIDERS = {"openrouter"}  # Cannot produce PRs, generates hollow completions
 
 PROVIDERS: dict[str, dict] = {}  # populated at startup
 
@@ -523,15 +527,17 @@ _TOOL_PROVIDERS = {"claude", "codex", "cursor", "gemini"}  # can produce files
 
 
 def select_provider(task_type: str, task: dict | None = None) -> str:
-    """Select provider via Thompson Sampling based on task outcome data.
+    """Select provider for a task. Only providers with required capabilities are considered.
 
-    All pipeline phases (spec, impl, test, review) prefer strong providers.
-    openrouter/free is excluded from impl and test (text-only, produces no files).
-    Respects exclude_provider from retry context.
+    Rules:
+    - Paused providers (openrouter) are never selected
+    - impl/test require tool-capable providers (can create files, run commands)
+    - All phases prefer strong providers (claude, codex, cursor)
+    - Respects exclude_provider from retry context
     """
-    available = list(PROVIDERS.keys())
+    available = [p for p in PROVIDERS.keys() if p not in _PAUSED_PROVIDERS]
     if not available:
-        raise RuntimeError("No providers available")
+        raise RuntimeError("No providers available (all paused)")
 
     # Respect exclude_provider from retry context
     if task:
