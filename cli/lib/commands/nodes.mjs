@@ -109,6 +109,24 @@ export async function listNodes() {
     if (sha) {
       console.log(`    sha \x1b[36m${sha}\x1b[0m${shaAge ? ` (updated ${shaAge})` : ""}`);
     }
+    // Streak
+    const streak = node.streak || {};
+    const total = streak.total_resolved || 0;
+    const attn = streak.attention || "idle";
+    if (total > 0 || streak.executing > 0) {
+      const icons = (streak.last_10 || []).map(s =>
+        s === "ok" ? "\x1b[32m✓\x1b[0m" : s === "fail" ? "\x1b[31m✗\x1b[0m" : "\x1b[33mT\x1b[0m"
+      ).join("");
+      const rate = streak.success_rate != null ? `${Math.round(streak.success_rate * 100)}%` : "?";
+      const attnColor = attn === "healthy" ? "\x1b[32m" : attn === "failing" ? "\x1b[31m" : attn === "slow" ? "\x1b[33m" : "\x1b[2m";
+      const running = streak.executing > 0 ? ` \x1b[33m${streak.executing} running\x1b[0m` : "";
+      console.log(`    ${icons} ${rate} ${attnColor}${attn}\x1b[0m${running}`);
+      if (attn === "failing" || attn === "slow") {
+        console.log(`    \x1b[2m→ ${streak.attention_detail}\x1b[0m`);
+      }
+    } else {
+      console.log(`    \x1b[2midle — no recent tasks\x1b[0m`);
+    }
     if (providers.length > 0) {
       console.log(`    ${providers.map(providerBadge).join(" ")}`);
     }

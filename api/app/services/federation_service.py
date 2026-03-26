@@ -527,9 +527,77 @@ def get_known_node_ids() -> set[str]:
         return {r.node_id for r in s.query(FederationNodeRecord).all()}
 
 
+def _build_node_streaks() -> dict[str, dict]:
+    """Build per-node task streaks from recent activity events."""
+    from app.services.task_activity_service import get_activity
+    events = get_activity(limit=500)
+
+    from collections import defaultdict
+    streaks: dict[str, dict] = defaultdict(lambda: {
+        "completed": 0, "failed": 0, "timed_out": 0, "executing": 0,
+        "last_10": [], "providers_used": set(),
+    })
+    for e in events:
+        node = e.get("node_name", "")
+        if not node:
+            continue
+        s = streaks[node]
+        et = e.get("event_type", "")
+        provider = e.get("provider", "")
+        if provider:
+            s["providers_used"].add(provider)
+        if et == "completed":
+            s["completed"] += 1
+            s["last_10"].append("ok")
+        elif et == "failed":
+            s["failed"] += 1
+            s["last_10"].append("fail")
+        elif et == "timeout":
+            s["timed_out"] += 1
+            s["last_10"].append("timeout")
+        elif et == "executing":
+            s["executing"] += 1
+
+    result = {}
+    for node, s in streaks.items():
+        total = s["completed"] + s["failed"] + s["timed_out"]
+        success_rate = round(s["completed"] / total, 2) if total else None
+        # Determine attention level
+        if s["failed"] > s["completed"] and total > 3:
+            attention = "failing"
+            attention_detail = f"More failures ({s['failed']}) than successes ({s['completed']}). Check provider logs."
+        elif s["timed_out"] > 2:
+            attention = "slow"
+            attention_detail = f"{s['timed_out']} timeouts. Increase timeout or use faster provider."
+        elif total == 0 and s["executing"] > 0:
+            attention = "starting"
+            attention_detail = "Executing tasks, no results yet."
+        elif total > 0 and success_rate and success_rate >= 0.7:
+            attention = "healthy"
+            attention_detail = f"{s['completed']}/{total} succeeded ({success_rate:.0%})."
+        else:
+            attention = "mixed"
+            attention_detail = f"{s['completed']}/{total} succeeded." if total else "No data."
+
+        result[node] = {
+            "completed": s["completed"],
+            "failed": s["failed"],
+            "timed_out": s["timed_out"],
+            "executing": s["executing"],
+            "total_resolved": total,
+            "success_rate": success_rate,
+            "last_10": s["last_10"][-10:],
+            "providers_used": sorted(s["providers_used"]),
+            "attention": attention,
+            "attention_detail": attention_detail,
+        }
+    return result
+
+
 def list_nodes() -> list[dict]:
     """Return all registered federation nodes with git_sha and streak data."""
     _ensure_schema()
+    streaks = _build_node_streaks()
     with _session() as s:
         recs = s.query(FederationNodeRecord).all()
         nodes = []
@@ -538,9 +606,15 @@ def list_nodes() -> list[dict]:
                 caps = json.loads(r.capabilities_json) if r.capabilities_json else {}
             except Exception:
                 caps = {}
+            hostname = r.hostname or ""
+            streak = streaks.get(hostname, {
+                "completed": 0, "failed": 0, "timed_out": 0, "executing": 0,
+                "total_resolved": 0, "success_rate": None, "last_10": [],
+                "providers_used": [], "attention": "idle", "attention_detail": "No recent activity.",
+            })
             nodes.append({
                 "node_id": r.node_id,
-                "hostname": r.hostname,
+                "hostname": hostname,
                 "os_type": r.os_type,
                 "providers": json.loads(r.providers_json) if r.providers_json else [],
                 "capabilities": caps,
@@ -549,6 +623,7 @@ def list_nodes() -> list[dict]:
                 "status": r.status,
                 "git_sha": caps.get("git_sha"),
                 "git_sha_updated_at": caps.get("git_sha_updated_at"),
+                "streak": streak,
             })
         return nodes
 
