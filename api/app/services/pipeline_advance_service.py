@@ -48,15 +48,19 @@ _PHASE_TASK_TYPE: dict[str, TaskType] = {
 # Text-only providers (openrouter/free) often claim completion with 0 output.
 _MIN_OUTPUT_CHARS: dict[str, int] = {
     "spec": 100,    # A real spec is at least a paragraph
-    "impl": 50,     # A real impl should describe what was changed
-    "test": 50,     # A real test run should show results
+    "impl": 200,    # A real impl must describe files changed + verification
+    "test": 100,    # A real test run must show test results
     "code-review": 30,  # A review at least says PASSED or FAILED
 }
+
+# Phases that MUST produce code (git diff). Text output alone is not enough.
+_CODE_REQUIRED_PHASES = {"impl", "test"}
 
 
 def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
     """Check if a completed task has meaningful output.
 
+    For impl/test: output must mention file changes or contain code evidence.
     Returns (is_valid, reason).
     """
     task_type = task.get("task_type", "")
@@ -67,6 +71,22 @@ def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
 
     if len(output) < min_chars:
         return False, f"Output too short ({len(output)} chars < {min_chars} min for {task_type})"
+
+    # impl/test must show evidence of code changes, not just text claims
+    if task_type in _CODE_REQUIRED_PHASES:
+        context = task.get("context") or {}
+        # Check for git diff evidence, file paths, or branch push
+        code_signals = any([
+            "diff" in output.lower(),
+            ".py" in output or ".tsx" in output or ".mjs" in output or ".ts" in output,
+            "created" in output.lower() and ("file" in output.lower() or "test" in output.lower()),
+            "modified" in output.lower(),
+            context.get("branch_pushed"),
+            context.get("diff_size"),
+        ])
+        if not code_signals:
+            return False, f"{task_type} completed but output has no evidence of code changes (no file paths, no diff, no branch)"
+
     return True, ""
 
 
