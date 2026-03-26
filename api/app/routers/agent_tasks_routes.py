@@ -224,7 +224,7 @@ async def update_task(
                 logger.info("Auto-advanced task %s → %s", task_id, advanced.get("id", "?"))
         except Exception:
             logger.warning("Auto-advance failed for task %s", task_id, exc_info=True)
-    if data.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
+    if data.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.TIMED_OUT):
         try:
             from app.services.metrics_service import record_task
 
@@ -252,4 +252,20 @@ async def update_task(
             )
         except ImportError:
             logger.info("Metrics module not available, skipping recording")
+        # Record provider outcome for Thompson Sampling learning
+        try:
+            from app.services.slot_selection_service import SlotSelector
+            success = status_str == "completed"
+            model = task.get("model", "unknown")
+            slot = SlotSelector(f"provider_{task_type_str}")
+            slot.record(
+                slot_id=model,
+                value_score=1.0 if success else 0.0,
+                resource_cost=max(duration_seconds, 0.1),
+                error_class=None if success else "timed_out" if status_str == "timed_out" else "failed",
+                duration_s=duration_seconds,
+            )
+            logger.info("SLOT_RECORD type=%s model=%s success=%s dur=%.0fs", task_type_str, model, success, duration_seconds)
+        except Exception:
+            pass  # Non-critical — don't break task completion
     return AgentTask(**task_to_full(task))
