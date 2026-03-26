@@ -159,6 +159,25 @@ def compute_pulse(window_days: int = 7, task_limit: int = 500) -> dict[str, Any]
     else:
         recommendation = "Pipeline appears balanced. Keep monitoring phase success rates."
 
+    # ── Tasks needing human attention ───────────────────────────────
+    needs_decision = []
+    for t in all_tasks:
+        status_val = t.get("status", "")
+        if hasattr(status_val, "value"):
+            status_val = status_val.value
+        if status_val == "needs_decision":
+            ctx = t.get("context") or {}
+            analysis = ctx.get("failure_analysis", {})
+            needs_decision.append({
+                "task_id": t.get("id", ""),
+                "task_type": t.get("task_type", ""),
+                "idea_id": ctx.get("idea_id", ""),
+                "idea_name": idea_names.get(ctx.get("idea_id", ""), ctx.get("idea_id", "")),
+                "failure_type": analysis.get("failure_type", "unknown"),
+                "reason": analysis.get("reason", t.get("decision_prompt", "")[:100]),
+                "decision_prompt": t.get("decision_prompt", ""),
+            })
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "window_days": window_days,
@@ -181,4 +200,6 @@ def compute_pulse(window_days: int = 7, task_limit: int = 500) -> dict[str, Any]
                 for iid in full_cycle
             ],
         },
+        "needs_decision": needs_decision,
+        "needs_decision_count": len(needs_decision),
     }

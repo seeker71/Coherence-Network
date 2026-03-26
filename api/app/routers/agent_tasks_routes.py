@@ -215,6 +215,15 @@ async def update_task(
             if data.output:
                 msg += f"\n\nOutput: {data.output[:200]}"
             background_tasks.add_task(telegram_adapter.send_alert, msg)
+    # Process escalation decisions (A/B/C/D from needs_decision tasks)
+    if (data.decision
+            and previous_status_value == TaskStatus.NEEDS_DECISION.value
+            and (task.get("context") or {}).get("escalation_source") == "pipeline_advance_service"):
+        try:
+            from app.services import pipeline_advance_service
+            pipeline_advance_service.handle_decision(task, data.decision)
+        except Exception:
+            logger.warning("Decision handling failed for task %s", task_id, exc_info=True)
     if data.status == TaskStatus.COMPLETED:
         # Auto-advance: create next phase task (spec→impl→test→review)
         try:
