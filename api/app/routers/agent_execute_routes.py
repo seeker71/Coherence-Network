@@ -58,11 +58,16 @@ async def pickup_and_execute_task(
         task = requeue_terminal_task_for_execute(task_id, task)
     else:
         pending, _, _ = agent_service.list_tasks(status=TaskStatus.PENDING, task_type=task_type, limit=200, offset=0)
+        # Skip federation tasks — they run on registered nodes, not Codex executor
+        pending = [t for t in pending if (t.get("context") or {}).get("executor") != "federation"]
         if not pending:
-            return {"ok": False, "picked": False, "reason": "No pending tasks"}
+            return {"ok": False, "picked": False, "reason": "No pending tasks (federation tasks skipped)"}
         task = pending[-1]
 
     task_ctx = task.get("context")
+    # Block federation tasks from Codex execution even when specified by task_id
+    if isinstance(task_ctx, dict) and task_ctx.get("executor") == "federation":
+        return {"ok": False, "picked": False, "reason": "Task is federation-executor — runs on registered nodes, not Codex"}
     selected_task_id = str(task.get("id") or "").strip()
     if not selected_task_id:
         raise HTTPException(status_code=404, detail="Task id missing")
