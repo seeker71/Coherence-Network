@@ -1542,19 +1542,33 @@ def _push_and_pr(
     try:
         cwd = str(_REPO_DIR)
 
-        # Ensure all changes are committed
+        # Ensure all changes are committed (exclude control files from staging)
+        _CONTROL_FILES = {".task-control", ".task-checkpoint.md", "data/coherence.db"}
         status = subprocess.run(
             ["git", "status", "--porcelain"], capture_output=True, text=True,
             timeout=5, cwd=cwd,
         )
-        uncommitted = [l for l in status.stdout.splitlines() if l.strip() and not l.startswith("?")]
-        if uncommitted:
-            # Stage and commit any uncommitted changes the provider left
-            subprocess.run(["git", "add", "-A"], capture_output=True, timeout=5, cwd=cwd)
-            subprocess.run(
-                ["git", "commit", "-m", f"{task_type}({idea_id}): {task_id[:12]} via {provider}"],
-                capture_output=True, timeout=10, cwd=cwd,
-            )
+        code_files = []
+        for line in status.stdout.splitlines():
+            if not line.strip() or line.startswith("?"):
+                continue
+            path = line[3:].strip().strip('"').split(" -> ")[-1]
+            if path not in _CONTROL_FILES and not any(path.startswith(p) for p in (".codex", "__pycache__", ".tmp")):
+                code_files.append(path)
+
+        if not code_files:
+            log.info("PR_SKIP task=%s — no real code files changed (only control files)", task_id)
+            # Reset working tree to clean state
+            subprocess.run(["git", "checkout", "--", "."], capture_output=True, timeout=5, cwd=cwd)
+            return None
+
+        # Stage only code files, commit
+        for f in code_files:
+            subprocess.run(["git", "add", f], capture_output=True, timeout=5, cwd=cwd)
+        subprocess.run(
+            ["git", "commit", "-m", f"{task_type}({idea_id}): {task_id[:12]} via {provider}\n\nFiles: {', '.join(code_files[:5])}"],
+            capture_output=True, timeout=10, cwd=cwd,
+        )
 
         # Check if there are commits ahead of origin/main
         diff_check = subprocess.run(
