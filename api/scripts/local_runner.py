@@ -2145,13 +2145,21 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     }
     min_chars = _MIN_OUTPUT_BY_PHASE.get(task_type, 50)
     output_stripped = (output or "").strip()
-    if success and len(output_stripped) < min_chars:
+    # If a PR was created with real code, the provider did real work —
+    # don't penalize for terse text output
+    has_pr = "PR:" in output or "PR_CREATED" in output or "pull/" in output
+    if success and len(output_stripped) < min_chars and not has_pr:
         log.warning(
             "QUALITY_GATE task=%s provider=%s type=%s — output too short (%d chars < %d min for %s). "
             "Marking as failed, not completed.",
             task_id, provider, task_type, len(output_stripped), min_chars, task_type,
         )
         success = False
+    elif success and len(output_stripped) < min_chars and has_pr:
+        log.info(
+            "QUALITY_GATE task=%s — output short (%d chars) but PR exists, accepting",
+            task_id, len(output_stripped),
+        )
 
     completion_status = "completed" if success else "failed"
     completion_error_category = "execution_error"
