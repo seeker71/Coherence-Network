@@ -481,6 +481,23 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
     }
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # Create contributor + asset + contribution to populate registry data
+        c = await client.post("/api/contributors", json={"type": "HUMAN", "name": "flow-tester", "email": "flow-tester@coherence.network"})
+        assert c.status_code == 201
+        contributor_id = c.json()["id"]
+
+        a = await client.post("/api/assets", json={"type": "CODE", "description": "Flow test repo"})
+        assert a.status_code == 201
+        asset_id = a.json()["id"]
+
+        contrib = await client.post("/api/contributions", json={
+            "contributor_id": contributor_id,
+            "asset_id": asset_id,
+            "cost_amount": "2.50",
+            "metadata": {"idea_id": "portfolio-governance", "has_tests": True},
+        })
+        assert contrib.status_code == 201
+
         created = await client.post("/api/value-lineage/links", json=link_payload, headers=AUTH_HEADERS)
         assert created.status_code == 201
         lineage_id = created.json()["id"]
@@ -1582,8 +1599,12 @@ async def test_sync_traceability_gaps_links_spec_to_idea_creates_missing_specs_a
             assert row["spec"]["tracked"] is True
             assert created["spec_id"] in row["spec"]["spec_ids"]
 
-        idea = await client.get(f"/api/ideas/{linked_spec_payload['idea_id']}")
-        assert idea.status_code == 200
+        # The sync creates an auto-idea for unlinked specs; verify it's in the graph
+        from app.services import graph_service as _gs
+        target_idea_id = linked_spec_payload["idea_id"]
+        node = _gs.get_node(target_idea_id)
+        assert node is not None, f"Idea {target_idea_id} should exist in graph after sync"
+        assert node.get("type") == "idea"
 
         listed_tasks = await client.get("/api/agent/tasks")
         assert listed_tasks.status_code == 200

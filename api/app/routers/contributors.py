@@ -43,7 +43,10 @@ def _node_to_contributor(node: dict) -> Contributor:
 )
 def create_contributor(contributor: ContributorCreate) -> Contributor:
     """Register a new contributor (human or system) in the network."""
+    from app.services.contributor_hygiene import is_test_contributor_email
     contrib = Contributor(**contributor.model_dump())
+    if is_test_contributor_email(contrib.email):
+        raise HTTPException(status_code=422, detail="Test email domains are not allowed for persistent contributors")
     node_id = f"contributor:{contrib.name}"
     existing = graph_service.get_node(node_id)
     if existing:

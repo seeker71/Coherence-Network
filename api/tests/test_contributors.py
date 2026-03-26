@@ -14,7 +14,7 @@ async def test_create_get_list_contributors() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.post(
             "/api/contributors",
-            json={"type": "HUMAN", "name": "Alice", "email": "alice@example.com"},
+            json={"type": "HUMAN", "name": "Alice", "email": "alice@coherence.network"},
         )
         assert resp.status_code == 201
         created = resp.json()

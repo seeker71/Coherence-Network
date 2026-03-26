@@ -371,7 +371,7 @@ async def test_ideas_storage_endpoint_reports_structured_backend(
         assert storage.status_code == 200
 
     data = storage.json()
-    assert data["backend"] == "sqlite"
+    assert data["backend"] == "graph_nodes"
     assert data["idea_count"] >= 1
     assert "bootstrap_source" in data
     assert data["database_url"].startswith("sqlite")

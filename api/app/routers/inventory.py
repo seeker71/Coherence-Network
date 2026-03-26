@@ -211,6 +211,31 @@ async def sync_traceability_gap_artifacts(
     return payload
 
 
+@router.get("/pipeline/pulse")
+async def pipeline_pulse(
+    window_days: int = Query(7, ge=1, le=90),
+    task_limit: int = Query(500, ge=10, le=5000),
+) -> dict:
+    """Pipeline self-awareness digest: what's working, what's stuck, what to do next."""
+    from app.services import pipeline_pulse_service
+    return pipeline_pulse_service.compute_pulse(
+        window_days=window_days,
+        task_limit=task_limit,
+    )
+
+
+@router.post("/inventory/gaps/bootstrap-specs")
+async def bootstrap_spec_tasks(
+    max_tasks: int = Query(20, ge=1, le=100),
+    min_value_gap: float = Query(10.0, ge=0),
+) -> dict:
+    """Create spec tasks for the highest-ROI ideas that don't have a spec yet."""
+    return inventory_service.bootstrap_spec_tasks(
+        max_tasks=max_tasks,
+        min_value_gap=min_value_gap,
+    )
+
+
 @router.get("/inventory/process-completeness")
 async def process_completeness(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
@@ -295,10 +320,35 @@ def spec_process_implementation_validation_flow(
     runtime_event_limit: int = Query(600, ge=1, le=5000),
     list_item_limit: int = Query(12, ge=1, le=200),
 ) -> dict:
-    store = get_store(request)
-    contributor_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=contributor_limit)]
-    contribution_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=contribution_limit)]
-    asset_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=asset_limit)]
+    from app.services import graph_service as _gs
+    from app.models.graph import Edge
+    from app.services.unified_db import session as _sess
+
+    def _compat_row(node: dict) -> dict:
+        """Map graph node to legacy-compatible dict for inventory_service."""
+        row = dict(node)
+        # Use legacy_id as the primary id if available
+        if row.get("legacy_id"):
+            row["id"] = row["legacy_id"]
+        return row
+
+    contributor_rows = [_compat_row(n) for n in _gs.list_nodes(type="contributor", limit=contributor_limit).get("items", [])]
+    asset_rows = [_compat_row(n) for n in _gs.list_nodes(type="asset", limit=asset_limit).get("items", [])]
+    def _compat_edge(edge_dict: dict) -> dict:
+        """Flatten edge properties for inventory_service compatibility."""
+        row = dict(edge_dict)
+        props = row.pop("properties", {}) or {}
+        row.update(props)
+        # Ensure contribution_id maps to id
+        if props.get("contribution_id"):
+            row["id"] = props["contribution_id"]
+        return row
+
+    with _sess() as s:
+        contribution_rows = [
+            _compat_edge(e.to_dict()) for e in
+            s.query(Edge).filter(Edge.type == "contribution").limit(contribution_limit).all()
+        ]
     return inventory_service.build_spec_process_implementation_validation_flow(
         idea_id=idea_id,
         include_internal_ideas=include_internal_ideas,

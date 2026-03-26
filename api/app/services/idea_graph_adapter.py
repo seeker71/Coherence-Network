@@ -160,9 +160,13 @@ def ensure_schema() -> None:
 
 def storage_info() -> dict[str, Any]:
     """Return storage info about the graph-backed idea store."""
-    stats = graph_service.count_nodes(type="idea")
+    from app.services.unified_db import database_url as _db_url
+    idea_stats = graph_service.count_nodes(type="idea")
+    question_stats = graph_service.count_nodes(type="question")
     return {
         "backend": "graph_nodes",
-        "total_ideas": stats.get("total", 0),
-        "table": "graph_nodes (type='idea')",
+        "database_url": _db_url(),
+        "idea_count": idea_stats.get("total", 0),
+        "question_count": question_stats.get("total", 0),
+        "bootstrap_source": "graph_nodes (type='idea')",
     }

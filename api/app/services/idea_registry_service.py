@@ -324,12 +324,15 @@ def save_ideas(ideas: list[Idea], bootstrap_source: str | None = None) -> None:
     for position, idea in enumerate(ideas):
         save_single_idea(idea, position=position)
 
-        if bootstrap_source is not None:
-            row = session.get(RegistryMetaRecord, "bootstrap_source")
+    if bootstrap_source is not None:
+        from app.services.unified_db import session as _sess
+        with _sess() as s:
+            row = s.get(RegistryMetaRecord, "bootstrap_source")
             if row is None:
-                session.add(RegistryMetaRecord(key="bootstrap_source", value=bootstrap_source))
+                s.add(RegistryMetaRecord(key="bootstrap_source", value=bootstrap_source))
             else:
                 row.value = bootstrap_source
+            s.commit()
 
 
 def _meta_value(session: Session, key: str, default: str = "") -> str:

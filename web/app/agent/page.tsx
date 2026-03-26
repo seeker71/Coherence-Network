@@ -92,147 +92,262 @@ export default async function AgentPage() {
 
       <h1 className="text-2xl font-bold">Agent Service Visibility</h1>
       <p className="text-muted-foreground">
-        Pipeline execution status, usage telemetry, and remaining usage tracking gap for safe agent operation.
+        Live overview of pipeline activity, model usage, and execution tracking coverage.
       </p>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Pipeline Snapshot</h2>
-        <p className="text-muted-foreground">
-          running {data.pipeline.running_count} | pending {data.pipeline.pending_count} | recent_completed{" "}
-          {data.pipeline.recent_completed_count}
-        </p>
-        <p className="text-muted-foreground">
-          attention_flags {data.pipeline.attention_flags.length > 0 ? data.pipeline.attention_flags.join(", ") : "none"}
-        </p>
-        <ul className="space-y-1">
-          {Object.entries(data.pipeline.running_by_phase).map(([phase, count]) => (
-            <li key={phase} className="flex justify-between rounded border p-2">
-              <span>{phase}</span>
-              <span className="text-muted-foreground">{count}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Remaining Usage Tracking</h2>
-        <p className="text-muted-foreground">
-          health {data.remaining_usage.health} | coverage {(data.remaining_usage.coverage_rate * 100).toFixed(1)}% |
-          remaining {data.remaining_usage.remaining_to_full_coverage}
-        </p>
-        <ul className="space-y-1">
-          {data.remaining_usage.untracked_task_ids.length === 0 && (
-            <li className="text-muted-foreground">No untracked completed/failed tasks.</li>
-          )}
-          {data.remaining_usage.untracked_task_ids.map((taskId) => (
-            <li key={taskId} className="rounded border p-2">
-              <Link href={`/tasks?task_id=${encodeURIComponent(taskId)}`} className="underline hover:text-foreground">
-                {taskId}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="rounded border p-4 space-y-3 text-sm">
-        <h2 className="font-semibold">Usage by Model</h2>
-        <ul className="space-y-2">
-          {modelRows.map(([model, row]) => (
-            <li key={model} className="rounded border p-2 flex justify-between gap-3">
-              <span>{model}</span>
-              <span className="text-muted-foreground">
-                count {row.count} | statuses{" "}
-                {Object.entries(row.by_status)
-                  .map(([status, count]) => `${status}:${count}`)
-                  .join(", ")}
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4 text-sm">
+        <h2 className="text-xl font-semibold">Pipeline Snapshot</h2>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Running</p>
+            <p className="text-lg font-semibold">{data.pipeline.running_count}</p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Pending</p>
+            <p className="text-lg font-semibold">{data.pipeline.pending_count}</p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Recently completed</p>
+            <p className="text-lg font-semibold">{data.pipeline.recent_completed_count}</p>
+          </div>
+        </div>
+        {data.pipeline.attention_flags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            <span className="text-muted-foreground text-xs">Attention flags:</span>
+            {data.pipeline.attention_flags.map((flag) => (
+              <span key={flag} className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-500/10 text-amber-500">
+                {flag}
               </span>
-            </li>
-          ))}
-          {modelRows.length === 0 && <li className="text-muted-foreground">No usage recorded yet.</li>}
-        </ul>
+            ))}
+          </div>
+        )}
+        {Object.entries(data.pipeline.running_by_phase).length > 0 && (
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-xs">Running by phase</p>
+            {Object.entries(data.pipeline.running_by_phase).map(([phase, count]) => (
+              <div key={phase} className="flex justify-between rounded-xl border border-border/20 bg-background/40 p-2">
+                <span>{phase}</span>
+                <span className="text-muted-foreground">{count}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4 text-sm">
+        <h2 className="text-xl font-semibold">Usage Tracking Coverage</h2>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Health</p>
+            <p className="text-lg font-semibold">
+              <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                data.remaining_usage.health === "ok" || data.remaining_usage.health === "healthy"
+                  ? "bg-green-500/10 text-green-500"
+                  : data.remaining_usage.health === "degraded"
+                    ? "bg-amber-500/10 text-amber-500"
+                    : "bg-red-500/10 text-red-500"
+              }`}>
+                {data.remaining_usage.health}
+              </span>
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Coverage</p>
+            <p className="text-lg font-semibold">{(data.remaining_usage.coverage_rate * 100).toFixed(1)}%</p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Remaining to full</p>
+            <p className="text-lg font-semibold">{data.remaining_usage.remaining_to_full_coverage}</p>
+          </div>
+        </div>
+        {data.remaining_usage.untracked_task_ids.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-muted-foreground text-xs">Untracked tasks</p>
+            {data.remaining_usage.untracked_task_ids.map((taskId) => (
+              <div key={taskId} className="rounded-xl border border-border/20 bg-background/40 p-2">
+                <Link href={`/tasks?task_id=${encodeURIComponent(taskId)}`} className="underline hover:text-foreground">
+                  {taskId}
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+        {data.remaining_usage.untracked_task_ids.length === 0 && (
+          <p className="text-muted-foreground">No untracked completed/failed tasks.</p>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+        <h2 className="text-xl font-semibold">Usage by Model</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border/30 text-muted-foreground text-xs">
+                <th className="py-2 pr-3">Model</th>
+                <th className="py-2 pr-3 text-right">Requests</th>
+                <th className="py-2 pr-3 text-right">Statuses</th>
+              </tr>
+            </thead>
+            <tbody>
+              {modelRows.map(([model, row]) => (
+                <tr key={model} className="border-b border-border/10">
+                  <td className="py-2 pr-3 font-medium">{model}</td>
+                  <td className="py-2 pr-3 text-right">{row.count}</td>
+                  <td className="py-2 pr-3 text-right">
+                    <span className="flex flex-wrap justify-end gap-1">
+                      {Object.entries(row.by_status).map(([s, c]) => (
+                        <span key={s} className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          s.startsWith("2") ? "bg-green-500/10 text-green-500"
+                            : s.startsWith("4") ? "bg-amber-500/10 text-amber-500"
+                              : s.startsWith("5") ? "bg-red-500/10 text-red-500"
+                                : "bg-muted text-muted-foreground"
+                        }`}>
+                          {s}: {c}
+                        </span>
+                      ))}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {modelRows.length === 0 && <p className="text-muted-foreground py-2">No usage recorded yet.</p>}
+        </div>
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-        <div className="rounded border p-4 space-y-2">
-          <h2 className="font-semibold">Execution by Executor</h2>
-          <p className="text-muted-foreground">
-            tracked_runs {execution?.tracked_runs ?? 0} | success_runs {execution?.success_runs ?? 0} | failed_runs{" "}
-            {execution?.failed_runs ?? 0} | success_rate {((execution?.success_rate ?? 0) * 100).toFixed(1)}%
-          </p>
-          <ul className="space-y-1">
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h2 className="text-xl font-semibold">Execution by Executor</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Tracked runs</p>
+              <p className="text-lg font-semibold">{execution?.tracked_runs ?? 0}</p>
+            </div>
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Success rate</p>
+              <p className="text-lg font-semibold">{((execution?.success_rate ?? 0) * 100).toFixed(1)}%</p>
+            </div>
+          </div>
+          <div className="space-y-1">
             {executorRows.map(([executor, row]) => (
-              <li key={executor} className="flex justify-between rounded border p-2">
-                <span>{executor}</span>
-                <span className="text-muted-foreground">
-                  total {row.count} | ok {row.completed} | failed {row.failed}
+              <div key={executor} className="flex justify-between rounded-xl border border-border/20 bg-background/40 p-2">
+                <span className="font-medium">{executor}</span>
+                <span className="flex gap-2 text-xs">
+                  <span className="text-muted-foreground">{row.count} total</span>
+                  <span className="text-green-500">{row.completed} ok</span>
+                  {row.failed > 0 && <span className="text-red-500">{row.failed} failed</span>}
                 </span>
-              </li>
+              </div>
             ))}
-            {executorRows.length === 0 && <li className="text-muted-foreground">No execution runs yet.</li>}
-          </ul>
+            {executorRows.length === 0 && <p className="text-muted-foreground">No execution runs yet.</p>}
+          </div>
         </div>
 
-        <div className="rounded border p-4 space-y-2">
-          <h2 className="font-semibold">Execution by Agent</h2>
-          <p className="text-muted-foreground">
-            codex_runs {execution?.codex_runs ?? 0} | tracked_task_runs {coverage?.tracked_task_runs ?? 0}
-          </p>
-          <ul className="space-y-1">
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h2 className="text-xl font-semibold">Execution by Agent</h2>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Codex runs</p>
+              <p className="text-lg font-semibold">{execution?.codex_runs ?? 0}</p>
+            </div>
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Tracked task runs</p>
+              <p className="text-lg font-semibold">{coverage?.tracked_task_runs ?? 0}</p>
+            </div>
+          </div>
+          <div className="space-y-1">
             {agentRows.map(([agent, row]) => (
-              <li key={agent} className="flex justify-between rounded border p-2">
-                <span>{agent}</span>
-                <span className="text-muted-foreground">
-                  total {row.count} | ok {row.completed} | failed {row.failed}
+              <div key={agent} className="flex justify-between rounded-xl border border-border/20 bg-background/40 p-2">
+                <span className="font-medium">{agent}</span>
+                <span className="flex gap-2 text-xs">
+                  <span className="text-muted-foreground">{row.count} total</span>
+                  <span className="text-green-500">{row.completed} ok</span>
+                  {row.failed > 0 && <span className="text-red-500">{row.failed} failed</span>}
                 </span>
-              </li>
+              </div>
             ))}
-            {agentRows.length === 0 && <li className="text-muted-foreground">No agent runs yet.</li>}
-          </ul>
+            {agentRows.length === 0 && <p className="text-muted-foreground">No agent runs yet.</p>}
+          </div>
         </div>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Tool Usage (Machine + Human)</h2>
-        <p className="text-muted-foreground">
-          Tool-level count, success rate, and failures from worker runtime telemetry events.
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+        <h2 className="text-xl font-semibold">Tool Usage</h2>
+        <p className="text-muted-foreground text-xs">
+          Counts, success rates, and failures from worker runtime telemetry.
         </p>
-        <ul className="space-y-1">
-          {toolRows.map(([tool, row]) => (
-            <li key={tool} className="flex justify-between rounded border p-2">
-              <span>{tool}</span>
-              <span className="text-muted-foreground">
-                total {row.count} | ok {row.completed} | failed {row.failed} | success_rate{" "}
-                {(row.success_rate * 100).toFixed(1)}%
-              </span>
-            </li>
-          ))}
-          {toolRows.length === 0 && <li className="text-muted-foreground">No tool usage events yet.</li>}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border/30 text-muted-foreground text-xs">
+                <th className="py-2 pr-3">Tool</th>
+                <th className="py-2 pr-3 text-right">Total</th>
+                <th className="py-2 pr-3 text-right">OK</th>
+                <th className="py-2 pr-3 text-right">Failed</th>
+                <th className="py-2 pr-3 text-right">Success rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {toolRows.map(([tool, row]) => (
+                <tr key={tool} className="border-b border-border/10">
+                  <td className="py-2 pr-3 font-medium">{tool}</td>
+                  <td className="py-2 pr-3 text-right">{row.count}</td>
+                  <td className="py-2 pr-3 text-right text-green-500">{row.completed}</td>
+                  <td className="py-2 pr-3 text-right">{row.failed > 0 ? <span className="text-red-500">{row.failed}</span> : <span className="text-muted-foreground">0</span>}</td>
+                  <td className="py-2 pr-3 text-right">{(row.success_rate * 100).toFixed(1)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {toolRows.length === 0 && <p className="text-muted-foreground py-2">No tool usage events yet.</p>}
+        </div>
       </section>
 
-      <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Recent Tracked Runs</h2>
-        <ul className="space-y-2">
-          {(execution?.recent_runs ?? []).slice(0, 20).map((run) => (
-            <li key={run.event_id} className="rounded border p-2 flex justify-between gap-3">
-              <span>
-                <Link
-                  href={`/tasks?task_id=${encodeURIComponent(run.task_id)}`}
-                  className="underline hover:text-foreground"
-                >
-                  {run.task_id}
-                </Link>{" "}
-                {run.endpoint}
-              </span>
-              <span className="text-muted-foreground">
-                {run.tool} | {run.executor} | status {run.status_code} | {run.runtime_ms.toFixed(1)}ms
-              </span>
-            </li>
-          ))}
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
+        <h2 className="text-xl font-semibold">Recent Tracked Runs</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border/30 text-muted-foreground text-xs">
+                <th className="py-2 pr-3">Task</th>
+                <th className="py-2 pr-3">Tool</th>
+                <th className="py-2 pr-3">Executor</th>
+                <th className="py-2 pr-3 text-right">Status</th>
+                <th className="py-2 pr-3 text-right">Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(execution?.recent_runs ?? []).slice(0, 20).map((run) => (
+                <tr key={run.event_id} className="border-b border-border/10">
+                  <td className="py-2 pr-3">
+                    <Link
+                      href={`/tasks?task_id=${encodeURIComponent(run.task_id)}`}
+                      className="underline hover:text-foreground"
+                    >
+                      {run.task_id}
+                    </Link>
+                    <span className="block text-xs text-muted-foreground">{run.endpoint}</span>
+                  </td>
+                  <td className="py-2 pr-3">{run.tool}</td>
+                  <td className="py-2 pr-3">{run.executor}</td>
+                  <td className="py-2 pr-3 text-right">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      run.status_code >= 200 && run.status_code < 300 ? "bg-green-500/10 text-green-500"
+                        : run.status_code >= 400 ? "bg-red-500/10 text-red-500"
+                          : "bg-muted text-muted-foreground"
+                    }`}>
+                      {run.status_code}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3 text-right text-muted-foreground">{run.runtime_ms.toFixed(1)} ms</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
           {(execution?.recent_runs ?? []).length === 0 && (
-            <li className="text-muted-foreground">No tracked execution events yet.</li>
+            <p className="text-muted-foreground py-2">No tracked execution events yet.</p>
           )}
-        </ul>
+        </div>
       </section>
     </main>
   );

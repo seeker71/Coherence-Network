@@ -18,14 +18,14 @@ from app.services.identity_providers import (
 
 
 def test_provider_count():
-    """Registry should contain 37 providers across 6 categories."""
-    assert len(SUPPORTED_PROVIDERS) == 37
-    assert len(PROVIDER_REGISTRY) == 6
+    """Registry should contain 40 providers across 6 categories."""
+    assert len(SUPPORTED_PROVIDERS) == 40
+    assert len(PROVIDER_REGISTRY) == 7
 
 
 def test_categories():
     cats = get_categories()
-    assert cats == ["Social", "Dev", "Crypto / Web3", "Professional", "Identity", "Custom"]
+    assert cats == ["Social", "Dev", "Crypto / Web3", "Professional", "Identity", "Agent", "Custom"]
 
 
 def test_original_providers_still_present():
@@ -83,7 +83,7 @@ def test_providers_endpoint(client):
     data = resp.json()
     assert "categories" in data
     cats = data["categories"]
-    assert len(cats) == 6
+    assert len(cats) == 7
     # Check github is in Social
     social_keys = [p["key"] for p in cats["Social"]]
     assert "github" in social_keys

@@ -8,6 +8,16 @@ import { useLiveRefresh } from "@/lib/live_refresh";
 
 const API_URL = getApiBase();
 
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return iso;
+  }
+}
+
 type Contributor = {
   id: string;
   name: string;
@@ -143,92 +153,65 @@ function ContributorsPageContent() {
             ) : null}
           </p>
           <ul className="space-y-2 text-sm">
-            {filteredRows.slice(0, 100).map((c) => (
-              <li key={c.id} className="rounded-xl border border-border/20 bg-background/40 p-4 flex justify-between gap-3">
-                <span className="font-medium">
-                  <Link href={`/contributors?contributor_id=${encodeURIComponent(c.id)}`} className="hover:underline">
-                    {c.name}
-                  </Link>
-                </span>
-                <span className="text-muted-foreground text-right">
-                  {c.type} | {c.email} | {c.created_at}
-                  <br />
-                  <Link
-                    href={`/contributions?contributor_id=${encodeURIComponent(c.id)}`}
-                    className="underline hover:text-foreground"
-                  >
-                    contributions
-                  </Link>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <ul className="space-y-2 text-sm">
             {filteredRows.slice(0, 100).map((c) => {
               const rel = relationsByContributor.get(c.id);
+              const hasRelations = rel && (
+                rel.ideaIds.length > 0 ||
+                rel.specIds.length > 0 ||
+                rel.processIdeaIds.length > 0 ||
+                rel.implementationRefs.length > 0
+              );
               return (
-                <li key={`${c.id}-relations`} className="rounded-xl border border-border/20 bg-background/40 p-4 text-muted-foreground">
-                  idea{" "}
-                  {rel && rel.ideaIds.length > 0
-                    ? rel.ideaIds.slice(0, 6).map((ideaId, idx) => (
-                        <span key={`${c.id}-idea-${ideaId}`}>
-                          {idx > 0 ? ", " : ""}
-                          <Link href={`/ideas/${encodeURIComponent(ideaId)}`} className="underline hover:text-foreground">
-                            {ideaId}
-                          </Link>
-                        </span>
-                      ))
-                    : (
-                      <Link href="/ideas" className="underline hover:text-foreground">
-                        missing
-                      </Link>
-                    )}{" "}
-                  | spec{" "}
-                  {rel && rel.specIds.length > 0
-                    ? rel.specIds.slice(0, 6).map((specId, idx) => (
-                        <span key={`${c.id}-spec-${specId}`}>
-                          {idx > 0 ? ", " : ""}
-                          <Link href={`/specs/${encodeURIComponent(specId)}`} className="underline hover:text-foreground">
-                            {specId}
-                          </Link>
-                        </span>
-                      ))
-                    : (
-                      <Link href="/specs" className="underline hover:text-foreground">
-                        missing
-                      </Link>
-                    )}{" "}
-                  | process{" "}
-                  {rel && rel.processIdeaIds.length > 0
-                    ? rel.processIdeaIds.slice(0, 4).map((ideaId, idx) => (
-                        <span key={`${c.id}-process-${ideaId}`}>
-                          {idx > 0 ? ", " : ""}
-                          <Link href={`/flow?idea_id=${encodeURIComponent(ideaId)}`} className="underline hover:text-foreground">
-                            {ideaId}
-                          </Link>
-                        </span>
-                      ))
-                    : (
-                      <Link href="/flow" className="underline hover:text-foreground">
-                        missing
-                      </Link>
-                    )}{" "}
-                  | implementation{" "}
-                  {rel && rel.implementationRefs.length > 0
-                    ? rel.implementationRefs.slice(0, 3).map((ref, idx) => (
-                        <span key={`${c.id}-impl-${ref}`}>
-                          {idx > 0 ? ", " : ""}
-                          <Link href={`/flow?contributor_id=${encodeURIComponent(c.id)}`} className="underline hover:text-foreground">
-                            ref-{idx + 1}
-                          </Link>
-                        </span>
-                      ))
-                    : (
-                      <Link href="/flow" className="underline hover:text-foreground">
-                        missing
+              <li key={c.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Link href={`/contributors?contributor_id=${encodeURIComponent(c.id)}`} className="font-medium hover:underline">
+                      {c.name}
+                    </Link>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      c.type === "SYSTEM" || c.type === "system"
+                        ? "bg-blue-500/10 text-blue-500"
+                        : "bg-green-500/10 text-green-500"
+                    }`}>
+                      {(c.type || "Human").charAt(0).toUpperCase() + (c.type || "Human").slice(1).toLowerCase()}
+                    </span>
+                  </div>
+                  <Link
+                    href={`/contributions?contributor_id=${encodeURIComponent(c.id)}`}
+                    className="text-xs underline text-muted-foreground hover:text-foreground"
+                  >
+                    View contributions
+                  </Link>
+                </div>
+                <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                  {c.email && <span>{c.email}</span>}
+                  {c.created_at && <span>Joined {formatDate(c.created_at)}</span>}
+                </div>
+                {hasRelations && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {rel!.ideaIds.length > 0 && (
+                      <Link href={`/ideas/${encodeURIComponent(rel!.ideaIds[0])}`} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
+                        {rel!.ideaIds.length} {rel!.ideaIds.length === 1 ? "idea" : "ideas"}
                       </Link>
                     )}
-                </li>
+                    {rel!.specIds.length > 0 && (
+                      <Link href={`/specs/${encodeURIComponent(rel!.specIds[0])}`} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
+                        {rel!.specIds.length} {rel!.specIds.length === 1 ? "spec" : "specs"}
+                      </Link>
+                    )}
+                    {rel!.processIdeaIds.length > 0 && (
+                      <Link href={`/flow?idea_id=${encodeURIComponent(rel!.processIdeaIds[0])}`} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
+                        {rel!.processIdeaIds.length} in process
+                      </Link>
+                    )}
+                    {rel!.implementationRefs.length > 0 && (
+                      <Link href={`/flow?contributor_id=${encodeURIComponent(c.id)}`} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
+                        {rel!.implementationRefs.length} {rel!.implementationRefs.length === 1 ? "implementation" : "implementations"}
+                      </Link>
+                    )}
+                  </div>
+                )}
+              </li>
               );
             })}
           </ul>

@@ -1,17 +1,18 @@
+"""Contributions router — backed by graph_nodes + graph_edges."""
 from __future__ import annotations
 
 from decimal import Decimal
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
-from app.adapters.graph_store import GraphStore
 from app.models.asset import Asset, AssetType
 from app.models.contribution import Contribution, ContributionCreate
 from app.models.contributor import Contributor, ContributorType
 from app.models.error import ErrorDetail
 from app.models.pagination import PaginatedResponse
+from app.services import graph_service
 from app.services.contribution_cost_service import (
     ACTUAL_VERIFICATION_KEYS,
     ESTIMATOR_VERSION,
@@ -31,8 +32,110 @@ class GitHubContribution(BaseModel):
     metadata: dict = {}
 
 
-def get_store(request: Request) -> GraphStore:
-    return request.app.state.graph_store
+# ── Graph helpers ─────────────────────────────────────────────────
+
+
+def _find_contributor_node(contributor_id: UUID) -> dict | None:
+    """Find a contributor node by legacy UUID."""
+    node = graph_service.get_node(f"contributor:{contributor_id}")
+    if node:
+        return node
+    result = graph_service.list_nodes(type="contributor", limit=500)
+    for n in result.get("items", []):
+        if n.get("legacy_id") == str(contributor_id) or n.get("name") == str(contributor_id):
+            return n
+    return None
+
+
+def _find_asset_node(asset_id: UUID) -> dict | None:
+    """Find an asset node by legacy UUID."""
+    node = graph_service.get_node(f"asset:{asset_id}")
+    if node:
+        return node
+    result = graph_service.list_nodes(type="asset", limit=500)
+    for n in result.get("items", []):
+        if n.get("legacy_id") == str(asset_id):
+            return n
+    return None
+
+
+def _find_contributor_by_email(email: str) -> dict | None:
+    """Find a contributor node by email."""
+    result = graph_service.list_nodes(type="contributor", limit=500)
+    for n in result.get("items", []):
+        if n.get("email") == email:
+            return n
+    return None
+
+
+def _find_asset_by_name(name: str) -> dict | None:
+    """Find an asset node by description/name."""
+    result = graph_service.list_nodes(type="asset", limit=500)
+    for n in result.get("items", []):
+        desc = n.get("description", "")
+        if name in desc or n.get("name") == name:
+            return n
+    return None
+
+
+def _edge_to_contribution(edge: dict) -> Contribution:
+    """Convert a graph edge to a Contribution model."""
+    props = edge.get("properties", {})
+    return Contribution(
+        id=UUID(props["contribution_id"]) if props.get("contribution_id") else uuid4(),
+        contributor_id=UUID(props["contributor_id"]) if props.get("contributor_id") else uuid4(),
+        asset_id=UUID(props["asset_id"]) if props.get("asset_id") else uuid4(),
+        cost_amount=Decimal(str(props.get("cost_amount", "0"))),
+        coherence_score=float(props.get("coherence_score", 0.5)),
+        metadata=props.get("metadata", {}),
+    )
+
+
+def _store_contribution(
+    contributor_id: UUID,
+    asset_id: UUID,
+    contributor_node_id: str,
+    asset_node_id: str,
+    cost_amount: Decimal,
+    coherence_score: float,
+    metadata: dict,
+) -> Contribution:
+    """Store a contribution as a graph edge and return the Contribution model."""
+    contrib_id = uuid4()
+    graph_service.create_edge(
+        from_id=contributor_node_id,
+        to_id=asset_node_id,
+        type="contribution",
+        properties={
+            "contribution_id": str(contrib_id),
+            "contributor_id": str(contributor_id),
+            "asset_id": str(asset_id),
+            "cost_amount": str(cost_amount),
+            "coherence_score": coherence_score,
+            "metadata": metadata,
+        },
+        strength=coherence_score,
+        created_by="contributions_router",
+    )
+    # Update total_cost on the asset node
+    asset_node = graph_service.get_node(asset_node_id)
+    if asset_node:
+        current_cost = Decimal(str(asset_node.get("total_cost", "0")))
+        graph_service.update_node(
+            asset_node_id,
+            properties={"total_cost": str(current_cost + cost_amount)},
+        )
+    return Contribution(
+        id=contrib_id,
+        contributor_id=contributor_id,
+        asset_id=asset_id,
+        cost_amount=cost_amount,
+        coherence_score=coherence_score,
+        metadata=metadata,
+    )
+
+
+# ── Cost provenance ──────────────────────────────────────────────
 
 
 def _manual_cost_provenance(metadata: dict, cost_amount: Decimal) -> dict:
@@ -58,20 +161,19 @@ def _manual_cost_provenance(metadata: dict, cost_amount: Decimal) -> dict:
     }
 
 
-def calculate_coherence(contribution: ContributionCreate, store: GraphStore) -> float:
+def calculate_coherence(contribution: ContributionCreate) -> float:
     """Calculate basic coherence score."""
     score = 0.5  # Baseline
-
     if contribution.metadata.get("has_tests"):
         score += 0.2
-
     if contribution.metadata.get("has_docs"):
         score += 0.2
-
     if contribution.metadata.get("complexity", "medium") == "low":
         score += 0.1
-
     return min(score, 1.0)
+
+
+# ── Core endpoints ───────────────────────────────────────────────
 
 
 @router.post(
@@ -84,20 +186,24 @@ def calculate_coherence(contribution: ContributionCreate, store: GraphStore) -> 
         422: {"model": ErrorDetail, "description": "Validation error"},
     },
 )
-async def create_contribution(contribution: ContributionCreate, store: GraphStore = Depends(get_store)) -> Contribution:
+async def create_contribution(contribution: ContributionCreate) -> Contribution:
     """Record a new contribution linking a contributor to an asset with cost and coherence scoring."""
-    if not store.get_contributor(contribution.contributor_id):
+    contributor_node = _find_contributor_node(contribution.contributor_id)
+    if not contributor_node:
         raise HTTPException(status_code=404, detail="Contributor not found")
 
-    if not store.get_asset(contribution.asset_id):
+    asset_node = _find_asset_node(contribution.asset_id)
+    if not asset_node:
         raise HTTPException(status_code=404, detail="Asset not found")
 
-    coherence = calculate_coherence(contribution, store)
+    coherence = calculate_coherence(contribution)
     provenance = _manual_cost_provenance(contribution.metadata, contribution.cost_amount)
 
-    return store.create_contribution(
+    return _store_contribution(
         contributor_id=contribution.contributor_id,
         asset_id=contribution.asset_id,
+        contributor_node_id=contributor_node["id"],
+        asset_node_id=asset_node["id"],
         cost_amount=contribution.cost_amount,
         coherence_score=coherence,
         metadata={**contribution.metadata, **provenance},
@@ -110,25 +216,36 @@ async def create_contribution(contribution: ContributionCreate, store: GraphStor
     summary="Get contribution by ID",
     responses={404: {"model": ErrorDetail, "description": "Contribution not found"}},
 )
-async def get_contribution(contribution_id: UUID, store: GraphStore = Depends(get_store)) -> Contribution:
+async def get_contribution(contribution_id: UUID) -> Contribution:
     """Retrieve a single contribution record by its unique identifier."""
-    contrib = store.get_contribution(contribution_id)
-    if not contrib:
-        raise HTTPException(status_code=404, detail="Contribution not found")
-    return contrib
+    from sqlalchemy import or_
+    from app.models.graph import Edge
+    from app.services.unified_db import session
+
+    with session() as s:
+        edges = s.query(Edge).filter(Edge.type == "contribution").all()
+        for e in edges:
+            props = e.properties or {}
+            if props.get("contribution_id") == str(contribution_id):
+                return _edge_to_contribution(e.to_dict())
+    raise HTTPException(status_code=404, detail="Contribution not found")
 
 
 @router.get("/contributions", response_model=PaginatedResponse[Contribution], summary="List contributions")
 def list_contributions(
     limit: int = Query(100, ge=1, le=1000, description="Maximum items to return"),
     offset: int = Query(0, ge=0, description="Number of items to skip"),
-    store: GraphStore = Depends(get_store),
 ) -> PaginatedResponse[Contribution]:
-    """List all contributions with pagination metadata (read-only)."""
-    all_items = store.list_contributions(limit=limit + offset + 1)
-    total = len(all_items)
-    page = all_items[offset : offset + limit]
-    return PaginatedResponse(items=page, total=total, limit=limit, offset=offset)
+    """List all contributions with pagination metadata."""
+    from app.models.graph import Edge
+    from app.services.unified_db import session
+
+    with session() as s:
+        q = s.query(Edge).filter(Edge.type == "contribution").order_by(Edge.created_at.desc())
+        total = q.count()
+        edges = q.offset(offset).limit(limit).all()
+        items = [_edge_to_contribution(e.to_dict()) for e in edges]
+    return PaginatedResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get(
@@ -137,11 +254,13 @@ def list_contributions(
     summary="List contributions for an asset",
     responses={404: {"model": ErrorDetail, "description": "Asset not found"}},
 )
-async def get_asset_contributions(asset_id: UUID, store: GraphStore = Depends(get_store)) -> list[Contribution]:
+async def get_asset_contributions(asset_id: UUID) -> list[Contribution]:
     """Get all contributions linked to a specific asset."""
-    if not store.get_asset(asset_id):
+    asset_node = _find_asset_node(asset_id)
+    if not asset_node:
         raise HTTPException(status_code=404, detail="Asset not found")
-    return store.get_asset_contributions(asset_id)
+    edges = graph_service.get_edges(asset_node["id"], direction="incoming", edge_type="contribution")
+    return [_edge_to_contribution(e) for e in edges]
 
 
 @router.get(
@@ -150,13 +269,30 @@ async def get_asset_contributions(asset_id: UUID, store: GraphStore = Depends(ge
     summary="List contributions by a contributor",
     responses={404: {"model": ErrorDetail, "description": "Contributor not found"}},
 )
-async def get_contributor_contributions(
-    contributor_id: UUID, store: GraphStore = Depends(get_store)
-) -> list[Contribution]:
+async def get_contributor_contributions(contributor_id: UUID) -> list[Contribution]:
     """Get all contributions made by a specific contributor."""
-    if not store.get_contributor(contributor_id):
+    contributor_node = _find_contributor_node(contributor_id)
+    if not contributor_node:
         raise HTTPException(status_code=404, detail="Contributor not found")
-    return store.get_contributor_contributions(contributor_id)
+    edges = graph_service.get_edges(contributor_node["id"], direction="outgoing", edge_type="contribution")
+    return [_edge_to_contribution(e) for e in edges]
+
+
+# ── GitHub contributions ─────────────────────────────────────────
+
+
+def calculate_coherence_from_github_metadata(metadata: dict) -> float:
+    """Calculate coherence score from GitHub commit metadata."""
+    score = 0.5
+    files_changed = metadata.get("files_changed", 0)
+    if files_changed > 0:
+        score += 0.1
+    lines_added = metadata.get("lines_added", 0)
+    if lines_added > 0 and lines_added < 100:
+        score += 0.2
+    elif lines_added >= 100:
+        score += 0.1
+    return min(score, 1.0)
 
 
 @router.post(
@@ -166,40 +302,50 @@ async def get_contributor_contributions(
     summary="Track GitHub contribution",
     responses={422: {"model": ErrorDetail, "description": "Validation error"}},
 )
-async def track_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> Contribution:
+async def track_github_contribution(payload: GitHubContribution) -> Contribution:
     """Track a contribution from a GitHub webhook. Auto-creates contributor and asset if they don't exist."""
     # Find or create contributor by email
-    contributor = None
-    if hasattr(store, "find_contributor_by_email"):
-        contributor = store.find_contributor_by_email(payload.contributor_email)
+    contributor_node = _find_contributor_by_email(payload.contributor_email)
+    contributor_name = payload.contributor_email.split("@")[0]
 
-    if not contributor:
-        # Create new contributor
-        contributor_name = payload.contributor_email.split("@")[0]
-        contributor = Contributor(
-            type=ContributorType.HUMAN,
-            name=contributor_name,
-            email=payload.contributor_email
+    if not contributor_node:
+        contrib = Contributor(type=ContributorType.HUMAN, name=contributor_name, email=payload.contributor_email)
+        node_id = f"contributor:{contrib.name}"
+        contributor_node = graph_service.create_node(
+            id=node_id, type="contributor", name=contrib.name,
+            description=f"HUMAN contributor",
+            phase="water",
+            properties={
+                "contributor_type": "HUMAN",
+                "email": payload.contributor_email,
+                "legacy_id": str(contrib.id),
+            },
         )
-        try:
-            contributor = store.create_contributor(contributor)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        contributor_legacy_id = contrib.id
+    else:
+        contributor_legacy_id = UUID(contributor_node.get("legacy_id", str(uuid4())))
 
     # Find or create asset for repository
-    asset = None
-    if hasattr(store, "find_asset_by_name"):
-        asset = store.find_asset_by_name(payload.repository)
+    asset_node = _find_asset_by_name(payload.repository)
 
-    if not asset:
-        # Create new asset
-        asset = Asset(
-            type=AssetType.CODE,
-            description=f"GitHub repository: {payload.repository}"
+    if not asset_node:
+        asset = Asset(type=AssetType.CODE, description=f"GitHub repository: {payload.repository}")
+        node_id = f"asset:{asset.id}"
+        asset_node = graph_service.create_node(
+            id=node_id, type="asset", name=payload.repository[:80],
+            description=f"GitHub repository: {payload.repository}",
+            phase="ice",
+            properties={
+                "asset_type": "CODE",
+                "total_cost": "0",
+                "legacy_id": str(asset.id),
+            },
         )
-        asset = store.create_asset(asset)
+        asset_legacy_id = asset.id
+    else:
+        asset_legacy_id = UUID(asset_node.get("legacy_id", str(uuid4())))
 
-    # Calculate coherence score from metadata
+    # Calculate coherence and cost
     coherence = calculate_coherence_from_github_metadata(payload.metadata)
     files_changed = payload.metadata.get("files_changed", 0)
     lines_added = payload.metadata.get("lines_added", 0)
@@ -210,10 +356,11 @@ async def track_github_contribution(payload: GitHubContribution, store: GraphSto
         metadata=payload.metadata,
     )
 
-    # Create contribution
-    return store.create_contribution(
-        contributor_id=contributor.id,
-        asset_id=asset.id,
+    return _store_contribution(
+        contributor_id=contributor_legacy_id,
+        asset_id=asset_legacy_id,
+        contributor_node_id=contributor_node["id"],
+        asset_node_id=asset_node["id"],
         cost_amount=normalized_cost,
         coherence_score=coherence,
         metadata={
@@ -330,7 +477,6 @@ async def get_contributor_idea_investments(contributor_id: str) -> dict:
     """Return ideas this contributor has invested CC into, grouped by idea."""
     history = contribution_ledger_service.get_contributor_history(contributor_id, limit=500)
     idea_records = [r for r in history if r.get("idea_id")]
-    # Group by idea_id
     by_idea: dict[str, list[dict]] = {}
     for rec in idea_records:
         by_idea.setdefault(rec["idea_id"], []).append(rec)
@@ -338,97 +484,3 @@ async def get_contributor_idea_investments(contributor_id: str) -> dict:
         "contributor_id": contributor_id,
         "ideas": by_idea,
     }
-
-
-def calculate_coherence_from_github_metadata(metadata: dict) -> float:
-    """Calculate coherence score from GitHub commit metadata."""
-    score = 0.5  # Baseline
-
-    # Check for test files
-    files_changed = metadata.get("files_changed", 0)
-    if files_changed > 0:
-        score += 0.1
-
-    # Check for documentation
-    lines_added = metadata.get("lines_added", 0)
-    if lines_added > 0 and lines_added < 100:
-        score += 0.2  # Well-scoped changes
-    elif lines_added >= 100:
-        score += 0.1  # Large changes
-
-    return min(score, 1.0)
-
-
-@router.post("/contributions/github/debug", response_model=dict, status_code=200)
-async def debug_github_contribution(payload: GitHubContribution, store: GraphStore = Depends(get_store)) -> dict:
-    """Debug version that returns detailed error info instead of raising."""
-    import traceback
-    try:
-        # Find or create contributor by email
-        contributor = None
-        if hasattr(store, "find_contributor_by_email"):
-            contributor = store.find_contributor_by_email(payload.contributor_email)
-
-        if not contributor:
-            contributor_name = payload.contributor_email.split("@")[0]
-            contributor = Contributor(
-                type=ContributorType.HUMAN,
-                name=contributor_name,
-                email=payload.contributor_email
-            )
-            contributor = store.create_contributor(contributor)
-
-        # Find or create asset
-        asset = None
-        if hasattr(store, "find_asset_by_name"):
-            asset = store.find_asset_by_name(payload.repository)
-
-        if not asset:
-            asset = Asset(
-                type=AssetType.CODE,
-                description=f"GitHub repository: {payload.repository}"
-            )
-            asset = store.create_asset(asset)
-
-        # Calculate coherence
-        coherence = calculate_coherence_from_github_metadata(payload.metadata)
-        files_changed = payload.metadata.get("files_changed", 0)
-        lines_added = payload.metadata.get("lines_added", 0)
-        normalized_cost, provenance = estimate_commit_cost_with_provenance(
-            files_changed=files_changed,
-            lines_added=lines_added,
-            submitted_cost=payload.cost_amount,
-            metadata=payload.metadata,
-        )
-
-        # Create contribution
-        contrib = store.create_contribution(
-            contributor_id=contributor.id,
-            asset_id=asset.id,
-            cost_amount=normalized_cost,
-            coherence_score=coherence,
-            metadata={
-                **payload.metadata,
-                "commit_hash": payload.commit_hash,
-                "repository": payload.repository,
-                "contributor_email": payload.contributor_email,
-                "raw_cost_amount": str(payload.cost_amount),
-                "normalized_cost_amount": str(normalized_cost),
-                "cost_estimator_version": ESTIMATOR_VERSION,
-                **provenance,
-            }
-        )
-
-        return {
-            "success": True,
-            "contribution_id": str(contrib.id),
-            "contributor_id": str(contributor.id),
-            "asset_id": str(asset.id)
-        }
-    except Exception as e:
-        return {
-            "success": False,
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "traceback": traceback.format_exc()
-        }

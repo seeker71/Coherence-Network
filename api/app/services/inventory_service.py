@@ -3065,6 +3065,8 @@ def _ensure_gap_idea(
 ) -> tuple[bool, bool]:
     if idea_service.get_idea(idea_id) is not None:
         return True, False
+    # Invalidate cache to ensure create_idea sees fresh state
+    idea_service._invalidate_ideas_cache()
     created = idea_service.create_idea(
         idea_id=idea_id,
         name=name,
@@ -3342,6 +3344,122 @@ def sync_traceability_gap_artifacts(
         "created_missing_endpoint_specs": created_specs_for_endpoints[:50],
         "updated_spec_process_pseudocode": updated_spec_process_pseudocode[:50],
         "created_usage_gap_tasks": created_usage_gap_tasks[:50],
+    }
+
+
+def bootstrap_spec_tasks(
+    max_tasks: int = 20,
+    min_value_gap: float = 10.0,
+) -> dict[str, Any]:
+    """Create spec tasks for the highest-ROI ideas that have no spec yet.
+
+    Reads all portfolio ideas, finds those with no spec linked in the flow,
+    sorts by ROI (value_gap * confidence / estimated_cost), and creates
+    spec tasks for the top N.
+
+    Returns a summary of what was created.
+    """
+    import hashlib
+
+    # Load flow to find which ideas have specs
+    flow_data = build_spec_process_implementation_validation_flow(
+        runtime_window_seconds=86400,
+        spec_registry_limit=500,
+        lineage_link_limit=300,
+        usage_event_limit=500,
+        commit_evidence_limit=300,
+        runtime_event_limit=500,
+    )
+    flow_items = flow_data.get("items", [])
+    ideas_with_spec = {
+        item["idea_id"]
+        for item in flow_items
+        if isinstance(item, dict) and item.get("spec", {}).get("tracked")
+    }
+
+    # Load portfolio for scoring
+    portfolio = idea_service.list_ideas(include_internal=False)
+    candidates = []
+    for idea in portfolio.ideas:
+        if idea.id in ideas_with_spec:
+            continue
+        gap = float(idea.value_gap) if hasattr(idea, "value_gap") else max(idea.potential_value - idea.actual_value, 0)
+        if gap < min_value_gap:
+            continue
+        cost = max(float(idea.estimated_cost), 1.0)
+        conf = max(float(idea.confidence), 0.1)
+        roi = gap * conf / cost
+        candidates.append({
+            "idea_id": idea.id,
+            "idea_name": idea.name,
+            "description": idea.description,
+            "potential_value": idea.potential_value,
+            "estimated_cost": idea.estimated_cost,
+            "confidence": idea.confidence,
+            "value_gap": gap,
+            "roi": roi,
+            "interfaces": list(idea.interfaces or []),
+        })
+
+    candidates.sort(key=lambda x: x["roi"], reverse=True)
+    selected = candidates[:max(1, min(max_tasks, 100))]
+
+    created_tasks: list[dict[str, Any]] = []
+    skipped_existing = 0
+
+    for candidate in selected:
+        idea_id = candidate["idea_id"]
+        fingerprint = hashlib.sha256(f"bootstrap-spec:{idea_id}".encode()).hexdigest()
+
+        # Check for existing active task
+        existing = agent_service.find_active_task_by_fingerprint(fingerprint)
+        if existing:
+            skipped_existing += 1
+            continue
+
+        direction = (
+            f"Write a spec for '{candidate['idea_name']}' ({idea_id}).\n\n"
+            f"Description: {candidate['description'][:500]}\n\n"
+            f"This idea has {candidate['confidence']:.0%} confidence and an estimated {candidate['value_gap']:.0f} CC of value gap.\n\n"
+            f"Write the spec in specs/ following the existing spec format. The spec MUST include:\n"
+            f"1. A clear 'Verification' section with concrete acceptance criteria\n"
+            f"2. At least 3 test scenarios that prove the feature works\n"
+            f"3. Expected API responses or UI behaviors (not vague goals)\n"
+            f"4. Edge cases and error handling expectations\n"
+            f"5. A 'Risks and Assumptions' section\n"
+            f"6. A 'Known Gaps and Follow-up Tasks' section\n\n"
+            f"The spec must be precise enough that an implementation task can verify against it.\n"
+            f"Run `python3 scripts/validate_spec_quality.py` before finishing."
+        )
+
+        from app.models.agent import AgentTaskCreate, TaskType
+        task = agent_service.create_task(AgentTaskCreate(
+            direction=direction,
+            task_type=TaskType.SPEC,
+            context={
+                "idea_id": idea_id,
+                "bootstrap_source": "bootstrap_spec_tasks",
+                "task_fingerprint": fingerprint,
+                "roi": round(candidate["roi"], 4),
+            },
+        ))
+        if isinstance(task, dict):
+            created_tasks.append({
+                "task_id": task.get("id"),
+                "idea_id": idea_id,
+                "idea_name": candidate["idea_name"],
+                "roi": round(candidate["roi"], 4),
+                "value_gap": candidate["value_gap"],
+            })
+
+    return {
+        "result": "spec_tasks_bootstrapped",
+        "total_ideas_without_spec": len(candidates) + skipped_existing,
+        "created_count": len(created_tasks),
+        "skipped_existing_count": skipped_existing,
+        "max_tasks": max_tasks,
+        "min_value_gap": min_value_gap,
+        "created_tasks": created_tasks,
     }
 
 
@@ -5083,6 +5201,16 @@ def build_spec_process_implementation_validation_flow(
     stage_timings["contributor_alias_merge"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
 
+    # Ensure ALL portfolio ideas appear in the flow, even without runtime evidence.
+    # This surfaces curated graph ideas with real differentiated scores.
+    if not requested_idea_id:
+        for portfolio_idea in portfolio.ideas:
+            pid = portfolio_idea.id
+            if pid not in flows:
+                flows[pid] = _new_flow_row(pid, portfolio_idea.name)
+    stage_timings["portfolio_merge"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
+
     items: list[dict[str, Any]] = []
     unblock_queue: list[dict[str, Any]] = []
     active_task_cache: dict[str, dict[str, Any] | None] = {}
@@ -5179,8 +5307,10 @@ def build_spec_process_implementation_validation_flow(
         contribution_ids, contribution_ids_total, contribution_ids_truncated = _sorted_limited(
             flow["_contribution_ids"], limit=bounded_list_item_limit
         )
+        # Source files from commit evidence and implementation refs are also tracked assets
+        all_asset_ids = flow["_asset_ids"] | flow["_source_files"] | flow["_implementation_refs"]
         asset_ids, asset_ids_total, asset_ids_truncated = _sorted_limited(
-            flow["_asset_ids"], limit=bounded_list_item_limit
+            all_asset_ids, limit=bounded_list_item_limit
         )
         contributor_roles: dict[str, list[str]] = {}
         contributor_roles_meta: dict[str, dict[str, Any]] = {}
@@ -5275,8 +5405,8 @@ def build_spec_process_implementation_validation_flow(
                     "contribution_ids_truncated": contribution_ids_truncated,
                 },
                 "assets": {
-                    "tracked": len(flow["_asset_ids"]) > 0,
-                    "count": len(flow["_asset_ids"]),
+                    "tracked": len(all_asset_ids) > 0,
+                    "count": len(all_asset_ids),
                     "asset_ids": asset_ids,
                     "asset_ids_total": asset_ids_total,
                     "asset_ids_truncated": asset_ids_truncated,
@@ -5288,7 +5418,7 @@ def build_spec_process_implementation_validation_flow(
                     "validation": "tracked" if validation_tracked else "missing",
                     "contributors": "tracked" if contributors_tracked else "missing",
                     "contributions": "tracked" if contributions_tracked else "missing",
-                    "assets": "tracked" if len(flow["_asset_ids"]) > 0 else "missing",
+                    "assets": "tracked" if len(all_asset_ids) > 0 else "missing",
                 },
                 "interdependencies": interdependencies,
                 "idea_signals": {

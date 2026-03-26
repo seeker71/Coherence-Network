@@ -88,7 +88,7 @@ def test_openrouter_chat_completion_uses_free_model_and_referer(monkeypatch: pyt
 def test_check_openrouter_uses_simple_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict[str, Any] = {}
 
-    def _chat(prompt: str, timeout_s: float) -> str:
+    def _chat(prompt: str, timeout_s: float, *, model: str | None = None) -> str:
         seen["prompt"] = prompt
         seen["timeout_s"] = timeout_s
         return "ok"
@@ -242,7 +242,7 @@ def test_run_one_stores_complexity_estimate_before_execution(
     monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
     monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "codex")
     monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
-    monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, "done", 0.6))
+    monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, "Implementation complete. All changes applied to api/scripts/local_runner.py successfully.", 0.6))
     monkeypatch.setattr(local_runner, "record_provider_outcome", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(local_runner, "PROVIDERS", {"codex": {"cmd": ["codex"]}})
 
@@ -420,27 +420,29 @@ def test_post_task_hook_enqueues_next_phase_and_sets_partial(monkeypatch: pytest
 def test_post_task_hook_marks_validated_after_review_phase(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, str, dict[str, Any] | None]] = []
 
+    def _completed_group(task_type: str, count: int = 1) -> dict:
+        return {
+            "task_type": task_type,
+            "count": count,
+            "status_counts": {"pending": 0, "running": 0, "completed": count, "failed": 0, "needs_decision": 0},
+        }
+
     def _api(method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any] | None:
         calls.append((method, path, body))
         if method == "GET" and path == "/api/ideas/idea-2/tasks":
             return {
                 "idea_id": "idea-2",
                 "groups": [
-                    {
-                        "task_type": "review",
-                        "count": 2,
-                        "status_counts": {
-                            "pending": 0,
-                            "running": 0,
-                            "completed": 2,
-                            "failed": 0,
-                            "needs_decision": 0,
-                        },
-                    }
+                    _completed_group("spec"),
+                    _completed_group("impl"),
+                    _completed_group("test"),
+                    _completed_group("review", 2),
                 ],
             }
+        if method == "GET" and path == "/api/ideas/idea-2":
+            return {"id": "idea-2", "name": "Test Idea", "interfaces": []}
         if method == "PATCH" and path == "/api/ideas/idea-2":
-            return {"id": "idea-2", "manifestation_status": "validated"}
+            return {"id": "idea-2", "manifestation_status": body.get("manifestation_status") if body else "partial"}
         return None
 
     monkeypatch.setattr(local_runner, "api", _api)

@@ -722,7 +722,7 @@ def get_openrouter_free_model_stats() -> dict:
 
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
-_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "deploy", "verify")
+_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "deploy", "verify", "review")
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
@@ -1166,13 +1166,30 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         return
 
     next_phase = _NEXT_PHASE.get(task_type)
+    idea_payload: dict | None = None
     if next_phase and not _has_any_tasks_for_phase(idea_tasks_payload, next_phase):
         idea_payload = api("GET", f"/api/ideas/{idea_id}")
         idea_name = str((idea_payload or {}).get("name") or idea_id) if isinstance(idea_payload, dict) else idea_id
         idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
 
         # Phase-specific direction with quality requirements
-        if next_phase == "code-review":
+        if next_phase == "spec":
+            direction = (
+                f"Write a spec for '{idea_name}' ({idea_id}).\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"Write the spec in specs/ following the existing spec format. The spec MUST include:\n"
+                f"1. A clear 'Verification' section with at least 3 concrete acceptance criteria\n"
+                f"2. Test scenarios that prove the feature works (expected inputs → expected outputs)\n"
+                f"3. Expected API responses or UI behaviors — not vague goals\n"
+                f"4. Edge cases and error handling expectations\n"
+                f"5. A 'Risks and Assumptions' section\n"
+                f"6. A 'Known Gaps and Follow-up Tasks' section\n\n"
+                f"The spec must be precise enough that an implementation task can verify against it.\n"
+                f"If you cannot define concrete verification criteria, the idea is not ready for a spec — "
+                f"say so and explain what question needs answering first.\n\n"
+                f"Run `python3 scripts/validate_spec_quality.py` before finishing."
+            )
+        elif next_phase == "code-review":
             direction = (
                 f"Code review for '{idea_name}' ({idea_id}).\n\n"
                 f"Description: {idea_desc[:300]}\n\n"
@@ -1284,6 +1301,8 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             )
 
     # Determine manifestation status with validation gate
+    if idea_payload is None:
+        idea_payload = api("GET", f"/api/ideas/{idea_id}")
     if next_phase is None:
         # All phases should be complete — verify before marking validated
         # ALSO verify that completed tasks had meaningful output (not empty)
