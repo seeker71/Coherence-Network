@@ -20,29 +20,98 @@ function nodeId() {
 }
 
 export async function listTasks(args) {
-  const status = args[0] || "pending";
+  const explicit = args[0];
   const limit = parseInt(args[1]) || 10;
-  const data = await get("/api/agent/tasks", { status, limit });
+
+  // Default: show running + pending + needs_decision (the actionable stuff)
+  if (!explicit) {
+    const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+    const G = "\x1b[32m", Y = "\x1b[33m", RED = "\x1b[31m", C = "\x1b[36m";
+
+    const [runRes, pendRes, decRes] = await Promise.all([
+      get("/api/agent/tasks", { status: "running", limit: 15 }),
+      get("/api/agent/tasks", { status: "pending", limit: 10 }),
+      get("/api/agent/tasks", { status: "needs_decision", limit: 5 }),
+    ]);
+    const running = runRes?.tasks || [];
+    const pending = pendRes?.tasks || [];
+    const blocked = decRes?.tasks || [];
+
+    console.log();
+    console.log(`${B}  TASKS${R}`);
+    console.log(`  ${"─".repeat(60)}`);
+
+    // Needs decision first — human attention required
+    if (blocked.length) {
+      console.log(`  ${RED}${B}${blocked.length} need decision${R}`);
+      for (const t of blocked) {
+        const ideaId = (t.context || {}).idea_id || "";
+        const dir = (t.direction || "").slice(0, 50);
+        console.log(`  ${RED}!${R} ${(t.task_type || "?").padEnd(8)} ${dir}`);
+        if (ideaId) console.log(`    ${D}idea: ${ideaId}${R}`);
+      }
+      console.log();
+    }
+
+    // Running — what's active now
+    if (running.length) {
+      console.log(`  ${Y}${running.length} running${R}`);
+      for (const t of running) {
+        const type = (t.task_type || "?").padEnd(8);
+        const ideaId = (t.context || {}).idea_id || "";
+        const model = t.model || "";
+        const claimed = (t.claimed_by || "").split(":")[0].split(".")[0] || "?";
+        const age = t.claimed_at ? timeSince(t.claimed_at) : "";
+        console.log(`  ${Y}▸${R} ${type} ${D}on ${claimed}${R} ${D}via ${model.split("/").pop() || "?"}${R} ${D}${age}${R}`);
+        if (ideaId) console.log(`    ${D}${ideaId}${R}`);
+      }
+      console.log();
+    }
+
+    // Pending — what's queued
+    if (pending.length) {
+      console.log(`  ${D}${pending.length} pending${R}`);
+      for (const t of pending) {
+        const type = (t.task_type || "?").padEnd(8);
+        const ideaId = (t.context || {}).idea_id || "";
+        const age = t.created_at ? timeSince(t.created_at) : "?";
+        console.log(`  ${D}○${R} ${type} ${D}${age}${R}  ${(t.direction || "").slice(0, 50)}`);
+        if (ideaId) console.log(`    ${D}idea: ${ideaId}${R}`);
+      }
+      console.log();
+    }
+
+    if (!running.length && !pending.length && !blocked.length) {
+      console.log(`  ${D}No active tasks. Pipeline idle.${R}`);
+      console.log();
+    }
+
+    return;
+  }
+
+  // Explicit status filter: cc tasks running, cc tasks failed, etc.
+  const data = await get("/api/agent/tasks", { status: explicit, limit });
   const tasks = data?.tasks || (Array.isArray(data) ? data : []);
 
   console.log();
-  console.log(`\x1b[1m  TASKS\x1b[0m (${status}, ${tasks.length})`)
+  console.log(`\x1b[1m  TASKS\x1b[0m (${explicit}, ${tasks.length})`)
   console.log(`  ${"─".repeat(60)}`);
 
   if (!tasks.length) {
-    console.log(`  No ${status} tasks.`);
+    console.log(`  No ${explicit} tasks.`);
     return;
   }
 
   for (const t of tasks) {
-    const type = (t.type || t.phase || "?").padEnd(7);
+    const type = (t.task_type || t.type || t.phase || "?").padEnd(8);
     const age = t.created_at ? timeSince(t.created_at) : "?";
     const dir = (t.direction || t.description || "").slice(0, 50);
     const ctx = t.context || {};
     const ideaId = ctx.idea_id || "";
     const statusMark = t.status === "running" ? "\x1b[33m▸\x1b[0m" :
                        t.status === "completed" ? "\x1b[32m✓\x1b[0m" :
-                       t.status === "failed" ? "\x1b[31m✗\x1b[0m" : "\x1b[2m○\x1b[0m";
+                       t.status === "failed" ? "\x1b[31m✗\x1b[0m" :
+                       t.status === "needs_decision" ? "\x1b[31m!\x1b[0m" : "\x1b[2m○\x1b[0m";
 
     console.log(`  ${statusMark} ${type} \x1b[2m${age}\x1b[0m  ${dir}`);
     if (ideaId) console.log(`    \x1b[2midea: ${ideaId}\x1b[0m`);
