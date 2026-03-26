@@ -2064,14 +2064,21 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     # Record outcome for Thompson Sampling (with error classification)
     record_provider_outcome(task_type, provider, success, duration, output)
 
-    # ── Quality gate: empty or trivially short output is NOT success ──
-    _MIN_OUTPUT_CHARS = 50  # minimum chars for a meaningful response
+    # ── Quality gate: phase-specific minimum output length ──
+    _MIN_OUTPUT_BY_PHASE = {
+        "spec": 200,    # A real spec has goals, files, acceptance criteria
+        "impl": 200,    # A real impl describes files changed + evidence
+        "test": 150,    # A real test shows test file + results
+        "review": 80,   # A review at minimum says PASSED/FAILED with reasons
+        "code-review": 80,
+    }
+    min_chars = _MIN_OUTPUT_BY_PHASE.get(task_type, 50)
     output_stripped = (output or "").strip()
-    if success and len(output_stripped) < _MIN_OUTPUT_CHARS:
+    if success and len(output_stripped) < min_chars:
         log.warning(
-            "QUALITY_GATE task=%s provider=%s — output too short (%d chars < %d min). "
+            "QUALITY_GATE task=%s provider=%s type=%s — output too short (%d chars < %d min for %s). "
             "Marking as failed, not completed.",
-            task_id, provider, len(output_stripped), _MIN_OUTPUT_CHARS,
+            task_id, provider, task_type, len(output_stripped), min_chars, task_type,
         )
         success = False
 
@@ -2137,11 +2144,11 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         )
     if success and reported:
         # Only advance phases if the task produced meaningful output
-        if len(output_stripped) >= _MIN_OUTPUT_CHARS:
+        if len(output_stripped) >= min_chars:
             _run_phase_auto_advance_hook(task)
             _auto_record_contribution(task, provider, duration)
         else:
-            log.warning("SKIP_ADVANCE task=%s — output too short for phase advancement", task_id)
+            log.warning("SKIP_ADVANCE task=%s — output too short (%d < %d) for phase advancement", task_id, len(output_stripped), min_chars)
 
     # Post completion activity
     _post_activity(
