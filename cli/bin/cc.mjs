@@ -12,7 +12,7 @@ import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
-import { listNodes, sendMessage, readMessages } from "../lib/commands/nodes.mjs";
+import { listNodes, sendMessage, sendCommand, readMessages } from "../lib/commands/nodes.mjs";
 import { listContributors, showContributor, showContributions } from "../lib/commands/contributors.mjs";
 import { listAssets, showAsset, createAsset } from "../lib/commands/assets.mjs";
 import { showNewsFeed, showTrending, showSources, addSource, showNewsResonance } from "../lib/commands/news.mjs";
@@ -54,6 +54,8 @@ const COMMANDS = {
   identity:      () => handleIdentity(args),
   nodes:         () => listNodes(),
   msg:           () => sendMessage(args),
+  cmd:           () => sendCommand(args),
+  command:       () => sendCommand(args),
   messages:      () => readMessages(args),
   inbox:         () => readMessages(args),
   contributors:  () => listContributors(args),
@@ -270,8 +272,10 @@ function showHelp() {
 
 \x1b[1mFederation:\x1b[0m
   nodes                   List federation nodes
-  msg <node|broadcast> <text>  Send message to a node
+  msg <node|all> <text>   Send message (accepts name, alias: mac/win)
+  cmd <node|all> <cmd>    Send command: update, status, restart, pause
   inbox                   Read your messages
+  listen                  Real-time event stream
 
 \x1b[1mContributors:\x1b[0m
   contributors [limit]    List contributors
