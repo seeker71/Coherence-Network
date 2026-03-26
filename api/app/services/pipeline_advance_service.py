@@ -44,9 +44,34 @@ _PHASE_TASK_TYPE: dict[str, TaskType] = {
     "code-review": TaskType.REVIEW,
 }
 
+# Minimum output length to consider a task genuinely completed.
+# Text-only providers (openrouter/free) often claim completion with 0 output.
+_MIN_OUTPUT_CHARS: dict[str, int] = {
+    "spec": 100,    # A real spec is at least a paragraph
+    "impl": 50,     # A real impl should describe what was changed
+    "test": 50,     # A real test run should show results
+    "code-review": 30,  # A review at least says PASSED or FAILED
+}
+
+
+def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
+    """Check if a completed task has meaningful output.
+
+    Returns (is_valid, reason).
+    """
+    task_type = task.get("task_type", "")
+    if hasattr(task_type, "value"):
+        task_type = task_type.value
+    output = (task.get("output") or "").strip()
+    min_chars = _MIN_OUTPUT_CHARS.get(task_type, 30)
+
+    if len(output) < min_chars:
+        return False, f"Output too short ({len(output)} chars < {min_chars} min for {task_type})"
+    return True, ""
+
 
 def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
-    """If the task completed successfully, create the next phase task.
+    """If the task completed successfully WITH meaningful output, create the next phase task.
 
     Returns the created task dict, or None if no advancement was needed.
     """
@@ -54,6 +79,30 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     if hasattr(status, "value"):
         status = status.value
     if status != "completed":
+        return None
+
+    # Reject hollow completions — text-only providers claim success with no output
+    valid, reason = _validate_output(task)
+    if not valid:
+        task_type_raw = task.get("task_type", "")
+        if hasattr(task_type_raw, "value"):
+            task_type_raw = task_type_raw.value
+        idea_id = (task.get("context") or {}).get("idea_id", "?")
+        log.warning(
+            "HOLLOW_COMPLETION blocked advance: type=%s idea=%s — %s",
+            task_type_raw, idea_id, reason,
+        )
+        # Mark it failed so auto-retry kicks in with a real provider
+        try:
+            from app.services import agent_service
+            agent_service.update_task(
+                task.get("id", ""),
+                status=TaskStatus.FAILED,
+                output=f"Hollow completion rejected: {reason}",
+                context={**(task.get("context") or {}), "hollow_rejection": True},
+            )
+        except Exception:
+            pass
         return None
 
     task_type = task.get("task_type", "")
