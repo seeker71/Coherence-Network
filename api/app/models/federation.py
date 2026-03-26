@@ -84,6 +84,7 @@ class FederationNodeHeartbeatRequest(BaseModel):
     """Request body for POST /api/federation/nodes/{node_id}/heartbeat."""
     status: str = "online"
     capabilities: NodeCapabilities | dict | None = None
+    git_sha: str | None = None
 
 
 class FederationNodeHeartbeatResponse(BaseModel):

@@ -479,8 +479,9 @@ def heartbeat_node(
     status: str = "online",
     capabilities: dict | None = None,
     refresh_capabilities: bool = False,
+    git_sha: str | None = None,
 ) -> FederationNodeHeartbeatResponse | None:
-    """Update last_seen_at and status for a node. Returns None if not found."""
+    """Update last_seen_at, status, and git_sha for a node. Returns None if not found."""
     _ensure_schema()
     now_iso = datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z")
     with _session() as s:
@@ -489,10 +490,24 @@ def heartbeat_node(
             return None
         rec.last_seen_at = now_iso
         rec.status = status
-        logger.debug("Heartbeat from %s", node_id)
+        if git_sha:
+            # Store git_sha in capabilities_json alongside other metadata
+            try:
+                caps = json.loads(rec.capabilities_json) if rec.capabilities_json else {}
+            except Exception:
+                caps = {}
+            caps["git_sha"] = git_sha
+            caps["git_sha_updated_at"] = now_iso
+            rec.capabilities_json = json.dumps(caps)
+        logger.debug("Heartbeat from %s sha=%s", node_id, (git_sha or "?")[:8])
         capabilities_refreshed = False
         if refresh_capabilities and capabilities is not None:
-            rec.capabilities_json = json.dumps(capabilities)
+            try:
+                existing_caps = json.loads(rec.capabilities_json) if rec.capabilities_json else {}
+            except Exception:
+                existing_caps = {}
+            existing_caps.update(capabilities)
+            rec.capabilities_json = json.dumps(existing_caps)
             executors = capabilities.get("executors", [])
             if isinstance(executors, list):
                 rec.providers_json = json.dumps(executors)
@@ -513,23 +528,29 @@ def get_known_node_ids() -> set[str]:
 
 
 def list_nodes() -> list[dict]:
-    """Return all registered federation nodes."""
+    """Return all registered federation nodes with git_sha and streak data."""
     _ensure_schema()
     with _session() as s:
         recs = s.query(FederationNodeRecord).all()
-        return [
-            {
+        nodes = []
+        for r in recs:
+            try:
+                caps = json.loads(r.capabilities_json) if r.capabilities_json else {}
+            except Exception:
+                caps = {}
+            nodes.append({
                 "node_id": r.node_id,
                 "hostname": r.hostname,
                 "os_type": r.os_type,
-                "providers": json.loads(r.providers_json),
-                "capabilities": json.loads(r.capabilities_json),
+                "providers": json.loads(r.providers_json) if r.providers_json else [],
+                "capabilities": caps,
                 "registered_at": r.registered_at,
                 "last_seen_at": r.last_seen_at,
                 "status": r.status,
-            }
-            for r in recs
-        ]
+                "git_sha": caps.get("git_sha"),
+                "git_sha_updated_at": caps.get("git_sha_updated_at"),
+            })
+        return nodes
 
 
 def delete_node(node_id: str) -> bool:
