@@ -451,29 +451,71 @@ def _humanize_idea_id(idea_id: str) -> str:
     return " ".join(words).strip().capitalize()
 
 
+_FUZZY_STOP_WORDS = frozenset({
+    "spec", "origin", "endpoint", "lineage", "the", "a", "for", "and", "of",
+    "with", "from", "to", "in", "on", "by", "is", "at", "or", "an",
+})
+
+
+def _find_closest_graph_idea(idea_id: str, graph_ideas: list) -> Any | None:
+    """Find the graph idea with the highest Jaccard word overlap to the given ID."""
+    target_words = set(idea_id.replace("-", " ").replace("_", " ").lower().split()) - _FUZZY_STOP_WORDS
+    if len(target_words) < 2:
+        return None
+
+    best_match = None
+    best_score = 0.0
+    for idea in graph_ideas:
+        idea_words = set(idea.id.replace("-", " ").replace("_", " ").lower().split()) - _FUZZY_STOP_WORDS
+        if not idea_words:
+            continue
+        overlap = len(target_words & idea_words)
+        union = len(target_words | idea_words)
+        score = overlap / union if union > 0 else 0
+        if score > best_score and score >= 0.5:
+            best_score = score
+            best_match = idea
+    return best_match
+
+
+def _idea_to_metadata(idea: Any) -> dict[str, Any]:
+    """Extract metadata dict from an Idea object for signal inheritance."""
+    return {
+        "name": idea.name,
+        "description": idea.description,
+        "interfaces": idea.interfaces,
+        "potential_value": idea.potential_value,
+        "actual_value": idea.actual_value,
+        "estimated_cost": idea.estimated_cost,
+        "actual_cost": idea.actual_cost,
+        "confidence": idea.confidence,
+        "resistance_risk": idea.resistance_risk,
+        "idea_type": idea.idea_type.value if idea.idea_type else "standalone",
+        "parent_idea_id": idea.parent_idea_id,
+        "child_idea_ids": idea.child_idea_ids or [],
+        "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
+    }
+
+
 def _derived_idea_for_id(idea_id: str) -> Idea:
-    # Try to find metadata from DB for discovered ideas
+    # Try to find metadata from DB — exact match first, then fuzzy match
     metadata: dict[str, Any] = {}
     try:
         db_ideas = idea_registry_service.load_ideas()
+        # Exact match
         for idea in db_ideas:
             if idea.id == idea_id:
-                metadata = {
-                    "name": idea.name,
-                    "description": idea.description,
-                    "interfaces": idea.interfaces,
-                    "potential_value": idea.potential_value,
-                    "actual_value": idea.actual_value,
-                    "estimated_cost": idea.estimated_cost,
-                    "actual_cost": idea.actual_cost,
-                    "confidence": idea.confidence,
-                    "resistance_risk": idea.resistance_risk,
-                    "idea_type": idea.idea_type.value if idea.idea_type else "standalone",
-                    "parent_idea_id": idea.parent_idea_id,
-                    "child_idea_ids": idea.child_idea_ids or [],
-                    "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
-                }
+                metadata = _idea_to_metadata(idea)
                 break
+        # Fuzzy match — inherit scores from closest graph idea
+        if not metadata:
+            closest = _find_closest_graph_idea(idea_id, db_ideas)
+            if closest:
+                metadata = _idea_to_metadata(closest)
+                # Keep the discovered ID's auto-generated name, not the matched idea's name
+                metadata.pop("name", None)
+                metadata.pop("description", None)
+                logger.debug("Fuzzy matched idea %s → %s", idea_id, closest.id)
     except Exception:
         logger.warning("Failed to load seed metadata for derived idea %s", idea_id, exc_info=True)
     name = str(metadata.get("name") or _humanize_idea_id(idea_id))

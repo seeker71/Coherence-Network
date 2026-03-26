@@ -69,8 +69,25 @@ export default function ApiHealthPage() {
     };
   }, [proxyUrl]);
 
+  const isStatusValue = (v: unknown): boolean => {
+    if (typeof v === "string") return ["ok", "healthy", "up", "error", "down", "degraded"].includes(v.toLowerCase());
+    if (typeof v === "object" && v !== null && "status" in (v as Record<string, unknown>)) return true;
+    return false;
+  };
+  const isOkValue = (v: unknown): boolean => {
+    if (typeof v === "string") return ["ok", "healthy", "up"].includes(v.toLowerCase());
+    if (typeof v === "object" && v !== null && "status" in (v as Record<string, unknown>)) {
+      const s = (v as Record<string, unknown>).status;
+      return typeof s === "string" && ["ok", "healthy", "up"].includes(s.toLowerCase());
+    }
+    return true;
+  };
+  const healthEntries = data ? Object.entries(data) : [];
+  const statusEntries = healthEntries.filter(([, v]) => isStatusValue(v));
+  const allOk = data && (statusEntries.length === 0 || statusEntries.every(([, v]) => isOkValue(v)));
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center p-8">
+    <main className="min-h-screen flex flex-col items-center justify-center p-8 max-w-2xl mx-auto">
       <div className="mb-4 flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Coherence Network
@@ -83,19 +100,66 @@ export default function ApiHealthPage() {
         </Link>
       </div>
       <h1 className="text-2xl font-bold mb-4">API Health</h1>
-      <p className="mb-3 text-sm text-gray-600">
-        Auto-refresh every 60s. {lastUpdated ? `Last updated: ${lastUpdated}` : "Waiting for first response..."}
+      <p className="mb-3 text-sm text-muted-foreground">
+        Auto-refreshes every 60 seconds.{" "}
+        {lastUpdated ? `Last checked: ${lastUpdated}` : "Waiting for first response..."}
       </p>
-      {status === "loading" && <p>Checking API health via {proxyUrl} (upstream: {apiUrl}/api/health)...</p>}
-      {status === "ok" && data && (
-        <pre className="bg-gray-100 p-4 rounded text-left">
-          {JSON.stringify(data, null, 2)}
-        </pre>
+
+      {status === "loading" && (
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 w-full text-center">
+          <p className="text-muted-foreground">Checking system health...</p>
+        </section>
       )}
+
+      {status === "ok" && data && (
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 w-full space-y-4">
+          <div className="flex items-center gap-2">
+            <span className={`inline-block w-3 h-3 rounded-full ${allOk ? "bg-green-500" : "bg-red-500"}`} />
+            <span className="text-lg font-semibold">
+              {allOk ? "All systems operational" : "Issues detected"}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {healthEntries.map(([key, value]) => {
+              const strValue = typeof value === "object" && value !== null
+                ? (value as Record<string, unknown>).status as string ?? JSON.stringify(value)
+                : String(value);
+              const label = key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+              // Format timestamps
+              const isTimestamp = typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value);
+              const displayValue = isTimestamp ? new Date(value as string).toLocaleString() : strValue;
+              const isOk = isOkValue(value);
+              const showBadge = isStatusValue(value);
+              return (
+                <div key={key} className="flex items-center justify-between rounded-xl border border-border/20 bg-background/40 p-3">
+                  <span className="text-sm">{label}</span>
+                  {showBadge ? (
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      isOk ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                    }`}>
+                      {displayValue}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">{displayValue}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {status === "error" && (
-        <p className="text-red-600">
-          API not reachable: {error}. Check NEXT_PUBLIC_API_URL and Railway availability.
-        </p>
+        <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6 w-full space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-3 h-3 rounded-full bg-red-500" />
+            <span className="text-lg font-semibold">API unreachable</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Could not connect to the backend service. Please verify the API server is running and accessible.
+          </p>
+          {error && <p className="text-xs text-muted-foreground">{error}</p>}
+        </section>
       )}
     </main>
   );

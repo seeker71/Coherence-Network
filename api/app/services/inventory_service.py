@@ -3065,6 +3065,8 @@ def _ensure_gap_idea(
 ) -> tuple[bool, bool]:
     if idea_service.get_idea(idea_id) is not None:
         return True, False
+    # Invalidate cache to ensure create_idea sees fresh state
+    idea_service._invalidate_ideas_cache()
     created = idea_service.create_idea(
         idea_id=idea_id,
         name=name,
@@ -5083,6 +5085,16 @@ def build_spec_process_implementation_validation_flow(
     stage_timings["contributor_alias_merge"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
     stage_start = time.perf_counter()
 
+    # Ensure ALL portfolio ideas appear in the flow, even without runtime evidence.
+    # This surfaces curated graph ideas with real differentiated scores.
+    if not requested_idea_id:
+        for portfolio_idea in portfolio.ideas:
+            pid = portfolio_idea.id
+            if pid not in flows:
+                flows[pid] = _new_flow_row(pid, portfolio_idea.name)
+    stage_timings["portfolio_merge"] = round((time.perf_counter() - stage_start) * 1000.0, 2)
+    stage_start = time.perf_counter()
+
     items: list[dict[str, Any]] = []
     unblock_queue: list[dict[str, Any]] = []
     active_task_cache: dict[str, dict[str, Any] | None] = {}
@@ -5179,8 +5191,10 @@ def build_spec_process_implementation_validation_flow(
         contribution_ids, contribution_ids_total, contribution_ids_truncated = _sorted_limited(
             flow["_contribution_ids"], limit=bounded_list_item_limit
         )
+        # Source files from commit evidence and implementation refs are also tracked assets
+        all_asset_ids = flow["_asset_ids"] | flow["_source_files"] | flow["_implementation_refs"]
         asset_ids, asset_ids_total, asset_ids_truncated = _sorted_limited(
-            flow["_asset_ids"], limit=bounded_list_item_limit
+            all_asset_ids, limit=bounded_list_item_limit
         )
         contributor_roles: dict[str, list[str]] = {}
         contributor_roles_meta: dict[str, dict[str, Any]] = {}
@@ -5275,8 +5289,8 @@ def build_spec_process_implementation_validation_flow(
                     "contribution_ids_truncated": contribution_ids_truncated,
                 },
                 "assets": {
-                    "tracked": len(flow["_asset_ids"]) > 0,
-                    "count": len(flow["_asset_ids"]),
+                    "tracked": len(all_asset_ids) > 0,
+                    "count": len(all_asset_ids),
                     "asset_ids": asset_ids,
                     "asset_ids_total": asset_ids_total,
                     "asset_ids_truncated": asset_ids_truncated,
@@ -5288,7 +5302,7 @@ def build_spec_process_implementation_validation_flow(
                     "validation": "tracked" if validation_tracked else "missing",
                     "contributors": "tracked" if contributors_tracked else "missing",
                     "contributions": "tracked" if contributions_tracked else "missing",
-                    "assets": "tracked" if len(flow["_asset_ids"]) > 0 else "missing",
+                    "assets": "tracked" if len(all_asset_ids) > 0 else "missing",
                 },
                 "interdependencies": interdependencies,
                 "idea_signals": {

@@ -722,7 +722,7 @@ def get_openrouter_free_model_stats() -> dict:
 
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
-_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "deploy", "verify")
+_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "deploy", "verify", "review")
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
@@ -1166,6 +1166,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         return
 
     next_phase = _NEXT_PHASE.get(task_type)
+    idea_payload: dict | None = None
     if next_phase and not _has_any_tasks_for_phase(idea_tasks_payload, next_phase):
         idea_payload = api("GET", f"/api/ideas/{idea_id}")
         idea_name = str((idea_payload or {}).get("name") or idea_id) if isinstance(idea_payload, dict) else idea_id
@@ -1284,6 +1285,8 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             )
 
     # Determine manifestation status with validation gate
+    if idea_payload is None:
+        idea_payload = api("GET", f"/api/ideas/{idea_id}")
     if next_phase is None:
         # All phases should be complete — verify before marking validated
         # ALSO verify that completed tasks had meaningful output (not empty)

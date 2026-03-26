@@ -295,10 +295,35 @@ def spec_process_implementation_validation_flow(
     runtime_event_limit: int = Query(600, ge=1, le=5000),
     list_item_limit: int = Query(12, ge=1, le=200),
 ) -> dict:
-    store = get_store(request)
-    contributor_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=contributor_limit)]
-    contribution_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=contribution_limit)]
-    asset_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=asset_limit)]
+    from app.services import graph_service as _gs
+    from app.models.graph import Edge
+    from app.services.unified_db import session as _sess
+
+    def _compat_row(node: dict) -> dict:
+        """Map graph node to legacy-compatible dict for inventory_service."""
+        row = dict(node)
+        # Use legacy_id as the primary id if available
+        if row.get("legacy_id"):
+            row["id"] = row["legacy_id"]
+        return row
+
+    contributor_rows = [_compat_row(n) for n in _gs.list_nodes(type="contributor", limit=contributor_limit).get("items", [])]
+    asset_rows = [_compat_row(n) for n in _gs.list_nodes(type="asset", limit=asset_limit).get("items", [])]
+    def _compat_edge(edge_dict: dict) -> dict:
+        """Flatten edge properties for inventory_service compatibility."""
+        row = dict(edge_dict)
+        props = row.pop("properties", {}) or {}
+        row.update(props)
+        # Ensure contribution_id maps to id
+        if props.get("contribution_id"):
+            row["id"] = props["contribution_id"]
+        return row
+
+    with _sess() as s:
+        contribution_rows = [
+            _compat_edge(e.to_dict()) for e in
+            s.query(Edge).filter(Edge.type == "contribution").limit(contribution_limit).all()
+        ]
     return inventory_service.build_spec_process_implementation_validation_flow(
         idea_id=idea_id,
         include_internal_ideas=include_internal_ideas,

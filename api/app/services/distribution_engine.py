@@ -1,28 +1,32 @@
+"""Distribution engine — reads contributions from graph edges."""
 from __future__ import annotations
 
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import UUID
 
-from app.adapters.graph_store import GraphStore
 from app.models.distribution import Distribution, Payout
+from app.services import graph_service
 
 
 class DistributionEngine:
-    def __init__(self, store: GraphStore):
-        self.store = store
-
-    async def distribute(self, asset_id: UUID, value_amount: Decimal) -> Distribution:
+    async def distribute(self, asset_id: UUID, asset_node_id: str, value_amount: Decimal) -> Distribution:
         """Distribute value proportionally to contributors weighted by coherence."""
-        contributions = self.store.get_asset_contributions(asset_id)
+        edges = graph_service.get_edges(asset_node_id, direction="incoming", edge_type="contribution")
 
-        if not contributions:
+        if not edges:
             return Distribution(asset_id=asset_id, value_amount=value_amount, payouts=[])
 
         weighted_costs: dict[UUID, Decimal] = {}
-        for contrib in contributions:
-            weight = Decimal("0.5") + Decimal(str(contrib.coherence_score))
-            weighted_cost = contrib.cost_amount * weight
-            weighted_costs[contrib.contributor_id] = weighted_costs.get(contrib.contributor_id, Decimal("0.00")) + weighted_cost
+        for edge in edges:
+            props = edge.get("properties", {})
+            contributor_id = UUID(props["contributor_id"]) if props.get("contributor_id") else None
+            if not contributor_id:
+                continue
+            cost = Decimal(str(props.get("cost_amount", "0")))
+            coherence = float(props.get("coherence_score", 0.5))
+            weight = Decimal("0.5") + Decimal(str(coherence))
+            weighted_cost = cost * weight
+            weighted_costs[contributor_id] = weighted_costs.get(contributor_id, Decimal("0.00")) + weighted_cost
 
         total_weighted = sum(weighted_costs.values(), Decimal("0.00"))
         if total_weighted == 0:

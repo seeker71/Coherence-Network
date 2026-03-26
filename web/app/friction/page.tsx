@@ -117,7 +117,7 @@ export default function FrictionPage() {
       </div>
       <h1 className="text-2xl font-bold mb-3">Friction Ledger</h1>
       <p className="text-muted-foreground mb-6">
-        Human view of blocking points and energy-loss hotspots from the machine ledger.
+        Active blocking points and energy-loss hotspots across the system.
       </p>
 
       {status === "loading" && <p className="text-muted-foreground">Loading friction data…</p>}
@@ -128,37 +128,78 @@ export default function FrictionPage() {
       {status === "ok" && report && (
         <section className="space-y-6">
           {entryPoints && (
-            <div className="rounded border p-4">
-              <h2 className="font-semibold mb-3">Friction entry points</h2>
-              <p className="text-muted-foreground text-sm mb-3">
-                total {entryPoints.total_entry_points} | open {entryPoints.open_entry_points}
-              </p>
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6">
+              <h2 className="font-semibold mb-3">Friction Entry Points</h2>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                  <p className="text-muted-foreground text-xs">Total</p>
+                  <p className="text-lg font-semibold">{entryPoints.total_entry_points}</p>
+                </div>
+                <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                  <p className="text-muted-foreground text-xs">Open</p>
+                  <p className="text-lg font-semibold">{entryPoints.open_entry_points}</p>
+                </div>
+              </div>
               <ul className="space-y-3 text-sm">
                 {entryPoints.entry_points.length === 0 && (
                   <li className="text-muted-foreground">No friction entry points detected.</li>
                 )}
                 {entryPoints.entry_points.map((entry) => (
-                  <li key={entry.key} className="rounded border p-3">
-                    <p className="font-medium">
-                      {entry.title} | severity {entry.severity} | status {entry.status}
-                    </p>
-                    <p className="text-muted-foreground">
-                      events {entry.event_count} | wasted_minutes {entry.wasted_minutes} | energy_loss {entry.energy_loss} | cost_of_delay{" "}
-                      {entry.cost_of_delay}
-                    </p>
+                  <li key={entry.key} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-medium">{entry.title}</span>
+                      <span className="flex gap-1.5">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          entry.severity === "critical" ? "bg-red-500/10 text-red-500"
+                            : entry.severity === "warning" ? "bg-amber-500/10 text-amber-500"
+                              : "bg-blue-500/10 text-blue-500"
+                        }`}>
+                          {entry.severity}
+                        </span>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                          entry.status === "open" ? "bg-red-500/10 text-red-500"
+                            : entry.status === "resolved" ? "bg-green-500/10 text-green-500"
+                              : "bg-muted text-muted-foreground"
+                        }`}>
+                          {entry.status}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {entry.event_count > 0 && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Events</p>
+                          <p className="font-medium">{entry.event_count}</p>
+                        </div>
+                      )}
+                      {entry.wasted_minutes > 0 && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Wasted minutes</p>
+                          <p className="font-medium">{entry.wasted_minutes}</p>
+                        </div>
+                      )}
+                      {entry.energy_loss > 0 && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Energy loss</p>
+                          <p className="font-medium">{entry.energy_loss}</p>
+                        </div>
+                      )}
+                      {entry.cost_of_delay > 0 && (
+                        <div>
+                          <p className="text-muted-foreground text-xs">Cost of delay</p>
+                          <p className="font-medium">{entry.cost_of_delay}</p>
+                        </div>
+                      )}
+                    </div>
                     <p className="text-muted-foreground">{entry.recommended_action}</p>
                     {entry.evidence_links.length > 0 && (
-                      <p className="text-muted-foreground">
-                        evidence:{" "}
-                        {entry.evidence_links.slice(0, 3).map((link, idx) => (
-                          <span key={`${entry.key}-${link}`}>
-                            {idx > 0 ? " | " : ""}
-                            <a href={link} target={link.startsWith("http") ? "_blank" : "_self"} rel="noreferrer" className="underline">
-                              {link}
-                            </a>
-                          </span>
+                      <div className="flex flex-wrap gap-2">
+                        {entry.evidence_links.slice(0, 3).map((link) => (
+                          <a key={`${entry.key}-${link}`} href={link} target={link.startsWith("http") ? "_blank" : "_self"} rel="noreferrer" className="text-xs underline text-muted-foreground hover:text-foreground">
+                            {link}
+                          </a>
                         ))}
-                      </p>
+                      </div>
                     )}
                   </li>
                 ))}
@@ -167,72 +208,106 @@ export default function FrictionPage() {
           )}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <div className="rounded border p-3">
-              <p className="text-muted-foreground">Events (7d)</p>
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Events (7d)</p>
               <p className="text-lg font-semibold">{report.total_events}</p>
             </div>
-            <div className="rounded border p-3">
-              <p className="text-muted-foreground">Open</p>
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Open</p>
               <p className="text-lg font-semibold">{report.open_events}</p>
             </div>
-            <div className="rounded border p-3">
-              <p className="text-muted-foreground">Energy loss</p>
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Energy loss</p>
               <p className="text-lg font-semibold">{report.total_energy_loss}</p>
             </div>
-            <div className="rounded border p-3">
-              <p className="text-muted-foreground">Cost of delay</p>
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Cost of delay</p>
               <p className="text-lg font-semibold">{report.total_cost_of_delay}</p>
             </div>
           </div>
 
-          <div className="rounded border p-4">
-            <h2 className="font-semibold mb-3">Top block types by energy loss</h2>
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6">
+            <h2 className="font-semibold mb-3">Top Block Types by Energy Loss</h2>
             <ul className="space-y-2 text-sm">
               {report.top_block_types.length === 0 && (
                 <li className="text-muted-foreground">No events in the selected window.</li>
               )}
               {report.top_block_types.map((row) => (
-                <li key={row.key} className="flex items-center justify-between">
-                  <span>{row.key}</span>
-                  <span className="text-muted-foreground">
-                    count {row.count} | energy {row.energy_loss}
+                <li key={row.key} className="flex items-center justify-between rounded-xl border border-border/20 bg-background/40 p-3">
+                  <span className="font-medium">{row.key}</span>
+                  <span className="flex gap-3 text-xs">
+                    <span className="text-muted-foreground">{row.count} events</span>
+                    <span className="text-muted-foreground">{row.energy_loss} energy</span>
                   </span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="rounded border p-4">
-            <h2 className="font-semibold mb-3">Recent events</h2>
+          <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6">
+            <h2 className="font-semibold mb-3">Recent Events</h2>
             <ul className="space-y-2 text-sm">
               {events.length === 0 && (
                 <li className="text-muted-foreground">No logged friction events yet.</li>
               )}
-              {events.map((event) => (
-                <li key={event.id} className="rounded border p-3">
-                  <div className="flex items-center justify-between">
-                    <strong>{event.block_type}</strong>
-                    <span className="text-muted-foreground">{event.status}</span>
-                  </div>
-                  <p className="text-muted-foreground">
-                    {event.stage} |{" "}
-                    <Link
-                      href={`/contributors?contributor_id=${encodeURIComponent(event.owner)}`}
-                      className="underline hover:text-foreground"
-                    >
-                      {event.owner}
-                    </Link>{" "}
-                    | energy {event.energy_loss_estimate} | delay {event.cost_of_delay}
-                  </p>
-                  <p className="text-muted-foreground">
-                    task {event.task_id || "-"} | tool {event.tool || "-"} | provider{" "}
-                    {event.provider || "-"}/{event.billing_provider || "-"} | model {event.model || "-"}
-                  </p>
-                  <p className="text-muted-foreground">
-                    resolution_action {event.resolution_action || "-"}
-                  </p>
-                </li>
-              ))}
+              {events.map((event) => {
+                const hasMetrics = event.energy_loss_estimate > 0 || event.cost_of_delay > 0;
+                const hasToolInfo = !!(event.task_id || event.tool || event.provider || event.model);
+                return (
+                  <li key={event.id} className="rounded-xl border border-border/20 bg-background/40 px-4 py-3 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm">{event.block_type}</span>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                        event.status === "open" ? "bg-red-500/10 text-red-500"
+                          : event.status === "resolved" ? "bg-green-500/10 text-green-500"
+                            : "bg-muted text-muted-foreground"
+                      }`}>
+                        {event.status}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <span>{event.stage}</span>
+                      <span>&middot;</span>
+                      <Link
+                        href={`/contributors?contributor_id=${encodeURIComponent(event.owner)}`}
+                        className="underline hover:text-foreground"
+                      >
+                        {event.owner}
+                      </Link>
+                      <span>&middot;</span>
+                      <span>
+                        {new Date(event.timestamp).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    {hasMetrics && (
+                      <div className="flex gap-4 text-xs">
+                        {event.energy_loss_estimate > 0 && (
+                          <span><span className="text-muted-foreground">Energy: </span>{event.energy_loss_estimate}</span>
+                        )}
+                        {event.cost_of_delay > 0 && (
+                          <span><span className="text-muted-foreground">Delay: </span>{event.cost_of_delay}</span>
+                        )}
+                      </div>
+                    )}
+                    {hasToolInfo && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                        {event.task_id && <span>task {event.task_id}</span>}
+                        {event.tool && <span>tool {event.tool}</span>}
+                        {event.provider && (
+                          <span>{event.provider}{event.billing_provider && event.billing_provider !== event.provider ? ` / ${event.billing_provider}` : ""}</span>
+                        )}
+                        {event.model && <span>{event.model}</span>}
+                      </div>
+                    )}
+                    {event.resolution_action && (
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-medium text-foreground">Resolution: </span>
+                        {event.resolution_action}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </section>

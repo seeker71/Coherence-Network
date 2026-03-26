@@ -98,7 +98,7 @@ async def lifespan(app: FastAPI):
             limit=2000,
             since=datetime.now(timezone.utc) - timedelta(hours=24),
         )
-        store = getattr(app.state, "graph_store", None)
+        from app.services import graph_service as _gs
         contributor_rows = 0
         contribution_rows = 0
         asset_rows = 0
@@ -106,25 +106,33 @@ async def lifespan(app: FastAPI):
         contribution_payload_rows: list[dict] = []
         asset_payload_rows: list[dict] = []
         startup_errors: list[str] = []
-        if store is not None:
-            try:
-                contributor_payload_rows = [item.model_dump(mode="json") for item in store.list_contributors(limit=2000)]
-                contributor_rows = len(contributor_payload_rows)
-            except Exception:
-                _startup_logger.error("startup: contributors table missing or unreadable", exc_info=True)
-                startup_errors.append("contributors_table_missing")
-            try:
-                contribution_payload_rows = [item.model_dump(mode="json") for item in store.list_contributions(limit=2000)]
-                contribution_rows = len(contribution_payload_rows)
-            except Exception:
-                _startup_logger.error("startup: contributions table missing or unreadable", exc_info=True)
-                startup_errors.append("contributions_table_missing")
-            try:
-                asset_payload_rows = [item.model_dump(mode="json") for item in store.list_assets(limit=2000)]
-                asset_rows = len(asset_payload_rows)
-            except Exception:
-                _startup_logger.error("startup: assets table missing or unreadable", exc_info=True)
-                startup_errors.append("assets_table_missing")
+        def _compat_row(node: dict) -> dict:
+            row = dict(node)
+            if row.get("legacy_id"):
+                row["id"] = row["legacy_id"]
+            return row
+        try:
+            result = _gs.list_nodes(type="contributor", limit=2000)
+            contributor_payload_rows = [_compat_row(n) for n in result.get("items", [])]
+            contributor_rows = len(contributor_payload_rows)
+        except Exception:
+            _startup_logger.error("startup: contributor graph_nodes unreadable", exc_info=True)
+            startup_errors.append("contributors_graph_unreadable")
+        try:
+            result = _gs.list_nodes(type="asset", limit=2000)
+            asset_payload_rows = [_compat_row(n) for n in result.get("items", [])]
+            asset_rows = len(asset_payload_rows)
+        except Exception:
+            _startup_logger.error("startup: asset graph_nodes unreadable", exc_info=True)
+            startup_errors.append("assets_graph_unreadable")
+        try:
+            from app.models.graph import Edge
+            from app.services.unified_db import session as _sess
+            with _sess() as s:
+                contribution_rows = s.query(Edge).filter(Edge.type == "contribution").count()
+        except Exception:
+            _startup_logger.error("startup: contribution graph_edges unreadable", exc_info=True)
+            startup_errors.append("contributions_graph_unreadable")
         try:
             flow_payload = inventory_service.build_spec_process_implementation_validation_flow(
                 runtime_window_seconds=86400,
@@ -481,23 +489,21 @@ async def reset_database(x_admin_key: str = Header(None)):
     if not isinstance(store, PostgresGraphStore):
         raise HTTPException(status_code=400, detail="Only PostgreSQL databases can be reset")
 
-    # Drop all tables
+    # Drop all tables (unified graph schema)
     with store.engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS contributions CASCADE;"))
-        conn.execute(text("DROP TABLE IF EXISTS assets CASCADE;"))
-        conn.execute(text("DROP TABLE IF EXISTS contributors CASCADE;"))
+        conn.execute(text("DROP TABLE IF EXISTS graph_edges CASCADE;"))
+        conn.execute(text("DROP TABLE IF EXISTS graph_nodes CASCADE;"))
         conn.commit()
 
-    # Recreate with new schema
+    # Recreate with current schema
     Base.metadata.create_all(bind=store.engine)
 
     return {
         "status": "success",
-        "message": "Database tables dropped and recreated with new schema",
+        "message": "Database tables dropped and recreated with unified graph schema",
         "changes": [
-            "contributors: added type, wallet_address, hourly_rate",
-            "assets: changed from name/asset_type to description/type",
-            "contributions: unchanged"
+            "graph_nodes: universal entity store (contributors, assets, ideas, specs, etc.)",
+            "graph_edges: universal relationship store (contributions, dependencies, etc.)",
         ]
     }
 
