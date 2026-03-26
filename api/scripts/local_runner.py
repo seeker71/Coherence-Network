@@ -1288,30 +1288,42 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>, TESTS_FAILED=<count>"
             )
         elif next_phase == "impl":
-            # Check if there's a spec to reference
+            # Read the spec content directly to give the provider full context
             spec_ref = ""
             try:
-                specs_data = api("GET", f"/api/spec-registry?idea_id={idea_id}&limit=1")
-                if isinstance(specs_data, dict) and specs_data.get("items"):
-                    spec = specs_data["items"][0]
-                    spec_ref = f"\n\nSpec file: specs/{spec.get('id', idea_id)}.md (read it first)\n"
+                import glob as _glob
+                spec_patterns = [
+                    str(_REPO_DIR / "specs" / f"*{idea_id}*"),
+                    str(_REPO_DIR / "specs" / f"*{idea_id.split('-')[0]}*{idea_id.split('-')[-1]}*"),
+                ]
+                spec_files = []
+                for pat in spec_patterns:
+                    spec_files.extend(_glob.glob(pat))
+                if spec_files:
+                    with open(spec_files[0], "r", encoding="utf-8", errors="replace") as sf:
+                        spec_content = sf.read()[:3000]
+                    spec_ref = f"\n\nSpec ({spec_files[0]}):\n```\n{spec_content}\n```\n"
             except Exception:
                 pass
 
             direction = (
                 f"Implement '{idea_name}' ({idea_id}).\n\n"
-                f"Description: {idea_desc[:300]}\n"
+                f"Description: {idea_desc[:500]}\n"
                 f"{spec_ref}\n"
-                f"CRITICAL INSTRUCTIONS:\n"
-                f"1. Read the spec file first if it exists (check specs/ directory)\n"
-                f"2. Write ACTUAL CODE FILES — not a description of what you'd do\n"
-                f"3. After writing files, stage and commit them:\n"
-                f"   git add <your-files> && git commit -m \"impl({idea_id}): <summary>\"\n"
-                f"4. Do NOT push or create PRs — the runner handles that\n"
-                f"5. Run tests if they exist: python -m pytest api/tests/ -x -q 2>/dev/null\n\n"
-                f"Follow the project's CLAUDE.md conventions.\n"
-                f"The implementation must be complete enough to deploy and use.\n\n"
-                f"Output: FILES_CHANGED=<list>, TESTS_RUN=<pass/fail/none>, SUMMARY=<what you built>"
+                f"YOU MUST CREATE OR MODIFY ACTUAL FILES. This is not a planning task.\n\n"
+                f"Where to put code:\n"
+                f"- API endpoints: api/app/routers/<name>.py\n"
+                f"- Services: api/app/services/<name>.py\n"
+                f"- Models: api/app/models/<name>.py\n"
+                f"- Web pages: web/app/<route>/page.tsx\n"
+                f"- CLI: cli/bin/cc.mjs\n"
+                f"- Specs: specs/<id>.md\n\n"
+                f"After writing files:\n"
+                f"  git add -A && git diff --cached --stat\n"
+                f"  git commit -m \"impl({idea_id}): <summary>\"\n\n"
+                f"If the spec doesn't exist or is too vague to implement, output:\n"
+                f"  IMPL_BLOCKED: <what specific information is missing>\n\n"
+                f"Output on success: FILES_CHANGED=<list>, COMMIT=<sha>"
             )
         elif next_phase == "merge":
             direction = (
