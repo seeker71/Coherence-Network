@@ -112,8 +112,6 @@ def invalidate_downstream(task_type: str, idea_id: str) -> int:
 
     return invalidated
 
-=======
->>>>>>> origin/main
 
 def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
     """Check if a completed task has meaningful output.
