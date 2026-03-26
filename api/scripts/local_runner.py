@@ -2496,23 +2496,37 @@ def _seed_task_from_open_idea() -> bool:
             log.info("SEED: idea '%s' orphaned (partial with 0 tasks) — resetting to none", idea_name[:30])
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "none"})
 
-        # Check if review phase completed AND passed (not REVIEW_FAILED)
-        if "review" in completed_phases:
-            # Verify the review actually passed by checking output
+        # Check if review/code-review phase completed AND passed
+        review_phase = "code-review" if "code-review" in completed_phases else ("review" if "review" in completed_phases else "")
+        if review_phase:
+            # Check output for explicit FAILED keywords
             review_passed = False
+            # Check groups format
             for g in (idea_tasks.get("groups") or []):
-                if not isinstance(g, dict) or g.get("task_type") != "review":
+                if not isinstance(g, dict) or g.get("task_type") not in ("review", "code-review"):
                     continue
                 for t in (g.get("tasks") or []):
                     if t.get("status") == "completed":
                         t_output = (t.get("output") or "").strip().upper()
-                        if t_output and "REVIEW_FAILED" not in t_output and len(t_output) >= 50:
+                        if "REVIEW_FAILED" in t_output or "CODE_REVIEW_FAILED" in t_output:
+                            continue  # explicitly failed
+                        if len(t_output) >= 30:
+                            review_passed = True
+                            break
+            # Also check flat task list (some API versions return flat)
+            if not review_passed:
+                all_tasks = idea_tasks.get("tasks", []) if isinstance(idea_tasks, dict) else []
+                for t in all_tasks:
+                    if t.get("task_type") in ("review", "code-review") and t.get("status") == "completed":
+                        t_output = (t.get("output") or "").strip().upper()
+                        if "REVIEW_FAILED" not in t_output and "CODE_REVIEW_FAILED" not in t_output and len(t_output) >= 30:
                             review_passed = True
                             break
 
             if review_passed:
-                log.info("SEED: idea '%s' review PASSED — marking validated", idea_name[:30])
-                api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "validated"})
+                # Advance to merge phase, not straight to validated
+                task_type = "merge"
+                log.info("SEED: idea '%s' review PASSED — advancing to merge phase", idea_name[:30])
             else:
                 log.info("SEED: idea '%s' review completed but FAILED — needs re-review", idea_name[:30])
                 task_type = "review"  # re-run review
