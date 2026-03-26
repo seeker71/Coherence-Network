@@ -2109,14 +2109,21 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     # Record outcome for Thompson Sampling (with error classification)
     record_provider_outcome(task_type, provider, success, duration, output)
 
-    # ── Quality gate: empty or trivially short output is NOT success ──
-    _MIN_OUTPUT_CHARS = 50  # minimum chars for a meaningful response
+    # ── Quality gate: phase-specific minimum output length ──
+    _MIN_OUTPUT_BY_PHASE = {
+        "spec": 200,    # A real spec has goals, files, acceptance criteria
+        "impl": 200,    # A real impl describes files changed + evidence
+        "test": 150,    # A real test shows test file + results
+        "review": 80,   # A review at minimum says PASSED/FAILED with reasons
+        "code-review": 80,
+    }
+    min_chars = _MIN_OUTPUT_BY_PHASE.get(task_type, 50)
     output_stripped = (output or "").strip()
-    if success and len(output_stripped) < _MIN_OUTPUT_CHARS:
+    if success and len(output_stripped) < min_chars:
         log.warning(
-            "QUALITY_GATE task=%s provider=%s — output too short (%d chars < %d min). "
+            "QUALITY_GATE task=%s provider=%s type=%s — output too short (%d chars < %d min for %s). "
             "Marking as failed, not completed.",
-            task_id, provider, len(output_stripped), _MIN_OUTPUT_CHARS,
+            task_id, provider, task_type, len(output_stripped), min_chars, task_type,
         )
         success = False
 
@@ -2182,11 +2189,11 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         )
     if success and reported:
         # Only advance phases if the task produced meaningful output
-        if len(output_stripped) >= _MIN_OUTPUT_CHARS:
+        if len(output_stripped) >= min_chars:
             _run_phase_auto_advance_hook(task)
             _auto_record_contribution(task, provider, duration)
         else:
-            log.warning("SKIP_ADVANCE task=%s — output too short for phase advancement", task_id)
+            log.warning("SKIP_ADVANCE task=%s — output too short (%d < %d) for phase advancement", task_id, len(output_stripped), min_chars)
 
     # Post completion activity
     _post_activity(
@@ -2431,13 +2438,20 @@ def _seed_task_from_open_idea() -> bool:
             if completed > 0:
                 completed_phases.add(phase)
 
-        # Cap: if any single phase has 10+ tasks, truly stuck — skip to prevent infinite loop
+        # Cap: if any single phase has 10+ tasks, truly stuck — skip for THIS cycle
+        # but don't permanently orphan it. If all tasks are gone (reaper cleaned up),
+        # reset to none so we can start fresh next cycle.
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
+        total_tasks = sum(phase_counts.values())
         if max_phase_tasks >= 10:
             log.info("SEED: idea '%s' truly stuck (%d tasks in one phase) — marking partial, skipping",
                      idea_name[:30], max_phase_tasks)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
+        if total_tasks == 0 and idea.get("manifestation_status") == "partial":
+            # Orphaned: marked partial but no tasks exist — reset to none
+            log.info("SEED: idea '%s' orphaned (partial with 0 tasks) — resetting to none", idea_name[:30])
+            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "none"})
 
         # Check if review phase completed AND passed (not REVIEW_FAILED)
         if "review" in completed_phases:
