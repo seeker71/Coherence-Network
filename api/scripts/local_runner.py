@@ -202,9 +202,11 @@ def _detect_providers() -> dict[str, dict]:
     """
     providers = {}
     cli_specs = {
-        # claude -p: non-interactive via stdin (not --bare which strips OAuth creds)
+        # claude -p: non-interactive prompt mode WITH tool access (can read/write files)
         # --dangerously-skip-permissions: bypass all permission checks
-        "claude": {"cmd": ["claude", "-p"], "stdin_prompt": True, "needs_skip_permissions": True, "check": _check_claude_auth},
+        # --output-format text: plain text output (no JSON wrapping)
+        # NOTE: --print disables tools — never use it for impl/test tasks
+        "claude": {"cmd": ["claude", "-p"], "append_prompt": True, "needs_skip_permissions": True, "extra_flags": ["--output-format", "text"], "check": _check_claude_auth},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
@@ -234,6 +236,9 @@ def _detect_providers() -> dict[str, dict]:
         # Add --dangerously-skip-permissions for providers that need it (e.g. claude)
         if spec.pop("needs_skip_permissions", False) and _SKIP_PERMISSIONS[0]:
             spec["cmd"].insert(1, "--dangerously-skip-permissions")
+        # Add extra flags (e.g. --output-format text for claude)
+        for flag in spec.pop("extra_flags", []):
+            spec["cmd"].append(flag)
         # Optional health check
         checker = spec.pop("check", None)
         if checker and not checker():
