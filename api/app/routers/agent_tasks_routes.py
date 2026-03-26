@@ -179,20 +179,20 @@ async def update_task(
     if not task_update_has_fields(data):
         raise HTTPException(status_code=400, detail="At least one field required")
     # Block unknown workers from claiming tasks — only registered nodes or API key holders
-    if data.status == TaskStatus.RUNNING and data.claimed_by:
+    worker_hint = data.worker_id or ""
+    if data.status == TaskStatus.RUNNING and worker_hint:
         from app.services import federation_service
         known_nodes = federation_service.get_known_node_ids() if hasattr(federation_service, "get_known_node_ids") else set()
-        # Allow: registered node IDs, "manual" prefix, API key present
-        is_known = any([
-            any(data.claimed_by.startswith(nid) for nid in known_nodes) if known_nodes else False,
-            data.claimed_by.startswith("manual"),
-            data.claimed_by.startswith("proof"),
-            data.claimed_by.startswith("claude"),
-            data.worker_id and any(data.worker_id.startswith(nid) for nid in known_nodes) if known_nodes else False,
-        ])
-        if not is_known and known_nodes:
-            logger.warning("BLOCKED_CLAIM task=%s claimed_by=%s — not a registered node", task_id, data.claimed_by)
-            raise HTTPException(status_code=403, detail=f"Worker '{data.claimed_by}' is not a registered federation node")
+        if known_nodes:
+            is_known = any([
+                any(worker_hint.startswith(nid) for nid in known_nodes),
+                worker_hint.startswith("manual"),
+                worker_hint.startswith("proof"),
+                worker_hint.startswith("claude"),
+            ])
+            if not is_known:
+                logger.warning("BLOCKED_CLAIM task=%s worker=%s — not a registered node", task_id, worker_hint)
+                raise HTTPException(status_code=403, detail=f"Worker '{worker_hint}' is not a registered federation node")
     existing_task = agent_service.get_task(task_id)
     previous_status_value = task_status_value(existing_task)
     context_patch = target_state_context_patch(data)
