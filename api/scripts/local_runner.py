@@ -2914,6 +2914,38 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
     return ""
 
 
+def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
+    """Remove worktrees older than max_age_hours. Called periodically from the loop."""
+    wt_base = _REPO_DIR / ".worktrees"
+    if not wt_base.exists():
+        return 0
+    cleaned = 0
+    now = time.time()
+    for wt_dir in wt_base.iterdir():
+        if not wt_dir.is_dir() or not wt_dir.name.startswith("task-"):
+            continue
+        try:
+            age_hours = (now - wt_dir.stat().st_mtime) / 3600
+            if age_hours < max_age_hours:
+                continue
+            task_slug = wt_dir.name.replace("task-", "")
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(wt_dir)],
+                capture_output=True, timeout=30, cwd=str(_REPO_DIR),
+            )
+            subprocess.run(
+                ["git", "branch", "-D", f"task/{task_slug}"],
+                capture_output=True, timeout=10, cwd=str(_REPO_DIR),
+            )
+            cleaned += 1
+        except Exception:
+            pass
+    if cleaned:
+        subprocess.run(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_REPO_DIR))
+        log.info("SWEEP_WORKTREES cleaned %d stale worktrees", cleaned)
+    return cleaned
+
+
 def _cleanup_worktree(task_id: str) -> None:
     """Remove a worktree after task completion.
 
@@ -3392,6 +3424,8 @@ def main():
         last_reap = 0.0
         msg_interval = 120  # check messages every 2 minutes
         last_msg_check = 0.0
+        cleanup_interval = 1800  # clean stale worktrees every 30 minutes
+        last_cleanup = 0.0
 
         use_parallel = args.parallel > 0
         if use_parallel:
@@ -3416,6 +3450,11 @@ def main():
 
                     # Process messages (interactive session needs to receive commands)
                     _process_node_messages(_NODE_ID)
+
+                    # Periodic worktree cleanup
+                    if now - last_cleanup > cleanup_interval:
+                        _sweep_stale_worktrees(max_age_hours=2)
+                        last_cleanup = now
 
                 # 2. Check if interactive session has taken over (pause task execution only)
                 _is_paused = False
