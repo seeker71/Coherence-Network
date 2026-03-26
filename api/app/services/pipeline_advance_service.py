@@ -180,9 +180,22 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
             log.info("AUTO_RETRY skip — %s task already pending/running for %s", task_type, idea_id)
             return None
 
-    # Reuse the original direction
+    # Reuse the original direction, enriched with partial output
     direction = task.get("direction", "")
     failed_provider = task.get("model", "") or context.get("provider", "")
+    partial_output = (task.get("output") or "").strip()
+
+    if partial_output and len(partial_output) > 20:
+        # Carry partial work forward so the retry doesn't start from scratch
+        direction = (
+            f"{direction}\n\n"
+            f"--- PARTIAL WORK FROM PREVIOUS ATTEMPT (timed out) ---\n"
+            f"{partial_output[:3000]}\n"
+            f"--- END PARTIAL WORK ---\n\n"
+            f"Continue from the partial work above. Do not start over — "
+            f"pick up where the previous attempt left off and complete the task."
+        )
+
     task_type_enum = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
 
     try:
