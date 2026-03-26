@@ -8,6 +8,22 @@ import { useLiveRefresh } from "@/lib/live_refresh";
 
 const API_URL = getApiBase();
 
+function formatDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return iso;
+  }
+}
+
+function formatCost(value: string | number): string {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return "CC 0.00";
+  return `CC ${n.toFixed(2)}`;
+}
+
 type Asset = {
   id: string;
   type: string;
@@ -68,11 +84,11 @@ function AssetsPageContent() {
       </div>
       <h1 className="text-2xl font-bold">Assets</h1>
       <p className="text-muted-foreground">
-        Human interface for `GET /api/assets`.
+        Browse all registered network assets.
         {selectedAssetId ? (
           <>
             {" "}
-            Filtered by asset <code>{selectedAssetId}</code>.
+            Showing one asset.
           </>
         ) : null}
       </p>
@@ -83,32 +99,39 @@ function AssetsPageContent() {
       {status === "ok" && (
         <section className="rounded border p-4 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Total: {filteredRows.length}
+            {filteredRows.length} {filteredRows.length === 1 ? "asset" : "assets"}
             {selectedAssetId ? (
               <>
                 {" "}
-                | <Link href="/assets" className="underline hover:text-foreground">Clear filter</Link>
+                · <Link href="/assets" className="underline hover:text-foreground">Clear filter</Link>
               </>
             ) : null}
           </p>
           <ul className="space-y-2 text-sm">
             {filteredRows.slice(0, 100).map((a) => (
-              <li key={a.id} className="rounded border p-2 flex justify-between gap-3">
-                <span className="font-medium">
-                  <Link href={`/assets?asset_id=${encodeURIComponent(a.id)}`} className="hover:underline">
-                    {a.id}
-                  </Link>
-                </span>
-                <span className="text-muted-foreground text-right">
-                  {a.type} | {a.description} | cost {a.total_cost} | {a.created_at}
-                  <br />
+              <li key={a.id} className="rounded border p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Link href={`/assets?asset_id=${encodeURIComponent(a.id)}`} className="font-medium hover:underline">
+                      {a.description || a.type || "Untitled asset"}
+                    </Link>
+                    {a.type && (
+                      <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        {a.type}
+                      </span>
+                    )}
+                  </div>
+                  <span className="font-medium whitespace-nowrap">{formatCost(a.total_cost)}</span>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>{formatDate(a.created_at)}</span>
                   <Link
                     href={`/contributions?asset_id=${encodeURIComponent(a.id)}`}
                     className="underline hover:text-foreground"
                   >
-                    contributions
+                    View contributions
                   </Link>
-                </span>
+                </div>
               </li>
             ))}
           </ul>

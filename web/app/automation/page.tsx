@@ -280,48 +280,105 @@ export default async function AutomationPage() {
         </p>
       </div>
 
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 text-sm space-y-2">
-        <p className="text-muted-foreground">
-          providers {usage.tracked_providers} | unavailable {(usage?.unavailable_providers?.length ?? 0)} | alerts {(alerts?.alerts?.length ?? 0)}
-        </p>
-        <p className="text-muted-foreground">
-          {"required_providers "}{readiness?.required_providers?.length ?? 0}{" | all_required_ready "}{readiness?.all_required_ready ? "yes" : "no"}{" | "}
-          {"blocking "}{readiness?.blocking_issues?.length ?? 0}
-        </p>
-        <p className="text-muted-foreground">
-          {"validation_required "}{validation?.required_providers?.length ?? 0}{" | all_required_validated "}{validation?.all_required_validated ? "yes" : "no"}{" | "}
-          {"blocking "}{validation?.blocking_issues?.length ?? 0}
-        </p>
-        {usage.limit_coverage && (
-          <p className="text-muted-foreground">
-            limit_coverage {Math.round((usage.limit_coverage.coverage_ratio ?? 0) * 100)}% | with_limit{" "}
-            {usage.limit_coverage.providers_with_limit_metrics}/{usage.limit_coverage.providers_considered} | with_remaining{" "}
-            {usage.limit_coverage.providers_with_remaining_metrics}
-          </p>
-        )}
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 text-sm space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Providers</p>
+            <p className="text-lg font-semibold">{usage.tracked_providers}</p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Unavailable</p>
+            <p className="text-lg font-semibold">{usage?.unavailable_providers?.length ?? 0}</p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Alerts</p>
+            <p className="text-lg font-semibold">{alerts?.alerts?.length ?? 0}</p>
+          </div>
+          {usage.limit_coverage && (
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Limit coverage</p>
+              <p className="text-lg font-semibold">{Math.round((usage.limit_coverage.coverage_ratio ?? 0) * 100)}%</p>
+            </div>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3 flex items-center justify-between">
+            <div>
+              <p className="text-muted-foreground text-xs">Required providers ready</p>
+              <p className="text-sm">{readiness?.required_providers?.length ?? 0} required, {readiness?.blocking_issues?.length ?? 0} blocking</p>
+            </div>
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+              readiness?.all_required_ready ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+            }`}>
+              {readiness?.all_required_ready ? "Ready" : "Not ready"}
+            </span>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3 flex items-center justify-between">
+            <div>
+              <p className="text-muted-foreground text-xs">Validation status</p>
+              <p className="text-sm">{validation?.required_providers?.length ?? 0} required, {validation?.blocking_issues?.length ?? 0} blocking</p>
+            </div>
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+              validation?.all_required_validated ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+            }`}>
+              {validation?.all_required_validated ? "Validated" : "Not validated"}
+            </span>
+          </div>
+        </div>
       </section>
 
-      {usage.limit_coverage && (
-        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+      {usage.limit_coverage && (usage.limit_coverage.providers_missing_limit_metrics.length > 0 || usage.limit_coverage.providers_partial_limit_metrics.length > 0) && (
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
           <h2 className="text-xl font-semibold">Usage Limit Coverage</h2>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">With limits</p>
+              <p className="text-lg font-semibold">{usage.limit_coverage.providers_with_limit_metrics} / {usage.limit_coverage.providers_considered}</p>
+            </div>
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">With remaining</p>
+              <p className="text-lg font-semibold">{usage.limit_coverage.providers_with_remaining_metrics}</p>
+            </div>
+            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+              <p className="text-muted-foreground text-xs">Coverage</p>
+              <p className="text-lg font-semibold">{Math.round((usage.limit_coverage.coverage_ratio ?? 0) * 100)}%</p>
+            </div>
+          </div>
           {usage.limit_coverage.providers_missing_limit_metrics.length > 0 && (
-            <p className="text-muted-foreground">
-              missing_limit_metrics {usage.limit_coverage.providers_missing_limit_metrics.join(", ")}
-            </p>
+            <div>
+              <p className="text-muted-foreground text-xs mb-1">Missing limit metrics</p>
+              <div className="flex flex-wrap gap-1.5">
+                {usage.limit_coverage.providers_missing_limit_metrics.map((p) => (
+                  <span key={p} className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-500/10 text-red-500">{p}</span>
+                ))}
+              </div>
+            </div>
           )}
           {usage.limit_coverage.providers_partial_limit_metrics.length > 0 && (
-            <p className="text-muted-foreground">
-              partial_limit_metrics {usage.limit_coverage.providers_partial_limit_metrics.join(", ")}
-            </p>
+            <div>
+              <p className="text-muted-foreground text-xs mb-1">Partial limit metrics</p>
+              <div className="flex flex-wrap gap-1.5">
+                {usage.limit_coverage.providers_partial_limit_metrics.map((p) => (
+                  <span key={p} className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-500/10 text-amber-500">{p}</span>
+                ))}
+              </div>
+            </div>
           )}
         </section>
       )}
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
         <h2 className="text-xl font-semibold">Provider Validation Contract</h2>
-        <p className="text-muted-foreground">
-          runtime_window_seconds {validation.runtime_window_seconds} | min_execution_events {validation.min_execution_events}
-        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Runtime window</p>
+            <p className="text-lg font-semibold">{Math.round(validation.runtime_window_seconds / 3600)}h</p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+            <p className="text-muted-foreground text-xs">Min execution events</p>
+            <p className="text-lg font-semibold">{validation.min_execution_events}</p>
+          </div>
+        </div>
         {(validation?.blocking_issues?.length ?? 0) > 0 && (
           <ul className="space-y-1 text-destructive">
             {validation.blocking_issues.map((item) => (
@@ -329,74 +386,123 @@ export default async function AutomationPage() {
             ))}
           </ul>
         )}
-        <ul className="space-y-2">
-          {validation.providers.map((provider) => (
-            <li key={`validation-${provider.provider}`} className="rounded-xl border border-border/20 bg-background/40 p-3">
-              <p>
-                {provider.provider} | configured {provider.configured ? "yes" : "no"} | readiness {provider.readiness_status} | usage_events{" "}
-                {provider.usage_events} | successful_events {provider.successful_events} | validated_execution{" "}
-                {provider.validated_execution ? "yes" : "no"}
-              </p>
-              {provider.notes.length > 0 && (
-                <ul className="space-y-1 text-muted-foreground">
-                  {provider.notes.map((note) => (
-                    <li key={`validation-note-${provider.provider}-${note}`}>{note}</li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border/30 text-muted-foreground text-xs">
+                <th className="py-2 pr-3">Provider</th>
+                <th className="py-2 pr-3 text-center">Configured</th>
+                <th className="py-2 pr-3 text-center">Readiness</th>
+                <th className="py-2 pr-3 text-right">Usage events</th>
+                <th className="py-2 pr-3 text-right">Successful</th>
+                <th className="py-2 pr-3 text-center">Validated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {validation.providers.map((provider) => (
+                <tr key={`validation-${provider.provider}`} className="border-b border-border/10">
+                  <td className="py-2 pr-3 font-medium">{provider.provider}</td>
+                  <td className="py-2 pr-3 text-center">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      provider.configured ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                    }`}>
+                      {provider.configured ? "Yes" : "No"}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3 text-center">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      provider.readiness_status === "ready" ? "bg-green-500/10 text-green-500"
+                        : provider.readiness_status === "degraded" ? "bg-amber-500/10 text-amber-500"
+                          : "bg-red-500/10 text-red-500"
+                    }`}>
+                      {provider.readiness_status}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3 text-right">{provider.usage_events}</td>
+                  <td className="py-2 pr-3 text-right">{provider.successful_events}</td>
+                  <td className="py-2 pr-3 text-center">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      provider.validated_execution ? "bg-green-500/10 text-green-500" : "bg-muted text-muted-foreground"
+                    }`}>
+                      {provider.validated_execution ? "Yes" : "No"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
         <h2 className="text-xl font-semibold">Provider Execution Stats</h2>
         {execStats ? (
           <>
-            <p className="text-muted-foreground">
-              {execStats.summary.healthy_providers}/{execStats.summary.total_providers} healthy | {execStats.summary.attention_needed} need attention | {execStats.summary.total_measurements} measurements
-            </p>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                <p className="text-muted-foreground text-xs">Healthy</p>
+                <p className="text-lg font-semibold">{execStats.summary.healthy_providers} / {execStats.summary.total_providers}</p>
+              </div>
+              <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                <p className="text-muted-foreground text-xs">Need attention</p>
+                <p className="text-lg font-semibold">{execStats.summary.attention_needed}</p>
+              </div>
+              <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                <p className="text-muted-foreground text-xs">Measurements</p>
+                <p className="text-lg font-semibold">{execStats.summary.total_measurements}</p>
+              </div>
+            </div>
             <ul className="space-y-2">
               {Object.entries(execStats.providers)
                 .sort(([a], [b]) => a.localeCompare(b))
                 .map(([name, entry]) => (
                   <li
                     key={`exec-${name}`}
-                    className={`rounded-xl border p-3 ${entry.blocked ? "border-red-500/50 bg-red-500/5" : "border-border/20 bg-background/40"}`}
+                    className={`rounded-xl border p-4 space-y-2 ${entry.blocked ? "border-red-500/50 bg-red-500/5" : "border-border/20 bg-background/40"}`}
                   >
-                    <p>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="font-medium">{name}</span>
-                      {entry.blocked && <span className="ml-2 text-red-600 dark:text-red-400 font-medium">[BLOCKED]</span>}
-                      {" "}| overall {(entry.success_rate * 100).toFixed(0)}%
-                      {" "}| last_5{" "}
-                      <span
-                        className={
-                          entry.last_5_rate < 0.5
-                            ? "text-red-600 dark:text-red-400"
-                            : entry.last_5_rate < 0.8
-                              ? "text-amber-600 dark:text-amber-400"
-                              : ""
-                        }
-                      >
-                        {(entry.last_5_rate * 100).toFixed(0)}%
+                      <span className="flex gap-1.5">
+                        {entry.blocked && (
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-500/10 text-red-500">Blocked</span>
+                        )}
+                        {entry.needs_attention && (
+                          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-amber-500/10 text-amber-500">Needs attention</span>
+                        )}
                       </span>
-                      {" "}| runs {entry.total_runs} ({entry.successes}ok {entry.failures}fail)
-                      {" "}| avg {entry.avg_duration_s.toFixed(1)}s
-                    </p>
-                    <p className="text-muted-foreground">
-                      selection_probability {(entry.selection_probability * 100).toFixed(1)}%
-                      {entry.needs_attention && (
-                        <span className="ml-2 text-amber-600 dark:text-amber-400">needs attention</span>
-                      )}
-                    </p>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Overall rate</p>
+                        <p className="font-medium">{(entry.success_rate * 100).toFixed(0)}%</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Last 5 rate</p>
+                        <p className={`font-medium ${
+                          entry.last_5_rate < 0.5 ? "text-red-500" : entry.last_5_rate < 0.8 ? "text-amber-500" : ""
+                        }`}>{(entry.last_5_rate * 100).toFixed(0)}%</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Runs</p>
+                        <p className="font-medium">{entry.total_runs} <span className="text-xs text-muted-foreground">({entry.successes} ok, {entry.failures} fail)</span></p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Avg duration</p>
+                        <p className="font-medium">{entry.avg_duration_s.toFixed(1)}s</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Selection probability</p>
+                        <p className="font-medium">{(entry.selection_probability * 100).toFixed(1)}%</p>
+                      </div>
+                    </div>
                     {Object.keys(entry.error_breakdown).length > 0 && (
-                      <ul className="mt-1 space-y-0.5 text-muted-foreground">
+                      <div className="flex flex-wrap gap-1.5">
                         {Object.entries(entry.error_breakdown).map(([errClass, count]) => (
-                          <li key={`exec-err-${name}-${errClass}`}>
-                            error: {errClass} x{count}
-                          </li>
+                          <span key={`exec-err-${name}-${errClass}`} className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-red-500/10 text-red-500">
+                            {errClass} x{count}
+                          </span>
                         ))}
-                      </ul>
+                      </div>
                     )}
                   </li>
                 ))}
@@ -423,72 +529,138 @@ export default async function AutomationPage() {
             ))}
           </ul>
         )}
-        <ul className="space-y-2">
-          {readiness.providers.map((provider) => (
-            <li key={`ready-${provider.provider}`} className="rounded-xl border border-border/20 bg-background/40 p-3">
-              <p>
-                {provider.provider} | status {provider.status} | required {provider.required ? "yes" : "no"} | configured{" "}
-                {provider.configured ? "yes" : "no"} | severity {provider.severity}
-              </p>
-              {provider.missing_env.length > 0 && (
-                <p className="text-muted-foreground">missing_env {provider.missing_env.join(", ")}</p>
-              )}
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border/30 text-muted-foreground text-xs">
+                <th className="py-2 pr-3">Provider</th>
+                <th className="py-2 pr-3 text-center">Status</th>
+                <th className="py-2 pr-3 text-center">Required</th>
+                <th className="py-2 pr-3 text-center">Configured</th>
+                <th className="py-2 pr-3 text-center">Severity</th>
+                <th className="py-2 pr-3">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {readiness.providers.map((provider) => (
+                <tr key={`ready-${provider.provider}`} className="border-b border-border/10">
+                  <td className="py-2 pr-3 font-medium">{provider.provider}</td>
+                  <td className="py-2 pr-3 text-center">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      provider.status === "ready" ? "bg-green-500/10 text-green-500"
+                        : provider.status === "degraded" ? "bg-amber-500/10 text-amber-500"
+                          : "bg-red-500/10 text-red-500"
+                    }`}>
+                      {provider.status}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3 text-center">{provider.required ? "Yes" : "No"}</td>
+                  <td className="py-2 pr-3 text-center">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      provider.configured ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                    }`}>
+                      {provider.configured ? "Yes" : "No"}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3 text-center">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      provider.severity === "critical" ? "bg-red-500/10 text-red-500"
+                        : provider.severity === "warning" ? "bg-amber-500/10 text-amber-500"
+                          : "bg-blue-500/10 text-blue-500"
+                    }`}>
+                      {provider.severity}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-3 text-muted-foreground text-xs">
+                    {provider.missing_env.length > 0 && (
+                      <span>Missing: {provider.missing_env.join(", ")}</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
         <h2 className="text-xl font-semibold">Provider Usage</h2>
         <ul className="space-y-3">
           {providers.map((provider) => (
-            <li key={provider.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
-              <p className="font-medium">
-                {provider.provider} | status {provider.status} | kind {provider.kind}
-              </p>
-              <p className="text-muted-foreground">
-                source {provider.data_source} | current_usage{" "}
-                {provider.actual_current_usage !== null && provider.actual_current_usage !== undefined
-                  ? `${provider.actual_current_usage} ${provider.actual_current_usage_unit ?? ""}`.trim()
-                  : "n/a"}{" "}
-                | usage_per_time {provider.usage_per_time ?? "n/a"} | remaining{" "}
-                {provider.usage_remaining !== null && provider.usage_remaining !== undefined
-                  ? `${provider.usage_remaining} ${provider.usage_remaining_unit ?? ""}`.trim()
-                  : "n/a"}
-              </p>
-              <ul className="space-y-1">
-                {provider.metrics.map((metric) => (
-                  <li key={`${provider.id}-${metric.id}`} className="flex justify-between">
-                    <span>{metric.label}</span>
-                    <span className="text-muted-foreground">
-                      used {metric.used}
-                      {metric.limit ? ` / ${metric.limit}` : ""}
-                      {metric.remaining !== null && metric.remaining !== undefined ? ` | remaining ${metric.remaining}` : ""}
-                      {metric.window ? ` | ${metric.window}` : ""}
-                    </span>
-                  </li>
-                ))}
-                {provider.metrics.length === 0 && (
-                  <li className="text-muted-foreground">No metrics available for this provider.</li>
+            <li key={provider.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="font-medium">{provider.provider}</span>
+                <span className="flex gap-1.5">
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                    provider.status === "ok" || provider.status === "active" || provider.status === "ready" ? "bg-green-500/10 text-green-500"
+                      : provider.status === "degraded" ? "bg-amber-500/10 text-amber-500"
+                        : "bg-red-500/10 text-red-500"
+                  }`}>
+                    {provider.status}
+                  </span>
+                  <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
+                    {provider.kind}
+                  </span>
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {provider.actual_current_usage !== null && provider.actual_current_usage !== undefined && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Current usage</p>
+                    <p className="font-medium">{provider.actual_current_usage} {provider.actual_current_usage_unit ?? ""}</p>
+                  </div>
                 )}
-              </ul>
-              <p className="text-muted-foreground">
-                cost_usd {provider.cost_usd ?? 0} | capacity_tasks_per_day {provider.capacity_tasks_per_day ?? 0}
-              </p>
-              {provider.official_records.length > 0 && (
-                <ul className="space-y-1 text-muted-foreground">
-                  {provider.official_records.map((url) => (
-                    <li key={`${provider.id}-${url}`}>
-                      <a href={url} target="_blank" rel="noreferrer" className="underline">
-                        official record
-                      </a>{" "}
-                      {url}
-                    </li>
+                {provider.usage_per_time && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Usage rate</p>
+                    <p className="font-medium">{provider.usage_per_time}</p>
+                  </div>
+                )}
+                {provider.usage_remaining !== null && provider.usage_remaining !== undefined && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Remaining</p>
+                    <p className="font-medium">{provider.usage_remaining} {provider.usage_remaining_unit ?? ""}</p>
+                  </div>
+                )}
+                {(provider.cost_usd ?? 0) > 0 && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Cost</p>
+                    <p className="font-medium">${(provider.cost_usd ?? 0).toFixed(2)}</p>
+                  </div>
+                )}
+                {(provider.capacity_tasks_per_day ?? 0) > 0 && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Capacity / day</p>
+                    <p className="font-medium">{provider.capacity_tasks_per_day}</p>
+                  </div>
+                )}
+              </div>
+              {provider.metrics.length > 0 && (
+                <div className="space-y-1">
+                  {provider.metrics.map((metric) => (
+                    <div key={`${provider.id}-${metric.id}`} className="flex justify-between text-xs">
+                      <span>{metric.label}</span>
+                      <span className="text-muted-foreground">
+                        {metric.used}{metric.limit ? ` / ${metric.limit}` : ""}
+                        {metric.remaining !== null && metric.remaining !== undefined ? ` (${metric.remaining} remaining)` : ""}
+                        {metric.window ? ` -- ${metric.window}` : ""}
+                      </span>
+                    </div>
                   ))}
-                </ul>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">Source: {provider.data_source}</p>
+              {provider.official_records.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {provider.official_records.map((url) => (
+                    <a key={`${provider.id}-${url}`} href={url} target="_blank" rel="noreferrer" className="text-xs underline text-muted-foreground hover:text-foreground">
+                      Official record
+                    </a>
+                  ))}
+                </div>
               )}
               {provider.notes.length > 0 && (
-                <ul className="space-y-1 text-muted-foreground">
+                <ul className="space-y-1 text-muted-foreground text-xs">
                   {provider.notes.map((note) => (
                     <li key={`${provider.id}-${note}`}>{note}</li>
                   ))}
@@ -616,22 +788,48 @@ export default async function AutomationPage() {
           <h2 className="text-xl font-semibold">Federation Node Capability Discovery</h2>
           {fleetCapabilities && (
             <>
-              <p className="text-muted-foreground">
-                nodes {fleetCapabilities.total_nodes} | total_cpu {fleetCapabilities.hardware_summary.total_cpus} | total_memory_gb{" "}
-                {fleetCapabilities.hardware_summary.total_memory_gb} | gpu_nodes {fleetCapabilities.hardware_summary.gpu_capable_nodes}
-              </p>
-              <p className="text-muted-foreground">
-                executors{" "}
-                {Object.entries(fleetCapabilities.executors)
-                  .map(([name, data]) => `${name}(${data.node_count})`)
-                  .join(", ") || "none"}
-              </p>
-              <p className="text-muted-foreground">
-                tools{" "}
-                {Object.entries(fleetCapabilities.tools)
-                  .map(([name, data]) => `${name}(${data.node_count})`)
-                  .join(", ") || "none"}
-              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                  <p className="text-muted-foreground text-xs">Nodes</p>
+                  <p className="text-lg font-semibold">{fleetCapabilities.total_nodes}</p>
+                </div>
+                <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                  <p className="text-muted-foreground text-xs">Total CPUs</p>
+                  <p className="text-lg font-semibold">{fleetCapabilities.hardware_summary.total_cpus}</p>
+                </div>
+                <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                  <p className="text-muted-foreground text-xs">Total memory</p>
+                  <p className="text-lg font-semibold">{fleetCapabilities.hardware_summary.total_memory_gb} GB</p>
+                </div>
+                <div className="rounded-xl border border-border/20 bg-background/40 p-3">
+                  <p className="text-muted-foreground text-xs">GPU nodes</p>
+                  <p className="text-lg font-semibold">{fleetCapabilities.hardware_summary.gpu_capable_nodes}</p>
+                </div>
+              </div>
+              {Object.keys(fleetCapabilities.executors).length > 0 && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">Executors</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(fleetCapabilities.executors).map(([name, data]) => (
+                      <span key={name} className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
+                        {name} ({data.node_count} nodes)
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {Object.keys(fleetCapabilities.tools).length > 0 && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">Tools</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {Object.entries(fleetCapabilities.tools).map(([name, data]) => (
+                      <span key={name} className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
+                        {name} ({data.node_count})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
           <div className="space-y-2">
@@ -674,14 +872,22 @@ export default async function AutomationPage() {
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
         <h2 className="text-xl font-semibold">Capacity Alerts</h2>
-        <p className="text-muted-foreground">threshold_ratio {alerts.threshold_ratio}</p>
+        <p className="text-muted-foreground text-xs">Threshold: {(alerts.threshold_ratio * 100).toFixed(0)}% remaining</p>
         <ul className="space-y-2">
           {alerts.alerts.map((alert) => (
-            <li key={alert.id} className="rounded-xl border border-border/20 bg-background/40 p-3 flex justify-between gap-3">
-              <span>
-                {alert.provider} | {alert.metric_id} | {alert.severity}
-              </span>
-              <span className="text-muted-foreground">{alert.message}</span>
+            <li key={alert.id} className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">{alert.provider}</span>
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  alert.severity === "critical" ? "bg-red-500/10 text-red-500"
+                    : alert.severity === "warning" ? "bg-amber-500/10 text-amber-500"
+                      : "bg-blue-500/10 text-blue-500"
+                }`}>
+                  {alert.severity}
+                </span>
+              </div>
+              <p className="text-muted-foreground text-xs">{alert.message}</p>
+              <p className="text-muted-foreground text-xs">Metric: {alert.metric_id}{alert.remaining_ratio !== null && alert.remaining_ratio !== undefined ? ` -- ${(alert.remaining_ratio * 100).toFixed(0)}% remaining` : ""}</p>
             </li>
           ))}
           {(alerts?.alerts?.length ?? 0) === 0 && <li className="text-muted-foreground">No capacity alerts.</li>}
