@@ -44,6 +44,41 @@ Coherence Network is operated as a spec-driven OSS intelligence platform.
 - Escalate via `needs-decision` for security-sensitive or high-impact architecture changes.
 - **Every new idea discussed in a session MUST be recorded via `POST /api/ideas` before the session ends.** Ideas are the atomic unit — if it's not in the system, it doesn't exist for tracking, attribution, or value lineage. See `docs/RUNBOOK.md` § "Idea Tracking" for the full protocol.
 
+## Code Isolation Rules
+
+**NEVER edit files in the main repo path directly.** All work happens in worktrees.
+
+- **Your worktree** is your workspace. Edit files there, commit there, push from there.
+- **Main repo** (`/Users/ursmuff/source/Coherence-Network/`) is read-only for agents. The runner lives there — touching it can break running tasks.
+- **Worktrees must be rebased** to `origin/main` before starting work. They carry only their own diff, nothing inherited.
+- **Ship workflow**: commit in worktree → push worktree branch → create PR → merge to main → deploy VPS → restart runner. Never `git push origin main` from a worktree.
+
+## Runner & Deployment Order
+
+The runner is an **isolated process** with its own code copy. Changing files on disk does not change the running runner.
+
+1. **Commit and push** your changes to a branch
+2. **Merge to main** via PR (squash)
+3. **Deploy API** to VPS: `ssh root@187.77.152.42 'cd /docker/coherence-network/repo && git pull && cd .. && docker compose build --no-cache api && docker compose up -d api'`
+4. **Restart runner** after deploy — kill old process, start new one. The runner self-updates on next poll but only if on `main` branch.
+5. **Verify** with `cc nodes` (both nodes show updated SHA) and `curl api/health`
+
+## Provider Model Rules
+
+Each provider runs **only its own models**. Never assign a model from one provider to another.
+
+| Provider | Models it can run | Cannot run |
+|----------|-------------------|------------|
+| claude | claude-* (haiku, sonnet, opus) | gpt-*, gemini-*, openrouter/* |
+| codex | gpt-*, o1-*, o3-* | claude-*, gemini-* |
+| cursor | auto, cursor-* | explicit model names from other providers |
+| gemini | gemini-* | claude-*, gpt-* |
+| openrouter | openrouter/* | anything without openrouter/ prefix |
+
+- Fallback chains stay **within the same provider**. Claude falls back to another Claude model, never to openrouter.
+- Routing config: `api/config/model_routing.json`. Validation: `model_routing_loader.validate_model_for_executor()`.
+- When diagnosing routing issues, **root-cause first** — understand why the wrong model was selected before blocking anything. Blocking is not a fix.
+
 ## Production Deployment (Hostinger VPS)
 
 The site runs at **coherencycoin.com** on a Hostinger VPS (`187.77.152.42`) via Docker Compose behind Cloudflare + Traefik.
