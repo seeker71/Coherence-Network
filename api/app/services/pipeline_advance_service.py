@@ -252,29 +252,38 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     if next_phase == "impl":
         direction = (
             f"Implement '{idea_name}' ({idea_id}).\n\n"
-            f"A spec was just completed for this idea. Read the spec in specs/ and implement it.\n"
-            f"Follow CLAUDE.md conventions. The implementation must satisfy all verification "
-            f"criteria in the spec.\n\n"
+            f"Read the spec in specs/ for this idea and implement ONLY what it requires.\n\n"
+            f"CRITICAL RULES:\n"
+            f"- ONLY create or modify files listed in the spec's files_allowed section\n"
+            f"- DO NOT delete, rename, or modify ANY other files in the repository\n"
+            f"- DO NOT refactor, clean up, or reorganize existing code\n"
+            f"- If the spec doesn't list a file, don't touch it\n"
+            f"- The repo has many files you didn't write — leave them all as-is\n\n"
             f"After writing code, verify with DIF:\n"
-            f"  cc dif verify --language python --file <file.py> --json\n"
-            f"Fix any DIF concerns before finishing."
+            f"  cc dif verify --language python --file <file.py> --json\n\n"
+            f"Output: list every file you created/modified and what you changed in each."
         )
     elif next_phase == "test":
         direction = (
             f"Write tests for '{idea_name}' ({idea_id}).\n\n"
-            f"Implementation was just completed. Write tests that verify the spec's acceptance "
-            f"criteria. Run them and ensure they pass.\n\n"
+            f"Read the spec in specs/ and write tests that verify its acceptance criteria.\n\n"
+            f"CRITICAL RULES:\n"
+            f"- ONLY create new test files (e.g. api/tests/test_*.py)\n"
+            f"- DO NOT modify or delete ANY existing files\n"
+            f"- Run your new tests and ensure they pass\n\n"
             f"After writing tests, verify with DIF:\n"
-            f"  cc dif verify --language python --file <test_file.py> --json"
+            f"  cc dif verify --language python --file <test_file.py> --json\n\n"
+            f"Output: the test file path, number of tests, pass/fail results."
         )
     elif next_phase == "code-review":
         direction = (
             f"Code review for '{idea_name}' ({idea_id}).\n\n"
-            f"Implementation and tests were completed. Review for:\n"
-            f"1. Does code match spec requirements?\n"
-            f"2. Are tests covering key scenarios?\n"
-            f"3. Code quality, error handling, project conventions\n\n"
-            f"Run DIF on all changed files. Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED."
+            f"Review the implementation against the spec's acceptance criteria:\n"
+            f"1. Are the spec's files_allowed files created/modified correctly?\n"
+            f"2. Do tests exist and cover key scenarios?\n"
+            f"3. No unrelated files were modified or deleted?\n\n"
+            f"Run DIF on changed files. Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED\n"
+            f"with specific findings for each file."
         )
     else:
         direction = f"Execute '{next_phase}' phase for '{idea_name}' ({idea_id})."
