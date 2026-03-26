@@ -1,9 +1,55 @@
 /**
- * Federation node commands: nodes, msg, broadcast
+ * Federation node commands: nodes, msg, cmd, broadcast
  */
 
 import { get, post } from "../api.mjs";
 import { hostname } from "node:os";
+
+/**
+ * Resolve a node target to a full node_id.
+ * Accepts: full node_id, partial match, hostname, alias (mac/windows/win/gateway).
+ */
+async function resolveNode(target) {
+  if (!target) return null;
+  const nodes = await get("/api/federation/nodes");
+  if (!Array.isArray(nodes) || nodes.length === 0) return target;
+
+  const t = target.toLowerCase();
+
+  // Built-in aliases
+  const aliases = { mac: "macos", macos: "macos", win: "windows", windows: "windows", gateway: "gateway" };
+  if (aliases[t]) {
+    const match = nodes.find(n => (n.os_type || "").toLowerCase() === aliases[t]
+      || (n.hostname || "").toLowerCase().includes(t));
+    if (match) return match.node_id;
+  }
+
+  // Exact node_id match
+  const exact = nodes.find(n => n.node_id === target);
+  if (exact) return exact.node_id;
+
+  // Partial node_id prefix
+  const prefix = nodes.find(n => (n.node_id || "").startsWith(t));
+  if (prefix) return prefix.node_id;
+
+  // Hostname match (case-insensitive, partial)
+  const hostMatch = nodes.find(n => (n.hostname || "").toLowerCase().includes(t));
+  if (hostMatch) return hostMatch.node_id;
+
+  // Still no match — return original (let API error)
+  return target;
+}
+
+/** Get our own node ID */
+async function getMyNodeId() {
+  const myHost = hostname();
+  const nodes = await get("/api/federation/nodes");
+  if (Array.isArray(nodes)) {
+    const mine = nodes.find(n => n.hostname === myHost);
+    if (mine) return mine.node_id;
+  }
+  return myHost;
+}
 
 export async function listNodes() {
   const nodes = await get("/api/federation/nodes");
@@ -68,24 +114,15 @@ export async function sendMessage(args) {
   const text = textParts.join(" ");
 
   if (!targetOrBroadcast || !text) {
-    console.log("Usage: cc msg <node_id|broadcast> <message text>");
+    console.log("Usage: cc msg <node|broadcast> <message text>");
     console.log("  cc msg broadcast Hello all nodes!");
-    console.log("  cc msg e66ff3d35dd4ccb1 Hello Mac node!");
+    console.log("  cc msg mac Hello Mac node!");
+    console.log("  cc msg windows Check status please");
+    console.log("  cc msg seeker Hello by hostname match");
     return;
   }
 
-  // Determine our node ID from hostname
-  const myHost = hostname();
-  const nodes = await get("/api/federation/nodes");
-  let myNodeId = null;
-  if (Array.isArray(nodes)) {
-    const mine = nodes.find(n => n.hostname === myHost);
-    if (mine) myNodeId = mine.node_id;
-  }
-  if (!myNodeId) {
-    // Fallback: use first 16 chars of hostname hash
-    myNodeId = myHost;
-  }
+  const myNodeId = await getMyNodeId();
 
   if (targetOrBroadcast === "broadcast" || targetOrBroadcast === "all") {
     const result = await post("/api/federation/broadcast", {
@@ -101,29 +138,86 @@ export async function sendMessage(args) {
       console.log("\x1b[31m✗\x1b[0m Failed to broadcast");
     }
   } else {
+    const resolvedTarget = await resolveNode(targetOrBroadcast);
     const result = await post(`/api/federation/nodes/${myNodeId}/messages`, {
       from_node: myNodeId,
-      to_node: targetOrBroadcast,
+      to_node: resolvedTarget,
       type: "text",
       text,
       payload: {},
     });
     if (result) {
-      console.log(`\x1b[32m✓\x1b[0m Message sent to ${targetOrBroadcast.slice(0, 12)}: ${text.slice(0, 60)}`);
+      const label = resolvedTarget !== targetOrBroadcast
+        ? `${targetOrBroadcast} (${resolvedTarget.slice(0, 12)})`
+        : resolvedTarget.slice(0, 12);
+      console.log(`\x1b[32m✓\x1b[0m Message sent to ${label}: ${text.slice(0, 60)}`);
     } else {
       console.log("\x1b[31m✗\x1b[0m Failed to send message");
     }
   }
 }
 
-export async function readMessages(args) {
-  const myHost = hostname();
-  const nodes = await get("/api/federation/nodes");
-  let myNodeId = null;
-  if (Array.isArray(nodes)) {
-    const mine = nodes.find(n => n.hostname === myHost);
-    if (mine) myNodeId = mine.node_id;
+/**
+ * Send a command to a node (not a text message).
+ * Usage: cc cmd <node> <command> [args...]
+ * Examples:
+ *   cc cmd mac update
+ *   cc cmd windows status
+ *   cc cmd all update
+ */
+export async function sendCommand(args) {
+  const [target, command, ...extra] = args;
+
+  if (!target || !command) {
+    console.log("Usage: cc cmd <node|all> <command> [args...]");
+    console.log("  cc cmd mac update          Tell Mac node to git pull");
+    console.log("  cc cmd windows status      Request status from Windows");
+    console.log("  cc cmd all update          Update all nodes");
+    console.log("  cc cmd seeker restart      Restart by hostname match");
+    console.log();
+    console.log("Commands: update, status, restart, pause, resume");
+    return;
   }
+
+  const myNodeId = await getMyNodeId();
+  const text = `${command} ${extra.join(" ")}`.trim();
+  const payload = { command, args: extra };
+
+  if (target === "broadcast" || target === "all") {
+    const result = await post("/api/federation/broadcast", {
+      from_node: myNodeId,
+      to_node: null,
+      type: "command",
+      text,
+      payload,
+    });
+    if (result) {
+      console.log(`\x1b[32m✓\x1b[0m Command '${command}' broadcast to all nodes`);
+    } else {
+      console.log("\x1b[31m✗\x1b[0m Failed to broadcast command");
+    }
+  } else {
+    const resolvedTarget = await resolveNode(target);
+    const result = await post(`/api/federation/nodes/${myNodeId}/messages`, {
+      from_node: myNodeId,
+      to_node: resolvedTarget,
+      type: "command",
+      text,
+      payload,
+    });
+    if (result) {
+      const label = resolvedTarget !== target
+        ? `${target} (${resolvedTarget.slice(0, 12)})`
+        : resolvedTarget.slice(0, 12);
+      console.log(`\x1b[32m✓\x1b[0m Command '${command}' sent to ${label}`);
+    } else {
+      console.log("\x1b[31m✗\x1b[0m Failed to send command");
+    }
+  }
+}
+
+export async function readMessages(args) {
+  const myNodeId = await getMyNodeId();
   if (!myNodeId) {
     console.log("Could not determine your node ID. Register first.");
     return;
