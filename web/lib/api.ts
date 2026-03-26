@@ -47,3 +47,34 @@ export function getApiBase(): string {
   if (isBrowser) return "";
   return DEV_API_URL;
 }
+
+/** Map GET /api/agent/tasks/count `by_status` into pipeline cards (spec 156). */
+export function aggregatePipelineCounts(
+  by_status: Record<string, number> | undefined,
+): {
+  pending: number;
+  running: number;
+  completed: number;
+  needsAttention: number;
+} {
+  const bs = by_status || {};
+  const n = (key: string) => {
+    const v = bs[key];
+    if (typeof v === "number" && Number.isFinite(v)) return Math.max(0, Math.trunc(v));
+    return 0;
+  };
+  return {
+    pending: n("pending") + n("queued"),
+    running: n("running") + n("claimed") + n("in_progress"),
+    completed: n("completed"),
+    needsAttention: n("failed") + n("needs_decision") + n("timed_out"),
+  };
+}
+
+/** True only after a successful tasks + count fetch (spec 156: no fake zero totals on error/loading). */
+export function shouldShowPipelineCounts(
+  status: "loading" | "ok" | "error",
+  pipelineCounts: { pending: number; running: number; completed: number; needsAttention: number } | null,
+): boolean {
+  return status === "ok" && pipelineCounts !== null;
+}

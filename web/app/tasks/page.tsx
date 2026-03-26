@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { aggregatePipelineCounts, shouldShowPipelineCounts } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
 
 import { EvidenceTrail } from "./EvidenceTrail";
@@ -69,6 +70,16 @@ function TasksPageContent() {
   const [ideaNamesById, setIdeaNamesById] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [pipelineCounts, setPipelineCounts] = useState<{
+    pending: number;
+    running: number;
+    completed: number;
+    needsAttention: number;
+  } | null>(null);
+
+  const loadSeqRef = useRef(0);
+  const statusRef = useRef(status);
+  statusRef.current = status;
 
   const statusFilter = useMemo(() => (searchParams.get("status") || "").trim(), [searchParams]);
   const typeFilter = useMemo(() => (searchParams.get("task_type") || "").trim(), [searchParams]);
@@ -81,8 +92,14 @@ function TasksPageContent() {
   const offset = useMemo(() => (page - 1) * pageSize, [page, pageSize]);
 
   const loadRows = useCallback(async () => {
+    loadSeqRef.current += 1;
+    const seq = loadSeqRef.current;
+
     setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
     setError(null);
+    if (statusRef.current !== "ok") {
+      setPipelineCounts(null);
+    }
     try {
       const params = new URLSearchParams({
         limit: String(pageSize),
@@ -90,14 +107,19 @@ function TasksPageContent() {
       });
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("task_type", typeFilter);
-      const [tasksResponse, ideasResponse, activeResponse, activityResponse] = await Promise.all([
+      const [tasksResponse, countResponse, ideasResponse, activeResponse, activityResponse] = await Promise.all([
         fetchWithTimeout(`/api/agent/tasks?${params.toString()}`),
+        fetchWithTimeout("/api/agent/tasks/count"),
         fetchWithTimeout("/api/ideas?limit=500"),
         fetchWithTimeout("/api/agent/tasks/active").catch(() => null),
         fetchWithTimeout("/api/agent/tasks/activity?limit=30").catch(() => null),
       ]);
       const json = (await tasksResponse.json()) as TaskListResponse;
       if (!tasksResponse.ok) throw new Error(JSON.stringify(json));
+      const countJson = (await countResponse.json()) as { by_status?: Record<string, number> };
+      if (!countResponse.ok) throw new Error(JSON.stringify(countJson));
+      if (seq !== loadSeqRef.current) return;
+
       const taskRows = Array.isArray(json.tasks)
         ? json.tasks
         : Array.isArray(json.items)
@@ -194,10 +216,15 @@ function TasksPageContent() {
         }
       }
 
+      if (seq !== loadSeqRef.current) return;
+
+      setPipelineCounts(aggregatePipelineCounts(countJson.by_status));
       setStatus("ok");
     } catch (e) {
+      if (seq !== loadSeqRef.current) return;
       setStatus("error");
       setError(String(e));
+      setPipelineCounts(null);
     }
   }, [offset, pageSize, statusFilter, taskIdFilter, typeFilter]);
 
@@ -287,25 +314,7 @@ function TasksPageContent() {
     };
   }, [evidenceEvents]);
 
-  const readyCount = useMemo(
-    () => filteredRows.filter((row) => ["pending", "queued"].includes(row.status)).length,
-    [filteredRows],
-  );
-  const activeCount = useMemo(
-    () => Math.max(
-      activeTasks.length,
-      filteredRows.filter((row) => ["running", "claimed", "in_progress"].includes(row.status)).length,
-    ),
-    [filteredRows, activeTasks],
-  );
-  const blockedCount = useMemo(
-    () => filteredRows.filter((row) => row.status === "failed" || row.status === "needs_decision").length,
-    [filteredRows],
-  );
-  const finishedCount = useMemo(
-    () => filteredRows.filter((row) => row.status === "completed").length,
-    [filteredRows],
-  );
+  const showPipelineCounts = shouldShowPipelineCounts(status, pipelineCounts);
   const selectedSummary = taskIdFilter
     ? selectedTask
       ? describeTaskStatus(selectedTask.status)
@@ -345,23 +354,33 @@ function TasksPageContent() {
         <section className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Work cards in view</p>
-            <p className="text-2xl font-light text-primary">{filteredRows.length}</p>
+            <p className="text-2xl font-light text-primary">
+              {showPipelineCounts ? filteredRows.length : "—"}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Ready to start</p>
-            <p className="text-2xl font-light text-primary">{readyCount}</p>
+            <p className="text-2xl font-light text-primary">
+              {showPipelineCounts ? pipelineCounts.pending : "—"}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">In progress</p>
-            <p className="text-2xl font-light text-primary">{activeCount}</p>
+            <p className="text-2xl font-light text-primary">
+              {showPipelineCounts ? pipelineCounts.running : "—"}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Needs attention</p>
-            <p className="text-2xl font-light text-primary">{blockedCount}</p>
+            <p className="text-2xl font-light text-primary">
+              {showPipelineCounts ? pipelineCounts.needsAttention : "—"}
+            </p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
             <p className="text-muted-foreground">Finished</p>
-            <p className="text-2xl font-light text-primary">{finishedCount}</p>
+            <p className="text-2xl font-light text-primary">
+              {showPipelineCounts ? pipelineCounts.completed : "—"}
+            </p>
           </div>
         </section>
 
@@ -456,7 +475,24 @@ function TasksPageContent() {
         ) : null}
 
         {status === "loading" && <p className="text-muted-foreground">Loading work cards…</p>}
-        {status === "error" && <p className="text-destructive">Error: {error}</p>}
+        {status === "error" && (
+          <section
+            className="rounded-2xl border border-destructive/40 bg-destructive/5 p-5 space-y-3"
+            role="alert"
+          >
+            <h2 className="text-lg font-medium text-destructive">Could not load task data</h2>
+            <p className="text-sm text-muted-foreground break-words">
+              {error || "Unknown error"}
+            </p>
+            <button
+              type="button"
+              className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium hover:bg-accent/60 transition-colors"
+              onClick={() => void loadRows()}
+            >
+              Retry
+            </button>
+          </section>
+        )}
 
         {status === "ok" && (
           <>
