@@ -29,6 +29,11 @@ AGENT_BY_TASK_TYPE: dict[TaskType, Optional[str]] = {
     TaskType.IMPL: "dev-engineer",
     TaskType.REVIEW: "reviewer",
     TaskType.HEAL: "dev-engineer",
+    TaskType.CODE_REVIEW: "reviewer",
+    TaskType.MERGE: "dev-engineer",
+    TaskType.DEPLOY: "dev-engineer",
+    TaskType.VERIFY: "qa-engineer",
+    TaskType.REFLECT: "product-manager",
 }
 
 GUARD_AGENTS_BY_TASK_TYPE: dict[TaskType, list[str]] = {
@@ -610,6 +615,11 @@ COMMAND_TEMPLATES: dict[TaskType, str] = {
     TaskType.IMPL: _command_template(TaskType.IMPL),
     TaskType.REVIEW: _command_template(TaskType.REVIEW),
     TaskType.HEAL: _command_template(TaskType.HEAL),
+    TaskType.CODE_REVIEW: _command_template(TaskType.REVIEW),
+    TaskType.MERGE: _command_template(TaskType.IMPL),
+    TaskType.DEPLOY: _command_template(TaskType.IMPL),
+    TaskType.VERIFY: _command_template(TaskType.TEST),
+    TaskType.REFLECT: _command_template(TaskType.SPEC),
 }
 
 
