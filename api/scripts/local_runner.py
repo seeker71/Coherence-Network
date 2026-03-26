@@ -2438,13 +2438,20 @@ def _seed_task_from_open_idea() -> bool:
             if completed > 0:
                 completed_phases.add(phase)
 
-        # Cap: if any single phase has 10+ tasks, truly stuck — skip to prevent infinite loop
+        # Cap: if any single phase has 10+ tasks, truly stuck — skip for THIS cycle
+        # but don't permanently orphan it. If all tasks are gone (reaper cleaned up),
+        # reset to none so we can start fresh next cycle.
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
+        total_tasks = sum(phase_counts.values())
         if max_phase_tasks >= 10:
             log.info("SEED: idea '%s' truly stuck (%d tasks in one phase) — marking partial, skipping",
                      idea_name[:30], max_phase_tasks)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
+        if total_tasks == 0 and idea.get("manifestation_status") == "partial":
+            # Orphaned: marked partial but no tasks exist — reset to none
+            log.info("SEED: idea '%s' orphaned (partial with 0 tasks) — resetting to none", idea_name[:30])
+            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "none"})
 
         # Check if review phase completed AND passed (not REVIEW_FAILED)
         if "review" in completed_phases:
