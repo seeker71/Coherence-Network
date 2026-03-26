@@ -1,9 +1,13 @@
-"""Pipeline auto-advance — create next-phase tasks when a task completes.
+"""Pipeline auto-advance + auto-retry.
 
-When a spec completes, create an impl task. When impl completes, create test.
-When test completes, create review. This makes the pipeline self-sustaining
-regardless of whether tasks are completed by the local_runner, the API, or
-any external agent.
+Auto-advance: when a task completes, create the next phase task.
+  spec → impl → test → code-review
+
+Auto-retry: when a task times out or fails, create a retry (up to 2 per phase).
+  Avoids the provider that failed via exclude_provider hint.
+
+Both fire from the task update API, making the pipeline self-sustaining
+regardless of which runner or client changes the task status.
 """
 
 from __future__ import annotations
@@ -14,6 +18,8 @@ from typing import Any
 from app.models.agent import AgentTaskCreate, TaskType
 
 log = logging.getLogger(__name__)
+
+_MAX_RETRIES = 2
 
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
@@ -128,4 +134,88 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
         return created
     except Exception:
         log.warning("AUTO_ADVANCE failed %s→%s for idea=%s", task_type, next_phase, idea_id, exc_info=True)
+        return None
+
+
+def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
+    """If a task timed out or failed, create a retry task (up to _MAX_RETRIES).
+
+    Returns the created retry task dict, or None if no retry was needed.
+    """
+    status = task.get("status")
+    if hasattr(status, "value"):
+        status = status.value
+    if status not in ("timed_out", "failed"):
+        return None
+
+    task_type = task.get("task_type", "")
+    if hasattr(task_type, "value"):
+        task_type = task_type.value
+
+    context = task.get("context") or {}
+    idea_id = context.get("idea_id", "")
+    if not idea_id:
+        return None
+
+    retry_count = int(context.get("retry_count", 0))
+    if retry_count >= _MAX_RETRIES:
+        log.info("AUTO_RETRY skip — %s for %s already retried %d times", task_type, idea_id, retry_count)
+        return None
+
+    # Don't retry if a pending/running task already exists for this phase+idea
+    from app.services import agent_service
+    existing_tasks, _total, _backfill = agent_service.list_tasks(limit=200, offset=0)
+    for existing in existing_tasks:
+        existing_type = existing.get("task_type", "")
+        if hasattr(existing_type, "value"):
+            existing_type = existing_type.value
+        existing_status = existing.get("status", "")
+        if hasattr(existing_status, "value"):
+            existing_status = existing_status.value
+        existing_idea = (existing.get("context") or {}).get("idea_id", "")
+
+        if (existing_type == task_type
+                and existing_idea == idea_id
+                and existing_status in ("pending", "running")):
+            log.info("AUTO_RETRY skip — %s task already pending/running for %s", task_type, idea_id)
+            return None
+
+    # Reuse the original direction, enriched with partial output
+    direction = task.get("direction", "")
+    failed_provider = task.get("model", "") or context.get("provider", "")
+    partial_output = (task.get("output") or "").strip()
+
+    if partial_output and len(partial_output) > 20:
+        # Carry partial work forward so the retry doesn't start from scratch
+        direction = (
+            f"{direction}\n\n"
+            f"--- PARTIAL WORK FROM PREVIOUS ATTEMPT (timed out) ---\n"
+            f"{partial_output[:3000]}\n"
+            f"--- END PARTIAL WORK ---\n\n"
+            f"Continue from the partial work above. Do not start over — "
+            f"pick up where the previous attempt left off and complete the task."
+        )
+
+    task_type_enum = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
+
+    try:
+        created = agent_service.create_task(AgentTaskCreate(
+            direction=direction,
+            task_type=task_type_enum,
+            context={
+                "idea_id": idea_id,
+                "retry_count": retry_count + 1,
+                "retry_of": task.get("id", ""),
+                "failed_provider": failed_provider,
+                "exclude_provider": failed_provider,
+                "auto_retry_source": "pipeline_advance_service",
+            },
+        ))
+        log.info(
+            "AUTO_RETRY %s #%d for idea=%s (failed_provider=%s) → task=%s",
+            task_type, retry_count + 1, idea_id, failed_provider, created.get("id", "?"),
+        )
+        return created
+    except Exception:
+        log.warning("AUTO_RETRY failed for idea=%s type=%s", idea_id, task_type, exc_info=True)
         return None

@@ -224,6 +224,15 @@ async def update_task(
                 logger.info("Auto-advanced task %s → %s", task_id, advanced.get("id", "?"))
         except Exception:
             logger.warning("Auto-advance failed for task %s", task_id, exc_info=True)
+    if data.status in (TaskStatus.TIMED_OUT, TaskStatus.FAILED):
+        # Auto-retry: create retry task with different provider (up to 2 retries)
+        try:
+            from app.services import pipeline_advance_service
+            retried = pipeline_advance_service.maybe_retry(task)
+            if retried:
+                logger.info("Auto-retried task %s → %s", task_id, retried.get("id", "?"))
+        except Exception:
+            logger.warning("Auto-retry failed for task %s", task_id, exc_info=True)
     if data.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.TIMED_OUT):
         try:
             from app.services.metrics_service import record_task
