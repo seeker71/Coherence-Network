@@ -2910,7 +2910,11 @@ def _create_worktree(task_id: str) -> Path | None:
 
 
 def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
-    """Fix 2: capture git diff from worktree after provider execution."""
+    """Capture git diff from worktree after provider execution.
+
+    Returns the full diff content (up to 10KB) — this is the actual code
+    that was written, suitable for carrying forward to a retry task.
+    """
     slug = task_id[:16]
     try:
         # Stage everything so diff captures new files too
@@ -3250,10 +3254,20 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                                 task_id,
                                 f"Timed out but produced code changes (branch pushed). Retry should continue from this branch.",
                                 False,
-                                context_patch={"branch_pushed": True, "diff_size": len(diff), "partial_timeout": True},
+                                context_patch={
+                                    "branch_pushed": True,
+                                    "diff_size": len(diff),
+                                    "diff_content": diff[:5000],  # Actual code for retry carry-over
+                                    "partial_timeout": True,
+                                },
                             )
                         else:
-                            complete_task(task_id, f"Timed out with {len(diff)} bytes of code, but branch push failed.", False)
+                            complete_task(
+                                task_id,
+                                f"Timed out with {len(diff)} bytes of code, but branch push failed.",
+                                False,
+                                context_patch={"diff_content": diff[:5000], "diff_size": len(diff)},
+                            )
                     elif ok and task_type in ("spec", "review", "code-review"):
                         pushed = True  # Text-only phases don't need a diff
                     elif ok and task_type in ("impl", "test"):

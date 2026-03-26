@@ -26,30 +26,36 @@ log = logging.getLogger(__name__)
 
 _MAX_RETRIES = 2
 
-import re
+def _extract_partial_work(task: dict[str, Any]) -> str:
+    """Extract self-contained partial work from a timed-out/failed task.
 
-def _sanitize_partial_output(output: str) -> str:
-    """Remove machine-specific paths and references from partial output.
+    Priority:
+    1. Git diff (actual code changes) from context.diff_content
+    2. Checkpoint file content from context.checkpoint
+    3. Provider output (text description of what was done)
 
-    Partial work must be self-contained — a different node or fresh worktree
-    should be able to use it without referencing the original filesystem.
+    The result must be self-contained: actual file contents and diffs,
+    not references to local paths. A different node should be able to
+    apply this work without access to the original filesystem.
     """
-    if not output:
-        return output
-    # Remove absolute paths to worktrees, home dirs, tmp dirs
-    output = re.sub(r'/Users/[^\s/]+/[^\s]*\.worktrees/task-[^\s/]*/', '', output)
-    output = re.sub(r'/Users/[^\s/]+/source/Coherence-Network/', '', output)
-    output = re.sub(r'C:\\[^\s]*\\Coherence-Network\\', '', output)
-    output = re.sub(r'/home/[^\s/]+/[^\s]*/', '', output)
-    output = re.sub(r'/tmp/[^\s]*', '/tmp/...', output)
-    output = re.sub(r'/private/tmp/[^\s]*', '/tmp/...', output)
-    # Remove PID references
-    output = re.sub(r'pid[=:]\s*\d{3,}', 'pid=...', output, flags=re.IGNORECASE)
-    # Remove docker container IDs
-    output = re.sub(r'[a-f0-9]{12,64}(?=\s|$|\.)', '...', output)
-    # Collapse multiple blank lines
-    output = re.sub(r'\n{3,}', '\n\n', output)
-    return output.strip()
+    context = task.get("context") or {}
+
+    # Best: actual git diff (set by the runner when worktree has changes)
+    diff = context.get("diff_content", "")
+    if diff and len(diff) > 50:
+        return f"Git diff from previous attempt (apply with `git apply`):\n\n{diff[:5000]}"
+
+    # Good: checkpoint summary with file contents
+    checkpoint = context.get("checkpoint", "")
+    if checkpoint and len(checkpoint) > 50:
+        return f"Checkpoint from previous attempt:\n\n{checkpoint[:3000]}"
+
+    # Fallback: provider output text (descriptions, not code)
+    output = (task.get("output") or "").strip()
+    if output and len(output) > 50:
+        return f"Provider output (may describe changes but not include full code):\n\n{output[:3000]}"
+
+    return ""
 
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
@@ -340,20 +346,19 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
             log.info("AUTO_RETRY skip — %s task already pending/running for %s", task_type, idea_id)
             return None
 
-    # Reuse the original direction, enriched with partial output
+    # Reuse the original direction, enriched with partial work
     direction = task.get("direction", "")
     failed_provider = task.get("model", "") or context.get("provider", "")
-    partial_output = _sanitize_partial_output((task.get("output") or "").strip())
+    partial_work = _extract_partial_work(task)
 
-    if partial_output and len(partial_output) > 20:
+    if partial_work:
         direction = (
             f"{direction}\n\n"
             f"--- PARTIAL WORK FROM PREVIOUS ATTEMPT ---\n"
-            f"{partial_output[:3000]}\n"
+            f"{partial_work}\n"
             f"--- END PARTIAL WORK ---\n\n"
-            f"Continue from the partial work above. Do not start over.\n"
-            f"NOTE: Any file paths from the previous attempt may be invalid. "
-            f"Use paths relative to the repo root (e.g. api/app/..., web/app/..., specs/...)."
+            f"The previous attempt produced the code/content above but did not finish.\n"
+            f"Apply these changes first, then complete the remaining work."
         )
 
     task_type_enum = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
