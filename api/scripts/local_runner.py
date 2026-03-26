@@ -1173,7 +1173,23 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
 
         # Phase-specific direction with quality requirements
-        if next_phase == "code-review":
+        if next_phase == "spec":
+            direction = (
+                f"Write a spec for '{idea_name}' ({idea_id}).\n\n"
+                f"Description: {idea_desc[:300]}\n\n"
+                f"Write the spec in specs/ following the existing spec format. The spec MUST include:\n"
+                f"1. A clear 'Verification' section with at least 3 concrete acceptance criteria\n"
+                f"2. Test scenarios that prove the feature works (expected inputs → expected outputs)\n"
+                f"3. Expected API responses or UI behaviors — not vague goals\n"
+                f"4. Edge cases and error handling expectations\n"
+                f"5. A 'Risks and Assumptions' section\n"
+                f"6. A 'Known Gaps and Follow-up Tasks' section\n\n"
+                f"The spec must be precise enough that an implementation task can verify against it.\n"
+                f"If you cannot define concrete verification criteria, the idea is not ready for a spec — "
+                f"say so and explain what question needs answering first.\n\n"
+                f"Run `python3 scripts/validate_spec_quality.py` before finishing."
+            )
+        elif next_phase == "code-review":
             direction = (
                 f"Code review for '{idea_name}' ({idea_id}).\n\n"
                 f"Description: {idea_desc[:300]}\n\n"

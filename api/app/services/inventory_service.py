@@ -3347,6 +3347,122 @@ def sync_traceability_gap_artifacts(
     }
 
 
+def bootstrap_spec_tasks(
+    max_tasks: int = 20,
+    min_value_gap: float = 10.0,
+) -> dict[str, Any]:
+    """Create spec tasks for the highest-ROI ideas that have no spec yet.
+
+    Reads all portfolio ideas, finds those with no spec linked in the flow,
+    sorts by ROI (value_gap * confidence / estimated_cost), and creates
+    spec tasks for the top N.
+
+    Returns a summary of what was created.
+    """
+    import hashlib
+
+    # Load flow to find which ideas have specs
+    flow_data = build_spec_process_implementation_validation_flow(
+        runtime_window_seconds=86400,
+        spec_registry_limit=500,
+        lineage_link_limit=300,
+        usage_event_limit=500,
+        commit_evidence_limit=300,
+        runtime_event_limit=500,
+    )
+    flow_items = flow_data.get("items", [])
+    ideas_with_spec = {
+        item["idea_id"]
+        for item in flow_items
+        if isinstance(item, dict) and item.get("spec", {}).get("tracked")
+    }
+
+    # Load portfolio for scoring
+    portfolio = idea_service.list_ideas(include_internal=False)
+    candidates = []
+    for idea in portfolio.ideas:
+        if idea.id in ideas_with_spec:
+            continue
+        gap = float(idea.value_gap) if hasattr(idea, "value_gap") else max(idea.potential_value - idea.actual_value, 0)
+        if gap < min_value_gap:
+            continue
+        cost = max(float(idea.estimated_cost), 1.0)
+        conf = max(float(idea.confidence), 0.1)
+        roi = gap * conf / cost
+        candidates.append({
+            "idea_id": idea.id,
+            "idea_name": idea.name,
+            "description": idea.description,
+            "potential_value": idea.potential_value,
+            "estimated_cost": idea.estimated_cost,
+            "confidence": idea.confidence,
+            "value_gap": gap,
+            "roi": roi,
+            "interfaces": list(idea.interfaces or []),
+        })
+
+    candidates.sort(key=lambda x: x["roi"], reverse=True)
+    selected = candidates[:max(1, min(max_tasks, 100))]
+
+    created_tasks: list[dict[str, Any]] = []
+    skipped_existing = 0
+
+    for candidate in selected:
+        idea_id = candidate["idea_id"]
+        fingerprint = hashlib.sha256(f"bootstrap-spec:{idea_id}".encode()).hexdigest()
+
+        # Check for existing active task
+        existing = agent_service.find_active_task_by_fingerprint(fingerprint)
+        if existing:
+            skipped_existing += 1
+            continue
+
+        direction = (
+            f"Write a spec for '{candidate['idea_name']}' ({idea_id}).\n\n"
+            f"Description: {candidate['description'][:500]}\n\n"
+            f"This idea has {candidate['confidence']:.0%} confidence and an estimated {candidate['value_gap']:.0f} CC of value gap.\n\n"
+            f"Write the spec in specs/ following the existing spec format. The spec MUST include:\n"
+            f"1. A clear 'Verification' section with concrete acceptance criteria\n"
+            f"2. At least 3 test scenarios that prove the feature works\n"
+            f"3. Expected API responses or UI behaviors (not vague goals)\n"
+            f"4. Edge cases and error handling expectations\n"
+            f"5. A 'Risks and Assumptions' section\n"
+            f"6. A 'Known Gaps and Follow-up Tasks' section\n\n"
+            f"The spec must be precise enough that an implementation task can verify against it.\n"
+            f"Run `python3 scripts/validate_spec_quality.py` before finishing."
+        )
+
+        from app.models.agent import AgentTaskCreate, TaskType
+        task = agent_service.create_task(AgentTaskCreate(
+            direction=direction,
+            task_type=TaskType.SPEC,
+            context={
+                "idea_id": idea_id,
+                "bootstrap_source": "bootstrap_spec_tasks",
+                "task_fingerprint": fingerprint,
+                "roi": round(candidate["roi"], 4),
+            },
+        ))
+        if isinstance(task, dict):
+            created_tasks.append({
+                "task_id": task.get("id"),
+                "idea_id": idea_id,
+                "idea_name": candidate["idea_name"],
+                "roi": round(candidate["roi"], 4),
+                "value_gap": candidate["value_gap"],
+            })
+
+    return {
+        "result": "spec_tasks_bootstrapped",
+        "total_ideas_without_spec": len(candidates) + skipped_existing,
+        "created_count": len(created_tasks),
+        "skipped_existing_count": skipped_existing,
+        "max_tasks": max_tasks,
+        "min_value_gap": min_value_gap,
+        "created_tasks": created_tasks,
+    }
+
+
 def evaluate_process_completeness(
     runtime_window_seconds: int = 86400,
     auto_sync: bool = False,

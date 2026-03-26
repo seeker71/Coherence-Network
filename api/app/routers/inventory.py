@@ -211,6 +211,18 @@ async def sync_traceability_gap_artifacts(
     return payload
 
 
+@router.post("/inventory/gaps/bootstrap-specs")
+async def bootstrap_spec_tasks(
+    max_tasks: int = Query(20, ge=1, le=100),
+    min_value_gap: float = Query(10.0, ge=0),
+) -> dict:
+    """Create spec tasks for the highest-ROI ideas that don't have a spec yet."""
+    return inventory_service.bootstrap_spec_tasks(
+        max_tasks=max_tasks,
+        min_value_gap=min_value_gap,
+    )
+
+
 @router.get("/inventory/process-completeness")
 async def process_completeness(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
