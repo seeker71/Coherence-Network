@@ -2607,6 +2607,7 @@ def _seed_task_from_open_idea() -> bool:
     result = api("POST", "/api/agent/tasks", {
         "direction": direction,
         "task_type": task_type,
+        "idea_id": idea_id,  # top-level for API linking
         "context": {
             "idea_id": idea_id,
             "idea_name": idea_name,
