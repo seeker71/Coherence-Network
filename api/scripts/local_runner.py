@@ -2513,7 +2513,8 @@ def _seed_task_from_open_idea() -> bool:
                         if len(t_output) >= 30:
                             review_passed = True
                             break
-            # Also scan recent tasks by context.idea_id (API doesn't store top-level idea_id)
+            # Scan recent tasks by context.idea_id (API doesn't store top-level idea_id,
+            # and task list doesn't include output field — so completed = passed)
             if not review_passed:
                 recent = api("GET", "/api/agent/tasks?limit=50")
                 if isinstance(recent, dict):
@@ -2522,11 +2523,10 @@ def _seed_task_from_open_idea() -> bool:
                         if (ctx.get("idea_id") == idea_id
                                 and t.get("task_type") in ("review", "code-review")
                                 and t.get("status") == "completed"):
-                            t_output = (t.get("output") or "").strip().upper()
-                            if "REVIEW_FAILED" not in t_output and "CODE_REVIEW_FAILED" not in t_output:
-                                review_passed = True
-                                log.info("SEED: found passing review for '%s' via task list scan", idea_name[:30])
-                                break
+                            review_passed = True
+                            log.info("SEED: found passing review for '%s' via task scan (task %s)",
+                                     idea_name[:30], t.get("id", "?")[:16])
+                            break
 
             if review_passed:
                 # Advance to merge phase, not straight to validated
