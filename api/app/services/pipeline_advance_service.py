@@ -1,12 +1,17 @@
-"""Pipeline auto-advance + auto-retry.
+"""Pipeline auto-advance + auto-retry + smart escalation.
 
 Auto-advance: when a task completes, create the next phase task.
   spec → impl → test → code-review
 
 Auto-retry: when a task times out or fails, create a retry (up to 2 per phase).
   Avoids the provider that failed via exclude_provider hint.
+  Carries partial output forward so retries don't start from scratch.
 
-Both fire from the task update API, making the pipeline self-sustaining
+Smart escalation: when retries exhaust, analyze the failure pattern and either:
+  - Auto-fix (split task, simplify direction, try different approach)
+  - Escalate to needs_decision with structured options for a human
+
+All fire from the task update API, making the pipeline self-sustaining
 regardless of which runner or client changes the task status.
 """
 
@@ -15,7 +20,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.models.agent import AgentTaskCreate, TaskType
+from app.models.agent import AgentTaskCreate, AgentTaskUpdate, TaskType, TaskStatus
 
 log = logging.getLogger(__name__)
 
@@ -159,7 +164,8 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
 
     retry_count = int(context.get("retry_count", 0))
     if retry_count >= _MAX_RETRIES:
-        log.info("AUTO_RETRY skip — %s for %s already retried %d times", task_type, idea_id, retry_count)
+        log.info("AUTO_RETRY exhausted — %s for %s retried %d times, escalating", task_type, idea_id, retry_count)
+        _escalate_or_autofix(task, task_type, idea_id, retry_count)
         return None
 
     # Don't retry if a pending/running task already exists for this phase+idea
@@ -219,3 +225,294 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
     except Exception:
         log.warning("AUTO_RETRY failed for idea=%s type=%s", idea_id, task_type, exc_info=True)
         return None
+
+
+# ── Failure analysis + smart escalation ──────────────────────────
+
+
+def _classify_failure(task: dict[str, Any]) -> dict[str, Any]:
+    """Analyze why a task failed and suggest fixes."""
+    context = task.get("context") or {}
+    output = (task.get("output") or "").strip()
+    error = (task.get("error_summary") or "").strip()
+    direction = (task.get("direction") or "").strip()
+    task_type = task.get("task_type", "")
+    if hasattr(task_type, "value"):
+        task_type = task_type.value
+    failed_providers = set()
+    if context.get("failed_provider"):
+        failed_providers.add(context["failed_provider"])
+    # Collect providers from retry chain
+    if context.get("exclude_provider"):
+        failed_providers.add(context["exclude_provider"])
+
+    analysis = {
+        "failure_type": "unknown",
+        "reason": "",
+        "auto_fixable": False,
+        "fix_action": None,
+        "fix_description": "",
+    }
+
+    combined = f"{output} {error}".lower()
+
+    # Pattern: timeout — task too large for provider
+    if "timed_out" in str(task.get("status", "")).lower() or "timeout" in combined:
+        if len(direction) > 2000:
+            analysis["failure_type"] = "task_too_large"
+            analysis["reason"] = f"Direction is {len(direction)} chars — providers time out on large tasks."
+            analysis["auto_fixable"] = True
+            analysis["fix_action"] = "split"
+            analysis["fix_description"] = "Split into smaller sub-tasks with focused directions."
+        else:
+            analysis["failure_type"] = "provider_timeout"
+            analysis["reason"] = f"All tried providers timed out: {', '.join(failed_providers) or 'unknown'}."
+            analysis["auto_fixable"] = False
+            analysis["fix_description"] = "Needs a faster/stronger provider or simpler task scope."
+
+    # Pattern: spec too vague for impl
+    elif task_type == "impl" and ("spec" in combined and ("unclear" in combined or "missing" in combined or "not found" in combined)):
+        analysis["failure_type"] = "spec_unclear"
+        analysis["reason"] = "Implementation failed because the spec is unclear or missing."
+        analysis["auto_fixable"] = True
+        analysis["fix_action"] = "respec"
+        analysis["fix_description"] = "Create a new spec task with more specific requirements."
+
+    # Pattern: test failures in impl or test phase
+    elif "test" in combined and ("fail" in combined or "error" in combined or "assert" in combined):
+        analysis["failure_type"] = "test_failure"
+        analysis["reason"] = "Tests are failing — likely a bug in the implementation."
+        analysis["auto_fixable"] = True
+        analysis["fix_action"] = "heal"
+        analysis["fix_description"] = "Create a heal task to fix the failing tests."
+
+    # Pattern: import/dependency error
+    elif "import" in combined and "error" in combined or "modulenotfounderror" in combined:
+        analysis["failure_type"] = "missing_dependency"
+        analysis["reason"] = "Missing import or dependency."
+        analysis["auto_fixable"] = True
+        analysis["fix_action"] = "heal"
+        analysis["fix_description"] = "Create a heal task to fix the missing dependency."
+
+    # Pattern: empty output — provider didn't respond meaningfully
+    elif not output or len(output) < 20:
+        analysis["failure_type"] = "empty_output"
+        analysis["reason"] = "Provider returned empty or trivial output."
+        analysis["auto_fixable"] = False
+        analysis["fix_description"] = "Needs a different provider or clearer direction."
+
+    # Default: unknown failure
+    else:
+        analysis["failure_type"] = "unknown"
+        analysis["reason"] = error[:200] if error else "No clear error pattern detected."
+        analysis["auto_fixable"] = False
+        analysis["fix_description"] = "Manual review needed."
+
+    return analysis
+
+
+def _escalate_or_autofix(
+    task: dict[str, Any],
+    task_type: str,
+    idea_id: str,
+    retry_count: int,
+) -> None:
+    """Analyze failure, auto-fix if possible, escalate to needs_decision if not."""
+    from app.services import agent_service
+
+    analysis = _classify_failure(task)
+    context = task.get("context") or {}
+    idea_name = idea_id.replace("-", " ").replace("_", " ").title()
+
+    log.info(
+        "ESCALATE idea=%s type=%s failure=%s auto_fixable=%s",
+        idea_id, task_type, analysis["failure_type"], analysis["auto_fixable"],
+    )
+
+    # ── Auto-fix path ──
+    if analysis["auto_fixable"] and analysis["fix_action"]:
+        action = analysis["fix_action"]
+
+        if action == "split":
+            # Create a simpler version of the same task with shorter direction
+            original_direction = task.get("direction", "")
+            # Take just the first paragraph as the focused direction
+            simplified = original_direction.split("\n\n")[0][:500]
+            try:
+                created = agent_service.create_task(AgentTaskCreate(
+                    direction=(
+                        f"{simplified}\n\n"
+                        f"Keep the scope minimal — implement only the core requirement. "
+                        f"Skip optional features. This is a simplified retry after timeout."
+                    ),
+                    task_type=_PHASE_TASK_TYPE.get(task_type, TaskType.IMPL),
+                    context={
+                        "idea_id": idea_id,
+                        "auto_fix": "split",
+                        "original_task_id": task.get("id", ""),
+                        "retry_count": 0,  # Fresh retry count for the simplified version
+                    },
+                ))
+                log.info("AUTO_FIX split task=%s → simplified task=%s", task.get("id", "?"), created.get("id", "?"))
+                return
+            except Exception:
+                log.warning("AUTO_FIX split failed for %s", idea_id, exc_info=True)
+
+        elif action == "respec":
+            # Create a new spec task that's more specific
+            try:
+                created = agent_service.create_task(AgentTaskCreate(
+                    direction=(
+                        f"Write a more detailed spec for '{idea_name}' ({idea_id}).\n\n"
+                        f"A previous implementation attempt failed because the spec was unclear.\n"
+                        f"This spec MUST include:\n"
+                        f"1. Concrete acceptance criteria (what 'done' looks like)\n"
+                        f"2. Specific files to create or modify\n"
+                        f"3. At least one test scenario with expected input/output\n"
+                        f"4. Verification command to prove it works"
+                    ),
+                    task_type=TaskType.SPEC,
+                    context={
+                        "idea_id": idea_id,
+                        "auto_fix": "respec",
+                        "original_task_id": task.get("id", ""),
+                    },
+                ))
+                log.info("AUTO_FIX respec for idea=%s → task=%s", idea_id, created.get("id", "?"))
+                return
+            except Exception:
+                log.warning("AUTO_FIX respec failed for %s", idea_id, exc_info=True)
+
+        elif action == "heal":
+            # Create a heal task to fix the specific issue
+            error_snippet = (task.get("output") or task.get("error_summary") or "")[:500]
+            try:
+                created = agent_service.create_task(AgentTaskCreate(
+                    direction=(
+                        f"Fix the failing code for '{idea_name}' ({idea_id}).\n\n"
+                        f"Error from previous run:\n{error_snippet}\n\n"
+                        f"Find the root cause, fix it, and verify the fix with tests."
+                    ),
+                    task_type=TaskType.IMPL,
+                    context={
+                        "idea_id": idea_id,
+                        "auto_fix": "heal",
+                        "original_task_id": task.get("id", ""),
+                    },
+                ))
+                log.info("AUTO_FIX heal for idea=%s → task=%s", idea_id, created.get("id", "?"))
+                return
+            except Exception:
+                log.warning("AUTO_FIX heal failed for %s", idea_id, exc_info=True)
+
+    # ── Escalation path — mark the ORIGINAL task as needs_decision ──
+    failed_providers = set(filter(None, [
+        context.get("failed_provider"),
+        context.get("exclude_provider"),
+        task.get("model"),
+    ]))
+
+    decision_prompt = (
+        f"Task '{task_type}' for '{idea_name}' failed {retry_count + 1} times.\n"
+        f"\n"
+        f"Failure: {analysis['failure_type']} — {analysis['reason']}\n"
+        f"Providers tried: {', '.join(failed_providers) or 'unknown'}\n"
+        f"\n"
+        f"Options:\n"
+        f"  A) Retry with simplified scope (trim direction, focus on core)\n"
+        f"  B) Rewrite the spec with clearer acceptance criteria\n"
+        f"  C) Deprioritize this idea (lower confidence score)\n"
+        f"  D) Skip this phase and advance anyway\n"
+        f"\n"
+        f"Reply with A, B, C, or D."
+    )
+
+    try:
+        agent_service.update_task(
+            task.get("id", ""),
+            status=TaskStatus.NEEDS_DECISION,
+            decision_prompt=decision_prompt,
+            context={
+                **(task.get("context") or {}),
+                "failure_analysis": analysis,
+                "escalation_source": "pipeline_advance_service",
+            },
+        )
+        log.info("ESCALATED idea=%s type=%s → needs_decision (failure=%s)", idea_id, task_type, analysis["failure_type"])
+    except Exception:
+        log.warning("ESCALATE failed for idea=%s", idea_id, exc_info=True)
+
+
+def handle_decision(task: dict[str, Any], decision: str) -> dict[str, Any] | None:
+    """Process a human decision (A/B/C/D) on an escalated task.
+
+    Returns the created follow-up task, or None.
+    """
+    from app.services import agent_service
+
+    context = task.get("context") or {}
+    idea_id = context.get("idea_id", "")
+    task_type = task.get("task_type", "")
+    if hasattr(task_type, "value"):
+        task_type = task_type.value
+    idea_name = idea_id.replace("-", " ").replace("_", " ").title()
+
+    choice = decision.strip().upper()[:1]
+    log.info("DECISION idea=%s type=%s choice=%s", idea_id, task_type, choice)
+
+    if choice == "A":
+        # Retry with simplified scope
+        original = task.get("direction", "")
+        simplified = original.split("\n\n")[0][:500]
+        try:
+            return agent_service.create_task(AgentTaskCreate(
+                direction=(
+                    f"{simplified}\n\n"
+                    f"Keep scope minimal — core requirement only. Skip optional features."
+                ),
+                task_type=_PHASE_TASK_TYPE.get(task_type, TaskType.IMPL),
+                context={"idea_id": idea_id, "decision_action": "simplified_retry", "retry_count": 0},
+            ))
+        except Exception:
+            log.warning("DECISION A failed for %s", idea_id, exc_info=True)
+
+    elif choice == "B":
+        # Rewrite spec
+        try:
+            return agent_service.create_task(AgentTaskCreate(
+                direction=(
+                    f"Rewrite the spec for '{idea_name}' ({idea_id}) with concrete acceptance criteria.\n"
+                    f"Include: specific files, test scenarios, verification commands."
+                ),
+                task_type=TaskType.SPEC,
+                context={"idea_id": idea_id, "decision_action": "respec"},
+            ))
+        except Exception:
+            log.warning("DECISION B failed for %s", idea_id, exc_info=True)
+
+    elif choice == "C":
+        # Deprioritize — lower the idea's confidence
+        try:
+            from app.services import graph_service
+            node = graph_service.get_node(idea_id)
+            if node:
+                current_conf = float(node.get("confidence", 0.5))
+                graph_service.update_node(idea_id, properties={"confidence": max(0.1, current_conf * 0.5)})
+                log.info("DEPRIORITIZED idea=%s confidence %.2f → %.2f", idea_id, current_conf, current_conf * 0.5)
+            # Mark task completed (it's been handled by deprioritizing)
+            agent_service.update_task(task.get("id", ""), status=TaskStatus.COMPLETED, output=f"Deprioritized: confidence halved.")
+        except Exception:
+            log.warning("DECISION C failed for %s", idea_id, exc_info=True)
+
+    elif choice == "D":
+        # Skip phase and advance
+        try:
+            agent_service.update_task(task.get("id", ""), status=TaskStatus.COMPLETED, output=f"Phase skipped by human decision.")
+            # Trigger auto-advance from the now-completed task
+            task_copy = dict(task)
+            task_copy["status"] = "completed"
+            return maybe_advance(task_copy)
+        except Exception:
+            log.warning("DECISION D failed for %s", idea_id, exc_info=True)
+
+    return None
