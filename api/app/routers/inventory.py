@@ -69,15 +69,20 @@ def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTas
         try:
             task = agent_service.get_task(task_id)
             task_ctx = task.get("context") if isinstance(task, dict) else {}
-            context_patch: dict[str, object] = {}
             if not isinstance(task_ctx, dict):
+                task_ctx = {}
+
+            # Skip auto-execution for pipeline tasks — they should run on federation nodes
+            # with strong providers (claude, codex, cursor), not openrouter/free
+            if task_ctx.get("auto_advance_source") or task_ctx.get("auto_retry_source") or task_ctx.get("bootstrap_source"):
+                logger.info("SKIP_AUTO_EXECUTE task=%s — pipeline task, runs on federation nodes", task_id[:16])
+                continue
+
+            context_patch: dict[str, object] = {}
+            if not str(task_ctx.get("executor") or "").strip():
                 context_patch["executor"] = "openrouter"
+            if not str(task_ctx.get("model_override") or "").strip():
                 context_patch["model_override"] = model_override
-            else:
-                if not str(task_ctx.get("executor") or "").strip():
-                    context_patch["executor"] = "openrouter"
-                if not str(task_ctx.get("model_override") or "").strip():
-                    context_patch["model_override"] = model_override
             if context_patch:
                 agent_service.update_task(task_id, context=context_patch)
             background_tasks.add_task(agent_execution_service.execute_task, task_id)
