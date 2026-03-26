@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { aggregateTaskCountsFromByStatus } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
 
 import { EvidenceTrail } from "./EvidenceTrail";
@@ -69,6 +70,13 @@ function TasksPageContent() {
   const [ideaNamesById, setIdeaNamesById] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
+  const [aggregateCounts, setAggregateCounts] = useState<{
+    pending: number;
+    running: number;
+    completed: number;
+    failed: number;
+  } | null>(null);
+  const loadGenRef = useRef(0);
 
   const statusFilter = useMemo(() => (searchParams.get("status") || "").trim(), [searchParams]);
   const typeFilter = useMemo(() => (searchParams.get("task_type") || "").trim(), [searchParams]);

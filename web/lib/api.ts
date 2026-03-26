@@ -32,6 +32,26 @@ function _resolveApiEnvUrl(envValue: string): string | null {
   return null;
 }
 
+/** Map GET /api/agent/tasks/count `by_status` into list `counts` buckets (spec 156). */
+export function aggregateTaskCountsFromByStatus(
+  byStatus: Record<string, number> | undefined | null,
+): {
+  pending: number;
+  running: number;
+  completed: number;
+  failed: number;
+} {
+  const by = byStatus || {};
+  const n = (k: string) =>
+    typeof by[k] === "number" && Number.isFinite(by[k]) ? Math.trunc(by[k]) : 0;
+  return {
+    pending: n("pending") + n("queued"),
+    running: n("running") + n("claimed") + n("in_progress"),
+    completed: n("completed"),
+    failed: n("failed") + n("needs_decision") + n("timed_out"),
+  };
+}
+
 export function getApiBase(): string {
   // In the browser, use the Next.js rewrite proxy (empty base = relative /api/* paths)
   // to avoid CORS issues. Server components can use the full URL directly.

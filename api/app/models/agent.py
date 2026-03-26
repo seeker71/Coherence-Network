@@ -213,12 +213,22 @@ class AgentTaskListItem(BaseModel):
     updated_at: Optional[datetime] = None
 
 
+class TaskStatusCounts(BaseModel):
+    """Aggregated counts for list + dashboard (global totals, not page slice)."""
+
+    pending: int = 0
+    running: int = 0
+    completed: int = 0
+    failed: int = 0
+
+
 class AgentTaskList(BaseModel):
     """List of tasks with total. meta reports fallbacks (e.g. runtime_fallback_backfill_count) for validation."""
 
     tasks: List[AgentTaskListItem]
     total: int
     meta: Optional[dict] = None
+    counts: Optional[TaskStatusCounts] = None
 
 
 class RouteResponse(BaseModel):

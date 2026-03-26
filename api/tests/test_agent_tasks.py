@@ -48,6 +48,11 @@ async def test_list_tasks_includes_status_counts(monkeypatch: pytest.MonkeyPatch
         assert "tasks" in body
         assert body["total"] == 3
         assert len(body["tasks"]) == 3
+        assert "counts" in body
+        assert body["counts"]["pending"] == 1
+        assert body["counts"]["running"] == 1
+        assert body["counts"]["completed"] == 1
+        assert body["counts"]["failed"] == 0
 
         counted = await client.get("/api/agent/tasks/count")
         assert counted.status_code == 200

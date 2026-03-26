@@ -14,6 +14,7 @@ from app.models.agent import (
     AgentTaskListItem,
     AgentTaskUpdate,
     AgentTaskUpsertActive,
+    TaskStatusCounts,
     TaskStatus,
     TaskType,
 )
@@ -34,6 +35,20 @@ from app.services.agent_routing.model_routing_loader import get_auto_execute_def
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _aggregate_task_status_counts(by_status: dict[str, int]) -> TaskStatusCounts:
+    """Map raw by_status keys into UI buckets (spec 156)."""
+
+    def _n(key: str) -> int:
+        return int(by_status.get(key, 0) or 0)
+
+    return TaskStatusCounts(
+        pending=_n("pending") + _n("queued"),
+        running=_n("running") + _n("claimed") + _n("in_progress"),
+        completed=_n("completed"),
+        failed=_n("failed") + _n("needs_decision") + _n("timed_out"),
+    )
 
 
 @router.post(
@@ -122,12 +137,17 @@ async def list_tasks(
     items, total, runtime_fallback_backfill = agent_service.list_tasks(
         status=status, task_type=task_type, limit=limit, offset=offset
     )
+    count_data = agent_service.get_task_count()
+    by_status_raw = count_data.get("by_status") or {}
+    by_status = {str(k): int(v or 0) for k, v in by_status_raw.items()}
+    counts = _aggregate_task_status_counts(by_status)
     return AgentTaskList(
         tasks=[AgentTaskListItem(**task_to_item(t)) for t in items],
         total=total,
         meta={"runtime_fallback_backfill_count": runtime_fallback_backfill}
         if runtime_fallback_backfill > 0
         else None,
+        counts=counts,
     )
 
 
