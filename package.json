@@ -1,5 +1,6 @@
 {
   "name": "coherence-network",
+  "private": true,
   "version": "1.0.0",
   "description": "[![Test](https://github.com/seeker71/Coherence-Network/actions/workflows/test.yml/badge.svg)](https://github.com/seeker71/Coherence-Network/actions/workflows/test.yml)",
   "main": "index.js",

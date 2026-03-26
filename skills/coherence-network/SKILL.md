@@ -329,6 +329,10 @@ Every part of the network links to every other. Jump in wherever makes sense.
 | **OpenClaw Skill** | This skill — auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
 
+## Skill distribution
+
+When files under `skills/coherence-network/` change on `main`, the `auto-publish-main` GitHub Actions workflow publishes this bundle to ClawHub (see `.github/workflows/auto-publish-main.yml` in the repository).
+
 ## MCP server
 
 For AI agents that support MCP (Model Context Protocol), Coherence Network exposes an MCP server at:

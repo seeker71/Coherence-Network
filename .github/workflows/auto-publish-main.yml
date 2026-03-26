@@ -1,0 +1,159 @@
+# Auto-publish on merge to main: VPS Docker deploy, conditional npm + ClawHub, GitHub Release.
+# Concurrency: queue (do not cancel in-flight deploys). See specs/157-auto-publish-pipeline-main-merge.md
+name: Auto-publish (main)
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: auto-publish-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install API dependencies
+        run: cd api && pip install -e ".[dev]"
+
+      - name: Run API tests
+        run: cd api && pytest -q
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Upgrade npm
+        run: npm install -g npm@11.10.0
+
+      - name: Build web
+        run: cd web && npm ci --allow-git=none && npm run build
+
+  deploy-vps:
+    needs: [preflight]
+    runs-on: ubuntu-latest
+    if: github.repository == 'seeker71/Coherence-Network'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check VPS SSH secret
+        env:
+          KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "${KEY:-}" ]; then
+            echo "::error::VPS_SSH_PRIVATE_KEY secret not available — cannot deploy."
+            exit 1
+          fi
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+
+      - name: Add VPS host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 187.77.152.42 >> ~/.ssh/known_hosts
+
+      - name: Deploy Docker Compose on VPS
+        env:
+          VPS_HOST: 187.77.152.42
+          VPS_USER: root
+        run: bash scripts/deploy_vps_compose.sh
+
+  npm-publish:
+    needs: [preflight]
+    runs-on: ubuntu-latest
+    if: github.repository == 'seeker71/Coherence-Network'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Publish npm packages if bumped
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: bash scripts/publish_npm_if_bumped.sh
+
+  clawhub-publish:
+    needs: [preflight]
+    runs-on: ubuntu-latest
+    if: github.repository == 'seeker71/Coherence-Network'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect skill changes
+        id: skill
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          if [ -z "${BEFORE:-}" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "$BEFORE" "$AFTER" | grep -q '^skills/coherence-network/'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v6
+        if: steps.skill.outputs.changed == 'true'
+        with:
+          node-version: "20"
+
+      - name: Publish skill to ClawHub
+        if: steps.skill.outputs.changed == 'true'
+        env:
+          CLAWHUB_TOKEN: ${{ secrets.CLAWHUB_TOKEN }}
+        run: bash scripts/publish_clawhub_skill.sh
+
+  release-and-changelog:
+    needs: [deploy-vps, npm-publish]
+    runs-on: ubuntu-latest
+    if: github.repository == 'seeker71/Coherence-Network'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          PREV="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+          TAG="v$(date -u +%Y.%m.%d)-$(git rev-parse --short HEAD)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          python3 scripts/changelog_from_conventional.py --prev-tag "$PREV" --head HEAD --title "## ${TAG}" > release_notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ steps.notes.outputs.tag }}" \
+            --title "${{ steps.notes.outputs.tag }}" \
+            --notes-file release_notes.md \
+            --target "${{ github.sha }}"

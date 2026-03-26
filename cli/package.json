@@ -38,6 +38,9 @@
     "openclaw"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "homepage": "https://coherencycoin.com",
   "repository": {
     "type": "git",
