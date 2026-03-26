@@ -739,14 +739,16 @@ def get_openrouter_free_model_stats() -> dict:
 
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
-_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "deploy", "verify", "review")
+_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect", "review")
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
     "test": "code-review",
-    "code-review": "deploy",
+    "code-review": "merge",
+    "merge": "deploy",
     "deploy": "verify",
-    "verify": None,
+    "verify": "reflect",
+    "reflect": None,
     # Backward compat: old "review" tasks map to code-review
     "review": None,
 }
@@ -1207,23 +1209,37 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"Run `python3 scripts/validate_spec_quality.py` before finishing."
             )
         elif next_phase == "code-review":
+            # Find open PRs for this idea
+            pr_ref = ""
+            try:
+                pr_check = subprocess.run(
+                    ["gh", "pr", "list", "--search", idea_id, "--json", "number,title,url", "--limit", "1"],
+                    capture_output=True, text=True, timeout=10, cwd=str(_REPO_DIR),
+                    shell=(sys.platform == "win32"),
+                )
+                if pr_check.returncode == 0:
+                    import json as _json
+                    prs = _json.loads(pr_check.stdout)
+                    if prs:
+                        pr_ref = f"\n\nOpen PR: {prs[0]['url']}\nReview the PR diff: gh pr diff {prs[0]['number']}\n"
+            except Exception:
+                pass
+
             direction = (
                 f"Code review for '{idea_name}' ({idea_id}).\n\n"
-                f"Description: {idea_desc[:300]}\n\n"
-                f"Review the implementation code for:\n"
-                f"1. Does the code match the spec requirements?\n"
-                f"2. Are there tests and do they cover the key scenarios?\n"
-                f"3. Code quality: no obvious bugs, proper error handling, follows project conventions\n"
-                f"4. Files are in the right locations per CLAUDE.md\n\n"
-                f"DIF AUTOMATED REVIEW:\n"
-                f"Run DIF verification on ALL changed code files:\n"
-                f"  cc dif verify --language python --file <file.py> --json\n"
-                f"  cc dif verify --language javascript --file <file.mjs> --json\n"
-                f"Include the DIF results as objective evidence in your review.\n"
-                f"DIF trust_signal='concern' or verification<30 = CODE_REVIEW_FAILED.\n"
-                f"DIF trust_signal='positive' with verification>50 = strong evidence for PASSED.\n\n"
-                f"Do NOT check production deployment — that's a separate phase.\n"
-                f"Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED with DIF scores + specific issues."
+                f"Description: {idea_desc[:300]}\n"
+                f"{pr_ref}\n"
+                f"REVIEW CHECKLIST:\n"
+                f"1. Read the spec (specs/ directory) — does the code match requirements?\n"
+                f"2. Check git log for recent impl/test commits for this idea\n"
+                f"3. Read the changed files — are there obvious bugs or missing error handling?\n"
+                f"4. Are there tests? Do they cover the key scenarios from the spec?\n"
+                f"5. Run the tests: python -m pytest api/tests/ -x -q 2>/dev/null\n"
+                f"6. Check code follows project conventions (CLAUDE.md)\n\n"
+                f"If there's an open PR, approve or request changes:\n"
+                f"  gh pr review <number> --approve  (if code is good)\n"
+                f"  gh pr review <number> --request-changes -b \"<issues>\"  (if not)\n\n"
+                f"Output: CODE_REVIEW_PASSED or CODE_REVIEW_FAILED with specific issues."
             )
         elif next_phase == "deploy":
             direction = (
@@ -1259,36 +1275,65 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             )
         elif next_phase == "test":
             direction = (
-                f"Write tests for '{idea_name}' ({idea_id}).\n\n"
+                f"Write and run tests for '{idea_name}' ({idea_id}).\n\n"
                 f"Description: {idea_desc[:300]}\n\n"
-                f"Write actual test code (pytest) that verifies the feature works.\n"
-                f"Tests must be runnable. Include both unit tests and an integration test\n"
-                f"that hits the API endpoint if applicable.\n"
-                f"Follow the project's CLAUDE.md conventions.\n\n"
-                f"CODE QUALITY — DIF verification:\n"
-                f"After writing test files, verify them:\n"
-                f"  cc dif verify --language python --file <test_file.py> --json\n"
-                f"DIF checks test code quality too — low semantic_support means trivial tests.\n"
-                f"Fix any DIF concerns before finishing."
+                f"CRITICAL INSTRUCTIONS:\n"
+                f"1. Find the implementation files (check git log --oneline -5 for recent impl commits)\n"
+                f"2. Write pytest test files in api/tests/ that verify the feature works\n"
+                f"3. Run the tests: python -m pytest api/tests/test_{idea_id.replace('-','_')}.py -v\n"
+                f"4. If tests fail, fix the implementation or the tests until they pass\n"
+                f"5. Stage and commit: git add <test-files> && git commit -m \"test({idea_id}): <summary>\"\n"
+                f"6. Do NOT push — the runner handles that\n\n"
+                f"Tests must be RUNNABLE and PASSING. A test file that doesn't execute is worthless.\n"
+                f"Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>, TESTS_FAILED=<count>"
             )
         elif next_phase == "impl":
+            # Check if there's a spec to reference
+            spec_ref = ""
+            try:
+                specs_data = api("GET", f"/api/spec-registry?idea_id={idea_id}&limit=1")
+                if isinstance(specs_data, dict) and specs_data.get("items"):
+                    spec = specs_data["items"][0]
+                    spec_ref = f"\n\nSpec file: specs/{spec.get('id', idea_id)}.md (read it first)\n"
+            except Exception:
+                pass
+
             direction = (
                 f"Implement '{idea_name}' ({idea_id}).\n\n"
-                f"Description: {idea_desc[:300]}\n\n"
-                f"Write the actual code that makes this feature work.\n"
-                f"Follow the project's CLAUDE.md conventions. Work in the repository.\n"
+                f"Description: {idea_desc[:300]}\n"
+                f"{spec_ref}\n"
+                f"CRITICAL INSTRUCTIONS:\n"
+                f"1. Read the spec file first if it exists (check specs/ directory)\n"
+                f"2. Write ACTUAL CODE FILES — not a description of what you'd do\n"
+                f"3. After writing files, stage and commit them:\n"
+                f"   git add <your-files> && git commit -m \"impl({idea_id}): <summary>\"\n"
+                f"4. Do NOT push or create PRs — the runner handles that\n"
+                f"5. Run tests if they exist: python -m pytest api/tests/ -x -q 2>/dev/null\n\n"
+                f"Follow the project's CLAUDE.md conventions.\n"
                 f"The implementation must be complete enough to deploy and use.\n\n"
-                f"CODE QUALITY — DIF verification:\n"
-                f"After writing each code file, verify it with DIF:\n"
-                f"  cc dif verify --language python --file <your_file.py> --json\n"
-                f"  cc dif verify --language javascript --file <your_file.mjs> --json\n"
-                f"Read the DIF output — check:\n"
-                f"  - trust_signal: 'positive' or 'review' is acceptable. 'concern' means fix needed.\n"
-                f"  - scores.verification: >40 is acceptable. <30 means rethink the approach.\n"
-                f"  - scores.semantic_support: >50 means well-known patterns. <20 means unusual code.\n"
-                f"  - top_finding: shows the exact line with the highest anomaly — address it.\n"
-                f"If DIF flags concerns, fix the code and re-verify before finishing.\n"
-                f"Include the final DIF scores in your output as evidence of code quality."
+                f"Output: FILES_CHANGED=<list>, TESTS_RUN=<pass/fail/none>, SUMMARY=<what you built>"
+            )
+        elif next_phase == "merge":
+            direction = (
+                f"Merge the PR for '{idea_name}' ({idea_id}).\n\n"
+                f"1. Find the open PR: gh pr list --search '{idea_id}' --json number,title,url\n"
+                f"2. Check PR status: gh pr checks <number>\n"
+                f"3. If tests passed and review approved, merge: gh pr merge <number> --squash\n"
+                f"4. If tests failed or review has requested changes, output MERGE_BLOCKED with reason\n"
+                f"5. After merge, verify: git log origin/main --oneline -1\n\n"
+                f"Output: MERGE_PASSED with merged SHA, or MERGE_BLOCKED with reason."
+            )
+        elif next_phase == "reflect":
+            direction = (
+                f"Reflect on the completed lifecycle for '{idea_name}' ({idea_id}).\n\n"
+                f"1. Check what was built: git log --oneline -10 | grep '{idea_id}'\n"
+                f"2. Verify it's on production: curl -s https://api.coherencycoin.com/api/health\n"
+                f"3. Record a contribution:\n"
+                f"   cc contribute --type code --idea {idea_id} --desc 'Full lifecycle: spec→impl→test→review→merge→deploy→verify'\n"
+                f"4. Update the idea's coherence score if possible\n"
+                f"5. Check if there are follow-up tasks or gaps identified during review\n\n"
+                f"Output: REFLECT_COMPLETE with summary of what was delivered, coherence impact, "
+                f"and any follow-up ideas that emerged."
             )
         else:
             direction = (
