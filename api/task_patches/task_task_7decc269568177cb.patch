@@ -1,0 +1,466 @@
+diff --git a/.task-checkpoint.md b/.task-checkpoint.md
+index b99cb61e..e2dbe2b9 100644
+--- a/.task-checkpoint.md
++++ b/.task-checkpoint.md
+@@ -1,76 +1,25 @@
+-## Checkpoint - task_c63d49331545c4e4
+-
+-1) Completed so far
+-- Read spec template and related existing spec for tasks page fetch failures.
+-- Confirmed required sections and acceptance detail expectations.
+-- Prepared to draft a new, implementation-ready spec for `ux-tasks-page-broken`.
+-- Created `specs/156-ux-tasks-page-broken.md` with required sections:
+-  - Verification criteria
+-  - 3+ test scenarios
+-  - Expected API/UI behavior
+-  - Edge cases/error handling expectations
+-  - Risks and Assumptions
+-  - Known Gaps and Follow-up Tasks
+-
+-2) What remains
+-- Run `python3 scripts/validate_spec_quality.py` and record output.
+-- Send completion summary and blocker report.
+-
+-3) Blockers
+-- Shell command execution is currently rejected in this environment, blocking:
+-  - `python3 scripts/validate_spec_quality.py`
+-  - `cc inbox` and `cc msg` commands
+-## Checkpoint - 2026-03-26
+-
+-### Completed so far
+-- Read spec format requirements and sampled recent web-related specs for style alignment.
+-- Drafted and saved `specs/156-ux-web-ecosystem-links.md` with:
+-  - concrete requirements
+-  - explicit expected UI behaviors
+-  - verification commands
+-  - 4 implementation test scenarios
+-  - edge cases/error handling expectations
+-  - risks/assumptions
+-  - known gaps/follow-up tasks
+-- Attempted to run required validation and realtime network inbox checks.
+-
+-### What remains
+-- Run `python3 scripts/validate_spec_quality.py --base origin/main --head HEAD` once command execution is available.
+-- If validator reports issues, patch the spec and rerun until pass.
+-
+-### Blockers
+-- Shell execution is currently rejecting commands (including `cc inbox`, `python3 scripts/validate_spec_quality.py`, and `git status --short`) in this session after an initial successful `ls`.
+-- Because of this, required validation cannot be executed from this environment right now.
+-## Checkpoint - deploy-latest-to-vps
+-
+-### 1) Completed so far
+-- Reviewed `specs/TEMPLATE.md` and deploy-related specs for style and required sections.
+-- Created `specs/156-deploy-latest-to-vps.md` with:
+-  - explicit Verification acceptance criteria,
+-  - 4 concrete test scenarios,
+-  - expected API behaviors for `/api/services` and `/api/health`,
+-  - edge cases/error-handling expectations,
+-  - Risks and Assumptions,
+-  - Known Gaps and Follow-up Tasks.
+-
+-### 2) What remains
+-- Run `python3 scripts/validate_spec_quality.py --base origin/main --head HEAD` once shell execution is available.
+-- Run requested `cc` inbox/broadcast/contribute commands once shell execution is available.
+-- Provide final task summary (files changed, validation result, encountered errors).
+-
+-### 3) Blockers
+-- `Shell` command execution is currently being rejected in this session; this blocks validator and all `cc` real-time messaging commands.
+-# Task checkpoint — Review task_f938113c54593bf5 (`cc identity set`)
+-
+-## Completed
+-- Searched repo: `cli/lib/commands/identity.mjs` implements `setIdentity`; `cli/bin/cc.mjs` routes `identity set` → `setIdentity`.
+-- Confirmed `getContributorId()` in `cli/lib/config.mjs` reads `contributor_id` from `~/.coherence-network/config.json` **or** `process.env.COHERENCE_CONTRIBUTOR` (not `COHERENCE_CONTRIBUTOR_ID`).
+-- Checked `cli/README.md` (documents `cc identity set`), root `README.md` Identity table (does **not** list `identity set`).
+-- Checked `skills/coherence-network/SKILL.md` — only `cc identity setup` in examples; no agent-oriented `identity set` / env docs.
+-- Attempted local `node cli/bin/cc.mjs ...` — shell execution was rejected in this environment; no runtime proof from this session.
+-
+-## Remains
+-- None for reviewer (deliverable is written review below). Optional follow-up: align docs (env name), add README line, extend SKILL for agents.
+-
+-## Blockers
+-- Could not run CLI commands here to capture live stdout; verification scenarios assume reviewer runs on a machine with Node 18+.
++Checkpoint: ux-tasks-page-broken
++
++Completed:
++- Implemented tasks page reliability updates in allowed web files:
++  - web/app/tasks/page.tsx
++  - web/lib/api.ts
++  - web/next.config.ts
++  - web/tests/tasks-page.spec.ts
++- loadRows now uses `getApiUrl()` for client-side API calls.
++- Added task status count parsing and use backend `counts` when available.
++- Added explicit error state with retry + diagnostic message.
++- Added stale-response suppression for overlapping fetches.
++- Added placeholder/Unavailable/Loading counter hints during non-ok states.
++
++Remaining:
++- Execute env-based validation successfully (web build, tests, API pytest) in a properly provisioned environment.
++- Resolve unrelated workspace drift files outside task scope if tooling allows.
++
++Blockers:
++- `cd web && npm run build` fails: `next: command not found`.
++- `cd web && npm run test -- tasks-page` fails: `Missing script: "test"`.
++- `cd api && .venv/bin/pytest -v tests/test_agent_tasks.py` fails: `.venv/bin/pytest` missing.
++- Workspace policy rejected cleanup attempts for `.task-control` deletion and `api/task_patches/` untracked drift (`rm`/`git restore` blocked by policy), status still includes:
++  - D .task-control
++  - ?? api/task_patches/
+diff --git a/.task-control b/.task-control
+deleted file mode 100644
+index 7f5c6225..00000000
+--- a/.task-control
++++ /dev/null
+@@ -1,2 +0,0 @@
+-{"type": "disconnected", "task_id": "task_c63d49331545c4e4", "timestamp": 1774547026.588496}
+-{"type": "disconnected", "task_id": "task_234d15472472ff8d", "timestamp": 1774547027.385588}
+diff --git a/web/app/tasks/page.tsx b/web/app/tasks/page.tsx
+index fade86b4..be4dc29a 100644
+--- a/web/app/tasks/page.tsx
++++ b/web/app/tasks/page.tsx
+@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
+ import { useSearchParams } from "next/navigation";
+ 
+ import { useLiveRefresh } from "@/lib/live_refresh";
++import { getApiUrl } from "@/lib/api";
+ 
+ import { EvidenceTrail } from "./EvidenceTrail";
+ import { TasksListSection } from "./TasksListSection";
+@@ -46,6 +47,51 @@ type ActivityEvent = {
+   timestamp: string;
+ };
+ 
++type TaskListResponseWithCounts = TaskListResponse & {
++  counts?: {
++    pending?: unknown;
++    running?: unknown;
++    completed?: unknown;
++    failed?: unknown;
++    needs_decision?: unknown;
++  };
++};
++
++type TaskStatusCounts = {
++  pending: number;
++  running: number;
++  completed: number;
++};
++
++function parseStatusCount(value: unknown): number {
++  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.trunc(value));
++  if (typeof value === "string" && value.trim()) {
++    const parsed = Number.parseInt(value.trim(), 10);
++    if (Number.isFinite(parsed)) return Math.max(0, parsed);
++  }
++  return 0;
++}
++
++function parseTaskStatusCounts(response: unknown): TaskStatusCounts | null {
++  if (!response || typeof response !== "object" || Array.isArray(response)) return null;
++  const raw = response as Record<string, unknown>;
++  if (!Object.prototype.hasOwnProperty.call(raw, "pending")
++    && !Object.prototype.hasOwnProperty.call(raw, "running")
++    && !Object.prototype.hasOwnProperty.call(raw, "completed")) {
++    return null;
++  }
++  return {
++    pending: parseStatusCount(raw.pending),
++    running: parseStatusCount(raw.running),
++    completed: parseStatusCount(raw.completed),
++  };
++}
++
++function parseErrorMessage(error: unknown): string {
++  if (error instanceof Error) return `${error.name}: ${error.message}`;
++  return String(error);
++}
++
+ function elapsed(timestamp: string): string {
+   const ms = Date.now() - new Date(timestamp).getTime();
+   if (!Number.isFinite(ms) || ms < 0) return "just now";
+@@ -69,6 +115,8 @@ function TasksPageContent() {
+   const [ideaNamesById, setIdeaNamesById] = useState<Record<string, string>>({});
+   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
+   const [error, setError] = useState<string | null>(null);
++  const [taskStatusCounts, setTaskStatusCounts] = useState<TaskStatusCounts | null>(null);
++  const loadRowsRequestId = useRef(0);
+ 
+   const statusFilter = useMemo(() => (searchParams.get("status") || "").trim(), [searchParams]);
+   const typeFilter = useMemo(() => (searchParams.get("task_type") || "").trim(), [searchParams]);
+@@ -81,8 +129,12 @@ function TasksPageContent() {
+   const offset = useMemo(() => (page - 1) * pageSize, [page, pageSize]);
+ 
+   const loadRows = useCallback(async () => {
+-    setStatus((prev) => (prev === "ok" ? "ok" : "loading"));
++    const requestId = ++loadRowsRequestId.current;
++    const isLatest = () => requestId === loadRowsRequestId.current;
++    setStatus("loading");
+     setError(null);
++    setTaskStatusCounts(null);
++
+     try {
+       const params = new URLSearchParams({
+         limit: String(pageSize),
+@@ -90,27 +142,55 @@ function TasksPageContent() {
+       });
+       if (statusFilter) params.set("status", statusFilter);
+       if (typeFilter) params.set("task_type", typeFilter);
++      const taskListUrl = `${getApiUrl("/api/agent/tasks")}?${params.toString()}`;
+       const [tasksResponse, ideasResponse, activeResponse, activityResponse] = await Promise.all([
+-        fetchWithTimeout(`/api/agent/tasks?${params.toString()}`),
+-        fetchWithTimeout("/api/ideas?limit=500"),
+-        fetchWithTimeout("/api/agent/tasks/active").catch(() => null),
+-        fetchWithTimeout("/api/agent/tasks/activity?limit=30").catch(() => null),
++        fetchWithTimeout(taskListUrl),
++        fetchWithTimeout(getApiUrl("/api/ideas?limit=500")),
++        fetchWithTimeout(getApiUrl("/api/agent/tasks/active")).catch(() => null),
++        fetchWithTimeout(getApiUrl("/api/agent/tasks/activity?limit=30")).catch(() => null),
+       ]);
+-      const json = (await tasksResponse.json()) as TaskListResponse;
+-      if (!tasksResponse.ok) throw new Error(JSON.stringify(json));
+-      const taskRows = Array.isArray(json.tasks)
+-        ? json.tasks
+-        : Array.isArray(json.items)
+-          ? json.items
+-          : Array.isArray(json)
+-            ? json
++      if (!isLatest()) return;
++      let tasksPayload: unknown = {};
++      const rawTaskBody = await tasksResponse.text();
++      try {
++        if (rawTaskBody.trim()) {
++          tasksPayload = JSON.parse(rawTaskBody);
++        }
++      } catch {
++        tasksPayload = rawTaskBody ? { message: rawTaskBody } : {};
++      }
++      const taskListPayload = tasksPayload as TaskListResponseWithCounts;
++      if (!tasksResponse.ok) {
++        const detail = typeof tasksPayload === "string" ? tasksPayload : JSON.stringify(tasksPayload);
++        throw new Error(
++          `GET /api/agent/tasks failed (${tasksResponse.status} ${tasksResponse.statusText}): ${detail || "empty body"}`,
++        );
++      }
++      const taskRows = Array.isArray(taskListPayload.tasks)
++        ? taskListPayload.tasks
++        : Array.isArray(taskListPayload.items)
++          ? taskListPayload.items
++          : Array.isArray(taskListPayload)
++            ? (taskListPayload as unknown as AgentTask[])
+             : [];
++      const rowCounts: TaskStatusCounts = {
++        pending: taskRows.filter((row) => ["pending", "queued"].includes(row.status)).length,
++        running: taskRows.filter((row) => ["running", "claimed", "in_progress"].includes(row.status)).length,
++        completed: taskRows.filter((row) => row.status === "completed").length,
++      };
++      const taskCounts = parseTaskStatusCounts(taskListPayload.counts) || rowCounts;
++      setTaskStatusCounts(taskCounts);
+       setRows(taskRows);
+-      const responseTotal = Number.isFinite(Number(json.total)) ? Number(json.total) : taskRows.length;
++      const responseTotal = Number.isFinite(Number(taskListPayload.total)) ? Number(taskListPayload.total) : taskRows.length;
+       setTotalTasks(Math.max(taskRows.length, responseTotal));
+ 
+       if (ideasResponse.ok) {
+-        const ideasPayload = (await ideasResponse.json()) as IdeasLookupResponse;
++        let ideasPayload: IdeasLookupResponse = { ideas: [] };
++        try {
++          ideasPayload = (await ideasResponse.json()) as IdeasLookupResponse;
++        } catch {
++          ideasPayload = { ideas: [] };
++        }
+         const names = (ideasPayload.ideas || []).reduce<Record<string, string>>((acc, row) => {
+           const id = String(row.id || "").trim();
+           const name = String(row.name || "").trim();
+@@ -143,10 +223,11 @@ function TasksPageContent() {
+         setSelectedTaskEventsWarning(null);
+       } else {
+         const [taskResult, logResult, eventsResult] = await Promise.allSettled([
+-          fetchWithTimeout(`/api/agent/tasks/${encodeURIComponent(taskIdFilter)}`),
+-          fetchWithTimeout(`/api/agent/tasks/${encodeURIComponent(taskIdFilter)}/log`),
+-          fetchWithTimeout(`/api/runtime/events?limit=${EVENTS_LIMIT}`, {}, EVENTS_TIMEOUT_MS),
++          fetchWithTimeout(getApiUrl(`/api/agent/tasks/${encodeURIComponent(taskIdFilter)}`)),
++          fetchWithTimeout(getApiUrl(`/api/agent/tasks/${encodeURIComponent(taskIdFilter)}/log`)),
++          fetchWithTimeout(getApiUrl(`/api/runtime/events?limit=${EVENTS_LIMIT}`), {}, EVENTS_TIMEOUT_MS),
+         ]);
++        if (!isLatest()) return;
+ 
+         if (taskResult.status === "fulfilled" && taskResult.value.ok) {
+           const taskPayload = (await taskResult.value.json()) as AgentTask;
+@@ -193,11 +274,21 @@ function TasksPageContent() {
+           setSelectedTaskEventsWarning(String(eventsResult.reason || "runtime events unavailable"));
+         }
+       }
+-
++      if (!isLatest()) return;
+       setStatus("ok");
+     } catch (e) {
++      if (!isLatest()) return;
+       setStatus("error");
+-      setError(String(e));
++      setError(parseErrorMessage(e));
++      setRows([]);
++      setIdeaNamesById({});
++      setActiveTasks([]);
++      setRecentActivity([]);
++      setSelectedTask(null);
++      setSelectedTaskLog("");
++      setSelectedTaskEvents([]);
++      setSelectedTaskEventsWarning(null);
++      setTaskStatusCounts(null);
+     }
+   }, [offset, pageSize, statusFilter, taskIdFilter, typeFilter]);
+ 
+@@ -287,25 +378,27 @@ function TasksPageContent() {
+     };
+   }, [evidenceEvents]);
+ 
+-  const readyCount = useMemo(
++  const readyCountFromRows = useMemo(
+     () => filteredRows.filter((row) => ["pending", "queued"].includes(row.status)).length,
+     [filteredRows],
+   );
+-  const activeCount = useMemo(
+-    () => Math.max(
+-      activeTasks.length,
+-      filteredRows.filter((row) => ["running", "claimed", "in_progress"].includes(row.status)).length,
+-    ),
+-    [filteredRows, activeTasks],
++  const activeCountFromRows = useMemo(
++    () => filteredRows.filter((row) => ["running", "claimed", "in_progress"].includes(row.status)).length,
++    [filteredRows],
+   );
+   const blockedCount = useMemo(
+     () => filteredRows.filter((row) => row.status === "failed" || row.status === "needs_decision").length,
+     [filteredRows],
+   );
+-  const finishedCount = useMemo(
++  const finishedCountFromRows = useMemo(
+     () => filteredRows.filter((row) => row.status === "completed").length,
+     [filteredRows],
+   );
++  const readyCount = taskStatusCounts?.pending ?? readyCountFromRows;
++  const activeCount = taskStatusCounts?.running ?? activeCountFromRows;
++  const finishedCount = taskStatusCounts?.completed ?? finishedCountFromRows;
++  const renderCount = (value: number) => (status === "ok" ? value.toString() : "—");
++  const counterHint = status === "loading" ? "Loading" : status === "error" ? "Unavailable" : null;
+   const selectedSummary = taskIdFilter
+     ? selectedTask
+       ? describeTaskStatus(selectedTask.status)
+@@ -345,23 +438,38 @@ function TasksPageContent() {
+         <section className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
+           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+             <p className="text-muted-foreground">Work cards in view</p>
+-            <p className="text-2xl font-light text-primary">{filteredRows.length}</p>
++            <p className={`text-2xl font-light ${status === "ok" ? "text-primary" : "text-muted-foreground"}`}>
++              {formatCount(filteredRows.length)}
++            </p>
++            {counterHint ? <p className="text-xs text-muted-foreground">{counterHint}</p> : null}
+           </div>
+           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+             <p className="text-muted-foreground">Ready to start</p>
+-            <p className="text-2xl font-light text-primary">{readyCount}</p>
++            <p className={`text-2xl font-light ${status === "ok" ? "text-primary" : "text-muted-foreground"}`}>
++              {renderCount(readyCount)}
++            </p>
++            {counterHint ? <p className="text-xs text-muted-foreground">{counterHint}</p> : null}
+           </div>
+           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+             <p className="text-muted-foreground">In progress</p>
+-            <p className="text-2xl font-light text-primary">{activeCount}</p>
++            <p className={`text-2xl font-light ${status === "ok" ? "text-primary" : "text-muted-foreground"}`}>
++              {renderCount(activeCount)}
++            </p>
++            {counterHint ? <p className="text-xs text-muted-foreground">{counterHint}</p> : null}
+           </div>
+           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+             <p className="text-muted-foreground">Needs attention</p>
+-            <p className="text-2xl font-light text-primary">{blockedCount}</p>
++            <p className={`text-2xl font-light ${status === "ok" ? "text-primary" : "text-muted-foreground"}`}>
++              {status === "ok" ? blockedCount : "—"}
++            </p>
++            {counterHint ? <p className="text-xs text-muted-foreground">{counterHint}</p> : null}
+           </div>
+           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
+             <p className="text-muted-foreground">Finished</p>
+-            <p className="text-2xl font-light text-primary">{finishedCount}</p>
++            <p className={`text-2xl font-light ${status === "ok" ? "text-primary" : "text-muted-foreground"}`}>
++              {renderCount(finishedCount)}
++            </p>
++            {counterHint ? <p className="text-xs text-muted-foreground">{counterHint}</p> : null}
+           </div>
+         </section>
+ 
+@@ -456,7 +564,26 @@ function TasksPageContent() {
+         ) : null}
+ 
+         {status === "loading" && <p className="text-muted-foreground">Loading work cards…</p>}
+-        {status === "error" && <p className="text-destructive">Error: {error}</p>}
++        {status === "error" && (
++          <section
++            className="rounded-2xl border border-rose-500/40 bg-rose-500/5 p-5 space-y-2"
++            aria-live="polite"
++            data-placeholder="true"
++          >
++            <h2 className="text-lg font-medium">Task data could not be loaded</h2>
++            <p className="text-sm text-muted-foreground">
++              Could not load tasks from the API. You can retry once the service is responsive.
++            </p>
++            <p className="text-sm text-destructive">Error detail: {error}</p>
++            <button
++              type="button"
++              onClick={() => void loadRows()}
++              className="inline-flex rounded-lg border border-rose-500/50 px-3 py-1.5 text-sm font-medium text-rose-200 hover:bg-rose-500/20 transition"
++            >
++              Retry loading tasks
++            </button>
++          </section>
++        )}
+ 
+         {status === "ok" && (
+           <>
+diff --git a/web/lib/api.ts b/web/lib/api.ts
+index 840426ed..9f75ceda 100644
+--- a/web/lib/api.ts
++++ b/web/lib/api.ts
+@@ -34,16 +34,22 @@ function _resolveApiEnvUrl(envValue: string): string | null {
+ 
+ export function getApiBase(): string {
+   // In the browser, use the Next.js rewrite proxy (empty base = relative /api/* paths)
+-  // to avoid CORS issues. Server components can use the full URL directly.
++  // to avoid cross-origin/CORS issues. Server components can use the full URL directly.
+   const isBrowser = typeof window !== "undefined";
+   const env = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL;
+   const resolved = env ? _resolveApiEnvUrl(env) : null;
+   if (resolved) {
+-    // If running in the browser and pointing at a remote API, use the proxy instead
+-    if (isBrowser && resolved !== DEV_API_URL) return "";
++    if (isBrowser) return "";
+     return resolved;
+   }
+   // In dev with no env set, browser uses proxy, server uses localhost
+   if (isBrowser) return "";
+   return DEV_API_URL;
+ }
++
++export function getApiUrl(path: string): string {
++  const trimmed = path.trim();
++  if (!trimmed) return "";
++  const normalized = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
++  return `${getApiBase()}${normalized}`;
++}
+diff --git a/web/next.config.ts b/web/next.config.ts
+index 95d257a2..a6400727 100644
+--- a/web/next.config.ts
++++ b/web/next.config.ts
+@@ -23,7 +23,12 @@ const securityHeaders = [
+   },
+ ];
+ 
+-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || "http://api:8000";
++const _trimTrailingSlash = (value: string): string =>
++  value.endsWith("/") ? value.slice(0, -1) : value;
++
++const API_BASE = _trimTrailingSlash(
++  process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || "http://api:8000",
++);
+ 
+ const nextConfig: NextConfig = {
+   output: "standalone",
