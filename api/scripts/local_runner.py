@@ -3052,26 +3052,52 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
                 capture_output=True, text=True, timeout=30, cwd=str(wt_path),
             )
 
-        # Push BRANCH to origin using gh auth token for credentials
+        # Push BRANCH to origin using direct HTTPS URL with token
+        # This avoids git remote-https helper issues in worktrees
         gh_token = ""
+        for gh_cmd in ["gh", "ghx"]:
+            try:
+                gh_result = subprocess.run(
+                    [gh_cmd, "auth", "token"],
+                    capture_output=True, text=True, timeout=10,
+                )
+                if gh_result.returncode == 0 and gh_result.stdout.strip():
+                    gh_token = gh_result.stdout.strip()
+                    break
+            except FileNotFoundError:
+                continue
+            except Exception:
+                continue
+
+        # Get the repo URL from git remote
+        remote_url = ""
         try:
-            gh_result = subprocess.run(
-                ["gh", "auth", "token"],
-                capture_output=True, text=True, timeout=10,
+            remote_result = subprocess.run(
+                ["git", "remote", "get-url", "origin"],
+                capture_output=True, text=True, timeout=5, cwd=str(wt_path),
             )
-            gh_token = gh_result.stdout.strip()
+            remote_url = remote_result.stdout.strip()
         except Exception:
             pass
 
-        push_cmd = ["git", "push", "origin", branch]
         push_env = dict(os.environ)
-        if gh_token:
-            push_cmd = [
-                "git",
-                "-c", f"url.https://x-access-token:{gh_token}@github.com/.insteadOf=https://github.com/",
-                "push", "origin", branch,
-            ]
-            push_env["SKIP_PR_GUARD"] = "1"
+        push_env["SKIP_PR_GUARD"] = "1"
+
+        if gh_token and "github.com" in remote_url:
+            # Extract owner/repo from remote URL
+            import re as _re
+            match = _re.search(r"github\.com[:/]([^/]+/[^/.]+)", remote_url)
+            if match:
+                repo_path = match.group(1).rstrip(".git")
+                token_url = f"https://x-access-token:{gh_token}@github.com/{repo_path}.git"
+                push_cmd = ["git", "push", token_url, f"HEAD:refs/heads/{branch}"]
+            else:
+                push_cmd = [
+                    "git", "-c", f"url.https://x-access-token:{gh_token}@github.com/.insteadOf=https://github.com/",
+                    "push", "origin", branch,
+                ]
+        else:
+            push_cmd = ["git", "push", "origin", branch]
 
         push = subprocess.run(
             push_cmd,
