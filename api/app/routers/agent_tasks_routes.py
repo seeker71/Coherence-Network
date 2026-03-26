@@ -182,17 +182,25 @@ async def update_task(
     worker_hint = data.worker_id or ""
     if data.status == TaskStatus.RUNNING and worker_hint:
         from app.services import federation_service
-        known_nodes = federation_service.get_known_node_ids() if hasattr(federation_service, "get_known_node_ids") else set()
-        if known_nodes:
+        try:
+            known = federation_service.list_nodes()
+            known_ids = {n["node_id"] for n in known}
+            known_hosts = {n.get("hostname", "") for n in known if n.get("hostname")}
+            worker_host = worker_hint.split(":")[0] if ":" in worker_hint else worker_hint
             is_known = any([
-                any(worker_hint.startswith(nid) for nid in known_nodes),
+                any(worker_hint.startswith(nid) for nid in known_ids),
+                worker_host in known_hosts,
                 worker_hint.startswith("manual"),
                 worker_hint.startswith("proof"),
                 worker_hint.startswith("claude"),
             ])
-            if not is_known:
+            if not is_known and known_ids:
                 logger.warning("BLOCKED_CLAIM task=%s worker=%s — not a registered node", task_id, worker_hint)
                 raise HTTPException(status_code=403, detail=f"Worker '{worker_hint}' is not a registered federation node")
+        except HTTPException:
+            raise
+        except Exception:
+            pass  # Don't block on federation service errors
     existing_task = agent_service.get_task(task_id)
     previous_status_value = task_status_value(existing_task)
     context_patch = target_state_context_patch(data)
