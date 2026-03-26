@@ -505,6 +505,13 @@ def heartbeat_node(
         )
 
 
+def get_known_node_ids() -> set[str]:
+    """Return the set of registered federation node IDs."""
+    _ensure_schema()
+    with _session() as s:
+        return {r.node_id for r in s.query(FederationNodeRecord).all()}
+
+
 def list_nodes() -> list[dict]:
     """Return all registered federation nodes."""
     _ensure_schema()
