@@ -212,7 +212,7 @@ def _detect_providers() -> dict[str, dict]:
         # -y is required: without it, tool calls block on approval (issue #12362)
         "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
         # cursor agent -p: Cursor's headless agent mode
-        "cursor": {"cmd": ["agent", "--model", "auto"], "append_prompt": True, "check_binary": "agent"},
+        "cursor": {"cmd": ["agent", "--model", "auto", "--trust", "-p"], "append_prompt": True, "check_binary": "agent"},
         # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
@@ -631,7 +631,7 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
     _PROVIDER_CAPS = {
         "claude":       {"file_write", "git", "tools", "gh", "ssh", "reasoning"},
         "codex":        {"file_write", "git", "tools", "gh", "reasoning"},
-        "cursor":       {"file_create", "tools", "gh", "reasoning"},  # unreliable file_write on Windows (v2025.10.22); Thompson will demote
+        "cursor":       {"file_write", "git", "tools", "gh", "reasoning"},  # v2026.03.25 + --trust fixes file editing
         "gemini":       {"file_write", "git", "tools", "gh", "reasoning"},
         "ollama-local": {"text_only"},                   # no tools, no file access
         "ollama-cloud": {"text_only"},                   # no tools, no file access
