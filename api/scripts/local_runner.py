@@ -2091,6 +2091,10 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         if isinstance(updated, dict):
             task = updated
 
+    # Operational phases run directly — no AI provider needed
+    if task_type in ("merge", "deploy", "verify", "reflect") and not dry_run:
+        return _run_operational_phase(task, task_id, task_type)
+
     # Select provider (data-driven)
     provider = select_provider(task_type, task=task)
 
