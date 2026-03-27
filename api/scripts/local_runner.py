@@ -1697,26 +1697,51 @@ REVIEW INSTRUCTIONS:
 SPEC INSTRUCTIONS:
 - Write a detailed spec file at specs/<idea_id>.md
 - Include: Summary, Requirements, API changes, Data model, Verification criteria, Risks
-- Commit: git add specs/ && git commit -m "spec(<idea>): <summary>"
-- Minimum 500 chars of spec content."""
+- Minimum 500 chars of spec content.
+
+BEFORE FINISHING — you MUST run these commands:
+  echo "*.pyc\n__pycache__/\n.task-*\ndata/coherence.db" >> .gitignore
+  git add -A
+  git diff --cached --stat
+  git commit -m "spec(<idea>): <summary>"
+Do NOT push or create PRs — the runner handles that."""
     elif task_type == "impl":
         type_instructions = f"""
 IMPL INSTRUCTIONS:
 - Write actual Python/TypeScript code files in the repository at {_REPO_DIR}
 - You MUST create or modify real files, not just describe what you would do.
-- After writing, commit: git add <files> && git commit -m "impl(<idea>): <summary>"
-- Do NOT push or create PRs — the runner handles that.
 - If you cannot write files, output the FULL file contents inline (not summaries).
-- Minimum 200 chars of real code or detailed inline output."""
+- Minimum 200 chars of real code or detailed inline output.
+
+Where to put code:
+- API endpoints: api/app/routers/<name>.py
+- Services: api/app/services/<name>.py
+- Models: api/app/models/<name>.py
+- Web pages: web/app/<route>/page.tsx
+- CLI: cli/bin/cc.mjs
+
+BEFORE FINISHING — you MUST run these commands:
+  echo "*.pyc\\n__pycache__/\\n.task-*\\ndata/coherence.db\\n.codex*" >> .gitignore
+  git add -A
+  git diff --cached --stat
+  git commit -m "impl(<idea>): <summary>"
+Do NOT push or create PRs — the runner handles that.
+Do NOT just describe what you would do — WRITE THE FILES."""
     elif task_type == "test":
         type_instructions = f"""
 TEST INSTRUCTIONS:
-- Write test files (pytest) in the repository at {_REPO_DIR}
+- Write pytest test files in the repository at {_REPO_DIR}
 - Place tests in api/tests/ following existing patterns.
-- After writing, commit: git add <files> && git commit -m "test(<idea>): <summary>"
-- Do NOT push or create PRs — the runner handles that.
-- Run tests if possible: cd api && python -m pytest <test_file> -x --timeout=60
-- If you cannot write files, output the FULL test code inline."""
+- Run tests after writing: cd api && python -m pytest <test_file> -v
+- If tests fail, fix them until they pass.
+
+BEFORE FINISHING — you MUST run these commands:
+  echo "*.pyc\\n__pycache__/\\n.task-*\\ndata/coherence.db" >> .gitignore
+  git add -A
+  git diff --cached --stat
+  git commit -m "test(<idea>): <summary>"
+Do NOT push or create PRs — the runner handles that.
+Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>"""
     else:
         type_instructions = f"""
 Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
