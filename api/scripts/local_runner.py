@@ -2676,6 +2676,77 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                     has_code_changes = True
                     log.info("VERIFIED task=%s code_files=%d total_files=%d", task_id, len(code_changes), len(new_changes))
 
+                    # DIF auto-verify: run DIF on each changed code file
+                    dif_results = []
+                    for changed_file in sorted(code_changes):
+                        fpath = _status_line_path(changed_file)
+                        # Detect language from extension
+                        ext_to_lang = {
+                            ".py": "python", ".js": "javascript", ".mjs": "javascript",
+                            ".ts": "typescript", ".tsx": "typescript",
+                            ".cpp": "cpp", ".c": "c", ".h": "cpp",
+                            ".rs": "rust", ".go": "go", ".java": "java",
+                        }
+                        ext = os.path.splitext(fpath)[1].lower()
+                        lang = ext_to_lang.get(ext)
+                        if not lang:
+                            continue
+                        full_path = os.path.join(str(_REPO_DIR), fpath)
+                        if not os.path.isfile(full_path):
+                            continue
+                        try:
+                            code_content = open(full_path, "r", encoding="utf-8", errors="replace").read()
+                            if len(code_content) < 20 or len(code_content) > 50000:
+                                continue  # Skip trivial or huge files
+                            import httpx
+                            dif_resp = httpx.post(
+                                "https://dif.merly.ai/api/v2/dif/verify",
+                                json={"language": lang, "code": code_content},
+                                timeout=30.0,
+                            )
+                            if dif_resp.status_code == 200:
+                                dif_data = dif_resp.json()
+                                dif_result = {
+                                    "file": fpath,
+                                    "language": lang,
+                                    "event_id": dif_data.get("eventId", ""),
+                                    "trust_signal": dif_data.get("trust_signal", "?"),
+                                    "verification": dif_data.get("scores", {}).get("verification"),
+                                    "semantic_support": dif_data.get("scores", {}).get("semantic_support"),
+                                    "anomalies": dif_data.get("counts", {}).get("anomalies", 0),
+                                    "blocks": dif_data.get("block_model", {}).get("blocks_analyzed", 0),
+                                    "latency_ms": dif_data.get("latency_ms"),
+                                }
+                                dif_results.append(dif_result)
+                                log.info(
+                                    "DIF_VERIFY task=%s file=%s trust=%s verification=%s anomalies=%s event=%s",
+                                    task_id[:12], fpath, dif_result["trust_signal"],
+                                    dif_result["verification"], dif_result["anomalies"],
+                                    dif_result["event_id"][:12] if dif_result["event_id"] else "?",
+                                )
+                                # Record DIF feedback to API
+                                try:
+                                    api("POST", "/api/dif/record", {
+                                        "event_id": dif_result["event_id"],
+                                        "task_id": task_id,
+                                        "language": lang,
+                                        "trust_signal": dif_result["trust_signal"],
+                                        "verification_score": dif_result["verification"],
+                                        "semantic_support": dif_result["semantic_support"],
+                                        "anomaly_count": dif_result["anomalies"],
+                                        "provider": provider,
+                                        "idea_id": context.get("idea_id", ""),
+                                        "file_path": fpath,
+                                    })
+                                except Exception:
+                                    pass  # best-effort recording
+                        except Exception as e:
+                            log.debug("DIF_VERIFY_FAILED file=%s error=%s", fpath, e)
+                    if dif_results:
+                        output += f"\n\nDIF_RESULTS: {len(dif_results)} files verified"
+                        for dr in dif_results:
+                            output += f"\n  {dr['file']}: trust={dr['trust_signal']} verification={dr['verification']} anomalies={dr['anomalies']} event={dr['event_id'][:16]}"
+
                     # Runner stages and commits — don't rely on provider to do it
                     cwd = str(_REPO_DIR)
                     subprocess.run(["git", "add", "-A"], capture_output=True, timeout=10, cwd=cwd)
