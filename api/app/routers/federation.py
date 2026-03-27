@@ -105,6 +105,7 @@ async def heartbeat_node(
         capabilities=capabilities_payload,
         refresh_capabilities=refresh_capabilities,
         git_sha=body.git_sha,
+        system_metrics=body.system_metrics,
     )
     if result is None:
         raise HTTPException(status_code=404, detail="Node not found")
