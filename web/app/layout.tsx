@@ -3,6 +3,7 @@ import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
 
 import SiteHeader from "@/components/site_header";
+import SiteFooter from "@/components/site-footer";
 import LiveUpdatesController from "@/components/live_updates_controller";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 
@@ -53,6 +54,7 @@ export default function RootLayout({
         <main id="main-content">
           {children}
         </main>
+        <SiteFooter />
       </body>
     </html>
   );
