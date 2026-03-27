@@ -2001,8 +2001,10 @@ def execute_with_provider(
     except Exception as e:
         log.warning("WRAPPER failed (falling back to raw subprocess): %s", e)
 
-    # Fallback: raw subprocess (original behavior)
+    # Fallback: raw subprocess with live progress reporting
     start = time.time()
+    # task_id for progress reporting (set by caller context)
+    _current_task_id = getattr(execute_with_provider, "_current_task_id", "")
 
     creation_flags = 0
     if sys.platform == "win32":
@@ -2019,12 +2021,58 @@ def execute_with_provider(
             cwd=str(_REPO_DIR), creationflags=creation_flags,
             shell=use_shell,
         )
+
+        # Stream stdout line-by-line for live progress
+        lines: list[str] = []
+        last_progress_time = time.time()
+        _PROGRESS_INTERVAL = 15  # Post progress every 15 seconds
+
+        if stdin_input and proc.stdin:
+            proc.stdin.write(stdin_input)
+            proc.stdin.close()
+
         try:
-            stdout, stderr = proc.communicate(
-                input=stdin_input, timeout=timeout,
-            )
+            while True:
+                line = proc.stdout.readline() if proc.stdout else ""
+                if not line and proc.poll() is not None:
+                    break
+                if line:
+                    lines.append(line)
+                    # Post progress at intervals
+                    now = time.time()
+                    if _current_task_id and (now - last_progress_time) >= _PROGRESS_INTERVAL:
+                        elapsed = int(now - start)
+                        preview = (lines[-1] if lines else "").strip()[:120]
+                        _post_activity(_current_task_id, "progress", {
+                            "provider": provider,
+                            "task_type": task_type,
+                            "elapsed_s": elapsed,
+                            "lines": len(lines),
+                            "preview": preview,
+                        })
+                        last_progress_time = now
+
+                # Check timeout
+                if (time.time() - start) > timeout:
+                    raise subprocess.TimeoutExpired(cmd, timeout)
+
+            # Collect any remaining stderr
+            stderr_out = proc.stderr.read() if proc.stderr else ""
             duration = time.time() - start
-            output = stdout or stderr or "(no output)"
+            stdout_text = "".join(lines)
+            output = stdout_text or stderr_out or "(no output)"
+
+            # Post final progress
+            if _current_task_id:
+                _post_activity(_current_task_id, "provider_done", {
+                    "provider": provider,
+                    "task_type": task_type,
+                    "duration_s": round(duration, 1),
+                    "lines": len(lines),
+                    "output_chars": len(output),
+                    "success": proc.returncode == 0,
+                })
+
             return proc.returncode == 0, output, duration
         except subprocess.TimeoutExpired:
             # Kill entire process tree on timeout
@@ -2228,7 +2276,10 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     log.info("EXECUTING task=%s type=%s provider=%s", task_id, task_type, provider)
     _post_activity(task_id, "executing", {"provider": provider, "task_type": task_type})
 
+    # Pass task_id to execute_with_provider for live progress reporting
+    execute_with_provider._current_task_id = task_id
     success, output, duration = execute_with_provider(provider, prompt, task_type, complexity_estimate)
+    execute_with_provider._current_task_id = ""
 
     # Stop control channel
     if control_channel:
