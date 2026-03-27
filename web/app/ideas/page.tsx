@@ -33,6 +33,7 @@ type IdeaWithScore = {
   confidence: number;
   resistance_risk: number;
   manifestation_status: string;
+  phase?: "ice" | "water" | "gas";
   stage?: string;
   interfaces: string[];
   open_questions: IdeaQuestion[];
@@ -43,6 +44,8 @@ type IdeaWithScore = {
   parent_idea_id?: string | null;
   child_idea_ids?: string[];
 };
+
+type IdeaPhase = "ice" | "water" | "gas";
 
 type IdeasResponse = {
   ideas: IdeaWithScore[];
@@ -159,6 +162,37 @@ function stageIndicator(status: string): { emoji: string; label: string } {
   return { emoji: "\uD83D\uDCCB", label: "Not started" };
 }
 
+function resolvePhase(idea: IdeaWithScore): IdeaPhase {
+  const phase = (idea.phase ?? "").toLowerCase();
+  if (phase === "ice" || phase === "water" || phase === "gas") return phase;
+  const status = idea.manifestation_status.trim().toLowerCase();
+  if (status === "validated") return "ice";
+  if (status === "partial") return "water";
+  return "gas";
+}
+
+function phasePresentation(phase: IdeaPhase): { icon: string; label: string; cardClass: string } {
+  if (phase === "ice") {
+    return {
+      icon: "\uD83E\uDDCA",
+      label: "Ice",
+      cardClass: "border-cyan-400/35 bg-cyan-500/5 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.15)]",
+    };
+  }
+  if (phase === "water") {
+    return {
+      icon: "\uD83D\uDCA7",
+      label: "Water",
+      cardClass: "animate-warm-pulse border-sky-400/35 bg-sky-500/10",
+    };
+  }
+  return {
+    icon: "\u2601\uFE0F",
+    label: "Gas",
+    cardClass: "border-slate-300/20 bg-slate-400/5 opacity-80",
+  };
+}
+
 function whatItNeeds(idea: IdeaWithScore): string {
   const s = idea.manifestation_status.trim().toLowerCase();
   if (s === "validated") return "Proven — ready to scale";
@@ -225,6 +259,8 @@ function IdeaHierarchySubtree({
 }) {
   const kids = getChildrenForParent(idea.id, allIdeas, byId);
   const role = hierarchyRoleLabel(idea);
+  const phase = resolvePhase(idea);
+  const phaseUi = phasePresentation(phase);
   const valueGapPct = idea.potential_value > 0
     ? Math.min(((idea.potential_value - idea.actual_value) / idea.potential_value) * 100, 100)
     : 0;
@@ -233,7 +269,7 @@ function IdeaHierarchySubtree({
   return (
     <div className={depth > 0 ? "border-l border-border/40 pl-4 ml-1 sm:ml-2" : undefined}>
       <article
-        className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-3"
+        className={`hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-3 ${phaseUi.cardClass}`}
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
@@ -254,6 +290,10 @@ function IdeaHierarchySubtree({
             </span>
             <span className="text-xs rounded-full border border-border/40 px-3 py-1 bg-muted/30 text-muted-foreground">
               {humanizeManifestationStatus(idea.manifestation_status)}
+            </span>
+            <span className="text-xs rounded-full border border-border/40 px-3 py-1 bg-background/40 text-foreground/85">
+              <span aria-hidden="true">{phaseUi.icon}</span>{" "}
+              {phaseUi.label}
             </span>
           </div>
         </div>

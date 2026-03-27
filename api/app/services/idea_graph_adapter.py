@@ -13,6 +13,7 @@ from typing import Any
 
 from app.models.idea import (
     Idea,
+    IdeaPhase,
     IdeaQuestion,
     IdeaStage,
     IdeaType,
@@ -41,6 +42,10 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         stage = IdeaStage(node.get("stage", "none") or "none")
     except (ValueError, KeyError):
         stage = IdeaStage.NONE
+    try:
+        phase = IdeaPhase(node.get("phase", "gas") or "gas")
+    except (ValueError, KeyError):
+        phase = IdeaPhase.GAS
 
     # Parse open questions
     raw_questions = node.get("open_questions", [])
@@ -76,6 +81,7 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         confidence=float(node.get("confidence", 0.5) or 0.5),
         manifestation_status=status,
         stage=stage,
+        phase=phase,
         interfaces=node.get("interfaces", []) or [],
         idea_type=idea_type,
         parent_idea_id=node.get("parent_idea_id"),
@@ -130,8 +136,7 @@ def save_single_idea(idea: Idea, position: int = 0) -> None:
     props = _idea_to_properties(idea)
 
     # Map manifestation_status to phase
-    status = idea.manifestation_status.value if hasattr(idea.manifestation_status, "value") else str(idea.manifestation_status)
-    phase = "ice" if status == "validated" else "water" if status == "partial" else "gas"
+    phase = idea.phase.value if hasattr(idea.phase, "value") else str(idea.phase or "gas")
 
     if existing:
         graph_service.update_node(idea.id, name=idea.name, description=idea.description, phase=phase, properties=props)

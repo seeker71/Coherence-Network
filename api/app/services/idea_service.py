@@ -33,6 +33,7 @@ from app.models.idea import (
     IdeaShowcaseItem,
     IdeaShowcaseResponse,
     IdeaSelectionResult,
+    IdeaPhase,
     IdeaStage,
     IdeaType,
     PaginationInfo,
@@ -494,7 +495,24 @@ def _idea_to_metadata(idea: Any) -> dict[str, Any]:
         "parent_idea_id": idea.parent_idea_id,
         "child_idea_ids": idea.child_idea_ids or [],
         "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
+        "phase": idea.phase.value if idea.phase else "gas",
     }
+
+
+def _derive_idea_phase(
+    manifestation_status: ManifestationStatus,
+    stage: IdeaStage,
+) -> IdeaPhase:
+    if manifestation_status == ManifestationStatus.VALIDATED or stage == IdeaStage.COMPLETE:
+        return IdeaPhase.ICE
+    if manifestation_status == ManifestationStatus.PARTIAL or stage in {
+        IdeaStage.SPECCED,
+        IdeaStage.IMPLEMENTING,
+        IdeaStage.TESTING,
+        IdeaStage.REVIEWING,
+    }:
+        return IdeaPhase.WATER
+    return IdeaPhase.GAS
 
 
 def _derived_idea_for_id(idea_id: str) -> Idea:
@@ -552,6 +570,11 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
         status = ManifestationStatus(status_str)
     except ValueError:
         status = ManifestationStatus.NONE
+    phase_str = metadata.get("phase")
+    try:
+        phase = IdeaPhase(phase_str) if phase_str else _derive_idea_phase(status, IdeaStage.NONE)
+    except ValueError:
+        phase = _derive_idea_phase(status, IdeaStage.NONE)
 
     return Idea(
         id=idea_id,
@@ -564,6 +587,7 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
         resistance_risk=resistance_risk,
         confidence=max(0.0, min(confidence, 1.0)),
         manifestation_status=status,
+        phase=phase,
         interfaces=interfaces,
         open_questions=[],
         idea_type=idea_type,
@@ -941,6 +965,7 @@ def create_idea(
     parent_idea_id: str | None = None,
     child_idea_ids: list[str] | None = None,
     manifestation_status: ManifestationStatus | None = None,
+    phase: IdeaPhase | None = None,
     value_basis: dict[str, str] | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas(persist_ensures=True)
@@ -958,6 +983,10 @@ def create_idea(
         resistance_risk=resistance_risk if resistance_risk is not None else 2.5,  # Unknown ideas assume moderate risk
         confidence=max(0.0, min(confidence, 1.0)),
         manifestation_status=manifestation_status or ManifestationStatus.NONE,
+        phase=phase or _derive_idea_phase(
+            manifestation_status or ManifestationStatus.NONE,
+            IdeaStage.NONE,
+        ),
         idea_type=idea_type or IdeaType.STANDALONE,
         parent_idea_id=parent_idea_id,
         child_idea_ids=child_idea_ids or [],
@@ -1024,6 +1053,7 @@ def update_idea(
     actual_cost: float | None = None,
     confidence: float | None = None,
     manifestation_status: ManifestationStatus | None = None,
+    phase: IdeaPhase | None = None,
     potential_value: float | None = None,
     estimated_cost: float | None = None,
 ) -> IdeaWithScore | None:
@@ -1055,6 +1085,11 @@ def update_idea(
         if manifestation_status is not None and manifestation_status != idea.manifestation_status:
             changes.append(("manifestation_status", idea.manifestation_status.value, manifestation_status.value))
             idea.manifestation_status = manifestation_status
+            if phase is None:
+                idea.phase = _derive_idea_phase(idea.manifestation_status, idea.stage)
+        if phase is not None and phase != idea.phase:
+            changes.append(("phase", idea.phase.value, phase.value))
+            idea.phase = phase
         if potential_value is not None and potential_value != idea.potential_value:
             changes.append(("potential_value", idea.potential_value, float(potential_value)))
             idea.potential_value = max(0.0, float(potential_value))
@@ -1377,6 +1412,7 @@ def _sync_manifestation_status(idea: Idea) -> None:
     new_ms = _STAGE_TO_MANIFESTATION.get(idea.stage)
     if new_ms is not None:
         idea.manifestation_status = new_ms
+    idea.phase = _derive_idea_phase(idea.manifestation_status, idea.stage)
 
 
 def advance_idea_stage(idea_id: str) -> tuple[IdeaWithScore | None, str | None]:

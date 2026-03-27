@@ -25,6 +25,12 @@ class IdeaStage(str, Enum):
     COMPLETE = "complete"
 
 
+class IdeaPhase(str, Enum):
+    ICE = "ice"
+    WATER = "water"
+    GAS = "gas"
+
+
 IDEA_STAGE_ORDER: list[IdeaStage] = [
     IdeaStage.NONE,
     IdeaStage.SPECCED,
@@ -72,6 +78,7 @@ class Idea(BaseModel):
     parent_idea_id: Optional[str] = None
     child_idea_ids: list[str] = Field(default_factory=list)
     stage: IdeaStage = IdeaStage.NONE
+    phase: IdeaPhase = IdeaPhase.GAS
     value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
@@ -161,6 +168,7 @@ class IdeaUpdate(BaseModel):
     confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     manifestation_status: Optional[ManifestationStatus] = None
     stage: Optional[IdeaStage] = None
+    phase: Optional[IdeaPhase] = None
 
 
 class IdeaCreate(BaseModel):
@@ -181,6 +189,7 @@ class IdeaCreate(BaseModel):
     child_idea_ids: Optional[list[str]] = None
     manifestation_status: Optional[ManifestationStatus] = None
     stage: Optional[IdeaStage] = None
+    phase: Optional[IdeaPhase] = None
     value_basis: Optional[dict[str, str]] = None
 
 

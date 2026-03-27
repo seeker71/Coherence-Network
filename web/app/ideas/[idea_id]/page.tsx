@@ -77,11 +77,23 @@ type IdeaWithScore = {
   confidence: number;
   resistance_risk: number;
   manifestation_status: string;
+  phase?: "ice" | "water" | "gas";
   interfaces: string[];
   open_questions: IdeaQuestion[];
   free_energy_score: number;
   value_gap: number;
 };
+
+function phaseView(phase?: string): { label: string; icon: string; shellClass: string } {
+  const normalized = (phase ?? "").toLowerCase();
+  if (normalized === "ice") {
+    return { label: "Ice", icon: "\uD83E\uDDCA", shellClass: "border-cyan-400/35 bg-cyan-500/10" };
+  }
+  if (normalized === "water") {
+    return { label: "Water", icon: "\uD83D\uDCA7", shellClass: "animate-warm-pulse border-sky-400/35 bg-sky-500/10" };
+  }
+  return { label: "Gas", icon: "\u2601\uFE0F", shellClass: "border-slate-300/25 bg-slate-500/10 opacity-85" };
+}
 
 type FlowItem = {
   idea_id: string;
@@ -331,6 +343,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
   }
 
   const idea = ideaResult.idea;
+  const phase = phaseView(idea.phase);
   const [flowResult, stakes, activity] = await Promise.all([
     loadFlowForIdea(ideaId),
     loadIdeaStakes(ideaId),
@@ -360,6 +373,10 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         <p className="max-w-3xl text-muted-foreground">{idea.description}</p>
         <p className="text-sm text-muted-foreground">
           Current proof level: {humanizeManifestationStatus(idea.manifestation_status)}
+        </p>
+        <p className={`inline-flex items-center gap-1 text-xs rounded-full border px-3 py-1 ${phase.shellClass}`}>
+          <span aria-hidden="true">{phase.icon}</span>
+          <span>{phase.label} state</span>
         </p>
         <IdeaShare
           ideaId={idea.id}
