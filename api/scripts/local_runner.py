@@ -1978,6 +1978,62 @@ def execute_with_provider(
     elif spec.get("append_prompt"):
         cmd.append(prompt)
 
+    # ── Start heartbeat monitoring (works for both wrapper and raw subprocess) ──
+    start = time.time()
+    _current_task_id = getattr(execute_with_provider, "_current_task_id", "")
+    _heartbeat_stop = threading.Event()
+    _HEARTBEAT_INTERVAL = 10
+
+    def _heartbeat_loop(task_id: str, cwd: str, prov: str, ttype: str):
+        last_status = ""
+        while not _heartbeat_stop.is_set():
+            _heartbeat_stop.wait(_HEARTBEAT_INTERVAL)
+            if _heartbeat_stop.is_set():
+                break
+            elapsed = int(time.time() - start)
+            git_status = ""
+            files_changed = 0
+            try:
+                gs = subprocess.run(
+                    ["git", "status", "--porcelain"],
+                    capture_output=True, text=True, timeout=5, cwd=cwd,
+                )
+                git_status = gs.stdout.strip()
+                files_changed = len([l for l in git_status.splitlines() if l.strip()])
+            except Exception:
+                pass
+            status_changed = git_status != last_status
+            is_heartbeat = (elapsed % 30) < _HEARTBEAT_INTERVAL
+            if status_changed or is_heartbeat:
+                new_files = [l[3:].strip() for l in git_status.splitlines() if l.startswith("??")]
+                modified_files = [l[3:].strip() for l in git_status.splitlines() if l.startswith(" M") or l.startswith("M ")]
+                summary = ""
+                if new_files:
+                    summary += f"new: {', '.join(f.split('/')[-1] for f in new_files[:3])}"
+                    if len(new_files) > 3:
+                        summary += f" +{len(new_files)-3}"
+                if modified_files:
+                    if summary:
+                        summary += " | "
+                    summary += f"modified: {', '.join(f.split('/')[-1] for f in modified_files[:3])}"
+                    if len(modified_files) > 3:
+                        summary += f" +{len(modified_files)-3}"
+                _post_activity(task_id, "heartbeat", {
+                    "provider": prov, "task_type": ttype, "elapsed_s": elapsed,
+                    "files_changed": files_changed, "git_summary": summary or "no changes yet",
+                    "new_files": len(new_files), "modified_files": len(modified_files),
+                })
+                last_status = git_status
+
+    heartbeat_thread = None
+    if _current_task_id:
+        heartbeat_thread = threading.Thread(
+            target=_heartbeat_loop,
+            args=(_current_task_id, str(_REPO_DIR), provider, task_type),
+            daemon=True,
+        )
+        heartbeat_thread.start()
+
     # Use ProviderWrapper for process-level control (checkpoint, steer, abort)
     control_dir = Path(os.environ.get("CC_TASK_WORKDIR", str(_REPO_DIR)))
     try:
@@ -1990,7 +2046,19 @@ def execute_with_provider(
             stdin_input=stdin_input,
         )
         log.info("WRAPPER executing %s (timeout=%ds)", provider, timeout)
-        return wrapper.run()
+        result = wrapper.run()
+        _heartbeat_stop.set()
+        if heartbeat_thread:
+            heartbeat_thread.join(timeout=2)
+        # Post completion
+        if _current_task_id:
+            _post_activity(_current_task_id, "provider_done", {
+                "provider": provider, "task_type": task_type,
+                "duration_s": round(time.time() - start, 1),
+                "output_chars": len(result[1]) if len(result) > 1 else 0,
+                "success": result[0] if result else False,
+            })
+        return result
     except ImportError:
         pass  # wrapper not available — fall back to raw subprocess
     except Exception as e:
