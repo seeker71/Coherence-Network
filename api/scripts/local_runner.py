@@ -2191,17 +2191,8 @@ def execute_with_provider(
     # Codex: `codex exec --full-auto` for everything (full tool access)
     # Cursor: `agent --model <model>` (positional arg, full tool access)
 
-    # Cursor: never use -p (disables tools), never use stdin (hangs).
-    # Proven working: `agent --model <model> "prompt"` (positional arg)
-    # Can write files inside repo, NOT outside (sandbox).
-    if provider == "cursor":
-        agent_bin = shutil.which("agent") or "agent"
-        model = "gpt-5.3-codex" if task_type in ("impl", "test", "spec") else "auto"
-        cmd = [agent_bin, "--model", model]
-        spec = dict(spec)  # copy to avoid mutating registry
-        spec["append_prompt"] = True
-        spec["stdin_prompt"] = False
-        log.info("CURSOR_CMD task=%s mode=positional_arg model=%s", task_type, model)
+    # Cursor: uses default config `agent --model auto --trust -p` (set in _detect_providers)
+    # --trust skips workspace trust dialog, -p is non-interactive, --model auto lets cursor pick
 
     if spec.get("stdin_prompt"):
         stdin_input = prompt
