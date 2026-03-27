@@ -3760,6 +3760,22 @@ _MAX_PARALLEL = int(os.environ.get("CC_MAX_PARALLEL", "3"))
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 
 
+def _worktree_path_for_branch(porcelain: str, branch: str) -> Path | None:
+    """Return existing worktree path for branch from `git worktree list --porcelain`."""
+    wanted = f"refs/heads/{branch}"
+    current_path: Path | None = None
+    for raw_line in porcelain.splitlines():
+        line = raw_line.strip()
+        if line.startswith("worktree "):
+            current_path = Path(line[len("worktree ") :].strip())
+            continue
+        if line.startswith("branch ") and current_path is not None:
+            branch_ref = line[len("branch ") :].strip()
+            if branch_ref == wanted:
+                return current_path
+    return None
+
+
 def _create_worktree(task_id: str) -> Path | None:
     """Create a git worktree for isolated task execution.
 
@@ -3770,22 +3786,87 @@ def _create_worktree(task_id: str) -> Path | None:
     wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
     repo_root = str(_REPO_DIR)
+    base_ref = "origin/main"
+
+    def _add_worktree() -> subprocess.CompletedProcess:
+        # -B makes retries idempotent when a stale local task branch exists.
+        return subprocess.run(
+            ["git", "worktree", "add", "-B", branch, str(wt_path), base_ref],
+            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        )
+
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
-        # Fix 1: fetch latest origin/main before branching
         subprocess.run(
+            ["git", "worktree", "prune"],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+        # Fetch latest origin/main before branching.
+        fetch = subprocess.run(
             ["git", "fetch", "origin", "main", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
-        # Branch from origin/main (not local HEAD which may be stale)
-        base_ref = "origin/main"
-        subprocess.run(
-            ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
-        )
+        if fetch.returncode != 0:
+            log.warning(
+                "WORKTREE_FETCH_FAILED task=%s base=%s stderr=%s",
+                slug,
+                base_ref,
+                (fetch.stderr or "").strip()[:300],
+            )
+            # Keep runner progressing in degraded mode if origin/main is temporarily unavailable.
+            base_ref = "HEAD"
+
         if wt_path.exists():
+            rm_existing = subprocess.run(
+                ["git", "worktree", "remove", "--force", str(wt_path)],
+                capture_output=True, text=True, timeout=20, cwd=repo_root,
+            )
+            if rm_existing.returncode != 0:
+                log.warning(
+                    "WORKTREE_PRE_REMOVE_FAILED task=%s path=%s stderr=%s",
+                    slug,
+                    wt_path,
+                    (rm_existing.stderr or "").strip()[:300],
+                )
+                shutil.rmtree(wt_path, ignore_errors=True)
+
+        add = _add_worktree()
+        if add.returncode != 0:
+            log.warning(
+                "WORKTREE_ADD_FAILED task=%s branch=%s base=%s stderr=%s",
+                slug,
+                branch,
+                base_ref,
+                (add.stderr or "").strip()[:300],
+            )
+            # Common after restart: branch already checked out in stale worktree metadata.
+            listed = subprocess.run(
+                ["git", "worktree", "list", "--porcelain"],
+                capture_output=True, text=True, timeout=10, cwd=repo_root,
+            )
+            if listed.returncode == 0:
+                stale_wt = _worktree_path_for_branch(listed.stdout, branch)
+                if stale_wt:
+                    subprocess.run(
+                        ["git", "worktree", "remove", "--force", str(stale_wt)],
+                        capture_output=True, text=True, timeout=20, cwd=repo_root,
+                    )
+                    subprocess.run(
+                        ["git", "worktree", "prune"],
+                        capture_output=True, text=True, timeout=10, cwd=repo_root,
+                    )
+                    add = _add_worktree()
+
+        if add.returncode == 0 and wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path
+        log.warning(
+            "WORKTREE_FAILED task=%s branch=%s base=%s stderr=%s",
+            slug,
+            branch,
+            base_ref,
+            (add.stderr or "").strip()[:300],
+        )
     except Exception as e:
         log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
     return None

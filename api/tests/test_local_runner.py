@@ -18,6 +18,71 @@ class _DummyResponse:
         return self._payload
 
 
+class _ProcResult:
+    def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def test_worktree_path_for_branch_parses_porcelain_output() -> None:
+    porcelain = (
+        "worktree /tmp/repo/.worktrees/task-other\n"
+        "HEAD 1111111\n"
+        "branch refs/heads/task/task-other\n"
+        "worktree /tmp/repo/.worktrees/task-task_3471277b825\n"
+        "HEAD 2222222\n"
+        "branch refs/heads/task/task_3471277b825\n"
+    )
+
+    found = local_runner._worktree_path_for_branch(porcelain, "task/task_3471277b825")
+
+    assert found == Path("/tmp/repo/.worktrees/task-task_3471277b825")
+
+
+def test_create_worktree_recovers_when_branch_is_checked_out_elsewhere(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    task_id = "task_3471277b825e13d1"
+    slug = task_id[:16]
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    wt_base = repo_root / ".worktrees"
+    target_wt = wt_base / f"task-{slug}"
+    stale_wt = wt_base / "task-stale-branch"
+    state = {"add_attempts": 0}
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _ProcResult:
+        calls.append(args)
+        if args[:4] == ["git", "worktree", "add", "-B"]:
+            state["add_attempts"] += 1
+            if state["add_attempts"] == 1:
+                return _ProcResult(returncode=1, stderr="fatal: branch is already checked out")
+            target_wt.mkdir(parents=True, exist_ok=True)
+            return _ProcResult(returncode=0)
+        if args == ["git", "worktree", "list", "--porcelain"]:
+            return _ProcResult(
+                returncode=0,
+                stdout=(
+                    f"worktree {stale_wt}\n"
+                    "HEAD abcdef0\n"
+                    f"branch refs/heads/task/{slug}\n"
+                ),
+            )
+        return _ProcResult(returncode=0)
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo_root)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    created = local_runner._create_worktree(task_id)
+
+    assert created == target_wt
+    assert state["add_attempts"] == 2
+    assert ["git", "worktree", "remove", "--force", str(stale_wt)] in calls
+
+
 def test_claim_and_complete_task_with_mocked_api_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, dict[str, Any] | None]] = []
 
