@@ -1789,10 +1789,14 @@ def _push_and_pr(
         )
         code_files = []
         for line in status.stdout.splitlines():
-            if not line.strip() or line.startswith("?"):
+            if not line.strip():
                 continue
-            path = line[3:].strip().strip('"').split(" -> ")[-1]
-            if path not in _CONTROL_FILES and not any(path.startswith(p) for p in (".codex", "__pycache__", ".tmp")):
+            # Untracked files show as "?? path" — these are NEW files from impl
+            if line.startswith("??"):
+                path = line[3:].strip().strip('"')
+            else:
+                path = line[3:].strip().strip('"').split(" -> ")[-1]
+            if path not in _CONTROL_FILES and not any(path.startswith(p) for p in (".codex", "__pycache__", ".tmp", ".task")):
                 code_files.append(path)
 
         if not code_files:
