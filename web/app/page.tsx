@@ -319,7 +319,7 @@ export default async function Home() {
           <Link href="/invest" className="hover:text-foreground transition-colors">Invest</Link>
           <Link href="/contribute" className="hover:text-foreground transition-colors">Contribute</Link>
         </div>
-        <div className="flex flex-wrap justify-center gap-4 text-xs text-foreground/80 mb-4">
+        <div className="flex flex-wrap justify-center gap-4 text-xs text-foreground/85 mb-4">
           <a href="https://github.com/seeker71/Coherence-Network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
           <a href="https://www.npmjs.com/package/coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">CLI (npm)</a>
           <a href="https://www.npmjs.com/package/coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">MCP Server</a>
