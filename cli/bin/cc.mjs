@@ -28,7 +28,7 @@ import { publishDiag, startDiagMode } from "../lib/commands/diag_publish.mjs";
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
-import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart } from "../lib/commands/tasks.mjs";
+import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -80,6 +80,7 @@ const COMMANDS = {
   dif:           () => handleDif(args),
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
+  watch:         () => watchTask(args),
   help:          () => showHelp(),
 };
 
@@ -113,6 +114,7 @@ async function handleTask(args) {
     case "claim":   return claimTask(args.slice(1));
     case "report":  return reportTask(args.slice(1));
     case "seed":    return seedTask(args.slice(1));
+    case "watch":   return watchTask(args.slice(1));
     default:        return showTask(args);
   }
 }

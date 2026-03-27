@@ -337,3 +337,103 @@ export async function streamStart(args) {
   });
   console.log(`\x1b[36m◉\x1b[0m Stream closed (${seq} messages)`);
 }
+
+export async function watchTask(args) {
+  const { get } = await import("../api.mjs");
+  const { getApiBase } = await import("../api.mjs");
+
+  let taskId = args[0] || "";
+  const verbose = args.includes("--verbose") || args.includes("-v");
+
+  // If no task ID, find the most recent running task
+  if (!taskId || taskId.startsWith("-")) {
+    const data = await get("/api/agent/tasks", { status: "running", limit: 1 });
+    if (data?.tasks?.[0]) {
+      taskId = data.tasks[0].id;
+      const idea = (data.tasks[0].context || {}).idea_id || "?";
+      const provider = data.tasks[0].model || "?";
+      console.log(`\x1b[36m◉\x1b[0m Watching: ${taskId.slice(0, 16)} [${data.tasks[0].task_type}] via ${provider}`);
+      console.log(`\x1b[2m  idea: ${idea}\x1b[0m`);
+    } else {
+      console.log("\x1b[33m⚠\x1b[0m No running tasks to watch.");
+      return;
+    }
+  } else {
+    console.log(`\x1b[36m◉\x1b[0m Watching: ${taskId.slice(0, 16)}`);
+  }
+
+  console.log(`\x1b[2m  Ctrl+C to stop\x1b[0m`);
+  console.log();
+
+  const apiBase = getApiBase();
+  const url = `${apiBase}/api/agent/tasks/${taskId}/events`;
+
+  try {
+    const resp = await fetch(url, {
+      headers: { "Accept": "text/event-stream", "Cache-Control": "no-cache" },
+    });
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // Process complete SSE events
+      while (buffer.includes("\n\n")) {
+        const idx = buffer.indexOf("\n\n");
+        const event = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+
+        for (const line of event.split("\n")) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const d = JSON.parse(line.slice(6));
+            const et = d.event_type || "?";
+            const data = d.data || {};
+            const ts = new Date(d.timestamp).toLocaleTimeString();
+
+            if (et === "heartbeat") {
+              const files = data.files_changed || 0;
+              const summary = data.git_summary || "no changes";
+              const elapsed = data.elapsed_s || 0;
+              if (verbose || files > 0 || elapsed % 30 < 15) {
+                console.log(`  \x1b[2m${ts}\x1b[0m \x1b[33m♥\x1b[0m ${elapsed}s | ${files} files | ${summary}`);
+              }
+            } else if (et === "progress") {
+              const msg = data.message || data.preview || "";
+              console.log(`  \x1b[2m${ts}\x1b[0m \x1b[36m→\x1b[0m ${msg}`);
+            } else if (et === "provider_done") {
+              const dur = data.duration_s || 0;
+              const chars = data.output_chars || 0;
+              const ok = data.success;
+              const icon = ok ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m";
+              console.log(`  \x1b[2m${ts}\x1b[0m ${icon} Done in ${dur}s | ${chars} chars`);
+            } else if (et === "completed") {
+              console.log(`  \x1b[2m${ts}\x1b[0m \x1b[32m🏁 Completed\x1b[0m`);
+            } else if (et === "failed" || et === "timeout") {
+              console.log(`  \x1b[2m${ts}\x1b[0m \x1b[31m✗ ${et}\x1b[0m`);
+            } else if (et === "end") {
+              console.log(`  \x1b[2m--- stream ended ---\x1b[0m`);
+              return;
+            } else if (et === "stream_open") {
+              console.log(`  \x1b[2m${ts}\x1b[0m \x1b[36m◉ Stream: ${data.label || "opened"}\x1b[0m`);
+            } else {
+              if (verbose) {
+                console.log(`  \x1b[2m${ts}\x1b[0m [${et}] ${JSON.stringify(data).slice(0, 80)}`);
+              } else {
+                console.log(`  \x1b[2m${ts}\x1b[0m [${et}]`);
+              }
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch (e) {
+    if (e.name === "AbortError") return;
+    console.log(`\x1b[31m✗\x1b[0m Stream error: ${e.message}`);
+  }
+}

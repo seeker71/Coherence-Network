@@ -2155,7 +2155,9 @@ def execute_with_provider(
     start = time.time()
     _current_task_id = getattr(execute_with_provider, "_current_task_id", "")
     _heartbeat_stop = threading.Event()
-    _HEARTBEAT_INTERVAL = 10
+    # CC_DIAG_LEVEL: normal (10s, file list) | high (5s, file list + diff stats + process info)
+    _diag_level = os.environ.get("CC_DIAG_LEVEL", "normal").lower()
+    _HEARTBEAT_INTERVAL = 5 if _diag_level == "high" else 10
 
     def _heartbeat_loop(task_id: str, cwd: str, prov: str, ttype: str):
         last_status = ""
@@ -2191,11 +2193,26 @@ def execute_with_provider(
                     summary += f"modified: {', '.join(f.split('/')[-1] for f in modified_files[:3])}"
                     if len(modified_files) > 3:
                         summary += f" +{len(modified_files)-3}"
-                _post_activity(task_id, "heartbeat", {
+
+                event_data = {
                     "provider": prov, "task_type": ttype, "elapsed_s": elapsed,
                     "files_changed": files_changed, "git_summary": summary or "no changes yet",
                     "new_files": len(new_files), "modified_files": len(modified_files),
-                })
+                    "diag_level": _diag_level,
+                }
+
+                # High diag: add diff line count + process tree info
+                if _diag_level == "high" and files_changed > 0:
+                    try:
+                        ds = subprocess.run(
+                            ["git", "diff", "--stat"],
+                            capture_output=True, text=True, timeout=5, cwd=cwd,
+                        )
+                        event_data["diff_stat"] = ds.stdout.strip()[-200:]
+                    except Exception:
+                        pass
+
+                _post_activity(task_id, "heartbeat", event_data)
                 last_status = git_status
 
     heartbeat_thread = None
