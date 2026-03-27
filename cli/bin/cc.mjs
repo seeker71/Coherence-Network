@@ -34,6 +34,7 @@ import {
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
   keyList as difKeyList, keyCreate as difKeyCreate, keyRevoke as difKeyRevoke,
   keyRotate as difKeyRotate, keyUpdate as difKeyUpdate, keyUse as difKeyUse, keyShow as difKeyShow,
+  keyEnsure as difKeyEnsure, keyStatus as difKeyStatus,
   showUsage as difUsage, showLimits as difLimits, showFunding as difFunding,
   showFeedback as difFeedback,
 } from "../lib/commands/dif.mjs";
@@ -78,6 +79,9 @@ const COMMANDS = {
   deploy:        () => deploy(args),
   listen:        () => listen(args),
   dif:           () => handleDif(args),
+  login:         () => handleLogin(args),
+  logout:        () => handleLogout(args),
+  auth:          () => handleAuth(args),
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
@@ -191,6 +195,73 @@ async function handleProviders(args) {
   }
 }
 
+async function handleLogin(args) {
+  const provider = (args[0] || "merly").toLowerCase();
+  if (provider !== "merly") {
+    console.log(`Unknown login provider: ${provider}. Supported: merly`);
+    return;
+  }
+  const { loginDeviceFlow } = await import("../lib/merly_auth.mjs");
+  await loginDeviceFlow();
+}
+
+async function handleLogout(args) {
+  const provider = (args[0] || "merly").toLowerCase();
+  if (provider !== "merly") {
+    console.log(`Unknown provider: ${provider}. Supported: merly`);
+    return;
+  }
+  const { clearMerlySession } = await import("../lib/merly_auth.mjs");
+  clearMerlySession();
+  console.log("  \x1b[32m✓\x1b[0m Logged out of Merly");
+}
+
+async function handleAuth(args) {
+  const sub = (args[0] || "status").toLowerCase();
+  const jsonMode = args.includes("--json");
+
+  if (sub === "status") {
+    const { getMerlySession, isLoggedIn, getIdentity } = await import("../lib/merly_auth.mjs");
+    const { getDifKey } = await import("../lib/dif.mjs");
+
+    const session = getMerlySession();
+    const loggedIn = isLoggedIn();
+    const key = getDifKey();
+
+    if (jsonMode) {
+      const result = {
+        merly: {
+          authenticated: loggedIn,
+          access_token: loggedIn ? "present" : null,
+          identity: session?.identity || null,
+          logged_in_at: session?.logged_in_at || null,
+          expires_at: session?.expires_at ? new Date(session.expires_at).toISOString() : null,
+        },
+        dif: {
+          key_configured: !!key.api_key,
+          key_id: key.key_id || null,
+          source: key.source || null,
+        },
+      };
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", RED = "\x1b[31m";
+      console.log(`\n${B}  AUTH STATUS${R}`);
+      console.log(`  ${"─".repeat(50)}`);
+      console.log(`  Merly:     ${loggedIn ? G + "logged in" + R : RED + "not logged in" + R}`);
+      if (session?.identity) {
+        const id = session.identity;
+        console.log(`  Identity:  ${id.display_name || id.email || id.contributor_id || "?"}`);
+      }
+      console.log(`  DIF key:   ${key.api_key ? G + "configured" + R : D + "not set" + R}`);
+      if (key.api_key) {
+        console.log(`  Key ID:    ${key.key_id || "?"}`);
+      }
+      console.log();
+    }
+  }
+}
+
 async function handleDif(args) {
   const sub = args[0];
   const subArgs = args.slice(1);
@@ -207,6 +278,8 @@ async function handleDif(args) {
         case "update": return difKeyUpdate(subArgs.slice(1));
         case "use":    return difKeyUse(subArgs.slice(1));
         case "show":   return difKeyShow();
+        case "ensure": return difKeyEnsure();
+        case "status": return difKeyStatus();
         default:       return difKeyList();
       }
     case "verify":  return difVerify(subArgs);
@@ -343,6 +416,21 @@ function showHelp() {
   trace coverage          Traceability coverage
   trace idea <id>         Trace an idea
   trace spec <id>         Trace a spec
+
+\x1b[1mAuth:\x1b[0m
+  login merly             Log into Merly (browser OAuth)
+  logout merly            Clear Merly session
+  auth status [--json]    Show auth + DIF key status
+
+\x1b[1mDIF:\x1b[0m
+  dif verify --language <lang> --code <code> | --file <path>
+  dif key ensure          Bootstrap DIF key from Merly
+  dif key status          Show DIF key + Merly auth status
+  dif key list            List DIF API keys
+  dif key create [name]   Create DIF key manually
+  dif whoami              DIF identity check
+  dif config              Show DIF configuration
+  dif smoke               Run DIF smoke test
 
 \x1b[1mDiagnostics:\x1b[0m
   diag                    Agent effectiveness + pipeline
