@@ -8,6 +8,7 @@
  */
 
 import { listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea } from "../lib/commands/ideas.mjs";
+import { investCommand } from "../lib/commands/invest.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
@@ -46,6 +47,7 @@ const COMMANDS = {
   idea:          () => handleIdea(args),
   share:         () => shareIdea(),
   stake:         () => stakeOnIdea(args),
+  invest:        () => investCommand(args),
   fork:          () => forkIdea(args),
   specs:         () => listSpecs(args),
   spec:          () => showSpec(args),
@@ -337,6 +339,10 @@ function showHelp() {
   contribute              Record contribution (interactive)
   contribute --type code --cc 5 --idea <id> --desc "what I did"
   stake <id> <cc>         Stake CC on an idea
+  invest <id> <cc>        Invest with ROI preview (confirm)
+  invest portfolio        Your staked positions + mark value
+  invest history          Recent CC flows
+  invest time <id> <h> --commit <review|implement>
   fork <id>               Fork an idea
 
 \x1b[1mIdentity:\x1b[0m

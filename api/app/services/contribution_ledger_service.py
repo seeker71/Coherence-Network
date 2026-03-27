@@ -60,7 +60,7 @@ def _session() -> Session:
 SUGGESTED_TYPES = [
     "compute", "code", "direction", "infrastructure", "attention", "stake",
     "deposit", "research", "promotion", "design", "question", "review",
-    "testing", "documentation", "mentoring", "feedback",
+    "testing", "documentation", "mentoring", "feedback", "time_commitment",
 ]
 
 

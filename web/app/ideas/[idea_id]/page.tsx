@@ -19,6 +19,7 @@ import IdeaProgressEditor from "@/components/ideas/IdeaProgressEditor";
 import IdeaTaskQuickCreate from "@/components/ideas/IdeaTaskQuickCreate";
 import IdeaShare from "@/components/idea_share";
 import { IdeaStakeForm } from "@/components/idea_stake_form";
+import { TimeCommitmentForm } from "@/components/time_commitment_form";
 
 const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
 const FETCH_TIMEOUT_MS = 6000;
@@ -464,6 +465,9 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         <div className="border-t border-amber-200/40 dark:border-amber-800/20 pt-4 mt-4">
           <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-3">Back this idea</h3>
           <IdeaStakeForm ideaId={idea.id} ideaName={idea.name} />
+        </div>
+        <div className="border-t border-amber-200/40 dark:border-amber-800/20 pt-4 mt-4">
+          <TimeCommitmentForm ideaId={idea.id} ideaName={idea.name} />
         </div>
       </section>
 

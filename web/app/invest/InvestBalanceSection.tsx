@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
 
 type LedgerBalance = {
-  total: number;
+  total?: number;
+  grand_total?: number;
+  totals_by_type?: Record<string, number>;
   by_type?: Record<string, number>;
 };
 
@@ -95,7 +97,11 @@ export function InvestBalanceSection() {
     <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5">
       <p className="text-sm font-medium text-primary">Your CC Balance</p>
       <p className="mt-1 text-2xl font-light text-foreground">
-        {loading ? "Loading..." : balance ? `${balance.total.toFixed(1)} CC` : "Unavailable"}
+        {loading
+          ? "Loading..."
+          : balance
+            ? `${(balance.grand_total ?? balance.total ?? 0).toFixed(1)} CC`
+            : "Unavailable"}
       </p>
       <p className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
         Contributor: {contributorId}

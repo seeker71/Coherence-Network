@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import { formatUsd, humanizeManifestationStatus } from "@/lib/humanize";
+import { InvestIdeaButton } from "@/components/invest_idea_button";
 import { InvestBalanceSection } from "./InvestBalanceSection";
 
 export const metadata: Metadata = {
@@ -84,6 +85,21 @@ export default async function InvestPage() {
 
       <InvestBalanceSection />
 
+      <nav className="flex flex-wrap gap-3 text-sm" aria-label="Investment views">
+        <a
+          href="/invest/portfolio"
+          className="text-amber-600 dark:text-amber-400 hover:underline"
+        >
+          Portfolio
+        </a>
+        <a
+          href="/invest/history"
+          className="text-amber-600 dark:text-amber-400 hover:underline"
+        >
+          History &amp; flow
+        </a>
+      </nav>
+
       {sorted.length === 0 ? (
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
           <p className="text-lg text-muted-foreground">
@@ -105,7 +121,7 @@ export default async function InvestPage() {
                 key={idea.id}
                 className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-3"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <Link
                       href={`/ideas/${encodeURIComponent(idea.id)}`}
@@ -119,12 +135,7 @@ export default async function InvestPage() {
                       </span>
                     </div>
                   </div>
-                  <Link
-                    href={`/ideas/${encodeURIComponent(idea.id)}`}
-                    className="shrink-0 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
-                  >
-                    Stake
-                  </Link>
+                  <InvestIdeaButton ideaId={idea.id} ideaName={idea.name} />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
