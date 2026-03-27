@@ -3213,20 +3213,82 @@ def _register_node() -> None:
         log.warning("NODE_REGISTER_FAILED id=%s — will retry on next heartbeat", _NODE_ID)
 
 
+def _collect_system_metrics() -> dict[str, Any]:
+    """Collect CPU, memory, disk, process, and network metrics."""
+    metrics: dict[str, Any] = {}
+    try:
+        import psutil
+        # CPU
+        metrics["cpu_percent"] = psutil.cpu_percent(interval=0.5)
+        metrics["cpu_count"] = psutil.cpu_count()
+        metrics["load_avg"] = list(os.getloadavg()) if hasattr(os, "getloadavg") else []
+
+        # Memory
+        mem = psutil.virtual_memory()
+        metrics["memory_percent"] = mem.percent
+        metrics["memory_total_gb"] = round(mem.total / (1024 ** 3), 1)
+        metrics["memory_available_gb"] = round(mem.available / (1024 ** 3), 1)
+
+        # Disk
+        try:
+            disk = psutil.disk_usage("/")
+            metrics["disk_percent"] = disk.percent
+            metrics["disk_free_gb"] = round(disk.free / (1024 ** 3), 1)
+        except Exception:
+            pass
+
+        # Disk I/O
+        try:
+            dio = psutil.disk_io_counters()
+            if dio:
+                metrics["disk_read_mb"] = round(dio.read_bytes / (1024 ** 2))
+                metrics["disk_write_mb"] = round(dio.write_bytes / (1024 ** 2))
+        except Exception:
+            pass
+
+        # Network I/O
+        try:
+            nio = psutil.net_io_counters()
+            if nio:
+                metrics["net_sent_mb"] = round(nio.bytes_sent / (1024 ** 2))
+                metrics["net_recv_mb"] = round(nio.bytes_recv / (1024 ** 2))
+        except Exception:
+            pass
+
+        # Process count
+        metrics["process_count"] = len(psutil.pids())
+
+        # Runner-specific: our process
+        proc = psutil.Process()
+        metrics["runner_cpu_percent"] = proc.cpu_percent()
+        metrics["runner_memory_mb"] = round(proc.memory_info().rss / (1024 ** 2))
+        metrics["runner_threads"] = proc.num_threads()
+
+    except ImportError:
+        metrics["psutil_available"] = False
+    except Exception as e:
+        metrics["error"] = str(e)
+
+    return metrics
+
+
 def _send_heartbeat() -> None:
-    """Update node liveness so other nodes and the UI can see we're active."""
+    """Update node liveness with system metrics so the UI can monitor health."""
     git_info = _get_git_info()
+    system_metrics = _collect_system_metrics()
     result = api("POST", f"/api/federation/nodes/{_NODE_ID}/heartbeat", {
         "capabilities": {
             "executors": list(PROVIDERS.keys()) if PROVIDERS else [],
             "tools": _detect_tools(),
         },
         "git_sha": git_info.get("local_sha", "unknown"),
+        "system_metrics": system_metrics,
     })
     if result:
-        log.debug("HEARTBEAT sent for node %s sha=%s", _NODE_ID, git_info.get("local_sha", "?")[:8])
+        log.debug("HEARTBEAT sent for node %s sha=%s cpu=%s%% mem=%s%%",
+                   _NODE_ID, git_info.get("local_sha", "?")[:8],
+                   system_metrics.get("cpu_percent", "?"), system_metrics.get("memory_percent", "?"))
     else:
-        # heartbeat might not exist — re-register (which includes SHA)
         _register_node()
 
 
