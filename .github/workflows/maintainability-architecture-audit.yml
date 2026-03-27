@@ -2,7 +2,7 @@ name: Maintainability Architecture Audit
 
 on:
   schedule:
-    - cron: "0 11 * * 1,4"
+    - cron: "0 11 * * 1"  # weekly on Monday (was Mon & Thu) — CI noise reduction
   workflow_dispatch:
 
 jobs:

@@ -1,8 +1,8 @@
 name: Thread Gates
 
 on:
-  push:
-    branches: [main, master]
+  # push trigger removed — CI noise reduction: PRs already gate merges,
+  # re-running on push to main is redundant (~3 extra runs per merge).
   pull_request:
     branches: [main, master]
 

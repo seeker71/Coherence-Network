@@ -1,10 +1,10 @@
 name: Public Deploy Contract
 
 on:
-  push:
-    branches: [main]
+  # push trigger removed — CI noise reduction: deploy contract runs daily,
+  # manual dispatch available for post-deploy verification.
   schedule:
-    - cron: "17 6,18 * * *"  # twice daily (was every 2h)
+    - cron: "17 6 * * *"  # once daily at 06:17 UTC (was twice daily)
   workflow_dispatch:
 
 concurrency:
@@ -143,7 +143,7 @@ jobs:
             });
 
       - name: Dispatch auto-heal workflow
-        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' && github.event_name == 'push' && vars.AUTO_HEAL_DEPLOY_GATES_ENABLED == '1' }}
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' && vars.AUTO_HEAL_DEPLOY_GATES_ENABLED == '1' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -159,8 +159,8 @@ jobs:
         run: |
           echo "MVP_LOCAL_ONLY_VALIDATION=1; hosted public deploy checks are non-blocking until provider is restored."
 
-      - name: Fail when contract is not satisfied
-        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' && github.event_name != 'schedule' }}
+      - name: Fail when contract is not satisfied (manual dispatch only)
+        if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' && github.event_name == 'workflow_dispatch' }}
         run: |
           echo "Public deployment contract failed"
           exit 1

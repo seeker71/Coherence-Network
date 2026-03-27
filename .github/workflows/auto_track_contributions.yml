@@ -1,8 +1,11 @@
 name: Auto-Track Contributions
 
 on:
-  push:
-    branches: [main, develop]
+  # Moved from push trigger to daily schedule — CI noise reduction.
+  # Tracks contributions from the last 24h of commits instead of per-push.
+  schedule:
+    - cron: "5 7 * * *"  # daily at 07:05 UTC
+  workflow_dispatch:
 
 jobs:
   track-contribution:
@@ -17,20 +20,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get commit info
+      - name: Get commits from last 24h
         id: commit_info
         run: |
-          AUTHOR_EMAIL=$(git log -1 --format='%ae')
-          COMMIT_HASH=$(git log -1 --format='%H')
-          FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r $COMMIT_HASH | wc -l)
-          LINES_ADDED=$(git diff-tree --no-commit-id --numstat -r $COMMIT_HASH | awk '{sum+=$1} END {print sum}')
+          # Collect all commits from the last 24 hours on main/develop
+          SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -v-24H '+%Y-%m-%dT%H:%M:%SZ')
+          COMMITS=$(git log --since="$SINCE" --format='%H %ae' --no-merges origin/main origin/develop 2>/dev/null || echo "")
+          COMMIT_COUNT=$(echo "$COMMITS" | grep -c . || echo "0")
+          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+          echo "Found $COMMIT_COUNT commits in the last 24h"
 
-          echo "author_email=$AUTHOR_EMAIL" >> $GITHUB_OUTPUT
-          echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
-          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
-          echo "lines_added=$LINES_ADDED" >> $GITHUB_OUTPUT
+          if [ "$COMMIT_COUNT" -eq 0 ]; then
+            echo "No commits to track."
+            exit 0
+          fi
+
+          # Process the most recent commit for summary stats
+          LATEST_HASH=$(echo "$COMMITS" | head -1 | awk '{print $1}')
+          LATEST_EMAIL=$(echo "$COMMITS" | head -1 | awk '{print $2}')
+          TOTAL_FILES=$(git log --since="$SINCE" --no-merges --format="" --numstat origin/main origin/develop 2>/dev/null | wc -l | tr -d ' ')
+          TOTAL_LINES=$(git log --since="$SINCE" --no-merges --format="" --numstat origin/main origin/develop 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
+
+          echo "author_email=$LATEST_EMAIL" >> $GITHUB_OUTPUT
+          echo "commit_hash=$LATEST_HASH" >> $GITHUB_OUTPUT
+          echo "files_changed=$TOTAL_FILES" >> $GITHUB_OUTPUT
+          echo "lines_added=$TOTAL_LINES" >> $GITHUB_OUTPUT
 
       - name: Calculate contribution cost
+        if: steps.commit_info.outputs.commit_count != '0'
         id: calc_cost
         run: |
           FILES=${{ steps.commit_info.outputs.files_changed }}
@@ -48,7 +65,7 @@ jobs:
           echo "cost=$COST" >> $GITHUB_OUTPUT
 
       - name: Record contribution
-        if: env.API_URL != '' && env.API_KEY != ''
+        if: env.API_URL != '' && env.API_KEY != '' && steps.commit_info.outputs.commit_count != '0'
         run: |
           curl -X POST "$API_URL/v1/contributions/github" \
             -H "Content-Type: application/json" \
@@ -60,7 +77,8 @@ jobs:
               "cost_amount": ${{ steps.calc_cost.outputs.cost }},
               "metadata": {
                 "files_changed": ${{ steps.commit_info.outputs.files_changed }},
-                "lines_added": ${{ steps.commit_info.outputs.lines_added }}
+                "lines_added": ${{ steps.commit_info.outputs.lines_added }},
+                "batch_mode": true
               }
             }'
 
@@ -70,9 +88,9 @@ jobs:
           echo "Skipping contribution tracking because COHERENCE_API_URL/COHERENCE_API_KEY is not configured for this run."
 
       - name: Log contribution tracking result
-        if: env.API_URL != '' && env.API_KEY != ''
+        if: env.API_URL != '' && env.API_KEY != '' && steps.commit_info.outputs.commit_count != '0'
         run: |
-          echo "✅ Contribution recorded!"
+          echo "Contribution recorded (daily batch)."
           echo "Cost: \$${{ steps.calc_cost.outputs.cost }}"
-          echo "Commit: ${{ steps.commit_info.outputs.commit_hash }}"
-          echo "Verify at: https://api.coherencycoin.com/v1/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}"
+          echo "Latest commit: ${{ steps.commit_info.outputs.commit_hash }}"
+          echo "Commits tracked: ${{ steps.commit_info.outputs.commit_count }}"
