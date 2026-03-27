@@ -2383,6 +2383,7 @@ def execute_with_provider(
             text=True, encoding="utf-8", errors="replace",
             cwd=str(_REPO_DIR), creationflags=creation_flags,
             shell=use_shell,
+            start_new_session=True,  # Own process group so killpg doesn't kill the runner
         )
 
         # Stream stdout line-by-line for live progress
