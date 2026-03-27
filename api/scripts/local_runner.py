@@ -3800,20 +3800,76 @@ def _create_worktree(task_id: str) -> Path | None:
     repo_root = str(_REPO_DIR)
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
-        # Fix 1: fetch latest origin/main before branching
+        # Sync refs and prune stale worktree metadata before adding a new one.
         subprocess.run(
             ["git", "fetch", "origin", "main", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
+        subprocess.run(
+            ["git", "worktree", "prune"],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+
+        # Self-heal stale path from interrupted runs.
+        if wt_path.exists():
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(wt_path)],
+                capture_output=True, text=True, timeout=20, cwd=repo_root,
+            )
+            if wt_path.exists():
+                shutil.rmtree(wt_path, ignore_errors=True)
+
+        # Self-heal stale branch/worktree mapping from interrupted runs.
+        # If the branch is currently attached to any worktree, remove it first.
+        existing = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+        if existing.returncode == 0 and existing.stdout:
+            active_path = ""
+            active_branch = ""
+            for raw in existing.stdout.splitlines():
+                line = raw.strip()
+                if line.startswith("worktree "):
+                    active_path = line.split(" ", 1)[1].strip()
+                    active_branch = ""
+                elif line.startswith("branch refs/heads/"):
+                    active_branch = line.replace("branch refs/heads/", "", 1)
+                elif line == "":
+                    if active_branch == branch and active_path and Path(active_path) != wt_path:
+                        subprocess.run(
+                            ["git", "worktree", "remove", "--force", active_path],
+                            capture_output=True, text=True, timeout=20, cwd=repo_root,
+                        )
+                    active_path = ""
+                    active_branch = ""
+            # Handle final record without trailing blank line.
+            if active_branch == branch and active_path and Path(active_path) != wt_path:
+                subprocess.run(
+                    ["git", "worktree", "remove", "--force", active_path],
+                    capture_output=True, text=True, timeout=20, cwd=repo_root,
+                )
+
+        subprocess.run(
+            ["git", "branch", "-D", branch],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+
         # Branch from origin/main (not local HEAD which may be stale)
         base_ref = "origin/main"
-        subprocess.run(
-            ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
+        created = subprocess.run(
+            ["git", "worktree", "add", "-B", branch, str(wt_path), base_ref],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
-        if wt_path.exists():
+        if created.returncode == 0 and wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path
+        log.warning(
+            "WORKTREE_FAILED task=%s rc=%s stderr=%s",
+            slug,
+            created.returncode,
+            (created.stderr or "").strip()[:500],
+        )
     except Exception as e:
         log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
     return None

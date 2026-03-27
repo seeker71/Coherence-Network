@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -679,3 +680,70 @@ def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pyte
     assert ok is True
     assert len(operational_calls) == 1
     assert operational_calls[0][2] == "reflect"
+
+
+def test_create_worktree_replaces_stale_branch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    remote = tmp_path / "remote.git"
+    wt_base = repo / ".worktrees"
+
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test User"], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.com"], check=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True)
+    (repo / "README.md").write_text("seed\n")
+    subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-m", "seed"], check=True)
+    subprocess.run(["git", "-C", str(repo), "push", "-u", "origin", "main"], check=True)
+
+    task_id = "task_a3166ef5c5908478"
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    subprocess.run(["git", "-C", str(repo), "branch", branch], check=True)
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+
+    wt = local_runner._create_worktree(task_id)
+
+    assert wt is not None
+    assert wt.exists()
+    current_branch = subprocess.run(
+        ["git", "-C", str(wt), "rev-parse", "--abbrev-ref", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert current_branch == branch
+
+
+def test_create_worktree_removes_stale_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo = tmp_path / "repo"
+    remote = tmp_path / "remote.git"
+    wt_base = repo / ".worktrees"
+
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True)
+    subprocess.run(["git", "init", "-b", "main", str(repo)], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "Test User"], check=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.com"], check=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", str(remote)], check=True)
+    (repo / "README.md").write_text("seed\n")
+    subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-m", "seed"], check=True)
+    subprocess.run(["git", "-C", str(repo), "push", "-u", "origin", "main"], check=True)
+
+    task_id = "task_bbbbbbbbbbbbbbbb"
+    slug = task_id[:16]
+    stale_path = wt_base / f"task-{slug}"
+    stale_path.mkdir(parents=True, exist_ok=True)
+    (stale_path / "junk.txt").write_text("stale\n")
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+
+    wt = local_runner._create_worktree(task_id)
+
+    assert wt is not None
+    assert wt.exists()
+    assert (wt / ".git").exists()
