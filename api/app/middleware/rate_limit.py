@@ -30,6 +30,13 @@ BURST_LIMIT = 10           # Allow 10 requests in 1 second before throttling
 
 _WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
+# Paths exempt from rate limiting (federation/runner internal traffic)
+_EXEMPT_PATHS = {
+    "/api/agent/tasks/",        # activity posts, task updates
+    "/api/federation/nodes",    # heartbeats, registration
+    "/api/pipeline/",           # pulse, bootstrap
+}
+
 _429_BODY = {"detail": "Too many requests. Please wait a moment."}
 
 
@@ -52,6 +59,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         if _TESTING:
+            return await call_next(request)
+        # Exempt federation/runner paths from rate limiting
+        path = request.url.path
+        if any(path.startswith(p) for p in _EXEMPT_PATHS):
             return await call_next(request)
         client_ip = request.client.host if request.client else "unknown"
         now = time.time()
