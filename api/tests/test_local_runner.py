@@ -679,3 +679,58 @@ def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pyte
     assert ok is True
     assert len(operational_calls) == 1
     assert operational_calls[0][2] == "reflect"
+
+
+def test_create_worktree_cleans_stale_restart_artifacts(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    task_id = "task_62ee148448fea293"
+    slug = task_id[:16]
+    wt_base = tmp_path / ".worktrees"
+    wt_path = wt_base / f"task-{slug}"
+    branch = f"task/{slug}"
+    calls: list[list[str]] = []
+
+    wt_path.mkdir(parents=True, exist_ok=True)
+
+    def _run(args: list[str], **_kwargs: Any) -> _CompletedProcess:
+        calls.append(args)
+        if args[:4] == ["git", "worktree", "add", "-b"]:
+            wt_path.mkdir(parents=True, exist_ok=True)
+            return _CompletedProcess(returncode=0, stdout="added")
+        return _CompletedProcess(returncode=0, stdout="ok")
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    created = local_runner._create_worktree(task_id)
+
+    assert created == wt_path
+    assert ["git", "worktree", "remove", "--force", str(wt_path)] in calls
+    assert ["git", "branch", "-D", branch] in calls
+
+
+def test_create_worktree_retries_after_add_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    task_id = "task_62ee148448fea293"
+    slug = task_id[:16]
+    wt_base = tmp_path / ".worktrees"
+    wt_path = wt_base / f"task-{slug}"
+    add_attempts = 0
+
+    def _run(args: list[str], **_kwargs: Any) -> _CompletedProcess:
+        nonlocal add_attempts
+        if args[:4] == ["git", "worktree", "add", "-b"]:
+            add_attempts += 1
+            if add_attempts == 1:
+                return _CompletedProcess(returncode=1, stderr="fatal: branch already exists")
+            wt_path.mkdir(parents=True, exist_ok=True)
+            return _CompletedProcess(returncode=0, stdout="added")
+        return _CompletedProcess(returncode=0, stdout="ok")
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    created = local_runner._create_worktree(task_id)
+
+    assert created == wt_path
+    assert add_attempts == 2

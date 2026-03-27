@@ -3805,15 +3805,49 @@ def _create_worktree(task_id: str) -> Path | None:
             ["git", "fetch", "origin", "main", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
+
+        # Self-heal stale restart artifacts before first attempt.
+        if wt_path.exists():
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(wt_path)],
+                capture_output=True, text=True, timeout=30, cwd=repo_root,
+            )
+        subprocess.run(
+            ["git", "branch", "-D", branch],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+
         # Branch from origin/main (not local HEAD which may be stale)
         base_ref = "origin/main"
-        subprocess.run(
+        add_result = subprocess.run(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
-        if wt_path.exists():
+        if add_result.returncode != 0:
+            # One retry path: branch/worktree might have appeared between cleanup and add.
+            subprocess.run(
+                ["git", "worktree", "remove", "--force", str(wt_path)],
+                capture_output=True, text=True, timeout=30, cwd=repo_root,
+            )
+            subprocess.run(
+                ["git", "branch", "-D", branch],
+                capture_output=True, text=True, timeout=10, cwd=repo_root,
+            )
+            add_result = subprocess.run(
+                ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
+                capture_output=True, text=True, timeout=30, cwd=repo_root,
+            )
+
+        if add_result.returncode == 0 and wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path
+
+        log.warning(
+            "WORKTREE_FAILED task=%s branch=%s stderr=%s",
+            slug,
+            branch,
+            (add_result.stderr or "").strip()[:300],
+        )
     except Exception as e:
         log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
     return None
