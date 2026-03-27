@@ -36,7 +36,7 @@ def test_claim_and_complete_task_with_mocked_api_calls(monkeypatch: pytest.Monke
     assert claimed["status"] == "running"
     assert ok is True
     assert calls[0][0].endswith("/api/agent/tasks/task-1")
-    assert calls[0][1] == {"status": "running", "claimed_by": local_runner.WORKER_ID}
+    assert calls[0][1] == {"status": "running", "worker_id": local_runner.WORKER_ID}
     assert calls[1][0].endswith("/api/agent/tasks/task-1")
     assert calls[1][1] == {
         "status": "completed",
@@ -108,7 +108,7 @@ def test_run_one_marks_false_positive_when_text_only_provider_reports_success(
 
     monkeypatch.setattr(local_runner, "_LOG_DIR", tmp_path)
     monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
-    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "openrouter")
+    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type, task=None: "openrouter")
     monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
     monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, "all done", 1.2))
     monkeypatch.setattr(local_runner, "record_provider_outcome", lambda *_args, **_kwargs: None)
@@ -240,7 +240,7 @@ def test_run_one_stores_complexity_estimate_before_execution(
 
     monkeypatch.setattr(local_runner, "_LOG_DIR", tmp_path)
     monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
-    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "codex")
+    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type, task=None: "codex")
     monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
     monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, "Implementation complete. All changes applied to api/scripts/local_runner.py successfully.", 0.6))
     monkeypatch.setattr(local_runner, "record_provider_outcome", lambda *_args, **_kwargs: None)
@@ -291,7 +291,7 @@ def test_run_one_timeout_saves_partial_patch_and_creates_resume_task(
     monkeypatch.setattr(local_runner, "_LOG_DIR", tmp_path)
     monkeypatch.setattr(local_runner, "_RESUME_MODE", [True])
     monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
-    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "codex")
+    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type, task=None: "codex")
     monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
     monkeypatch.setattr(
         local_runner,
