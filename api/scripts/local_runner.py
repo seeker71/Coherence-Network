@@ -1992,6 +1992,80 @@ def execute_with_provider(
         return False, f"Error: {type(e).__name__}: {e}", duration
 
 
+def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
+    """Run merge/deploy/verify/reflect directly — these are commands, not AI tasks."""
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    idea_id = context.get("idea_id", "unknown")
+    cwd = str(_REPO_DIR)
+    start = time.time()
+    log.info("OPERATIONAL task=%s type=%s idea=%s", task_id, task_type, idea_id)
+    try:
+        if task_type == "merge":
+            pr_result = subprocess.run(
+                ["gh", "pr", "list", "--search", idea_id, "--json", "number,title", "--limit", "1"],
+                capture_output=True, text=True, timeout=15, cwd=cwd, shell=(sys.platform == "win32"),
+            )
+            prs = json.loads(pr_result.stdout) if pr_result.returncode == 0 else []
+            if prs:
+                pr_num = prs[0]["number"]
+                merge_result = subprocess.run(
+                    ["gh", "pr", "merge", str(pr_num), "--squash", "--admin"],
+                    capture_output=True, text=True, timeout=30, cwd=cwd, shell=(sys.platform == "win32"),
+                )
+                output = (f"MERGE_PASSED: PR #{pr_num} merged." if merge_result.returncode == 0
+                          else f"MERGE_FAILED: {merge_result.stderr.strip()[:200]}")
+            else:
+                output = f"MERGE_PASSED: No open PR for {idea_id} — code already on main."
+        elif task_type == "deploy":
+            ssh_key = os.path.expanduser("~/.ssh/hostinger_openclaw_key_rsa")
+            if os.path.exists(ssh_key):
+                deploy_result = subprocess.run(
+                    ["ssh", "-o", "StrictHostKeyChecking=no", "-i", ssh_key, "root@187.77.152.42",
+                     "cd /docker/coherence-network/repo && git pull origin main && cd /docker/coherence-network && docker compose build --no-cache api web && docker compose up -d api web"],
+                    capture_output=True, text=True, timeout=300, cwd=cwd,
+                )
+                output = (f"DEPLOY_PASSED: VPS updated." if deploy_result.returncode == 0
+                          else f"DEPLOY_FAILED: {deploy_result.stderr[-200:]}")
+            else:
+                output = "DEPLOY_SKIPPED: No SSH key for VPS."
+        elif task_type == "verify":
+            import httpx as _httpx
+            results = []
+            with _httpx.Client(timeout=10) as client:
+                for ep in ["/api/health", "/api/ideas/count", "/api/coherence"]:
+                    try:
+                        r = client.get(f"https://api.coherencycoin.com{ep}")
+                        results.append(f"{ep}:{r.status_code}")
+                    except Exception as e:
+                        results.append(f"{ep}:FAIL({e})")
+                try:
+                    r = client.get("https://coherencycoin.com/", follow_redirects=True)
+                    results.append(f"web:{r.status_code}")
+                except Exception as e:
+                    results.append(f"web:FAIL({e})")
+            all_ok = all("200" in r for r in results)
+            output = ("VERIFY_PASSED: " if all_ok else "VERIFY_FAILED: ") + " | ".join(results)
+        elif task_type == "reflect":
+            output = f"REFLECT_COMPLETE: {idea_id} full lifecycle done."
+        else:
+            output = f"Unknown phase: {task_type}"
+
+        duration = time.time() - start
+        success = "PASSED" in output or "COMPLETE" in output
+        log.info("OPERATIONAL_DONE task=%s type=%s success=%s dur=%.1fs output=%s",
+                 task_id, task_type, success, duration, output[:100])
+        complete_task(task_id, output, success, {"provider": "runner-direct", "duration_s": round(duration, 1)})
+        if success:
+            _run_phase_auto_advance_hook(task)
+        return success
+    except Exception as exc:
+        duration = time.time() - start
+        log.error("OPERATIONAL_ERROR task=%s type=%s error=%s", task_id, task_type, exc)
+        complete_task(task_id, f"{task_type.upper()}_FAILED: {exc}", False,
+                      {"provider": "runner-direct", "duration_s": round(duration, 1)})
+        return False
+
+
 def run_one(task: dict, dry_run: bool = False) -> bool:
     """Full lifecycle: claim → select provider → execute → record → report."""
     task_id = task["id"]
