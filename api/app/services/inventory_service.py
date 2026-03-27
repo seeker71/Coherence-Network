@@ -5045,6 +5045,23 @@ def build_spec_process_implementation_validation_flow(
         if spec.implementation_summary and str(spec.implementation_summary).strip():
             flow["_implementation_refs"].add(f"spec-registry:{spec.spec_id}")
 
+    # Graph-backed spec→idea links (single source of truth)
+    try:
+        from app.services import graph_service as _gs
+        graph_specs = _gs.list_nodes(type="spec", limit=500).get("items", [])
+        for gspec in graph_specs:
+            gidea = str(gspec.get("idea_id") or "").strip()
+            if not gidea:
+                continue
+            if requested_idea_id and gidea != requested_idea_id:
+                continue
+            flow = ensure(gidea)
+            flow["_spec_ids"].add(gspec.get("id", gspec.get("spec_file", "")))
+            if gspec.get("content_path"):
+                flow["_source_files"].add(gspec["content_path"])
+    except Exception:
+        pass
+
     for record in evidence_records:
         raw_idea_ids = record.get("idea_ids")
         if not isinstance(raw_idea_ids, list):
