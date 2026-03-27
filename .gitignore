@@ -61,3 +61,8 @@ out.txt
 data/*.db
 *.db-wal
 *.db-shm
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+.codex*

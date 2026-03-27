@@ -15,21 +15,12 @@ const PRIMARY_NAV = [
 /** Always visible — the heartbeat of the network. */
 const HEARTBEAT_NAV = { href: "/resonance", label: "Resonance" };
 
-/** Secondary nav — grouped by purpose, accessible via Menu dropdown. */
+/** Secondary nav — intentionally compact to avoid option overload. */
 const SECONDARY_NAV = [
-  // Value & investment
   { href: "/invest", label: "Invest" },
-  { href: "/treasury", label: "Treasury" },
-  { href: "/contributors", label: "Contributors" },
-  { href: "/assets", label: "Assets" },
-  // Knowledge & specs
   { href: "/specs", label: "Specs" },
-  { href: "/blog", label: "Blog" },
-  { href: "/search", label: "Search" },
-  // Operations (power users)
   { href: "/automation", label: "Automation" },
-  { href: "/friction", label: "Friction" },
-  { href: "/identity", label: "Identity" },
+  { href: "/search", label: "Search" },
 ];
 
 export default function SiteHeader() {
