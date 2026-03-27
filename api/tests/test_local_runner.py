@@ -501,3 +501,181 @@ def test_seed_task_from_open_idea_sets_idea_id_at_top_level(monkeypatch: pytest.
     )
     # Also verify it's in context (for backwards compatibility)
     assert (payload.get("context") or {}).get("idea_id") == "seed-idea-1"
+
+
+# ---------------------------------------------------------------------------
+# _run_operational_phase — merge / deploy / verify / reflect
+# ---------------------------------------------------------------------------
+
+
+class _CompletedProcess:
+    def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def test_run_operational_phase_reflect_succeeds(monkeypatch: pytest.MonkeyPatch) -> None:
+    completions: list[dict[str, Any]] = []
+
+    monkeypatch.setattr(
+        local_runner,
+        "complete_task",
+        lambda task_id, output, success, context_patch=None: completions.append(
+            {"task_id": task_id, "output": output, "success": success}
+        ) or True,
+    )
+    monkeypatch.setattr(local_runner, "_run_phase_auto_advance_hook", lambda _task: None)
+
+    task = {"id": "task-reflect-1", "task_type": "reflect", "context": {"idea_id": "idea-42"}}
+    ok = local_runner._run_operational_phase(task, "task-reflect-1", "reflect")
+
+    assert ok is True
+    assert len(completions) == 1
+    assert "REFLECT_COMPLETE" in completions[0]["output"]
+    assert "idea-42" in completions[0]["output"]
+    assert completions[0]["success"] is True
+
+
+def test_run_operational_phase_merge_no_open_pr(monkeypatch: pytest.MonkeyPatch) -> None:
+    completions: list[dict[str, Any]] = []
+
+    monkeypatch.setattr(
+        local_runner.subprocess,
+        "run",
+        lambda *_args, **_kwargs: _CompletedProcess(returncode=0, stdout="[]"),
+    )
+    monkeypatch.setattr(
+        local_runner,
+        "complete_task",
+        lambda task_id, output, success, context_patch=None: completions.append(
+            {"output": output, "success": success}
+        ) or True,
+    )
+    monkeypatch.setattr(local_runner, "_run_phase_auto_advance_hook", lambda _task: None)
+
+    task = {"id": "task-merge-1", "task_type": "merge", "context": {"idea_id": "idea-99"}}
+    ok = local_runner._run_operational_phase(task, "task-merge-1", "merge")
+
+    assert ok is True
+    assert "MERGE_PASSED" in completions[0]["output"]
+    assert "already on main" in completions[0]["output"]
+
+
+def test_run_operational_phase_merge_with_open_pr(monkeypatch: pytest.MonkeyPatch) -> None:
+    completions: list[dict[str, Any]] = []
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _CompletedProcess:
+        calls.append(args)
+        if "list" in args:
+            return _CompletedProcess(returncode=0, stdout='[{"number": 7, "title": "test"}]')
+        # merge call
+        return _CompletedProcess(returncode=0, stdout="merged")
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(
+        local_runner,
+        "complete_task",
+        lambda task_id, output, success, context_patch=None: completions.append(
+            {"output": output, "success": success}
+        ) or True,
+    )
+    monkeypatch.setattr(local_runner, "_run_phase_auto_advance_hook", lambda _task: None)
+
+    task = {"id": "task-merge-2", "task_type": "merge", "context": {"idea_id": "idea-77"}}
+    ok = local_runner._run_operational_phase(task, "task-merge-2", "merge")
+
+    assert ok is True
+    assert "MERGE_PASSED" in completions[0]["output"]
+    assert "PR #7" in completions[0]["output"]
+    merge_call = [c for c in calls if "merge" in c]
+    assert any("7" in str(c) for c in merge_call)
+
+
+def test_run_operational_phase_merge_gh_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    completions: list[dict[str, Any]] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _CompletedProcess:
+        if "list" in args:
+            return _CompletedProcess(returncode=0, stdout='[{"number": 3, "title": "test"}]')
+        return _CompletedProcess(returncode=1, stderr="GraphQL error: merge blocked")
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(
+        local_runner,
+        "complete_task",
+        lambda task_id, output, success, context_patch=None: completions.append(
+            {"output": output, "success": success}
+        ) or True,
+    )
+    monkeypatch.setattr(local_runner, "_run_phase_auto_advance_hook", lambda _task: None)
+
+    task = {"id": "task-merge-3", "task_type": "merge", "context": {"idea_id": "idea-11"}}
+    ok = local_runner._run_operational_phase(task, "task-merge-3", "merge")
+
+    assert ok is False
+    assert "MERGE_FAILED" in completions[0]["output"]
+    assert completions[0]["success"] is False
+
+
+def test_run_operational_phase_deploy_no_ssh_key(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    completions: list[dict[str, Any]] = []
+
+    monkeypatch.setattr(local_runner.os.path, "exists", lambda _p: False)
+    monkeypatch.setattr(
+        local_runner,
+        "complete_task",
+        lambda task_id, output, success, context_patch=None: completions.append(
+            {"output": output, "success": success}
+        ) or True,
+    )
+    monkeypatch.setattr(local_runner, "_run_phase_auto_advance_hook", lambda _task: None)
+
+    task = {"id": "task-deploy-1", "task_type": "deploy", "context": {"idea_id": "idea-88"}}
+    ok = local_runner._run_operational_phase(task, "task-deploy-1", "deploy")
+
+    assert ok is False
+    assert "DEPLOY_SKIPPED" in completions[0]["output"]
+    assert completions[0]["success"] is False
+
+
+def test_run_operational_phase_exception_marks_failed(monkeypatch: pytest.MonkeyPatch) -> None:
+    completions: list[dict[str, Any]] = []
+
+    def _run(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("network unreachable")
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(
+        local_runner,
+        "complete_task",
+        lambda task_id, output, success, context_patch=None: completions.append(
+            {"output": output, "success": success}
+        ) or True,
+    )
+
+    task = {"id": "task-exc-1", "task_type": "merge", "context": {"idea_id": "idea-0"}}
+    ok = local_runner._run_operational_phase(task, "task-exc-1", "merge")
+
+    assert ok is False
+    assert "MERGE_FAILED" in completions[0]["output"]
+    assert "network unreachable" in completions[0]["output"]
+
+
+def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    operational_calls: list[tuple[str, str, str]] = []
+
+    monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: {"id": "task-op-1", "task_type": "reflect", "status": "running", "context": {"idea_id": "idea-x"}})
+    monkeypatch.setattr(
+        local_runner,
+        "_run_operational_phase",
+        lambda task, task_id, task_type: operational_calls.append((task["id"], task_id, task_type)) or True,
+    )
+
+    task = {"id": "task-op-1", "task_type": "reflect", "context": {"idea_id": "idea-x"}}
+    ok = local_runner.run_one(task, dry_run=False)
+
+    assert ok is True
+    assert len(operational_calls) == 1
+    assert operational_calls[0][2] == "reflect"

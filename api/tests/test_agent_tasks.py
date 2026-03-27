@@ -38,7 +38,15 @@ async def test_list_tasks_includes_status_counts(monkeypatch: pytest.MonkeyPatch
 
         patch_done = await client.patch(
             f"/api/agent/tasks/{created[2]}",
-            json={"status": "completed", "worker_id": "manual-test"},
+            json={
+                "status": "completed",
+                "worker_id": "manual-test",
+                "output": (
+                    "Implementation complete. Modified api/app/services/agent_service.py "
+                    "to add status count endpoint. FILES_CHANGED=api/app/services/agent_service.py "
+                    "COMMIT=abc1234 All tests passing. Verified output matches spec requirements."
+                ),
+            },
         )
         assert patch_done.status_code == 200, patch_done.text
 
