@@ -57,6 +57,64 @@ def _extract_partial_work(task: dict[str, Any]) -> str:
 
     return ""
 
+def _find_spec_file(idea_id: str, task: dict[str, Any]) -> str:
+    """Find the spec file path for an idea.
+
+    Searches:
+    1. The completed spec task's output for a path like specs/NNN-*.md
+    2. The specs/ directory for files matching the idea slug
+    3. The spec registry for linked spec IDs
+    """
+    import re
+    from pathlib import Path
+
+    # 1. Extract from the completed task output (spec tasks often say "Created specs/156-foo.md")
+    output = (task.get("output") or "").strip()
+    spec_mentions = re.findall(r'specs/[\w-]+\.md', output)
+    if spec_mentions:
+        # Verify the file exists
+        repo_root = Path(__file__).resolve().parents[3]
+        for mention in spec_mentions:
+            if (repo_root / mention).exists():
+                return mention
+
+    # 2. Search specs/ directory by idea slug
+    repo_root = Path(__file__).resolve().parents[3]
+    specs_dir = repo_root / "specs"
+    if specs_dir.exists():
+        slug = idea_id.lower().replace("_", "-")
+        # Try exact slug match
+        for f in specs_dir.iterdir():
+            if f.suffix == ".md" and slug in f.stem.lower():
+                return f"specs/{f.name}"
+        # Try partial word overlap
+        slug_words = set(slug.split("-"))
+        best_match = None
+        best_overlap = 0
+        for f in specs_dir.iterdir():
+            if f.suffix != ".md":
+                continue
+            stem_words = set(f.stem.lower().split("-"))
+            overlap = len(slug_words & stem_words)
+            if overlap > best_overlap and overlap >= 2:
+                best_overlap = overlap
+                best_match = f"specs/{f.name}"
+        if best_match:
+            return best_match
+
+    # 3. Check spec registry
+    try:
+        from app.services import spec_registry_service
+        specs = spec_registry_service.list_specs(limit=500)
+        for spec in specs:
+            if spec.idea_id == idea_id:
+                return f"specs/{spec.spec_id}.md" if not spec.content_path else spec.content_path
+    except Exception:
+        pass
+
+    return ""
+
+
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
@@ -247,12 +305,18 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             log.info("AUTO_ADVANCE skip — %s task already exists for %s", next_phase, idea_id)
             return None
 
-    # Build direction
+    # Find the spec file path for this idea
+    spec_path = _find_spec_file(idea_id, task)
     idea_name = idea_id.replace("-", " ").replace("_", " ").title()
+
     if next_phase == "impl":
+        if not spec_path:
+            log.warning("AUTO_ADVANCE skip impl — no spec file found for %s", idea_id)
+            return None
         direction = (
             f"Implement '{idea_name}' ({idea_id}).\n\n"
-            f"Read the spec in specs/ for this idea and implement ONLY what it requires.\n\n"
+            f"The spec is at: {spec_path}\n"
+            f"Read it and implement ONLY what it requires.\n\n"
             f"CRITICAL RULES:\n"
             f"- ONLY create or modify files listed in the spec's files_allowed section\n"
             f"- DO NOT delete, rename, or modify ANY other files in the repository\n"
@@ -264,9 +328,10 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             f"Output: list every file you created/modified and what you changed in each."
         )
     elif next_phase == "test":
+        spec_hint = f"\nThe spec is at: {spec_path}\n" if spec_path else "\n"
         direction = (
-            f"Write tests for '{idea_name}' ({idea_id}).\n\n"
-            f"Read the spec in specs/ and write tests that verify its acceptance criteria.\n\n"
+            f"Write tests for '{idea_name}' ({idea_id}).\n{spec_hint}"
+            f"Read the spec and write tests that verify its acceptance criteria.\n\n"
             f"CRITICAL RULES:\n"
             f"- ONLY create new test files (e.g. api/tests/test_*.py)\n"
             f"- DO NOT modify or delete ANY existing files\n"
