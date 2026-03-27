@@ -371,19 +371,82 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         />
       </div>
 
-      <IdeaProgressEditor
-        ideaId={idea.id}
-        initialActualValue={idea.actual_value}
-        initialActualCost={idea.actual_cost}
-        initialConfidence={idea.confidence}
-        initialManifestationStatus={idea.manifestation_status as "none" | "partial" | "validated"}
-      />
+      <section
+        className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/[0.07] to-transparent p-6 shadow-sm dark:border-emerald-500/25 dark:from-emerald-950/30"
+        aria-labelledby="idea-help-cta-heading"
+      >
+        <h2 id="idea-help-cta-heading" className="text-xl font-semibold tracking-tight text-foreground">
+          How can I help this idea?
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground leading-relaxed">
+          Pick a path below — each one moves this idea toward proof. You can start with a small work card, back it with CC,
+          or focus on what is still unknown.
+        </p>
+        <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+          <li>
+            <Link
+              href="#idea-work-card"
+              className="block rounded-xl border border-border/50 bg-background/70 p-4 transition-colors hover:bg-accent/60 hover:border-border"
+            >
+              <span className="font-medium text-foreground">Create a work card</span>
+              <span className="mt-1 block text-sm text-muted-foreground">
+                Ship the next build, review, or short plan — without leaving this page.
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="#idea-invest"
+              className="block rounded-xl border border-border/50 bg-background/70 p-4 transition-colors hover:bg-accent/60 hover:border-border"
+            >
+              <span className="font-medium text-foreground">Back it with CC</span>
+              <span className="mt-1 block text-sm text-muted-foreground">
+                Stake coherence credits so compute can run toward this idea.
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="#idea-open-questions"
+              className="block rounded-xl border border-border/50 bg-background/70 p-4 transition-colors hover:bg-accent/60 hover:border-border"
+            >
+              <span className="font-medium text-foreground">Answer open questions</span>
+              <span className="mt-1 block text-sm text-muted-foreground">
+                See what still needs a decision or evidence below.
+              </span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href={`/flow?idea_id=${encodeURIComponent(idea.id)}`}
+              className="block rounded-xl border border-border/50 bg-background/70 p-4 transition-colors hover:bg-accent/60 hover:border-border"
+            >
+              <span className="font-medium text-foreground">See progress and links</span>
+              <span className="mt-1 block text-sm text-muted-foreground">
+                Open the flow view for plans, tasks, and files tied to this idea.
+              </span>
+            </Link>
+          </li>
+        </ul>
+      </section>
 
-      <IdeaTaskQuickCreate
-        ideaId={idea.id}
-        ideaName={idea.name}
-        unansweredQuestions={idea.open_questions.filter((question) => !question.answer).map((question) => question.question)}
-      />
+      <div id="idea-progress" className="scroll-mt-24">
+        <IdeaProgressEditor
+          ideaId={idea.id}
+          initialActualValue={idea.actual_value}
+          initialActualCost={idea.actual_cost}
+          initialConfidence={idea.confidence}
+          initialManifestationStatus={idea.manifestation_status as "none" | "partial" | "validated"}
+        />
+      </div>
+
+      <div id="idea-work-card" className="scroll-mt-24">
+        <IdeaTaskQuickCreate
+          ideaId={idea.id}
+          ideaName={idea.name}
+          unansweredQuestions={idea.open_questions.filter((question) => !question.answer).map((question) => question.question)}
+        />
+      </div>
 
       <IdeaDsssSpecBuilder
         ideaId={idea.id}
@@ -421,7 +484,10 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         </div>
       </section>
 
-      <section className="rounded-2xl border border-amber-200 bg-amber-50/30 p-6 space-y-3 text-sm dark:border-amber-800/40 dark:bg-amber-950/10">
+      <section
+        id="idea-invest"
+        className="scroll-mt-24 rounded-2xl border border-amber-200 bg-amber-50/30 p-6 space-y-3 text-sm dark:border-amber-800/40 dark:bg-amber-950/10"
+      >
         <h2 className="font-semibold text-amber-900 dark:text-amber-200">Investment</h2>
         <p className="text-amber-800/70 dark:text-amber-300/70">
           CC staked on this idea and what it produced.
@@ -612,7 +678,7 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         )}
       </section>
 
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+      <section id="idea-open-questions" className="scroll-mt-24 rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
         <h2 className="text-xl font-semibold">Questions Still To Answer</h2>
         {idea.open_questions.length === 0 && <p className="text-sm text-muted-foreground">Nothing open right now.</p>}
         <ul className="space-y-2 text-sm">

@@ -59,5 +59,11 @@ out.txt
 
 # SQLite databases and WAL sidecar files (regenerate via: python3 scripts/seed_db.py)
 data/*.db
+data/coherence.db
 *.db-wal
 *.db-shm
+
+# Task runner / local tooling
+*.pyc
+.task-*
+.codex*
