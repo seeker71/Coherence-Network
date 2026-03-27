@@ -3950,6 +3950,25 @@ def main():
         cleanup_interval = 1800  # clean stale worktrees every 30 minutes
         last_cleanup = 0.0
 
+        # Reap own stale tasks from previous process
+        try:
+            stale = api("GET", f"/api/agent/tasks?status=running&limit=50")
+            if isinstance(stale, dict):
+                own_stale = [
+                    t for t in stale.get("tasks", [])
+                    if WORKER_ID.split(":")[0] in (t.get("claimed_by") or "")
+                ]
+                for t in own_stale:
+                    api("PATCH", f"/api/agent/tasks/{t['id']}", {
+                        "status": "timed_out",
+                        "output": f"Reaped on startup: runner restarted while task was running.",
+                        "context": {**(t.get("context") or {}), "reaped_on_startup": True},
+                    })
+                if own_stale:
+                    log.info("STARTUP_REAP: marked %d own stale tasks as timed_out", len(own_stale))
+        except Exception as e:
+            log.warning("STARTUP_REAP failed: %s", e)
+
         use_parallel = args.parallel > 0
         if use_parallel:
             global _MAX_PARALLEL
