@@ -524,21 +524,91 @@ def _provider_has_tools(provider: str) -> bool:
 
 
 
-# Provider tiers: which providers are strong enough for each task type
-# spec + review need the strongest models (claude, codex, cursor)
-# impl + test can use any tool-capable provider
-# openrouter/free and ollama-local are only suitable for simple/draft tasks
-_STRONG_PROVIDERS = {"claude", "codex", "cursor"}
-_TOOL_PROVIDERS = {"claude", "codex", "cursor", "gemini"}  # can produce files
+# Data-driven provider routing: auto-compute which providers work for each task type
+# from Thompson Sampling measurements. No hardcoded tiers — the data decides.
+_MIN_SUCCESS_RATE = 0.40   # providers below 40% success for a task type are excluded
+_MIN_SAMPLES = 3           # need at least 3 samples before excluding
+_ROUTING_CACHE: dict[str, tuple[list[str], float]] = {}  # task_type -> (eligible, timestamp)
+_ROUTING_CACHE_TTL = 300   # refresh every 5 minutes
+
+
+def _compute_eligible_providers(task_type: str, available: list[str]) -> list[str]:
+    """Use Thompson Sampling measurements to filter out providers that consistently fail."""
+    import time as _time
+    now = _time.time()
+
+    cache_key = task_type
+    if cache_key in _ROUTING_CACHE:
+        cached, ts = _ROUTING_CACHE[cache_key]
+        if now - ts < _ROUTING_CACHE_TTL:
+            result = [p for p in cached if p in available]
+            if result:
+                return result
+
+    # Read measurement file for this task type
+    measurement_file = Path("api/logs/slot_measurements") / f"provider_{task_type}.json"
+    if not measurement_file.exists():
+        # No data yet — allow all
+        return available
+
+    try:
+        data = json.loads(measurement_file.read_text(encoding="utf-8"))
+        if not isinstance(data, list) or not data:
+            return available
+
+        # Aggregate by slot_id (provider name)
+        from collections import defaultdict
+        stats: dict[str, dict] = defaultdict(lambda: {"ok": 0, "fail": 0})
+        for entry in data:
+            slot = entry.get("slot_id", "")
+            if not slot:
+                continue
+            if entry.get("value_score", 0) > 0.5:
+                stats[slot]["ok"] += 1
+            else:
+                stats[slot]["fail"] += 1
+
+        # Filter: exclude providers below threshold with enough samples
+        eligible = []
+        excluded = []
+        for p in available:
+            s = stats.get(p)
+            if not s:
+                eligible.append(p)  # no data = give it a chance
+                continue
+            total = s["ok"] + s["fail"]
+            if total < _MIN_SAMPLES:
+                eligible.append(p)  # not enough data = give it a chance
+                continue
+            rate = s["ok"] / total
+            if rate >= _MIN_SUCCESS_RATE:
+                eligible.append(p)
+            else:
+                excluded.append(f"{p}({rate:.0%})")
+
+        if excluded:
+            log.info("ROUTING_DATA task=%s excluded=%s (below %.0f%% with %d+ samples)",
+                     task_type, excluded, _MIN_SUCCESS_RATE * 100, _MIN_SAMPLES)
+
+        if not eligible:
+            log.warning("ROUTING_DATA all providers below threshold for %s — using all", task_type)
+            eligible = available
+
+        _ROUTING_CACHE[cache_key] = (eligible, now)
+        return [p for p in eligible if p in available]
+
+    except Exception as e:
+        log.debug("ROUTING_DATA failed to read measurements for %s: %s", task_type, e)
+        return available
 
 
 def select_provider(task_type: str, task: dict | None = None) -> str:
-    """Select provider for a task. Only providers with required capabilities are considered.
+    """Select provider for a task using data-driven routing.
 
-    Rules:
-    - Paused providers (openrouter) are never selected
-    - impl/test require tool-capable providers (can create files, run commands)
-    - All phases prefer strong providers (claude, codex, cursor)
+    Rules (all learned from Thompson Sampling measurements):
+    - Paused providers are never selected
+    - Providers below 40% success rate (with 3+ samples) are excluded for that task type
+    - Remaining providers compete via Thompson Sampling
     - Respects exclude_provider from retry context
     """
     available = [p for p in PROVIDERS.keys() if p not in _PAUSED_PROVIDERS]
@@ -553,20 +623,8 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
             available = [p for p in available if p != exclude]
             log.info("PROVIDER_EXCLUDE task=%s excluded=%s remaining=%s", task_type, exclude, available)
 
-    # All pipeline phases prefer strong providers when available
-    if task_type in ("spec", "impl", "test", "review", "code-review"):
-        strong = [p for p in available if p in _STRONG_PROVIDERS]
-        if strong:
-            available = strong
-            log.info("PROVIDER_TIER task=%s restricted to strong: %s", task_type, available)
-        else:
-            # At minimum, impl and test need tool-capable providers (not text-only)
-            if task_type in ("impl", "test"):
-                tool_available = [p for p in available if p in _TOOL_PROVIDERS or _provider_has_tools(p)]
-                if tool_available:
-                    available = tool_available
-                    log.info("PROVIDER_FILTER task=%s restricted to tool-capable: %s", task_type, available)
-            log.warning("No strong providers for %s task — using %s", task_type, available)
+    # Data-driven filtering: exclude providers that fail too often for this task type
+    available = _compute_eligible_providers(task_type, available)
 
     if len(available) == 1:
         return available[0]
