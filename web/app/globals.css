@@ -168,3 +168,116 @@ body::before {
 main {
   animation: fadeInUp 0.4s ease-out;
 }
+
+@keyframes ambientRing {
+  0% {
+    opacity: 0.08;
+    transform: scale(0.78);
+  }
+  50% {
+    opacity: 0.22;
+  }
+  100% {
+    opacity: 0.05;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes particleDrift {
+  0% {
+    opacity: 0.2;
+    transform: translate3d(0, 10px, 0);
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0.15;
+    transform: translate3d(0, -12px, 0);
+  }
+}
+
+@keyframes ambientWave {
+  0% {
+    transform: translateX(-8%) scaleX(0.98);
+    opacity: 0.22;
+  }
+  50% {
+    transform: translateX(8%) scaleX(1.02);
+    opacity: 0.34;
+  }
+  100% {
+    transform: translateX(-8%) scaleX(0.98);
+    opacity: 0.22;
+  }
+}
+
+.ambient-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 14rem;
+  height: 14rem;
+  border-radius: 9999px;
+  border: 1px solid hsl(var(--primary) / 0.32);
+  transform: translate(-50%, -50%);
+  animation: ambientRing 4.8s ease-in-out infinite;
+}
+
+.ambient-ring-1 {
+  animation-delay: 0s;
+}
+
+.ambient-ring-2 {
+  width: 18rem;
+  height: 18rem;
+  animation-delay: 1.2s;
+}
+
+.ambient-ring-3 {
+  width: 22rem;
+  height: 22rem;
+  animation-delay: 2.2s;
+}
+
+.ambient-particle {
+  position: absolute;
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 9999px;
+  background: hsl(var(--primary) / 0.45);
+  animation: particleDrift 4.2s ease-in-out infinite;
+}
+
+.ambient-particle-a {
+  left: 20%;
+  top: 62%;
+  animation-delay: 0.3s;
+}
+
+.ambient-particle-b {
+  left: 52%;
+  top: 30%;
+  animation-delay: 1.4s;
+}
+
+.ambient-particle-c {
+  left: 78%;
+  top: 56%;
+  animation-delay: 2.1s;
+}
+
+.ambient-wave {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: 0;
+  height: 4rem;
+  background: radial-gradient(
+    120% 100% at 50% 0%,
+    hsl(var(--primary) / 0.22),
+    transparent 68%
+  );
+  filter: blur(2px);
+  animation: ambientWave 7s ease-in-out infinite;
+}

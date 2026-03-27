@@ -79,6 +79,18 @@ function timeAgo(iso: string): string {
   return `${days}d ago`;
 }
 
+function formatPulseTimestamp(iso: string | null): string {
+  if (!iso) return "No pulse recorded yet";
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return "No pulse recorded yet";
+  return parsed.toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    hour12: false,
+    timeZone: "UTC",
+  }) + " UTC";
+}
+
 function statusIcon(status: string): string {
   if (status === "validated") return "\u2705";
   if (status === "partial") return "\uD83D\uDD28";
@@ -137,6 +149,10 @@ export default async function ResonancePage() {
       activity: await loadActivity(item.idea_id),
     }))
   );
+  const lastKnownPulseAt =
+    itemsWithActivity[0]?.last_activity_at ??
+    newsItems.find((item) => item.published_at)?.published_at ??
+    null;
 
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -151,7 +167,7 @@ export default async function ResonancePage() {
       </header>
 
       {itemsWithActivity.length === 0 ? (
-        <FallbackIdeasSection />
+        <FallbackIdeasSection lastPulseAt={lastKnownPulseAt} />
       ) : (
         <div className="space-y-4">
           {itemsWithActivity.map((item, idx) => (
@@ -263,22 +279,40 @@ export default async function ResonancePage() {
   );
 }
 
-async function FallbackIdeasSection() {
+async function FallbackIdeasSection({ lastPulseAt }: { lastPulseAt: string | null }) {
   const ideas = await loadFallbackIdeas();
 
   if (ideas.length === 0) {
     return (
-      <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center">
-        <p className="text-muted-foreground mb-3">
-          The network is quiet right now. Be the first to share an idea.
-        </p>
-        <Link
-          href="/"
-          className="text-primary hover:text-foreground transition-colors underline underline-offset-4"
-        >
-          Share an idea &rarr;
-        </Link>
-      </div>
+      <section className="relative overflow-hidden rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="ambient-ring ambient-ring-1" />
+          <div className="ambient-ring ambient-ring-2" />
+          <div className="ambient-ring ambient-ring-3" />
+          <span className="ambient-particle ambient-particle-a" />
+          <span className="ambient-particle ambient-particle-b" />
+          <span className="ambient-particle ambient-particle-c" />
+          <div className="ambient-wave" />
+        </div>
+        <div className="relative z-10 mx-auto max-w-xl space-y-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-primary/80">
+            Last known pulse
+          </p>
+          <p className="text-sm text-foreground/90">
+            {formatPulseTimestamp(lastPulseAt)}
+          </p>
+          <p className="text-muted-foreground">
+            The network is breathing quietly. Start the next pulse with a warm idea,
+            a question, or a tiny contribution.
+          </p>
+          <Link
+            href="/"
+            className="inline-flex rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+          >
+            Spark the next pulse
+          </Link>
+        </div>
+      </section>
     );
   }
 
