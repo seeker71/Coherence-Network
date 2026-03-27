@@ -631,7 +631,7 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
     _PROVIDER_CAPS = {
         "claude":       {"file_write", "git", "tools", "gh", "ssh", "reasoning"},
         "codex":        {"file_write", "git", "tools", "gh", "reasoning"},
-        "cursor":       {"file_create", "tools", "gh", "reasoning"},  # unreliable file_write on Windows (v2025.10.22); Thompson will demote
+        "cursor":       {"file_write", "git", "tools", "gh", "reasoning"},  # v2026.03.25 + --trust fixes file editing
         "gemini":       {"file_write", "git", "tools", "gh", "reasoning"},
         "ollama-local": {"text_only"},                   # no tools, no file access
         "ollama-cloud": {"text_only"},                   # no tools, no file access
