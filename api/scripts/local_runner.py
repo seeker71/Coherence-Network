@@ -4227,6 +4227,7 @@ def _run_task_in_worktree(task: dict, wt_path: Path) -> tuple[bool, str]:
 _active_idea_ids: set[str] = set()
 _active_lock = threading.Lock()
 _shutdown_event = threading.Event()
+_update_pending = threading.Event()  # Set when origin/main has new commits
 
 
 def _runner_deploy_phase(task: dict) -> bool:
@@ -4296,6 +4297,12 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
     """Independent worker thread: claim one task, execute, repeat."""
     while not _shutdown_event.is_set():
         try:
+            # Don't claim new tasks if an update is pending — finish current, then update
+            if _update_pending.is_set():
+                log.info("WORKER[%d] update pending — not claiming new tasks", worker_id)
+                _shutdown_event.wait(10)
+                continue
+
             # Get a pending task
             pending = api("GET", "/api/agent/tasks?status=pending&limit=5")
             if not pending:
@@ -4539,6 +4546,7 @@ def _check_for_updates_and_restart() -> bool:
             return False
 
         log.info("SELF-UPDATE: new commits detected (local=%s remote=%s)", local_sha[:8], remote_sha[:8])
+        _update_pending.set()  # Signal workers to stop claiming new tasks
 
         # Check for uncommitted changes that would block pull
         status = subprocess.run(
@@ -4813,14 +4821,16 @@ def main():
                     time.sleep(args.interval)
                     continue
 
-                # 3. Self-update: only when all workers are idle (no in-flight tasks)
+                # 3. Self-update: check for new commits, but only restart when idle
                 if not args.no_self_update:
                     with _active_lock:
                         active = len(_active_idea_ids)
                     if active == 0:
+                        if _update_pending.is_set():
+                            log.info("SELF-UPDATE: workers drained, proceeding with update")
                         _check_for_updates_and_restart()
-                    else:
-                        log.debug("SELF-UPDATE: deferred — %d tasks in flight", active)
+                    elif _update_pending.is_set():
+                        log.info("SELF-UPDATE: waiting for %d tasks to finish before updating", active)
 
                 # 4. Execute tasks (parallel or sequential)
                 if not use_parallel:
