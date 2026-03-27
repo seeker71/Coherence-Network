@@ -3936,11 +3936,12 @@ _MAX_PARALLEL = int(os.environ.get("CC_MAX_PARALLEL", "3"))
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 
 
-def _create_worktree(task_id: str) -> Path | None:
+def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | None:
     """Create a git worktree for isolated task execution.
 
-    Fix 1: fetch origin/main first so worktree starts from latest remote code,
-    not stale local HEAD.
+    base_branch: optional remote branch to base on (e.g. 'worker/impl/idea/task_abc').
+    If None, defaults to origin/main. Used by test/review/code-review phases
+    to checkout the impl PR branch so the provider can see the actual code.
     """
     slug = task_id[:16]
     wt_path = _WORKTREE_BASE / f"task-{slug}"
@@ -3948,13 +3949,25 @@ def _create_worktree(task_id: str) -> Path | None:
     repo_root = str(_REPO_DIR)
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
-        # Fix 1: fetch latest origin/main before branching
+        # Fetch latest remote refs
         subprocess.run(
-            ["git", "fetch", "origin", "main", "--quiet"],
+            ["git", "fetch", "origin", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
-        # Branch from origin/main (not local HEAD which may be stale)
+        # Determine base ref: PR branch if specified, else origin/main
         base_ref = "origin/main"
+        if base_branch:
+            # Check if the remote branch exists
+            check = subprocess.run(
+                ["git", "rev-parse", "--verify", f"origin/{base_branch}"],
+                capture_output=True, text=True, timeout=5, cwd=repo_root,
+            )
+            if check.returncode == 0:
+                base_ref = f"origin/{base_branch}"
+                log.info("WORKTREE_FROM_PR task=%s branch=%s", slug, base_branch)
+            else:
+                log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
+
         subprocess.run(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
@@ -4351,9 +4364,11 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             log.info("WORKER[%d] CLAIMED task=%s type=%s idea=%s",
                      worker_id, task_id[:16], task.get("task_type"), (idea_id or "?")[:20])
 
-            # Create worktree and execute
+            # Create worktree — for test/review phases, checkout the impl PR branch
             task_type = task.get("task_type", "spec")
-            wt = _create_worktree(task_id)
+            impl_branch = ctx.get("impl_branch", "")
+            base_branch = impl_branch if task_type in ("test", "code-review", "review") and impl_branch else None
+            wt = _create_worktree(task_id, base_branch=base_branch)
             pushed = False
             try:
                 # Fix 6+7: deploy and verify are RUNNER actions, not provider
