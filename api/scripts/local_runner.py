@@ -243,6 +243,24 @@ def _detect_providers() -> dict[str, dict]:
         if checker and not checker():
             log.info("Provider skipped (not ready): %s", name)
             continue
+        # Detect provider version
+        version = "unknown"
+        try:
+            version_flags = {"claude": "--version", "codex": "--version", "gemini": "--version", "agent": "--version", "ollama": "--version"}
+            vflag = version_flags.get(binary.split("/")[-1] if "/" in binary else binary, "--version")
+            vresult = subprocess.run([resolved, vflag], capture_output=True, text=True, timeout=5)
+            vout = (vresult.stdout or vresult.stderr or "").strip()
+            # Extract version string — first line, strip common prefixes
+            if vout:
+                vline = vout.split("\n")[0].strip()
+                for prefix in ["claude ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent "]:
+                    if vline.lower().startswith(prefix):
+                        vline = vline[len(prefix):].strip()
+                version = vline[:40]  # cap at 40 chars
+        except Exception:
+            pass
+        spec["_version"] = version
+
         # Optional model selection (e.g., ollama picks best available model)
         model_selector = spec.pop("model_select", None)
         if model_selector:
@@ -251,9 +269,9 @@ def _detect_providers() -> dict[str, dict]:
                 log.info("Provider skipped (no model): %s", name)
                 continue
             spec["cmd"].append(model)
-            log.info("Provider detected: %s model=%s", name, model)
+            log.info("Provider detected: %s model=%s version=%s", name, model, version)
         else:
-            log.info("Provider detected: %s (%s)", name, resolved)
+            log.info("Provider detected: %s (%s) version=%s", name, resolved, version)
         providers[name] = spec
 
     # API-based providers (no CLI binary needed)
@@ -733,10 +751,44 @@ def classify_error(output: str) -> str:
     return "unknown"
 
 
+_provider_streak: dict[str, list[dict]] = {}  # provider → list of {ok, task_type, duration}
+_provider_streak_lock = threading.Lock()
+
+
+def _record_provider_streak(provider: str, task_type: str, success: bool, duration: float):
+    """Track per-provider outcome ring buffer (last 20) for streak display."""
+    with _provider_streak_lock:
+        if provider not in _provider_streak:
+            _provider_streak[provider] = []
+        ring = _provider_streak[provider]
+        ring.append({"ok": success, "task_type": task_type, "duration": round(duration, 1)})
+        if len(ring) > 20:
+            _provider_streak[provider] = ring[-20:]
+
+
+def get_provider_streaks() -> dict[str, dict]:
+    """Return per-provider streak summaries for heartbeat/display."""
+    with _provider_streak_lock:
+        result = {}
+        for provider, ring in _provider_streak.items():
+            ok = sum(1 for r in ring if r["ok"])
+            fail = len(ring) - ok
+            last_10 = ["ok" if r["ok"] else "fail" for r in ring[-10:]]
+            avg_dur = sum(r["duration"] for r in ring) / len(ring) if ring else 0
+            result[provider] = {
+                "completed": ok, "failed": fail, "total": len(ring),
+                "success_rate": ok / len(ring) if ring else None,
+                "avg_duration_s": round(avg_dur, 1),
+                "last_10": last_10,
+            }
+        return result
+
+
 def record_provider_outcome(
     task_type: str, provider: str, success: bool, duration: float, output: str = "",
 ):
     """Record provider outcome with error classification for root-cause analysis."""
+    _record_provider_streak(provider, task_type, success, duration)
     if not HAS_SERVICES:
         return
 
@@ -3170,10 +3222,14 @@ def _seed_task_from_open_idea() -> bool:
         f"- If you cannot complete the task, explain WHY in detail (don't return empty).\n"
         f"\n"
         f"CODE QUALITY — DIF (Deep Inspection Framework):\n"
-        f"- After writing any code file (.py, .js, .ts, .mjs), verify it:\n"
-        f"    cc dif verify --language python --file <your_file.py> --json\n"
-        f"- Check: trust_signal (positive/review=ok, concern=fix), verification (>40=ok, <30=fix)\n"
+        f"- After writing any code file, verify it with DIF via curl:\n"
+        f"    curl -s -X POST https://dif.merly.ai/api/v2/dif/verify \\\n"
+        f"      -H 'Content-Type: application/json' \\\n"
+        f"      -d '{{\"language\": \"python\", \"code\": \"'\"$(cat <your_file.py>)\"'\"}}'\n"
+        f"- Or if cc CLI is available: cc dif verify --language python --file <your_file.py> --json\n"
+        f"- Check response: trust_signal (positive/review=ok, concern=fix), verification (>40=ok, <30=fix)\n"
         f"- Fix any DIF-flagged issues before finishing. Include final DIF scores in your output.\n"
+        f"- Include the DIF event_id in your output for traceability.\n"
         f"\n"
         f"COMMUNICATION:\n"
         f"- Check `cc inbox` every 5-7 minutes for messages from other nodes\n"
@@ -3270,6 +3326,12 @@ def _register_node() -> None:
     providers = list(PROVIDERS.keys()) if PROVIDERS else list(_detect_providers().keys())
     tools = _detect_tools()
 
+    # Build provider version map
+    provider_versions = {}
+    for pname, pspec in (PROVIDERS or {}).items():
+        if isinstance(pspec, dict):
+            provider_versions[pname] = pspec.get("_version", "unknown")
+
     payload = {
         "node_id": _NODE_ID,
         "hostname": _NODE_NAME,
@@ -3284,6 +3346,7 @@ def _register_node() -> None:
                 "python": platform.python_version(),
             },
             "git": _NODE_GIT,
+            "provider_versions": provider_versions,
         },
     }
     result = api("POST", "/api/federation/nodes?refresh_capabilities=true", payload)
@@ -3362,6 +3425,7 @@ def _send_heartbeat() -> None:
         "capabilities": {
             "executors": list(PROVIDERS.keys()) if PROVIDERS else [],
             "tools": _detect_tools(),
+            "provider_streaks": get_provider_streaks(),
         },
         "git_sha": git_info.get("local_sha", "unknown"),
         "system_metrics": system_metrics,

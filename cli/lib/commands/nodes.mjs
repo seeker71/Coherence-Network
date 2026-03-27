@@ -149,7 +149,23 @@ export async function listNodes() {
       if (extra.length) console.log(`    \x1b[2m${extra.join(" · ")}\x1b[0m`);
     }
     if (providers.length > 0) {
-      console.log(`    ${providers.map(providerBadge).join(" ")}`);
+      const pv = caps.provider_versions || {};
+      const ps = caps.provider_streaks || {};
+      const badges = providers.map(p => {
+        const ver = pv[p];
+        const streak = ps[p];
+        let badge = providerBadge(p);
+        if (ver && ver !== "unknown") badge += `\x1b[2m(${ver.slice(0, 12)})\x1b[0m`;
+        if (streak && streak.total > 0) {
+          const icons = (streak.last_10 || []).slice(-5).map(s =>
+            s === "ok" ? "\x1b[32m·\x1b[0m" : "\x1b[31m·\x1b[0m"
+          ).join("");
+          const rate = streak.success_rate != null ? `${Math.round(streak.success_rate * 100)}%` : "?";
+          badge += ` ${icons} ${rate}`;
+        }
+        return badge;
+      });
+      console.log(`    ${badges.join("  ")}`);
     }
   }
   console.log();
