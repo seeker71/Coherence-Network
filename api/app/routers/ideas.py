@@ -15,6 +15,9 @@ from app.models.idea import (
     GovernanceHealth,
     IdeaCountResponse,
     IdeaCreate,
+    IdeaTagCatalogResponse,
+    IdeaTagsResponse,
+    IdeaTagsUpdate,
     IdeaShowcaseResponse,
     IdeaStage,
     IdeaPortfolioResponse,
@@ -38,19 +41,33 @@ router = APIRouter()
 async def list_ideas(
     only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
     include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
+    tags: str = Query("", description="Comma-separated tags. Ideas must include all provided tags."),
     limit: int = Query(200, ge=1, le=500),
     offset: int = Query(0, ge=0),
     read_only_guard: bool = Query(False, description="When true, do not persist ensure logic (for invariant/guard runs)."),
     sort: str = Query("free_energy", description="Sort method: 'free_energy' (default, Method A) or 'marginal_cc' (Method B)."),
 ) -> IdeaPortfolioResponse:
+    parsed_tags = [item.strip() for item in tags.split(",") if item.strip()] if tags else []
+    try:
+        normalized_tags = idea_service.normalize_tags(parsed_tags) if parsed_tags else []
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     return idea_service.list_ideas(
         only_unvalidated=only_unvalidated,
         include_internal=include_internal,
+        tags=normalized_tags,
         limit=limit,
         offset=offset,
         read_only_guard=read_only_guard,
         sort_method=sort,
     )
+
+
+@router.get("/ideas/tags", response_model=IdeaTagCatalogResponse)
+async def get_idea_tag_catalog(
+    include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
+) -> IdeaTagCatalogResponse:
+    return IdeaTagCatalogResponse(tags=idea_service.get_tag_catalog(include_internal=include_internal))
 
 
 @router.get("/ideas/storage", response_model=IdeaStorageInfo)
@@ -327,6 +344,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         estimated_cost=data.estimated_cost,
         confidence=data.confidence,
         interfaces=data.interfaces,
+        tags=data.tags,
         open_questions=data.open_questions,
         actual_value=data.actual_value,
         actual_cost=data.actual_cost,
@@ -340,6 +358,21 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")
     return created
+
+
+@router.put("/ideas/{idea_id}/tags", response_model=IdeaTagsResponse)
+async def put_idea_tags(
+    idea_id: str,
+    data: IdeaTagsUpdate,
+    _key: str = Depends(require_api_key),
+) -> IdeaTagsResponse:
+    try:
+        updated = idea_service.update_idea_tags(idea_id=idea_id, tags=data.tags)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return IdeaTagsResponse(id=updated.id, tags=updated.tags)
 
 
 @router.patch("/ideas/{idea_id}", response_model=IdeaWithScore)

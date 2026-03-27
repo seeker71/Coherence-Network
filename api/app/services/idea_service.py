@@ -457,6 +457,31 @@ _FUZZY_STOP_WORDS = frozenset({
 })
 
 
+_TAG_ALLOWED_RE = re.compile(r"^[a-z0-9-]+$")
+
+
+def _normalize_tag_value(tag: str) -> str:
+    normalized = "-".join(str(tag).strip().lower().split())
+    if not normalized:
+        raise ValueError("Tag cannot be empty")
+    if not _TAG_ALLOWED_RE.fullmatch(normalized):
+        raise ValueError(f"Invalid tag value: {tag}")
+    return normalized
+
+
+def normalize_tags(tags: list[str] | None) -> list[str]:
+    if tags is None:
+        return []
+    normalized = {_normalize_tag_value(tag) for tag in tags}
+    return sorted(normalized)
+
+
+def _normalize_filter_tags(tags: list[str] | None) -> list[str]:
+    if not tags:
+        return []
+    return sorted({_normalize_tag_value(tag) for tag in tags})
+
+
 def _find_closest_graph_idea(idea_id: str, graph_ideas: list) -> Any | None:
     """Find the graph idea with the highest Jaccard word overlap to the given ID."""
     target_words = set(idea_id.replace("-", " ").replace("_", " ").lower().split()) - _FUZZY_STOP_WORDS
@@ -484,6 +509,7 @@ def _idea_to_metadata(idea: Any) -> dict[str, Any]:
         "name": idea.name,
         "description": idea.description,
         "interfaces": idea.interfaces,
+        "tags": idea.tags,
         "potential_value": idea.potential_value,
         "actual_value": idea.actual_value,
         "estimated_cost": idea.estimated_cost,
@@ -526,6 +552,10 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
     interfaces = metadata.get("interfaces")
     if not isinstance(interfaces, list) or not all(isinstance(x, str) for x in interfaces):
         interfaces = ["machine:api", "human:web", "machine:commit-evidence"]
+    tags = metadata.get("tags")
+    if not isinstance(tags, list):
+        tags = []
+    tags = normalize_tags([str(x) for x in tags if isinstance(x, str)])
 
     # Copy all numeric and enum fields from seed, with safe defaults
     potential_value = float(metadata.get("potential_value", 70.0))
@@ -565,6 +595,7 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
         confidence=max(0.0, min(confidence, 1.0)),
         manifestation_status=status,
         interfaces=interfaces,
+        tags=tags,
         open_questions=[],
         idea_type=idea_type,
         parent_idea_id=parent_idea_id,
@@ -857,6 +888,7 @@ def list_ideas(
     limit: int | None = None,
     offset: int = 0,
     include_internal: bool = True,
+    tags: list[str] | None = None,
     read_only_guard: bool = False,
     sort_method: str = "free_energy",
 ) -> IdeaPortfolioResponse:
@@ -869,6 +901,10 @@ def list_ideas(
         ideas = [i for i in ideas if not is_internal_idea_id(i.id, i.interfaces)]
     if only_unvalidated:
         ideas = [i for i in ideas if i.manifestation_status != ManifestationStatus.VALIDATED]
+    normalized_filter_tags = _normalize_filter_tags(tags)
+    if normalized_filter_tags:
+        required = set(normalized_filter_tags)
+        ideas = [i for i in ideas if required.issubset(set(i.tags or []))]
 
     scored = [_with_score(i) for i in ideas]
     if sort_method == "marginal_cc":
@@ -932,6 +968,7 @@ def create_idea(
     estimated_cost: float,
     confidence: float = 0.5,
     interfaces: list[str] | None = None,
+    tags: list[str] | None = None,
     open_questions: list[IdeaQuestionCreate] | None = None,
     *,
     actual_value: float | None = None,
@@ -963,6 +1000,7 @@ def create_idea(
         child_idea_ids=child_idea_ids or [],
         value_basis=value_basis,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
+        tags=normalize_tags(tags),
         open_questions=[
             IdeaQuestion(
                 question=item.question,
@@ -1091,6 +1129,36 @@ def update_idea(
 
     _write_single_idea(updated, position=updated_idx)
     return _with_score(updated)
+
+
+def update_idea_tags(idea_id: str, tags: list[str]) -> IdeaWithScore | None:
+    ideas = _read_ideas(persist_ensures=True)
+    updated: Idea | None = None
+    updated_idx: int = -1
+    normalized_tags = normalize_tags(tags)
+    for idx, idea in enumerate(ideas):
+        if idea.id != idea_id:
+            continue
+        idea.tags = normalized_tags
+        ideas[idx] = idea
+        updated = idea
+        updated_idx = idx
+        break
+    if updated is None:
+        return None
+    _write_single_idea(updated, position=updated_idx)
+    return _with_score(updated)
+
+
+def get_tag_catalog(include_internal: bool = True) -> list[dict[str, int | str]]:
+    ideas = _read_ideas(persist_ensures=False)
+    if not include_internal:
+        ideas = [i for i in ideas if not is_internal_idea_id(i.id, i.interfaces)]
+    counts: dict[str, int] = {}
+    for idea in ideas:
+        for tag in idea.tags or []:
+            counts[tag] = counts.get(tag, 0) + 1
+    return [{"tag": tag, "idea_count": counts[tag]} for tag in sorted(counts)]
 
 
 def stake_on_idea(idea_id: str, contributor_id: str, amount_cc: float, rationale: str | None = None) -> dict:

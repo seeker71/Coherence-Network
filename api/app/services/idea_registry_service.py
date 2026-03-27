@@ -154,6 +154,19 @@ def _load_interfaces(raw: str) -> list[str]:
     return [x for x in data if isinstance(x, str) and x.strip()]
 
 
+def _load_tags(raw: Any) -> list[str]:
+    if isinstance(raw, list):
+        return [x for x in raw if isinstance(x, str) and x.strip()]
+    if isinstance(raw, str):
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(data, list):
+            return [x for x in data if isinstance(x, str) and x.strip()]
+    return []
+
+
 def load_ideas() -> list[Idea]:
     """Load all ideas from graph_nodes."""
     from app.services import graph_service
@@ -199,6 +212,7 @@ def load_ideas() -> list[Idea]:
             manifestation_status=status,
             stage=stage,
             interfaces=n.get("interfaces") or [],
+            tags=_load_tags(n.get("tags") or []),
             idea_type=idea_type,
             parent_idea_id=n.get("parent_idea_id"),
             child_idea_ids=n.get("child_idea_ids") or [],
@@ -295,6 +309,7 @@ def save_single_idea(idea: Idea, position: int = 0) -> None:
         "parent_idea_id": idea.parent_idea_id,
         "child_idea_ids": idea.child_idea_ids or [],
         "interfaces": idea.interfaces or [],
+        "tags": idea.tags or [],
         "open_questions": [q.model_dump() if hasattr(q, "model_dump") else q for q in (idea.open_questions or [])],
         "value_basis": idea.value_basis,
     }

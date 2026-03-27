@@ -67,6 +67,7 @@ class Idea(BaseModel):
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     manifestation_status: ManifestationStatus = ManifestationStatus.NONE
     interfaces: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
     open_questions: list[IdeaQuestion] = Field(default_factory=list)
     idea_type: IdeaType = IdeaType.STANDALONE
     parent_idea_id: Optional[str] = None
@@ -171,6 +172,7 @@ class IdeaCreate(BaseModel):
     estimated_cost: float = Field(ge=0.0)
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     interfaces: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
     open_questions: list[IdeaQuestionCreate] = Field(default_factory=list)
     # Optional fields for full-fidelity seeding
     actual_value: Optional[float] = Field(default=None, ge=0.0)
@@ -250,3 +252,21 @@ class ProgressDashboard(BaseModel):
     completion_pct: float = 0.0
     by_stage: dict[str, StageBucket] = Field(default_factory=dict)
     snapshot_at: str = Field(description="ISO 8601 UTC timestamp")
+
+
+class IdeaTagsUpdate(BaseModel):
+    tags: list[str] = Field(default_factory=list)
+
+
+class IdeaTagsResponse(BaseModel):
+    id: str = Field(min_length=1)
+    tags: list[str] = Field(default_factory=list)
+
+
+class IdeaTagCatalogEntry(BaseModel):
+    tag: str = Field(min_length=1)
+    idea_count: int = Field(ge=1)
+
+
+class IdeaTagCatalogResponse(BaseModel):
+    tags: list[IdeaTagCatalogEntry] = Field(default_factory=list)
