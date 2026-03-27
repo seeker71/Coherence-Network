@@ -36,9 +36,12 @@ async def create_event(event: FrictionEvent) -> FrictionEvent:
 
 @router.get("/friction/report", response_model=FrictionReport)
 async def report(
-    window_days: int = Query(7, ge=1, le=365),
+    window_days: int = Query(7, ge=1, le=90),
+    limit: int = Query(500, ge=1, le=5000, description="Max events to scan"),
 ) -> FrictionReport:
     events, ignored = friction_service.load_events()
+    # Cap events scanned to prevent slow page loads
+    events = events[-limit:] if len(events) > limit else events
     data = friction_service.summarize(events, window_days=window_days)
     data["source_file"] = str(friction_service.friction_file_path())
     data["ignored_lines"] = ignored
