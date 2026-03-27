@@ -2632,6 +2632,17 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                 if code_changes:
                     has_code_changes = True
                     log.info("VERIFIED task=%s code_files=%d total_files=%d", task_id, len(code_changes), len(new_changes))
+
+                    # Runner stages and commits — don't rely on provider to do it
+                    cwd = str(_REPO_DIR)
+                    subprocess.run(["git", "add", "-A"], capture_output=True, timeout=10, cwd=cwd)
+                    idea_id = context.get("idea_id", "unknown")
+                    subprocess.run(
+                        ["git", "commit", "-m", f"{task_type}({idea_id}): {task_id[:12]} via {provider}"],
+                        capture_output=True, timeout=10, cwd=cwd,
+                    )
+                    log.info("RUNNER_COMMITTED task=%s type=%s files=%d", task_id, task_type, len(code_changes))
+
                     # Push changes and create PR for impl/test tasks
                     if task_type == "impl":
                         pr_url = _push_and_pr(task, task_id, task_type, provider, code_changes, output)
