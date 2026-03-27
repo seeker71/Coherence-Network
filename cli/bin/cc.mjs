@@ -27,6 +27,7 @@ import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisi
 import { publishDiag, startDiagMode } from "../lib/commands/diag_publish.mjs";
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
+import { setup } from "../lib/commands/setup.mjs";
 import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
 import {
@@ -77,6 +78,7 @@ const COMMANDS = {
   update:        () => update(args),
   deploy:        () => deploy(args),
   listen:        () => listen(args),
+  setup:         () => setup(args),
   dif:           () => handleDif(args),
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
@@ -258,6 +260,7 @@ function showHelp() {
   spec <id>               View spec detail
   resonance               What's alive right now
   status                  Network health + node info
+  setup                   Interactive onboarding (identity + key)
 
 \x1b[1mContribute:\x1b[0m
   share                   Submit a new idea (interactive)

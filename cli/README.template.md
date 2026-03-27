@@ -157,45 +157,7 @@ Config is stored in `~/.coherence-network/config.json`.
 
 ## All commands
 
-```
-cc help                           Show all commands
-
-# Explore
-cc ideas [limit]                  Browse ideas by ROI
-cc idea <id>                      View idea detail with scores
-cc idea create <id> <name>        Create a new idea
-cc specs [limit]                  List feature specs
-cc spec <id>                      View spec detail
-cc resonance                      What's alive right now
-cc status                         Network health + node info
-
-# Contribute
-cc share                          Submit a new idea (interactive)
-cc stake <id> <cc>                Stake CC on an idea
-cc fork <id>                      Fork an idea
-cc contribute                     Record any contribution
-
-# Tasks (agent-to-agent)
-cc tasks [status] [limit]         List tasks (pending|running|completed)
-cc task <id>                      View task detail
-cc task next                      Claim next pending task
-cc task claim <id>                Claim a specific task
-cc task report <id> <status> [output]  Report result
-cc task seed <idea> [type]        Create task from idea
-
-# Identity
-cc identity                       Show linked accounts
-cc identity setup                 Guided identity onboarding
-cc identity link <provider> <id>  Link a provider identity
-cc identity unlink <provider>     Unlink a provider
-cc identity lookup <provider> <id> Find contributor by identity
-
-# Federation
-cc nodes                          List federation nodes
-cc msg <node|broadcast> <text>    Send message to a node
-cc cmd <node> <command>           Send structured command
-cc inbox                          Read your messages
-```
+<!-- include: docs/shared/cli-commands.md -->
 
 ---
 

@@ -153,9 +153,9 @@ Acceptance criteria:
 
 ## Known Gaps and Follow-up Tasks
 
-- Add automated post-deploy smoke check job that validates `/api/services` and `/api/health.schema_ok` after each main deploy.
-- Add explicit deploy evidence artifact template for command output, image IDs, and endpoint snapshots.
-- Add release lag monitor that alerts when production commit SHA drifts beyond a threshold from `origin/main`.
+- Follow-up: Add automated post-deploy smoke check task that validates `/api/services` and `/api/health.schema_ok` after each main deploy.
+- Task: Add explicit deploy evidence artifact template for command output, image IDs, and endpoint snapshots.
+- Task: Add release lag monitor that alerts when production commit SHA drifts beyond a threshold from `origin/main`.
 
 ## Failure/Retry Reflection
 

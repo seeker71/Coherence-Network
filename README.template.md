@@ -27,6 +27,8 @@ cc ideas                     # browse the portfolio ranked by ROI
 cc idea <id>                 # deep-dive: scores, open questions, value gaps
 ```
 
+<!-- include: docs/shared/cli-commands.md -->
+
 **Option C — give your AI agent access:**
 
 Add to your Claude/Cursor MCP config:

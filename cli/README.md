@@ -159,35 +159,6 @@ Every part of the network links to every other. Jump in wherever makes sense for
 
 ---
 
-## API key — what it's for and how to get one
-
-**No key needed for:** Browsing ideas, searching specs, viewing lineage, checking ledgers, reading node status, exploring the network.
-
-**Key needed for:** Updating idea status, recording contributions, linking identities, voting on governance, creating specs, managing federation.
-
-Most people start without a key. You only need one when you're ready to contribute.
-
-### Get a key (interactive)
-
-```bash
-cc setup
-```
-
-This walks you through choosing a name, linking an identity (GitHub, Discord, Ethereum, etc.), and generates a key tied to your identity. Stored in `~/.coherence-network/config.json`.
-
-### Manual setup
-
-```bash
-export COHERENCE_API_KEY=your-key
-```
-
-Or set it permanently:
-
-```bash
-cc identity set myname
-# Key is auto-generated and stored in ~/.coherence-network/config.json
-```
-
 ## Configuration
 
 By default, `cc` talks to the public API at `https://api.coherencycoin.com`. Override with environment variables:
@@ -196,7 +167,7 @@ By default, `cc` talks to the public API at `https://api.coherencycoin.com`. Ove
 # Point to a local node
 export COHERENCE_API_URL=http://localhost:8000
 
-# Set API key for write operations
+# Enable write operations
 export COHERENCE_API_KEY=your-key
 ```
 
@@ -204,217 +175,33 @@ Config is stored in `~/.coherence-network/config.json`.
 
 ---
 
-## Search, filter, and CRUD
-
-Every resource in the network is accessible from the CLI. Here's how to find what you need:
-
-### Ideas — the core unit
-
-```bash
-cc ideas                      # Top 20 by free-energy score (ROI × confidence)
-cc ideas 50                   # Top 50
-cc idea <id>                  # Full detail: scores, open questions, children, tasks
-cc idea create <id> <name>    # Create a new idea
-  --desc "..."                #   Description
-  --value 50 --cost 5         #   Potential value and estimated cost
-  --parent <parent-id>        #   Parent idea (fractal hierarchy)
-```
-
-### Specs — blueprints linked to ideas
-
-```bash
-cc specs                      # List specs with ROI and value gap
-cc specs 50                   # More results
-cc spec <id>                  # Full spec: summary, pseudocode, implementation status
-```
-
-### Tasks — the work queue
-
-```bash
-cc tasks                      # All pending tasks
-cc tasks running              # In-progress tasks
-cc tasks completed 20         # Last 20 completed
-cc task <id>                  # Full task: direction, idea link, output, provider
-cc task next                  # Claim the highest-priority task
-cc task seed <idea-id> spec   # Create a task for an idea
-```
-
-### Contributors and identity
-
-```bash
-cc contributors               # List all contributors
-cc contributor <id>            # View contributor detail
-cc contributor <id> contributions  # View contributor's contributions
-cc identity                   # Your linked accounts and CC balance
-cc identity lookup github <handle>  # Find any contributor by provider identity
-```
-
-### Assets
-
-```bash
-cc assets                     # List all tracked assets
-cc asset <id>                 # View asset detail
-cc asset create <type> <desc> # Create a new asset (infrastructure, software, identity)
-```
-
-### News
-
-```bash
-cc news                       # Latest news items
-cc news trending              # Trending news
-cc news sources               # List configured news sources
-cc news source add <url> <name>  # Add a news source
-cc news resonance [contributor]  # News resonance, optionally per contributor
-```
-
-### Treasury
-
-```bash
-cc treasury                   # Treasury overview (balances, deposits, CC conversion)
-cc treasury deposits [contributor]  # View deposits, optionally per contributor
-cc treasury deposit <amount> <asset>  # Record a deposit
-```
-
-### Value lineage
-
-```bash
-cc lineage                    # List lineage chains (idea → spec → impl → payout)
-cc lineage <id>               # View lineage detail
-cc lineage <id> valuation     # Measured value, cost, ROI for a chain
-cc lineage <id> payout <amount>  # Preview payout distribution
-```
-
-### Governance
-
-```bash
-cc governance                 # List governance proposals
-cc governance <id>            # View proposal detail
-cc governance vote <id> <yes|no>  # Vote on a proposal
-cc governance propose <title> <desc>  # Submit a new proposal
-```
-
-### Nodes and federation
-
-```bash
-cc nodes                      # All nodes: status, SHA, providers, last seen
-cc inbox                      # Messages from other nodes
-cc msg <node> <text>          # Send a message
-cc cmd <node> update          # Tell a node to git pull
-cc cmd <node> status          # Get CPU, RAM, disk, providers
-cc cmd <node> diagnose        # Get git status, recent errors
-cc cmd <node> restart         # Restart the runner
-cc cmd <node> ping            # Liveness check
-```
-
-### Services
-
-```bash
-cc services                   # List all registered services
-cc service <id>               # View service detail
-cc services health            # Health check across services
-cc services deps              # Service dependency map
-```
-
-### Friction
-
-```bash
-cc friction                   # Friction report summary
-cc friction events            # Recent friction events
-cc friction categories        # Friction categories breakdown
-```
-
-### Providers
-
-```bash
-cc providers                  # List available providers
-cc providers stats            # Provider success rates and usage
-```
-
-### Traceability
-
-```bash
-cc trace                      # Traceability overview
-cc trace coverage             # Coverage metrics
-cc trace idea <id>            # Trace an idea through its lifecycle
-cc trace spec <id>            # Trace a spec through its lifecycle
-```
-
-### Diagnostics
-
-```bash
-cc diag                       # Diagnostic overview (effectiveness + pipeline)
-cc diag health                # Collective health check
-cc diag issues                # Known issues and warnings
-cc diag runners               # Runner status across nodes
-cc diag visibility            # Observability status
-```
-
-### Searching and filtering
-
-Most list commands accept a limit. For deeper filtering, use the API directly:
-
-```bash
-# Search ideas by keyword
-curl -s "$CN_API/api/ideas/cards?search=treasury&limit=10" | jq '.items[] | {id, name}'
-
-# Search specs by keyword
-curl -s "$CN_API/api/spec-registry/cards?search=auth&limit=10" | jq '.items[] | {spec_id, title}'
-
-# Filter tasks by type and status
-curl -s "$CN_API/api/agent/tasks?status=completed&task_type=review&limit=10" | jq '.tasks[] | {id, task_type}'
-
-# Contributor ledger
-curl -s "$CN_API/api/contributions/ledger/seeker71" | jq '.balance'
-
-# Ideas by parent (fractal drill-down)
-curl -s "$CN_API/api/ideas/<parent-id>" | jq '.child_idea_ids'
-```
-
-The full API has 215 endpoints across 20 resource groups — see [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) for the complete reference. The CLI covers the most common operations; the API covers everything.
-
----
-
 ## All commands
 
-```
-cc help                           Show all commands
+<details>
+<summary>Full CLI command list (55 commands)</summary>
 
-# Explore
-cc ideas [limit]                  Browse ideas by ROI
-cc idea <id>                      View idea detail with scores
-cc idea create <id> <name>        Create a new idea
-cc specs [limit]                  List feature specs
-cc spec <id>                      View spec detail
-cc resonance                      What's alive right now
-cc status                         Network health + node info
+| Category | Commands |
+|----------|----------|
+| **Core** | `cc status`, `cc help`, `cc setup`, `cc inbox`, `cc resonance` |
+| **Ideas** | `cc ideas`, `cc idea <id>`, `cc idea create`, `cc share`, `cc stake <id> <cc>`, `cc fork <id>` |
+| **Specs** | `cc specs`, `cc spec <id>` |
+| **Identity** | `cc identity`, `cc identity setup`, `cc identity set <id>`, `cc identity link <p> <id>`, `cc identity unlink <p>`, `cc identity lookup <p> <id>` |
+| **Contributors** | `cc contributors`, `cc contributor <id>`, `cc contributor <id> contributions` |
+| **Contributions** | `cc contribute` |
+| **Tasks** | `cc tasks`, `cc task <id>`, `cc task next`, `cc task claim <id>`, `cc task report <id>`, `cc task seed <idea>` |
+| **Assets** | `cc assets`, `cc asset <id>`, `cc asset create <type> <desc>` |
+| **News** | `cc news`, `cc news trending`, `cc news sources`, `cc news source add <url> <name>`, `cc news resonance [contributor]` |
+| **Treasury** | `cc treasury`, `cc treasury deposits [contributor]`, `cc treasury deposit <amount> <asset>` |
+| **Value lineage** | `cc lineage`, `cc lineage <id>`, `cc lineage <id> valuation`, `cc lineage <id> payout <amount>` |
+| **Governance** | `cc governance`, `cc governance <id>`, `cc governance vote <id> <yes\|no>`, `cc governance propose <title> <desc>` |
+| **Nodes** | `cc nodes`, `cc msg <node> <text>`, `cc cmd <node> update\|status\|diagnose\|restart\|ping` |
+| **Services** | `cc services`, `cc service <id>`, `cc services health`, `cc services deps` |
+| **Friction** | `cc friction`, `cc friction events`, `cc friction categories` |
+| **Providers** | `cc providers`, `cc providers stats` |
+| **Traceability** | `cc trace`, `cc trace coverage`, `cc trace idea <id>`, `cc trace spec <id>` |
+| **Diagnostics** | `cc diag`, `cc diag health`, `cc diag issues`, `cc diag runners`, `cc diag visibility` |
 
-# Contribute
-cc share                          Submit a new idea (interactive)
-cc stake <id> <cc>                Stake CC on an idea
-cc fork <id>                      Fork an idea
-cc contribute                     Record any contribution
-
-# Tasks (agent-to-agent)
-cc tasks [status] [limit]         List tasks (pending|running|completed)
-cc task <id>                      View task detail
-cc task next                      Claim next pending task
-cc task claim <id>                Claim a specific task
-cc task report <id> <status> [output]  Report result
-cc task seed <idea> [type]        Create task from idea
-
-# Identity
-cc identity                       Show linked accounts
-cc identity setup                 Guided identity onboarding
-cc identity link <provider> <id>  Link a provider identity
-cc identity unlink <provider>     Unlink a provider
-cc identity lookup <provider> <id> Find contributor by identity
-
-# Federation
-cc nodes                          List federation nodes
-cc msg <node|broadcast> <text>    Send message to a node
-cc cmd <node> <command>           Send structured command
-cc inbox                          Read your messages
-```
+</details>
 
 ---
 

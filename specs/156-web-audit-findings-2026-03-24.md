@@ -71,6 +71,8 @@ N/A - no model changes in this spec.
 
 ## Acceptance Tests
 
+Manual validation scenarios that prove audit findings are resolved:
+
 - `Scenario A`: Tasks/client pages load without `Failed to fetch` when browser network uses relative `/api/...` routes.
 - `Scenario B`: Local dev navigation to `/ideas` does not crash Next.js dev server process.
 - `Scenario C`: Production deployment updates both API and web containers in the same release run.

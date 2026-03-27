@@ -25,7 +25,7 @@ curl -s https://api.coherencycoin.com/api/ideas?limit=5 | python3 -m json.tool
 curl -s https://api.coherencycoin.com/api/health | python3 -m json.tool
 ```
 
-**Option B — install the CLI (v0.8.0 — 54 commands across 22 modules):**
+**Option B — install the CLI:**
 
 ```bash
 npm i -g coherence-cli
@@ -35,16 +35,17 @@ cc idea <id>                 # deep-dive: scores, open questions, value gaps
 ```
 
 <details>
-<summary>Full CLI command list (54 commands)</summary>
+<summary>Full CLI command list (55 commands)</summary>
 
 | Category | Commands |
 |----------|----------|
-| **Core** | `cc status`, `cc help`, `cc inbox`, `cc resonance` |
-| **Ideas** | `cc ideas`, `cc idea <id>`, `cc share`, `cc stake <id> <cc>`, `cc fork <id>` |
+| **Core** | `cc status`, `cc help`, `cc setup`, `cc inbox`, `cc resonance` |
+| **Ideas** | `cc ideas`, `cc idea <id>`, `cc idea create`, `cc share`, `cc stake <id> <cc>`, `cc fork <id>` |
 | **Specs** | `cc specs`, `cc spec <id>` |
-| **Identity** | `cc identity`, `cc identity setup`, `cc identity link <provider> <handle>`, `cc identity unlink <provider>`, `cc identity lookup <provider> <handle>` |
+| **Identity** | `cc identity`, `cc identity setup`, `cc identity set <id>`, `cc identity link <p> <id>`, `cc identity unlink <p>`, `cc identity lookup <p> <id>` |
 | **Contributors** | `cc contributors`, `cc contributor <id>`, `cc contributor <id> contributions` |
 | **Contributions** | `cc contribute` |
+| **Tasks** | `cc tasks`, `cc task <id>`, `cc task next`, `cc task claim <id>`, `cc task report <id>`, `cc task seed <idea>` |
 | **Assets** | `cc assets`, `cc asset <id>`, `cc asset create <type> <desc>` |
 | **News** | `cc news`, `cc news trending`, `cc news sources`, `cc news source add <url> <name>`, `cc news resonance [contributor]` |
 | **Treasury** | `cc treasury`, `cc treasury deposits [contributor]`, `cc treasury deposit <amount> <asset>` |

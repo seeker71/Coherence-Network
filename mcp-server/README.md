@@ -123,37 +123,6 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 
 ---
 
-## CLI equivalent
-
-The Coherence CLI (`npm i -g coherence-cli`) provides the same capabilities as the MCP tools, plus additional commands. Here is the mapping:
-
-| MCP Tool | CLI Command |
-|----------|------------|
-| `coherence_list_ideas` | `cc ideas` |
-| `coherence_get_idea` | `cc idea <id>` |
-| `coherence_idea_progress` | `cc idea <id>` (includes progress) |
-| `coherence_select_idea` | `cc ideas` (with temperature flag) |
-| `coherence_showcase` | `cc ideas` (showcase view) |
-| `coherence_resonance` | `cc resonance` |
-| `coherence_list_specs` | `cc specs` |
-| `coherence_get_spec` | `cc spec <id>` |
-| `coherence_list_lineage` | `cc lineage` |
-| `coherence_lineage_valuation` | `cc lineage <id> valuation` |
-| `coherence_list_providers` | `cc providers` |
-| `coherence_link_identity` | `cc identity link <provider> <handle>` |
-| `coherence_lookup_identity` | `cc identity lookup <provider> <handle>` |
-| `coherence_get_identities` | `cc identity` |
-| `coherence_record_contribution` | `cc contribute` |
-| `coherence_contributor_ledger` | `cc contributor <id> contributions` |
-| `coherence_status` | `cc status` |
-| `coherence_friction_report` | `cc friction` |
-| `coherence_list_change_requests` | `cc governance` |
-| `coherence_list_federation_nodes` | `cc nodes` |
-
-The CLI also includes additional commands not available via MCP: `cc news`, `cc treasury`, `cc assets`, `cc services`, `cc trace`, `cc diag`, and more. Run `cc help` for the full list of 54 commands.
-
----
-
 ## Example conversations
 
 Once connected, you can ask your agent things like:
@@ -186,56 +155,7 @@ Payouts are weighted by coherence. Higher-quality work earns proportionally more
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `COHERENCE_API_URL` | `https://api.coherencycoin.com` | API base URL. Override to point at a local node. |
-| `COHERENCE_API_KEY` | *(none)* | API key for write operations. See below for what requires a key and how to get one. |
-
-### What requires an API key?
-
-**No key needed (read-only):** Browse ideas, search specs, view lineage, check contributor ledgers, see federation nodes, read coherence scores, view governance proposals.
-
-**Key needed (write operations):** Update idea status, record contributions, link identities, create specs, vote on governance proposals, manage federation nodes, submit news sources.
-
-Most users start without a key — exploring ideas, reading specs, checking who's contributing. You only need a key when you're ready to actively contribute.
-
-### How to get an API key
-
-Run the interactive setup:
-
-```bash
-npx coherence-cli
-# then: cc setup
-```
-
-This walks you through:
-1. Choose a contributor name
-2. Link an identity (GitHub, Discord, Ethereum, etc.)
-3. The system generates an API key tied to your identity
-
-Your key is stored locally in `~/.coherence-network/config.json` and used automatically by both the CLI and MCP server.
-
-**Manual setup** (if you already have a key):
-
-```bash
-export COHERENCE_API_KEY="your-key-here"
-npx coherence-mcp-server
-```
-
-Or in your MCP config:
-
-```json
-{
-  "mcpServers": {
-    "coherence-network": {
-      "command": "npx",
-      "args": ["coherence-mcp-server"],
-      "env": {
-        "COHERENCE_API_KEY": "your-key-here"
-      }
-    }
-  }
-}
-```
-
-Source code: [github.com/seeker71/Coherence-Network/mcp-server](https://github.com/seeker71/Coherence-Network/tree/main/mcp-server)
+| `COHERENCE_API_KEY` | *(none)* | Required for write operations (governance, spec creation, federation). Reads work without a key. |
 
 ---
 

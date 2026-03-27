@@ -30,6 +30,11 @@ metadata:
                 "description": "API key for write operations (governance, spec creation, federation). Read-only access works without a key.",
                 "required": false,
               },
+            "COHERENCE_CONTRIBUTOR":
+              {
+                "description": "Contributor ID for attribution (overrides local config)",
+                "required": false,
+              },
           },
       },
   }
@@ -179,6 +184,7 @@ Link any identity to attribute contributions. No registration required — just 
 ```bash
 cc identity                         # Show linked accounts
 cc identity setup                   # Guided onboarding
+cc identity set <id>                # Set identity non-interactively
 cc identity link github alice-dev   # Link GitHub
 cc identity link discord user#1234  # Link Discord
 cc identity link ethereum 0x123...  # Link ETH address
