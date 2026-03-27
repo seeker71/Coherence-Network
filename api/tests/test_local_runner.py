@@ -18,6 +18,39 @@ class _DummyResponse:
         return self._payload
 
 
+def test_create_worktree_uses_full_task_slug_for_branch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    worktree_base = repo_root / ".worktrees"
+    repo_root.mkdir()
+    worktree_base.mkdir()
+    task_id = "task_c80276cc0b98b044"
+    calls: list[list[str]] = []
+
+    class _Result:
+        def __init__(self) -> None:
+            self.returncode = 0
+            self.stdout = ""
+            self.stderr = ""
+
+    def _run(cmd: list[str], **kwargs: Any) -> _Result:
+        calls.append(cmd)
+        if cmd[:3] == ["git", "worktree", "add"]:
+            Path(cmd[5]).mkdir(parents=True, exist_ok=True)
+        return _Result()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo_root)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", worktree_base)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    wt = local_runner._create_worktree(task_id)
+
+    assert wt is not None
+    assert wt.name == "task-task_c80276cc0b98b044"
+    worktree_add_calls = [cmd for cmd in calls if cmd[:3] == ["git", "worktree", "add"]]
+    assert len(worktree_add_calls) == 1
+    assert worktree_add_calls[0][4] == "task/task_c80276cc0b98b044"
+
+
 def test_claim_and_complete_task_with_mocked_api_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[tuple[str, dict[str, Any] | None]] = []
 

@@ -3788,13 +3788,22 @@ _MAX_PARALLEL = int(os.environ.get("CC_MAX_PARALLEL", "3"))
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 
 
+def _task_worktree_slug(task_id: str) -> str:
+    """Return a collision-resistant, git-safe slug for worktree refs."""
+    normalized = re.sub(r"[^A-Za-z0-9._-]+", "-", (task_id or "").strip()).strip("-")
+    if not normalized:
+        normalized = "task"
+    # Keep most of the task identifier to avoid branch collisions.
+    return normalized[:40]
+
+
 def _create_worktree(task_id: str) -> Path | None:
     """Create a git worktree for isolated task execution.
 
     Fix 1: fetch origin/main first so worktree starts from latest remote code,
     not stale local HEAD.
     """
-    slug = task_id[:16]
+    slug = _task_worktree_slug(task_id)
     wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
     repo_root = str(_REPO_DIR)
@@ -3825,7 +3834,7 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
     Returns the full diff content (up to 10KB) — this is the actual code
     that was written, suitable for carrying forward to a retry task.
     """
-    slug = task_id[:16]
+    slug = _task_worktree_slug(task_id)
     try:
         # Stage everything so diff captures new files too
         subprocess.run(
@@ -3884,7 +3893,7 @@ def _cleanup_worktree(task_id: str) -> None:
 
     Fix 5: only called AFTER push is confirmed (or task failed).
     """
-    slug = task_id[:16]
+    slug = _task_worktree_slug(task_id)
     wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
     try:
@@ -3909,7 +3918,7 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
     After impl/test: push branch (NOT main) — code stays on branch until
     code-review passes. Other nodes fetch this branch for subsequent phases.
     """
-    slug = task_id[:16]
+    slug = _task_worktree_slug(task_id)
     branch = f"task/{slug}"
     try:
         # Commit any uncommitted changes in the worktree
@@ -4003,7 +4012,7 @@ def _merge_branch_to_main(task_id: str) -> bool:
 
     This is the gate — code only reaches main after review.
     """
-    slug = task_id[:16]
+    slug = _task_worktree_slug(task_id)
     branch = f"task/{slug}"
     repo_root = str(_REPO_DIR)
     try:
