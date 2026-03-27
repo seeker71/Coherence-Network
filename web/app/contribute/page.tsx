@@ -70,6 +70,9 @@ export default function ContributePage() {
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [quickContributionIdeaId, setQuickContributionIdeaId] = useState("");
+  const [quickContributionSummary, setQuickContributionSummary] = useState("");
+  const [quickContributionProof, setQuickContributionProof] = useState("");
 
   const [newContributorName, setNewContributorName] = useState("");
   const [newContributorEmail, setNewContributorEmail] = useState("");
@@ -186,6 +189,30 @@ export default function ContributePage() {
     return idea?.open_questions ?? [];
   }, [ideas, answerIdeaId]);
 
+  const openIdeaQuestions = useMemo(
+    () =>
+      ideas
+        .flatMap((idea) =>
+          (idea.open_questions ?? []).map((question) => ({
+            ideaId: idea.id,
+            ideaName: idea.name,
+            question: question.question,
+          }))
+        )
+        .slice(0, 6),
+    [ideas]
+  );
+
+  const openHelpTasks = useMemo(() => changeRequests.filter((item) => item.status === "open").slice(0, 6), [changeRequests]);
+
+  const recentContributions = useMemo(
+    () =>
+      [...changeRequests]
+        .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at))
+        .slice(0, 6),
+    [changeRequests]
+  );
+
   async function registerContributor() {
     if (!newContributorName.trim() || !newContributorEmail.trim()) return;
     setBusy("register");
@@ -285,12 +312,115 @@ export default function ContributePage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Contribute</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          Every contribution moves the network forward. Register, propose changes, and review what others have submitted. Approved requests apply automatically.
+          Start with what needs help now, pick something interesting, ship your contribution, and get visible credit in the network.
         </p>
       </div>
 
+      <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h2 className="text-xl font-semibold">What needs help right now</h2>
+          <p className="text-sm text-muted-foreground">Open idea questions that are waiting on a contributor response.</p>
+          <ul className="space-y-2 text-sm">
+            {openIdeaQuestions.map((item) => (
+              <li key={`${item.ideaId}:${item.question}`} className="rounded-xl border border-border/20 bg-background/40 px-3 py-2">
+                <p className="font-medium">{item.question}</p>
+                <p className="text-muted-foreground">
+                  idea <code>{item.ideaId}</code> - {item.ideaName}
+                </p>
+              </li>
+            ))}
+            {openIdeaQuestions.length === 0 && <li className="text-muted-foreground">No open idea questions right now.</li>}
+          </ul>
+        </article>
+
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h2 className="text-xl font-semibold">Pick something interesting</h2>
+          <p className="text-sm text-muted-foreground">These open requests can be reviewed or advanced by anyone with contributor access.</p>
+          <ul className="space-y-2 text-sm">
+            {openHelpTasks.map((item) => (
+              <li key={item.id} className="rounded-xl border border-border/20 bg-background/40 px-3 py-2">
+                <p className="font-medium">{REQUEST_TYPE_LABELS[item.request_type] ?? item.request_type}</p>
+                <p>{item.title}</p>
+                <p className="text-muted-foreground">
+                  proposer <code>{item.proposer_id}</code> - <code>{item.id}</code>
+                </p>
+              </li>
+            ))}
+            {openHelpTasks.length === 0 && <li className="text-muted-foreground">No open requests yet. Check back after the next sync.</li>}
+          </ul>
+        </article>
+
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h2 className="text-xl font-semibold">Recent contributions</h2>
+          <p className="text-sm text-muted-foreground">Recent activity from other contributors so you can follow momentum.</p>
+          <ul className="space-y-2 text-sm">
+            {recentContributions.map((item) => (
+              <li key={`recent-${item.id}`} className="rounded-xl border border-border/20 bg-background/40 px-3 py-2">
+                <p className="font-medium">{item.title}</p>
+                <p className="text-muted-foreground">
+                  {item.status} - updated {item.updated_at}
+                </p>
+              </li>
+            ))}
+            {recentContributions.length === 0 && <li className="text-muted-foreground">No recent contributions yet.</li>}
+          </ul>
+        </article>
+
+        <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <h2 className="text-xl font-semibold">I did something</h2>
+          <p className="text-sm text-muted-foreground">Drop a quick contribution note so a proposer can capture it in governance flow.</p>
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            <select
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
+              value={quickContributionIdeaId}
+              onChange={(e) => setQuickContributionIdeaId(e.target.value)}
+            >
+              <option value="">Related idea (optional)</option>
+              {ideas.map((item) => (
+                <option key={`quick-${item.id}`} value={item.id}>
+                  {item.id}
+                </option>
+              ))}
+            </select>
+            <input
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
+              placeholder="What did you do?"
+              value={quickContributionSummary}
+              onChange={(e) => setQuickContributionSummary(e.target.value)}
+            />
+            <textarea
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
+              rows={3}
+              placeholder="Proof link, commit, or notes"
+              value={quickContributionProof}
+              onChange={(e) => setQuickContributionProof(e.target.value)}
+            />
+            <button
+              type="button"
+              className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent transition-colors"
+              disabled={!quickContributionSummary.trim()}
+              onClick={() => {
+                setError("Quick note captured locally. Use Advanced admin tools below to submit a formal request.");
+                setQuickContributionSummary("");
+                setQuickContributionProof("");
+                setQuickContributionIdeaId("");
+              }}
+            >
+              Save quick contribution note
+            </button>
+          </div>
+        </article>
+      </section>
+
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">
+        <h2 className="text-xl font-semibold">Advanced admin tools</h2>
+        <p className="text-sm text-muted-foreground">
+          Governance operators can register contributors, draft formal requests, and process votes.
+        </p>
+      </section>
+
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
-        <h2 className="text-xl font-semibold">Register as a Contributor</h2>
+        <h2 className="text-xl font-semibold">Register contributor identity</h2>
         <p className="text-sm text-muted-foreground">Create your identity in the network so your contributions are tracked and credited.</p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
           <div className="space-y-1">
@@ -343,7 +473,7 @@ export default function ContributePage() {
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-        <h2 className="text-xl font-semibold">Select Proposer and Reviewer</h2>
+        <h2 className="text-xl font-semibold">Assign proposer and reviewer</h2>
         <p className="text-sm text-muted-foreground">Choose who is proposing changes and who will review them. This determines attribution and vote authority.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
           <select
@@ -379,7 +509,7 @@ export default function ContributePage() {
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-          <h3 className="text-xl font-semibold">Create an Idea</h3>
+          <h3 className="text-xl font-semibold">Propose a new idea record</h3>
           <p className="text-sm text-muted-foreground">Submit a new idea to the network. It starts as a proposal and gets reviewed before going live.</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <div className="space-y-1">
@@ -430,7 +560,7 @@ export default function ContributePage() {
         </article>
 
         <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-          <h3 className="text-xl font-semibold">Update an Idea</h3>
+          <h3 className="text-xl font-semibold">Adjust an existing idea record</h3>
           <p className="text-sm text-muted-foreground">Adjust values, cost, confidence, or status of an existing idea as new information emerges.</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={ideaUpdateId} onChange={(e) => setIdeaUpdateId(e.target.value)}>

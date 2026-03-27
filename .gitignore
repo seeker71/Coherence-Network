@@ -61,3 +61,5 @@ out.txt
 data/*.db
 *.db-wal
 *.db-shm
+.task-*
+data/coherence.db

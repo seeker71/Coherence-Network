@@ -34,12 +34,13 @@ def test_contributors_page_points_new_contributors_to_contribution_console() -> 
 
 
 def test_contribute_page_contains_new_contributor_orientation_sections() -> None:
-    """Contribute page exposes first-time contributor orientation sections."""
+    """Contribute page exposes contributor-first sections instead of admin-first forms."""
     content = _read(CONTRIBUTE_PAGE)
-    assert "Register as a Contributor" in content
-    assert "Select Proposer and Reviewer" in content
+    assert "What needs help right now" in content
+    assert "Pick something interesting" in content
+    assert "I did something" in content
+    assert "Recent contributions" in content
     assert "Where to go next" in content
-    assert "Machine API" in content
 
 
 def test_contribute_page_orientation_navigation_links_exist() -> None:
@@ -48,6 +49,17 @@ def test_contribute_page_orientation_navigation_links_exist() -> None:
     assert 'href="/ideas"' in content
     assert 'href="/specs"' in content
     assert 'href="/resonance"' in content
+
+
+def test_contribute_page_keeps_admin_controls_behind_advanced_toggle() -> None:
+    """Admin workflows are available but no longer positioned as the default contributor path."""
+    content = _read(CONTRIBUTE_PAGE)
+    assert "Register as a Contributor" not in content
+    assert "Select Proposer and Reviewer" not in content
+    assert "Create an Idea" not in content
+    assert "Update an Idea" not in content
+    assert "Advanced admin tools" in content
+    assert "Machine API" in content
 
 
 def test_orientation_backing_endpoints_are_reachable() -> None:
