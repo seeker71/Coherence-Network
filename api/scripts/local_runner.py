@@ -3248,32 +3248,114 @@ _MAX_PARALLEL = int(os.environ.get("CC_MAX_PARALLEL", "3"))
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 
 
+def _worktree_path_is_valid(wt_path: Path, branch: str) -> bool:
+    """True if path is a git worktree checked out on ``branch`` (reuse after push-fail keep)."""
+    git_file = wt_path / ".git"
+    if not git_file.exists():
+        return False
+    try:
+        cur = subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            capture_output=True, text=True, timeout=5, cwd=str(wt_path),
+        )
+        if cur.returncode != 0:
+            return False
+        head = cur.stdout.strip()
+        if head != branch:
+            return False
+        inside = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            capture_output=True, text=True, timeout=5, cwd=str(wt_path),
+        )
+        return inside.returncode == 0 and inside.stdout.strip().lower() == "true"
+    except Exception:
+        return False
+
+
+def _remove_stale_worktree_dir(repo_root: str, wt_path: Path, branch: str) -> None:
+    """Remove a leftover path so ``git worktree add`` can recreate it."""
+    subprocess.run(
+        ["git", "worktree", "remove", "--force", str(wt_path)],
+        capture_output=True, text=True, timeout=30, cwd=repo_root,
+    )
+    subprocess.run(
+        ["git", "worktree", "prune"],
+        capture_output=True, text=True, timeout=10, cwd=repo_root,
+    )
+    if wt_path.exists():
+        shutil.rmtree(wt_path, ignore_errors=True)
+    # Orphan branch with no checkout — safe to drop so we can recreate from origin/main
+    subprocess.run(
+        ["git", "branch", "-D", branch],
+        capture_output=True, text=True, timeout=10, cwd=repo_root,
+    )
+
+
 def _create_worktree(task_id: str) -> Path | None:
     """Create a git worktree for isolated task execution.
 
     Fix 1: fetch origin/main first so worktree starts from latest remote code,
     not stale local HEAD.
+
+    Recover when ``git worktree add -b`` fails because the task branch or path
+    already exists (retry after partial cleanup, or stale refs).
     """
     slug = task_id[:16]
     wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
     repo_root = str(_REPO_DIR)
+    base_ref = "origin/main"
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
-        # Fix 1: fetch latest origin/main before branching
         subprocess.run(
             ["git", "fetch", "origin", "main", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
-        # Branch from origin/main (not local HEAD which may be stale)
-        base_ref = "origin/main"
-        subprocess.run(
+        # Reuse kept worktree (success + branch push failed — path still valid)
+        if _worktree_path_is_valid(wt_path, branch):
+            log.info("WORKTREE_REUSE task=%s path=%s", slug, wt_path)
+            return wt_path
+        # Stale directory or half-removed worktree — clear before add
+        if wt_path.exists():
+            _remove_stale_worktree_dir(repo_root, wt_path, branch)
+
+        add = subprocess.run(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
-        if wt_path.exists():
+        if add.returncode == 0 and wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path
+
+        err = ((add.stderr or "") + (add.stdout or "")).lower()
+        # Branch exists without a checkout, or duplicate branch after interrupted run
+        if "already exists" in err or "already checked out" in err:
+            add2 = subprocess.run(
+                ["git", "worktree", "add", str(wt_path), branch],
+                capture_output=True, text=True, timeout=30, cwd=repo_root,
+            )
+            if add2.returncode == 0 and wt_path.exists():
+                log.info("WORKTREE_CHECKOUT_EXISTING task=%s path=%s", slug, wt_path)
+                return wt_path
+            # Last resort: drop branch and recreate from origin/main
+            subprocess.run(
+                ["git", "branch", "-D", branch],
+                capture_output=True, text=True, timeout=10, cwd=repo_root,
+            )
+            add3 = subprocess.run(
+                ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
+                capture_output=True, text=True, timeout=30, cwd=repo_root,
+            )
+            if add3.returncode == 0 and wt_path.exists():
+                log.info("WORKTREE_RECREATED task=%s path=%s", slug, wt_path)
+                return wt_path
+
+        log.warning(
+            "WORKTREE_FAILED task=%s rc=%s stderr=%s",
+            slug,
+            add.returncode,
+            (add.stderr or "")[:800],
+        )
     except Exception as e:
         log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
     return None
