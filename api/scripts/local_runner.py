@@ -1961,10 +1961,20 @@ def execute_with_provider(
     cmd = list(spec["cmd"])
     stdin_input = None
 
+    # Codex: use `codex review` for reviews (read-only, no exec), `codex exec` for everything else
+    # Proven: `codex exec --full-auto` hangs on reviews (12/12 timeouts at 510s)
+    if provider == "codex" and task_type in ("review", "code-review"):
+        codex_bin = shutil.which("codex") or "codex"
+        cmd = [codex_bin, "review"]
+        spec = dict(spec)
+        spec["append_prompt"] = True
+        spec["stdin_prompt"] = False
+        log.info("CODEX_CMD task=%s mode=review (read-only, no exec)", task_type)
+
     # Cursor: never use -p (disables tools), never use stdin (hangs).
     # Proven working: `agent --model <model> "prompt"` (positional arg)
     # Can write files inside repo, NOT outside (sandbox).
-    if provider == "cursor":
+    elif provider == "cursor":
         agent_bin = shutil.which("agent") or "agent"
         model = "gpt-5.3-codex" if task_type in ("impl", "test", "spec") else "auto"
         cmd = [agent_bin, "--model", model]
