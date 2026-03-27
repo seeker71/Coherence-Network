@@ -2117,22 +2117,10 @@ def execute_with_provider(
     cmd = list(spec["cmd"])
     stdin_input = None
 
-    # Codex: use `codex review` for review tasks (built-in review mode)
-    # `codex exec --full-auto` hangs on reviews (12/12 timeouts at 510s)
-    # `codex review` has tools (can read files, run gh) but won't try to execute impl
-    if provider == "codex" and task_type in ("review", "code-review"):
-        codex_bin = shutil.which("codex") or "codex"
-        # If we have a PR number, use --uncommitted to review the PR diff
-        ctx = task.get("context") or {} if isinstance(task, dict) else {}
-        pr_number = (ctx if isinstance(ctx, dict) else {}).get("pr_number", "")
-        if pr_number:
-            cmd = [codex_bin, "review", "--base", "main"]
-        else:
-            cmd = [codex_bin, "review"]
-        spec = dict(spec)
-        spec["append_prompt"] = True
-        spec["stdin_prompt"] = False
-        log.info("CODEX_CMD task=%s mode=review pr=%s", task_type, pr_number or "none")
+    # All providers use their default invocation with full tool access.
+    # No special-casing per task type — the prompt guides behavior, not the CLI flags.
+    # Codex: `codex exec --full-auto` for everything (full tool access)
+    # Cursor: `agent --model <model>` (positional arg, full tool access)
 
     # Cursor: never use -p (disables tools), never use stdin (hangs).
     # Proven working: `agent --model <model> "prompt"` (positional arg)
