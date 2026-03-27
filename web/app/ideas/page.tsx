@@ -38,6 +38,9 @@ type IdeaWithScore = {
   open_questions: IdeaQuestion[];
   free_energy_score: number;
   value_gap: number;
+  idea_type?: string;
+  parent_idea_id?: string | null;
+  child_idea_ids?: string[];
 };
 
 type IdeasResponse = {
@@ -163,6 +166,104 @@ function whatItNeeds(idea: IdeaWithScore): string {
   return "Needs a spec";
 }
 
+function buildIdeaMap(ideas: IdeaWithScore[]): Map<string, IdeaWithScore> {
+  return new Map(ideas.map((i) => [i.id, i]));
+}
+
+function gatherChildren(
+  parent: IdeaWithScore,
+  byId: Map<string, IdeaWithScore>,
+): IdeaWithScore[] {
+  const ordered: IdeaWithScore[] = [];
+  const seen = new Set<string>();
+  for (const cid of parent.child_idea_ids ?? []) {
+    const child = byId.get(cid);
+    if (child) {
+      ordered.push(child);
+      seen.add(cid);
+    }
+  }
+  for (const idea of byId.values()) {
+    if (idea.parent_idea_id === parent.id && !seen.has(idea.id)) {
+      ordered.push(idea);
+    }
+  }
+  return ordered;
+}
+
+function hierarchyDisplayRoots(ideas: IdeaWithScore[]): IdeaWithScore[] {
+  const byId = buildIdeaMap(ideas);
+  return ideas
+    .filter((i) => {
+      const t = (i.idea_type ?? "standalone").toLowerCase();
+      const listed = (i.child_idea_ids?.length ?? 0) > 0;
+      const linked = [...byId.values()].some((x) => x.parent_idea_id === i.id);
+      const isStructural = t === "super" || listed || linked;
+      if (!isStructural) return false;
+      const parentMissing = !i.parent_idea_id || !byId.has(i.parent_idea_id);
+      return parentMissing;
+    })
+    .sort((a, b) => {
+      const ap = (a.idea_type ?? "").toLowerCase() === "super" ? 0 : 1;
+      const bp = (b.idea_type ?? "").toLowerCase() === "super" ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      return b.free_energy_score - a.free_energy_score;
+    });
+}
+
+function IdeaHierarchyBranch({
+  node,
+  byId,
+}: {
+  node: IdeaWithScore;
+  byId: Map<string, IdeaWithScore>;
+}) {
+  const children = gatherChildren(node, byId);
+  const typeLabel = (node.idea_type ?? "standalone").toLowerCase();
+  return (
+    <li className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href={`/ideas/${encodeURIComponent(node.id)}`}
+          className="font-medium text-foreground hover:text-primary transition-colors"
+        >
+          {node.name}
+        </Link>
+        {typeLabel !== "standalone" ? (
+          <span className="text-xs rounded-full border border-border/40 px-2 py-0.5 bg-muted/30 text-muted-foreground">
+            {typeLabel}
+          </span>
+        ) : null}
+      </div>
+      {children.length > 0 ? (
+        <ul className="ml-3 sm:ml-4 border-l border-border/40 pl-4 space-y-3">
+          {children.map((ch) => (
+            <IdeaHierarchyBranch key={ch.id} node={ch} byId={byId} />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+function IdeaHierarchyTree({ ideas }: { ideas: IdeaWithScore[] }) {
+  const roots = hierarchyDisplayRoots(ideas);
+  if (roots.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No grouped hierarchy yet. When super-ideas link children, they appear here.
+      </p>
+    );
+  }
+  return (
+    <ul className="space-y-4">
+      {roots.map((r) => (
+        <IdeaHierarchyBranch key={r.id} node={r} byId={byId} />
+      ))}
+    </ul>
+  );
+}
+
 export default async function IdeasPage() {
   const data = await loadIdeas();
   const progress = await loadProgressDashboard(data.ideas);
@@ -195,6 +296,16 @@ export default async function IdeasPage() {
           <p className="text-sm text-muted-foreground">Remaining opportunity</p>
           <p className="text-2xl font-light text-primary">{formatUsd(data.summary.total_value_gap)}</p>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-4">
+        <div>
+          <h2 className="text-xl font-semibold tracking-tight">Ideas hierarchy</h2>
+          <p className="text-sm text-muted-foreground mt-1 max-w-2xl leading-relaxed">
+            Super-ideas group related work. Child ideas show under their parent for strategic context.
+          </p>
+        </div>
+        <IdeaHierarchyTree ideas={ideas} />
       </section>
 
       <section className="space-y-4">
