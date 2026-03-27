@@ -13,6 +13,9 @@ type FederationNodeCapabilities = {
   executors?: string[];
   tools?: string[];
   hardware?: {
+    platform?: string;
+    processor?: string;
+    python?: string;
     cpu_count?: number;
     memory_total_gb?: number | null;
     gpu_available?: boolean;
@@ -273,24 +276,21 @@ export default async function NodesPage() {
                   </p>
                 )}
 
-                {/* Row 6: Hardware (collapsed) */}
-                {node.capabilities?.hardware && (
-                  <p className="text-xs text-muted-foreground">
-                    {node.capabilities.hardware.cpu_count ?? "?"} CPU |{" "}
-                    {node.capabilities.hardware.memory_total_gb != null
-                      ? `${node.capabilities.hardware.memory_total_gb.toFixed(0)} GB`
-                      : "? GB"} RAM
-                    {node.capabilities.hardware.gpu_available && (
-                      <> | GPU: {node.capabilities.hardware.gpu_type ?? "yes"}</>
-                    )}
-                    {" "}| registered {new Date(node.registered_at).toLocaleDateString()}
-                  </p>
-                )}
-                {!node.capabilities?.hardware && (
-                  <p className="text-xs text-muted-foreground">
-                    registered {new Date(node.registered_at).toLocaleDateString()}
-                  </p>
-                )}
+                {/* Row 6: Platform info */}
+                <p className="text-xs text-muted-foreground">
+                  {node.capabilities?.hardware?.platform && (
+                    <>{node.capabilities.hardware.platform.split("-").slice(0, 2).join(" ")} | </>
+                  )}
+                  {node.capabilities?.hardware?.processor && (
+                    <>{node.capabilities.hardware.processor.length > 30
+                      ? node.capabilities.hardware.processor.split(",")[0]
+                      : node.capabilities.hardware.processor} | </>
+                  )}
+                  {node.capabilities?.hardware?.python && (
+                    <>Python {node.capabilities.hardware.python} | </>
+                  )}
+                  registered {new Date(node.registered_at).toLocaleDateString()}
+                </p>
               </li>
             );
           })}
