@@ -536,6 +536,7 @@ def _build_node_streaks() -> dict[str, dict]:
     streaks: dict[str, dict] = defaultdict(lambda: {
         "completed": 0, "failed": 0, "timed_out": 0, "executing": 0,
         "last_10": [], "providers_used": set(),
+        "by_provider": defaultdict(lambda: {"ok": 0, "fail": 0, "timeout": 0, "last_5": []}),
     })
     for e in events:
         node = e.get("node_name", "")
@@ -543,18 +544,27 @@ def _build_node_streaks() -> dict[str, dict]:
             continue
         s = streaks[node]
         et = e.get("event_type", "")
-        provider = e.get("provider", "")
+        provider = (e.get("provider") or e.get("data", {}).get("provider", "")).strip()
         if provider:
             s["providers_used"].add(provider)
         if et == "completed":
             s["completed"] += 1
             s["last_10"].append("ok")
+            if provider:
+                s["by_provider"][provider]["ok"] += 1
+                s["by_provider"][provider]["last_5"].append("ok")
         elif et == "failed":
             s["failed"] += 1
             s["last_10"].append("fail")
+            if provider:
+                s["by_provider"][provider]["fail"] += 1
+                s["by_provider"][provider]["last_5"].append("fail")
         elif et == "timeout":
             s["timed_out"] += 1
             s["last_10"].append("timeout")
+            if provider:
+                s["by_provider"][provider]["timeout"] += 1
+                s["by_provider"][provider]["last_5"].append("timeout")
         elif et == "executing":
             s["executing"] += 1
 
@@ -579,6 +589,19 @@ def _build_node_streaks() -> dict[str, dict]:
             attention = "mixed"
             attention_detail = f"{s['completed']}/{total} succeeded." if total else "No data."
 
+        # Per-provider stats with success rate
+        provider_stats = {}
+        for prov, ps in s["by_provider"].items():
+            ptotal = ps["ok"] + ps["fail"] + ps["timeout"]
+            provider_stats[prov] = {
+                "ok": ps["ok"],
+                "fail": ps["fail"],
+                "timeout": ps["timeout"],
+                "total": ptotal,
+                "success_rate": round(ps["ok"] / ptotal, 2) if ptotal else None,
+                "last_5": ps["last_5"][-5:],
+            }
+
         result[node] = {
             "completed": s["completed"],
             "failed": s["failed"],
@@ -588,6 +611,7 @@ def _build_node_streaks() -> dict[str, dict]:
             "success_rate": success_rate,
             "last_10": s["last_10"][-10:],
             "providers_used": sorted(s["providers_used"]),
+            "by_provider": provider_stats,
             "attention": attention,
             "attention_detail": attention_detail,
         }
