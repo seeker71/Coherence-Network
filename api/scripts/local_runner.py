@@ -1532,6 +1532,46 @@ def build_prompt(task: dict) -> str:
     context = task.get("context", {}) or {}
     agent = context.get("task_agent", "dev-engineer")
 
+    # Task-type-specific instructions
+    if task_type == "review":
+        type_instructions = """
+REVIEW INSTRUCTIONS:
+- Do NOT run any commands, tests, or code. This is a TEXT-ONLY review.
+- Read the spec/impl/test output and evaluate it for correctness, completeness, and quality.
+- Check: Does the implementation match the spec? Are edge cases handled? Is the code clean?
+- Output your review as structured text: PASS/FAIL, issues found, suggestions.
+- Minimum 300 chars of substantive review text.
+- Do NOT try to execute, verify, or deploy anything."""
+    elif task_type == "spec":
+        type_instructions = """
+SPEC INSTRUCTIONS:
+- Write a detailed spec file at specs/<idea_id>.md
+- Include: Summary, Requirements, API changes, Data model, Verification criteria, Risks
+- Commit: git add specs/ && git commit -m "spec(<idea>): <summary>"
+- Minimum 500 chars of spec content."""
+    elif task_type == "impl":
+        type_instructions = f"""
+IMPL INSTRUCTIONS:
+- Write actual Python/TypeScript code files in the repository at {_REPO_DIR}
+- You MUST create or modify real files, not just describe what you would do.
+- After writing, commit: git add <files> && git commit -m "impl(<idea>): <summary>"
+- Do NOT push or create PRs — the runner handles that.
+- If you cannot write files, output the FULL file contents inline (not summaries).
+- Minimum 200 chars of real code or detailed inline output."""
+    elif task_type == "test":
+        type_instructions = f"""
+TEST INSTRUCTIONS:
+- Write test files (pytest) in the repository at {_REPO_DIR}
+- Place tests in api/tests/ following existing patterns.
+- After writing, commit: git add <files> && git commit -m "test(<idea>): <summary>"
+- Do NOT push or create PRs — the runner handles that.
+- Run tests if possible: cd api && python -m pytest <test_file> -x --timeout=60
+- If you cannot write files, output the FULL test code inline."""
+    else:
+        type_instructions = f"""
+Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
+Output a summary: files created/modified, validation results, errors encountered."""
+
     prompt = f"""You are acting as a {agent} for the Coherence Network project.
 
 Task type: {task_type}
@@ -1539,16 +1579,7 @@ Task ID: {task.get('id', 'unknown')}
 
 Direction:
 {direction}
-
-Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
-
-Output a summary: files created/modified, validation results, errors encountered.
-
-CRITICAL for impl and test tasks:
-- You MUST write actual files, not just describe what you would do.
-- After writing files, commit your changes: git add <files> && git commit -m "<task_type>(<idea>): <summary>"
-- Do NOT push or create PRs — the runner handles that after you finish.
-- If you cannot write files (no tool access), say so explicitly."""
+{type_instructions}"""
     # Resume from checkpoint — either from explicit resume mode or from reaper retry
     if isinstance(context, dict):
         resume_patch_path = str(context.get("resume_patch_path") or "").strip()
