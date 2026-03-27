@@ -49,19 +49,18 @@ if str(_API_DIR) not in sys.path:
 
 try:
     from app.services.slot_selection_service import SlotSelector
-    from app.services.openrouter_free_tier import (
-        OPENROUTER_FREE_MODELS,
-        OPENROUTER_HEALTHCHECK_MODEL,
-        wait_openrouter_rate_limit,
-    )
     HAS_SERVICES = True
 except ImportError:
     HAS_SERVICES = False
-    OPENROUTER_HEALTHCHECK_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
-    OPENROUTER_FREE_MODELS = (OPENROUTER_HEALTHCHECK_MODEL,)
 
-    def wait_openrouter_rate_limit() -> None:
-        return
+# OpenRouter free tier config — doesn't depend on app services
+OPENROUTER_HEALTHCHECK_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
+OPENROUTER_FREE_MODELS = (OPENROUTER_HEALTHCHECK_MODEL,)
+
+
+def wait_openrouter_rate_limit() -> None:
+    """Placeholder — no rate limiting needed for free tier."""
+    return
 
 # Logging
 _LOG_DIR.mkdir(exist_ok=True)
