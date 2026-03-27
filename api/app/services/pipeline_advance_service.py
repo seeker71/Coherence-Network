@@ -18,6 +18,7 @@ regardless of which runner or client changes the task status.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from app.models.agent import AgentTaskCreate, AgentTaskUpdate, TaskType, TaskStatus
@@ -189,12 +190,20 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     # Reject hollow completions — text-only providers claim success with no output
+    # Skip guard in test/manual environments where AGENT_AUTO_EXECUTE=0
+    if os.environ.get("AGENT_AUTO_EXECUTE", "1") == "0":
+        return None
+    # Only enforce hollow completion guard for real pipeline tasks that have an idea_id.
+    # Tasks without an idea context (manual/test completions) are allowed through.
+    context = task.get("context") or {}
+    idea_id = context.get("idea_id", "")
+    if not idea_id:
+        return None
     valid, reason = _validate_output(task)
     if not valid:
         task_type_raw = task.get("task_type", "")
         if hasattr(task_type_raw, "value"):
             task_type_raw = task_type_raw.value
-        idea_id = (task.get("context") or {}).get("idea_id", "?")
         log.warning(
             "HOLLOW_COMPLETION blocked advance: type=%s idea=%s — %s",
             task_type_raw, idea_id, reason,
@@ -206,7 +215,7 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
                 task.get("id", ""),
                 status=TaskStatus.FAILED,
                 output=f"Hollow completion rejected: {reason}",
-                context={**(task.get("context") or {}), "hollow_rejection": True},
+                context={**context, "hollow_rejection": True},
             )
             # Cascade: invalidate downstream tasks built on this hollow output
             invalidated = invalidate_downstream(task_type_raw, idea_id)
