@@ -575,7 +575,8 @@ def _build_node_streaks() -> dict[str, dict]:
     # Correct executing count from actual running tasks (activity buffer overcounts)
     try:
         from app.services import agent_service
-        running_tasks, _total, _backfill = agent_service.list_tasks(limit=500, offset=0, status="running")
+        from app.models.agent import TaskStatus as _TS
+        running_tasks, _total, _backfill = agent_service.list_tasks(limit=500, offset=0, status=_TS.RUNNING)
         running_by_node: dict[str, int] = defaultdict(int)
         for rt in running_tasks:
             claimed = rt.get("claimed_by") or ""
