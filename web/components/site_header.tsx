@@ -17,6 +17,7 @@ const HEARTBEAT_NAV = { href: "/resonance", label: "Resonance" };
 
 /** Secondary nav — grouped by purpose, accessible via Menu dropdown. */
 const SECONDARY_NAV = [
+  { href: "/vision", label: "Vision" },
   // Value & investment
   { href: "/invest", label: "Invest" },
   { href: "/treasury", label: "Treasury" },
