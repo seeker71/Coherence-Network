@@ -127,6 +127,27 @@ export async function listNodes() {
     } else {
       console.log(`    \x1b[2midle — no recent tasks\x1b[0m`);
     }
+    // System metrics
+    const caps = node.capabilities || {};
+    const sm = caps.system_metrics;
+    if (sm) {
+      const bar = (val, max, w = 10) => {
+        const filled = Math.round((Math.min(val, max) / max) * w);
+        const color = filled > w * 0.8 ? "\x1b[31m" : filled > w * 0.6 ? "\x1b[33m" : "\x1b[32m";
+        return `${color}${"█".repeat(filled)}${"░".repeat(w - filled)}\x1b[0m`;
+      };
+      const parts = [];
+      if (sm.cpu_percent != null) parts.push(`CPU ${bar(sm.cpu_percent, 100)} ${sm.cpu_percent}%`);
+      if (sm.memory_percent != null) parts.push(`RAM ${bar(sm.memory_percent, 100)} ${sm.memory_percent}%`);
+      if (sm.disk_percent != null) parts.push(`Disk ${bar(sm.disk_percent, 100)} ${sm.disk_percent}%`);
+      if (parts.length) console.log(`    ${parts.join("  ")}`);
+      const extra = [];
+      if (sm.process_count != null) extra.push(`${sm.process_count} procs`);
+      if (sm.net_sent_mb != null) extra.push(`↑${sm.net_sent_mb}MB ↓${sm.net_recv_mb || 0}MB`);
+      if (sm.cpu_count != null) extra.push(`${sm.cpu_count} cores`);
+      if (sm.memory_total_gb != null) extra.push(`${sm.memory_total_gb}GB total`);
+      if (extra.length) console.log(`    \x1b[2m${extra.join(" · ")}\x1b[0m`);
+    }
     if (providers.length > 0) {
       console.log(`    ${providers.map(providerBadge).join(" ")}`);
     }

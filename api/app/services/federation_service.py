@@ -480,6 +480,7 @@ def heartbeat_node(
     capabilities: dict | None = None,
     refresh_capabilities: bool = False,
     git_sha: str | None = None,
+    system_metrics: dict | None = None,
 ) -> FederationNodeHeartbeatResponse | None:
     """Update last_seen_at, status, and git_sha for a node. Returns None if not found."""
     _ensure_schema()
@@ -490,14 +491,17 @@ def heartbeat_node(
             return None
         rec.last_seen_at = now_iso
         rec.status = status
-        if git_sha:
-            # Store git_sha in capabilities_json alongside other metadata
+        if git_sha or system_metrics:
             try:
                 caps = json.loads(rec.capabilities_json) if rec.capabilities_json else {}
             except Exception:
                 caps = {}
-            caps["git_sha"] = git_sha
-            caps["git_sha_updated_at"] = now_iso
+            if git_sha:
+                caps["git_sha"] = git_sha
+                caps["git_sha_updated_at"] = now_iso
+            if system_metrics:
+                caps["system_metrics"] = system_metrics
+                caps["system_metrics_at"] = now_iso
             rec.capabilities_json = json.dumps(caps)
         logger.debug("Heartbeat from %s sha=%s", node_id, (git_sha or "?")[:8])
         capabilities_refreshed = False

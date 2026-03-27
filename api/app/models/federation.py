@@ -85,6 +85,7 @@ class FederationNodeHeartbeatRequest(BaseModel):
     status: str = "online"
     capabilities: NodeCapabilities | dict | None = None
     git_sha: str | None = None
+    system_metrics: dict | None = None
 
 
 class FederationNodeHeartbeatResponse(BaseModel):

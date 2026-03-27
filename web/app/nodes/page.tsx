@@ -9,6 +9,25 @@ export const metadata: Metadata = {
   description: "Registered federation nodes, status, and messaging.",
 };
 
+type SystemMetrics = {
+  cpu_percent?: number;
+  cpu_count?: number;
+  load_avg?: number[];
+  memory_percent?: number;
+  memory_total_gb?: number;
+  memory_available_gb?: number;
+  disk_percent?: number;
+  disk_free_gb?: number;
+  disk_read_mb?: number;
+  disk_write_mb?: number;
+  net_sent_mb?: number;
+  net_recv_mb?: number;
+  process_count?: number;
+  runner_cpu_percent?: number;
+  runner_memory_mb?: number;
+  runner_threads?: number;
+};
+
 type FederationNodeCapabilities = {
   executors?: string[];
   tools?: string[];
@@ -21,6 +40,8 @@ type FederationNodeCapabilities = {
     gpu_available?: boolean;
     gpu_type?: string | null;
   };
+  system_metrics?: SystemMetrics;
+  system_metrics_at?: string;
   models_by_executor?: Record<string, string[]>;
   probed_at?: string;
 };
@@ -310,20 +331,54 @@ export default async function NodesPage() {
                   </p>
                 )}
 
-                {/* Row 6: Platform info */}
-                <p className="text-xs text-muted-foreground">
+                {/* Row 6: System metrics gauges */}
+                {node.capabilities?.system_metrics && (() => {
+                  const m = node.capabilities.system_metrics!;
+                  const gauges = [
+                    { label: "CPU", value: m.cpu_percent, max: 100, unit: "%" },
+                    { label: "RAM", value: m.memory_percent, max: 100, unit: "%" },
+                    { label: "Disk", value: m.disk_percent, max: 100, unit: "%" },
+                    { label: "Procs", value: m.process_count, max: 500, unit: "" },
+                  ].filter(g => g.value != null);
+                  return gauges.length > 0 ? (
+                    <div className="flex gap-3">
+                      {gauges.map(g => {
+                        const pct = Math.min(100, ((g.value ?? 0) / g.max) * 100);
+                        const color = pct > 80 ? "bg-red-500" : pct > 60 ? "bg-yellow-500" : "bg-green-500";
+                        return (
+                          <div key={g.label} className="flex-1 min-w-0">
+                            <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                              <span>{g.label}</span>
+                              <span>{Math.round(g.value ?? 0)}{g.unit}</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                              <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {m.net_sent_mb != null && (
+                        <div className="flex-shrink-0 text-[10px] text-muted-foreground self-end">
+                          ↑{m.net_sent_mb}MB ↓{m.net_recv_mb ?? 0}MB
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
+                {/* Row 7: Platform + registered */}
+                <p className="text-[10px] text-muted-foreground">
                   {node.capabilities?.hardware?.platform && (
-                    <>{node.capabilities.hardware.platform.split("-").slice(0, 2).join(" ")} | </>
+                    <>{node.capabilities.hardware.platform.split("-").slice(0, 2).join(" ")} · </>
                   )}
                   {node.capabilities?.hardware?.processor && (
-                    <>{node.capabilities.hardware.processor.length > 30
+                    <>{node.capabilities.hardware.processor.length > 25
                       ? node.capabilities.hardware.processor.split(",")[0]
-                      : node.capabilities.hardware.processor} | </>
-                  )}
-                  {node.capabilities?.hardware?.python && (
-                    <>Python {node.capabilities.hardware.python} | </>
+                      : node.capabilities.hardware.processor} · </>
                   )}
                   registered {new Date(node.registered_at).toLocaleDateString()}
+                  {node.capabilities?.system_metrics_at && (
+                    <> · metrics {relativeTime(node.capabilities.system_metrics_at)}</>
+                  )}
                 </p>
               </li>
             );
