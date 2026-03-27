@@ -265,3 +265,75 @@ function timeSince(iso) {
   if (hrs < 24) return `${hrs}h`;
   return `${Math.floor(hrs / 24)}d`;
 }
+
+export async function streamStart(args) {
+  const label = args.join(" ").trim() || "Live agent stream";
+  
+  // Find current task
+  let taskId = process.env.CC_TASK_ID || "";
+  if (!taskId) {
+    try {
+      const { readFileSync } = await import("node:fs");
+      const ctrl = readFileSync(".task-control", "utf-8").trim();
+      const match = ctrl.match(/task[_-]([a-f0-9]+)/i);
+      if (match) taskId = `task_${match[1]}`;
+    } catch {}
+  }
+  if (!taskId) {
+    const { get } = await import("../api.mjs");
+    const data = await get("/api/agent/tasks", { status: "running", limit: 1 });
+    if (data?.tasks?.[0]) taskId = data.tasks[0].id;
+  }
+
+  if (!taskId) {
+    console.log("\x1b[33m⚠\x1b[0m No active task. Set CC_TASK_ID.");
+    return;
+  }
+
+  const { post } = await import("../api.mjs");
+  const { hostname } = await import("node:os");
+
+  // Open the stream
+  console.log(`\x1b[36m◉\x1b[0m Stream open: ${label}`);
+  console.log(`\x1b[2m  Watch: curl -N ${process.env.CC_API_BASE || "https://api.coherencycoin.com"}/api/agent/tasks/${taskId}/events\x1b[0m`);
+  console.log(`\x1b[2m  Type messages, they stream live. Ctrl+C to stop.\x1b[0m`);
+  console.log();
+
+  // Post stream-open event
+  await post(`/api/agent/tasks/${taskId}/activity`, {
+    node_name: hostname(),
+    event_type: "stream_open",
+    data: { label, source: "cc_stream" },
+  });
+
+  // Read stdin line by line and post each as a progress event
+  const readline = await import("node:readline");
+  const rl = readline.createInterface({ input: process.stdin });
+
+  let seq = 0;
+  for await (const line of rl) {
+    seq++;
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    await post(`/api/agent/tasks/${taskId}/activity`, {
+      node_name: hostname(),
+      event_type: "progress",
+      data: {
+        message: trimmed,
+        seq,
+        source: "cc_stream",
+        label,
+      },
+    });
+    console.log(`  \x1b[32m→\x1b[0m [${seq}] ${trimmed}`);
+  }
+
+  // Post stream-close
+  await post(`/api/agent/tasks/${taskId}/activity`, {
+    node_name: hostname(),
+    event_type: "stream_close",
+    data: { label, seq, source: "cc_stream" },
+  });
+  console.log(`\x1b[36m◉\x1b[0m Stream closed (${seq} messages)`);
+}
