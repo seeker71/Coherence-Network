@@ -2989,7 +2989,7 @@ def _seed_task_from_open_idea() -> bool:
         log.info("SEED_SKIP_IMPLEMENTED idea=%s already on main (%s PR #%s) — marked validated",
                  idea_id, evidence_type, pr_num)
         _SEEDER_SKIP_CACHE.add(idea_id)
-        return _seed_from_ideas()  # try next idea
+        return _seed_task_from_open_idea()  # try next idea
 
     # Check existing task history for this idea to determine next phase
     task_type = "spec"  # default
