@@ -4590,29 +4590,10 @@ def _check_for_updates_and_restart() -> bool:
                 cwd=str(_REPO_DIR),
             )
 
-        log.info("SELF-UPDATE: pulled latest → %s. Signaling workers to drain...", remote_sha[:8])
+        log.info("SELF-UPDATE: pulled latest → %s. Restarting (workers are idle).", remote_sha[:8])
 
-        # Signal workers to stop claiming new tasks
+        # Signal workers to stop claiming new tasks during restart
         _shutdown_event.set()
-
-        # Wait for in-flight workers to finish (up to 10 min)
-        with _active_lock:
-            active_count = len(_active_idea_ids)
-        if active_count > 0:
-            log.info("SELF-UPDATE: waiting for %d in-flight tasks to finish (max 600s)...", active_count)
-            for _ in range(120):  # 120 * 5s = 600s max
-                time.sleep(5)
-                with _active_lock:
-                    remaining = len(_active_idea_ids)
-                if remaining == 0:
-                    log.info("SELF-UPDATE: all in-flight tasks drained")
-                    break
-                if _ % 12 == 0:  # Log every 60s
-                    log.info("SELF-UPDATE: still waiting for %d tasks...", remaining)
-            else:
-                with _active_lock:
-                    remaining = len(_active_idea_ids)
-                log.warning("SELF-UPDATE: timed out with %d tasks still active — restarting anyway", remaining)
 
         # Notify the network about the update
         try:
@@ -4832,9 +4813,14 @@ def main():
                     time.sleep(args.interval)
                     continue
 
-                # 3. Self-update: check for new commits before each cycle
+                # 3. Self-update: only when all workers are idle (no in-flight tasks)
                 if not args.no_self_update:
-                    _check_for_updates_and_restart()
+                    with _active_lock:
+                        active = len(_active_idea_ids)
+                    if active == 0:
+                        _check_for_updates_and_restart()
+                    else:
+                        log.debug("SELF-UPDATE: deferred — %d tasks in flight", active)
 
                 # 4. Execute tasks (parallel or sequential)
                 if not use_parallel:
