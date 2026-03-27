@@ -61,3 +61,8 @@ out.txt
 data/*.db
 *.db-wal
 *.db-shm
+
+# Task runner / local tooling (impl hygiene)
+.task-*
+data/coherence.db
+.codex*

@@ -27,6 +27,7 @@ from app.routers import (
     contributor_identity,
     contributors,
     distributions,
+    event_stream,
     federation,
     friction,
     gates,
@@ -254,6 +255,7 @@ app = FastAPI(
         {"name": "agent", "description": "Task orchestration and agent execution"},
         {"name": "gates", "description": "Release gate validation"},
         {"name": "runtime", "description": "Runtime telemetry and event tracking"},
+        {"name": "event-stream", "description": "WebSocket pub/sub for live cross-service events"},
         {"name": "inventory", "description": "System lineage aggregation"},
         {"name": "governance", "description": "Change approval workflows"},
         {"name": "friction", "description": "Pipeline friction signals"},
@@ -545,6 +547,7 @@ app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
+app.include_router(event_stream.router, prefix="/api", tags=["event-stream"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(auth_keys.router, prefix="/api", tags=["auth"])
 app.include_router(news.router, prefix="/api", tags=["news"])

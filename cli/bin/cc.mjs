@@ -352,7 +352,7 @@ function showHelp() {
   msg <node|all> <text>   Send message (accepts name, alias: mac/win)
   cmd <node|all> <cmd>    Send command: update, status, restart, pause
   inbox                   Read your messages
-  listen                  Real-time event stream
+  listen [--ws]           Real-time stream (federation SSE, or --ws for event pub/sub)
 
 \x1b[1mContributors:\x1b[0m
   contributors [limit]    List contributors

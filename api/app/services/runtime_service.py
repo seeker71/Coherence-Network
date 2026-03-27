@@ -647,6 +647,23 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
         data["events"].append(event.model_dump(mode="json"))
         _write_store(data)
     _invalidate_runtime_events_cache()
+    try:
+        from app.services import event_stream_service as _event_stream
+
+        _event_stream.publish(
+            "runtime_event",
+            entity="runtime",
+            entity_id=event.id,
+            data={
+                "source": event.source,
+                "endpoint": event.endpoint,
+                "method": event.method,
+                "status_code": event.status_code,
+                "idea_id": event.idea_id,
+            },
+        )
+    except Exception:
+        logger.debug("event_stream runtime_event publish skipped", exc_info=True)
     return event
 
 
