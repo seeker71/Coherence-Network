@@ -232,6 +232,33 @@ def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
         if not code_signals:
             return False, f"{task_type} completed but output has no evidence of code changes (no file paths, no diff, no branch)"
 
+    # DIF verification evidence — extract eventIds and persist for feedback loop
+    if task_type in _CODE_REQUIRED_PHASES:
+        import re
+        dif_evidence = re.findall(r'DIF:\s*trust=(\w+),?\s*verify=(\d+)', output, re.IGNORECASE)
+        event_ids = re.findall(r'eventId=([a-f0-9-]{8,})', output, re.IGNORECASE)
+        if dif_evidence:
+            dif_results = [
+                {"trust": t, "verify": int(v), "eventId": event_ids[i] if i < len(event_ids) else ""}
+                for i, (t, v) in enumerate(dif_evidence)
+            ]
+            # Persist DIF results for feedback loop
+            try:
+                from app.services import agent_service
+                agent_service.update_task(
+                    task.get("id", ""),
+                    context={**(task.get("context") or {}), "dif_results": dif_results, "dif_verified": True},
+                )
+            except Exception:
+                pass
+            # Block if DIF flagged concerns
+            concerns = [d for d in dif_results if d["trust"] == "concern"]
+            if concerns:
+                return False, f"DIF flagged {len(concerns)} concern(s) — code must be fixed before advancing"
+            log.info("DIF_VERIFIED task=%s files=%d eventIds=%s", task.get("id", "?")[:16], len(dif_results), event_ids[:3])
+        else:
+            log.warning("DIF_MISSING task=%s type=%s — no DIF evidence in output", task.get("id", "?")[:16], task_type)
+
     return True, ""
 
 
@@ -309,6 +336,21 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     spec_path = _find_spec_file(idea_id, task)
     idea_name = idea_id.replace("-", " ").replace("_", " ").title()
 
+    DIF_VERIFY = (
+        "DIF VERIFICATION (MANDATORY — task REJECTED without it):\n"
+        "For EACH code file you create/modify, run:\n\n"
+        "  DIF_RESULT=$(curl -s -X POST https://coherency-network.merly-mentor.ai/api/v2/dif/verify \\\n"
+        "    -H 'Content-Type: application/json' \\\n"
+        "    -d '{\"language\": \"LANG\", \"code\": \"FILE_CONTENTS\", \"response_mode\": \"script\", \"sensitivity\": 0}')\n"
+        "  echo \"$DIF_RESULT\" | python3 -c \"import sys,json; d=json.load(sys.stdin); "
+        "print(f'DIF: trust={d.get(\\\"trust_signal\\\",\\\"?\\\")}, verify={d.get(\\\"scores\\\",{}).get(\\\"verification\\\",\\\"?\\\")}, eventId={d.get(\\\"eventId\\\",\\\"?\\\")}')\"\n\n"
+        "Replace LANG with: python, javascript, typescript\n"
+        "Replace FILE_CONTENTS with actual code (escape \" as \\\").\n\n"
+        "Your output MUST include for each file: DIF: trust=X, verify=Y, eventId=Z\n"
+        "If trust_signal='concern': FIX the code and re-verify.\n"
+        "If verification < 30: RETHINK your approach.\n\n"
+    )
+
     if next_phase == "impl":
         if not spec_path:
             log.warning("AUTO_ADVANCE skip impl — no spec file found for %s", idea_id)
@@ -323,9 +365,8 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             f"- DO NOT refactor, clean up, or reorganize existing code\n"
             f"- If the spec doesn't list a file, don't touch it\n"
             f"- The repo has many files you didn't write — leave them all as-is\n\n"
-            f"After writing code, verify with DIF:\n"
-            f"  cc dif verify --language python --file <file.py> --json\n\n"
-            f"Output: list every file you created/modified and what you changed in each."
+            f"{DIF_VERIFY}"
+            f"Output: list every file you created/modified, what you changed, and the DIF line for each."
         )
     elif next_phase == "test":
         spec_hint = f"\nThe spec is at: {spec_path}\n" if spec_path else "\n"
@@ -336,9 +377,8 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             f"- ONLY create new test files (e.g. api/tests/test_*.py)\n"
             f"- DO NOT modify or delete ANY existing files\n"
             f"- Run your new tests and ensure they pass\n\n"
-            f"After writing tests, verify with DIF:\n"
-            f"  cc dif verify --language python --file <test_file.py> --json\n\n"
-            f"Output: the test file path, number of tests, pass/fail results."
+            f"{DIF_VERIFY}"
+            f"Output: the test file path, number of tests, pass/fail results, and DIF line for each."
         )
     elif next_phase == "code-review":
         direction = (
@@ -347,8 +387,8 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             f"1. Are the spec's files_allowed files created/modified correctly?\n"
             f"2. Do tests exist and cover key scenarios?\n"
             f"3. No unrelated files were modified or deleted?\n\n"
-            f"Run DIF on changed files. Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED\n"
-            f"with specific findings for each file."
+            f"{DIF_VERIFY}"
+            f"Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED with DIF results + specific findings."
         )
     else:
         direction = f"Execute '{next_phase}' phase for '{idea_name}' ({idea_id})."
@@ -371,6 +411,14 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             "AUTO_ADVANCE %s→%s for idea=%s created task=%s",
             task_type, next_phase, idea_id, created.get("id", "?"),
         )
+        # Submit DIF feedback for the successfully advanced task
+        if (task.get("context") or {}).get("dif_results"):
+            try:
+                feedback = submit_dif_feedback(task, ground_truth="positive", agent_action="accepted")
+                if feedback:
+                    log.info("DIF_FEEDBACK_SUBMITTED %d events for task=%s", len(feedback), task.get("id", "?")[:16])
+            except Exception:
+                pass
         return created
     except Exception:
         log.warning("AUTO_ADVANCE failed %s→%s for idea=%s", task_type, next_phase, idea_id, exc_info=True)
@@ -751,3 +799,71 @@ def handle_decision(task: dict[str, Any], decision: str) -> dict[str, Any] | Non
             log.warning("DECISION D failed for %s", idea_id, exc_info=True)
 
     return None
+
+
+# ── DIF Feedback Loop ────────────────────────────────────────────
+
+
+def submit_dif_feedback(
+    task: dict[str, Any],
+    ground_truth: str = "positive",
+    agent_action: str = "accepted",
+    confidence: float = 0.8,
+) -> list[dict[str, Any]]:
+    """Submit DIF feedback for all eventIds found in a completed task.
+
+    Called after a task successfully advances through the pipeline.
+    The feedback closes the loop: verify → implement → test → review → feedback.
+
+    Returns list of submitted feedback records.
+    """
+    import httpx
+
+    context = task.get("context") or {}
+    dif_results = context.get("dif_results", [])
+    if not dif_results:
+        return []
+
+    task_id = task.get("id", "")
+    idea_id = context.get("idea_id", "")
+    merly_base = "https://coherency-network.merly-mentor.ai"
+
+    submitted = []
+    for result in dif_results:
+        event_id = result.get("eventId", "")
+        if not event_id or event_id == "?":
+            continue
+
+        payload = {
+            "eventId": event_id,
+            "feedbackKind": "judgment",
+            "groundTruth": ground_truth,
+            "agentAction": agent_action,
+            "confidence": confidence,
+            "reasonCode": "pipeline_phase_passed",
+            "notes": f"Task {task_id[:16]} for idea {idea_id} passed pipeline validation.",
+            "resolutionState": "confirmed",
+            "taskId": task_id,
+            "evidence": {
+                "idea_id": idea_id,
+                "trust_signal": result.get("trust", ""),
+                "verification_score": result.get("verify", 0),
+            },
+        }
+
+        try:
+            resp = httpx.post(
+                f"{merly_base}/api/v2/dif/feedback",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=10,
+            )
+            if resp.status_code in (200, 201):
+                submitted.append({"eventId": event_id, "status": "submitted"})
+                log.info("DIF_FEEDBACK submitted eventId=%s task=%s", event_id, task_id[:16])
+            else:
+                log.warning("DIF_FEEDBACK failed eventId=%s status=%d", event_id, resp.status_code)
+        except Exception:
+            log.warning("DIF_FEEDBACK error eventId=%s", event_id, exc_info=True)
+
+    return submitted
