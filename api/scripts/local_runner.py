@@ -2149,6 +2149,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             pass
 
     # Post-execution validation: did file-producing tasks actually produce files?
+    has_code_changes = False
     if success and task_type in ("spec", "impl", "test"):
         try:
             post_result = subprocess.run(
@@ -2179,6 +2180,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                     )
                 )}
                 if code_changes:
+                    has_code_changes = True
                     log.info("VERIFIED task=%s code_files=%d total_files=%d", task_id, len(code_changes), len(new_changes))
                     # Push changes and create PR for impl/test tasks
                     if task_type in ("impl", "test"):
@@ -2223,10 +2225,10 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     }
     min_chars = _MIN_OUTPUT_BY_PHASE.get(task_type, 50)
     output_stripped = (output or "").strip()
-    # If a PR was created with real code, the provider did real work —
+    # If a PR was created, or real code file changes were detected, the provider did real work —
     # don't penalize for terse text output
     has_pr = "PR:" in output or "PR_CREATED" in output or "pull/" in output
-    if success and len(output_stripped) < min_chars and not has_pr:
+    if success and len(output_stripped) < min_chars and not has_pr and not has_code_changes:
         log.warning(
             "QUALITY_GATE task=%s provider=%s type=%s — output too short (%d chars < %d min for %s). "
             "Marking as failed, not completed.",
