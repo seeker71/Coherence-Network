@@ -36,7 +36,7 @@ def test_claim_and_complete_task_with_mocked_api_calls(monkeypatch: pytest.Monke
     assert claimed["status"] == "running"
     assert ok is True
     assert calls[0][0].endswith("/api/agent/tasks/task-1")
-    assert calls[0][1] == {"status": "running", "claimed_by": local_runner.WORKER_ID}
+    assert calls[0][1] == {"status": "running", "worker_id": local_runner.WORKER_ID}
     assert calls[1][0].endswith("/api/agent/tasks/task-1")
     assert calls[1][1] == {
         "status": "completed",
@@ -108,7 +108,7 @@ def test_run_one_marks_false_positive_when_text_only_provider_reports_success(
 
     monkeypatch.setattr(local_runner, "_LOG_DIR", tmp_path)
     monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
-    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "openrouter")
+    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type, **_kw: "openrouter")
     monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
     monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, "all done", 1.2))
     monkeypatch.setattr(local_runner, "record_provider_outcome", lambda *_args, **_kwargs: None)
@@ -190,7 +190,7 @@ def test_get_timeout_for_falls_back_when_no_data(monkeypatch: pytest.MonkeyPatch
 
     timeout = local_runner.get_timeout_for("codex", "test")
 
-    assert timeout == 345
+    assert timeout == 600  # test task_type defaults to 600 when no p90 data
 
 
 def test_estimate_task_complexity_simple() -> None:
@@ -240,15 +240,20 @@ def test_run_one_stores_complexity_estimate_before_execution(
 
     monkeypatch.setattr(local_runner, "_LOG_DIR", tmp_path)
     monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
-    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "codex")
+    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type, **_kw: "codex")
     monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
-    monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, "Implementation complete. All changes applied to api/scripts/local_runner.py successfully.", 0.6))
+    _impl_output = (
+        "Implementation complete. Modified api/scripts/local_runner.py to add idea_id at top "
+        "level. FILES_CHANGED=api/scripts/local_runner.py COMMIT=abc1234 All tests passing."
+    )
+    monkeypatch.setattr(local_runner, "execute_with_provider", lambda *_args, **_kwargs: (True, _impl_output, 0.6))
     monkeypatch.setattr(local_runner, "record_provider_outcome", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(local_runner, "PROVIDERS", {"codex": {"cmd": ["codex"]}})
 
     class _GitStatus:
         def __init__(self, output: str) -> None:
             self.stdout = output
+            self.returncode = 0
 
     monkeypatch.setattr(local_runner.subprocess, "run", lambda *_args, **_kwargs: _GitStatus(" M api/scripts/local_runner.py"))
 
@@ -291,7 +296,7 @@ def test_run_one_timeout_saves_partial_patch_and_creates_resume_task(
     monkeypatch.setattr(local_runner, "_LOG_DIR", tmp_path)
     monkeypatch.setattr(local_runner, "_RESUME_MODE", [True])
     monkeypatch.setattr(local_runner, "claim_task", lambda _task_id: task | {"status": "running"})
-    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type: "codex")
+    monkeypatch.setattr(local_runner, "select_provider", lambda _task_type, **_kw: "codex")
     monkeypatch.setattr(local_runner, "build_prompt", lambda _task: "prompt")
     monkeypatch.setattr(
         local_runner,
@@ -462,3 +467,37 @@ def test_post_task_hook_marks_validated_after_review_phase(monkeypatch: pytest.M
         "/api/ideas/idea-2",
         {"manifestation_status": "validated"},
     ) in calls
+
+
+def test_seed_task_from_open_idea_sets_idea_id_at_top_level(monkeypatch: pytest.MonkeyPatch) -> None:
+    """_seed_task_from_open_idea must set idea_id at top level so /api/ideas/{id}/tasks works."""
+    calls: list[tuple[str, str, dict[str, Any] | None]] = []
+
+    def _api(method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        calls.append((method, path, body))
+        if method == "GET" and path == "/api/ideas?limit=200":
+            return [{"id": "seed-idea-1", "name": "Seed Idea", "manifestation_status": "none", "free_energy_score": 0.8}]
+        if method == "GET" and path.startswith("/api/agent/tasks?status="):
+            return []
+        if method == "GET" and path == "/api/ideas/seed-idea-1/tasks":
+            return {"total": 0, "groups": []}
+        if method == "POST" and path == "/api/agent/tasks":
+            return {"id": "task-seed-created-1"}
+        return None
+
+    monkeypatch.setattr(local_runner, "api", _api)
+    monkeypatch.setattr(local_runner, "_count_active_tasks", lambda: 0)
+    monkeypatch.setattr(local_runner, "_SEEDER_SKIP_CACHE", set())
+
+    result = local_runner._seed_task_from_open_idea()
+
+    assert result is True
+    create_calls = [row for row in calls if row[0] == "POST" and row[1] == "/api/agent/tasks"]
+    assert len(create_calls) == 1
+    payload = create_calls[0][2] or {}
+    # Top-level idea_id is required so /api/ideas/{id}/tasks query links correctly
+    assert payload.get("idea_id") == "seed-idea-1", (
+        "idea_id must be at the top level of the task payload, not only in context"
+    )
+    # Also verify it's in context (for backwards compatibility)
+    assert (payload.get("context") or {}).get("idea_id") == "seed-idea-1"
