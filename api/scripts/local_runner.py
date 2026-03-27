@@ -213,7 +213,7 @@ def _detect_providers() -> dict[str, dict]:
         # -y is required: without it, tool calls block on approval (issue #12362)
         "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
         # cursor agent -p: Cursor's headless agent mode
-        "cursor": {"cmd": ["agent", "-p", "--force"], "append_prompt": True, "check_binary": "agent"},
+        "cursor": {"cmd": ["agent", "-p"], "append_prompt": True, "check_binary": "agent"},
         # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
@@ -1961,22 +1961,12 @@ def execute_with_provider(
     cmd = list(spec["cmd"])
     stdin_input = None
 
-    # Per-task model selection for cursor
-    if provider == "cursor" and complexity_estimate:
-        complexity = complexity_estimate.get("level", "medium")
-        model = _select_cursor_model(task_type, complexity)
+    # Cursor: use bare `agent -p` — --model and --force flags cause hollow exits
+    # on Windows. Let cursor pick its own model. Only -p works reliably.
+    if provider == "cursor":
         agent_bin = shutil.which("agent") or "agent"
-        cmd = [agent_bin, "--model", model, "-p"]
-        log.info("CURSOR_MODEL task=%s complexity=%s model=%s", task_type, complexity, model)
-
-        # Record model selection for SlotSelector learning
-        try:
-            sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-            from app.services.slot_selection_service import SlotSelector
-            spec["_selected_model"] = model
-            spec["_model_tier"] = complexity
-        except Exception:
-            pass
+        cmd = [agent_bin, "-p"]
+        log.info("CURSOR_CMD task=%s cmd=%s (bare -p, no --model/--force)", task_type, cmd)
 
     if spec.get("stdin_prompt"):
         stdin_input = prompt
