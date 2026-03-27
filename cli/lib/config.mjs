@@ -32,6 +32,7 @@ export function saveConfig(updates) {
 
 export function getContributorId() {
   return (
+    process.env.COHERENCE_CONTRIBUTOR_ID ||
     loadConfig().contributor_id ||
     process.env.COHERENCE_CONTRIBUTOR ||
     null

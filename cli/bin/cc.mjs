@@ -270,6 +270,7 @@ function showHelp() {
   identity                Show your linked accounts
   identity setup          Guided onboarding
   identity set <id>       Set identity non-interactively
+  export COHERENCE_CONTRIBUTOR_ID=<id>  Non-interactive identity for agents
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity

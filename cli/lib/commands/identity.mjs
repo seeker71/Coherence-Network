@@ -10,6 +10,7 @@ export async function showIdentity() {
   const id = getContributorId();
   if (!id) {
     console.log("No identity configured. Run: cc identity setup");
+    console.log("Or set env var: COHERENCE_CONTRIBUTOR_ID=<contributor_id>");
     return;
   }
   const data = await get(`/api/identity/${encodeURIComponent(id)}`);
@@ -91,6 +92,7 @@ export async function setIdentity(args) {
   if (!id) {
     console.log("Usage: cc identity set <contributor_id>");
     console.log("Sets the contributor identity non-interactively (for agents and scripts).");
+    console.log("Alternative: export COHERENCE_CONTRIBUTOR_ID=<contributor_id>");
     return;
   }
   const { saveConfig } = await import("../config.mjs");
