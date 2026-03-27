@@ -85,7 +85,7 @@ _CACHE_LOCK = threading.Lock()
 _TRACKED_IDEA_CACHE: dict[str, Any] = {"expires_at": 0.0, "idea_ids": [], "cache_key": ""}
 _TRACKED_IDEA_CACHE_TTL_SECONDS = 300.0
 _IDEAS_CACHE: dict[str, Any] = {"expires_at": 0.0, "items": []}
-_IDEAS_CACHE_TTL_SECONDS = 0.0  # Disabled — ideas are in graph_nodes, DB reads are fast
+_IDEAS_CACHE_TTL_SECONDS = 30.0  # 30s cache — prevents DB hammering under load
 
 DEFAULT_INTERNAL_IDEA_PREFIXES = (
     "spec-origin-",
