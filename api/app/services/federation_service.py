@@ -503,6 +503,19 @@ def heartbeat_node(
                 caps["system_metrics"] = system_metrics
                 caps["system_metrics_at"] = now_iso
             rec.capabilities_json = json.dumps(caps)
+        # Merge provider_streaks and provider_versions from heartbeat capabilities
+        if capabilities and isinstance(capabilities, dict):
+            merge_keys = ("provider_streaks", "provider_versions")
+            has_merge = any(k in capabilities for k in merge_keys)
+            if has_merge:
+                try:
+                    caps = json.loads(rec.capabilities_json) if rec.capabilities_json else {}
+                except Exception:
+                    caps = {}
+                for k in merge_keys:
+                    if k in capabilities:
+                        caps[k] = capabilities[k]
+                rec.capabilities_json = json.dumps(caps)
         logger.debug("Heartbeat from %s sha=%s", node_id, (git_sha or "?")[:8])
         capabilities_refreshed = False
         if refresh_capabilities and capabilities is not None:
