@@ -22,6 +22,19 @@ type FederationNodeCapabilities = {
   probed_at?: string;
 };
 
+type NodeStreak = {
+  completed?: number;
+  failed?: number;
+  timed_out?: number;
+  executing?: number;
+  total_resolved?: number;
+  success_rate?: number;
+  last_10?: string[];
+  providers_used?: string[];
+  attention?: string;
+  attention_detail?: string;
+};
+
 type FederationNode = {
   node_id: string;
   hostname: string;
@@ -31,6 +44,9 @@ type FederationNode = {
   registered_at: string;
   last_seen_at: string;
   status: string;
+  git_sha?: string;
+  git_sha_updated_at?: string;
+  streak?: NodeStreak;
 };
 
 function osIcon(osType: string): string {
@@ -57,6 +73,32 @@ function statusDotClass(color: "green" | "yellow" | "red"): string {
       return "bg-yellow-500 shadow-yellow-500/50 shadow-sm";
     case "red":
       return "bg-red-500 shadow-red-500/50 shadow-sm";
+  }
+}
+
+function streakDot(result: string): { char: string; cls: string } {
+  switch (result) {
+    case "ok":
+      return { char: "✓", cls: "text-green-500" };
+    case "fail":
+      return { char: "✗", cls: "text-red-500" };
+    case "timeout":
+      return { char: "T", cls: "text-yellow-500" };
+    default:
+      return { char: "·", cls: "text-muted-foreground" };
+  }
+}
+
+function attentionBadge(attention: string): { label: string; cls: string } {
+  switch (attention) {
+    case "healthy":
+      return { label: "healthy", cls: "bg-green-500/10 text-green-500 border-green-500/30" };
+    case "slow":
+      return { label: "slow", cls: "bg-yellow-500/10 text-yellow-500 border-yellow-500/30" };
+    case "failing":
+      return { label: "failing", cls: "bg-red-500/10 text-red-500 border-red-500/30" };
+    default:
+      return { label: attention || "unknown", cls: "bg-muted text-muted-foreground border-border/30" };
   }
 }
 
@@ -97,13 +139,40 @@ export default async function NodesPage() {
       </div>
 
       {/* Summary */}
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 text-sm space-y-2">
-        <p className="text-muted-foreground">
-          nodes {nodes.length} | online{" "}
-          {nodes.filter((n) => statusColor(n.last_seen_at) === "green").length} | recent{" "}
-          {nodes.filter((n) => statusColor(n.last_seen_at) === "yellow").length} | offline{" "}
-          {nodes.filter((n) => statusColor(n.last_seen_at) === "red").length}
-        </p>
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div>
+            <p className="text-2xl font-bold">{nodes.length}</p>
+            <p className="text-xs text-muted-foreground">total nodes</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-500">
+              {nodes.filter((n) => statusColor(n.last_seen_at) === "green").length}
+            </p>
+            <p className="text-xs text-muted-foreground">online</p>
+          </div>
+          <div>
+            <p className="text-2xl font-bold">
+              {nodes.reduce((sum, n) => sum + (n.streak?.executing ?? 0), 0)}
+            </p>
+            <p className="text-xs text-muted-foreground">tasks running</p>
+          </div>
+          <div>
+            {(() => {
+              const totalOk = nodes.reduce((s, n) => s + (n.streak?.completed ?? 0), 0);
+              const totalResolved = nodes.reduce((s, n) => s + (n.streak?.total_resolved ?? 0), 0);
+              const rate = totalResolved > 0 ? Math.round((totalOk / totalResolved) * 100) : 0;
+              return (
+                <>
+                  <p className={`text-2xl font-bold ${rate >= 70 ? "text-green-500" : rate >= 40 ? "text-yellow-500" : "text-red-500"}`}>
+                    {rate}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">fleet success</p>
+                </>
+              );
+            })()}
+          </div>
+        </div>
       </section>
 
       {/* Node list */}
@@ -118,19 +187,71 @@ export default async function NodesPage() {
             return (
               <li
                 key={node.node_id}
-                className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2"
+                className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-3"
               >
+                {/* Row 1: Status dot, name, attention badge, last seen */}
                 <div className="flex items-center gap-2">
                   <span
                     className={`inline-block w-2.5 h-2.5 rounded-full ${statusDotClass(color)}`}
                   />
                   <span className="text-lg mr-1">{osIcon(node.os_type)}</span>
-                  <span className="font-medium">{node.hostname}</span>
+                  <span className="font-semibold">{node.hostname}</span>
+                  {node.streak?.attention && (() => {
+                    const badge = attentionBadge(node.streak.attention);
+                    return (
+                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${badge.cls}`}>
+                        {badge.label}
+                      </span>
+                    );
+                  })()}
                   <span className="text-muted-foreground text-xs ml-auto">
                     {relativeTime(node.last_seen_at)}
                   </span>
                 </div>
 
+                {/* Row 2: Streak visualization + success rate + running count */}
+                {node.streak && (
+                  <div className="flex items-center gap-3">
+                    {/* Streak dots */}
+                    <div className="flex items-center gap-0.5 font-mono text-sm">
+                      {(node.streak.last_10 ?? []).map((result, idx) => {
+                        const dot = streakDot(result);
+                        return (
+                          <span key={`${node.node_id}-streak-${idx}`} className={dot.cls}>
+                            {dot.char}
+                          </span>
+                        );
+                      })}
+                    </div>
+                    {/* Success rate */}
+                    {node.streak.success_rate != null && (
+                      <span className={`text-xs font-medium ${
+                        node.streak.success_rate >= 0.8 ? "text-green-500" :
+                        node.streak.success_rate >= 0.5 ? "text-yellow-500" : "text-red-500"
+                      }`}>
+                        {Math.round(node.streak.success_rate * 100)}%
+                      </span>
+                    )}
+                    {/* Running count */}
+                    {(node.streak.executing ?? 0) > 0 && (
+                      <span className="text-xs text-amber-500 font-medium">
+                        {node.streak.executing} running
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Row 3: SHA + update time */}
+                {node.git_sha && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="font-mono text-cyan-500">{node.git_sha.slice(0, 7)}</span>
+                    {node.git_sha_updated_at && (
+                      <span>updated {relativeTime(node.git_sha_updated_at)}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Row 4: Providers */}
                 <div className="flex flex-wrap gap-1.5">
                   {node.providers.map((p) => (
                     <span
@@ -145,25 +266,29 @@ export default async function NodesPage() {
                   )}
                 </div>
 
-                <p className="text-muted-foreground text-xs">
-                  ID: {node.node_id} | OS: {node.os_type} | registered:{" "}
-                  {new Date(node.registered_at).toLocaleDateString()}
-                </p>
-
-                {node.capabilities?.executors && node.capabilities.executors.length > 0 && (
+                {/* Row 5: Attention detail hint */}
+                {node.streak?.attention_detail && node.streak.attention !== "healthy" && (
                   <p className="text-xs text-muted-foreground">
-                    executors: {node.capabilities.executors.join(", ")}
+                    → {node.streak.attention_detail}
                   </p>
                 )}
+
+                {/* Row 6: Hardware (collapsed) */}
                 {node.capabilities?.hardware && (
                   <p className="text-xs text-muted-foreground">
-                    cpu: {node.capabilities.hardware.cpu_count ?? "?"} | memory:{" "}
+                    {node.capabilities.hardware.cpu_count ?? "?"} CPU |{" "}
                     {node.capabilities.hardware.memory_total_gb != null
-                      ? `${node.capabilities.hardware.memory_total_gb.toFixed(1)} GB`
-                      : "?"}
+                      ? `${node.capabilities.hardware.memory_total_gb.toFixed(0)} GB`
+                      : "? GB"} RAM
                     {node.capabilities.hardware.gpu_available && (
-                      <> | gpu: {node.capabilities.hardware.gpu_type ?? "yes"}</>
+                      <> | GPU: {node.capabilities.hardware.gpu_type ?? "yes"}</>
                     )}
+                    {" "}| registered {new Date(node.registered_at).toLocaleDateString()}
+                  </p>
+                )}
+                {!node.capabilities?.hardware && (
+                  <p className="text-xs text-muted-foreground">
+                    registered {new Date(node.registered_at).toLocaleDateString()}
                   </p>
                 )}
               </li>
