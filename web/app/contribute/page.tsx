@@ -708,9 +708,21 @@ export default function ContributePage() {
         <p>List specs: <code>GET /api/spec-registry</code> | list queue: <code>GET /api/governance/change-requests</code></p>
       </section>
 
-      {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
-      {status === "error" && <p className="text-destructive">Error: {error}</p>}
-      {error && status !== "error" && <p className="text-destructive">Error: {error}</p>}
+      {status === "loading" && (
+        <p className="text-muted-foreground" data-placeholder="true">
+          Loading…
+        </p>
+      )}
+      {status === "error" && (
+        <p className="text-destructive" data-placeholder="true">
+          Error: {error}
+        </p>
+      )}
+      {error && status !== "error" && (
+        <p className="text-destructive" data-placeholder="true">
+          Error: {error}
+        </p>
+      )}
 
       {/* Where to go next */}
       <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
