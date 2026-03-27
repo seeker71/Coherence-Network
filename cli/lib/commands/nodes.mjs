@@ -145,7 +145,14 @@ export async function listNodes() {
       if (sm.process_count != null) extra.push(`${sm.process_count} procs`);
       if (sm.net_sent_mb != null) extra.push(`↑${sm.net_sent_mb}MB ↓${sm.net_recv_mb || 0}MB`);
       if (sm.cpu_count != null) extra.push(`${sm.cpu_count} cores`);
-      if (sm.memory_total_gb != null) extra.push(`${sm.memory_total_gb}GB total`);
+      if (sm.memory_total_gb != null) {
+        let memDetail = `${sm.memory_total_gb}GB total`;
+        if (sm.memory_used_gb != null) memDetail += ` ${sm.memory_used_gb}GB used`;
+        if (sm.memory_available_gb != null) memDetail += ` ${sm.memory_available_gb}GB free`;
+        if (sm.memory_cached_gb != null) memDetail += ` (${sm.memory_cached_gb}GB cached)`;
+        extra.push(memDetail);
+      }
+      if (sm.swap_percent != null && sm.swap_percent > 0) extra.push(`swap ${sm.swap_percent}%`);
       if (extra.length) console.log(`    \x1b[2m${extra.join(" · ")}\x1b[0m`);
     }
     if (providers.length > 0) {

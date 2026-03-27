@@ -3456,6 +3456,20 @@ def _collect_system_metrics() -> dict[str, Any]:
         metrics["memory_percent"] = mem.percent
         metrics["memory_total_gb"] = round(mem.total / (1024 ** 3), 1)
         metrics["memory_available_gb"] = round(mem.available / (1024 ** 3), 1)
+        metrics["memory_used_gb"] = round((mem.total - mem.available) / (1024 ** 3), 1)
+        # Windows: cached = standby list (reclaimable). macOS: inactive + wired split.
+        if hasattr(mem, "cached"):
+            metrics["memory_cached_gb"] = round(mem.cached / (1024 ** 3), 1)
+        if hasattr(mem, "buffers"):
+            metrics["memory_buffers_gb"] = round(mem.buffers / (1024 ** 3), 1)
+        # Swap
+        try:
+            swap = psutil.swap_memory()
+            metrics["swap_percent"] = swap.percent
+            metrics["swap_used_gb"] = round(swap.used / (1024 ** 3), 1)
+            metrics["swap_total_gb"] = round(swap.total / (1024 ** 3), 1)
+        except Exception:
+            pass
 
         # Disk
         try:
