@@ -67,7 +67,10 @@ export async function difFetch(method, path, body, opts = {}) {
   const url = `${cfg.base_url}${path}`;
 
   const headers = { "Content-Type": "application/json" };
-  if (opts.apiKey) {
+  if (opts.bearer) {
+    // Bearer token for management calls (Merly session token)
+    headers["Authorization"] = `Bearer ${opts.bearer}`;
+  } else if (opts.apiKey) {
     headers["X-API-Key"] = opts.apiKey;
   } else if (key.api_key) {
     headers["X-API-Key"] = key.api_key;
