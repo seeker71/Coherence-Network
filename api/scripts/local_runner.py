@@ -615,15 +615,41 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
     if not available:
         raise RuntimeError("No providers available (all paused)")
 
-    # impl and test MUST use tool providers (they need to write files)
-    _TOOL_REQUIRED_PHASES = {"impl", "test"}
-    if task_type in _TOOL_REQUIRED_PHASES:
-        tool_only = [p for p in available if p in _TOOL_PROVIDERS]
-        if tool_only:
-            available = tool_only
-            log.info("PROVIDER_TIER task=%s restricted to tool providers: %s", task_type, available)
+    # Capability-based filtering: each task type needs specific provider capabilities
+    # Providers without required capabilities are excluded BEFORE Thompson Sampling
+    _CAPABILITIES = {
+        # What each task type needs:
+        "spec":        {"file_write", "git"},           # write spec files, commit
+        "impl":        {"file_write", "git", "tools"},  # write code, commit, run commands
+        "test":        {"file_write", "git", "tools"},  # write tests, run pytest, commit
+        "review":      {"tools", "gh"},                 # read files, run gh pr review
+        "code-review": {"tools", "gh"},
+        "merge":       {"tools", "gh"},                 # run gh pr merge
+        "deploy":      {"tools", "ssh"},                # ssh to VPS
+        "verify":      {"tools"},                       # curl, check endpoints
+    }
+    # What each provider has:
+    _PROVIDER_CAPS = {
+        "claude":       {"file_write", "git", "tools", "gh", "ssh", "reasoning"},
+        "codex":        {"file_write", "git", "tools", "gh", "reasoning"},
+        "cursor":       {"file_write", "git", "tools", "gh", "reasoning"},
+        "gemini":       {"file_write", "git", "tools", "gh", "reasoning"},
+        "ollama-local": {"text_only"},                   # no tools, no file access
+        "ollama-cloud": {"text_only"},                   # no tools, no file access
+        "openrouter":   {"text_only"},                   # API only, no tools
+    }
+
+    required = _CAPABILITIES.get(task_type, set())
+    if required:
+        capable = [p for p in available if required.issubset(_PROVIDER_CAPS.get(p, set()))]
+        if capable:
+            if set(capable) != set(available):
+                excluded = set(available) - set(capable)
+                log.info("CAPABILITY_FILTER task=%s required=%s excluded=%s (missing capabilities)",
+                         task_type, required, excluded)
+            available = capable
         else:
-            log.warning("PROVIDER_TIER task=%s needs tools but none available, using: %s", task_type, available)
+            log.warning("CAPABILITY_FILTER task=%s needs %s but no provider has all — using all", task_type, required)
 
     # Respect exclude_provider from retry context
     if task:
