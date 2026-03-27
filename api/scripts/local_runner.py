@@ -4488,13 +4488,40 @@ def _check_for_updates_and_restart() -> bool:
         except Exception:
             pass  # best-effort notification
 
-        # Clear shutdown so the new process starts fresh
-        _shutdown_event.clear()
+        # Kill any remaining child subprocesses (codex, claude, cursor, etc.)
+        import signal
+        try:
+            import psutil
+            current = psutil.Process()
+            children = current.children(recursive=True)
+            for child in children:
+                try:
+                    child.send_signal(signal.SIGTERM)
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+            # Wait briefly for graceful shutdown
+            gone, alive = psutil.wait_procs(children, timeout=10)
+            for p in alive:
+                try:
+                    p.kill()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    pass
+            log.info("SELF-UPDATE: killed %d child processes (%d graceful, %d forced)",
+                     len(children), len(gone), len(alive))
+        except ImportError:
+            log.warning("SELF-UPDATE: psutil not available — child processes may be orphaned")
+        except Exception as e:
+            log.warning("SELF-UPDATE: child cleanup error: %s", e)
 
-        # Re-exec this script with the same arguments
-        os.execv(sys.executable, [sys.executable] + sys.argv)
-        # This line is never reached — os.execv replaces the process
-        return True
+        # Spawn new process BEFORE exiting, so there's no gap
+        new_proc = subprocess.Popen(
+            [sys.executable] + sys.argv,
+            start_new_session=True,  # Detach from our process group
+        )
+        log.info("SELF-UPDATE: spawned new runner PID=%d. Exiting old process.", new_proc.pid)
+
+        # Exit cleanly — don't use os.execv which kills daemon threads abruptly
+        os._exit(0)
 
     except Exception as e:
         log.debug("SELF-UPDATE: check failed: %s", e)
