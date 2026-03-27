@@ -3773,16 +3773,60 @@ def _create_worktree(task_id: str) -> Path | None:
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
         # Fix 1: fetch latest origin/main before branching
-        subprocess.run(
+        fetch = subprocess.run(
             ["git", "fetch", "origin", "main", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
+        if fetch.returncode != 0:
+            log.warning(
+                "WORKTREE_FETCH_FAILED task=%s stderr=%s",
+                slug,
+                (fetch.stderr or "").strip()[:400],
+            )
+
+        # If stale filesystem path exists but is not registered as a worktree,
+        # remove it so `git worktree add` can proceed.
+        if wt_path.exists():
+            wt_list = subprocess.run(
+                ["git", "worktree", "list", "--porcelain"],
+                capture_output=True, text=True, timeout=10, cwd=repo_root,
+            )
+            registered = (
+                wt_list.returncode == 0
+                and f"worktree {wt_path}" in (wt_list.stdout or "")
+            )
+            if registered:
+                log.info("WORKTREE_REUSED task=%s path=%s", slug, wt_path)
+                return wt_path
+            shutil.rmtree(wt_path, ignore_errors=True)
+            log.info("WORKTREE_STALE_PATH_REMOVED task=%s path=%s", slug, wt_path)
+
         # Branch from origin/main (not local HEAD which may be stale)
         base_ref = "origin/main"
-        subprocess.run(
+        add = subprocess.run(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
+        if add.returncode != 0:
+            stderr = (add.stderr or "").lower()
+            # Common retry case: stale local branch exists from prior interrupted run.
+            if "already exists" in stderr:
+                subprocess.run(
+                    ["git", "branch", "-D", branch],
+                    capture_output=True, text=True, timeout=10, cwd=repo_root,
+                )
+                add = subprocess.run(
+                    ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
+                    capture_output=True, text=True, timeout=30, cwd=repo_root,
+                )
+            if add.returncode != 0:
+                log.warning(
+                    "WORKTREE_ADD_FAILED task=%s branch=%s stderr=%s",
+                    slug,
+                    branch,
+                    (add.stderr or "").strip()[:400],
+                )
+                return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path

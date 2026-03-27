@@ -679,3 +679,118 @@ def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pyte
     assert ok is True
     assert len(operational_calls) == 1
     assert operational_calls[0][2] == "reflect"
+
+
+def test_create_worktree_removes_stale_path_and_adds(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir(parents=True, exist_ok=True)
+    worktree_base = repo_root / ".worktrees"
+    worktree_base.mkdir(parents=True, exist_ok=True)
+
+    task_id = "task_70eb7ad6160825a9"
+    slug = task_id[:16]
+    wt_path = worktree_base / f"task-{slug}"
+    wt_path.mkdir(parents=True, exist_ok=True)  # stale path from old interrupted run
+    (wt_path / "junk.txt").write_text("stale")
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo_root)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", worktree_base)
+
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _CompletedProcess:
+        calls.append(args)
+        if args[:4] == ["git", "fetch", "origin", "main"]:
+            return _CompletedProcess(returncode=0)
+        if args[:4] == ["git", "worktree", "list", "--porcelain"]:
+            return _CompletedProcess(returncode=0, stdout="")
+        if args[:3] == ["git", "worktree", "add"]:
+            wt_path.mkdir(parents=True, exist_ok=True)  # emulate git creating path
+            return _CompletedProcess(returncode=0)
+        return _CompletedProcess(returncode=0)
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    created = local_runner._create_worktree(task_id)
+
+    assert created == wt_path
+    assert not (wt_path / "junk.txt").exists()
+    assert any(c[:3] == ["git", "worktree", "add"] for c in calls)
+
+
+def test_create_worktree_retries_when_branch_already_exists(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir(parents=True, exist_ok=True)
+    worktree_base = repo_root / ".worktrees"
+    worktree_base.mkdir(parents=True, exist_ok=True)
+
+    task_id = "task_70eb7ad6160825a9"
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    wt_path = worktree_base / f"task-{slug}"
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo_root)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", worktree_base)
+
+    add_attempts = {"count": 0}
+    branch_delete_calls: list[list[str]] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _CompletedProcess:
+        if args[:4] == ["git", "fetch", "origin", "main"]:
+            return _CompletedProcess(returncode=0)
+        if args[:4] == ["git", "worktree", "list", "--porcelain"]:
+            return _CompletedProcess(returncode=0, stdout="")
+        if args[:3] == ["git", "worktree", "add"]:
+            add_attempts["count"] += 1
+            if add_attempts["count"] == 1:
+                return _CompletedProcess(returncode=1, stderr=f"fatal: A branch named '{branch}' already exists.")
+            wt_path.mkdir(parents=True, exist_ok=True)  # emulate successful second add
+            return _CompletedProcess(returncode=0)
+        if args[:3] == ["git", "branch", "-D"]:
+            branch_delete_calls.append(args)
+            return _CompletedProcess(returncode=0)
+        return _CompletedProcess(returncode=0)
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    created = local_runner._create_worktree(task_id)
+
+    assert created == wt_path
+    assert add_attempts["count"] == 2
+    assert branch_delete_calls == [["git", "branch", "-D", branch]]
+
+
+def test_create_worktree_reuses_registered_existing_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir(parents=True, exist_ok=True)
+    worktree_base = repo_root / ".worktrees"
+    worktree_base.mkdir(parents=True, exist_ok=True)
+
+    task_id = "task_70eb7ad6160825a9"
+    slug = task_id[:16]
+    wt_path = worktree_base / f"task-{slug}"
+    wt_path.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo_root)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", worktree_base)
+
+    add_called = {"value": False}
+
+    def _run(args: list[str], **_kwargs: Any) -> _CompletedProcess:
+        if args[:4] == ["git", "fetch", "origin", "main"]:
+            return _CompletedProcess(returncode=0)
+        if args[:4] == ["git", "worktree", "list", "--porcelain"]:
+            return _CompletedProcess(returncode=0, stdout=f"worktree {wt_path}\n")
+        if args[:3] == ["git", "worktree", "add"]:
+            add_called["value"] = True
+            return _CompletedProcess(returncode=0)
+        return _CompletedProcess(returncode=0)
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    created = local_runner._create_worktree(task_id)
+
+    assert created == wt_path
+    assert add_called["value"] is False
