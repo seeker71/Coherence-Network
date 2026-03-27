@@ -3406,7 +3406,7 @@ def _get_git_sha() -> tuple[str, str]:
 
 def _register_node() -> None:
     """Register this worker node with the federation API on startup."""
-    providers = list(PROVIDERS.keys()) if PROVIDERS else list(_detect_providers().keys())
+    providers = [p for p in (PROVIDERS.keys() if PROVIDERS else _detect_providers().keys()) if p not in _PAUSED_PROVIDERS]
     tools = _detect_tools()
 
     # Build provider version map
