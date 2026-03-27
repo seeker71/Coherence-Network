@@ -299,6 +299,150 @@ export async function smoke() {
 }
 
 
+// ── cc dif key ensure ──────────────────────────────────────────────
+
+export async function keyEnsure() {
+  const { getMerlySession, getAccessToken, merlyAuthedPost } = await import("../merly_auth.mjs");
+  const { difFetch } = await import("../dif.mjs");
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", Y = "\x1b[33m", RED = "\x1b[31m";
+
+  console.log(`\n${B}  DIF KEY ENSURE${R}`);
+  console.log(`  ${"─".repeat(50)}`);
+
+  // Step 1: Check Merly login
+  const token = await getAccessToken();
+  if (!token) {
+    console.log(`  ${RED}✗${R} Not logged into Merly. Run: cc login merly`);
+    return;
+  }
+  console.log(`  ${G}✓${R} Merly session active`);
+
+  // Step 2: Check for existing DIF key locally
+  const { getDifKey } = await import("../dif.mjs");
+  const localKey = getDifKey();
+  if (localKey.api_key) {
+    // Verify it still works
+    const { status } = await difFetch("GET", "/api/v2/dif/me");
+    if (status === 200) {
+      console.log(`  ${G}✓${R} DIF key active: ${localKey.api_key.slice(0, 12)}...`);
+      console.log(`  ${D}Key ID: ${localKey.key_id || "?"}${R}`);
+      console.log();
+      return;
+    }
+    console.log(`  ${Y}!${R} Local DIF key expired or invalid — requesting new one`);
+  }
+
+  // Step 3: Check for existing keys on Merly
+  const { status: listStatus, data: listData } = await difFetch("GET", "/api/v2/dif/me/api-keys", null, { bearer: token });
+  if (listStatus === 200) {
+    const keys = Array.isArray(listData) ? listData : (listData.keys || listData.items || []);
+    const active = keys.filter(k => k.active !== false && !k.revoked);
+    if (active.length > 0) {
+      // Use the most recent active key
+      const key = active[0];
+      console.log(`  ${G}✓${R} Found existing active DIF key on Merly: ${key.id || key.key_id}`);
+      // We can't recover the secret — need to create a new one
+      if (key.preview || key.key_prefix) {
+        console.log(`  ${D}Preview: ${key.preview || key.key_prefix}${R}`);
+      }
+      console.log(`  ${Y}!${R} Cannot recover key secret — creating a new one`);
+    }
+  }
+
+  // Step 4: Create new DIF key via Merly
+  const { status: createStatus, data: createData } = await merlyAuthedPost(
+    "/api/v2/dif/me/api-keys",
+    { name: "cc-cli" },
+    token,
+  );
+
+  if (createStatus !== 200 && createStatus !== 201) {
+    console.log(`  ${RED}✗${R} Failed to create DIF key: ${createStatus}`);
+    if (typeof createData === "object") console.log(`  ${D}${JSON.stringify(createData)}${R}`);
+    return;
+  }
+
+  const newKey = createData.api_key || createData.key || createData.secret || "";
+  const keyId = createData.id || createData.key_id || "";
+
+  if (!newKey) {
+    console.log(`  ${RED}✗${R} Merly returned no key value. Response: ${JSON.stringify(createData).slice(0, 200)}`);
+    return;
+  }
+
+  // Step 5: Store locally
+  const { setDifKey, setDifConfig } = await import("../dif.mjs");
+  setDifKey({
+    api_key: newKey,
+    key_id: keyId,
+    created_at: new Date().toISOString(),
+    source: "merly",
+  });
+  setDifConfig({
+    selected_key_id: keyId,
+    selected_key_preview: newKey.slice(0, 8) + "...",
+  });
+
+  console.log(`  ${G}✓${R} DIF key created and stored`);
+  console.log(`  ${D}Key ID: ${keyId}${R}`);
+  console.log(`  ${Y}Secret (stored locally):${R} ${newKey.slice(0, 12)}...`);
+  console.log();
+}
+
+
+// ── cc dif key status ──────────────────────────────────────────────
+
+export async function keyStatus() {
+  const { getMerlySession, isLoggedIn } = await import("../merly_auth.mjs");
+  const { getDifKey, getDifConfig } = await import("../dif.mjs");
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", Y = "\x1b[33m", RED = "\x1b[31m";
+
+  console.log(`\n${B}  DIF KEY STATUS${R}`);
+  console.log(`  ${"─".repeat(50)}`);
+
+  // Merly session
+  const loggedIn = isLoggedIn();
+  const session = getMerlySession();
+  console.log(`  Merly auth:    ${loggedIn ? G + "active" + R : RED + "not logged in" + R}`);
+  if (session?.identity) {
+    const id = session.identity;
+    console.log(`  Merly identity: ${id.display_name || id.email || id.contributor_id || "?"}`);
+  }
+  if (session?.logged_in_at) {
+    console.log(`  Logged in:     ${D}${session.logged_in_at}${R}`);
+  }
+
+  // DIF key
+  const key = getDifKey();
+  const cfg = getDifConfig();
+  const hasKey = !!key.api_key;
+  console.log(`  DIF key:       ${hasKey ? G + "configured" + R : Y + "not set" + R}`);
+  if (hasKey) {
+    console.log(`  Key ID:        ${key.key_id || "?"}`);
+    console.log(`  Preview:       ${key.api_key.slice(0, 12)}...`);
+    console.log(`  Source:        ${key.source || "manual"}`);
+    if (key.created_at) console.log(`  Created:       ${D}${key.created_at}${R}`);
+  }
+
+  console.log(`  DIF base URL:  ${cfg.base_url}`);
+
+  // Verify key works
+  if (hasKey) {
+    try {
+      const { difFetch } = await import("../dif.mjs");
+      const { status } = await difFetch("GET", "/api/v2/dif/me");
+      console.log(`  Key valid:     ${status === 200 ? G + "yes" + R : RED + "no (" + status + ")" + R}`);
+    } catch {
+      console.log(`  Key valid:     ${RED}unreachable${R}`);
+    }
+  }
+
+  console.log();
+}
+
+
 // ── cc dif feedback ────────────────────────────────────────────────
 
 export async function showFeedback(args) {
