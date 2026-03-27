@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
+import TaskLiveStream from "../TaskLiveStream";
 
 type ActivityEvent = {
   id?: string;
@@ -203,21 +204,13 @@ export default function TaskDetailPage() {
           )}
         </section>
 
-        {/* SSE status */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span
-            className={`inline-flex h-2 w-2 rounded-full ${
-              sseStatus === "open"
-                ? "bg-green-400"
-                : sseStatus === "connecting"
-                  ? "bg-amber-400 animate-pulse"
-                  : "bg-muted-foreground/40"
-            }`}
-          />
-          <span>
-            Live stream: {sseStatus === "open" ? "connected" : sseStatus === "connecting" ? "connecting..." : "ended"}
-          </span>
-        </div>
+        {/* Live Stream */}
+        {task && (task.status === "running" || task.status === "in_progress" || task.status === "claimed") && (
+          <section className="space-y-2">
+            <h2 className="text-lg font-medium">Live Stream</h2>
+            <TaskLiveStream taskId={taskId} />
+          </section>
+        )}
 
         {/* Event timeline */}
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
