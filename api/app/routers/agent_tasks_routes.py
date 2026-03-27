@@ -206,6 +206,24 @@ async def update_task(
     existing_task = agent_service.get_task(task_id)
     previous_status_value = task_status_value(existing_task)
     context_patch = target_state_context_patch(data)
+    # Pre-completion gate: reject hollow completions before they stick
+    if data.status == TaskStatus.COMPLETED:
+        output_text = (data.output or "").strip()
+        task_type_val = existing_task.get("task_type", "") if existing_task else ""
+        if hasattr(task_type_val, "value"):
+            task_type_val = task_type_val.value
+        min_output = {"spec": 100, "impl": 200, "test": 100, "code-review": 30, "review": 30}.get(str(task_type_val).lower(), 30)
+        if len(output_text) < min_output:
+            logger.warning(
+                "HOLLOW_GATE task=%s type=%s output=%d chars < %d min — rejecting completion, marking failed",
+                task_id, task_type_val, len(output_text), min_output,
+            )
+            data.status = TaskStatus.FAILED
+            data.output = f"Hollow completion rejected: {len(output_text)} chars < {min_output} min for {task_type_val}. Provider must produce meaningful output."
+            if context_patch is None:
+                context_patch = {}
+            context_patch["hollow_rejection"] = True
+            context_patch["hollow_output_chars"] = len(output_text)
     try:
         task = agent_service.update_task(
             task_id,
