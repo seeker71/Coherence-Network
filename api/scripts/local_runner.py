@@ -4171,12 +4171,20 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                 _shutdown_event.wait(10)
                 continue
 
+            # Respect parallel cap: don't claim if at capacity
+            with _active_lock:
+                if len(_active_idea_ids) >= _MAX_PARALLEL:
+                    _shutdown_event.wait(15)
+                    continue
+
             # Find a task for an idea we're not already working on
             task = None
             for candidate in task_list:
                 ctx = candidate.get("context") if isinstance(candidate.get("context"), dict) else {}
                 idea_id = ctx.get("idea_id", "")
                 with _active_lock:
+                    if len(_active_idea_ids) >= _MAX_PARALLEL:
+                        break  # At capacity
                     if idea_id and idea_id in _active_idea_ids:
                         continue
                     # Try to claim
@@ -4300,9 +4308,57 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             _shutdown_event.wait(30)
 
 
+def _recover_in_flight_tasks() -> int:
+    """On startup, find tasks already running on this node and track them.
+
+    When the runner restarts (self-update, crash, manual restart), the API
+    still shows tasks as 'running' for this node. We must count them toward
+    our parallel cap so we don't over-claim.
+
+    Returns the number of recovered in-flight tasks.
+    """
+    try:
+        running = api("GET", "/api/agent/tasks?status=running&limit=100")
+        if not running:
+            return 0
+        task_list = running if isinstance(running, list) else running.get("tasks", [])
+        recovered = 0
+        for t in task_list:
+            claimed = str(t.get("claimed_by") or "")
+            # Match tasks claimed by this node (hostname or node_id prefix)
+            if NODE_ID[:8] not in claimed and HOSTNAME not in claimed:
+                continue
+            ctx = t.get("context") if isinstance(t.get("context"), dict) else {}
+            idea_id = ctx.get("idea_id", "")
+            with _active_lock:
+                if idea_id:
+                    _active_idea_ids.add(idea_id)
+            recovered += 1
+            task_type = t.get("task_type", "?")
+            if hasattr(task_type, "value"):
+                task_type = task_type.value
+            log.info("RECOVERED in-flight task=%s type=%s idea=%s",
+                     t.get("id", "?")[:16], task_type, (idea_id or "?")[:25])
+        return recovered
+    except Exception as e:
+        log.warning("RECOVER_IN_FLIGHT failed: %s", e)
+        return 0
+
+
 def run_parallel_workers(num_workers: int, dry_run: bool = False) -> list:
-    """Start N independent worker threads that each claim and execute tasks."""
-    log.info("PARALLEL_WORKERS starting %d workers", num_workers)
+    """Start N independent worker threads that each claim and execute tasks.
+
+    Before starting workers, recovers in-flight tasks from the API so the
+    parallel cap accounts for tasks left running by a previous instance.
+    """
+    recovered = _recover_in_flight_tasks()
+    available_slots = max(0, num_workers - recovered)
+    log.info("PARALLEL_WORKERS recovered=%d in-flight, starting %d workers (cap=%d)",
+             recovered, available_slots, num_workers)
+
+    if available_slots == 0:
+        log.info("PARALLEL_WORKERS all slots occupied by in-flight tasks — waiting for them to finish")
+
     threads = []
     for i in range(num_workers):
         t = threading.Thread(target=_worker_loop, args=(i, dry_run), daemon=True, name=f"worker-{i}")
@@ -4398,7 +4454,29 @@ def _check_for_updates_and_restart() -> bool:
                 cwd=str(_REPO_DIR),
             )
 
-        log.info("SELF-UPDATE: pulled latest → %s. Re-executing runner...", remote_sha[:8])
+        log.info("SELF-UPDATE: pulled latest → %s. Signaling workers to drain...", remote_sha[:8])
+
+        # Signal workers to stop claiming new tasks
+        _shutdown_event.set()
+
+        # Wait for in-flight workers to finish (up to 10 min)
+        with _active_lock:
+            active_count = len(_active_idea_ids)
+        if active_count > 0:
+            log.info("SELF-UPDATE: waiting for %d in-flight tasks to finish (max 600s)...", active_count)
+            for _ in range(120):  # 120 * 5s = 600s max
+                time.sleep(5)
+                with _active_lock:
+                    remaining = len(_active_idea_ids)
+                if remaining == 0:
+                    log.info("SELF-UPDATE: all in-flight tasks drained")
+                    break
+                if _ % 12 == 0:  # Log every 60s
+                    log.info("SELF-UPDATE: still waiting for %d tasks...", remaining)
+            else:
+                with _active_lock:
+                    remaining = len(_active_idea_ids)
+                log.warning("SELF-UPDATE: timed out with %d tasks still active — restarting anyway", remaining)
 
         # Notify the network about the update
         try:
@@ -4409,6 +4487,9 @@ def _check_for_updates_and_restart() -> bool:
             })
         except Exception:
             pass  # best-effort notification
+
+        # Clear shutdown so the new process starts fresh
+        _shutdown_event.clear()
 
         # Re-exec this script with the same arguments
         os.execv(sys.executable, [sys.executable] + sys.argv)
