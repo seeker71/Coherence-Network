@@ -615,6 +615,16 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
     if not available:
         raise RuntimeError("No providers available (all paused)")
 
+    # impl and test MUST use tool providers (they need to write files)
+    _TOOL_REQUIRED_PHASES = {"impl", "test"}
+    if task_type in _TOOL_REQUIRED_PHASES:
+        tool_only = [p for p in available if p in _TOOL_PROVIDERS]
+        if tool_only:
+            available = tool_only
+            log.info("PROVIDER_TIER task=%s restricted to tool providers: %s", task_type, available)
+        else:
+            log.warning("PROVIDER_TIER task=%s needs tools but none available, using: %s", task_type, available)
+
     # Respect exclude_provider from retry context
     if task:
         ctx = task.get("context") or {}
