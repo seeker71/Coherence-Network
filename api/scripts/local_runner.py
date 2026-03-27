@@ -2652,6 +2652,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             pass
 
     # Post-execution validation: did file-producing tasks actually produce files?
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
     has_code_changes = False
     if success and task_type in ("spec", "impl", "test"):
         try:
@@ -4469,7 +4470,7 @@ def _recover_in_flight_tasks() -> int:
         for t in task_list:
             claimed = str(t.get("claimed_by") or "")
             # Match tasks claimed by this node (hostname or node_id prefix)
-            if NODE_ID[:8] not in claimed and HOSTNAME not in claimed:
+            if _NODE_ID[:8] not in claimed and _NODE_NAME not in claimed:
                 continue
             ctx = t.get("context") if isinstance(t.get("context"), dict) else {}
             idea_id = ctx.get("idea_id", "")
