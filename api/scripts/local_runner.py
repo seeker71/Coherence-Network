@@ -205,7 +205,7 @@ def _detect_providers() -> dict[str, dict]:
         # --dangerously-skip-permissions: bypass all permission checks
         # --output-format text: plain text output (no JSON wrapping)
         # NOTE: --print disables tools — never use it for impl/test tasks
-        "claude": {"cmd": ["claude", "-p", "--allowedTools", "Bash,Read,Edit,Write,Glob,Grep,WebFetch", "--output-format", "text", "--max-turns", "25"], "append_prompt": True, "check": _check_claude_auth},
+        "claude": {"cmd": ["claude", "-p", "--allowedTools", "Bash,Read,Edit,Write,Glob,Grep,WebFetch", "--output-format", "text"], "append_prompt": True, "check": _check_claude_auth},
         # codex exec --full-auto: non-interactive sandboxed execution
         "codex": {"cmd": ["codex", "exec", "--full-auto"], "append_prompt": True},
         # gemini -y -p <prompt>: yolo mode (auto-approve tools) + headless
