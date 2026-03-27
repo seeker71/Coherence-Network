@@ -1263,6 +1263,47 @@ def _has_any_tasks_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> 
     return int(group.get("count", 0) or 0) > 0
 
 
+def _check_existing_evidence(idea_id: str) -> tuple[str, str] | None:
+    """Check if an idea is already implemented on main by searching merged PRs and commits.
+
+    Returns (pr_or_sha, evidence_type) if found, None if not.
+    """
+    cwd = str(_REPO_DIR)
+
+    # 1. Search for merged PRs mentioning this idea_id
+    try:
+        result = subprocess.run(
+            ["gh", "pr", "list", "--state", "merged", "--search", idea_id,
+             "--json", "number,mergedAt", "--limit", "5"],
+            capture_output=True, text=True, timeout=15, cwd=cwd,
+            shell=(sys.platform == "win32"),
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            prs = json.loads(result.stdout)
+            if prs:
+                # Pick most recently merged
+                prs.sort(key=lambda p: p.get("mergedAt", ""), reverse=True)
+                return (str(prs[0]["number"]), "merged" if len(prs) == 1 else f"merged({len(prs)})")
+    except Exception as e:
+        log.debug("EVIDENCE_CHECK gh pr failed for %s: %s", idea_id, e)
+
+    # 2. Search for commits on main mentioning this idea_id
+    try:
+        result = subprocess.run(
+            ["git", "log", "origin/main", "--oneline", "--grep", idea_id, "-3"],
+            capture_output=True, text=True, timeout=10, cwd=cwd,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            lines = [l for l in result.stdout.strip().split("\n") if l.strip()]
+            if lines:
+                sha = lines[0].split()[0]
+                return (sha, f"commit({len(lines)})")
+    except Exception as e:
+        log.debug("EVIDENCE_CHECK git log failed for %s: %s", idea_id, e)
+
+    return None
+
+
 def _extract_pr_from_completed_tasks(idea_tasks: dict, phase: str) -> str:
     """Extract PR number from a completed task's output for a given phase."""
     tasks = idea_tasks.get("tasks", [])
@@ -2938,6 +2979,17 @@ def _seed_task_from_open_idea() -> bool:
     idea = _random.choices(top, weights=weights, k=1)[0]
     idea_id = idea.get("id", "unknown")
     idea_name = idea.get("name", idea_id)
+
+    # Before spending compute, check if this idea is already implemented on main
+    # by searching for merged PRs or commits mentioning the idea_id
+    already_done = _check_existing_evidence(idea_id)
+    if already_done:
+        pr_num, evidence_type = already_done
+        api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "validated"})
+        log.info("SEED_SKIP_IMPLEMENTED idea=%s already on main (%s PR #%s) — marked validated",
+                 idea_id, evidence_type, pr_num)
+        _SEEDER_SKIP_CACHE.add(idea_id)
+        return _seed_from_ideas()  # try next idea
 
     # Check existing task history for this idea to determine next phase
     task_type = "spec"  # default
