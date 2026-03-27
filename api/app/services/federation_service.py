@@ -570,7 +570,24 @@ def _build_node_streaks() -> dict[str, dict]:
                 s["by_provider"][provider]["timeout"] += 1
                 s["by_provider"][provider]["last_5"].append("timeout")
         elif et == "executing":
-            s["executing"] += 1
+            s["executing"] += 1  # Approximate — corrected below from actual task state
+
+    # Correct executing count from actual running tasks (activity buffer overcounts)
+    try:
+        from app.services import agent_service
+        running_tasks, _total, _backfill = agent_service.list_tasks(limit=500, offset=0, status="running")
+        running_by_node: dict[str, int] = defaultdict(int)
+        for rt in running_tasks:
+            claimed = rt.get("claimed_by") or ""
+            # Match claimed_by (format: hostname:pid) to node name
+            for node_name in streaks:
+                if node_name in claimed or claimed.startswith(node_name.split(".")[0]):
+                    running_by_node[node_name] += 1
+                    break
+        for node_name in streaks:
+            streaks[node_name]["executing"] = running_by_node.get(node_name, 0)
+    except Exception:
+        pass  # Fall back to activity-based count
 
     result = {}
     for node, s in streaks.items():
