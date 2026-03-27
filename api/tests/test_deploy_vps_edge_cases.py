@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from api.tests.test_deploy_latest_to_vps import (
+from tests.test_deploy_latest_to_vps import (
     COMPOSE_PATH,
     PUBLIC_API_BASE,
     PUBLIC_WEB_BASE,
