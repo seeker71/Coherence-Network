@@ -55,7 +55,33 @@ except ImportError:
 
 # OpenRouter free tier config — doesn't depend on app services
 OPENROUTER_HEALTHCHECK_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
-OPENROUTER_FREE_MODELS = (OPENROUTER_HEALTHCHECK_MODEL,)
+
+
+def _load_openrouter_free_models() -> tuple[str, ...]:
+    """Load free-tier models from env and enforce :free-only candidates."""
+    raw = os.environ.get("OPENROUTER_FREE_MODELS", "").strip()
+    if not raw:
+        return (OPENROUTER_HEALTHCHECK_MODEL,)
+
+    # Support comma/newline-delimited values in env var.
+    parsed = [value.strip() for value in re.split(r"[,\n]", raw) if value.strip()]
+    free_only: list[str] = []
+    seen: set[str] = set()
+    for model_id in parsed:
+        if not model_id.endswith(":free"):
+            continue
+        if model_id in seen:
+            continue
+        seen.add(model_id)
+        free_only.append(model_id)
+
+    if OPENROUTER_HEALTHCHECK_MODEL not in seen:
+        free_only.insert(0, OPENROUTER_HEALTHCHECK_MODEL)
+
+    return tuple(free_only) if free_only else (OPENROUTER_HEALTHCHECK_MODEL,)
+
+
+OPENROUTER_FREE_MODELS = _load_openrouter_free_models()
 
 
 def wait_openrouter_rate_limit() -> None:

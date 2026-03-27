@@ -61,3 +61,11 @@ out.txt
 data/*.db
 *.db-wal
 *.db-shm
+*.pyc
+.task-*
+data/coherence.db
+.codex*
+*.pyc
+.task-*
+data/coherence.db
+.codex*
