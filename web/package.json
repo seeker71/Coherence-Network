@@ -29,7 +29,7 @@
     "@tailwindcss/postcss": "^4.2.1",
     "postcss": "^8",
     "tailwindcss": "^4.2.1",
-    "typescript": "^5",
+    "typescript": "^6",
     "vitest": "^2.0.0"
   }
 }
