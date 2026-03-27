@@ -92,15 +92,15 @@ def get_openrouter_free_model() -> str:
 
 
 def get_auto_execute_default_model() -> str:
-    """Default model for auto-execute when context has no model_override. Env AGENT_AUTO_EXECUTE_MODEL overrides at call site."""
+    """Default model for auto-execute. No fallback to openrouter — slot selector decides."""
     raw = _load().get("auto_execute_default_model")
-    return str(raw or get_openrouter_free_model()).strip()
+    return str(raw or "").strip()
 
 
 def get_roi_spec_cheap_model() -> str:
-    """Model override for ROI spec progress tasks (inventory). From config; falls back to openrouter free."""
+    """Model override for ROI spec progress tasks (inventory). No fallback to openrouter."""
     raw = _load().get("roi_spec_cheap_model")
-    return str(raw or get_openrouter_free_model()).strip()
+    return str(raw or "").strip()
 
 
 def get_model_for_executor(executor: str, kind: str = "default") -> str:

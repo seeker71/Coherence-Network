@@ -42,30 +42,13 @@ router = APIRouter()
     responses={422: {"description": "Invalid task_type, empty direction, or validation error (detail: list of {loc, msg, type})"}},
 )
 async def create_task(data: AgentTaskCreate, background_tasks: BackgroundTasks) -> AgentTask:
-    """Submit a task and get routed model + command.
+    """Submit a task. Execution is handled by federation node runners, not server-side.
 
-    When AGENT_AUTO_EXECUTE=1, tasks are executed server-side in the background using the
-    OpenRouter free model, and completion is tracked via runtime events.
+    Tasks are created as pending and picked up by node runners via polling.
+    The slot selector on each node determines the provider based on capabilities.
+    No server-side auto-execution — openrouter is not hardcoded as default.
     """
-    auto = truthy(os.environ.get("AGENT_AUTO_EXECUTE", "0"))
-    if auto:
-        ctx = data.context if isinstance(data.context, dict) else {}
-        patched_ctx = dict(ctx)
-        patched_ctx.setdefault("executor", "openrouter")
-        patched_ctx.setdefault(
-            "model_override",
-            os.environ.get("AGENT_AUTO_EXECUTE_MODEL") or get_auto_execute_default_model(),
-        )
-        patched = data.model_copy(update={"context": patched_ctx})
-        task = agent_service.create_task(patched)
-        try:
-            from app.services import agent_execution_service
-
-            background_tasks.add_task(agent_execution_service.execute_task, task["id"])
-        except Exception:
-            logger.warning("Auto-execution of task failed", exc_info=True)
-    else:
-        task = agent_service.create_task(data)
+    task = agent_service.create_task(data)
     return AgentTask(**task_to_full(task))
 
 
