@@ -1237,6 +1237,44 @@ def _has_any_tasks_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> 
     return int(group.get("count", 0) or 0) > 0
 
 
+def _extract_pr_from_completed_tasks(idea_tasks: dict, phase: str) -> str:
+    """Extract PR number from a completed task's output for a given phase."""
+    tasks = idea_tasks.get("tasks", [])
+    for t in reversed(tasks):
+        if t.get("task_type") == phase and t.get("status") == "completed":
+            output = str(t.get("output") or t.get("result") or "")
+            # Look for PR_NUMBER: 123 or PR: .../pull/123
+            import re
+            m = re.search(r"PR_NUMBER:\s*(\d+)", output)
+            if m:
+                return m.group(1)
+            m = re.search(r"pull/(\d+)", output)
+            if m:
+                return m.group(1)
+            # Check context
+            ctx = t.get("context") or {}
+            if ctx.get("pr_number"):
+                return str(ctx["pr_number"])
+    return ""
+
+
+def _extract_branch_from_completed_tasks(idea_tasks: dict, phase: str) -> str:
+    """Extract impl branch name from a completed task's output."""
+    tasks = idea_tasks.get("tasks", [])
+    for t in reversed(tasks):
+        if t.get("task_type") == phase and t.get("status") == "completed":
+            output = str(t.get("output") or t.get("result") or "")
+            import re
+            m = re.search(r"IMPL_BRANCH:\s*(\S+)", output)
+            if m:
+                return m.group(1)
+            # Check context
+            ctx = t.get("context") or {}
+            if ctx.get("impl_branch"):
+                return str(ctx["impl_branch"])
+    return ""
+
+
 def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
     task_type = str(task.get("task_type") or "").strip().lower()
     if task_type not in _PHASE_SEQUENCE:
@@ -1258,6 +1296,8 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         idea_payload = api("GET", f"/api/ideas/{idea_id}")
         idea_name = str((idea_payload or {}).get("name") or idea_id) if isinstance(idea_payload, dict) else idea_id
         idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
+
+        extra_context = {}  # PR/branch info passed to downstream phases
 
         # Phase-specific direction with quality requirements
         if next_phase == "spec":
@@ -1334,27 +1374,53 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"this is a HOTFIX priority — note what needs immediate fixing."
             )
         elif next_phase == "review":
-            # Legacy — treat as code-review
+            # Extract PR info from the completed impl task
+            pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
+            impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            pr_instruction = ""
+            if pr_number:
+                pr_instruction = (
+                    f"\n\nThis review is for PR #{pr_number}.\n"
+                    f"1. Read the PR diff: gh pr diff {pr_number}\n"
+                    f"2. Review the code for correctness, security, completeness\n"
+                    f"3. Post your review using GitHub's review feature:\n"
+                    f"   gh pr review {pr_number} --approve --body 'LGTM: <summary>'\n"
+                    f"   OR: gh pr review {pr_number} --request-changes --body 'Issues: <details>'\n"
+                )
             direction = (
                 f"Code review for '{idea_name}' ({idea_id}).\n\n"
-                f"Description: {idea_desc[:300]}\n\n"
-                f"Review the implementation for correctness and completeness.\n"
+                f"Description: {idea_desc[:300]}\n"
+                f"{pr_instruction}\n"
                 f"Output REVIEW_PASSED or REVIEW_FAILED with specific issues."
             )
+            extra_context["pr_number"] = pr_number
+            extra_context["impl_branch"] = impl_branch
         elif next_phase == "test":
+            # Extract PR branch from completed impl task so tests push to same PR
+            impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
+            branch_instruction = ""
+            if impl_branch:
+                branch_instruction = (
+                    f"\n\nIMPORTANT: The implementation is on branch '{impl_branch}'.\n"
+                    f"First checkout that branch: git fetch origin {impl_branch} && git checkout {impl_branch}\n"
+                    f"Write your tests on THIS branch so they go into the same PR.\n"
+                )
             direction = (
                 f"Write and run tests for '{idea_name}' ({idea_id}).\n\n"
-                f"Description: {idea_desc[:300]}\n\n"
-                f"CRITICAL INSTRUCTIONS:\n"
-                f"1. Find the implementation files (check git log --oneline -5 for recent impl commits)\n"
-                f"2. Write pytest test files in api/tests/ that verify the feature works\n"
-                f"3. Run the tests: python -m pytest api/tests/test_{idea_id.replace('-','_')}.py -v\n"
-                f"4. If tests fail, fix the implementation or the tests until they pass\n"
-                f"5. Stage and commit: git add <test-files> && git commit -m \"test({idea_id}): <summary>\"\n"
-                f"6. Do NOT push — the runner handles that\n\n"
-                f"Tests must be RUNNABLE and PASSING. A test file that doesn't execute is worthless.\n"
+                f"Description: {idea_desc[:300]}\n"
+                f"{branch_instruction}\n"
+                f"INSTRUCTIONS:\n"
+                f"1. Write pytest test files in api/tests/ that verify the feature works\n"
+                f"2. Run the tests: cd api && python -m pytest tests/test_{idea_id.replace('-','_')}.py -v --timeout=60\n"
+                f"3. If tests fail, fix the tests until they pass\n"
+                f"4. Stage and commit: git add <test-files> && git commit -m \"test({idea_id}): <summary>\"\n"
+                f"5. Do NOT push or create new PRs — the runner handles that\n\n"
+                f"Tests must be RUNNABLE and PASSING.\n"
                 f"Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>, TESTS_FAILED=<count>"
             )
+            extra_context["impl_branch"] = impl_branch
+            extra_context["pr_number"] = pr_number
         elif next_phase == "impl":
             # Read the spec content directly to give the provider full context
             spec_ref = ""
@@ -1431,6 +1497,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                     "idea_id": idea_id,
                     "auto_phase_advanced_from": task_type,
                     "auto_phase_advance_source": "local_runner_post_task_hook",
+                    **extra_context,
                 },
             },
         )
@@ -1544,14 +1611,21 @@ def build_prompt(task: dict) -> str:
 
     # Task-type-specific instructions
     if task_type == "review":
-        type_instructions = """
+        ctx = task.get("context", {}) or {}
+        pr_number = ctx.get("pr_number", "")
+        pr_instruction = ""
+        if pr_number:
+            pr_instruction = f"""
+- Read the PR diff: gh pr diff {pr_number}
+- Post your review on the PR: gh pr review {pr_number} --approve --body '<review summary>'
+  OR: gh pr review {pr_number} --request-changes --body '<issues found>'"""
+        type_instructions = f"""
 REVIEW INSTRUCTIONS:
-- Do NOT run any commands, tests, or code. This is a TEXT-ONLY review.
-- Read the spec/impl/test output and evaluate it for correctness, completeness, and quality.
+- Read the implementation files and evaluate for correctness, completeness, and quality.
 - Check: Does the implementation match the spec? Are edge cases handled? Is the code clean?
-- Output your review as structured text: PASS/FAIL, issues found, suggestions.
-- Minimum 300 chars of substantive review text.
-- Do NOT try to execute, verify, or deploy anything."""
+- You CAN use tools to read files, run `gh pr diff`, and post reviews.{pr_instruction}
+- Output REVIEW_PASSED or REVIEW_FAILED with specific issues.
+- Minimum 300 chars of substantive review text."""
     elif task_type == "spec":
         type_instructions = """
 SPEC INSTRUCTIONS:
@@ -1731,6 +1805,52 @@ def _push_and_pr(
         try:
             subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=str(_REPO_DIR))
             subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=str(_REPO_DIR))
+        except Exception:
+            pass
+        return None
+
+
+def _push_to_existing_branch(
+    task: dict, task_id: str, provider: str,
+    branch: str, new_changes: set[str], output: str,
+) -> str | None:
+    """Push test/review changes to an existing impl branch (same PR)."""
+    cwd = str(_REPO_DIR)
+    try:
+        # Checkout the impl branch
+        subprocess.run(["git", "fetch", "origin", branch], capture_output=True, timeout=15, cwd=cwd)
+        subprocess.run(["git", "checkout", branch], capture_output=True, timeout=5, cwd=cwd)
+
+        # Stage and commit
+        for f in new_changes:
+            subprocess.run(["git", "add", f], capture_output=True, timeout=5, cwd=cwd)
+        subprocess.run(
+            ["git", "commit", "-m", f"test({task_id[:12]}): add tests via {provider}"],
+            capture_output=True, timeout=10, cwd=cwd,
+        )
+
+        # Push to same branch
+        push_result = subprocess.run(
+            ["git", "push", "origin", branch],
+            capture_output=True, text=True, timeout=30, cwd=cwd,
+            shell=(sys.platform == "win32"),
+        )
+
+        # Switch back to worker-main
+        subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=cwd)
+        subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=cwd)
+
+        if push_result.returncode == 0:
+            log.info("PUSH_EXISTING task=%s branch=%s", task_id, branch)
+            return branch
+        else:
+            log.warning("PUSH_EXISTING_FAILED task=%s stderr=%s", task_id, push_result.stderr[:200])
+            return None
+    except Exception as exc:
+        log.warning("PUSH_EXISTING_ERROR task=%s error=%s", task_id, exc)
+        try:
+            subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=cwd)
+            subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=cwd)
         except Exception:
             pass
         return None
@@ -1971,15 +2091,22 @@ def execute_with_provider(
     cmd = list(spec["cmd"])
     stdin_input = None
 
-    # Codex: use `codex review` for reviews (read-only, no exec), `codex exec` for everything else
-    # Proven: `codex exec --full-auto` hangs on reviews (12/12 timeouts at 510s)
+    # Codex: use `codex review` for review tasks (built-in review mode)
+    # `codex exec --full-auto` hangs on reviews (12/12 timeouts at 510s)
+    # `codex review` has tools (can read files, run gh) but won't try to execute impl
     if provider == "codex" and task_type in ("review", "code-review"):
         codex_bin = shutil.which("codex") or "codex"
-        cmd = [codex_bin, "review"]
+        # If we have a PR number, use --uncommitted to review the PR diff
+        ctx = task.get("context") or {} if isinstance(task, dict) else {}
+        pr_number = (ctx if isinstance(ctx, dict) else {}).get("pr_number", "")
+        if pr_number:
+            cmd = [codex_bin, "review", "--base", "main"]
+        else:
+            cmd = [codex_bin, "review"]
         spec = dict(spec)
         spec["append_prompt"] = True
         spec["stdin_prompt"] = False
-        log.info("CODEX_CMD task=%s mode=review (read-only, no exec)", task_type)
+        log.info("CODEX_CMD task=%s mode=review pr=%s", task_type, pr_number or "none")
 
     # Cursor: never use -p (disables tools), never use stdin (hangs).
     # Proven working: `agent --model <model> "prompt"` (positional arg)
@@ -2406,11 +2533,28 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                     has_code_changes = True
                     log.info("VERIFIED task=%s code_files=%d total_files=%d", task_id, len(code_changes), len(new_changes))
                     # Push changes and create PR for impl/test tasks
-                    if task_type in ("impl", "test"):
+                    if task_type == "impl":
                         pr_url = _push_and_pr(task, task_id, task_type, provider, code_changes, output)
                         if pr_url:
-                            output += f"\n\nPR: {pr_url}"
-                            log.info("PR_CREATED task=%s url=%s files=%d", task_id, pr_url, len(code_changes))
+                            # Extract PR number and branch for downstream phases
+                            pr_number = pr_url.rstrip("/").split("/")[-1] if pr_url else ""
+                            impl_branch = f"worker/{task_type}/{context.get('idea_id', 'unknown')}/{task_id[:8]}"
+                            output += f"\n\nPR: {pr_url}\nPR_NUMBER: {pr_number}\nIMPL_BRANCH: {impl_branch}"
+                            log.info("PR_CREATED task=%s url=%s pr=%s branch=%s files=%d",
+                                     task_id, pr_url, pr_number, impl_branch, len(code_changes))
+                    elif task_type == "test":
+                        # Test pushes to the IMPL branch, not a new PR
+                        impl_branch = context.get("impl_branch", "")
+                        if impl_branch:
+                            pr_url = _push_to_existing_branch(task, task_id, provider, impl_branch, code_changes, output)
+                            if pr_url:
+                                output += f"\n\nPushed to existing PR branch: {impl_branch}"
+                                log.info("TEST_PUSHED task=%s branch=%s files=%d", task_id, impl_branch, len(code_changes))
+                        else:
+                            log.warning("TEST_NO_BRANCH task=%s — no impl_branch in context, creating standalone PR", task_id)
+                            pr_url = _push_and_pr(task, task_id, task_type, provider, code_changes, output)
+                            if pr_url:
+                                output += f"\n\nPR: {pr_url}"
                 else:
                     # Only control files changed — hollow impl
                     log.warning(
