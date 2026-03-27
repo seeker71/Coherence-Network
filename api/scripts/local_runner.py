@@ -2125,7 +2125,7 @@ def execute_with_provider(
     # Cursor: never use -p (disables tools), never use stdin (hangs).
     # Proven working: `agent --model <model> "prompt"` (positional arg)
     # Can write files inside repo, NOT outside (sandbox).
-    elif provider == "cursor":
+    if provider == "cursor":
         agent_bin = shutil.which("agent") or "agent"
         model = "gpt-5.3-codex" if task_type in ("impl", "test", "spec") else "auto"
         cmd = [agent_bin, "--model", model]
