@@ -213,7 +213,7 @@ def _detect_providers() -> dict[str, dict]:
         # -y is required: without it, tool calls block on approval (issue #12362)
         "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
         # cursor agent -p: Cursor's headless agent mode
-        "cursor": {"cmd": ["agent", "-p"], "append_prompt": True, "check_binary": "agent"},
+        "cursor": {"cmd": ["agent", "--model", "auto"], "append_prompt": True, "check_binary": "agent"},
         # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
@@ -1961,12 +1961,17 @@ def execute_with_provider(
     cmd = list(spec["cmd"])
     stdin_input = None
 
-    # Cursor: use bare `agent -p` — --model and --force flags cause hollow exits
-    # on Windows. Let cursor pick its own model. Only -p works reliably.
+    # Cursor: never use -p (disables tools), never use stdin (hangs).
+    # Proven working: `agent --model <model> "prompt"` (positional arg)
+    # Can write files inside repo, NOT outside (sandbox).
     if provider == "cursor":
         agent_bin = shutil.which("agent") or "agent"
-        cmd = [agent_bin, "-p"]
-        log.info("CURSOR_CMD task=%s cmd=%s (bare -p, no --model/--force)", task_type, cmd)
+        model = "gpt-5.3-codex" if task_type in ("impl", "test", "spec") else "auto"
+        cmd = [agent_bin, "--model", model]
+        spec = dict(spec)  # copy to avoid mutating registry
+        spec["append_prompt"] = True
+        spec["stdin_prompt"] = False
+        log.info("CURSOR_CMD task=%s mode=positional_arg model=%s", task_type, model)
 
     if spec.get("stdin_prompt"):
         stdin_input = prompt
