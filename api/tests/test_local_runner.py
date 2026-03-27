@@ -679,3 +679,72 @@ def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pyte
     assert ok is True
     assert len(operational_calls) == 1
     assert operational_calls[0][2] == "reflect"
+
+
+def test_create_worktree_retries_after_stale_state(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    class _Proc:
+        def __init__(self, returncode: int = 0, stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stderr = stderr
+            self.stdout = ""
+
+    repo_root = tmp_path / "repo"
+    wt_base = repo_root / ".worktrees"
+    repo_root.mkdir()
+    wt_base.mkdir(parents=True)
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo_root)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+
+    add_attempts = {"count": 0}
+    task_id = "task-retry-1234567890"
+    worktree_path = wt_base / f"task-{task_id[:16]}"
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:4] == ["git", "worktree", "add", "-b"]:
+            add_attempts["count"] += 1
+            if add_attempts["count"] == 1:
+                return _Proc(returncode=1, stderr="fatal: branch already exists")
+            worktree_path.mkdir(parents=True, exist_ok=True)
+            return _Proc(returncode=0)
+        if args[:3] == ["git", "rev-parse", "--verify"]:
+            return _Proc(returncode=0)
+        return _Proc(returncode=0)
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    wt = local_runner._create_worktree(task_id)
+
+    assert wt == worktree_path
+    assert add_attempts["count"] == 2
+
+
+def test_create_worktree_logs_and_returns_none_on_add_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    class _Proc:
+        def __init__(self, returncode: int = 0, stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stderr = stderr
+            self.stdout = ""
+
+    repo_root = tmp_path / "repo"
+    wt_base = repo_root / ".worktrees"
+    repo_root.mkdir()
+    wt_base.mkdir(parents=True)
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo_root)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:4] == ["git", "worktree", "add", "-b"]:
+            return _Proc(returncode=1, stderr="fatal: invalid reference: origin/main")
+        if args[:3] == ["git", "rev-parse", "--verify"]:
+            return _Proc(returncode=1)
+        return _Proc(returncode=0)
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    wt = local_runner._create_worktree("task-fail-1234567890")
+
+    assert wt is None
