@@ -30,6 +30,7 @@ import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
+import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -76,6 +77,8 @@ const COMMANDS = {
   diag:          () => handleDiag(args),
   tasks:         () => listTasks(args),
   task:          () => handleTask(args),
+  edges:         () => listEntityEdges(args),
+  edge:          () => handleEdge(args),
   update:        () => update(args),
   deploy:        () => deploy(args),
   listen:        () => listen(args),
@@ -94,6 +97,21 @@ const COMMANDS = {
 async function handleIdea(args) {
   if (args[0] === "create") return createIdea(args.slice(1));
   return showIdea(args);
+}
+
+async function handleEdge(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "create": return createEdge(subArgs);
+    case "delete": return deleteEdge(subArgs);
+    case "types":  return listEdgeTypes();
+    default:
+      console.log("Usage: cc edge <create|delete|types>");
+      console.log("  cc edge create <from-id> <type> <to-id>");
+      console.log("  cc edge delete <edge-id>");
+      console.log("  cc edge types");
+  }
 }
 
 async function handleIdentity(args) {

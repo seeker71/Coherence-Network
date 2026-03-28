@@ -503,14 +503,11 @@ tuned iteratively:
 
 ## Risks and Assumptions
 
-| Risk | Likelihood | Mitigation |
-|------|-----------|-----------|
-| No embeddings exist for news items → `news_resonance` section always empty | Medium | Fall back to keyword matching on title/tags; emit a warning in logs if < 10% of news items have embeddings |
-| Contributor skills not populated → `ideas_needing_skills` always empty | High | Return generic top-coherence ideas when skills are missing; add onboarding prompt in `/brief` web page |
-| Brief generation is too slow (> 2s) for a real-time API | Medium | Cap each section query to 50ms using `LIMIT 20` with indexed queries; add `X-Brief-Generation-Time-Ms` response header for observability |
-| `cc brief` CLI not installed on agent nodes | Low | Document install step in RUNBOOK.md; fall back to `curl /api/brief/daily` in agent skills |
-
-**Assumption**: Contributor skills can be inferred from their previous task types and idea tags if not explicitly set. If this assumption is false, `ideas_needing_skills` may require a separate skills-onboarding spec before it can be meaningfully populated.
+- **Risk (Medium)**: No embeddings exist for news items → `news_resonance` section always empty. Mitigation: fall back to keyword matching on title/tags; emit a warning in logs if < 10% of news items have embeddings.
+- **Risk (High)**: Contributor skills not populated → `ideas_needing_skills` always empty. Mitigation: return generic top-coherence ideas when skills are missing; add onboarding prompt in `/brief` web page.
+- **Risk (Medium)**: Brief generation too slow (> 2s). Mitigation: cap each section query to 50ms using `LIMIT 20` with indexed queries; add `X-Brief-Generation-Time-Ms` response header for observability.
+- **Risk (Low)**: `cc brief` CLI not installed on agent nodes. Mitigation: document install step in RUNBOOK.md; fall back to `curl /api/brief/daily` in agent skills.
+- **Assumption**: Contributor skills can be inferred from their previous task types and idea tags if not explicitly set. If this assumption is false, `ideas_needing_skills` may require a separate skills-onboarding spec before it can be meaningfully populated.
 
 ---
 
