@@ -437,6 +437,13 @@ function showHelp() {
   lineage <id> valuation  Link valuation
   lineage <id> payout <amt>  Payout preview
 
+\x1b[1mEdge Navigation:\x1b[0m
+  edges <id>              List all edges for an entity
+  edges <id> --type <t>  Filter edges by relationship type
+  edge types              Print all 46 canonical edge types
+  edge create <from> <type> <to>  Create a typed edge
+  edge delete <edge-id>   Delete an edge
+
 \x1b[1mGovernance:\x1b[0m
   governance              List change requests
   governance <id>         View change request
