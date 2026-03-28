@@ -83,26 +83,12 @@ def record_task(
     model: str,
     duration_seconds: float,
     status: str,
+    executor: str = "",
+    prompt_variant: str | None = None,
+    skill_version: str | None = None,
 ) -> None:
     """Append one task metric (JSONL). Call from agent_runner or PATCH /api/agent/tasks when status is completed/failed."""
-    if _use_db_metrics():
-        _bootstrap_db_metrics_if_needed()
-        max_rows = max(100, min(int(os.getenv("METRICS_MAX_ROWS", "50000")), 200000))
-        telemetry_persistence_service.append_task_metric(
-            {
-                "task_id": task_id,
-                "task_type": task_type,
-                "model": model,
-                "duration_seconds": duration_seconds,
-                "status": status,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-            },
-            max_rows=max_rows,
-        )
-        return
-
-    os.makedirs(os.path.dirname(METRICS_FILE), exist_ok=True)
-    record = {
+    record: dict[str, Any] = {
         "task_id": task_id,
         "task_type": task_type,
         "model": model,
@@ -110,6 +96,20 @@ def record_task(
         "status": status,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    if executor:
+        record["executor"] = executor
+    if prompt_variant:
+        record["prompt_variant"] = prompt_variant
+    if skill_version:
+        record["skill_version"] = skill_version
+
+    if _use_db_metrics():
+        _bootstrap_db_metrics_if_needed()
+        max_rows = max(100, min(int(os.getenv("METRICS_MAX_ROWS", "50000")), 200000))
+        telemetry_persistence_service.append_task_metric(record, max_rows=max_rows)
+        return
+
+    os.makedirs(os.path.dirname(METRICS_FILE), exist_ok=True)
     with open(METRICS_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
 
