@@ -34,5 +34,8 @@ The system observes its own graph shape and surfaces **dynamic equilibrium** sig
 
 ## Known Gaps and Follow-up Tasks
 
-- Wire optional UI dashboard (`web/app/graph/balance/page.tsx`) to consume the report.
 - Persist balance snapshots for time-series charts.
+
+## Web
+
+- `web/app/graph/balance/page.tsx` — reads `GET /api/graph/balance` via `getApiBase()`.

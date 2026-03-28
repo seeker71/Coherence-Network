@@ -11,6 +11,7 @@ from collections import defaultdict
 from typing import Any
 
 from sqlalchemy import func, or_
+from sqlalchemy.orm import Session
 
 from app.models.graph import Edge, Node
 from app.models.graph_balance import (
@@ -134,6 +135,76 @@ def _load_nodes_by_ids(s: Session, ids: set[str]) -> dict[str, dict[str, Any]]:
     return {n.id: n.to_dict() for n in rows}
 
 
+def compute_entropy_report(
+    ideas: list[dict[str, Any]],
+    *,
+    concentration_threshold: float = 0.8,
+) -> EntropyReport:
+    """Compute energy concentration and neglected branches from idea node dicts."""
+    concentration_threshold = max(0.5, min(1.0, concentration_threshold))
+
+    energies = [(i["id"], i.get("name") or i["id"], _node_energy(i)) for i in ideas]
+    total_e = sum(e for _, _, e in energies) or 1.0
+    sorted_by_e = sorted(energies, key=lambda x: -x[2])
+    top3 = sorted_by_e[:3]
+    top3_sum = sum(e for _, _, e in top3)
+    top3_share = top3_sum / total_e if total_e > 0 else 0.0
+    top3_ids = {x[0] for x in top3}
+
+    top_ideas: list[IdeaEnergyRow] = []
+    for iid, name, e in sorted_by_e[: min(10, len(sorted_by_e))]:
+        top_ideas.append(
+            IdeaEnergyRow(
+                idea_id=iid,
+                name=name,
+                energy=e,
+                energy_share=(e / total_e) if total_e > 0 else 0.0,
+            )
+        )
+
+    all_vg = [_safe_float(i, "value_gap") for i in ideas]
+    all_roi = [_safe_float(i, "roi_cc") for i in ideas]
+    med_vg = _median([x for x in all_vg if x > 0] or all_vg)
+    med_roi = _median([x for x in all_roi if x > 0] or all_roi)
+
+    neglected: list[NeglectedBranch] = []
+    alert = len(ideas) >= 4 and top3_share >= concentration_threshold
+    if alert:
+        for i in ideas:
+            iid = i["id"]
+            if iid in top3_ids:
+                continue
+            en = _node_energy(i)
+            vg = _safe_float(i, "value_gap")
+            rc = _safe_float(i, "roi_cc")
+            high_potential = (vg >= med_vg and med_vg > 0) or (rc >= med_roi and med_roi > 0)
+            if high_potential:
+                neglected.append(
+                    NeglectedBranch(
+                        idea_id=iid,
+                        name=i.get("name") or iid,
+                        energy=en,
+                        value_gap=vg,
+                        roi_cc=rc,
+                        reason=(
+                            "Outside top-3 energy share but value_gap or roi_cc is at/above "
+                            "median — attention may be misallocated."
+                        ),
+                    )
+                )
+        neglected.sort(key=lambda x: -(x.value_gap + x.roi_cc))
+
+    return EntropyReport(
+        total_ideas=len(ideas),
+        total_energy=float(total_e),
+        top3_energy_share=float(top3_share),
+        concentration_alert=alert,
+        top_ideas=top_ideas,
+        neglected_branches=neglected[:25],
+        shannon_entropy_normalized=_shannon_normalized([e for _, _, e in energies]),
+    )
+
+
 def compute_balance_report(
     *,
     max_children: int = 10,
@@ -205,66 +276,7 @@ def compute_balance_report(
         idea_rows = s.query(Node).filter(Node.type == "idea").all()
         ideas: list[dict[str, Any]] = [n.to_dict() for n in idea_rows]
 
-    energies = [(i["id"], i.get("name") or i["id"], _node_energy(i)) for i in ideas]
-    total_e = sum(e for _, _, e in energies) or 1.0
-    sorted_by_e = sorted(energies, key=lambda x: -x[2])
-    top3 = sorted_by_e[:3]
-    top3_sum = sum(e for _, _, e in top3)
-    top3_share = top3_sum / total_e if total_e > 0 else 0.0
-    top3_ids = {x[0] for x in top3}
-
-    top_ideas: list[IdeaEnergyRow] = []
-    for iid, name, e in sorted_by_e[: min(10, len(sorted_by_e))]:
-        top_ideas.append(
-            IdeaEnergyRow(
-                idea_id=iid,
-                name=name,
-                energy=e,
-                energy_share=(e / total_e) if total_e > 0 else 0.0,
-            )
-        )
-
-    all_vg = [_safe_float(i, "value_gap") for i in ideas]
-    all_roi = [_safe_float(i, "roi_cc") for i in ideas]
-    med_vg = _median([x for x in all_vg if x > 0] or all_vg)
-    med_roi = _median([x for x in all_roi if x > 0] or all_roi)
-
-    neglected: list[NeglectedBranch] = []
-    alert = len(ideas) >= 4 and top3_share >= concentration_threshold
-    if alert:
-        for i in ideas:
-            iid = i["id"]
-            if iid in top3_ids:
-                continue
-            en = _node_energy(i)
-            vg = _safe_float(i, "value_gap")
-            rc = _safe_float(i, "roi_cc")
-            high_potential = (vg >= med_vg and med_vg > 0) or (rc >= med_roi and med_roi > 0)
-            if high_potential:
-                neglected.append(
-                    NeglectedBranch(
-                        idea_id=iid,
-                        name=i.get("name") or iid,
-                        energy=en,
-                        value_gap=vg,
-                        roi_cc=rc,
-                        reason=(
-                            "Outside top-3 energy share but value_gap or roi_cc is at/above "
-                            "median — attention may be misallocated."
-                        ),
-                    )
-                )
-        neglected.sort(key=lambda x: -(x.value_gap + x.roi_cc))
-
-    ent = EntropyReport(
-        total_ideas=len(ideas),
-        total_energy=float(total_e),
-        top3_energy_share=float(top3_share),
-        concentration_alert=alert,
-        top_ideas=top_ideas,
-        neglected_branches=neglected[:25],
-        shannon_entropy_normalized=_shannon_normalized([e for _, _, e in energies]),
-    )
+    ent = compute_entropy_report(ideas, concentration_threshold=concentration_threshold)
 
     return GraphBalanceReport(
         split_signals=split_signals,
