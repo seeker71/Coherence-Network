@@ -47,7 +47,8 @@ async def list_ideas(
     sort: str = Query("free_energy", description="Sort method: 'free_energy' (default, Method A) or 'marginal_cc' (Method B)."),
     tags: str = Query("", description="Comma-separated tag filter. When present, return only ideas matching all normalized tags."),
 ) -> IdeaPortfolioResponse:
-    parsed_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
+    raw_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
+    parsed_tags = idea_service.normalize_tags(raw_tags) if raw_tags else None
     return idea_service.list_ideas(
         only_unvalidated=only_unvalidated,
         include_internal=include_internal,
