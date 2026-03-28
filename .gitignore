@@ -61,3 +61,9 @@ out.txt
 data/*.db
 *.db-wal
 *.db-shm
+
+# Task runner / QA (explicit entries)
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
