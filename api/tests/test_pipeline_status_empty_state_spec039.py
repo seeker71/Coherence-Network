@@ -98,7 +98,7 @@ async def test_pipeline_status_only_completed_tasks_returns_200_empty_running(
         assert (
             await client.patch(
                 f"/api/agent/tasks/{tid}",
-                json={"status": "completed", "output": "ok"},
+                json={"status": "completed", "output": "x" * 100},
             )
         ).status_code == 200
         response = await client.get("/api/agent/pipeline-status")
