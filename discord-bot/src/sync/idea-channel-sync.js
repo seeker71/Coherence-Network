@@ -143,7 +143,7 @@ export async function syncIdeaChannels(client) {
   ]);
 
   // Fetch active ideas from API
-  const res = await getIdeas({ limit: MAX_ACTIVE_CHANNELS });
+  const res = await getIdeas({ stage: ACTIVE_STAGES.join(','), limit: MAX_ACTIVE_CHANNELS });
   if (!res.ok) {
     log.error('Failed to fetch ideas for sync', { status: res.status });
     return;
