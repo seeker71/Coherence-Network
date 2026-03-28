@@ -3,7 +3,6 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 
 import pytest
 
@@ -241,11 +240,19 @@ def test_backward_compatible_state_load(tmp_path):
     assert data["backlog_index"] == 0
 
 
-def test_dry_run_exits_zero():
+def test_dry_run_exits_zero(tmp_path):
     """project_manager --dry-run exits 0 and prints preview (no HTTP)."""
     script = os.path.join(_api_dir, "scripts", "project_manager.py")
+    state_path = tmp_path / "dry_run_state.json"
     result = subprocess.run(
-        [sys.executable, script, "--dry-run", "--reset"],
+        [
+            sys.executable,
+            script,
+            "--dry-run",
+            "--reset",
+            "--state-file",
+            str(state_path),
+        ],
         cwd=os.path.dirname(_api_dir),
         capture_output=True,
         text=True,
@@ -253,3 +260,44 @@ def test_dry_run_exits_zero():
     )
     assert result.returncode == 0
     assert "DRY-RUN" in result.stdout or "dry-run" in result.stdout.lower()
+
+
+def test_reset_clears_state_starts_from_index_zero(tmp_path):
+    """--reset with --state-file removes prior state; dry-run sees backlog index 0 and default phase."""
+    script = os.path.join(_api_dir, "scripts", "project_manager.py")
+    state_path = tmp_path / "pm_reset_state.json"
+    state_path.write_text(
+        json.dumps(
+            {
+                "backlog_index": 7,
+                "phase": "impl",
+                "current_task_id": "task-old",
+                "iteration": 2,
+                "blocked": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            sys.executable,
+            script,
+            "--dry-run",
+            "--reset",
+            "--state-file",
+            str(state_path),
+        ],
+        cwd=os.path.dirname(_api_dir),
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 0
+    assert "DRY-RUN" in result.stdout or "dry-run" in result.stdout.lower()
+    # Reset removes the file when present; load_state then yields defaults (index 0, phase spec).
+    assert not state_path.is_file()
+    pm.STATE_FILE = str(state_path)
+    data = pm.load_state()
+    assert data["backlog_index"] == 0
+    assert data["phase"] == "spec"
+    assert "backlog index=0" in result.stdout
