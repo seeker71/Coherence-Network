@@ -1,86 +1,51 @@
 [
   {
     "type": "inspires",
-    "description": "Active: this node inspires another (forward direction of inspired-by).",
+    "description": "A gave rise to or motivated B without directly implementing it",
     "is_symmetric": false,
-    "family": "attribution"
+    "family": "attribution",
+    "example": "idea:resonance-nav → inspires → idea:fractal-primitives"
   },
   {
     "type": "depends-on",
-    "description": "Requires in order to function. Dependency relationship.",
+    "description": "A requires B to function correctly or to be implemented first",
     "is_symmetric": false,
-    "family": "attribution"
+    "family": "attribution",
+    "example": "spec:168 → depends-on → spec:166"
   },
   {
     "type": "implements",
-    "description": "Provides concrete realisation of a spec or concept.",
+    "description": "A puts B into practice — code realizes a spec, a spec realizes an idea",
     "is_symmetric": false,
-    "family": "knowledge"
+    "family": "knowledge",
+    "example": "impl:graph-router → implements → spec:166"
   },
   {
     "type": "contradicts",
-    "description": "Is in direct logical opposition.",
+    "description": "A and B are in tension or mutually exclusive",
     "is_symmetric": true,
-    "family": "knowledge"
+    "family": "knowledge",
+    "example": "idea:centralise-auth ↔ contradicts ↔ idea:federated-identity"
   },
   {
     "type": "extends",
-    "description": "Adds to without replacing. Augments the target.",
+    "description": "A adds to or refines B, building on its foundation without replacing it",
     "is_symmetric": false,
-    "family": "knowledge"
+    "family": "knowledge",
+    "example": "spec:168 → extends → spec:166"
   },
   {
     "type": "analogous-to",
-    "description": "Shares structural pattern without causation.",
+    "description": "A and B are structurally isomorphic or conceptually parallel",
     "is_symmetric": true,
-    "family": "attribution"
+    "family": "attribution",
+    "example": "concept:ice-water-gas ↔ analogous-to ↔ concept:breath-states"
   },
   {
     "type": "parent-of",
-    "description": "Direct hierarchical containment — this node contains the target as a sub-node.",
+    "description": "A hierarchically contains B — A is the container, B is the sub-unit",
     "is_symmetric": false,
-    "family": "fractal"
-  },
-  {
-    "type": "child-of",
-    "description": "Inverse of parent-of — this node is contained within the source node.",
-    "is_symmetric": false,
-    "family": "fractal"
-  },
-  {
-    "type": "inspired-by",
-    "description": "Non-causal conceptual origin (reverse: inspires).",
-    "is_symmetric": false,
-    "family": "attribution"
-  },
-  {
-    "type": "contributes-to",
-    "description": "A person or agent adds work to this node.",
-    "is_symmetric": false,
-    "family": "attribution"
-  },
-  {
-    "type": "enables",
-    "description": "Provides conditions for something to happen.",
-    "is_symmetric": false,
-    "family": "process"
-  },
-  {
-    "type": "triggers",
-    "description": "Initiates as a direct cause.",
-    "is_symmetric": false,
-    "family": "temporal"
-  },
-  {
-    "type": "resonates-with",
-    "description": "Shares deep harmonic alignment.",
-    "is_symmetric": true,
-    "family": "ontological"
-  },
-  {
-    "type": "fractal-scaling",
-    "description": "Repeats pattern at different scales.",
-    "is_symmetric": false,
-    "family": "scale"
+    "family": "fractal",
+    "example": "domain:graph-theory → parent-of → concept:edge-types"
   }
 ]
