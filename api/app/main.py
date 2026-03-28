@@ -557,6 +557,10 @@ app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
 app.include_router(contributor_identity.router, tags=["identity"])
+
+# TOFU onboarding (Spec 168)
+from app.routers import onboarding as onboarding_router  # noqa: E402
+app.include_router(onboarding_router.router, tags=["onboarding"])
 app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
