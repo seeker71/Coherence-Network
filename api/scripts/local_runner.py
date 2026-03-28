@@ -43,6 +43,50 @@ _API_DIR = _SCRIPT_DIR.parent
 _REPO_DIR = _API_DIR.parent
 _LOG_DIR = _API_DIR / "logs"
 
+# ── Runner config — single source of truth, no env vars ──────────────
+_RUNNER_CONFIG: dict[str, Any] = {}
+
+
+def _load_runner_config() -> dict[str, Any]:
+    """Load runner config from api/config/runner.json.
+
+    Falls back to defaults if file missing. Env vars are NOT read —
+    all configuration comes from this file.
+    """
+    global _RUNNER_CONFIG
+    config_path = _API_DIR / "config" / "runner.json"
+    defaults = {
+        "api": {"base_url": "https://api.coherencycoin.com", "api_key": "dev-key"},
+        "execution": {"parallel": 2, "timeout_default_s": 300, "work_dir": None},
+        "providers": {"paused": ["openrouter"], "openrouter_api_key": None, "openrouter_referer": "https://coherencycoin.com"},
+        "heartbeat": {"url": None, "cmd": None},
+        "diagnostics": {"level": "normal"},
+        "deploy": {"api_base": "https://api.coherencycoin.com", "web_base": "https://coherencycoin.com"},
+        "self_update": {"enabled": True},
+    }
+    if config_path.exists():
+        try:
+            with open(config_path, encoding="utf-8") as f:
+                loaded = json.load(f)
+            # Merge loaded into defaults (shallow per section)
+            for section, section_defaults in defaults.items():
+                if section in loaded and isinstance(loaded[section], dict):
+                    section_defaults.update({k: v for k, v in loaded[section].items() if not k.startswith("_")})
+            _RUNNER_CONFIG = defaults
+        except Exception as e:
+            print(f"WARNING: Failed to load {config_path}: {e}. Using defaults.", file=sys.stderr)
+            _RUNNER_CONFIG = defaults
+    else:
+        _RUNNER_CONFIG = defaults
+    return _RUNNER_CONFIG
+
+
+def rc(section: str, key: str, default: Any = None) -> Any:
+    """Read a runner config value. rc("api", "base_url") -> "https://..."."""
+    if not _RUNNER_CONFIG:
+        _load_runner_config()
+    return _RUNNER_CONFIG.get(section, {}).get(key, default)
+
 # Ensure the app package is importable
 if str(_API_DIR) not in sys.path:
     sys.path.insert(0, str(_API_DIR))
@@ -77,9 +121,9 @@ log = logging.getLogger("local_runner")
 # Config
 try:
     from app.services.config_service import get_hub_url
-    API_BASE = os.environ.get("AGENT_API_BASE") or get_hub_url()
+    API_BASE = rc("api", "base_url", "https://api.coherencycoin.com")
 except ImportError:
-    API_BASE = os.environ.get("AGENT_API_BASE", os.environ.get("COHERENCE_HUB_URL", "https://api.coherencycoin.com"))
+    API_BASE = rc("api", "base_url", "https://api.coherencycoin.com")
 WORKER_ID = f"{socket.gethostname()}:{os.getpid()}"
 _NODE_NAME = socket.gethostname()
 # Persistent node ID — hash of hostname so it survives restarts
@@ -150,15 +194,15 @@ def _get_git_info() -> dict[str, str]:
 
 _NODE_GIT = _get_git_info()
 
-_TASK_TIMEOUT = [int(os.environ.get("AGENT_TASK_TIMEOUT", "600"))]  # 10 min default — real code takes time
+_TASK_TIMEOUT = [rc("execution", "timeout_default_s", 300)]  # 10 min default — real code takes time
 _RESUME_MODE = [False]
 _SKIP_PERMISSIONS = [True]  # --dangerously-skip-permissions for claude; operators can disable
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 try:
     from app.services.config_service import get_hub_url as _get_hub
-    _OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER") or _get_hub().replace("://api.", "://").rstrip("/")
+    _OPENROUTER_REFERER = rc("providers", "openrouter_referer", "https://coherencycoin.com")
 except ImportError:
-    _OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER", "https://coherencycoin.com")
+    _OPENROUTER_REFERER = rc("providers", "openrouter_referer", "https://coherencycoin.com")
 
 
 # ── Provider registry (auto-detected) ───────────────────────────────
@@ -474,7 +518,7 @@ def _openrouter_chat_completion(
         "Content-Type": "application/json",
         "HTTP-Referer": _OPENROUTER_REFERER,
     }
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    api_key = rc("providers", "openrouter_api_key", "") or ""
     # Fall back to keystore (~/.coherence-network/keys.json)
     if not api_key:
         ks_path = os.path.join(os.path.expanduser("~"), ".coherence-network", "keys.json")
@@ -900,7 +944,7 @@ _NEXT_PHASE: dict[str, str | None] = {
 def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> dict | list | None:
     """Call the API via httpx. Auto-retries on 429 with backoff."""
     url = f"{API_BASE}{path}"
-    headers = {"X-Api-Key": os.environ.get("AGENT_API_KEY", "dev-key")}
+    headers = {"X-Api-Key": rc("api", "api_key", "dev-key")}
     try:
         if method == "GET":
             resp = _HTTP_CLIENT.get(url, headers=headers)
@@ -1253,7 +1297,7 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
     api_paths = re.findall(r'/api/[\w/{}]+', desc)
     api_paths = list(set(p.split("{")[0].rstrip("/") for p in api_paths))
 
-    API_BASE = os.environ.get("PUBLIC_DEPLOY_API_BASE", "https://api.coherencycoin.com")
+    API_BASE = rc("deploy", "api_base", "https://api.coherencycoin.com")
 
     if api_paths:
         # Deep verification: not just 404 check, but schema, content, error handling
@@ -1267,7 +1311,7 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
     # Check web pages if human:web is in interfaces
     if any(i in set(interfaces) for i in ("human:web", "web")):
         web_paths = re.findall(r'Web:.*?/([\w-]+)\s', desc)
-        WEB_BASE = os.environ.get("PUBLIC_DEPLOY_WEB_BASE", "https://coherencycoin.com")
+        WEB_BASE = rc("deploy", "web_base", "https://coherencycoin.com")
         for page in web_paths[:3]:
             try:
                 resp = httpx.get(f"{WEB_BASE}/{page}", timeout=5, follow_redirects=True)
@@ -2293,7 +2337,7 @@ def execute_with_provider(
     _current_task_id = getattr(execute_with_provider, "_current_task_id", "")
     _heartbeat_stop = threading.Event()
     # CC_DIAG_LEVEL: normal (10s, file list) | high (5s, file list + diff stats + process info)
-    _diag_level = os.environ.get("CC_DIAG_LEVEL", "normal").lower()
+    _diag_level = rc("diagnostics", "level", "normal")
     _HEARTBEAT_INTERVAL = 5 if _diag_level == "high" else 10
 
     def _heartbeat_loop(task_id: str, cwd: str, prov: str, ttype: str):
@@ -2354,8 +2398,8 @@ def execute_with_provider(
                 # External heartbeat hook (runner-owned, not provider-owned)
                 # CC_HEARTBEAT_URL: POST JSON to this URL on every heartbeat
                 # CC_HEARTBEAT_CMD: shell command to run on every heartbeat (escape hatch)
-                hb_url = os.environ.get("CC_HEARTBEAT_URL", "").strip()
-                hb_cmd = os.environ.get("CC_HEARTBEAT_CMD", "").strip()
+                hb_url = rc("heartbeat", "url", "") or ""
+                hb_cmd = rc("heartbeat", "cmd", "") or ""
                 hb_payload = {
                     "node_id": _NODE_ID, "node_name": _NODE_NAME,
                     "task_id": task_id, "task_type": ttype, "provider": prov,
@@ -2394,7 +2438,7 @@ def execute_with_provider(
         heartbeat_thread.start()
 
     # Use ProviderWrapper for process-level control (checkpoint, steer, abort)
-    control_dir = Path(os.environ.get("CC_TASK_WORKDIR", str(_REPO_DIR)))
+    control_dir = Path(rc("execution", "work_dir") or str(_REPO_DIR))
     try:
         from provider_wrapper import ProviderWrapper
         wrapper = ProviderWrapper(
@@ -2678,12 +2722,12 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     task_work_dir = _REPO_DIR  # default; worktree overrides this
     try:
         from task_control_channel import TaskControlChannel, inject_control_instructions
-        task_work_dir = Path(os.environ.get("CC_TASK_WORKDIR", str(_REPO_DIR)))
+        task_work_dir = Path(rc("execution", "work_dir") or str(_REPO_DIR))
         control_channel = TaskControlChannel(
             node_id=_NODE_ID,
             task_id=task_id,
             task_dir=task_work_dir,
-            api_base=os.environ.get("AGENT_API_BASE", "https://api.coherencycoin.com"),
+            api_base=rc("api", "base_url", "https://api.coherencycoin.com"),
         )
         control_channel.start()
         prompt = inject_control_instructions(prompt, task_work_dir)
@@ -4014,7 +4058,7 @@ def _deploy_to_vps() -> str:
 
 # ── Parallel worktree execution ───────────────────────────────────────
 
-_MAX_PARALLEL = int(os.environ.get("CC_MAX_PARALLEL", "3"))
+_MAX_PARALLEL = rc("execution", "parallel", 2)
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 
 
@@ -4362,7 +4406,7 @@ def _runner_verify_phase(task: dict) -> bool:
     failed = 0
 
     # Basic endpoint existence checks
-    api_base = os.environ.get("AGENT_API_BASE", "https://api.coherencycoin.com")
+    api_base = rc("api", "base_url", "https://api.coherencycoin.com")
     checks = [
         (f"{api_base}/api/health", 200, "API health"),
         (f"{api_base}/api/ideas/count", 200, "Ideas count"),
