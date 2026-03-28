@@ -350,8 +350,12 @@ def test_local_news_resonance_service_returns_location_and_items(
 
     AC-6: response includes 'location' field and 'items' list; each item has
     resonance_score in [0.0, 1.0].
-    Uses a monkeypatched news source to avoid real network calls.
+    Patches the geolocation service's internal news lookup so no network calls
+    are made and the article matching logic can be exercised.
     """
+    import types
+    import app.services.geolocation_service as gs
+
     fake_articles = [
         {
             "id": "art-1",
@@ -362,11 +366,21 @@ def test_local_news_resonance_service_returns_location_and_items(
             "published_at": "2026-03-28T10:00:00Z",
         }
     ]
-    # Patch the news ingestion service so no real HTTP calls are made
-    import app.services.news_ingestion_service as nis
-    monkeypatch.setattr(nis, "get_recent_articles", lambda limit=200: fake_articles)
 
-    result = geolocation_service.local_news_resonance(location="Berlin", limit=10)
+    # Create a fake news_ingestion_service module with get_recent_articles
+    fake_nis = types.ModuleType("app.services.news_ingestion_service")
+    fake_nis.get_recent_articles = lambda limit=200: fake_articles  # type: ignore[attr-defined]
+
+    import sys
+    original = sys.modules.get("app.services.news_ingestion_service")
+    sys.modules["app.services.news_ingestion_service"] = fake_nis
+    try:
+        result = gs.local_news_resonance(location="Berlin", limit=10)
+    finally:
+        if original is not None:
+            sys.modules["app.services.news_ingestion_service"] = original
+        else:
+            sys.modules.pop("app.services.news_ingestion_service", None)
 
     assert result.location == "Berlin"
     assert isinstance(result.items, list)
@@ -376,17 +390,14 @@ def test_local_news_resonance_service_returns_location_and_items(
     assert item.location_match == "Berlin"
 
 
-def test_local_news_resonance_service_no_location_empty_items(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_local_news_resonance_service_no_location_empty_items() -> None:
     """local_news_resonance with an unresolvable location returns empty items.
 
     AC-7 equivalent at service level: when no articles match the location
     the items list is empty (graceful handling, no 500 error).
+    The service already falls back to articles=[] when news ingestion is
+    unavailable, so this also tests the fallback path.
     """
-    import app.services.news_ingestion_service as nis
-    monkeypatch.setattr(nis, "get_recent_articles", lambda limit=200: [])
-
     result = geolocation_service.local_news_resonance(location="ZZZNonExistentCity999", limit=10)
 
     assert result.location == "ZZZNonExistentCity999"
