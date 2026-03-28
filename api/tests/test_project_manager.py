@@ -253,3 +253,33 @@ def test_dry_run_exits_zero():
     )
     assert result.returncode == 0
     assert "DRY-RUN" in result.stdout or "dry-run" in result.stdout.lower()
+
+
+def test_reset_clears_state_and_starts_from_index_zero(tmp_path):
+    """--reset removes any existing state so run proceeds from backlog_index 0."""
+    state_file = tmp_path / "pm_state.json"
+    # Pre-populate state with a non-zero backlog_index to prove reset clears it.
+    state_file.write_text(
+        '{"backlog_index": 7, "phase": "impl", "current_task_id": "t-99", "iteration": 3, "blocked": false}'
+    )
+    assert state_file.exists(), "pre-condition: state file must exist before reset"
+
+    script = os.path.join(_api_dir, "scripts", "project_manager.py")
+    result = subprocess.run(
+        [sys.executable, script, "--reset", "--dry-run", "--state-file", str(state_file)],
+        cwd=os.path.dirname(_api_dir),
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    assert result.returncode == 0, f"Script failed: {result.stderr}"
+
+    # After --reset the state file is removed; load_state() must return defaults.
+    pm.STATE_FILE = str(state_file)
+    loaded = pm.load_state()
+    assert loaded["backlog_index"] == 0, (
+        f"Expected backlog_index 0 after reset, got {loaded['backlog_index']}"
+    )
+    assert loaded["phase"] == "spec", (
+        f"Expected phase 'spec' after reset, got {loaded['phase']}"
+    )
