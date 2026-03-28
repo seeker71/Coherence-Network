@@ -572,7 +572,6 @@ from app.routers import discord_votes  # noqa: E402
 app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 
 # Identity-driven onboarding - TOFU MVP (spec-168)
-from app.routers import onboarding as onboarding_router  # noqa: E402
 app.include_router(onboarding_router.router, tags=["onboarding"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
