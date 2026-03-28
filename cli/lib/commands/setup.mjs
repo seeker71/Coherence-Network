@@ -48,6 +48,9 @@ export async function setup(args) {
   console.log(`
 \x1b[1mCoherence Network — Contributor Setup\x1b[0m
 
+Trust-on-first-use (TOFU): we link your identity as \x1b[33munverified\x1b[0m first so you can
+onboard without OAuth. You can prove ownership later (GitHub gist, wallet, …) — same as \x1b[1mcc verify\x1b[0m.
+
 This will create your contributor identity and generate a personal API key.
 Everything you create, contribute, and invest will be attributed to you.
 `);
@@ -93,7 +96,7 @@ async function completeSetup(name, provider, providerId) {
     return;
   }
 
-  // Save API key to keys.json and contributor_id to config.json
+  // Save API key to keys.json and contributor_id to config.json (TOFU: verified upgraded later)
   saveKeys({
     contributor_id: name,
     api_key: result.api_key,
@@ -101,11 +104,12 @@ async function completeSetup(name, provider, providerId) {
     provider_id: providerId,
     created_at: result.created_at,
     scopes: result.scopes,
+    verified: false,
   });
   saveConfig({ contributor_id: name });
 
   console.log(`
-\x1b[32m✓\x1b[0m Setup complete!
+\x1b[32m✓\x1b[0m Identity linked (unverified). Verify later with: \x1b[1mcc verify\x1b[0m
 
   Contributor: \x1b[1m${name}\x1b[0m
   Identity:    ${provider}:${providerId}

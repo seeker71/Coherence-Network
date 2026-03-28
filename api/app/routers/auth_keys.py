@@ -1,6 +1,8 @@
 """Per-contributor API key management.
 
-Implements: identity-driven-onboarding
+Implements: identity-driven-onboarding (Spec 162 ``specs/task_957a8a7e00501874.md``).
+Tests: ``api/tests/test_identity_onboarding.py``. MVP uses TOFU (``verified: false``);
+``POST /api/auth/verify/*`` upgrades trust when proof is supplied.
 """
 
 from __future__ import annotations
@@ -106,10 +108,11 @@ async def generate_api_key(body: KeyRequest) -> KeyResponse:
     )
 
 
-class VerifyChallenge(BaseModel):
+class VerifyChallengeCreate(BaseModel):
+    """Client request: server generates the challenge token."""
+
     contributor_id: str
     provider: str
-    challenge: str  # What the user needs to prove
 
 
 class VerifyProof(BaseModel):
@@ -125,7 +128,7 @@ _CHALLENGES: dict[str, dict] = {}
 
 @router.post("/auth/verify/challenge")
 @traces_to(spec="identity-driven-onboarding", idea="identity-driven-onboarding")
-async def create_verification_challenge(body: VerifyChallenge) -> dict:
+async def create_verification_challenge(body: VerifyChallengeCreate) -> dict:
     """Create a verification challenge for an identity provider.
 
     GitHub: create a public gist with the challenge text
@@ -202,13 +205,9 @@ async def submit_verification_proof(body: VerifyProof) -> dict:
     if not verified:
         raise HTTPException(400, "Verification failed — challenge token not found in proof")
 
-    # Mark identity as verified
-    try:
-        contributor_identity_service.verify_identity(
-            body.contributor_id, body.provider, body.provider_id,
-        )
-    except Exception:
-        pass  # verify_identity may not exist yet — the link is still there
+    contributor_identity_service.verify_identity(
+        body.contributor_id, body.provider, body.provider_id,
+    )
 
     # Clean up challenge
     _CHALLENGES.pop(body.contributor_id, None)

@@ -168,6 +168,25 @@ def find_contributor_by_identity(provider: str, provider_id: str) -> str | None:
     return None
 
 
+def verify_identity(contributor_id: str, provider: str, provider_id: str) -> bool:
+    """Mark a linked identity as verified (e.g. after gist or signature proof)."""
+    _ensure_schema()
+    with _session() as s:
+        rec = (
+            s.query(ContributorIdentityRecord)
+            .filter_by(
+                contributor_id=contributor_id,
+                provider=provider,
+                provider_id=provider_id,
+            )
+            .first()
+        )
+        if not rec:
+            return False
+        rec.verified = True
+        return True
+
+
 def unlink_identity(contributor_id: str, provider: str) -> bool:
     """Remove a linked identity. Returns True if something was deleted."""
     _ensure_schema()

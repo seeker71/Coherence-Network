@@ -8,6 +8,8 @@ run a node — all from the command line.
 Usage:
   cc ideas                    List ideas sorted by free energy score
   cc status                   Network status (coherence score, nodes, tasks)
+  cc setup                    Onboard: TOFU identity + personal API key (see ~/.coherence-network/keys.json)
+  cc verify [--provider github]  Prove identity ownership after setup
   cc idea <id>                Show idea details + tasks
   cc share <name> <desc>      Share a new idea
   cc ask <idea_id> <question> Ask a question on an idea
@@ -24,6 +26,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -31,21 +34,65 @@ from pathlib import Path
 
 import httpx
 
-API_BASE = os.environ.get("COHERENCE_API_BASE", "https://api.coherencycoin.com")
-API_KEY = os.environ.get("COHERENCE_API_KEY", "dev-key")
+API_BASE = (
+    os.environ.get("COHERENCE_API_BASE")
+    or os.environ.get("COHERENCE_HUB_URL")
+    or "https://api.coherencycoin.com"
+)
+_KEYS_PATH = Path.home() / ".coherence-network" / "keys.json"
 
-_client = httpx.Client(timeout=30.0, headers={"X-Api-Key": API_KEY})
+
+def _load_keys_file() -> dict:
+    try:
+        return json.loads(_KEYS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _resolve_api_key() -> str | None:
+    """CC_API_KEY / COHERENCE_API_KEY override, then ~/.coherence-network/keys.json."""
+    for env in ("CC_API_KEY", "COHERENCE_API_KEY"):
+        v = os.environ.get(env)
+        if v:
+            return v
+    k = _load_keys_file().get("api_key")
+    return k if k else None
+
+
+def _effective_api_key() -> str:
+    """Read-only calls may fall back to dev-key; callers that need identity use _require_personal_key."""
+    return _resolve_api_key() or "dev-key"
+
+
+_client: httpx.Client | None = None
+
+
+def _http() -> httpx.Client:
+    global _client
+    if _client is None:
+        _client = httpx.Client(timeout=30.0)
+    _client.headers["X-API-Key"] = _effective_api_key()
+    return _client
+
+
+def _require_personal_key() -> str:
+    k = _resolve_api_key()
+    if not k:
+        print("No API key found. Run: cc setup", file=sys.stderr)
+        sys.exit(1)
+    return k
 
 
 def _api(method: str, path: str, body: dict | None = None) -> dict | list | None:
     url = f"{API_BASE}{path}"
+    c = _http()
     try:
         if method == "GET":
-            r = _client.get(url)
+            r = c.get(url)
         elif method == "POST":
-            r = _client.post(url, json=body)
+            r = c.post(url, json=body)
         elif method == "PATCH":
-            r = _client.patch(url, json=body)
+            r = c.patch(url, json=body)
         else:
             return None
         if r.status_code >= 400:
@@ -57,8 +104,152 @@ def _api(method: str, path: str, body: dict | None = None) -> dict | list | None
         return None
 
 
+def _api_raw(method: str, path: str, body: dict | None = None) -> tuple[int, dict | None]:
+    """Same as _api but returns status + JSON for flows that need non-2xx handling."""
+    url = f"{API_BASE}{path}"
+    c = _http()
+    try:
+        if method == "POST":
+            r = c.post(url, json=body)
+        elif method == "GET":
+            r = c.get(url)
+        else:
+            return 0, None
+        try:
+            payload = r.json() if r.text.strip() else None
+        except Exception:
+            payload = None
+        return r.status_code, payload if isinstance(payload, dict) else None
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 0, None
+
+
 def _fmt_cc(v: float) -> str:
     return f"{v:,.0f} CC" if v >= 1 else f"{v:.2f} CC"
+
+
+_NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9\-]{0,31}$")
+
+
+def cmd_setup(args: argparse.Namespace) -> None:
+    """Trust-on-first-use onboarding (MVP). OAuth/device-flow can upgrade verification later."""
+    keys = _load_keys_file()
+    cid = keys.get("contributor_id")
+    if keys.get("api_key") and cid and not args.force:
+        ans = input(f"You already have a key for {cid}. Re-run setup? [y/N] ")
+        if ans.strip().lower() not in ("y", "yes"):
+            return
+    if args.name and args.provider and args.provider_id:
+        _complete_setup(args.name.strip(), args.provider.strip().lower(), args.provider_id.strip())
+        return
+    if not sys.stdin.isatty():
+        print(
+            "Non-interactive setup requires: "
+            "cc setup --name NAME --provider PROVIDER --provider-id HANDLE",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    print(
+        "\nCoherence Network — cc setup\n\n"
+        "Trust-on-first-use (TOFU): your identity is linked unverified first; "
+        "you can prove ownership later with: cc verify\n",
+    )
+    name = input("What is your contributor name? (letters, numbers, hyphens, max 32 chars) ").strip()
+    if not _NAME_RE.match(name):
+        print("Invalid name. Use letters, numbers, hyphens only.", file=sys.stderr)
+        sys.exit(1)
+    provider = input("Link an identity — provider key (e.g. github): ").strip().lower()
+    provider_id = input(f"Your {provider or 'provider'} handle or address: ").strip()
+    if not provider or not provider_id:
+        print("Provider and handle are required.", file=sys.stderr)
+        sys.exit(1)
+    _complete_setup(name, provider, provider_id)
+
+
+def _complete_setup(name: str, provider: str, provider_id: str) -> None:
+    print(f"\nLinking identity (unverified TOFU) and creating API key for {name}...")
+    code, data = _api_raw(
+        "POST",
+        "/api/onboard",
+        {
+            "name": name,
+            "provider": provider,
+            "provider_id": provider_id,
+            "display_name": name,
+        },
+    )
+    if code != 201 or not data or not data.get("api_key"):
+        print(f"Setup failed (HTTP {code}): {data}", file=sys.stderr)
+        sys.exit(1)
+    _KEYS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "api_key": data["api_key"],
+        "contributor_id": name,
+        "provider": provider,
+        "provider_id": provider_id,
+        "created_at": data.get("created_at", datetime.now(timezone.utc).isoformat()),
+        "verified": False,
+    }
+    _KEYS_PATH.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    try:
+        _KEYS_PATH.chmod(0o600)
+    except OSError:
+        pass
+    print("Identity linked (unverified). You can verify ownership later with: cc verify")
+    print(f"API key generated: {data['api_key'][:24]}...")
+    print(f"Key saved to {_KEYS_PATH}")
+    print(
+        f"\nSetup complete! You are now: {name} (via {provider}:{provider_id}). "
+        "Run `cc status` (after setting CC_API_KEY or using this shell's keys.json).",
+    )
+
+
+def cmd_verify(args: argparse.Namespace) -> None:
+    """Optional post-setup: GitHub gist proof (or other provider) to mark identity verified."""
+    _require_personal_key()
+    k = _load_keys_file()
+    cid = k.get("contributor_id") or os.environ.get("COHERENCE_CONTRIBUTOR")
+    if not cid:
+        print("No contributor_id in keys.json. Run: cc setup", file=sys.stderr)
+        sys.exit(1)
+    provider = getattr(args, "provider", None) or "github"
+    code, chal = _api_raw(
+        "POST",
+        "/api/auth/verify/challenge",
+        {"contributor_id": cid, "provider": provider},
+    )
+    if code != 200 or not chal:
+        print("Could not create verification challenge.", file=sys.stderr)
+        sys.exit(1)
+    print(chal.get("instructions", ""))
+    proof = getattr(args, "proof", None) or input("Paste proof URL or text: ").strip()
+    if not proof:
+        print("Proof required.", file=sys.stderr)
+        sys.exit(1)
+    pid = k.get("provider_id") or ""
+    pr_code, result = _api_raw(
+        "POST",
+        "/api/auth/verify/proof",
+        {
+            "contributor_id": cid,
+            "provider": provider,
+            "provider_id": pid,
+            "proof": proof,
+        },
+    )
+    if pr_code == 200 and result and result.get("verified"):
+        print(f"{provider} identity verified!")
+        upd = dict(k)
+        upd["verified"] = True
+        _KEYS_PATH.write_text(json.dumps(upd, indent=2) + "\n", encoding="utf-8")
+        try:
+            _KEYS_PATH.chmod(0o600)
+        except OSError:
+            pass
+    else:
+        print(f"Verification failed (HTTP {pr_code}): {result}", file=sys.stderr)
+        sys.exit(1)
 
 
 # ── Commands ──────────────────────────────────────────────────────────
@@ -125,6 +316,7 @@ def cmd_idea(args):
 
 def cmd_share(args):
     """Share a new idea."""
+    _require_personal_key()
     idea_id = "idea-" + hashlib.sha256(args.name.encode()).hexdigest()[:12]
     body = {
         "id": idea_id,
@@ -143,6 +335,7 @@ def cmd_share(args):
 
 def cmd_ask(args):
     """Ask a question on an idea."""
+    _require_personal_key()
     body = {
         "question": args.question,
         "value_to_whole": args.value,
@@ -157,6 +350,7 @@ def cmd_ask(args):
 
 def cmd_stake(args):
     """Stake CC on an idea."""
+    _require_personal_key()
     body = {
         "contributor_id": args.contributor or os.environ.get("COHERENCE_CONTRIBUTOR", "anonymous"),
         "amount_cc": args.amount,
@@ -222,6 +416,7 @@ def cmd_specs(_args):
 
 def cmd_contribute(args):
     """Record a contribution."""
+    _require_personal_key()
     body = {
         "contributor_id": args.contributor or os.environ.get("COHERENCE_CONTRIBUTOR", "anonymous"),
         "type": args.type,
@@ -318,6 +513,16 @@ def main():
     p_run.add_argument("--loop", action="store_true")
     p_run.add_argument("--interval", type=int, default=120)
 
+    p_setup = sub.add_parser("setup", help="Contributor onboarding (TOFU identity + API key)")
+    p_setup.add_argument("--force", action="store_true", help="Re-run even if keys.json exists")
+    p_setup.add_argument("--name", default=None, help="Non-interactive: contributor id")
+    p_setup.add_argument("--provider", default=None, help="Non-interactive: identity provider key")
+    p_setup.add_argument("--provider-id", dest="provider_id", default=None, help="Non-interactive: handle")
+
+    p_verify = sub.add_parser("verify", help="Verify linked identity (e.g. GitHub gist)")
+    p_verify.add_argument("--provider", default="github", help="Identity provider")
+    p_verify.add_argument("--proof", default=None, help="Proof URL or text (skip prompt)")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -328,6 +533,7 @@ def main():
         "share": cmd_share, "ask": cmd_ask, "stake": cmd_stake,
         "tasks": cmd_tasks, "nodes": cmd_nodes, "specs": cmd_specs,
         "contribute": cmd_contribute, "coherence": cmd_coherence, "run": cmd_run,
+        "setup": cmd_setup, "verify": cmd_verify,
     }
     handler = cmd_map.get(args.command)
     if handler:
