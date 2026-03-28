@@ -331,41 +331,60 @@ async def test_surface_candidate_list_present_in_response(monkeypatch, client):
 
 @pytest.mark.asyncio
 async def test_balance_degrades_as_gravity_wells_grow(monkeypatch, client):
-    """Idea criterion 5: Balance score decreases as gravity wells appear."""
+    """Idea criterion 5: Balance score is lower with gravity wells + orphan clusters than without.
+
+    Uses a clearly healthy ring graph (uniform engagement, no wells, no orphans) vs a graph
+    with a critical gravity well and orphan clusters so the comparison is unambiguous.
+    """
     import app.services.concept_service as cs
     import app.services.graph_health_service as svc
 
-    threshold = svc.SPLIT_THRESHOLD
+    critical = svc.SPLIT_CRITICAL
 
-    concepts_small, edges_small = _make_graph(parent_count=2)
-    monkeypatch.setattr(cs, "_concepts", concepts_small)
-    monkeypatch.setattr(cs, "_edges", edges_small)
-    monkeypatch.setattr(cs, "_concept_index", {c["id"]: c for c in concepts_small})
+    # Healthy baseline: 20-node ring — uniform degree, no gravity wells, no orphans.
+    ring_size = 20
+    ring_concepts = [{"id": f"ring-{i}", "name": f"Ring {i}"} for i in range(ring_size)]
+    ring_edges = [
+        {"from": f"ring-{i}", "to": f"ring-{(i+1) % ring_size}", "type": "related"}
+        for i in range(ring_size)
+    ]
+    monkeypatch.setattr(cs, "_concepts", ring_concepts)
+    monkeypatch.setattr(cs, "_edges", ring_edges)
+    monkeypatch.setattr(cs, "_concept_index", {c["id"]: c for c in ring_concepts})
     monkeypatch.setattr(svc, "_last_compute_time", None)
 
     r1 = await client.post("/api/graph/health/compute")
+    assert r1.status_code == 200
     score_balanced = r1.json()["balance_score"]
 
-    concepts_gw, edges_gw = _make_graph(parent_count=threshold + 5)
+    # Unhealthy state: critical gravity well + multiple orphan clusters.
+    concepts_gw, edges_gw = _make_graph(parent_count=critical, orphan_sizes=[3, 3, 3])
     monkeypatch.setattr(cs, "_concepts", concepts_gw)
     monkeypatch.setattr(cs, "_edges", edges_gw)
     monkeypatch.setattr(cs, "_concept_index", {c["id"]: c for c in concepts_gw})
     monkeypatch.setattr(svc, "_last_compute_time", None)
 
     r2 = await client.post("/api/graph/health/compute")
+    assert r2.status_code == 200
     score_with_gw = r2.json()["balance_score"]
 
-    assert score_with_gw <= score_balanced, (
-        f"Balance should be lower with gravity well. Balanced={score_balanced}, WithGW={score_with_gw}"
+    assert score_with_gw < score_balanced, (
+        f"Critical gravity well + orphan clusters should reduce balance score. "
+        f"Healthy={score_balanced}, Unhealthy={score_with_gw}"
     )
 
 
 @pytest.mark.asyncio
 async def test_compute_endpoint_reflects_latest_state(monkeypatch, client):
-    """POST /api/graph/health/compute returns a fresh snapshot after each graph change."""
+    """POST /api/graph/health/compute returns a snapshot that reflects current graph state.
+
+    Tests that balance_score changes between an empty graph (score=0.0) and a non-empty
+    graph (positive score), proving compute uses the current state rather than a stale cache.
+    """
     import app.services.concept_service as cs
     import app.services.graph_health_service as svc
 
+    # State A: empty graph → balance_score=0.0
     monkeypatch.setattr(cs, "_concepts", [])
     monkeypatch.setattr(cs, "_edges", [])
     monkeypatch.setattr(cs, "_concept_index", {})
@@ -373,18 +392,25 @@ async def test_compute_endpoint_reflects_latest_state(monkeypatch, client):
 
     r_a = await client.post("/api/graph/health/compute")
     assert r_a.status_code == 200
-    ts_a = r_a.json()["computed_at"]
+    score_a = r_a.json()["balance_score"]
+    assert score_a == 0.0, f"Empty graph should have balance_score=0.0, got {score_a}"
 
-    concepts_b = [{"id": f"c-{i}", "name": f"C{i}"} for i in range(3)]
+    # State B: connected graph → positive balance_score
+    concepts_b = [{"id": f"c-{i}", "name": f"C{i}"} for i in range(6)]
+    edges_b = [{"from": f"c-{i}", "to": f"c-{i+1}", "type": "related"} for i in range(5)]
     monkeypatch.setattr(cs, "_concepts", concepts_b)
+    monkeypatch.setattr(cs, "_edges", edges_b)
     monkeypatch.setattr(cs, "_concept_index", {c["id"]: c for c in concepts_b})
     monkeypatch.setattr(svc, "_last_compute_time", None)
 
     r_b = await client.post("/api/graph/health/compute")
     assert r_b.status_code == 200
-    ts_b = r_b.json()["computed_at"]
+    score_b = r_b.json()["balance_score"]
+    assert score_b > 0.0, f"Non-empty connected graph should have positive balance_score, got {score_b}"
 
-    assert ts_a != ts_b, "Each compute call should return a fresh snapshot"
+    assert score_b != score_a, (
+        f"Compute must reflect state changes: empty={score_a}, with-6-nodes={score_b}"
+    )
 
 
 # ===========================================================================
