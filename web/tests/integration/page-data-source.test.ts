@@ -40,8 +40,8 @@ const PAGE_ASSERTIONS: PageAssertion[] = [
   {
     route: "/automation",
     file: "app/automation/page.tsx",
-    apiHints: ["/api/automation/usage", "/api/providers/stats", "getApiBase()"],
-    dynamicHints: [/usage\.tracked_providers/, /readiness/, /validation/],
+    apiHints: ["/api/automation/usage", "/api/providers/stats", "getApiBase()", "loadAutomationData"],
+    dynamicHints: [/AutomationGarden/, /automation-technical-soil/, /readiness/],
   },
   {
     route: "/flow",
