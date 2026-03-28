@@ -1,0 +1,77 @@
+{
+  "date": "2026-03-28T16:05:00Z",
+  "thread_branch": "worker-main",
+  "commit_scope": "impl(contribution-recognition): merge store-backed contributions into recognition snapshots",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/models/contributor_recognition.py",
+    "api/app/routers/contributor_recognition.py",
+    "api/app/services/contributor_recognition_service.py",
+    "api/tests/test_contributor_recognition.py",
+    "docs/system_audit/commit_evidence_2026-03-28_contributor-recognition-store-fallback.json"
+  ],
+  "local_validation": {
+    "status": "fail",
+    "details": "Verified the service fix with `python -m py_compile api/app/services/contributor_recognition_service.py api/tests/test_contributor_recognition.py` and a direct Python probe reproducing the graph-contributor/store-contribution bug, but full pytest/FastAPI validation is blocked in this sandbox because the available Python environment lacks project dependencies and no repo-local virtualenv is present."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "No CI run from this sandboxed worktree."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "No deploy step is part of this implementation fix."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "contribution-recognition-loop",
+    "visible-contribution-recognition-and-growth-tracking"
+  ],
+  "spec_ids": [
+    "task_db6bddf6664e5db0"
+  ],
+  "task_ids": [
+    "task_208cb1bb6476156d"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "Verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex GPT-5",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/contributor_recognition_service.py",
+    "api/tests/test_contributor_recognition.py",
+    "docs/system_audit/commit_evidence_2026-03-28_contributor-recognition-store-fallback.json"
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/models/contributor_recognition.py",
+    "api/app/routers/contributor_recognition.py",
+    "api/app/services/contributor_recognition_service.py",
+    "api/tests/test_contributor_recognition.py",
+    "docs/system_audit/commit_evidence_2026-03-28_contributor-recognition-store-fallback.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "fail",
+    "expected_behavior_delta": "Recognition snapshots should include store-backed contribution history even when the contributor record was resolved from graph nodes and graph edges are empty.",
+    "public_endpoints": [
+      "GET /api/contributors/{contributor_id}/recognition"
+    ],
+    "test_flows": [
+      "Compile contributor recognition service and regression test module",
+      "Run direct Python probe for graph contributor plus store-only contributions"
+    ]
+  }
+}

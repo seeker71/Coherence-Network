@@ -155,6 +155,23 @@ class IdeaShowcaseResponse(BaseModel):
     ideas: list[IdeaShowcaseItem]
 
 
+class IdeaConceptResonanceMatch(BaseModel):
+    idea_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    resonance_score: float = Field(ge=0.0, le=1.0)
+    free_energy_score: float = Field(ge=0.0)
+    shared_concepts: list[str] = Field(default_factory=list)
+    source_domains: list[str] = Field(default_factory=list)
+    candidate_domains: list[str] = Field(default_factory=list)
+    cross_domain: bool = False
+
+
+class IdeaConceptResonanceResponse(BaseModel):
+    idea_id: str = Field(min_length=1)
+    matches: list[IdeaConceptResonanceMatch] = Field(default_factory=list)
+    total: int = Field(ge=0)
+
+
 class IdeaUpdate(BaseModel):
     """PATCH body — extend original spec-053 fields with structural fields for reorganization."""
     actual_value: Optional[float] = Field(default=None, ge=0.0)

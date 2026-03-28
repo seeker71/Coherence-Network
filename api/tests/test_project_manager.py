@@ -35,6 +35,20 @@ def test_load_backlog_numbered_items(tmp_path):
     assert items == ["First item", "Second item", "Third item"]
 
 
+def test_load_backlog_malformed_missing_number_prefix(tmp_path):
+    """Mixed numbered and unnumbered lines: only \\d+. items are returned, order preserved (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_text(
+        "1. First item\n"
+        "Unnumbered line\n"
+        "2. Second item\n"
+        "Another line without number\n"
+    )
+    pm.BACKLOG_FILE = str(p)
+    items = pm.load_backlog()
+    assert items == ["First item", "Second item"]
+
+
 def test_load_state_defaults(tmp_path):
     """load_state returns defaults when no file."""
     pm.STATE_FILE = str(tmp_path / "missing.json")

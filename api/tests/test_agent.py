@@ -5,6 +5,8 @@ return a local model (e.g. ollama/glm/qwen) with tier "local" per the
 routing table in spec 002 (spec | test | impl | review → local; heal → claude).
 
 Spec 039: Ensures GET /api/agent/pipeline-status returns 200 in empty state.
+
+Spec 037: POST /api/agent/tasks with invalid task_type returns 422 with Pydantic detail array.
 """
 
 from __future__ import annotations
@@ -242,3 +244,32 @@ async def test_effectiveness_plan_progress_phase_boundary_logic() -> None:
         finally:
             eff_svc.STATE_FILES = original_state_files
             eff_svc.BACKLOG_FILE = original_backlog_file
+
+
+@pytest.mark.asyncio
+async def test_post_task_invalid_task_type_returns_422() -> None:
+    """POST /api/agent/tasks with task_type not in the allowed enum returns 422.
+
+    Spec 037: Invalid task_type (e.g. foo) is rejected; body matches FastAPI/Pydantic
+    validation error shape with detail as a list referencing body.task_type.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "A valid direction string for the task.", "task_type": "foo"},
+        )
+
+    assert r.status_code == 422, r.text
+    body = r.json()
+    assert "detail" in body
+    detail = body["detail"]
+    assert isinstance(detail, list)
+    assert len(detail) >= 1
+    for item in detail:
+        assert isinstance(item, dict)
+        assert "loc" in item
+        assert "msg" in item
+        assert "type" in item  # Pydantic/FastAPI validation item shape (spec 009)
+    assert any(
+        list(item.get("loc", ())) == ["body", "task_type"] for item in detail
+    ), f"Expected a validation error item for body.task_type, got {detail!r}"
