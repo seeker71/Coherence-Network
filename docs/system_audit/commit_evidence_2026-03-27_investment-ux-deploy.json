@@ -1,0 +1,77 @@
+{
+  "date": "2026-03-27",
+  "thread_branch": "task/task_2b7c9222b32",
+  "commit_scope": "Record the investment-ux production deploy attempt, improve cc deploy help/error reporting, and capture the sandbox blocker that prevented SSH and health verification.",
+  "files_owned": [
+    "cli/lib/commands/deploy.mjs",
+    "docs/system_audit/commit_evidence_2026-03-27_investment-ux-deploy.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    ".task-checkpoint.md",
+    ".gitignore"
+  ],
+  "local_validation": {
+    "status": "fail",
+    "commands": [
+      "node --input-type=module -e \"import('./cli/lib/commands/deploy.mjs').then(async (m) => { await m.deploy(['--help']); })\"",
+      "git add -A",
+      "git diff --cached --stat",
+      "git commit -m \"impl(investment-ux): record blocked deploy attempt\""
+    ],
+    "summary": "Verified the patched deploy command prints usage instead of attempting a deployment when called with --help, but the required git stage/commit sequence was blocked because the sandbox cannot create the worktree index.lock file."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [],
+    "summary": "No CI run was started from this sandboxed worktree."
+  },
+  "deploy_validation": {
+    "status": "fail",
+    "commands": [
+      "cc deploy",
+      "ssh -i ~/.ssh/hostinger-openclaw -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@187.77.152.42 'echo connected && hostname && cd /docker/coherence-network/repo && git rev-parse --short HEAD'",
+      "curl -i --max-time 20 https://api.coherencycoin.com/api/health"
+    ],
+    "summary": "Production deploy could not be executed from this environment because SSH to the VPS was blocked with 'Operation not permitted' and the production health host could not be resolved."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Production deploy proof is blocked by sandbox network restrictions, and the required local git commit is blocked by sandbox filesystem restrictions, so this task cannot be truthfully marked as deployed."
+  },
+  "idea_ids": [
+    "investment-ux"
+  ],
+  "spec_ids": [
+    "156-deploy-latest-to-vps"
+  ],
+  "task_ids": [
+    "task_2b7c9222b326fa49"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "dev-engineer"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    ".task-checkpoint.md",
+    "cli/lib/commands/deploy.mjs",
+    "ssh stderr: connect to host 187.77.152.42 port 22: Operation not permitted",
+    "curl stderr: Could not resolve host: api.coherencycoin.com",
+    "git stderr: Unable to create .../.git/worktrees/task-task_2b7c9222b32/index.lock: Operation not permitted"
+  ],
+  "change_files": [
+    "cli/lib/commands/deploy.mjs",
+    "docs/system_audit/commit_evidence_2026-03-27_investment-ux-deploy.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    ".task-checkpoint.md",
+    ".gitignore"
+  ],
+  "change_intent": "process_only"
+}

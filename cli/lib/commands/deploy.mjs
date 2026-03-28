@@ -16,6 +16,13 @@ const VPS_HOST = "root@187.77.152.42";
 const REPO_DIR = "/docker/coherence-network/repo";
 const COMPOSE_DIR = "/docker/coherence-network";
 
+function printDeployUsage() {
+  console.log("Usage:");
+  console.log("  cc deploy         Deploy latest main to the VPS");
+  console.log("  cc deploy status  Show deployed SHA vs current health payload");
+  console.log("  cc deploy --help  Show this help");
+}
+
 function ssh(cmd, timeout = 120000) {
   return execSync(
     `ssh -i "${SSH_KEY}" -o LogLevel=QUIET -o StrictHostKeyChecking=no ${VPS_HOST} '${cmd}'`,
@@ -23,8 +30,34 @@ function ssh(cmd, timeout = 120000) {
   ).trim();
 }
 
+function formatDeployError(error) {
+  const raw = [
+    error?.stderr?.toString?.() || "",
+    error?.stdout?.toString?.() || "",
+    error?.message || "",
+  ].filter(Boolean).join("\n").trim();
+
+  if (!raw) return "unknown deploy error";
+  if (raw.includes("Operation not permitted")) {
+    return "SSH blocked by the current environment (Operation not permitted).";
+  }
+  if (raw.includes("Could not resolve host")) {
+    return "DNS resolution failed for the deploy target.";
+  }
+  if (raw.includes("fetch failed")) {
+    return "Network fetch failed while checking deployment health.";
+  }
+
+  const compact = raw.replace(/\s+/g, " ").trim();
+  return compact.length > 280 ? `${compact.slice(0, 277)}...` : compact;
+}
+
 export async function deploy(args) {
   const sub = args[0];
+  if (sub === "--help" || sub === "-h" || sub === "help") {
+    printDeployUsage();
+    return;
+  }
   if (sub === "status") return deployStatus();
 
   console.log("\x1b[1m  DEPLOYING TO VPS\x1b[0m");
@@ -82,7 +115,7 @@ async function deployDirect() {
       await broadcast(`Deploy FAILED health check. Rolled back ${newSha} → ${prevSha}.`);
     }
   } catch (e) {
-    console.log(`  \x1b[31m✗\x1b[0m Deploy error: ${e.message}`);
+    console.log(`  \x1b[31m✗\x1b[0m Deploy error: ${formatDeployError(e)}`);
   }
 }
 
