@@ -6943,6 +6943,17 @@ def run_one_task(
             attempt_status=status,
             failure_class=failure_class,
         )
+        # Spec 026 Phase 1: post pipeline metric for observability aggregation.
+        _post_pipeline_metric(
+            client,
+            task_id=task_id,
+            task_type=str(task_type or "impl"),
+            model=model,
+            duration_seconds=duration_sec,
+            status=status,
+            executor=executor,
+            prompt_variant=str(task_ctx.get("prompt_variant") or ""),
+        )
         if pr_mode:
             manifest_context_patch = _append_agent_manifest_entry(
                 task_id=task_id,
