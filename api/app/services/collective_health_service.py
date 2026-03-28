@@ -7,8 +7,9 @@ import math
 from datetime import datetime, timezone
 from typing import Any
 
+from app.models.friction import FrictionEvent
 from app.services import friction_service, metrics_service
-from app.services.friction_service import FrictionEvent, _severity_rank
+from app.services.friction_service import _severity_rank
 
 logger = logging.getLogger(__name__)
 

@@ -61,3 +61,10 @@ out.txt
 data/*.db
 *.db-wal
 *.db-shm
+
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+.codex*
+scripts/_dif_verify_collective_health.py

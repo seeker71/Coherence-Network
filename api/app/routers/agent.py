@@ -2,7 +2,6 @@
 
 from fastapi import APIRouter
 
-from app.services.collective_health_service import build_collective_health
 from app.routers.agent_telegram import router as telegram_router
 from app.routers.agent_execute_routes import router as execute_router
 from app.routers.agent_task_log_routes import router as task_log_router
@@ -16,6 +15,7 @@ from app.routers.agent_route_telegram_routes import router as route_telegram_rou
 from app.routers.agent_prompt_ab_routes import router as prompt_ab_router
 from app.routers.agent_diagnostics_routes import router as diagnostics_router
 from app.routers.agent_auto_heal_routes import router as auto_heal_router
+from app.services.collective_health_service import build_collective_health
 
 router = APIRouter()
 

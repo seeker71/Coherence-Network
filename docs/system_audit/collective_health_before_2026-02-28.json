@@ -1,9 +1,13 @@
 {
-  "captured_at": "2026-02-28T09:00:00Z",
-  "endpoint": "/api/agent/collective-health",
-  "status_code": 404,
-  "body": {
-    "detail": "Not Found"
+  "topic": "collective_health_api",
+  "captured_at": "2026-02-28T00:00:00Z",
+  "endpoint": "GET /api/agent/collective-health",
+  "availability": {
+    "registered": false,
+    "notes": "Route was not present on the agent router; callers received 404 Not Found."
   },
-  "meaning": "No explicit system-level Coherence/Resonance/Flow/Friction score was available."
+  "sample_probe": {
+    "status_code": 404,
+    "body_excerpt": "Not Found"
+  }
 }

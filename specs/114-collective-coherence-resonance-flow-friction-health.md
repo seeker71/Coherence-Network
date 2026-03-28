@@ -6,14 +6,14 @@ Expose system-level progress toward the project's core values by making coherenc
 
 ## Requirements
 
-- [ ] Add `GET /api/agent/collective-health` that returns explicit scores for coherence, resonance, flow, and friction.
-- [ ] Compute scores from real task/runtime/friction data already available in the system.
-- [ ] Return a single `collective_value` score derived from `coherence * resonance * flow * (1 - friction)`.
-- [ ] Include component diagnostics and counts so contributors can understand what drives each score.
-- [ ] Include a top friction queue to make blocking points visible.
-- [ ] Include top opportunities for improving coherence/resonance/flow in the same payload.
-- [ ] Add API tests proving payload shape and score ranges.
-- [ ] Add before/after proof artifacts showing endpoint availability and changed behavior.
+- [x] Add `GET /api/agent/collective-health` that returns explicit scores for coherence, resonance, flow, and friction.
+- [x] Compute scores from real task/runtime/friction data already available in the system.
+- [x] Return a single `collective_value` score derived from `coherence * resonance * flow * (1 - friction)`.
+- [x] Include component diagnostics and counts so contributors can understand what drives each score.
+- [x] Include a top friction queue to make blocking points visible.
+- [x] Include top opportunities for improving coherence/resonance/flow in the same payload.
+- [x] Add API tests proving payload shape and score ranges.
+- [x] Add before/after proof artifacts showing endpoint availability and changed behavior.
 
 ## API Contract (if applicable)
 
