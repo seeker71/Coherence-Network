@@ -68,15 +68,13 @@ def get_beliefs(contributor_id: str) -> BeliefProfile:
 def patch_beliefs(
     contributor_id: str,
     patch: BeliefProfilePatch,
-    x_api_key: Optional[str] = None,
-    x_contributor_id: Optional[str] = None,
+    x_contributor_id: Annotated[Optional[str], Header()] = None,
 ) -> BeliefProfile:
     """Partially update a contributor's belief profile.
 
     Axis values must be in [0.0, 1.0]. Unknown axis names return 422.
     Only the authenticated contributor (or admin) can update their own profile.
     """
-    from fastapi import Header
     if not _contributor_exists(contributor_id):
         raise HTTPException(status_code=404, detail=f"Contributor '{contributor_id}' not found")
 

@@ -536,3 +536,141 @@ def get_stats() -> dict[str, Any]:
             "nodes_by_type": {t: c for t, c in node_counts},
             "edges_by_type": {t: c for t, c in sorted(edge_counts, key=lambda x: -x[1])[:20]},
         }
+
+
+def get_neighbors_with_lifecycle(
+    node_id: str,
+    edge_type: str | None = None,
+    node_type: str | None = None,
+    lifecycle_state: str | None = None,
+    direction: str = "both",
+    depth: int = 1,
+) -> dict[str, Any]:
+    """Get neighboring nodes with optional lifecycle_state filter (spec-168).
+
+    lifecycle_state filters by the 'phase' column (which mirrors payload.lifecycle_state
+    for nodes created via the spec-168 API).
+    """
+    with session() as s:
+        if direction == "outgoing":
+            edge_q = s.query(Edge).filter(Edge.from_id == node_id)
+        elif direction == "incoming":
+            edge_q = s.query(Edge).filter(Edge.to_id == node_id)
+        else:
+            edge_q = s.query(Edge).filter(
+                or_(Edge.from_id == node_id, Edge.to_id == node_id)
+            )
+
+        if edge_type:
+            edge_q = edge_q.filter(Edge.type == edge_type)
+
+        edges = edge_q.all()
+
+        neighbor_ids = set()
+        edge_by_neighbor: dict[str, dict] = {}
+        for edge in edges:
+            other = edge.to_id if edge.from_id == node_id else edge.from_id
+            dir_val = "outgoing" if edge.from_id == node_id else "incoming"
+            neighbor_ids.add(other)
+            if other not in edge_by_neighbor:
+                edge_by_neighbor[other] = {
+                    "id": edge.id,
+                    "type": edge.type,
+                    "direction": dir_val,
+                    "strength": edge.strength,
+                }
+
+        if not neighbor_ids:
+            return {"node_id": node_id, "neighbors": [], "total": 0}
+
+        node_q = s.query(Node).filter(Node.id.in_(neighbor_ids))
+        if node_type:
+            node_q = node_q.filter(Node.type == node_type)
+        if lifecycle_state:
+            # Filter by phase column (synced with payload.lifecycle_state)
+            node_q = node_q.filter(Node.phase == lifecycle_state)
+
+        nodes = node_q.all()
+        neighbors = []
+        for n in nodes:
+            entry = {
+                "node": n.to_dict(),
+                "via_edge": edge_by_neighbor.get(n.id),
+            }
+            neighbors.append(entry)
+
+        return {"node_id": node_id, "neighbors": neighbors, "total": len(neighbors)}
+
+
+def get_graph_proof() -> dict[str, Any]:
+    """Return graph health and coverage metrics (spec-168).
+
+    Always returns a valid response — even with an empty graph.
+    """
+    with session() as s:
+        node_counts = s.query(Node.type, func.count(Node.id)).group_by(Node.type).all()
+        edge_counts = s.query(Edge.type, func.count(Edge.id)).group_by(Edge.type).all()
+        phase_counts = s.query(Node.phase, func.count(Node.id)).group_by(Node.phase).all()
+
+        total_nodes = sum(c for _, c in node_counts)
+        total_edges = sum(c for _, c in edge_counts)
+
+        nodes_by_type: dict[str, int] = {t: c for t, c in node_counts}
+        edges_by_type: dict[str, int] = {t: c for t, c in edge_counts}
+        lifecycle_distribution: dict[str, int] = {p: c for p, c in phase_counts}
+
+        # Coverage metrics
+        idea_count = nodes_by_type.get("idea", 0)
+        spec_count = nodes_by_type.get("spec", 0)
+        impl_count = nodes_by_type.get("implementation", 0)
+
+        # ideas_with_spec: ideas that have at least one 'implements' edge to a spec
+        ideas_with_spec_edges = (
+            s.query(func.count(func.distinct(Edge.from_id)))
+            .join(Node, Node.id == Edge.from_id)
+            .filter(Node.type == "idea", Edge.type == "implements")
+            .scalar()
+        ) or 0
+        ideas_with_spec_pct = ideas_with_spec_edges / idea_count if idea_count > 0 else 0.0
+
+        # specs_with_impl: specs that have at least one 'implements' edge pointing to them
+        specs_with_impl_edges = (
+            s.query(func.count(func.distinct(Edge.to_id)))
+            .join(Node, Node.id == Edge.to_id)
+            .filter(Node.type == "spec", Edge.type == "implements")
+            .scalar()
+        ) or 0
+        specs_with_impl_pct = specs_with_impl_edges / spec_count if spec_count > 0 else 0.0
+
+        # impls_with_test: implementations that have 'artifact' neighbors
+        impls_with_test_edges = (
+            s.query(func.count(func.distinct(Edge.from_id)))
+            .join(Node, Node.id == Edge.from_id)
+            .filter(Node.type == "implementation", Edge.type == "parent-of")
+            .scalar()
+        ) or 0
+        impls_with_test_pct = impls_with_test_edges / impl_count if impl_count > 0 else 0.0
+
+        # Last edge created_at
+        last_edge_row = s.query(Edge.created_at).order_by(Edge.created_at.desc()).first()
+        last_edge_created_at = last_edge_row[0].isoformat() if last_edge_row else None
+
+        return {
+            "total_nodes": total_nodes,
+            "total_edges": total_edges,
+            "nodes_by_type": nodes_by_type,
+            "edges_by_type": edges_by_type,
+            "lifecycle_distribution": lifecycle_distribution,
+            "graph_density": (
+                (2 * total_edges) / (total_nodes * (total_nodes - 1))
+                if total_nodes > 1 else 0.0
+            ),
+            "connected_components": 0,  # placeholder — full component analysis is expensive
+            "average_degree": (2 * total_edges / total_nodes) if total_nodes > 0 else 0.0,
+            "last_edge_created_at": last_edge_created_at,
+            "coverage_pct": {
+                "ideas_with_spec": round(ideas_with_spec_pct, 4),
+                "specs_with_impl": round(specs_with_impl_pct, 4),
+                "impls_with_test": round(impls_with_test_pct, 4),
+            },
+        }
