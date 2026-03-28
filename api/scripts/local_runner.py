@@ -2324,13 +2324,14 @@ def execute_with_provider(
     except OSError as e:
         log.warning("Could not write prompt file: %s", e)
 
-    if spec.get("stdin_prompt"):
-        # ollama: already uses stdin
+    # Prompt delivery: stdin for most, CLI arg for gemini (doesn't read stdin)
+    _STDIN_PROVIDERS = {"claude", "codex", "cursor", "ollama-local", "ollama-cloud"}
+    _CLI_ARG_PROVIDERS = {"gemini"}  # gemini -y -p <prompt> — must be positional arg
+
+    if spec.get("stdin_prompt") or provider in _STDIN_PROVIDERS:
         stdin_input = prompt
-    elif spec.get("append_prompt"):
-        # All CLI providers (claude, codex, cursor, gemini) support stdin
-        # stdin is preferred over CLI args: no length limit, no shell escaping issues
-        stdin_input = prompt
+    elif spec.get("append_prompt") or provider in _CLI_ARG_PROVIDERS:
+        cmd.append(prompt)
 
     # ── Start heartbeat monitoring (works for both wrapper and raw subprocess) ──
     start = time.time()
