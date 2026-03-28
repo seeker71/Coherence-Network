@@ -416,12 +416,9 @@ curl -s -o /dev/null -w "%{http_code}" \
 
 ## Known Gaps and Follow-up Tasks
 
-- **Gap**: Reap history endpoint scans all timed_out tasks (O(n)). For large deployments, add an
-  index on `context->>'idea_id'` in PostgreSQL.  Follow-up: `task_spec_gap_169a`
-- **Gap**: Telegram notification for `needs_human_attention` reuses `format_task_alert`; a dedicated
-  "human required" alert format would be clearer. Follow-up: `task_spec_gap_169b`
-- **Gap**: No automatic un-flagging when an idea eventually succeeds after human intervention.
-  Follow-up: `task_spec_gap_169c` — clear `needs_human_attention` on `completed` status.
+- **Gap (follow-up task_spec_gap_169a)**: Reap history endpoint scans all `timed_out` tasks (O(n)). For large deployments, add a PostgreSQL index on `context->>'idea_id'` to keep aggregation fast.
+- **Gap (follow-up task_spec_gap_169b)**: `needs_human_attention` Telegram alert reuses generic `format_task_alert`; a dedicated "human required" alert template would be clearer for on-call.
+- **Gap (follow-up task_spec_gap_169c)**: No automatic un-flagging when an idea eventually succeeds after human intervention — `needs_human_attention` should be cleared on `completed` status.
 
 ## Failure/Retry Reflection
 
