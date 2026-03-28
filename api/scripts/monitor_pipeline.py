@@ -2213,6 +2213,20 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
         _record_resolution(cond, log, heal_task_id=prev_condition_to_heal_task.get(cond))
     data["resolved_since_last"] = list(resolved_this_run)
 
+    # Optional: persist resolved entries into monitor_issues.json when MONITOR_PERSIST_RESOLVED=1
+    if os.environ.get("MONITOR_PERSIST_RESOLVED") == "1" and resolved_this_run:
+        resolved_entries: list = list(data.get("resolved") or [])
+        for cond in resolved_this_run:
+            entry: dict = {"condition": cond, "resolved_at": now.isoformat()}
+            htid = prev_condition_to_heal_task.get(cond)
+            if htid:
+                entry["heal_task_id"] = htid
+            iid = prev_condition_to_issue_id.get(cond)
+            if iid:
+                entry["issue_id"] = iid
+            resolved_entries.append(entry)
+        data["resolved"] = resolved_entries[-50:]  # cap at last 50 entries
+
     # Sort by priority (1 = highest)
     data["issues"].sort(key=lambda i: (i.get("priority", 2), i.get("created_at", "")))
 
