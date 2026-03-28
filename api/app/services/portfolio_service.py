@@ -20,6 +20,7 @@ from app.models.portfolio import (
     LinkedIdentity,
     NetworkStats,
     PortfolioSummary,
+    StakeDetail,
     StakesList,
     StakeSummary,
     TasksList,
@@ -222,6 +223,8 @@ def get_cc_history(contributor_id: str, window: str = "90d", bucket: str = "7d")
             continue
         try:
             ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
         except (ValueError, AttributeError):
             continue
         if ts < start:
@@ -504,6 +507,90 @@ def get_stakes(contributor_id: str, sort: str = "roi_desc", limit: int = 20, off
         items.sort(key=lambda x: x.roi_pct if x.roi_pct is not None else float("-inf"), reverse=True)
 
     return StakesList(contributor_id=contributor_id, total=len(items), items=items[offset: offset + limit])
+
+
+def get_stake_detail(contributor_id: str, stake_id: str) -> StakeDetail:
+    node = _find_contributor(contributor_id)
+    if not node:
+        raise ValueError(f"Contributor not found: {contributor_id}")
+
+    stake_node = graph_service.get_node(f"stake:{stake_id}") or graph_service.get_node(stake_id)
+    if not stake_node:
+        # fallback: search by legacy_id
+        stakes_result = graph_service.list_nodes(type="stake", limit=10000)
+        for s in stakes_result.get("items", []):
+            if s.get("id") == stake_id or s.get("legacy_id") == stake_id:
+                stake_node = s
+                break
+    if not stake_node:
+        raise ValueError(f"Stake not found: {stake_id}")
+
+    props = _graph_node_props(stake_node)
+    if props.get("contributor_id") != contributor_id:
+        raise PermissionError("Stake does not belong to this contributor")
+
+    idea_id = props.get("idea_id", "")
+    idea_node = graph_service.get_node(f"idea:{idea_id}") or {}
+    idea_props = _graph_node_props(idea_node)
+    idea_title = idea_node.get("name") or idea_id
+    idea_status = idea_props.get("status", "unknown")
+
+    cc_staked = float(props.get("cc_staked", 0) or 0)
+    cc_val_raw = props.get("cc_valuation")
+    cc_val: Optional[float] = float(cc_val_raw) if cc_val_raw is not None else None
+    roi: Optional[float] = None
+    if cc_val is not None and cc_staked > 0:
+        roi = round((cc_val - cc_staked) / cc_staked * 100, 2)
+
+    staked_at: Optional[datetime] = None
+    ts_raw = props.get("staked_at") or stake_node.get("created_at")
+    if ts_raw:
+        try:
+            staked_at = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            pass
+
+    last_valued_at: Optional[datetime] = None
+    ts_raw2 = props.get("last_valued_at") or stake_node.get("updated_at")
+    if ts_raw2:
+        try:
+            last_valued_at = datetime.fromisoformat(str(ts_raw2).replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            pass
+
+    # Count contributions to the staked idea by this contributor
+    contributions = graph_service.list_nodes(type="contribution", limit=10000)
+    c_name = node.get("name", "")
+    idea_contribution_count = sum(
+        1
+        for c in contributions.get("items", [])
+        if (
+            _graph_node_props(c).get("contributor_id") == contributor_id
+            or _graph_node_props(c).get("contributor_name") == c_name
+        )
+        and _graph_node_props(c).get("idea_id") == idea_id
+    )
+
+    all_idea_conts = [
+        c for c in contributions.get("items", [])
+        if _graph_node_props(c).get("idea_id") == idea_id
+    ]
+    health = _health_for_idea(idea_node, all_idea_conts)
+
+    return StakeDetail(
+        stake_id=stake_node.get("id") or stake_node.get("legacy_id") or stake_id,
+        contributor_id=contributor_id,
+        idea_id=idea_id,
+        idea_title=idea_title,
+        cc_staked=cc_staked,
+        cc_valuation=cc_val,
+        roi_pct=roi,
+        staked_at=staked_at,
+        last_valued_at=last_valued_at,
+        health=health,
+        idea_status=idea_status,
+        idea_contribution_count=idea_contribution_count,
+    )
 
 
 # ── Tasks ────────────────────────────────────────────────────────────

@@ -166,6 +166,21 @@ class StakesList(BaseModel):
     items: list[StakeSummary] = Field(default_factory=list)
 
 
+class StakeDetail(BaseModel):
+    stake_id: str
+    contributor_id: str
+    idea_id: str
+    idea_title: str
+    cc_staked: float
+    cc_valuation: Optional[float] = None
+    roi_pct: Optional[float] = None
+    staked_at: Optional[datetime] = None
+    last_valued_at: Optional[datetime] = None
+    health: HealthSignal = Field(default_factory=HealthSignal)
+    idea_status: str = "unknown"
+    idea_contribution_count: int = 0
+
+
 # ── Tasks ────────────────────────────────────────────────────────────
 
 
