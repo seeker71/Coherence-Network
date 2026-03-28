@@ -33,6 +33,7 @@ import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
+import { listConcepts, handleConcept } from "../lib/commands/concepts.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -97,6 +98,8 @@ const COMMANDS = {
   meta:          () => handleMeta(args),
   nearby:        () => showNearby(args),
   location:      () => handleLocation(args),
+  concepts:      () => listConcepts(args),
+  concept:       () => handleConcept(args),
   help:          () => showHelp(),
 };
 

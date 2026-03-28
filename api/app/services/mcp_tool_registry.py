@@ -547,5 +547,180 @@ TOOLS: list[dict[str, Any]] = [
     },
 ]
 
+# ---------------------------------------------------------------------------
+# Concept tool handlers
+# ---------------------------------------------------------------------------
+
+def coherence_list_concepts_handler(arguments: dict[str, Any]) -> Any:
+    """List concepts from the Living Codex ontology."""
+    from app.services import concept_service
+
+    limit = int(arguments.get("limit", 50))
+    offset = int(arguments.get("offset", 0))
+    axis = arguments.get("axis")
+
+    result = concept_service.list_concepts(limit=limit, offset=offset, axis=axis)
+    return _json_safe(result)
+
+
+def coherence_get_concept_handler(arguments: dict[str, Any]) -> Any:
+    """Get a single concept with its edges and related entities."""
+    from app.services import concept_service
+
+    concept_id = str(arguments["concept_id"])
+    concept = concept_service.get_concept(concept_id)
+    if concept is None:
+        return {"error": f"Concept '{concept_id}' not found"}
+
+    edges = concept_service.get_concept_edges(concept_id)
+    related = concept_service.get_related_entities(concept_id)
+
+    return _json_safe({
+        "concept": concept,
+        "edges": edges,
+        "related": related,
+    })
+
+
+def coherence_link_concepts_handler(arguments: dict[str, Any]) -> Any:
+    """Create a typed edge between two concepts."""
+    from app.services import concept_service
+
+    from_id = str(arguments["from_concept_id"])
+    to_id = str(arguments["to_concept_id"])
+    rel_type = str(arguments["relationship_type"])
+    created_by = str(arguments.get("created_by", "mcp"))
+
+    if not concept_service.get_concept(from_id):
+        return {"error": f"Source concept '{from_id}' not found"}
+    if not concept_service.get_concept(to_id):
+        return {"error": f"Target concept '{to_id}' not found"}
+
+    edge = concept_service.create_edge(
+        from_id=from_id,
+        to_id=to_id,
+        rel_type=rel_type,
+        created_by=created_by,
+    )
+    return _json_safe(edge)
+
+
+def coherence_tag_entity_handler(arguments: dict[str, Any]) -> Any:
+    """Tag an entity (idea/spec/news/task) with a concept."""
+    from app.services import concept_service
+
+    concept_id = str(arguments["concept_id"])
+    entity_type = str(arguments["entity_type"])
+    entity_id = str(arguments["entity_id"])
+    tagged_by = str(arguments.get("tagged_by", "mcp"))
+
+    if not concept_service.get_concept(concept_id):
+        return {"error": f"Concept '{concept_id}' not found"}
+
+    tag = concept_service.tag_entity(
+        concept_id=concept_id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        tagged_by=tagged_by,
+    )
+    return _json_safe(tag)
+
+
+def coherence_search_concepts_handler(arguments: dict[str, Any]) -> Any:
+    """Search concepts by name, description, or keyword."""
+    from app.services import concept_service
+
+    query = str(arguments["query"])
+    limit = int(arguments.get("limit", 20))
+
+    results = concept_service.search_concepts(query=query, limit=limit)
+    return _json_safe({"items": results, "total": len(results), "query": query})
+
+
+TOOLS.extend([
+    # --- Ontology concept tools ---
+    {
+        "name": "coherence_list_concepts",
+        "description": (
+            "List concepts from the Living Codex ontology (184 universal concepts, "
+            "46 relationship types, 53 axes). Optionally filter by axis."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "default": 50, "description": "Max concepts to return"},
+                "offset": {"type": "integer", "default": 0},
+                "axis": {"type": "string", "description": "Filter by axis (e.g. temporal, causal, ucore)"},
+            },
+        },
+        "handler": coherence_list_concepts_handler,
+    },
+    {
+        "name": "coherence_get_concept",
+        "description": (
+            "Get a single concept by ID, including its ontology edges (parent/child) "
+            "and any entities (ideas, specs, news) tagged with it."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "concept_id": {"type": "string", "description": "Concept ID (e.g. 'adaptation', 'consciousness')"},
+            },
+            "required": ["concept_id"],
+        },
+        "handler": coherence_get_concept_handler,
+    },
+    {
+        "name": "coherence_link_concepts",
+        "description": (
+            "Create a typed edge between two concepts. "
+            "Relationship types include: parent_of, child_of, related_to, contrasts_with, "
+            "instantiates, transforms_into, requires, enables."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "from_concept_id": {"type": "string"},
+                "to_concept_id": {"type": "string"},
+                "relationship_type": {"type": "string"},
+                "created_by": {"type": "string", "description": "Contributor or agent ID"},
+            },
+            "required": ["from_concept_id", "to_concept_id", "relationship_type"],
+        },
+        "handler": coherence_link_concepts_handler,
+    },
+    {
+        "name": "coherence_tag_entity",
+        "description": (
+            "Tag an entity (idea, spec, news, task) with a concept from the ontology. "
+            "This makes the entity discoverable via concept navigation."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "concept_id": {"type": "string"},
+                "entity_type": {"type": "string", "enum": ["idea", "spec", "news", "task"]},
+                "entity_id": {"type": "string"},
+                "tagged_by": {"type": "string", "description": "Contributor or agent ID"},
+            },
+            "required": ["concept_id", "entity_type", "entity_id"],
+        },
+        "handler": coherence_tag_entity_handler,
+    },
+    {
+        "name": "coherence_search_concepts",
+        "description": "Search the ontology by keyword, name, or description fragment.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search term"},
+                "limit": {"type": "integer", "default": 20},
+            },
+            "required": ["query"],
+        },
+        "handler": coherence_search_concepts_handler,
+    },
+])
+
 # Build lookup for fast access by name
 TOOL_MAP: dict[str, dict[str, Any]] = {t["name"]: t for t in TOOLS}
