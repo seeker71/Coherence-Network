@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Any
 
-from app.services import graph_service
+from app.services import concept_service, graph_service
 
 router = APIRouter()
 
@@ -119,9 +119,48 @@ async def get_edges(
     return graph_service.get_edges(node_id, direction=direction, edge_type=type)
 
 
+# ── Unified edge surface (aliases for graph navigation UIs / CLI docs) ─
+
+
+@router.get("/edges/types")
+async def list_edge_types():
+    """Living Codex ontology: all typed relationship kinds (e.g. resonates-with, emerges-from)."""
+    return concept_service.list_relationship_types()
+
+
+@router.get("/edges")
+async def list_edges(
+    type: str | None = None,
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+):
+    """List edges in the universal graph (paginated). Filter by relationship type when given."""
+    return graph_service.list_edges(edge_type=type, limit=limit, offset=offset)
+
+
+@router.get("/entities/{entity_id}/edges")
+async def get_entity_edges(
+    entity_id: str,
+    direction: str = Query(default="both", regex="^(both|outgoing|incoming)$"),
+    type: str | None = None,
+):
+    """Same as ``GET /api/graph/nodes/{id}/edges`` — entities are graph nodes."""
+    return graph_service.get_edges(entity_id, direction=direction, edge_type=type)
+
+
 @router.post("/graph/edges")
 async def create_edge(body: EdgeCreate):
     """Create an edge between two nodes."""
+    return graph_service.create_edge(
+        from_id=body.from_id, to_id=body.to_id, type=body.type,
+        properties=body.properties, strength=body.strength,
+        created_by=body.created_by,
+    )
+
+
+@router.post("/edges")
+async def create_edge_unified(body: EdgeCreate):
+    """Alias of ``POST /api/graph/edges`` for clients that target ``/api/edges``."""
     return graph_service.create_edge(
         from_id=body.from_id, to_id=body.to_id, type=body.type,
         properties=body.properties, strength=body.strength,

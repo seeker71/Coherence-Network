@@ -225,6 +225,32 @@ def delete_edge(edge_id: str) -> bool:
         return True
 
 
+def list_edges(
+    *,
+    limit: int = 50,
+    offset: int = 0,
+    edge_type: str | None = None,
+) -> dict[str, Any]:
+    """Paginated list of edges (newest first). Optional filter by Living Codex / operational type."""
+    with session() as s:
+        q = s.query(Edge)
+        if edge_type:
+            q = q.filter(Edge.type == edge_type)
+        total = q.count()
+        rows = (
+            q.order_by(Edge.created_at.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+        return {
+            "items": [e.to_dict() for e in rows],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+        }
+
+
 # ── Graph queries ────────────────────────────────────────────────────
 
 
