@@ -4,7 +4,8 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import Any
 
-from app.services import concept_service
+from app.models.translation import ConceptTranslationResponse, TranslationLens
+from app.services import concept_service, concept_translation_service
 
 router = APIRouter()
 
@@ -50,6 +51,23 @@ async def list_relationships():
 async def list_axes():
     """List all 53 ontology axes."""
     return concept_service.list_axes()
+
+
+@router.get("/concepts/{concept_id}/translate", response_model=ConceptTranslationResponse)
+async def translate_concept_view(
+    concept_id: str,
+    from_lens: TranslationLens = Query(..., alias="from"),
+    to_lens: TranslationLens = Query(..., alias="to"),
+):
+    """Reframe one ontology concept toward another lens (parent/keyword bridges)."""
+    if from_lens == to_lens:
+        raise HTTPException(status_code=400, detail="from and to must differ")
+    result = concept_translation_service.translate_concept(
+        concept_id, from_lens.value, to_lens.value
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    return result
 
 
 @router.get("/concepts/{concept_id}")

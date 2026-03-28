@@ -32,7 +32,15 @@ from app.models.idea import (
     ProgressDashboard,
     StageSetRequest,
 )
-from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service
+from app.models.translation import IdeaTranslationResponse, TranslationLens
+from app.services import (
+    agent_service,
+    concept_translation_service,
+    idea_service,
+    idea_selection_ab_service,
+    inventory_service,
+    stake_compute_service,
+)
 
 router = APIRouter()
 
@@ -176,6 +184,18 @@ async def get_idea_concept_resonance(
         limit=limit,
         min_score=min_score,
     )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.get("/ideas/{idea_id}/translate", response_model=IdeaTranslationResponse)
+async def translate_idea_view(
+    idea_id: str,
+    view: TranslationLens = Query(..., description="Worldview lens (conceptual framing, not MT)."),
+) -> IdeaTranslationResponse:
+    """Reframe an idea through a worldview using the ontology graph and resonance edges."""
+    result = concept_translation_service.translate_idea(idea_id, view.value)
     if result is None:
         raise HTTPException(status_code=404, detail="Idea not found")
     return result
