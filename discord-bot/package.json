@@ -1,0 +1,17 @@
+{
+  "name": "coherence-discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Coherence Network Discord bot — channels per idea, slash commands, live pipeline feed",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/index.mjs"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  }
+}
