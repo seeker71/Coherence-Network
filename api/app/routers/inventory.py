@@ -53,8 +53,7 @@ def _extract_created_task_ids(payload: dict) -> list[str]:
 
 
 def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTasks) -> None:
-    if not _truthy(os.environ.get("AGENT_AUTO_EXECUTE", "0")):
-        return
+    return  # Disabled: tasks run on federation nodes, not server-side openrouter
 
     task_ids = _extract_created_task_ids(payload)
     if not task_ids:

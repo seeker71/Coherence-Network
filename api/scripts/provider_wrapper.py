@@ -73,6 +73,7 @@ class ProviderWrapper:
                 encoding="utf-8",
                 errors="replace",
                 cwd=self.cwd,
+                start_new_session=True,  # Own process group so killpg doesnt kill runner
                 creationflags=creation_flags,
             )
         except Exception as e:
