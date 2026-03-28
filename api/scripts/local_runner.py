@@ -97,6 +97,18 @@ try:
 except ImportError:
     HAS_SERVICES = False
 
+try:
+    from app.services.smart_task_reap_service import (
+        build_reap_diagnosis,
+        context_patch_for_reap,
+        context_patch_for_skip_reap,
+        runners_matching_claim,
+        task_stale_age_minutes,
+    )
+    HAS_SMART_REAP = True
+except ImportError:
+    HAS_SMART_REAP = False
+
 # OpenRouter free tier config — doesn't depend on app services
 OPENROUTER_HEALTHCHECK_MODEL = "nvidia/nemotron-nano-12b-v2-vl:free"
 OPENROUTER_FREE_MODELS = (OPENROUTER_HEALTHCHECK_MODEL,)
@@ -3060,10 +3072,11 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
     """Time out stale tasks, diagnose the failure, and retry with a different provider.
 
     For each reaped task:
-    1. Mark as timed_out with diagnosis
-    2. Check retry count for this idea+phase
-    3. If under limit, create a retry task with a different provider hint
-    4. If over limit, record a friction event
+    1. Query runner registry; if claimant is still online and actively running this task, extend (skip reap).
+    2. Otherwise mark as timed_out with structured diagnosis (provider, error class, partial log).
+    3. Check retry count for this idea+phase
+    4. If under limit, create a retry task with checkpoint / partial-output hints
+    5. If over limit, record a friction event
     """
     tasks_data = api("GET", "/api/agent/tasks?status=running&limit=100")
     if not tasks_data:
@@ -3072,21 +3085,35 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
     task_list = tasks_data if isinstance(tasks_data, list) else tasks_data.get("tasks", [])
     now = datetime.now(timezone.utc)
     reaped = 0
+    iso_now = now.isoformat()
+
+    runners_payload = api("GET", "/api/agent/runners?include_stale=true&limit=500")
+    runner_list: list = []
+    if isinstance(runners_payload, dict):
+        runner_list = runners_payload.get("runners") or []
+    if not isinstance(runner_list, list):
+        runner_list = []
 
     for t in task_list:
-        created = t.get("created_at", "")
-        if not created:
-            continue
-        try:
-            dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-            age_min = (now - dt).total_seconds() / 60
-        except Exception:
-            continue
-
-        if age_min <= max_age_minutes:
-            continue
-
         task_id = t.get("id", "")
+        if not task_id:
+            continue
+
+        if HAS_SMART_REAP:
+            age_min = task_stale_age_minutes(t, now=now)
+        else:
+            created = t.get("created_at", "")
+            if not created:
+                continue
+            try:
+                dt = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+                age_min = (now - dt).total_seconds() / 60
+            except Exception:
+                continue
+
+        if age_min is None or age_min <= max_age_minutes:
+            continue
+
         task_type = t.get("task_type", "spec")
         ctx = t.get("context", {}) or {}
         idea_id = ctx.get("idea_id", "")
@@ -3094,24 +3121,61 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
         failed_provider = ctx.get("provider", "unknown")
         retry_count = int(ctx.get("retry_count", 0))
 
-        # Diagnose: check if we have a task log with partial output
-        diagnosis = f"Stuck running for {int(age_min)}m (threshold {max_age_minutes}m)"
         log_path = _LOG_DIR / f"task_{task_id}.log"
-        if log_path.exists():
-            try:
-                log_content = log_path.read_text(errors="replace")[-500:]
-                if "error" in log_content.lower() or "timeout" in log_content.lower():
-                    diagnosis += f" | Partial log: {log_content[-200:]}"
-            except Exception:
-                pass
+        claimed_by = str(t.get("claimed_by") or "")
+        matched_runner = runners_matching_claim(claimed_by, runner_list) if HAS_SMART_REAP else None
+        d = None
+
+        if HAS_SMART_REAP:
+            d = build_reap_diagnosis(
+                task_id=task_id,
+                task=t if isinstance(t, dict) else {},
+                runner=matched_runner,
+                log_path=log_path,
+            )
+            if d.skip_reap_runner_active:
+                skip_patch = context_patch_for_skip_reap(d, iso_now=iso_now)
+                api("PATCH", f"/api/agent/tasks/{task_id}", {"context": skip_patch})
+                log.info(
+                    "SMART_REAP: skip (runner active) task=%s %s age=%dm",
+                    task_id[:16],
+                    d.runner_id or "?",
+                    int(age_min),
+                )
+                continue
+
+            diagnosis = (
+                f"Stuck running for {int(age_min)}m (threshold {max_age_minutes}m) | {d.diagnosis_summary}"
+            )
+            if d.log_tail_excerpt:
+                diagnosis += f" | log_tail: {d.log_tail_excerpt[-400:]}"
+            ctx_reap = context_patch_for_reap(
+                d,
+                iso_now=iso_now,
+                stale_minutes=int(age_min),
+                threshold_minutes=max_age_minutes,
+            )
+        else:
+            diagnosis = f"Stuck running for {int(age_min)}m (threshold {max_age_minutes}m)"
+            if log_path.exists():
+                try:
+                    log_content = log_path.read_text(errors="replace")[-500:]
+                    if "error" in log_content.lower() or "timeout" in log_content.lower():
+                        diagnosis += f" | Partial log: {log_content[-200:]}"
+                except Exception:
+                    pass
+            ctx_reap = {}
 
         # Reap the task
-        result = api("PATCH", f"/api/agent/tasks/{task_id}", {
+        patch_body: dict[str, Any] = {
             "status": "timed_out",
             "output": f"Reaped: {diagnosis}",
             "error_summary": diagnosis[:500],
             "error_category": "stale_task_reaped",
-        })
+        }
+        if ctx_reap:
+            patch_body["context"] = ctx_reap
+        result = api("PATCH", f"/api/agent/tasks/{task_id}", patch_body)
         if not result:
             continue
 
@@ -3161,6 +3225,12 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
             retry_ctx["retried_from"] = task_id
             retry_ctx["failed_provider"] = failed_provider
             retry_ctx["seed_source"] = "reaper_retry"
+            if HAS_SMART_REAP and d is not None:
+                retry_ctx["reap_partial_output_ratio"] = round(d.partial_output_ratio, 4)
+                retry_ctx["reap_error_class"] = d.error_class
+                retry_ctx["resume_from_partial_output"] = bool(d.has_partial_output)
+                if d.log_tail_excerpt:
+                    retry_ctx["reap_log_tail_excerpt"] = d.log_tail_excerpt[:4000]
             if checkpoint_summary:
                 retry_ctx["checkpoint_summary"] = checkpoint_summary
             if resume_patch_path:
