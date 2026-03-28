@@ -83,6 +83,44 @@ def database_url(service: str | None = None) -> str:
     return str(config.get("database", {}).get("url", "sqlite:///data/coherence.db"))
 
 
+def get_float(section: str, key: str, default: float = 0.0) -> float:
+    """Read a float config value."""
+    val = api_config(section, key, default)
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
+def get_int(section: str, key: str, default: int = 0) -> int:
+    """Read an int config value."""
+    val = api_config(section, key, default)
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return default
+
+
+def get_bool(section: str, key: str, default: bool = False) -> bool:
+    """Read a bool config value."""
+    val = api_config(section, key, default)
+    if isinstance(val, bool):
+        return val
+    return str(val).lower().strip() in ("true", "1", "yes", "on")
+
+
+def get_str(section: str, key: str, default: str = "") -> str:
+    """Read a string config value."""
+    val = api_config(section, key, default)
+    return str(val) if val is not None else default
+
+
+def get_list(section: str, key: str, default: list | None = None) -> list:
+    """Read a list config value."""
+    val = api_config(section, key, default or [])
+    return val if isinstance(val, list) else default or []
+
+
 def reload_config() -> None:
     global _LOADED
     _LOADED = False
