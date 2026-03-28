@@ -15,6 +15,7 @@ from app.routers.agent_route_telegram_routes import router as route_telegram_rou
 from app.routers.agent_prompt_ab_routes import router as prompt_ab_router
 from app.routers.agent_diagnostics_routes import router as diagnostics_router
 from app.routers.agent_auto_heal_routes import router as auto_heal_router
+from app.routers.live_pipeline_routes import router as live_pipeline_router
 
 router = APIRouter()
 router.include_router(telegram_router)
@@ -28,6 +29,7 @@ router.include_router(run_state_router, prefix="/agent")
 router.include_router(usage_router, prefix="/agent")
 router.include_router(issues_router, prefix="/agent")
 router.include_router(status_router, prefix="/agent")
+router.include_router(live_pipeline_router, prefix="/agent")
 router.include_router(route_telegram_router, prefix="/agent")
 router.include_router(prompt_ab_router, prefix="/agent")
 router.include_router(diagnostics_router, prefix="/agent")
