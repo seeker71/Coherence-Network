@@ -5,9 +5,7 @@ Three auth levels:
 - API_KEY: requires X-API-Key header (mutating endpoints)
 - ADMIN: requires X-Admin-Key header (destructive operations)
 
-Keys are configured via environment variables:
-- COHERENCE_API_KEY: for API_KEY level (default: "dev-key" in dev, required in production)
-- COHERENCE_ADMIN_KEY: for ADMIN level (default: "dev-admin" in dev, required in production)
+Keys configured in api/config/api.json under auth.api_key and auth.admin_key.
 """
 
 import os
@@ -15,8 +13,13 @@ from fastapi import Header, HTTPException, Depends
 
 from app.services.config_service import get_api_key, is_production
 
-_API_KEY = get_api_key()
-_ADMIN_KEY = os.environ.get("COHERENCE_ADMIN_KEY", "") or "dev-admin"
+try:
+    from app.config_loader import api_config
+    _API_KEY = api_config("auth", "api_key", "dev-key") or get_api_key()
+    _ADMIN_KEY = api_config("auth", "admin_key", "dev-admin") or "dev-admin"
+except ImportError:
+    _API_KEY = get_api_key()
+    _ADMIN_KEY = os.environ.get("COHERENCE_ADMIN_KEY", "") or "dev-admin"
 _PRODUCTION = is_production()
 
 # Fail-fast: refuse to start in production with default keys

@@ -48,15 +48,25 @@ def database_url() -> str:
     """Single source for the database URL.
 
     Priority:
-      1. DATABASE_URL (production override, e.g. PostgreSQL)
-      2. IDEA_PORTFOLIO_PATH → derived .db path (test isolation)
-      3. sqlite:///data/coherence.db (default, works out of the box)
+      1. api/config/api.json → database.url
+      2. DATABASE_URL env var (legacy — Docker/CI override)
+      3. IDEA_PORTFOLIO_PATH → derived .db path (test isolation)
+      4. sqlite:///data/coherence.db (default)
     """
+    # Config file first
+    try:
+        from app.config_loader import api_config
+        config_url = api_config("database", "url")
+        if config_url and config_url != "sqlite:///data/coherence.db":
+            return str(config_url).strip()
+    except ImportError:
+        pass
+
+    # Legacy env var (Docker/CI)
     configured = os.getenv("DATABASE_URL")
     if configured:
         return str(configured).strip()
-    # Legacy: IDEA_PORTFOLIO_PATH derives a SQLite path for test isolation.
-    # Ideas now live in graph_nodes but tests still use this for DB isolation.
+    # Test isolation via IDEA_PORTFOLIO_PATH
     portfolio_path = os.getenv("IDEA_PORTFOLIO_PATH")
     if portfolio_path:
         p = Path(portfolio_path)
