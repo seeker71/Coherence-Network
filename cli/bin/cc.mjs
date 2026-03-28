@@ -10,6 +10,7 @@
 import { listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea } from "../lib/commands/ideas.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
+import { ontology } from "../lib/commands/ontology.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
 import { setup } from "../lib/commands/setup.mjs";
@@ -54,6 +55,7 @@ const COMMANDS = {
   specs:         () => listSpecs(args),
   spec:          () => showSpec(args),
   contribute:    () => contribute(args),
+  ontology:      () => ontology(args),
   status:        () => showStatus(),
   resonance:     () => showResonance(),
   identity:      () => handleIdentity(args),
