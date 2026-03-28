@@ -1,0 +1,54 @@
+{
+  "date": "2026-03-28T00:00:00Z",
+  "thread_branch": "worker/test/040-project-manager-load-backlog-malformed-test/task_b54",
+  "commit_scope": "test(040-project-manager-load-backlog-malformed-test): Write tests for project_manager load_backlog malformed input",
+  "files_owned": [
+    "api/tests/test_040_project_manager_load_backlog_malformed.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "353-line test file covering missing file, empty file, whitespace-only, malformed lines, and valid backlog parsing for spec 040."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Test-only change; no runtime code modified. All existing CI tests unaffected."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "Test-only change, no deployment required."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "040-project-manager-load-backlog-malformed-test"
+  ],
+  "spec_ids": [
+    "040-project-manager-load-backlog-malformed"
+  ],
+  "task_ids": [
+    "task_b54"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-sonnet-4-6",
+      "contributor_type": "machine",
+      "roles": [
+        "QA",
+        "Test"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Sonnet 4.6",
+    "version": "claude-sonnet-4-6"
+  },
+  "evidence_refs": [
+    "api/tests/test_040_project_manager_load_backlog_malformed.py"
+  ],
+  "change_files": [
+    ".gitignore",
+    "api/tests/test_040_project_manager_load_backlog_malformed.py"
+  ],
+  "change_intent": "test_only"
+}
