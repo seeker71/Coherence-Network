@@ -115,11 +115,24 @@ class ProviderWrapper:
         with self._output_lock:
             output = "\n".join(self._output_lines)
 
-        # Also capture stderr
-        try:
-            stderr = self._proc.stderr.read() if self._proc.stderr else ""
-        except Exception:
-            stderr = ""
+        # Also capture stderr (with timeout to avoid pipe hang on Windows)
+        stderr = ""
+        if self._proc.stderr:
+            def _read_stderr():
+                nonlocal stderr
+                try:
+                    stderr = self._proc.stderr.read()
+                except Exception:
+                    pass
+            t = threading.Thread(target=_read_stderr, daemon=True)
+            t.start()
+            t.join(timeout=5)
+            if t.is_alive():
+                log.warning("WRAPPER stderr read hung — pipe held by orphan child")
+                try:
+                    self._proc.stderr.close()
+                except Exception:
+                    pass
 
         if not output and stderr:
             output = stderr
@@ -128,16 +141,36 @@ class ProviderWrapper:
             output = "(no output)"
 
         success = self._proc.returncode == 0 and not self._aborted
+        log.info(
+            "WRAPPER finished: rc=%s output=%d chars duration=%.1fs aborted=%s",
+            self._proc.returncode, len(output), duration, self._aborted,
+        )
+        if not success and len(output) < 100:
+            log.warning(
+                "WRAPPER low-output failure: rc=%s stderr=%s",
+                self._proc.returncode, (stderr or "")[:500],
+            )
         return success, output, duration
 
     def _read_stdout(self) -> None:
-        """Read provider stdout line by line."""
+        """Read provider stdout line by line.
+
+        Uses readline() instead of iterator to avoid Python's internal
+        buffering which can block on Windows until the buffer fills.
+        Logs exceptions instead of silently swallowing them.
+        """
         try:
-            for line in self._proc.stdout:
+            while not self._stop_event.is_set():
+                line = self._proc.stdout.readline()
+                if not line:  # EOF — process closed stdout
+                    break
                 with self._output_lock:
                     self._output_lines.append(line.rstrip("\n"))
-        except Exception:
+        except ValueError:
+            # Pipe closed — expected after kill
             pass
+        except Exception as exc:
+            log.warning("WRAPPER stdout reader error: %s", exc)
 
     def _control_monitor(self) -> None:
         """Monitor .task-control for commands. Process-level control — no agent cooperation needed."""
