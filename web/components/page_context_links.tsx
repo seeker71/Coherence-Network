@@ -110,25 +110,30 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/inventory/system-lineage", label: "System lineage" },
     ],
   },
-  "/usage": {
-    ideaId: "coherence-network-value-attribution",
+  "/pipeline": {
+    ideaId: "coherence-network-agent-pipeline",
+    focusLabel: "task execution, provider health, and queue",
     related: SHARED_RELATED,
     machinePaths: [
-      { href: "/api/runtime/ideas/summary?seconds=21600", label: "Runtime summary" },
-      { href: "/api/runtime/web/views/summary?seconds=21600", label: "Full-view runtime + cost" },
+      { href: "/api/providers/stats", label: "Provider stats" },
+      { href: "/api/agent/tasks/active", label: "Active tasks" },
+      { href: "/api/agent/tasks/activity?limit=50", label: "Activity stream" },
+      { href: "/api/agent/tasks?status=pending&limit=20", label: "Pending queue" },
+      { href: "/api/agent/usage/daily-summary", label: "Daily summary" },
       { href: "/api/friction/report?window_days=7", label: "Friction report" },
     ],
   },
-  "/automation": {
+  "/nodes": {
     ideaId: "coherence-network-agent-pipeline",
+    focusLabel: "federation nodes, health, and remote control",
     related: SHARED_RELATED,
     machinePaths: [
-      { href: "/api/automation/usage", label: "Automation usage API" },
-      { href: "/api/automation/usage/alerts", label: "Automation alerts API" },
-      { href: "/api/automation/usage/snapshots", label: "Automation snapshots API" },
-      { href: "/api/automation/usage/readiness", label: "Automation readiness API" },
-      { href: "/api/automation/usage/provider-validation", label: "Provider validation API" },
-      { href: "/api/automation/usage/provider-validation/run", label: "Provider validation run API" },
+      { href: "/api/federation/nodes", label: "Federation nodes" },
+      { href: "/api/federation/nodes/stats", label: "Node stats" },
+      { href: "/api/providers/stats", label: "Provider stats" },
+      { href: "/api/agent/pipeline-status", label: "Pipeline status" },
+      { href: "/api/gates/public-deploy-contract", label: "Deploy contract" },
+      { href: "/api/health", label: "Health check" },
     ],
   },
   "/contributors": {
@@ -183,16 +188,6 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/agent/usage", label: "Agent usage" },
       { href: "/api/agent/pipeline-status", label: "Pipeline status" },
       { href: "/api/agent/effectiveness", label: "Effectiveness" },
-    ],
-  },
-  "/remote-ops": {
-    ideaId: "coherence-network-agent-pipeline",
-    related: SHARED_RELATED,
-    machinePaths: [
-      { href: "/api/gates/public-deploy-contract", label: "Public deploy contract" },
-      { href: "/api/agent/pipeline-status", label: "Pipeline status" },
-      { href: "/api/agent/tasks?status=pending&limit=20", label: "Pending tasks" },
-      { href: "/api/health", label: "Health check" },
     ],
   },
   "/gates": {

@@ -56,14 +56,40 @@ export async function showDeposits(args) {
 export async function makeDeposit(args) {
   const amount = parseFloat(args[0]);
   const asset = args[1];
+  const contributor = args[2];
   if (isNaN(amount) || !asset) {
-    console.log("Usage: cc treasury deposit <amount> <asset>");
+    console.log("Usage: cc treasury deposit <amount> <asset> [contributor-id]");
     return;
   }
-  const result = await post("/api/treasury/deposit", { amount, asset });
+  const body = { amount, asset };
+  if (contributor) body.contributor_id = contributor;
+  const result = await post("/api/treasury/deposit", body);
   if (result) {
-    console.log(`\x1b[32m✓\x1b[0m Deposited ${amount} ${asset}`);
+    console.log(`\x1b[32m✓\x1b[0m Deposited ${amount} ${asset}${contributor ? ` for ${contributor}` : ""}`);
+    if (result.deposit_id || result.id) console.log(`  Deposit ID: ${result.deposit_id || result.id}`);
   } else {
     console.log("Deposit failed.");
+  }
+}
+
+/**
+ * Stake a deposit's CC on an idea.
+ * Usage: cc treasury stake <deposit-id> <idea-id> [amount]
+ */
+export async function stakeDeposit(args) {
+  const [depositId, ideaId, amountStr] = args;
+  if (!depositId || !ideaId) {
+    console.log("Usage: cc treasury stake <deposit-id> <idea-id> [amount]");
+    return;
+  }
+  const body = { idea_id: ideaId };
+  if (amountStr) body.amount = parseFloat(amountStr);
+
+  const result = await post(`/api/treasury/deposit/${encodeURIComponent(depositId)}/stake`, body);
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Staked deposit ${depositId} on idea ${ideaId}`);
+    if (result.staked_amount) console.log(`  Staked: ${result.staked_amount} CC`);
+  } else {
+    console.log("Stake failed.");
   }
 }
