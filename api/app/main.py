@@ -23,6 +23,7 @@ from app.routers import (
     assets,
     audit,
     coherence,
+    daily_engagement,
     contributions,
     contributor_identity,
     contributors,
@@ -549,6 +550,7 @@ app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(auth_keys.router, prefix="/api", tags=["auth"])
 app.include_router(news.router, prefix="/api", tags=["news"])
+app.include_router(daily_engagement.router, prefix="/api", tags=["engagement"])
 app.include_router(traceability.router, prefix="/api", tags=["traceability"])
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
