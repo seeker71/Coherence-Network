@@ -27,6 +27,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || "ht
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  /** Legacy ops pages → consolidated surfaces (nodes vs pipeline). */
+  async redirects() {
+    return [
+      { source: "/automation", destination: "/nodes", permanent: true },
+      { source: "/usage", destination: "/pipeline", permanent: true },
+      { source: "/remote-ops", destination: "/pipeline", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {
