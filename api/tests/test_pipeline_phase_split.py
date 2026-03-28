@@ -381,6 +381,29 @@ class TestDeployPhase:
         assert result is None
         assert created == []
 
+    def test_deploy_completed_with_deploy_failed_creates_fix_not_verify(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """R3: completed deploy whose output contains DEPLOY_FAILED → fix task, no verify."""
+        _stub_no_existing_tasks(monkeypatch)
+        created = _stub_create_task(monkeypatch)
+
+        task = _task(
+            task_type="deploy",
+            status="completed",
+            output=(
+                "DEPLOY_FAILED: SSH connection timeout to 187.77.152.42 during docker compose build. "
+                "No containers restarted."
+            ),
+            idea_id="idea-deploy-fail-output",
+        )
+        result = pipeline_advance_service.maybe_advance(task)
+
+        assert result is None
+        assert len(created) == 1
+        assert created[0]["task_type"] == "impl"
+        assert created[0]["context"].get("failure_type") == "deploy_failure"
+
     def test_deploy_failure_creates_fix_task_via_escalation(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

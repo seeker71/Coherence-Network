@@ -14,6 +14,7 @@ class ManifestationStatus(str, Enum):
     NONE = "none"
     PARTIAL = "partial"
     VALIDATED = "validated"
+    REGRESSION = "regression"  # Spec 159: verify-production failed after deployment
 
 
 class IdeaStage(str, Enum):

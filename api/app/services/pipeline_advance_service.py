@@ -286,6 +286,32 @@ def _set_idea_validated(idea_id: str) -> None:
         log.warning("IDEA_VALIDATED failed for idea=%s", idea_id, exc_info=True)
 
 
+def _handle_deploy_failure(task: dict[str, Any], idea_id: str, output: str) -> None:
+    """Deploy reported DEPLOY_FAILED — create fix task; do not advance to verify (Spec 159 R3)."""
+    from app.services import agent_service
+
+    idea_name = idea_id.replace("-", " ").replace("_", " ").title()
+    try:
+        agent_service.create_task(AgentTaskCreate(
+            direction=(
+                f"Deploy failed for '{idea_name}' ({idea_id}).\n\n"
+                f"Error output:\n{output[:2000]}\n\n"
+                f"Resolve merge conflicts, SSH/build issues, or health check failures, then re-run deploy.\n"
+                f"Output DEPLOY_PASSED when production is healthy."
+            ),
+            task_type=TaskType.IMPL,
+            context={
+                "idea_id": idea_id,
+                "failure_type": "deploy_failure",
+                "source_task_id": task.get("id", ""),
+                "auto_advance_source": "pipeline_advance_service",
+            },
+        ))
+        log.warning("DEPLOY_FAILURE_FIX idea=%s — fix task created", idea_id)
+    except Exception:
+        log.error("DEPLOY_FAILURE_FIX create failed idea=%s", idea_id, exc_info=True)
+
+
 def _handle_verify_failure(task: dict[str, Any], idea_id: str, output: str) -> None:
     """Handle verify-production failure — create urgent hotfix task and set regression status.
 
@@ -376,6 +402,13 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     output = (task.get("output") or "").strip()
     context = task.get("context") or {}
     idea_id = context.get("idea_id", "")
+
+    # R3: deploy completed but reports DEPLOY_FAILED — fix task, no verify (Spec 159)
+    if task_type == "deploy" and "DEPLOY_FAILED" in output.upper():
+        if idea_id:
+            _handle_deploy_failure(task, idea_id, output)
+        log.warning("DEPLOY_FAILED blocked advance: idea=%s", idea_id or "?")
+        return None
 
     # R2: Pass-gate check — code-review must contain CODE_REVIEW_PASSED (Spec 159)
     gate_token = _PASS_GATE_TOKEN.get(task_type)
@@ -571,6 +604,11 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
     if retry_count >= _MAX_RETRIES:
         log.info("AUTO_RETRY exhausted — %s for %s retried %d times, escalating", task_type, idea_id, retry_count)
         _escalate_or_autofix(task, task_type, idea_id, retry_count)
+        return None
+
+    # Spec 159 R4: verify-production has retry budget 0 — live incident, hotfix path only
+    if task_type in ("verify-production", "verify"):
+        log.info("AUTO_RETRY skip — %s has no retry budget (Spec 159)", task_type)
         return None
 
     # Don't retry if a pending/running task already exists for this phase+idea

@@ -165,9 +165,79 @@ def reset_for_tests() -> None:
         _STATE = PipelineState()
 
 
+def _compute_phase_stats() -> dict[str, Any]:
+    """Aggregate per-phase completion stats for Spec 159 (code-review → deploy → verify)."""
+    try:
+        from app.services import agent_service
+    except Exception:
+        return {}
+
+    try:
+        all_tasks, _total, _backfill = agent_service.list_tasks(limit=2000, offset=0)
+    except Exception:
+        return {}
+
+    phase_keys = ("code-review", "deploy", "verify-production")
+    buckets: dict[str, dict[str, Any]] = {
+        k: {"completed": 0, "failed": 0, "retry_sum": 0, "retry_n": 0} for k in phase_keys
+    }
+
+    def _phase_for(tt: str) -> str | None:
+        if tt == "code-review":
+            return "code-review"
+        if tt == "deploy":
+            return "deploy"
+        if tt in ("verify", "verify-production"):
+            return "verify-production"
+        return None
+
+    for t in all_tasks:
+        raw = t.get("task_type", "")
+        if hasattr(raw, "value"):
+            raw = raw.value
+        phase = _phase_for(str(raw))
+        if not phase:
+            continue
+        st = t.get("status", "")
+        if hasattr(st, "value"):
+            st = st.value
+        st = str(st)
+        if st == "completed":
+            buckets[phase]["completed"] += 1
+        elif st in ("failed", "timed_out", "needs_decision"):
+            buckets[phase]["failed"] += 1
+        ctx = t.get("context") or {}
+        try:
+            rc = int(ctx.get("retry_count", 0))
+        except (TypeError, ValueError):
+            rc = 0
+        if rc > 0:
+            buckets[phase]["retry_sum"] += rc
+            buckets[phase]["retry_n"] += 1
+
+    out: dict[str, Any] = {}
+    for phase, b in buckets.items():
+        done = int(b["completed"])
+        failed = int(b["failed"])
+        total = done + failed
+        pass_rate = round(done / total, 4) if total else None
+        avg_retries = (
+            round(b["retry_sum"] / b["retry_n"], 4) if b["retry_n"] else 0.0
+        )
+        out[phase] = {
+            "completed": done,
+            "failed": failed,
+            "pass_rate": pass_rate,
+            "avg_retries": avg_retries,
+        }
+    return out
+
+
 def get_status() -> dict[str, Any]:
     with _LOCK:
-        return _STATE.snapshot()
+        snap = _STATE.snapshot()
+    snap["phase_stats"] = _compute_phase_stats()
+    return snap
 
 
 def persist_state(path: Path | None = None) -> None:

@@ -519,7 +519,7 @@ class TestRetryLogic:
         assert result["context"]["retry_count"] == 2
 
     def test_verify_production_retries_on_failure(self) -> None:
-        """Failed verify-production (not VERIFY_FAILED — but failed status) retries."""
+        """Spec 159 R4: verify-production has retry budget 0 — no auto-retry on failed status."""
         task = _make_task(
             "verify-production",
             status="failed",
@@ -532,8 +532,7 @@ class TestRetryLogic:
         ):
             result = pipeline_advance_service.maybe_retry(task)
 
-        assert result is not None
-        assert result["context"]["retry_count"] == 1
+        assert result is None
 
     def test_code_review_max_retries_escalates(self) -> None:
         """After 2 retries, code-review escalates to needs_decision."""

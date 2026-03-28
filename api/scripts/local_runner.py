@@ -927,17 +927,19 @@ def get_openrouter_free_model_stats() -> dict:
 
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
-_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect", "review")
+# Spec 159: code-review → deploy → verify (merge is folded into deploy; verify is terminal)
+_PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "deploy", "verify", "reflect", "review")
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
     "test": "code-review",
-    "code-review": "merge",
-    "merge": "deploy",
+    "code-review": "deploy",
     "deploy": "verify",
-    "verify": "reflect",
+    "verify": None,
+    "verify-production": None,
+    "merge": "deploy",  # legacy: merge continues to deploy
     "reflect": None,
-    # Backward compat: old "review" tasks map to code-review
+    # Backward compat: old "review" tasks do not auto-advance
     "review": None,
 }
 
@@ -3336,18 +3338,40 @@ def _seed_task_from_open_idea() -> bool:
                             break
 
             if review_passed:
-                # Advance to merge phase, not straight to validated
-                task_type = "merge"
-                log.info("SEED: idea '%s' review PASSED — advancing to merge phase", idea_name[:30])
+                if "deploy" not in completed_phases and "merge" not in completed_phases:
+                    task_type = "deploy"
+                    log.info("SEED: idea '%s' code-review PASSED — advancing to deploy phase", idea_name[:30])
+                elif (
+                    "verify" not in completed_phases
+                    and "verify-production" not in completed_phases
+                ):
+                    task_type = "verify"
+                    log.info("SEED: idea '%s' deploy done — seeding verify-production", idea_name[:30])
+                else:
+                    log.info(
+                        "SEED: idea '%s' already completed deploy+verify — picking another idea",
+                        idea_name[:30],
+                    )
+                    _SEEDER_SKIP_CACHE.add(idea_id)
+                    return _seed_task_from_open_idea()
             else:
                 log.info("SEED: idea '%s' review completed but FAILED — needs re-review", idea_name[:30])
-                task_type = "review"  # re-run review
-        elif "impl" in completed_phases:
-            task_type = "review"
-        elif "test" in completed_phases:
-            task_type = "impl"
-        elif "spec" in completed_phases:
+                task_type = "code-review" if "code-review" in completed_phases else "review"
+        elif ("deploy" in completed_phases or "merge" in completed_phases) and (
+            "verify" not in completed_phases and "verify-production" not in completed_phases
+        ):
+            task_type = "verify"
+            log.info("SEED: idea '%s' deploy done — seeding verify-production", idea_name[:30])
+        elif (
+            "test" in completed_phases
+            and "code-review" not in completed_phases
+            and "review" not in completed_phases
+        ):
+            task_type = "code-review"
+        elif "impl" in completed_phases and "test" not in completed_phases:
             task_type = "test"
+        elif "spec" in completed_phases and "impl" not in completed_phases:
+            task_type = "impl"
 
     # Build direction
     desc = idea.get("description", "")
