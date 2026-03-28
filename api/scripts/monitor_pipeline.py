@@ -1103,6 +1103,9 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     prev_condition_to_heal_task = {
         i["condition"]: i["heal_task_id"] for i in prev_issues if i.get("heal_task_id")
     }
+    prev_condition_to_issue_id = {
+        i["condition"]: i["id"] for i in prev_issues if i.get("id")
+    }
     data["last_check"] = now.isoformat()
     data["issues"] = []  # fresh run; we'll repopulate
 
