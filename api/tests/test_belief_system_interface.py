@@ -90,7 +90,8 @@ def test_compare_concepts_self_high_coherence_bounded_scores():
     assert 0.0 <= result.crk <= 1.0
     assert 0.0 <= result.coherence <= 1.0
     assert 0.0 <= result.d_codex <= 1.0
-    assert result.coherence >= 0.99
+    assert result.crk == pytest.approx(1.0, abs=1e-5)
+    assert result.coherence == pytest.approx(1.0, abs=1e-4)
 
 
 def test_base_concept_changes_fundamental_frequency_anchor():
