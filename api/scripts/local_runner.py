@@ -2260,7 +2260,8 @@ def execute_with_provider(
 
     # Write prompt to file for debugging, deliver via stdin for all providers
     # stdin avoids shell arg length limits and is more reliable than CLI args
-    prompt_file = os.path.join(cwd, f".task-prompt-{task_id[:12]}.md")
+    _task_id = getattr(execute_with_provider, "_current_task_id", "unknown")
+    prompt_file = os.path.join(str(_REPO_DIR), f".task-prompt-{_task_id[:12]}.md")
     try:
         with open(prompt_file, "w", encoding="utf-8") as pf:
             pf.write(prompt)
