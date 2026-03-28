@@ -225,3 +225,39 @@ body {
 main {
   animation: fadeInUp 0.4s ease-out;
 }
+
+/* Automation garden — soft breathing motion for node orbs */
+@keyframes garden-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.03);
+    filter: brightness(1.06);
+  }
+}
+
+/* Horizontal activity stream */
+@keyframes garden-stream {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.garden-stream {
+  animation: garden-stream 48s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .garden-stream {
+    animation: none;
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+}
