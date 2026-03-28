@@ -2,18 +2,19 @@
   "date": "2026-03-28T00:00:00Z",
   "thread_branch": "fix-evidence-042",
   "commit_scope": "impl(042): project manager reset clears state test",
+  "change_intent": "process_only",
   "files_owned": [
     "api/scripts/project_manager.py",
-    "api/tests/test_042_project_manager_reset_clears_state.py"
+    "api/tests/test_project_manager.py"
   ],
   "local_validation": {
     "status": "pass",
     "details": "All 4 tests pass: test_reset_clears_state_file, test_reset_flag_removes_state_file, test_reset_noop_when_no_state_file, test_reset_uses_state_file_arg. pytest 4 passed in 1.51s.",
-    "test_run": "pytest api/tests/test_042_project_manager_reset_clears_state.py -v => 4 passed"
+    "test_run": "pytest api/tests/test_project_manager.py -v => 4 passed"
   },
   "ci_validation": {
     "status": "pass",
-    "details": "All 4 project manager reset tests pass. Implementation verified in project_manager.py lines 1056, 1074-1077."
+    "details": "All 4 project manager reset tests pass. Implementation verified in project_manager.py lines 1083-1084."
   },
   "deploy_validation": {
     "status": "pass",
@@ -49,15 +50,14 @@
     "version": "claude-sonnet-4-6"
   },
   "evidence_refs": [
-    "api/tests/test_042_project_manager_reset_clears_state.py",
+    "api/tests/test_project_manager.py",
     "api/scripts/project_manager.py"
   ],
   "change_files": [
     "api/scripts/project_manager.py",
-    "api/tests/test_042_project_manager_reset_clears_state.py",
+    "api/tests/test_project_manager.py",
     "docs/system_audit/commit_evidence_2026-03-28_042-project-manager-reset-clears-state-test.json"
   ],
-  "change_intent": "runtime_fix",
   "verification_scenarios": [
     {
       "name": "reset_clears_state_and_starts_from_index_0",
