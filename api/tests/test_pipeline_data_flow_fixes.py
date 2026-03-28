@@ -127,6 +127,70 @@ def test_create_worktree_falls_back_to_origin_main_when_pr_branch_not_found(
 # ---------------------------------------------------------------------------
 
 
+def test_create_worktree_reclaims_orphaned_slot_before_retry(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """AC-1: stale retry state must be removed before a new worktree is created."""
+    slug = "abc5def234567890"
+    wt_path = tmp_path / f"task-{slug}"
+    branch = f"task/{slug}"
+    stale_file = wt_path / "stale.txt"
+    stale_file.parent.mkdir(parents=True, exist_ok=True)
+    stale_file.write_text("leftover retry state", encoding="utf-8")
+
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        calls.append(list(args))
+        if args[:4] == ["git", "show-ref", "--verify", "--quiet"]:
+            return _Proc(returncode=0)
+        if args[:3] == ["git", "worktree", "list"]:
+            return _Proc(stdout="")
+        if args[:3] == ["git", "worktree", "add"]:
+            assert not stale_file.exists(), "orphaned worktree directory must be removed before retry"
+            wt_path.mkdir(parents=True, exist_ok=True)
+            return _Proc()
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    result = local_runner._create_worktree(slug)
+
+    assert result == wt_path
+    assert ["git", "branch", "-D", branch] in calls, "stale retry branch must be deleted before recreate"
+
+
+def test_create_worktree_logs_failure_details_when_git_add_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """AC-1: worktree add failures must include git stderr for root-cause diagnosis."""
+    slug = "abc6def234567890"
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:4] == ["git", "show-ref", "--verify", "--quiet"]:
+            return _Proc(returncode=1)
+        if args[:3] == ["git", "worktree", "list"]:
+            return _Proc(stdout="")
+        if args[:3] == ["git", "worktree", "add"]:
+            return _Proc(returncode=1, stderr="fatal: branch already exists")
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    with caplog.at_level(logging.WARNING, logger="local_runner"):
+        result = local_runner._create_worktree(slug)
+
+    assert result is None
+    assert any(
+        "fatal: branch already exists" in record.message
+        for record in caplog.records
+    ), "git stderr must be logged when worktree creation fails"
+
+
 def test_capture_worktree_diff_returns_empty_when_no_changes(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -697,6 +761,32 @@ def test_cleanup_worktree_runs_git_worktree_remove(
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
     local_runner._cleanup_worktree("abcidef234567890")
+
+
+def test_cleanup_worktree_removes_orphaned_directory(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """R5: cleanup must also remove stale task directories Git no longer tracks."""
+    slug = "abcjdef234567890"
+    wt_path = tmp_path / f"task-{slug}"
+    stale_file = wt_path / "orphaned.txt"
+    stale_file.parent.mkdir(parents=True, exist_ok=True)
+    stale_file.write_text("stale", encoding="utf-8")
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:4] == ["git", "show-ref", "--verify", "--quiet"]:
+            return _Proc(returncode=1)
+        if args[:3] == ["git", "worktree", "list"]:
+            return _Proc(stdout="")
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    local_runner._cleanup_worktree(slug)
+
+    assert not wt_path.exists(), "orphaned worktree directory must be deleted during cleanup"
 
     assert any("--force" in c for c in remove_calls), (
         "git worktree remove --force must be used to ensure cleanup"
