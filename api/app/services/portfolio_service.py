@@ -220,6 +220,8 @@ def get_cc_history(contributor_id: str, window: str = "90d", bucket: str = "7d")
             continue
         try:
             ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
         except (ValueError, AttributeError):
             continue
         if ts < start:
@@ -320,6 +322,8 @@ def _health_for_idea(idea_node: dict[str, Any], contributions_in_idea: list[dict
         if ts_raw:
             try:
                 ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
                 if ts >= cutoff:
                     recent_count += 1
             except (ValueError, AttributeError):

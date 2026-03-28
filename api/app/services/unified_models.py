@@ -87,3 +87,6 @@ from app.services.contributor_identity_service import ContributorIdentityRecord 
 
 # Graph models (Node + Edge universal data layer)
 from app.models.graph import Node, Edge  # noqa: F401
+
+# Data hygiene snapshots (spec task_ad1705c62ca9c76d)
+from app.services.data_hygiene_service import DataHygieneSnapshotRecord  # noqa: F401

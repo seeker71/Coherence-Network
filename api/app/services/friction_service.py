@@ -15,6 +15,9 @@ from app.services import metrics_service, telemetry_persistence_service
 
 logger = logging.getLogger(__name__)
 
+# Spec task_ad1705c62ca9c76d — data hygiene uses block_type "data_growth_anomaly" (data_hygiene_service).
+BLOCK_TYPE_DATA_GROWTH_ANOMALY = "data_growth_anomaly"
+
 
 def _default_path() -> Path:
     logs_dir = Path(__file__).resolve().parents[2] / "logs"
