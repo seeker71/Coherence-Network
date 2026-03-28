@@ -6,7 +6,7 @@
  *   cc contribute --type code --cc 5 --idea <id> --desc "what I did"
  */
 
-import { post } from "../api.mjs";
+import { postWithRetryOnTimeout } from "../api.mjs";
 import { ensureIdentity } from "../identity.mjs";
 import { getContributorId } from "../config.mjs";
 
@@ -33,7 +33,7 @@ export async function contribute(args = []) {
     const ideaId = flags.idea || undefined;
     const description = flags.desc || "";
 
-    const result = await post("/api/contributions/record", {
+    const result = await postWithRetryOnTimeout("/api/contributions/record", {
       contributor_id: contributor,
       type,
       amount_cc: amount,
@@ -67,7 +67,7 @@ export async function contribute(args = []) {
 
   rl.close();
 
-  const result = await post("/api/contributions/record", {
+  const result = await postWithRetryOnTimeout("/api/contributions/record", {
     contributor_id: contributor,
     type,
     amount_cc: amount,
