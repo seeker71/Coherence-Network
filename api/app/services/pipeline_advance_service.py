@@ -119,25 +119,30 @@ _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
     "test": "code-review",
-    "code-review": None,
-    "review": None,
-    "deploy": None,
-    "verify": None,
+    "code-review": "deploy",          # R1: code-review → deploy (Spec 159)
+    "deploy": "verify-production",    # R1: deploy → verify-production (Spec 159)
+    "verify-production": None,        # R1: terminal — triggers validated status (Spec 159)
+    "review": None,                   # backward compat: legacy dead-end
+    "verify": None,                   # backward compat
     "heal": None,
 }
 
 # All phases downstream of a given phase — used for cascade invalidation
 _DOWNSTREAM: dict[str, list[str]] = {
-    "spec": ["impl", "test", "code-review", "review"],
-    "impl": ["test", "code-review", "review"],
-    "test": ["code-review", "review"],
+    "spec": ["impl", "test", "code-review", "deploy", "verify-production", "review"],
+    "impl": ["test", "code-review", "deploy", "verify-production", "review"],
+    "test": ["code-review", "deploy", "verify-production", "review"],
+    "code-review": ["deploy", "verify-production"],  # R5: cascade includes deploy+verify
+    "deploy": ["verify-production"],                 # R5
 }
 
 _PHASE_TASK_TYPE: dict[str, TaskType] = {
     "spec": TaskType.SPEC,
     "impl": TaskType.IMPL,
     "test": TaskType.TEST,
-    "code-review": TaskType.REVIEW,
+    "code-review": TaskType.CODE_REVIEW,
+    "deploy": TaskType.DEPLOY,           # R1: deploy phase task type
+    "verify-production": TaskType.VERIFY, # R1: verify-production phase task type
 }
 
 # Minimum output length to consider a task genuinely completed.
