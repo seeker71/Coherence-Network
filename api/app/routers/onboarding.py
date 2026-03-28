@@ -76,7 +76,7 @@ class UpgradeRequest(BaseModel):
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post("/register", response_model=RegisterResponse, summary="TOFU registration")
+@router.post("/register", response_model=RegisterResponse, status_code=201, summary="TOFU registration")
 async def register(body: RegisterRequest) -> RegisterResponse:
     """Claim a unique handle and receive an opaque session token.
 
