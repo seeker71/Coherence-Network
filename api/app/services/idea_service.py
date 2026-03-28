@@ -1186,6 +1186,46 @@ def update_idea(
     return _with_score(updated)
 
 
+def set_parent_idea(idea_id: str, parent_idea_id: str) -> bool:
+    """Set or update the parent_idea_id for an idea, maintaining child_idea_ids on parent."""
+    ideas = _read_ideas(persist_ensures=True)
+    target: Idea | None = None
+    target_idx: int = -1
+    old_parent_id: str | None = None
+
+    for idx, idea in enumerate(ideas):
+        if idea.id == idea_id:
+            target = idea
+            target_idx = idx
+            old_parent_id = idea.parent_idea_id
+            break
+
+    if target is None:
+        return False
+
+    # Remove from old parent's child_idea_ids
+    if old_parent_id and old_parent_id != parent_idea_id:
+        for idea in ideas:
+            if idea.id == old_parent_id and idea_id in idea.child_idea_ids:
+                idea.child_idea_ids.remove(idea_id)
+                _write_single_idea(idea, position=ideas.index(idea))
+                break
+
+    # Set new parent
+    target.parent_idea_id = parent_idea_id if parent_idea_id != "" else None
+
+    # Add to new parent's child_idea_ids
+    if parent_idea_id:
+        for idea in ideas:
+            if idea.id == parent_idea_id and idea_id not in idea.child_idea_ids:
+                idea.child_idea_ids.append(idea_id)
+                _write_single_idea(idea, position=ideas.index(idea))
+                break
+
+    _write_single_idea(target, position=target_idx)
+    return True
+
+
 def stake_on_idea(idea_id: str, contributor_id: str, amount_cc: float, rationale: str | None = None) -> dict:
     """Stake CC on an idea — records contribution, increases potential_value, adds lineage investment."""
     from app.models.value_lineage import LineageLinkCreate, LineageContributors, LineageInvestment
