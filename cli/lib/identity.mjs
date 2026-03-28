@@ -2,7 +2,7 @@
  * Identity-first onboarding — runs on first use if no contributor_id in config.
  *
  * Interactive:   asks for name + primary identity (e.g. github:seeker71)
- * Non-interactive: auto-generates from COHERENCE_CONTRIBUTOR env, git config,
+ * Non-interactive: auto-generates from COHERENCE_CONTRIBUTOR_ID / COHERENCE_CONTRIBUTOR env, git config,
  *                  or hostname — then registers with the network.
  */
 
@@ -23,17 +23,21 @@ async function prompt(rl, question) {
 
 /**
  * Try to detect identity from environment:
- *   1. COHERENCE_CONTRIBUTOR env var
- *   2. git config user.name (most developers have this)
- *   3. hostname-based hash (last resort)
+ *   1. COHERENCE_CONTRIBUTOR_ID env var
+ *   2. COHERENCE_CONTRIBUTOR (legacy) env var
+ *   3. git config user.name (most developers have this)
+ *   4. hostname-based hash (last resort)
  */
 function detectIdentity() {
-  // 1. Explicit env var
-  if (process.env.COHERENCE_CONTRIBUTOR) {
-    return { id: process.env.COHERENCE_CONTRIBUTOR, source: "env" };
+  // 1–2. Explicit env vars (R3)
+  if (process.env.COHERENCE_CONTRIBUTOR_ID?.trim()) {
+    return { id: process.env.COHERENCE_CONTRIBUTOR_ID.trim(), source: "env" };
+  }
+  if (process.env.COHERENCE_CONTRIBUTOR?.trim()) {
+    return { id: process.env.COHERENCE_CONTRIBUTOR.trim(), source: "env" };
   }
 
-  // 2. Git config
+  // 3. Git config
   try {
     const gitUser = execSync("git config user.name", { encoding: "utf8", timeout: 3000 }).trim();
     if (gitUser) {
@@ -41,7 +45,7 @@ function detectIdentity() {
     }
   } catch {}
 
-  // 3. Hostname hash
+  // 4. Hostname hash
   const hash = createHash("sha256").update(hostname()).digest("hex").slice(0, 8);
   return { id: `node-${hostname().split(".")[0].toLowerCase()}-${hash}`, source: "hostname" };
 }
