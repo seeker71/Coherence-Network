@@ -103,7 +103,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
               <span className="text-muted-foreground">
                 ({pipelineHealth.summary.healthy_providers}/{pipelineHealth.summary.total_providers} healthy)
               </span>
-              <Link href="/automation" className="ml-auto text-amber-600 dark:text-amber-400 hover:underline">
+              <Link href="/pipeline" className="ml-auto text-amber-600 dark:text-amber-400 hover:underline">
                 Details
               </Link>
             </>
@@ -114,7 +114,7 @@ export default async function FlowPage({ searchParams }: { searchParams: FlowSea
               <span className="text-muted-foreground">
                 ({pipelineHealth.summary.total_providers} provider{pipelineHealth.summary.total_providers !== 1 ? "s" : ""}, {pipelineHealth.summary.total_measurements} measurements)
               </span>
-              <Link href="/automation" className="ml-auto text-amber-600 dark:text-amber-400 hover:underline">
+              <Link href="/pipeline" className="ml-auto text-amber-600 dark:text-amber-400 hover:underline">
                 Details
               </Link>
             </>
