@@ -96,27 +96,17 @@ def _readme_install_ready(repo_root: Path) -> bool:
     )
 
 
+def _glama_metadata_ready(repo_root: Path) -> bool:
+    glama = _read_json(repo_root, "mcp-server/glama.json")
+    return (
+        glama.get("name") == "coherence-network"
+        and bool(glama.get("description"))
+        and bool(glama.get("url"))
+        and isinstance(glama.get("tags"), list)
+    )
+
+
 _TARGETS: tuple[_RegistryTarget, ...] = (
-    _RegistryTarget(
-        registry_id="modelcontextprotocol-registry",
-        registry_name="Model Context Protocol Registry",
-        category="mcp",
-        asset_name="coherence-mcp-server",
-        install_hint="npx coherence-mcp-server",
-        required_files=("mcp-server/server.json", "mcp-server/package.json", "mcp-server/README.md"),
-        validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _npm_package_ready(repo_root),
-        notes="Canonical MCP registry submission built from the typed server manifest and npm package metadata.",
-    ),
-    _RegistryTarget(
-        registry_id="npm",
-        registry_name="npm",
-        category="mcp",
-        asset_name="coherence-mcp-server",
-        install_hint="npx coherence-mcp-server",
-        required_files=("mcp-server/package.json", "mcp-server/README.md"),
-        validator=lambda repo_root: _npm_package_ready(repo_root),
-        notes="Package discovery for MCP clients that install the server directly from npm.",
-    ),
     _RegistryTarget(
         registry_id="smithery",
         registry_name="Smithery",
@@ -125,7 +115,27 @@ _TARGETS: tuple[_RegistryTarget, ...] = (
         install_hint="npx coherence-mcp-server",
         required_files=("mcp-server/server.json", "mcp-server/package.json", "mcp-server/README.md"),
         validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _readme_install_ready(repo_root),
-        notes="Submission packet is covered by the existing MCP manifest, package metadata, and install docs.",
+        notes="Smithery.ai MCP registry — submit via server.json PR or npm package discovery.",
+    ),
+    _RegistryTarget(
+        registry_id="glama",
+        registry_name="Glama (awesome-mcp-servers)",
+        category="mcp",
+        asset_name="coherence-mcp-server",
+        install_hint="npx coherence-mcp-server",
+        required_files=("mcp-server/server.json", "mcp-server/package.json", "mcp-server/glama.json", "mcp-server/README.md"),
+        validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _glama_metadata_ready(repo_root),
+        notes="Glama discovery via PR to punkpeye/awesome-mcp-servers. Requires glama.json metadata file.",
+    ),
+    _RegistryTarget(
+        registry_id="pulsemcp",
+        registry_name="PulseMCP",
+        category="mcp",
+        asset_name="coherence-mcp-server",
+        install_hint="npx coherence-mcp-server",
+        required_files=("mcp-server/server.json", "mcp-server/package.json", "mcp-server/README.md"),
+        validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _npm_package_ready(repo_root),
+        notes="PulseMCP catalog — submit via GitHub PR. Tracks install counts via public API.",
     ),
     _RegistryTarget(
         registry_id="mcp-so",
@@ -135,27 +145,27 @@ _TARGETS: tuple[_RegistryTarget, ...] = (
         install_hint="npx coherence-mcp-server",
         required_files=("mcp-server/server.json", "mcp-server/package.json", "README.md"),
         validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _readme_install_ready(repo_root),
-        notes="Directory discovery can reuse the same MCP manifest, package identity, and install instructions.",
+        notes="MCP.so directory — submitted via web form. Reuses MCP manifest and README install docs.",
     ),
     _RegistryTarget(
-        registry_id="clawhub",
-        registry_name="ClawHub",
+        registry_id="skills-sh",
+        registry_name="skills.sh",
         category="skill",
         asset_name="coherence-network",
         install_hint="clawhub install coherence-network",
         required_files=("skills/coherence-network/SKILL.md", "README.md"),
         validator=lambda repo_root: _skill_manifest_ready(repo_root) and _readme_install_ready(repo_root),
-        notes="OpenClaw skill registry entry anchored to the published SKILL.md and repository install docs.",
+        notes="skills.sh skill registry — submit via PR. SKILL.md manifest required.",
     ),
     _RegistryTarget(
-        registry_id="agentskills",
-        registry_name="AgentSkills",
+        registry_id="askill-sh",
+        registry_name="askill.sh",
         category="skill",
         asset_name="coherence-network",
-        install_hint="copy skills/coherence-network/SKILL.md into a compatible skills directory",
+        install_hint="clawhub install coherence-network",
         required_files=("skills/coherence-network/SKILL.md", "README.md"),
         validator=lambda repo_root: _skill_manifest_ready(repo_root),
-        notes="Portable skill packaging for AgentSkills-compatible discovery catalogs and workspace registries.",
+        notes="askill.sh skill directory — submit via PR. Compatible with the standard SKILL.md format.",
     ),
 )
 

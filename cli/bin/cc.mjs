@@ -30,7 +30,9 @@ import { showMetaSummary, showMetaEndpoints, showMetaModules } from "../lib/comm
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
-import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
+import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask, showTaskCount, showTaskEvents } from "../lib/commands/tasks.mjs";
+import { handleAgent } from "../lib/commands/agent.mjs";
+import { handleRest } from "../lib/commands/rest.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
 import {
@@ -97,6 +99,8 @@ const COMMANDS = {
   meta:          () => handleMeta(args),
   nearby:        () => showNearby(args),
   location:      () => handleLocation(args),
+  rest:          () => handleRest(args),
+  agent:         () => handleAgent(args),
   help:          () => showHelp(),
 };
 
@@ -155,6 +159,8 @@ async function handleTask(args) {
     case "report":  return reportTask(args.slice(1));
     case "seed":    return seedTask(args.slice(1));
     case "watch":   return watchTask(args.slice(1));
+    case "count":   return showTaskCount();
+    case "events":  return showTaskEvents(args.slice(1));
     default:        return showTask(args);
   }
 }
@@ -429,6 +435,22 @@ function showHelp() {
   task claim <id>         Claim a specific task
   task report <id> <completed|failed> [output]  Report result
   task seed <idea> [type] Create task from idea (spec|test|impl|review)
+  task count              JSON task counts (/api/agent/tasks/count)
+  task events <id> [N]    Paginated activity events for a task
+
+\x1b[1mUniversal API (full coverage):\x1b[0m
+  rest coverage           Canonical route count + proof JSON
+  rest GET /api/...       Raw authenticated GET (any path)
+  rest POST /api/... --body '{"k":"v"}'   Raw POST/PATCH/PUT/DELETE
+  rest ... -q limit=10 -H "X-Custom: 1"   Query + extra headers
+
+\x1b[1mAgent pipeline:\x1b[0m
+  agent                   Status report (default)
+  agent route [type]      Routing hint for task_type (default impl)
+  agent execute <id>      POST execute (set AGENT_EXECUTE_TOKEN)
+  agent pickup [task_id]  Pickup-and-execute pending task
+  agent smart-reap        Preview; agent smart-reap run
+  agent metrics|issues|effectiveness|...  (see agent.mjs)
 
 \x1b[1mAssets:\x1b[0m
   assets [limit]          List assets
