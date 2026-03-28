@@ -4,6 +4,7 @@ import RuntimeBeacon from "@/components/runtime-beacon";
 
 import SiteHeader from "@/components/site_header";
 import LiveUpdatesController from "@/components/live_updates_controller";
+import { ThemeProvider } from "@/components/theme-provider";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 
 const spaceGrotesk = Space_Grotesk({
@@ -39,7 +40,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/*
+          Anti-flash script — Spec 165.
+          Runs synchronously before paint to apply saved theme class.
+          Must be inline (not deferred) to avoid FOUC.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('coherence-theme');var d=document.documentElement;if(t==='light'){d.classList.add('light');d.style.colorScheme='light';}else if(t==='dark'||!t||t==='system'){var sys=window.matchMedia('(prefers-color-scheme: light)').matches;if(t==='light'||(t!=='dark'&&sys)){d.classList.add('light');d.style.colorScheme='light';}else{d.classList.add('dark');d.style.colorScheme='dark';}}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className={`${spaceGrotesk.variable} ${plexMono.variable} antialiased font-sans`}>
         <a
           href="#main-content"
@@ -48,11 +61,13 @@ export default function RootLayout({
           Skip to main content
         </a>
         <RuntimeBeacon />
-        <SiteHeader />
-        <LiveUpdatesController />
-        <main id="main-content">
-          {children}
-        </main>
+        <ThemeProvider>
+          <SiteHeader />
+          <LiveUpdatesController />
+          <main id="main-content">
+            {children}
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   );

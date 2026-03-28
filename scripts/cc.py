@@ -61,6 +61,17 @@ def _fmt_cc(v: float) -> str:
     return f"{v:,.0f} CC" if v >= 1 else f"{v:.2f} CC"
 
 
+def _resolve_contributor_id(cli_arg: str | None) -> str:
+    """R3: explicit CLI arg → COHERENCE_CONTRIBUTOR_ID → COHERENCE_CONTRIBUTOR → anonymous."""
+    if cli_arg and str(cli_arg).strip():
+        return str(cli_arg).strip()
+    return (
+        os.environ.get("COHERENCE_CONTRIBUTOR_ID", "").strip()
+        or os.environ.get("COHERENCE_CONTRIBUTOR", "").strip()
+        or "anonymous"
+    )
+
+
 # ── Commands ──────────────────────────────────────────────────────────
 
 def cmd_status(_args):
@@ -158,7 +169,7 @@ def cmd_ask(args):
 def cmd_stake(args):
     """Stake CC on an idea."""
     body = {
-        "contributor_id": args.contributor or os.environ.get("COHERENCE_CONTRIBUTOR", "anonymous"),
+        "contributor_id": _resolve_contributor_id(args.contributor),
         "amount_cc": args.amount,
         "rationale": args.rationale or f"Staking {args.amount} CC",
     }
@@ -223,7 +234,7 @@ def cmd_specs(_args):
 def cmd_contribute(args):
     """Record a contribution."""
     body = {
-        "contributor_id": args.contributor or os.environ.get("COHERENCE_CONTRIBUTOR", "anonymous"),
+        "contributor_id": _resolve_contributor_id(args.contributor),
         "type": args.type,
         "amount_cc": args.amount,
         "metadata": {"description": args.description},

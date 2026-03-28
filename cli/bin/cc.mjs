@@ -26,10 +26,12 @@ import { listProviders, showProviderStats } from "../lib/commands/providers.mjs"
 import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
 import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility, showDiagLive } from "../lib/commands/diagnostics.mjs";
 import { publishDiag, startDiagMode } from "../lib/commands/diag_publish.mjs";
+import { showMetaSummary, showMetaEndpoints, showMetaModules } from "../lib/commands/meta.mjs";
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
+import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -76,6 +78,9 @@ const COMMANDS = {
   diag:          () => handleDiag(args),
   tasks:         () => listTasks(args),
   task:          () => handleTask(args),
+  edges:         () => listEntityEdges(args),
+  edg:           () => listEntityEdges(args),
+  edge:          () => handleEdge(args),
   update:        () => update(args),
   deploy:        () => deploy(args),
   listen:        () => listen(args),
@@ -88,12 +93,37 @@ const COMMANDS = {
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
+  meta:          () => handleMeta(args),
   help:          () => showHelp(),
 };
+
+async function handleMeta(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "endpoints": return showMetaEndpoints(args.slice(1));
+    case "modules":   return showMetaModules(args.slice(1));
+    default:          return showMetaSummary();
+  }
+}
 
 async function handleIdea(args) {
   if (args[0] === "create") return createIdea(args.slice(1));
   return showIdea(args);
+}
+
+async function handleEdge(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "create": return createEdge(subArgs);
+    case "delete": return deleteEdge(subArgs);
+    case "types":  return listEdgeTypes();
+    default:
+      console.log("Usage: cc edge <create|delete|types>");
+      console.log("  cc edge create <from-id> <type> <to-id>");
+      console.log("  cc edge delete <edge-id>");
+      console.log("  cc edge types");
+  }
 }
 
 async function handleIdentity(args) {
@@ -371,10 +401,11 @@ function showHelp() {
   setup --reset           Re-run setup (replace existing key)
   whoami                  Show authenticated contributor + key status
   identity                Show your linked accounts
-  identity set <id>       Set identity non-interactively
+  identity set <contributor_id>  Set identity non-interactively
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity
+  COHERENCE_CONTRIBUTOR_ID overrides config.json for per-process agent identity
 
 \x1b[1mFederation:\x1b[0m
   nodes                   List federation nodes
@@ -418,6 +449,14 @@ function showHelp() {
   lineage <id>            View lineage link
   lineage <id> valuation  Link valuation
   lineage <id> payout <amt>  Payout preview
+
+\x1b[1mEdge Navigation:\x1b[0m
+  edges <id>              List all edges for an entity (alias: edg)
+  edg <id>                Shorthand alias for cc edges
+  edges <id> --type <t>  Filter edges by relationship type
+  edge types              Print all 46 canonical edge types
+  edge create <from> <type> <to>  Create a typed edge
+  edge delete <edge-id>   Delete an edge
 
 \x1b[1mGovernance:\x1b[0m
   governance              List change requests

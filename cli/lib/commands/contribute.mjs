@@ -27,7 +27,7 @@ export async function contribute(args = []) {
 
   if (hasFlags) {
     // Non-interactive mode (for agents and scripts)
-    const contributor = getContributorId() || process.env.COHERENCE_CONTRIBUTOR || "anonymous";
+    const contributor = getContributorId() || "anonymous";
     const type = flags.type || "other";
     const amount = flags.cc || 1.0;
     const ideaId = flags.idea || undefined;

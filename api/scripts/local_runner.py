@@ -4850,6 +4850,22 @@ def main():
     log.info("  parallel:  %d", args.parallel)
     log.info("=" * 60)
 
+    try:
+        from app.services.config_service import resolve_cli_contributor_id
+
+        _rcid, _rsrc = resolve_cli_contributor_id()
+        if _rcid:
+            log.info("[runner] identity resolved: %s (source: %s)", _rcid, _rsrc)
+        else:
+            log.warning(
+                "[runner] WARNING: no contributor identity configured — all contributions will be anonymous",
+            )
+            log.warning(
+                "[runner] Fix: cc identity set <your_id>  or  export COHERENCE_CONTRIBUTOR_ID=<your_id>",
+            )
+    except Exception as exc:
+        log.debug("Runner identity resolution skipped: %s", exc)
+
     if args.stats:
         stats = get_provider_stats()
         print(json.dumps(stats, indent=2, default=str))

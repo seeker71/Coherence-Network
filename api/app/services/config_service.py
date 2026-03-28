@@ -226,6 +226,31 @@ def get_hub_url() -> str:
     return get_config().get("hub_url", "https://api.coherencycoin.com")
 
 
+def resolve_cli_contributor_id() -> tuple[str | None, str]:
+    """CLI/runner identity resolution (R3): env ID → legacy env → config file only.
+
+    Does not use full ``get_config()`` merge — matches npm ``cc`` precedence.
+
+    Returns ``(contributor_id or None, source label)`` for logging and display.
+    """
+    cid = os.environ.get("COHERENCE_CONTRIBUTOR_ID", "").strip()
+    if cid:
+        return cid, "env:COHERENCE_CONTRIBUTOR_ID"
+    cid = os.environ.get("COHERENCE_CONTRIBUTOR", "").strip()
+    if cid:
+        return cid, "env:COHERENCE_CONTRIBUTOR (legacy)"
+    try:
+        if _CONFIG_PATH.exists():
+            data = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                cid = (data.get("contributor_id") or "").strip()
+                if cid:
+                    return cid, "config.json"
+    except (OSError, json.JSONDecodeError, TypeError, AttributeError):
+        pass
+    return None, "none"
+
+
 def get_cors_origins() -> list[str]:
     origins = get_config().get("cors_origins")
     if isinstance(origins, list) and origins:

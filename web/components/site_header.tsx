@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import { ActiveNavLink } from "./active_nav_link";
+import { ThemeToggle } from "./theme-toggle";
 
 /** Primary nav — 5 core actions visible to everyone. */
 const PRIMARY_NAV = [
@@ -68,6 +69,9 @@ export default function SiteHeader() {
           </nav>
 
           <div className="flex-1" />
+
+          {/* Theme toggle — Spec 165 */}
+          <ThemeToggle />
 
           {/* Desktop "More" dropdown — secondary pages */}
           <details className="relative hidden md:block group">

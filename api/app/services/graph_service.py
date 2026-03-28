@@ -17,6 +17,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models.graph import Edge, Node
 from app.services.unified_db import session
+from app.config.edge_types import CANONICAL_EDGE_TYPES
 
 log = logging.getLogger(__name__)
 
@@ -325,6 +326,203 @@ def get_subgraph(
             "center": center_id,
             "depth": depth,
         }
+
+
+def _node_stub(node: Node | None) -> dict[str, Any] | None:
+    """Return a minimal node stub for edge enrichment."""
+    if not node:
+        return None
+    return {"id": node.id, "type": node.type, "name": node.name}
+
+
+def _enrich_edge(edge: Edge, s) -> dict[str, Any]:
+    """Return edge dict enriched with from_node and to_node stubs."""
+    d = edge.to_dict()
+    from_node = s.get(Node, edge.from_id)
+    to_node = s.get(Node, edge.to_id)
+    d["from_node"] = _node_stub(from_node)
+    d["to_node"] = _node_stub(to_node)
+    d["canonical"] = edge.type in CANONICAL_EDGE_TYPES
+    return d
+
+
+def create_edge_strict(
+    *,
+    from_id: str,
+    to_id: str,
+    type: str,
+    properties: dict[str, Any] | None = None,
+    strength: float = 1.0,
+    created_by: str = "system",
+) -> dict[str, Any]:
+    """Create an edge. Returns {'error': 'edge_exists'} on duplicate instead of updating."""
+    edge_id = str(uuid.uuid4())[:12]
+    with session() as s:
+        edge = Edge(
+            id=edge_id,
+            from_id=from_id,
+            to_id=to_id,
+            type=type,
+            properties=properties or {},
+            strength=strength,
+            created_by=created_by,
+        )
+        s.add(edge)
+        try:
+            s.commit()
+            s.refresh(edge)
+            return edge.to_dict()
+        except IntegrityError:
+            s.rollback()
+            return {"error": "edge_exists"}
+
+
+def get_edge_by_id(edge_id: str) -> dict[str, Any] | None:
+    """Get a single edge by ID, enriched with node stubs."""
+    with session() as s:
+        edge = s.get(Edge, edge_id)
+        if not edge:
+            return None
+        return _enrich_edge(edge, s)
+
+
+def list_edges(
+    edge_type: str | None = None,
+    from_id: str | None = None,
+    to_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """List edges with optional filters, enriched with node stubs."""
+    with session() as s:
+        q = s.query(Edge)
+        if edge_type:
+            q = q.filter(Edge.type == edge_type)
+        if from_id:
+            q = q.filter(Edge.from_id == from_id)
+        if to_id:
+            q = q.filter(Edge.to_id == to_id)
+
+        total = q.count()
+        edges = q.order_by(Edge.created_at.desc()).offset(offset).limit(limit).all()
+
+        # Batch-load all referenced nodes to avoid N+1
+        node_ids = set()
+        for e in edges:
+            node_ids.add(e.from_id)
+            node_ids.add(e.to_id)
+        nodes_map: dict[str, Node] = {
+            n.id: n for n in s.query(Node).filter(Node.id.in_(node_ids)).all()
+        }
+
+        items = []
+        for e in edges:
+            d = e.to_dict()
+            fn = nodes_map.get(e.from_id)
+            tn = nodes_map.get(e.to_id)
+            d["from_node"] = _node_stub(fn)
+            d["to_node"] = _node_stub(tn)
+            d["canonical"] = e.type in CANONICAL_EDGE_TYPES
+            items.append(d)
+
+        return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+def list_edges_for_entity(
+    entity_id: str,
+    edge_type: str | None = None,
+    direction: str = "both",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """List edges for a given entity with optional type and direction filters."""
+    with session() as s:
+        if direction == "outgoing":
+            q = s.query(Edge).filter(Edge.from_id == entity_id)
+        elif direction == "incoming":
+            q = s.query(Edge).filter(Edge.to_id == entity_id)
+        else:
+            q = s.query(Edge).filter(
+                or_(Edge.from_id == entity_id, Edge.to_id == entity_id)
+            )
+
+        if edge_type:
+            q = q.filter(Edge.type == edge_type)
+
+        total = q.count()
+        edges = q.order_by(Edge.created_at.desc()).offset(offset).limit(limit).all()
+
+        # Batch-load nodes
+        node_ids = set()
+        for e in edges:
+            node_ids.add(e.from_id)
+            node_ids.add(e.to_id)
+        nodes_map: dict[str, Node] = {
+            n.id: n for n in s.query(Node).filter(Node.id.in_(node_ids)).all()
+        }
+
+        items = []
+        for e in edges:
+            d = e.to_dict()
+            fn = nodes_map.get(e.from_id)
+            tn = nodes_map.get(e.to_id)
+            d["from_node"] = _node_stub(fn)
+            d["to_node"] = _node_stub(tn)
+            d["canonical"] = e.type in CANONICAL_EDGE_TYPES
+            items.append(d)
+
+        return {"items": items, "total": total, "limit": limit, "offset": offset}
+
+
+def get_neighbors_enriched(
+    node_id: str,
+    edge_type: str | None = None,
+    node_type: str | None = None,
+    limit: int = 50,
+) -> dict[str, Any]:
+    """Get neighboring nodes with edge context for the API /entities/{id}/neighbors endpoint."""
+    with session() as s:
+        edge_q = s.query(Edge).filter(
+            or_(Edge.from_id == node_id, Edge.to_id == node_id)
+        )
+        if edge_type:
+            edge_q = edge_q.filter(Edge.type == edge_type)
+
+        edges = edge_q.limit(limit * 2).all()  # over-fetch before node_type filter
+
+        # Build neighbor list
+        neighbor_map: dict[str, dict] = {}
+        for edge in edges:
+            other_id = edge.to_id if edge.from_id == node_id else edge.from_id
+            direction = "outgoing" if edge.from_id == node_id else "incoming"
+            if other_id not in neighbor_map:
+                neighbor_map[other_id] = {
+                    "node": None,
+                    "via_edge": {
+                        "id": edge.id,
+                        "type": edge.type,
+                        "direction": direction,
+                        "strength": edge.strength,
+                    },
+                }
+
+        if not neighbor_map:
+            return {"entity_id": node_id, "neighbors": [], "total": 0}
+
+        # Batch-load neighbor nodes
+        node_q = s.query(Node).filter(Node.id.in_(list(neighbor_map.keys())))
+        if node_type:
+            node_q = node_q.filter(Node.type == node_type)
+
+        nodes = node_q.limit(limit).all()
+        neighbors = []
+        for n in nodes:
+            entry = neighbor_map.get(n.id)
+            if entry:
+                entry["node"] = _node_stub(n)
+                neighbors.append(entry)
+
+        return {"entity_id": node_id, "neighbors": neighbors, "total": len(neighbors)}
 
 
 def get_stats() -> dict[str, Any]:

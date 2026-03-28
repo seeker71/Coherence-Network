@@ -3,13 +3,25 @@
  */
 
 import { get, post, del } from "../api.mjs";
-import { getContributorId } from "../config.mjs";
+import {
+  getContributorId,
+  getContributorSource,
+  saveConfig,
+  parseContributorId,
+} from "../config.mjs";
 import { ensureIdentity } from "../identity.mjs";
 
 export async function showIdentity() {
-  const id = getContributorId();
+  const rawId = getContributorId();
+  const id = parseContributorId(rawId);
+  const source = getContributorSource();
   if (!id) {
-    console.log("No identity configured. Run: cc identity setup");
+    if (rawId) {
+      console.log("Configured identity is invalid.");
+    }
+    console.log("No identity configured.");
+    console.log("  Fix: cc identity set <your_id>");
+    console.log("       export COHERENCE_CONTRIBUTOR_ID=<your_id>");
     return;
   }
   const data = await get(`/api/identity/${encodeURIComponent(id)}`);
@@ -17,6 +29,7 @@ export async function showIdentity() {
   console.log();
   console.log(`\x1b[1m  ${id}\x1b[0m`);
   console.log(`  ${"─".repeat(40)}`);
+  console.log(`  Source:  ${source}`);
 
   if (!data || !Array.isArray(data) || data.length === 0) {
     console.log("  No linked accounts.");
@@ -59,7 +72,7 @@ export async function unlinkIdentity(args) {
     console.log("Usage: cc identity unlink <provider>");
     return;
   }
-  const contributor = getContributorId();
+  const contributor = parseContributorId(getContributorId());
   if (!contributor) {
     console.log("No identity configured.");
     return;
@@ -87,13 +100,20 @@ export async function lookupIdentity(args) {
 }
 
 export async function setIdentity(args) {
-  const id = args[0];
-  if (!id) {
-    console.log("Usage: cc identity set <contributor_id>");
-    console.log("Sets the contributor identity non-interactively (for agents and scripts).");
+  if (args.length !== 1) {
+    console.error("Usage: cc identity set <contributor_id>");
+    console.error("Alternatively: export COHERENCE_CONTRIBUTOR_ID=<your_id>");
+    process.exitCode = 1;
     return;
   }
-  const { saveConfig } = await import("../config.mjs");
+  const id = parseContributorId(args[0]);
+  if (!id) {
+    console.error(
+      "Error: invalid contributor_id — use only letters, numbers, hyphens, underscores, periods (max 64 chars)",
+    );
+    process.exitCode = 1;
+    return;
+  }
   saveConfig({ contributor_id: id });
   console.log(`\x1b[32m✓\x1b[0m Identity set to: ${id}`);
 }
