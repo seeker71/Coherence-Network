@@ -263,35 +263,63 @@ async def test_nearby_response_has_required_top_level_fields(
         assert field in data, f"Missing field: {field}"
 
 
-@pytest.mark.asyncio
-async def test_nearby_contributors_sorted_by_distance(
+def test_find_nearby_service_sorts_contributors_by_distance(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Contributors in GET /api/nearby are ordered by distance_km ascending."""
-    result = NearbyResult(
-        contributors=[
-            NearbyContributor(
-                contributor_id="far", name="Far", city="Far City",
-                country="FC", distance_km=99.5, coherence_score=None,
-            ),
-            NearbyContributor(
-                contributor_id="near", name="Near", city="Near City",
-                country="NC", distance_km=1.2, coherence_score=None,
-            ),
-        ],
-        ideas=[],
-        query_lat=0.0, query_lon=0.0, radius_km=200.0,
-        total_contributors=2, total_ideas=0,
+    """find_nearby service sorts contributors by distance_km ascending (AC-4)."""
+    # Create two contributors: one near, one far, in reverse order
+    close_lat, close_lon = 52.52, 13.405   # Berlin
+    far_lat, far_lon = 48.14, 11.58        # Munich (~507 km from Hamburg ref point)
+    query_lat, query_lon = 53.55, 9.993    # Hamburg
+
+    nodes = [
+        # Munich first (farther from Hamburg)
+        {
+            "id": "contributor:munich-user",
+            "type": "contributor",
+            "name": "MunichUser",
+            "properties": {
+                "geo_location": {
+                    "city": "Munich",
+                    "country": "DE",
+                    "latitude": far_lat,
+                    "longitude": far_lon,
+                    "visibility": "public",
+                    "updated_at": "2026-01-01T00:00:00+00:00",
+                }
+            },
+        },
+        # Berlin second (closer to Hamburg)
+        {
+            "id": "contributor:berlin-user",
+            "type": "contributor",
+            "name": "BerlinUser",
+            "properties": {
+                "geo_location": {
+                    "city": "Berlin",
+                    "country": "DE",
+                    "latitude": close_lat,
+                    "longitude": close_lon,
+                    "visibility": "public",
+                    "updated_at": "2026-01-01T00:00:00+00:00",
+                }
+            },
+        },
+    ]
+
+    monkeypatch.setattr(
+        geolocation_service, "_get_all_contributors", lambda: nodes
     )
-    monkeypatch.setattr(geolocation_service, "find_nearby", lambda **_kw: result)
+    monkeypatch.setattr(
+        geolocation_service, "_get_all_ideas", lambda: []
+    )
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        resp = await client.get("/api/nearby?lat=0&lon=0&radius_km=200")
+    result = geolocation_service.find_nearby(
+        lat=query_lat, lon=query_lon, radius_km=1000.0
+    )
 
-    assert resp.status_code == 200
-    contributors = resp.json()["contributors"]
-    distances = [c["distance_km"] for c in contributors]
-    assert distances == sorted(distances)
+    distances = [c.distance_km for c in result.contributors]
+    assert distances == sorted(distances), "Contributors must be sorted by distance ascending"
 
 
 # ---------------------------------------------------------------------------
