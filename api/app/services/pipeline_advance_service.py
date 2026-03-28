@@ -154,6 +154,7 @@ _MIN_OUTPUT_CHARS: dict[str, int] = {
     "code-review": 30,       # A review at least says PASSED or FAILED
     "deploy": 50,            # Health check output
     "verify-production": 50, # curl scenario output
+    "verify": 50,            # alias for verify-production (TaskType.VERIFY.value)
 }
 
 # Pass-gate tokens: if the completed task output does NOT contain this token,
@@ -385,8 +386,12 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
         )
         return None
 
+    # Normalize: TaskType.VERIFY has value "verify" but the phase is named "verify-production"
+    # so we treat both as equivalent for the verify-production phase (Spec 159).
+    _is_verify_phase = task_type in ("verify-production", "verify")
+
     # R4: verify-production failure — feature publicly broken (Spec 159)
-    if task_type == "verify-production" and "VERIFY_FAILED" in output:
+    if _is_verify_phase and "VERIFY_FAILED" in output:
         if idea_id:
             _handle_verify_failure(task, idea_id, output)
         return None
@@ -394,7 +399,7 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     next_phase = _NEXT_PHASE.get(task_type)
     if not next_phase:
         # R5: verify-production with VERIFY_PASSED → set manifestation_status=validated
-        if task_type == "verify-production" and "VERIFY_PASSED" in output and idea_id:
+        if _is_verify_phase and "VERIFY_PASSED" in output and idea_id:
             _set_idea_validated(idea_id)
         return None
 

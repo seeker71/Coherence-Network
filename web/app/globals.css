@@ -103,7 +103,7 @@
   }
 }
 
-/* Warm organic backdrop with soft light blooms. */
+/* Warm organic backdrop — adapts to dark/light mode. */
 html {
   background:
     radial-gradient(60rem 40rem at 6% -12%, hsl(22 68% 55% / 0.2), transparent 62%),
@@ -112,12 +112,21 @@ html {
     linear-gradient(180deg, hsl(var(--background)) 0%, hsl(24 28% 8%) 100%);
 }
 
+/* Light mode: gentler, sun-warmed gradients */
+html.light {
+  background:
+    radial-gradient(60rem 40rem at 6% -12%, hsl(36 72% 60% / 0.12), transparent 62%),
+    radial-gradient(50rem 36rem at 100% 0%, hsl(44 60% 70% / 0.10), transparent 62%),
+    radial-gradient(72rem 46rem at 45% 100%, hsl(160 34% 60% / 0.08), transparent 64%),
+    linear-gradient(180deg, hsl(var(--background)) 0%, hsl(42 32% 90%) 100%);
+}
+
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
-  /* Softer blooms so foreground text stays legible (was washing out low-opacity copy) */
+  /* Softer blooms so foreground text stays legible */
   background:
     radial-gradient(520px 340px at 14% 24%, hsl(28 92% 74% / 0.05), transparent 72%),
     radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.035), transparent 76%),
@@ -125,10 +134,31 @@ body::before {
   mix-blend-mode: screen;
 }
 
+/* Light mode body overlay — reduced bloom intensity */
+html.light body::before {
+  background:
+    radial-gradient(520px 340px at 14% 24%, hsl(28 80% 70% / 0.06), transparent 72%),
+    radial-gradient(660px 420px at 86% 74%, hsl(168 40% 55% / 0.04), transparent 76%),
+    radial-gradient(460px 300px at 54% 32%, hsl(36 80% 68% / 0.05), transparent 74%);
+  mix-blend-mode: multiply;
+}
+
 /* Hero headline: full-opacity ink + soft shadow for separation from ambient gradients */
 .hero-headline {
   color: hsl(var(--foreground));
   text-shadow: 0 2px 28px hsl(20 40% 6% / 0.55);
+}
+
+html.light .hero-headline {
+  text-shadow: 0 2px 18px hsl(36 40% 88% / 0.8);
+}
+
+/* Theme transition: smooth colour shifts on mode change */
+html {
+  transition: background 0.3s ease;
+}
+body {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Gentle scroll reveal animation */
