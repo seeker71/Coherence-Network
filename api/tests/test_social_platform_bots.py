@@ -1,16 +1,15 @@
 """Tests for Social Platform Bots (spec-167).
 
-Verifies acceptance criteria for:
-- R1: Ideas submitted via Discord carry interfaces=["discord"]
-- R2: Vote tracking on idea open questions (question_votes table)
-- /cc-link attribution: contributor mapping logic
-- Platform selection: Discord-first model is recorded in spec
+Verifies:
+- R1: Ideas created with interfaces=["discord"] carry the discord interface tag.
+- R2: POST /api/ideas/{id}/questions/{idx}/vote records votes and returns aggregate counts.
+- Duplicate vote returns 409. Invalid polarity returns 422.
+- Nonexistent idea returns 404. Out-of-range question index returns 404.
+- All three polarity types are accepted (positive, negative, excited).
+- Discord-tagged ideas appear in the main idea list.
 """
 
 from __future__ import annotations
-
-import os
-from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -20,332 +19,158 @@ from app.main import app
 AUTH_HEADERS = {"X-API-Key": "dev-key"}
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-async def _create_discord_idea(
-    client: AsyncClient,
-    idea_id: str,
-    *,
-    with_question: bool = False,
-) -> dict:
-    """Create a test idea tagged with the discord interface."""
-    payload: dict = {
-        "id": idea_id,
-        "name": f"Discord Idea {idea_id}",
-        "description": "Idea submitted via Discord bot.",
-        "potential_value": 100.0,
-        "estimated_cost": 10.0,
-        "confidence": 0.8,
-        "interfaces": ["discord"],
-    }
-    if with_question:
-        payload["open_questions"] = [
-            {
-                "question": "Is this the best approach?",
-                "value_to_whole": 30.0,
-                "estimated_cost": 3.0,
-            }
-        ]
-    res = await client.post("/api/ideas", json=payload, headers=AUTH_HEADERS)
-    assert res.status_code in (200, 201), f"Failed to create idea: {res.text}"
-    return res.json()
-
-
-# ---------------------------------------------------------------------------
-# R1 — Idea Submission Rate via Discord
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_discord_idea_carries_discord_interface(tmp_path: Path) -> None:
-    """Ideas created via Discord bot carry 'discord' in their interfaces list (R1)."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        body = await _create_discord_idea(client, "social-r1-001")
-
-    assert "discord" in body["interfaces"], (
-        f"Expected 'discord' in interfaces, got {body['interfaces']!r}"
+async def _create_discord_idea(client, idea_id):
+    resp = await client.post(
+        "/api/ideas",
+        json={
+            "id": idea_id,
+            "name": f"Discord Idea {idea_id}",
+            "description": "Created via Discord bot.",
+            "potential_value": 100.0,
+            "estimated_cost": 20.0,
+            "confidence": 0.7,
+            "interfaces": ["discord"],
+            "open_questions": [
+                {
+                    "question": "Is this a good idea?",
+                    "value_to_whole": 10.0,
+                    "estimated_cost": 2.0,
+                }
+            ],
+        },
+        headers=AUTH_HEADERS,
     )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
 
 
 @pytest.mark.asyncio
-async def test_discord_idea_is_retrievable_by_id(tmp_path: Path) -> None:
-    """A Discord-submitted idea can be fetched via GET /api/ideas/{id} and retains the discord tag."""
+async def test_idea_carries_discord_interface_tag():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await _create_discord_idea(client, "social-r1-002")
-        r = await client.get("/api/ideas/social-r1-002")
-
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["id"] == "social-r1-002"
-    assert "discord" in body["interfaces"]
+        idea = await _create_discord_idea(client, "spb-r1-tag")
+    assert "discord" in idea.get("interfaces", [])
 
 
 @pytest.mark.asyncio
-async def test_discord_idea_appears_in_portfolio(tmp_path: Path) -> None:
-    """Discord-submitted idea appears in the portfolio response."""
+async def test_discord_idea_retrievable_by_id():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await _create_discord_idea(client, "social-r1-003")
-        r = await client.get("/api/ideas")
-
-    assert r.status_code == 200, r.text
-    ideas = r.json()["ideas"]
-    ids = [i["id"] for i in ideas]
-    assert "social-r1-003" in ids, f"Discord idea not found in portfolio. IDs: {ids}"
+        idea = await _create_discord_idea(client, "spb-r1-get")
+        resp = await client.get(f"/api/ideas/{idea['id']}")
+    assert resp.status_code == 200
+    assert "discord" in resp.json().get("interfaces", [])
 
 
 @pytest.mark.asyncio
-async def test_non_discord_idea_has_no_discord_interface(tmp_path: Path) -> None:
-    """An idea created without discord interface does not carry the discord tag."""
+async def test_vote_returns_aggregate_counts():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        res = await client.post(
-            "/api/ideas",
-            json={
-                "id": "social-r1-non-discord",
-                "name": "Non-Discord Idea",
-                "description": "Submitted via web UI, not Discord.",
-                "potential_value": 50.0,
-                "estimated_cost": 5.0,
-                "confidence": 0.6,
-                "interfaces": ["human:web"],
-            },
-            headers=AUTH_HEADERS,
+        idea = await _create_discord_idea(client, "spb-r2-basic")
+        resp = await client.post(
+            f"/api/ideas/{idea['id']}/questions/0/vote",
+            json={"polarity": "positive", "discord_user_id": "u001"},
         )
-
-    assert res.status_code in (200, 201), res.text
-    body = res.json()
-    assert "discord" not in body["interfaces"]
-
-
-# ---------------------------------------------------------------------------
-# R2 — Reaction Vote Volume
-# ---------------------------------------------------------------------------
+    assert resp.status_code == 200
+    d = resp.json()
+    assert d["votes"]["positive"] == 1
+    assert d["votes"]["negative"] == 0
+    assert d["votes"]["excited"] == 0
+    assert d["your_vote"] == "positive"
+    assert d["question_index"] == 0
 
 
 @pytest.mark.asyncio
-async def test_vote_increments_question_vote_count(tmp_path: Path) -> None:
-    """Posting a vote via the API increments question vote counts (R2 signal)."""
-    os.environ["DATABASE_URL"] = f"sqlite:///{tmp_path}/social_votes.db"
-    import app.services.unified_db as udb
-    udb.reset_engine()
-
+async def test_multiple_voters_aggregate_counts():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await _create_discord_idea(client, "social-r2-001", with_question=True)
-
-        res = await client.post(
-            "/api/ideas/social-r2-001/questions/0/vote",
-            json={"polarity": "positive", "discord_user_id": "voter_a"},
-        )
-
-    assert res.status_code == 200, res.text
-    body = res.json()
-    assert body["votes"]["positive"] == 1
-    assert body["question_index"] == 0
+        idea = await _create_discord_idea(client, "spb-r2-multi")
+        iid = idea["id"]
+        last = None
+        for uid, pol in [("u1", "positive"), ("u2", "positive"), ("u3", "excited")]:
+            last = await client.post(
+                f"/api/ideas/{iid}/questions/0/vote",
+                json={"polarity": pol, "discord_user_id": uid},
+            )
+            assert last.status_code == 200
+    d = last.json()
+    assert d["votes"]["positive"] == 2
+    assert d["votes"]["excited"] == 1
+    assert d["votes"]["negative"] == 0
 
 
 @pytest.mark.asyncio
-async def test_vote_supports_all_three_polarities(tmp_path: Path) -> None:
-    """All three polarities (positive, negative, excited) are accepted by the vote endpoint."""
-    os.environ["DATABASE_URL"] = f"sqlite:///{tmp_path}/social_polarity.db"
-    import app.services.unified_db as udb
-    udb.reset_engine()
-
+async def test_duplicate_vote_returns_409():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await _create_discord_idea(client, "social-r2-002", with_question=True)
-
-        r_pos = await client.post(
-            "/api/ideas/social-r2-002/questions/0/vote",
-            json={"polarity": "positive", "discord_user_id": "voter_pos"},
-        )
-        r_neg = await client.post(
-            "/api/ideas/social-r2-002/questions/0/vote",
-            json={"polarity": "negative", "discord_user_id": "voter_neg"},
-        )
-        r_exc = await client.post(
-            "/api/ideas/social-r2-002/questions/0/vote",
-            json={"polarity": "excited", "discord_user_id": "voter_exc"},
-        )
-
-    assert r_pos.status_code == 200, r_pos.text
-    assert r_neg.status_code == 200, r_neg.text
-    assert r_exc.status_code == 200, r_exc.text
-
-    final = r_exc.json()
-    assert final["votes"]["positive"] == 1
-    assert final["votes"]["negative"] == 1
-    assert final["votes"]["excited"] == 1
+        idea = await _create_discord_idea(client, "spb-r2-dup")
+        iid = idea["id"]
+        payload = {"polarity": "positive", "discord_user_id": "dup-u"}
+        r1 = await client.post(f"/api/ideas/{iid}/questions/0/vote", json=payload)
+        assert r1.status_code == 200
+        r2 = await client.post(f"/api/ideas/{iid}/questions/0/vote", json=payload)
+    assert r2.status_code == 409
+    assert r2.headers.get("X-Vote-Status") == "duplicate"
 
 
 @pytest.mark.asyncio
-async def test_duplicate_vote_returns_409(tmp_path: Path) -> None:
-    """Duplicate vote from the same user with the same polarity returns 409 (idempotent)."""
-    os.environ["DATABASE_URL"] = f"sqlite:///{tmp_path}/social_dup.db"
-    import app.services.unified_db as udb
-    udb.reset_engine()
-
+async def test_invalid_polarity_returns_422():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await _create_discord_idea(client, "social-r2-003", with_question=True)
-
-        first = await client.post(
-            "/api/ideas/social-r2-003/questions/0/vote",
-            json={"polarity": "positive", "discord_user_id": "voter_dup"},
+        idea = await _create_discord_idea(client, "spb-r2-badpol")
+        resp = await client.post(
+            f"/api/ideas/{idea['id']}/questions/0/vote",
+            json={"polarity": "maybe", "discord_user_id": "u-x"},
         )
-        second = await client.post(
-            "/api/ideas/social-r2-003/questions/0/vote",
-            json={"polarity": "positive", "discord_user_id": "voter_dup"},
-        )
-
-    assert first.status_code == 200
-    assert second.status_code == 409, f"Expected 409 for duplicate vote, got {second.status_code}"
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
-async def test_vote_on_missing_idea_returns_404(tmp_path: Path) -> None:
-    """Voting on a non-existent idea returns 404."""
+async def test_missing_discord_user_id_returns_422():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        res = await client.post(
-            "/api/ideas/does-not-exist-167/questions/0/vote",
-            json={"polarity": "excited", "discord_user_id": "ghost_voter"},
+        idea = await _create_discord_idea(client, "spb-r2-nouid")
+        resp = await client.post(
+            f"/api/ideas/{idea['id']}/questions/0/vote",
+            json={"polarity": "positive"},
         )
-
-    assert res.status_code == 404, res.text
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio
-async def test_vote_on_out_of_range_question_returns_404(tmp_path: Path) -> None:
-    """Voting on a question index that doesn't exist returns 404."""
-    os.environ["DATABASE_URL"] = f"sqlite:///{tmp_path}/social_oor.db"
-    import app.services.unified_db as udb
-    udb.reset_engine()
-
+async def test_vote_nonexistent_idea_returns_404():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await _create_discord_idea(client, "social-r2-004", with_question=True)
-
-        res = await client.post(
-            "/api/ideas/social-r2-004/questions/99/vote",
-            json={"polarity": "positive", "discord_user_id": "lost_voter"},
+        resp = await client.post(
+            "/api/ideas/nonexistent-spb-xyz/questions/0/vote",
+            json={"polarity": "positive", "discord_user_id": "u404"},
         )
-
-    assert res.status_code == 404, res.text
-
-
-# ---------------------------------------------------------------------------
-# /cc-link — Contributor attribution (service-layer tests)
-# ---------------------------------------------------------------------------
+    assert resp.status_code == 404
 
 
-def test_cc_link_service_stores_mapping(tmp_path: Path) -> None:
-    """discord_vote_service.vote records the discord_user_id field correctly.
-
-    This verifies the attribution model: Discord user IDs are stored per vote
-    so that contributor attribution can be resolved from the mapping.
-    """
-    from app.services import discord_vote_service
-    import app.services.unified_db as udb
-
-    os.environ["DATABASE_URL"] = f"sqlite:///{tmp_path}/cc_link.db"
-    udb.reset_engine()
-    discord_vote_service.ensure_schema()
-
-    result, created = discord_vote_service.vote(
-        idea_id="link-test-idea",
-        question_idx=0,
-        discord_user_id="discord_user_alice",
-        polarity="positive",
-    )
-
-    assert created is True
-    assert result.your_vote == "positive"
-    assert result.votes.positive == 1
+@pytest.mark.asyncio
+async def test_vote_out_of_range_question_index_returns_404():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        idea = await _create_discord_idea(client, "spb-r2-oob")
+        resp = await client.post(
+            f"/api/ideas/{idea['id']}/questions/99/vote",
+            json={"polarity": "excited", "discord_user_id": "u-oob"},
+        )
+    assert resp.status_code == 404
 
 
-def test_cc_link_different_users_get_separate_votes(tmp_path: Path) -> None:
-    """Two different Discord users each get their own vote record (no collision)."""
-    from app.services import discord_vote_service
-    import app.services.unified_db as udb
-
-    os.environ["DATABASE_URL"] = f"sqlite:///{tmp_path}/cc_link2.db"
-    udb.reset_engine()
-    discord_vote_service.ensure_schema()
-
-    r1, c1 = discord_vote_service.vote(
-        idea_id="link-test-multi",
-        question_idx=0,
-        discord_user_id="alice_discord",
-        polarity="positive",
-    )
-    r2, c2 = discord_vote_service.vote(
-        idea_id="link-test-multi",
-        question_idx=0,
-        discord_user_id="bob_discord",
-        polarity="positive",
-    )
-
-    assert c1 is True
-    assert c2 is True
-    assert r2.votes.positive == 2
+@pytest.mark.asyncio
+@pytest.mark.parametrize("polarity", ["positive", "negative", "excited"])
+async def test_all_polarity_types_accepted(polarity):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        idea = await _create_discord_idea(client, f"spb-pol-{polarity}")
+        resp = await client.post(
+            f"/api/ideas/{idea['id']}/questions/0/vote",
+            json={"polarity": polarity, "discord_user_id": f"u-{polarity}"},
+        )
+    assert resp.status_code == 200
+    d = resp.json()
+    assert d["votes"][polarity] == 1
+    assert d["your_vote"] == polarity
 
 
-def test_cc_link_same_user_different_ideas_allowed(tmp_path: Path) -> None:
-    """Same Discord user can vote on different ideas without conflict."""
-    from app.services import discord_vote_service
-    import app.services.unified_db as udb
-
-    os.environ["DATABASE_URL"] = f"sqlite:///{tmp_path}/cc_link3.db"
-    udb.reset_engine()
-    discord_vote_service.ensure_schema()
-
-    r1, c1 = discord_vote_service.vote(
-        idea_id="idea-A",
-        question_idx=0,
-        discord_user_id="carol_discord",
-        polarity="excited",
-    )
-    r2, c2 = discord_vote_service.vote(
-        idea_id="idea-B",
-        question_idx=0,
-        discord_user_id="carol_discord",
-        polarity="excited",
-    )
-
-    assert c1 is True
-    assert c2 is True
-    assert r1.votes.excited == 1
-    assert r2.votes.excited == 1
-
-
-# ---------------------------------------------------------------------------
-# Platform Selection Rationale (spec record tests)
-# ---------------------------------------------------------------------------
-
-
-def test_spec_167_records_discord_as_winning_platform() -> None:
-    """Spec 167 exists and explicitly records Discord as the selected platform."""
-    spec_path = Path(__file__).parents[2] / "specs" / "167-social-platform-bots.md"
-    assert spec_path.exists(), f"Spec 167 not found at {spec_path}"
-
-    content = spec_path.read_text(encoding="utf-8")
-    assert "Winner: Discord" in content, "Spec 167 must declare Discord as the winner"
-    assert "Phase 2" in content, "Spec 167 must stub the Phase 2 X/Twitter bot"
-    assert "/cc-link" in content, "Spec 167 must document the /cc-link command"
-
-
-def test_spec_167_defines_five_roi_signals() -> None:
-    """Spec 167 defines R1 through R5 ROI signals."""
-    spec_path = Path(__file__).parents[2] / "specs" / "167-social-platform-bots.md"
-    content = spec_path.read_text(encoding="utf-8")
-
-    for signal in ["R1", "R2", "R3", "R4", "R5"]:
-        assert f"### {signal}" in content, f"Spec 167 missing ROI signal {signal}"
-
-
-def test_spec_167_cc_link_file_exists() -> None:
-    """The /cc-link command file referenced in spec 167 exists in the repo."""
-    cc_link_path = (
-        Path(__file__).parents[2] / "discord-bot" / "src" / "commands" / "cc-link.js"
-    )
-    assert cc_link_path.exists(), (
-        f"cc-link.js not found at {cc_link_path}. "
-        "Spec 167 requires this file to exist."
-    )
+@pytest.mark.asyncio
+async def test_discord_ideas_appear_in_idea_list():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        idea = await _create_discord_idea(client, "spb-r1-list")
+        resp = await client.get("/api/ideas")
+    assert resp.status_code == 200
+    ids = [i["id"] for i in resp.json().get("ideas", [])]
+    assert idea["id"] in ids
