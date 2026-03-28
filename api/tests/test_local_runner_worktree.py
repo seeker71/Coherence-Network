@@ -64,15 +64,23 @@ def test_create_worktree_recreates_after_worktree_removed_leaving_branch(tmp_pat
         timeout=60,
         check=False,
     )
-    # Branch often remains after worktree removal — next add would fail without cleanup.
-    br = subprocess.run(
-        ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
+    # If the local branch still exists, a naive ``worktree add -b`` would fail until we delete it.
+    subprocess.run(
+        ["git", "branch", "-D", branch],
         cwd=repo,
         capture_output=True,
         text=True,
         timeout=10,
+        check=False,
     )
-    assert br.returncode == 0, "expected local branch to remain so cleanup path is exercised"
+    subprocess.run(
+        ["git", "branch", branch, "HEAD"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=True,
+    )
 
     second = mod._create_worktree(tid, repo_root=repo)
     assert second is not None
