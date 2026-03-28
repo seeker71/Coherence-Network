@@ -4,9 +4,9 @@ Public API and store re-exports for backward compatibility.
 Implementation lives in agent_service_*.py modules.
 """
 
-from typing import Any
+from typing import Any, Optional
 
-from app.models.agent import TaskType
+from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 from app.services import agent_routing_service as routing_service
 
 # Re-export routing for tests and consumers
@@ -37,8 +37,12 @@ from app.services.agent_service_executor import (
     get_route,
 )
 
-# CRUD
-from app.services.agent_service_crud import create_task, get_task, update_task
+# CRUD (wrapped below to record Open Responses interop evidence)
+from app.services.agent_service_crud import (
+    create_task as _crud_create_task,
+    get_task,
+    update_task as _crud_update_task,
+)
 
 # List / counts
 from app.services.agent_service_list import (
@@ -64,6 +68,90 @@ from app.services.agent_service_active_task import (
 
 # Pipeline status
 from app.services.agent_service_pipeline_status import get_pipeline_status
+
+
+def adapt_task_execution_payload_to_open_responses_request(task: dict[str, Any]) -> dict[str, Any]:
+    """Map a stored task execution record to an Open Responses-compatible request body (v1).
+
+    Executors share the same envelope; task-level prompts are not rewritten per provider.
+    """
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    nrc = ctx.get("normalized_response_call") if isinstance(ctx.get("normalized_response_call"), dict) else {}
+    rd = ctx.get("route_decision") if isinstance(ctx.get("route_decision"), dict) else {}
+    direction = str(task.get("direction") or "").strip()
+    if nrc.get("input"):
+        return {
+            "schema": "open_responses_v1",
+            "model": str(
+                nrc.get("model") or routing_service.normalize_open_responses_model(str(task.get("model") or ""))
+            ),
+            "input": nrc.get("input"),
+        }
+    built = routing_service.build_normalized_response_call(
+        task_id=str(task.get("id") or ""),
+        executor=str(rd.get("executor") or ctx.get("executor") or "claude"),
+        provider=str(rd.get("provider") or "unknown"),
+        model=str(task.get("model") or ""),
+        direction=direction,
+    )
+    return {
+        "schema": built["request_schema"],
+        "model": built["model"],
+        "input": built["input"],
+    }
+
+
+def adapt_provider_output_to_open_responses_output(_task: dict[str, Any], output_text: str) -> dict[str, Any]:
+    """Map provider output text into a normalized Open Responses output shape."""
+    text = (output_text or "").strip() or "(empty)"
+    if len(text) > 50000:
+        text = text[:49990] + "…(truncated)"
+    return {
+        "schema": "open_responses_v1",
+        "output": [{"type": "message", "content": [{"type": "output_text", "text": text}]}],
+    }
+
+
+def create_task(data: AgentTaskCreate) -> dict[str, Any]:
+    """Create agent task and persist normalized route/model evidence."""
+    task = _crud_create_task(data)
+    from app.services import provider_usage_service
+
+    provider_usage_service.persist_normalized_call_from_task(task, phase="routed")
+    return task
+
+
+def update_task(
+    task_id: str,
+    status: Optional[TaskStatus] = None,
+    output: Optional[str] = None,
+    progress_pct: Optional[int] = None,
+    current_step: Optional[str] = None,
+    decision_prompt: Optional[str] = None,
+    decision: Optional[str] = None,
+    context: Optional[dict[str, Any]] = None,
+    worker_id: Optional[str] = None,
+) -> Optional[dict]:
+    """Update task; on terminal status, persist normalized completion evidence."""
+    task = _crud_update_task(
+        task_id,
+        status=status,
+        output=output,
+        progress_pct=progress_pct,
+        current_step=current_step,
+        decision_prompt=decision_prompt,
+        decision=decision,
+        context=context,
+        worker_id=worker_id,
+    )
+    if task is not None:
+        st = task.get("status")
+        final = getattr(st, "value", st) if st is not None else None
+        if str(final or "") in {"completed", "failed"}:
+            from app.services import provider_usage_service
+
+            provider_usage_service.persist_normalized_call_from_task(task, phase="completed")
+    return task
 
 
 def get_agent_integration_status() -> dict[str, Any]:
