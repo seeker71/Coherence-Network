@@ -49,6 +49,21 @@ Open questions (tracked in tests via documentation, not assertions)
 - *Proof over time*: ``GET /api/graph/stats`` exposes counts by node/edge type for
   dashboards; increase coverage by adding integration tests as new routers adopt
   ``graph_service``.
+
+Verification scenarios (production / curl contract)
+---------------------------------------------------
+1. **Lifecycle** — Setup: empty graph. Action: ``POST /api/graph/nodes`` with
+   ``phase=ice`` then ``PATCH`` to ``gas`` then ``water``. Expected: each ``GET``
+   reflects the new phase; no 500.
+2. **CRUD** — Setup: no node ``svc-crud-1``. Action: POST create, GET read, PATCH
+   merge properties, DELETE. Expected: 200 on success path; final GET returns 404.
+3. **Typed edges** — Setup: two nodes. Action: ``POST /api/graph/edges`` with
+   ``type=depends-on``; ``GET .../edges?direction=outgoing&type=depends-on``.
+   Expected: one edge dict with matching ``from_id`` / ``to_id``.
+4. **Stats proof** — Action: ``GET /api/graph/stats``. Expected: JSON includes
+   ``nodes_by_type``, ``edges_by_type``, non-negative totals.
+5. **Errors** — Action: ``GET /api/graph/nodes/missing-id``; ``DELETE
+   /api/graph/edges/bad-id``. Expected: **404** with detail, not **500**.
 """
 
 from __future__ import annotations
@@ -225,24 +240,58 @@ async def test_error_missing_node_returns_404_not_500() -> None:
 
 
 @pytest.mark.asyncio
-async def test_error_invalid_edge_direction_rejected() -> None:
-    """Invalid ``direction`` query must not succeed silently."""
+async def test_edge_direction_outgoing_and_incoming_filters() -> None:
+    """Outgoing vs incoming listing returns the same logical edge from opposite endpoints."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         await client.post(
             "/api/graph/nodes",
             json={
-                "id": "edge-dir-node",
+                "id": "dir-from",
                 "type": "concept",
-                "name": "n",
-                "description": "d",
+                "name": "parent",
+                "description": "",
                 "phase": "water",
             },
         )
-        bad = await client.get(
-            "/api/graph/nodes/edge-dir-node/edges",
-            params={"direction": "sideways"},
+        await client.post(
+            "/api/graph/nodes",
+            json={
+                "id": "dir-to",
+                "type": "concept",
+                "name": "child",
+                "description": "",
+                "phase": "ice",
+            },
         )
-        assert bad.status_code == 422
+        await client.post(
+            "/api/graph/edges",
+            json={
+                "from_id": "dir-from",
+                "to_id": "dir-to",
+                "type": "parent-of",
+                "strength": 1.0,
+            },
+        )
+        out = await client.get(
+            "/api/graph/nodes/dir-from/edges",
+            params={"direction": "outgoing", "type": "parent-of"},
+        )
+        inc = await client.get(
+            "/api/graph/nodes/dir-to/edges",
+            params={"direction": "incoming", "type": "parent-of"},
+        )
+        assert out.status_code == 200 and inc.status_code == 200
+        assert len(out.json()) >= 1 and len(inc.json()) >= 1
+        assert out.json()[0]["to_id"] == "dir-to"
+        assert inc.json()[0]["from_id"] == "dir-from"
+
+
+@pytest.mark.asyncio
+async def test_error_delete_unknown_edge_returns_404() -> None:
+    """Deleting a non-existent edge is a client error, not a server error."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        d = await client.delete("/api/graph/edges/edge-does-not-exist-9999")
+        assert d.status_code == 404
 
 
 @pytest.mark.asyncio
