@@ -24,6 +24,7 @@ from app.routers import (
     audit,
     coherence,
     contributions,
+    contributor_beliefs,
     contributor_identity,
     contributors,
     distributions,
@@ -533,6 +534,7 @@ async def reset_database(x_admin_key: str = Header(None)):
 
 # Resource routers (canonical)
 app.include_router(contributors.router, prefix="/api", tags=["contributors"])
+app.include_router(contributor_beliefs.router, prefix="/api/contributors", tags=["contributors"])
 app.include_router(assets.router, prefix="/api", tags=["assets"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
 app.include_router(contributions.router, prefix="/api", tags=["contributions"])
@@ -574,6 +576,7 @@ app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
 app.include_router(contributors.router, prefix="/v1", include_in_schema=False)
+app.include_router(contributor_beliefs.router, prefix="/v1/contributors", include_in_schema=False)
 app.include_router(assets.router, prefix="/v1", include_in_schema=False)
 app.include_router(contributions.router, prefix="/v1", include_in_schema=False)
 app.include_router(distributions.router, prefix="/v1", include_in_schema=False)
