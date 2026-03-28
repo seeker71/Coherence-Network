@@ -1846,12 +1846,23 @@ CRITICAL: Start executing immediately. Do NOT respond with "I'm ready" or "What 
                 " uncommitted changes before starting fresh."
             )
 
-    # Instruct agent to write checkpoint files periodically
-    prompt += (
-        "\n\nIMPORTANT: Every 5-7 minutes of work, write a brief checkpoint to"
-        " `.task-checkpoint.md` in the repo root with: (1) what you completed so far,"
-        " (2) what remains, (3) any blockers. This allows work to be resumed if interrupted."
-    )
+    # Instruct agent to heartbeat and checkpoint
+    task_id = task.get("id", "unknown")
+    prompt += f"""
+
+PROGRESS TRACKING — do these every 3-5 minutes of work:
+
+1. Heartbeat via API (proves you are alive and working):
+   curl -s -X POST {API_BASE}/api/agent/tasks/{task_id}/activity \\
+     -H "Content-Type: application/json" \\
+     -d '{{"event":"agent_heartbeat","data":{{"step":"<what you just did>","files_touched":"<list>","progress_pct":<0-100>}}}}'
+
+2. Write checkpoint to `.task-checkpoint.md`:
+   - What you completed so far
+   - What remains
+   - Any blockers
+
+If the heartbeat curl fails, continue working — it's not critical. The checkpoint file IS critical for resume."""
     return prompt
 
 
