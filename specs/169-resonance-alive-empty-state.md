@@ -3,7 +3,7 @@
 **Status**: Draft (enhanced)
 **Author**: product-manager agent
 **Date**: 2026-03-28
-**Task ID**: task_33e4a5b56e7b56d9 (original: task_d70c65293963148a)
+**Task ID**: task_0d3fb87a8855dbda (original: task_d70c65293963148a)
 
 ---
 

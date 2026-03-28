@@ -140,7 +140,7 @@ No new external API routes are added for initial rollout. The normalized call is
 }
 ```
 
-### Input Validation
+### Request Field Constraints
 
 - `executor`: string, normalized to known set (`cursor`, `codex`, `claude`, `gemini`, `openrouter`, `openclaw`); unknown values fall back to `"claude"`.
 - `model`: string, provider prefix stripped during normalization; empty model uses executor default.
