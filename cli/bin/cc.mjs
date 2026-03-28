@@ -17,8 +17,8 @@ import { listNodes, sendMessage, sendCommand, readMessages } from "../lib/comman
 import { listContributors, showContributor, showContributions } from "../lib/commands/contributors.mjs";
 import { listAssets, showAsset, createAsset } from "../lib/commands/assets.mjs";
 import { showNewsFeed, showTrending, showSources, addSource, showNewsResonance } from "../lib/commands/news.mjs";
-import { showTreasury, showDeposits, makeDeposit } from "../lib/commands/treasury.mjs";
-import { listLinks, showLink, showValuation, payoutPreview } from "../lib/commands/lineage.mjs";
+import { showTreasury, showDeposits, makeDeposit, stakeDeposit } from "../lib/commands/treasury.mjs";
+import { listLinks, showLink, showValuation, payoutPreview, createLink, addUsageEvent, runMinimumE2EFlow } from "../lib/commands/lineage.mjs";
 import { listChangeRequests, showChangeRequest, vote, propose } from "../lib/commands/governance.mjs";
 import { listServices, showService, showServicesHealth, showServicesDeps } from "../lib/commands/services.mjs";
 import { showFrictionReport, listFrictionEvents, showFrictionCategories } from "../lib/commands/friction.mjs";
@@ -42,6 +42,15 @@ import {
   showUsage as difUsage, showLimits as difLimits, showFunding as difFunding,
   showFeedback as difFeedback,
 } from "../lib/commands/dif.mjs";
+import { handleInventory, handlePipeline } from "../lib/commands/inventory.mjs";
+import { handleRuntime } from "../lib/commands/runtime.mjs";
+import { handleFederation } from "../lib/commands/federation.mjs";
+import {
+  showIdeaTags, showIdeaHealth, showIdeaShowcase, showIdeaResonance,
+  showIdeasProgress, showIdeasCount, showIdeaActivity, showIdeaTasks,
+  showIdeaItemProgress, showIdeaConceptResonance, advanceIdea, setIdeaStage,
+  updateIdeaTags, addIdeaQuestion, answerIdeaQuestion,
+} from "../lib/commands/ideas.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 
@@ -97,6 +106,15 @@ const COMMANDS = {
   meta:          () => handleMeta(args),
   nearby:        () => showNearby(args),
   location:      () => handleLocation(args),
+  // ── New: Inventory / Pipeline ─────────────────────────────────────────
+  inventory:     () => handleInventory(args),
+  pipeline:      () => handlePipeline(args),
+  // ── New: Runtime monitoring ──────────────────────────────────────────
+  runtime:       () => handleRuntime(args),
+  // ── New: Federation (extended) ───────────────────────────────────────
+  federation:    () => handleFederation(args),
+  // ── New: Lineage shorthand ───────────────────────────────────────────
+  link:          () => handleLink(args),
   help:          () => showHelp(),
 };
 
@@ -110,8 +128,27 @@ async function handleMeta(args) {
 }
 
 async function handleIdea(args) {
-  if (args[0] === "create") return createIdea(args.slice(1));
-  return showIdea(args);
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "create":    return createIdea(subArgs);
+    case "tags":      return showIdeaTags();
+    case "tag":       return updateIdeaTags(subArgs);
+    case "health":    return showIdeaHealth();
+    case "showcase":  return showIdeaShowcase();
+    case "resonance": return showIdeaResonance();
+    case "progress":  return showIdeasProgress();
+    case "count":     return showIdeasCount();
+    case "activity":  return showIdeaActivity(subArgs);
+    case "tasks":     return showIdeaTasks(subArgs);
+    case "itempr":    return showIdeaItemProgress(subArgs);
+    case "conceptres": return showIdeaConceptResonance(subArgs);
+    case "advance":   return advanceIdea(subArgs);
+    case "stage":     return setIdeaStage(subArgs);
+    case "question":  return addIdeaQuestion(subArgs);
+    case "answer":    return answerIdeaQuestion(subArgs);
+    default:          return showIdea(args);
+  }
 }
 
 async function handleEdge(args) {
@@ -182,14 +219,19 @@ async function handleTreasury(args) {
   switch (sub) {
     case "deposits": return showDeposits(args.slice(1));
     case "deposit":  return makeDeposit(args.slice(1));
+    case "stake":    return stakeDeposit(args.slice(1));
     default:         return showTreasury();
   }
 }
 
 async function handleLineage(args) {
   if (!args[0]) return listLinks([]);
+  if (args[0] === "create") return createLink(args.slice(1));
+  if (args[0] === "usage")  return addUsageEvent(args.slice(1));
+  if (args[0] === "e2e")    return runMinimumE2EFlow();
   if (args[1] === "valuation") return showValuation(args);
   if (args[1] === "payout") return payoutPreview([args[0], args[2]]);
+  if (args[1] === "usage")  return addUsageEvent([args[0], ...args.slice(2)]);
   // If first arg is a number, treat as limit
   if (/^\d+$/.test(args[0])) return listLinks(args);
   return showLink(args);
@@ -228,6 +270,21 @@ async function handleProviders(args) {
   switch (sub) {
     case "stats": return showProviderStats();
     default:      return listProviders();
+  }
+}
+
+async function handleLink(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "create": return createLink(subArgs);
+    case "usage":  return addUsageEvent(subArgs);
+    case "e2e":    return runMinimumE2EFlow();
+    default:
+      console.log("Usage: cc link <create|usage|e2e>");
+      console.log("  cc link create <idea-id> <spec-id> [contributor] [weight]");
+      console.log("  cc link usage <link-id> <event-type> [amount]");
+      console.log("  cc link e2e");
   }
 }
 
@@ -410,7 +467,7 @@ function showHelp() {
   identity lookup <p> <id> Find contributor by identity
   COHERENCE_CONTRIBUTOR_ID overrides config.json for per-process agent identity
 
-\x1b[1mFederation:\x1b[0m
+\x1b[1mFederation (basic):\x1b[0m
   nodes                   List federation nodes
   msg <node|all> <text>   Send message (accepts name, alias: mac/win)
   cmd <node|all> <cmd>    Send command: update, status, restart, pause
@@ -445,13 +502,18 @@ function showHelp() {
 \x1b[1mTreasury:\x1b[0m
   treasury                Treasury overview
   treasury deposits <id>  Deposits for contributor
-  treasury deposit <amt> <asset>  Make a deposit
+  treasury deposit <amt> <asset> [contributor]  Make a deposit
+  treasury stake <deposit-id> <idea-id> [amt]   Stake deposit CC on idea
 
 \x1b[1mLineage:\x1b[0m
   lineage [limit]         Value lineage links
   lineage <id>            View lineage link
   lineage <id> valuation  Link valuation
   lineage <id> payout <amt>  Payout preview
+  lineage create <idea> <spec> [contributor] [weight]  Create link
+  lineage <id> usage <event-type> [amount]  Record usage event
+  lineage e2e             Run minimum E2E value flow
+  link create|usage|e2e   Shorthand for lineage create/usage/e2e
 
 \x1b[1mEdge Navigation:\x1b[0m
   edges <id>              List all edges for an entity (alias: edg)
@@ -509,6 +571,67 @@ function showHelp() {
   diag issues             Fatal + monitor issues
   diag runners            Agent runners
   diag visibility         Agent visibility
+
+\x1b[1mInventory / Pipeline:\x1b[0m
+  inventory               Pipeline pulse + flow overview
+  inventory pulse         Live pipeline health
+  inventory flow          Full pipeline flow details
+  inventory completeness  Process completeness by stage
+  inventory gaps          Traceability gaps
+  inventory routes        Canonical route manifest
+  inventory endpoints     Endpoint traceability (S/T/I coverage)
+  inventory evidence      Route and commit evidence
+  inventory assets        Asset modularity report
+  inventory lineage       System lineage summary
+  inventory fix-hollow    Fix hollow completions
+  pipeline pulse          Alias: pipeline pulse
+  pipeline fix-hollow     Alias: fix hollow completions
+
+\x1b[1mRuntime Monitoring:\x1b[0m
+  runtime                 Change token + overview
+  runtime events [N]      List runtime events
+  runtime event <type> [data]  Post runtime event
+  runtime ideas           Runtime summary by idea
+  runtime endpoints       Endpoints coverage summary
+  runtime web             Web view performance
+  runtime attention       Endpoints needing attention
+  runtime exerciser       Run endpoint exerciser
+  runtime usage           Usage verification
+  runtime mvp             MVP acceptance summary
+  runtime mvp judge       MVP acceptance judge
+  runtime mvp baselines   Local baselines
+  runtime token           Current change token
+
+\x1b[1mFederation (extended):\x1b[0m
+  federation              List federation nodes
+  federation nodes        List registered nodes
+  federation instances    List federated instances
+  federation instance <id>  Show instance detail
+  federation register <url> [caps...]  Register a new node
+  federation heartbeat <id>  Send heartbeat for node
+  federation capabilities  Fleet capability summary
+  federation stats        Aggregated node stats
+  federation sync         Trigger federation sync
+  federation sync history Sync history
+  federation aggregates   Federated aggregations
+  federation msg <id> <text>  Send message to a node
+  federation msgs <id>    Read messages from a node
+  federation broadcast <text>  Broadcast to all nodes
+
+\x1b[1mIdea (extended):\x1b[0m
+  idea tags               List all tags in the catalog
+  idea tag <id> <tag...>  Set tags on an idea
+  idea health             Governance health
+  idea showcase           Showcase ideas
+  idea resonance          Ideas resonance overview
+  idea progress           Progress dashboard
+  idea count              Total idea count
+  idea <id> activity      Activity for an idea
+  idea <id> tasks         Tasks for an idea
+  idea <id> advance       Advance idea to next stage
+  idea <id> stage <s>     Set idea stage explicitly
+  idea <id> question <q>  Add question to idea
+  idea <id> answer <a>    Answer an open question
 
 \x1b[2mHub: https://api.coherencycoin.com\x1b[0m
 \x1b[2mDocs: https://coherencycoin.com\x1b[0m
