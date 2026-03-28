@@ -78,6 +78,7 @@ const COMMANDS = {
   tasks:         () => listTasks(args),
   task:          () => handleTask(args),
   edges:         () => listEntityEdges(args),
+  edg:           () => listEntityEdges(args),
   edge:          () => handleEdge(args),
   update:        () => update(args),
   deploy:        () => deploy(args),
@@ -438,7 +439,8 @@ function showHelp() {
   lineage <id> payout <amt>  Payout preview
 
 \x1b[1mEdge Navigation:\x1b[0m
-  edges <id>              List all edges for an entity
+  edges <id>              List all edges for an entity (alias: edg)
+  edg <id>                Shorthand alias for cc edges
   edges <id> --type <t>  Filter edges by relationship type
   edge types              Print all 46 canonical edge types
   edge create <from> <type> <to>  Create a typed edge
