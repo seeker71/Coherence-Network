@@ -481,13 +481,13 @@ async def test_friction_queue_signal_aggregates_same_stage(
     queue = response.json()["top_friction_queue"]
     assert len(queue) >= 1
 
-    # Find the "deploy" stage entry
-    deploy_entry = next((e for e in queue if "deploy" in str(e.get("key", ""))), None)
-    assert deploy_entry is not None, f"deploy stage not found in queue: {queue}"
+    # Both events have block_type="timeout", so they aggregate under key "friction:timeout"
+    timeout_entry = next((e for e in queue if "timeout" in str(e.get("key", ""))), None)
+    assert timeout_entry is not None, f"friction:timeout key not found in queue: {queue}"
 
     # signal = (3.0 + 5.0) + 0.5 * 2 = 8.0 + 1.0 = 9.0
     expected_signal = (3.0 + 5.0) + 0.5 * 2
-    assert float(deploy_entry["signal"]) == pytest.approx(expected_signal, rel=1e-4)
+    assert float(timeout_entry["signal"]) == pytest.approx(expected_signal, rel=1e-4)
 
 
 # ---------------------------------------------------------------------------
