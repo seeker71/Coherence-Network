@@ -1930,7 +1930,16 @@ PROGRESS TRACKING — do these every 3-5 minutes of work:
    - What remains
    - Any blockers
 
-If the heartbeat curl fails, continue working — it's not critical. The checkpoint file IS critical for resume."""
+If the heartbeat curl fails, continue working — it's not critical. The checkpoint file IS critical for resume.
+
+3. Update `.idea-progress.md` (carried across tasks for this idea):
+   - This file tracks cumulative progress for the ENTIRE idea across all phases/tasks.
+   - Read it first — it may contain work from previous tasks.
+   - Update the "Current task" section with what you're doing now.
+   - When done, move your work summary to "Completed phases".
+   - Record any key decisions or architectural choices in "Key decisions".
+   - List unresolved issues in "Blockers".
+   - This file is NOT committed to git — it's extracted by the runner after your task."""
     return prompt
 
 
@@ -1950,7 +1959,7 @@ def _push_and_pr(
         cwd = str(_REPO_DIR)
 
         # Ensure all changes are committed (exclude control files from staging)
-        _CONTROL_FILES = {".task-control", ".task-checkpoint.md", "data/coherence.db"}
+        _CONTROL_FILES = {".task-control", ".task-checkpoint.md", ".idea-progress.md", "data/coherence.db"}
         status = subprocess.run(
             ["git", "status", "--porcelain"], capture_output=True, text=True,
             timeout=5, cwd=cwd,
@@ -3163,9 +3172,11 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
         action = result.get("action")
         if action == "reaped":
             reaped += 1
-            # Also capture worktree checkpoint if available (preserves existing behaviour)
+            # Also capture worktree checkpoint + progress sheet if available
             task_id = t.get("id", "")
             slug = task_id[:16]
+            ctx = t.get("context", {}) or {}
+            reap_idea_id = ctx.get("idea_id", "")
             wt_path = _WORKTREE_BASE / f"task-{slug}"
             if wt_path.exists():
                 checkpoint_file = wt_path / ".task-checkpoint.md"
@@ -3175,6 +3186,9 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
                         log.info("REAPER: captured checkpoint for %s (%d chars)", slug, len(cp))
                     except Exception:
                         pass
+                # Persist progress sheet before worktree is cleaned up
+                if reap_idea_id:
+                    _persist_idea_progress(reap_idea_id, wt_path)
                 try:
                     diff_result = subprocess.run(
                         ["git", "diff", "HEAD"],
@@ -4137,14 +4151,53 @@ def _deploy_to_vps() -> str:
 
 _MAX_PARALLEL = rc("execution", "parallel", 2)
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
+_PROGRESS_DIR = _REPO_DIR / ".idea-progress"
 
 
-def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | None:
+def _inject_idea_progress(idea_id: str, wt_path: Path) -> None:
+    """Copy persisted progress sheet into a worktree so the provider can read/update it."""
+    src = _PROGRESS_DIR / f"{idea_id}.md"
+    dst = wt_path / ".idea-progress.md"
+    try:
+        if src.exists():
+            shutil.copy2(str(src), str(dst))
+            log.info("PROGRESS_INJECTED idea=%s (%d bytes)", idea_id, dst.stat().st_size)
+        else:
+            # Create empty progress sheet with header
+            dst.write_text(
+                f"# Progress — {idea_id}\n\n"
+                f"## Completed phases\n\n(none yet)\n\n"
+                f"## Current task\n\n(starting)\n\n"
+                f"## Key decisions\n\n(none yet)\n\n"
+                f"## Blockers\n\n(none)\n",
+                encoding="utf-8",
+            )
+            log.info("PROGRESS_CREATED idea=%s", idea_id)
+    except Exception as e:
+        log.warning("PROGRESS_INJECT_FAILED idea=%s error=%s", idea_id, e)
+
+
+def _persist_idea_progress(idea_id: str, wt_path: Path) -> None:
+    """Copy progress sheet from worktree back to persistent storage."""
+    src = wt_path / ".idea-progress.md"
+    if not src.exists():
+        return
+    try:
+        _PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+        dst = _PROGRESS_DIR / f"{idea_id}.md"
+        shutil.copy2(str(src), str(dst))
+        log.info("PROGRESS_PERSISTED idea=%s (%d bytes)", idea_id, dst.stat().st_size)
+    except Exception as e:
+        log.warning("PROGRESS_PERSIST_FAILED idea=%s error=%s", idea_id, e)
+
+
+def _create_worktree(task_id: str, base_branch: str | None = None, *, idea_id: str = "") -> Path | None:
     """Create a git worktree for isolated task execution.
 
     base_branch: optional remote branch to base on (e.g. 'worker/impl/idea/task_abc').
     If None, defaults to origin/main. Used by test/review/code-review phases
     to checkout the impl PR branch so the provider can see the actual code.
+    idea_id: if provided, injects the persisted .idea-progress.md into the worktree.
     """
     slug = task_id[:16]
     wt_path = _WORKTREE_BASE / f"task-{slug}"
@@ -4177,6 +4230,9 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
         )
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
+            # Inject persisted idea progress sheet if available
+            if idea_id:
+                _inject_idea_progress(idea_id, wt_path)
             return wt_path
     except Exception as e:
         log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
@@ -4571,7 +4627,7 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             task_type = task.get("task_type", "spec")
             impl_branch = ctx.get("impl_branch", "")
             base_branch = impl_branch if task_type in ("test", "code-review", "review") and impl_branch else None
-            wt = _create_worktree(task_id, base_branch=base_branch)
+            wt = _create_worktree(task_id, base_branch=base_branch, idea_id=idea_id)
             pushed = False
             try:
                 # Fix 6+7: deploy and verify are RUNNER actions, not provider
@@ -4657,6 +4713,9 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             except Exception as e:
                 log.error("WORKER[%d] ERROR task=%s: %s", worker_id, task_id[:16], e)
             finally:
+                # Persist progress sheet before cleanup
+                if wt and idea_id:
+                    _persist_idea_progress(idea_id, wt)
                 # Fix 5: keep worktree if push failed (recovery copy)
                 if wt and (pushed or not ok):
                     _cleanup_worktree(task_id)
