@@ -33,6 +33,7 @@ import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
+import { dbStatus } from "../lib/commands/db-status.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -97,6 +98,7 @@ const COMMANDS = {
   meta:          () => handleMeta(args),
   nearby:        () => showNearby(args),
   location:      () => handleLocation(args),
+  "db-status":   () => dbStatus(args),
   help:          () => showHelp(),
 };
 
@@ -502,6 +504,9 @@ function showHelp() {
   dif whoami              DIF identity check
   dif config              Show DIF configuration
   dif smoke               Run DIF smoke test
+
+\x1b[1mData hygiene:\x1b[0m
+  db-status [--json]      Row counts + 24h growth (from /api/data-health)
 
 \x1b[1mDiagnostics:\x1b[0m
   diag                    Agent effectiveness + pipeline
