@@ -49,6 +49,78 @@ def test_load_backlog_malformed_missing_number_prefix(tmp_path):
     assert items == ["First item", "Second item"]
 
 
+def test_load_backlog_missing_file_returns_empty(tmp_path):
+    """load_backlog returns [] when BACKLOG_FILE does not exist — no crash (spec 040)."""
+    pm.BACKLOG_FILE = str(tmp_path / "does_not_exist.md")
+    assert pm.load_backlog() == []
+
+
+def test_load_backlog_whitespace_only_returns_empty(tmp_path):
+    """load_backlog returns [] for a file containing only whitespace/newlines (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_text("   \n\n\t\n   \n")
+    pm.BACKLOG_FILE = str(p)
+    assert pm.load_backlog() == []
+
+
+def test_load_backlog_skips_markdown_headers(tmp_path):
+    """Markdown headers (# / ##) are not numbered items and must be skipped (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_text("# Heading\n## Sub-heading\n1. Real item\n### Deep\n2. Second item\n")
+    pm.BACKLOG_FILE = str(p)
+    assert pm.load_backlog() == ["Real item", "Second item"]
+
+
+def test_load_backlog_skips_bullet_list_items(tmp_path):
+    """Bullet markers (- / * / +) without a leading digit are skipped (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_text("- bullet one\n* bullet two\n1. Numbered\n+ bullet three\n")
+    pm.BACKLOG_FILE = str(p)
+    assert pm.load_backlog() == ["Numbered"]
+
+
+def test_load_backlog_skips_parenthesised_numbers(tmp_path):
+    """Items like '1) item' do not match ^\\d+\\. → skipped (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_text("1) First\n2) Second\n1. Valid\n")
+    pm.BACKLOG_FILE = str(p)
+    assert pm.load_backlog() == ["Valid"]
+
+
+def test_load_backlog_number_dot_no_text_skipped(tmp_path):
+    """'1.' with nothing after (stripped) produces no item (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_text("1.\n2.   \n3. Real item\n")
+    pm.BACKLOG_FILE = str(p)
+    assert pm.load_backlog() == ["Real item"]
+
+
+def test_load_backlog_non_sequential_numbers_in_file_order(tmp_path):
+    """Non-sequential numbers are returned in file order, not sorted (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_text("5. Fifth\n1. First\n99. Ninety-ninth\n2. Second\n")
+    pm.BACKLOG_FILE = str(p)
+    assert pm.load_backlog() == ["Fifth", "First", "Ninety-ninth", "Second"]
+
+
+def test_load_backlog_trailing_whitespace_stripped(tmp_path):
+    """Trailing spaces on item text are stripped (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_text("1. Item with trailing spaces   \n2. Tab-trailing\t\n")
+    pm.BACKLOG_FILE = str(p)
+    result = pm.load_backlog()
+    assert result[0] == "Item with trailing spaces"
+    assert result[1] == "Tab-trailing"
+
+
+def test_load_backlog_crlf_line_endings(tmp_path):
+    """Windows CRLF line endings are handled gracefully (spec 040)."""
+    p = tmp_path / "backlog.md"
+    p.write_bytes(b"1. First item\r\n2. Second item\r\nJunk\r\n3. Third item\r\n")
+    pm.BACKLOG_FILE = str(p)
+    assert pm.load_backlog() == ["First item", "Second item", "Third item"]
+
+
 def test_load_state_defaults(tmp_path):
     """load_state returns defaults when no file."""
     pm.STATE_FILE = str(tmp_path / "missing.json")
