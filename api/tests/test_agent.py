@@ -242,3 +242,62 @@ async def test_effectiveness_plan_progress_phase_boundary_logic() -> None:
         finally:
             eff_svc.STATE_FILES = original_state_files
             eff_svc.BACKLOG_FILE = original_backlog_file
+
+
+@pytest.mark.asyncio
+async def test_post_task_invalid_task_type_returns_422(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /api/agent/tasks with invalid task_type returns 422.
+
+    Spec 037 R1-R4: task_type outside the allowed enum must be rejected with:
+    - HTTP 422
+    - detail is a list
+    - at least one error references task_type in loc
+    - msg is a non-empty string
+    """
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _reset_agent_store()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "Do something", "task_type": "invalid"},
+        )
+
+    assert r.status_code == 422, f"Expected 422, got {r.status_code}: {r.text}"
+    body = r.json()
+    assert "detail" in body, "Response must have 'detail' key"
+    detail = body["detail"]
+    assert isinstance(detail, list), "detail must be a list"
+    task_type_errors = [
+        item for item in detail if "task_type" in str(item.get("loc", []))
+    ]
+    assert task_type_errors, f"No error references task_type in loc; detail={detail}"
+    for item in task_type_errors:
+        assert isinstance(item.get("msg"), str) and item.get("msg"), (
+            f"msg must be a non-empty string; got {item.get('msg')!r}"
+        )
+
+
+@pytest.mark.asyncio
+async def test_post_task_valid_task_type_returns_201(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """POST /api/agent/tasks with valid task_type returns 201 (regression guard).
+
+    Spec 037 R5: valid task_type values must continue to be accepted.
+    """
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _reset_agent_store()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/api/agent/tasks",
+            json={"direction": "Implement feature X", "task_type": "impl"},
+        )
+
+    assert r.status_code == 201, f"Expected 201, got {r.status_code}: {r.text}"
+    body = r.json()
+    assert body.get("task_type") == "impl", f"Expected task_type='impl', got {body.get('task_type')}"
+    assert body.get("status") == "pending", f"Expected status='pending', got {body.get('status')}"
