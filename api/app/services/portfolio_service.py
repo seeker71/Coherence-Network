@@ -18,6 +18,8 @@ from app.models.portfolio import (
     LinkedIdentity,
     NetworkStats,
     PortfolioSummary,
+    StakeDetail,
+    StakeIdeaActivity,
     StakesList,
     StakeSummary,
     TasksList,
@@ -550,3 +552,128 @@ def get_tasks(contributor_id: str, status: str = "completed", limit: int = 20, o
 
     items.sort(key=lambda x: x.completed_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return TasksList(contributor_id=contributor_id, total=len(items), items=items[offset: offset + limit])
+
+
+# ── Stake detail ─────────────────────────────────────────────────────
+
+
+def get_stake_detail(contributor_id: str, stake_id: str) -> StakeDetail:
+    """Return full detail for a single stake position including idea activity since staking."""
+    node = _find_contributor(contributor_id)
+    if not node:
+        raise ValueError(f"Contributor not found: {contributor_id}")
+
+    stake_node: dict[str, Any] | None = graph_service.get_node(f"stake:{stake_id}")
+    if not stake_node:
+        stakes_result = graph_service.list_nodes(type="stake", limit=10000)
+        for s in stakes_result.get("items", []):
+            if s.get("id") == stake_id or s.get("legacy_id") == stake_id:
+                stake_node = s
+                break
+    if not stake_node:
+        raise ValueError(f"Stake not found: {stake_id}")
+
+    sprops = _graph_node_props(stake_node)
+    if sprops.get("contributor_id") != contributor_id:
+        raise PermissionError(f"Stake {stake_id} does not belong to contributor {contributor_id}")
+
+    idea_id = sprops.get("idea_id", "")
+    idea_node = graph_service.get_node(f"idea:{idea_id}") or {}
+    idea_title = idea_node.get("name") or idea_id
+    idea_props = _graph_node_props(idea_node)
+
+    cc_staked = float(sprops.get("cc_staked", 0) or 0)
+    cc_val_raw = sprops.get("cc_valuation")
+    cc_val: Optional[float] = float(cc_val_raw) if cc_val_raw is not None else None
+    roi: Optional[float] = None
+    if cc_val is not None and cc_staked > 0:
+        roi = round((cc_val - cc_staked) / cc_staked * 100, 2)
+
+    staked_at: Optional[datetime] = None
+    ts_raw = sprops.get("staked_at") or stake_node.get("created_at")
+    if ts_raw:
+        try:
+            staked_at = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            pass
+
+    last_valued_at: Optional[datetime] = None
+    lv_raw = sprops.get("last_valued_at") or stake_node.get("updated_at")
+    if lv_raw:
+        try:
+            last_valued_at = datetime.fromisoformat(str(lv_raw).replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            pass
+
+    coherence_current: Optional[float] = None
+    raw_coh = idea_props.get("coherence_score")
+    if raw_coh is not None:
+        try:
+            coherence_current = float(raw_coh)
+        except (ValueError, TypeError):
+            pass
+
+    coherence_at_staking: Optional[float] = None
+    raw_coh_at_stake = sprops.get("coherence_at_staking")
+    if raw_coh_at_stake is not None:
+        try:
+            coherence_at_staking = float(raw_coh_at_stake)
+        except (ValueError, TypeError):
+            pass
+
+    contributions_since = 0
+    if staked_at and idea_id:
+        contributions = graph_service.list_nodes(type="contribution", limit=10000)
+        for c in contributions.get("items", []):
+            cprops = _graph_node_props(c)
+            if cprops.get("idea_id") != idea_id:
+                continue
+            ts_raw2 = c.get("updated_at") or c.get("created_at")
+            if ts_raw2:
+                try:
+                    ts2 = datetime.fromisoformat(str(ts_raw2).replace("Z", "+00:00"))
+                    if ts2 >= staked_at:
+                        contributions_since += 1
+                except (ValueError, AttributeError):
+                    pass
+
+    if coherence_current is not None and coherence_at_staking is not None:
+        delta = coherence_current - coherence_at_staking
+        if delta > 0.05:
+            activity = "improved"
+        elif delta < -0.05:
+            activity = "declined"
+        else:
+            activity = "stable"
+    elif contributions_since > 0:
+        activity = "stable"
+    else:
+        activity = "unknown"
+
+    idea_activity = StakeIdeaActivity(
+        activity_since_staking=activity,
+        coherence_at_staking=coherence_at_staking,
+        coherence_current=coherence_current,
+        contributions_since_staking=contributions_since,
+    )
+
+    total_val = cc_val if cc_val is not None else cc_staked
+    value_lineage = ValueLineageSummary(
+        total_value=total_val,
+        roi_ratio=round(cc_val / cc_staked, 4) if cc_val is not None and cc_staked > 0 else None,
+        stage_events=contributions_since,
+    )
+
+    return StakeDetail(
+        stake_id=stake_id,
+        contributor_id=contributor_id,
+        idea_id=idea_id,
+        idea_title=idea_title,
+        cc_staked=cc_staked,
+        cc_valuation=cc_val,
+        roi_pct=roi,
+        staked_at=staked_at,
+        last_valued_at=last_valued_at,
+        idea_activity=idea_activity,
+        value_lineage=value_lineage,
+    )

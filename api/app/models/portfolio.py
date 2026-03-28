@@ -146,6 +146,27 @@ class StakesList(BaseModel):
     items: list[StakeSummary] = Field(default_factory=list)
 
 
+class StakeIdeaActivity(BaseModel):
+    activity_since_staking: str = "unknown"  # improved | stable | declined | unknown
+    coherence_at_staking: Optional[float] = None
+    coherence_current: Optional[float] = None
+    contributions_since_staking: int = 0
+
+
+class StakeDetail(BaseModel):
+    stake_id: str
+    contributor_id: str
+    idea_id: str
+    idea_title: str
+    cc_staked: float
+    cc_valuation: Optional[float] = None
+    roi_pct: Optional[float] = None
+    staked_at: Optional[datetime] = None
+    last_valued_at: Optional[datetime] = None
+    idea_activity: StakeIdeaActivity = Field(default_factory=StakeIdeaActivity)
+    value_lineage: ValueLineageSummary = Field(default_factory=ValueLineageSummary)
+
+
 # ── Tasks ────────────────────────────────────────────────────────────
 
 
