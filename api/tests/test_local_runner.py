@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -679,3 +680,58 @@ def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pyte
     assert ok is True
     assert len(operational_calls) == 1
     assert operational_calls[0][2] == "reflect"
+
+
+def test_create_worktree_succeeds_when_task_branch_already_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Stale task/* branches (partial cleanup) must not block a new worktree.
+
+    Regression: ``git worktree add -b task/<slug>`` fails with 'branch already exists';
+    runner then reported 'Worktree creation failed' for all impl/test tasks.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True)
+    (repo / "README.md").write_text("x\n")
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True)
+    subprocess.run(["git", "branch", "-M", "main"], cwd=repo, check=True)
+    task_id = "deadbeef00000000aaaabbbbccccdddd"
+    subprocess.run(["git", "branch", f"task/{task_id[:16]}", "main"], cwd=repo, check=True)
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", repo / ".worktrees")
+
+    wt = local_runner._create_worktree(task_id)
+    assert wt is not None
+    assert wt.is_dir()
+    assert (wt / "README.md").exists()
+
+    local_runner._cleanup_worktree(task_id)
+
+
+def test_create_worktree_uses_main_when_origin_main_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Clone-less / offline test repos may have ``main`` but no ``origin/main``."""
+    repo = tmp_path / "repo2"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=repo, check=True)
+    subprocess.run(["git", "config", "user.name", "t"], cwd=repo, check=True)
+    (repo / "f.md").write_text("y\n")
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True)
+    subprocess.run(["git", "branch", "-M", "main"], cwd=repo, check=True)
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", repo / ".worktrees")
+
+    wt = local_runner._create_worktree("cafebabe00000000aaaabbbbccccdddd")
+    assert wt is not None
+    assert (wt / "f.md").exists()
+
+    local_runner._cleanup_worktree("cafebabe00000000aaaabbbbccccdddd")
