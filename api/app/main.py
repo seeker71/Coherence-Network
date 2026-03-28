@@ -49,6 +49,7 @@ from app.routers import edges as edges_router
 from app.routers import graph
 from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
+from app.routers import onboarding as onboarding_router
 from app.routers import pipeline
 from app.routers import provider_stats
 from app.routers import service_registry_router
@@ -569,6 +570,10 @@ app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 # Discord bot vote endpoint (spec-164)
 from app.routers import discord_votes  # noqa: E402
 app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
+
+# Identity-driven onboarding - TOFU MVP (spec-168)
+from app.routers import onboarding as onboarding_router  # noqa: E402
+app.include_router(onboarding_router.router, tags=["onboarding"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
