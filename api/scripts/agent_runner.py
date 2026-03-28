@@ -3201,6 +3201,36 @@ def _post_tool_failure_friction(
         pass
 
 
+def _post_pipeline_metric(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    task_type: str,
+    model: str,
+    duration_seconds: float,
+    status: str,
+    executor: str = "",
+    prompt_variant: str = "",
+) -> None:
+    """POST task metric to /api/agent/metrics for pipeline observability. Spec 026 Phase 1."""
+    if status not in {"completed", "failed", "timed_out"}:
+        return
+    payload: dict[str, Any] = {
+        "task_id": task_id,
+        "task_type": task_type or "impl",
+        "model": model or "unknown",
+        "duration_seconds": max(0.0, float(duration_seconds)),
+        "status": status,
+        "executor": executor or "",
+    }
+    if prompt_variant:
+        payload["prompt_variant"] = prompt_variant
+    try:
+        client.post(f"{BASE}/api/agent/metrics", json=payload, timeout=5.0)
+    except Exception:
+        pass
+
+
 def _setup_logging(verbose: bool = False) -> logging.Logger:
     os.makedirs(LOG_DIR, exist_ok=True)
     log_file = os.path.join(LOG_DIR, "agent_runner.log")
@@ -6912,6 +6942,17 @@ def run_one_task(
             duration_seconds=duration_sec,
             attempt_status=status,
             failure_class=failure_class,
+        )
+        # Spec 026 Phase 1: post pipeline metric for observability aggregation.
+        _post_pipeline_metric(
+            client,
+            task_id=task_id,
+            task_type=str(task_type or "impl"),
+            model=model,
+            duration_seconds=duration_sec,
+            status=status,
+            executor=executor,
+            prompt_variant=str(task_ctx.get("prompt_variant") or ""),
         )
         if pr_mode:
             manifest_context_patch = _append_agent_manifest_entry(

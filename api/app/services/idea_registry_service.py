@@ -79,6 +79,14 @@ class RegistryMetaRecord(Base):
     value: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
+class IdeaTagRecord(Base):
+    """Stores normalized tags for each idea in the unified registry."""
+    __tablename__ = "idea_registry_tags"
+
+    idea_id: Mapped[str] = mapped_column(String, primary_key=True)
+    tags_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+
+
 from app.services import unified_db as _udb
 
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
