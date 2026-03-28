@@ -9,8 +9,10 @@ from app.models.geolocation import (
     LocalNewsResonanceResponse,
     NearbyResult,
 )
+from app.models.geocoding import GeocodeForwardResponse, NearbyAgentTaskItem, NearbyAgentTasksResponse
 from app.models.error import ErrorDetail
 from app.services import geolocation_service
+from app.services import geocoding_service
 
 router = APIRouter()
 
@@ -119,3 +121,50 @@ def local_news_resonance(
     the location keywords.
     """
     return geolocation_service.local_news_resonance(location=location, limit=limit)
+
+
+# ---------------------------------------------------------------------------
+# Forward geocoding (OpenCage → Nominatim → fallback)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/geocode/forward",
+    response_model=GeocodeForwardResponse,
+    summary="Resolve a place name to approximate coordinates",
+)
+def geocode_forward(
+    q: str = Query(..., min_length=2, max_length=200, description="Address, city, or place name"),
+) -> GeocodeForwardResponse:
+    """Forward geocode a free-text query. Coordinates are rounded to ~1 km precision."""
+    return geocoding_service.forward_geocode(q)
+
+
+# ---------------------------------------------------------------------------
+# Agent tasks by geographic proximity (context geo or contributor location)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/geo/tasks/nearby",
+    response_model=NearbyAgentTasksResponse,
+    summary="List agent tasks near a geographic point",
+)
+def geo_tasks_nearby(
+    lat: float = Query(..., ge=-90.0, le=90.0, description="Query latitude"),
+    lon: float = Query(..., ge=-180.0, le=180.0, description="Query longitude"),
+    radius_km: float = Query(100.0, gt=0, le=20000, description="Search radius in km"),
+    limit: int = Query(50, ge=1, le=200, description="Max tasks returned"),
+) -> NearbyAgentTasksResponse:
+    """Return tasks whose ``context`` includes geo coordinates or a contributor within range."""
+    rows, r_used = geolocation_service.filter_agent_tasks_by_proximity(
+        lat=lat, lon=lon, radius_km=radius_km, limit=limit
+    )
+    items = [NearbyAgentTaskItem(**item) for item in rows]
+    return NearbyAgentTasksResponse(
+        tasks=items,
+        query_lat=lat,
+        query_lon=lon,
+        radius_km=r_used,
+        total=len(items),
+    )

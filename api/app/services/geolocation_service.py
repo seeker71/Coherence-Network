@@ -279,3 +279,69 @@ def local_news_resonance(location: str, limit: int = 20) -> LocalNewsResonanceRe
         items=results[:limit],
         total=len(results[:limit]),
     )
+
+
+def filter_agent_tasks_by_proximity(
+    lat: float,
+    lon: float,
+    radius_km: float = 100.0,
+    limit: int = 50,
+) -> tuple[list[dict[str, Any]], float]:
+    """Return agent tasks whose ``context`` includes geo coords or a nearby contributor.
+
+    Checks, in order:
+    - ``context.geo_lat`` / ``context.geo_lon`` (degrees)
+    - ``context.contributor_id`` or ``context.assigned_contributor`` + stored contributor location
+    """
+    radius_km = max(1.0, min(radius_km, 20_000.0))
+    from app.services import agent_service  # noqa: PLC0415
+
+    items, _total, _bf = agent_service.list_tasks(limit=500, offset=0)
+    scored: list[tuple[dict[str, Any], float]] = []
+
+    for t in items:
+        ctx = t.get("context") if isinstance(t.get("context"), dict) else {}
+        tid = str(t.get("id") or "")
+        if not tid:
+            continue
+
+        dist: Optional[float] = None
+
+        glat, glon = ctx.get("geo_lat"), ctx.get("geo_lon")
+        if glat is not None and glon is not None:
+            try:
+                dist = _haversine_km(lat, lon, float(glat), float(glon))
+            except (TypeError, ValueError):
+                dist = None
+        else:
+            cid = ctx.get("contributor_id") or ctx.get("assigned_contributor")
+            if cid:
+                loc = get_contributor_location(str(cid))
+                if loc:
+                    dist = _haversine_km(lat, lon, float(loc.latitude), float(loc.longitude))
+
+        if dist is None or dist > radius_km:
+            continue
+
+        status = t.get("status")
+        status_s = str(status.value) if hasattr(status, "value") else str(status or "")
+
+        tt = t.get("task_type")
+        tt_s = str(tt.value) if hasattr(tt, "value") else (str(tt) if tt is not None else None)
+
+        scored.append(
+            (
+                {
+                    "task_id": tid,
+                    "direction": str(t.get("direction") or "")[:2000],
+                    "status": status_s,
+                    "task_type": tt_s,
+                    "distance_km": round(dist, 2),
+                },
+                dist,
+            )
+        )
+
+    scored.sort(key=lambda x: x[1])
+    rows = [x[0] for x in scored[:limit]]
+    return rows, radius_km
