@@ -41,6 +41,7 @@ import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postPr
 import { showPortfolio } from "../lib/commands/portfolio.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
+import { showDbStatus } from "../lib/commands/db_status.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -436,6 +437,7 @@ function showHelp() {
   spec <id>               View spec detail
   resonance               What's alive right now
   status                  Network health + node info
+  db-status [--json] [--record]  DB row counts, growth, alerts (data hygiene)
 
 \x1b[1mContribute:\x1b[0m
   share                   Submit a new idea (interactive)

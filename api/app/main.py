@@ -20,6 +20,7 @@ from app.config_loader import get_float
 from app.routers import (
     agent,
     automation_usage,
+    data_hygiene,
     assets,
     audit,
     coherence,
@@ -273,6 +274,7 @@ app = FastAPI(
         {"name": "governance", "description": "Change approval workflows"},
         {"name": "friction", "description": "Pipeline friction signals"},
         {"name": "automation-usage", "description": "Provider readiness and usage tracking"},
+        {"name": "data-hygiene", "description": "Database row counts, growth, and noise alerts"},
         {"name": "value-lineage", "description": "Value attribution tracing"},
         {"name": "identity", "description": "Contributor identity linking and verification"},
         {"name": "meta", "description": "System self-discovery: endpoints and modules as concept nodes"},
@@ -555,6 +557,7 @@ app.include_router(contributions.router, prefix="/api", tags=["contributions"])
 app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
+app.include_router(data_hygiene.router, prefix="/api", tags=["data-hygiene"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
 app.include_router(lenses.router, prefix="/api", tags=["lenses"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
