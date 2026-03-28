@@ -3,12 +3,14 @@ from __future__ import annotations
 
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from app.middleware.auth import require_api_key
+from app.models.belief import BeliefProfileResponse, BeliefProfileUpdate, BeliefResonanceResponse
 from app.models.contributor import Contributor, ContributorCreate
 from app.models.error import ErrorDetail
 from app.models.pagination import PaginatedResponse
-from app.services import graph_service
+from app.services import belief_service, graph_service
 
 router = APIRouter()
 
@@ -101,3 +103,65 @@ def list_contributors(
     result = graph_service.list_nodes(type="contributor", limit=limit, offset=offset)
     items = [_node_to_contributor(n) for n in result.get("items", [])]
     return PaginatedResponse(items=items, total=result.get("total", len(items)), limit=limit, offset=offset)
+
+
+def _belief_payload(contributor_id: str, data: dict) -> BeliefProfileResponse:
+    return BeliefProfileResponse(
+        contributor_id=contributor_id,
+        worldview=data["worldview"],
+        axis_weights=data["axis_weights"],
+        concept_weights=data["concept_weights"],
+        updated_at=data.get("updated_at"),
+    )
+
+
+@router.get(
+    "/contributors/{contributor_id}/beliefs/resonance",
+    response_model=BeliefResonanceResponse,
+    summary="Resonance between contributor beliefs and an idea",
+)
+def get_belief_resonance(
+    contributor_id: str,
+    idea_id: str = Query(..., min_length=1, description="Idea id to compare"),
+) -> BeliefResonanceResponse:
+    payload = belief_service.compute_resonance(contributor_id, idea_id)
+    if payload is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Contributor or idea not found",
+        )
+    return BeliefResonanceResponse(**payload)
+
+
+@router.get(
+    "/contributors/{contributor_id}/beliefs",
+    response_model=BeliefProfileResponse,
+    summary="Get contributor belief profile",
+    responses={404: {"model": ErrorDetail, "description": "Contributor not found"}},
+)
+def get_contributor_beliefs(contributor_id: str) -> BeliefProfileResponse:
+    data = belief_service.get_belief_profile_dict(contributor_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Contributor not found")
+    return _belief_payload(contributor_id, data)
+
+
+@router.patch(
+    "/contributors/{contributor_id}/beliefs",
+    response_model=BeliefProfileResponse,
+    summary="Update contributor belief profile",
+    responses={401: {"model": ErrorDetail}, 404: {"model": ErrorDetail}},
+)
+def patch_contributor_beliefs(
+    contributor_id: str,
+    body: BeliefProfileUpdate,
+    _key: str = Depends(require_api_key),
+) -> BeliefProfileResponse:
+    dump = body.model_dump(exclude_unset=True)
+    if not dump:
+        data = belief_service.get_belief_profile_dict(contributor_id)
+    else:
+        data = belief_service.save_belief_profile(contributor_id, dump)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Contributor not found")
+    return _belief_payload(contributor_id, data)
