@@ -23,6 +23,7 @@ from app.routers import (
     assets,
     audit,
     coherence,
+    contributor_recognition,
     contributions,
     contributor_identity,
     contributors,
@@ -34,6 +35,8 @@ from app.routers import (
     health,
     ideas,
     inventory,
+    marketplace,
+    registry_discovery,
     news,
     providers,
     spec_registry,
@@ -50,6 +53,7 @@ from app.routers import dif_feedback
 from app.routers import geolocation
 from app.routers import edges as edges_router
 from app.routers import graph
+from app.routers import graph_health
 from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
 from app.routers import onboarding as onboarding_router
@@ -268,6 +272,7 @@ app = FastAPI(
         {"name": "value-lineage", "description": "Value attribution tracing"},
         {"name": "identity", "description": "Contributor identity linking and verification"},
         {"name": "meta", "description": "System self-discovery: endpoints and modules as concept nodes"},
+        {"name": "discovery", "description": "Submission readiness for MCP and skill discovery registries"},
     ],
 )
 logger = logging.getLogger("coherence.api.slow")
@@ -537,6 +542,7 @@ async def reset_database(x_admin_key: str = Header(None)):
 
 # Resource routers (canonical)
 app.include_router(contributors.router, prefix="/api", tags=["contributors"])
+app.include_router(contributor_recognition.router, prefix="/api", tags=["contributors"])
 app.include_router(contributors_portfolio.router, prefix="/api", tags=["contributors"])
 app.include_router(assets.router, prefix="/api", tags=["assets"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
@@ -555,6 +561,8 @@ app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
+app.include_router(marketplace.router, prefix="/api", tags=["marketplace"])
+app.include_router(registry_discovery.router, prefix="/api", tags=["discovery"])
 app.include_router(auth_keys.router, prefix="/api", tags=["auth"])
 app.include_router(news.router, prefix="/api", tags=["news"])
 app.include_router(traceability.router, prefix="/api", tags=["traceability"])
@@ -569,6 +577,7 @@ app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
+app.include_router(graph_health.router, prefix="/api", tags=["graph-health"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])

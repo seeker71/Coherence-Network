@@ -14,6 +14,7 @@ from app.middleware.traceability import traces_to
 from app.models.idea import (
     GovernanceHealth,
     IdeaCountResponse,
+    IdeaConceptResonanceResponse,
     IdeaCreate,
     IdeaShowcaseResponse,
     IdeaStage,
@@ -161,6 +162,23 @@ async def get_resonance(
 ) -> list[dict]:
     """Return ideas with recent activity, sorted by most-recent-activity-first."""
     return idea_service.get_resonance_feed(window_hours=window_hours, limit=limit)
+
+
+@router.get("/ideas/{idea_id}/concept-resonance", response_model=IdeaConceptResonanceResponse)
+async def get_idea_concept_resonance(
+    idea_id: str,
+    limit: int = Query(5, ge=1, le=25),
+    min_score: float = Query(0.05, ge=0.0, le=1.0),
+) -> IdeaConceptResonanceResponse:
+    """Return conceptually related ideas, preferring matches from different domains."""
+    result = idea_service.get_concept_resonance_matches(
+        idea_id=idea_id,
+        limit=limit,
+        min_score=min_score,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
 
 
 @router.get("/ideas/selection-ab/stats")

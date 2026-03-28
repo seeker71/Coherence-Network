@@ -29,6 +29,35 @@ from app.services import graph_service
 log = logging.getLogger(__name__)
 
 
+def _linked_identities_from_store(contributor_key: str) -> list[LinkedIdentity]:
+    """Merge SQLite-linked identities (OAuth / manual) with graph-derived ones."""
+    try:
+        from app.services import contributor_identity_service
+
+        records = contributor_identity_service.get_identities(contributor_key)
+    except Exception:
+        log.debug("portfolio: identity store unreadable for %s", contributor_key, exc_info=True)
+        return []
+    out: list[LinkedIdentity] = []
+    for rec in records:
+        prov = (rec.get("provider") or "unknown").lower()
+        if prov in ("ethereum", "bitcoin", "solana", "cosmos"):
+            identity_type = "wallet"
+        else:
+            identity_type = prov
+        pid = str(rec.get("provider_id") or "")
+        if not pid:
+            continue
+        out.append(
+            LinkedIdentity(
+                type=identity_type,
+                handle=pid,
+                verified=bool(rec.get("verified")),
+            )
+        )
+    return out
+
+
 # ── Contributor resolution ───────────────────────────────────────────
 
 
@@ -47,26 +76,38 @@ def _find_contributor(contributor_id: str) -> dict[str, Any] | None:
     return None
 
 
-def _contributor_summary(node: dict[str, Any]) -> ContributorSummary:
+def _contributor_summary(node: dict[str, Any], contributor_key: str) -> ContributorSummary:
     identities: list[LinkedIdentity] = []
     # Node properties might be merged into top level or in "properties" key
     props = node.get("properties") or {}
-    
+
     gh = props.get("github_handle") or node.get("github_handle")
     if gh:
         identities.append(LinkedIdentity(type="github", handle=gh, verified=True))
-        
+
     tg = props.get("telegram_handle") or node.get("telegram_handle")
     if tg:
         identities.append(LinkedIdentity(type="telegram", handle=tg, verified=True))
-        
+
     wa = node.get("wallet_address") or props.get("wallet_address")
     if wa:
         identities.append(LinkedIdentity(type="wallet", handle=wa, verified=False))
+
+    identities.extend(_linked_identities_from_store(contributor_key))
+
+    seen: set[tuple[str, str]] = set()
+    merged: list[LinkedIdentity] = []
+    for ident in identities:
+        key = (ident.type, ident.handle)
+        if key in seen:
+            continue
+        seen.add(key)
+        merged.append(ident)
+
     return ContributorSummary(
         id=node.get("legacy_id") or node.get("id", ""),
         display_name=node.get("name", "unknown"),
-        identities=identities,
+        identities=merged,
     )
 
 
@@ -216,6 +257,13 @@ def get_portfolio_summary(contributor_id: str, include_cc: bool = True) -> Portf
             except (ValueError, AttributeError):
                 pass
 
+    stake_count = 0
+    stakes_scan = graph_service.list_nodes(type="stake", limit=10000)
+    for s in stakes_scan.get("items", []):
+        sprops = s.get("properties") or {}
+        if sprops.get("contributor_id") == contributor_id:
+            stake_count += 1
+
     balance_val: Optional[float] = None
     pct_val: Optional[float] = None
     if include_cc:
@@ -227,11 +275,11 @@ def get_portfolio_summary(contributor_id: str, include_cc: bool = True) -> Portf
             pass
 
     return PortfolioSummary(
-        contributor=_contributor_summary(node),
+        contributor=_contributor_summary(node, contributor_id),
         cc_balance=balance_val,
         cc_network_pct=pct_val,
         idea_contribution_count=len(idea_ids),
-        stake_count=0,
+        stake_count=stake_count,
         task_completion_count=task_count,
         recent_activity=recent,
     )

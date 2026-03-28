@@ -248,3 +248,23 @@ class FederatedAggregationMergeResult(BaseModel):
 class FederatedAggregationListResponse(BaseModel):
     """Response for GET /api/federation/aggregates."""
     aggregates: list[FederatedAggregationMergeResult]
+
+
+# ---------------------------------------------------------------------------
+# Marketplace federated payload types (Spec 121)
+# ---------------------------------------------------------------------------
+
+MARKETPLACE_PAYLOAD_TYPES = frozenset({
+    "MARKETPLACE_LISTING",
+    "MARKETPLACE_FORK",
+})
+
+
+class MarketplaceFederatedPayload(BaseModel):
+    """Federated payload envelope for marketplace sync (spec 121)."""
+
+    type: str = Field(description="MARKETPLACE_LISTING or MARKETPLACE_FORK")
+    source_instance_id: str = Field(min_length=1)
+    sent_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    listing_id: str = Field(min_length=1)
+    data: dict = Field(default_factory=dict, description="Full listing or fork payload")

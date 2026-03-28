@@ -17,11 +17,13 @@ class IdeaServiceContract:
             version="1.0.0",
             description=(
                 "Manages the idea portfolio: CRUD, scoring, stage advancement, "
-                "governance health, showcase, resonance feed, forking, and staking."
+                "governance health, showcase, resonance feeds, concept resonance, "
+                "forking, and staking."
             ),
             capabilities=[
                 "list_ideas",
                 "get_idea",
+                "get_concept_resonance_matches",
                 "create_idea",
                 "update_idea",
                 "add_question",
@@ -48,6 +50,7 @@ class IdeaServiceContract:
                 "GET /api/ideas/health",
                 "GET /api/ideas/showcase",
                 "GET /api/ideas/resonance",
+                "GET /api/ideas/{idea_id}/concept-resonance",
                 "GET /api/ideas/selection-ab/stats",
                 "POST /api/ideas/select",
                 "GET /api/ideas/count",
