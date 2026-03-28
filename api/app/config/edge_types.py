@@ -87,7 +87,8 @@ EDGE_TYPE_FAMILIES: list[dict] = [
         "types": [
             {"slug": "contributes-to", "description": "A person or agent adds work", "canonical": True},
             {"slug": "funded-by", "description": "Financial or resource backing", "canonical": True},
-            {"slug": "inspired-by", "description": "Non-causal conceptual origin", "canonical": True},
+            {"slug": "inspired-by", "description": "Non-causal conceptual origin (reverse: inspires)", "canonical": True},
+            {"slug": "inspires", "description": "Active: this node inspires another (forward of inspired-by)", "canonical": True},
             {"slug": "referenced-by", "description": "Cited or mentioned", "canonical": True},
             {"slug": "challenges", "description": "Poses a question or problem", "canonical": True},
             {"slug": "validates", "description": "Provides evidence for", "canonical": True},
@@ -95,6 +96,14 @@ EDGE_TYPE_FAMILIES: list[dict] = [
             {"slug": "analogous-to", "description": "Shares structural pattern without causation", "canonical": True},
             {"slug": "depends-on", "description": "Requires in order to function", "canonical": True},
             {"slug": "precondition-of", "description": "Must exist first", "canonical": True},
+        ],
+    },
+    {
+        "name": "Fractal / Hierarchy",
+        "slug": "fractal",
+        "types": [
+            {"slug": "parent-of", "description": "Direct hierarchical containment — this node contains the target as a sub-node", "canonical": True},
+            {"slug": "child-of", "description": "Inverse of parent-of — this node is contained within the source node", "canonical": True},
         ],
     },
 ]

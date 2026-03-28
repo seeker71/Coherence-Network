@@ -95,6 +95,7 @@ const COMMANDS = {
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
   meta:          () => handleMeta(args),
+  beliefs:       () => handleBeliefs(args),
   help:          () => showHelp(),
 };
 
@@ -351,6 +352,16 @@ async function handleDif(args) {
   }
 }
 
+async function handleBeliefs(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "set":         return setBeliefAxis(args.slice(1));
+    case "add-concept": return addBeliefConcept(args.slice(1));
+    case "match":       return matchBeliefs(args.slice(1));
+    default:            return showBeliefs(args);
+  }
+}
+
 async function handleTrace(args) {
   const sub = args[0];
   switch (sub) {
@@ -419,6 +430,12 @@ function showHelp() {
   contributors [limit]    List contributors
   contributor <id>        View contributor detail
   contributor <id> contributions  View contributions
+
+\x1b[1mBeliefs (spec-169):\x1b[0m
+  beliefs [id]            Show belief profile (yours or a contributor's)
+  beliefs set <axis> <v>  Set a worldview axis value (0.0–1.0)
+  beliefs add-concept <id> <v>  Add concept resonance
+  beliefs match <idea_id> [--verbose]  Resonance score vs an idea
 
 \x1b[1mTasks (agent work protocol):\x1b[0m
   tasks [status] [limit]  List tasks (pending, running, completed)

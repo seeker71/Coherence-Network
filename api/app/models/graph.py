@@ -6,11 +6,12 @@ Type-specific fields live in `properties` (JSONB). The schema is:
     nodes: id, type, name, description, properties, phase, created_at, updated_at
     edges: id, from_id, to_id, type, properties, strength, created_by, created_at
 
-Node types: idea, concept, contributor, spec, task, asset, news_item,
-            federation_node, axis, frequency, message, measurement
+Node types: idea, concept, contributor, spec, implementation, service, domain,
+            task, asset, news_item, federation_node, axis, frequency, message, measurement
 
-Edge types: the 46 relationship types from Living Codex ontology,
-            plus operational types (contributes_to, claimed_by, funded_by, etc.)
+Edge types: canonical types from Living Codex ontology + fractal hierarchy types
+            (inspires, parent-of, child-of added in spec-169).
+            Full registry: api/app/config/edge_types.py
 """
 
 from __future__ import annotations
@@ -45,11 +46,19 @@ from app.services.unified_db import Base
 
 
 class NodeType(str, Enum):
-    """All entity types in the system."""
+    """All entity types in the system.
+
+    Canonical metadata (description, allowed phases, fractal flag) is in
+    api/app/config/node_types.py (NODE_TYPE_REGISTRY).
+    Spec 169 additions: IMPLEMENTATION, SERVICE, DOMAIN.
+    """
     IDEA = "idea"
     CONCEPT = "concept"
     CONTRIBUTOR = "contributor"
     SPEC = "spec"
+    IMPLEMENTATION = "implementation"   # concrete realisation of a spec
+    SERVICE = "service"                 # running software service or API
+    DOMAIN = "domain"                   # bounded context grouping related nodes
     TASK = "task"
     ASSET = "asset"
     NEWS_ITEM = "news_item"
