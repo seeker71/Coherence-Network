@@ -2,11 +2,31 @@
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Any
+from typing import Any, Optional
 
 from app.services import concept_service
 
 router = APIRouter()
+
+
+class ConceptCreate(BaseModel):
+    id: str
+    name: str
+    description: str
+    typeId: Optional[str] = None
+    level: Optional[int] = 2
+    keywords: Optional[list[str]] = None
+    axes: Optional[list[str]] = None
+    userDefined: bool = True
+
+
+class ConceptPatch(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    typeId: Optional[str] = None
+    level: Optional[int] = None
+    keywords: Optional[list[str]] = None
+    axes: Optional[list[str]] = None
 
 
 class EdgeCreate(BaseModel):
@@ -52,6 +72,14 @@ async def list_axes():
     return concept_service.list_axes()
 
 
+@router.post("/concepts", status_code=201)
+async def create_concept(body: ConceptCreate):
+    """Create a new user-defined concept."""
+    if concept_service.get_concept(body.id):
+        raise HTTPException(status_code=409, detail=f"Concept '{body.id}' already exists")
+    return concept_service.create_concept(body.model_dump())
+
+
 @router.get("/concepts/{concept_id}")
 async def get_concept(concept_id: str):
     """Get a single concept by ID."""
@@ -59,6 +87,28 @@ async def get_concept(concept_id: str):
     if not concept:
         raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
     return concept
+
+
+@router.patch("/concepts/{concept_id}")
+async def patch_concept(concept_id: str, body: ConceptPatch):
+    """Update a user-defined concept."""
+    concept = concept_service.get_concept(concept_id)
+    if not concept:
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    if not concept.get("userDefined"):
+        raise HTTPException(status_code=403, detail="Built-in ontology concepts cannot be modified")
+    return concept_service.patch_concept(concept_id, body.model_dump(exclude_none=True))
+
+
+@router.delete("/concepts/{concept_id}", status_code=204)
+async def delete_concept(concept_id: str):
+    """Delete a user-defined concept."""
+    concept = concept_service.get_concept(concept_id)
+    if not concept:
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    if not concept.get("userDefined"):
+        raise HTTPException(status_code=403, detail="Built-in ontology concepts cannot be deleted")
+    concept_service.delete_concept(concept_id)
 
 
 @router.get("/concepts/{concept_id}/edges")
@@ -69,7 +119,7 @@ async def get_concept_edges(concept_id: str):
     return concept_service.get_concept_edges(concept_id)
 
 
-@router.post("/concepts/{concept_id}/edges")
+@router.post("/concepts/{concept_id}/edges", status_code=201)
 async def create_edge(concept_id: str, body: EdgeCreate):
     """Create a new edge from this concept to another."""
     if not concept_service.get_concept(concept_id):
@@ -82,3 +132,11 @@ async def create_edge(concept_id: str, body: EdgeCreate):
         rel_type=body.relationship_type,
         created_by=body.created_by,
     )
+
+
+@router.get("/concepts/{concept_id}/related")
+async def get_related(concept_id: str):
+    """Get ideas and specs tagged with this concept."""
+    if not concept_service.get_concept(concept_id):
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    return concept_service.get_related_items(concept_id)
