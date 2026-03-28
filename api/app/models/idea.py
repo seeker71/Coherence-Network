@@ -72,6 +72,7 @@ class Idea(BaseModel):
     parent_idea_id: Optional[str] = None
     child_idea_ids: list[str] = Field(default_factory=list)
     stage: IdeaStage = IdeaStage.NONE
+    tags: list[str] = Field(default_factory=list, description="Normalized slug tags for filtering and discovery")
     value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
@@ -172,6 +173,7 @@ class IdeaCreate(BaseModel):
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     interfaces: list[str] = Field(default_factory=list)
     open_questions: list[IdeaQuestionCreate] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list, description="Optional tags; normalized at write time")
     # Optional fields for full-fidelity seeding
     actual_value: Optional[float] = Field(default=None, ge=0.0)
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
@@ -250,3 +252,25 @@ class ProgressDashboard(BaseModel):
     completion_pct: float = 0.0
     by_stage: dict[str, StageBucket] = Field(default_factory=dict)
     snapshot_at: str = Field(description="ISO 8601 UTC timestamp")
+
+
+class IdeaTagUpdateRequest(BaseModel):
+    """Request body for PUT /api/ideas/{idea_id}/tags."""
+    tags: list[str] = Field(default_factory=list)
+
+
+class IdeaTagUpdateResponse(BaseModel):
+    """Response for PUT /api/ideas/{idea_id}/tags."""
+    id: str
+    tags: list[str]
+
+
+class IdeaTagCatalogEntry(BaseModel):
+    """A single entry in the tag catalog with count."""
+    tag: str
+    idea_count: int = Field(ge=1)
+
+
+class IdeaTagCatalogResponse(BaseModel):
+    """Response for GET /api/ideas/tags."""
+    tags: list[IdeaTagCatalogEntry]
