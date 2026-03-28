@@ -75,6 +75,7 @@ class Idea(BaseModel):
     value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
+    tags: list[str] = Field(default_factory=list, description="Normalized tags for categorization (spec 129)")
 
 
 class IdeaWithScore(Idea):
@@ -172,6 +173,7 @@ class IdeaCreate(BaseModel):
     confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     interfaces: list[str] = Field(default_factory=list)
     open_questions: list[IdeaQuestionCreate] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list, description="Optional tags; normalized at write time")
     # Optional fields for full-fidelity seeding
     actual_value: Optional[float] = Field(default=None, ge=0.0)
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
@@ -250,3 +252,27 @@ class ProgressDashboard(BaseModel):
     completion_pct: float = 0.0
     by_stage: dict[str, StageBucket] = Field(default_factory=dict)
     snapshot_at: str = Field(description="ISO 8601 UTC timestamp")
+
+
+# ── Tag management (spec 129) ─────────────────────────────────────────────────
+
+class IdeaTagCatalogEntry(BaseModel):
+    """A single tag in the catalog with its usage count."""
+    tag: str
+    idea_count: int = Field(ge=1)
+
+
+class IdeaTagCatalogResponse(BaseModel):
+    """All normalized tags across ideas with per-tag idea counts."""
+    tags: list[IdeaTagCatalogEntry] = Field(default_factory=list)
+
+
+class IdeaTagUpdateRequest(BaseModel):
+    """Body for PUT /api/ideas/{idea_id}/tags — replaces the full tag set."""
+    tags: list[str] = Field(default_factory=list)
+
+
+class IdeaTagUpdateResponse(BaseModel):
+    """Confirmation of a tag update operation."""
+    id: str
+    tags: list[str] = Field(default_factory=list)

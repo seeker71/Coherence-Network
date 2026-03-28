@@ -34,6 +34,9 @@ from app.models.idea import (
     IdeaShowcaseResponse,
     IdeaSelectionResult,
     IdeaStage,
+    IdeaTagCatalogEntry,
+    IdeaTagCatalogResponse,
+    IdeaTagUpdateResponse,
     IdeaType,
     PaginationInfo,
     ProgressDashboard,
@@ -49,10 +52,49 @@ from app.models.idea import (
 from app.models.audit_ledger import AuditEntryCreate, AuditEntryType
 from app.services import audit_ledger_service
 from app.services import idea_graph_adapter as idea_registry_service  # Graph-backed
+from app.services import idea_registry_service as _tag_store  # SQLAlchemy tag persistence
 from app.services import commit_evidence_service
 from app.services import runtime_service
 from app.services import spec_registry_service
 from app.services import value_lineage_service
+
+
+_TAG_SLUG_PATTERN = re.compile(r"[^a-z0-9-]")
+
+
+def normalize_tags(raw_tags: list[str]) -> list[str]:
+    """Normalize tags: trim, lowercase, slugify, deduplicate, sort ascending."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in raw_tags:
+        tag = raw.strip().lower()
+        tag = re.sub(r"\s+", "-", tag)
+        tag = _TAG_SLUG_PATTERN.sub("", tag)
+        tag = tag.strip("-")
+        if tag and tag not in seen:
+            seen.add(tag)
+            result.append(tag)
+    return sorted(result)
+
+
+def validate_raw_tags(raw_tags: list[str]) -> tuple[list[str], bool]:
+    """Validate and normalize tags. Returns (normalized, is_valid).
+
+    is_valid is False when a non-empty raw tag normalizes to empty string.
+    """
+    normalized = []
+    for raw in raw_tags:
+        stripped = raw.strip()
+        if not stripped:
+            continue  # silently drop empty/whitespace-only tags
+        tag = stripped.lower()
+        tag = re.sub(r"\s+", "-", tag)
+        tag = _TAG_SLUG_PATTERN.sub("", tag)
+        tag = tag.strip("-")
+        if not tag:
+            return [], False  # non-empty raw → empty after normalization = invalid
+        normalized.append(tag)
+    return normalize_tags(normalized), True
 
 
 # Known internal idea IDs — these were previously loaded from derived_metadata
@@ -598,6 +640,16 @@ def _read_ideas(*, persist_ensures: bool = False) -> list[Idea]:
 
     ideas = idea_registry_service.load_ideas()
 
+    # Overlay tags from the SQLAlchemy tag store
+    try:
+        all_tags = _tag_store.load_all_idea_tags()
+        if all_tags:
+            for idea in ideas:
+                if idea.id in all_tags:
+                    idea.tags = all_tags[idea.id]
+    except Exception:
+        pass  # Non-fatal: ideas load without tags if tag table unavailable
+
     # Runtime discovery: find idea IDs referenced in evidence/specs/lineage
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)
     ideas, domain_changed = _ensure_registry_domain_idea_entries(ideas)
@@ -859,16 +911,21 @@ def list_ideas(
     include_internal: bool = True,
     read_only_guard: bool = False,
     sort_method: str = "free_energy",
+    tags_filter: list[str] | None = None,
 ) -> IdeaPortfolioResponse:
     """When read_only_guard=True, ensure logic is applied in memory but not persisted (for invariant/guard runs).
 
     sort_method: "free_energy" (default, Method A) or "marginal_cc" (Method B).
+    tags_filter: when provided, only return ideas that carry ALL of the given normalized tags.
     """
     ideas = _read_ideas(persist_ensures=not read_only_guard)
     if not include_internal:
         ideas = [i for i in ideas if not is_internal_idea_id(i.id, i.interfaces)]
     if only_unvalidated:
         ideas = [i for i in ideas if i.manifestation_status != ManifestationStatus.VALIDATED]
+    if tags_filter:
+        required = set(tags_filter)
+        ideas = [i for i in ideas if required.issubset(set(i.tags))]
 
     scored = [_with_score(i) for i in ideas]
     if sort_method == "marginal_cc":
@@ -942,10 +999,13 @@ def create_idea(
     child_idea_ids: list[str] | None = None,
     manifestation_status: ManifestationStatus | None = None,
     value_basis: dict[str, str] | None = None,
+    tags: list[str] | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas(persist_ensures=True)
     if any(existing.id == idea_id for existing in ideas):
         return None
+
+    normalized_tags = normalize_tags(tags or [])
 
     idea = Idea(
         id=idea_id,
@@ -962,6 +1022,7 @@ def create_idea(
         parent_idea_id=parent_idea_id,
         child_idea_ids=child_idea_ids or [],
         value_basis=value_basis,
+        tags=normalized_tags,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(
@@ -976,7 +1037,39 @@ def create_idea(
     ideas.append(idea)
     ideas, _ = _ensure_standing_questions(ideas)
     _write_ideas(ideas)
+
+    # Persist tags to the SQLAlchemy tag store
+    if normalized_tags:
+        try:
+            _tag_store.set_idea_tags(idea_id, normalized_tags)
+        except Exception:
+            pass  # Non-fatal; tags are already on the in-memory idea
+
     return _with_score(idea)
+
+
+def set_idea_tags(idea_id: str, tags: list[str]) -> IdeaTagUpdateResponse | None:
+    """Replace the full tag set for an idea. Returns None if idea not found.
+
+    Tags are already expected to be normalized; this function persists them.
+    """
+    found = any(i.id == idea_id for i in _read_ideas())
+    if not found:
+        return None
+    _tag_store.set_idea_tags(idea_id, tags)
+    _invalidate_ideas_cache()
+    return IdeaTagUpdateResponse(id=idea_id, tags=tags)
+
+
+def get_tag_catalog() -> IdeaTagCatalogResponse:
+    """Return the full normalized tag catalog with idea counts."""
+    counts = _tag_store.get_all_tag_counts()
+    entries = [
+        IdeaTagCatalogEntry(tag=tag, idea_count=count)
+        for tag, count in sorted(counts.items())
+        if count >= 1
+    ]
+    return IdeaTagCatalogResponse(tags=entries)
 
 
 def add_question(
