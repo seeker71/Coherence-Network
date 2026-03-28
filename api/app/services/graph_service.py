@@ -15,11 +15,62 @@ from typing import Any
 from sqlalchemy import and_, func, or_, text
 from sqlalchemy.exc import IntegrityError
 
-from app.models.graph import Edge, Node
+from app.models.graph import (
+    Edge, Node,
+    CANONICAL_EDGE_TYPE_SET, CANONICAL_NODE_TYPE_SET,
+    LIFECYCLE_DEFAULTS, SYMMETRIC_EDGE_TYPES,
+)
 from app.services.unified_db import session
 from app.config.edge_types import CANONICAL_EDGE_TYPES
 
 log = logging.getLogger(__name__)
+
+_VALID_EDGE_TYPES_MSG = (
+    "Valid types: inspires, depends-on, implements, contradicts, extends, analogous-to, parent-of"
+)
+
+_VALID_LIFECYCLE_STATES = frozenset({"gas", "ice", "water"})
+
+
+# ── Spec 169: Semantic validation helpers ────────────────────────────
+
+
+def validate_node_type(node_type: str) -> None:
+    """Raise ValueError if node_type is not in the canonical 10-type vocabulary."""
+    if node_type not in CANONICAL_NODE_TYPE_SET:
+        raise ValueError(
+            f"node_type '{node_type}' is not a recognized node type. "
+            f"See /api/graph/node-types for valid values."
+        )
+
+
+def validate_edge_type(edge_type: str) -> None:
+    """Raise ValueError if edge_type is not in the canonical 7-type vocabulary."""
+    if edge_type not in CANONICAL_EDGE_TYPE_SET:
+        raise ValueError(
+            f"edge_type '{edge_type}' is not a recognized edge type. {_VALID_EDGE_TYPES_MSG}."
+        )
+
+
+def validate_no_self_loop(from_id: str, to_id: str) -> None:
+    """Raise ValueError if from_id == to_id."""
+    if from_id == to_id:
+        raise ValueError(
+            "Self-loop edges are not allowed: from_node_id and to_node_id must be different."
+        )
+
+
+def validate_lifecycle_state(state: str) -> None:
+    """Raise ValueError if lifecycle state is not gas/ice/water."""
+    if state not in _VALID_LIFECYCLE_STATES:
+        raise ValueError(
+            f"lifecycle_state '{state}' is not valid. Must be one of: gas, ice, water."
+        )
+
+
+def get_lifecycle_default(node_type: str) -> str:
+    """Return the default lifecycle state for a given node type."""
+    return LIFECYCLE_DEFAULTS.get(node_type, "gas")
 
 
 # ── Node CRUD ────────────────────────────────────────────────────────
@@ -32,9 +83,31 @@ def create_node(
     name: str,
     description: str = "",
     properties: dict[str, Any] | None = None,
-    phase: str = "water",
+    phase: str | None = None,
+    strict: bool = False,
 ) -> dict[str, Any]:
-    """Create a node. Returns the node dict."""
+    """Create a node. Returns the node dict.
+
+    When strict=True, validates node_type against the canonical vocabulary (Spec 169).
+    If phase is not provided, defaults based on node type (canonical types only).
+    """
+    if strict:
+        validate_node_type(type)
+
+    props = dict(properties or {})
+
+    # Apply lifecycle default for canonical node types if not explicitly set
+    if type in CANONICAL_NODE_TYPE_SET:
+        if "lifecycle_state" not in props:
+            props["lifecycle_state"] = get_lifecycle_default(type)
+        else:
+            validate_lifecycle_state(props["lifecycle_state"])
+
+    # Derive phase from lifecycle_state for canonical types
+    effective_phase = phase
+    if effective_phase is None:
+        effective_phase = props.get("lifecycle_state", "water")
+
     node_id = id or str(uuid.uuid4())[:12]
     with session() as s:
         node = Node(
@@ -42,8 +115,8 @@ def create_node(
             type=type,
             name=name,
             description=description,
-            properties=properties or {},
-            phase=phase,
+            properties=props,
+            phase=effective_phase,
         )
         s.add(node)
         try:
@@ -158,8 +231,17 @@ def create_edge(
     properties: dict[str, Any] | None = None,
     strength: float = 1.0,
     created_by: str = "system",
+    strict: bool = False,
 ) -> dict[str, Any]:
-    """Create an edge between two nodes."""
+    """Create an edge between two nodes.
+
+    When strict=True, validates edge_type against the canonical vocabulary and
+    prevents self-loops (Spec 169).
+    """
+    if strict:
+        validate_edge_type(type)
+        validate_no_self_loop(from_id, to_id)
+
     edge_id = str(uuid.uuid4())[:12]
     with session() as s:
         edge = Edge(
@@ -234,23 +316,42 @@ def get_neighbors(
     edge_type: str | None = None,
     node_type: str | None = None,
     depth: int = 1,
+    direction: str = "both",
+    lifecycle_state: str | None = None,
 ) -> list[dict[str, Any]]:
     """Get neighboring nodes (1 hop by default).
 
-    Optionally filter by edge type and/or neighbor node type.
+    Optionally filter by edge type, node type, direction, and lifecycle_state.
+    direction: 'outgoing', 'incoming', or 'both' (default)
+    lifecycle_state: 'gas', 'ice', or 'water' (Spec 169)
     """
+    if lifecycle_state is not None:
+        validate_lifecycle_state(lifecycle_state)
+
     with session() as s:
-        # Get connected node IDs
-        edge_q = s.query(Edge).filter(
-            or_(Edge.from_id == node_id, Edge.to_id == node_id)
-        )
+        # Get connected node IDs via edges in the requested direction
+        if direction == "outgoing":
+            edge_q = s.query(Edge).filter(Edge.from_id == node_id)
+        elif direction == "incoming":
+            edge_q = s.query(Edge).filter(Edge.to_id == node_id)
+        else:
+            edge_q = s.query(Edge).filter(
+                or_(Edge.from_id == node_id, Edge.to_id == node_id)
+            )
+
         if edge_type:
             edge_q = edge_q.filter(Edge.type == edge_type)
 
         neighbor_ids = set()
+        neighbor_edge_map: dict[str, dict] = {}
         for edge in edge_q.all():
             other = edge.to_id if edge.from_id == node_id else edge.from_id
             neighbor_ids.add(other)
+            if other not in neighbor_edge_map:
+                neighbor_edge_map[other] = {
+                    "edge_type": edge.type,
+                    "direction": "outgoing" if edge.from_id == node_id else "incoming",
+                }
 
         if not neighbor_ids:
             return []
@@ -260,7 +361,19 @@ def get_neighbors(
         if node_type:
             node_q = node_q.filter(Node.type == node_type)
 
-        return [n.to_dict() for n in node_q.all()]
+        neighbors = []
+        for n in node_q.all():
+            if lifecycle_state is not None:
+                node_lifecycle = (n.properties or {}).get("lifecycle_state", n.phase)
+                if node_lifecycle != lifecycle_state:
+                    continue
+            d = n.to_dict()
+            edge_ctx = neighbor_edge_map.get(n.id, {})
+            d["via_edge_type"] = edge_ctx.get("edge_type")
+            d["via_direction"] = edge_ctx.get("direction")
+            neighbors.append(d)
+
+        return neighbors
 
 
 def get_path(from_id: str, to_id: str, max_depth: int = 5) -> list[dict[str, Any]] | None:
@@ -535,4 +648,106 @@ def get_stats() -> dict[str, Any]:
             "total_edges": sum(c for _, c in edge_counts),
             "nodes_by_type": {t: c for t, c in node_counts},
             "edges_by_type": {t: c for t, c in sorted(edge_counts, key=lambda x: -x[1])[:20]},
+        }
+
+
+# ── Spec 169: Registry + Proof endpoints ────────────────────────────
+
+
+def get_node_type_registry() -> dict[str, Any]:
+    """Return the canonical node type registry (10 types from Spec 169)."""
+    import json as _json
+    import os as _os
+    registry_path = _os.path.join(
+        _os.path.dirname(_os.path.dirname(_os.path.dirname(__file__))),
+        "config", "node_type_registry.json",
+    )
+    try:
+        with open(registry_path) as f:
+            return _json.load(f)
+    except (FileNotFoundError, Exception) as e:
+        log.warning("Could not load node_type_registry.json: %s", e)
+        return {"node_types": []}
+
+
+def get_edge_type_registry() -> dict[str, Any]:
+    """Return the canonical edge type registry (7 types from Spec 169)."""
+    import json as _json
+    import os as _os
+    registry_path = _os.path.join(
+        _os.path.dirname(_os.path.dirname(_os.path.dirname(__file__))),
+        "config", "edge_type_registry.json",
+    )
+    try:
+        with open(registry_path) as f:
+            return _json.load(f)
+    except (FileNotFoundError, Exception) as e:
+        log.warning("Could not load edge_type_registry.json: %s", e)
+        return {"edge_types": []}
+
+
+def get_proof() -> dict[str, Any]:
+    """Return aggregate proof that the graph is functioning as the fractal data layer.
+
+    Spec 169 §GET /api/graph/proof — must return 200 even on empty graph.
+    """
+    with session() as s:
+        node_counts = s.query(Node.type, func.count(Node.id)).group_by(Node.type).all()
+        edge_counts = s.query(Edge.type, func.count(Edge.id)).group_by(Edge.type).all()
+
+        total_nodes = sum(c for _, c in node_counts)
+        total_edges = sum(c for _, c in edge_counts)
+        nodes_by_type = {t: c for t, c in node_counts}
+        edges_by_type = {t: c for t, c in edge_counts}
+
+        # Lifecycle distribution — count nodes per lifecycle_state in payload
+        lifecycle_dist: dict[str, int] = {"gas": 0, "ice": 0, "water": 0}
+        all_nodes = s.query(Node).all()
+        for n in all_nodes:
+            ls = (n.properties or {}).get("lifecycle_state", n.phase)
+            if ls in lifecycle_dist:
+                lifecycle_dist[ls] += 1
+            else:
+                lifecycle_dist[ls] = lifecycle_dist.get(ls, 0) + 1
+
+        # Graph density: edges / (nodes * (nodes-1))
+        density = 0.0
+        if total_nodes > 1:
+            density = total_edges / (total_nodes * (total_nodes - 1))
+
+        # Average degree
+        avg_degree = (2 * total_edges / total_nodes) if total_nodes > 0 else 0.0
+
+        # Last edge created
+        last_edge = s.query(Edge).order_by(Edge.created_at.desc()).first()
+        last_edge_ts = last_edge.created_at.isoformat() if last_edge and last_edge.created_at else None
+
+        # Coverage: ideas with spec, specs with impl, impls with tests (via edges)
+        idea_count = nodes_by_type.get("idea", 0)
+        spec_count = nodes_by_type.get("spec", 0)
+        impl_count = nodes_by_type.get("implementation", 0)
+
+        ideas_with_spec_edges = s.query(Edge).filter(
+            Edge.type.in_(["implements", "inspires", "depends-on"])
+        ).count()
+        specs_with_impl_edges = s.query(Edge).filter(Edge.type == "implements").count()
+        artifact_count = nodes_by_type.get("artifact", 0)
+
+        def safe_pct(num: int, denom: int) -> float:
+            return round(min(num / denom, 1.0), 3) if denom > 0 else 0.0
+
+        return {
+            "total_nodes": total_nodes,
+            "total_edges": total_edges,
+            "nodes_by_type": nodes_by_type,
+            "edges_by_type": edges_by_type,
+            "lifecycle_distribution": lifecycle_dist,
+            "graph_density": round(density, 6),
+            "average_degree": round(avg_degree, 3),
+            "last_edge_created_at": last_edge_ts,
+            "coverage_pct": {
+                "ideas_with_spec": safe_pct(ideas_with_spec_edges, idea_count),
+                "specs_with_impl": safe_pct(specs_with_impl_edges, spec_count),
+                "impls_with_test": safe_pct(artifact_count, impl_count),
+            },
         }

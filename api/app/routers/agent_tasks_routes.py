@@ -2,7 +2,7 @@
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
@@ -112,6 +112,70 @@ async def list_tasks(
         if runtime_fallback_backfill > 0
         else None,
     )
+
+
+@router.get("/reap-history")
+async def get_reap_history(
+    idea_id: Optional[str] = Query(None),
+    needs_attention: Optional[bool] = Query(None),
+    limit: int = Query(50, ge=1, le=200),
+) -> dict:
+    """Return per-idea reap summary for the last 30 days (Spec 169 R7).
+
+    Aggregates timed_out tasks grouped by (idea_id, task_type).
+    Each item includes timeout_count, last_reaped_at, needs_human_attention,
+    last_error_class, and last_partial_output_pct.
+    """
+    from app.services.smart_reap_service import aggregate_reap_history
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+
+    # Fetch all timed_out tasks within 30 days (up to 500)
+    raw = agent_service.list_tasks(status="timed_out", limit=500, offset=0)
+    if isinstance(raw, tuple):
+        timed_out_tasks, *_ = raw
+    else:
+        timed_out_tasks = raw
+
+    # Filter to last 30 days
+    def _within_30_days(t: dict) -> bool:
+        updated = t.get("updated_at") or t.get("created_at") or ""
+        return str(updated) >= cutoff
+
+    timed_out_tasks = [t for t in timed_out_tasks if _within_30_days(t)]
+
+    items = aggregate_reap_history(
+        timed_out_tasks,
+        idea_id_filter=idea_id,
+        needs_attention_filter=needs_attention,
+        limit=limit,
+    )
+    return {"items": items, "total": len(items)}
+
+
+@router.get(
+    "/tasks/{task_id}/reap-diagnosis",
+    responses={404: {"description": "Task not reaped or not found", "model": ErrorDetail}},
+)
+async def get_reap_diagnosis(task_id: str) -> dict:
+    """Return the reap_diagnosis sub-object for a reaped task (Spec 169 R9).
+
+    Returns 404 if the task was never reaped or has no diagnosis.
+    """
+    task = agent_service.get_task(task_id)
+    if task is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Task {task_id} has no reap diagnosis (never reaped or not found)",
+        )
+    ctx = task.get("context") or {}
+    diagnosis = ctx.get("reap_diagnosis")
+    if not diagnosis:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Task {task_id} has no reap diagnosis (never reaped or not found)",
+        )
+    return {"task_id": task_id, **diagnosis}
 
 
 @router.get("/tasks/attention")

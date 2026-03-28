@@ -3057,14 +3057,121 @@ _MAX_RETRIES_PER_IDEA_PHASE = 2
 
 
 def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
-    """Time out stale tasks, diagnose the failure, and retry with a different provider.
+    """Smart reap: diagnose why tasks are stuck, capture partial work, resume from checkpoint.
 
-    For each reaped task:
-    1. Mark as timed_out with diagnosis
-    2. Check retry count for this idea+phase
-    3. If under limit, create a retry task with a different provider hint
-    4. If over limit, record a friction event
+    Spec 169 — replaces blind timed_out with diagnostic-first reaping:
+    1. Query runner registry to check liveness before reaping
+    2. Extend timeout for live runners (up to 2 times)
+    3. Capture partial output from on-disk log if runner crashed
+    4. Write structured reap_diagnosis into task context
+    5. Create resume task when partial output >= 20%
+    6. Track per-idea timeout count; flag needs_human_attention after 3 failures
     """
+    import sys as _sys
+    # Import smart_reap_service from the API package
+    _api_dir = str(_API_DIR)
+    if _api_dir not in _sys.path:
+        _sys.path.insert(0, _api_dir)
+    try:
+        from app.services.smart_reap_service import smart_reap_task
+    except ImportError as _e:
+        log.warning("REAPER: could not import smart_reap_service (%s) — falling back to legacy reap", _e)
+        return _legacy_reap_stale_tasks(max_age_minutes)
+
+    tasks_data = api("GET", "/api/agent/tasks?status=running&limit=100")
+    if not tasks_data:
+        return 0
+    task_list = tasks_data if isinstance(tasks_data, list) else tasks_data.get("tasks", [])
+
+    # Filter to tasks that have exceeded the age threshold
+    now = datetime.now(timezone.utc)
+    stale_tasks = []
+    for t in task_list:
+        created = t.get("created_at", "")
+        if not created:
+            continue
+        try:
+            dt = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                from datetime import timezone as _tz
+                dt = dt.replace(tzinfo=_tz.utc)
+            age_min = (now - dt).total_seconds() / 60
+        except Exception:
+            continue
+        if age_min > max_age_minutes:
+            stale_tasks.append(t)
+
+    if not stale_tasks:
+        return 0
+
+    # Fetch runner registry for liveness checks
+    runners: list[dict] = []
+    try:
+        runners_data = api("GET", "/api/agent/runners?limit=100")
+        if runners_data:
+            if isinstance(runners_data, list):
+                runners = runners_data
+            elif isinstance(runners_data, dict):
+                runners = runners_data.get("runners", []) or runners_data.get("items", [])
+    except Exception as _re:
+        log.warning("REAPER: could not fetch runners for liveness check: %s", _re)
+
+    # Fetch recent timed_out tasks for per-idea history (R6)
+    timed_out_tasks: list[dict] = []
+    try:
+        to_data = api("GET", "/api/agent/tasks?status=timed_out&limit=200")
+        if to_data:
+            timed_out_tasks = to_data if isinstance(to_data, list) else to_data.get("tasks", [])
+    except Exception:
+        pass
+
+    reaped = 0
+    for t in stale_tasks:
+        result = smart_reap_task(
+            t,
+            runners=runners,
+            timed_out_tasks=timed_out_tasks,
+            log_dir=_LOG_DIR / "tasks",
+            max_age_minutes=max_age_minutes,
+            api_fn=api,
+            send_alert_fn=None,  # Telegram integration via existing runner alert path
+        )
+        action = result.get("action")
+        if action == "reaped":
+            reaped += 1
+            # Also capture worktree checkpoint if available (preserves existing behaviour)
+            task_id = t.get("id", "")
+            slug = task_id[:16]
+            wt_path = _WORKTREE_BASE / f"task-{slug}"
+            if wt_path.exists():
+                checkpoint_file = wt_path / ".task-checkpoint.md"
+                if checkpoint_file.exists():
+                    try:
+                        cp = checkpoint_file.read_text(errors="replace")[:2000]
+                        log.info("REAPER: captured checkpoint for %s (%d chars)", slug, len(cp))
+                    except Exception:
+                        pass
+                try:
+                    diff_result = subprocess.run(
+                        ["git", "diff", "HEAD"],
+                        capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+                    )
+                    if diff_result.stdout.strip():
+                        patch_dir = _REPO_DIR / "api" / "task_patches"
+                        patch_dir.mkdir(parents=True, exist_ok=True)
+                        patch_file = patch_dir / f"task_{task_id}.patch"
+                        patch_file.write_text(diff_result.stdout)
+                        log.info("REAPER: saved %d-byte patch for %s", len(diff_result.stdout), slug)
+                except Exception:
+                    pass
+
+    if reaped:
+        log.info("REAPER: smart-reaped %d stale tasks", reaped)
+    return reaped
+
+
+def _legacy_reap_stale_tasks(max_age_minutes: int = 15) -> int:
+    """Fallback reaper used only if smart_reap_service fails to import."""
     tasks_data = api("GET", "/api/agent/tasks?status=running&limit=100")
     if not tasks_data:
         return 0
@@ -3094,18 +3201,7 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
         failed_provider = ctx.get("provider", "unknown")
         retry_count = int(ctx.get("retry_count", 0))
 
-        # Diagnose: check if we have a task log with partial output
         diagnosis = f"Stuck running for {int(age_min)}m (threshold {max_age_minutes}m)"
-        log_path = _LOG_DIR / f"task_{task_id}.log"
-        if log_path.exists():
-            try:
-                log_content = log_path.read_text(errors="replace")[-500:]
-                if "error" in log_content.lower() or "timeout" in log_content.lower():
-                    diagnosis += f" | Partial log: {log_content[-200:]}"
-            except Exception:
-                pass
-
-        # Reap the task
         result = api("PATCH", f"/api/agent/tasks/{task_id}", {
             "status": "timed_out",
             "output": f"Reaped: {diagnosis}",
@@ -3115,57 +3211,19 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
         if not result:
             continue
 
-        log.info("REAPER: timed out %s (%s, %dm, provider=%s, retries=%d) — %s",
+        log.info("REAPER(legacy): timed out %s (%s, %dm, provider=%s, retries=%d) — %s",
                  task_id[:16], task_type, int(age_min), failed_provider, retry_count, idea_name[:40])
         reaped += 1
 
-        # Capture checkpoint from worktree if it exists
-        checkpoint_summary = ""
-        resume_patch_path = ""
-        slug = task_id[:16]
-        wt_path = _WORKTREE_BASE / f"task-{slug}"
-        if wt_path.exists():
-            # Read checkpoint file
-            checkpoint_file = wt_path / ".task-checkpoint.md"
-            if checkpoint_file.exists():
-                try:
-                    checkpoint_summary = checkpoint_file.read_text(errors="replace")[:2000]
-                    log.info("REAPER: captured checkpoint for %s (%d chars)", slug, len(checkpoint_summary))
-                except Exception:
-                    pass
-
-            # Save git diff as a patch for resume
-            try:
-                diff_result = subprocess.run(
-                    ["git", "diff", "HEAD"],
-                    capture_output=True, text=True, timeout=10, cwd=str(wt_path),
-                )
-                if diff_result.stdout.strip():
-                    patch_dir = _REPO_DIR / "api" / "task_patches"
-                    patch_dir.mkdir(parents=True, exist_ok=True)
-                    patch_file = patch_dir / f"task_{task_id}.patch"
-                    patch_file.write_text(diff_result.stdout)
-                    resume_patch_path = str(patch_file)
-                    log.info("REAPER: saved %d-byte patch for %s", len(diff_result.stdout), slug)
-            except Exception:
-                pass
-
-        # Retry logic: create a new task for the same idea+phase with checkpoint context
         if idea_id and retry_count < _MAX_RETRIES_PER_IDEA_PHASE:
             direction = t.get("direction", ctx.get("direction", ""))
             if not direction:
                 direction = f"Retry: {task_type} for {idea_name}. Previous attempt timed out after {int(age_min)}m."
-
             retry_ctx = dict(ctx)
             retry_ctx["retry_count"] = retry_count + 1
             retry_ctx["retried_from"] = task_id
             retry_ctx["failed_provider"] = failed_provider
             retry_ctx["seed_source"] = "reaper_retry"
-            if checkpoint_summary:
-                retry_ctx["checkpoint_summary"] = checkpoint_summary
-            if resume_patch_path:
-                retry_ctx["resume_patch_path"] = resume_patch_path
-
             retry_result = api("POST", "/api/agent/tasks", {
                 "direction": direction,
                 "task_type": task_type,
@@ -3173,15 +3231,9 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
                 "target_state": t.get("target_state", f"{task_type.title()} completed for: {idea_name}"),
             })
             if retry_result and retry_result.get("id"):
-                log.info("REAPER: retried %s → %s (attempt %d/%d, excluding provider %s)",
-                         task_id[:16], retry_result["id"][:16], retry_count + 1,
-                         _MAX_RETRIES_PER_IDEA_PHASE, failed_provider)
-            else:
-                log.warning("REAPER: retry failed for %s", task_id[:16])
+                log.info("REAPER(legacy): retried %s → %s (attempt %d/%d)",
+                         task_id[:16], retry_result["id"][:16], retry_count + 1, _MAX_RETRIES_PER_IDEA_PHASE)
         elif idea_id:
-            log.warning("REAPER: max retries reached for %s (%s/%s) — recording friction",
-                        idea_name[:30], task_type, idea_id[:20])
-            # Record friction event
             api("POST", "/api/friction/events", {
                 "stage": task_type,
                 "block_type": "repeated_timeout",
@@ -3191,7 +3243,7 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
             })
 
     if reaped:
-        log.info("REAPER: cleaned %d stale tasks", reaped)
+        log.info("REAPER(legacy): cleaned %d stale tasks", reaped)
     return reaped
 
 

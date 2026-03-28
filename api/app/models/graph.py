@@ -8,9 +8,12 @@ Type-specific fields live in `properties` (JSONB). The schema is:
 
 Node types: idea, concept, contributor, spec, task, asset, news_item,
             federation_node, axis, frequency, message, measurement
+            (plus canonical types from Spec 169: implementation, service, domain,
+             pipeline-run, event, artifact)
 
 Edge types: the 46 relationship types from Living Codex ontology,
-            plus operational types (contributes_to, claimed_by, funded_by, etc.)
+            plus canonical 7 from Spec 169 (inspires, depends-on, implements,
+            contradicts, extends, analogous-to, parent-of)
 """
 
 from __future__ import annotations
@@ -18,6 +21,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
+
+from pydantic import BaseModel
 
 from sqlalchemy import (
     Column,
@@ -45,7 +50,7 @@ from app.services.unified_db import Base
 
 
 class NodeType(str, Enum):
-    """All entity types in the system."""
+    """All entity types in the system (legacy + canonical)."""
     IDEA = "idea"
     CONCEPT = "concept"
     CONTRIBUTOR = "contributor"
@@ -58,13 +63,119 @@ class NodeType(str, Enum):
     FREQUENCY = "frequency"
     MESSAGE = "message"
     MEASUREMENT = "measurement"
+    # Spec 169 canonical additions
+    IMPLEMENTATION = "implementation"
+    SERVICE = "service"
+    DOMAIN = "domain"
+    PIPELINE_RUN = "pipeline-run"
+    EVENT = "event"
+    ARTIFACT = "artifact"
+
+
+# Spec 169: canonical closed vocabulary for the semantic layer
+class CanonicalNodeType(str, Enum):
+    """10 canonical node types from Spec 169 — the typed semantic layer."""
+    IDEA = "idea"
+    CONCEPT = "concept"
+    SPEC = "spec"
+    IMPLEMENTATION = "implementation"
+    SERVICE = "service"
+    CONTRIBUTOR = "contributor"
+    DOMAIN = "domain"
+    PIPELINE_RUN = "pipeline-run"
+    EVENT = "event"
+    ARTIFACT = "artifact"
+
+
+class CanonicalEdgeType(str, Enum):
+    """7 canonical edge types from Spec 169 — minimal closed vocabulary."""
+    INSPIRES = "inspires"
+    DEPENDS_ON = "depends-on"
+    IMPLEMENTS = "implements"
+    CONTRADICTS = "contradicts"
+    EXTENDS = "extends"
+    ANALOGOUS_TO = "analogous-to"
+    PARENT_OF = "parent-of"
+
+
+class LifecycleState(str, Enum):
+    """Ice/Water/Gas lifecycle state for nodes (Spec 169)."""
+    GAS = "gas"      # Ideation phase — unformed, pre-specification
+    ICE = "ice"      # Specification phase — frozen potential, not yet implemented
+    WATER = "water"  # Active phase — being implemented, run, or used
 
 
 class NodePhase(str, Enum):
-    """Ice/Water/Gas lifecycle state."""
+    """Ice/Water/Gas lifecycle state (legacy alias — use LifecycleState for new code)."""
     ICE = "ice"          # stable, archived, reference
     WATER = "water"      # active, flowing, changing
     GAS = "gas"          # speculative, volatile, experimental
+
+
+# Lifecycle defaults per canonical node type (Spec 169 §Lifecycle States)
+LIFECYCLE_DEFAULTS: dict[str, str] = {
+    "idea": "gas",
+    "concept": "gas",
+    "spec": "ice",
+    "implementation": "water",
+    "service": "water",
+    "contributor": "water",
+    "domain": "ice",
+    "pipeline-run": "water",
+    "event": "water",
+    "artifact": "water",
+}
+
+# Symmetric canonical edge types (Spec 169)
+SYMMETRIC_EDGE_TYPES: frozenset[str] = frozenset({"contradicts", "analogous-to"})
+
+# Canonical edge type set for O(1) lookup
+CANONICAL_EDGE_TYPE_SET: frozenset[str] = frozenset(e.value for e in CanonicalEdgeType)
+
+# Canonical node type set for O(1) lookup
+CANONICAL_NODE_TYPE_SET: frozenset[str] = frozenset(n.value for n in CanonicalNodeType)
+
+
+# ── Pydantic response models for registry endpoints ──────────────────────────
+
+
+class NodeTypeEntry(BaseModel):
+    """One entry in the node-type registry (GET /api/graph/node-types)."""
+    type: str
+    description: str
+    lifecycle_default: str
+    payload_schema: dict[str, Any]
+    example_id: str
+
+
+class EdgeTypeEntry(BaseModel):
+    """One entry in the edge-type registry (GET /api/graph/edge-types)."""
+    type: str
+    description: str
+    symmetric: bool
+    direction_label: str
+    example: str
+
+
+class NodeTypeRegistry(BaseModel):
+    node_types: list[NodeTypeEntry]
+
+
+class EdgeTypeRegistry(BaseModel):
+    edge_types: list[EdgeTypeEntry]
+
+
+class GraphProof(BaseModel):
+    """Aggregate proof that the graph is functioning as the fractal data layer."""
+    total_nodes: int
+    total_edges: int
+    nodes_by_type: dict[str, int]
+    edges_by_type: dict[str, int]
+    lifecycle_distribution: dict[str, int]
+    graph_density: float
+    average_degree: float
+    last_edge_created_at: str | None
+    coverage_pct: dict[str, float]
 
 
 class Node(Base):

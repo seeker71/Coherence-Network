@@ -43,12 +43,14 @@ from app.routers import (
     treasury,
     value_lineage,
 )
+from app.routers import beliefs
 from app.routers import concepts
 from app.routers import dif_feedback
 from app.routers import edges as edges_router
 from app.routers import graph
 from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
+from app.routers import onboarding as onboarding_router
 from app.routers import pipeline
 from app.routers import provider_stats
 from app.routers import service_registry_router
@@ -561,6 +563,7 @@ app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
+app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
@@ -569,6 +572,13 @@ app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 # Discord bot vote endpoint (spec-164)
 from app.routers import discord_votes  # noqa: E402
 app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
+
+# Daily engagement brief (spec-171)
+from app.routers import brief as brief_router  # noqa: E402
+app.include_router(brief_router.router)
+
+# Identity-driven onboarding - TOFU MVP (spec-168)
+app.include_router(onboarding_router.router, tags=["onboarding"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained

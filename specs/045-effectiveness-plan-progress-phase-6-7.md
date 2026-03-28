@@ -115,6 +115,125 @@ Phase boundaries (006): Phase 6 = items 56–57 (inclusive). Phase 7 = items 58�
 
 See `api/tests/test_agent.py`. Test name suggestion: `test_effectiveness_plan_progress_includes_phase_6_and_phase_7`. All existing effectiveness tests must continue to pass.
 
+## Verification Scenarios
+
+These scenarios are executable against the live API and must pass for this spec to be considered complete.
+Run with: `curl -s https://api.coherencycoin.com/api/agent/effectiveness | python3 -m json.tool`
+
+---
+
+### Scenario 1 — Baseline: phase_6 and phase_7 present in response
+
+**Setup:** API is running with no project_manager_state file present (cold start, or state file deleted).
+
+**Action:**
+```bash
+curl -s https://api.coherencycoin.com/api/agent/effectiveness | python3 -m json.tool
+```
+
+**Expected result:**
+- HTTP 200
+- Response contains `plan_progress` object
+- `plan_progress.phase_6` is present with keys `completed` (int ≥ 0), `total` (int = 2), `pct` (number 0–100)
+- `plan_progress.phase_7` is present with keys `completed` (int ≥ 0), `total` (int = 17), `pct` (number 0–100)
+- `plan_progress.index` = 0 (no state file means index defaults to 0)
+- `plan_progress.phase_6.completed` = 0 (no items completed when index = 0)
+- `plan_progress.phase_7.completed` = 0
+
+**Edge case:** If 006-overnight-backlog.md is missing, `plan_progress` must still return without 500; `total` may be 0.
+
+---
+
+### Scenario 2 — Phase 6 partially complete (backlog_index = 56)
+
+**Setup:** Create a minimal PM state file so `backlog_index = 56` (Phase 6 item 1 done, item 2 not):
+```bash
+echo '{"backlog_index": 56}' > api/logs/project_manager_state.json
+```
+
+**Action:**
+```bash
+curl -s https://api.coherencycoin.com/api/agent/effectiveness \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); pp=d['plan_progress']; print('phase_6:', pp['phase_6']); print('phase_7:', pp['phase_7'])"
+```
+
+**Expected result:**
+- `phase_6.completed` = 1 (item 56 passed, item 57 not yet)
+- `phase_6.total` = 2
+- `phase_6.pct` = 50.0
+- `phase_7.completed` = 0 (Phase 7 starts at item 58, not yet reached)
+- `phase_7.total` = 17
+- `phase_7.pct` = 0.0
+
+**Edge case:** State file has `backlog_index = null` — should be treated as index 0, completed = 0 for both phases.
+
+---
+
+### Scenario 3 — Phase 6 fully complete, Phase 7 in progress (backlog_index = 65)
+
+**Setup:** Set `backlog_index = 65` (Phase 6 done, 8 of 17 Phase 7 items done: items 58–65):
+```bash
+echo '{"backlog_index": 65}' > api/logs/project_manager_state.json
+```
+
+**Action:**
+```bash
+curl -s https://api.coherencycoin.com/api/agent/effectiveness \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); pp=d['plan_progress']; print(json.dumps(pp, indent=2))"
+```
+
+**Expected result:**
+- `phase_6.completed` = 2, `phase_6.total` = 2, `phase_6.pct` = 100.0
+- `phase_7.completed` = 8, `phase_7.total` = 17, `phase_7.pct` = 47.1 (round(100 * 8/17, 1))
+- `plan_progress.index` = 65
+- `plan_progress.pct` = round(100 * 65 / 74, 1) = 87.8
+
+**Edge case:** State file contains non-integer `backlog_index` (e.g. `"abc"`) — API must return 200 with `index = 0`, not 500.
+
+---
+
+### Scenario 4 — Full completion (backlog_index = 74 or beyond)
+
+**Setup:** Set `backlog_index = 74` (all phases done):
+```bash
+echo '{"backlog_index": 74}' > api/logs/project_manager_state.json
+```
+
+**Action:**
+```bash
+curl -s https://api.coherencycoin.com/api/agent/effectiveness \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); pp=d['plan_progress']; print('p6:', pp['phase_6']['pct'], 'p7:', pp['phase_7']['pct'])"
+```
+
+**Expected result:**
+- `phase_6.completed` = 2, `phase_6.pct` = 100.0
+- `phase_7.completed` = 17, `phase_7.pct` = 100.0
+- `plan_progress.pct` = 100.0
+
+**Edge case:** `backlog_index = 200` (beyond total 74) — completed values are clamped to `total`; pct stays 100.0 for each phase.
+
+---
+
+### Scenario 5 — Error handling: corrupted state file
+
+**Setup:** Write invalid JSON to the PM state file:
+```bash
+echo '{NOT VALID JSON' > api/logs/project_manager_state.json
+```
+
+**Action:**
+```bash
+curl -s -o /dev/null -w "%{http_code}" https://api.coherencycoin.com/api/agent/effectiveness
+```
+
+**Expected result:**
+- HTTP 200 (not 500)
+- `plan_progress.index` = 0 (graceful degradation)
+- `plan_progress.state_file` = "" (no valid state loaded)
+- `plan_progress.phase_6` and `plan_progress.phase_7` still present with `completed = 0`
+
+**Edge case:** Both state files (`project_manager_state_overnight.json` and `project_manager_state.json`) missing — identical graceful 200 with zero values.
+
 ## Concurrency Behavior
 
 - **Read operations**: Safe for concurrent access; no locking required.
@@ -129,12 +248,22 @@ See `api/tests/test_agent.py`. Test name suggestion: `test_effectiveness_plan_pr
 - **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
 - **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
 
-## Risks and Known Gaps
+## Risks and Assumptions
 
 - **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
 - **No rate limiting**: Subject to abuse until M1 rate limiter active.
 - **Single-node only**: No distributed locking; concurrent access may race.
-- **Follow-up**: Add distributed locking for multi-worker pipelines.
+- **Phase boundary assumption**: Phase 6 = items 56–57 (2 items), Phase 7 = items 58–74 (17 items). If 006 backlog changes item counts, these constants must be updated.
+- **State file location assumption**: PM state is read from `api/logs/project_manager_state.json` or `api/logs/project_manager_state_overnight.json`; path changes require implementation update.
+- **Backlog index semantics**: `backlog_index` in PM state is an integer representing the last completed item's ordinal in the 006 backlog sequence (1-based). Items with ordinal ≤ index are considered complete.
+
+## Known Gaps and Follow-up Tasks
+
+- **Distributed locking**: Add distributed locking for multi-worker pipeline deployments (follow-up ticket).
+- **Phase 1–5 visibility**: Current spec only exposes Phase 6 and Phase 7; earlier phases not surfaced in effectiveness response. Consider extending to all phases.
+- **Real-time streaming**: Effectiveness endpoint is polled; no push/SSE support for dashboards. Future work.
+- **Auth gate**: Endpoint needs auth middleware (C1 milestone) before public exposure.
+- **Test coverage for edge cases**: Add property-based tests for `backlog_index` boundary values (55, 56, 57, 58, 74, 75) to prevent regressions when backlog changes.
 
 
 ## Out of Scope
@@ -147,6 +276,29 @@ See `api/tests/test_agent.py`. Test name suggestion: `test_effectiveness_plan_pr
 ## Decision Gates (if any)
 
 - If backlog phase boundaries or item ranges change in 006, update implementation (and optionally this spec) to match; no new dependency or resource.
+
+## Verification
+
+Executable commands to validate this spec:
+
+```bash
+# Unit tests
+cd api && python -m pytest api/tests/test_agent.py -q -k "effectiveness"
+
+# Live API check (requires running API)
+export API=https://api.coherencycoin.com
+curl -s $API/api/agent/effectiveness | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+pp = d['plan_progress']
+assert 'phase_6' in pp, 'phase_6 missing'
+assert 'phase_7' in pp, 'phase_7 missing'
+assert pp['phase_6']['total'] == 2, f\"phase_6.total={pp['phase_6']['total']} expected 2\"
+assert pp['phase_7']['total'] == 17, f\"phase_7.total={pp['phase_7']['total']} expected 17\"
+print('PASS: phase_6.total=', pp['phase_6']['total'], 'phase_7.total=', pp['phase_7']['total'])
+print('PASS: phase_6.pct=', pp['phase_6']['pct'], 'phase_7.pct=', pp['phase_7']['pct'])
+"
+```
 
 ## See also
 

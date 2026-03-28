@@ -1,0 +1,111 @@
+{
+  "node_types": [
+    {
+      "type": "idea",
+      "description": "A tracked concept or proposal — the atomic unit of intellectual value",
+      "lifecycle_default": "gas",
+      "payload_schema": {
+        "title": "string",
+        "lifecycle_state": "gas|ice|water"
+      },
+      "example_id": "fractal-node-edge-primitives"
+    },
+    {
+      "type": "concept",
+      "description": "An abstract or theoretical construct, not yet grounded in a spec or implementation",
+      "lifecycle_default": "gas",
+      "payload_schema": {
+        "title": "string",
+        "lifecycle_state": "gas|ice|water"
+      },
+      "example_id": "ice-water-gas-lifecycle"
+    },
+    {
+      "type": "spec",
+      "description": "A written specification document that defines acceptance criteria for an idea",
+      "lifecycle_default": "ice",
+      "payload_schema": {
+        "title": "string",
+        "spec_id": "string",
+        "lifecycle_state": "gas|ice|water"
+      },
+      "example_id": "169-fractal-node-edge-primitives"
+    },
+    {
+      "type": "implementation",
+      "description": "A code artifact, pull request, or deployed feature that realises a spec",
+      "lifecycle_default": "water",
+      "payload_schema": {
+        "title": "string",
+        "pr_url": "string",
+        "lifecycle_state": "gas|ice|water"
+      },
+      "example_id": "pr-472-graph-router"
+    },
+    {
+      "type": "service",
+      "description": "A running software service or API in the Coherence Network",
+      "lifecycle_default": "water",
+      "payload_schema": {
+        "title": "string",
+        "url": "string",
+        "lifecycle_state": "gas|ice|water"
+      },
+      "example_id": "coherence-network-api"
+    },
+    {
+      "type": "contributor",
+      "description": "A human or agent that contributes work to the network",
+      "lifecycle_default": "water",
+      "payload_schema": {
+        "name": "string",
+        "agent_type": "string",
+        "lifecycle_state": "gas|ice|water"
+      },
+      "example_id": "agent-claude-sonnet-4-6"
+    },
+    {
+      "type": "domain",
+      "description": "A knowledge domain or namespace that organises related concepts",
+      "lifecycle_default": "ice",
+      "payload_schema": {
+        "title": "string",
+        "lifecycle_state": "gas|ice|water"
+      },
+      "example_id": "graph-theory"
+    },
+    {
+      "type": "pipeline-run",
+      "description": "A single execution of a pipeline stage — always active, append-only",
+      "lifecycle_default": "water",
+      "payload_schema": {
+        "pipeline_id": "string",
+        "status": "string",
+        "lifecycle_state": "water"
+      },
+      "example_id": "run-20260328-001"
+    },
+    {
+      "type": "event",
+      "description": "A system event or signal emitted by a service or pipeline",
+      "lifecycle_default": "water",
+      "payload_schema": {
+        "event_type": "string",
+        "source": "string",
+        "lifecycle_state": "water"
+      },
+      "example_id": "task-completed"
+    },
+    {
+      "type": "artifact",
+      "description": "A produced output such as a test file, documentation, or report",
+      "lifecycle_default": "water",
+      "payload_schema": {
+        "title": "string",
+        "artifact_type": "string",
+        "lifecycle_state": "gas|ice|water"
+      },
+      "example_id": "test_graph_layer.py"
+    }
+  ]
+}

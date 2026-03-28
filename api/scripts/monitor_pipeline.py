@@ -668,6 +668,33 @@ def _record_resolution(
         log.debug("Could not record resolution: %s", e)
 
 
+def _persist_resolved_to_issues_file(
+    data: dict,
+    condition: str,
+    resolved_at: str,
+    log: logging.Logger,
+    heal_task_id: Optional[str] = None,
+    issue_id: Optional[str] = None,
+) -> None:
+    """Append resolved entry to monitor_issues.json 'resolved' array (capped at 50).
+
+    Only called when MONITOR_PERSIST_RESOLVED=1. Best-effort: write failures are
+    logged at DEBUG and do not crash the monitor (R8).
+    """
+    entry: dict = {"condition": condition, "resolved_at": resolved_at}
+    if heal_task_id:
+        entry["heal_task_id"] = heal_task_id
+    if issue_id:
+        entry["issue_id"] = issue_id
+
+    resolved_list = data.get("resolved") or []
+    resolved_list.append(entry)
+    # Cap to last 50 entries (R4)
+    if len(resolved_list) > 50:
+        resolved_list = resolved_list[-50:]
+    data["resolved"] = resolved_list
+
+
 def _add_issue(data: dict, condition: str, severity: str, message: str, suggested_action: str) -> dict:
     priority = SEVERITY_TO_PRIORITY.get(severity, 2)
     issue = {
@@ -2206,8 +2233,22 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     # Track resolved issues for effectiveness measurement; attribute to heal when we have heal_task_id
     current_conditions = {i["condition"] for i in data["issues"]}
     resolved_this_run = prev_conditions - current_conditions
+    persist_resolved = os.environ.get("MONITOR_PERSIST_RESOLVED") == "1"
+    # Build a map from condition -> issue_id for resolved entries (R3)
+    prev_condition_to_issue_id = {i["condition"]: i["id"] for i in prev_issues if i.get("id")}
+    resolved_at_ts = datetime.now(timezone.utc).isoformat()
     for cond in resolved_this_run:
-        _record_resolution(cond, log, heal_task_id=prev_condition_to_heal_task.get(cond))
+        htid = prev_condition_to_heal_task.get(cond)
+        _record_resolution(cond, log, heal_task_id=htid)
+        if persist_resolved:
+            _persist_resolved_to_issues_file(
+                data,
+                condition=cond,
+                resolved_at=resolved_at_ts,
+                log=log,
+                heal_task_id=htid,
+                issue_id=prev_condition_to_issue_id.get(cond),
+            )
     data["resolved_since_last"] = list(resolved_this_run)
 
     # Sort by priority (1 = highest)
