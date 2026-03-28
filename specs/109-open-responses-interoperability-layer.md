@@ -371,23 +371,20 @@ python3 scripts/validate_spec_quality.py --file specs/109-open-responses-interop
 
 ## Risks and Assumptions
 
-| Risk | Likelihood | Mitigation |
-|---|---|---|
-| Provider-specific capabilities don't map 1:1 to `open_responses_v1` | Medium | Additive provider extension fields; core schema is minimal |
-| Normalization layer introduces latency regression | Low | In-process dict construction; no I/O; benchmarked well under 1 ms |
-| `direction` content contains provider-specific syntax | Medium | REQ-9: adapter is envelope-only; no prompt rewriting |
-| Existing task context shape changes break consumers | Low | Normalization only adds new keys; no existing keys removed or renamed |
-
-**Assumption**: Current agent execution contracts can be wrapped without breaking existing endpoint behavior (validated by existing test suite passing).
+- Risk: Provider-specific capabilities don't map 1:1 to `open_responses_v1` (Medium) — mitigation: additive provider extension fields; core schema is minimal.
+- Risk: Normalization layer introduces latency regression (Low) — mitigation: in-process dict construction; no I/O; benchmarked well under 1 ms.
+- Risk: `direction` content contains provider-specific syntax (Medium) — mitigation: REQ-9 enforces adapter is envelope-only; no prompt rewriting.
+- Risk: Existing task context shape changes break consumers (Low) — mitigation: normalization only adds new keys; no existing keys removed or renamed.
+- Assumption: Current agent execution contracts can be wrapped without breaking existing endpoint behavior (validated by existing test suite passing).
 
 ---
 
 ## Known Gaps and Follow-up Tasks
 
-- `task_open_responses_tool_schema_parity_001`: Normalize tool-call schema parity across providers (function-calling, structured outputs).
-- `task_open_responses_streaming_001`: Extend `open_responses_v1` to cover streaming delta events.
-- `task_open_responses_audit_api_001`: Expose a dedicated `GET /api/agent/tasks/{id}/normalized-call` endpoint for operator audit UIs.
-- `task_open_responses_validation_001`: Add strict Pydantic validation for `NormalizedResponseCall.input` schema so malformed envelopes are caught at construction time.
+- Follow-up task `task_open_responses_tool_schema_parity_001`: normalize tool-call schema parity across providers (function-calling, structured outputs).
+- Follow-up task `task_open_responses_streaming_001`: extend `open_responses_v1` to cover streaming delta events.
+- Follow-up task `task_open_responses_audit_api_001`: expose a dedicated `GET /api/agent/tasks/{id}/normalized-call` endpoint for operator audit UIs.
+- Follow-up task `task_open_responses_validation_001`: add strict Pydantic validation for `NormalizedResponseCall.input` schema so malformed envelopes are caught at construction time.
 
 ---
 

@@ -11,6 +11,32 @@
 
 ---
 
+## Purpose
+
+Establish a canonical, closed-but-extensible vocabulary of node types and typed edge relationships that makes the Coherence Network graph a reliable fractal data layer. Every meaningful entity becomes a node; every relationship between entities is expressed as a typed edge. This enables generic traversal queries, value lineage attribution, and pipeline-wide observability — replacing ad-hoc SQL with a uniform semantic contract.
+
+---
+
+## Requirements
+
+- [ ] `node_type` is constrained to exactly 10 canonical values: `idea`, `concept`, `spec`, `implementation`, `service`, `contributor`, `domain`, `pipeline-run`, `event`, `artifact`
+- [ ] `edge_type` is constrained to exactly 7 canonical values: `inspires`, `depends-on`, `implements`, `contradicts`, `extends`, `analogous-to`, `parent-of`
+- [ ] POST `/api/graph/nodes` with an unrecognized `node_type` returns HTTP 422 with a message listing valid types
+- [ ] POST `/api/graph/edges` with an unrecognized `edge_type` returns HTTP 422 with a message listing valid types
+- [ ] POST `/api/graph/edges` where `from_node_id == to_node_id` (self-loop) returns HTTP 422
+- [ ] Every `idea` node defaults to `lifecycle_state: gas` when not specified in payload
+- [ ] Every `spec` node defaults to `lifecycle_state: ice` when not specified in payload
+- [ ] Every `contributor` node defaults to `lifecycle_state: water` when not specified in payload
+- [ ] GET `/api/graph/nodes/{id}/neighbors?lifecycle_state=ice` returns only neighbors whose payload `lifecycle_state` equals `"ice"`
+- [ ] GET `/api/graph/node-types` returns all 10 node type registry entries with `type`, `description`, `lifecycle_default`
+- [ ] GET `/api/graph/edge-types` returns all 7 edge type registry entries with `type`, `description`, `is_symmetric`
+- [ ] GET `/api/graph/proof` returns HTTP 200 with `total_nodes`, `total_edges`, `nodes_by_type`, `edges_by_type`, `lifecycle_distribution`, `coverage_pct`
+- [ ] GET `/api/graph/proof` returns HTTP 200 with empty graph (no nodes created) — does not error on zero counts
+- [ ] Alembic migration applies `NOT VALID` CHECK constraints on `node_type` and `edge_type` without locking the table
+- [ ] `pytest api/tests/test_typed_node_edge_primitives.py` passes with 0 failures and ≥ 90% line coverage on new code
+
+---
+
 ## Summary
 
 This spec defines the **semantic layer** on top of the raw graph primitives introduced in Spec 166. Where Spec 166 established the *storage contract* (`graph_nodes`, `graph_edges` tables, CRUD endpoints), this spec establishes the *meaning contract*: a canonical, closed-but-extensible vocabulary of node types and edge types, the Ice/Water/Gas lifecycle model for nodes, and the constraint machinery that makes the graph *reliable* rather than merely *flexible*.
