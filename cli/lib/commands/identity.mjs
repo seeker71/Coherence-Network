@@ -12,9 +12,13 @@ import {
 import { ensureIdentity } from "../identity.mjs";
 
 export async function showIdentity() {
-  const id = getContributorId();
+  const rawId = getContributorId();
+  const id = parseContributorId(rawId);
   const source = getContributorSource();
   if (!id) {
+    if (rawId) {
+      console.log("Configured identity is invalid.");
+    }
     console.log("No identity configured.");
     console.log("  Fix: cc identity set <your_id>");
     console.log("       export COHERENCE_CONTRIBUTOR_ID=<your_id>");
@@ -68,7 +72,7 @@ export async function unlinkIdentity(args) {
     console.log("Usage: cc identity unlink <provider>");
     return;
   }
-  const contributor = getContributorId();
+  const contributor = parseContributorId(getContributorId());
   if (!contributor) {
     console.log("No identity configured.");
     return;
