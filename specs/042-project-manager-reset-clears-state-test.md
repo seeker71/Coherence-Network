@@ -100,6 +100,144 @@ None.
 - **Follow-up**: Add distributed locking for multi-worker pipelines.
 
 
+## Verification Scenarios
+
+The reviewer will run these scenarios against the repo to confirm the feature is implemented and correct.
+
+---
+
+### Scenario 1: Reset removes a pre-existing state file and run starts from index 0
+
+**Setup:**
+```bash
+TMPDIR=$(mktemp -d)
+STATEFILE="$TMPDIR/state.json"
+# Pre-populate state with backlog_index > 0
+echo '{"backlog_index": 5, "phase": "impl", "current_task_id": "task_abc", "iteration": 2, "blocked": false}' > "$STATEFILE"
+```
+
+**Action:**
+```bash
+python3 api/scripts/project_manager.py --dry-run --reset --state-file "$STATEFILE"
+```
+
+**Expected result:**
+- Exit code 0
+- The state file at `$STATEFILE` is either absent (removed by `--reset`) **or** present with `backlog_index` == 0 and `phase` == `"spec"` (i.e., reset to defaults).
+- Stdout contains `DRY-RUN` or `dry-run` (case-insensitive) confirming dry-run mode ran.
+- Previous values (`backlog_index: 5`, `phase: impl`) are NOT reflected in any output or the post-run state file.
+
+**Edge case:**
+- Run with `--reset` when the state file does **not** exist: script must exit 0 without error (no `FileNotFoundError`). The `os.remove` call is guarded by `os.path.isfile(STATE_FILE)`.
+
+---
+
+### Scenario 2: Reset with in-process `load_state()` after reset yields default values
+
+**Setup:**
+```python
+import json, os, tempfile, importlib, sys
+sys.path.insert(0, "api/scripts")
+import project_manager as pm
+
+tmp = tempfile.NamedTemporaryFile(suffix=".json", delete=False)
+# Write stale state
+json.dump({"backlog_index": 7, "phase": "review", "iteration": 3, "blocked": True}, tmp)
+tmp.close()
+pm.STATE_FILE = tmp.name
+```
+
+**Action:**
+```python
+# Simulate --reset: remove file if present
+if os.path.isfile(pm.STATE_FILE):
+    os.remove(pm.STATE_FILE)
+
+state = pm.load_state()
+```
+
+**Expected result:**
+- `state["backlog_index"]` == 0
+- `state["phase"]` == `"spec"`
+- `state["iteration"]` == 1
+- `state["blocked"]` == False
+- `state["current_task_id"]` is None
+
+**Edge case:**
+- If state file contains invalid JSON (e.g., `echo "CORRUPT" > $STATEFILE`) before reset, `load_state()` after removal still returns defaults without raising an exception.
+
+---
+
+### Scenario 3: pytest test for `--reset` flag passes in CI
+
+**Setup:**
+```bash
+cd /path/to/repo
+```
+
+**Action:**
+```bash
+python3 -m pytest api/tests/test_project_manager.py -x -v -k "reset"
+```
+
+**Expected result:**
+- At least one test matching `reset` is collected and passes (e.g., `test_reset_clears_state` or `test_dry_run_reset_starts_from_zero`).
+- Output line: `PASSED api/tests/test_project_manager.py::test_reset_clears_state` (or similarly named).
+- Overall exit code 0.
+
+**Edge case:**
+- Running without `-k reset` (`pytest api/tests/test_project_manager.py -x -v`) must also pass — the reset test must not break existing tests or leave temporary files behind.
+
+---
+
+### Scenario 4: Reset does not affect a different state file path (isolation)
+
+**Setup:**
+```bash
+DEFAULT_STATE="api/logs/project_manager_state.json"
+# Pre-populate default state to a known value
+mkdir -p api/logs
+echo '{"backlog_index": 9, "phase": "test"}' > "$DEFAULT_STATE"
+
+TMPFILE=$(mktemp /tmp/pm_state_XXXX.json)
+echo '{"backlog_index": 3, "phase": "impl"}' > "$TMPFILE"
+```
+
+**Action:**
+```bash
+python3 api/scripts/project_manager.py --dry-run --reset --state-file "$TMPFILE"
+```
+
+**Expected result:**
+- The temp state file `$TMPFILE` is removed (or reset to index 0).
+- The **default** state file `api/logs/project_manager_state.json` is **unchanged** — still contains `backlog_index: 9`.
+- Exit code 0; no error output.
+
+**Edge case:**
+- If `--state-file` is omitted but `--reset` is passed, the **default** path is reset (not an arbitrary file). The test must use `--state-file` to avoid stomping on live state during CI.
+
+---
+
+### Scenario 5: Full test suite passes after adding the reset test
+
+**Setup:** Fresh checkout, no state files present.
+
+**Action:**
+```bash
+python3 -m pytest api/tests/test_project_manager.py -v --tb=short 2>&1 | tail -20
+```
+
+**Expected result:**
+- All existing tests pass (no regressions).
+- The new reset test (`test_reset_clears_state` or equivalent) appears as `PASSED`.
+- No `ERROR` or `FAILED` lines in output.
+- Final summary line: `X passed` (where X ≥ prior count + 1).
+
+**Edge case:**
+- If the test creates temporary files, they must be cleaned up via `tmp_path` fixture or `tempfile.mkdtemp` + `shutil.rmtree` in teardown — no leftover `/tmp/pm_state_*.json` files after the test run.
+
+---
+
 ## Verification
 
 ```bash
