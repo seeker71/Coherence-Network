@@ -6,10 +6,10 @@ First-time visitors to `https://coherencycoin.com/` (route `/`) land on a warm, 
 
 ## Requirements
 
-- [ ] **R1 — Body copy contrast**: All homepage (`/`) primary body text (hero description, stat labels, “How it works” descriptions, feed cards secondary lines, footer links, closing quote block, form helper text and placeholders except intentional error colors) uses foreground opacity **≥ 0.85** relative to `hsl(var(--foreground))` (e.g. `text-foreground/85`, `text-foreground/90`, or `text-foreground`).
-- [ ] **R2 — Design tokens**: Global CSS variables in `web/app/globals.css` are adjusted so default readable text is slightly brighter on the dark canvas (raise lightness of `--foreground` / `--muted-foreground` where used for prose) and the fixed full-screen bloom overlay is **slightly toned down** so it does not wash out text.
-- [ ] **R3 — Hero headline**: The main H1 remains visually prominent (full-opacity foreground); optional subtle text-shadow is allowed for separation from gradients without lowering opacity below 1.0 for the headline color.
-- [ ] **R4 — API-backed “proof” unchanged**: Homepage continues to consume existing public endpoints; no breaking changes to response shapes.
+- [x] **R1 — Body copy contrast**: All homepage (`/`) primary body text (hero description, stat labels, “How it works” descriptions, feed cards secondary lines, footer links, closing quote block, form helper text and placeholders except intentional error colors) uses foreground opacity **≥ 0.85** relative to `hsl(var(--foreground))` (e.g. `text-foreground/85`, `text-foreground/90`, or `text-foreground`).
+- [x] **R2 — Design tokens**: Global CSS variables in `web/app/globals.css` are adjusted so default readable text is slightly brighter on the dark canvas (raise lightness of `--foreground` / `--muted-foreground` where used for prose) and the fixed full-screen bloom overlay is **slightly toned down** so it does not wash out text.
+- [x] **R3 — Hero headline**: The main H1 remains visually prominent (full-opacity foreground); optional subtle text-shadow is allowed for separation from gradients without lowering opacity below 1.0 for the headline color.
+- [x] **R4 — API-backed “proof” unchanged**: Homepage continues to consume existing public endpoints; no breaking changes to response shapes.
 
 ## Research Inputs (Required)
 

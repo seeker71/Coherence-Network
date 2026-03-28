@@ -57,6 +57,11 @@ def test_homepage_readability_page_classes() -> None:
         assert int(match) >= 85, f"Found text-foreground/{match} (minimum allowed is 85)"
 
 
+def test_homepage_readability_contract_files() -> None:
+    """Spec 150 acceptance alias: same static contract as `test_homepage_readability_page_classes`."""
+    test_homepage_readability_page_classes()
+
+
 def test_idea_submit_form_readability() -> None:
     """Form placeholders and optional field meet minimum opacity."""
     form_path = REPO_ROOT / "web" / "components" / "idea_submit_form.tsx"
