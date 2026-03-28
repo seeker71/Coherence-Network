@@ -343,6 +343,87 @@ Seeded via migration with the 7 edge types above.
 
 ---
 
+## Task Card
+
+```yaml
+goal: >
+  Implement the semantic layer on top of graph_nodes/graph_edges (Spec 166):
+  enforce typed node/edge vocabulary, Ice/Water/Gas lifecycle states,
+  registry endpoints, and a /api/graph/proof health endpoint that proves
+  the fractal graph is being used in production.
+files_allowed:
+  - api/alembic/versions/xxxx_add_typed_node_edge_constraints.py
+  - api/app/models/graph.py
+  - api/app/services/graph_service.py
+  - api/app/routers/graph.py
+  - api/config/node_type_registry.json
+  - api/config/edge_type_registry.json
+  - api/tests/test_typed_node_edge_primitives.py
+done_when:
+  - alembic upgrade head applies CHECKs on node_type and edge_type
+  - POST /api/graph/nodes with invalid node_type returns 422
+  - POST /api/graph/edges with invalid edge_type returns 422
+  - POST /api/graph/edges with from_node_id == to_node_id returns 422
+  - GET /api/graph/node-types returns list of exactly 10 types
+  - GET /api/graph/edge-types returns list of exactly 7 types
+  - GET /api/graph/proof returns 200 with total_nodes, edges_by_type, lifecycle_distribution
+  - pytest api/tests/test_typed_node_edge_primitives.py passes 0 failed
+commands:
+  - cd api && alembic upgrade head
+  - cd api && .venv/bin/pytest api/tests/test_typed_node_edge_primitives.py -v --tb=short
+  - cd api && .venv/bin/ruff check app/models/graph.py app/services/graph_service.py app/routers/graph.py
+  - curl -s https://api.coherencycoin.com/api/graph/proof | grep total_nodes
+constraints:
+  - Do NOT modify Spec 166's existing tables — additive constraints only (NOT VALID first)
+  - Do NOT remove or rename existing endpoints from Spec 166
+  - All new endpoints must return Pydantic response models (no raw dict)
+  - CHECK constraints must use NOT VALID + VALIDATE CONSTRAINT pattern to avoid table lock
+  - Node type and edge type vocabularies are closed — extension requires migration + registry update
+```
+
+---
+
+## Proof Over Time: Observability Strategy
+
+The open question "How can we show whether this is working and make that proof clearer over time?" is answered here.
+
+### Immediate proof (Day 1 after deploy)
+
+The `GET /api/graph/proof` endpoint provides a single-call health check. After deploy, run:
+
+```bash
+curl -sf https://api.coherencycoin.com/api/graph/proof
+```
+
+This returns the coverage metrics above. Initially, most values will be 0 or low — that **is the baseline**. The graph is working when these numbers grow.
+
+### Trend proof (Day 7+)
+
+Track `GET /api/graph/proof` as a time series in the pipeline metrics store. Key signals:
+
+| Metric | Working signal | Concern signal |
+|---|---|---|
+| `coverage_pct.ideas_with_spec` | Growing toward 0.80 | Stagnant below 0.30 |
+| `coverage_pct.specs_with_impl` | Growing toward 0.70 | Stagnant below 0.20 |
+| `lifecycle_distribution.water / total_nodes` | > 0.40 (active system) | < 0.10 (frozen system) |
+| `edges_by_type.inspires` | Growing (ideas connecting) | Zero (graph is unused) |
+| `connected_components` | Decreasing toward 1 | Increasing (fragmentation) |
+
+### Structural proof (Day 30+)
+
+The strongest proof that the fractal works: run a depth-2 traversal from a known root node and verify that the path through `parent-of` → `inspires` → `implements` chains produces a coherent value-lineage tree. The `GET /api/graph/nodes/{id}/neighbors?depth=2` endpoint enables this.
+
+A CI check (not in scope but recommended as follow-up) could assert:
+- `coverage_pct.ideas_with_spec >= 0.50` — fail the build if spec coverage drops
+- `connected_components <= 5` — fail if graph fragments into isolated islands
+- `lifecycle_distribution.gas / total_nodes <= 0.70` — fail if too much stays in ideation
+
+### Displaying proof to humans
+
+The `GET /api/graph/proof` response is designed for dashboard consumption. Spec 163 (Resonance Navigation) should add a panel labeled **"Graph Health"** with these metrics. Until that panel exists, the `/api/graph/proof` URL is the authoritative source.
+
+---
+
 ## Files to Create or Modify
 
 | File | Action | Purpose |

@@ -15,6 +15,12 @@ This reduces provider lock-in, enables operator audit trails, and makes multi-pr
 
 ---
 
+## Purpose
+
+Reduce provider lock-in and simplify model routing by introducing a normalized Open Responses interface in the agent execution path so task execution can move across providers without per-provider payload rewrites. Without this layer, switching a running task from `claude` to `codex` requires a prompt rewrite at the call site, making cross-provider A/B testing, load-balancing, and fallback chains brittle and error-prone.
+
+---
+
 ## Goal
 
 Every task creation in `agent_service.create_task()` must produce a `normalized_response_call` entry in the task context that follows the Open Responses v1 schema. The same task direction string must appear verbatim in the normalized call regardless of the executor chosen. Route decisions must also carry `request_schema: open_responses_v1` as a top-level field.
