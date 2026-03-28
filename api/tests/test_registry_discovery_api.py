@@ -33,13 +33,14 @@ async def test_registry_submission_inventory_lists_mcp_and_skill_targets() -> No
     ids = {item["registry_id"] for item in items}
     categories = {item["category"] for item in items}
 
+    # Spec-180 registries: smithery, glama, pulsemcp, mcp-so, skills-sh, askill-sh
     assert {
-        "modelcontextprotocol-registry",
-        "npm",
         "smithery",
+        "glama",
+        "pulsemcp",
         "mcp-so",
-        "clawhub",
-        "agentskills",
+        "skills-sh",
+        "askill-sh",
     }.issubset(ids)
     assert categories == {"mcp", "skill"}
 
