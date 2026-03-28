@@ -31,8 +31,35 @@
     --chart-5: 198 36% 52%;
     --radius: 0.75rem;
   }
+  /* ── Light mode — Spec 165: warm off-white palette, WCAG AA compliant ── */
   :root.light {
-    color-scheme: dark;
+    color-scheme: light;
+    --background: 42 40% 96%;
+    --foreground: 24 28% 14%;
+    --card: 42 30% 98%;
+    --card-foreground: 24 26% 16%;
+    --popover: 42 30% 97%;
+    --popover-foreground: 24 26% 16%;
+    /* Darker gold so primary text passes AA on light bg (≥4.5:1) */
+    --primary: 36 72% 42%;
+    --primary-foreground: 42 40% 97%;
+    --secondary: 36 22% 88%;
+    --secondary-foreground: 24 22% 18%;
+    --muted: 36 20% 90%;
+    /* muted-foreground: 28 18% 38% ≈ #6b5d4a — passes AA on card/bg */
+    --muted-foreground: 28 18% 38%;
+    --accent: 36 28% 85%;
+    --accent-foreground: 24 22% 18%;
+    --destructive: 3 68% 44%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 36 20% 82%;
+    --input: 36 20% 82%;
+    --ring: 36 72% 42%;
+    --chart-1: 36 72% 42%;
+    --chart-2: 158 38% 32%;
+    --chart-3: 45 65% 38%;
+    --chart-4: 12 60% 48%;
+    --chart-5: 198 44% 38%;
   }
   :root.dark {
     color-scheme: dark;

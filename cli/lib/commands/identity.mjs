@@ -7,7 +7,7 @@ import {
   getContributorId,
   getContributorSource,
   saveConfig,
-  CONTRIBUTOR_ID_PATTERN,
+  parseContributorId,
 } from "../config.mjs";
 import { ensureIdentity } from "../identity.mjs";
 
@@ -96,15 +96,14 @@ export async function lookupIdentity(args) {
 }
 
 export async function setIdentity(args) {
-  const raw = args[0];
-  if (!raw || !String(raw).trim()) {
+  if (args.length !== 1) {
     console.error("Usage: cc identity set <contributor_id>");
     console.error("Alternatively: export COHERENCE_CONTRIBUTOR_ID=<your_id>");
     process.exitCode = 1;
     return;
   }
-  const id = String(raw).trim();
-  if (!CONTRIBUTOR_ID_PATTERN.test(id)) {
+  const id = parseContributorId(args[0]);
+  if (!id) {
     console.error(
       "Error: invalid contributor_id — use only letters, numbers, hyphens, underscores, periods (max 64 chars)",
     );

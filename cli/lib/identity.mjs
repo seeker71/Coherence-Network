@@ -11,7 +11,7 @@ import { stdin, stdout } from "node:process";
 import { execSync } from "node:child_process";
 import { hostname } from "node:os";
 import { createHash } from "node:crypto";
-import { getContributorId, saveConfig, loadKeys, saveKeys } from "./config.mjs";
+import { getContributorId, parseContributorId, saveConfig, loadKeys, saveKeys } from "./config.mjs";
 import { post } from "./api.mjs";
 
 const ONBOARD_PROVIDERS = ["github", "ethereum", "x", "discord", "email"];
