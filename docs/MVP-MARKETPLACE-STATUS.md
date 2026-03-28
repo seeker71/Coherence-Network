@@ -65,12 +65,12 @@ Objective 3: Build financial discipline while MVP planning progresses.
 |---|---|---|
 | Craft mission and scope | Done | Frozen at `v1.0` |
 | Set up project workspace | Done | Keep docs updated in this repo |
-| Outline first OKRs and metrics | Ready | Define objective + KR targets next |
-| Identify/contact potential partners | Ready | Build target list template and first outreach batch |
-| Review security and permissions | Ready | Draft minimum policy + approval checkpoints |
-| Prepare investment allocation plan | Ready | Draft allocation model and decision criteria |
-| Set up progress dashboard | Ready | Define weekly KPI board linked to OKRs |
-| Onboard pilot projects/investors | Blocked by upstream | Start after outreach packet is sent |
+| Outline first OKRs and metrics | Done | Monitor KR progress weekly |
+| Identify/contact potential partners | Done | Execute first 10-contact outreach batch (2026-03-28) |
+| Review security and permissions | Done | Refer to `docs/MVP-SECURITY-POLICY.md` |
+| Prepare investment allocation plan | Done | Refer to `docs/MVP-ALLOCATION-POLICY.md` |
+| Set up progress dashboard | Done | Refer to `docs/MVP-DASHBOARD-METRICS.md` |
+| Onboard pilot projects/investors | Ready | Start after outreach packet responses arrive |
 | Build marketplace MVP | Blocked by upstream | Start after pilot requirements harden |
 | Finalize security/governance protocols | Blocked by upstream | Run after MVP scope freeze |
 | Define marketplace quality/trust process | Ready | Draft eligibility + review criteria |
@@ -79,9 +79,7 @@ Objective 3: Build financial discipline while MVP planning progresses.
 
 ## Immediate Next Commands
 
-1. Execute first outreach sprint:
-   - Use `docs/MVP-PARTNER-OUTREACH.md` and send first 10 messages.
-2. Start weekly operating review:
-   - Use `docs/MVP-DASHBOARD-METRICS.md` and publish week-1 baseline.
-3. Finalize security + allocation policies:
-   - Add policy refs under this file and mark readiness for pilot onboarding.
+1. **DONE** Execute first outreach sprint (2026-03-28).
+2. **DONE** Start weekly operating review and publish week-1 baseline (2026-03-28).
+3. **DONE** Finalize security + allocation policies (2026-03-28).
+4. **NEXT** Follow up on outreach responses and schedule discovery calls.

@@ -166,15 +166,10 @@ export async function deleteEdge(args) {
     process.exit(1);
   }
 
-  let result;
-  try {
-    result = await del(`/api/edges/${encodeURIComponent(edgeId)}`);
-  } catch (err) {
-    if (err.status === 404) {
-      console.error(`Edge not found: ${edgeId}`);
-      process.exit(1);
-    }
-    throw err;
+  let result = await del(`/api/edges/${encodeURIComponent(edgeId)}`);
+  if (!result) {
+    console.error(`Edge not found: ${edgeId}`);
+    process.exit(1);
   }
 
   console.log(`Deleted edge: ${result.deleted}`);

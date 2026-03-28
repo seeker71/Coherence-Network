@@ -81,8 +81,9 @@ export async function del(path) {
       headers: authHeaders(),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
-    return res.ok;
+    if (!res.ok) return null;
+    return await res.json();
   } catch {
-    return false;
+    return null;
   }
 }

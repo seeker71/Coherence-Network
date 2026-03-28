@@ -571,10 +571,6 @@ app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 
-# Cross-domain concept resonance (spec-179)
-from app.routers import cross_domain_resonance as cross_domain_resonance_router  # noqa: E402
-app.include_router(cross_domain_resonance_router.router, prefix="/api", tags=["resonance"])
-
 # Discord bot vote endpoint (spec-164)
 from app.routers import discord_votes  # noqa: E402
 app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
