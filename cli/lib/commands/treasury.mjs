@@ -67,3 +67,23 @@ export async function makeDeposit(args) {
     console.log("Deposit failed.");
   }
 }
+
+/**
+ * Stake a deposit's CC on an idea.
+ * Usage: cc treasury stake <deposit-id> <idea-id> [amount]
+ */
+export async function stakeDeposit(args) {
+  const [depositId, ideaId, amountStr] = args;
+  if (!depositId || !ideaId) {
+    console.log("Usage: cc treasury stake <deposit-id> <idea-id> [amount]");
+    return;
+  }
+  const body = { idea_id: ideaId };
+  if (amountStr) body.amount = parseFloat(amountStr);
+  const result = await post(`/api/treasury/deposit/${encodeURIComponent(depositId)}/stake`, body);
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Staked deposit ${depositId} on idea ${ideaId}`);
+  } else {
+    console.log("Stake failed.");
+  }
+}

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { getApiBase } from "@/lib/api";
 import MessageForm from "./MessageForm";
+import { RemoteControlSection } from "./RemoteControlSection";
 
 export const metadata: Metadata = {
-  title: "Federation Nodes",
-  description: "Registered federation nodes, status, and messaging.",
+  title: "Nodes",
+  description: "Federation nodes — status, health, providers, messaging, and remote control.",
 };
 
 type SystemMetrics = {
@@ -179,9 +181,9 @@ export default async function NodesPage() {
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Federation Nodes</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Nodes</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          All registered nodes in the Coherence federation. Monitor status, view capabilities, and send messages across the network.
+          Everything about the network's nodes — who is online, their capabilities, provider health, messaging, and remote dispatch controls.
         </p>
       </div>
 
@@ -391,6 +393,19 @@ export default async function NodesPage() {
         apiBase={apiBase}
       />
 
+      {/* Remote control section */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-xl font-semibold mb-1">Remote Control</h2>
+          <p className="text-sm text-muted-foreground">
+            Dispatch tasks, monitor the queue, and check deployment status.
+          </p>
+        </div>
+        <Suspense fallback={<p className="text-sm text-muted-foreground">Loading controls…</p>}>
+          <RemoteControlSection />
+        </Suspense>
+      </section>
+
       {/* Navigation */}
       <nav
         className="py-8 text-center space-y-2 border-t border-border/20"
@@ -400,8 +415,8 @@ export default async function NodesPage() {
           Where to go next
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/automation" className="text-amber-600 dark:text-amber-400 hover:underline">
-            Automation
+          <Link href="/pipeline" className="text-amber-600 dark:text-amber-400 hover:underline">
+            Pipeline
           </Link>
           <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">
             Flow
