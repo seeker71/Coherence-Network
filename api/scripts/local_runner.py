@@ -941,6 +941,27 @@ _NEXT_PHASE: dict[str, str | None] = {
     "review": None,
 }
 
+# Quality gate for phase auto-advance (shared by run_one and deferred worktree path)
+_MIN_OUTPUT_CHARS_FOR_ADVANCE: dict[str, int] = {
+    "spec": 200,
+    "impl": 200,
+    "test": 150,
+    "review": 80,
+    "code-review": 80,
+}
+
+# When True, run_one must not auto-advance phases until worktree push / merge succeeds (worker gate).
+_PHASE_ADVANCE_TLS = threading.local()
+
+
+def _set_defer_phase_advance(v: bool) -> None:
+    _PHASE_ADVANCE_TLS.defer = v
+
+
+def _defer_phase_advance() -> bool:
+    return bool(getattr(_PHASE_ADVANCE_TLS, "defer", False))
+
+
 def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> dict | list | None:
     """Call the API via httpx. Auto-retries on 429 with backoff."""
     url = f"{API_BASE}{path}"
@@ -2605,6 +2626,10 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
     log.info("OPERATIONAL task=%s type=%s idea=%s", task_id, task_type, idea_id)
     try:
         if task_type == "merge":
+            subprocess.run(
+                ["git", "fetch", "origin", "main"],
+                capture_output=True, text=True, timeout=60, cwd=cwd,
+            )
             pr_result = subprocess.run(
                 ["gh", "pr", "list", "--search", idea_id, "--json", "number,title", "--limit", "1"],
                 capture_output=True, text=True, timeout=15, cwd=cwd, shell=(sys.platform == "win32"),
@@ -2616,39 +2641,35 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
                     ["gh", "pr", "merge", str(pr_num), "--squash", "--admin"],
                     capture_output=True, text=True, timeout=30, cwd=cwd, shell=(sys.platform == "win32"),
                 )
-                output = (f"MERGE_PASSED: PR #{pr_num} merged." if merge_result.returncode == 0
-                          else f"MERGE_FAILED: {merge_result.stderr.strip()[:200]}")
+                if merge_result.returncode == 0:
+                    subprocess.run(
+                        ["git", "fetch", "origin", "main"],
+                        capture_output=True, text=True, timeout=60, cwd=cwd,
+                    )
+                    subprocess.run(
+                        ["git", "checkout", "main"],
+                        capture_output=True, text=True, timeout=15, cwd=cwd,
+                    )
+                    subprocess.run(
+                        ["git", "reset", "--hard", "origin/main"],
+                        capture_output=True, text=True, timeout=30, cwd=cwd,
+                    )
+                    output = f"MERGE_PASSED: PR #{pr_num} merged; local main synced to origin/main."
+                else:
+                    output = f"MERGE_FAILED: {merge_result.stderr.strip()[:200]}"
             else:
-                output = f"MERGE_PASSED: No open PR for {idea_id} — code already on main."
-        elif task_type == "deploy":
-            ssh_key = os.path.expanduser("~/.ssh/hostinger_openclaw_key_rsa")
-            if os.path.exists(ssh_key):
-                deploy_result = subprocess.run(
-                    ["ssh", "-o", "StrictHostKeyChecking=no", "-i", ssh_key, "root@187.77.152.42",
-                     "cd /docker/coherence-network/repo && git pull origin main && cd /docker/coherence-network && docker compose build --no-cache api web && docker compose up -d api web"],
-                    capture_output=True, text=True, timeout=300, cwd=cwd,
+                subprocess.run(
+                    ["git", "fetch", "origin", "main"],
+                    capture_output=True, text=True, timeout=60, cwd=cwd,
                 )
-                output = (f"DEPLOY_PASSED: VPS updated." if deploy_result.returncode == 0
-                          else f"DEPLOY_FAILED: {deploy_result.stderr[-200:]}")
-            else:
-                output = "DEPLOY_SKIPPED: No SSH key for VPS."
+                output = f"MERGE_PASSED: No open PR for {idea_id} — code already on main (fetched origin/main)."
+        elif task_type == "deploy":
+            result = _deploy_to_vps()
+            ok_d = _deploy_succeeded_message(result)
+            output = f"DEPLOY_PASSED: {result}" if ok_d else f"DEPLOY_FAILED: {result}"
         elif task_type == "verify":
-            import httpx as _httpx
-            results = []
-            with _httpx.Client(timeout=10) as client:
-                for ep in ["/api/health", "/api/ideas/count", "/api/coherence"]:
-                    try:
-                        r = client.get(f"https://api.coherencycoin.com{ep}")
-                        results.append(f"{ep}:{r.status_code}")
-                    except Exception as e:
-                        results.append(f"{ep}:FAIL({e})")
-                try:
-                    r = client.get("https://coherencycoin.com/", follow_redirects=True)
-                    results.append(f"web:{r.status_code}")
-                except Exception as e:
-                    results.append(f"web:FAIL({e})")
-            all_ok = all("200" in r for r in results)
-            output = ("VERIFY_PASSED: " if all_ok else "VERIFY_FAILED: ") + " | ".join(results)
+            ok_v, detail = _verify_production_http_checks()
+            output = ("VERIFY_PASSED: " if ok_v else "VERIFY_FAILED: ") + detail
         elif task_type == "reflect":
             output = f"REFLECT_COMPLETE: {idea_id} full lifecycle done."
         else:
@@ -2931,14 +2952,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     record_provider_outcome(task_type, provider, success, duration, output)
 
     # ── Quality gate: phase-specific minimum output length ──
-    _MIN_OUTPUT_BY_PHASE = {
-        "spec": 200,    # A real spec has goals, files, acceptance criteria
-        "impl": 200,    # A real impl describes files changed + evidence
-        "test": 150,    # A real test shows test file + results
-        "review": 80,   # A review at minimum says PASSED/FAILED with reasons
-        "code-review": 80,
-    }
-    min_chars = _MIN_OUTPUT_BY_PHASE.get(task_type, 50)
+    min_chars = _MIN_OUTPUT_CHARS_FOR_ADVANCE.get(task_type, 50)
     output_stripped = (output or "").strip()
     # If a PR was created, or real code file changes were detected, the provider did real work —
     # don't penalize for terse text output
@@ -3017,8 +3031,10 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             error_category=completion_error_category,
         )
     if success and reported:
-        # Only advance phases if the task produced meaningful output
-        if len(output_stripped) >= min_chars:
+        # Only advance phases if the task produced meaningful output (unless waiting for push gate)
+        if _defer_phase_advance():
+            log.info("DEFER_PHASE_ADVANCE task=%s — push/merge gate will run advance", task_id[:16])
+        elif len(output_stripped) >= min_chars:
             _run_phase_auto_advance_hook(task)
             _auto_record_contribution(task, provider, duration)
         else:
@@ -4075,7 +4091,12 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
     repo_root = str(_REPO_DIR)
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
-        # Fetch latest remote refs
+        # Pin origin/main before branching — prevents stale local refs
+        subprocess.run(
+            ["git", "fetch", "origin", "main"],
+            capture_output=True, text=True, timeout=60, cwd=repo_root,
+        )
+        # Fetch other refs (PR branches, tags) used by downstream phases
         subprocess.run(
             ["git", "fetch", "origin", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
@@ -4354,8 +4375,25 @@ def _run_task_in_worktree(task: dict, wt_path: Path) -> tuple[bool, str]:
     try:
         _REPO_DIR = wt_path
         ok = run_one(task, dry_run=False)
-        # Fix 2: capture what the provider actually wrote
+        # Fix 2: capture what the provider actually wrote (not stdout text alone)
         diff = _capture_worktree_diff(task_id, wt_path)
+        if diff.strip():
+            stat = subprocess.run(
+                ["git", "diff", "--cached", "--stat"],
+                capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+            )
+            stat_line = (stat.stdout or "").strip()[:2000]
+            api(
+                "PATCH",
+                f"/api/agent/tasks/{task_id}",
+                {
+                    "context": {
+                        "post_provider_git_diff_excerpt": diff[:8000],
+                        "post_provider_git_diff_stat": stat_line,
+                        "git_diff_captured": True,
+                    },
+                },
+            )
         return ok, diff
     except Exception as e:
         log.error("WORKTREE_EXEC_FAILED task=%s error=%s", task_id[:16], e)
@@ -4370,6 +4408,73 @@ _shutdown_event = threading.Event()
 _update_pending = threading.Event()  # Set when origin/main has new commits
 
 
+def _deploy_succeeded_message(result: str) -> bool:
+    r = result.lower()
+    if "deploy skipped" in r and "ssh" in r:
+        return False
+    if "deploy failed" in r or "rolled back" in r:
+        return False
+    return True
+
+
+def _verify_production_http_checks() -> tuple[bool, str]:
+    """Runner-only HTTP checks against production (fix 7 — not provider-hallucinated)."""
+    results: list[str] = []
+    passed = 0
+    failed = 0
+    api_base = rc("api", "base_url", "https://api.coherencycoin.com")
+    web_base = rc("deploy", "web_base", "https://coherencycoin.com")
+    checks = [
+        (f"{api_base}/api/health", 200, "API health"),
+        (f"{api_base}/api/ideas/count", 200, "Ideas count"),
+        (f"{api_base}/api/coherence", 200, "Coherence endpoint"),
+        (web_base.rstrip("/") + "/", 200, "Web root"),
+    ]
+    for url, expected_status, label in checks:
+        try:
+            resp = httpx.get(url, timeout=15, follow_redirects=True)
+            if resp.status_code == expected_status:
+                results.append(f"PASS: {label} -> HTTP {resp.status_code}")
+                passed += 1
+            else:
+                results.append(f"FAIL: {label} -> HTTP {resp.status_code} (expected {expected_status})")
+                failed += 1
+        except Exception as e:
+            results.append(f"FAIL: {label} -> {e}")
+            failed += 1
+    body = "\n".join(results)
+    ok = failed == 0
+    return ok, f"{passed} passed, {failed} failed\n{body}"
+
+
+def _runner_post_phase_advance(task_id: str) -> None:
+    """Enqueue next phase after runner-only task completion (deploy/verify)."""
+    task_fresh = api("GET", f"/api/agent/tasks/{task_id}")
+    if isinstance(task_fresh, dict):
+        _run_phase_auto_advance_hook(task_fresh)
+
+
+def _finalize_deferred_phase_advance(task_id: str, task_type: str) -> None:
+    """Run auto-advance after worktree push / merge-to-main (deferred from run_one)."""
+    task_fresh = api("GET", f"/api/agent/tasks/{task_id}")
+    if not isinstance(task_fresh, dict):
+        return
+    out = str(task_fresh.get("output") or "").strip()
+    min_chars = _MIN_OUTPUT_CHARS_FOR_ADVANCE.get(task_type, 50)
+    has_pr = "PR:" in out or "PR_CREATED" in out or "pull/" in out
+    if len(out) < min_chars and not has_pr:
+        log.warning(
+            "SKIP_ADVANCE_DEFERRED task=%s — output too short (%d < %d) after push gate",
+            task_id[:16], len(out), min_chars,
+        )
+        return
+    _run_phase_auto_advance_hook(task_fresh)
+    ctx = task_fresh.get("context") if isinstance(task_fresh.get("context"), dict) else {}
+    provider = str(ctx.get("provider") or "worktree-runner")
+    dur = float(ctx.get("duration_s") or 0.0)
+    _auto_record_contribution(task_fresh, provider, dur)
+
+
 def _runner_deploy_phase(task: dict) -> bool:
     """Fix 6: deploy is a RUNNER action — SSH to VPS, build, health check.
 
@@ -4379,15 +4484,15 @@ def _runner_deploy_phase(task: dict) -> bool:
     log.info("DEPLOY_PHASE task=%s — runner executing deploy", task_id[:16])
     try:
         result = _deploy_to_vps()
-        if "successful" in str(result).lower():
-            complete_task(task_id, f"Deploy passed: {result}", True)
-            return True
-        else:
-            complete_task(task_id, f"Deploy failed: {result}", False)
-            return False
+        ok = _deploy_succeeded_message(result)
+        out = f"DEPLOY_PASSED: {result}" if ok else f"DEPLOY_FAILED: {result}"
+        complete_task(task_id, out, ok, {"provider": "runner-direct", "duration_s": 0.0})
+        if ok:
+            _runner_post_phase_advance(task_id)
+        return ok
     except Exception as e:
         log.error("DEPLOY_PHASE_ERROR task=%s: %s", task_id[:16], e)
-        complete_task(task_id, f"Deploy error: {e}", False)
+        complete_task(task_id, f"DEPLOY_FAILED: {e}", False)
         return False
 
 
@@ -4401,36 +4506,13 @@ def _runner_verify_phase(task: dict) -> bool:
     idea_id = ctx.get("idea_id", "")
     log.info("VERIFY_PHASE task=%s idea=%s — runner verifying production", task_id[:16], idea_id[:20])
 
-    results = []
-    passed = 0
-    failed = 0
-
-    # Basic endpoint existence checks
-    api_base = rc("api", "base_url", "https://api.coherencycoin.com")
-    checks = [
-        (f"{api_base}/api/health", 200, "API health"),
-        (f"{api_base}/api/ideas/count", 200, "Ideas count"),
-    ]
-
-    for url, expected_status, label in checks:
-        try:
-            import httpx
-            resp = httpx.get(url, timeout=10)
-            if resp.status_code == expected_status:
-                results.append(f"PASS: {label} -> HTTP {resp.status_code}")
-                passed += 1
-            else:
-                results.append(f"FAIL: {label} -> HTTP {resp.status_code} (expected {expected_status})")
-                failed += 1
-        except Exception as e:
-            results.append(f"FAIL: {label} -> {e}")
-            failed += 1
-
-    output = f"Verify: {passed} passed, {failed} failed\n" + "\n".join(results)
-    success = failed == 0
-    complete_task(task_id, output, success)
-    log.info("VERIFY_PHASE task=%s passed=%d failed=%d", task_id[:16], passed, failed)
-    return success
+    ok, detail = _verify_production_http_checks()
+    out = ("VERIFY_PASSED: " if ok else "VERIFY_FAILED: ") + detail
+    complete_task(task_id, out, ok, {"provider": "runner-direct", "duration_s": 0.0})
+    log.info("VERIFY_PHASE task=%s ok=%s", task_id[:16], ok)
+    if ok:
+        _runner_post_phase_advance(task_id)
+    return ok
 
 
 def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
