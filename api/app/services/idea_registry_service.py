@@ -381,3 +381,68 @@ def _redact_database_url(url: str) -> str:
     else:
         credentials = "***"
     return f"{scheme}://{credentials}@{host}"
+
+
+# ── Tag persistence functions ──────────────────────────────────────────────
+
+
+def get_idea_tags(idea_id: str) -> list[str]:
+    """Return the normalized tags for a single idea (empty list if none)."""
+    ensure_schema()
+    with _session() as session:
+        row = session.get(IdeaTagRecord, idea_id)
+        if row is None:
+            return []
+        try:
+            tags = json.loads(row.tags_json or "[]")
+            return tags if isinstance(tags, list) else []
+        except (json.JSONDecodeError, ValueError):
+            return []
+
+
+def set_idea_tags(idea_id: str, tags: list[str]) -> None:
+    """Replace the full tag set for an idea (normalized, sorted)."""
+    ensure_schema()
+    with _session() as session:
+        row = session.get(IdeaTagRecord, idea_id)
+        tags_json = json.dumps(sorted(tags))
+        if row is None:
+            session.add(IdeaTagRecord(idea_id=idea_id, tags_json=tags_json))
+        else:
+            row.tags_json = tags_json
+        session.commit()
+
+
+def load_all_idea_tags() -> dict[str, list[str]]:
+    """Return a mapping of idea_id -> [tags] for all ideas that have tags."""
+    ensure_schema()
+    with _session() as session:
+        rows = session.query(IdeaTagRecord).all()
+        result: dict[str, list[str]] = {}
+        for row in rows:
+            try:
+                tags = json.loads(row.tags_json or "[]")
+                if isinstance(tags, list) and tags:
+                    result[row.idea_id] = tags
+            except (json.JSONDecodeError, ValueError):
+                pass
+        return result
+
+
+def get_all_tag_counts() -> dict[str, int]:
+    """Return a mapping of tag -> count of ideas that have that tag."""
+    ensure_schema()
+    with _session() as session:
+        rows = session.query(IdeaTagRecord).all()
+        counts: dict[str, int] = {}
+        for row in rows:
+            try:
+                tags = json.loads(row.tags_json or "[]")
+                if not isinstance(tags, list):
+                    continue
+                for tag in tags:
+                    if isinstance(tag, str) and tag:
+                        counts[tag] = counts.get(tag, 0) + 1
+            except (json.JSONDecodeError, ValueError):
+                pass
+        return counts

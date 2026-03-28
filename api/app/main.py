@@ -46,6 +46,7 @@ from app.routers import (
 from app.routers import beliefs
 from app.routers import concepts
 from app.routers import dif_feedback
+from app.routers import portfolio as portfolio_router
 from app.routers import geolocation
 from app.routers import edges as edges_router
 from app.routers import graph
@@ -560,6 +561,7 @@ app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
 app.include_router(contributor_identity.router, tags=["identity"])
+app.include_router(portfolio_router.router, prefix="/api", tags=["portfolio"])
 app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
