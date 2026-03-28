@@ -33,6 +33,7 @@ import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
+import { listConcepts, searchConcepts, showConcept, showConceptEdges, createConceptLink, showConceptStats, listRelationshipTypes, listAxes } from "../lib/commands/concepts.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -82,6 +83,8 @@ const COMMANDS = {
   edges:         () => listEntityEdges(args),
   edg:           () => listEntityEdges(args),
   edge:          () => handleEdge(args),
+  concepts:      () => listConcepts(args),
+  concept:       () => handleConcept(args),
   update:        () => update(args),
   deploy:        () => deploy(args),
   listen:        () => listen(args),
@@ -127,6 +130,22 @@ async function handleEdge(args) {
       console.log("  cc edge delete <edge-id>");
       console.log("  cc edge types");
   }
+}
+
+async function handleConcept(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  if (!sub) {
+    console.log("Usage: cc concept <id|link>");
+    console.log("  cc concept <id>                     — show concept detail");
+    console.log("  cc concept <id> edges               — show concept edges");
+    console.log("  cc concept link <from> <rel> <to>   — create a typed edge");
+    return;
+  }
+  if (sub === "link") return createConceptLink(subArgs);
+  // sub is concept id
+  if (subArgs[0] === "edges") return showConceptEdges(args);
+  return showConcept(args);
 }
 
 async function handleIdentity(args) {
@@ -452,6 +471,16 @@ function showHelp() {
   lineage <id>            View lineage link
   lineage <id> valuation  Link valuation
   lineage <id> payout <amt>  Payout preview
+
+\x1b[1mConcepts Ontology:\x1b[0m
+  concepts                List all concepts (Living Codex ontology)
+  concepts search <q>     Search concepts by name or description
+  concepts stats          Ontology statistics (184 concepts, 46 rel types, 53 axes)
+  concepts relationships  List all 46 relationship types
+  concepts axes           List all 53 ontology axes
+  concept <id>            View concept detail
+  concept <id> edges      Show concept edges
+  concept link <f> <r> <t>  Create typed edge: cc concept link breath resonates-with water
 
 \x1b[1mEdge Navigation:\x1b[0m
   edges <id>              List all edges for an entity (alias: edg)
