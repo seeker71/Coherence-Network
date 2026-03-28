@@ -297,9 +297,12 @@ def _detect_providers() -> dict[str, dict]:
             # Extract version string — first line, strip common prefixes
             if vout:
                 vline = vout.split("\n")[0].strip()
-                for prefix in ["claude ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent "]:
+                for prefix in ["claude ", "codex-cli ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent "]:
                     if vline.lower().startswith(prefix):
                         vline = vline[len(prefix):].strip()
+                        break
+                # Strip trailing parenthetical labels like "(Claude Code)"
+                vline = re.sub(r"\s*\(.*?\)\s*$", "", vline).strip()
                 version = vline[:40]  # cap at 40 chars
         except Exception:
             pass
@@ -1460,6 +1463,15 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
 
         extra_context = {}  # PR/branch info passed to downstream phases
 
+        # Idea scope header prepended to every direction so providers know exactly what they're working on
+        _idea_scope_header = (
+            f"─── IDEA SCOPE ───\n"
+            f"idea_id: {idea_id}\n"
+            f"idea_name: {idea_name}\n"
+            f"phase: {next_phase}\n"
+            f"───────────────────\n\n"
+        )
+
         # Phase-specific direction with quality requirements
         if next_phase == "spec":
             direction = (
@@ -1585,21 +1597,23 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         elif next_phase == "impl":
             # Read the spec content directly to give the provider full context
             spec_ref = ""
+            resolved_spec_path = ""
             try:
                 import glob as _glob
-                spec_patterns = [
-                    str(_REPO_DIR / "specs" / f"*{idea_id}*"),
-                    str(_REPO_DIR / "specs" / f"*{idea_id.split('-')[0]}*{idea_id.split('-')[-1]}*"),
-                ]
-                spec_files = []
-                for pat in spec_patterns:
-                    spec_files.extend(_glob.glob(pat))
+                # Exact match first, then glob fallback
+                exact = _REPO_DIR / "specs" / f"{idea_id}.md"
+                if exact.exists():
+                    spec_files = [str(exact)]
+                else:
+                    spec_files = _glob.glob(str(_REPO_DIR / "specs" / f"*{idea_id}*"))
                 if spec_files:
-                    with open(spec_files[0], "r", encoding="utf-8", errors="replace") as sf:
+                    resolved_spec_path = spec_files[0]
+                    with open(resolved_spec_path, "r", encoding="utf-8", errors="replace") as sf:
                         spec_content = sf.read()[:3000]
-                    spec_ref = f"\n\nSpec ({spec_files[0]}):\n```\n{spec_content}\n```\n"
+                    spec_ref = f"\n\nSpec ({resolved_spec_path}):\n```\n{spec_content}\n```\n"
             except Exception:
                 pass
+            extra_context["spec_path"] = resolved_spec_path or "none"
 
             direction = (
                 f"Implement '{idea_name}' ({idea_id}).\n\n"
@@ -1658,6 +1672,9 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"Description: {idea_desc[:300]}\n\n"
                 f"Follow the project's CLAUDE.md conventions. Work in the repository."
             )
+        # Prepend idea scope header so every provider prompt starts with clear context
+        direction = _idea_scope_header + direction
+
         created = api(
             "POST",
             "/api/agent/tasks",
@@ -1852,11 +1869,18 @@ Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>"""
 Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
 Output a summary: files created/modified, validation results, errors encountered."""
 
+    idea_id = context.get("idea_id", "unknown") if isinstance(context, dict) else "unknown"
+    spec_path = context.get("spec_path", "none") if isinstance(context, dict) else "none"
+
     prompt = f"""EXECUTE THIS TASK NOW. Do NOT ask what to do — the task is described below. Start working immediately.
 
 Task type: {task_type}
 Task ID: {task.get('id', 'unknown')}
+Idea ID: {idea_id}
+Spec file: {spec_path}
 Role: {agent} for Coherence Network
+
+SCOPE RULE: Only modify files related to idea '{idea_id}'. Do NOT work on any other idea.
 
 TASK:
 {direction}
@@ -2622,7 +2646,7 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
             else:
                 output = f"MERGE_PASSED: No open PR for {idea_id} — code already on main."
         elif task_type == "deploy":
-            ssh_key = os.path.expanduser("~/.ssh/hostinger_openclaw_key_rsa")
+            ssh_key = os.path.expanduser("~/.ssh/hostinger-openclaw")
             if os.path.exists(ssh_key):
                 deploy_result = subprocess.run(
                     ["ssh", "-o", "StrictHostKeyChecking=no", "-i", ssh_key, "root@187.77.152.42",
@@ -4662,7 +4686,7 @@ def _recover_in_flight_tasks() -> int:
         task_list = running if isinstance(running, list) else running.get("tasks", [])
         recovered = 0
         for t in task_list:
-            claimed = str(t.get("claimed_by") or "")
+            claimed = str(t.get("claimed_by") or t.get("worker_id") or "")
             # Match tasks claimed by this node (hostname or node_id prefix)
             if _NODE_ID[:8] not in claimed and _NODE_NAME not in claimed:
                 continue
