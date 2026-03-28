@@ -213,6 +213,15 @@ def load_ideas() -> list[Idea]:
             value_basis=n.get("value_basis"),
             open_questions=questions,
         ))
+
+    # Bulk-attach tags from IdeaTagRecord
+    try:
+        tag_map = load_all_idea_tags()
+        for idea in out:
+            idea.tags = tag_map.get(idea.id, [])
+    except Exception:
+        pass  # Tags are best-effort; don't fail idea loading if tag table is missing
+
     return out
 
 
