@@ -1,66 +1,58 @@
-# Spec: Hierarchical view in check_pipeline (goal → PM → tasks → artifacts)
+# Spec: Hierarchical View in check_pipeline (Goal → PM → Tasks → Artifacts)
+
+**Spec ID**: 036
+**Status**: Implemented
+**Author**: agent/product-manager
+**Related Specs**: 007-meta-pipeline-backlog, 026-pipeline-observability-and-auto-review, 032-attention-heuristics-pipeline-status
+
+---
 
 ## Summary
 
-Operators need a single command that shows pipeline health in a clear hierarchy: goal progress first, then orchestration (PM), then task execution, then artifact health. This makes it easy to see "are we on track?" before drilling into running/pending tasks and recent outputs.
+Operators need a single command that shows pipeline health in a clear hierarchy: goal progress first, then orchestration (PM), then task execution, then artifact health. The `check_pipeline.py` script is extended with a four-layer hierarchical view so operators can immediately answer "are we on track?" without scrolling through undifferentiated status blocks.
 
-The feature adds a structured four-layer view to `api/scripts/check_pipeline.py`, controlled via `--hierarchical` (default) and `--flat` flags. When run without `--json`, output is sectioned as:
+---
+
+## Goal
+
+Replace the flat ad-hoc layout of `check_pipeline.py` human-readable output with a strictly ordered hierarchical view:
 
 ```
-Pipeline Status (hierarchical)
-============================================================
-Goal (Layer 0)
-  status: ok
-  goal_proximity=0.78, 12 tasks (7d), 91% success
-  ...
-
-PM / Orchestration (Layer 1)
-  item 5, phase=impl; agent_runner workers=5 (ok); PM parallel=true (ok)
-  PROJECT MANAGER: item 5, phase=impl
-
-Tasks (Layer 2)
-  RUNNING: abc123 (impl) | model: claude-sonnet-4-6 | duration: 1m 23s
-  PENDING: 3 tasks
-  RECENT COMPLETED: 5
-
-Artifacts (Layer 3)
-  • abc120 | output: 4200 chars | preview: Implemented feature X...
+Goal (Layer 0)               <- Are we making progress toward the system goal?
+PM / Orchestration (Layer 1) <- Is the project manager healthy and running?
+Tasks (Layer 2)              <- What is running, pending, recently completed?
+Artifacts (Layer 3)          <- What did recently-completed tasks produce?
 ```
+
+The hierarchy is also exposed in `--json` output so scripting consumers get the same structure.
 
 ---
 
 ## Requirements
 
-- [ ] When run without `--json`, `check_pipeline.py` prints a **hierarchical view**: Goal → PM/Orchestration → Tasks → Artifacts (in that order).
-- [ ] **Goal** section (Layer 0): Use `GET /api/agent/status-report` when available; show `layer_0_goal.status` and `layer_0_goal.summary` (e.g. goal_proximity, throughput, success rate). If status-report is missing or not yet generated, fall back to `GET /api/agent/effectiveness` and show `goal_proximity` and a one-line summary. If both unavailable, print `(report not yet generated)`.
-- [ ] **PM / Orchestration** section (Layer 1): Show `layer_1_orchestration` from status-report when available; otherwise derive from `GET /api/agent/pipeline-status` (project_manager state: backlog_index, phase, blocked) and process detection (agent_runner workers, PM --parallel). Label as "Layer 1".
-- [ ] **Tasks** section (Layer 2): Running task (id, task_type, model, duration), pending count with wait times for first 8, recent completed count and brief list with duration. Label as "Layer 2".
-- [ ] **Artifacts** section (Layer 3): Recent completed tasks listed with `output_len` (chars) and optional one-line `output_preview`. Label as "Layer 3".
-- [ ] `--hierarchical` flag explicitly selects hierarchical view; human-readable default is hierarchical.
-- [ ] `--flat` flag preserves legacy flat output (sections not strictly layered; backward-compatible).
-- [ ] With `--json`, when hierarchical view is requested (default or `--hierarchical`), the JSON includes a top-level `"hierarchical"` key containing `layer_0_goal`, `layer_1_orchestration`, `layer_2_execution`, `layer_3_attention`. When status-report is available, those fields come from it; otherwise built from pipeline-status + effectiveness.
+- [ ] When run without `--json`, `check_pipeline.py` prints a **hierarchical view** with four labeled sections in this exact order: Goal (Layer 0), PM/Orchestration (Layer 1), Tasks (Layer 2), Artifacts (Layer 3).
+- [ ] **Goal section (Layer 0)**: Fetch `GET /api/agent/status-report`; display `layer_0_goal.status`, `goal_proximity`, `throughput`, and `success_rate`. If status-report is unavailable, fall back to `GET /api/agent/effectiveness` for the same fields. If both are unavailable, print `Goal: (report not yet generated)`.
+- [ ] **PM / Orchestration section (Layer 1)**: Use `layer_1_orchestration` from status-report when available; otherwise derive from `GET /api/agent/pipeline-status` fields (`project_manager.state`, `backlog_index`, `phase`, `blocked`) plus OS-process detection for `agent_runner` workers and PM `--parallel` flag.
+- [ ] **Tasks section (Layer 2)**: Show running tasks (with model, duration, direction), pending tasks (with wait time), and recent completed (with duration). Source: `GET /api/agent/pipeline-status`.
+- [ ] **Artifacts section (Layer 3)**: Show recent completed tasks with `output_len` and optional `output_preview` (first ~80 chars) so operators can confirm artifacts were produced.
+- [ ] Add `--hierarchical` flag to explicitly select hierarchical view. Default for human-readable output **is** hierarchical (`use_hierarchical = not args.flat`).
+- [ ] Add `--flat` flag to preserve legacy output format (sections may appear in any order, no strict layering requirement).
+- [ ] With `--json` and hierarchical view active (default or `--hierarchical`): response JSON includes a top-level `"hierarchical"` key containing `layer_0_goal`, `layer_1_orchestration`, `layer_2_execution`, `layer_3_attention` subobjects.
+- [ ] With `--json --flat`: response JSON does **not** include `"hierarchical"` key; returns raw pipeline-status JSON only.
 
 ---
 
 ## API Contract
 
-No new API endpoints. Uses existing read-only endpoints:
+No new API endpoints. Uses existing read-only APIs:
 
 | Endpoint | Purpose | Fallback |
 |---|---|---|
-| `GET /api/agent/status-report` | Full hierarchical report (layers 0–3) | Falls back to next row |
-| `GET /api/agent/pipeline-status` | Running/pending/completed tasks, PM state | Required (no further fallback) |
-| `GET /api/agent/effectiveness` | goal_proximity, throughput, success_rate | Used when status-report missing |
+| `GET /api/agent/status-report` | Full hierarchical report written by monitor | Falls back to effectiveness + pipeline-status |
+| `GET /api/agent/pipeline-status` | Running/pending/completed tasks, PM state | Required — script fails gracefully if unreachable |
+| `GET /api/agent/effectiveness` | goal_proximity, throughput, success_rate | Used when status-report unavailable |
 
-All endpoints return JSON. All are read-only (GET). No mutations needed.
-
----
-
-## Data Model
-
-Script aggregates existing API responses and prints (or emits JSON) in hierarchical order. No new database schema.
-
-**Output JSON shape (with `--json` and hierarchical mode)**:
+### Response Shape for `--json` (hierarchical, default)
 
 ```json
 {
@@ -70,21 +62,28 @@ Script aggregates existing API responses and prints (or emits JSON) in hierarchi
   "project_manager": {...},
   "hierarchical": {
     "layer_0_goal": {
-      "status": "ok",
-      "goal_proximity": 0.78,
-      "summary": "goal_proximity=0.78, 12 tasks (7d), 91% success"
+      "status": "healthy",
+      "goal_proximity": 0.72,
+      "throughput": 3.1,
+      "success_rate": 0.85,
+      "summary": "Pipeline operating at steady state"
     },
     "layer_1_orchestration": {
-      "status": "ok",
-      "summary": "item 5, phase=impl; workers=5; parallel=true"
+      "status": "running",
+      "state": "EXECUTING",
+      "backlog_index": 12,
+      "workers": 2,
+      "parallel": true
     },
     "layer_2_execution": {
-      "running": 1,
-      "pending": 3,
-      "recent_completed": 5
+      "running_count": 1,
+      "pending_count": 2,
+      "recent_completed_count": 5
     },
     "layer_3_attention": {
-      "flags": []
+      "flags": [],
+      "artifact_count": 5,
+      "total_output_bytes": 18340
     }
   }
 }
@@ -92,160 +91,212 @@ Script aggregates existing API responses and prints (or emits JSON) in hierarchi
 
 ---
 
-## Files to Create/Modify
+## Data Model
 
-- `api/scripts/check_pipeline.py` — add `--hierarchical` / `--flat` argument; fetch status-report and effectiveness; build and print four-layer hierarchy; extend `--json` output to include `hierarchical` key.
+No database schema changes. The script is a read-only aggregator that:
 
-No other files. No migrations. No new API routes.
+1. Fetches `status-report`, `pipeline-status`, and optionally `effectiveness` from the running API.
+2. Merges responses into a `hierarchical` dict via `_build_hierarchical_from_data()`.
+3. Prints (human-readable) or serializes (JSON) the result.
 
 ---
 
-## Acceptance Tests
+## Files to Create / Modify
 
-- Run `python scripts/check_pipeline.py` (no flags): output begins with `Pipeline Status (hierarchical)`, contains sections `Goal (Layer 0)`, `PM / Orchestration (Layer 1)`, `Tasks (Layer 2)`, `Artifacts (Layer 3)` in that order.
-- Run with `--json`: JSON response includes top-level key `"hierarchical"` containing `layer_0_goal`, `layer_1_orchestration`, `layer_2_execution`, `layer_3_attention`.
-- Run with `--flat`: output begins with `Pipeline Status` (no "hierarchical" in header), shows sections in legacy format (RUNNING, PENDING, RECENT COMPLETED, PROJECT MANAGER, PROCESSES).
-- Run with `--hierarchical` explicitly: same output as default (no `--flat`).
-- When API is down or status-report not yet generated: Goal section shows `(report not yet generated)` or effectiveness-derived fallback; script exits cleanly (exit 0 or 1 only, no unhandled exception).
+| File | Change |
+|---|---|
+| `api/scripts/check_pipeline.py` | Add `--hierarchical` / `--flat` flags; implement four-section hierarchical human-readable output; extend `--json` to include `hierarchical` key; add `_fetch_status_report()`, `_fetch_effectiveness()`, `_build_hierarchical_from_data()` helpers. |
+| `api/tests/test_check_pipeline_hierarchical.py` | Pytest suite (mocked HTTP) verifying section order, JSON shape, fallback behavior, and flag interactions. |
 
 ---
 
 ## Verification Scenarios
 
-### Scenario 1: Default hierarchical output structure
+These scenarios are concrete and runnable. The reviewer will execute them against the actual script.
 
-**Setup**: API is running (`GET /api/agent/pipeline-status` responds 200). Status-report may or may not be available.
+### Scenario 1 — Default human-readable output shows all four sections in order
+
+**Setup**: API is reachable at `http://localhost:8000`. `GET /api/agent/pipeline-status` returns at least one running task.
 
 **Action**:
 ```bash
-cd api && .venv/bin/python scripts/check_pipeline.py
+cd api && python scripts/check_pipeline.py 2>&1
 ```
 
 **Expected result**:
-- Exit code 0
-- stdout contains the string `Pipeline Status (hierarchical)`
-- stdout contains `Goal (Layer 0)` before `PM / Orchestration (Layer 1)`
-- stdout contains `PM / Orchestration (Layer 1)` before `Tasks (Layer 2)`
-- stdout contains `Tasks (Layer 2)` before `Artifacts (Layer 3)`
-- All four section headers appear exactly once
+- Output contains section labels in this order (earlier lines first):
+  1. A line matching `Goal` or `Goal (Layer 0)`
+  2. A line matching `PM` or `Orchestration` or `Layer 1`
+  3. A line matching `Task` or `Running` or `Layer 2`
+  4. A line matching `Artifact` or `Layer 3`
+- `Goal` section shows either a numeric `goal_proximity` value (e.g. `goal_proximity: 0.72`) or the literal string `report not yet generated`.
+- Script exits with code 0.
 
-**Edge case**: If `GET /api/agent/status-report` returns 404, the Goal section shows either effectiveness-based fallback or `(report not yet generated)` — it does NOT crash or print a Python traceback.
+**Edge case**: If the API is completely unreachable, output contains `[API unreachable]` or `Connection refused` message. Script exits with non-zero code without printing a Python traceback.
 
 ---
 
-### Scenario 2: `--flat` flag produces legacy output
+### Scenario 2 — `--json` output includes `hierarchical` key with four layers
 
-**Setup**: API is running.
+**Setup**: API is reachable.
 
 **Action**:
 ```bash
-cd api && .venv/bin/python scripts/check_pipeline.py --flat
+cd api && python scripts/check_pipeline.py --json | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+assert 'hierarchical' in d, 'missing top-level hierarchical key'
+h = d['hierarchical']
+for layer in ('layer_0_goal', 'layer_1_orchestration', 'layer_2_execution', 'layer_3_attention'):
+    assert layer in h, f'missing {layer}'
+print('OK - all four layers present')
+"
 ```
 
-**Expected result**:
-- Exit code 0
-- stdout starts with `Pipeline Status` (NOT `Pipeline Status (hierarchical)`)
-- stdout does NOT contain `Goal (Layer 0)`, `Tasks (Layer 2)`, or `Artifacts (Layer 3)`
-- stdout contains legacy sections `RUNNING:`, `PENDING:`, `RECENT COMPLETED:`
+**Expected result**: Prints `OK - all four layers present`. No assertion errors. Exit code 0.
 
-**Edge case**: Running with both `--flat` and `--hierarchical` at once should fail with an argparse error (mutually exclusive group) or clearly print an error and exit non-zero.
+**Edge case**: If `GET /api/agent/status-report` returns 404 (monitor not yet run), `hierarchical` key is still present — built from pipeline-status + effectiveness fallback. `layer_0_goal.summary` will contain `"Report not yet generated by monitor"` or `goal_proximity` from effectiveness.
 
 ---
 
-### Scenario 3: `--json` output includes `hierarchical` key
+### Scenario 3 — `--flat` flag disables hierarchical key in JSON and uses legacy layout
 
-**Setup**: API is running.
+**Setup**: API is reachable.
 
-**Action**:
+**Action (JSON)**:
 ```bash
-cd api && .venv/bin/python scripts/check_pipeline.py --json
+cd api && python scripts/check_pipeline.py --json --flat | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+assert 'hierarchical' not in d, f'hierarchical key should be absent with --flat, got keys: {list(d.keys())}'
+print('OK - no hierarchical key with --flat')
+"
 ```
 
-**Expected result**:
-- Exit code 0
-- Output is valid JSON (parseable with `python3 -c "import sys,json; json.load(sys.stdin)"`)
-- The JSON object contains a top-level key `"hierarchical"`
-- `hierarchical["layer_0_goal"]` is an object with at least the keys `"status"` and `"summary"`
-- `hierarchical["layer_1_orchestration"]` is present
-- `hierarchical["layer_2_execution"]` is present
-- `hierarchical["layer_3_attention"]` is present
+**Expected result**: Prints `OK - no hierarchical key with --flat`.
 
-**Edge case**: If `GET /api/agent/effectiveness` returns 500, the `layer_0_goal` key is still present in JSON output, with a degraded summary (e.g. `"status": "unknown"` or `"summary": "report not yet generated"`) — not absent or null.
+**Action (human-readable)**:
+```bash
+cd api && python scripts/check_pipeline.py --flat 2>&1 | head -10
+```
+
+**Expected result**: Output does NOT begin with `Goal (Layer 0)`. Uses legacy section headers (e.g. `PIPELINE STATUS`, `PROJECT MANAGER`, `Running Tasks`).
+
+**Edge case**: `--hierarchical` and `--flat` are mutually exclusive. Passing both raises an argparse error or `--flat` takes precedence (per documented behavior).
 
 ---
 
-### Scenario 4: `--json --flat` produces JSON WITHOUT `hierarchical` key
+### Scenario 4 — Graceful fallback when `status-report` endpoint is unavailable
 
-**Setup**: API is running.
+**Setup**: `GET /api/agent/status-report` returns HTTP 404. `GET /api/agent/pipeline-status` and `GET /api/agent/effectiveness` return valid data.
 
 **Action**:
 ```bash
-cd api && .venv/bin/python scripts/check_pipeline.py --json --flat
+cd api && python scripts/check_pipeline.py 2>&1
 ```
 
 **Expected result**:
-- Exit code 0
-- Output is valid JSON
-- The JSON object does NOT contain `"hierarchical"` as a top-level key (legacy flat JSON output)
-- Keys present: `"running"`, `"pending"`, `"recent_completed"` (standard pipeline-status fields)
+- Script does not crash with a traceback.
+- `Goal (Layer 0)` section is present.
+- Shows fallback effectiveness data (e.g. `goal_proximity: 0.65`) **or** the literal text `report not yet generated` — one of the two must appear.
+- `Tasks (Layer 2)` section is still populated from pipeline-status.
+- `Artifacts (Layer 3)` section still lists recent completed tasks.
+- Exit code 0 (partial data is not an error condition).
 
-**Edge case**: Consumers relying on flat JSON (CI scripts, monitors) continue to work without modification when `--flat` is passed.
+**Edge case**: If `GET /api/agent/pipeline-status` is also unavailable (both endpoints down), script exits with non-zero code and prints a user-facing error message (not a bare Python exception).
 
 ---
 
-### Scenario 5: Graceful degradation when API is unreachable
+### Scenario 5 — Full test suite passes without a live API server
 
-**Setup**: API is NOT running (or `AGENT_API_BASE` points to a non-responding host).
+**Setup**: No live API server. Tests use `unittest.mock.patch` to mock `httpx` responses.
 
 **Action**:
 ```bash
-cd api && AGENT_API_BASE=http://localhost:19999 .venv/bin/python scripts/check_pipeline.py
+cd api && python3 -m pytest tests/test_check_pipeline_hierarchical.py -x -v 2>&1 | tail -25
 ```
 
 **Expected result**:
-- Script exits with a non-zero exit code OR prints an error message indicating the API is not reachable
-- No unhandled Python exception / traceback in stdout (stderr stacktrace acceptable if handled cleanly)
-- Script does not hang indefinitely (timeouts are applied to HTTP requests, default ≤ 10 seconds)
+```
+PASSED tests/test_check_pipeline_hierarchical.py::test_hierarchical_view_default_output_order
+PASSED tests/test_check_pipeline_hierarchical.py::test_hierarchical_flag_explicit
+PASSED tests/test_check_pipeline_hierarchical.py::test_flat_flag_legacy_output
+PASSED tests/test_check_pipeline_hierarchical.py::test_json_output_includes_hierarchical_data
+PASSED tests/test_check_pipeline_hierarchical.py::test_json_flat_output_no_hierarchical
+PASSED tests/test_check_pipeline_hierarchical.py::test_goal_section_displays_status
+PASSED tests/test_check_pipeline_hierarchical.py::test_pm_orchestration_section_displays
+PASSED tests/test_check_pipeline_hierarchical.py::test_tasks_section_displays
+PASSED tests/test_check_pipeline_hierarchical.py::test_artifacts_section_displays
+PASSED tests/test_check_pipeline_hierarchical.py::test_script_handles_api_unreachable
+...
+X passed, 0 failed, 0 errors
+```
 
-**Edge case**: With `--json` and unreachable API, output may be empty or a JSON error object, but the script must not hang.
+Exit code 0. No `FAILED` or `ERROR` lines.
+
+**Edge case**: If `check_pipeline` module cannot be imported (missing dependency), all tests fail with `ImportError`. The spec requires no new third-party dependencies beyond `httpx` and `argparse` (both already present in the project).
+
+---
+
+## Acceptance Tests
+
+- `python scripts/check_pipeline.py` (no flags): output shows four sections in order — Goal, PM/Orchestration, Tasks, Artifacts.
+- `python scripts/check_pipeline.py --json`: response includes `"hierarchical"` key with four layer subobjects.
+- `python scripts/check_pipeline.py --json --flat`: response does NOT include `"hierarchical"` key.
+- `python scripts/check_pipeline.py --flat`: uses legacy flat layout (no `Goal (Layer 0)` header).
+- When status-report is missing (API up): Goal section shows fallback from effectiveness or "report not yet generated"; other sections still populated.
+- Full test suite: `python3 -m pytest api/tests/test_check_pipeline_hierarchical.py -x -v` — all tests pass.
 
 ---
 
 ## Out of Scope
 
-- Changing `GET /api/agent/status-report` or `GET /api/agent/pipeline-status` response contracts.
-- Modifying `monitor_pipeline.py` (monitor continues to write status-report independently).
-- New API endpoints or files beyond `api/scripts/check_pipeline.py`.
-- Authentication or authorization changes.
+- Changing `GET /api/agent/status-report` or `GET /api/agent/pipeline-status` API contracts.
+- Modifying `monitor_pipeline.py` (monitor continues to write status-report as-is).
+- New API endpoints or files beyond `check_pipeline.py` and its test.
+- Authentication / authorization on the existing read-only endpoints.
 
 ---
 
-## Risks and Assumptions
+## Risks and Known Gaps
 
-- **status-report availability**: The feature degrades gracefully when `GET /api/agent/status-report` is absent. Effectiveness fallback provides minimal Layer 0 data. This is an assumption — confirmed in implementation review.
-- **No auth gate**: Script endpoints are unprotected in current deployment; acceptable for internal tooling.
-- **Output contract**: The `--flat` mode preserves existing output format exactly to avoid breaking downstream CI/bash consumers.
-- **Existing tests**: Any tests referencing `Pipeline Status\n` (without "hierarchical") must pass `--flat` to preserve coverage.
-
----
-
-## Known Gaps and Follow-up Tasks
-
-- **Layer 3 depth**: Currently only lists recent completed tasks with output size. Future: parse artifact files from `specs/` or `STATUS.md` for richer health signals.
-- **Interactive refresh**: No `--watch` / auto-refresh. Operators must re-run manually. Could be added as a follow-up.
-- **Attention flags in Layer 3**: `layer_3_attention` flags (from spec 032) could surface more prominently in the hierarchical view.
+| Risk | Mitigation |
+|---|---|
+| `status-report` not yet written by monitor (fresh deploy) | Fallback to `effectiveness` + `pipeline-status`; never crash |
+| `ps aux` process detection fails on non-Unix hosts (Windows, Docker) | Wrap in `try/except`; return `None` for process counts |
+| `--hierarchical` and `--flat` both passed | `argparse` mutual exclusion group or `--flat` takes precedence |
+| API timeouts during script execution | `httpx` client uses `timeout=10`; script continues with partial data |
+| No auth gate on endpoints | Acceptable for MVP (local/VPS internal network); defer to C1 auth milestone |
+| `ps aux` parsing brittle across OS flavors | Return best-effort; log warning on parse failure |
 
 ---
 
-## See also
+## Concurrency Behavior
+
+- **Read operations**: All API calls are GET (read-only); safe for concurrent access — no locking required.
+- **No writes**: Script does not mutate any API state.
+
+---
+
+## Failure and Retry Behavior
+
+- Script makes a single attempt per endpoint with `timeout=10s`.
+- No retry logic — script is intended for interactive operator use; re-run manually if needed.
+- On connection failure: print human-friendly error and exit non-zero.
+- On partial API failure (status-report missing, effectiveness missing): continue with available data and note missing sections.
+
+---
+
+## See Also
 
 - [007-meta-pipeline-backlog.md](007-meta-pipeline-backlog.md) — item 5.
-- [032-attention-heuristics-pipeline-status.md](032-attention-heuristics-pipeline-status.md) — attention flags.
 - [026-pipeline-observability-and-auto-review.md](026-pipeline-observability-and-auto-review.md) — goal status and dashboard.
+- [032-attention-heuristics-pipeline-status.md](032-attention-heuristics-pipeline-status.md) — attention flags.
+- [docs/PIPELINE-EFFICIENCY-PLAN.md](../docs/PIPELINE-EFFICIENCY-PLAN.md) — §4.3 Hierarchical view, §7 Phase 3.
 
 ---
 
-## Verification (automated tests)
+## Verification Command
 
 ```bash
 python3 -m pytest api/tests/test_check_pipeline_hierarchical.py -x -v

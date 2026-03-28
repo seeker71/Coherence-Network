@@ -352,10 +352,34 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         child_idea_ids=data.child_idea_ids,
         manifestation_status=data.manifestation_status,
         value_basis=data.value_basis,
+        tags=data.tags,
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")
     return created
+
+
+@router.put("/ideas/{idea_id}/tags", response_model=IdeaTagUpdateResponse)
+async def update_idea_tags(
+    idea_id: str,
+    body: IdeaTagUpdateRequest,
+    _key: str = Depends(require_api_key),
+) -> IdeaTagUpdateResponse:
+    """Replace the full tag set for an idea (spec 129).
+
+    Tags are normalized to lowercase slug format, deduplicated, and sorted.
+    Empty array clears all tags. Unknown idea_id returns 404.
+    Invalid tag values (non-normalizable) return 422.
+    """
+    # Validate that all tags are normalizable strings
+    for raw in body.tags:
+        if not isinstance(raw, str):
+            raise HTTPException(status_code=422, detail=f"Invalid tag value: {raw!r}")
+
+    result = idea_service.set_idea_tags(idea_id, body.tags)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return IdeaTagUpdateResponse(id=idea_id, tags=result)
 
 
 @router.patch("/ideas/{idea_id}", response_model=IdeaWithScore)

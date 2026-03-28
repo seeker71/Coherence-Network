@@ -1,0 +1,58 @@
+# Smithery registry manifest for coherence-mcp-server
+# Schema: https://smithery.ai/docs/registry/schema
+name: coherence-mcp-server
+description: >
+  20 typed tools for AI agents to browse ideas, trace value chains, link identities,
+  and record contributions on the Coherence Network — an open intelligence platform
+  where every idea is tracked from inception to payout with fair attribution and
+  coherence scoring. Works with Claude, Cursor, Windsurf, and any MCP client.
+version: "0.3.1"
+homepage: https://coherencycoin.com
+license: MIT
+repository: https://github.com/seeker71/Coherence-Network
+categories:
+  - collaboration
+  - project-management
+  - open-source
+tags:
+  - ideas
+  - collaboration
+  - investment
+  - federation
+  - coherence
+  - attribution
+  - value-chain
+  - traceability
+install:
+  npm:
+    package: coherence-mcp-server
+    bin: coherence-mcp-server
+tools:
+  - name: list_ideas
+    description: Browse ideas sorted by free energy score
+  - name: get_idea
+    description: Get idea details including tasks and progress
+  - name: create_idea
+    description: Share a new idea with the network
+  - name: list_specs
+    description: Browse registered specs
+  - name: list_nodes
+    description: List federation compute nodes
+  - name: get_coherence_score
+    description: Get coherence score with signal breakdown
+  - name: ask_question
+    description: Ask a question on an idea
+  - name: stake
+    description: Invest CC in an idea (triggers compute tasks)
+  - name: record_contribution
+    description: Record a contribution to the network
+  - name: list_tasks
+    description: List agent tasks by status
+  - name: get_resonance
+    description: Get recent network activity
+  - name: link_identity
+    description: Link an external identity to a contributor
+  - name: get_portfolio
+    description: Get idea portfolio summary
+  - name: get_provider_stats
+    description: Get provider execution statistics

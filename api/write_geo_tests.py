@@ -141,7 +141,8 @@ def test_local_news_resonance_with_articles(monkeypatch):
             "published_at": "2026-03-28T10:00:00Z",
         }
     ]
-    monkeypatch.setattr(nis, "get_recent_articles", lambda limit=200: fake_articles)
+    # Add the function if it does not exist (raising=False allows new attrs)
+    monkeypatch.setattr(nis, "get_recent_articles", lambda limit=200: fake_articles, raising=False)
     result = gs.local_news_resonance(location="Paris", limit=10)
     assert result.location == "Paris"
     assert len(result.items) >= 1
