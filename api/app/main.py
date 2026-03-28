@@ -47,6 +47,7 @@ from app.routers import concepts
 from app.routers import dif_feedback
 from app.routers import graph
 from app.routers import agent_grounded_metrics_routes
+from app.routers import pipeline
 from app.routers import provider_stats
 from app.routers import service_registry_router
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -554,6 +555,7 @@ app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["i
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
 app.include_router(contributor_identity.router, tags=["identity"])
 app.include_router(provider_stats.router)
+app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])

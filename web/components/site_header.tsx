@@ -8,7 +8,7 @@ const PRIMARY_NAV = [
   { href: "/ideas", label: "Ideas" },
   { href: "/contribute", label: "Contribute" },
   { href: "/resonance", label: "Resonance" },
-  { href: "/tasks", label: "Pipeline" },
+  { href: "/pipeline", label: "Pipeline" },
   { href: "/nodes", label: "Nodes" },
 ];
 
@@ -27,6 +27,7 @@ const SECONDARY_NAV = [
   { href: "/blog", label: "Blog" },
   { href: "/search", label: "Search" },
   // Operations (power users)
+  { href: "/tasks", label: "Work Cards" },
   { href: "/automation", label: "Automation" },
   { href: "/friction", label: "Friction" },
   { href: "/identity", label: "Identity" },
