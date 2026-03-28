@@ -503,6 +503,89 @@ def test_seed_task_from_open_idea_sets_idea_id_at_top_level(monkeypatch: pytest.
     assert (payload.get("context") or {}).get("idea_id") == "seed-idea-1"
 
 
+def test_create_worktree_reuses_existing_task_worktree(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    existing_worktree = repo_root / ".worktrees" / "task-task_cb684a7d0b9"
+    existing_worktree.mkdir(parents=True)
+
+    monkeypatch.setattr(local_runner, "_git_common_repo_root", lambda repo_dir=None: repo_root)
+    monkeypatch.setattr(local_runner, "_worktree_base", lambda repo_dir=None: repo_root / ".worktrees")
+    monkeypatch.setattr(local_runner, "_find_task_worktree", lambda branch, repo_dir=None: existing_worktree)
+
+    def _unexpected_run(*_args: Any, **_kwargs: Any) -> Any:
+        pytest.fail("subprocess.run should not be called when reusing an existing worktree")
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _unexpected_run)
+
+    reused = local_runner._create_worktree("task_cb684a7d0b9339ec")
+
+    assert reused == existing_worktree
+
+
+def test_create_worktree_reattaches_existing_branch(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+    worktree_base = repo_root / ".worktrees"
+    task_id = "task_existing_branch_123"
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    expected_path = worktree_base / f"task-{slug}"
+    calls: list[list[str]] = []
+
+    monkeypatch.setattr(local_runner, "_git_common_repo_root", lambda repo_dir=None: repo_root)
+    monkeypatch.setattr(local_runner, "_worktree_base", lambda repo_dir=None: worktree_base)
+    monkeypatch.setattr(local_runner, "_find_task_worktree", lambda branch_name, repo_dir=None: None)
+    monkeypatch.setattr(local_runner, "_local_branch_exists", lambda branch_name, repo_dir=None: branch_name == branch)
+
+    class _Result:
+        def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def _run(args: list[str], **_kwargs: Any) -> _Result:
+        calls.append(args)
+        if args[:3] == ["git", "fetch", "origin"]:
+            return _Result()
+        if args[:3] == ["git", "worktree", "add"]:
+            Path(args[3]).mkdir(parents=True, exist_ok=True)
+            return _Result()
+        pytest.fail(f"Unexpected command: {args}")
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    created = local_runner._create_worktree(task_id)
+
+    assert created == expected_path
+    assert ["git", "worktree", "add", str(expected_path), branch] in calls
+
+
+def test_cleanup_worktree_skips_current_repo_path(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    repo_root = tmp_path / "repo"
+    current_worktree = repo_root / ".worktrees" / "task-task_keep_alive"
+    current_worktree.mkdir(parents=True)
+    task_id = "task_keep_alive_123456"
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", current_worktree)
+    monkeypatch.setattr(local_runner, "_git_common_repo_root", lambda repo_dir=None: repo_root)
+    monkeypatch.setattr(local_runner, "_worktree_base", lambda repo_dir=None: repo_root / ".worktrees")
+    monkeypatch.setattr(
+        local_runner,
+        "_find_task_worktree",
+        lambda branch_name, repo_dir=None: current_worktree if branch_name == branch else None,
+    )
+
+    def _unexpected_run(*_args: Any, **_kwargs: Any) -> Any:
+        pytest.fail("cleanup should not try to remove the current worktree")
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _unexpected_run)
+
+    local_runner._cleanup_worktree(task_id)
+
+
 # ---------------------------------------------------------------------------
 # _run_operational_phase — merge / deploy / verify / reflect
 # ---------------------------------------------------------------------------

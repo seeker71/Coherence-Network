@@ -3122,7 +3122,7 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
         checkpoint_summary = ""
         resume_patch_path = ""
         slug = task_id[:16]
-        wt_path = _WORKTREE_BASE / f"task-{slug}"
+        wt_path = _worktree_base() / f"task-{slug}"
         if wt_path.exists():
             # Read checkpoint file
             checkpoint_file = wt_path / ".task-checkpoint.md"
@@ -4059,7 +4059,94 @@ def _deploy_to_vps() -> str:
 # ── Parallel worktree execution ───────────────────────────────────────
 
 _MAX_PARALLEL = rc("execution", "parallel", 2)
-_WORKTREE_BASE = _REPO_DIR / ".worktrees"
+
+
+def _git_common_repo_root(repo_dir: Path | None = None) -> Path:
+    """Resolve the shared repository root, even when running inside a linked worktree."""
+    repo_path = Path(repo_dir or _REPO_DIR)
+    try:
+        common_dir = subprocess.run(
+            ["git", "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=str(repo_path),
+        )
+        if common_dir.returncode == 0 and common_dir.stdout.strip():
+            git_common_dir = Path(common_dir.stdout.strip())
+            if not git_common_dir.is_absolute():
+                git_common_dir = (repo_path / git_common_dir).resolve()
+            if git_common_dir.name == ".git":
+                return git_common_dir.parent
+    except Exception:
+        pass
+
+    try:
+        top_level = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=str(repo_path),
+        )
+        if top_level.returncode == 0 and top_level.stdout.strip():
+            return Path(top_level.stdout.strip())
+    except Exception:
+        pass
+
+    return repo_path
+
+
+def _worktree_base(repo_dir: Path | None = None) -> Path:
+    """Return the shared worktree directory for the repository."""
+    return _git_common_repo_root(repo_dir) / ".worktrees"
+
+
+def _find_task_worktree(branch: str, repo_dir: Path | None = None) -> Path | None:
+    """Return the linked worktree path for a task branch if it already exists."""
+    repo_root = _git_common_repo_root(repo_dir)
+    try:
+        listed = subprocess.run(
+            ["git", "worktree", "list", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=str(repo_root),
+        )
+        if listed.returncode != 0:
+            return None
+        for entry in listed.stdout.strip().split("\n\n"):
+            if not entry.strip():
+                continue
+            worktree_path = ""
+            branch_ref = ""
+            for line in entry.splitlines():
+                if line.startswith("worktree "):
+                    worktree_path = line.split(" ", 1)[1].strip()
+                elif line.startswith("branch "):
+                    branch_ref = line.split(" ", 1)[1].strip()
+            if branch_ref == f"refs/heads/{branch}" and worktree_path:
+                candidate = Path(worktree_path)
+                if candidate.exists():
+                    return candidate
+    except Exception:
+        return None
+    return None
+
+
+def _local_branch_exists(branch: str, repo_dir: Path | None = None) -> bool:
+    repo_root = _git_common_repo_root(repo_dir)
+    try:
+        check = subprocess.run(
+            ["git", "show-ref", "--verify", f"refs/heads/{branch}"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=str(repo_root),
+        )
+        return check.returncode == 0
+    except Exception:
+        return False
 
 
 def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | None:
@@ -4070,15 +4157,21 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
     to checkout the impl PR branch so the provider can see the actual code.
     """
     slug = task_id[:16]
-    wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
-    repo_root = str(_REPO_DIR)
+    repo_root = _git_common_repo_root()
+    wt_base = _worktree_base(repo_root)
+    wt_path = wt_base / f"task-{slug}"
     try:
-        _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
+        existing_worktree = _find_task_worktree(branch, repo_root)
+        if existing_worktree is not None:
+            log.info("WORKTREE_REUSED task=%s branch=%s path=%s", slug, branch, existing_worktree)
+            return existing_worktree
+
+        wt_base.mkdir(parents=True, exist_ok=True)
         # Fetch latest remote refs
         subprocess.run(
             ["git", "fetch", "origin", "--quiet"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
+            capture_output=True, text=True, timeout=30, cwd=str(repo_root),
         )
         # Determine base ref: PR branch if specified, else origin/main
         base_ref = "origin/main"
@@ -4086,7 +4179,7 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
             # Check if the remote branch exists
             check = subprocess.run(
                 ["git", "rev-parse", "--verify", f"origin/{base_branch}"],
-                capture_output=True, text=True, timeout=5, cwd=repo_root,
+                capture_output=True, text=True, timeout=5, cwd=str(repo_root),
             )
             if check.returncode == 0:
                 base_ref = f"origin/{base_branch}"
@@ -4094,10 +4187,25 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
             else:
                 log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
 
-        subprocess.run(
-            ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        add_cmd = ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref]
+        if _local_branch_exists(branch, repo_root):
+            add_cmd = ["git", "worktree", "add", str(wt_path), branch]
+
+        added = subprocess.run(
+            add_cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(repo_root),
         )
+        if added.returncode != 0:
+            existing_worktree = _find_task_worktree(branch, repo_root)
+            if existing_worktree is not None:
+                log.info("WORKTREE_REUSED_AFTER_ADD task=%s branch=%s path=%s", slug, branch, existing_worktree)
+                return existing_worktree
+            stderr = (added.stderr or added.stdout or "").strip()[:300]
+            log.warning("WORKTREE_ADD_FAILED task=%s branch=%s error=%s", slug, branch, stderr)
+            return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path
@@ -4136,13 +4244,16 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
 
 def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
     """Remove worktrees older than max_age_hours. Called periodically from the loop."""
-    wt_base = _REPO_DIR / ".worktrees"
+    repo_root = _git_common_repo_root()
+    wt_base = _worktree_base(repo_root)
     if not wt_base.exists():
         return 0
     cleaned = 0
     now = time.time()
     for wt_dir in wt_base.iterdir():
         if not wt_dir.is_dir() or not wt_dir.name.startswith("task-"):
+            continue
+        if wt_dir.resolve() == Path(_REPO_DIR).resolve():
             continue
         try:
             age_hours = (now - wt_dir.stat().st_mtime) / 3600
@@ -4151,17 +4262,17 @@ def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
             task_slug = wt_dir.name.replace("task-", "")
             subprocess.run(
                 ["git", "worktree", "remove", "--force", str(wt_dir)],
-                capture_output=True, timeout=30, cwd=str(_REPO_DIR),
+                capture_output=True, timeout=30, cwd=str(repo_root),
             )
             subprocess.run(
                 ["git", "branch", "-D", f"task/{task_slug}"],
-                capture_output=True, timeout=10, cwd=str(_REPO_DIR),
+                capture_output=True, timeout=10, cwd=str(repo_root),
             )
             cleaned += 1
         except Exception:
             pass
     if cleaned:
-        subprocess.run(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_REPO_DIR))
+        subprocess.run(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(repo_root))
         log.info("SWEEP_WORKTREES cleaned %d stale worktrees", cleaned)
     return cleaned
 
@@ -4172,18 +4283,22 @@ def _cleanup_worktree(task_id: str) -> None:
     Fix 5: only called AFTER push is confirmed (or task failed).
     """
     slug = task_id[:16]
-    wt_path = _WORKTREE_BASE / f"task-{slug}"
+    repo_root = _git_common_repo_root()
     branch = f"task/{slug}"
+    wt_path = _find_task_worktree(branch, repo_root) or (_worktree_base(repo_root) / f"task-{slug}")
     try:
+        if wt_path.resolve() == Path(_REPO_DIR).resolve():
+            log.info("WORKTREE_CLEANUP_SKIPPED task=%s path=%s", slug, wt_path)
+            return
         subprocess.run(
             ["git", "worktree", "remove", "--force", str(wt_path)],
             capture_output=True, text=True, timeout=30,
-            cwd=str(_REPO_DIR),
+            cwd=str(repo_root),
         )
         subprocess.run(
             ["git", "branch", "-D", branch],
             capture_output=True, text=True, timeout=10,
-            cwd=str(_REPO_DIR),
+            cwd=str(repo_root),
         )
         log.info("WORKTREE_CLEANED task=%s", slug)
     except Exception as e:
