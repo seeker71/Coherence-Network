@@ -30,6 +30,7 @@ import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
+import { showEdges } from "../lib/commands/edges.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -88,6 +89,7 @@ const COMMANDS = {
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
+  edg:           () => showEdges(args),
   help:          () => showHelp(),
 };
 
@@ -445,6 +447,11 @@ function showHelp() {
   trace coverage          Traceability coverage
   trace idea <id>         Trace an idea
   trace spec <id>         Trace a spec
+
+\x1b[1mGraph edges:\x1b[0m
+  edg types               46 Living Codex relationship types
+  edg list [limit]        Recent edges in the graph store
+  edg <entity_id> [type]  Edges for an entity (?type= filter)
 
 \x1b[1mAuth:\x1b[0m
   login merly             Log into Merly (browser OAuth)

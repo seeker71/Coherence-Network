@@ -45,6 +45,7 @@ from app.routers import (
 )
 from app.routers import concepts
 from app.routers import dif_feedback
+from app.routers import edge_navigation
 from app.routers import graph
 from app.routers import agent_grounded_metrics_routes
 from app.routers import pipeline
@@ -560,6 +561,7 @@ app.include_router(service_registry_router.router, prefix="/api", tags=["service
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
+app.include_router(edge_navigation.router, prefix="/api", tags=["edges"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained

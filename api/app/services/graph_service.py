@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import and_, func, or_, text
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 
 from app.models.graph import Edge, Node
@@ -212,6 +212,66 @@ def get_edges(
             q = q.filter(Edge.type == edge_type)
 
         return [e.to_dict() for e in q.order_by(Edge.created_at.desc()).all()]
+
+
+def list_edges(
+    *,
+    edge_type: str | None = None,
+    from_id: str | None = None,
+    to_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Paginated listing of edges (global browse)."""
+    with session() as s:
+        q = s.query(Edge)
+        if edge_type:
+            q = q.filter(Edge.type == edge_type)
+        if from_id:
+            q = q.filter(Edge.from_id == from_id)
+        if to_id:
+            q = q.filter(Edge.to_id == to_id)
+        total = q.count()
+        rows = q.order_by(Edge.created_at.desc()).offset(offset).limit(limit).all()
+        return {
+            "items": [e.to_dict() for e in rows],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+        }
+
+
+def get_edges_for_entity_nav(
+    entity_id: str,
+    direction: str = "both",
+    edge_type: str | None = None,
+) -> list[dict[str, Any]]:
+    """Edges for an entity with peer node summary for navigation UIs."""
+    raw = get_edges(entity_id, direction=direction, edge_type=edge_type)
+    if not raw:
+        return []
+    peer_ids: set[str] = set()
+    for e in raw:
+        peer_ids.add(e["to_id"] if e["from_id"] == entity_id else e["from_id"])
+    with session() as s:
+        rows = s.query(Node).filter(Node.id.in_(peer_ids)).all()
+        by_id = {n.id: n for n in rows}
+    out: list[dict[str, Any]] = []
+    for e in raw:
+        peer_id = e["to_id"] if e["from_id"] == entity_id else e["from_id"]
+        node = by_id.get(peer_id)
+        peer_summary: dict[str, Any] = (
+            {"id": peer_id, "type": node.type, "name": node.name, "phase": node.phase}
+            if node
+            else {"id": peer_id}
+        )
+        edir = "outgoing" if e["from_id"] == entity_id else "incoming"
+        row = dict(e)
+        row["peer_id"] = peer_id
+        row["edge_direction"] = edir
+        row["peer"] = peer_summary
+        out.append(row)
+    return out
 
 
 def delete_edge(edge_id: str) -> bool:
