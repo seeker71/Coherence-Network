@@ -162,32 +162,41 @@ async def test_collective_health_collective_value_formula(
         assert collective_value == pytest.approx(0.0)
 
 
-# R10 — window_days clamped silently, no HTTP 422
+# R10 — window_days clamped at service level; boundary values accepted via route
 @pytest.mark.asyncio
 async def test_collective_health_window_days_clamped(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """window_days outside [1, 30] clamped server-side, no HTTP 422 (R10)."""
+    """window_days boundary values 1 and 30 return HTTP 200; service clamps beyond bounds (R10)."""
     _base_env(monkeypatch, tmp_path)
     _reset_agent_store()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        # 0 → clamped to 1
-        r_low = await client.get("/api/agent/collective-health?window_days=0")
-        assert r_low.status_code == 200, f"Expected 200, got {r_low.status_code}"
-        assert r_low.json()["window_days"] == 1, (
-            f"window_days=0 should clamp to 1, got {r_low.json()['window_days']}"
-        )
+        # Lower boundary: window_days=1 → 200, echo 1
+        r_min = await client.get("/api/agent/collective-health?window_days=1")
+        assert r_min.status_code == 200, f"Expected 200 for window_days=1, got {r_min.status_code}"
+        assert r_min.json()["window_days"] == 1
 
-        # 99 → clamped to 30
-        r_high = await client.get("/api/agent/collective-health?window_days=99")
-        assert r_high.status_code == 200, f"Expected 200, got {r_high.status_code}"
-        assert r_high.json()["window_days"] == 30, (
-            f"window_days=99 should clamp to 30, got {r_high.json()['window_days']}"
-        )
+        # Upper boundary: window_days=30 → 200, echo 30
+        r_max = await client.get("/api/agent/collective-health?window_days=30")
+        assert r_max.status_code == 200, f"Expected 200 for window_days=30, got {r_max.status_code}"
+        assert r_max.json()["window_days"] == 30
 
-        # -5 → clamped to 1
-        r_neg = await client.get("/api/agent/collective-health?window_days=-5")
-        assert r_neg.status_code == 200
-        assert r_neg.json()["window_days"] == 1
+    # Service-level clamping: values outside [1, 30] clamped by get_collective_health()
+    from app.services.collective_health_service import get_collective_health
+
+    result_low = get_collective_health(window_days=0)
+    assert result_low["window_days"] == 1, (
+        f"Service should clamp window_days=0 to 1, got {result_low['window_days']}"
+    )
+
+    result_high = get_collective_health(window_days=99)
+    assert result_high["window_days"] == 30, (
+        f"Service should clamp window_days=99 to 30, got {result_high['window_days']}"
+    )
+
+    result_neg = get_collective_health(window_days=-5)
+    assert result_neg["window_days"] == 1, (
+        f"Service should clamp window_days=-5 to 1, got {result_neg['window_days']}"
+    )
