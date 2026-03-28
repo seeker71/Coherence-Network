@@ -574,6 +574,8 @@ app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 from app.routers import discord_votes  # noqa: E402
 app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 
+# (onboarding router already registered above at line 562)
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
