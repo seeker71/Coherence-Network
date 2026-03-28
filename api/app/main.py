@@ -561,7 +561,7 @@ app.include_router(service_registry_router.router, prefix="/api", tags=["service
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
-app.include_router(discord_integration.router, prefix="/api", tags=["integrations-discord"])
+app.include_router(discord_integration.router, prefix="/api")
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained

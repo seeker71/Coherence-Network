@@ -65,3 +65,9 @@ data/*.db
 __pycache__/
 .task-*
 data/coherence.db
+
+# Local agent / codex
+.codex*
+
+# Discord bot local state
+discord-bot/data/
