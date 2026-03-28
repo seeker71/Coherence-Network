@@ -59,6 +59,20 @@ _EFFECTIVENESS = {
     "success_rate": 0.9,
 }
 
+_STATUS_REPORT_FULL = {
+    "layer_0_goal": {
+        "status": "ok",
+        "goal_proximity": 0.7,
+        "summary": "goal_proximity=0.7, 5 tasks (7d), 80% success",
+    },
+    "layer_1_orchestration": {
+        "status": "ok",
+        "summary": "PM item=4, phase=implement; runner_workers=5",
+    },
+    "layer_2_execution": {"status": "ok", "summary": "running=1, pending=1"},
+    "layer_3_attention": {"status": "ok", "flags": [], "summary": "No issues"},
+}
+
 
 def _mock_httpx_get_factory(
     *,
@@ -123,21 +137,6 @@ def test_acceptance_four_sections_order_goal_pm_tasks_artifacts():
     a = out.find("artifacts (layer 3)")
     assert g >= 0 and pm >= 0 and t >= 0 and a >= 0
     assert g < pm < t < a
-
-
-_STATUS_REPORT_FULL = {
-    "layer_0_goal": {
-        "status": "ok",
-        "goal_proximity": 0.7,
-        "summary": "goal_proximity=0.7, 5 tasks (7d), 80% success",
-    },
-    "layer_1_orchestration": {
-        "status": "ok",
-        "summary": "PM item=4, phase=implement; runner_workers=5",
-    },
-    "layer_2_execution": {"status": "ok", "summary": "running=1, pending=1"},
-    "layer_3_attention": {"status": "ok", "flags": [], "summary": "No issues"},
-}
 
 
 def test_acceptance_json_includes_hierarchical_structure():
