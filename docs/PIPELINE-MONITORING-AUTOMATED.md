@@ -83,9 +83,20 @@ Response shape:
     }
   ],
   "last_check": "2026-02-12T12:05:00Z",
-  "history": []
+  "history": [],
+  "resolved_since_last": [],
+  "resolved": [
+    {
+      "condition": "stale_running_tasks",
+      "resolved_at": "2026-02-12T12:05:00Z",
+      "heal_task_id": "task_abc123",
+      "issue_id": "abc12345"
+    }
+  ]
 }
 ```
+
+The `resolved` array is only present when `MONITOR_PERSIST_RESOLVED=1` is set. When absent, it is omitted from the response (not `null`).
 
 ## Detection Rules
 
