@@ -27,6 +27,9 @@ const SHARED_RELATED: LinkItem[] = [
   { href: "/tasks", label: "Work" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/specs", label: "Plans" },
+  { href: "/friction", label: "Friction" },
+  { href: "/import", label: "Import" },
+  { href: "/api-health", label: "API health" },
 ];
 
 const CONTEXTS: Record<string, ContextDef> = {

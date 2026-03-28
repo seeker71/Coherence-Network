@@ -29,6 +29,8 @@ const SECONDARY_NAV = [
   // Operations (power users)
   { href: "/automation", label: "Automation" },
   { href: "/friction", label: "Friction" },
+  { href: "/import", label: "Import" },
+  { href: "/api-health", label: "API health" },
   { href: "/identity", label: "Identity" },
 ];
 

@@ -57,6 +57,11 @@ out.txt
 
 .deployment_config
 
+# Agent task checkpoints and local tooling
+.task-*
+data/coherence.db
+.codex*
+
 # SQLite databases and WAL sidecar files (regenerate via: python3 scripts/seed_db.py)
 data/*.db
 *.db-wal
