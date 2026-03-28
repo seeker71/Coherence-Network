@@ -65,6 +65,15 @@ async def get_idea_storage_info() -> IdeaStorageInfo:
     return idea_service.storage_info()
 
 
+@router.get("/ideas/tags", response_model=IdeaTagCatalogResponse)
+async def get_idea_tag_catalog() -> IdeaTagCatalogResponse:
+    """Return the normalized idea tag catalog with counts (spec 129)."""
+    entries = idea_service.get_tag_catalog()
+    return IdeaTagCatalogResponse(
+        tags=[IdeaTagCatalogEntry(tag=e["tag"], idea_count=e["idea_count"]) for e in entries]
+    )
+
+
 @router.get("/ideas/cards")
 async def list_idea_cards(
     q: str = Query("", description="Free-text search across idea title/description/spec IDs."),
