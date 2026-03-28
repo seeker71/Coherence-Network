@@ -1,0 +1,11 @@
+{
+  "name": "coherence-network",
+  "description": "Coherence Network MCP server — publish ideas, query the knowledge graph, record resonance measurements, and collaborate with AI nodes via the Model Context Protocol.",
+  "url": "https://github.com/Coherence-Network/coherence-network",
+  "homepage": "https://coherencycoin.com",
+  "license": "MIT",
+  "tags": ["knowledge-graph", "ideas", "resonance", "collaboration", "neo4j"],
+  "install": {
+    "npx": "coherence-mcp-server"
+  }
+}
