@@ -20,6 +20,8 @@ from app.models.portfolio import (
     LinkedIdentity,
     NetworkStats,
     PortfolioSummary,
+    StakeDetail,
+    StakeIdeaActivity,
     StakesList,
     StakeSummary,
     TasksList,
