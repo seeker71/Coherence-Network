@@ -41,6 +41,7 @@ import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postPr
 import { showPortfolio } from "../lib/commands/portfolio.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
+import { showDbStatus } from "../lib/commands/data_hygiene.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -547,6 +548,10 @@ function showHelp() {
   dif whoami              DIF identity check
   dif config              Show DIF configuration
   dif smoke               Run DIF smoke test
+
+\x1b[1mData Hygiene:\x1b[0m
+  db-status               Row counts per table with growth anomaly alerts
+  db-status investigate runtime-events  Deep-dive on runtime_events noise
 
 \x1b[1mDiagnostics:\x1b[0m
   diag                    Agent effectiveness + pipeline
