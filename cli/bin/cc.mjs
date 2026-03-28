@@ -34,6 +34,30 @@ import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postPr
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
 import {
+  showInventoryOverview, showPipelinePulse, showProcessCompleteness,
+  showProactiveQuestions, showNextRoiTask, showCanonicalRoutes, showSystemLineage,
+  syncSpecTasks, syncProactiveQuestions, syncRoiProgress, syncTraceabilityGaps,
+  bootstrapSpecTasks, fixHollowCompletions,
+} from "../lib/commands/inventory.mjs";
+import {
+  showRuntimeOverview, listRuntimeEvents, createRuntimeEvent,
+  showEndpointAttention, showRuntimeByIdea, showRuntimeByEndpoint,
+  showWebViewPerformance, showMvpSummary, showMvpJudge, showMvpBaselines,
+  showUsageVerification, runExerciser, showChangeToken,
+} from "../lib/commands/runtime.mjs";
+import {
+  showFederationOverview, listInstances, showInstance, registerInstance,
+  showSyncHistory, showFleetCapabilities, showNodeStats,
+  listStrategies, computeStrategies, showMeasurements,
+} from "../lib/commands/federation.mjs";
+import {
+  listIdeaTags, setIdeaTags, listIdeaCards, showIdeaProgress, showIdeaActivity,
+  showIdeaTasks, advanceIdeaStage, setIdeaStage, addIdeaQuestion, answerIdeaQuestion,
+  showIdeaShowcase, showIdeaStorage, showIdeaCount, selectIdea, showProgressDashboard,
+  showIdeaConceptResonance,
+} from "../lib/commands/ideas.mjs";
+import { createLink, addUsageEvent, runMinimumE2EFlow } from "../lib/commands/lineage.mjs";
+import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
   keyList as difKeyList, keyCreate as difKeyCreate, keyRevoke as difKeyRevoke,
@@ -97,6 +121,15 @@ const COMMANDS = {
   meta:          () => handleMeta(args),
   nearby:        () => showNearby(args),
   location:      () => handleLocation(args),
+  // Inventory / pipeline
+  inventory:     () => handleInventory(args),
+  pipeline:      () => handleInventory(args),
+  // Runtime monitoring
+  runtime:       () => handleRuntime(args),
+  // Federation
+  federation:    () => handleFederation(args),
+  // Extended lineage
+  link:          () => handleLink(args),
   help:          () => showHelp(),
 };
 
@@ -109,9 +142,106 @@ async function handleMeta(args) {
   }
 }
 
+async function handleInventory(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "pulse":          return showPipelinePulse();
+    case "completeness":   return showProcessCompleteness();
+    case "questions":      return showProactiveQuestions(subArgs);
+    case "roi":            return showNextRoiTask();
+    case "routes":         return showCanonicalRoutes(subArgs);
+    case "lineage":        return showSystemLineage();
+    case "sync-tasks":     return syncSpecTasks();
+    case "sync-proactive": return syncProactiveQuestions();
+    case "sync-roi":       return syncRoiProgress();
+    case "gaps":           return syncTraceabilityGaps();
+    case "bootstrap":      return bootstrapSpecTasks();
+    case "fix-hollow":     return fixHollowCompletions();
+    default:               return showInventoryOverview();
+  }
+}
+
+async function handleRuntime(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "events":
+      if (subArgs[0] === "post") return createRuntimeEvent(subArgs.slice(1));
+      return listRuntimeEvents(subArgs);
+    case "attention":   return showEndpointAttention();
+    case "ideas":       return showRuntimeByIdea(subArgs);
+    case "endpoints":   return showRuntimeByEndpoint(subArgs);
+    case "web":         return showWebViewPerformance();
+    case "mvp":
+      switch (subArgs[0]) {
+        case "judge":    return showMvpJudge();
+        case "baselines": return showMvpBaselines();
+        default:         return showMvpSummary();
+      }
+    case "usage":       return showUsageVerification();
+    case "exerciser":   return runExerciser();
+    case "token":       return showChangeToken();
+    default:            return showRuntimeOverview();
+  }
+}
+
+async function handleFederation(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "instances":     return listInstances();
+    case "instance":      return showInstance(subArgs);
+    case "register":      return registerInstance(subArgs);
+    case "sync":          return showSyncHistory(subArgs);
+    case "capabilities":  return showFleetCapabilities();
+    case "stats":         return showNodeStats(subArgs);
+    case "strategies":
+      if (subArgs[0] === "compute") return computeStrategies();
+      return listStrategies();
+    case "measurements":  return showMeasurements(subArgs);
+    default:              return showFederationOverview();
+  }
+}
+
+async function handleLink(args) {
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "create": return createLink(subArgs);
+    case "usage":  return addUsageEvent(subArgs);
+    case "e2e":    return runMinimumE2EFlow();
+    default:
+      console.log("Usage: cc link <create|usage|e2e>");
+      console.log("  cc link create <idea-id> <spec-id> [contributor] [weight]");
+      console.log("  cc link usage <link-id> <event-type> [amount]");
+      console.log("  cc link e2e");
+  }
+}
+
 async function handleIdea(args) {
-  if (args[0] === "create") return createIdea(args.slice(1));
-  return showIdea(args);
+  const sub = args[0];
+  const subArgs = args.slice(1);
+  switch (sub) {
+    case "create":    return createIdea(subArgs);
+    case "tags":      return setIdeaTags(subArgs);
+    case "cards":     return listIdeaCards(subArgs);
+    case "progress":  return showIdeaProgress(subArgs);
+    case "activity":  return showIdeaActivity(subArgs);
+    case "tasks":     return showIdeaTasks(subArgs);
+    case "advance":   return advanceIdeaStage(subArgs);
+    case "stage":     return setIdeaStage(subArgs);
+    case "question":  return addIdeaQuestion(subArgs);
+    case "answer":    return answerIdeaQuestion(subArgs);
+    case "showcase":  return showIdeaShowcase();
+    case "storage":   return showIdeaStorage();
+    case "count":     return showIdeaCount();
+    case "select":    return selectIdea(subArgs);
+    case "dashboard": return showProgressDashboard();
+    case "resonance": return showIdeaConceptResonance(subArgs);
+    case "tags-list": return listIdeaTags();
+    default:          return showIdea(args);
+  }
 }
 
 async function handleEdge(args) {
@@ -188,8 +318,12 @@ async function handleTreasury(args) {
 
 async function handleLineage(args) {
   if (!args[0]) return listLinks([]);
+  if (args[0] === "create") return createLink(args.slice(1));
+  if (args[0] === "usage")  return addUsageEvent(args.slice(1));
+  if (args[0] === "e2e")    return runMinimumE2EFlow();
   if (args[1] === "valuation") return showValuation(args);
   if (args[1] === "payout") return payoutPreview([args[0], args[2]]);
+  if (args[1] === "usage")  return addUsageEvent([args[0], ...args.slice(2)]);
   // If first arg is a number, treat as limit
   if (/^\d+$/.test(args[0])) return listLinks(args);
   return showLink(args);
@@ -509,6 +643,69 @@ function showHelp() {
   diag issues             Fatal + monitor issues
   diag runners            Agent runners
   diag visibility         Agent visibility
+
+\x1b[1mInventory / Pipeline:\x1b[0m
+  inventory               Pipeline pulse + completeness overview
+  inventory pulse         Live pipeline health
+  inventory questions [N] Proactive questions queue
+  inventory roi           Next highest-ROI task
+  inventory routes [f]    Canonical route manifest (optional filter)
+  inventory completeness  Process completeness by phase
+  inventory sync-tasks    Sync spec → implementation tasks
+  inventory sync-roi      Sync ROI progress tasks
+  inventory gaps          Sync traceability gaps
+  inventory fix-hollow    Fix hollow completions
+
+\x1b[1mRuntime Monitoring:\x1b[0m
+  runtime                 Endpoint attention + MVP summary
+  runtime events [N]      List runtime events
+  runtime events post <type> [source] [value]  Record event
+  runtime attention       Endpoints needing attention
+  runtime ideas [N]       Runtime summary by idea
+  runtime endpoints [N]   Runtime summary by endpoint
+  runtime web             Web view performance
+  runtime mvp             MVP acceptance summary
+  runtime mvp judge       MVP acceptance judge
+  runtime mvp baselines   Local baselines
+  runtime usage           Usage verification
+  runtime exerciser       Run endpoint exerciser
+  runtime token           Current change token
+
+\x1b[1mFederation:\x1b[0m
+  federation              Instances + capabilities
+  federation instances    List federation instances
+  federation instance <id> Show instance detail
+  federation register <id> <url>  Register instance
+  federation sync [N]     Sync history
+  federation capabilities Fleet capability summary
+  federation stats [days] Aggregated node stats
+  federation strategies   Routing strategies
+  federation strategies compute  Compute strategies
+  federation measurements <node-id>  Node measurements
+
+\x1b[1mIdea (extended):\x1b[0m
+  idea tags-list          List all idea tags
+  idea tags <id> <tag...> Set tags on idea
+  idea cards [N]          Idea cards (brief)
+  idea progress <id>      Idea progress
+  idea activity <id>      Idea activity feed
+  idea tasks <id>         Tasks for an idea
+  idea advance <id>       Advance idea to next stage
+  idea stage <id> <stage> Set idea stage explicitly
+  idea question <id> <q>  Add a question to idea
+  idea answer <id> <i> <a> Answer a question
+  idea showcase           Showcase ideas
+  idea storage            Idea storage info
+  idea count              Total idea count
+  idea select [context]   AI-assisted idea selection
+  idea dashboard          Progress dashboard
+  idea resonance <id>     Concept resonance
+
+\x1b[1mLineage (extended):\x1b[0m
+  lineage create <idea> <spec> [contributor] [weight]  Create link
+  lineage <id> usage <event-type> [amount]  Record usage event
+  lineage e2e             Run minimum E2E value flow
+  link create|usage|e2e   Shorthand for lineage create/usage/e2e
 
 \x1b[2mHub: https://api.coherencycoin.com\x1b[0m
 \x1b[2mDocs: https://coherencycoin.com\x1b[0m

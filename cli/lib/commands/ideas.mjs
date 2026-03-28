@@ -153,6 +153,305 @@ export async function forkIdea(args) {
   }
 }
 
+/** List idea tags catalog */
+export async function listIdeaTags() {
+  const data = await get("/api/ideas/tags");
+  if (!data) { console.log("Could not fetch idea tags."); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m";
+  const tags = data.tags || data.catalog || (Array.isArray(data) ? data : []);
+  console.log();
+  console.log(`${B}  IDEA TAGS${R} (${tags.length})`);
+  console.log(`  ${"─".repeat(50)}`);
+  for (const t of tags) {
+    const name = (t.tag || t.name || t).padEnd(25);
+    const count = t.count != null ? `${D}${t.count} ideas${R}` : "";
+    console.log(`  ${G}#${R}${name} ${count}`);
+  }
+  console.log();
+}
+
+/** Set tags on an idea */
+export async function setIdeaTags(args) {
+  const id = args[0];
+  const tags = args.slice(1).filter(a => !a.startsWith("--"));
+  if (!id || !tags.length) {
+    console.log("Usage: cc idea tags <idea-id> <tag1> [tag2 ...]");
+    return;
+  }
+  const result = await import("../api.mjs").then(m =>
+    fetch(`${m.getApiBase?.() || "https://api.coherencycoin.com"}/api/ideas/${encodeURIComponent(id)}/tags`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tags }),
+    }).then(r => r.ok ? r.json() : null).catch(() => null)
+  );
+  // Fallback using post-like call
+  const { patch } = await import("../api.mjs");
+  const r = await patch(`/api/ideas/${encodeURIComponent(id)}/tags`, { tags });
+  if (r) {
+    console.log(`\x1b[32m✓\x1b[0m Tags updated for '${id}': ${tags.join(", ")}`);
+  } else {
+    console.log("Failed to update tags.");
+  }
+}
+
+/** Show idea cards (brief display format) */
+export async function listIdeaCards(args) {
+  const limit = parseInt(args[0]) || 10;
+  const data = await get("/api/ideas/cards", { limit });
+  if (!data) { console.log("Could not fetch idea cards."); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", Y = "\x1b[33m";
+  const cards = data.cards || data.items || (Array.isArray(data) ? data : []);
+  console.log();
+  console.log(`${B}  IDEA CARDS${R} (${cards.length})`);
+  console.log(`  ${"─".repeat(65)}`);
+  for (const c of cards) {
+    const title = (c.name || c.title || c.id || "?").slice(0, 42).padEnd(44);
+    const stage = (c.stage || c.manifestation_status || "").slice(0, 12).padEnd(13);
+    const roi = c.roi_cc != null ? `${G}${c.roi_cc.toFixed(1)}${R}` : D + "?" + R;
+    console.log(`  ${title} ${D}${stage}${R} roi:${roi}`);
+  }
+  console.log();
+}
+
+/** Show idea progress */
+export async function showIdeaProgress(args) {
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea progress <idea-id>"); return; }
+  const data = await get(`/api/ideas/${encodeURIComponent(id)}/progress`);
+  if (!data) { console.log(`No progress data for '${id}'.`); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", Y = "\x1b[33m";
+  console.log();
+  console.log(`${B}  IDEA PROGRESS: ${id}${R}`);
+  console.log(`  ${"─".repeat(55)}`);
+  for (const [k, v] of Object.entries(data)) {
+    if (v == null) continue;
+    const display = typeof v === "number" && k.includes("pct")
+      ? `${G}${v}%${R}`
+      : typeof v === "object" ? JSON.stringify(v).slice(0, 60) : String(v);
+    console.log(`  ${k.padEnd(28)} ${display}`);
+  }
+  console.log();
+}
+
+/** Show idea activity feed */
+export async function showIdeaActivity(args) {
+  const id = args[0];
+  const limit = parseInt(args[1]) || 15;
+  if (!id) { console.log("Usage: cc idea activity <idea-id> [limit]"); return; }
+  const data = await get(`/api/ideas/${encodeURIComponent(id)}/activity`, { limit });
+  if (!data) { console.log(`No activity for '${id}'.`); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m";
+  const items = data.activity || data.events || (Array.isArray(data) ? data : []);
+  console.log();
+  console.log(`${B}  IDEA ACTIVITY: ${id}${R} (${items.length})`);
+  console.log(`  ${"─".repeat(60)}`);
+  for (const ev of items) {
+    const ts = ev.created_at ? new Date(ev.created_at).toLocaleString() : "?";
+    const type = (ev.event_type || ev.type || "?").padEnd(20);
+    const actor = ev.actor || ev.contributor_id || "";
+    console.log(`  ${D}${ts}${R} ${C}${type}${R} ${D}${actor}${R}`);
+  }
+  console.log();
+}
+
+/** Show idea tasks */
+export async function showIdeaTasks(args) {
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea tasks <idea-id>"); return; }
+  const data = await get(`/api/ideas/${encodeURIComponent(id)}/tasks`);
+  if (!data) { console.log(`No tasks for '${id}'.`); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  const G = "\x1b[32m", Y = "\x1b[33m", RED = "\x1b[31m";
+  const tasks = data.tasks || (Array.isArray(data) ? data : []);
+  console.log();
+  console.log(`${B}  IDEA TASKS: ${id}${R} (${tasks.length})`);
+  console.log(`  ${"─".repeat(60)}`);
+  for (const t of tasks) {
+    const type = (t.task_type || t.type || "?").padEnd(8);
+    const status = t.status || "?";
+    const statusColor = status === "completed" ? G : status === "running" ? Y : status === "failed" ? RED : D;
+    const dir = (t.direction || t.description || "").slice(0, 50);
+    console.log(`  ${statusColor}${status.padEnd(12)}${R} ${type} ${D}${dir}${R}`);
+  }
+  console.log();
+}
+
+/** Advance idea stage */
+export async function advanceIdeaStage(args) {
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea advance <idea-id>"); return; }
+  const result = await post(`/api/ideas/${encodeURIComponent(id)}/advance`, {});
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Idea '${id}' advanced to: ${result.manifestation_status || result.stage || "?"}`);
+  } else {
+    console.log("Stage advance failed.");
+  }
+}
+
+/** Set idea stage explicitly */
+export async function setIdeaStage(args) {
+  const id = args[0];
+  const stage = args[1];
+  if (!id || !stage) {
+    console.log("Usage: cc idea stage <idea-id> <stage>");
+    return;
+  }
+  const result = await post(`/api/ideas/${encodeURIComponent(id)}/stage`, { stage });
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Idea '${id}' stage set to: ${result.manifestation_status || stage}`);
+  } else {
+    console.log("Stage set failed.");
+  }
+}
+
+/** Add a question to an idea */
+export async function addIdeaQuestion(args) {
+  const id = args[0];
+  const question = args.slice(1).join(" ");
+  if (!id || !question) {
+    console.log("Usage: cc idea question <idea-id> <question text>");
+    return;
+  }
+  const result = await post(`/api/ideas/${encodeURIComponent(id)}/questions`, { question });
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Question added to '${id}'`);
+  } else {
+    console.log("Failed to add question.");
+  }
+}
+
+/** Answer an idea question */
+export async function answerIdeaQuestion(args) {
+  const id = args[0];
+  const questionIdx = args[1];
+  const answer = args.slice(2).join(" ");
+  if (!id || !answer) {
+    console.log("Usage: cc idea answer <idea-id> <question-index> <answer text>");
+    return;
+  }
+  const result = await post(`/api/ideas/${encodeURIComponent(id)}/questions/answer`, {
+    question_index: parseInt(questionIdx) || 0,
+    answer,
+  });
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Answer recorded for '${id}'`);
+  } else {
+    console.log("Failed to record answer.");
+  }
+}
+
+/** Show ideas showcase */
+export async function showIdeaShowcase() {
+  const data = await get("/api/ideas/showcase");
+  if (!data) { console.log("Could not fetch idea showcase."); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m";
+  const ideas = data.ideas || data.showcase || (Array.isArray(data) ? data : []);
+  console.log();
+  console.log(`${B}  IDEA SHOWCASE${R} (${ideas.length})`);
+  console.log(`  ${"─".repeat(65)}`);
+  for (const idea of ideas) {
+    const name = (idea.name || idea.id || "?").padEnd(40);
+    const roi = idea.roi_cc != null ? `${G}${idea.roi_cc.toFixed(1)}${R}` : "";
+    console.log(`  ${name} roi:${roi}`);
+  }
+  console.log();
+}
+
+/** Show idea storage info */
+export async function showIdeaStorage() {
+  const data = await get("/api/ideas/storage");
+  if (!data) { console.log("Could not fetch storage info."); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  console.log();
+  console.log(`${B}  IDEA STORAGE${R}`);
+  console.log(`  ${"─".repeat(50)}`);
+  for (const [k, v] of Object.entries(data)) {
+    if (v != null) console.log(`  ${k.padEnd(25)} ${JSON.stringify(v).slice(0, 60)}`);
+  }
+  console.log();
+}
+
+/** Show ideas count */
+export async function showIdeaCount() {
+  const data = await get("/api/ideas/count");
+  if (!data) { console.log("Could not fetch idea count."); return; }
+  const count = data.count ?? data.total ?? JSON.stringify(data);
+  console.log(`Ideas: ${count}`);
+}
+
+/** Select best idea (AI-assisted selection) */
+export async function selectIdea(args) {
+  const context = args.join(" ");
+  const result = await post("/api/ideas/select", { context: context || undefined });
+  if (!result) { console.log("Selection failed."); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m";
+  console.log();
+  console.log(`${B}  SELECTED IDEA${R}`);
+  console.log(`  ${"─".repeat(50)}`);
+  const idea = result.idea || result;
+  console.log(`  ${G}${idea.name || idea.id || "?"}${R}`);
+  if (idea.id) console.log(`  ID:    ${idea.id}`);
+  if (idea.roi_cc != null) console.log(`  ROI:   ${idea.roi_cc.toFixed(2)} CC`);
+  if (result.reason) console.log(`  Why:   ${result.reason.slice(0, 80)}`);
+  console.log();
+}
+
+/** Show progress dashboard */
+export async function showProgressDashboard() {
+  const data = await get("/api/ideas/progress");
+  if (!data) { console.log("Could not fetch progress dashboard."); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", Y = "\x1b[33m";
+  console.log();
+  console.log(`${B}  PROGRESS DASHBOARD${R}`);
+  console.log(`  ${"─".repeat(60)}`);
+  for (const [k, v] of Object.entries(data)) {
+    if (v == null) continue;
+    const display = typeof v === "number"
+      ? (k.includes("pct") || k.includes("score") ? `${v.toFixed ? v.toFixed(1) : v}%` : String(v))
+      : typeof v === "object" ? JSON.stringify(v).slice(0, 60) : String(v);
+    console.log(`  ${k.padEnd(30)} ${display}`);
+  }
+  console.log();
+}
+
+/** Show concept resonance for an idea */
+export async function showIdeaConceptResonance(args) {
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea resonance <idea-id>"); return; }
+  const data = await get(`/api/ideas/${encodeURIComponent(id)}/concept-resonance`);
+  if (!data) { console.log(`No concept resonance for '${id}'.`); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m";
+  const concepts = data.concepts || data.resonance || (Array.isArray(data) ? data : []);
+  console.log();
+  console.log(`${B}  CONCEPT RESONANCE: ${id}${R}`);
+  console.log(`  ${"─".repeat(55)}`);
+  if (Array.isArray(concepts) && concepts.length) {
+    for (const c of concepts) {
+      const name = (c.concept || c.name || "?").padEnd(30);
+      const score = c.score ?? c.resonance ?? 0;
+      const bar = "█".repeat(Math.round(score * 10)) + "░".repeat(10 - Math.round(score * 10));
+      const color = score > 0.7 ? G : score > 0.4 ? "\x1b[33m" : D;
+      console.log(`  ${name} ${color}${bar}${R} ${score.toFixed(2)}`);
+    }
+  } else {
+    for (const [k, v] of Object.entries(data)) {
+      if (v != null) console.log(`  ${k.padEnd(25)} ${JSON.stringify(v).slice(0, 60)}`);
+    }
+  }
+  console.log();
+}
+
 /**
  * Non-interactive idea creation for agents and scripts.
  *

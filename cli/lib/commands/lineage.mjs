@@ -105,3 +105,74 @@ export async function payoutPreview(args) {
   }
   console.log();
 }
+
+/**
+ * Create a new lineage link.
+ * Usage: cc lineage create <idea_id> <spec_id> [contributor] [weight]
+ */
+export async function createLink(args) {
+  const [ideaId, specId, contributor, weightStr] = args;
+  if (!ideaId || !specId) {
+    console.log("Usage: cc lineage create <idea-id> <spec-id> [contributor] [weight]");
+    return;
+  }
+  const payload = { idea_id: ideaId, spec_id: specId };
+  if (contributor) payload.contributor = contributor;
+  if (weightStr) payload.weight = parseFloat(weightStr);
+
+  const result = await post("/api/value-lineage/links", payload);
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Lineage link created: ${result.id || `${ideaId} → ${specId}`}`);
+  } else {
+    console.log("Failed to create lineage link.");
+  }
+}
+
+/**
+ * Record a usage event on a lineage link.
+ * Usage: cc lineage usage <link-id> <event-type> [amount]
+ */
+export async function addUsageEvent(args) {
+  const [linkId, eventType, amountStr] = args;
+  if (!linkId || !eventType) {
+    console.log("Usage: cc lineage usage <link-id> <event-type> [amount]");
+    return;
+  }
+  const payload = { event_type: eventType };
+  if (amountStr) payload.amount = parseFloat(amountStr);
+
+  const result = await post(`/api/value-lineage/links/${encodeURIComponent(linkId)}/usage`, payload);
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m Usage event recorded: ${result.id || eventType}`);
+  } else {
+    console.log("Failed to record usage event.");
+  }
+}
+
+/**
+ * Run the minimum end-to-end value flow.
+ * Usage: cc lineage e2e
+ */
+export async function runMinimumE2EFlow() {
+  console.log("Running minimum E2E value flow...");
+  const result = await post("/api/value-lineage/minimum-e2e-flow", {});
+  if (!result) {
+    console.log("\x1b[31m✗\x1b[0m E2E flow failed.");
+    return;
+  }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", RED = "\x1b[31m";
+  console.log();
+  console.log(`${B}  E2E FLOW RESULT${R}`);
+  console.log(`  ${"─".repeat(50)}`);
+  const ok = result.success ?? result.passed ?? true;
+  console.log(`  Status:  ${ok ? G + "✓ passed" + R : RED + "✗ failed" + R}`);
+  for (const [k, v] of Object.entries(result)) {
+    if (k === "success" || k === "passed") continue;
+    if (v != null) {
+      const display = typeof v === "object" ? JSON.stringify(v).slice(0, 70) : String(v);
+      console.log(`  ${k.padEnd(20)} ${display}`);
+    }
+  }
+  console.log();
+}
