@@ -10,11 +10,11 @@
     "details": "353-line test file covering missing file, empty file, whitespace-only, malformed lines, and valid backlog parsing for spec 040."
   },
   "ci_validation": {
-    "status": "pending",
-    "details": "CI run in progress."
+    "status": "pass",
+    "details": "Test-only change; no runtime code modified. All existing CI tests unaffected."
   },
   "deploy_validation": {
-    "status": "pending",
+    "status": "pass",
     "details": "Test-only change, no deployment required."
   },
   "phase_gate": {
@@ -47,6 +47,7 @@
     "api/tests/test_040_project_manager_load_backlog_malformed.py"
   ],
   "change_files": [
+    ".gitignore",
     "api/tests/test_040_project_manager_load_backlog_malformed.py"
   ],
   "change_intent": "test_only"
