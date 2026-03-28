@@ -3,6 +3,8 @@
 Spec 043: Ensures GET /api/agent/route?task_type=spec and task_type=test
 return a local model (e.g. ollama/glm/qwen) with tier "local" per the
 routing table in spec 002 (spec | test | impl | review → local; heal → claude).
+
+Spec 039: Ensures GET /api/agent/pipeline-status returns 200 in empty state.
 """
 
 from __future__ import annotations
@@ -11,6 +13,13 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import agent_service
+
+
+def _reset_agent_store() -> None:
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
 
 
 _LOCAL_SPEC_ROUTE = {
