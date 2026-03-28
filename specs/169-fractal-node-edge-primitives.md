@@ -482,7 +482,17 @@ All acceptance criteria map 1:1 to tests in `api/tests/test_typed_node_edge_prim
 
 ---
 
-## Verification Scenarios
+## Verification
+
+Run to confirm the feature is deployed and working:
+
+```bash
+API=https://api.coherencycoin.com
+curl -sf $API/api/graph/node-types | grep -o '"type"' | wc -l
+curl -sf $API/api/graph/edge-types | grep -o '"type"' | wc -l
+curl -sf $API/api/graph/proof
+pytest api/tests/test_typed_node_edge_primitives.py -v --tb=short
+```
 
 These scenarios are designed to be run against the production API after deployment. The reviewer will run them verbatim.
 

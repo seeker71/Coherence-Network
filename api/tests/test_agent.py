@@ -130,3 +130,115 @@ async def test_pipeline_status_returns_200_in_empty_state(
     running_by_phase = body["running_by_phase"]
     for phase in ("spec", "impl", "test", "review"):
         assert phase in running_by_phase, f"Missing phase '{phase}' in running_by_phase"
+
+
+@pytest.mark.asyncio
+async def test_effectiveness_plan_progress_includes_phase_6_and_phase_7(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /api/agent/effectiveness returns plan_progress with phase_6 and phase_7.
+
+    Spec 045: plan_progress must include phase_6 (total=2) and phase_7 (total=17).
+    Completion is derived from PM state and backlog (006).
+    Phase 6 = items 56–57 (2 items), Phase 7 = items 58–74 (17 items).
+    """
+    import app.services.effectiveness_service as eff_svc
+
+    _fake_response = {
+        "throughput": {"completed_7d": 0, "tasks_per_day": 0.0},
+        "success_rate": 0.0,
+        "issues": {"open": 0, "resolved_7d": 0},
+        "progress": {"spec": 0, "impl": 0, "test": 0, "review": 0, "heal": 0},
+        "plan_progress": {
+            "index": 0,
+            "total": 74,
+            "pct": 0.0,
+            "state_file": "",
+            "phase_6": {"completed": 0, "total": 2, "pct": 0.0},
+            "phase_7": {"completed": 0, "total": 17, "pct": 0.0},
+        },
+        "goal_proximity": 0.0,
+        "heal_resolved_count": 0,
+        "top_issues_by_priority": [],
+    }
+    monkeypatch.setattr(eff_svc, "get_effectiveness", lambda: _fake_response)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.get("/api/agent/effectiveness")
+
+    assert r.status_code == 200, r.text
+    body = r.json()
+
+    assert "plan_progress" in body, "plan_progress missing from effectiveness response"
+    pp = body["plan_progress"]
+
+    assert "phase_6" in pp, "plan_progress.phase_6 missing"
+    assert "phase_7" in pp, "plan_progress.phase_7 missing"
+
+    p6 = pp["phase_6"]
+    assert isinstance(p6["completed"], int), "phase_6.completed must be int"
+    assert isinstance(p6["total"], int), "phase_6.total must be int"
+    assert p6["total"] == 2, f"phase_6.total expected 2, got {p6['total']}"
+
+    p7 = pp["phase_7"]
+    assert isinstance(p7["completed"], int), "phase_7.completed must be int"
+    assert isinstance(p7["total"], int), "phase_7.total must be int"
+    assert p7["total"] == 17, f"phase_7.total expected 17, got {p7['total']}"
+
+
+@pytest.mark.asyncio
+async def test_effectiveness_plan_progress_phase_boundary_logic() -> None:
+    """_plan_progress() correctly computes phase_6 and phase_7 completion from backlog_index.
+
+    Spec 045: Phase 6 = items 56–57 (0-based start 55), Phase 7 = items 58–74 (0-based start 57).
+    Validates boundary values: 0, 56, 57, 65, 74.
+    """
+    import app.services.effectiveness_service as eff_svc
+
+    cases = [
+        # (backlog_index, expected_p6_completed, expected_p7_completed)
+        (0, 0, 0),
+        (55, 0, 0),
+        (56, 1, 0),
+        (57, 2, 0),
+        (58, 2, 1),
+        (65, 2, 8),
+        (74, 2, 17),
+        (200, 2, 17),  # beyond total — clamped
+    ]
+
+    original_state_files = eff_svc.STATE_FILES
+    original_backlog_file = eff_svc.BACKLOG_FILE
+
+    import tempfile, json, os
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        state_path = os.path.join(tmpdir, "project_manager_state.json")
+        # Use a non-existent backlog so total=0 but phase logic still runs from constants
+        eff_svc.STATE_FILES = [state_path]
+        eff_svc.BACKLOG_FILE = os.path.join(tmpdir, "nonexistent_006.md")
+
+        try:
+            for idx, exp_p6, exp_p7 in cases:
+                with open(state_path, "w") as f:
+                    json.dump({"backlog_index": idx}, f)
+
+                result = eff_svc._plan_progress()
+                p6 = result["phase_6"]
+                p7 = result["phase_7"]
+
+                assert p6["completed"] == exp_p6, (
+                    f"backlog_index={idx}: phase_6.completed expected {exp_p6}, got {p6['completed']}"
+                )
+                assert p6["total"] == eff_svc.PHASE_6_TOTAL, (
+                    f"phase_6.total expected {eff_svc.PHASE_6_TOTAL}, got {p6['total']}"
+                )
+                assert p7["completed"] == exp_p7, (
+                    f"backlog_index={idx}: phase_7.completed expected {exp_p7}, got {p7['completed']}"
+                )
+                assert p7["total"] == eff_svc.PHASE_7_TOTAL, (
+                    f"phase_7.total expected {eff_svc.PHASE_7_TOTAL}, got {p7['total']}"
+                )
+        finally:
+            eff_svc.STATE_FILES = original_state_files
+            eff_svc.BACKLOG_FILE = original_backlog_file
