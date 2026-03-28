@@ -71,7 +71,14 @@ def list_concepts(limit: int = 50, offset: int = 0) -> dict[str, Any]:
 
 
 def get_concept(concept_id: str) -> dict[str, Any] | None:
-    return _concept_index.get(concept_id)
+    # Check built-in index first
+    if concept_id in _concept_index:
+        return _concept_index[concept_id]
+    # Check user-defined concepts
+    for c in _user_concepts:
+        if c["id"] == concept_id:
+            return c
+    return None
 
 
 def search_concepts(query: str, limit: int = 20) -> list[dict[str, Any]]:

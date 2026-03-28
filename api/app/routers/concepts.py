@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Any
+from typing import Any, Optional
 
 from app.services import concept_service, translate_service
 from app.services.translate_service import TranslateLens
