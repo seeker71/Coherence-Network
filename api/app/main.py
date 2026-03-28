@@ -589,6 +589,9 @@ app.include_router(contributors.router, prefix="/v1", include_in_schema=False)
 app.include_router(assets.router, prefix="/v1", include_in_schema=False)
 app.include_router(contributions.router, prefix="/v1", include_in_schema=False)
 app.include_router(distributions.router, prefix="/v1", include_in_schema=False)
+# MCP/skill registry submission stats (idea-4deb5bd7c800)
+from app.routers import registry as registry_router  # noqa: E402
+app.include_router(registry_router.router, prefix="/api", tags=["registry"])
 
 
 @app.middleware("http")
