@@ -46,8 +46,7 @@ def test_homepage_readability_css_tokens() -> None:
     assert "hsl(28 92% 74% / 0.05)" in css
 
 
-def test_homepage_readability_page_classes() -> None:
-    """Hero uses .hero-headline; body copy uses /90 or /85 (never below 85)."""
+def _assert_homepage_readability_page_classes() -> None:
     page_path = REPO_ROOT / "web" / "app" / "page.tsx"
     assert page_path.is_file(), f"Missing {page_path}"
     content = page_path.read_text(encoding="utf-8")
@@ -57,9 +56,14 @@ def test_homepage_readability_page_classes() -> None:
         assert int(match) >= 85, f"Found text-foreground/{match} (minimum allowed is 85)"
 
 
+def test_homepage_readability_page_classes() -> None:
+    """Hero uses .hero-headline; body copy uses /90 or /85 (never below 85)."""
+    _assert_homepage_readability_page_classes()
+
+
 def test_homepage_readability_contract_files() -> None:
-    """Spec 150 acceptance alias: same static contract as `test_homepage_readability_page_classes`."""
-    test_homepage_readability_page_classes()
+    """Spec 150 acceptance name: homepage `page.tsx` opacity + hero class contract."""
+    _assert_homepage_readability_page_classes()
 
 
 def test_idea_submit_form_readability() -> None:

@@ -61,10 +61,30 @@ N/A — no model changes.
 - `web/components/idea_submit_form.tsx` — placeholder/input text classes for ≥ `/85`
 - `api/tests/test_ui_readability.py` — contract tests (repo-root paths, CSS/token assertions)
 
+## Evidence (measurable artifact)
+
+- **Decision**: Dark-mode contrast fix only (no light-mode toggle in this delivery); toggle deferred — see Open Questions table.
+- **Proof**: CI-style contract — `api/tests/test_ui_readability.py` asserts `globals.css` tokens (including softened `body::before` bloom), `page.tsx` opacity floor, and `idea_submit_form.tsx` placeholder/body classes.
+- **Human review**: [WCAG 2.2 Understanding Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) (design uses token + opacity classes; automated WCAG measurement not in CI).
+
+## ROI signals (idea `ux-homepage-readability` ↔ spec 150)
+
+Tracked as value-vs-cost for portfolio / specs UI (`estimated_roi` = `potential_value / estimated_cost`, `actual_roi` = `actual_value / actual_cost` when costs are recorded):
+
+| Signal | Value | Basis |
+|--------|------:|--------|
+| `potential_value` | 24 | Reduced bounce / faster comprehension on first-run `/` |
+| `estimated_cost` | 3 | CSS + homepage class sweep + contract tests |
+| `estimated_roi` | 8.0 | 24 / 3 |
+| `actual_value` (post-ship) | TBD | e.g. engagement proxy or audit re-grade |
+| `actual_cost` (post-ship) | TBD | engineer time or pipeline minutes |
+| `actual_roi` | TBD | after actuals |
+
 ## Acceptance Tests
 
 - `api/tests/test_ui_readability.py::test_get_coherence_score_endpoint`
 - `api/tests/test_ui_readability.py::test_homepage_readability_contract_files`
+- `api/tests/test_ui_readability.py::test_homepage_readability_page_classes`
 - `api/tests/test_ui_readability.py::test_homepage_readability_css_tokens`
 
 ## Verification
