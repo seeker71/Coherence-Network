@@ -47,6 +47,7 @@ from app.routers import (
     value_lineage,
     contributors_portfolio,
 )
+from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
 from app.routers import dif_feedback
@@ -574,6 +575,7 @@ app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
+app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])
 app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
