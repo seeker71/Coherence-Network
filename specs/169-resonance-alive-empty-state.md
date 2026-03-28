@@ -1,9 +1,9 @@
 # Spec 169: Resonance — Alive Empty State with Ambient Breathing
 
-**Status**: Draft
+**Status**: Draft (enhanced)
 **Author**: product-manager agent
 **Date**: 2026-03-28
-**Task ID**: task_d70c65293963148a
+**Task ID**: task_33e4a5b56e7b56d9 (original: task_d70c65293963148a)
 
 ---
 
@@ -345,6 +345,91 @@ Beyond the verification scenarios above, the following signals indicate the feat
 4. **Regression signal**: If `meta` disappears from the API response (e.g., after a refactor), the timestamp line silently vanishes. A dedicated API contract test checking for `meta.last_pulse_at` catches this early.
 
 5. **Accessibility signal**: Run `axe` scan on `/resonance` — the breathing SVG must be `aria-hidden` and not trigger a motion-related accessibility violation.
+
+---
+
+## Open Questions Addressed
+
+> *"How can we improve this idea, show whether it is working yet, and make that proof clearer over time?"*
+
+### 1 — How to improve the idea
+
+| Improvement Area | Concrete action |
+|-----------------|----------------|
+| **Emotional resonance** | Vary the animation speed based on network activity: faster breath when `active_in_window > 5`, slower when 0. The orb itself becomes a live health indicator. |
+| **Temporal context** | Show relative quietude: "Quieter than usual" vs "Most active time" based on historical average `active_in_window` over the last 30 days (requires new aggregation query). |
+| **First-time visitor** | If `total_ever === 0`, render a special "first-run" invitation: "You could be the first heartbeat." with a distinct pulsing dot color. |
+| **Progressive loading** | The orb skeleton should render immediately on SSR so the page never shows blank space during hydration. |
+
+### 2 — How to show it is working (right now)
+
+The fastest way to confirm this spec is **implemented** (not just written):
+
+```bash
+# Step 1: Check the meta endpoint exists
+curl -s -w "\nHTTP:%{http_code}" https://api.coherencycoin.com/api/ideas/resonance/meta
+
+# Step 2: Confirm response shape
+curl -s https://api.coherencycoin.com/api/ideas/resonance/meta | \
+  grep -E '"last_pulse_at"|"total_ever"|"active_in_window"'
+
+# Step 3: Confirm resonance endpoint wraps ideas in meta shape
+curl -s "https://api.coherencycoin.com/api/ideas/resonance?window_hours=72&limit=1" | \
+  grep '"meta"'
+
+# Step 4: Visually confirm — navigate to /resonance in browser
+# Look for: element with aria-label="resonance-breathing-orb" in the DOM
+```
+
+If all 4 steps pass, the feature is implemented and live.
+
+### 3 — How to make proof clearer over time
+
+A **three-layer proof stack** that gets stronger as usage grows:
+
+| Layer | Mechanism | Automated? |
+|-------|-----------|------------|
+| **Contract** | `GET /api/ideas/resonance/meta` returns the required JSON shape | CI test (asserts 200 + shape) |
+| **Visual** | Playwright screenshot of `/resonance?window_hours=0` shows `.resonance-breathing-orb` | CI screenshot diff |
+| **Behavioral** | `last_pulse_at` returned is within 7 days of today in production | Nightly health check via `cc` |
+| **Engagement** | Click-through rate on "Share an idea →" CTA (track with existing analytics or server log parsing) | Weekly manual review |
+| **Regression** | If `meta` field disappears from API response (post-refactor), the CI contract test fails immediately | CI (fast) |
+
+The most important signal for "is it working" in the long run: if `last_pulse_at` ever becomes `null` on a production system with known activity, the feature has silently regressed.
+
+---
+
+## Observability
+
+### API-level signals
+
+- **`/api/ideas/resonance/meta`** — poll-able endpoint for network health dashboards
+- **`total_ever`** — monotonically increasing; if it stops growing, the network is stagnant
+- **`active_in_window`** — shows real-time activity intensity; can be used for animated breath speed
+- **Response time** — the `MAX(created_at)` query should complete in <5ms on indexed tables
+
+### Frontend signals
+
+- **`resonance-breathing-orb` DOM element** — presence confirms the empty state is rendered
+- **Animation active** — DevTools Animations panel shows at least 1 active animation
+- **`data-last-pulse` attribute** on the orb container — allows automated scraping of the displayed timestamp without parsing visible text
+
+Suggested attribute contract for automated testing:
+```html
+<div
+  class="resonance-breathing-orb"
+  data-last-pulse="2026-03-27T14:22:10Z"
+  data-total-ever="147"
+  aria-label="Network breathing — last pulse 14 hours ago"
+>
+```
+
+This allows a one-liner health check:
+```bash
+# Playwright / Puppeteer:
+page.locator('[data-last-pulse]').getAttribute('data-last-pulse')
+# Should be a non-null ISO string within the last 7 days
+```
 
 ---
 
