@@ -53,40 +53,18 @@ def _extract_created_task_ids(payload: dict) -> list[str]:
 
 
 def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTasks) -> None:
-    if not _truthy(os.environ.get("AGENT_AUTO_EXECUTE", "0")):
-        return
+    """Disabled: tasks are executed by federation node runners, not server-side.
 
+    Previously this stamped tasks with executor=openrouter and model_override=openrouter/free,
+    causing all tasks to bypass strong providers. Removed to ensure slot selector on each
+    node determines the provider based on capabilities and Thompson Sampling.
+    """
+    return  # All task execution happens on federation nodes
+    # Legacy code below kept for reference but never reached
     task_ids = _extract_created_task_ids(payload)
     if not task_ids:
         return
-
-    from app.services import agent_execution_service
-    from app.services.agent_routing.model_routing_loader import get_auto_execute_default_model
-
-    model_override = os.environ.get("AGENT_AUTO_EXECUTE_MODEL") or get_auto_execute_default_model()
-
-    for task_id in task_ids[:20]:
-        try:
-            task = agent_service.get_task(task_id)
-            task_ctx = task.get("context") if isinstance(task, dict) else {}
-            if not isinstance(task_ctx, dict):
-                task_ctx = {}
-
-            # Skip auto-execution for pipeline tasks — they should run on federation nodes
-            # with strong providers (claude, codex, cursor), not openrouter/free
-            if task_ctx.get("auto_advance_source") or task_ctx.get("auto_retry_source") or task_ctx.get("bootstrap_source"):
-                logger.info("SKIP_AUTO_EXECUTE task=%s — pipeline task, runs on federation nodes", task_id[:16])
-                continue
-
-            context_patch: dict[str, object] = {}
-            if not str(task_ctx.get("executor") or "").strip():
-                context_patch["executor"] = "openrouter"
-            if not str(task_ctx.get("model_override") or "").strip():
-                context_patch["model_override"] = model_override
-            if context_patch:
-                agent_service.update_task(task_id, context=context_patch)
-            background_tasks.add_task(agent_execution_service.execute_task, task_id)
-        except Exception:
+    try:
             logger.warning("Task auto-execution failed, skipping", exc_info=True)
             continue
 

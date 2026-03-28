@@ -2824,10 +2824,18 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
 
     # Save task log
     task_log = _LOG_DIR / f"task_{task_id}.log"
+    spec_info = PROVIDERS.get(provider, {})
+    cmd_line = " ".join(str(c) for c in spec_info.get("cmd", []))
+    model_info = spec_info.get("_selected_model", "default")
     task_log.write_text(
         f"=== Task {task_id} | Provider: {provider} | Type: {task_type} ===\n"
         f"Time: {datetime.now(timezone.utc).isoformat()}\n"
         f"Duration: {duration:.1f}s | Success: {success}\n"
+        f"Model: {model_info}\n"
+        f"Cmd: {cmd_line}\n"
+        f"Timeout: {get_timeout_for(provider, task_type, complexity_estimate)}s\n"
+        f"Complexity: {json.dumps(complexity_estimate) if complexity_estimate else 'none'}\n"
+        f"Node: {_NODE_NAME} ({_NODE_ID[:8]})\n"
         f"=== OUTPUT ===\n{output}\n"
     )
 
