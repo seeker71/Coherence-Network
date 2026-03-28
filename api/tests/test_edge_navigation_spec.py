@@ -15,10 +15,7 @@ Implementation sources (static analysis only; no mocks):
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
-
-import pytest
 
 _api_dir = Path(__file__).resolve().parent.parent
 _repo_root = _api_dir.parent
