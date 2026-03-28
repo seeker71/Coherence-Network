@@ -923,16 +923,21 @@ def list_ideas(
     include_internal: bool = True,
     read_only_guard: bool = False,
     sort_method: str = "free_energy",
+    tags_filter: list[str] | None = None,
 ) -> IdeaPortfolioResponse:
     """When read_only_guard=True, ensure logic is applied in memory but not persisted (for invariant/guard runs).
 
     sort_method: "free_energy" (default, Method A) or "marginal_cc" (Method B).
+    tags_filter: when provided, only return ideas that have ALL of the given normalized tags.
     """
     ideas = _read_ideas(persist_ensures=not read_only_guard)
     if not include_internal:
         ideas = [i for i in ideas if not is_internal_idea_id(i.id, i.interfaces)]
     if only_unvalidated:
         ideas = [i for i in ideas if i.manifestation_status != ManifestationStatus.VALIDATED]
+    if tags_filter:
+        required = set(tags_filter)
+        ideas = [i for i in ideas if required.issubset(set(i.tags))]
 
     scored = [_with_score(i) for i in ideas]
     if sort_method == "marginal_cc":
@@ -1006,10 +1011,13 @@ def create_idea(
     child_idea_ids: list[str] | None = None,
     manifestation_status: ManifestationStatus | None = None,
     value_basis: dict[str, str] | None = None,
+    tags: list[str] | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas(persist_ensures=True)
     if any(existing.id == idea_id for existing in ideas):
         return None
+
+    normalized_tags = normalize_tags(tags or [])
 
     idea = Idea(
         id=idea_id,
@@ -1026,6 +1034,7 @@ def create_idea(
         parent_idea_id=parent_idea_id,
         child_idea_ids=child_idea_ids or [],
         value_basis=value_basis,
+        tags=normalized_tags,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(
@@ -1040,6 +1049,14 @@ def create_idea(
     ideas.append(idea)
     ideas, _ = _ensure_standing_questions(ideas)
     _write_ideas(ideas)
+
+    # Persist tags in the SQLAlchemy tag store
+    if normalized_tags:
+        try:
+            _tag_store.set_idea_tags(idea_id, normalized_tags)
+        except Exception:
+            pass  # Non-fatal; tags will still be in-memory after cache refresh
+
     return _with_score(idea)
 
 
@@ -1155,6 +1172,38 @@ def update_idea(
 
     _write_single_idea(updated, position=updated_idx)
     return _with_score(updated)
+
+
+def set_idea_tags(idea_id: str, tags: list[str]) -> IdeaTagUpdateResponse | None:
+    """Replace the full tag set for an idea.
+
+    Returns None if the idea does not exist.
+    The tag list is normalized: trimmed, lowercased, slugified, deduplicated, sorted.
+    """
+    # Verify the idea exists
+    found = False
+    for idea in _read_ideas():
+        if idea.id == idea_id:
+            found = True
+            break
+    if not found:
+        return None
+
+    normalized = normalize_tags(tags)
+    _tag_store.set_idea_tags(idea_id, normalized)
+    _invalidate_ideas_cache()
+    return IdeaTagUpdateResponse(id=idea_id, tags=normalized)
+
+
+def get_tag_catalog() -> IdeaTagCatalogResponse:
+    """Return the full tag catalog with idea counts, sorted alphabetically."""
+    counts = _tag_store.get_all_tag_counts()
+    entries = [
+        IdeaTagCatalogEntry(tag=tag, idea_count=count)
+        for tag, count in sorted(counts.items())
+        if count >= 1
+    ]
+    return IdeaTagCatalogResponse(tags=entries)
 
 
 def stake_on_idea(idea_id: str, contributor_id: str, amount_cc: float, rationale: str | None = None) -> dict:
