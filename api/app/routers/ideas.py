@@ -378,6 +378,9 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
             data.confidence,
             data.manifestation_status,
             data.stage,
+            data.parent_idea_id,
+            data.potential_value,
+            data.estimated_cost,
         )
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
@@ -386,12 +389,18 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
     if data.stage is not None:
         idea_service.set_idea_stage(idea_id, data.stage)
 
+    # Handle parent_idea_id update directly on the idea object
+    if data.parent_idea_id is not None:
+        idea_service.set_parent_idea(idea_id, data.parent_idea_id)
+
     updated = idea_service.update_idea(
         idea_id=idea_id,
         actual_value=data.actual_value,
         actual_cost=data.actual_cost,
         confidence=data.confidence,
         manifestation_status=data.manifestation_status,
+        potential_value=data.potential_value,
+        estimated_cost=data.estimated_cost,
     )
     if updated is None:
         raise HTTPException(status_code=404, detail="Idea not found")

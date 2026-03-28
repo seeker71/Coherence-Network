@@ -156,12 +156,16 @@ class IdeaShowcaseResponse(BaseModel):
 
 
 class IdeaUpdate(BaseModel):
-    """PATCH body per spec 053: only these four optional fields."""
+    """PATCH body — extend original spec-053 fields with structural fields for reorganization."""
     actual_value: Optional[float] = Field(default=None, ge=0.0)
     actual_cost: Optional[float] = Field(default=None, ge=0.0)
     confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     manifestation_status: Optional[ManifestationStatus] = None
     stage: Optional[IdeaStage] = None
+    # Structural / prioritization fields
+    parent_idea_id: Optional[str] = Field(default=None, description="Set parent idea for hierarchy")
+    potential_value: Optional[float] = Field(default=None, ge=0.0, description="Revise potential value estimate")
+    estimated_cost: Optional[float] = Field(default=None, ge=0.0, description="Revise cost estimate")
 
 
 class IdeaCreate(BaseModel):
