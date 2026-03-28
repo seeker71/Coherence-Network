@@ -367,15 +367,16 @@ export default function ContributorPortfolioPage() {
         {stakes && stakes.items.length > 0 ? (
           <ul className="space-y-2">
             {stakes.items.map((stake) => (
-              <li key={stake.stake_id} className="rounded-xl border border-border/20 bg-background/40 p-4">
+              <li key={stake.stake_id}>
+                <Link
+                  href={`/contributors/${encodeURIComponent(contributorId)}/portfolio/stakes/${encodeURIComponent(stake.stake_id)}`}
+                  className="block rounded-xl border border-border/20 bg-background/40 p-4 hover:border-primary/40 hover:bg-background/60 transition-all group"
+                >
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1 min-w-0">
-                    <Link
-                      href={`/ideas/${encodeURIComponent(stake.idea_id)}`}
-                      className="font-medium hover:text-primary transition-colors truncate block"
-                    >
+                    <p className="font-medium hover:text-primary transition-colors truncate group-hover:text-primary">
                       {stake.idea_title}
-                    </Link>
+                    </p>
                     <p className="text-xs text-muted-foreground">Staked {fmtDate(stake.staked_at)}</p>
                   </div>
                   <div className="text-right shrink-0 space-y-1">
@@ -390,6 +391,7 @@ export default function ContributorPortfolioPage() {
                     )}
                   </div>
                 </div>
+                </Link>
               </li>
             ))}
           </ul>
