@@ -114,3 +114,14 @@ def test_resonance_invalid_window_returns_422() -> None:
 def test_get_nonexistent_idea_returns_404() -> None:
     response = client.get("/api/ideas/__does_not_exist_idea__")
     assert response.status_code == 404
+
+
+def test_spec_150_documents_decision_and_evidence_links() -> None:
+    """Spec 150 records the dark-contrast-first decision, evidence table, and idea id for ROI follow-up."""
+    spec_path = REPO_ROOT / "specs" / "150-homepage-readability-contrast.md"
+    assert spec_path.is_file(), f"Missing {spec_path}"
+    text = spec_path.read_text(encoding="utf-8")
+    assert "Dark contrast fix only" in text
+    assert "ux-homepage-readability" in text
+    assert "## Evidence (spec → test → impl)" in text
+    assert "api/tests/test_ui_readability.py" in text

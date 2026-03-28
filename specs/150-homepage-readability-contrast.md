@@ -6,15 +6,26 @@ First-time visitors to `https://coherencycoin.com/` (route `/`) land on a warm, 
 
 ## Requirements
 
-- [ ] **R1 — Body copy contrast**: All homepage (`/`) primary body text (hero description, stat labels, “How it works” descriptions, feed cards secondary lines, footer links, closing quote block, form helper text and placeholders except intentional error colors) uses foreground opacity **≥ 0.85** relative to `hsl(var(--foreground))` (e.g. `text-foreground/85`, `text-foreground/90`, or `text-foreground`).
-- [ ] **R2 — Design tokens**: Global CSS variables in `web/app/globals.css` are adjusted so default readable text is slightly brighter on the dark canvas (raise lightness of `--foreground` / `--muted-foreground` where used for prose) and the fixed full-screen bloom overlay is **slightly toned down** so it does not wash out text.
-- [ ] **R3 — Hero headline**: The main H1 remains visually prominent (full-opacity foreground); optional subtle text-shadow is allowed for separation from gradients without lowering opacity below 1.0 for the headline color.
-- [ ] **R4 — API-backed “proof” unchanged**: Homepage continues to consume existing public endpoints; no breaking changes to response shapes.
+- [x] **R1 — Body copy contrast**: All homepage (`/`) primary body text (hero description, stat labels, “How it works” descriptions, feed cards secondary lines, footer links, closing quote block, form helper text and placeholders except intentional error colors) uses foreground opacity **≥ 0.85** relative to `hsl(var(--foreground))` (e.g. `text-foreground/85`, `text-foreground/90`, or `text-foreground`).
+- [x] **R2 — Design tokens**: Global CSS variables in `web/app/globals.css` are adjusted so default readable text is slightly brighter on the dark canvas (raise lightness of `--foreground` / `--muted-foreground` where used for prose) and the fixed full-screen bloom overlay is **slightly toned down** so it does not wash out text.
+- [x] **R3 — Hero headline**: The main H1 remains visually prominent (full-opacity foreground); optional subtle text-shadow is allowed for separation from gradients without lowering opacity below 1.0 for the headline color.
+- [x] **R4 — API-backed “proof” unchanged**: Homepage continues to consume existing public endpoints; no breaking changes to response shapes.
 
 ## Research Inputs (Required)
 
 - `2024-2025` — [WCAG 2.2 Understanding Contrast (Minimum)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) — informs contrast intent (implementation uses design tokens + opacity classes, not automated WCAG measurement in CI).
 - `2025-03-25` — Project `web/app/page.tsx` + `web/app/globals.css` — baseline UI before this change.
+
+## Evidence (spec → test → impl)
+
+| Artifact | Location |
+|----------|----------|
+| Spec (decision + requirements) | `specs/150-homepage-readability-contrast.md` (this file) |
+| Automated contract | `api/tests/test_ui_readability.py` (CSS tokens, `page.tsx` opacity floor, form classes, public API health) |
+| Implementation | `web/app/globals.css`, `web/app/page.tsx`, `web/components/idea_submit_form.tsx` |
+| Idea linkage (UX surface → `ux-homepage-readability`) | `web/components/page_context_links.tsx` route `/` |
+
+**ROI update (post-ship):** PATCH `https://api.coherencycoin.com/api/ideas/ux-homepage-readability` with `X-API-Key` to set `manifestation_status` → `partial` or `validated`, `actual_value` / `actual_cost` per [RUNBOOK.md](../docs/RUNBOOK.md) idea tracking when measured outcomes exist.
 
 ## Task Card (Required)
 
@@ -25,6 +36,8 @@ files_allowed:
   - web/app/globals.css
   - web/app/page.tsx
   - web/components/idea_submit_form.tsx
+  - web/components/page_context_links.tsx
+  - docs/SPEC-TRACKING.md
   - api/tests/test_ui_readability.py
 done_when:
   - pytest api/tests/test_ui_readability.py passes
@@ -59,13 +72,17 @@ N/A — no model changes.
 - `web/app/globals.css` — foreground/muted tokens; optional `body::before` strength
 - `web/app/page.tsx` — hero, sections, footer classes for ≥ `/85` body copy; hero H1 clarity
 - `web/components/idea_submit_form.tsx` — placeholder/input text classes for ≥ `/85`
+- `web/components/page_context_links.tsx` — homepage context `ideaId` → `ux-homepage-readability`
+- `docs/SPEC-TRACKING.md` — spec 150 ↔ test mapping
 - `api/tests/test_ui_readability.py` — contract tests (repo-root paths, CSS/token assertions)
 
 ## Acceptance Tests
 
 - `api/tests/test_ui_readability.py::test_get_coherence_score_endpoint`
-- `api/tests/test_ui_readability.py::test_homepage_readability_contract_files`
 - `api/tests/test_ui_readability.py::test_homepage_readability_css_tokens`
+- `api/tests/test_ui_readability.py::test_homepage_readability_page_classes`
+- `api/tests/test_ui_readability.py::test_idea_submit_form_readability`
+- `api/tests/test_ui_readability.py::test_spec_150_documents_decision_and_evidence_links`
 
 ## Verification
 

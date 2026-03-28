@@ -31,7 +31,7 @@ const SHARED_RELATED: LinkItem[] = [
 
 const CONTEXTS: Record<string, ContextDef> = {
   "/": {
-    ideaId: "portfolio-governance",
+    ideaId: "ux-homepage-readability",
     related: SHARED_RELATED,
     machinePaths: [
       { href: "/api/inventory/system-lineage", label: "System lineage" },
