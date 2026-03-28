@@ -176,12 +176,20 @@ function ContributorsPageContent() {
                       {(c.type || "Human").charAt(0).toUpperCase() + (c.type || "Human").slice(1).toLowerCase()}
                     </span>
                   </div>
-                  <Link
-                    href={`/contributions?contributor_id=${encodeURIComponent(c.id)}`}
-                    className="text-xs underline text-muted-foreground hover:text-foreground"
-                  >
-                    View contributions
-                  </Link>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/contributors/${encodeURIComponent(c.id)}/beliefs`}
+                      className="text-xs underline text-muted-foreground hover:text-foreground"
+                    >
+                      Beliefs
+                    </Link>
+                    <Link
+                      href={`/contributions?contributor_id=${encodeURIComponent(c.id)}`}
+                      className="text-xs underline text-muted-foreground hover:text-foreground"
+                    >
+                      View contributions
+                    </Link>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                   {c.email && <span>{c.email}</span>}

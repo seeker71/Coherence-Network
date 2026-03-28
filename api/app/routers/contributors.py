@@ -157,7 +157,7 @@ def patch_contributor_beliefs(
     body: BeliefProfileUpdate,
     _key: str = Depends(require_api_key),
 ) -> BeliefProfileResponse:
-    dump = body.model_dump(exclude_unset=True)
+    dump = body.model_dump(exclude_unset=True, exclude_none=True)
     if not dump:
         data = belief_service.get_belief_profile_dict(contributor_id)
     else:

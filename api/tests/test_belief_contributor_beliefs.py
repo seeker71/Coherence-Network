@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -41,10 +43,11 @@ async def test_get_patch_beliefs_and_resonance() -> None:
         assert patched["worldview"] == "scientific"
         assert patched["concept_weights"]["api"] == 0.9
 
+        idea_id = f"test-belief-resonance-{uuid.uuid4().hex[:12]}"
         idea = await client.post(
             "/api/ideas",
             json={
-                "id": "test-belief-resonance-idea",
+                "id": idea_id,
                 "name": "API graph coherence",
                 "description": "Measure evidence and deploy the graph api with data metrics.",
                 "potential_value": 10.0,
@@ -56,10 +59,10 @@ async def test_get_patch_beliefs_and_resonance() -> None:
 
         r = await client.get(
             f"/api/contributors/{contributor_id}/beliefs/resonance",
-            params={"idea_id": "test-belief-resonance-idea"},
+            params={"idea_id": idea_id},
         )
         assert r.status_code == 200
         res = r.json()
-        assert res["idea_id"] == "test-belief-resonance-idea"
+        assert res["idea_id"] == idea_id
         assert 0.0 <= res["resonance_score"] <= 1.0
         assert "matching_concepts" in res
