@@ -20,6 +20,7 @@ import {
 
 import * as ccStatus from './commands/cc-status.js';
 import * as ccIdea from './commands/cc-idea.js';
+import * as ccLink from './commands/cc-link.js';
 import * as ccStake from './commands/cc-stake.js';
 
 import { syncIdeaChannels } from './sync/idea-channel-sync.js';
@@ -43,7 +44,7 @@ const client = new Client({
 // ── Command registry ──────────────────────────────────────────────────────────
 
 client.commands = new Collection();
-for (const cmd of [ccStatus, ccIdea, ccStake]) {
+for (const cmd of [ccStatus, ccIdea, ccLink, ccStake]) {
   client.commands.set(cmd.data.name, cmd);
 }
 

@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { data as ccIdea } from './commands/cc-idea.js';
+import { data as ccLink } from './commands/cc-link.js';
 import { data as ccStatus } from './commands/cc-status.js';
 import { data as ccStake } from './commands/cc-stake.js';
 
@@ -21,7 +22,7 @@ if (!TOKEN || !CLIENT_ID) {
 }
 
 const rest = new REST().setToken(TOKEN);
-const commands = [ccIdea, ccStatus, ccStake].map(cmd => cmd.toJSON());
+const commands = [ccIdea, ccLink, ccStatus, ccStake].map(cmd => cmd.toJSON());
 
 try {
   if (GUILD_ID) {

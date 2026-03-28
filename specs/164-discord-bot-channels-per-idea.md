@@ -2,7 +2,7 @@
 
 **Spec ID**: 164-discord-bot-channels-per-idea
 **Task ID**: task_54c58715153ef78e
-**Status**: draft
+**Status**: approved
 **Priority**: high
 **Author**: product-manager agent
 **Date**: 2026-03-28
