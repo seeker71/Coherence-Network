@@ -26,6 +26,7 @@ import { listProviders, showProviderStats } from "../lib/commands/providers.mjs"
 import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
 import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility, showDiagLive } from "../lib/commands/diagnostics.mjs";
 import { publishDiag, startDiagMode } from "../lib/commands/diag_publish.mjs";
+import { showMetaSummary, showMetaEndpoints, showMetaModules } from "../lib/commands/meta.mjs";
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
@@ -92,8 +93,18 @@ const COMMANDS = {
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
+  meta:          () => handleMeta(args),
   help:          () => showHelp(),
 };
+
+async function handleMeta(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "endpoints": return showMetaEndpoints(args.slice(1));
+    case "modules":   return showMetaModules(args.slice(1));
+    default:          return showMetaSummary();
+  }
+}
 
 async function handleIdea(args) {
   if (args[0] === "create") return createIdea(args.slice(1));

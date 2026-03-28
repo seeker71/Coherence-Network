@@ -48,6 +48,7 @@ from app.routers import dif_feedback
 from app.routers import edges as edges_router
 from app.routers import graph
 from app.routers import agent_grounded_metrics_routes
+from app.routers import meta as meta_router
 from app.routers import pipeline
 from app.routers import provider_stats
 from app.routers import service_registry_router
@@ -262,6 +263,7 @@ app = FastAPI(
         {"name": "automation-usage", "description": "Provider readiness and usage tracking"},
         {"name": "value-lineage", "description": "Value attribution tracing"},
         {"name": "identity", "description": "Contributor identity linking and verification"},
+        {"name": "meta", "description": "System self-discovery: endpoints and modules as concept nodes"},
     ],
 )
 logger = logging.getLogger("coherence.api.slow")
@@ -562,6 +564,7 @@ app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
+app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
