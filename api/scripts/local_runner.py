@@ -927,6 +927,10 @@ def get_openrouter_free_model_stats() -> dict:
 
 _HTTP_CLIENT = httpx.Client(timeout=30.0)
 
+# Worktree execution: defer API completion for impl/test/code-review until push or merge
+# confirms code is on origin — prevents phase advancement before remotes are updated.
+_worktree_tls = threading.local()
+
 _PHASE_SEQUENCE = ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect", "review")
 _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
@@ -3006,8 +3010,32 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                         else:
                             log.warning("TIMEOUT resume task create failed source=%s", task_id)
 
-    # Report to API
-    if completion_status == "completed":
+    # Report to API — defer impl/test/code-review success until worktree push or merge confirms origin
+    defer_completion = (
+        getattr(_worktree_tls, "defer", False)
+        and task_type in ("impl", "test", "code-review")
+        and success
+        and completion_status == "completed"
+    )
+    if defer_completion:
+        _worktree_tls.pending = {
+            "success": success,
+            "output": output,
+            "completion_context": completion_context,
+            "completion_status": completion_status,
+            "completion_error_category": completion_error_category,
+            "min_chars": min_chars,
+            "output_stripped": output_stripped,
+            "provider": provider,
+            "duration": duration,
+        }
+        log.info(
+            "WORKTREE_DEFER_COMPLETION task=%s type=%s — API patch deferred until push/merge to origin",
+            task_id[:16],
+            task_type,
+        )
+        reported = True
+    elif completion_status == "completed":
         reported = complete_task(task_id, output, success, completion_context)
     else:
         reported = _complete_task_with_status(
@@ -3017,7 +3045,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             completion_context,
             error_category=completion_error_category,
         )
-    if success and reported:
+    if success and reported and not defer_completion:
         # Only advance phases if the task produced meaningful output
         if len(output_stripped) >= min_chars:
             _run_phase_auto_advance_hook(task)
@@ -3026,14 +3054,27 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
             log.warning("SKIP_ADVANCE task=%s — output too short (%d < %d) for phase advancement", task_id, len(output_stripped), min_chars)
 
     # Post completion activity
-    _post_activity(
-        task_id,
-        "completed" if success else ("timeout" if completion_status == "timed_out" else "failed"),
-        {"provider": provider, "task_type": task_type, "duration_s": round(duration, 1), "output_preview": output[:200] if output else ""},
-    )
+    if defer_completion:
+        _post_activity(
+            task_id,
+            "awaiting_remote_push",
+            {
+                "provider": provider,
+                "task_type": task_type,
+                "duration_s": round(duration, 1),
+                "output_preview": output[:200] if output else "",
+                "note": "completion deferred until git push/merge to origin",
+            },
+        )
+    else:
+        _post_activity(
+            task_id,
+            "completed" if success else ("timeout" if completion_status == "timed_out" else "failed"),
+            {"provider": provider, "task_type": task_type, "duration_s": round(duration, 1), "output_preview": output[:200] if output else ""},
+        )
 
-    log.info("OUTCOME task=%s type=%s provider=%s success=%s duration=%.1fs",
-             task_id, task_type, provider, success, duration)
+    log.info("OUTCOME task=%s type=%s provider=%s success=%s duration=%.1fs defer=%s",
+             task_id, task_type, provider, success, duration, defer_completion)
     return success
 
 
@@ -4077,9 +4118,10 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
         # Fetch latest remote refs
+        # Fix 1: refresh origin/main (and optional feature branch) before worktree — avoid stale base
         subprocess.run(
-            ["git", "fetch", "origin", "--quiet"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
+            ["git", "fetch", "origin", "main", "--quiet"],
+            capture_output=True, text=True, timeout=60, cwd=repo_root,
         )
         # Determine base ref: PR branch if specified, else origin/main
         base_ref = "origin/main"
@@ -4093,7 +4135,23 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
                 base_ref = f"origin/{base_branch}"
                 log.info("WORKTREE_FROM_PR task=%s branch=%s", slug, base_branch)
             else:
-                log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
+                subprocess.run(
+                    ["git", "fetch", "origin", base_branch, "--quiet"],
+                    capture_output=True, text=True, timeout=60, cwd=repo_root,
+                )
+                check2 = subprocess.run(
+                    ["git", "rev-parse", "--verify", f"origin/{base_branch}"],
+                    capture_output=True, text=True, timeout=5, cwd=repo_root,
+                )
+                if check2.returncode == 0:
+                    base_ref = f"origin/{base_branch}"
+                    log.info("WORKTREE_FROM_PR task=%s branch=%s (after fetch)", slug, base_branch)
+                else:
+                    log.info(
+                        "WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main",
+                        slug,
+                        base_branch,
+                    )
 
         subprocess.run(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
@@ -4286,21 +4344,84 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
         return False
 
 
-def _merge_branch_to_main(task_id: str) -> bool:
-    """Merge task branch to main AND push. Only called after code-review passes.
+def _push_main_to_origin(repo_root: str) -> bool:
+    """Push local ``main`` to ``origin/main`` using the same token path as task branches (fix 3)."""
+    try:
+        gh_token = ""
+        gh_env = dict(os.environ)
+        config_base = os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config")
+        seeker71_config = os.path.join(config_base, "gh-seeker71")
+        if os.path.isdir(seeker71_config):
+            gh_env["GH_CONFIG_DIR"] = seeker71_config
+        for gh_cmd in ["gh"]:
+            try:
+                gh_result = subprocess.run(
+                    [gh_cmd, "auth", "token"],
+                    capture_output=True, text=True, timeout=10,
+                    env=gh_env,
+                )
+                if gh_result.returncode == 0 and gh_result.stdout.strip():
+                    gh_token = gh_result.stdout.strip()
+                    break
+            except (FileNotFoundError, Exception):
+                continue
+        remote_url = ""
+        try:
+            remote_result = subprocess.run(
+                ["git", "remote", "get-url", "origin"],
+                capture_output=True, text=True, timeout=5, cwd=repo_root,
+            )
+            remote_url = remote_result.stdout.strip()
+        except Exception:
+            pass
+        push_env = dict(os.environ)
+        push_env["SKIP_PR_GUARD"] = "1"
+        if gh_token and "github.com" in remote_url:
+            import re as _re
+            match = _re.search(r"github\.com[:/]([^/]+/[^/.]+)", remote_url)
+            if match:
+                repo_path = match.group(1).rstrip(".git")
+                token_url = f"https://x-access-token:{gh_token}@github.com/{repo_path}.git"
+                push_cmd = ["git", "push", token_url, "HEAD:refs/heads/main"]
+            else:
+                push_cmd = [
+                    "git", "-c", f"url.https://x-access-token:{gh_token}@github.com/.insteadOf=https://github.com/",
+                    "push", "origin", "main",
+                ]
+        else:
+            push_cmd = ["git", "push", "origin", "main"]
+        push = subprocess.run(
+            push_cmd,
+            capture_output=True, text=True, timeout=120, cwd=repo_root,
+            env=push_env,
+        )
+        if push.returncode == 0:
+            log.info("MAIN_PUSHED repo=%s", repo_root[-40:])
+            return True
+        log.warning("MAIN_PUSH_FAILED error=%s", (push.stderr or push.stdout or "")[:200])
+        return False
+    except Exception as e:
+        log.warning("MAIN_PUSH_FAILED error=%s", e)
+        return False
 
-    This is the gate — code only reaches main after review.
+
+def _merge_branch_to_main(task_id: str) -> bool:
+    """Merge task branch to main AND push to origin/main. Only after code-review passes.
+
+    Fix 3: same auth path as branch push — not a local-only merge.
     """
     slug = task_id[:16]
     branch = f"task/{slug}"
     repo_root = str(_REPO_DIR)
     try:
-        # Fetch latest
         subprocess.run(
-            ["git", "fetch", "origin"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
+            ["git", "fetch", "origin", "main"],
+            capture_output=True, text=True, timeout=60, cwd=repo_root,
         )
-        # Check if branch exists on origin
+        subprocess.run(
+            ["git", "fetch", "origin", branch],
+            capture_output=True, text=True, timeout=60, cwd=repo_root,
+        )
         check = subprocess.run(
             ["git", "rev-parse", "--verify", f"origin/{branch}"],
             capture_output=True, text=True, timeout=10, cwd=repo_root,
@@ -4309,10 +4430,13 @@ def _merge_branch_to_main(task_id: str) -> bool:
             log.info("MERGE_SKIP task=%s — branch not on origin (no code changes)", slug)
             return True
 
-        # Merge origin/branch into local main
         subprocess.run(
             ["git", "checkout", "main"],
             capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+        subprocess.run(
+            ["git", "pull", "--ff-only", "origin", "main"],
+            capture_output=True, text=True, timeout=60, cwd=repo_root,
         )
         merge = subprocess.run(
             ["git", "merge", "--no-ff", f"origin/{branch}", "-m", f"Merge reviewed task {slug}"],
@@ -4323,45 +4447,98 @@ def _merge_branch_to_main(task_id: str) -> bool:
             log.warning("MERGE_CONFLICT task=%s", slug)
             return False
 
-        # Push main to origin
-        push = subprocess.run(
-            ["git", "push", "origin", "main"],
-            capture_output=True, text=True, timeout=60, cwd=repo_root,
-        )
-        if push.returncode == 0:
-            log.info("MERGED_TO_MAIN task=%s", slug)
-            # Clean up remote branch
+        if _push_main_to_origin(repo_root):
+            log.info("MERGED_TO_MAIN task=%s (main pushed to origin)", slug)
             subprocess.run(
                 ["git", "push", "origin", "--delete", branch],
                 capture_output=True, text=True, timeout=30, cwd=repo_root,
             )
             return True
-        else:
-            log.warning("MAIN_PUSH_FAILED task=%s error=%s", slug, push.stderr.strip()[:200])
-            return False
+        log.warning("MAIN_PUSH_FAILED task=%s — merge is local only; not advancing", slug)
+        return False
     except Exception as e:
         log.warning("MERGE_TO_MAIN_FAILED task=%s error=%s", slug, e)
         return False
 
 
-def _run_task_in_worktree(task: dict, wt_path: Path) -> tuple[bool, str]:
+def _finalize_worktree_deferred_task(
+    task: dict[str, Any],
+    pending: dict[str, Any],
+    *,
+    final_success: bool,
+    output: str,
+    context_extra: dict[str, Any] | None = None,
+) -> None:
+    """Apply API completion + phase hook after push/merge (deferred run_one path)."""
+    task_id = task["id"]
+    task_type = str(task.get("task_type") or "")
+    ctx = dict(pending["completion_context"])
+    if context_extra:
+        ctx.update(context_extra)
+    min_chars = int(pending.get("min_chars") or 50)
+    out_stripped = (output or "").strip()
+    provider = str(pending.get("provider") or "unknown")
+    duration = float(pending.get("duration") or 0.0)
+
+    if final_success:
+        complete_task(task_id, output, True, ctx)
+        if len(out_stripped) >= min_chars:
+            _run_phase_auto_advance_hook(task)
+            _auto_record_contribution(task, provider, duration)
+        else:
+            log.warning(
+                "SKIP_ADVANCE deferred task=%s — output too short (%d < %d)",
+                task_id[:16],
+                len(out_stripped),
+                min_chars,
+            )
+    else:
+        _complete_task_with_status(
+            task_id,
+            output,
+            "failed",
+            ctx,
+            error_category="execution_error",
+        )
+    _post_activity(
+        task_id,
+        "completed" if final_success else "failed",
+        {
+            "provider": provider,
+            "task_type": task_type,
+            "duration_s": round(duration, 1),
+            "output_preview": output[:200] if output else "",
+            "deferred_remote": True,
+        },
+    )
+
+
+def _run_task_in_worktree(task: dict, wt_path: Path) -> tuple[bool, str, dict[str, Any] | None]:
     """Execute a task inside a worktree directory.
 
-    Fix 2: returns (success, git_diff) — diff captured after provider runs.
+    Returns (success, git_diff, deferred_pending). When ``deferred_pending`` is set,
+    ``run_one`` did not PATCH the task — caller must push/merge then
+    :func:`_finalize_worktree_deferred_task`.
     """
     task_id = task["id"]
+    task_type = str(task.get("task_type") or "").strip().lower()
     global _REPO_DIR
     original_repo = _REPO_DIR
+    _worktree_tls.defer = task_type in ("impl", "test", "code-review")
+    _worktree_tls.pending = None
     try:
         _REPO_DIR = wt_path
         ok = run_one(task, dry_run=False)
-        # Fix 2: capture what the provider actually wrote
+        pending = getattr(_worktree_tls, "pending", None)
+        if pending:
+            ok = bool(pending.get("success", ok))
         diff = _capture_worktree_diff(task_id, wt_path)
-        return ok, diff
+        return ok, diff, pending
     except Exception as e:
         log.error("WORKTREE_EXEC_FAILED task=%s error=%s", task_id[:16], e)
-        return False, ""
+        return False, "", None
     finally:
+        _worktree_tls.defer = False
         _REPO_DIR = original_repo
 
 
@@ -4380,15 +4557,22 @@ def _runner_deploy_phase(task: dict) -> bool:
     log.info("DEPLOY_PHASE task=%s — runner executing deploy", task_id[:16])
     try:
         result = _deploy_to_vps()
-        if "successful" in str(result).lower():
-            complete_task(task_id, f"Deploy passed: {result}", True)
+        lr = str(result).lower()
+        ok = (
+            "deploy failed" not in lr
+            and "rolled back" not in lr
+            and ("successful" in lr or "already up to date" in lr)
+        )
+        if ok:
+            out = f"DEPLOY_PASSED: {result}"
+            complete_task(task_id, out, True, {"provider": "runner-deploy", "deploy_result": result})
+            _run_phase_auto_advance_hook(task)
             return True
-        else:
-            complete_task(task_id, f"Deploy failed: {result}", False)
-            return False
+        complete_task(task_id, f"DEPLOY_FAILED: {result}", False, {"provider": "runner-deploy"})
+        return False
     except Exception as e:
         log.error("DEPLOY_PHASE_ERROR task=%s: %s", task_id[:16], e)
-        complete_task(task_id, f"Deploy error: {e}", False)
+        complete_task(task_id, f"DEPLOY_FAILED: {e}", False)
         return False
 
 
@@ -4406,8 +4590,9 @@ def _runner_verify_phase(task: dict) -> bool:
     passed = 0
     failed = 0
 
-    # Basic endpoint existence checks
-    api_base = rc("api", "base_url", "https://api.coherencycoin.com")
+    # Runner-driven checks (httpx + curl) — real HTTP to production, not provider text
+    api_base = rc("api", "base_url", "https://api.coherencycoin.com").rstrip("/")
+    web_base = rc("deploy", "web_base", "https://coherencycoin.com").rstrip("/")
     checks = [
         (f"{api_base}/api/health", 200, "API health"),
         (f"{api_base}/api/ideas/count", 200, "Ideas count"),
@@ -4415,7 +4600,6 @@ def _runner_verify_phase(task: dict) -> bool:
 
     for url, expected_status, label in checks:
         try:
-            import httpx
             resp = httpx.get(url, timeout=10)
             if resp.status_code == expected_status:
                 results.append(f"PASS: {label} -> HTTP {resp.status_code}")
@@ -4427,9 +4611,57 @@ def _runner_verify_phase(task: dict) -> bool:
             results.append(f"FAIL: {label} -> {e}")
             failed += 1
 
-    output = f"Verify: {passed} passed, {failed} failed\n" + "\n".join(results)
+    # curl(1) sanity — matches operator / spec "curl scenarios"
+    try:
+        curl_health = subprocess.run(
+            [
+                "curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}",
+                f"{api_base}/api/health",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        code = (curl_health.stdout or "").strip()
+        if code == "200":
+            results.append(f"PASS: curl /api/health -> {code}")
+            passed += 1
+        else:
+            results.append(f"FAIL: curl /api/health -> {code}")
+            failed += 1
+    except Exception as e:
+        results.append(f"FAIL: curl /api/health -> {e}")
+        failed += 1
+
+    try:
+        curl_web = subprocess.run(
+            ["curl", "-sS", "-o", "/dev/null", "-w", "%{http_code}", "-L", web_base + "/"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        wcode = (curl_web.stdout or "").strip()
+        if wcode.startswith("2"):
+            results.append(f"PASS: curl web root -> {wcode}")
+            passed += 1
+        else:
+            results.append(f"FAIL: curl web root -> {wcode}")
+            failed += 1
+    except Exception as e:
+        results.append(f"FAIL: curl web -> {e}")
+        failed += 1
+
     success = failed == 0
-    complete_task(task_id, output, success)
+    body = "\n".join(results)
+    output = ("VERIFY_PASSED: " if success else "VERIFY_FAILED: ") + f"{passed} passed, {failed} failed\n" + body
+    complete_task(
+        task_id,
+        output,
+        success,
+        {"provider": "runner-verify", "idea_id": idea_id, "verify_checks": len(results)},
+    )
+    if success:
+        _run_phase_auto_advance_hook(task)
     log.info("VERIFY_PHASE task=%s passed=%d failed=%d", task_id[:16], passed, failed)
     return success
 
@@ -4497,6 +4729,7 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             base_branch = impl_branch if task_type in ("test", "code-review", "review") and impl_branch else None
             wt = _create_worktree(task_id, base_branch=base_branch)
             pushed = False
+            keep_worktree = False  # Fix 5: retain worktree when push to origin failed (recovery copy)
             try:
                 # Fix 6+7: deploy and verify are RUNNER actions, not provider
                 if task_type == "deploy":
@@ -4506,64 +4739,185 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                     ok = _runner_verify_phase(task)
                     pushed = True  # verify is read-only
                 elif wt:
-                    ok, diff = _run_task_in_worktree(task, wt)
-                    # Guard: reject destructive diffs for impl/test (not cleanup/heal)
-                    if diff and task_type in ("impl", "test"):
-                        add_lines = diff.count("\n+") - diff.count("\n+++")
-                        del_lines = diff.count("\n-") - diff.count("\n---")
-                        if del_lines > add_lines * 3 and del_lines > 50:
-                            log.warning("WORKER[%d] DESTRUCTIVE_DIFF task=%s +%d -%d — rejecting",
-                                        worker_id, task_id[:16], add_lines, del_lines)
-                            diff = ""  # Treat as no code produced
-                            ok = False
-                            complete_task(task_id, f"Rejected: diff deletes {del_lines} lines but only adds {add_lines}. Impl must add, not delete.", False)
-                    if ok and diff:
-                        # Push BRANCH (not main) — code stays on branch until code-review
-                        pushed = _push_branch_to_origin(task_id, wt)
-                        if not pushed:
-                            log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
-                    elif not ok and diff and task_type in ("impl", "test"):
-                        # Timed out but produced real code — save the work, push branch
-                        log.info("WORKER[%d] TIMEOUT_WITH_CODE task=%s type=%s diff=%d bytes — pushing partial work",
-                                 worker_id, task_id[:16], task_type, len(diff))
-                        pushed = _push_branch_to_origin(task_id, wt)
-                        if pushed:
-                            # Record as timed_out (not failed) so retry carries the branch forward
-                            complete_task(
-                                task_id,
-                                f"Timed out but produced code changes (branch pushed). Retry should continue from this branch.",
-                                False,
-                                context_patch={
-                                    "branch_pushed": True,
-                                    "diff_size": len(diff),
-                                    "diff_content": diff[:5000],  # Actual code for retry carry-over
-                                    "partial_timeout": True,
-                                },
-                            )
-                        else:
-                            complete_task(
-                                task_id,
-                                f"Timed out with {len(diff)} bytes of code, but branch push failed.",
-                                False,
-                                context_patch={"diff_content": diff[:5000], "diff_size": len(diff)},
-                            )
-                    elif ok and task_type in ("spec", "review", "code-review"):
-                        pushed = True  # Text-only phases don't need a diff
-                    elif ok and task_type in ("impl", "test"):
-                        # impl/test MUST produce code — no diff means provider didn't actually write anything
-                        log.warning("WORKER[%d] NO_CODE_PRODUCED task=%s type=%s — marking failed (provider claimed success but wrote no files)",
-                                    worker_id, task_id[:16], task_type)
-                        ok = False
-                        complete_task(task_id, "Provider claimed success but produced no code changes. No git diff detected in worktree.", False)
-                    elif ok:
-                        pushed = True  # Other phases (heal, etc)
+                    ok, diff, deferred_pending = _run_task_in_worktree(task, wt)
 
-                    # After code-review passes, merge branch to main
-                    if ok and pushed and task_type == "code-review":
-                        merged = _merge_branch_to_main(task_id)
-                        if not merged:
-                            log.warning("WORKER[%d] MERGE_TO_MAIN_FAILED task=%s", worker_id, task_id[:16])
-                            pushed = False  # Don't advance to deploy if merge failed
+                    if deferred_pending is not None:
+                        pend = deferred_pending
+                        base_out = str(pend.get("output") or "")
+                        bad_diff = False
+                        if diff and task_type in ("impl", "test"):
+                            add_lines = diff.count("\n+") - diff.count("\n+++")
+                            del_lines = diff.count("\n-") - diff.count("\n---")
+                            if del_lines > add_lines * 3 and del_lines > 50:
+                                log.warning(
+                                    "WORKER[%d] DESTRUCTIVE_DIFF task=%s +%d -%d — rejecting",
+                                    worker_id,
+                                    task_id[:16],
+                                    add_lines,
+                                    del_lines,
+                                )
+                                bad_diff = True
+                                _finalize_worktree_deferred_task(
+                                    task,
+                                    pend,
+                                    final_success=False,
+                                    output=(
+                                        f"Rejected: diff deletes {del_lines} lines but only adds {add_lines}. "
+                                        "Impl must add, not delete."
+                                    ),
+                                )
+                                ok = False
+                                pushed = False
+
+                        if not bad_diff and task_type in ("impl", "test"):
+                            if diff:
+                                pushed = _push_branch_to_origin(task_id, wt)
+                                if pushed:
+                                    combined = (
+                                        base_out
+                                        + "\n\n--- git diff (captured after provider) ---\n"
+                                        + diff[:8000]
+                                    )
+                                    _finalize_worktree_deferred_task(
+                                        task,
+                                        pend,
+                                        final_success=True,
+                                        output=combined,
+                                        context_extra={
+                                            "git_diff_excerpt": diff[:5000],
+                                            "git_diff_bytes": len(diff),
+                                        },
+                                    )
+                                    ok = True
+                                else:
+                                    log.warning(
+                                        "WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance",
+                                        worker_id,
+                                        task_id[:16],
+                                    )
+                                    keep_worktree = True
+                                    _finalize_worktree_deferred_task(
+                                        task,
+                                        pend,
+                                        final_success=False,
+                                        output=base_out + "\nGIT_PUSH_FAILED: branch could not be pushed to origin.",
+                                    )
+                                    ok = False
+                                    pushed = False
+                            else:
+                                log.warning(
+                                    "WORKER[%d] NO_CODE_PRODUCED task=%s type=%s",
+                                    worker_id,
+                                    task_id[:16],
+                                    task_type,
+                                )
+                                _finalize_worktree_deferred_task(
+                                    task,
+                                    pend,
+                                    final_success=False,
+                                    output=(
+                                        "Provider claimed success but produced no code changes. "
+                                        "No git diff detected in worktree."
+                                    ),
+                                )
+                                ok = False
+                                pushed = False
+                        elif not bad_diff and task_type == "code-review":
+                            merged = _merge_branch_to_main(task_id)
+                            if merged:
+                                _finalize_worktree_deferred_task(
+                                    task,
+                                    pend,
+                                    final_success=True,
+                                    output=(
+                                        base_out
+                                        + "\n\nMERGED_TO_MAIN: task branch merged; origin/main updated."
+                                    ),
+                                )
+                                ok = True
+                                pushed = True
+                            else:
+                                log.warning(
+                                    "WORKER[%d] MERGE_TO_MAIN_FAILED task=%s",
+                                    worker_id,
+                                    task_id[:16],
+                                )
+                                keep_worktree = True
+                                _finalize_worktree_deferred_task(
+                                    task,
+                                    pend,
+                                    final_success=False,
+                                    output=base_out + "\nMERGE_TO_MAIN_FAILED: could not merge to origin/main.",
+                                )
+                                ok = False
+                                pushed = False
+                    else:
+                        # run_one already PATCHed the task (failure, spec, review, timeout, etc.)
+                        if diff and task_type in ("impl", "test"):
+                            add_lines = diff.count("\n+") - diff.count("\n+++")
+                            del_lines = diff.count("\n-") - diff.count("\n---")
+                            if del_lines > add_lines * 3 and del_lines > 50:
+                                log.warning(
+                                    "WORKER[%d] DESTRUCTIVE_DIFF task=%s +%d -%d — rejecting",
+                                    worker_id,
+                                    task_id[:16],
+                                    add_lines,
+                                    del_lines,
+                                )
+                                diff = ""
+                                ok = False
+                        if ok and diff:
+                            pushed = _push_branch_to_origin(task_id, wt)
+                            if not pushed:
+                                keep_worktree = True
+                                log.warning(
+                                    "WORKER[%d] BRANCH_PUSH_FAILED task=%s",
+                                    worker_id,
+                                    task_id[:16],
+                                )
+                        elif not ok and diff and task_type in ("impl", "test"):
+                            log.info(
+                                "WORKER[%d] PUSH_PARTIAL task=%s type=%s diff=%d bytes (status already set by run_one)",
+                                worker_id,
+                                task_id[:16],
+                                task_type,
+                                len(diff),
+                            )
+                            pushed = _push_branch_to_origin(task_id, wt)
+                            if pushed:
+                                api(
+                                    "PATCH",
+                                    f"/api/agent/tasks/{task_id}",
+                                    {
+                                        "context": {
+                                            "branch_pushed_after_timeout": True,
+                                            "diff_size": len(diff),
+                                            "diff_content": diff[:5000],
+                                        },
+                                    },
+                                )
+                            else:
+                                log.warning(
+                                    "WORKER[%d] branch push failed for partial work task=%s",
+                                    worker_id,
+                                    task_id[:16],
+                                )
+                        elif ok and task_type in ("spec", "review", "code-review"):
+                            pushed = True
+                        elif ok and task_type in ("impl", "test"):
+                            log.warning(
+                                "WORKER[%d] NO_CODE_PRODUCED task=%s",
+                                worker_id,
+                                task_id[:16],
+                            )
+                            ok = False
+                            complete_task(
+                                task_id,
+                                "Provider claimed success but produced no code changes. No git diff in worktree.",
+                                False,
+                            )
+                        elif ok:
+                            pushed = True
                 else:
                     if task_type in ("impl", "test"):
                         # impl/test MUST run in worktree — no fallback allowed
@@ -4581,11 +4935,13 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             except Exception as e:
                 log.error("WORKER[%d] ERROR task=%s: %s", worker_id, task_id[:16], e)
             finally:
-                # Fix 5: keep worktree if push failed (recovery copy)
-                if wt and (pushed or not ok):
+                # Fix 5: keep worktree if push failed (recovery copy); otherwise remove when done or failed safely
+                if wt and keep_worktree:
+                    log.warning("WORKER[%d] KEEPING_WORKTREE task=%s (push failed — recovery copy)", worker_id, task_id[:16])
+                elif wt and (pushed or not ok):
                     _cleanup_worktree(task_id)
                 elif wt and not pushed:
-                    log.warning("WORKER[%d] KEEPING_WORKTREE task=%s (push failed)", worker_id, task_id[:16])
+                    log.warning("WORKER[%d] KEEPING_WORKTREE task=%s (push pending)", worker_id, task_id[:16])
                 with _active_lock:
                     _active_idea_ids.discard(idea_id)
 
