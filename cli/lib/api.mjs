@@ -3,9 +3,16 @@
  * Zero deps — uses native fetch (Node 18+).
  */
 
-import { getHubUrl } from "./config.mjs";
+import { getHubUrl, getApiKey } from "./config.mjs";
 
 const TIMEOUT_MS = 12_000;
+
+function authHeaders(extra = {}) {
+  const key = getApiKey();
+  const headers = { ...extra };
+  if (key) headers["X-API-Key"] = key;
+  return headers;
+}
 
 function buildUrl(path, params) {
   const base = getHubUrl().replace(/\/$/, "");
@@ -21,6 +28,7 @@ function buildUrl(path, params) {
 export async function get(path, params) {
   try {
     const res = await fetch(buildUrl(path, params), {
+      headers: authHeaders(),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (!res.ok) return null;
@@ -35,7 +43,7 @@ export async function post(path, body) {
   try {
     const res = await fetch(buildUrl(path), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -55,7 +63,7 @@ export async function patch(path, body) {
   try {
     const res = await fetch(buildUrl(path), {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
@@ -70,6 +78,7 @@ export async function del(path) {
   try {
     const res = await fetch(buildUrl(path), {
       method: "DELETE",
+      headers: authHeaders(),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     return res.ok;

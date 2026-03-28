@@ -11,7 +11,7 @@ import { stdin, stdout } from "node:process";
 import { execSync } from "node:child_process";
 import { hostname } from "node:os";
 import { createHash } from "node:crypto";
-import { getContributorId, saveConfig } from "./config.mjs";
+import { getContributorId, saveConfig, loadKeys, saveKeys } from "./config.mjs";
 import { post } from "./api.mjs";
 
 const ONBOARD_PROVIDERS = ["github", "ethereum", "x", "discord", "email"];
@@ -152,6 +152,36 @@ export async function ensureIdentity() {
           console.log(`  \x1b[33m!\x1b[0m Could not link. Try later: cc identity link ${provider} ${value}`);
         }
       }
+    }
+  }
+
+  // Generate personal API key if none exists yet
+  const existingKeys = loadKeys();
+  if (!existingKeys.api_key) {
+    // Pick the first linked identity provider for keying
+    let keyProvider = "name";
+    let keyProviderId = name;
+    if (primary && primary.includes(":")) {
+      const [kp, ki] = primary.split(":", 2);
+      if (kp && ki) { keyProvider = kp.toLowerCase(); keyProviderId = ki; }
+    }
+    const keyResult = await post("/api/auth/keys", {
+      contributor_id: name,
+      provider: keyProvider,
+      provider_id: keyProviderId,
+    });
+    if (keyResult && keyResult.api_key) {
+      saveKeys({
+        contributor_id: name,
+        api_key: keyResult.api_key,
+        provider: keyProvider,
+        provider_id: keyProviderId,
+        created_at: keyResult.created_at,
+        scopes: keyResult.scopes,
+      });
+      console.log(`\x1b[32m✓\x1b[0m API key generated and saved to ~/.coherence-network/keys.json`);
+    } else {
+      console.log(`\x1b[33m!\x1b[0m Could not generate API key now. Run: cc setup`);
     }
   }
 
