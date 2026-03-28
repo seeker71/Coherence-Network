@@ -190,12 +190,35 @@ def get_aggregates(window_days: int | None = None) -> dict[str, Any]:
             ds = v.pop("durations", [])
             v["avg_duration"] = round(sum(ds) / len(ds), 1) if ds else 0
 
+        # Phase 2: aggregate by prompt_variant when present
+        by_prompt_variant: dict[str, dict[str, Any]] = {}
+        for r in windowed:
+            pv = r.get("prompt_variant")
+            if not pv:
+                continue
+            if pv not in by_prompt_variant:
+                by_prompt_variant[pv] = {"count": 0, "completed": 0, "failed": 0, "durations": []}
+            by_prompt_variant[pv]["count"] += 1
+            if r.get("status") == "completed":
+                by_prompt_variant[pv]["completed"] += 1
+            elif r.get("status") == "failed":
+                by_prompt_variant[pv]["failed"] += 1
+            if isinstance(r.get("duration_seconds"), (int, float)):
+                by_prompt_variant[pv]["durations"].append(r["duration_seconds"])
+        for pv, v in by_prompt_variant.items():
+            ds = v.pop("durations", [])
+            v["avg_duration"] = round(sum(ds) / len(ds), 1) if ds else 0
+            t = v["completed"] + v["failed"]
+            v["success_rate"] = round(v["completed"] / t, 2) if t > 0 else 0.0
+
         out = {
             "success_rate": {"completed": completed, "failed": failed, "total": total, "rate": float(round(rate, 2))},
             "execution_time": {"p50_seconds": p50_seconds, "p95_seconds": p95_seconds},
             "by_task_type": by_task_type,
             "by_model": by_model,
         }
+        if by_prompt_variant:
+            out["by_prompt_variant"] = by_prompt_variant
         if window_days is not None and 1 <= window_days <= 90:
             out["window_days"] = days
         return out
