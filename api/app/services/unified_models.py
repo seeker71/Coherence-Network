@@ -87,3 +87,6 @@ from app.services.contributor_identity_service import ContributorIdentityRecord 
 
 # Graph models (Node + Edge universal data layer)
 from app.models.graph import Node, Edge  # noqa: F401
+
+# Data hygiene samples (row-count history)
+from app.services.data_hygiene_service import DataHygieneSampleRecord  # noqa: F401
