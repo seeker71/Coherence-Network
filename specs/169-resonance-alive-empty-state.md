@@ -219,6 +219,11 @@ This allows dashboard widgets, health checks, and future agents to query network
 
 These scenarios are designed to be run against the production API and browser. A reviewer MUST be able to execute them exactly as written.
 
+Quick smoke test (run first):
+```bash
+curl -s https://api.coherencycoin.com/api/ideas/resonance/meta | python3 -c "import json,sys; d=json.load(sys.stdin); assert 'last_pulse_at' in d and 'total_ever' in d, 'FAIL: meta shape missing'; print('PASS: meta endpoint OK, total_ever=', d['total_ever'])"
+```
+
 ### Scenario 1: Meta endpoint returns liveness data
 **Setup**: Production API is running; at least one idea or activity exists
 **Action**:
