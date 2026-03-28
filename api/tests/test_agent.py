@@ -93,3 +93,40 @@ async def test_test_tasks_route_to_local(monkeypatch: pytest.MonkeyPatch) -> Non
         f"Expected test task_type to route to a local model or tier='local', "
         f"got model={model!r} tier={tier!r}"
     )
+
+
+@pytest.mark.asyncio
+async def test_pipeline_status_returns_200_in_empty_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GET /api/agent/pipeline-status returns 200 when no tasks exist (empty state).
+
+    Spec 039: Empty state is a valid outcome — no 4xx/5xx due to absence of tasks.
+    Response must include all required top-level keys with running as an empty list.
+    """
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    _reset_agent_store()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/agent/pipeline-status")
+
+    assert response.status_code == 200, f"Expected 200 in empty state, got {response.status_code}: {response.text}"
+    body = response.json()
+
+    # All required top-level keys must be present
+    for key in ("running", "pending", "recent_completed", "attention", "running_by_phase"):
+        assert key in body, f"Missing required key '{key}' in pipeline-status response"
+
+    # running must be a list (empty in empty state)
+    assert isinstance(body["running"], list), "Expected 'running' to be a list"
+    assert body["running"] == [], f"Expected 'running' to be empty in empty state, got {body['running']}"
+
+    # attention must have required sub-keys
+    attention = body["attention"]
+    for key in ("stuck", "repeated_failures", "low_success_rate", "flags"):
+        assert key in attention, f"Missing required key '{key}' in attention object"
+
+    # running_by_phase must have all phase keys with empty/zero values
+    running_by_phase = body["running_by_phase"]
+    for phase in ("spec", "impl", "test", "review"):
+        assert phase in running_by_phase, f"Missing phase '{phase}' in running_by_phase"
