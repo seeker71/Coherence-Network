@@ -23,6 +23,7 @@ from app.routers import (
     assets,
     audit,
     coherence,
+    data_health,
     contributor_recognition,
     contributions,
     contributor_identity,
@@ -277,6 +278,7 @@ app = FastAPI(
         {"name": "identity", "description": "Contributor identity linking and verification"},
         {"name": "meta", "description": "System self-discovery: endpoints and modules as concept nodes"},
         {"name": "discovery", "description": "Submission readiness for MCP and skill discovery registries"},
+        {"name": "data-health", "description": "Relational store row counts, growth, and hygiene alerts"},
     ],
 )
 logger = logging.getLogger("coherence.api.slow")
@@ -564,6 +566,7 @@ app.include_router(federation.router, prefix="/api", tags=["federation"])
 app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])
+app.include_router(data_health.router, prefix="/api", tags=["data-health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
