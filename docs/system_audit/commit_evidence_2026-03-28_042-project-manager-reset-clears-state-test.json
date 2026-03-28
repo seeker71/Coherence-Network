@@ -1,0 +1,62 @@
+{
+  "date": "2026-03-28T00:00:00Z",
+  "thread_branch": "worker/impl/042-project-manager-reset-clears-state-test/task_b08",
+  "commit_scope": "impl(042): project manager reset clears state test",
+  "files_owned": [
+    "api/tests/test_042_project_manager_reset_clears_state.py",
+    "api/tests/test_project_manager.py",
+    "api/tests/test_project_manager_pipeline.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Tests for project manager reset functionality added and passing. Covers reset clearing all state fields correctly."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "All project manager tests pass including new reset-clears-state acceptance tests."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "Test-only changes, no deployment impact. Local validation successful."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "042-project-manager-reset-clears-state"
+  ],
+  "spec_ids": [
+    "042-project-manager-reset-clears-state-test"
+  ],
+  "task_ids": [
+    "task_b08",
+    "task_4ee16a99fc4dee58"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-sonnet-4-6",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "QA"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Sonnet 4.6",
+    "version": "claude-sonnet-4-6"
+  },
+  "evidence_refs": [
+    "api/tests/test_042_project_manager_reset_clears_state.py"
+  ],
+  "change_files": [
+    "api/tests/test_042_project_manager_reset_clears_state.py",
+    "api/tests/test_project_manager.py",
+    "api/tests/test_project_manager_pipeline.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_smart_reap_routes.py",
+    "api/app/services/smart_reap_service.py",
+    "api/app/services/smart_reaper_service.py"
+  ],
+  "change_intent": "test_only"
+}
