@@ -645,7 +645,7 @@ class TestVerifyProductionDirection:
         """verify-production direction tells agent to run verification scenarios."""
         deploy_task = _make_task(
             "deploy",
-            output="Deploy completed. Health check returned HTTP 200.",
+            output="Deploy completed successfully. Health check returned HTTP 200 ok.",
         )
         created_tasks: list[dict] = []
 
@@ -715,7 +715,7 @@ class TestPublicFailureGracefulHandling:
         task = _make_task(
             "verify-production",
             idea_id="split-review-pipeline",
-            output="VERIFY_FAILED: health endpoint returned 503.",
+            output="VERIFY_FAILED: health endpoint returned 503 Service Unavailable. Production is down.",
         )
         created_tasks: list[dict] = []
 
@@ -736,9 +736,9 @@ class TestPublicFailureGracefulHandling:
     def test_multiple_verify_failures_each_create_hotfix(self) -> None:
         """Each VERIFY_FAILED event independently creates its own hotfix task."""
         task1 = _make_task("verify-production", idea_id="idea-alpha",
-                           output="VERIFY_FAILED: idea-alpha is broken.")
+                           output="VERIFY_FAILED: idea-alpha is broken — GET /api/ideas/alpha returned 500.")
         task2 = _make_task("verify-production", idea_id="idea-beta",
-                           output="VERIFY_FAILED: idea-beta is broken.")
+                           output="VERIFY_FAILED: idea-beta is broken — GET /api/ideas/beta returned 404.")
         created_tasks: list[dict] = []
 
         def capture_create(task_create: Any) -> dict:
