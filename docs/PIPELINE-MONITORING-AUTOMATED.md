@@ -39,7 +39,17 @@ The monitor writes a hierarchical status report each check:
 ## Issue Prioritization & Resolution Tracking
 
 - **Priority**: Each issue has `priority` (1=high, 2=medium, 3=low). Issues are sorted by priority for addressing order.
-- **Resolution tracking**: When a condition clears (e.g. metrics_unavailable after API restart), the monitor records it in `api/logs/monitor_resolutions.jsonl`.
+- **Resolution tracking**: When a condition clears (e.g. metrics_unavailable after API restart), the monitor records it in `api/logs/monitor_resolutions.jsonl`. Each line is newline-delimited JSON:
+  ```json
+  { "condition": "stale_running_tasks", "resolved_at": "2026-03-28T06:00:00Z", "heal_task_id": "task_abc123" }
+  ```
+  The `heal_task_id` field is included when the previous open issue carried one (attribution to the heal task that fixed it); omitted otherwise.
+- **Optional persistent resolved array** (`MONITOR_PERSIST_RESOLVED=1`): When this env var is set, the monitor also appends a resolved entry to the `resolved` array in `api/logs/monitor_issues.json` whenever a condition clears. The array is capped at the last 50 entries to prevent unbounded growth. Each entry:
+  - `condition` (string, required)
+  - `resolved_at` (ISO 8601 UTC string, required)
+  - `heal_task_id` (string, optional — from the originating heal task)
+  - `issue_id` (string, optional — from the original open issue record)
+- **API passthrough**: `GET /api/agent/monitor-issues` passes through the `resolved` array when present in `monitor_issues.json`. When absent, the response returns `{ "issues": [], "last_check": ... }` without error.
 - **Effectiveness measurement**: `GET /api/agent/effectiveness` returns throughput, success rate, issues open/resolved, progress by phase, and goal proximity (0–1).
 
 ## How to Check (API)
