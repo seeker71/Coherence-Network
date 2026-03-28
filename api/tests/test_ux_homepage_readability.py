@@ -10,6 +10,7 @@ import re
 import uuid
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -63,8 +64,13 @@ def test_ux_homepage_readability_r3_hero_headline_full_opacity() -> None:
     assert "color: hsl(var(--foreground))" in css
     page_path = REPO_ROOT / "web" / "app" / "page.tsx"
     page = page_path.read_text(encoding="utf-8")
-    assert 'className="hero-headline' in page or "className='hero-headline" in page
-    assert "text-foreground/" not in page.split("hero-headline")[1].split(">")[0]
+    for line in page.splitlines():
+        stripped = line.strip()
+        if "<h1" in stripped and "hero-headline" in stripped:
+            assert "text-foreground/" not in stripped, "Hero H1 must not use reduced text-foreground opacity"
+            break
+    else:
+        pytest.fail("Expected <h1> with hero-headline on homepage")
 
 
 def test_ux_homepage_readability_r4_coherence_score_endpoint() -> None:
