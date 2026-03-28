@@ -1,213 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { AutomationGardenExperience } from "@/components/automation_garden/automation_garden_experience";
+import type {
+  AutomationUsageResponse,
+  UsageAlertResponse,
+  ProviderReadinessResponse,
+  ProviderValidationResponse,
+  ProviderExecStatsResponse,
+  NetworkStatsResponse,
+  FederationNode,
+  FleetCapabilitiesResponse,
+} from "@/components/automation_garden/types";
 import { getApiBase } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Automation",
   description: "Provider automation readiness and subscription status.",
-};
-
-type UsageMetric = {
-  id: string;
-  label: string;
-  unit: string;
-  used: number;
-  remaining?: number | null;
-  limit?: number | null;
-  window?: string | null;
-};
-
-type ProviderSnapshot = {
-  id: string;
-  provider: string;
-  kind: string;
-  status: string;
-  collected_at: string;
-  metrics: UsageMetric[];
-  cost_usd?: number | null;
-  capacity_tasks_per_day?: number | null;
-  actual_current_usage?: number | null;
-  actual_current_usage_unit?: string | null;
-  usage_per_time?: string | null;
-  usage_remaining?: number | null;
-  usage_remaining_unit?: string | null;
-  official_records: string[];
-  data_source: string;
-  notes: string[];
-};
-
-type AutomationUsageResponse = {
-  generated_at: string;
-  providers: ProviderSnapshot[];
-  unavailable_providers: string[];
-  tracked_providers: number;
-  limit_coverage?: {
-    providers_considered: number;
-    providers_with_limit_metrics: number;
-    providers_with_remaining_metrics: number;
-    providers_missing_limit_metrics: string[];
-    providers_partial_limit_metrics: string[];
-    coverage_ratio: number;
-  };
-};
-
-type UsageAlert = {
-  id: string;
-  provider: string;
-  metric_id: string;
-  severity: string;
-  message: string;
-  remaining_ratio?: number | null;
-  created_at: string;
-};
-
-type UsageAlertResponse = {
-  generated_at: string;
-  threshold_ratio: number;
-  alerts: UsageAlert[];
-};
-
-type ProviderReadinessRow = {
-  provider: string;
-  kind: string;
-  status: string;
-  required: boolean;
-  configured: boolean;
-  severity: string;
-  missing_env: string[];
-  notes: string[];
-};
-
-type ProviderReadinessResponse = {
-  generated_at: string;
-  required_providers: string[];
-  all_required_ready: boolean;
-  blocking_issues: string[];
-  recommendations: string[];
-  providers: ProviderReadinessRow[];
-};
-
-type ProviderExecStatsEntry = {
-  total_runs: number;
-  successes: number;
-  failures: number;
-  success_rate: number;
-  last_5_rate: number;
-  avg_duration_s: number;
-  selection_probability: number;
-  blocked: boolean;
-  needs_attention: boolean;
-  error_breakdown: Record<string, number>;
-};
-
-type ProviderExecStatsAlert = {
-  provider: string;
-  metric: string;
-  value: number;
-  threshold: number;
-  message: string;
-};
-
-type ProviderExecStatsSummary = {
-  total_providers: number;
-  healthy_providers: number;
-  attention_needed: number;
-  total_measurements: number;
-};
-
-type ProviderExecStatsResponse = {
-  providers: Record<string, ProviderExecStatsEntry>;
-  task_types: Record<string, { providers: Record<string, ProviderExecStatsEntry> }>;
-  alerts: ProviderExecStatsAlert[];
-  summary: ProviderExecStatsSummary;
-};
-
-type NetworkNodeInfo = {
-  hostname: string;
-  os_type: string;
-  status: string;
-  last_seen_at: string;
-};
-
-type NetworkProviderNode = {
-  success_rate: number;
-  samples: number;
-  avg_duration_s: number;
-};
-
-type NetworkProvider = {
-  node_count: number;
-  total_samples: number;
-  total_successes: number;
-  total_failures: number;
-  overall_success_rate: number;
-  avg_duration_s: number;
-  per_node: Record<string, NetworkProviderNode>;
-};
-
-type NetworkStatsResponse = {
-  nodes: Record<string, NetworkNodeInfo>;
-  providers: Record<string, NetworkProvider>;
-  alerts: Array<{ provider: string; message: string }>;
-  window_days: number;
-  total_measurements: number;
-};
-
-type FederationNodeCapabilities = {
-  executors?: string[];
-  tools?: string[];
-  hardware?: {
-    cpu_count?: number;
-    memory_total_gb?: number | null;
-    gpu_available?: boolean;
-    gpu_type?: string | null;
-  };
-  models_by_executor?: Record<string, string[]>;
-  probed_at?: string;
-};
-
-type FederationNode = {
-  node_id: string;
-  hostname: string;
-  os_type: string;
-  providers: string[];
-  capabilities: FederationNodeCapabilities;
-  registered_at: string;
-  last_seen_at: string;
-  status: string;
-};
-
-type FleetCapabilitiesResponse = {
-  total_nodes: number;
-  executors: Record<string, { node_count: number; node_ids: string[] }>;
-  tools: Record<string, { node_count: number }>;
-  hardware_summary: {
-    total_cpus: number;
-    total_memory_gb: number;
-    gpu_capable_nodes: number;
-  };
-};
-
-type ProviderValidationRow = {
-  provider: string;
-  configured: boolean;
-  readiness_status: string;
-  usage_events: number;
-  successful_events: number;
-  validated_execution: boolean;
-  last_event_at?: string | null;
-  notes: string[];
-};
-
-type ProviderValidationResponse = {
-  generated_at: string;
-  required_providers: string[];
-  runtime_window_seconds: number;
-  min_execution_events: number;
-  all_required_validated: boolean;
-  blocking_issues: string[];
-  providers: ProviderValidationRow[];
 };
 
 async function loadAutomationData(): Promise<{
@@ -257,8 +66,27 @@ async function loadAutomationData(): Promise<{
   return {
     usage: (await usageRes.json()) as AutomationUsageResponse,
     alerts: alertsRes?.ok ? ((await alertsRes.json()) as UsageAlertResponse) : ({ alerts: [], generated_at: "" } as unknown as UsageAlertResponse),
-    readiness: readinessRes?.ok ? ((await readinessRes.json()) as ProviderReadinessResponse) : ({ providers: [], ready: true, generated_at: "" } as unknown as ProviderReadinessResponse),
-    validation: validationRes?.ok ? ((await validationRes.json()) as ProviderValidationResponse) : ({ providers: [], generated_at: "" } as unknown as ProviderValidationResponse),
+    readiness: readinessRes?.ok
+      ? ((await readinessRes.json()) as ProviderReadinessResponse)
+      : ({
+          providers: [],
+          required_providers: [],
+          all_required_ready: true,
+          blocking_issues: [],
+          recommendations: [],
+          generated_at: "",
+        } as ProviderReadinessResponse),
+    validation: validationRes?.ok
+      ? ((await validationRes.json()) as ProviderValidationResponse)
+      : ({
+          providers: [],
+          required_providers: [],
+          runtime_window_seconds: 86400,
+          min_execution_events: 1,
+          all_required_validated: true,
+          blocking_issues: [],
+          generated_at: "",
+        } as ProviderValidationResponse),
     execStats,
     networkStats,
     federationNodes,
@@ -276,56 +104,30 @@ export default async function AutomationPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Automation Capacity</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          A live view of provider adapters, capacity metrics, and threshold alerts. Use this to plan automation runs and spot bottlenecks early.
+          A living map of adapters, nodes, and capacity — explore the garden first; open the detailed panel when you need
+          raw tables and contract rows.
         </p>
       </div>
 
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 text-sm space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
-            <p className="text-muted-foreground text-xs">Providers</p>
-            <p className="text-lg font-semibold">{usage.tracked_providers}</p>
-          </div>
-          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
-            <p className="text-muted-foreground text-xs">Unavailable</p>
-            <p className="text-lg font-semibold">{usage?.unavailable_providers?.length ?? 0}</p>
-          </div>
-          <div className="rounded-xl border border-border/20 bg-background/40 p-3">
-            <p className="text-muted-foreground text-xs">Alerts</p>
-            <p className="text-lg font-semibold">{alerts?.alerts?.length ?? 0}</p>
-          </div>
-          {usage.limit_coverage && (
-            <div className="rounded-xl border border-border/20 bg-background/40 p-3">
-              <p className="text-muted-foreground text-xs">Limit coverage</p>
-              <p className="text-lg font-semibold">{Math.round((usage.limit_coverage.coverage_ratio ?? 0) * 100)}%</p>
-            </div>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div className="rounded-xl border border-border/20 bg-background/40 p-3 flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-xs">Required providers ready</p>
-              <p className="text-sm">{readiness?.required_providers?.length ?? 0} required, {readiness?.blocking_issues?.length ?? 0} blocking</p>
-            </div>
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-              readiness?.all_required_ready ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-            }`}>
-              {readiness?.all_required_ready ? "Ready" : "Not ready"}
-            </span>
-          </div>
-          <div className="rounded-xl border border-border/20 bg-background/40 p-3 flex items-center justify-between">
-            <div>
-              <p className="text-muted-foreground text-xs">Validation status</p>
-              <p className="text-sm">{validation?.required_providers?.length ?? 0} required, {validation?.blocking_issues?.length ?? 0} blocking</p>
-            </div>
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-              validation?.all_required_validated ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
-            }`}>
-              {validation?.all_required_validated ? "Validated" : "Not validated"}
-            </span>
-          </div>
-        </div>
-      </section>
+      <AutomationGardenExperience
+        data={{
+          usage,
+          alerts,
+          readiness,
+          validation,
+          execStats,
+          networkStats,
+          federationNodes,
+          fleetCapabilities,
+        }}
+      />
+
+      <details className="group rounded-2xl border border-border/25 bg-card/20 open:border-border/40">
+        <summary className="cursor-pointer list-none rounded-2xl px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground flex items-center justify-between gap-2">
+          <span>Detailed metrics &amp; tables</span>
+          <span className="text-xs font-normal opacity-70 group-open:rotate-90 transition-transform">▸</span>
+        </summary>
+        <div className="px-4 pb-8 pt-2 space-y-8 border-t border-border/15">
 
       {usage.limit_coverage && (usage.limit_coverage.providers_missing_limit_metrics.length > 0 || usage.limit_coverage.providers_partial_limit_metrics.length > 0) && (
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
@@ -893,6 +695,9 @@ export default async function AutomationPage() {
           {(alerts?.alerts?.length ?? 0) === 0 && <li className="text-muted-foreground">No capacity alerts.</li>}
         </ul>
       </section>
+
+        </div>
+      </details>
 
       {/* Where to go next */}
       <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
