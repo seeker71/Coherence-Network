@@ -74,6 +74,7 @@ class ProviderWrapper:
                 errors="replace",
                 cwd=self.cwd,
                 creationflags=creation_flags,
+                start_new_session=True,  # Own process group so killpg doesn't kill the runner
             )
         except Exception as e:
             return False, f"Failed to start provider: {e}", time.time() - start
