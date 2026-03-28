@@ -390,7 +390,7 @@ function showHelp() {
   setup --reset           Re-run setup (replace existing key)
   whoami                  Show authenticated contributor + key status
   identity                Show your linked accounts
-  identity set <id>       Set identity non-interactively
+  identity set <contributor_id>  Set identity non-interactively
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity

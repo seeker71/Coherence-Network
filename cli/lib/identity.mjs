@@ -30,16 +30,20 @@ async function prompt(rl, question) {
  */
 function detectIdentity() {
   // 1–2. Explicit env vars (R3)
-  if (process.env.COHERENCE_CONTRIBUTOR_ID?.trim()) {
-    return { id: process.env.COHERENCE_CONTRIBUTOR_ID.trim(), source: "env" };
+  const envContributorId = parseContributorId(process.env.COHERENCE_CONTRIBUTOR_ID);
+  if (envContributorId) {
+    return { id: envContributorId, source: "env" };
   }
-  if (process.env.COHERENCE_CONTRIBUTOR?.trim()) {
-    return { id: process.env.COHERENCE_CONTRIBUTOR.trim(), source: "env" };
+  const legacyContributorId = parseContributorId(process.env.COHERENCE_CONTRIBUTOR);
+  if (legacyContributorId) {
+    return { id: legacyContributorId, source: "env" };
   }
 
   // 3. Git config
   try {
-    const gitUser = execSync("git config user.name", { encoding: "utf8", timeout: 3000 }).trim();
+    const gitUser = parseContributorId(
+      execSync("git config user.name", { encoding: "utf8", timeout: 3000 }),
+    );
     if (gitUser) {
       return { id: gitUser, source: "git" };
     }
@@ -55,7 +59,7 @@ function detectIdentity() {
  * If not, run guided onboarding (interactive) or auto-detect (non-interactive).
  */
 export async function ensureIdentity() {
-  let id = getContributorId();
+  let id = parseContributorId(getContributorId());
   if (id) return id;
 
   // Non-interactive environment — auto-detect and register silently
