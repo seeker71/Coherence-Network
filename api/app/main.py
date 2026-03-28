@@ -264,6 +264,7 @@ app = FastAPI(
         {"name": "value-lineage", "description": "Value attribution tracing"},
         {"name": "identity", "description": "Contributor identity linking and verification"},
         {"name": "meta", "description": "System self-discovery: endpoints and modules as concept nodes"},
+        {"name": "beliefs", "description": "Contributor belief profiles: worldview axes, concept resonances, and idea matching (spec-169)"},
     ],
 )
 logger = logging.getLogger("coherence.api.slow")
@@ -565,6 +566,10 @@ app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
+
+# Belief system — per-contributor worldview, interests, and concept preferences (spec-169)
+from app.routers import beliefs as beliefs_router  # noqa: E402
+app.include_router(beliefs_router.router, prefix="/api", tags=["beliefs"])
 
 # Discord bot vote endpoint (spec-164)
 from app.routers import discord_votes  # noqa: E402
