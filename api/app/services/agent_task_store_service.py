@@ -162,6 +162,21 @@ def _serialize_dt(value: datetime | None) -> str | None:
     return value.isoformat()
 
 
+def _normalize_failed_diagnostics(payload: dict[str, Any]) -> None:
+    """Ensure error_summary/error_category for failed tasks (spec 113). Mutates payload."""
+    if str(payload.get("status") or "").strip() != "failed":
+        return
+    from app.services.failed_task_diagnostics_service import ensure_diagnostics
+
+    d = ensure_diagnostics(
+        payload.get("error_summary"),
+        payload.get("error_category"),
+        payload.get("output"),
+    )
+    payload["error_summary"] = d["error_summary"]
+    payload["error_category"] = d["error_category"]
+
+
 def _row_to_payload(
     row: AgentTaskRecord,
     *,
@@ -193,6 +208,8 @@ def _row_to_payload(
         "updated_at": _serialize_dt(row.updated_at),
         "started_at": _serialize_dt(row.started_at),
         "tier": row.tier,
+        "error_summary": row.error_summary,
+        "error_category": row.error_category,
     }
 
 
@@ -214,6 +231,8 @@ def _minimal_columns(*, include_output: bool, include_command: bool) -> tuple[An
         AgentTaskRecord.updated_at,
         AgentTaskRecord.started_at,
         AgentTaskRecord.tier,
+        AgentTaskRecord.error_summary,
+        AgentTaskRecord.error_category,
     ]
     if include_command:
         columns.append(AgentTaskRecord.command)
@@ -370,6 +389,7 @@ def upsert_task(payload: dict[str, Any]) -> None:
     task_id = str(payload.get("id") or "").strip()
     if not task_id:
         return
+    _normalize_failed_diagnostics(payload)
     with _session() as session:
         row = session.get(AgentTaskRecord, task_id)
         if row is None:
@@ -392,6 +412,8 @@ def upsert_task(payload: dict[str, Any]) -> None:
                 updated_at=_parse_dt(payload.get("updated_at")),
                 started_at=_parse_dt(payload.get("started_at")),
                 tier=str(payload.get("tier") or "openrouter"),
+                error_summary=payload.get("error_summary"),
+                error_category=payload.get("error_category"),
             )
             session.add(row)
             return
@@ -414,6 +436,8 @@ def upsert_task(payload: dict[str, Any]) -> None:
         row.updated_at = _parse_dt(payload.get("updated_at"))
         row.started_at = _parse_dt(payload.get("started_at"))
         row.tier = str(payload.get("tier") or row.tier or "openrouter")
+        row.error_summary = payload.get("error_summary")
+        row.error_category = payload.get("error_category")
 
 
 def clear_tasks() -> None:
