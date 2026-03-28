@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -679,3 +680,80 @@ def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pyte
     assert ok is True
     assert len(operational_calls) == 1
     assert operational_calls[0][2] == "reflect"
+
+
+def _git_minimal_repo(tmp_path: Path) -> Path:
+    repo = tmp_path / "gitrepo"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-b", "main"], check=True, cwd=repo, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "t@example.com"], check=True, cwd=repo)
+    subprocess.run(["git", "config", "user.name", "test"], check=True, cwd=repo)
+    (repo / "README.md").write_text("seed\n")
+    subprocess.run(["git", "add", "-A"], check=True, cwd=repo)
+    subprocess.run(["git", "commit", "-m", "init"], check=True, cwd=repo)
+    # local_runner bases impl worktrees on origin/main
+    subprocess.run(
+        ["git", "update-ref", "refs/remotes/origin/main", "refs/heads/main"],
+        check=True,
+        cwd=repo,
+    )
+    return repo
+
+
+def test_create_worktree_recreates_after_stale_branch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Stale task/* branch without worktree (runner died) must not block the next impl."""
+    repo = _git_minimal_repo(tmp_path)
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", repo / ".worktrees")
+
+    tid = "task_8e33e16a0e7ee0d2"
+    slug = tid[:16]
+    wt_path = repo / ".worktrees" / f"task-{slug}"
+    branch = f"task/{slug}"
+
+    first = local_runner._create_worktree(tid)
+    assert first is not None
+    assert wt_path.is_dir()
+
+    # Simulate crash: worktree removed but branch often remains
+    subprocess.run(
+        ["git", "worktree", "remove", "--force", str(wt_path)],
+        check=True,
+        cwd=repo,
+        capture_output=True,
+    )
+    br = subprocess.run(
+        ["git", "rev-parse", "--verify", branch],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+    )
+    assert br.returncode == 0
+
+    second = local_runner._create_worktree(tid)
+    assert second is not None
+    assert second == wt_path
+    assert wt_path.is_dir()
+
+
+def test_prepare_task_worktree_slot_rmtree_orphan_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _git_minimal_repo(tmp_path)
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", repo / ".worktrees")
+    tid = "task_orphan_dir_aaaa"
+    slug = tid[:16]
+    wt_path = repo / ".worktrees" / f"task-{slug}"
+    branch = f"task/{slug}"
+    wt_path.mkdir(parents=True)
+    (wt_path / "junk").write_text("not a git worktree")
+
+    local_runner._prepare_task_worktree_slot(str(repo), wt_path, branch, slug)
+    assert not wt_path.exists()
+
+    created = local_runner._create_worktree(tid)
+    assert created is not None
+    assert (created / ".git").exists()

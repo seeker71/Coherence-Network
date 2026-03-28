@@ -4063,6 +4063,38 @@ _MAX_PARALLEL = rc("execution", "parallel", 2)
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 
 
+def _prepare_task_worktree_slot(repo_root: str, wt_path: Path, branch: str, slug: str) -> None:
+    """Remove stale worktree path and branch so `git worktree add -b` can succeed.
+
+    After a runner crash or kill, the task branch may still exist while the
+    worktree path is gone or orphaned — the next `git worktree add -b` fails with
+    'branch already exists' or 'already exists'. This is idempotent.
+    """
+    if wt_path.exists():
+        rm = subprocess.run(
+            ["git", "worktree", "remove", "--force", str(wt_path)],
+            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        )
+        if rm.returncode != 0 and wt_path.exists():
+            log.warning(
+                "WORKTREE_ORPHAN_DIR task=%s err=%s — rmtree",
+                slug,
+                (rm.stderr or "")[:300],
+            )
+            try:
+                shutil.rmtree(wt_path)
+            except OSError as e:
+                log.warning("WORKTREE_RMTREE_FAILED task=%s error=%s", slug, e)
+    subprocess.run(
+        ["git", "branch", "-D", branch],
+        capture_output=True, text=True, timeout=10, cwd=repo_root,
+    )
+    subprocess.run(
+        ["git", "worktree", "prune"],
+        capture_output=True, text=True, timeout=10, cwd=repo_root,
+    )
+
+
 def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | None:
     """Create a git worktree for isolated task execution.
 
@@ -4095,10 +4127,20 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
             else:
                 log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
 
-        subprocess.run(
+        _prepare_task_worktree_slot(repo_root, wt_path, branch, slug)
+
+        add = subprocess.run(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
+        if add.returncode != 0:
+            log.warning(
+                "WORKTREE_ADD_FAILED task=%s base=%s stderr=%s",
+                slug,
+                base_ref,
+                (add.stderr or "").strip()[:800],
+            )
+            return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path
