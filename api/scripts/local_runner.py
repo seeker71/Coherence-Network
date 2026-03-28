@@ -2350,6 +2350,38 @@ def execute_with_provider(
                         pass
 
                 _post_activity(task_id, "heartbeat", event_data)
+
+                # External heartbeat hook (runner-owned, not provider-owned)
+                # CC_HEARTBEAT_URL: POST JSON to this URL on every heartbeat
+                # CC_HEARTBEAT_CMD: shell command to run on every heartbeat (escape hatch)
+                hb_url = os.environ.get("CC_HEARTBEAT_URL", "").strip()
+                hb_cmd = os.environ.get("CC_HEARTBEAT_CMD", "").strip()
+                hb_payload = {
+                    "node_id": _NODE_ID, "node_name": _NODE_NAME,
+                    "task_id": task_id, "task_type": ttype, "provider": prov,
+                    "elapsed_s": elapsed, "files_changed": files_changed,
+                    "git_summary": summary or "no changes",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+                if hb_url:
+                    try:
+                        import httpx
+                        httpx.post(hb_url, json=hb_payload, timeout=5.0)
+                    except Exception as he:
+                        log.debug("HEARTBEAT_HOOK_HTTP failed: %s", he)
+                if hb_cmd:
+                    try:
+                        env = dict(os.environ)
+                        env.update({
+                            "CC_TASK_ID": task_id, "CC_TASK_TYPE": ttype,
+                            "CC_PROVIDER": prov, "CC_ELAPSED": str(elapsed),
+                            "CC_FILES_CHANGED": str(files_changed),
+                            "CC_GIT_SUMMARY": summary or "no changes",
+                        })
+                        subprocess.run(hb_cmd, shell=True, timeout=10, capture_output=True, env=env)
+                    except Exception as he:
+                        log.debug("HEARTBEAT_HOOK_CMD failed: %s", he)
+
                 last_status = git_status
 
     heartbeat_thread = None
