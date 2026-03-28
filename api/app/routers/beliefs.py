@@ -8,9 +8,9 @@ Endpoints:
 """
 from __future__ import annotations
 
-from typing import Optional
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 
 from app.models.belief_profile import (
     BeliefProfile,
