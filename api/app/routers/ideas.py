@@ -22,6 +22,10 @@ from app.models.idea import (
     IdeaQuestionAnswerUpdate,
     IdeaSelectionResult,
     IdeaStorageInfo,
+    IdeaTagCatalogResponse,
+    IdeaTagCatalogEntry,
+    IdeaTagUpdateRequest,
+    IdeaTagUpdateResponse,
     IdeaTasksResponse,
     IdeaUpdate,
     IdeaWithScore,
@@ -42,7 +46,9 @@ async def list_ideas(
     offset: int = Query(0, ge=0),
     read_only_guard: bool = Query(False, description="When true, do not persist ensure logic (for invariant/guard runs)."),
     sort: str = Query("free_energy", description="Sort method: 'free_energy' (default, Method A) or 'marginal_cc' (Method B)."),
+    tags: str = Query("", description="Comma-separated tag filter. When present, return only ideas matching ALL requested tags."),
 ) -> IdeaPortfolioResponse:
+    tag_filter = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
     return idea_service.list_ideas(
         only_unvalidated=only_unvalidated,
         include_internal=include_internal,
@@ -50,6 +56,7 @@ async def list_ideas(
         offset=offset,
         read_only_guard=read_only_guard,
         sort_method=sort,
+        tags=tag_filter,
     )
 
 

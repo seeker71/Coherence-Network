@@ -49,6 +49,7 @@ from app.models.idea import (
 from app.models.audit_ledger import AuditEntryCreate, AuditEntryType
 from app.services import audit_ledger_service
 from app.services import idea_graph_adapter as idea_registry_service  # Graph-backed
+import app.services.idea_registry_service as _sql_tag_registry  # SQL-backed tag persistence
 from app.services import commit_evidence_service
 from app.services import runtime_service
 from app.services import spec_registry_service
@@ -220,6 +221,42 @@ def _should_include_default_tracked_ideas() -> bool:
     # With unified_db (spec 118), all services share one DB, so tracked
     # ideas from commit evidence are always in the same store as ideas.
     return True
+
+
+# ── Tag normalization (spec 129) ──────────────────────────────────────────────
+
+_TAG_SLUG_RE = re.compile(r"[^a-z0-9-]")
+_TAG_MULTI_DASH_RE = re.compile(r"-{2,}")
+
+
+def normalize_tag(raw: str) -> str | None:
+    """Normalize a single tag to lowercase slug format.
+
+    Returns None if the tag is invalid after normalization.
+    """
+    tag = raw.strip().lower()
+    tag = re.sub(r"\s+", "-", tag)          # internal whitespace → dash
+    tag = _TAG_SLUG_RE.sub("", tag)          # remove non-slug chars
+    tag = _TAG_MULTI_DASH_RE.sub("-", tag)   # collapse multiple dashes
+    tag = tag.strip("-")                     # trim leading/trailing dashes
+    return tag if tag else None
+
+
+def normalize_tags(tags: list[str]) -> list[str]:
+    """Normalize, deduplicate, and sort a list of tags."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in tags:
+        if not isinstance(raw, str):
+            continue
+        normalized = normalize_tag(raw)
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            result.append(normalized)
+    return sorted(result)
+
+
+# ── End tag normalization ─────────────────────────────────────────────────────
 
 
 def _invalidate_ideas_cache() -> None:
@@ -608,6 +645,14 @@ def _read_ideas(*, persist_ensures: bool = False) -> list[Idea]:
     if persist_ensures and (tracked_changed or domain_changed or transient_pruned or pruned_standing or standing_changed):
         _write_ideas(ideas)
 
+    # Attach persisted tags from SQL registry (spec 129)
+    try:
+        all_tags = _sql_tag_registry.load_all_idea_tags()
+        for idea in ideas:
+            idea.tags = all_tags.get(idea.id, [])
+    except Exception:
+        pass  # Tags are best-effort; don't break idea loading if tag table is unavailable
+
     _cache_ideas(ideas)
     return ideas
 
@@ -859,16 +904,22 @@ def list_ideas(
     include_internal: bool = True,
     read_only_guard: bool = False,
     sort_method: str = "free_energy",
+    tags: list[str] | None = None,
 ) -> IdeaPortfolioResponse:
     """When read_only_guard=True, ensure logic is applied in memory but not persisted (for invariant/guard runs).
 
     sort_method: "free_energy" (default, Method A) or "marginal_cc" (Method B).
+    tags: when provided, return only ideas that carry all requested normalized tags.
     """
     ideas = _read_ideas(persist_ensures=not read_only_guard)
     if not include_internal:
         ideas = [i for i in ideas if not is_internal_idea_id(i.id, i.interfaces)]
     if only_unvalidated:
         ideas = [i for i in ideas if i.manifestation_status != ManifestationStatus.VALIDATED]
+    if tags:
+        required = set(normalize_tags(tags))
+        if required:
+            ideas = [i for i in ideas if required.issubset(set(i.tags))]
 
     scored = [_with_score(i) for i in ideas]
     if sort_method == "marginal_cc":
@@ -942,10 +993,13 @@ def create_idea(
     child_idea_ids: list[str] | None = None,
     manifestation_status: ManifestationStatus | None = None,
     value_basis: dict[str, str] | None = None,
+    tags: list[str] | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas(persist_ensures=True)
     if any(existing.id == idea_id for existing in ideas):
         return None
+
+    normalized_tags = normalize_tags(tags or [])
 
     idea = Idea(
         id=idea_id,
@@ -971,11 +1025,20 @@ def create_idea(
             )
             for item in (open_questions or [])
         ],
+        tags=normalized_tags,
     )
 
     ideas.append(idea)
     ideas, _ = _ensure_standing_questions(ideas)
     _write_ideas(ideas)
+
+    # Persist tags to SQL registry (spec 129)
+    if normalized_tags:
+        try:
+            _sql_tag_registry.set_idea_tags(idea_id, normalized_tags)
+        except Exception:
+            pass  # Tag persistence failure must not block idea creation
+
     return _with_score(idea)
 
 
@@ -1690,4 +1753,30 @@ def compute_progress_dashboard() -> ProgressDashboard:
         completion_pct=completion_pct,
         by_stage=by_stage,
         snapshot_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+
+# ── Tag management (spec 129) ─────────────────────────────────────────────────
+
+
+def set_idea_tags(idea_id: str, tags: list[str]) -> list[str] | None:
+    """Replace the full tag set for an idea.
+
+    Returns the stored normalized tag list, or None if the idea does not exist.
+    """
+    ideas = _read_ideas(persist_ensures=False)
+    if not any(i.id == idea_id for i in ideas):
+        return None
+    normalized = normalize_tags(tags)
+    _sql_tag_registry.set_idea_tags(idea_id, normalized)
+    _invalidate_ideas_cache()
+    return normalized
+
+
+def get_tag_catalog() -> list[dict]:
+    """Return all tags with idea counts, sorted by tag name."""
+    counts = _sql_tag_registry.get_all_tag_counts()
+    return sorted(
+        [{"tag": k, "idea_count": v} for k, v in counts.items()],
+        key=lambda x: x["tag"],
     )
