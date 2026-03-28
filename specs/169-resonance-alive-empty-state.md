@@ -354,11 +354,12 @@ The component is `"use client"` only if absolutely necessary for hydration-safe 
 
 ## Known Gaps and Follow-up Tasks
 
-- **Pulse frequency counter**: Future spec could show "X pulses in the last 24h" as a network health indicator.
-- **Sonification**: A very subtle audio tone on pulse (opt-in). Out of scope.
-- **Live refresh**: The empty state could poll `/api/ideas/resonance` every 30s and transition to active list when activity appears. Deferred to avoid complexity.
-- **Network health score**: Expose `health_score` from resonance meta that combines recency + frequency + diversity of activity.
-- **Storybook**: Add visual story for `ResonanceBreathingOrb` in all three tiers. Deferred.
+- **Pulse frequency counter**: Future spec (follow-up idea) could show "X pulses in the last 24h" as a network health indicator.
+- **Sonification**: A very subtle audio tone on pulse (opt-in). Out of scope for this spec; log as separate idea.
+- **Live refresh**: The empty state could poll `/api/ideas/resonance` every 30s and transition to active list when activity appears. Deferred to separate follow-up task to avoid complexity.
+- **Network health score**: Expose `health_score` from resonance meta combining recency + frequency + diversity. Requires separate aggregation spec.
+- **Storybook**: Add visual story for `ResonanceBreathingOrb` in all three tiers. Deferred to front-end quality follow-up.
+- **Playwright screenshot test**: Automated visual regression for the breathing orb. Track as follow-up test task once component is implemented.
 
 ---
 
