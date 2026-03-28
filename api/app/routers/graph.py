@@ -3,31 +3,87 @@
 This is the universal API. Entity-specific routers (/api/ideas, /api/specs)
 are thin adapters that call graph_service with type filters.
 
+Spec-168 additions (fractal-node-edge-primitives):
+  GET  /graph/node-types            — canonical node type vocabulary (10 types)
+  GET  /graph/edge-types            — canonical edge type vocabulary (7 types)
+  GET  /graph/proof                 — live graph health / coverage metrics
+  Validation on POST /graph/nodes   — node_type constrained to 10 canonical values
+  Validation on POST /graph/edges   — edge_type constrained to 7 canonical values, no self-loops
+  Lifecycle filter on GET /graph/nodes/{id}/neighbors
+
 Spec-169 additions:
-  GET  /graph/node-types            — canonical node type vocabulary
   POST /graph/nodes/{id}/transition — Ice/Water/Gas lifecycle transitions
   POST /graph/nodes/{id}/sub-nodes  — create fractal sub-node
   GET  /graph/nodes/{id}/sub-nodes  — list direct sub-nodes
   POST /graph/validate-edge         — advisory type constraint check
 """
 
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
-from typing import Any
 
 from app.services import graph_service
 from app.services import fractal_primitives_service
 
 router = APIRouter()
 
+# ── Spec 168: Canonical type vocabularies ────────────────────────────
+
+_CONFIG_DIR = Path(__file__).parent.parent.parent.parent / "config"
+
+
+def _load_node_type_registry() -> list[dict]:
+    """Load node type registry from JSON config."""
+    path = _CONFIG_DIR / "node_type_registry.json"
+    if path.exists():
+        with open(path) as f:
+            return json.load(f)
+    return []
+
+
+def _load_edge_type_registry() -> list[dict]:
+    """Load edge type registry from JSON config."""
+    path = _CONFIG_DIR / "edge_type_registry.json"
+    if path.exists():
+        with open(path) as f:
+            return json.load(f)
+    return []
+
+
+# Cached at module load — these are static configurations
+_NODE_TYPE_REGISTRY: list[dict] = _load_node_type_registry()
+_EDGE_TYPE_REGISTRY: list[dict] = _load_edge_type_registry()
+
+# Sets for O(1) validation
+VALID_NODE_TYPES: set[str] = {entry["type"] for entry in _NODE_TYPE_REGISTRY}
+VALID_EDGE_TYPES: set[str] = {entry["type"] for entry in _EDGE_TYPE_REGISTRY}
+VALID_LIFECYCLE_STATES: set[str] = {"gas", "ice", "water"}
+
+# Lifecycle defaults by node_type
+_LIFECYCLE_DEFAULTS: dict[str, str] = {
+    entry["type"]: entry["lifecycle_default"]
+    for entry in _NODE_TYPE_REGISTRY
+}
+
 
 # ── Request models ───────────────────────────────────────────────────
 
 
 class NodeCreate(BaseModel):
+    # Spec 168 fields (new)
+    node_type: str | None = None
+    external_id: str | None = None
+    payload: dict[str, Any] | None = None
+    # Legacy fields (spec 166 / spec 169)
     id: str | None = None
-    type: str
-    name: str
+    type: str | None = None
+    name: str | None = None
     description: str = ""
     properties: dict[str, Any] = Field(default_factory=dict)
     phase: str = "water"
@@ -41,9 +97,15 @@ class NodeUpdate(BaseModel):
 
 
 class EdgeCreate(BaseModel):
-    from_id: str
-    to_id: str
-    type: str
+    # Spec 168 fields (new)
+    edge_type: str | None = None
+    from_node_id: str | None = None
+    to_node_id: str | None = None
+    weight: float | None = None
+    # Legacy fields (spec 166 / spec 169)
+    from_id: str | None = None
+    to_id: str | None = None
+    type: str | None = None
     properties: dict[str, Any] = Field(default_factory=dict)
     strength: float = 1.0
     created_by: str = "system"
@@ -55,22 +117,69 @@ class EdgeCreate(BaseModel):
 @router.get("/graph/nodes")
 async def list_nodes(
     type: str | None = None,
+    node_type: str | None = None,
     phase: str | None = None,
+    lifecycle_state: str | None = None,
     search: str | None = None,
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
 ):
-    """List nodes with optional type, phase, and search filters."""
+    """List nodes with optional type, phase/lifecycle_state, and search filters."""
+    effective_type = node_type or type
+    effective_phase = lifecycle_state or phase
     return graph_service.list_nodes(
-        type=type, phase=phase, search=search, limit=limit, offset=offset,
+        type=effective_type, phase=effective_phase, search=search,
+        limit=limit, offset=offset,
     )
 
 
 @router.post("/graph/nodes")
 async def create_node(body: NodeCreate):
-    """Create a new node."""
+    """Create a new node.
+
+    Accepts both spec-168 format (node_type, external_id, payload) and
+    legacy format (type, name, properties, phase).
+
+    Spec-168 validation:
+      - node_type must be one of the 10 canonical values
+      - lifecycle_state in payload defaults to node_type default when absent
+    """
+    # Spec 168 path: node_type provided
+    if body.node_type is not None:
+        if body.node_type not in VALID_NODE_TYPES:
+            valid_list = ", ".join(sorted(VALID_NODE_TYPES))
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"node_type '{body.node_type}' is not a recognized node type. "
+                    f"Valid types: {valid_list}. "
+                    f"See /api/graph/node-types for details."
+                ),
+            )
+        # Apply lifecycle default
+        payload = dict(body.payload or {})
+        if "lifecycle_state" not in payload:
+            payload["lifecycle_state"] = _LIFECYCLE_DEFAULTS.get(body.node_type, "water")
+
+        lifecycle = payload["lifecycle_state"]
+        node_id = body.external_id or body.id
+
+        return graph_service.create_node(
+            id=node_id,
+            type=body.node_type,
+            name=payload.get("title") or payload.get("name") or (body.external_id or ""),
+            description=body.description,
+            properties=payload,
+            phase=lifecycle,
+        )
+
+    # Legacy path: type provided (or missing → error)
+    node_type_val = body.type
+    if not node_type_val:
+        raise HTTPException(status_code=422, detail="Either 'node_type' or 'type' must be provided.")
+
     return graph_service.create_node(
-        id=body.id, type=body.type, name=body.name,
+        id=body.id, type=node_type_val, name=body.name or "",
         description=body.description, properties=body.properties,
         phase=body.phase,
     )
@@ -129,10 +238,53 @@ async def get_edges(
 
 @router.post("/graph/edges")
 async def create_edge(body: EdgeCreate):
-    """Create an edge between two nodes."""
+    """Create an edge between two nodes.
+
+    Accepts both spec-168 format (edge_type, from_node_id, to_node_id, weight) and
+    legacy format (type, from_id, to_id, strength).
+
+    Spec-168 validation:
+      - edge_type must be one of the 7 canonical values
+      - self-loops (from_node_id == to_node_id) are rejected
+    """
+    # Resolve to canonical field names
+    effective_edge_type = body.edge_type or body.type
+    effective_from = body.from_node_id or body.from_id
+    effective_to = body.to_node_id or body.to_id
+    effective_strength = body.weight if body.weight is not None else body.strength
+
+    if not effective_edge_type:
+        raise HTTPException(status_code=422, detail="Either 'edge_type' or 'type' must be provided.")
+    if not effective_from:
+        raise HTTPException(status_code=422, detail="Either 'from_node_id' or 'from_id' must be provided.")
+    if not effective_to:
+        raise HTTPException(status_code=422, detail="Either 'to_node_id' or 'to_id' must be provided.")
+
+    # Spec 168: validate edge_type when using new field name
+    if body.edge_type is not None:
+        if body.edge_type not in VALID_EDGE_TYPES:
+            valid_list = ", ".join(sorted(VALID_EDGE_TYPES))
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"edge_type '{body.edge_type}' is not a recognized edge type. "
+                    f"Valid types: {valid_list}."
+                ),
+            )
+
+    # Spec 168: reject self-loops
+    if effective_from == effective_to:
+        raise HTTPException(
+            status_code=422,
+            detail="Self-loop edges are not allowed: from_node_id and to_node_id must be different.",
+        )
+
     return graph_service.create_edge(
-        from_id=body.from_id, to_id=body.to_id, type=body.type,
-        properties=body.properties, strength=body.strength,
+        from_id=effective_from,
+        to_id=effective_to,
+        type=effective_edge_type,
+        properties=body.properties,
+        strength=effective_strength,
         created_by=body.created_by,
     )
 
@@ -152,11 +304,36 @@ async def delete_edge(edge_id: str):
 async def get_neighbors(
     node_id: str,
     edge_type: str | None = None,
+    rel_type: str | None = None,
     node_type: str | None = None,
+    lifecycle_state: str | None = None,
+    direction: str = Query(default="both", regex="^(both|outgoing|incoming)$"),
+    depth: int = Query(default=1, ge=1, le=2),
 ):
-    """Get neighboring nodes (1 hop)."""
-    return graph_service.get_neighbors(
-        node_id, edge_type=edge_type, node_type=node_type,
+    """Get neighboring nodes (1-2 hops).
+
+    Spec-168 extensions:
+      - lifecycle_state=gas|ice|water  — filter neighbors by lifecycle state
+      - rel_type=<edge_type>           — alias for edge_type filter
+      - direction=incoming|outgoing|both
+      - depth=1|2
+
+    Returns 422 for unknown lifecycle_state values.
+    """
+    if lifecycle_state is not None and lifecycle_state not in VALID_LIFECYCLE_STATES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"lifecycle_state '{lifecycle_state}' is invalid. Valid values: gas, ice, water.",
+        )
+
+    effective_edge_type = rel_type or edge_type
+    return graph_service.get_neighbors_with_lifecycle(
+        node_id=node_id,
+        edge_type=effective_edge_type,
+        node_type=node_type,
+        lifecycle_state=lifecycle_state,
+        direction=direction,
+        depth=depth,
     )
 
 
@@ -184,24 +361,42 @@ async def find_path(
     return {"path": path, "length": len(path)}
 
 
-# ── Spec-169: Node type vocabulary ─────────────────────────────────────
+# ── Spec-168: Node type registry ────────────────────────────────────
 
 
 @router.get("/graph/node-types")
-async def get_node_types(family: str | None = None):
-    """Return the canonical node type vocabulary (spec-169).
+async def get_node_types():
+    """Return the canonical node type vocabulary (spec-168).
 
-    Lists all node types grouped by family, with lifecycle metadata
-    (allowed phases, fractal flag, description).
+    Returns exactly 10 node types with type, description, and lifecycle_default.
     """
-    result = fractal_primitives_service.get_node_type_registry()
-    if family:
-        result["families"] = [
-            f for f in result["families"]
-            if f["slug"] == family or f["name"] == family
-        ]
-        result["total"] = sum(len(f["types"]) for f in result["families"])
-    return result
+    return {"node_types": _NODE_TYPE_REGISTRY}
+
+
+# ── Spec-168: Edge type registry ────────────────────────────────────
+
+
+@router.get("/graph/edge-types")
+async def get_edge_types():
+    """Return the canonical edge type vocabulary (spec-168).
+
+    Returns exactly 7 edge types with type, description, and is_symmetric.
+    """
+    return {"edge_types": _EDGE_TYPE_REGISTRY}
+
+
+# ── Spec-168: Graph proof / health endpoint ─────────────────────────
+
+
+@router.get("/graph/proof")
+async def get_graph_proof():
+    """Return aggregate evidence that the graph is being used as the fractal data layer.
+
+    Always returns 200 — even with an empty graph.
+    Returns total_nodes, total_edges, nodes_by_type, edges_by_type,
+    lifecycle_distribution, coverage_pct.
+    """
+    return graph_service.get_graph_proof()
 
 
 # ── Spec-169: Lifecycle phase transitions ──────────────────────────────
