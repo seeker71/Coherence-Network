@@ -435,6 +435,66 @@ curl -s -o /dev/null -w "%{http_code}" \
   appended verbatim may be very long. Next action: truncate partial output to 3000 chars in the
   resume direction, append "[truncated]" marker.
 
+## Observability and Proof of Value
+
+### Is It Working Yet?
+
+The primary question after deployment is: "Are we avoiding blind timeouts?" These metrics answer it.
+
+**Key signals to watch** (all queryable from existing endpoints after implementation):
+
+| Signal | How to measure | Target |
+|--------|---------------|--------|
+| Blind timeout rate | `timed_out` tasks with no `reap_diagnosis` in context | 0% (down from 100%) |
+| Extension success rate | tasks where runner was alive and extension avoided reap | ≥ 30% of stale tasks |
+| Resume task survival rate | resume tasks that reach `completed` vs `timed_out` again | ≥ 50% |
+| Human attention backlog | `GET /api/agent/reap-history?needs_attention=true` total | < 5 open |
+| Executor crash detection | `reap_diagnosis.error_class = "executor_crash"` count | Trending down week-over-week |
+
+### Proving It Over Time
+
+**Week 1 after deploy** — Baseline check:
+```bash
+# How many reaped tasks now have structured diagnosis?
+curl -s "https://api.coherencycoin.com/api/agent/reap-history?limit=200" | jq '.items | length'
+# Expected: grows each day as tasks are reaped; was 0 before deploy
+
+# Any ideas needing human attention?
+curl -s "https://api.coherencycoin.com/api/agent/reap-history?needs_attention=true" | jq '.total'
+```
+
+**Week 2–4** — Track reduction in repeated failures:
+```bash
+# Per-idea timeout counts trending down means smart reap + resume is working
+curl -s "https://api.coherencycoin.com/api/agent/reap-history?limit=200" \
+  | jq '[.items[] | select(.timeout_count > 1)] | length'
+# Should decrease as resume tasks start succeeding
+```
+
+**Month 1+** — Resume task ROI:
+```bash
+# Find all resume tasks (direction starts with "Previous attempt produced")
+# Their completion rate vs timeout rate shows whether partial capture adds value
+curl -s "https://api.coherencycoin.com/api/agent/tasks?status=completed&limit=200" \
+  | jq '[.items[] | select(.direction | startswith("Previous attempt"))] | length'
+```
+
+### Dashboard Integration (Future)
+
+When the web UI gains an admin panel, the following cards map directly to the API:
+- "Tasks rescued by extension": count where `reap_diagnosis.extensions_granted > 0` and task later `completed`
+- "Resume success rate": pie chart of resumed tasks by final status
+- "Ideas needing human attention": table from `GET /api/agent/reap-history?needs_attention=true`
+
+Until then, all metrics are accessible via `curl` + `jq` on the API.
+
+### Improving the Idea Over Time
+
+1. **Expand the partial output threshold**: if resume tasks succeed, lower the 20% threshold to 10% to capture more work.
+2. **Smarter expected-length baselines**: after 4 weeks of production data, replace the heuristic task-type baselines with p50 observed output lengths per task type.
+3. **Provider-specific extension windows**: `claude` and `codex` have different response latencies; store per-provider average completion times in the runner registry and use those instead of the global `3 × max_age_minutes` cap.
+4. **Un-flag `needs_human_attention`**: when a human successfully resolves an idea (it reaches `completed`), automatically clear the flag so the idea re-enters normal automation. See Known Gaps follow-up `task_spec_gap_169c`.
+
 ## Decision Gates
 
 - **Liveness window (270 s)**: Can be tuned at deploy time. No code change required if the default
