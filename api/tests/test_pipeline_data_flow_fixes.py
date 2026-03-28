@@ -73,7 +73,8 @@ def test_create_worktree_uses_origin_main_as_base_ref(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """AC-1: log shows base=origin/main when no explicit base_branch given."""
-    wt_path = tmp_path / "task-abc1"
+    # slug = task_id[:16], so "abc1def234567890"[:16] = "abc1def234567890"
+    wt_path = tmp_path / "task-abc1def234567890"
 
     def _run(args: list[str], **_kwargs: Any) -> _Proc:
         if args[:3] == ["git", "worktree", "add"]:
@@ -84,7 +85,7 @@ def test_create_worktree_uses_origin_main_as_base_ref(
     monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
-    with caplog.at_level(logging.INFO, logger="scripts.local_runner"):
+    with caplog.at_level(logging.INFO, logger="local_runner"):
         result = local_runner._create_worktree("abc1def234567890")
 
     assert result is not None, "worktree path should be returned"
@@ -98,7 +99,7 @@ def test_create_worktree_falls_back_to_origin_main_when_pr_branch_not_found(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     """AC-1: if specified PR branch doesn't exist on origin, fall back to origin/main."""
-    wt_path = tmp_path / "task-abc2"
+    wt_path = tmp_path / "task-abc2def234567890"
 
     def _run(args: list[str], **_kwargs: Any) -> _Proc:
         # rev-parse check for branch fails (branch not on origin)
@@ -112,7 +113,7 @@ def test_create_worktree_falls_back_to_origin_main_when_pr_branch_not_found(
     monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
-    with caplog.at_level(logging.INFO, logger="scripts.local_runner"):
+    with caplog.at_level(logging.INFO, logger="local_runner"):
         result = local_runner._create_worktree("abc2def234567890", base_branch="worker/impl/no-such")
 
     assert result is not None
@@ -211,7 +212,7 @@ def test_push_branch_to_origin_returns_true_on_success(
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
     monkeypatch.setattr(local_runner.os, "environ", {})
 
-    with caplog.at_level(logging.INFO, logger="scripts.local_runner"):
+    with caplog.at_level(logging.INFO, logger="local_runner"):
         result = local_runner._push_branch_to_origin("abc6def234567890", tmp_path)
 
     assert result is True
@@ -240,7 +241,7 @@ def test_push_branch_to_origin_returns_false_on_push_failure(
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
     monkeypatch.setattr(local_runner.os, "environ", {})
 
-    with caplog.at_level(logging.WARNING, logger="scripts.local_runner"):
+    with caplog.at_level(logging.WARNING, logger="local_runner"):
         result = local_runner._push_branch_to_origin("abc7def234567890", tmp_path)
 
     assert result is False
@@ -259,7 +260,7 @@ def test_push_branch_to_origin_returns_false_on_exception(
 
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
-    with caplog.at_level(logging.WARNING, logger="scripts.local_runner"):
+    with caplog.at_level(logging.WARNING, logger="local_runner"):
         result = local_runner._push_branch_to_origin("abc8def234567890", tmp_path)
 
     assert result is False
@@ -310,7 +311,7 @@ def test_merge_branch_to_main_returns_false_on_merge_conflict(
     monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
-    with caplog.at_level(logging.WARNING, logger="scripts.local_runner"):
+    with caplog.at_level(logging.WARNING, logger="local_runner"):
         result = local_runner._merge_branch_to_main("abcadef234567890")
 
     assert result is False
@@ -336,7 +337,7 @@ def test_merge_branch_to_main_returns_false_when_push_to_main_fails(
     monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
-    with caplog.at_level(logging.WARNING, logger="scripts.local_runner"):
+    with caplog.at_level(logging.WARNING, logger="local_runner"):
         result = local_runner._merge_branch_to_main("abcbdef234567890")
 
     assert result is False
@@ -358,7 +359,7 @@ def test_merge_branch_to_main_skips_when_branch_not_on_origin(
     monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
-    with caplog.at_level(logging.INFO, logger="scripts.local_runner"):
+    with caplog.at_level(logging.INFO, logger="local_runner"):
         result = local_runner._merge_branch_to_main("abccdef234567890")
 
     assert result is True
@@ -419,7 +420,7 @@ def test_branch_push_failed_log_appears_for_push_failure(
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
     monkeypatch.setattr(local_runner.os, "environ", {})
 
-    with caplog.at_level(logging.WARNING, logger="scripts.local_runner"):
+    with caplog.at_level(logging.WARNING, logger="local_runner"):
         local_runner._push_branch_to_origin("abcedef234567890", tmp_path)
 
     assert any("BRANCH_PUSH_FAILED" in r.message for r in caplog.records), (
@@ -444,7 +445,7 @@ def test_cleanup_worktree_logs_worktree_cleaned(
     monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
-    with caplog.at_level(logging.INFO, logger="scripts.local_runner"):
+    with caplog.at_level(logging.INFO, logger="local_runner"):
         local_runner._cleanup_worktree("abcfdef234567890")
 
     assert any("WORKTREE_CLEANED" in r.message for r in caplog.records), (
@@ -464,7 +465,7 @@ def test_cleanup_worktree_handles_exception_gracefully(
     monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
     monkeypatch.setattr(local_runner.subprocess, "run", _run)
 
-    with caplog.at_level(logging.WARNING, logger="scripts.local_runner"):
+    with caplog.at_level(logging.WARNING, logger="local_runner"):
         # Must not raise
         local_runner._cleanup_worktree("abcgdef234567890")
 
@@ -731,7 +732,7 @@ def test_runner_deploy_phase_logs_deploy_phase_start(
 
     task = {"id": "task_deploy_log12345", "task_type": "deploy", "context": {}}
 
-    with caplog.at_level(logging.INFO, logger="scripts.local_runner"):
+    with caplog.at_level(logging.INFO, logger="local_runner"):
         local_runner._runner_deploy_phase(task)
 
     assert any("DEPLOY_PHASE" in r.message for r in caplog.records), (
@@ -753,7 +754,7 @@ def test_runner_verify_phase_logs_verify_phase_start(
 
     task = {"id": "task_verify_log1234_", "task_type": "verify", "context": {"idea_id": "idea-x"}}
 
-    with caplog.at_level(logging.INFO, logger="scripts.local_runner"):
+    with caplog.at_level(logging.INFO, logger="local_runner"):
         local_runner._runner_verify_phase(task)
 
     assert any("VERIFY_PHASE" in r.message for r in caplog.records), (
