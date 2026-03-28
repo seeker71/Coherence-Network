@@ -1,7 +1,11 @@
-"""Canonical edge type registry — 46 typed relationships from the Living Codex ontology.
+"""Canonical edge type registry — typed relationships from the Living Codex ontology.
 
 This is the single source of truth for all relationship types in the Coherence Network.
 All edge write operations should validate against CANONICAL_EDGE_TYPES.
+
+Spec 169 additions (fractal-node-edge-primitives):
+  - inspires     : Active direction of inspired-by (A inspires B)
+  - parent-of    : Explicit hierarchical containment for fractal sub-nodes
 """
 
 EDGE_TYPE_FAMILIES: list[dict] = [
