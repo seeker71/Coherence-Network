@@ -2,7 +2,7 @@
 
 **Spec ID**: 169-fractal-node-edge-primitives
 **Idea ID**: fractal-node-edge-primitives
-**Task ID**: task_0dfd0a77f2ed8891
+**Task ID**: task_9125767b3db4bde2
 **Status**: draft
 **Priority**: high
 **Author**: product-manager agent
