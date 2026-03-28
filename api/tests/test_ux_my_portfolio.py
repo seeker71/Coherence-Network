@@ -1,4 +1,4 @@
-"""Minimal tests for the my-portfolio UX flow."""
+"""Tests for the My Portfolio UX flow — web wiring, models, service aggregation, and API."""
 
 from __future__ import annotations
 
@@ -10,6 +10,10 @@ import unittest.mock as mock
 import uuid
 
 import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.main import app
+from app.services import graph_service
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -250,3 +254,255 @@ def test_get_cc_balance_rejects_unknown_contributor(
 
     with pytest.raises(ValueError, match="Contributor not found"):
         portfolio_service.get_cc_balance("missing-user")
+
+
+# ── HTTP API integration (ASGI) — portfolio sub-resources per spec 174 ─────
+
+
+def _seed_portfolio_graph(*, contributor_uuid: str) -> None:
+    """Insert idea, contribution, stake, and completed task nodes for one contributor."""
+    idea_key = "pf-seed-idea"
+    graph_service.create_node(
+        id=f"idea:{idea_key}",
+        type="idea",
+        name="Seeded Portfolio Idea",
+        description="Test idea for portfolio API",
+        phase="gas",
+        properties={"status": "active", "coherence_score": 0.72},
+    )
+    graph_service.create_node(
+        id=f"contrib-{contributor_uuid[:8]}",
+        type="contribution",
+        name="spec contribution",
+        description="",
+        phase="water",
+        properties={
+            "contributor_id": contributor_uuid,
+            "idea_id": idea_key,
+            "cost_amount": 5.0,
+            "contribution_type": "spec",
+            "coherence_score": 0.9,
+        },
+    )
+    graph_service.create_node(
+        id=f"contrib-task-{contributor_uuid[:8]}",
+        type="contribution",
+        name="task completion",
+        description="",
+        phase="water",
+        properties={
+            "contributor_id": contributor_uuid,
+            "idea_id": idea_key,
+            "cost_amount": 3.0,
+            "contribution_type": "task",
+            "coherence_score": 0.5,
+        },
+    )
+    graph_service.create_node(
+        id=f"stake-{contributor_uuid[:8]}",
+        type="stake",
+        name="stake on idea",
+        description="",
+        phase="water",
+        properties={
+            "contributor_id": contributor_uuid,
+            "idea_id": idea_key,
+            "cc_staked": 20.0,
+            "cc_valuation": 24.0,
+            "staked_at": "2026-01-15T12:00:00+00:00",
+        },
+    )
+    graph_service.create_node(
+        id=f"task-{contributor_uuid[:8]}",
+        type="task",
+        name="Implement portfolio section",
+        description="Portfolio task",
+        phase="water",
+        properties={
+            "contributor_id": contributor_uuid,
+            "idea_id": idea_key,
+            "status": "completed",
+            "provider": "openclaw",
+            "outcome": "passed",
+            "cc_earned": 3.0,
+            "completed_at": "2026-03-27T18:00:00+00:00",
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_portfolio_api_full_cycle_seeded_graph() -> None:
+    """Create contributor, seed graph CC/ideas/stakes/tasks, exercise all portfolio GET routes."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "PortfolioSeedUser",
+                "email": "portfolioseed@coherence.network",
+            },
+        )
+        assert create.status_code == 201, create.text
+        cid = create.json()["id"]
+        _seed_portfolio_graph(contributor_uuid=str(cid))
+
+        sum_res = await client.get(f"/api/contributors/{cid}/portfolio")
+        assert sum_res.status_code == 200
+        body = sum_res.json()
+        assert body["contributor"]["id"] == str(cid)
+        assert body["idea_contribution_count"] == 1
+        assert body["stake_count"] == 1
+        assert body["task_completion_count"] == 1
+        assert body["cc_balance"] is not None
+        assert float(body["cc_balance"]) == pytest.approx(8.0)
+        assert body["cc_network_pct"] is not None
+
+        hist = await client.get(f"/api/contributors/{cid}/cc-history?window=90d&bucket=7d")
+        assert hist.status_code == 200
+        hist_j = hist.json()
+        assert hist_j["contributor_id"] == str(cid)
+        assert hist_j["window"] == "90d"
+        assert isinstance(hist_j["series"], list)
+        assert len(hist_j["series"]) >= 1
+
+        ideas = await client.get(f"/api/contributors/{cid}/idea-contributions")
+        assert ideas.status_code == 200
+        ij = ideas.json()
+        assert ij["total"] == 1
+        assert ij["items"][0]["idea_id"] == "pf-seed-idea"
+        assert ij["items"][0]["cc_attributed"] == pytest.approx(8.0)
+        assert "spec" in ij["items"][0]["contribution_types"]
+        assert "task" in ij["items"][0]["contribution_types"]
+        assert ij["items"][0]["idea_status"] == "active"
+
+        drill = await client.get(
+            f"/api/contributors/{cid}/idea-contributions/pf-seed-idea",
+        )
+        assert drill.status_code == 200
+        dj = drill.json()
+        assert dj["idea_id"] == "pf-seed-idea"
+        assert dj["idea_title"] == "Seeded Portfolio Idea"
+        assert len(dj["contributions"]) == 2
+        assert dj["value_lineage_summary"]["total_value"] == pytest.approx(8.0)
+
+        stakes = await client.get(f"/api/contributors/{cid}/stakes")
+        assert stakes.status_code == 200
+        sj = stakes.json()
+        assert sj["total"] == 1
+        assert sj["items"][0]["cc_staked"] == 20.0
+        assert sj["items"][0]["roi_pct"] == pytest.approx(20.0)
+
+        tasks = await client.get(f"/api/contributors/{cid}/tasks?status=completed")
+        assert tasks.status_code == 200
+        tj = tasks.json()
+        assert tj["total"] == 1
+        assert tj["items"][0]["provider"] == "openclaw"
+        assert tj["items"][0]["outcome"] == "passed"
+        assert tj["items"][0]["cc_earned"] == 3.0
+
+
+@pytest.mark.asyncio
+async def test_portfolio_api_unknown_contributor_404() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for path in (
+            "/api/contributors/00000000-0000-0000-0000-000000000099/portfolio",
+            "/api/contributors/00000000-0000-0000-0000-000000000099/cc-history",
+            "/api/contributors/00000000-0000-0000-0000-000000000099/idea-contributions",
+            "/api/contributors/00000000-0000-0000-0000-000000000099/stakes",
+            "/api/contributors/00000000-0000-0000-0000-000000000099/tasks",
+        ):
+            r = await client.get(path)
+            assert r.status_code == 404, path
+            assert "not found" in r.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_portfolio_idea_drilldown_forbidden_when_no_matching_contributions() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "NoDrillUser",
+                "email": "nodrill@coherence.network",
+            },
+        )
+        assert create.status_code == 201
+        cid = create.json()["id"]
+        r = await client.get(f"/api/contributors/{cid}/idea-contributions/ghost-idea-id")
+        assert r.status_code == 403
+        assert r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_portfolio_summary_include_cc_false() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "NoCCUser",
+                "email": "nocc@coherence.network",
+            },
+        )
+        assert create.status_code == 201
+        cid = create.json()["id"]
+        graph_service.create_node(
+            id=f"idea:nocc",
+            type="idea",
+            name="I",
+            description="",
+            phase="gas",
+            properties={"status": "unknown"},
+        )
+        graph_service.create_node(
+            id="contrib-nocc",
+            type="contribution",
+            name="c",
+            description="",
+            phase="water",
+            properties={
+                "contributor_id": str(cid),
+                "idea_id": "nocc",
+                "cost_amount": 1.0,
+                "contribution_type": "code",
+            },
+        )
+        r = await client.get(f"/api/contributors/{cid}/portfolio?include_cc=false")
+        assert r.status_code == 200
+        j = r.json()
+        assert j["cc_balance"] is None
+        assert j["cc_network_pct"] is None
+
+
+@pytest.mark.asyncio
+async def test_cc_history_invalid_bucket_returns_404() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "BucketUser",
+                "email": "bucket@coherence.network",
+            },
+        )
+        cid = create.json()["id"]
+        r = await client.get(f"/api/contributors/{cid}/cc-history?bucket=2d")
+        assert r.status_code == 404
+        assert "bucket" in r.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_portfolio_pagination_invalid_limit_returns_422() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "PageUser",
+                "email": "pageuser@coherence.network",
+            },
+        )
+        cid = create.json()["id"]
+        r = await client.get(f"/api/contributors/{cid}/tasks?limit=0")
+        assert r.status_code == 422

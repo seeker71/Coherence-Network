@@ -28,6 +28,29 @@ from app.services import graph_service
 
 log = logging.getLogger(__name__)
 
+_GRAPH_NODE_TOP_KEYS = frozenset({
+    "id",
+    "type",
+    "name",
+    "description",
+    "phase",
+    "created_at",
+    "updated_at",
+    "properties",
+})
+
+
+def _graph_node_props(node: dict[str, Any]) -> dict[str, Any]:
+    """Resolve per-type fields from a graph node.
+
+    ``Node.to_dict()`` merges ``properties`` into the top level; unit tests may
+    use a nested ``properties`` dict instead.
+    """
+    nested = node.get("properties")
+    if isinstance(nested, dict) and nested:
+        return nested
+    return {k: v for k, v in node.items() if k not in _GRAPH_NODE_TOP_KEYS}
+
 
 def _linked_identities_from_store(contributor_key: str) -> list[LinkedIdentity]:
     """Merge SQLite-linked identities (OAuth / manual) with graph-derived ones."""
@@ -79,7 +102,7 @@ def _find_contributor(contributor_id: str) -> dict[str, Any] | None:
 def _contributor_summary(node: dict[str, Any], contributor_key: str) -> ContributorSummary:
     identities: list[LinkedIdentity] = []
     # Node properties might be merged into top level or in "properties" key
-    props = node.get("properties") or {}
+    props = _graph_node_props(node)
 
     gh = props.get("github_handle") or node.get("github_handle")
     if gh:
@@ -118,7 +141,7 @@ def get_network_stats() -> NetworkStats:
     """Return total CC supply derived from all contributions."""
     contributions = graph_service.list_nodes(type="contribution", limit=10000)
     total_cc = sum(
-        float(n.get("properties", {}).get("cost_amount", 0) or 0)
+        float(_graph_node_props(n).get("cost_amount", 0) or 0)
         for n in contributions.get("items", [])
     )
     contributor_count = graph_service.list_nodes(type="contributor", limit=1)
@@ -141,7 +164,7 @@ def get_cc_balance(contributor_id: str) -> CCBalance:
     contributions = graph_service.list_nodes(type="contribution", limit=10000)
     balance = 0.0
     for c in contributions.get("items", []):
-        props = c.get("properties") or {}
+        props = _graph_node_props(c)
         if props.get("contributor_id") == contributor_id or props.get("contributor_name") == c_name:
             balance += float(props.get("cost_amount", 0) or 0)
 
@@ -189,7 +212,7 @@ def get_cc_history(contributor_id: str, window: str = "90d", bucket: str = "7d")
 
     events: list[tuple[datetime, float]] = []
     for c in contributions.get("items", []):
-        props = c.get("properties") or {}
+        props = _graph_node_props(c)
         if props.get("contributor_id") != contributor_id and props.get("contributor_name") != c_name:
             continue
         ts_raw = c.get("created_at") or c.get("updated_at")
@@ -241,7 +264,7 @@ def get_portfolio_summary(contributor_id: str, include_cc: bool = True) -> Portf
     recent: Optional[datetime] = None
 
     for c in contributions.get("items", []):
-        props = c.get("properties") or {}
+        props = _graph_node_props(c)
         if props.get("contributor_id") != contributor_id and props.get("contributor_name") != c_name:
             continue
         if props.get("idea_id"):
@@ -260,7 +283,7 @@ def get_portfolio_summary(contributor_id: str, include_cc: bool = True) -> Portf
     stake_count = 0
     stakes_scan = graph_service.list_nodes(type="stake", limit=10000)
     for s in stakes_scan.get("items", []):
-        sprops = s.get("properties") or {}
+        sprops = _graph_node_props(s)
         if sprops.get("contributor_id") == contributor_id:
             stake_count += 1
 
@@ -309,7 +332,7 @@ def _health_for_idea(idea_node: dict[str, Any], contributions_in_idea: list[dict
     else:
         activity = "dormant"
 
-    props = idea_node.get("properties") or {}
+    props = _graph_node_props(idea_node)
     coherence = props.get("coherence_score")
     delta: Optional[float] = None
     if coherence is not None:
@@ -336,7 +359,7 @@ def get_idea_contributions(
 
     idea_map: dict[str, list[dict]] = {}
     for c in contributions.get("items", []):
-        props = c.get("properties") or {}
+        props = _graph_node_props(c)
         if props.get("contributor_id") != contributor_id and props.get("contributor_name") != c_name:
             continue
         idea_id = props.get("idea_id") or "unknown"
@@ -346,9 +369,9 @@ def get_idea_contributions(
     for idea_id, conts in idea_map.items():
         idea_node = graph_service.get_node(f"idea:{idea_id}") or {}
         idea_title = idea_node.get("name") or idea_id
-        idea_status = (idea_node.get("properties") or {}).get("status", "unknown")
-        cc_total = sum(float((c.get("properties") or {}).get("cost_amount", 0) or 0) for c in conts)
-        types = list({(c.get("properties") or {}).get("contribution_type", "unknown") for c in conts})
+        idea_status = _graph_node_props(idea_node).get("status", "unknown")
+        cc_total = sum(float(_graph_node_props(c).get("cost_amount", 0) or 0) for c in conts)
+        types = list({_graph_node_props(c).get("contribution_type", "unknown") for c in conts})
         last_ts: Optional[datetime] = None
         for c in conts:
             ts_raw = c.get("updated_at") or c.get("created_at")
@@ -393,7 +416,7 @@ def get_idea_contribution_detail(contributor_id: str, idea_id: str) -> IdeaContr
 
     details: list[ContributionDetail] = []
     for c in contributions.get("items", []):
-        props = c.get("properties") or {}
+        props = _graph_node_props(c)
         if props.get("contributor_id") != contributor_id and props.get("contributor_name") != c_name:
             continue
         if props.get("idea_id") != idea_id:
@@ -442,7 +465,7 @@ def get_stakes(contributor_id: str, sort: str = "roi_desc", limit: int = 20, off
     stakes_result = graph_service.list_nodes(type="stake", limit=10000)
     items: list[StakeSummary] = []
     for s in stakes_result.get("items", []):
-        props = s.get("properties") or {}
+        props = _graph_node_props(s)
         if props.get("contributor_id") != contributor_id:
             continue
         idea_id = props.get("idea_id", "")
@@ -492,7 +515,7 @@ def get_tasks(contributor_id: str, status: str = "completed", limit: int = 20, o
     tasks_result = graph_service.list_nodes(type="task", limit=10000)
     items: list[TaskSummary] = []
     for t in tasks_result.get("items", []):
-        props = t.get("properties") or {}
+        props = _graph_node_props(t)
         executor = props.get("executor_contributor_id") or props.get("contributor_id") or props.get("contributor_name", "")
         if executor not in (contributor_id, c_name):
             continue
