@@ -1,63 +1,54 @@
-"""Onboarding service — Trust-on-First-Use (TOFU) identity registration.
+"""Onboarding Service -- Trust-on-First-Use (TOFU) MVP.
 
-Spec 168: Zero-friction contributor onboarding.
-
-In-memory + SQLite store. No OAuth required at registration. Handles are
-unique and immutable once registered. Session tokens expire after 30 days.
+Spec 168: zero-friction handle claim -> session token.
 """
-
 from __future__ import annotations
 
 import hashlib
 import os
-import secrets
-import time
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Column, String, Float, Integer, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import DateTime, String
+from sqlalchemy.orm import Mapped, mapped_column
 
-from app.services import unified_db
-
-# ---------------------------------------------------------------------------
-# SQLAlchemy model
-# ---------------------------------------------------------------------------
-
+from app.services import unified_db as _udb
 from app.services.unified_db import Base
 
 
 class OnboardingSession(Base):
     __tablename__ = "onboarding_sessions"
-    __table_args__ = {"extend_existing": True}
 
-    session_token = Column(String, primary_key=True, index=True)
-    contributor_id = Column(String, nullable=False, index=True)
-    handle = Column(String, nullable=False, unique=True, index=True)
-    trust_level = Column(String, nullable=False, default="tofu")
-    email = Column(String, nullable=True)
-    hint_github = Column(String, nullable=True)
-    hint_wallet = Column(String, nullable=True)
-    linked_identities = Column(Integer, nullable=False, default=0)
-    created_at = Column(Float, nullable=False, default=time.time)
-    expires_at = Column(Float, nullable=False)
+    contributor_id: Mapped[str] = mapped_column(String, primary_key=True)
+    handle: Mapped[str] = mapped_column(String, nullable=False, unique=True, index=True)
+    session_token: Mapped[str] = mapped_column(String, nullable=False, unique=True, index=True)
+    trust_level: Mapped[str] = mapped_column(String, nullable=False, default="tofu")
+    email: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    hint_github: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    hint_wallet: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    )
+    verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
 def _ensure_schema() -> None:
-    Base.metadata.create_all(bind=unified_db.engine(), checkfirst=True)
+    _udb.ensure_schema()
+
+
+@contextmanager
+def _session():
+    with _udb.session() as s:
+        yield s
 
 
 def _make_contributor_id(handle: str) -> str:
-    h = hashlib.sha256(handle.encode()).hexdigest()[:12]
-    return f"cid_{h}"
+    return "onboard:" + hashlib.sha1(handle.lower().encode()).hexdigest()[:16]
 
 
-def _make_session_token() -> str:
-    return f"sess_{secrets.token_urlsafe(32)}"
-
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+def _make_token() -> str:
+    return os.urandom(32).hex()
 
 
 def register(
@@ -66,105 +57,78 @@ def register(
     hint_github: Optional[str] = None,
     hint_wallet: Optional[str] = None,
 ) -> dict:
-    """Register a new contributor via TOFU. Returns session token.
+    """Claim a handle and return a TOFU session token.
 
     Raises ValueError("handle_taken") if the handle is already registered.
     """
     _ensure_schema()
-
     contributor_id = _make_contributor_id(handle)
-    session_token = _make_session_token()
-    now = time.time()
-    expires_at = now + 30 * 86400  # 30 days
-
-    session = OnboardingSession(
-        session_token=session_token,
-        contributor_id=contributor_id,
-        handle=handle,
-        trust_level="tofu",
-        email=email,
-        hint_github=hint_github,
-        hint_wallet=hint_wallet,
-        linked_identities=0,
-        created_at=now,
-        expires_at=expires_at,
-    )
-
-    with unified_db.session() as db:
-        # Check for existing handle
-        existing = db.query(OnboardingSession).filter_by(handle=handle).first()
-        if existing is not None:
+    with _session() as db:
+        if db.query(OnboardingSession).filter(OnboardingSession.handle == handle).first():
             raise ValueError("handle_taken")
-
-        db.add(session)
-        try:
-            db.flush()
-            created = True
-        except IntegrityError:
-            db.rollback()
-            raise ValueError("handle_taken")
-
-    return {
-        "contributor_id": contributor_id,
-        "session_token": session_token,
-        "trust_level": "tofu",
-        "handle": handle,
-        "created": created,
-    }
+        existing = db.query(OnboardingSession).filter(
+            OnboardingSession.contributor_id == contributor_id
+        ).first()
+        if existing:
+            return {
+                "contributor_id": existing.contributor_id,
+                "session_token": existing.session_token,
+                "trust_level": existing.trust_level,
+                "handle": existing.handle,
+                "created": False,
+            }
+        token = _make_token()
+        row = OnboardingSession(
+            contributor_id=contributor_id, handle=handle, session_token=token,
+            trust_level="tofu", email=email, hint_github=hint_github, hint_wallet=hint_wallet,
+        )
+        db.add(row)
+        db.commit()
+        return {
+            "contributor_id": contributor_id, "session_token": token,
+            "trust_level": "tofu", "handle": handle, "created": True,
+        }
 
 
 def resolve_session(token: str) -> Optional[dict]:
-    """Return contributor profile for a valid, unexpired session token.
-
-    Returns None if the token is invalid or expired.
-    """
+    """Return contributor profile from session token, or None."""
     _ensure_schema()
-
-    with unified_db.session() as db:
-        row = db.query(OnboardingSession).filter_by(session_token=token).first()
-        if row is None:
+    with _session() as db:
+        row = db.query(OnboardingSession).filter(
+            OnboardingSession.session_token == token
+        ).first()
+        if not row:
             return None
-        if row.expires_at < time.time():
-            return None
+        try:
+            from app.services import contributor_identity_service as _cis
+            linked = len(_cis.get_identities(row.contributor_id))
+        except Exception:
+            linked = 0
         return {
-            "contributor_id": row.contributor_id,
-            "handle": row.handle,
-            "trust_level": row.trust_level,
-            "linked_identities": row.linked_identities,
-            "email": row.email,
-            "hint_github": row.hint_github,
-            "hint_wallet": row.hint_wallet,
+            "contributor_id": row.contributor_id, "handle": row.handle,
+            "trust_level": row.trust_level, "linked_identities": linked,
+            "email": row.email, "hint_github": row.hint_github, "hint_wallet": row.hint_wallet,
         }
 
 
 def get_roi_signals() -> dict:
-    """Return live onboarding ROI signals."""
+    """Compute live ROI signals for the onboarding funnel."""
     _ensure_schema()
-
-    with unified_db.session() as db:
-        total = db.query(OnboardingSession).count()
-        verified = (
-            db.query(OnboardingSession)
-            .filter(OnboardingSession.trust_level != "tofu")
-            .count()
-        )
-        with_hints = (
-            db.query(OnboardingSession)
-            .filter(
-                (OnboardingSession.hint_github.isnot(None))
-                | (OnboardingSession.hint_wallet.isnot(None))
-            )
-            .count()
-        )
-
-    verified_ratio = (verified / total) if total > 0 else 0.0
-    hint_ratio = (with_hints / total) if total > 0 else 0.0
-
-    return {
-        "handle_registrations": total,
-        "verified_count": verified,
-        "verified_ratio": round(verified_ratio, 4),
-        "with_hints": with_hints,
-        "hint_ratio": round(hint_ratio, 4),
-        "avg_time_to_verify_days": None,  # computed when verified count > 0
-    }
+    with _session() as db:
+        rows = db.query(OnboardingSession).all()
+        total = len(rows)
+        verified = [r for r in rows if r.trust_level == "verified"]
+        verified_count = len(verified)
+        verified_ratio = round(verified_count / total, 4) if total > 0 else 0.0
+        durations = [
+            (r.verified_at - r.created_at).total_seconds() / 86400.0
+            for r in verified if r.verified_at and r.created_at
+        ]
+        avg_days = round(sum(durations) / len(durations), 2) if durations else None
+        return {
+            "handle_registrations": total,
+            "verified_count": verified_count,
+            "verified_ratio": verified_ratio,
+            "avg_time_to_verify_days": avg_days,
+            "spec_ref": "spec-168",
+        }
