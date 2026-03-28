@@ -118,6 +118,7 @@ See `api/tests/test_agent.py`. Test name suggestion: `test_effectiveness_plan_pr
 ## Verification Scenarios
 
 These scenarios are executable against the live API and must pass for this spec to be considered complete.
+Run with: `curl -s https://api.coherencycoin.com/api/agent/effectiveness | python3 -m json.tool`
 
 ---
 

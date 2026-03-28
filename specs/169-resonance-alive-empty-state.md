@@ -342,13 +342,20 @@ The component is `"use client"` only if absolutely necessary for hydration-safe 
 
 ## Risks and Assumptions
 
+- **API shape change breaks consumers** (Medium): Wrapping the response in `{ ideas, meta }` is a breaking change for clients reading a raw array. Mitigation: consumers using `data.ideas` path are unaffected; document migration path for raw-array consumers.
+- **SVG animation performance on low-end devices** (Low): CSS `animation` is GPU-composited; particle count capped at 6 to keep budget negligible.
+- **Hydration mismatch from client-only timestamps** (Medium): Format timestamp server-side as a pre-rendered string; pass as prop to avoid client bundle overhead.
+- **`prefers-reduced-motion` not respected** (Low): Explicit `@media (prefers-reduced-motion: reduce)` block disables all animation keyframes.
+- **`last_pulse_at` query cost on large datasets** (Low): Uses `MAX(created_at)` — a single fast aggregate on an indexed column.
+- **Assumption**: The existing `animate-warm-pulse` Tailwind utility is already defined in `globals.css`; the new keyframes extend it, not replace it.
+
 | Risk | Likelihood | Mitigation |
 |------|-----------|------------|
-| API response shape change breaks existing consumers | Medium | Wrap in `{ ideas, meta }` shape; consumers using `data.ideas` path are unaffected; raw-array consumers need migration |
-| SVG animation performance on low-end devices | Low | Rings use CSS `animation` (GPU-composited); particle count limited to 6 |
-| Hydration mismatch from client-only timestamps | Medium | Format timestamp server-side as string; pass pre-formatted to component |
-| `prefers-reduced-motion` not respected | Low | Explicit `@media (prefers-reduced-motion: reduce)` block disables all animations |
-| `last_pulse_at` query cost on large datasets | Low | Use `MAX(created_at)` from existing activity table — single fast aggregate |
+| API response shape change breaks existing consumers | Medium | Wrap in `{ ideas, meta }` shape; consumers using `data.ideas` path are unaffected |
+| SVG animation performance on low-end devices | Low | CSS `animation` (GPU-composited); particle count limited to 6 |
+| Hydration mismatch from client-only timestamps | Medium | Format timestamp server-side as string |
+| `prefers-reduced-motion` not respected | Low | Explicit `@media (prefers-reduced-motion: reduce)` block |
+| `last_pulse_at` query cost on large datasets | Low | `MAX(created_at)` — single fast aggregate |
 
 ---
 

@@ -573,6 +573,10 @@ app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 from app.routers import discord_votes  # noqa: E402
 app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 
+# Daily engagement brief (spec-171)
+from app.routers import brief as brief_router  # noqa: E402
+app.include_router(brief_router.router)
+
 # Identity-driven onboarding - TOFU MVP (spec-168)
 app.include_router(onboarding_router.router, tags=["onboarding"])
 
