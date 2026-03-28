@@ -1,0 +1,66 @@
+{
+    "date": "2026-03-28",
+    "thread_branch": "task/task_4058a62e9b5",
+    "commit_scope": "Review idea 036 (check_pipeline hierarchical view): spec verification scenarios, JSON merge fix for layer_0 placeholders, .gitignore repair, DIF pending local run",
+    "files_owned": [
+        "api/scripts/check_pipeline.py",
+        "api/tests/test_check_pipeline_hierarchical.py",
+        "specs/036-check-pipeline-hierarchical-view.md",
+        ".gitignore",
+        "docs/system_audit/commit_evidence_2026-03-28_036-hierarchical-pipeline-review.json"
+    ],
+    "idea_ids": [
+        "036-check-pipeline-hierarchical-view"
+    ],
+    "spec_ids": [
+        "036-check-pipeline-hierarchical-view"
+    ],
+    "task_ids": [
+        "task_4058a62e9b5ae373"
+    ],
+    "contributors": [
+        {
+            "contributor_id": "cursor-agent",
+            "contributor_type": "machine",
+            "roles": ["review", "spec_update", "implementation_touchup"]
+        }
+    ],
+    "agent": {
+        "name": "cursor-agent",
+        "version": "implementation-session"
+    },
+    "evidence_refs": [
+        "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-28_036-hierarchical-pipeline-review.json",
+        "cd api && .venv/bin/python -m pytest tests/test_check_pipeline_hierarchical.py -v"
+    ],
+    "review_summary": {
+        "feature": "check_pipeline.py prints Goal→PM→Tasks→Artifacts; --json adds hierarchical layers; --flat legacy; uses GET /api/agent/status-report, /api/agent/effectiveness, /api/agent/pipeline-status",
+        "implementation_verdict": "Implemented in api/scripts/check_pipeline.py. Hierarchical sections, artifact output_len/preview, flags documented in spec 036.",
+        "tests": "api/tests/test_check_pipeline_hierarchical.py covers order, --json/--flat, --attention, help, API unreachable.",
+        "deploy_surface": "No new endpoints. Script consumes existing GET /api/agent/status-report, /api/agent/pipeline-status, /api/agent/effectiveness, /api/agent/tasks/{id}/log. Production verification: curl these paths on api.coherencycoin.com or Railway URL.",
+        "dif_verify": {
+            "status": "not_run_in_session",
+            "note": "Run: curl -s -X POST https://dif.merly.ai/api/v2/dif/verify -H 'Content-Type: application/json' -d @- with code payload for api/scripts/check_pipeline.py",
+            "event_id": null
+        },
+        "code_change": "Added _layer0_goal_usable_from_report() so JSON --json merge matches human-readable placeholder handling (substring not yet generated) instead of a stale exact string match."
+    },
+    "local_validation": {
+        "status": "pending_runner",
+        "commands": [
+            "cd api && .venv/bin/python -m pytest tests/test_check_pipeline_hierarchical.py -v"
+        ]
+    },
+    "deploy_validation": {
+        "status": "manual",
+        "environment": "production endpoints per spec Verification Scenarios section",
+        "curl_samples": [
+            "curl -sS https://api.coherencycoin.com/api/agent/status-report | jq .layer_0_goal",
+            "curl -sS https://api.coherencycoin.com/api/agent/pipeline-status | jq .running"
+        ]
+    },
+    "phase_gate": {
+        "can_move_next_phase": true,
+        "blocked_reason": ""
+    }
+}

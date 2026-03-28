@@ -251,3 +251,14 @@ def test_attention_flag_compatibility():
     """--attention flag should work with hierarchical view."""
     stdout = _run_main("--attention")
     assert "attention:" in stdout.lower() or "attention" in stdout.lower()
+
+
+def test_layer0_goal_usable_from_report_helper():
+    """Placeholder layer_0_goal summaries must not be treated as authoritative."""
+    assert not check_pipeline._layer0_goal_usable_from_report(None)
+    assert not check_pipeline._layer0_goal_usable_from_report({})
+    assert not check_pipeline._layer0_goal_usable_from_report({"summary": "Report not yet generated"})
+    assert not check_pipeline._layer0_goal_usable_from_report({"summary": "  "})
+    assert check_pipeline._layer0_goal_usable_from_report(
+        {"summary": "goal_proximity=0.7, 5 tasks (7d), 80% success"}
+    )

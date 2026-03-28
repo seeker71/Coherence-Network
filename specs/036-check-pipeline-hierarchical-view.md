@@ -97,16 +97,64 @@ N/A. Script aggregates existing API responses and prints (or emits JSON) in hier
 - **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
 - **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
 
-## Risks and Known Gaps
-
-- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
-- **No rate limiting**: Subject to abuse until M1 rate limiter active.
-- **Single-node only**: No distributed locking; concurrent access may race.
-- **Follow-up**: Add distributed locking for multi-worker pipelines.
-
-
 ## Verification
 
 ```bash
 python3 -m pytest api/tests/test_check_pipeline_hierarchical.py -x -v
 ```
+
+## Verification Scenarios
+
+These scenarios are the contract for production and local validation. Replace `API` with the deployed base URL (e.g. `https://api.coherencycoin.com` or `https://coherence-network-production.up.railway.app`) and ensure `AGENT_API_BASE` matches when running the script.
+
+### 1. Human hierarchical view (default)
+
+- **Setup:** API is up with `GET /api/agent/pipeline-status` returning 200; optional `GET /api/agent/status-report` and `GET /api/agent/effectiveness` available.
+- **Action:** `cd api && .venv/bin/python scripts/check_pipeline.py` (no flags).
+- **Expected:** Stdout contains four sections in order: `Goal (Layer 0)`, `PM / Orchestration (Layer 1)`, `Tasks (Layer 2)`, `Artifacts (Layer 3)`; running/pending/artifact lines reflect pipeline-status.
+- **Edge:** If `status-report` returns a placeholder layer_0 summary (contains `not yet generated`), Goal falls back to effectiveness or `(report not yet generated)`.
+
+### 2. JSON hierarchical merge (read + structure)
+
+- **Setup:** Same as scenario 1.
+- **Action:** `cd api && AGENT_API_BASE=$API .venv/bin/python scripts/check_pipeline.py --json | jq 'has("hierarchical"), .hierarchical | keys'`
+- **Expected:** Top-level JSON includes `hierarchical` with keys `layer_0_goal`, `layer_1_orchestration`, `layer_2_execution`, `layer_3_attention`; base pipeline-status fields remain at top level.
+- **Edge:** `curl -s $API/api/agent/pipeline-status` returns 404; script exits non-zero after printing a clear error (no silent JSON).
+
+### 3. Flat legacy output (error handling path)
+
+- **Setup:** API reachable.
+- **Action:** `cd api && AGENT_API_BASE=$API .venv/bin/python scripts/check_pipeline.py --flat`
+- **Expected:** Output does **not** use Layer 0–3 headings; shows legacy `Pipeline Status` blocks (`RUNNING`, `PENDING`, `PROJECT MANAGER`, `PROCESSES`).
+- **Edge:** `--json --flat` prints pipeline-status JSON only **without** a `hierarchical` key (machine consumers opt out).
+
+### 4. Full read cycle (status-report → script → pipeline-status)
+
+- **Setup:** No local file requirement; use public API.
+- **Action:**
+  1. `curl -sS $API/api/agent/status-report | jq '.layer_0_goal.status, .generated_at'`
+  2. `curl -sS $API/api/agent/pipeline-status | jq '.running | length'`
+  3. `cd api && AGENT_API_BASE=$API .venv/bin/python scripts/check_pipeline.py --json | jq '.hierarchical.layer_2_execution.summary'`
+- **Expected:** Step 1 returns valid JSON (200) with goal layer fields or API fallback; step 2 returns a number; step 3 matches execution summary from merged pipeline data (running/pending counts consistent with step 2).
+- **Edge:** If status-report is stale/missing, API still returns 200 with `fallback_reason` set; script still builds `hierarchical` from pipeline + effectiveness.
+
+### 5. Bad input / missing resource
+
+- **Setup:** API up.
+- **Action:** `cd api && AGENT_API_BASE=$API .venv/bin/python scripts/check_pipeline.py --task-id task_nonexistent_00000000`
+- **Expected:** Non-zero exit; stderr/stdout contains HTTP error or `Error:` with status code (not a Python traceback in normal operation).
+- **Edge:** `AGENT_API_BASE` points to a host that refuses connections — script prints `API not reachable` and exits non-zero.
+
+## Risks and Assumptions
+
+- **Assumption:** Operators set `AGENT_API_BASE` when not using localhost; script defaults to `http://localhost:8000`.
+- **Assumption:** `ps aux` is available for process detection on Unix-like hosts; workers may show as `unknown` on constrained environments.
+- **Risk:** Placeholder detection for layer 0 relies on substring `not yet generated` in `summary`; monitor/API wording changes may require updating `_layer0_goal_usable_from_report`.
+- **No auth gate:** Agent endpoints used by the script are unprotected until C1 auth middleware applies (inherited platform risk).
+- **No rate limiting:** Subject to abuse until M1 rate limiter active.
+- **Single-node only:** No distributed locking; concurrent access may race.
+
+## Known Gaps and Follow-up Tasks
+
+- Optional: surface spec/STATUS artifact health when `effectiveness` or status-report exposes it explicitly.
+- Windows: `ps aux` path is not used; orchestration hints may be weaker than on macOS/Linux.
