@@ -94,15 +94,13 @@ class NormalizedResponseCall(BaseModel):
 
 ---
 
-## Files to Create / Modify
+## Files to Create/Modify
 
-| File | Change |
-|---|---|
-| `api/app/models/agent.py` | `NormalizedResponseCall` model (present at line 254) |
-| `api/app/services/agent_routing_service.py` | `build_normalized_response_call()`, `normalize_open_responses_model()` (present at line 123) |
-| `api/app/services/agent_service_crud.py` | Inject `normalized_response_call` into task context on creation (line ~165) |
-| `api/app/services/agent_service_completion_tracking.py` | Read `request_schema` from task context for persistence (line ~201) |
-| `api/tests/test_agent_executor_policy.py` | `test_open_responses_normalization_is_shared_across_executors` (line 338) |
+- `api/app/models/agent.py` — add `NormalizedResponseCall` Pydantic model (line ~254)
+- `api/app/services/agent_routing_service.py` — add `build_normalized_response_call()` and `normalize_open_responses_model()` (line ~123)
+- `api/app/services/agent_service_crud.py` — inject `normalized_response_call` into task context on creation (line ~165)
+- `api/app/services/agent_service_completion_tracking.py` — read `request_schema` from task context for persistence (line ~201)
+- `api/tests/test_agent_executor_policy.py` — add `test_open_responses_normalization_is_shared_across_executors` test (line ~338)
 
 ---
 
@@ -169,7 +167,28 @@ Strips executor prefix from model names:
 
 ---
 
-## Verification Scenarios
+## Verification
+
+```bash
+# Run core normalization test
+cd api && python -m pytest tests/test_agent_executor_policy.py::test_open_responses_normalization_is_shared_across_executors -v
+
+# Run full executor policy suite
+cd api && python -m pytest tests/test_agent_executor_policy.py -q
+
+# Verify API contract: normalized_response_call present in task response
+curl -s -X POST https://api.coherencycoin.com/api/agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"Open responses check","task_type":"impl","context":{"executor":"cursor"}}' \
+  | python3 -c "import sys,json; d=json.load(sys.stdin); c=d.get('context',{}); nrc=c.get('normalized_response_call',{}); assert nrc.get('request_schema')=='open_responses_v1', f'FAIL: {nrc}'; print('OK')"
+
+# Spec quality check
+python3 scripts/validate_spec_quality.py --file specs/109-open-responses-interoperability-layer.md
+```
+
+---
+
+## Test Scenarios
 
 These scenarios are concrete and runnable. The reviewer will execute them against the live API or test suite.
 
