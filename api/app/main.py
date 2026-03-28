@@ -43,6 +43,7 @@ from app.routers import (
     treasury,
     value_lineage,
 )
+from app.routers import beliefs
 from app.routers import concepts
 from app.routers import dif_feedback
 from app.routers import edges as edges_router
@@ -562,6 +563,7 @@ app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
+app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])

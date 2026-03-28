@@ -15,11 +15,62 @@ from typing import Any
 from sqlalchemy import and_, func, or_, text
 from sqlalchemy.exc import IntegrityError
 
-from app.models.graph import Edge, Node
+from app.models.graph import (
+    Edge, Node,
+    CANONICAL_EDGE_TYPE_SET, CANONICAL_NODE_TYPE_SET,
+    LIFECYCLE_DEFAULTS, SYMMETRIC_EDGE_TYPES,
+)
 from app.services.unified_db import session
 from app.config.edge_types import CANONICAL_EDGE_TYPES
 
 log = logging.getLogger(__name__)
+
+_VALID_EDGE_TYPES_MSG = (
+    "Valid types: inspires, depends-on, implements, contradicts, extends, analogous-to, parent-of"
+)
+
+_VALID_LIFECYCLE_STATES = frozenset({"gas", "ice", "water"})
+
+
+# ── Spec 169: Semantic validation helpers ────────────────────────────
+
+
+def validate_node_type(node_type: str) -> None:
+    """Raise ValueError if node_type is not in the canonical 10-type vocabulary."""
+    if node_type not in CANONICAL_NODE_TYPE_SET:
+        raise ValueError(
+            f"node_type '{node_type}' is not a recognized node type. "
+            f"See /api/graph/node-types for valid values."
+        )
+
+
+def validate_edge_type(edge_type: str) -> None:
+    """Raise ValueError if edge_type is not in the canonical 7-type vocabulary."""
+    if edge_type not in CANONICAL_EDGE_TYPE_SET:
+        raise ValueError(
+            f"edge_type '{edge_type}' is not a recognized edge type. {_VALID_EDGE_TYPES_MSG}."
+        )
+
+
+def validate_no_self_loop(from_id: str, to_id: str) -> None:
+    """Raise ValueError if from_id == to_id."""
+    if from_id == to_id:
+        raise ValueError(
+            "Self-loop edges are not allowed: from_node_id and to_node_id must be different."
+        )
+
+
+def validate_lifecycle_state(state: str) -> None:
+    """Raise ValueError if lifecycle state is not gas/ice/water."""
+    if state not in _VALID_LIFECYCLE_STATES:
+        raise ValueError(
+            f"lifecycle_state '{state}' is not valid. Must be one of: gas, ice, water."
+        )
+
+
+def get_lifecycle_default(node_type: str) -> str:
+    """Return the default lifecycle state for a given node type."""
+    return LIFECYCLE_DEFAULTS.get(node_type, "gas")
 
 
 # ── Node CRUD ────────────────────────────────────────────────────────
@@ -32,9 +83,31 @@ def create_node(
     name: str,
     description: str = "",
     properties: dict[str, Any] | None = None,
-    phase: str = "water",
+    phase: str | None = None,
+    strict: bool = False,
 ) -> dict[str, Any]:
-    """Create a node. Returns the node dict."""
+    """Create a node. Returns the node dict.
+
+    When strict=True, validates node_type against the canonical vocabulary (Spec 169).
+    If phase is not provided, defaults based on node type (canonical types only).
+    """
+    if strict:
+        validate_node_type(type)
+
+    props = dict(properties or {})
+
+    # Apply lifecycle default for canonical node types if not explicitly set
+    if type in CANONICAL_NODE_TYPE_SET:
+        if "lifecycle_state" not in props:
+            props["lifecycle_state"] = get_lifecycle_default(type)
+        else:
+            validate_lifecycle_state(props["lifecycle_state"])
+
+    # Derive phase from lifecycle_state for canonical types
+    effective_phase = phase
+    if effective_phase is None:
+        effective_phase = props.get("lifecycle_state", "water")
+
     node_id = id or str(uuid.uuid4())[:12]
     with session() as s:
         node = Node(
@@ -42,8 +115,8 @@ def create_node(
             type=type,
             name=name,
             description=description,
-            properties=properties or {},
-            phase=phase,
+            properties=props,
+            phase=effective_phase,
         )
         s.add(node)
         try:
@@ -158,8 +231,17 @@ def create_edge(
     properties: dict[str, Any] | None = None,
     strength: float = 1.0,
     created_by: str = "system",
+    strict: bool = False,
 ) -> dict[str, Any]:
-    """Create an edge between two nodes."""
+    """Create an edge between two nodes.
+
+    When strict=True, validates edge_type against the canonical vocabulary and
+    prevents self-loops (Spec 169).
+    """
+    if strict:
+        validate_edge_type(type)
+        validate_no_self_loop(from_id, to_id)
+
     edge_id = str(uuid.uuid4())[:12]
     with session() as s:
         edge = Edge(
