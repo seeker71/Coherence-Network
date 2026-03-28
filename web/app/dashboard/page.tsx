@@ -50,9 +50,11 @@ type RunningTask = {
 };
 
 type PulseData = {
-  bottleneck: { type: string; reason: string; recommendation: string };
-  phase_stats: Record<string, { completed: number; failed: number; pending: number; success_rate: number | null }>;
+  bottleneck: { type: string | null; reason: string | null; recommendation: string };
+  phase_stats: Record<string, { completed: number; failed: number; pending: number; running?: number; success_rate: number | null }>;
   ideas: { total_in_portfolio: number; without_spec: number; full_cycle: unknown[]; advancing: unknown[]; stuck: unknown[] };
+  needs_decision_count?: number;
+  generated_at?: string;
 };
 
 type SSEEvent = {
@@ -285,8 +287,8 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Bottleneck</p>
           {pulse ? (
             <>
-              <p className="text-sm font-medium">{pulse.bottleneck.type.replace(/_/g, " ")}</p>
-              <p className="text-xs text-muted-foreground line-clamp-2">{pulse.bottleneck.reason}</p>
+              <p className="text-sm font-medium">{(pulse.bottleneck.type ?? "balanced").replace(/_/g, " ")}</p>
+              <p className="text-xs text-muted-foreground line-clamp-2">{pulse.bottleneck.reason ?? "No bottleneck detected."}</p>
             </>
           ) : (
             <p className="text-xs text-muted-foreground">Loading...</p>
@@ -416,7 +418,7 @@ export default function DashboardPage() {
 
       {/* Ideas Progress */}
       {pulse && (
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-4 gap-3 text-center">
           <div className="rounded-xl border border-border/20 bg-card/40 p-3">
             <p className="text-2xl font-bold">{pulse.ideas.full_cycle.length}</p>
             <p className="text-[10px] text-muted-foreground">full cycle</p>
@@ -428,6 +430,12 @@ export default function DashboardPage() {
           <div className="rounded-xl border border-border/20 bg-card/40 p-3">
             <p className="text-2xl font-bold text-red-500">{pulse.ideas.stuck.length}</p>
             <p className="text-[10px] text-muted-foreground">stuck</p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-card/40 p-3">
+            <p className={`text-2xl font-bold ${(pulse.needs_decision_count ?? 0) > 0 ? "text-orange-500" : ""}`}>
+              {pulse.needs_decision_count ?? 0}
+            </p>
+            <p className="text-[10px] text-muted-foreground">needs decision</p>
           </div>
         </div>
       )}

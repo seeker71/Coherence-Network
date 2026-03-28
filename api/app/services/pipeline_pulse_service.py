@@ -159,6 +159,13 @@ def compute_pulse(window_days: int = 7, task_limit: int = 500) -> dict[str, Any]
     else:
         recommendation = "Pipeline appears balanced. Keep monitoring phase success rates."
 
+    # Normalise: bottleneck fields must always be strings (never None) so the
+    # dashboard can safely call .replace() without a null-check.
+    if bottleneck is None:
+        bottleneck = "balanced"
+    if bottleneck_reason is None:
+        bottleneck_reason = "No significant bottleneck detected."
+
     # ── Tasks needing human attention ───────────────────────────────
     needs_decision = []
     for t in all_tasks:
