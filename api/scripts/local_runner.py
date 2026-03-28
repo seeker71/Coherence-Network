@@ -2258,25 +2258,23 @@ def execute_with_provider(
     # Cursor: uses default config `agent --model auto --trust -p` (set in _detect_providers)
     # --trust skips workspace trust dialog, -p is non-interactive, --model auto lets cursor pick
 
+    # Write prompt to file for debugging, deliver via stdin for all providers
+    # stdin avoids shell arg length limits and is more reliable than CLI args
+    prompt_file = os.path.join(cwd, f".task-prompt-{task_id[:12]}.md")
+    try:
+        with open(prompt_file, "w", encoding="utf-8") as pf:
+            pf.write(prompt)
+        log.info("PROMPT_FILE written: %s (%d chars)", prompt_file, len(prompt))
+    except OSError as e:
+        log.warning("Could not write prompt file: %s", e)
+
     if spec.get("stdin_prompt"):
+        # ollama: already uses stdin
         stdin_input = prompt
     elif spec.get("append_prompt"):
-        # Write prompt to a temp file and read it — avoids shell arg length limits
-        # and makes prompts debuggable (can read the file after failure)
-        prompt_file = os.path.join(cwd, f".task-prompt-{task_id[:12]}.md")
-        try:
-            with open(prompt_file, "w", encoding="utf-8") as pf:
-                pf.write(prompt)
-            # Use stdin pipe instead of CLI arg for providers that support it
-            if provider_name == "claude":
-                # claude -p reads from stdin when no positional prompt given
-                stdin_input = prompt
-            else:
-                cmd.append(prompt)
-            log.info("PROMPT_FILE written: %s (%d chars)", prompt_file, len(prompt))
-        except OSError as e:
-            log.warning("Could not write prompt file: %s — falling back to CLI arg", e)
-            cmd.append(prompt)
+        # All CLI providers (claude, codex, cursor, gemini) support stdin
+        # stdin is preferred over CLI args: no length limit, no shell escaping issues
+        stdin_input = prompt
 
     # ── Start heartbeat monitoring (works for both wrapper and raw subprocess) ──
     start = time.time()
