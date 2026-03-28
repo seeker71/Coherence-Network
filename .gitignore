@@ -83,3 +83,16 @@ __pycache__/
 .task-*
 data/coherence.db
 *.pyc\n__pycache__/\n.task-*\ndata/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+*.pyc\n__pycache__/\n.task-*\ndata/coherence.db
