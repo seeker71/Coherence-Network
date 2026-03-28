@@ -1,349 +1,243 @@
-"""Collective health scoring for coherence, resonance, flow, and friction."""
+"""Collective health: coherence, resonance, flow, and friction from live task/metrics/friction data."""
 
 from __future__ import annotations
 
-import json
-from datetime import datetime, timedelta, timezone
+import logging
+import math
+from datetime import datetime, timezone
 from typing import Any
 
-from app.models.agent import TaskStatus
-from app.services import agent_service, friction_service, metrics_service, runtime_service
+from app.services import friction_service, metrics_service
+from app.services.friction_service import FrictionEvent, _severity_rank
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_WINDOW_DAYS = 7
 
 
-def _clamp01(value: float) -> float:
-    return max(0.0, min(float(value), 1.0))
+def _clamp01(x: float) -> float:
+    return max(0.0, min(1.0, float(x)))
 
 
-def _safe_ratio(numerator: float, denominator: float, default: float = 0.0) -> float:
-    if denominator <= 0:
-        return float(default)
-    return float(numerator) / float(denominator)
-
-
-def _score_with_neutral(task_count: int, score: float) -> float:
-    if task_count <= 0:
+def _balance_spread(by_task_type: dict[str, Any]) -> float:
+    """How evenly work completes across spec/impl/test/review (0–1). Degrades gracefully when sparse."""
+    pillars = ("spec", "impl", "test", "review")
+    comps = [int((by_task_type.get(p) or {}).get("completed") or 0) for p in pillars]
+    if sum(comps) == 0:
         return 0.5
-    return _clamp01(score)
+    mn = min(comps)
+    mx = max(comps)
+    if mx <= 0:
+        return 0.5
+    return _clamp01((mn + 1) / (mx + 1))
 
 
-def _task_context(task: dict[str, Any]) -> dict[str, Any]:
-    context = task.get("context")
-    return context if isinstance(context, dict) else {}
+def _coherence_score(rate: float, balance: float) -> float:
+    return round(0.5 * rate + 0.5 * math.sqrt(balance), 4)
 
 
-def _monitor_issue_rows() -> list[dict[str, Any]]:
-    path = friction_service.monitor_issues_file_path()
-    if not path.is_file():
-        return []
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return []
-    rows = payload.get("issues") if isinstance(payload, dict) else []
-    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+def _resonance_score(rate: float, issues_open: int) -> float:
+    issue_damp = 1.0 - min(1.0, issues_open * 0.12)
+    return round(0.5 * rate + 0.5 * issue_damp, 4)
 
 
-def _coherence_summary(tasks: list[dict[str, Any]]) -> dict[str, Any]:
-    task_count = len(tasks)
-    target_state_count = 0
-    evidence_count = 0
-    task_card_count = 0
-    task_card_scores: list[float] = []
-
-    for task in tasks:
-        context = _task_context(task)
-        if isinstance(context.get("target_state_contract"), dict):
-            target_state_count += 1
-        if context.get("success_evidence") or context.get("abort_evidence"):
-            evidence_count += 1
-        validation = context.get("task_card_validation")
-        if isinstance(validation, dict) and validation.get("present") is True:
-            task_card_count += 1
-            try:
-                task_card_scores.append(_clamp01(float(validation.get("score") or 0.0)))
-            except (TypeError, ValueError):
-                task_card_scores.append(0.0)
-
-    target_state_coverage = _safe_ratio(target_state_count, task_count)
-    evidence_coverage = _safe_ratio(evidence_count, task_count)
-    task_card_coverage = _safe_ratio(task_card_count, task_count)
-    task_card_quality = _safe_ratio(sum(task_card_scores), len(task_card_scores), default=0.0)
-
-    score = _score_with_neutral(
-        task_count,
-        (0.35 * target_state_coverage)
-        + (0.30 * task_card_quality)
-        + (0.20 * task_card_coverage)
-        + (0.15 * evidence_coverage),
-    )
-
-    return {
-        "score": round(score, 4),
-        "task_count": task_count,
-        "target_state_coverage": round(target_state_coverage, 4),
-        "task_card_coverage": round(task_card_coverage, 4),
-        "task_card_quality": round(task_card_quality, 4),
-        "evidence_coverage": round(evidence_coverage, 4),
-    }
+def _flow_score(completed_7d: int, window_days: int, p95_seconds: float) -> float:
+    tpd = completed_7d / max(1, window_days)
+    throughput_factor = min(1.0, tpd / 5.0)
+    latency_factor = 1.0 / (1.0 + max(0.0, float(p95_seconds)) / 1800.0)
+    return round(0.6 * throughput_factor + 0.4 * latency_factor, 4)
 
 
-def _resonance_summary(tasks: list[dict[str, Any]], *, window_days: int) -> dict[str, Any]:
-    task_count = len(tasks)
-    id_counts: dict[str, int] = {}
-    failed_count = 0
-    failed_with_learning = 0
-
-    for task in tasks:
-        context = _task_context(task)
-        for key in ("spec_id", "idea_id"):
-            value = str(context.get(key) or "").strip()
-            if value:
-                id_counts[value] = id_counts.get(value, 0) + 1
-        status = task.get("status")
-        if status == TaskStatus.FAILED:
-            failed_count += 1
-            reflections = context.get("retry_reflections")
-            if isinstance(reflections, list) and reflections:
-                failed_with_learning += 1
-
-    reused_reference_count = sum(count for count in id_counts.values() if count > 1)
-    tracked_reference_total = sum(id_counts.values())
-    reference_reuse_ratio = _safe_ratio(reused_reference_count, tracked_reference_total, default=0.0)
-    learning_capture_ratio = _safe_ratio(failed_with_learning, failed_count, default=0.5 if failed_count == 0 else 0.0)
-
-    cutoff = datetime.now(timezone.utc) - timedelta(days=max(1, window_days))
-    completion_events = [
-        event
-        for event in runtime_service.list_events(limit=4000, since=cutoff, source="worker")
-        if isinstance(getattr(event, "metadata", None), dict)
-        and str(event.metadata.get("tracking_kind") or "") == "agent_task_completion"
-    ]
-    traceable_events = [
-        event
-        for event in completion_events
-        if str((event.metadata or {}).get("repeatable_tool_call") or "").strip()
-    ]
-    traceability_ratio = _safe_ratio(len(traceable_events), len(completion_events), default=0.5 if not completion_events else 0.0)
-
-    score = _score_with_neutral(
-        task_count,
-        (0.40 * reference_reuse_ratio) + (0.35 * traceability_ratio) + (0.25 * learning_capture_ratio),
-    )
-
-    return {
-        "score": round(score, 4),
-        "task_count": task_count,
-        "tracked_reference_total": tracked_reference_total,
-        "reused_reference_count": reused_reference_count,
-        "reference_reuse_ratio": round(reference_reuse_ratio, 4),
-        "completion_event_count": len(completion_events),
-        "traceable_completion_ratio": round(traceability_ratio, 4),
-        "learning_capture_ratio": round(learning_capture_ratio, 4),
-    }
+def _friction_score(open_events: int, total_energy_loss: float) -> float:
+    if open_events <= 0 and total_energy_loss <= 0:
+        return 0.12
+    open_norm = min(1.0, open_events / 8.0)
+    energy_norm = min(1.0, max(0.0, total_energy_loss) / 20.0)
+    return round(0.45 * open_norm + 0.55 * energy_norm, 4)
 
 
-def _flow_summary(tasks: list[dict[str, Any]], *, metrics: dict[str, Any]) -> dict[str, Any]:
-    task_count = len(tasks)
-    status_counts: dict[str, int] = {status.value: 0 for status in TaskStatus}
+def _open_friction_events(events: list[FrictionEvent], window_days: int) -> list[FrictionEvent]:
+    from datetime import timedelta
 
-    for task in tasks:
-        status = task.get("status")
-        key = status.value if isinstance(status, TaskStatus) else str(status or "").strip()
-        if key in status_counts:
-            status_counts[key] += 1
-
-    completed = int(status_counts.get(TaskStatus.COMPLETED.value, 0))
-    failed = int(status_counts.get(TaskStatus.FAILED.value, 0))
-    running = int(status_counts.get(TaskStatus.RUNNING.value, 0))
-    pending = int(status_counts.get(TaskStatus.PENDING.value, 0))
-    needs_decision = int(status_counts.get(TaskStatus.NEEDS_DECISION.value, 0))
-
-    terminal_total = completed + failed
-    active_total = running + pending + needs_decision
-
-    completion_ratio = _safe_ratio(completed, terminal_total, default=0.5 if terminal_total == 0 else 0.0)
-    active_flow_ratio = _safe_ratio(running, active_total, default=0.5 if active_total == 0 else 0.0)
-
-    throughput = metrics.get("success_rate") if isinstance(metrics.get("success_rate"), dict) else {}
-    completed_7d = int(throughput.get("completed") or 0)
-    throughput_factor = _clamp01(completed_7d / 20.0)
-
-    exec_time = metrics.get("execution_time") if isinstance(metrics.get("execution_time"), dict) else {}
-    p95_seconds = float(exec_time.get("p95_seconds") or 0.0)
-    latency_factor = 1.0 - _clamp01(p95_seconds / 1800.0)
-
-    score = _score_with_neutral(
-        task_count,
-        (0.35 * completion_ratio)
-        + (0.25 * active_flow_ratio)
-        + (0.25 * throughput_factor)
-        + (0.15 * latency_factor),
-    )
-
-    return {
-        "score": round(score, 4),
-        "task_count": task_count,
-        "completion_ratio": round(completion_ratio, 4),
-        "active_flow_ratio": round(active_flow_ratio, 4),
-        "throughput_factor": round(throughput_factor, 4),
-        "latency_factor": round(latency_factor, 4),
-        "status_counts": status_counts,
-    }
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(days=max(1, window_days))
+    return [e for e in events if e.timestamp >= since and e.status == "open"]
 
 
-def _friction_summary(*, window_days: int) -> dict[str, Any]:
-    events, ignored = friction_service.load_events()
-    summary = friction_service.summarize(events, window_days=window_days)
-    issue_rows = _monitor_issue_rows()
+def _friction_queue(open_events: list[FrictionEvent], *, limit: int = 12) -> list[dict[str, Any]]:
+    def sort_key(e: FrictionEvent) -> float:
+        return float(e.energy_loss_estimate) * (1.0 + 0.25 * float(_severity_rank(e.severity)))
 
-    total_events = int(summary.get("total_events") or 0)
-    open_events = int(summary.get("open_events") or 0)
-    total_energy_loss = float(summary.get("total_energy_loss") or 0.0)
-
-    open_density = _safe_ratio(open_events, total_events, default=0.0)
-    energy_norm = _clamp01(_safe_ratio(total_energy_loss, max(total_events, 1), default=0.0) / 10.0)
-    issue_norm = _clamp01(len(issue_rows) / 10.0)
-    friction_score = _clamp01((0.5 * open_density) + (0.3 * energy_norm) + (0.2 * issue_norm))
-
-    entry_report = friction_service.friction_entry_points(window_days=window_days, limit=5)
-    entries = entry_report.get("entry_points") if isinstance(entry_report, dict) else []
-    queue: list[dict[str, Any]] = []
-    if isinstance(entries, list):
-        for row in entries[:5]:
-            if not isinstance(row, dict):
-                continue
-            signal = float(row.get("energy_loss") or 0.0) + (0.5 * float(row.get("event_count") or 0.0))
-            queue.append(
-                {
-                    "key": str(row.get("key") or "unknown"),
-                    "title": str(row.get("title") or "Friction entry"),
-                    "severity": str(row.get("severity") or "info"),
-                    "signal": round(signal, 4),
-                    "recommended_action": str(row.get("recommended_action") or ""),
-                }
-            )
-
-    return {
-        "score": round(friction_score, 4),
-        "event_count": total_events,
-        "open_events": open_events,
-        "ignored_events": int(ignored),
-        "open_density": round(open_density, 4),
-        "energy_loss": round(total_energy_loss, 4),
-        "issue_count": len(issue_rows),
-        "top_friction_queue": queue,
-        "monitor_issue_preview": [
-            {
-                "condition": str(row.get("condition") or ""),
-                "severity": str(row.get("severity") or ""),
-                "message": str(row.get("message") or "")[:120],
-            }
-            for row in issue_rows[:5]
-        ],
-    }
-
-
-def _top_opportunities(
-    *,
-    coherence: dict[str, Any],
-    resonance: dict[str, Any],
-    flow: dict[str, Any],
-    friction: dict[str, Any],
-) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-
-    if float(coherence.get("task_card_coverage") or 0.0) < 0.9:
+    for e in sorted(open_events, key=sort_key, reverse=True)[:limit]:
+        sig = _clamp01((e.energy_loss_estimate / 10.0) * (1.0 + 0.2 * float(_severity_rank(e.severity))))
+        title = (e.unblock_condition or e.block_type or "friction").strip()
         rows.append(
+            {
+                "key": f"{e.block_type}:{e.id}",
+                "title": title[:240],
+                "severity": e.severity,
+                "signal": round(sig, 4),
+            }
+        )
+    return rows
+
+
+def _opportunities(
+    *,
+    coherence: float,
+    resonance: float,
+    flow: float,
+    friction: float,
+    balance: float,
+    issues_open: int,
+    p95_seconds: float,
+    open_friction: int,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    if balance < 0.55:
+        out.append(
             {
                 "pillar": "coherence",
-                "signal": "task_card_coverage",
-                "action": "Increase task-card completeness on new tasks.",
-                "impact_estimate": round(1.0 - float(coherence.get("task_card_coverage") or 0.0), 4),
+                "signal": "balance_spec_impl_test_review",
+                "impact_estimate": round(max(0.0, 0.65 - coherence), 4),
             }
         )
-    if float(resonance.get("reference_reuse_ratio") or 0.0) < 0.5:
-        rows.append(
+    if issues_open >= 2 or resonance < 0.55:
+        out.append(
             {
                 "pillar": "resonance",
-                "signal": "reference_reuse_ratio",
-                "action": "Link tasks to shared spec_id/idea_id to amplify reusable outcomes.",
-                "impact_estimate": round(0.5 - float(resonance.get("reference_reuse_ratio") or 0.0), 4),
+                "signal": "reduce_open_monitor_issues",
+                "impact_estimate": round(min(1.0, 0.08 * issues_open), 4),
             }
         )
-    if float(flow.get("active_flow_ratio") or 0.0) < 0.5:
-        rows.append(
+    if p95_seconds > 900:
+        out.append(
             {
                 "pillar": "flow",
-                "signal": "active_flow_ratio",
-                "action": "Reduce pending/needs_decision queue and keep active runners working.",
-                "impact_estimate": round(0.5 - float(flow.get("active_flow_ratio") or 0.0), 4),
+                "signal": "reduce_p95_execution_latency",
+                "impact_estimate": round(min(1.0, min(1.0, p95_seconds / 7200.0)), 4),
             }
         )
-    if float(friction.get("score") or 0.0) > 0.2:
-        rows.append(
+    if open_friction >= 1 or friction > 0.35:
+        out.append(
             {
                 "pillar": "friction",
-                "signal": "friction_score",
-                "action": "Work the top friction queue to remove highest-energy blockers first.",
-                "impact_estimate": round(float(friction.get("score") or 0.0), 4),
+                "signal": "clear_open_friction_events",
+                "impact_estimate": round(friction, 4),
             }
         )
+    if not out:
+        out.append(
+            {
+                "pillar": "collective",
+                "signal": "maintain_current_operating_posture",
+                "impact_estimate": 0.05,
+            }
+        )
+    return out[:12]
 
-    rows.sort(key=lambda row: float(row.get("impact_estimate") or 0.0), reverse=True)
-    return rows[:5]
 
+def build_collective_health(*, window_days: int | None = None) -> dict[str, Any]:
+    """Aggregate coherence, resonance, flow, friction, and collective_value from operational telemetry."""
+    days = window_days if window_days is not None and 1 <= int(window_days) <= 90 else DEFAULT_WINDOW_DAYS
+    try:
+        aggregates = metrics_service.get_aggregates(days)
+    except Exception:
+        logger.warning("collective_health: metrics aggregates failed", exc_info=True)
+        aggregates = {
+            "success_rate": {"completed": 0, "failed": 0, "total": 0, "rate": 0.0},
+            "execution_time": {"p50_seconds": 0, "p95_seconds": 0},
+            "by_task_type": {},
+        }
 
-def get_collective_health(window_days: int = 7) -> dict[str, Any]:
-    """Compute collective health scorecard for coherence, resonance, flow, and friction."""
-    bounded_window = max(1, min(int(window_days), 30))
-    tasks, _total, _ = agent_service.list_tasks(limit=5000, offset=0)
-    metrics = metrics_service.get_aggregates()
+    sr = aggregates.get("success_rate") or {}
+    completed = int(sr.get("completed") or 0)
+    failed = int(sr.get("failed") or 0)
+    total_m = completed + failed
+    rate = float(sr.get("rate") or (completed / total_m if total_m > 0 else 0.0))
 
-    coherence = _coherence_summary(tasks)
-    resonance = _resonance_summary(tasks, window_days=bounded_window)
-    flow = _flow_summary(tasks, metrics=metrics)
-    friction = _friction_summary(window_days=bounded_window)
+    by_tt = aggregates.get("by_task_type") or {}
+    balance = _balance_spread(by_tt)
 
-    coherence_score = float(coherence.get("score") or 0.0)
-    resonance_score = float(resonance.get("score") or 0.0)
-    flow_score = float(flow.get("score") or 0.0)
-    friction_score = float(friction.get("score") or 0.0)
+    exec_t = aggregates.get("execution_time") or {}
+    p95 = int(exec_t.get("p95_seconds") or 0)
 
-    collective_value = round(
-        _clamp01(coherence_score)
-        * _clamp01(resonance_score)
-        * _clamp01(flow_score)
-        * (1.0 - _clamp01(friction_score)),
-        4,
+    coh = _coherence_score(rate, balance)
+    monitor = friction_service._load_monitor_issues()
+    issues = monitor.get("issues") if isinstance(monitor, dict) else []
+    issues_open = len(issues) if isinstance(issues, list) else 0
+    res = _resonance_score(rate, issues_open)
+    fl = _flow_score(completed, days, float(p95))
+
+    try:
+        events, _ignored = friction_service.load_events()
+    except Exception:
+        logger.warning("collective_health: friction load_events failed", exc_info=True)
+        events = []
+
+    summ = friction_service.summarize(events, days)
+    open_ct = int(summ.get("open_events") or 0)
+    energy = float(summ.get("total_energy_loss") or 0.0)
+    fric = _friction_score(open_ct, energy)
+
+    coh = _clamp01(coh)
+    res = _clamp01(res)
+    fl = _clamp01(fl)
+    fric = _clamp01(fric)
+
+    collective_value = round(coh * res * fl * (1.0 - fric), 4)
+
+    open_evts = _open_friction_events(events, days)
+    top_q = _friction_queue(open_evts)
+    tops = _opportunities(
+        coherence=coh,
+        resonance=res,
+        flow=fl,
+        friction=fric,
+        balance=balance,
+        issues_open=issues_open,
+        p95_seconds=float(p95),
+        open_friction=open_ct,
     )
 
-    scores = {
-        "coherence": round(coherence_score, 4),
-        "resonance": round(resonance_score, 4),
-        "flow": round(flow_score, 4),
-        "friction": round(friction_score, 4),
-        "collective_value": collective_value,
-    }
-
-    opportunities = _top_opportunities(
-        coherence=coherence,
-        resonance=resonance,
-        flow=flow,
-        friction=friction,
-    )
+    generated = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
     return {
-        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "window_days": bounded_window,
-        "scores": scores,
-        "coherence": coherence,
-        "resonance": resonance,
-        "flow": flow,
-        "friction": {
-            key: value
-            for key, value in friction.items()
-            if key != "top_friction_queue"
+        "generated_at": generated,
+        "window_days": days,
+        "scores": {
+            "coherence": coh,
+            "resonance": res,
+            "flow": fl,
+            "friction": fric,
+            "collective_value": collective_value,
         },
-        "top_friction_queue": list(friction.get("top_friction_queue") or []),
-        "top_opportunities": opportunities,
+        "coherence": {
+            "task_count": total_m,
+            "success_rate": rate,
+            "balance_spread": round(balance, 4),
+            "by_task_type_completed": {
+                k: int((by_tt.get(k) or {}).get("completed") or 0) for k in ("spec", "impl", "test", "review", "heal")
+            },
+        },
+        "resonance": {
+            "issues_open": issues_open,
+            "success_rate_component": rate,
+            "monitor_issues_path": str(friction_service.monitor_issues_file_path()),
+        },
+        "flow": {
+            "completed_7d": completed,
+            "tasks_per_day": round(completed / max(1, days), 4),
+            "p95_seconds": p95,
+            "p50_seconds": int((exec_t.get("p50_seconds") or 0)),
+        },
+        "friction": {
+            "open_events": open_ct,
+            "total_energy_loss": energy,
+            "window_total_events": int(summ.get("total_events") or 0),
+            "top_block_types": (summ.get("top_block_types") or [])[:8],
+        },
+        "top_friction_queue": top_q,
+        "top_opportunities": tops,
     }

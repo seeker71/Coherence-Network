@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.services.collective_health_service import build_collective_health
 from app.routers.agent_telegram import router as telegram_router
 from app.routers.agent_execute_routes import router as execute_router
 from app.routers.agent_task_log_routes import router as task_log_router
@@ -17,7 +18,18 @@ from app.routers.agent_diagnostics_routes import router as diagnostics_router
 from app.routers.agent_auto_heal_routes import router as auto_heal_router
 
 router = APIRouter()
+
+_collective_health_router = APIRouter()
+
+
+@_collective_health_router.get("/collective-health")
+async def get_collective_health() -> dict:
+    """Collective coherence, resonance, flow, friction, and derived collective_value from live telemetry."""
+    return build_collective_health()
+
+
 router.include_router(telegram_router)
+router.include_router(_collective_health_router, prefix="/agent")
 
 # Prefix /agent for all agent sub-routers. Order: more specific paths first.
 router.include_router(execute_router, prefix="/agent")
