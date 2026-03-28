@@ -356,7 +356,7 @@ class TestDeployPhase:
         task = _task(
             task_type="deploy",
             status="completed",
-            output="DEPLOY_PASSED: live.",
+            output="DEPLOY_PASSED: SHA abc1234 live at coherencycoin.com. Health check returned 200 OK.",
             idea_id="idea-xyz",
         )
         pipeline_advance_service.maybe_advance(task)
@@ -384,7 +384,7 @@ class TestDeployPhase:
     def test_deploy_failure_creates_fix_task_via_escalation(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Exhausted deploy retries create a fix task tagged deploy_failure."""
+        """Exhausted deploy retries escalate to needs_decision on the original task."""
         created = _stub_create_task(monkeypatch)
         updates = _stub_update_task(monkeypatch)
         from app.services import agent_service as _as
@@ -392,6 +392,7 @@ class TestDeployPhase:
 
         # A deploy task that has already exhausted retries (_MAX_RETRIES = 2)
         task = _task(
+            id="deploy-exhausted",
             task_type="deploy",
             status="failed",
             output="DEPLOY_FAILED: docker build failed with exit code 1.",
@@ -401,11 +402,17 @@ class TestDeployPhase:
         # maybe_retry sees exhausted retries → calls _escalate_or_autofix
         pipeline_advance_service.maybe_retry(task)
 
-        # A needs_decision or fix/impl task should be created
-        created_types = [c["task_type"] for c in created]
-        assert any(
-            t in ("impl", "needs_decision") for t in created_types
-        ), f"Expected fix/needs_decision task, got: {created_types}"
+        # Escalation: either a new fix/impl task is created OR the original task
+        # is updated to needs_decision status — both are valid escalation paths.
+        escalated = (
+            any(t in ("impl", "heal") for t in [c["task_type"] for c in created])
+            or any(u.get("status") == "needs_decision" for u in updates)
+        )
+        assert escalated, (
+            f"Expected fix task or needs_decision update after retry exhaustion. "
+            f"created={[c['task_type'] for c in created]}, "
+            f"updates={[u.get('status') for u in updates]}"
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -491,7 +498,10 @@ class TestVerifyProductionPhase:
         task = _task(
             task_type="verify-production",
             status="completed",
-            output="VERIFY_FAILED: /api/concepts/test returned 500.",
+            output=(
+                "VERIFY_FAILED: GET /api/concepts/test returned HTTP 500 "
+                "— internal server error, feature broken in production."
+            ),
             idea_id="idea-regressed",
         )
         pipeline_advance_service.maybe_advance(task)
@@ -677,7 +687,10 @@ class TestFullChain:
 
         # Step 2: deploy passes → verify-production task created
         deploy_task = dict(r1)
-        deploy_task.update({"status": "completed", "output": "DEPLOY_PASSED: SHA abc live."})
+        deploy_task.update({
+            "status": "completed",
+            "output": "DEPLOY_PASSED: SHA abc1234 live at coherencycoin.com. Health check returned 200 OK.",
+        })
         r2 = pipeline_advance_service.maybe_advance(deploy_task)
         assert r2 is not None
         assert r2["task_type"] == "verify"
@@ -687,7 +700,10 @@ class TestFullChain:
         verify_task = dict(r2)
         verify_task.update({
             "status": "completed",
-            "output": "VERIFY_PASSED: GET /api/health 200, GET /api/ideas 200, all scenarios green.",
+            "output": (
+                "VERIFY_PASSED: GET /api/health returned 200 OK, GET /api/ideas returned 200 "
+                "with 3 items. All 3 verification scenarios passed. Feature is live."
+            ),
         })
         r3 = pipeline_advance_service.maybe_advance(verify_task)
         assert r3 is None  # terminal — no more tasks
@@ -814,7 +830,10 @@ class TestPassGateRegistry:
         task = _task(
             task_type="verify-production",
             status="completed",
-            output="VERIFY_FAILED: endpoint down.",
+            output=(
+                "VERIFY_FAILED: production endpoint returned HTTP 500, "
+                "feature is down and unreachable."
+            ),
             idea_id="idea-verify-gate",
         )
         pipeline_advance_service.maybe_advance(task)

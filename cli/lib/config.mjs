@@ -57,6 +57,18 @@ export function getContributorSource() {
 /** R2 — contributor_id for `cc identity set` (letters, digits, underscore, period, hyphen; max 64). */
 export const CONTRIBUTOR_ID_PATTERN = /^[\w.\-]{1,64}$/;
 
+export function normalizeContributorId(value) {
+  return String(value || "").trim();
+}
+
+export function parseContributorId(value) {
+  const contributorId = normalizeContributorId(value);
+  if (!CONTRIBUTOR_ID_PATTERN.test(contributorId)) {
+    return null;
+  }
+  return contributorId;
+}
+
 export function getHubUrl() {
   // Env vars override config file (allows easy local dev testing)
   return (
