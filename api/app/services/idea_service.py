@@ -941,12 +941,14 @@ def create_idea(
     parent_idea_id: str | None = None,
     child_idea_ids: list[str] | None = None,
     manifestation_status: ManifestationStatus | None = None,
+    stage: IdeaStage | None = None,
     value_basis: dict[str, str] | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas(persist_ensures=True)
     if any(existing.id == idea_id for existing in ideas):
         return None
 
+    initial_stage = stage if stage is not None else IdeaStage.NONE
     idea = Idea(
         id=idea_id,
         name=name,
@@ -958,6 +960,7 @@ def create_idea(
         resistance_risk=resistance_risk if resistance_risk is not None else 2.5,  # Unknown ideas assume moderate risk
         confidence=max(0.0, min(confidence, 1.0)),
         manifestation_status=manifestation_status or ManifestationStatus.NONE,
+        stage=initial_stage,
         idea_type=idea_type or IdeaType.STANDALONE,
         parent_idea_id=parent_idea_id,
         child_idea_ids=child_idea_ids or [],
@@ -972,6 +975,7 @@ def create_idea(
             for item in (open_questions or [])
         ],
     )
+    _sync_manifestation_status(idea)
 
     ideas.append(idea)
     ideas, _ = _ensure_standing_questions(ideas)
@@ -1363,12 +1367,13 @@ _STAGE_TO_MANIFESTATION: dict[IdeaStage, ManifestationStatus | None] = {
     IdeaStage.COMPLETE: ManifestationStatus.VALIDATED,
 }
 
-# Task type → target stage after that task type completes for the idea.
+# Task type → target stage after that task type completes for the idea (spec 138 R6).
+# impl completes → implementing→testing; test → testing→reviewing; review → reviewing→complete.
 _TASK_TYPE_TARGET_STAGE: dict[str, IdeaStage] = {
     "spec": IdeaStage.SPECCED,
-    "impl": IdeaStage.IMPLEMENTING,
-    "test": IdeaStage.TESTING,
-    "review": IdeaStage.REVIEWING,
+    "impl": IdeaStage.TESTING,
+    "test": IdeaStage.REVIEWING,
+    "review": IdeaStage.COMPLETE,
 }
 
 
@@ -1377,6 +1382,37 @@ def _sync_manifestation_status(idea: Idea) -> None:
     new_ms = _STAGE_TO_MANIFESTATION.get(idea.stage)
     if new_ms is not None:
         idea.manifestation_status = new_ms
+
+
+def validate_sequential_stage_patch(idea_id: str, new_stage: IdeaStage) -> str | None:
+    """PATCH /ideas must advance at most one stage forward (R4). POST /stage bypasses this."""
+    ideas = _read_ideas(persist_ensures=False)
+    current: IdeaStage | None = None
+    for idea in ideas:
+        if idea.id == idea_id:
+            current = idea.stage
+            break
+    if current is None:
+        return None
+    if new_stage == current:
+        return None
+    try:
+        cur_idx = IDEA_STAGE_ORDER.index(current)
+    except ValueError:
+        next_allowed = IDEA_STAGE_ORDER[0]
+        return (
+            f"Cannot skip stages; current stage is '{current.value}', "
+            f"next allowed is '{next_allowed.value}'"
+        )
+    if cur_idx + 1 >= len(IDEA_STAGE_ORDER):
+        return "Idea is already complete"
+    next_allowed = IDEA_STAGE_ORDER[cur_idx + 1]
+    if new_stage != next_allowed:
+        return (
+            f"Cannot skip stages; current stage is '{current.value}', "
+            f"next allowed is '{next_allowed.value}'"
+        )
+    return None
 
 
 def advance_idea_stage(idea_id: str) -> tuple[IdeaWithScore | None, str | None]:
@@ -1685,9 +1721,11 @@ def compute_progress_dashboard() -> ProgressDashboard:
     completion_pct = round(complete_count / total, 4) if total > 0 else 0.0
 
     from datetime import datetime, timezone
+
+    snapshot_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     return ProgressDashboard(
         total_ideas=total,
         completion_pct=completion_pct,
         by_stage=by_stage,
-        snapshot_at=datetime.now(timezone.utc).isoformat(),
+        snapshot_at=snapshot_at,
     )

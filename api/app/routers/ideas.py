@@ -335,6 +335,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         parent_idea_id=data.parent_idea_id,
         child_idea_ids=data.child_idea_ids,
         manifestation_status=data.manifestation_status,
+        stage=data.stage,
         value_basis=data.value_basis,
     )
     if created is None:
@@ -356,8 +357,15 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
 
-    # Handle stage update via dedicated set_idea_stage for sync logic
+    existing = idea_service.get_idea(idea_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+
+    # PATCH: stage is sequential only (R4). Use POST /stage for admin override.
     if data.stage is not None:
+        err = idea_service.validate_sequential_stage_patch(idea_id, data.stage)
+        if err:
+            raise HTTPException(status_code=422, detail=err)
         idea_service.set_idea_stage(idea_id, data.stage)
 
     updated = idea_service.update_idea(
