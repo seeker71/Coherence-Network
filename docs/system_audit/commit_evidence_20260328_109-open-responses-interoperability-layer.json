@@ -1,0 +1,74 @@
+{
+  "date": "2026-03-28T12:00:00Z",
+  "thread_branch": "worker/test/109-open-responses-interoperability-layer/task_d9d",
+  "commit_scope": "Tests for Spec 109: Open Responses Interoperability Layer",
+  "files_owned": [
+    "api/tests/test_open_responses_interoperability.py"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Test file verified against spec 109. Tests cover: normalize_open_responses_model() prefix stripping, build_normalized_response_call() envelope construction, task creation with route_decision context, executor interoperability, completion tracking with open_responses_v1 schema, GET /api/agent/tasks/{task_id} exposes route_decision, error handling, and NormalizedResponseCall Pydantic model enforcement."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Test-only PR: adds test file covering Spec 109 acceptance criteria. No runtime code changed."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "Test-only change, no deployment impact."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "109-open-responses-interoperability-layer"
+  ],
+  "spec_ids": [
+    "109-open-responses-interoperability-layer"
+  ],
+  "task_ids": [
+    "task_7a400322d962b67a",
+    "task_d9d"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-sonnet-4-6",
+      "contributor_type": "machine",
+      "roles": [
+        "Test",
+        "QA"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Sonnet 4.6",
+    "version": "4.6"
+  },
+  "evidence_refs": [
+    "api/tests/test_open_responses_interoperability.py",
+    "specs/109-open-responses-interoperability-layer.md"
+  ],
+  "change_files": [
+    ".gitignore",
+    "api/tests/test_open_responses_interoperability.py",
+    "docs/system_audit/commit_evidence_20260328_109-open-responses-interoperability-layer.json"
+  ],
+  "change_intent": "test_only",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Test suite verifies Open Responses v1 normalization layer: executor prefix stripping (cursor/, codex/, gemini/), normalized response call envelope construction, task context embedding, cross-executor input structure parity, and schema contract enforcement via Pydantic model.",
+    "public_endpoints": [
+      "GET /api/agent/tasks/{task_id}"
+    ],
+    "test_flows": [
+      "normalize_open_responses_model strips cursor/codex/gemini prefixes",
+      "build_normalized_response_call produces valid v1 envelope",
+      "task creation embeds route_decision + normalized_response_call",
+      "cursor and codex produce identical input structure",
+      "completion tracking persists request_schema == open_responses_v1",
+      "GET /api/agent/tasks/{task_id} exposes route_decision and normalized_response_call",
+      "error handling returns correct HTTP status codes",
+      "NormalizedResponseCall Pydantic model enforces schema contract"
+    ]
+  }
+}
