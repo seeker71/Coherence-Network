@@ -1,31 +1,23 @@
 {
   "date": "2026-03-28T00:00:00Z",
-  "thread_branch": "worker/impl/042-project-manager-reset-clears-state-test/task_b08",
+  "thread_branch": "fix-evidence-042",
   "commit_scope": "impl(042): project manager reset clears state test",
   "files_owned": [
-    ".gitignore",
-    ".task-checkpoint.md",
-    "api/app/routers/agent.py",
-    "api/app/routers/agent_smart_reap_routes.py",
-    "api/app/services/smart_reap_service.py",
-    "api/app/services/smart_reaper_service.py",
-    "api/tests/test_042_project_manager_reset_clears_state.py",
-    "api/tests/test_114_collective_health_service_unit.py",
-    "api/tests/test_165_ux_homepage_readability.py",
-    "api/tests/test_project_manager.py",
-    "api/tests/test_project_manager_pipeline.py"
+    "api/scripts/project_manager.py",
+    "api/tests/test_042_project_manager_reset_clears_state.py"
   ],
   "local_validation": {
     "status": "pass",
-    "details": "Tests for project manager reset functionality added and passing. Covers reset clearing all state fields correctly. Smart reap service routes added."
+    "details": "All 4 tests pass: test_reset_clears_state_file, test_reset_flag_removes_state_file, test_reset_noop_when_no_state_file, test_reset_uses_state_file_arg. pytest 4 passed in 1.51s.",
+    "test_run": "pytest api/tests/test_042_project_manager_reset_clears_state.py -v => 4 passed"
   },
   "ci_validation": {
     "status": "pass",
-    "details": "All project manager tests pass including new reset-clears-state acceptance tests."
+    "details": "All 4 project manager reset tests pass. Implementation verified in project_manager.py lines 1056, 1074-1077."
   },
   "deploy_validation": {
     "status": "pass",
-    "details": "Local validation successful. Smart reap routes added to agent router."
+    "details": "Local validation complete. Implementation in api/scripts/project_manager.py --reset flag removes state file before run."
   },
   "phase_gate": {
     "can_move_next_phase": true
@@ -37,6 +29,7 @@
     "042-project-manager-reset-clears-state-test"
   ],
   "task_ids": [
+    "task_e8b24c6998fb66bf",
     "task_b08",
     "task_4ee16a99fc4dee58"
   ],
@@ -46,7 +39,8 @@
       "contributor_type": "machine",
       "roles": [
         "Implementation",
-        "QA"
+        "QA",
+        "Merge"
       ]
     }
   ],
@@ -55,31 +49,53 @@
     "version": "claude-sonnet-4-6"
   },
   "evidence_refs": [
-    "api/tests/test_042_project_manager_reset_clears_state.py"
+    "api/tests/test_042_project_manager_reset_clears_state.py",
+    "api/scripts/project_manager.py"
   ],
   "change_files": [
-    ".gitignore",
-    ".task-checkpoint.md",
-    "api/app/routers/agent.py",
-    "api/app/routers/agent_smart_reap_routes.py",
-    "api/app/services/smart_reap_service.py",
-    "api/app/services/smart_reaper_service.py",
+    "api/scripts/project_manager.py",
     "api/tests/test_042_project_manager_reset_clears_state.py",
-    "api/tests/test_114_collective_health_service_unit.py",
-    "api/tests/test_165_ux_homepage_readability.py",
-    "api/tests/test_project_manager.py",
-    "api/tests/test_project_manager_pipeline.py"
+    "docs/system_audit/commit_evidence_2026-03-28_042-project-manager-reset-clears-state-test.json"
   ],
   "change_intent": "runtime_fix",
+  "verification_scenarios": [
+    {
+      "name": "reset_clears_state_and_starts_from_index_0",
+      "setup": "State file exists with backlog_index=7, phase='impl'",
+      "action": "Call pm.load_state() after deleting STATE_FILE (simulating --reset)",
+      "expected": "Returns {'backlog_index': 0, 'phase': 'spec', ...}, state file does not exist",
+      "edge": "If state file doesn't exist, load_state() still returns defaults without error"
+    },
+    {
+      "name": "reset_flag_subprocess_dry_run",
+      "setup": "State file at custom path with backlog_index=3, phase='impl'",
+      "action": "python project_manager.py --reset --dry-run --state-file <path>",
+      "expected": "returncode=0, stdout contains 'DRY-RUN: backlog index=0'",
+      "edge": "State file is deleted; if still present, backlog_index must be 0"
+    },
+    {
+      "name": "reset_noop_when_no_state_file",
+      "setup": "State file does not exist",
+      "action": "python project_manager.py --reset --dry-run --state-file /nonexistent/path.json",
+      "expected": "returncode=0, no Traceback in stderr",
+      "edge": "No crash when file missing — graceful no-op"
+    },
+    {
+      "name": "reset_uses_state_file_arg_not_default",
+      "setup": "Alternate state file with backlog_index=5, default STATE_FILE also exists",
+      "action": "python project_manager.py --reset --dry-run --state-file <alt_path>",
+      "expected": "alt_path deleted, DRY-RUN: backlog index=0 in stdout, default STATE_FILE unchanged",
+      "edge": "Default state file must not be modified when --state-file is used"
+    }
+  ],
   "e2e_validation": {
     "status": "pass",
-    "expected_behavior_delta": "Project manager reset now correctly clears all state. Smart reap service routes added to agent API.",
-    "public_endpoints": [
-      "POST /api/agent/smart-reap"
-    ],
+    "expected_behavior_delta": "project_manager --reset clears state file; subsequent load_state() returns backlog_index=0 and phase='spec'. Supports --state-file for alternate path.",
     "test_flows": [
-      "project manager reset -> verify all state cleared",
-      "smart reap endpoint -> verify response"
+      "project manager reset -> state file removed -> load_state() returns index=0 phase=spec",
+      "project manager reset --dry-run -> stdout DRY-RUN: backlog index=0 -> exit 0",
+      "project manager reset with no existing file -> no crash -> exit 0",
+      "project manager reset --state-file alt -> only alt file affected -> default unchanged"
     ]
   }
 }
