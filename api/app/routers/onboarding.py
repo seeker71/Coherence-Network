@@ -122,31 +122,32 @@ async def get_session(authorization: str = Header(...)) -> SessionResponse:
     return SessionResponse(**profile)
 
 
-@router.post("/upgrade", summary="Upgrade trust level via OAuth [stub — 501]")
+@router.post("/upgrade", summary="Upgrade trust level to verified")
 async def upgrade_oauth(body: UpgradeRequest) -> dict:
     """Upgrade a TOFU session to verified after OAuth confirmation.
 
-    **Status**: MVP stub — returns 501 until OAuth flow is implemented (Spec 169).
+    Call this after the OAuth callback has confirmed the identity. Delegates
+    to ``onboarding_service.upgrade_trust`` which links the identity via
+    ``contributor_identity_service`` and sets ``trust_level='verified'``.
 
-    When implemented, this endpoint will:
-    1. Accept an OAuth provider + provider_id (from the OAuth callback).
-    2. Call ``contributor_identity_service.link_identity`` with ``verified=True``.
-    3. Update the onboarding session ``trust_level`` to ``"verified"``.
-
-    Planned providers: ``github``, ``google``, ``ethereum``.
+    Supported providers: ``github``, ``google``, ``ethereum``, ``solana``.
     """
-    raise HTTPException(
-        status_code=501,
-        detail={
-            "message": "OAuth upgrade not yet implemented. Planned for Spec 169.",
-            "upgrade_path": {
-                "github": "POST /api/identity/oauth/github → callback upgrades trust_level",
-                "ethereum": "POST /api/identity/verify-ethereum → EIP-712 signature",
-            },
-            "current_trust_level": "tofu",
-            "spec_ref": "spec-168",
-        },
-    )
+    try:
+        result = onboarding_service.upgrade_trust(
+            contributor_id=body.contributor_id,
+            provider=body.provider,
+            provider_id=body.provider_id,
+            display_name=body.display_name,
+            avatar_url=body.avatar_url,
+            metadata=body.metadata,
+        )
+    except ValueError as exc:
+        if "contributor_not_found" in str(exc):
+            raise HTTPException(status_code=404, detail="contributor_not_found")
+        raise HTTPException(status_code=422, detail=str(exc))
+
+    roi = onboarding_service.get_roi_signals()
+    return {**result, "roi_signals": roi}
 
 
 @router.get("/roi", summary="Onboarding ROI signals")
