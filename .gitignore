@@ -69,4 +69,3 @@ data/coherence.db
 .task-*
 .codex*
 
-*.pyc
