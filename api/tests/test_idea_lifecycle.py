@@ -273,7 +273,8 @@ async def test_progress_completion_pct() -> None:
         body = after.json()
         assert body["total_ideas"] == total_before
         assert body["by_stage"]["complete"]["count"] == complete_before + 1
-        assert body["completion_pct"] == pytest.approx((complete_before + 1) / total_before, rel=1e-3)
+        expected_pct = round((complete_before + 1) / total_before, 4) if total_before else 0.0
+        assert body["completion_pct"] == pytest.approx(expected_pct, abs=1e-4)
 
 
 @pytest.mark.asyncio
