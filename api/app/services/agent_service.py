@@ -40,6 +40,16 @@ from app.services.agent_service_executor import (
 # CRUD
 from app.services.agent_service_crud import create_task, get_task, update_task
 
+
+def apply_decision(task_id: str, decision: str) -> dict[str, Any] | None:
+    """Record a user decision on a needs_decision task and set status→running.
+
+    Convenience wrapper over update_task for the /reply Telegram command
+    and PATCH decision-only payloads.  Returns the updated task or None if
+    not found.
+    """
+    return update_task(task_id, decision=decision)
+
 # List / counts
 from app.services.agent_service_list import (
     get_attention_tasks,
