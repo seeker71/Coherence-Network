@@ -87,3 +87,8 @@ from app.services.contributor_identity_service import ContributorIdentityRecord 
 
 # Graph models (Node + Edge universal data layer)
 from app.models.graph import Node, Edge  # noqa: F401
+
+# ---------------------------------------------------------------------------
+# Cross-Domain Concept Resonance models (Spec 179)
+# ---------------------------------------------------------------------------
+from app.services.cross_domain_resonance_service import CrossDomainResonanceRecord  # noqa: F401
