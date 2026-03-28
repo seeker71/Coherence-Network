@@ -47,12 +47,66 @@ from app.models.idea import (
     StageBucket,
 )
 from app.models.audit_ledger import AuditEntryCreate, AuditEntryType
+from app.models.idea import IdeaTagCatalogEntry, IdeaTagCatalogResponse, IdeaTagUpdateResponse
 from app.services import audit_ledger_service
 from app.services import idea_graph_adapter as idea_registry_service  # Graph-backed
+from app.services import idea_registry_service as _tag_store  # SQLAlchemy — tag persistence
 from app.services import commit_evidence_service
 from app.services import runtime_service
 from app.services import spec_registry_service
 from app.services import value_lineage_service
+
+
+_TAG_SLUG_PATTERN = re.compile(r"[^a-z0-9-]")
+
+
+def normalize_tags(raw_tags: list[str]) -> list[str]:
+    """Normalize tags to lowercase slug format, deduplicate, and sort.
+
+    Normalization steps:
+    1. Trim whitespace
+    2. Lowercase
+    3. Replace internal whitespace runs with '-'
+    4. Strip characters outside a-z, 0-9, '-'
+    5. Strip leading/trailing '-'
+    6. Deduplicate (case-insensitively, since already lowercased)
+    7. Sort ascending
+
+    Returns empty list for all-empty or all-invalid tags.
+    """
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in raw_tags:
+        tag = raw.strip().lower()
+        tag = re.sub(r"\s+", "-", tag)
+        tag = _TAG_SLUG_PATTERN.sub("", tag)
+        tag = tag.strip("-")
+        if tag and tag not in seen:
+            seen.add(tag)
+            result.append(tag)
+    return sorted(result)
+
+
+def validate_raw_tags(raw_tags: list[str]) -> tuple[list[str], bool]:
+    """Normalize tags and check if any raw tag became empty after normalization.
+
+    Returns (normalized_tags, is_valid).
+    is_valid is False when a non-empty raw tag normalizes to empty string.
+    """
+    normalized = []
+    for raw in raw_tags:
+        tag = raw.strip().lower()
+        tag = re.sub(r"\s+", "-", tag)
+        tag = _TAG_SLUG_PATTERN.sub("", tag)
+        tag = tag.strip("-")
+        if not raw.strip():
+            # Empty/whitespace-only tags are silently dropped
+            continue
+        if not tag:
+            # Non-empty raw that became empty after normalization → invalid
+            return [], False
+        normalized.append(tag)
+    return normalize_tags(normalized), True
 
 
 # Known internal idea IDs — these were previously loaded from derived_metadata
@@ -597,6 +651,16 @@ def _read_ideas(*, persist_ensures: bool = False) -> list[Idea]:
         return cached
 
     ideas = idea_registry_service.load_ideas()
+
+    # Overlay tags from the SQLAlchemy tag store (graph adapter doesn't carry tags)
+    try:
+        all_tags = _tag_store.load_all_idea_tags()
+        if all_tags:
+            for idea in ideas:
+                if idea.id in all_tags:
+                    idea.tags = all_tags[idea.id]
+    except Exception:
+        pass  # Tag overlay is non-fatal; ideas load without tags
 
     # Runtime discovery: find idea IDs referenced in evidence/specs/lineage
     ideas, tracked_changed = _ensure_tracked_idea_entries(ideas)

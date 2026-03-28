@@ -237,11 +237,13 @@ def test_get_aggregates_window_days_respected(monkeypatch: pytest.MonkeyPatch) -
     assert result.get("window_days") == 14
 
 
-def test_record_task_writes_jsonl(monkeypatch: pytest.MonkeyPatch, tmp_path: pytest.TempPathFactory) -> None:
+def test_record_task_writes_jsonl(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
     """record_task appends a well-formed JSONL record."""
     from app.services import metrics_service
 
     metrics_file = tmp_path / "metrics.jsonl"
+    # Patch the module-level constant AND the env var path so both paths agree.
+    monkeypatch.setattr(metrics_service, "METRICS_FILE", str(metrics_file))
     monkeypatch.setenv("METRICS_FILE_PATH", str(metrics_file))
     monkeypatch.setenv("METRICS_USE_DB", "false")
 
