@@ -107,3 +107,44 @@ def backfill_host_runner_failure_observability(*, window_hours: int = 24) -> dic
     """Ensure host-runner failed tasks are linked to completion + friction telemetry."""
     from app.services.agent_service_usage_visibility import backfill_host_runner_failure_observability as _backfill
     return _backfill(window_hours=window_hours)
+
+
+# ---------------------------------------------------------------------------
+# Open Responses interoperability layer (spec 109)
+# ---------------------------------------------------------------------------
+
+def normalize_to_open_responses(
+    task_id: str,
+    provider: str,
+    model: str,
+    output_text: str = "",
+) -> "Any":
+    """Adapt a task execution result to the open_responses_v1 normalized schema.
+
+    Wraps the provider/model/output in a NormalizedResponseCall and persists
+    route evidence via provider_usage_service so operator audits can verify
+    the actual execution path.
+
+    Parameters
+    ----------
+    task_id     The task identifier for which the call was made.
+    provider    Normalized provider name (e.g. 'claude', 'codex', 'gemini').
+    model       Fully-qualified model identifier.
+    output_text Raw text output returned by the provider.
+
+    Returns
+    -------
+    NormalizedResponseCall  The persisted, schema-tagged record.
+    """
+    from app.models.schemas import NormalizedResponseCall
+    from app.services.provider_usage_service import record_normalized_call
+
+    call = NormalizedResponseCall(
+        task_id=task_id,
+        provider=provider,
+        model=model,
+        request_schema="open_responses_v1",
+        output_text=output_text,
+    )
+    record_normalized_call(call)
+    return call

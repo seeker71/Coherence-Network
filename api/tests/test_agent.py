@@ -141,6 +141,48 @@ async def test_effectiveness_plan_progress_includes_phase_6_and_phase_7(
 
 
 @pytest.mark.asyncio
+async def test_pipeline_status_returns_200_in_empty_state() -> None:
+    """GET /api/agent/pipeline-status returns 200 with required keys when no task is running.
+
+    Spec 039: Empty state (no tasks, or only pending/completed/failed, none running) must
+    return HTTP 200 with body containing running, pending, recent_completed, attention,
+    and running_by_phase. running must be a list (empty when no running task).
+    attention must contain stuck, repeated_failures, low_success_rate, flags.
+    """
+    from app.services import agent_service
+
+    agent_service._store.clear()
+    agent_service._store_loaded = False
+    agent_service._store_loaded_path = None
+
+    import os
+
+    os.environ["AGENT_TASKS_PERSIST"] = "0"
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.get("/api/agent/pipeline-status")
+
+    assert r.status_code == 200, f"Expected 200 in empty state, got {r.status_code}: {r.text}"
+
+    body = r.json()
+
+    for key in ("running", "pending", "recent_completed", "attention", "running_by_phase"):
+        assert key in body, f"Missing required key '{key}' in pipeline-status response"
+
+    assert isinstance(body["running"], list), "running must be a list"
+    assert body["running"] == [], f"running must be empty in empty state, got {body['running']}"
+
+    attention = body["attention"]
+    for key in ("stuck", "repeated_failures", "low_success_rate", "flags"):
+        assert key in attention, f"Missing required attention key '{key}'"
+
+    running_by_phase = body["running_by_phase"]
+    assert isinstance(running_by_phase, dict), "running_by_phase must be a dict"
+    for phase in ("spec", "impl", "test", "review"):
+        assert phase in running_by_phase, f"running_by_phase missing phase '{phase}'"
+
+
+@pytest.mark.asyncio
 async def test_effectiveness_plan_progress_phase_boundary_logic() -> None:
     """_plan_progress() correctly computes phase_6 and phase_7 completion from backlog_index.
 
