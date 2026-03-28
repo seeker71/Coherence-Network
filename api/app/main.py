@@ -44,6 +44,7 @@ from app.routers import (
     value_lineage,
 )
 from app.routers import concepts
+from app.routers import discovery
 from app.routers import dif_feedback
 from app.routers import graph
 from app.routers import agent_grounded_metrics_routes
@@ -537,6 +538,7 @@ app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
+app.include_router(discovery.router, prefix="/api", tags=["discovery"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(coherence.router, prefix="/api", tags=["coherence"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])

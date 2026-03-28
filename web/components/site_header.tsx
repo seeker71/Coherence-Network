@@ -25,7 +25,7 @@ const SECONDARY_NAV = [
   // Knowledge & specs
   { href: "/specs", label: "Specs" },
   { href: "/blog", label: "Blog" },
-  { href: "/search", label: "Search" },
+  { href: "/discover", label: "Discover" },
   // Operations (power users)
   { href: "/tasks", label: "Work Cards" },
   { href: "/automation", label: "Automation" },
