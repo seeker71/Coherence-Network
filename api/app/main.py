@@ -566,6 +566,10 @@ app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 
+# Discord bot vote endpoint (spec-164)
+from app.routers import discord_votes  # noqa: E402
+app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
