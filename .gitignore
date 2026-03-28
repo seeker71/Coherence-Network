@@ -47,6 +47,10 @@ logs/
 api/packages/
 .aider*
 
+# Runner progress tracking (persisted per-idea, not committed)
+.idea-progress/
+.idea-progress.md
+
 # Local / one-off audit outputs (do not merge)
 docs/system_audit/production_db_*.json
 docs/system_audit/production_db_*.md
