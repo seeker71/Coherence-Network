@@ -22,6 +22,9 @@ from app.models.idea import (
     IdeaQuestionAnswerUpdate,
     IdeaSelectionResult,
     IdeaStorageInfo,
+    IdeaTagCatalogResponse,
+    IdeaTagUpdateRequest,
+    IdeaTagUpdateResponse,
     IdeaTasksResponse,
     IdeaUpdate,
     IdeaWithScore,
@@ -42,7 +45,9 @@ async def list_ideas(
     offset: int = Query(0, ge=0),
     read_only_guard: bool = Query(False, description="When true, do not persist ensure logic (for invariant/guard runs)."),
     sort: str = Query("free_energy", description="Sort method: 'free_energy' (default, Method A) or 'marginal_cc' (Method B)."),
+    tags: str = Query("", description="Comma-separated tag filter. When present, return only ideas matching all normalized tags."),
 ) -> IdeaPortfolioResponse:
+    parsed_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
     return idea_service.list_ideas(
         only_unvalidated=only_unvalidated,
         include_internal=include_internal,
@@ -50,7 +55,14 @@ async def list_ideas(
         offset=offset,
         read_only_guard=read_only_guard,
         sort_method=sort,
+        tags_filter=parsed_tags,
     )
+
+
+@router.get("/ideas/tags", response_model=IdeaTagCatalogResponse)
+async def get_idea_tags_catalog() -> IdeaTagCatalogResponse:
+    """Return the normalized idea tag catalog with idea counts (spec 129)."""
+    return idea_service.get_tag_catalog()
 
 
 @router.get("/ideas/storage", response_model=IdeaStorageInfo)
@@ -309,6 +321,18 @@ async def list_idea_tasks(idea_id: str) -> IdeaTasksResponse:
     return agent_service.list_tasks_for_idea(idea_id)
 
 
+@router.put("/ideas/{idea_id}/tags", response_model=IdeaTagUpdateResponse)
+async def put_idea_tags(idea_id: str, body: IdeaTagUpdateRequest) -> IdeaTagUpdateResponse:
+    """Replace the full tag set for an idea after normalization (spec 129)."""
+    normalized, valid = idea_service.validate_raw_tags(body.tags)
+    if not valid:
+        raise HTTPException(status_code=422, detail="One or more tag values are invalid")
+    result = idea_service.set_idea_tags(idea_id, normalized)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
 async def get_idea(idea_id: str) -> IdeaWithScore:
     idea = idea_service.get_idea(idea_id)
@@ -336,6 +360,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         child_idea_ids=data.child_idea_ids,
         manifestation_status=data.manifestation_status,
         value_basis=data.value_basis,
+        tags=data.tags,
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")
