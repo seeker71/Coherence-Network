@@ -335,3 +335,47 @@ def test_reset_uses_state_file_arg(tmp_path):
     # Default STATE_FILE must be untouched
     if default_mtime_before is not None:
         assert os.path.getmtime(default_state) == default_mtime_before
+
+
+def test_load_backlog_mixed_malformed(tmp_path):
+    """load_backlog returns only valid numbered items; unnumbered/blank lines are skipped."""
+    p = tmp_path / "backlog.md"
+    p.write_text(
+        "1. First item\n"
+        "Unnumbered line\n"
+        "2. Second item\n"
+        "Another line without number\n"
+        "   \n"
+        "3. Third item\n"
+    )
+    pm.BACKLOG_FILE = str(p)
+    items = pm.load_backlog()
+    assert items == ["First item", "Second item", "Third item"]
+
+
+def test_load_backlog_all_malformed_returns_empty(tmp_path):
+    """load_backlog returns [] when every line lacks a valid digit-dot-space prefix."""
+    p = tmp_path / "backlog_malformed.md"
+    p.write_text(
+        "No numbers here\n"
+        "Still no numbers\n"
+        "1.MissingSpace\n"
+        "item without prefix\n"
+    )
+    pm.BACKLOG_FILE = str(p)
+    items = pm.load_backlog()
+    assert items == []
+
+
+def test_load_backlog_comments_excluded(tmp_path):
+    """load_backlog excludes comment lines starting with '#', even if they contain digit-dot patterns."""
+    p = tmp_path / "backlog_comments.md"
+    p.write_text(
+        "# 1. This looks numbered but is a comment\n"
+        "1. Real item\n"
+        "# another comment\n"
+        "2. Another real item\n"
+    )
+    pm.BACKLOG_FILE = str(p)
+    items = pm.load_backlog()
+    assert items == ["Real item", "Another real item"]

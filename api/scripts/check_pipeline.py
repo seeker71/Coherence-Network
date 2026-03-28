@@ -179,8 +179,9 @@ def main():
     ap.add_argument("--log", action="store_true", help="Include log preview for running task")
     ap.add_argument("--json", action="store_true", help="Output pipeline-status as JSON")
     ap.add_argument("--attention", action="store_true", help="Print attention flags (stuck, repeated_failures, low_success_rate)")
-    ap.add_argument("--hierarchical", action="store_true", help="Use hierarchical view (Goal → PM → Tasks → Artifacts). Default for human-readable.")
-    ap.add_argument("--flat", action="store_true", help="Legacy flat output (sections not strictly layered).")
+    view_group = ap.add_mutually_exclusive_group()
+    view_group.add_argument("--hierarchical", action="store_true", help="Use hierarchical view (Goal → PM → Tasks → Artifacts). Default for human-readable.")
+    view_group.add_argument("--flat", action="store_true", help="Legacy flat output (sections not strictly layered).")
     args = ap.parse_args()
     use_hierarchical = not args.flat
 

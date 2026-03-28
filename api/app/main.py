@@ -579,6 +579,10 @@ app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 from app.routers import brief as brief_router  # noqa: E402
 app.include_router(brief_router.router)
 
+# MCP/skill registry submission stats (spec-178)
+from app.routers import registry as registry_router  # noqa: E402
+app.include_router(registry_router.router, prefix="/api", tags=["registry"])
+
 # Identity-driven onboarding - TOFU MVP (spec-168)
 app.include_router(onboarding_router.router, tags=["onboarding"])
 
