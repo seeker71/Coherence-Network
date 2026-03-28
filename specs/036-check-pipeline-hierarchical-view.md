@@ -6,13 +6,13 @@ Operators need a single command that shows pipeline health in a clear hierarchy:
 
 ## Requirements
 
-- [ ] When run without `--json`, `check_pipeline.py` prints a **hierarchical view**: Goal → PM/Orchestration → Tasks → Artifacts (in that order).
-- [ ] **Goal** section: Use `GET /api/agent/status-report` when available (from monitor-written file); show layer_0_goal status and summary (e.g. goal_proximity, throughput, success rate). If status-report is missing, show "Goal: (report not yet generated)" or fetch `GET /api/agent/effectiveness` and show goal_proximity and a one-line summary.
-- [ ] **PM / Orchestration** section: Show layer_1_orchestration from status-report when available; else derive from pipeline-status (project_manager state, backlog_index, phase, blocked) and process detection (agent_runner workers, PM --parallel). Same information as current "PROJECT MANAGER" and "PROCESSES" blocks, but labeled as Layer 1.
-- [ ] **Tasks** section: Running, pending (with wait times), recent completed (with duration) — current pipeline-status content, labeled as Layer 2 / Tasks.
-- [ ] **Artifacts** section: Recent task outputs / artifact health — e.g. recent_completed tasks with output_len and optional one-line output_preview; optionally mention spec/STATUS artifact health if effectiveness or status-report exposes it. At minimum: list recent completed with output size so operator can see "artifacts produced."
-- [ ] Add optional flag `--hierarchical` to explicitly enable this view; default human-readable output is hierarchical. Add `--flat` to preserve legacy flat output (Goal/PM/Tasks/Artifacts order still allowed but sections not strictly layered).
-- [ ] With `--json`, when hierarchical view is requested (default or `--hierarchical`), include in the JSON a top-level key `hierarchical` (or merge layer_0_goal, layer_1_orchestration, layer_2_execution, layer_3_attention from status-report when available) so script consumers get the same structure.
+- [x] When run without `--json`, `check_pipeline.py` prints a **hierarchical view**: Goal → PM/Orchestration → Tasks → Artifacts (in that order).
+- [x] **Goal** section: Use `GET /api/agent/status-report` when available (from monitor-written file); show layer_0_goal status and summary (e.g. goal_proximity, throughput, success rate). If status-report is missing, show "Goal: (report not yet generated)" or fetch `GET /api/agent/effectiveness` and show goal_proximity and a one-line summary.
+- [x] **PM / Orchestration** section: Show layer_1_orchestration from status-report when available; else derive from pipeline-status (project_manager state, backlog_index, phase, blocked) and process detection (agent_runner workers, PM --parallel). Same information as current "PROJECT MANAGER" and "PROCESSES" blocks, but labeled as Layer 1.
+- [x] **Tasks** section: Running, pending (with wait times), recent completed (with duration) — current pipeline-status content, labeled as Layer 2 / Tasks.
+- [x] **Artifacts** section: Recent task outputs / artifact health — e.g. recent_completed tasks with output_len and optional one-line output_preview; optionally mention spec/STATUS artifact health if effectiveness or status-report exposes it. At minimum: list recent completed with output size so operator can see "artifacts produced."
+- [x] Add optional flag `--hierarchical` to explicitly enable this view; default human-readable output is hierarchical. Add `--flat` to preserve legacy flat output (Goal/PM/Tasks/Artifacts order still allowed but sections not strictly layered).
+- [x] With `--json`, when hierarchical view is requested (default or `--hierarchical`), include in the JSON a top-level key `hierarchical` (or merge layer_0_goal, layer_1_orchestration, layer_2_execution, layer_3_attention from status-report when available) so script consumers get the same structure.
 
 
 ## Research Inputs
