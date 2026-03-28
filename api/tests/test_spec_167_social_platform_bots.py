@@ -77,6 +77,15 @@ def test_spec_verification_table_present():
     assert "Discord" in text or "cc-link" in text.lower()
 
 
+def test_spec_verification_table_includes_roi_r2_and_cc_link_proofs():
+    """Acceptance: verification table documents /cc-link, attribution, and ROI R2 evidence."""
+    text = _spec_text()
+    assert "ROI R2" in text
+    assert "open_questions" in text
+    assert "/cc-link" in text
+    assert "contributor_id" in text
+
+
 def test_cc_link_command_file_exists():
     """Proof: /cc-link implementation file exists (spec file paths)."""
     assert _cc_link_js.is_file(), f"Expected {_cc_link_js}"
