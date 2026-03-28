@@ -148,6 +148,39 @@ Each phase is a separate numbered Alembic migration. Phases 1–2 are in scope f
 
 ---
 
+## Files to Create/Modify
+
+- `api/alembic/versions/<timestamp>_add_graph_nodes_edges.py` — Alembic migration adding `graph_nodes`, `graph_edges` tables, ENUMs, and all indexes
+- `api/app/models/graph_node.py` — Pydantic models: `GraphNodeCreate`, `GraphNodeResponse`, `GraphNodePatch`
+- `api/app/models/graph_edge.py` — Pydantic models: `GraphEdgeCreate`, `GraphEdgeResponse`
+- `api/app/routers/graph.py` — FastAPI router mounted at `/api/graph` (CRUD + bulk upsert + traversal)
+- `api/app/services/graph_service.py` — `create_node()`, `get_node()`, `patch_node()`, `soft_delete_node()`, `bulk_upsert_nodes()`, `create_edge()`, `get_neighbors()`
+- `api/tests/test_graph_router.py` — pytest test suite covering all endpoints and edge cases
+
+## Acceptance Criteria
+
+All acceptance criteria map 1:1 to tests in `api/tests/test_graph_router.py`:
+
+- `test_create_node` — POST `/api/graph/nodes` returns 201 with `node_id` UUID
+- `test_get_node` — GET `/api/graph/nodes/{id}` returns 200 with correct payload
+- `test_get_node_not_found` — GET for unknown UUID returns 404
+- `test_patch_node` — PATCH updates `payload` and advances `updated_at`
+- `test_soft_delete_node` — DELETE sets `deleted_at`; subsequent GET returns 404
+- `test_bulk_upsert_nodes` — POST `/api/graph/nodes/bulk` with 500 records returns 207 with all `node_id` values
+- `test_create_edge` — POST `/api/graph/edges` returns 201 with `edge_id`
+- `test_get_neighbors_depth1` — GET `/api/graph/nodes/{id}/neighbors?depth=1` returns correct first-degree neighbors
+- `test_soft_deleted_not_in_list` — soft-deleted nodes omitted from list and neighbor results
+- `test_ruff_clean` — (CI check) `ruff check` passes with 0 warnings
+
+## Out of Scope
+
+- Neo4j sync / Cypher bridge for heavy analytics queries
+- WebSocket / SSE push on node/edge change events
+- ACL per-node row-level security (depends on auth layer)
+- Migration phases 3–5 (dual-write, deprecation of legacy columns)
+- Operator CLI commands (`cc graph list`)
+- Hard deletes (admin endpoint only, not in this spec)
+
 ## Files Allowed (Task Card)
 
 ```yaml
