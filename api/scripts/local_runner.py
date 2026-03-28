@@ -275,17 +275,16 @@ def _detect_providers() -> dict[str, dict]:
         providers[name] = spec
 
     # API-based providers (no CLI binary needed)
-    # OpenRouter free-tier provider (no API key required for :free models)
-    if _check_openrouter():
-        providers["openrouter"] = {
-            "api": True,
-            "models": list(OPENROUTER_FREE_MODELS),
-            "tool_capable": False,
-        }
-        log.info(
-            "Provider detected: openrouter (API free tier, %d models, Thompson Sampling per task_type)",
-            len(OPENROUTER_FREE_MODELS),
-        )
+    # OpenRouter: DISABLED — cannot produce PRs, generates hollow completions.
+    # Re-enable by removing "openrouter" from _PAUSED_PROVIDERS and uncommenting below.
+    # if _check_openrouter():
+    #     providers["openrouter"] = {
+    #         "api": True,
+    #         "models": list(OPENROUTER_FREE_MODELS),
+    #         "tool_capable": False,
+    #     }
+    #     log.info("Provider detected: openrouter (API free tier)")
+    log.info("Provider DISABLED: openrouter (paused — hollow completions, no PR capability)")
 
     return providers
 
@@ -1809,14 +1808,17 @@ Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>"""
 Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
 Output a summary: files created/modified, validation results, errors encountered."""
 
-    prompt = f"""You are acting as a {agent} for the Coherence Network project.
+    prompt = f"""EXECUTE THIS TASK NOW. Do NOT ask what to do — the task is described below. Start working immediately.
 
 Task type: {task_type}
 Task ID: {task.get('id', 'unknown')}
+Role: {agent} for Coherence Network
 
-Direction:
+TASK:
 {direction}
-{type_instructions}"""
+{type_instructions}
+
+CRITICAL: Start executing immediately. Do NOT respond with "I'm ready" or "What should I do?" — the task is above. Do the work, write files, commit, and output results."""
     # Resume from checkpoint — either from explicit resume mode or from reaper retry
     if isinstance(context, dict):
         resume_patch_path = str(context.get("resume_patch_path") or "").strip()
