@@ -49,11 +49,17 @@ def _find_contributor(contributor_id: str) -> dict[str, Any] | None:
 
 def _contributor_summary(node: dict[str, Any]) -> ContributorSummary:
     identities: list[LinkedIdentity] = []
+    # Node properties might be merged into top level or in "properties" key
     props = node.get("properties") or {}
-    if props.get("github_handle"):
-        identities.append(LinkedIdentity(type="github", handle=props["github_handle"], verified=True))
-    if props.get("telegram_handle"):
-        identities.append(LinkedIdentity(type="telegram", handle=props["telegram_handle"], verified=True))
+    
+    gh = props.get("github_handle") or node.get("github_handle")
+    if gh:
+        identities.append(LinkedIdentity(type="github", handle=gh, verified=True))
+        
+    tg = props.get("telegram_handle") or node.get("telegram_handle")
+    if tg:
+        identities.append(LinkedIdentity(type="telegram", handle=tg, verified=True))
+        
     wa = node.get("wallet_address") or props.get("wallet_address")
     if wa:
         identities.append(LinkedIdentity(type="wallet", handle=wa, verified=False))

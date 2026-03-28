@@ -42,6 +42,7 @@ from app.routers import (
     traceability,
     treasury,
     value_lineage,
+    contributors_portfolio,
 )
 from app.routers import beliefs
 from app.routers import concepts
@@ -536,6 +537,7 @@ async def reset_database(x_admin_key: str = Header(None)):
 
 # Resource routers (canonical)
 app.include_router(contributors.router, prefix="/api", tags=["contributors"])
+app.include_router(contributors_portfolio.router, prefix="/api", tags=["contributors"])
 app.include_router(assets.router, prefix="/api", tags=["assets"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
 app.include_router(contributions.router, prefix="/api", tags=["contributions"])
