@@ -579,6 +579,10 @@ app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 from app.routers import brief as brief_router  # noqa: E402
 app.include_router(brief_router.router)
 
+# Self-balancing graph health monitor (spec-172)
+from app.routers import graph_health as graph_health_router  # noqa: E402
+app.include_router(graph_health_router.router, prefix="/api", tags=["graph-health"])
+
 # Identity-driven onboarding - TOFU MVP (spec-168)
 app.include_router(onboarding_router.router, tags=["onboarding"])
 

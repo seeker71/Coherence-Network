@@ -87,3 +87,12 @@ from app.services.contributor_identity_service import ContributorIdentityRecord 
 
 # Graph models (Node + Edge universal data layer)
 from app.models.graph import Node, Edge  # noqa: F401
+
+# ---------------------------------------------------------------------------
+# Graph Health models (spec-172)
+# ---------------------------------------------------------------------------
+from app.db.graph_health_repo import (  # noqa: F401
+    GraphHealthSnapshotRecord,
+    GraphSignalRecord,
+    ConvergenceGuardRecord,
+)
