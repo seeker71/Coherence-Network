@@ -5,40 +5,28 @@
  * Non-interactive mode: cc setup --name <name> --provider <p> --id <id>
  */
 
-import { get, post } from "../api.mjs";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { homedir } from "node:os";
+import { post } from "../api.mjs";
 import { join } from "node:path";
+import { homedir } from "node:os";
 import { createInterface } from "node:readline";
+import { loadKeys, saveKeys, saveConfig, CONFIG_DIR } from "../config.mjs";
 
-const CONFIG_DIR = join(homedir(), ".coherence-network");
 const KEYS_FILE = join(CONFIG_DIR, "keys.json");
 
 function ask(rl, question) {
   return new Promise((resolve) => rl.question(question, resolve));
 }
 
-function loadKeys() {
-  try {
-    return JSON.parse(readFileSync(KEYS_FILE, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-function saveKeys(keys) {
-  mkdirSync(CONFIG_DIR, { recursive: true });
-  writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2), { mode: 0o600 });
-}
-
 export async function setup(args) {
+  const force = args.includes("--force") || args.includes("--reset");
+
   // Check if already set up
   const keys = loadKeys();
-  if (keys.api_key && keys.contributor_id) {
+  if (keys.api_key && keys.contributor_id && !force) {
     console.log(`\n\x1b[32m✓\x1b[0m Already set up as \x1b[1m${keys.contributor_id}\x1b[0m`);
     console.log(`  API key: ${keys.api_key.slice(0, 12)}...`);
-    console.log(`  Provider: ${keys.provider}:${keys.provider_id}`);
-    console.log(`\n  To reconfigure: rm ${KEYS_FILE} && cc setup`);
+    if (keys.provider) console.log(`  Provider: ${keys.provider}:${keys.provider_id}`);
+    console.log(`\n  To reconfigure: cc setup --reset`);
     return;
   }
 
@@ -92,11 +80,12 @@ Everything you create, contribute, and invest will be attributed to you.
 async function completeSetup(name, provider, providerId) {
   console.log(`\n  Setting up \x1b[1m${name}\x1b[0m with ${provider}:${providerId}...`);
 
-  // Generate API key
-  const result = await post("/api/auth/keys", {
-    contributor_id: name,
+  // One-shot onboard: create contributor + link identity + generate key
+  const result = await post("/api/onboard", {
+    name,
     provider,
     provider_id: providerId,
+    display_name: name,
   });
 
   if (!result || !result.api_key) {
@@ -104,16 +93,16 @@ async function completeSetup(name, provider, providerId) {
     return;
   }
 
-  // Save to config
-  const keys = {
+  // Save API key to keys.json and contributor_id to config.json
+  saveKeys({
     contributor_id: name,
     api_key: result.api_key,
     provider,
     provider_id: providerId,
     created_at: result.created_at,
     scopes: result.scopes,
-  };
-  saveKeys(keys);
+  });
+  saveConfig({ contributor_id: name });
 
   console.log(`
 \x1b[32m✓\x1b[0m Setup complete!

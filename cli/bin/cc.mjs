@@ -12,6 +12,7 @@ import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
 import { showStatus, showResonance } from "../lib/commands/status.mjs";
 import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdentity, setIdentity } from "../lib/commands/identity.mjs";
+import { setup } from "../lib/commands/setup.mjs";
 import { listNodes, sendMessage, sendCommand, readMessages } from "../lib/commands/nodes.mjs";
 import { listContributors, showContributor, showContributions } from "../lib/commands/contributors.mjs";
 import { listAssets, showAsset, createAsset } from "../lib/commands/assets.mjs";
@@ -79,6 +80,8 @@ const COMMANDS = {
   deploy:        () => deploy(args),
   listen:        () => listen(args),
   dif:           () => handleDif(args),
+  setup:         () => setup(args),
+  whoami:        () => showWhoami(),
   login:         () => handleLogin(args),
   logout:        () => handleLogout(args),
   auth:          () => handleAuth(args),
@@ -193,6 +196,30 @@ async function handleProviders(args) {
     case "stats": return showProviderStats();
     default:      return listProviders();
   }
+}
+
+async function showWhoami() {
+  const { get } = await import("../lib/api.mjs");
+  const { loadKeys } = await import("../lib/config.mjs");
+  const keys = loadKeys();
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", Y = "\x1b[33m";
+  console.log(`\n${B}  WHOAMI${R}`);
+  console.log(`  ${"─".repeat(40)}`);
+  if (keys.contributor_id) {
+    console.log(`  Contributor: ${B}${keys.contributor_id}${R}`);
+    if (keys.provider) console.log(`  Identity:    ${keys.provider}:${keys.provider_id}`);
+    if (keys.api_key) console.log(`  API key:     ${keys.api_key.slice(0, 16)}...`);
+    const data = await get("/api/auth/whoami");
+    if (data?.authenticated) {
+      console.log(`  Network:     ${G}authenticated${R}`);
+      if (data.scopes) console.log(`  Scopes:      ${D}${data.scopes.join(", ")}${R}`);
+    } else {
+      console.log(`  Network:     ${Y}key not recognized by server${R}`);
+    }
+  } else {
+    console.log(`  ${Y}Not set up yet.${R} Run: cc setup`);
+  }
+  console.log();
 }
 
 async function handleLogin(args) {
@@ -340,8 +367,10 @@ function showHelp() {
   fork <id>               Fork an idea
 
 \x1b[1mIdentity:\x1b[0m
+  setup                   Interactive onboarding — creates contributor + API key
+  setup --reset           Re-run setup (replace existing key)
+  whoami                  Show authenticated contributor + key status
   identity                Show your linked accounts
-  identity setup          Guided onboarding
   identity set <id>       Set identity non-interactively
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider

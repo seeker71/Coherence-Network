@@ -10,7 +10,7 @@ import os
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel
 
 from app.middleware.traceability import traces_to
@@ -221,19 +221,108 @@ async def submit_verification_proof(body: VerifyProof) -> dict:
     }
 
 
+class OnboardRequest(BaseModel):
+    name: str
+    provider: str
+    provider_id: str
+    display_name: str | None = None
+
+
+@router.post("/onboard", status_code=201)
+@traces_to(spec="identity-driven-onboarding", idea="identity-driven-onboarding")
+async def onboard_contributor(body: OnboardRequest) -> dict:
+    """One-shot onboarding: create contributor + link identity + generate API key.
+
+    This is the primary entry point for `cc setup`.
+    Returns the API key — save it to ~/.coherence-network/keys.json.
+    """
+    from app.services import contributor_identity_service, contributor_service
+
+    # 1. Create or retrieve contributor record
+    existing = contributor_service.get_contributor(body.name)
+    if not existing:
+        try:
+            contributor_service.create_contributor(
+                name=body.name,
+                contributor_type="HUMAN",
+            )
+        except Exception:
+            pass
+
+    # 2. Link the primary identity (trust-on-first-use)
+    identities = contributor_identity_service.get_identities(body.name)
+    already_linked = any(
+        i.get("provider") == body.provider and i.get("provider_id") == body.provider_id
+        for i in identities
+    )
+    if not already_linked:
+        contributor_identity_service.link_identity(
+            contributor_id=body.name,
+            provider=body.provider,
+            provider_id=body.provider_id,
+            display_name=body.display_name or body.provider_id,
+            verified=False,
+        )
+
+    # 3. Also link name identity for discoverability
+    name_linked = any(i.get("provider") == "name" for i in identities)
+    if not name_linked:
+        try:
+            contributor_identity_service.link_identity(
+                contributor_id=body.name,
+                provider="name",
+                provider_id=body.name,
+                display_name=body.display_name or body.name,
+                verified=False,
+            )
+        except Exception:
+            pass
+
+    # 4. Generate personal API key
+    raw_key = f"cc_{body.name}_{secrets.token_hex(16)}"
+    key_hash = _hash_key(raw_key)
+    now = datetime.now(timezone.utc).isoformat()
+
+    scopes = ["own:read", "own:write", "contribute", "stake", "vote"]
+    _KEY_STORE[key_hash] = {
+        "contributor_id": body.name,
+        "provider": body.provider,
+        "provider_id": body.provider_id,
+        "created_at": now,
+        "scopes": scopes,
+    }
+
+    return {
+        "contributor_id": body.name,
+        "api_key": raw_key,
+        "provider": body.provider,
+        "provider_id": body.provider_id,
+        "created_at": now,
+        "scopes": scopes,
+        "message": f"Welcome to Coherence Network, {body.name}! Key saved — run: cc status",
+    }
+
+
 @router.get("/auth/whoami")
-async def whoami(x_api_key: str | None = None):
-    """Check who the current API key belongs to."""
-    if not x_api_key:
+async def whoami(
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+    api_key_query: str | None = None,
+):
+    """Check who the current API key belongs to.
+
+    Accepts the key via X-API-Key header (preferred) or api_key_query param.
+    """
+    key = x_api_key or api_key_query
+    if not key:
         return {"authenticated": False, "message": "No API key provided. Run: cc setup"}
 
-    info = verify_contributor_key(x_api_key)
+    info = verify_contributor_key(key)
     if info:
         return {"authenticated": True, **info}
 
     # Check if it's the system dev-key
     from app.middleware.auth import _API_KEY
-    if x_api_key == _API_KEY:
+    if key == _API_KEY:
         return {"authenticated": True, "contributor_id": "system", "scopes": ["admin"]}
 
     return {"authenticated": False, "message": "Invalid API key"}

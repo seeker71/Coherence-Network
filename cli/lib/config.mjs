@@ -47,3 +47,34 @@ export function getHubUrl() {
     DEFAULT_HUB_URL
   );
 }
+
+const KEYS_FILE = join(CONFIG_DIR, "keys.json");
+
+export function loadKeys() {
+  try {
+    return JSON.parse(readFileSync(KEYS_FILE, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+export function saveKeys(updates) {
+  const keys = { ...loadKeys(), ...updates };
+  if (!existsSync(CONFIG_DIR)) {
+    mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+  writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2) + "\n", { mode: 0o600 });
+  return keys;
+}
+
+/**
+ * Get the personal API key for this contributor from keys.json.
+ * Falls back to COHERENCE_API_KEY env var.
+ */
+export function getApiKey() {
+  return (
+    process.env.COHERENCE_API_KEY ||
+    loadKeys().api_key ||
+    null
+  );
+}
