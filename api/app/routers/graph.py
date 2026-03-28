@@ -365,12 +365,25 @@ async def find_path(
 
 
 @router.get("/graph/node-types")
-async def get_node_types():
-    """Return the canonical node type vocabulary (spec-168).
+async def get_node_types(family: str | None = None):
+    """Return the canonical node type vocabulary (spec-169).
 
-    Returns exactly 10 node types with type, description, and lifecycle_default.
+    Returns all node types grouped by family with lifecycle metadata.
+    Falls back to JSON registry when available; uses Python config as canonical source.
+    Optional family filter to narrow results.
     """
-    return {"node_types": _NODE_TYPE_REGISTRY}
+    # Prefer rich Python config (spec-169) over flat JSON (spec-168)
+    result = fractal_primitives_service.get_node_type_registry()
+    if family:
+        result["families"] = [
+            f for f in result["families"]
+            if f["slug"] == family or f["name"] == family
+        ]
+        result["total"] = sum(len(f["types"]) for f in result["families"])
+    # Include flat list for backwards compat with spec-168 consumers
+    if _NODE_TYPE_REGISTRY:
+        result["node_types"] = _NODE_TYPE_REGISTRY
+    return result
 
 
 # ── Spec-168: Edge type registry ────────────────────────────────────

@@ -1,0 +1,92 @@
+[
+  {
+    "type": "idea",
+    "description": "An atomic unit of intent or insight. The primary entry point for new work.",
+    "lifecycle_default": "water",
+    "fractal": true
+  },
+  {
+    "type": "concept",
+    "description": "A named abstraction or mental model that underpins multiple ideas.",
+    "lifecycle_default": "water",
+    "fractal": true
+  },
+  {
+    "type": "spec",
+    "description": "A formal specification defining behaviour, contracts, or requirements.",
+    "lifecycle_default": "ice",
+    "fractal": true
+  },
+  {
+    "type": "implementation",
+    "description": "Concrete code, configuration, or artefact that realises a spec.",
+    "lifecycle_default": "water",
+    "fractal": false
+  },
+  {
+    "type": "contributor",
+    "description": "A human or AI agent who contributes to the network.",
+    "lifecycle_default": "water",
+    "fractal": false
+  },
+  {
+    "type": "service",
+    "description": "A running software service or API that the network depends on.",
+    "lifecycle_default": "water",
+    "fractal": true
+  },
+  {
+    "type": "domain",
+    "description": "A bounded context or subject area that groups related nodes.",
+    "lifecycle_default": "water",
+    "fractal": true
+  },
+  {
+    "type": "task",
+    "description": "An executable work unit assigned to an agent.",
+    "lifecycle_default": "water",
+    "fractal": false
+  },
+  {
+    "type": "asset",
+    "description": "A digital artefact — file, image, dataset, credential.",
+    "lifecycle_default": "water",
+    "fractal": false
+  },
+  {
+    "type": "news_item",
+    "description": "An external news article or event ingested into the network.",
+    "lifecycle_default": "water",
+    "fractal": false
+  },
+  {
+    "type": "measurement",
+    "description": "A quantitative signal or metric observation.",
+    "lifecycle_default": "ice",
+    "fractal": false
+  },
+  {
+    "type": "federation_node",
+    "description": "A peer Coherence Network instance in the federation.",
+    "lifecycle_default": "water",
+    "fractal": false
+  },
+  {
+    "type": "axis",
+    "description": "A navigational dimension or resonance axis.",
+    "lifecycle_default": "ice",
+    "fractal": true
+  },
+  {
+    "type": "frequency",
+    "description": "A periodic signal or harmonic dimension.",
+    "lifecycle_default": "water",
+    "fractal": false
+  },
+  {
+    "type": "message",
+    "description": "A communication event between agents or systems.",
+    "lifecycle_default": "ice",
+    "fractal": false
+  }
+]
