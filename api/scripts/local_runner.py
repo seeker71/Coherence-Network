@@ -2626,10 +2626,15 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
     log.info("OPERATIONAL task=%s type=%s idea=%s", task_id, task_type, idea_id)
     try:
         if task_type == "merge":
-            subprocess.run(
+            pre_fetch = subprocess.run(
                 ["git", "fetch", "origin", "main"],
                 capture_output=True, text=True, timeout=60, cwd=cwd,
             )
+            if pre_fetch.returncode != 0:
+                log.warning(
+                    "MERGE_PREFETCH origin/main failed (continuing): %s",
+                    (pre_fetch.stderr or "")[:200],
+                )
             pr_result = subprocess.run(
                 ["gh", "pr", "list", "--search", idea_id, "--json", "number,title", "--limit", "1"],
                 capture_output=True, text=True, timeout=15, cwd=cwd, shell=(sys.platform == "win32"),
@@ -2658,15 +2663,22 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
                 else:
                     output = f"MERGE_FAILED: {merge_result.stderr.strip()[:200]}"
             else:
-                subprocess.run(
+                nf = subprocess.run(
                     ["git", "fetch", "origin", "main"],
                     capture_output=True, text=True, timeout=60, cwd=cwd,
                 )
-                output = f"MERGE_PASSED: No open PR for {idea_id} — code already on main (fetched origin/main)."
+                if nf.returncode != 0:
+                    log.warning("MERGE_NOPR_FETCH failed (continuing): %s", (nf.stderr or "")[:200])
+                output = f"MERGE_PASSED: No open PR for {idea_id} — code already on main."
         elif task_type == "deploy":
             result = _deploy_to_vps()
-            ok_d = _deploy_succeeded_message(result)
-            output = f"DEPLOY_PASSED: {result}" if ok_d else f"DEPLOY_FAILED: {result}"
+            rl = result.lower()
+            if "deploy skipped" in rl:
+                output = f"DEPLOY_SKIPPED: {result}"
+                ok_d = False
+            else:
+                ok_d = _deploy_succeeded_message(result)
+                output = f"DEPLOY_PASSED: {result}" if ok_d else f"DEPLOY_FAILED: {result}"
         elif task_type == "verify":
             ok_v, detail = _verify_production_http_checks()
             output = ("VERIFY_PASSED: " if ok_v else "VERIFY_FAILED: ") + detail
@@ -4427,7 +4439,7 @@ def _verify_production_http_checks() -> tuple[bool, str]:
     checks = [
         (f"{api_base}/api/health", 200, "API health"),
         (f"{api_base}/api/ideas/count", 200, "Ideas count"),
-        (f"{api_base}/api/coherence", 200, "Coherence endpoint"),
+        (f"{api_base}/api/coherence/score", 200, "Coherence score"),
         (web_base.rstrip("/") + "/", 200, "Web root"),
     ]
     for url, expected_status, label in checks:
@@ -4587,64 +4599,73 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                     ok = _runner_verify_phase(task)
                     pushed = True  # verify is read-only
                 elif wt:
-                    ok, diff = _run_task_in_worktree(task, wt)
-                    # Guard: reject destructive diffs for impl/test (not cleanup/heal)
-                    if diff and task_type in ("impl", "test"):
-                        add_lines = diff.count("\n+") - diff.count("\n+++")
-                        del_lines = diff.count("\n-") - diff.count("\n---")
-                        if del_lines > add_lines * 3 and del_lines > 50:
-                            log.warning("WORKER[%d] DESTRUCTIVE_DIFF task=%s +%d -%d — rejecting",
-                                        worker_id, task_id[:16], add_lines, del_lines)
-                            diff = ""  # Treat as no code produced
+                    ok = False
+                    diff = ""
+                    pushed = False
+                    _set_defer_phase_advance(True)
+                    try:
+                        ok, diff = _run_task_in_worktree(task, wt)
+                        # Guard: reject destructive diffs for impl/test (not cleanup/heal)
+                        if diff and task_type in ("impl", "test"):
+                            add_lines = diff.count("\n+") - diff.count("\n+++")
+                            del_lines = diff.count("\n-") - diff.count("\n---")
+                            if del_lines > add_lines * 3 and del_lines > 50:
+                                log.warning("WORKER[%d] DESTRUCTIVE_DIFF task=%s +%d -%d — rejecting",
+                                            worker_id, task_id[:16], add_lines, del_lines)
+                                diff = ""  # Treat as no code produced
+                                ok = False
+                                complete_task(task_id, f"Rejected: diff deletes {del_lines} lines but only adds {add_lines}. Impl must add, not delete.", False)
+                        if ok and diff:
+                            # Push BRANCH (not main) — code stays on branch until code-review
+                            pushed = _push_branch_to_origin(task_id, wt)
+                            if not pushed:
+                                log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
+                        elif not ok and diff and task_type in ("impl", "test"):
+                            # Timed out but produced real code — save the work, push branch
+                            log.info("WORKER[%d] TIMEOUT_WITH_CODE task=%s type=%s diff=%d bytes — pushing partial work",
+                                     worker_id, task_id[:16], task_type, len(diff))
+                            pushed = _push_branch_to_origin(task_id, wt)
+                            if pushed:
+                                # Record as timed_out (not failed) so retry carries the branch forward
+                                complete_task(
+                                    task_id,
+                                    f"Timed out but produced code changes (branch pushed). Retry should continue from this branch.",
+                                    False,
+                                    context_patch={
+                                        "branch_pushed": True,
+                                        "diff_size": len(diff),
+                                        "diff_content": diff[:5000],  # Actual code for retry carry-over
+                                        "partial_timeout": True,
+                                    },
+                                )
+                            else:
+                                complete_task(
+                                    task_id,
+                                    f"Timed out with {len(diff)} bytes of code, but branch push failed.",
+                                    False,
+                                    context_patch={"diff_content": diff[:5000], "diff_size": len(diff)},
+                                )
+                        elif ok and task_type in ("spec", "review", "code-review"):
+                            pushed = True  # Text-only phases don't need a diff
+                        elif ok and task_type in ("impl", "test"):
+                            # impl/test MUST produce code — no diff means provider didn't actually write anything
+                            log.warning("WORKER[%d] NO_CODE_PRODUCED task=%s type=%s — marking failed (provider claimed success but wrote no files)",
+                                        worker_id, task_id[:16], task_type)
                             ok = False
-                            complete_task(task_id, f"Rejected: diff deletes {del_lines} lines but only adds {add_lines}. Impl must add, not delete.", False)
-                    if ok and diff:
-                        # Push BRANCH (not main) — code stays on branch until code-review
-                        pushed = _push_branch_to_origin(task_id, wt)
-                        if not pushed:
-                            log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
-                    elif not ok and diff and task_type in ("impl", "test"):
-                        # Timed out but produced real code — save the work, push branch
-                        log.info("WORKER[%d] TIMEOUT_WITH_CODE task=%s type=%s diff=%d bytes — pushing partial work",
-                                 worker_id, task_id[:16], task_type, len(diff))
-                        pushed = _push_branch_to_origin(task_id, wt)
-                        if pushed:
-                            # Record as timed_out (not failed) so retry carries the branch forward
-                            complete_task(
-                                task_id,
-                                f"Timed out but produced code changes (branch pushed). Retry should continue from this branch.",
-                                False,
-                                context_patch={
-                                    "branch_pushed": True,
-                                    "diff_size": len(diff),
-                                    "diff_content": diff[:5000],  # Actual code for retry carry-over
-                                    "partial_timeout": True,
-                                },
-                            )
-                        else:
-                            complete_task(
-                                task_id,
-                                f"Timed out with {len(diff)} bytes of code, but branch push failed.",
-                                False,
-                                context_patch={"diff_content": diff[:5000], "diff_size": len(diff)},
-                            )
-                    elif ok and task_type in ("spec", "review", "code-review"):
-                        pushed = True  # Text-only phases don't need a diff
-                    elif ok and task_type in ("impl", "test"):
-                        # impl/test MUST produce code — no diff means provider didn't actually write anything
-                        log.warning("WORKER[%d] NO_CODE_PRODUCED task=%s type=%s — marking failed (provider claimed success but wrote no files)",
-                                    worker_id, task_id[:16], task_type)
-                        ok = False
-                        complete_task(task_id, "Provider claimed success but produced no code changes. No git diff detected in worktree.", False)
-                    elif ok:
-                        pushed = True  # Other phases (heal, etc)
+                            complete_task(task_id, "Provider claimed success but produced no code changes. No git diff detected in worktree.", False)
+                        elif ok:
+                            pushed = True  # Other phases (heal, etc)
 
-                    # After code-review passes, merge branch to main
-                    if ok and pushed and task_type == "code-review":
-                        merged = _merge_branch_to_main(task_id)
-                        if not merged:
-                            log.warning("WORKER[%d] MERGE_TO_MAIN_FAILED task=%s", worker_id, task_id[:16])
-                            pushed = False  # Don't advance to deploy if merge failed
+                        # After code-review passes, merge branch to main (pushes origin/main)
+                        if ok and pushed and task_type == "code-review":
+                            merged = _merge_branch_to_main(task_id)
+                            if not merged:
+                                log.warning("WORKER[%d] MERGE_TO_MAIN_FAILED task=%s", worker_id, task_id[:16])
+                                pushed = False  # Don't advance to deploy if merge failed
+                    finally:
+                        _set_defer_phase_advance(False)
+                    if ok and pushed:
+                        _finalize_deferred_phase_advance(task_id, task_type)
                 else:
                     if task_type in ("impl", "test"):
                         # impl/test MUST run in worktree — no fallback allowed
