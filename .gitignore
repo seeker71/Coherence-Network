@@ -59,29 +59,10 @@ out.txt
 
 # SQLite databases and WAL sidecar files (regenerate via: python3 scripts/seed_db.py)
 data/*.db
+data/coherence.db
 *.db-wal
 *.db-shm
-*.pyc\n__pycache__/\n.task-*\ndata/coherence.db
-*.pyc
-__pycache__/
+
+# Task runner / local agent artifacts
 .task-*
-data/coherence.db
-*.pyc
-__pycache__/
-.task-*
-data/coherence.db
-*.pyc
-__pycache__/
-.task-*
-data/coherence.db
-*.pyc\n__pycache__/\n.task-*\ndata/coherence.db
-*.pyc
-__pycache__/
-.task-*
-data/coherence.db
-*.pyc\n__pycache__/\n.task-*\ndata/coherence.db\n.codex*
-*.pyc
-__pycache__/
-.task-*
-data/coherence.db
-*.pyc\n__pycache__/\n.task-*\ndata/coherence.db\n.codex*
+.codex*

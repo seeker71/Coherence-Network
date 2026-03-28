@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -679,3 +680,31 @@ def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pyte
     assert ok is True
     assert len(operational_calls) == 1
     assert operational_calls[0][2] == "reflect"
+
+
+def test_create_worktree_recovers_when_slot_still_occupied(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stale worktree + branch from a prior run must not block a second create (impl retry)."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "-C", str(repo), "init"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.email", "t@t"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "config", "user.name", "t"], check=True, capture_output=True)
+    (repo / "f").write_text("x")
+    subprocess.run(["git", "-C", str(repo), "add", "f"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-m", "i"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "branch", "-M", "main"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "remote", "add", "origin", "."], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(repo), "fetch", "origin"], check=True, capture_output=True)
+
+    wt_base = repo / ".worktrees"
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+
+    tid = "task_staleworktree9"
+    first = local_runner._create_worktree(tid)
+    assert first is not None
+    assert first.exists()
+    # No cleanup — same state as "branch push failed, worktree kept"
+    second = local_runner._create_worktree(tid)
+    assert second is not None
+    assert second.exists()
