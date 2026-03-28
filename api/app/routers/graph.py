@@ -2,6 +2,13 @@
 
 This is the universal API. Entity-specific routers (/api/ideas, /api/specs)
 are thin adapters that call graph_service with type filters.
+
+Spec-169 additions:
+  GET  /graph/node-types            — canonical node type vocabulary
+  POST /graph/nodes/{id}/transition — Ice/Water/Gas lifecycle transitions
+  POST /graph/nodes/{id}/sub-nodes  — create fractal sub-node
+  GET  /graph/nodes/{id}/sub-nodes  — list direct sub-nodes
+  POST /graph/validate-edge         — advisory type constraint check
 """
 
 from fastapi import APIRouter, HTTPException, Query
@@ -9,6 +16,7 @@ from pydantic import BaseModel, Field
 from typing import Any
 
 from app.services import graph_service
+from app.services import fractal_primitives_service
 
 router = APIRouter()
 
@@ -174,6 +182,144 @@ async def find_path(
     if path is None:
         return {"path": None, "message": f"No path found within {max_depth} hops"}
     return {"path": path, "length": len(path)}
+
+
+# ── Spec-169: Node type vocabulary ─────────────────────────────────────
+
+
+@router.get("/graph/node-types")
+async def get_node_types(family: str | None = None):
+    """Return the canonical node type vocabulary (spec-169).
+
+    Lists all node types grouped by family, with lifecycle metadata
+    (allowed phases, fractal flag, description).
+    """
+    result = fractal_primitives_service.get_node_type_registry()
+    if family:
+        result["families"] = [
+            f for f in result["families"]
+            if f["slug"] == family or f["name"] == family
+        ]
+        result["total"] = sum(len(f["types"]) for f in result["families"])
+    return result
+
+
+# ── Spec-169: Lifecycle phase transitions ──────────────────────────────
+
+
+class PhaseTransitionRequest(BaseModel):
+    to_phase: str
+    reason: str = ""
+    actor: str = "system"
+
+
+@router.post("/graph/nodes/{node_id}/transition")
+async def transition_node_phase(node_id: str, body: PhaseTransitionRequest):
+    """Transition a node's lifecycle phase (gas ↔ water ↔ ice).
+
+    Valid transitions:
+      gas   → water | ice
+      water → ice   | gas
+      ice   → water | gas
+
+    Returns 404 if node not found, 400 if transition is invalid.
+    """
+    result = fractal_primitives_service.transition_node_phase(
+        node_id=node_id,
+        to_phase=body.to_phase,
+        reason=body.reason,
+        actor=body.actor,
+    )
+    error = result.get("error")
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+    if error in ("invalid_phase", "invalid_transition", "phase_not_allowed_for_type"):
+        raise HTTPException(status_code=400, detail=result.get("detail", error))
+    if error == "no_op":
+        return result  # 200 with no_op is fine
+    return result
+
+
+# ── Spec-169: Fractal sub-nodes ─────────────────────────────────────
+
+
+class SubNodeCreate(BaseModel):
+    type: str
+    name: str
+    description: str = ""
+    properties: dict[str, Any] = Field(default_factory=dict)
+    phase: str | None = None
+    created_by: str = "system"
+
+
+@router.post("/graph/nodes/{node_id}/sub-nodes", status_code=201)
+async def create_sub_node(node_id: str, body: SubNodeCreate):
+    """Create a fractal sub-node of node_id (spec-169).
+
+    Creates the child node and a parent-of edge from parent → child.
+    Returns 404 if parent not found, 400 if parent type is not fractal.
+    """
+    result = fractal_primitives_service.create_sub_node(
+        parent_id=node_id,
+        type=body.type,
+        name=body.name,
+        description=body.description,
+        properties=body.properties,
+        phase=body.phase,
+        created_by=body.created_by,
+    )
+    error = result.get("error")
+    if error == "parent_not_found":
+        raise HTTPException(status_code=404, detail=f"Parent node '{node_id}' not found")
+    if error == "not_fractal":
+        raise HTTPException(status_code=400, detail=result.get("detail", "not_fractal"))
+    return result
+
+
+@router.get("/graph/nodes/{node_id}/sub-nodes")
+async def get_sub_nodes(
+    node_id: str,
+    type: str | None = None,
+    phase: str | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+):
+    """List direct sub-nodes of node_id (spec-169).
+
+    Only returns nodes connected via parent-of edges.
+    Optionally filters by node type and/or phase.
+    """
+    result = fractal_primitives_service.get_sub_nodes(
+        parent_id=node_id,
+        node_type=type,
+        phase=phase,
+        limit=limit,
+    )
+    if result.get("error") == "not_found":
+        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+    return result
+
+
+# ── Spec-169: Edge constraint validation ───────────────────────────────
+
+
+class EdgeValidateRequest(BaseModel):
+    from_type: str
+    to_type: str
+    edge_type: str
+
+
+@router.post("/graph/validate-edge")
+async def validate_edge_types(body: EdgeValidateRequest):
+    """Advisory check: is this edge type semantically valid between two node types?
+
+    Does not write anything. Returns warnings if the combination is unusual.
+    Always returns 200 — use the 'valid' field to check the result.
+    """
+    return fractal_primitives_service.validate_edge_for_types(
+        from_type=body.from_type,
+        to_type=body.to_type,
+        edge_type=body.edge_type,
+    )
 
 
 # ── DIF Feedback endpoints ───────────────────────────────────────────

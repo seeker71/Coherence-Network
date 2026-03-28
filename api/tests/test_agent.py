@@ -239,3 +239,105 @@ async def test_effectiveness_plan_progress_phase_boundary_logic() -> None:
         finally:
             eff_svc.STATE_FILES = original_state_files
             eff_svc.BACKLOG_FILE = original_backlog_file
+
+
+# ---------------------------------------------------------------------------
+# Spec 109: Open Responses Interoperability Layer
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_to_open_responses_claude_provider() -> None:
+    """normalize_to_open_responses returns open_responses_v1 record for claude provider.
+
+    Spec 109: provider-agnostic adapter must produce a NormalizedResponseCall
+    with request_schema='open_responses_v1', persisted via provider_usage_service.
+    """
+    import app.services.agent_service as svc
+    import app.services.provider_usage_service as pu_svc
+
+    pu_svc.clear_call_log()
+
+    result = svc.normalize_to_open_responses(
+        task_id="task_test_claude_001",
+        provider="claude",
+        model="claude-sonnet-4-6",
+        output_text="Hello from claude",
+    )
+
+    assert result.task_id == "task_test_claude_001"
+    assert result.provider == "claude"
+    assert result.model == "claude-sonnet-4-6"
+    assert result.request_schema == "open_responses_v1"
+    assert result.output_text == "Hello from claude"
+
+    log = pu_svc.get_call_log_for_task("task_test_claude_001")
+    assert len(log) == 1
+    assert log[0]["request_schema"] == "open_responses_v1"
+
+
+def test_normalize_to_open_responses_codex_provider() -> None:
+    """normalize_to_open_responses returns open_responses_v1 record for codex provider.
+
+    Spec 109: at least two providers execute through the same normalized interface
+    without task-level prompt rewrites. Codex (gpt-based) path must also produce
+    open_responses_v1 schema without any provider-specific payload transformation.
+    """
+    import app.services.agent_service as svc
+    import app.services.provider_usage_service as pu_svc
+
+    pu_svc.clear_call_log()
+
+    result = svc.normalize_to_open_responses(
+        task_id="task_test_codex_001",
+        provider="codex",
+        model="gpt-4o",
+        output_text="Hello from codex",
+    )
+
+    assert result.task_id == "task_test_codex_001"
+    assert result.provider == "codex"
+    assert result.model == "gpt-4o"
+    assert result.request_schema == "open_responses_v1"
+    assert result.output_text == "Hello from codex"
+
+    log = pu_svc.get_call_log_for_task("task_test_codex_001")
+    assert len(log) == 1
+    assert log[0]["provider"] == "codex"
+    assert log[0]["request_schema"] == "open_responses_v1"
+
+
+def test_normalize_to_open_responses_route_evidence_persisted() -> None:
+    """Route and model evidence is persisted for each normalized call (spec 109).
+
+    Verifies that get_call_log() accumulates records across multiple providers
+    and each entry carries request_schema='open_responses_v1' as the audit marker.
+    """
+    import app.services.agent_service as svc
+    import app.services.provider_usage_service as pu_svc
+
+    pu_svc.clear_call_log()
+
+    providers = [
+        ("task_evidence_001", "claude", "claude-haiku-4-5-20251001", "output_a"),
+        ("task_evidence_002", "codex", "gpt-4o-mini", "output_b"),
+    ]
+
+    for task_id, provider, model, output in providers:
+        svc.normalize_to_open_responses(
+            task_id=task_id,
+            provider=provider,
+            model=model,
+            output_text=output,
+        )
+
+    log = pu_svc.get_call_log()
+    assert len(log) == 2, f"Expected 2 audit entries, got {len(log)}"
+
+    for entry in log:
+        assert entry["request_schema"] == "open_responses_v1", (
+            f"All entries must carry open_responses_v1 schema; got {entry['request_schema']!r}"
+        )
+
+    seen_providers = {e["provider"] for e in log}
+    assert "claude" in seen_providers
+    assert "codex" in seen_providers
