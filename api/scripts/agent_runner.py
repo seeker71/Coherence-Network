@@ -3201,6 +3201,36 @@ def _post_tool_failure_friction(
         pass
 
 
+def _post_pipeline_metric(
+    client: httpx.Client,
+    *,
+    task_id: str,
+    task_type: str,
+    model: str,
+    duration_seconds: float,
+    status: str,
+    executor: str = "",
+    prompt_variant: str = "",
+) -> None:
+    """POST task metric to /api/agent/metrics for pipeline observability. Spec 026 Phase 1."""
+    if status not in {"completed", "failed", "timed_out"}:
+        return
+    payload: dict[str, Any] = {
+        "task_id": task_id,
+        "task_type": task_type or "impl",
+        "model": model or "unknown",
+        "duration_seconds": max(0.0, float(duration_seconds)),
+        "status": status,
+        "executor": executor or "",
+    }
+    if prompt_variant:
+        payload["prompt_variant"] = prompt_variant
+    try:
+        client.post(f"{BASE}/api/agent/metrics", json=payload, timeout=5.0)
+    except Exception:
+        pass
+
+
 def _setup_logging(verbose: bool = False) -> logging.Logger:
     os.makedirs(LOG_DIR, exist_ok=True)
     log_file = os.path.join(LOG_DIR, "agent_runner.log")
