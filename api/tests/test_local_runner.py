@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -679,3 +680,46 @@ def test_run_one_dispatches_operational_phase_without_provider(monkeypatch: pyte
     assert ok is True
     assert len(operational_calls) == 1
     assert operational_calls[0][2] == "reflect"
+
+
+def _git_repo_with_origin_main(tmp_path: Path) -> Path:
+    """Clone with ``origin/main`` so ``_create_worktree`` fetch + add matches production."""
+    bare = tmp_path / "origin.git"
+    clone = tmp_path / "repo"
+    subprocess.run(["git", "init", "--bare", str(bare)], check=True, capture_output=True)
+    subprocess.run(["git", "clone", str(bare), str(clone)], check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "t@t.local"], cwd=clone, check=True)
+    subprocess.run(["git", "config", "user.name", "test"], cwd=clone, check=True)
+    (clone / "README.md").write_text("x\n")
+    subprocess.run(["git", "add", "-A"], cwd=clone, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=clone, check=True)
+    subprocess.run(["git", "push", "origin", "HEAD:main"], cwd=clone, check=True)
+    return clone
+
+
+def test_create_worktree_recovers_when_branch_already_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Stale ``task/<slug>`` from a prior run caused ``git worktree add -b`` to fail."""
+    repo = _git_repo_with_origin_main(tmp_path)
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", repo / ".worktrees")
+
+    task_id = "task_d03cb363eb09e0bd"
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    subprocess.run(["git", "branch", branch, "HEAD"], cwd=repo, check=True)
+
+    wt = local_runner._create_worktree(task_id)
+    assert wt is not None
+    assert wt.exists()
+    assert (wt / "README.md").read_text() == "x\n"
+
+
+def test_remove_stale_task_worktree_idempotent(tmp_path: Path) -> None:
+    repo = _git_repo_with_origin_main(tmp_path)
+    slug = "deadbeef00000000"
+    branch = f"task/{slug}"
+    wt_path = repo / ".worktrees" / f"task-{slug}"
+    local_runner._remove_stale_task_worktree(str(repo), branch, wt_path)
+    local_runner._remove_stale_task_worktree(str(repo), branch, wt_path)

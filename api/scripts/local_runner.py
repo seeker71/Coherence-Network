@@ -4063,6 +4063,46 @@ _MAX_PARALLEL = rc("execution", "parallel", 2)
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 
 
+def _remove_stale_task_worktree(repo_root: str, branch: str, wt_path: Path) -> None:
+    """Remove a task worktree directory and local branch so ``git worktree add -b`` can succeed.
+
+    Re-claim after crashes, partial cleanups, or retries where ``task/<slug>`` or the
+    linked path under ``.worktrees/`` was left behind.
+    """
+    try:
+        if wt_path.exists():
+            rm = subprocess.run(
+                ["git", "worktree", "remove", "--force", str(wt_path)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                cwd=repo_root,
+            )
+            if rm.returncode != 0 and wt_path.exists():
+                log.debug(
+                    "WORKTREE_REMOVE_FORCE_FALLBACK path=%s stderr=%s",
+                    wt_path,
+                    (rm.stderr or "")[:300],
+                )
+                shutil.rmtree(wt_path, ignore_errors=True)
+        subprocess.run(
+            ["git", "branch", "-D", branch],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=repo_root,
+        )
+        subprocess.run(
+            ["git", "worktree", "prune"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=repo_root,
+        )
+    except Exception as e:
+        log.warning("WORKTREE_REMOVE_STALE_FAILED branch=%s path=%s error=%s", branch, wt_path, e)
+
+
 def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | None:
     """Create a git worktree for isolated task execution.
 
@@ -4095,13 +4135,39 @@ def _create_worktree(task_id: str, base_branch: str | None = None) -> Path | Non
             else:
                 log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
 
-        subprocess.run(
-            ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
-        )
-        if wt_path.exists():
+        def _run_add() -> tuple[int, str]:
+            add = subprocess.run(
+                ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=repo_root,
+            )
+            err = ((add.stderr or "") + (add.stdout or "")).strip()
+            return add.returncode, err
+
+        rc_add, err_msg = _run_add()
+        if rc_add != 0 or not wt_path.exists():
+            log.warning(
+                "WORKTREE_ADD_FIRST_FAIL task=%s rc=%s base=%s err=%s",
+                slug,
+                rc_add,
+                base_ref,
+                err_msg[:800] if err_msg else "(no output)",
+            )
+            _remove_stale_task_worktree(repo_root, branch, wt_path)
+            rc_add, err_msg = _run_add()
+
+        if rc_add == 0 and wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             return wt_path
+        log.error(
+            "WORKTREE_ADD_FAILED task=%s rc=%s base=%s err=%s",
+            slug,
+            rc_add,
+            base_ref,
+            err_msg[:800] if err_msg else "(no output)",
+        )
     except Exception as e:
         log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
     return None
@@ -4176,16 +4242,7 @@ def _cleanup_worktree(task_id: str) -> None:
     wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
     try:
-        subprocess.run(
-            ["git", "worktree", "remove", "--force", str(wt_path)],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(_REPO_DIR),
-        )
-        subprocess.run(
-            ["git", "branch", "-D", branch],
-            capture_output=True, text=True, timeout=10,
-            cwd=str(_REPO_DIR),
-        )
+        _remove_stale_task_worktree(str(_REPO_DIR), branch, wt_path)
         log.info("WORKTREE_CLEANED task=%s", slug)
     except Exception as e:
         log.warning("WORKTREE_CLEANUP_FAILED task=%s error=%s", slug, e)
