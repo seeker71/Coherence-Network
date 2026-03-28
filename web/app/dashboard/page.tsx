@@ -206,6 +206,82 @@ function TaskStream({ taskId }: { taskId: string }) {
   );
 }
 
+// ── Registry Stats Types ────────────────────────────────────────
+
+type RegistryEntry = {
+  name: string;
+  status: "live" | "pending" | "unknown" | "rejected";
+  listing_url: string | null;
+  installs: number | null;
+};
+
+type RegistryStats = {
+  npm_weekly_downloads: number;
+  npm_total_downloads: number;
+  registries: RegistryEntry[];
+  fetched_at: string;
+  fetched_error: string | null;
+};
+
+// ── Registry Card ───────────────────────────────────────────────
+
+function RegistryCard({ stats, error }: { stats: RegistryStats | null; error: boolean }) {
+  if (error) {
+    return (
+      <div className="rounded-xl border border-border/20 bg-card/40 p-4 space-y-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Registries</p>
+        <p className="text-xs text-muted-foreground">Registry data unavailable</p>
+      </div>
+    );
+  }
+  if (!stats) {
+    return (
+      <div className="rounded-xl border border-border/20 bg-card/40 p-4 space-y-2">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Registries</p>
+        <p className="text-xs text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+  const liveCount = stats.registries.filter(r => r.status === "live").length;
+  return (
+    <div className="rounded-xl border border-border/20 bg-card/40 p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Registries</p>
+        <span className="text-xs text-muted-foreground">{liveCount} of {stats.registries.length} live</span>
+      </div>
+      <div className="grid grid-cols-2 gap-1 text-center mb-1">
+        <div>
+          <p className="text-lg font-bold">{stats.npm_weekly_downloads}</p>
+          <p className="text-[10px] text-muted-foreground">npm/week</p>
+        </div>
+        <div>
+          <p className="text-lg font-bold">{stats.npm_total_downloads}</p>
+          <p className="text-[10px] text-muted-foreground">npm total</p>
+        </div>
+      </div>
+      <div className="space-y-1">
+        {stats.registries.map(r => (
+          <div key={r.name} className="flex items-center gap-2 text-xs">
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+              r.status === "live" ? "bg-green-500" :
+              r.status === "rejected" ? "bg-red-500" :
+              r.status === "unknown" ? "bg-muted-foreground" : "bg-yellow-500"
+            }`} />
+            {r.listing_url ? (
+              <a href={r.listing_url} target="_blank" rel="noopener noreferrer"
+                className="underline text-foreground/80 hover:text-foreground">{r.name.replace("_", ".")}</a>
+            ) : (
+              <span className="text-muted-foreground">{r.name.replace("_", ".")}</span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground">{r.status}</span>
+            {r.installs != null && <span className="text-[10px] text-muted-foreground">↓{r.installs}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Dashboard ─────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -214,6 +290,8 @@ export default function DashboardPage() {
   const [pulse, setPulse] = useState<PulseData | null>(null);
   const [activeTab, setActiveTab] = useState<string>("");
   const [lastRefresh, setLastRefresh] = useState(Date.now());
+  const [registryStats, setRegistryStats] = useState<RegistryStats | null>(null);
+  const [registryError, setRegistryError] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -233,6 +311,14 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => { refresh(); const iv = setInterval(refresh, 10000); return () => clearInterval(iv); }, [refresh]);
+
+  // Registry stats — fetched once on mount
+  useEffect(() => {
+    fetch(`${API}/api/registry/stats`, { cache: "no-store" })
+      .then(r => r.ok ? r.json() : Promise.reject(r))
+      .then((d: RegistryStats) => { setRegistryStats(d); setRegistryError(false); })
+      .catch(() => setRegistryError(true));
+  }, []);
 
   // Auto-select first task tab
   useEffect(() => {

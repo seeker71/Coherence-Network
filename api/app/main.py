@@ -579,6 +579,10 @@ app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
 from app.routers import brief as brief_router  # noqa: E402
 app.include_router(brief_router.router)
 
+# Cross-domain concept resonance (spec-179)
+from app.routers import cross_domain_resonance as cdcr_router  # noqa: E402
+app.include_router(cdcr_router.router, prefix="/api", tags=["resonance"])
+
 # Identity-driven onboarding - TOFU MVP (spec-168)
 app.include_router(onboarding_router.router, tags=["onboarding"])
 
@@ -589,6 +593,9 @@ app.include_router(contributors.router, prefix="/v1", include_in_schema=False)
 app.include_router(assets.router, prefix="/v1", include_in_schema=False)
 app.include_router(contributions.router, prefix="/v1", include_in_schema=False)
 app.include_router(distributions.router, prefix="/v1", include_in_schema=False)
+# MCP/skill registry submission stats (idea-4deb5bd7c800)
+from app.routers import registry as registry_router  # noqa: E402
+app.include_router(registry_router.router, prefix="/api", tags=["registry"])
 
 
 @app.middleware("http")

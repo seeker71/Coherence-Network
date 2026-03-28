@@ -26,6 +26,21 @@ Week 1 outreach minimum:
 - 4 funder/investor-side contacts.
 - Log every message, response, and next step.
 
+## Outreach Tracker
+
+| Contact | Segment | Fit score (1-5) | Channel | Date sent | Response status | Next step | Owner |
+|---|---|---:|---|---|---|---|---|
+| **LangChain** | Project | 5 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **CrewAI** | Project | 5 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **AutoGPT** | Project | 4 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **Ocean Protocol** | Project | 4 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **Gitcoin** | Project | 5 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **Radworks** | Project | 5 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **Protocol Labs** | Funder | 5 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **Gitcoin DAO** | Funder | 5 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **Variant Fund** | Funder | 4 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+| **a16z Crypto** | Funder | 4 | DM/Email | 2026-03-28 | Pending | Follow-up 2026-03-31 | seeker71 |
+
 ## Outreach Tracker Template
 
 | Contact | Segment | Fit score (1-5) | Channel | Date sent | Response status | Next step | Owner |

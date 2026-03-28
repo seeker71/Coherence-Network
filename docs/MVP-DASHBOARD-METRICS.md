@@ -35,7 +35,7 @@ Track whether the MVP marketplace is moving toward validated demand, trusted exe
 
 | Week of | targets_total | outreach_sent_week | reply_rate_week | discovery_calls_week | pilot_projects_active | funders_active | qualified_matches | onboarding_checklist_usage | quality_review_pass_rate | security_policy_compliance | allocated_capital_total_usd | yield_sleeve_allocated_usd | policy_variance_count | Key notes | Next actions |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|
-| YYYY-MM-DD |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| 2026-03-28 | 20 | 10 | 0% | 0 | 0 | 0 | 0 | 0% | 0% | 100% | 0 | 0 | 0 | Initialized week-1 baseline with first outreach sprint. | Execute first 10-contact outreach batch and log results. |
 
 ## Review Process
 
