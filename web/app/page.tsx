@@ -156,7 +156,7 @@ export default async function Home() {
           <h1 className="hero-headline text-3xl md:text-5xl lg:text-6xl font-normal md:font-light tracking-tight leading-[1.15]">
             What idea are you holding?
           </h1>
-          <p className="text-base md:text-lg text-foreground/90 max-w-xl mx-auto leading-relaxed">
+          <p className="text-base md:text-lg hero-body-readable max-w-xl mx-auto leading-relaxed">
             A pattern you noticed. A gap that needs filling. A better way.
             Share it — someone out there is looking for exactly this.
           </p>
@@ -169,7 +169,7 @@ export default async function Home() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
                 </span>
-                <span className="text-sm text-foreground/90">
+                <span className="text-sm text-body-readable">
                   <span className="text-foreground font-medium">{formatNumber(summary?.total_ideas)}</span> ideas alive
                 </span>
               </div>
@@ -178,7 +178,7 @@ export default async function Home() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-2/40" style={{ animationDelay: "0.5s" }} />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-2/60" />
                 </span>
-                <span className="text-sm text-foreground/90">
+                <span className="text-sm text-body-readable">
                   <span className="text-foreground font-medium">{formatNumber(summary?.total_actual_value)}</span> value created
                 </span>
               </div>
@@ -187,7 +187,7 @@ export default async function Home() {
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-chart-3/40" style={{ animationDelay: "1s" }} />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-3/60" />
                 </span>
-                <span className="text-sm text-foreground/90">
+                <span className="text-sm text-body-readable">
                   <span className="text-foreground font-medium">{nodeCount}</span>{" "}node{nodeCount !== 1 ? "s" : ""}
                 </span>
               </div>
@@ -197,7 +197,7 @@ export default async function Home() {
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" style={{ animationDelay: "1.5s" }} />
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
                   </span>
-                  <span className="text-sm text-foreground/90">
+                  <span className="text-sm text-body-readable">
                     <span className="text-foreground font-medium">{formatCoherenceScore(coherenceScore.score)}</span> coherence
                   </span>
                 </div>
@@ -221,7 +221,7 @@ export default async function Home() {
                 {step.icon}
               </div>
               <h3 className="text-base font-medium">{step.title}</h3>
-              <p className="text-sm text-foreground/90 leading-relaxed max-w-[240px] mx-auto">
+              <p className="text-sm text-body-readable leading-relaxed max-w-[240px] mx-auto">
                 {step.description}
               </p>
             </div>
@@ -231,7 +231,7 @@ export default async function Home() {
 
       {/* Section 3: LIVE FEED PREVIEW — recent resonance or top ideas fallback */}
       <section className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto animate-fade-in-up delay-200">
-        <h2 className="text-lg font-medium text-center mb-6 text-foreground/90">
+        <h2 className="text-lg font-medium text-center mb-6 text-body-readable">
           {resonanceItems.length > 0 ? "Recent activity" : "Active ideas"}
         </h2>
         {resonanceItems.length > 0 ? (
@@ -243,10 +243,10 @@ export default async function Home() {
                 className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2 block"
               >
                 <p className="text-sm font-medium text-foreground line-clamp-1">{item.name}</p>
-                <p className="text-xs text-foreground/90">
+                <p className="text-xs text-body-readable">
                   {item.activity_type ? item.activity_type.replace(/_/g, " ") : item.manifestation_status}
                 </p>
-                <p className="text-xs text-foreground/90">
+                <p className="text-xs text-body-readable">
                   {timeAgo(item.last_activity_at)}
                 </p>
               </Link>
@@ -261,17 +261,17 @@ export default async function Home() {
                 className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2 block"
               >
                 <p className="text-sm font-medium text-foreground line-clamp-1">{idea.name}</p>
-                <p className="text-xs text-foreground/90">
+                <p className="text-xs text-body-readable">
                   {idea.manifestation_status}
                 </p>
-                <p className="text-xs text-foreground/90">
+                <p className="text-xs text-body-readable">
                   {formatNumber(idea.value_gap)} CC remaining
                 </p>
               </Link>
             ))}
           </div>
         ) : (
-          <p className="text-center text-sm text-foreground/90">
+          <p className="text-center text-sm text-body-readable">
             No recent activity yet. Be the first to share an idea.
           </p>
         )}
@@ -279,7 +279,7 @@ export default async function Home() {
           <p className="text-center mt-4">
             <Link
               href={resonanceItems.length > 0 ? "/resonance" : "/ideas"}
-              className="text-xs text-foreground/90 hover:text-foreground transition-colors underline underline-offset-4"
+              className="text-xs text-body-readable hover:text-foreground transition-colors underline underline-offset-4"
             >
               {resonanceItems.length > 0 ? "See all activity" : "See all ideas"}
             </Link>
@@ -295,7 +295,7 @@ export default async function Home() {
         <p className="mt-3">
           <Link
             href="/resonance"
-            className="text-sm text-foreground/90 hover:text-foreground transition-colors underline underline-offset-4"
+            className="text-sm text-body-readable hover:text-foreground transition-colors underline underline-offset-4"
           >
             or browse the resonance feed
           </Link>
@@ -304,7 +304,7 @@ export default async function Home() {
 
       {/* Section 6: THE GENTLE TAP */}
       <section className="px-4 sm:px-6 lg:px-8 py-16 max-w-2xl mx-auto text-center">
-        <p className="text-xl md:text-2xl font-light text-foreground/90 leading-relaxed">
+        <p className="text-xl md:text-2xl font-light text-body-readable leading-relaxed">
           You don&apos;t need permission.<br />
           You don&apos;t need to know everything.<br />
           You just need one thought worth sharing.
@@ -313,20 +313,20 @@ export default async function Home() {
 
       {/* Footer */}
       <footer className="px-4 sm:px-6 lg:px-8 py-12 max-w-3xl mx-auto text-center border-t border-border/20">
-        <div className="flex flex-wrap justify-center gap-6 text-sm text-foreground/90 mb-4">
+        <div className="flex flex-wrap justify-center gap-6 text-sm text-body-readable mb-4">
           <Link href="/resonance" className="hover:text-foreground transition-colors">Resonance</Link>
           <Link href="/ideas" className="hover:text-foreground transition-colors">Ideas</Link>
           <Link href="/invest" className="hover:text-foreground transition-colors">Invest</Link>
           <Link href="/contribute" className="hover:text-foreground transition-colors">Contribute</Link>
         </div>
-        <div className="flex flex-wrap justify-center gap-4 text-xs text-foreground/85 mb-4">
+        <div className="flex flex-wrap justify-center gap-4 text-xs text-body-readable mb-4">
           <a href="https://github.com/seeker71/Coherence-Network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
           <a href="https://www.npmjs.com/package/coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">CLI (npm)</a>
           <a href="https://www.npmjs.com/package/coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">MCP Server</a>
           <a href="https://api.coherencycoin.com/docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">API Docs</a>
           <a href="https://clawhub.ai/skills/coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">OpenClaw Skill</a>
         </div>
-        <p className="text-xs text-foreground/85 leading-relaxed">
+        <p className="text-xs text-body-readable leading-relaxed">
           Ideas into realization — through attention, curiosity, and collaboration.
         </p>
       </footer>

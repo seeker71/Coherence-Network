@@ -104,6 +104,17 @@ body::before {
   text-shadow: 0 2px 28px hsl(20 40% 6% / 0.55);
 }
 
+/* Body copy on dark warm backdrop: alpha >= 0.85; soft shadow keeps copy off the blooms */
+@layer utilities {
+  .hero-body-readable {
+    color: hsl(var(--foreground) / 0.94);
+    text-shadow: 0 1px 20px hsl(20 40% 6% / 0.45);
+  }
+  .text-body-readable {
+    color: hsl(var(--foreground) / 0.92);
+  }
+}
+
 /* Gentle scroll reveal animation */
 @keyframes fadeInUp {
   from {
