@@ -131,17 +131,25 @@ async def test_self_loop_rejected():
 # ── Lifecycle state defaults ─────────────────────────────────────────
 
 
+def _get_lifecycle(data: dict) -> str | None:
+    """Extract lifecycle_state from a node API response dict.
+
+    to_dict() merges properties to top-level, so lifecycle_state may appear
+    directly on the dict or nested under 'properties'.
+    """
+    if "lifecycle_state" in data:
+        return data["lifecycle_state"]
+    return data.get("properties", {}).get("lifecycle_state", data.get("phase"))
+
+
 @pytest.mark.asyncio
 async def test_lifecycle_state_gas_default_for_idea():
     """POST idea without lifecycle_state; GET returns gas default (Spec 169 AC)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r = await _post_node(client, "idea", "Gas Idea")
     assert r.status_code == 200, r.text
-    data = r.json()
-    # lifecycle_state should be in properties with default "gas"
-    props = data.get("properties", {})
-    lc = props.get("lifecycle_state", data.get("phase"))
-    assert lc == "gas", f"Expected gas default for idea, got {lc!r}. Full data: {data}"
+    lc = _get_lifecycle(r.json())
+    assert lc == "gas", f"Expected gas default for idea, got {lc!r}. Full data: {r.json()}"
 
 
 @pytest.mark.asyncio
@@ -150,9 +158,7 @@ async def test_lifecycle_state_water_default_for_contributor():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r = await _post_node(client, "contributor", "Agent Claude")
     assert r.status_code == 200, r.text
-    data = r.json()
-    props = data.get("properties", {})
-    lc = props.get("lifecycle_state", data.get("phase"))
+    lc = _get_lifecycle(r.json())
     assert lc == "water", f"Expected water default for contributor, got {lc!r}."
 
 
@@ -162,9 +168,7 @@ async def test_lifecycle_state_ice_default_for_spec():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r = await _post_node(client, "spec", "Frozen Spec")
     assert r.status_code == 200, r.text
-    data = r.json()
-    props = data.get("properties", {})
-    lc = props.get("lifecycle_state", data.get("phase"))
+    lc = _get_lifecycle(r.json())
     assert lc == "ice", f"Expected ice default for spec, got {lc!r}."
 
 
@@ -177,9 +181,7 @@ async def test_explicit_lifecycle_state_accepted():
             properties={"lifecycle_state": "ice"},
         )
     assert r.status_code == 200, r.text
-    data = r.json()
-    props = data.get("properties", {})
-    lc = props.get("lifecycle_state", data.get("phase"))
+    lc = _get_lifecycle(r.json())
     assert lc == "ice"
 
 
@@ -340,6 +342,19 @@ async def test_contradicts_and_analogous_to_symmetric():
 # ── Lifecycle transitions ────────────────────────────────────────────
 
 
+def _get_lifecycle(data: dict) -> str | None:
+    """Extract lifecycle_state from a node API response dict.
+
+    to_dict() merges properties to top-level, so lifecycle_state may appear
+    directly on the dict or nested under 'properties'.
+    """
+    # Check top-level first (to_dict merges properties)
+    if "lifecycle_state" in data:
+        return data["lifecycle_state"]
+    # Fall back to nested properties
+    return data.get("properties", {}).get("lifecycle_state", data.get("phase"))
+
+
 @pytest.mark.asyncio
 async def test_full_lifecycle_transition():
     """Create idea in gas → update to ice → GET shows ice; update to water (Spec 169 AC)."""
@@ -355,9 +370,8 @@ async def test_full_lifecycle_transition():
             json={"properties": {"lifecycle_state": "ice"}},
         )
         assert r_ice.status_code == 200
-        props_ice = r_ice.json().get("properties", {})
-        lc_ice = props_ice.get("lifecycle_state", r_ice.json().get("phase"))
-        assert lc_ice == "ice", f"Expected ice after update, got {lc_ice!r}"
+        lc_ice = _get_lifecycle(r_ice.json())
+        assert lc_ice == "ice", f"Expected ice after update, got {lc_ice!r}. Full: {r_ice.json()}"
 
         # Update to water
         r_water = await client.patch(
@@ -365,9 +379,8 @@ async def test_full_lifecycle_transition():
             json={"properties": {"lifecycle_state": "water"}},
         )
         assert r_water.status_code == 200
-        props_water = r_water.json().get("properties", {})
-        lc_water = props_water.get("lifecycle_state", r_water.json().get("phase"))
-        assert lc_water == "water", f"Expected water after update, got {lc_water!r}"
+        lc_water = _get_lifecycle(r_water.json())
+        assert lc_water == "water", f"Expected water after update, got {lc_water!r}."
 
 
 # ── Direction filter on neighbors ────────────────────────────────────

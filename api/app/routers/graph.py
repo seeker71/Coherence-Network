@@ -67,16 +67,23 @@ async def list_nodes(
 
 @router.post("/graph/nodes")
 async def create_node(body: NodeCreate):
-    """Create a new node. Validates node_type and lifecycle_state for canonical types (Spec 169)."""
-    # Validate canonical node types via service layer
-    if body.type in CANONICAL_NODE_TYPE_SET:
-        try:
-            graph_service.validate_node_type(body.type)
-            lc = body.properties.get("lifecycle_state")
-            if lc is not None:
-                graph_service.validate_lifecycle_state(lc)
-        except ValueError as exc:
-            raise HTTPException(status_code=422, detail=str(exc))
+    """Create a new node. Validates node_type against canonical vocabulary (Spec 169)."""
+    # Spec 169: reject unknown node types
+    if body.type not in CANONICAL_NODE_TYPE_SET:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"node_type '{body.type}' is not a recognized node type. "
+                "See /api/graph/node-types for valid values."
+            ),
+        )
+    # Validate lifecycle_state if provided
+    lc = body.properties.get("lifecycle_state")
+    if lc is not None and lc not in ("gas", "ice", "water"):
+        raise HTTPException(
+            status_code=422,
+            detail=f"lifecycle_state '{lc}' is not valid. Must be one of: gas, ice, water.",
+        )
     try:
         return graph_service.create_node(
             id=body.id, type=body.type, name=body.name,

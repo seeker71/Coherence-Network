@@ -247,12 +247,22 @@ curl -s -o /dev/null -w "%{http_code}" https://api.coherencycoin.com/api/agent/e
 - **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
 - **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
 
-## Risks and Known Gaps
+## Risks and Assumptions
 
 - **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
 - **No rate limiting**: Subject to abuse until M1 rate limiter active.
 - **Single-node only**: No distributed locking; concurrent access may race.
-- **Follow-up**: Add distributed locking for multi-worker pipelines.
+- **Phase boundary assumption**: Phase 6 = items 56–57 (2 items), Phase 7 = items 58–74 (17 items). If 006 backlog changes item counts, these constants must be updated.
+- **State file location assumption**: PM state is read from `api/logs/project_manager_state.json` or `api/logs/project_manager_state_overnight.json`; path changes require implementation update.
+- **Backlog index semantics**: `backlog_index` in PM state is an integer representing the last completed item's ordinal in the 006 backlog sequence (1-based). Items with ordinal ≤ index are considered complete.
+
+## Known Gaps and Follow-up Tasks
+
+- **Distributed locking**: Add distributed locking for multi-worker pipeline deployments (follow-up ticket).
+- **Phase 1–5 visibility**: Current spec only exposes Phase 6 and Phase 7; earlier phases not surfaced in effectiveness response. Consider extending to all phases.
+- **Real-time streaming**: Effectiveness endpoint is polled; no push/SSE support for dashboards. Future work.
+- **Auth gate**: Endpoint needs auth middleware (C1 milestone) before public exposure.
+- **Test coverage for edge cases**: Add property-based tests for `backlog_index` boundary values (55, 56, 57, 58, 74, 75) to prevent regressions when backlog changes.
 
 
 ## Out of Scope
