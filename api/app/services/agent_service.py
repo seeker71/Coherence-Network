@@ -4,9 +4,10 @@ Public API and store re-exports for backward compatibility.
 Implementation lives in agent_service_*.py modules.
 """
 
-from typing import Any
+from typing import Any, Optional
 
-from app.models.agent import TaskType
+from app.models.agent import TaskStatus, TaskType
+from app.models.schemas import NormalizedResponseCall
 from app.services import agent_routing_service as routing_service
 
 # Re-export routing for tests and consumers
@@ -38,7 +39,8 @@ from app.services.agent_service_executor import (
 )
 
 # CRUD
-from app.services.agent_service_crud import create_task, get_task, update_task
+from app.services.agent_service_crud import create_task, get_task, update_task as _crud_update_task
+from app.services import provider_usage_service
 
 # List / counts
 from app.services.agent_service_list import (
@@ -107,3 +109,88 @@ def backfill_host_runner_failure_observability(*, window_hours: int = 24) -> dic
     """Ensure host-runner failed tasks are linked to completion + friction telemetry."""
     from app.services.agent_service_usage_visibility import backfill_host_runner_failure_observability as _backfill
     return _backfill(window_hours=window_hours)
+
+
+def map_task_payload_to_open_responses(task: dict[str, Any]) -> dict[str, Any]:
+    """Map a task execution payload to an Open Responses–compatible request envelope (provider-agnostic)."""
+    task_id = str(task.get("id") or task.get("task_id") or "").strip()
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    rd = ctx.get("route_decision") if isinstance(ctx.get("route_decision"), dict) else {}
+    executor = str(ctx.get("executor") or rd.get("executor") or "claude").strip()
+    provider = str(rd.get("provider") or rd.get("billing_provider") or "").strip().lower() or "unknown"
+    model = str(task.get("model") or rd.get("model") or "").strip()
+    direction = str(task.get("direction") or "").strip()
+    return routing_service.build_normalized_response_call(
+        task_id=task_id,
+        executor=executor,
+        provider=provider,
+        model=model,
+        direction=direction,
+    )
+
+
+def _normalize_output_for_record(text: str) -> str:
+    cleaned = str(text or "").strip()
+    if not cleaned:
+        return ""
+    return cleaned[:1000]
+
+
+def _persist_open_responses_evidence(task: dict[str, Any], output: str) -> None:
+    """Persist route + model + schema evidence for operator audits."""
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    rd = ctx.get("route_decision") if isinstance(ctx.get("route_decision"), dict) else {}
+    provider = str(rd.get("billing_provider") or rd.get("provider") or "").strip().lower() or "unknown"
+    model = str(task.get("model") or rd.get("model") or "").strip() or "unknown"
+    task_id = str(task.get("id") or "").strip()
+    snippet = _normalize_output_for_record(output)
+    if not task_id or not snippet:
+        return
+    record = NormalizedResponseCall(
+        task_id=task_id,
+        provider=provider,
+        model=model,
+        request_schema="open_responses_v1",
+        output_text=snippet,
+    )
+    evidence = {
+        **record.model_dump(),
+        "route_decision": dict(rd) if isinstance(rd, dict) else {},
+        "normalized_envelope": ctx.get("normalized_response_call")
+        if isinstance(ctx.get("normalized_response_call"), dict)
+        else {},
+    }
+    provider_usage_service.record_normalized_open_responses_evidence(evidence)
+
+
+def update_task(
+    task_id: str,
+    status: Optional[TaskStatus] = None,
+    output: Optional[str] = None,
+    progress_pct: Optional[int] = None,
+    current_step: Optional[str] = None,
+    decision_prompt: Optional[str] = None,
+    decision: Optional[str] = None,
+    context: Optional[dict[str, Any]] = None,
+    worker_id: Optional[str] = None,
+) -> Optional[dict]:
+    """Update task; when output is supplied, persist normalized Open Responses audit evidence."""
+    result = _crud_update_task(
+        task_id,
+        status=status,
+        output=output,
+        progress_pct=progress_pct,
+        current_step=current_step,
+        decision_prompt=decision_prompt,
+        decision=decision,
+        context=context,
+        worker_id=worker_id,
+    )
+    if result is not None and output is not None:
+        text = str(output).strip()
+        if text:
+            try:
+                _persist_open_responses_evidence(result, text)
+            except Exception:
+                pass
+    return result
