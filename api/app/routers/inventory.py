@@ -59,14 +59,7 @@ def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTas
     causing all tasks to bypass strong providers. Removed to ensure slot selector on each
     node determines the provider based on capabilities and Thompson Sampling.
     """
-    return  # All task execution happens on federation nodes
-    # Legacy code below kept for reference but never reached
-    task_ids = _extract_created_task_ids(payload)
-    if not task_ids:
-        return
-    try:
-            logger.warning("Task auto-execution failed, skipping", exc_info=True)
-            continue
+    return
 
 
 @router.get("/inventory/system-lineage")
