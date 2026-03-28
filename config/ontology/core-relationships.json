@@ -438,8 +438,8 @@
       "reflexive": false
     },
     {
-      "id": "resonates-with",
-      "name": "Resonates With",
+      "id": "resonates-with-cross-domain",
+      "name": "Resonates With (Cross-Domain)",
       "description": "Harmonic resonance relationship indicating vibrational alignment between concepts from different domains",
       "fromConcept": "*",
       "toConcept": "*",
