@@ -394,6 +394,7 @@ function showHelp() {
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity
+  COHERENCE_CONTRIBUTOR_ID overrides config.json for per-process agent identity
 
 \x1b[1mFederation:\x1b[0m
   nodes                   List federation nodes
