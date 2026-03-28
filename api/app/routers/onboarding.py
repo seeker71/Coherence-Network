@@ -1,57 +1,88 @@
-"""Onboarding router — Trust-on-First-Use (TOFU) MVP with OAuth upgrade path.
+"""Onboarding endpoints — Trust-on-First-Use (TOFU) identity registration.
 
-Spec: specs/168-identity-driven-onboarding-tofu.md
+Spec 168: Zero-friction contributor onboarding for the MVP.
 
-Endpoints:
-  POST /api/onboarding/register   — claim handle, get session token
-  GET  /api/onboarding/session    — resolve token → contributor profile
-  POST /api/onboarding/upgrade    — upgrade TOFU → verified via OAuth
-  GET  /api/onboarding/roi        — funnel ROI signals
+POST /api/onboarding/register   — claim a handle, get a session token
+GET  /api/onboarding/session    — validate a session token → contributor profile
+POST /api/onboarding/upgrade    — upgrade trust_level via OAuth (stub → 501)
+GET  /api/onboarding/roi        — live ROI signals for the onboarding funnel
 """
+
 from __future__ import annotations
 
 import logging
+from typing import Optional
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, HTTPException, Header
+from pydantic import BaseModel, field_validator
+import re
 
-from app.models.onboarding import (
-    OnboardingRegisterRequest,
-    OnboardingRegisterResponse,
-    OnboardingSessionResponse,
-    OnboardingUpgradeRequest,
-    OnboardingUpgradeResponse,
-    ROISignals,
-)
 from app.services import onboarding_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
+# ---------------------------------------------------------------------------
+# Request / response models
+# ---------------------------------------------------------------------------
 
-def _roi() -> ROISignals:
-    signals = onboarding_service.get_roi_signals()
-    return ROISignals(**signals)
+class RegisterRequest(BaseModel):
+    handle: str
+    email: Optional[str] = None
+    hint_github: Optional[str] = None
+    hint_wallet: Optional[str] = None
+
+    @field_validator("handle")
+    @classmethod
+    def handle_format(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not re.fullmatch(r"[a-z0-9_\-]{3,40}", v):
+            raise ValueError(
+                "Handle must be 3–40 characters using only a-z, 0-9, _ or -"
+            )
+        return v
+
+
+class RegisterResponse(BaseModel):
+    contributor_id: str
+    session_token: str
+    trust_level: str
+    handle: str
+    created: bool
+    roi_signals: dict
+
+
+class SessionResponse(BaseModel):
+    contributor_id: str
+    handle: str
+    trust_level: str
+    linked_identities: int
+    email: Optional[str]
+    hint_github: Optional[str]
+    hint_wallet: Optional[str]
+
+
+class UpgradeRequest(BaseModel):
+    contributor_id: str
+    provider: str
+    provider_id: str
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None
+    metadata: Optional[dict] = None
 
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
-@router.post(
-    "/register",
-    response_model=OnboardingRegisterResponse,
-    status_code=201,
-    summary="Register a new contributor via TOFU",
-    description=(
-        "Trust-on-First-Use registration. Claim a unique handle and optionally provide "
-        "social hints. Immediately returns a session token — no email verification or "
-        "OAuth required for the MVP. Identity can be upgraded to 'verified' later via "
-        "POST /api/onboarding/upgrade."
-    ),
-)
-async def register(body: OnboardingRegisterRequest) -> OnboardingRegisterResponse:
-    """Claim a handle and receive a TOFU session token."""
+@router.post("/register", response_model=RegisterResponse, summary="TOFU registration")
+async def register(body: RegisterRequest) -> RegisterResponse:
+    """Claim a unique handle and receive an opaque session token.
+
+    No verification required. Trust level starts at ``tofu`` and can be
+    upgraded to ``verified`` later via ``POST /api/onboarding/upgrade``.
+    """
     try:
         result = onboarding_service.register(
             handle=body.handle,
@@ -63,100 +94,69 @@ async def register(body: OnboardingRegisterRequest) -> OnboardingRegisterRespons
         if "handle_taken" in str(exc):
             raise HTTPException(status_code=409, detail="handle_taken")
         raise HTTPException(status_code=422, detail=str(exc))
-    return OnboardingRegisterResponse(
+
+    roi = onboarding_service.get_roi_signals()
+    return RegisterResponse(
         contributor_id=result["contributor_id"],
         session_token=result["session_token"],
         trust_level=result["trust_level"],
         handle=result["handle"],
         created=result["created"],
-        roi_signals=_roi(),
+        roi_signals=roi,
     )
 
 
-@router.get(
-    "/session",
-    response_model=OnboardingSessionResponse,
-    summary="Resolve a session token to a contributor profile",
-    description=(
-        "Pass a session token in the Authorization header as 'Bearer <token>'. "
-        "Returns the contributor profile with trust_level and linked identity count."
-    ),
-)
-async def get_session(
-    authorization: str | None = Header(None, alias="Authorization"),
-) -> OnboardingSessionResponse:
-    """Resolve a session token to a contributor profile."""
-    token = None
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization[7:].strip()
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing Bearer token in Authorization header")
+@router.get("/session", response_model=SessionResponse, summary="Validate session token")
+async def get_session(authorization: str = Header(...)) -> SessionResponse:
+    """Return the contributor profile associated with a session token.
 
+    Expects ``Authorization: Bearer <token>`` header.
+    Returns 401 if the token is unknown or malformed.
+    """
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="invalid_authorization_header")
+    token = authorization.removeprefix("Bearer ").strip()
     profile = onboarding_service.resolve_session(token)
-    if not profile:
-        raise HTTPException(status_code=401, detail="Invalid or expired session token")
+    if profile is None:
+        raise HTTPException(status_code=401, detail="invalid_or_expired_token")
+    return SessionResponse(**profile)
 
-    return OnboardingSessionResponse(
-        contributor_id=profile["contributor_id"],
-        handle=profile["handle"],
-        trust_level=profile["trust_level"],
-        linked_identities=profile["linked_identities"],
-        email=profile.get("email"),
-        hint_github=profile.get("hint_github"),
-        hint_wallet=profile.get("hint_wallet"),
-        roi_signals=_roi(),
+
+@router.post("/upgrade", summary="Upgrade trust level via OAuth [stub — 501]")
+async def upgrade_oauth(body: UpgradeRequest) -> dict:
+    """Upgrade a TOFU session to verified after OAuth confirmation.
+
+    **Status**: MVP stub — returns 501 until OAuth flow is implemented (Spec 169).
+
+    When implemented, this endpoint will:
+    1. Accept an OAuth provider + provider_id (from the OAuth callback).
+    2. Call ``contributor_identity_service.link_identity`` with ``verified=True``.
+    3. Update the onboarding session ``trust_level`` to ``"verified"``.
+
+    Planned providers: ``github``, ``google``, ``ethereum``.
+    """
+    raise HTTPException(
+        status_code=501,
+        detail={
+            "message": "OAuth upgrade not yet implemented. Planned for Spec 169.",
+            "upgrade_path": {
+                "github": "POST /api/identity/oauth/github → callback upgrades trust_level",
+                "ethereum": "POST /api/identity/verify-ethereum → EIP-712 signature",
+            },
+            "current_trust_level": "tofu",
+            "spec_ref": "spec-168",
+        },
     )
 
 
-@router.post(
-    "/upgrade",
-    response_model=OnboardingUpgradeResponse,
-    summary="Upgrade TOFU identity to verified",
-    description=(
-        "After a contributor has verified their identity via OAuth (e.g., GitHub) or "
-        "cryptographic signature, call this endpoint to upgrade trust_level from "
-        "'tofu' to 'verified'. The identity link is stored in contributor_identities."
-    ),
-)
-async def upgrade(body: OnboardingUpgradeRequest) -> OnboardingUpgradeResponse:
-    """Upgrade a TOFU identity to verified via OAuth or signature."""
-    try:
-        result = onboarding_service.upgrade_trust(
-            contributor_id=body.contributor_id,
-            provider=body.provider,
-            provider_id=body.provider_id,
-            display_name=body.display_name,
-            avatar_url=body.avatar_url,
-            metadata=body.metadata,
-        )
-    except ValueError as exc:
-        if "contributor_not_found" in str(exc):
-            raise HTTPException(status_code=404, detail="Contributor not found")
-        raise HTTPException(status_code=422, detail=str(exc))
+@router.get("/roi", summary="Onboarding ROI signals")
+async def roi_signals() -> dict:
+    """Return live ROI signals for the onboarding funnel.
 
-    return OnboardingUpgradeResponse(
-        contributor_id=result["contributor_id"],
-        trust_level=result["trust_level"],
-        provider=result["provider"],
-        provider_id=result["provider_id"],
-        message=(
-            f"Identity upgraded to 'verified' via {body.provider}. "
-            "OAuth flow available at POST /api/identity/verify/github for full verification."
-        ),
-        roi_signals=_roi(),
-    )
-
-
-@router.get(
-    "/roi",
-    response_model=ROISignals,
-    summary="Onboarding funnel ROI signals",
-    description=(
-        "Returns live metrics: total handle registrations, verified count, "
-        "verified_ratio, and avg_time_to_verify_days. These ROI signals track "
-        "the effectiveness of the TOFU → OAuth upgrade funnel."
-    ),
-)
-async def roi_signals() -> ROISignals:
-    """Return live onboarding funnel ROI metrics."""
-    return _roi()
+    Fields:
+    - ``handle_registrations`` — total TOFU registrations
+    - ``verified_count`` — contributors who completed OAuth upgrade
+    - ``verified_ratio`` — fraction of verified contributors (0.0–1.0)
+    - ``avg_time_to_verify_days`` — mean days from register → verify (null if none)
+    """
+    return onboarding_service.get_roi_signals()

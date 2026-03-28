@@ -6,17 +6,22 @@ linking routes to specs and ideas via the traceability registry.
 
 from __future__ import annotations
 
+import hashlib
 import os
-from typing import Any
+import subprocess
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Literal, Optional
 
 from app.models.meta import (
-    EndpointEdge,
-    EndpointNode,
+    MetaEndpointNode,
     MetaEndpointsResponse,
+    MetaModuleNode,
     MetaModulesResponse,
     MetaSummaryResponse,
-    ModuleNode,
+    MetaTraceResult,
 )
+from app.services import runtime_service
 
 
 def _get_trace_registry() -> list[dict[str, Any]]:
@@ -37,12 +42,38 @@ def _build_trace_index(registry: list[dict[str, Any]]) -> dict[str, dict[str, An
     return index
 
 
+def _get_path_hash(method: str, path: str) -> str:
+    return hashlib.sha1(f"{method}:{path}".encode("utf-8")).hexdigest()
+
+
+def _get_git_contributors(file_path: str) -> list[str]:
+    """Get unique contributors for a file using git log."""
+    try:
+        # Run git log to get author names
+        cmd = ["git", "log", "--follow", "--format=%an", "--", file_path]
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if result.returncode != 0:
+            return []
+        authors = result.stdout.strip().split("\n")
+        # Filter out empty strings and return unique names
+        return sorted(list(set(a.strip() for a in authors if a.strip())))
+    except Exception:
+        return []
+
+
 def list_endpoints(app: Any) -> MetaEndpointsResponse:
-    """Walk FastAPI routes and return each as an EndpointNode concept node."""
+    """Walk FastAPI routes and return each as a MetaEndpointNode."""
     registry = _get_trace_registry()
     trace_index = _build_trace_index(registry)
+    
+    # Get runtime stats for the last 30 days
+    try:
+        runtime_stats = runtime_service.summarize_by_endpoint(seconds=30 * 24 * 3600)
+        stats_map = {s.endpoint: s for s in runtime_stats}
+    except Exception:
+        stats_map = {}
 
-    nodes: list[EndpointNode] = []
+    nodes: list[MetaEndpointNode] = []
 
     try:
         routes = app.routes
@@ -50,170 +81,198 @@ def list_endpoints(app: Any) -> MetaEndpointsResponse:
         routes = []
 
     for route in routes:
-        # Only include APIRoute instances (not static files, mounts, etc.)
         methods = getattr(route, "methods", None)
         path = getattr(route, "path", None)
         if not methods or not path:
             continue
-        # Skip internal/meta-infrastructure paths
-        if path in ("/", "/openapi.json", "/docs", "/redoc", "/api/admin/reset-database"):
+            
+        # Skip internal/meta-infrastructure paths unless they have tags
+        tags = list(getattr(route, "tags", []) or [])
+        if not tags and path in ("/", "/openapi.json", "/docs", "/redoc", "/api/admin/reset-database"):
             continue
 
-        name = getattr(route, "name", "") or ""
-        tags = list(getattr(route, "tags", []) or [])
-        summary = getattr(route, "summary", None) or getattr(route, "description", None)
+        summary = getattr(route, "summary", None) or getattr(route, "description", "")
         endpoint_fn = getattr(route, "endpoint", None)
-        module_name: str | None = None
-        if endpoint_fn:
-            module_name = getattr(endpoint_fn, "__module__", None)
-
+        
+        # Get stats for this endpoint
+        stats = stats_map.get(path)
+        call_count = stats.event_count if stats else 0
+        # last_called_at would need more detailed stats or a separate query
+        # For Phase 1, we'll leave it as None or try to get it from events
+        
         for method in sorted(methods):
-            node_id = f"{method} {path}"
-            edges: list[EndpointEdge] = []
-            spec_id: str | None = None
-            idea_id: str | None = None
-
-            # Look up trace registry by function qualname
+            spec_ids = []
+            idea_ids = []
+            contributors = []
+            
+            # Look up trace registry
             if endpoint_fn:
                 qualname = getattr(endpoint_fn, "__qualname__", "")
                 trace = trace_index.get(qualname)
                 if trace:
-                    spec_id = trace.get("spec")
-                    idea_id = trace.get("idea")
+                    if trace.get("spec"):
+                        spec_ids.append(trace["spec"])
+                    if trace.get("idea"):
+                        idea_ids.append(trace["idea"])
                     if not summary:
-                        summary = trace.get("description")
+                        summary = trace.get("description") or ""
 
-            if spec_id:
-                edges.append(EndpointEdge(
-                    type="implements_spec",
-                    target_id=f"spec-{spec_id}",
-                    target_label=f"Spec {spec_id}",
-                ))
-            if idea_id:
-                edges.append(EndpointEdge(
-                    type="traces_idea",
-                    target_id=idea_id,
-                    target_label=idea_id,
-                ))
+            # Try to get contributors from module if possible
+            module_name = getattr(endpoint_fn, "__module__", None)
             if module_name:
-                edges.append(EndpointEdge(
-                    type="defined_in_module",
-                    target_id=module_name,
-                    target_label=module_name.split(".")[-1],
-                ))
+                # Approximate file path
+                file_path = module_name.replace(".", "/") + ".py"
+                if os.path.exists(file_path):
+                    contributors = _get_git_contributors(file_path)
 
-            nodes.append(EndpointNode(
-                id=node_id,
-                method=method,
+            nodes.append(MetaEndpointNode(
                 path=path,
-                name=name,
+                method=method,
+                path_hash=_get_path_hash(method, path),
+                tag=tags[0] if tags else "default",
                 summary=summary,
-                tags=tags,
-                spec_id=spec_id,
-                idea_id=idea_id,
-                module=module_name,
-                edges=edges,
+                spec_ids=spec_ids,
+                idea_ids=idea_ids,
+                contributors=contributors,
+                call_count_30d=call_count,
+                last_called_at=None,
+                status="active"
             ))
 
     nodes.sort(key=lambda n: (n.path, n.method))
-    return MetaEndpointsResponse(total=len(nodes), endpoints=nodes)
+    return MetaEndpointsResponse(
+        total=len(nodes), 
+        endpoints=nodes,
+        generated_at=datetime.now(timezone.utc)
+    )
+
+
+def get_endpoint_by_hash(app: Any, path_hash: str) -> Optional[MetaEndpointNode]:
+    """Find a single endpoint by its SHA-1 hash."""
+    all_eps = list_endpoints(app)
+    for ep in all_eps.endpoints:
+        if ep.path_hash == path_hash:
+            return ep
+    return None
+
+
+def _get_module_type(path: Path) -> Literal["api_router", "service", "model", "adapter", "web_page", "web_component", "middleware", "other"]:
+    p_str = str(path)
+    if "routers" in p_str:
+        return "api_router"
+    if "services" in p_str:
+        return "service"
+    if "models" in p_str:
+        return "model"
+    if "adapters" in p_str:
+        return "adapter"
+    if "middleware" in p_str:
+        return "middleware"
+    if p_str.endswith(".tsx") or p_str.endswith(".jsx"):
+        if "components" in p_str:
+            return "web_component"
+        return "web_page"
+    return "other"
 
 
 def list_modules(app: Any) -> MetaModulesResponse:
-    """Return code modules as concept nodes linked to endpoints, specs, and ideas."""
+    """Walk the filesystem to discover code modules and their metadata."""
+    modules: list[MetaModuleNode] = []
+    
+    # Define directories to scan
+    base_dirs = [
+        Path("api/app"),
+        Path("web/app"),
+        Path("web/components")
+    ]
+    
+    # Trace registry for spec/idea links in Python code
     registry = _get_trace_registry()
-
-    # Aggregate by module
-    module_data: dict[str, dict] = {}
-
-    try:
-        routes = app.routes
-    except Exception:
-        routes = []
-
-    for route in routes:
-        methods = getattr(route, "methods", None)
-        path = getattr(route, "path", None)
-        if not methods or not path:
-            continue
-        endpoint_fn = getattr(route, "endpoint", None)
-        if not endpoint_fn:
-            continue
-        module_name = getattr(endpoint_fn, "__module__", None)
-        if not module_name:
-            continue
-
-        if module_name not in module_data:
-            module_data[module_name] = {
-                "spec_ids": set(),
-                "idea_ids": set(),
-                "endpoint_count": 0,
-            }
-        module_data[module_name]["endpoint_count"] += len(methods)
-
-    # Add spec/idea links from trace registry
+    mod_to_specs: dict[str, set[str]] = {}
+    mod_to_ideas: dict[str, set[str]] = {}
     for entry in registry:
         mod = entry.get("module", "")
-        if mod and mod in module_data:
-            if entry.get("spec"):
-                module_data[mod]["spec_ids"].add(entry["spec"])
-            if entry.get("idea"):
-                module_data[mod]["idea_ids"].add(entry["idea"])
-
-    # Also add any traced modules not yet in module_data
-    for entry in registry:
-        mod = entry.get("module", "")
-        if mod and mod not in module_data:
-            module_data[mod] = {
-                "spec_ids": set(),
-                "idea_ids": set(),
-                "endpoint_count": 0,
-            }
         if mod:
             if entry.get("spec"):
-                module_data[mod]["spec_ids"].add(entry["spec"])
+                mod_to_specs.setdefault(mod, set()).add(entry["spec"])
             if entry.get("idea"):
-                module_data[mod]["idea_ids"].add(entry["idea"])
+                mod_to_ideas.setdefault(mod, set()).add(entry["idea"])
 
-    nodes: list[ModuleNode] = []
-    for mod_name, data in sorted(module_data.items()):
-        short_name = mod_name.split(".")[-1]
-        # Determine type from module path
-        if ".routers." in mod_name or mod_name.endswith(".routers"):
-            module_type = "router"
-        elif ".services." in mod_name or mod_name.endswith(".services"):
-            module_type = "service"
-        elif ".models." in mod_name or mod_name.endswith(".models"):
-            module_type = "model"
-        elif ".middleware." in mod_name:
-            module_type = "middleware"
-        else:
-            module_type = "module"
+    for base_dir in base_dirs:
+        if not base_dir.exists():
+            continue
+            
+        for path in base_dir.rglob("*"):
+            if path.is_dir() or path.suffix not in (".py", ".tsx", ".ts", ".jsx", ".js"):
+                continue
+                
+            if "__pycache__" in str(path) or "__init__.py" in str(path):
+                continue
 
-        spec_ids = sorted(data["spec_ids"])
-        idea_ids = sorted(data["idea_ids"])
+            rel_path = str(path)
+            name = path.stem
+            if path.suffix == ".py":
+                # Convert path to module name
+                parts = path.with_suffix("").parts
+                if "api" in parts:
+                    idx = parts.index("api")
+                    name = ".".join(parts[idx+1:])
+            
+            # Metadata
+            stat = path.stat()
+            last_modified = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+            
+            # Line count and Spec links from comments
+            line_count = 0
+            spec_ids = set()
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line_count += 1
+                        # Look for "Implements: spec-XXX" or "traces_to(spec='XXX')"
+                        if "Implements:" in line or "traces_to" in line:
+                            import re
+                            # Match spec-123 or spec="123"
+                            matches = re.findall(r"spec[-=:\s\"']+([a-zA-Z0-9_-]+)", line)
+                            for m in matches:
+                                spec_ids.add(m)
+            except Exception:
+                pass
+            
+            # Merge with registry links
+            if name in mod_to_specs:
+                spec_ids.update(mod_to_specs[name])
+            
+            idea_ids = mod_to_ideas.get(name, set())
+            
+            # Contributors
+            contributors = _get_git_contributors(rel_path)
+            
+            # Test file?
+            test_file = None
+            if path.suffix == ".py":
+                t_path = Path("api/tests") / f"test_{path.name}"
+                if t_path.exists():
+                    test_file = str(t_path)
+            
+            modules.append(MetaModuleNode(
+                name=name,
+                path=rel_path,
+                type=_get_module_type(path),
+                spec_ids=sorted(list(spec_ids)),
+                idea_ids=sorted(list(idea_ids)),
+                contributors=contributors,
+                line_count=line_count,
+                last_modified=last_modified,
+                test_file=test_file
+            ))
 
-        edges: list[EndpointEdge] = []
-        for sid in spec_ids:
-            edges.append(EndpointEdge(type="implements_spec", target_id=f"spec-{sid}", target_label=f"Spec {sid}"))
-        for iid in idea_ids:
-            edges.append(EndpointEdge(type="traces_idea", target_id=iid, target_label=iid))
-
-        # Approximate file path from module dotted name
-        file_path = mod_name.replace(".", "/") + ".py"
-
-        nodes.append(ModuleNode(
-            id=mod_name,
-            name=short_name,
-            module_type=module_type,
-            file_path=file_path,
-            spec_ids=spec_ids,
-            idea_ids=idea_ids,
-            endpoint_count=data["endpoint_count"],
-            edges=edges,
-        ))
-
-    return MetaModulesResponse(total=len(nodes), modules=nodes)
+    modules.sort(key=lambda m: m.path)
+    return MetaModulesResponse(
+        total=len(modules),
+        modules=modules,
+        generated_at=datetime.now(timezone.utc)
+    )
 
 
 def get_summary(app: Any) -> MetaSummaryResponse:
@@ -221,16 +280,113 @@ def get_summary(app: Any) -> MetaSummaryResponse:
     ep_response = list_endpoints(app)
     mod_response = list_modules(app)
 
-    traced = sum(
-        1 for ep in ep_response.endpoints
-        if ep.spec_id or ep.idea_id
-    )
+    with_spec = sum(1 for ep in ep_response.endpoints if ep.spec_ids)
+    without_spec = ep_response.total - with_spec
+    
+    with_tests = sum(1 for m in mod_response.modules if m.test_file)
+    without_tests = mod_response.total - with_tests
+
     total = ep_response.total
-    coverage = (traced / total) if total > 0 else 0.0
+    score = (with_spec / total) if total > 0 else 0.0
+
+    # Version from git
+    try:
+        version = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+        version = f"main@{version}"
+    except Exception:
+        version = "unknown"
 
     return MetaSummaryResponse(
-        endpoint_count=total,
-        module_count=mod_response.total,
-        traced_count=traced,
-        spec_coverage=round(coverage, 4),
+        system="Coherence Network",
+        version=version,
+        generated_at=datetime.now(timezone.utc),
+        counts={
+            "endpoints": total,
+            "modules": mod_response.total,
+            "specs_linked": len(set(sid for ep in ep_response.endpoints for sid in ep.spec_ids)),
+            "ideas_traced": len(set(iid for ep in ep_response.endpoints for iid in ep.idea_ids))
+        },
+        traceability_score=round(score, 4),
+        coverage={
+            "endpoints_with_spec": with_spec,
+            "endpoints_without_spec": without_spec,
+            "modules_with_tests": with_tests,
+            "modules_without_tests": without_tests
+        }
+    )
+
+
+def trace_id(app: Any, entity_id: str) -> MetaTraceResult:
+    """Trace an idea or spec to all its produced artifacts."""
+    # This requires looking up the spec/idea title from their respective services
+    # and searching through all endpoints and modules.
+    
+    # Try spec first
+    from app.services import spec_registry_service, idea_service
+    
+    entity_type: Literal["spec", "idea"] = "spec"
+    title = "Unknown"
+    
+    spec = None
+    try:
+        spec = spec_registry_service.get_spec(entity_id)
+        if spec:
+            entity_type = "spec"
+            title = spec.get("title", "Unknown Spec")
+    except Exception:
+        pass
+        
+    if not spec:
+        try:
+            idea = idea_service.get_idea(entity_id)
+            if idea:
+                entity_type = "idea"
+                title = idea.title
+        except Exception:
+            pass
+            
+    if title == "Unknown":
+        # Final attempt: maybe it's a spec ID that doesn't have the full object
+        entity_type = "spec" if entity_id.isdigit() else "idea"
+
+    ep_response = list_endpoints(app)
+    mod_response = list_modules(app)
+    
+    matching_endpoints = []
+    matching_modules = []
+    contributors = set()
+    call_count = 0
+    
+    for ep in ep_response.endpoints:
+        match = False
+        if entity_type == "spec" and entity_id in ep.spec_ids:
+            match = True
+        elif entity_type == "idea" and entity_id in ep.idea_ids:
+            match = True
+            
+        if match:
+            matching_endpoints.append({"method": ep.method, "path": ep.path})
+            contributors.update(ep.contributors)
+            call_count += ep.call_count_30d
+            
+    for mod in mod_response.modules:
+        match = False
+        if entity_type == "spec" and entity_id in mod.spec_ids:
+            match = True
+        elif entity_type == "idea" and entity_id in mod.idea_ids:
+            match = True
+            
+        if match:
+            matching_modules.append({"name": mod.name, "path": mod.path})
+            contributors.update(mod.contributors)
+
+    return MetaTraceResult(
+        id=entity_id,
+        type=entity_type,
+        title=title,
+        endpoints=matching_endpoints,
+        modules=matching_modules,
+        contributors=sorted(list(contributors)),
+        first_commit=None, # Would need git history scan
+        call_count_30d=call_count
     )
