@@ -162,7 +162,7 @@ export async function listNodes() {
         const ver = pv[p];
         const streak = ps[p];
         let badge = providerBadge(p);
-        if (ver && ver !== "unknown") badge += `\x1b[2m(${ver.slice(0, 12)})\x1b[0m`;
+        if (ver && ver !== "unknown") badge += `\x1b[2m(${ver.slice(0, 24)})\x1b[0m`;
         if (streak && streak.total > 0) {
           const icons = (streak.last_10 || []).slice(-5).map(s =>
             s === "ok" ? "\x1b[32m·\x1b[0m" : "\x1b[31m·\x1b[0m"
@@ -172,7 +172,7 @@ export async function listNodes() {
         }
         return badge;
       });
-      console.log(`    ${badges.join("  ")}`);
+      console.log(`    ${badges.join("  ")}`)
     }
   }
   console.log();
