@@ -7,9 +7,9 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.models.agent import AgentTaskCreate, NormalizedResponseCall, TaskType
+from app.services import agent_routing_service as routing
 from app.services import agent_service
 from app.services import agent_service_executor
-from app.services import agent_routing_service as routing
 
 
 def _reset_agent_store() -> None:
