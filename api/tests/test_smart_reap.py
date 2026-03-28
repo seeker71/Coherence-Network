@@ -53,6 +53,7 @@ def _task(
     context: dict | None = None,
     age_minutes: float = 20.0,
     direction: str = "Do the thing",
+    target_state: str | None = None,
 ) -> dict[str, Any]:
     tid = task_id or f"task_{uuid.uuid4().hex[:12]}"
     created = (datetime.now(timezone.utc) - timedelta(minutes=age_minutes)).isoformat()
@@ -64,7 +65,7 @@ def _task(
         "created_at": created,
         "updated_at": created,
         "direction": direction,
-        "target_state": "Completed",
+        "target_state": target_state,  # None → uses task_type baseline in estimate_partial_pct
         "context": ctx,
     }
 

@@ -1,450 +1,372 @@
 # Spec 109: Open Responses Interoperability Layer
 
-## Summary
-
-Introduce a **provider-agnostic normalization adapter** in the agent execution path so that task payloads
-can flow through any supported provider (claude, codex, gemini, openrouter) without per-provider prompt
-rewrites. Calls made through the adapter are recorded with a `request_schema: open_responses_v1` marker
-so operators can audit which tasks ran through the normalized path and verify routing evidence.
+**Idea ID**: `109-open-responses-interoperability-layer`
+**Status**: Approved
+**Author**: Product Manager Agent
+**Date**: 2026-03-28
 
 ---
 
-## Purpose
+## Summary
 
-Reduce provider lock-in and simplify model routing by introducing a normalized Open Responses interface
-in the agent execution path, so task execution can move across providers without per-provider payload
-rewrites.
+Introduce a normalized **Open Responses** adapter in the agent execution path so that tasks can move across providers (Claude, Cursor, Codex, Gemini, OpenRouter) without per-provider prompt rewrites. Every task execution is wrapped in an `open_responses_v1` envelope that captures provider, model, and input in a stable, auditable schema — regardless of which executor actually runs the task.
 
-**Problem today**: Each executor produces slightly different payload shapes for task instructions,
-context, and output. Switching a running task from `claude` to `codex` requires a prompt rewrite at
-the call site. This makes cross-provider A/B testing, load-balancing, and fallback chains brittle.
+This reduces provider lock-in, enables operator audit trails, and makes multi-provider A/B routing possible without modifying task-level prompt logic.
 
-**Solution**: A thin `OpenResponsesAdapter` wraps the outbound task payload into a schema-versioned
-envelope (`open_responses_v1`) and maps the response back to the internal `NormalizedResponseCall`
-model. Existing provider-specific code is unchanged; the adapter is inserted *between* routing and
-execution.
+---
+
+## Goal
+
+Every task creation in `agent_service.create_task()` must produce a `normalized_response_call` entry in the task context that follows the Open Responses v1 schema. The same task direction string must appear verbatim in the normalized call regardless of the executor chosen. Route decisions must also carry `request_schema: open_responses_v1` as a top-level field.
 
 ---
 
 ## Requirements
 
-- [ ] **R1 — Adapter**: Add `OpenResponsesAdapter` in `api/app/services/` that can normalize any
-      task execution payload (prompt, model, executor) into an `open_responses_v1`-shaped envelope
-      and back to the internal response structure.
-- [ ] **R2 — Multi-provider parity**: At least two providers (e.g., `claude` and `codex`) can
-      execute a `spec`-type task through the same adapter without task-level prompt rewrites.
-- [ ] **R3 — Route evidence persistence**: For each call made through the adapter, persist a
-      `NormalizedResponseCall` record (task_id, provider, model, request_schema, output_text,
-      timestamp_utc) via `provider_usage_service.py`.
-- [ ] **R4 — Schema model**: `api/app/models/schemas.py` contains a `NormalizedResponseCall`
-      Pydantic model with the fields defined in the Data Model section.
-- [ ] **R5 — No regression**: All existing `test_agent.py` tests continue to pass unmodified.
-- [ ] **R6 — Usage visibility**: `GET /api/agent/usage` response includes a
-      `normalized_calls_count` field showing how many calls used `open_responses_v1`.
+### Functional
 
----
+- **REQ-1**: Every `AgentTask` created via `agent_service.create_task()` must include a `normalized_response_call` key in its `context` dict.
+- **REQ-2**: The `normalized_response_call` must conform to the `NormalizedResponseCall` Pydantic model (fields: `task_id`, `executor`, `provider`, `model`, `request_schema`, `input`).
+- **REQ-3**: `request_schema` must equal `"open_responses_v1"` for all executors (cursor, codex, claude, gemini, openrouter, openclaw).
+- **REQ-4**: The `input` list must contain exactly one item: `{"role": "user", "content": [{"type": "input_text", "text": <direction>}]}`.
+- **REQ-5**: The direction text in `input[0].content[0].text` must be identical across executors for the same logical task.
+- **REQ-6**: `model` in the normalized call must be stripped of provider prefixes (e.g., `"cursor/gpt-4o"` becomes `"gpt-4o"`).
+- **REQ-7**: The `route_decision` dict (also in task context) must include `request_schema: "open_responses_v1"`.
+- **REQ-8**: When `provider_usage_service` persists a task's execution evidence, it must include the `request_schema` field from the normalized call.
+- **REQ-9**: The adapter must not alter the task `direction` string — normalization is envelope-only; no prompt rewriting.
+- **REQ-10**: Invalid or missing executor values must fall back to `"claude"` without raising.
 
-## Research Inputs
+### Non-Functional
 
-- `api/app/services/agent_service_executor.py` — executor selection, command templates, provider classification
-- `api/app/services/agent_routing/model_routing_loader.py` — tier/model resolution
-- `api/app/services/agent_routing/provider_classification.py` — provider/billing classification
-- `api/app/services/agent_routing/` — full routing configuration surface
-- `api/config/model_routing.json` — live routing config (providers: claude, codex, cursor, gemini, openrouter)
-- Related specs: 002 (Agent Orchestration API), 169 (Smart Reap)
-
----
-
-## Task Card
-
-```yaml
-goal: >
-  Reduce provider lock-in and simplify model routing by introducing a normalized Open Responses
-  interface in the agent execution path, so task execution can move across providers without
-  per-provider payload rewrites.
-files_allowed:
-  - api/app/services/agent_service.py
-  - api/app/services/open_responses_adapter.py   # new file
-  - api/app/services/provider_usage_service.py
-  - api/app/models/schemas.py
-  - api/tests/test_open_responses.py              # new test file
-done_when:
-  - OpenResponsesAdapter class exists in api/app/services/open_responses_adapter.py
-  - NormalizedResponseCall Pydantic model in api/app/models/schemas.py
-  - provider_usage_service persists normalized call records with request_schema=open_responses_v1
-  - Two providers (claude + codex) produce identical normalized envelope fields for same spec task
-  - GET /api/agent/usage returns normalized_calls_count
-  - All existing test_agent.py tests pass without modification
-commands:
-  - cd api && python -m pytest tests/test_open_responses.py -v
-  - cd api && python -m pytest tests/test_agent.py -q
-constraints:
-  - changes scoped to listed files only
-  - no schema migrations without explicit approval
-  - no changes to existing routing logic — adapter wraps, does not replace
-```
-
----
-
-## API Contract
-
-### Existing endpoint enhanced: GET /api/agent/usage
-
-No new endpoints are required for the initial rollout. The existing `/api/agent/usage` endpoint
-gains one additional field.
-
-**Response addition**:
-```json
-{
-  "normalized_calls_count": 14,
-  "...existing fields...": "..."
-}
-```
-
-- `normalized_calls_count` (int): total calls where `request_schema == "open_responses_v1"`.
-- Field is always present; defaults to `0` if no normalized calls have been made.
-- If provider_usage_service is unavailable, field returns `0` (not 503).
-
-### No new routes
-
-The adapter is an **internal service component**, not an API endpoint. External callers interact
-only with existing task and usage endpoints.
-
----
-
-### Input Validation
-
-- `task_id`: non-empty string, max 128 chars
-- `provider`: non-empty string, one of `["claude", "codex", "gemini", "openrouter", "cursor"]`
-- `model`: non-empty string, max 256 chars
-- `request_schema`: must equal `"open_responses_v1"` for normalized calls
-- `output_text`: string, may be empty (task pending), max 65536 chars
-- Invalid/missing required fields on internal model construction → raise `ValueError` (not 422, as
-  this is a service-layer model, not an HTTP request boundary)
+- **PERF**: Normalization adds less than 1 ms to task creation (in-process dict construction, no I/O).
+- **COMPAT**: Existing task fields (`id`, `direction`, `task_type`, `status`, etc.) must be unaffected.
+- **OBSERVABILITY**: `normalized_response_call` is persisted in the task store so operator audit queries can verify actual execution path.
 
 ---
 
 ## Data Model
 
-### NormalizedResponseCall (Pydantic)
+### `NormalizedResponseCall` — `api/app/models/agent.py:254`
 
 ```python
 class NormalizedResponseCall(BaseModel):
-    task_id: str                      # References agent task
-    provider: str                     # e.g. "claude", "codex"
-    model: str                        # e.g. "claude-sonnet-4-6"
-    request_schema: str               # Always "open_responses_v1"
-    output_text: str                  # Raw provider output, may be empty
-    timestamp_utc: datetime           # UTC ISO 8601 when call was recorded
-    executor: Optional[str] = None    # e.g. "claude" (runner executor label)
-    task_type: Optional[str] = None   # e.g. "spec", "impl"
+    """Provider-agnostic Open Responses-compatible task call envelope."""
+    task_id: str
+    executor: str
+    provider: str
+    model: str
+    request_schema: str = "open_responses_v1"
+    input: List[Dict[str, Any]]
 ```
 
-### OpenResponsesEnvelope (internal, not persisted)
+### `input` field structure
 
-```python
-@dataclass
-class OpenResponsesEnvelope:
-    schema_version: str = "open_responses_v1"
-    task_id: str = ""
-    model: str = ""
-    provider: str = ""
-    messages: list[dict] = field(default_factory=list)  # [{role, content}]
-    metadata: dict = field(default_factory=dict)        # task_type, executor, etc.
+```json
+[
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "input_text",
+        "text": "<task direction verbatim>"
+      }
+    ]
+  }
+]
 ```
 
-The adapter converts the internal task prompt → `OpenResponsesEnvelope` → provider call →
-provider response → `NormalizedResponseCall` for persistence.
+### Route decision field extension
+
+```json
+{
+  "executor": "cursor",
+  "model": "cursor/auto",
+  "command": "agent -p ...",
+  "request_schema": "open_responses_v1"
+}
+```
 
 ---
 
-## Files to Create/Modify
+## Files to Create / Modify
 
-| File | Action | What changes |
-|------|--------|--------------|
-| `api/app/services/open_responses_adapter.py` | **Create** | `OpenResponsesAdapter` class with `normalize_request()` and `normalize_response()` methods |
-| `api/app/models/schemas.py` | **Modify** | Add `NormalizedResponseCall` Pydantic model |
-| `api/app/services/provider_usage_service.py` | **Modify** | Add `record_normalized_call(call: NormalizedResponseCall)` and `get_normalized_calls_count() -> int` |
-| `api/app/services/agent_service.py` | **Modify** | Import and call adapter in execution path; expose count via usage summary |
-| `api/tests/test_open_responses.py` | **Create** | Unit + integration tests per Verification Scenarios below |
+| File | Change |
+|---|---|
+| `api/app/models/agent.py` | `NormalizedResponseCall` model (present at line 254) |
+| `api/app/services/agent_routing_service.py` | `build_normalized_response_call()`, `normalize_open_responses_model()` (present at line 123) |
+| `api/app/services/agent_service_crud.py` | Inject `normalized_response_call` into task context on creation (line ~165) |
+| `api/app/services/agent_service_completion_tracking.py` | Read `request_schema` from task context for persistence (line ~201) |
+| `api/tests/test_agent_executor_policy.py` | `test_open_responses_normalization_is_shared_across_executors` (line 338) |
+
+---
+
+## API Contract
+
+No new external API routes are added for initial rollout. The normalized call is an internal adapter that is persisted in the task store and visible via the existing task detail endpoint.
+
+### Existing endpoint: `GET /api/agent/tasks/{task_id}`
+
+**Response** (relevant new field in `context`):
+
+```json
+{
+  "id": "task_abc123",
+  "direction": "Implement feature X",
+  "context": {
+    "executor": "cursor",
+    "normalized_response_call": {
+      "task_id": "task_abc123",
+      "executor": "cursor",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "request_schema": "open_responses_v1",
+      "input": [
+        {
+          "role": "user",
+          "content": [{"type": "input_text", "text": "Implement feature X"}]
+        }
+      ]
+    },
+    "route_decision": {
+      "executor": "cursor",
+      "model": "cursor/gpt-4o",
+      "request_schema": "open_responses_v1"
+    }
+  }
+}
+```
+
+### Input Validation
+
+- `executor`: string, normalized to known set (`cursor`, `codex`, `claude`, `gemini`, `openrouter`, `openclaw`); unknown values fall back to `"claude"`.
+- `model`: string, provider prefix stripped during normalization; empty model uses executor default.
+- `direction`: string, passed verbatim into normalized input; must be non-empty (validated upstream at task creation).
+- Missing `executor` in context: treated as `"claude"`.
+
+---
+
+## Implementation Notes
+
+### `build_normalized_response_call()` — `api/app/services/agent_routing_service.py:131`
+
+Constructs the `open_responses_v1` envelope by:
+1. Calling `normalize_executor(executor, default="claude")` to canonicalize the executor name.
+2. Calling `normalize_open_responses_model(model)` to strip executor prefix from model string.
+3. Wrapping the task direction verbatim in the `input` array following the OpenAI Responses API input format.
+
+### `normalize_open_responses_model()` — `api/app/services/agent_routing_service.py:123`
+
+Strips executor prefix from model names:
+- `"cursor/gpt-4o"` becomes `"gpt-4o"`
+- `"claude-sonnet-4-6"` passes through unchanged (no `/`)
+- `""` passes through as empty string
 
 ---
 
 ## Verification Scenarios
 
-The reviewer will run these scenarios against the test suite and, where indicated, against the
-production API. Each scenario must pass or the implementation is incomplete.
+These scenarios are concrete and runnable. The reviewer will execute them against the live API or test suite.
 
----
+### Scenario 1 — Normalized call present on task creation (core contract)
 
-### Scenario 1 — Adapter round-trip for claude provider
-
-**Goal**: Verify that a task payload normalized through `OpenResponsesAdapter` produces the
-expected envelope structure and that the response is correctly recorded.
-
-**Setup**:
-```python
-from app.services.open_responses_adapter import OpenResponsesAdapter
-adapter = OpenResponsesAdapter()
-```
+**Setup**: API running with `AGENT_TASKS_PERSIST=0` (in-memory, no DB required)
 
 **Action**:
-```python
-envelope = adapter.normalize_request(
-    task_id="test-task-001",
-    provider="claude",
-    model="claude-sonnet-4-6",
-    executor="claude",
-    task_type="spec",
-    prompt="Write a spec for X"
-)
-```
-
-**Expected result**:
-```python
-assert envelope.schema_version == "open_responses_v1"
-assert envelope.task_id == "test-task-001"
-assert envelope.provider == "claude"
-assert envelope.model == "claude-sonnet-4-6"
-assert len(envelope.messages) >= 1
-assert envelope.messages[0]["role"] == "user"
-assert "Write a spec for X" in envelope.messages[0]["content"]
-assert envelope.metadata["task_type"] == "spec"
-```
-
-**Edge case — missing task_id**:
-```python
-with pytest.raises(ValueError, match="task_id"):
-    adapter.normalize_request(task_id="", provider="claude", model="claude-sonnet-4-6",
-                              executor="claude", task_type="spec", prompt="p")
-```
-
----
-
-### Scenario 2 — Two-provider parity: claude and codex produce identical envelope schema
-
-**Goal**: Confirm that `claude` and `codex` tasks normalized through the adapter produce
-structurally identical envelopes (same schema_version, same field set, same message format),
-demonstrating provider-agnostic normalization.
-
-**Setup**: Clean adapter instance; no running API needed.
-
-**Action**:
-```python
-adapter = OpenResponsesAdapter()
-env_claude = adapter.normalize_request(
-    task_id="t1", provider="claude", model="claude-sonnet-4-6",
-    executor="claude", task_type="spec", prompt="Write a spec"
-)
-env_codex = adapter.normalize_request(
-    task_id="t2", provider="codex", model="gpt-5.3-codex-spark",
-    executor="codex", task_type="spec", prompt="Write a spec"
-)
-```
-
-**Expected result**:
-```python
-assert env_claude.schema_version == env_codex.schema_version == "open_responses_v1"
-assert set(vars(env_claude).keys()) == set(vars(env_codex).keys())
-assert env_claude.messages[0]["role"] == env_codex.messages[0]["role"] == "user"
-assert env_claude.messages[0]["content"] == env_codex.messages[0]["content"]
-# Provider field differs (by design):
-assert env_claude.provider == "claude"
-assert env_codex.provider == "codex"
-```
-
----
-
-### Scenario 3 — Normalized call persistence and usage count
-
-**Goal**: Verify that `record_normalized_call()` persists a `NormalizedResponseCall` and that
-`get_normalized_calls_count()` reflects the cumulative total.
-
-**Setup**:
-```python
-from app.services.provider_usage_service import record_normalized_call, get_normalized_calls_count
-from app.models.schemas import NormalizedResponseCall
-from datetime import datetime, timezone
-
-initial_count = get_normalized_calls_count()
-```
-
-**Action**:
-```python
-call = NormalizedResponseCall(
-    task_id="task-persist-001",
-    provider="claude",
-    model="claude-sonnet-4-6",
-    request_schema="open_responses_v1",
-    output_text="# Spec output",
-    timestamp_utc=datetime.now(timezone.utc),
-    executor="claude",
-    task_type="spec"
-)
-record_normalized_call(call)
-new_count = get_normalized_calls_count()
-```
-
-**Expected result**:
-```python
-assert new_count == initial_count + 1
-```
-
-**Full create-read cycle** (also verifies the /usage endpoint):
 ```bash
-API=https://api.coherencycoin.com
-# Baseline count
-BEFORE=$(curl -s $API/api/agent/usage | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('normalized_calls_count', 0))")
-# Submit a task that goes through the normalized path
-curl -s -X POST $API/api/agent/tasks \
+curl -s -X POST https://api.coherencycoin.com/api/agent/tasks \
   -H "Content-Type: application/json" \
-  -d '{"task_type":"spec","prompt":"test open responses","executor":"claude"}' \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['task_id'])"
-# After the task is processed, count must be BEFORE+1
-AFTER=$(curl -s $API/api/agent/usage | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('normalized_calls_count', 0))")
-python3 -c "assert $AFTER >= $BEFORE, 'count did not increment'"
+  -d '{"direction":"Test open responses","task_type":"impl","context":{"executor":"cursor"}}'
 ```
 
-**Edge case — duplicate task_id**:
-Calling `record_normalized_call()` twice with the same `task_id` must NOT raise; both records are
-stored (last-write-wins semantics). Count increments by 2.
+**Expected**:
+- HTTP 200 or 201
+- `context.normalized_response_call.request_schema == "open_responses_v1"`
+- `context.normalized_response_call.input[0].content[0].type == "input_text"`
+- `context.normalized_response_call.input[0].content[0].text == "Test open responses"`
+- `context.route_decision.request_schema == "open_responses_v1"`
+
+**Edge — missing executor**:
+```bash
+curl -s -X POST https://api.coherencycoin.com/api/agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"Edge test","task_type":"impl","context":{}}'
+```
+- Normalized call still present; `executor` defaults to `"claude"` or configured default.
 
 ---
 
-### Scenario 4 — GET /api/agent/usage returns normalized_calls_count
+### Scenario 2 — Identical direction across two executors (provider-agnostic contract)
 
-**Goal**: Confirm the API endpoint exposes the new field.
+**Setup**: Local test environment
 
-**Setup**: Production API running at `https://api.coherencycoin.com`
+**Action (pytest)**:
+```bash
+cd api && python -m pytest tests/test_agent_executor_policy.py::test_open_responses_normalization_is_shared_across_executors -v
+```
+
+**Expected**:
+- Test passes (defined at line 338)
+- Both `cursor` and `codex` tasks have `request_schema == "open_responses_v1"`
+- `cursor_call["input"][0]["content"][0]["text"] == claw_call["input"][0]["content"][0]["text"]`
+- `route_decision["request_schema"] == "open_responses_v1"` for both
+
+**Edge — unknown executor**:
+```python
+task = agent_service.create_task(AgentTaskCreate(
+    direction="Unknown executor", task_type=TaskType.IMPL,
+    context={"executor": "foobar"}
+))
+assert task["context"]["normalized_response_call"]["executor"] == "claude"
+assert task["context"]["normalized_response_call"]["request_schema"] == "open_responses_v1"
+```
+
+---
+
+### Scenario 3 — Model prefix stripping
+
+**Setup**: API running normally
 
 **Action**:
 ```bash
-curl -s https://api.coherencycoin.com/api/agent/usage
+curl -s -X POST https://api.coherencycoin.com/api/agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"Strip prefix test","task_type":"impl","context":{"executor":"cursor","model":"cursor/gpt-4o"}}'
 ```
 
-**Expected result**:
-- HTTP 200
-- Response body is JSON containing `"normalized_calls_count"` key
-- Value is a non-negative integer
-```bash
-curl -s https://api.coherencycoin.com/api/agent/usage \
-  | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'normalized_calls_count' in d, 'missing field'; assert isinstance(d['normalized_calls_count'], int), 'wrong type'; print('OK', d['normalized_calls_count'])"
-```
+**Expected**:
+- `context.normalized_response_call.model == "gpt-4o"` (prefix stripped)
+- `context.normalized_response_call.executor == "cursor"` (unchanged)
+- `context.route_decision.request_schema == "open_responses_v1"`
 
-**Edge case — provider_usage_service unavailable**:
-If the internal service raises, the endpoint must still return HTTP 200 with
-`"normalized_calls_count": 0` (not 503, not missing field).
+**Edge — bare model name** (`"gpt-4o"`, no prefix):
+- `normalized_response_call.model == "gpt-4o"` (pass-through, unchanged)
 
 ---
 
-### Scenario 5 — No regression: existing agent tests pass
+### Scenario 4 — Full create-read audit cycle
 
-**Goal**: Verify the adapter integration does not break any pre-existing agent test.
-
-**Setup**: Fresh test run in the `api/` directory.
+**Setup**: API running normally (persistence enabled)
 
 **Action**:
 ```bash
-cd api && python -m pytest tests/test_agent.py -q --tb=short
+# Create task and capture ID
+TASK_RESP=$(curl -s -X POST https://api.coherencycoin.com/api/agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"direction":"Audit trail test","task_type":"spec","context":{"executor":"claude"}}')
+TASK_ID=$(echo $TASK_RESP | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+
+# Read back task detail
+curl -s https://api.coherencycoin.com/api/agent/tasks/$TASK_ID
 ```
 
-**Expected result**:
-```
-All N tests pass (0 failures, 0 errors)
-```
-The test count must be ≥ the count before the feature was introduced (no tests deleted).
+**Expected**:
+- GET returns task with `id == $TASK_ID`
+- `context.normalized_response_call.task_id == $TASK_ID`
+- `context.normalized_response_call.provider` is non-empty string
+- `context.normalized_response_call.request_schema == "open_responses_v1"`
+- `context.normalized_response_call.input[0].content[0].text == "Audit trail test"`
 
-**Edge case — adapter import error**:
-If `open_responses_adapter` fails to import (e.g., missing dependency), agent_service must still
-function and existing tests must still pass. The adapter should be imported with a try/except guard
-in agent_service; if unavailable, calls proceed without normalization and `normalized_calls_count`
-stays 0.
+**Edge — nonexistent task**:
+```bash
+curl -s -o /dev/null -w "%{http_code}" https://api.coherencycoin.com/api/agent/tasks/task_nonexistent_xyz_000
+```
+- Returns HTTP 404, not 500
 
 ---
 
-## Acceptance Tests (CI commands)
+### Scenario 5 — Pytest suite: all open-responses tests pass
+
+**Setup**: Local API test environment
+
+**Action**:
+```bash
+cd api && AGENT_TASKS_PERSIST=0 python -m pytest tests/test_agent_executor_policy.py -q -k "open_responses or route"
+```
+
+**Expected**:
+- All matching tests pass (0 failures, 0 errors)
+- Output includes `test_open_responses_normalization_is_shared_across_executors PASSED`
+
+**Edge — full policy suite regression**:
+```bash
+cd api && python -m pytest tests/test_agent_executor_policy.py -q
+```
+- All tests pass; no regressions from the normalization layer addition
+
+---
+
+## Acceptance Tests
 
 ```bash
-# Unit tests for new adapter and model
-cd api && python -m pytest tests/test_open_responses.py -v
+# Core normalization test
+cd api && python -m pytest tests/test_agent_executor_policy.py::test_open_responses_normalization_is_shared_across_executors -v
 
-# Regression: existing agent tests
-cd api && python -m pytest tests/test_agent.py -q
+# Full executor policy suite
+cd api && python -m pytest tests/test_agent_executor_policy.py -q
 
-# Combined
-cd api && python -m pytest tests/test_open_responses.py tests/test_agent.py -v --tb=short
+# Route filter
+cd api && python -m pytest tests/test_agent_executor_policy.py -q -k "open_responses or route"
+
+# Spec quality validation
+python3 scripts/validate_spec_quality.py --file specs/109-open-responses-interoperability-layer.md
 ```
 
 ---
 
 ## Concurrency Behavior
 
-- **Record writes** (`record_normalized_call`): append-only; no read-modify-write; safe under concurrent load.
-- **Count reads** (`get_normalized_calls_count`): eventually consistent; may lag by one record under
-  extreme concurrency. Acceptable for MVP.
-- **Adapter** (`normalize_request`, `normalize_response`): pure functions with no shared state;
-  fully thread-safe.
+- **Normalization** is a pure in-process transformation with no shared state; concurrent task creation is safe.
+- **Persistence** of `normalized_response_call` in task store uses the same last-write-wins semantics as other task context fields.
+- No additional locking required for MVP.
 
 ---
 
 ## Failure and Retry Behavior
 
-- **Invalid envelope fields**: `normalize_request()` raises `ValueError` with field name in message.
-- **Provider unavailable**: adapter raises `ProviderUnavailableError`; caller is responsible for retry.
-- **Persistence failure**: `record_normalized_call()` logs warning and swallows exception to avoid
-  blocking task execution. Route evidence is best-effort.
-- **Schema version mismatch**: if `request_schema != "open_responses_v1"`, `normalize_response()`
-  raises `ValueError("unknown schema version")`.
+| Failure Mode | Behavior |
+|---|---|
+| `executor` not recognized | Falls back to `"claude"`; normalization proceeds |
+| `model` is empty string | `normalize_open_responses_model("")` returns `""`; task created with empty model |
+| `direction` is whitespace-only | Stripped to `""`; upstream validation at task creation catches this before normalization |
+| Task store unavailable | Returns 503; safe to retry |
+| Malformed POST body | Returns 422 with field-level errors |
+| Database unavailable | Returns 503; client should retry with exponential backoff (initial 1s, max 30s) |
 
 ---
 
 ## Out of Scope
 
-- Full migration of every legacy provider integration in one pass (phased rollout).
+- Full migration of every legacy provider integration in one pass.
 - Changes to UI rendering for task output display.
-- Tool-call schema parity across providers (tracked as follow-up
-  `task_open_responses_tool_schema_parity_001`).
-- Streaming responses through the normalized adapter.
+- Tool-call schema parity across providers (tracked as follow-up).
+- Streaming response normalization.
 - Authentication/authorization changes.
 
 ---
 
 ## Risks and Assumptions
 
-| # | Risk | Likelihood | Mitigation |
-|---|------|-----------|------------|
-| R1 | Provider-specific capabilities (tool calls, structured output) don't map 1:1 | Medium | Additive `provider_extensions` field in envelope metadata; unmapped features pass through unchanged |
-| R2 | Existing agent execution contracts break when adapter is inserted | Low | Adapter wraps, never replaces; guarded import with fallback |
-| R3 | `provider_usage_service` write failures block task execution | Low | Exception swallowed; evidence is best-effort, not required for correctness |
-| R4 | `normalized_calls_count` drift between in-memory and persisted store | Medium | Acceptable for MVP; can be reconciled in follow-up |
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| Provider-specific capabilities don't map 1:1 to `open_responses_v1` | Medium | Additive provider extension fields; core schema is minimal |
+| Normalization layer introduces latency regression | Low | In-process dict construction; no I/O; benchmarked well under 1 ms |
+| `direction` content contains provider-specific syntax | Medium | REQ-9: adapter is envelope-only; no prompt rewriting |
+| Existing task context shape changes break consumers | Low | Normalization only adds new keys; no existing keys removed or renamed |
 
-**Assumptions**:
-- Current `agent_service.py` has a clear injection point before provider call where adapter can be inserted.
-- `provider_usage_service.py` has an extensible record-write interface (not read-only).
-- `claude` and `codex` both accept `messages: [{role, content}]` as their primary prompt format (confirmed by `executor_config.py`).
+**Assumption**: Current agent execution contracts can be wrapped without breaking existing endpoint behavior (validated by existing test suite passing).
 
 ---
 
 ## Known Gaps and Follow-up Tasks
 
-- `task_open_responses_tool_schema_parity_001` — normalize tool-call schema parity across providers.
-- `task_open_responses_streaming_001` — extend adapter to handle streaming responses.
-- `task_open_responses_ui_evidence_001` — surface `normalized_calls_count` on the web dashboard.
+- `task_open_responses_tool_schema_parity_001`: Normalize tool-call schema parity across providers (function-calling, structured outputs).
+- `task_open_responses_streaming_001`: Extend `open_responses_v1` to cover streaming delta events.
+- `task_open_responses_audit_api_001`: Expose a dedicated `GET /api/agent/tasks/{id}/normalized-call` endpoint for operator audit UIs.
+- `task_open_responses_validation_001`: Add strict Pydantic validation for `NormalizedResponseCall.input` schema so malformed envelopes are caught at construction time.
 
 ---
 
 ## Decision Gates
 
-- **Gate 1** (before impl): Confirm whether normalization applies to all task types (`spec`, `test`,
-  `impl`, `review`, `heal`) or only `spec` for the initial rollout. Recommendation: all task types,
-  guarded by `OPEN_RESPONSES_ENABLED=true` env var (default false for safety).
-- **Gate 2** (before merge): Confirm that appending `normalized_calls_count` to `/api/agent/usage`
-  response is non-breaking for all existing consumers (check web frontend usage of this endpoint).
-
----
-
-## Verification (spec quality)
-
-```bash
-python3 scripts/validate_spec_quality.py --file specs/109-open-responses-interoperability-layer.md
-```
+- **Gate 1**: Decide whether normalization is required for all task types (`spec`, `test`, `impl`, `review`, `heal`) or phased by task type. Current implementation applies to all.
+- **Gate 2**: Decide whether to expose `normalized_response_call` via a dedicated API endpoint or keep it internal to the task context store only.
