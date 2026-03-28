@@ -553,7 +553,7 @@ export default function TodayTopIdeaQuickLaunch({
         const executeError = await readErrorMessage(executeResponse);
         setLaunchState("created");
         setErrorMessage(
-          `The work card was created, but it could not start automatically: ${executeError}. You can still open it now or continue from Remote Ops if you use manual controls.`,
+          `The work card was created, but it could not start automatically: ${executeError}. You can still open it now or use Nodes controls if you use manual controls.`,
         );
         await refreshCreatedTask(taskId);
         return;
@@ -660,8 +660,8 @@ export default function TodayTopIdeaQuickLaunch({
             Open work card
           </Link>{" "}
           or{" "}
-          <Link href="/remote-ops" className="underline">
-            continue from Remote Ops
+          <Link href="/nodes" className="underline">
+            use Nodes controls
           </Link>
           .
         </p>

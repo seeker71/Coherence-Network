@@ -87,6 +87,37 @@ type TaskSummary = {
   failed: number;
 };
 
+type PendingTask = {
+  id: string;
+  task_type: string;
+  direction: string;
+  created_at: string;
+};
+
+type DailySummary = {
+  generated_at: string;
+  host_runner?: {
+    total_runs: number;
+    failed_runs: number;
+    completed_runs: number;
+    running_runs: number;
+    pending_runs: number;
+    by_task_type: Record<string, Record<string, number>>;
+  };
+  tool_usage?: {
+    worker_events: number;
+    worker_failed_events: number;
+    worker_failed_events_raw?: number;
+    worker_failed_events_recoverable?: number;
+    recovery_success_streak_target?: number;
+  };
+  friction?: {
+    total_events: number;
+    open_events: number;
+    top_block_types: Array<{ key: string; count: number; energy_loss: number }>;
+  };
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function elapsed(timestamp: string): string {
@@ -251,24 +282,30 @@ function PipelineDashboardContent() {
   const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([]);
   const [providerStats, setProviderStats] = useState<ProviderStats | null>(null);
   const [taskSummary, setTaskSummary] = useState<TaskSummary | null>(null);
+  const [pendingQueue, setPendingQueue] = useState<PendingTask[]>([]);
+  const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
 
   const load = useCallback(async () => {
     try {
-      const [nodesData, activeData, activityData, provStats, pendingData, runningData] = await Promise.allSettled([
+      const [nodesData, activeData, activityData, provStats, pendingData, runningData, pendingQueueData, dailySummaryData] = await Promise.allSettled([
         fetchJson<NetworkNode[]>("/api/federation/nodes"),
         fetchJson<ActivityEvent[]>("/api/agent/tasks/active"),
         fetchJson<ActivityEvent[]>("/api/agent/tasks/activity?limit=50"),
         fetchJson<ProviderStats>("/api/providers/stats"),
         fetchJson<{ total?: number }>("/api/agent/tasks?status=pending&limit=1"),
         fetchJson<{ total?: number }>("/api/agent/tasks?status=running&limit=1"),
+        fetchJson<{ tasks?: PendingTask[]; total?: number }>("/api/agent/tasks?status=pending&limit=20"),
+        fetchJson<DailySummary>("/api/agent/usage/daily-summary"),
       ]);
 
       if (nodesData.status === "fulfilled") setNodes(nodesData.value);
       if (activeData.status === "fulfilled") setActiveTasks(Array.isArray(activeData.value) ? activeData.value : []);
       if (activityData.status === "fulfilled") setRecentActivity(Array.isArray(activityData.value) ? activityData.value : []);
       if (provStats.status === "fulfilled") setProviderStats(provStats.value);
+      if (pendingQueueData.status === "fulfilled") setPendingQueue(pendingQueueData.value.tasks ?? []);
+      if (dailySummaryData.status === "fulfilled") setDailySummary(dailySummaryData.value);
 
       const pendingCount = pendingData.status === "fulfilled" ? (pendingData.value.total ?? 0) : 0;
       const runningCount = runningData.status === "fulfilled" ? (runningData.value.total ?? 0) : 0;
@@ -501,6 +538,105 @@ function PipelineDashboardContent() {
             })}
           </div>
         </section>
+
+        {/* Pending queue */}
+        {pendingQueue.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-medium">Pending Queue</h2>
+              <Link href="/tasks" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                All tasks →
+              </Link>
+            </div>
+            <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-2">
+              {pendingQueue.slice(0, 10).map((task) => (
+                <div key={task.id} className="flex items-start gap-3 py-2 border-b border-border/20 last:border-0">
+                  <span className="inline-block w-2 h-2 mt-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Link href={} className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors">
+                        {task.id.slice(0, 12)}
+                      </Link>
+                      {task.task_type && (
+                        <span className="text-[10px] rounded bg-muted/60 px-1.5 py-0.5 text-muted-foreground">
+                          {task.task_type}
+                        </span>
+                      )}
+                    </div>
+                    {task.direction && <p className="text-xs text-muted-foreground line-clamp-1">{task.direction}</p>}
+                  </div>
+                  {task.created_at && (
+                    <span className="text-[10px] text-muted-foreground/60 shrink-0 tabular-nums">{elapsed(task.created_at)}</span>
+                  )}
+                </div>
+              ))}
+              {(taskSummary?.pending ?? 0) > 10 && (
+                <p className="text-xs text-muted-foreground text-center pt-2">
+                  + {(taskSummary?.pending ?? 0) - 10} more —{" "}
+                  <Link href="/tasks" className="underline hover:text-foreground">view all</Link>
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Execution Health (24h) */}
+        {dailySummary?.host_runner && (
+          <section className="space-y-3">
+            <h2 className="text-lg font-medium">Execution Health (24h)</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1">
+                <p className="text-xs text-muted-foreground">Total runs</p>
+                <p className="text-2xl font-light tabular-nums">{dailySummary.host_runner.total_runs}</p>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1">
+                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-2xl font-light tabular-nums text-emerald-400">{dailySummary.host_runner.completed_runs}</p>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1">
+                <p className="text-xs text-muted-foreground">Failed</p>
+                <p className={}>{dailySummary.host_runner.failed_runs}</p>
+              </div>
+              <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1">
+                <p className="text-xs text-muted-foreground">Success rate</p>
+                {(() => {
+                  const total = dailySummary.host_runner!.total_runs;
+                  const rate = total > 0 ? Math.round((dailySummary.host_runner!.completed_runs / total) * 100) : 0;
+                  return <p className={}>{rate}%</p>;
+                })()}
+              </div>
+            </div>
+            {dailySummary.friction && dailySummary.friction.open_events > 0 && (
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-400 text-sm">⚠</span>
+                  <p className="text-sm font-medium">Friction: {dailySummary.friction.open_events} open events</p>
+                </div>
+                {dailySummary.friction.top_block_types.slice(0, 3).map((block) => (
+                  <div key={block.key} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="w-2 h-2 rounded-full bg-amber-400/60 shrink-0" />
+                    <span className="flex-1">{block.key}</span>
+                    <span className="tabular-nums">{block.count}×</span>
+                  </div>
+                ))}
+                <Link href="/friction" className="text-xs text-amber-600 dark:text-amber-400 hover:underline">
+                  View friction details →
+                </Link>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Footer nav */}
+        <nav className="py-6 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
+          <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">Where to go next</p>
+          <div className="flex flex-wrap justify-center gap-4 text-sm">
+            <Link href="/nodes" className="text-amber-600 dark:text-amber-400 hover:underline">Nodes</Link>
+            <Link href="/tasks" className="text-amber-600 dark:text-amber-400 hover:underline">Work Cards</Link>
+            <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">Flow</Link>
+            <Link href="/friction" className="text-amber-600 dark:text-amber-400 hover:underline">Friction</Link>
+          </div>
+        </nav>
 
       </div>
     </main>
