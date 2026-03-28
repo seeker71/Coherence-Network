@@ -27,6 +27,8 @@ from app.models.idea import (
     IDEA_STAGE_ORDER,
     GovernanceHealth,
     Idea,
+    IdeaConceptResonanceMatch,
+    IdeaConceptResonanceResponse,
     IdeaCountByStatus,
     IdeaCountResponse,
     IdeaShowcaseBudget,
@@ -497,6 +499,61 @@ _FUZZY_STOP_WORDS = frozenset({
     "spec", "origin", "endpoint", "lineage", "the", "a", "for", "and", "of",
     "with", "from", "to", "in", "on", "by", "is", "at", "or", "an",
 })
+_RESONANCE_TOKEN_PATTERN = re.compile(r"[a-z0-9]{3,}")
+_CONCEPT_RESONANCE_STOP_WORDS = _FUZZY_STOP_WORDS.union({
+    "idea",
+    "ideas",
+    "concept",
+    "concepts",
+    "network",
+    "system",
+    "platform",
+    "service",
+    "services",
+    "tool",
+    "tools",
+    "domain",
+    "domains",
+    "cross",
+    "related",
+    "across",
+    "core",
+})
+
+
+def _extract_resonance_tokens(*parts: Any) -> set[str]:
+    tokens: set[str] = set()
+    pending = list(parts)
+    while pending:
+        part = pending.pop()
+        if part is None:
+            continue
+        if isinstance(part, (list, tuple, set)):
+            pending.extend(part)
+            continue
+        text = str(part).strip().lower()
+        if not text:
+            continue
+        text = text.replace("_", " ").replace("-", " ")
+        for token in _RESONANCE_TOKEN_PATTERN.findall(text):
+            if token in _CONCEPT_RESONANCE_STOP_WORDS:
+                continue
+            tokens.add(token)
+    return tokens
+
+
+def _idea_concept_tokens(idea: Idea) -> set[str]:
+    return _extract_resonance_tokens(
+        idea.id,
+        idea.name,
+        idea.description,
+        idea.tags,
+        [item.question for item in idea.open_questions],
+    )
+
+
+def _idea_domain_tokens(idea: Idea) -> set[str]:
+    return _extract_resonance_tokens(idea.tags, idea.interfaces)
 
 
 def _find_closest_graph_idea(idea_id: str, graph_ideas: list) -> Any | None:
@@ -1672,6 +1729,75 @@ def get_resonance_feed(window_hours: int = 24, limit: int = 20) -> list[dict]:
         })
 
     return feed
+
+
+def get_concept_resonance_matches(
+    idea_id: str,
+    *,
+    limit: int = 5,
+    min_score: float = 0.05,
+) -> IdeaConceptResonanceResponse | None:
+    """Return conceptually related ideas, sorted to favor cross-domain overlap."""
+    source = get_idea(idea_id)
+    if source is None:
+        return None
+
+    source_concepts = _idea_concept_tokens(source)
+    source_domains = _idea_domain_tokens(source)
+    if not source_concepts:
+        return IdeaConceptResonanceResponse(idea_id=source.id, matches=[], total=0)
+
+    matches: list[IdeaConceptResonanceMatch] = []
+    for candidate in _read_ideas(persist_ensures=False):
+        if candidate.id == source.id:
+            continue
+
+        candidate_concepts = _idea_concept_tokens(candidate)
+        shared_concepts = sorted(source_concepts & candidate_concepts)
+        if not shared_concepts:
+            continue
+
+        candidate_domains = _idea_domain_tokens(candidate)
+        combined_concepts = source_concepts | candidate_concepts
+        concept_overlap = len(shared_concepts) / max(len(combined_concepts), 1)
+        domain_union = source_domains | candidate_domains
+        domain_novelty = 0.0
+        if domain_union:
+            domain_novelty = len(candidate_domains - source_domains) / len(domain_union)
+        cross_domain = bool(source_domains and candidate_domains and source_domains != candidate_domains)
+        resonance_score = concept_overlap + (0.25 * domain_novelty if cross_domain else 0.0)
+        resonance_score = round(min(1.0, resonance_score), 4)
+        if resonance_score < min_score:
+            continue
+
+        scored_candidate = _with_score(candidate)
+        matches.append(
+            IdeaConceptResonanceMatch(
+                idea_id=candidate.id,
+                name=candidate.name,
+                resonance_score=resonance_score,
+                free_energy_score=scored_candidate.free_energy_score,
+                shared_concepts=shared_concepts[:8],
+                source_domains=sorted(source_domains),
+                candidate_domains=sorted(candidate_domains),
+                cross_domain=cross_domain,
+            )
+        )
+
+    matches.sort(
+        key=lambda item: (
+            item.cross_domain,
+            item.resonance_score,
+            item.free_energy_score,
+            item.idea_id,
+        ),
+        reverse=True,
+    )
+    return IdeaConceptResonanceResponse(
+        idea_id=source.id,
+        matches=matches[: max(1, limit)],
+        total=len(matches),
+    )
 
 
 def fork_idea(source_idea_id: str, forker_id: str, adaptation_notes: str | None = None) -> dict:

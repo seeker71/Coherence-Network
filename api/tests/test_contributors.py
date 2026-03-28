@@ -33,6 +33,17 @@ async def test_create_get_list_contributors() -> None:
         assert "offset" in body
         assert any(x["id"] == cid for x in body["items"])
 
+        # Portfolio sub-resources
+        resp4 = await client.get(f"/api/contributors/{cid}/portfolio")
+        assert resp4.status_code == 200
+        assert resp4.json()["contributor"]["id"] == cid
+
+        resp5 = await client.get(f"/api/contributors/{cid}/cc-history")
+        assert resp5.status_code == 200
+
+        resp6 = await client.get(f"/api/contributors/{cid}/idea-contributions")
+        assert resp6.status_code == 200
+
 
 @pytest.mark.asyncio
 async def test_get_contributor_404() -> None:
@@ -42,6 +53,10 @@ async def test_get_contributor_404() -> None:
         resp = await client.get("/api/contributors/00000000-0000-0000-0000-000000000000")
         assert resp.status_code == 404
         assert resp.json()["detail"] == "Contributor not found"
+
+        # Portfolio sub-resources 404
+        resp2 = await client.get("/api/contributors/nonexistent/portfolio")
+        assert resp2.status_code == 404
 
 
 @pytest.mark.asyncio

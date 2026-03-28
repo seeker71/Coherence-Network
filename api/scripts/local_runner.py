@@ -28,6 +28,8 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 import threading
 import time
 import socket
@@ -154,6 +156,37 @@ def _stable_node_id() -> str:
 _NODE_ID = _stable_node_id()
 
 
+def _completed_process_text(value: object) -> str:
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="ignore")
+    return str(value or "")
+
+
+def _is_dubious_ownership_failure(proc: object) -> bool:
+    stderr = _completed_process_text(getattr(proc, "stderr", ""))
+    stdout = _completed_process_text(getattr(proc, "stdout", ""))
+    detail = f"{stderr}\n{stdout}".lower()
+    return "detected dubious ownership" in detail and "safe.directory" in detail
+
+
+def _run_git_command(args: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+    proc = subprocess.run(args, **kwargs)
+    if proc.returncode == 0:
+        return proc
+
+    if any(str(arg).startswith("safe.directory=") for arg in args):
+        return proc
+
+    cwd = kwargs.get("cwd")
+    if not cwd or not _is_dubious_ownership_failure(proc):
+        return proc
+
+    safe_dir = str(Path(cwd).resolve())
+    retry_args = [args[0], "-c", f"safe.directory={safe_dir}", *args[1:]]
+    log.info("GIT_SAFE_DIRECTORY_RETRY cwd=%s", safe_dir)
+    return subprocess.run(retry_args, **kwargs)
+
+
 def _get_git_info() -> dict[str, str]:
     """Get git version info for this node."""
     repo = str(_REPO_DIR)
@@ -162,17 +195,17 @@ def _get_git_info() -> dict[str, str]:
     if not os.path.exists(git):
         git = "git"  # Fallback
     try:
-        r = subprocess.run([git, "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5, cwd=repo)
+        r = _run_git_command([git, "rev-parse", "--short", "HEAD"], capture_output=True, text=True, timeout=5, cwd=repo)
         if r.returncode == 0:
             info["local_sha"] = r.stdout.strip()
-        subprocess.run([git, "fetch", "origin", "main", "--quiet"], capture_output=True, timeout=15, cwd=repo)
-        r = subprocess.run([git, "rev-parse", "--short", "origin/main"], capture_output=True, text=True, timeout=5, cwd=repo)
+        _run_git_command([git, "fetch", "origin", "main", "--quiet"], capture_output=True, timeout=15, cwd=repo)
+        r = _run_git_command([git, "rev-parse", "--short", "origin/main"], capture_output=True, text=True, timeout=5, cwd=repo)
         if r.returncode == 0:
             info["origin_sha"] = r.stdout.strip()
-        r = subprocess.run([git, "branch", "--show-current"], capture_output=True, text=True, timeout=5, cwd=repo)
+        r = _run_git_command([git, "branch", "--show-current"], capture_output=True, text=True, timeout=5, cwd=repo)
         if r.returncode == 0:
             info["branch"] = r.stdout.strip()
-        r = subprocess.run([git, "status", "--porcelain"], capture_output=True, text=True, timeout=5, cwd=repo)
+        r = _run_git_command([git, "status", "--porcelain"], capture_output=True, text=True, timeout=5, cwd=repo)
         info["dirty"] = "yes" if r.stdout.strip() else "no"
         info["up_to_date"] = "yes" if info["local_sha"] == info["origin_sha"] else "no"
     except Exception as e:
@@ -4191,6 +4224,274 @@ def _persist_idea_progress(idea_id: str, wt_path: Path) -> None:
         log.warning("PROGRESS_PERSIST_FAILED idea=%s error=%s", idea_id, e)
 
 
+def _repo_is_linked_worktree(repo_root: str) -> bool:
+    git_marker = Path(repo_root) / ".git"
+    if not git_marker.exists() or git_marker.is_dir() or not git_marker.is_file():
+        return False
+    try:
+        gitdir_line = git_marker.read_text(encoding="utf-8").strip()
+    except OSError:
+        return False
+    if not gitdir_line.startswith("gitdir:"):
+        return False
+    gitdir = Path(gitdir_line.split(":", 1)[1].strip())
+    if not gitdir.is_absolute():
+        gitdir = (git_marker.parent / gitdir).resolve()
+    return "/.git/worktrees/" in gitdir.as_posix().lower()
+
+
+def _resolve_available_ref(repo_root: str, refs: list[str]) -> str | None:
+    seen: set[str] = set()
+    for ref in refs:
+        ref = str(ref or "").strip()
+        if not ref or ref in seen:
+            continue
+        seen.add(ref)
+        proc = _run_git_command(
+            ["git", "rev-parse", "--verify", ref],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+        if proc.returncode == 0:
+            return ref
+    return None
+
+
+def _get_origin_remote_url(repo_root: str) -> str:
+    proc = _run_git_command(
+        ["git", "remote", "get-url", "origin"],
+        capture_output=True, text=True, timeout=10, cwd=repo_root,
+    )
+    if proc.returncode == 0:
+        return (proc.stdout or "").strip()
+    return ""
+
+
+def _extract_git_archive(archive_path: Path, destination: Path) -> None:
+    destination_root = destination.resolve()
+    with tarfile.open(archive_path) as archive:
+        members = archive.getmembers()
+        for member in members:
+            member_path = (destination_root / member.name).resolve()
+            if not member_path.is_relative_to(destination_root):
+                raise ValueError(f"unsafe archive member: {member.name}")
+        archive.extractall(destination)
+
+
+def _create_standalone_task_repo(
+    task_id: str,
+    wt_path: Path,
+    branch: str,
+    *,
+    base_branch: str | None = None,
+    idea_id: str = "",
+) -> Path | None:
+    """Create an isolated task repo when nested git worktrees are not writable.
+
+    Linked worktrees share a parent gitdir. In restricted environments that makes
+    ``git worktree add`` write through to the parent repo's refs/FETCH_HEAD, which
+    can fail with Permission denied. This fallback keeps task execution isolated
+    inside a standalone git repo rooted under ``.worktrees/``.
+    """
+    slug = task_id[:16]
+    repo_root = str(_REPO_DIR)
+    archive_candidates = []
+    if base_branch:
+        archive_candidates.extend([f"origin/{base_branch}", base_branch])
+    archive_candidates.extend(["origin/main", "main", "HEAD"])
+    archive_ref = _resolve_available_ref(repo_root, archive_candidates)
+    origin_url = _get_origin_remote_url(repo_root)
+    archive_path: Path | None = None
+
+    try:
+        wt_path.mkdir(parents=True, exist_ok=True)
+        init = _run_git_command(
+            ["git", "init", "--quiet"],
+            capture_output=True, text=True, timeout=30, cwd=str(wt_path),
+        )
+        if init.returncode != 0:
+            detail = (init.stderr or init.stdout or "unknown failure").strip()
+            log.warning("WORKTREE_STANDALONE_INIT_FAILED task=%s path=%s error=%s", slug, wt_path, detail)
+            return None
+
+        for key, value in (
+            ("user.name", "Coherence Task Runner"),
+            ("user.email", "runner@coherence.local"),
+        ):
+            _run_git_command(
+                ["git", "config", key, value],
+                capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+            )
+
+        if origin_url:
+            _run_git_command(
+                ["git", "remote", "add", "origin", origin_url],
+                capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+            )
+
+        if archive_ref:
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=f"-{slug}.tar",
+                dir=str(_WORKTREE_BASE),
+            ) as tmp:
+                archive_path = Path(tmp.name)
+
+            archive = _run_git_command(
+                ["git", "archive", "--format=tar", f"--output={archive_path}", archive_ref],
+                capture_output=True, text=True, timeout=120, cwd=repo_root,
+            )
+            if archive.returncode != 0:
+                detail = (archive.stderr or archive.stdout or "unknown failure").strip()
+                log.warning("WORKTREE_ARCHIVE_FAILED task=%s ref=%s error=%s", slug, archive_ref, detail)
+                return None
+
+            _extract_git_archive(archive_path, wt_path)
+
+            checkout = _run_git_command(
+                ["git", "checkout", "-b", branch],
+                capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+            )
+            if checkout.returncode != 0:
+                detail = (checkout.stderr or checkout.stdout or "unknown failure").strip()
+                log.warning("WORKTREE_STANDALONE_BRANCH_FAILED task=%s branch=%s error=%s", slug, branch, detail)
+                return None
+
+            stage = _run_git_command(
+                ["git", "add", "-A"],
+                capture_output=True, text=True, timeout=30, cwd=str(wt_path),
+            )
+            if stage.returncode != 0:
+                detail = (stage.stderr or stage.stdout or "unknown failure").strip()
+                log.warning("WORKTREE_STANDALONE_STAGE_FAILED task=%s error=%s", slug, detail)
+                return None
+
+            commit = _run_git_command(
+                ["git", "commit", "--quiet", "-m", f"Task {slug}: base snapshot ({archive_ref})"],
+                capture_output=True, text=True, timeout=30, cwd=str(wt_path),
+            )
+            if commit.returncode != 0:
+                detail = (commit.stderr or commit.stdout or "unknown failure").strip()
+                log.warning("WORKTREE_STANDALONE_COMMIT_FAILED task=%s error=%s", slug, detail)
+                return None
+
+            log.info("WORKTREE_STANDALONE_CREATED task=%s base=%s path=%s", slug, archive_ref, wt_path)
+        else:
+            remote_ref = base_branch or "main"
+            if not origin_url:
+                log.warning("WORKTREE_STANDALONE_REF_MISSING task=%s ref=%s (no origin remote)", slug, remote_ref)
+                return None
+
+            fetch = _run_git_command(
+                ["git", "fetch", "--quiet", "origin", remote_ref],
+                capture_output=True, text=True, timeout=60, cwd=str(wt_path),
+            )
+            if fetch.returncode != 0:
+                detail = (fetch.stderr or fetch.stdout or "unknown failure").strip()
+                log.warning("WORKTREE_STANDALONE_FETCH_FAILED task=%s ref=%s error=%s", slug, remote_ref, detail)
+                return None
+
+            checkout = _run_git_command(
+                ["git", "checkout", "-b", branch, "FETCH_HEAD"],
+                capture_output=True, text=True, timeout=30, cwd=str(wt_path),
+            )
+            if checkout.returncode != 0:
+                detail = (checkout.stderr or checkout.stdout or "unknown failure").strip()
+                log.warning("WORKTREE_STANDALONE_CHECKOUT_FAILED task=%s branch=%s error=%s", slug, branch, detail)
+                return None
+
+            log.info("WORKTREE_STANDALONE_FETCH_CREATED task=%s base=%s path=%s", slug, remote_ref, wt_path)
+
+        if idea_id:
+            _inject_idea_progress(idea_id, wt_path)
+        return wt_path
+    except Exception as e:
+        log.warning("WORKTREE_STANDALONE_FAILED task=%s error=%s", slug, e)
+        shutil.rmtree(wt_path, ignore_errors=True)
+    finally:
+        if archive_path and archive_path.exists():
+            try:
+                archive_path.unlink()
+            except OSError:
+                pass
+    return None
+
+
+def _branch_exists(repo_root: str, branch: str) -> bool:
+    proc = _run_git_command(
+        ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
+        capture_output=True, text=True, timeout=5, cwd=repo_root,
+    )
+    return proc.returncode == 0
+
+
+def _tracked_worktree_paths(repo_root: str) -> set[Path]:
+    proc = _run_git_command(
+        ["git", "worktree", "list", "--porcelain"],
+        capture_output=True, text=True, timeout=10, cwd=repo_root,
+    )
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout or "unknown failure").strip()
+        log.warning("WORKTREE_LIST_FAILED repo=%s error=%s", repo_root, detail)
+        return set()
+
+    paths: set[Path] = set()
+    for line in (proc.stdout or "").splitlines():
+        if line.startswith("worktree "):
+            paths.add(Path(line.split(" ", 1)[1].strip()).resolve())
+    return paths
+
+
+def _reclaim_worktree_slot(repo_root: str, wt_path: Path, branch: str) -> bool:
+    branch_present = _branch_exists(repo_root, branch)
+    if not wt_path.exists() and not branch_present:
+        return True
+
+    _run_git_command(
+        ["git", "worktree", "prune"],
+        capture_output=True, text=True, timeout=10, cwd=repo_root,
+    )
+
+    tracked_paths = _tracked_worktree_paths(repo_root)
+    if wt_path.resolve() in tracked_paths:
+        remove = _run_git_command(
+            ["git", "worktree", "remove", "--force", str(wt_path)],
+            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        )
+        if remove.returncode != 0:
+            detail = (remove.stderr or remove.stdout or "unknown failure").strip()
+            log.warning("WORKTREE_SLOT_REMOVE_FAILED path=%s error=%s", wt_path, detail)
+
+    if wt_path.exists():
+        try:
+            shutil.rmtree(wt_path)
+            log.info("WORKTREE_SLOT_ORPHAN_REMOVED path=%s", wt_path)
+        except Exception as e:
+            log.warning("WORKTREE_SLOT_ORPHAN_REMOVE_FAILED path=%s error=%s", wt_path, e)
+
+    if branch_present:
+        delete = _run_git_command(
+            ["git", "branch", "-D", branch],
+            capture_output=True, text=True, timeout=10, cwd=repo_root,
+        )
+        if delete.returncode != 0:
+            detail = (delete.stderr or delete.stdout or "unknown failure").strip()
+            log.warning("WORKTREE_BRANCH_DELETE_FAILED branch=%s error=%s", branch, detail)
+            branch_present = _branch_exists(repo_root, branch)
+        else:
+            branch_present = False
+
+    slot_clear = not wt_path.exists() and not branch_present
+    if not slot_clear:
+        log.warning(
+            "WORKTREE_SLOT_RECLAIM_FAILED path=%s branch=%s path_exists=%s branch_exists=%s",
+            wt_path,
+            branch,
+            wt_path.exists(),
+            branch_present,
+        )
+    return slot_clear
+
+
 def _create_worktree(task_id: str, base_branch: str | None = None, *, idea_id: str = "") -> Path | None:
     """Create a git worktree for isolated task execution.
 
@@ -4205,16 +4506,34 @@ def _create_worktree(task_id: str, base_branch: str | None = None, *, idea_id: s
     repo_root = str(_REPO_DIR)
     try:
         _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
+        if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+            return None
+        if _repo_is_linked_worktree(repo_root):
+            log.info(
+                "WORKTREE_LINKED_REPO task=%s repo=%s -- using standalone task repo fallback",
+                slug,
+                repo_root,
+            )
+            return _create_standalone_task_repo(
+                task_id,
+                wt_path,
+                branch,
+                base_branch=base_branch,
+                idea_id=idea_id,
+            )
         # Fetch latest remote refs
-        subprocess.run(
+        fetch = _run_git_command(
             ["git", "fetch", "origin", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
+        if fetch.returncode != 0:
+            detail = (fetch.stderr or fetch.stdout or "unknown failure").strip()
+            log.warning("WORKTREE_FETCH_FAILED task=%s error=%s", slug, detail)
         # Determine base ref: PR branch if specified, else origin/main
         base_ref = "origin/main"
         if base_branch:
             # Check if the remote branch exists
-            check = subprocess.run(
+            check = _run_git_command(
                 ["git", "rev-parse", "--verify", f"origin/{base_branch}"],
                 capture_output=True, text=True, timeout=5, cwd=repo_root,
             )
@@ -4224,10 +4543,20 @@ def _create_worktree(task_id: str, base_branch: str | None = None, *, idea_id: s
             else:
                 log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
 
-        subprocess.run(
+        create = _run_git_command(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
+        if create.returncode != 0:
+            detail = (create.stderr or create.stdout or "unknown failure").strip()
+            log.warning(
+                "WORKTREE_CREATE_FAILED task=%s base=%s path=%s error=%s",
+                slug,
+                base_ref,
+                wt_path,
+                detail,
+            )
+            return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             # Inject persisted idea progress sheet if available
@@ -4248,14 +4577,14 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
     slug = task_id[:16]
     try:
         # Stage everything so diff captures new files too
-        subprocess.run(
+        _run_git_command(
             ["git", "add", "-A"], capture_output=True, timeout=10, cwd=str(wt_path),
         )
-        diff = subprocess.run(
+        diff = _run_git_command(
             ["git", "diff", "--cached", "--stat"],
             capture_output=True, text=True, timeout=10, cwd=str(wt_path),
         )
-        full_diff = subprocess.run(
+        full_diff = _run_git_command(
             ["git", "diff", "--cached"],
             capture_output=True, text=True, timeout=10, cwd=str(wt_path),
         )
@@ -4282,19 +4611,12 @@ def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
             if age_hours < max_age_hours:
                 continue
             task_slug = wt_dir.name.replace("task-", "")
-            subprocess.run(
-                ["git", "worktree", "remove", "--force", str(wt_dir)],
-                capture_output=True, timeout=30, cwd=str(_REPO_DIR),
-            )
-            subprocess.run(
-                ["git", "branch", "-D", f"task/{task_slug}"],
-                capture_output=True, timeout=10, cwd=str(_REPO_DIR),
-            )
-            cleaned += 1
+            if _reclaim_worktree_slot(str(_REPO_DIR), wt_dir, f"task/{task_slug}"):
+                cleaned += 1
         except Exception:
             pass
     if cleaned:
-        subprocess.run(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_REPO_DIR))
+        _run_git_command(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_REPO_DIR))
         log.info("SWEEP_WORKTREES cleaned %d stale worktrees", cleaned)
     return cleaned
 
@@ -4308,17 +4630,8 @@ def _cleanup_worktree(task_id: str) -> None:
     wt_path = _WORKTREE_BASE / f"task-{slug}"
     branch = f"task/{slug}"
     try:
-        subprocess.run(
-            ["git", "worktree", "remove", "--force", str(wt_path)],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(_REPO_DIR),
-        )
-        subprocess.run(
-            ["git", "branch", "-D", branch],
-            capture_output=True, text=True, timeout=10,
-            cwd=str(_REPO_DIR),
-        )
-        log.info("WORKTREE_CLEANED task=%s", slug)
+        if _reclaim_worktree_slot(str(_REPO_DIR), wt_path, branch):
+            log.info("WORKTREE_CLEANED task=%s", slug)
     except Exception as e:
         log.warning("WORKTREE_CLEANUP_FAILED task=%s error=%s", slug, e)
 
@@ -4333,17 +4646,17 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
     branch = f"task/{slug}"
     try:
         # Commit any uncommitted changes in the worktree
-        subprocess.run(
+        _run_git_command(
             ["git", "add", "-A"],
             capture_output=True, timeout=10, cwd=str(wt_path),
         )
         # Check if there's anything to commit
-        status = subprocess.run(
+        status = _run_git_command(
             ["git", "status", "--porcelain"],
             capture_output=True, text=True, timeout=10, cwd=str(wt_path),
         )
         if status.stdout.strip():
-            subprocess.run(
+            _run_git_command(
                 ["git", "commit", "-m", f"Task {slug}: provider output"],
                 capture_output=True, text=True, timeout=30, cwd=str(wt_path),
             )
@@ -4375,7 +4688,7 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
         # Get the repo URL from git remote
         remote_url = ""
         try:
-            remote_result = subprocess.run(
+            remote_result = _run_git_command(
                 ["git", "remote", "get-url", "origin"],
                 capture_output=True, text=True, timeout=5, cwd=str(wt_path),
             )
@@ -4402,7 +4715,7 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
         else:
             push_cmd = ["git", "push", "origin", branch]
 
-        push = subprocess.run(
+        push = _run_git_command(
             push_cmd,
             capture_output=True, text=True, timeout=60, cwd=str(wt_path),
             env=push_env,
@@ -4428,12 +4741,12 @@ def _merge_branch_to_main(task_id: str) -> bool:
     repo_root = str(_REPO_DIR)
     try:
         # Fetch latest
-        subprocess.run(
+        _run_git_command(
             ["git", "fetch", "origin"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
         # Check if branch exists on origin
-        check = subprocess.run(
+        check = _run_git_command(
             ["git", "rev-parse", "--verify", f"origin/{branch}"],
             capture_output=True, text=True, timeout=10, cwd=repo_root,
         )
@@ -4442,28 +4755,28 @@ def _merge_branch_to_main(task_id: str) -> bool:
             return True
 
         # Merge origin/branch into local main
-        subprocess.run(
+        _run_git_command(
             ["git", "checkout", "main"],
             capture_output=True, text=True, timeout=10, cwd=repo_root,
         )
-        merge = subprocess.run(
+        merge = _run_git_command(
             ["git", "merge", "--no-ff", f"origin/{branch}", "-m", f"Merge reviewed task {slug}"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
         )
         if merge.returncode != 0:
-            subprocess.run(["git", "merge", "--abort"], capture_output=True, timeout=10, cwd=repo_root)
+            _run_git_command(["git", "merge", "--abort"], capture_output=True, timeout=10, cwd=repo_root)
             log.warning("MERGE_CONFLICT task=%s", slug)
             return False
 
         # Push main to origin
-        push = subprocess.run(
+        push = _run_git_command(
             ["git", "push", "origin", "main"],
             capture_output=True, text=True, timeout=60, cwd=repo_root,
         )
         if push.returncode == 0:
             log.info("MERGED_TO_MAIN task=%s", slug)
             # Clean up remote branch
-            subprocess.run(
+            _run_git_command(
                 ["git", "push", "origin", "--delete", branch],
                 capture_output=True, text=True, timeout=30, cwd=repo_root,
             )

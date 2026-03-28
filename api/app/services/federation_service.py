@@ -1534,4 +1534,57 @@ def _merge_warning_union(items: list[FederatedAggregationRecord]) -> dict:
         except:
             m = {}
         all_warnings.append({"node_id": r.node_id, "warning": m})
+
+
+# ---------------------------------------------------------------------------
+# Marketplace payload handling (Spec 121)
+# ---------------------------------------------------------------------------
+
+def broadcast_marketplace_payload(payload: dict) -> None:
+    """Broadcast a MARKETPLACE_LISTING or MARKETPLACE_FORK payload to registered instances.
+
+    This is a best-effort fire-and-forget. Failures are logged but not raised.
+    Registered instances with trust_level in ('pending', 'verified', 'trusted') receive the payload.
+    """
+    payload_type = payload.get("type", "")
+    if payload_type not in ("MARKETPLACE_LISTING", "MARKETPLACE_FORK"):
+        logger.warning("broadcast_marketplace_payload: unknown type %s", payload_type)
+        return
+
+    instances = list_instances()
+    source_instance_id = payload.get("data", {}).get("origin_instance_id", "local-instance")
+    sent = 0
+    for inst in instances:
+        if inst.instance_id == source_instance_id:
+            continue  # don't echo back
+        try:
+            import urllib.request as _req
+            import urllib.error as _err
+            body = json.dumps(payload).encode("utf-8")
+            url = f"{inst.endpoint_url.rstrip('/')}/api/federation/marketplace/ingest"
+            request = _req.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+            with _req.urlopen(request, timeout=5) as resp:
+                sent += 1
+        except Exception:
+            logger.debug(
+                "broadcast_marketplace_payload: failed to send to %s", inst.instance_id, exc_info=True
+            )
+
+    logger.info("broadcast_marketplace_payload type=%s sent_to=%d instances", payload_type, sent)
+
+
+def receive_marketplace_payload(payload_type: str, data: dict) -> bool:
+    """Ingest a MARKETPLACE_LISTING or MARKETPLACE_FORK from a remote instance.
+
+    Returns True if accepted, False if skipped (duplicate or error).
+    """
+    from app.services import marketplace_service
+
+    if payload_type == "MARKETPLACE_LISTING":
+        return marketplace_service.ingest_federated_listing(data)
+    elif payload_type == "MARKETPLACE_FORK":
+        return marketplace_service.ingest_federated_fork(data)
+    else:
+        logger.warning("receive_marketplace_payload: unknown type %s", payload_type)
+        return False
     return {"warnings": all_warnings}

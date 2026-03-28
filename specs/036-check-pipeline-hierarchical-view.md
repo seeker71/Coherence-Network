@@ -105,7 +105,127 @@ N/A. Script aggregates existing API responses and prints (or emits JSON) in hier
 - **Follow-up**: Add distributed locking for multi-worker pipelines.
 
 
-## Verification
+## Verification Scenarios
+
+These scenarios must be run against the API (local or production) to confirm the feature works end-to-end. Each is concrete and runnable.
+
+---
+
+### Scenario 1: Default (hierarchical) human-readable output shows four sections in order
+
+**Setup:** API is running at `$BASE` (e.g. `http://localhost:8000`). At least one task exists in the pipeline.
+
+**Action:**
+```bash
+BASE=http://localhost:8000 python3 api/scripts/check_pipeline.py
+```
+
+**Expected result:**
+- Output printed to stdout.
+- Sections appear in order: Goal (layer 0), PM/Orchestration (layer 1), Tasks (layer 2), Artifacts/Attention (layer 3).
+- The header line includes "hierarchical" (e.g. `Pipeline Status (hierarchical)`).
+- Goal section shows `goal_proximity`, throughput, and success rate (or fallback message `"report not yet generated"`).
+- Tasks section shows running, pending, and recent completed tasks.
+
+**Edge case — API unreachable:**
+```bash
+BASE=http://localhost:19999 python3 api/scripts/check_pipeline.py
+```
+Expected: non-zero exit code, error message printed to stderr. No Python traceback exposed to user.
+
+---
+
+### Scenario 2: `--json` output includes `hierarchical` top-level key
+
+**Setup:** API running, at least one task exists.
+
+**Action:**
+```bash
+BASE=http://localhost:8000 python3 api/scripts/check_pipeline.py --json | python3 -c "import sys,json; d=json.load(sys.stdin); assert 'hierarchical' in d, 'Missing hierarchical key'; print('OK')"
+```
+
+**Expected result:**
+- Exit 0, prints `OK`.
+- `hierarchical` key contains at minimum `layer_0_goal`, `layer_1_orchestration`, `layer_2_execution`.
+
+**Edge case — `--flat --json`:**
+```bash
+BASE=http://localhost:8000 python3 api/scripts/check_pipeline.py --flat --json | python3 -c "import sys,json; d=json.load(sys.stdin); print('hierarchical' in d)"
+```
+Expected: Prints `False` (flat mode omits hierarchical wrapper) or includes it but clearly labelled flat — either behaviour is acceptable; must not crash.
+
+---
+
+### Scenario 3: `--flat` flag produces legacy flat output without hierarchical header
+
+**Setup:** API running.
+
+**Action:**
+```bash
+BASE=http://localhost:8000 python3 api/scripts/check_pipeline.py --flat | grep -i "hierarchical"
+```
+
+**Expected result:**
+- Grep returns empty (exit 1) — i.e. the word "hierarchical" does not appear in the flat output header.
+- Command itself exits 0 (pipeline output was produced without error).
+
+**Edge case — mutually exclusive flags:**
+```bash
+BASE=http://localhost:8000 python3 api/scripts/check_pipeline.py --hierarchical --flat
+```
+Expected: Either an `argparse` error (`error: argument --flat: not allowed with argument --hierarchical`) with exit code 2, or one flag silently takes precedence. Must not crash with an unhandled exception.
+
+---
+
+### Scenario 4: Goal section graceful fallback when `GET /api/agent/status-report` returns 404
+
+**Setup:** Status-report endpoint is not available (returns 404). `GET /api/agent/effectiveness` is available and returns `{"goal_proximity": 0.7, "throughput": {"tasks_per_hour": 4}, "success_rate": 0.85}`.
+
+**Action:**
+```bash
+BASE=http://localhost:8000 python3 api/scripts/check_pipeline.py 2>&1 | head -30
+```
+
+**Expected result:**
+- Output still prints all four sections.
+- Goal section shows values derived from effectiveness endpoint (proximity ≥ 0.7, throughput ≥ 4 tasks/hr, success rate ≥ 85%).
+- No Python traceback visible; any fallback message is human-readable.
+
+**Edge case — both status-report and effectiveness unreachable:**
+- Goal section prints `"Goal: (report not yet generated)"` or equivalent placeholder.
+- Remaining sections (Tasks, Artifacts) still render from `pipeline-status`.
+
+---
+
+### Scenario 5: `--json` output passes full create-read cycle for scripting consumers
+
+**Setup:** API running. Assign `OUT` to captured JSON output.
+
+**Action:**
+```bash
+OUT=$(BASE=http://localhost:8000 python3 api/scripts/check_pipeline.py --json)
+echo "$OUT" | python3 - <<'EOF'
+import sys, json
+d = json.loads(sys.stdin.read())
+# Must have standard pipeline-status keys
+assert "running" in d or "tasks" in d or "project_manager" in d, "Missing pipeline-status fields"
+h = d.get("hierarchical", {})
+assert "layer_0_goal" in h, f"Missing layer_0_goal: {list(h.keys())}"
+assert "layer_1_orchestration" in h, f"Missing layer_1_orchestration"
+assert "layer_2_execution" in h, f"Missing layer_2_execution"
+print("ALL ASSERTIONS PASSED")
+EOF
+```
+
+**Expected result:**
+- Prints `ALL ASSERTIONS PASSED`, exit 0.
+
+**Edge case — malformed JSON from upstream:**
+- Script must not crash; should print error and exit non-zero rather than propagating a json.JSONDecodeError traceback.
+
+---
+
+## Verification (automated)
 
 ```bash
 python3 -m pytest api/tests/test_check_pipeline_hierarchical.py -x -v
