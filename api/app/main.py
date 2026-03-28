@@ -25,6 +25,7 @@ from app.routers import (
     coherence,
     contributions,
     contributor_identity,
+    contributor_beliefs,
     contributors,
     distributions,
     federation,
@@ -529,6 +530,7 @@ async def reset_database(x_admin_key: str = Header(None)):
 # ---------------------------------------------------------------------------
 
 # Resource routers (canonical)
+app.include_router(contributor_beliefs.router, prefix="/api", tags=["contributors"])
 app.include_router(contributors.router, prefix="/api", tags=["contributors"])
 app.include_router(assets.router, prefix="/api", tags=["assets"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
@@ -564,6 +566,7 @@ app.include_router(graph.router, prefix="/api", tags=["graph"])
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
+app.include_router(contributor_beliefs.router, prefix="/v1", include_in_schema=False)
 app.include_router(contributors.router, prefix="/v1", include_in_schema=False)
 app.include_router(assets.router, prefix="/v1", include_in_schema=False)
 app.include_router(contributions.router, prefix="/v1", include_in_schema=False)

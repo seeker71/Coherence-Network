@@ -15,6 +15,7 @@ import { showIdentity, linkIdentity, unlinkIdentity, lookupIdentity, setupIdenti
 import { setup } from "../lib/commands/setup.mjs";
 import { listNodes, sendMessage, sendCommand, readMessages } from "../lib/commands/nodes.mjs";
 import { listContributors, showContributor, showContributions } from "../lib/commands/contributors.mjs";
+import { showBeliefs } from "../lib/commands/beliefs.mjs";
 import { listAssets, showAsset, createAsset } from "../lib/commands/assets.mjs";
 import { showNewsFeed, showTrending, showSources, addSource, showNewsResonance } from "../lib/commands/news.mjs";
 import { showTreasury, showDeposits, makeDeposit } from "../lib/commands/treasury.mjs";
@@ -62,6 +63,7 @@ const COMMANDS = {
   inbox:         () => readMessages(args),
   contributors:  () => listContributors(args),
   contributor:   () => handleContributor(args),
+  beliefs:       () => showBeliefs(args),
   assets:        () => listAssets(args),
   asset:         () => handleAsset(args),
   news:          () => handleNews(args),
@@ -387,6 +389,8 @@ function showHelp() {
   contributors [limit]    List contributors
   contributor <id>        View contributor detail
   contributor <id> contributions  View contributions
+  beliefs <id>            Contributor belief profile (worldview, axes, concepts)
+  beliefs <id> resonance <idea_id>  Alignment score vs an idea
 
 \x1b[1mTasks (agent work protocol):\x1b[0m
   tasks [status] [limit]  List tasks (pending, running, completed)
