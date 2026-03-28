@@ -452,15 +452,13 @@ The `GET /api/graph/proof` response is designed for dashboard consumption. Spec 
 
 ## Files to Create or Modify
 
-| File | Action | Purpose |
-|---|---|---|
-| `api/alembic/versions/xxxx_add_typed_node_edge_constraints.py` | **Create** | Migration: add CHECKs, registry tables, lifecycle index |
-| `api/app/models/graph.py` | **Modify** | Add `NodeType`, `EdgeType`, `LifecycleState` enums; add `NodeTypeEntry`, `EdgeTypeEntry` Pydantic models |
-| `api/app/services/graph_service.py` | **Modify** | Validate `node_type`, `edge_type`, `lifecycle_state` against registry; prevent self-loops |
-| `api/app/routers/graph.py` | **Modify** | Add `GET /api/graph/node-types`, `GET /api/graph/edge-types`, `GET /api/graph/proof` endpoints |
-| `api/config/node_type_registry.json` | **Create** | JSON seed data for node type registry |
-| `api/config/edge_type_registry.json` | **Create** | JSON seed data for edge type registry |
-| `api/tests/test_typed_node_edge_primitives.py` | **Create** | pytest tests for all new constraints, endpoints, lifecycle transitions |
+- `api/alembic/versions/xxxx_add_typed_node_edge_constraints.py` — Migration: add NOT VALID CHECK constraints on node_type and edge_type, create node_type_registry and edge_type_registry tables, add lifecycle state index
+- `api/app/models/graph.py` — Add `NodeType`, `EdgeType`, `LifecycleState` enums; add `NodeTypeEntry`, `EdgeTypeEntry` Pydantic models for registry responses
+- `api/app/services/graph_service.py` — Validate `node_type`, `edge_type`, `lifecycle_state` against registry on write; apply lifecycle defaults by node type; prevent self-loops on edge creation
+- `api/app/routers/graph.py` — Add `GET /api/graph/node-types`, `GET /api/graph/edge-types`, `GET /api/graph/proof` endpoints; extend neighbors endpoint with lifecycle_state and rel_type filters
+- `api/config/node_type_registry.json` — JSON seed data for 10 node types with lifecycle_default and description
+- `api/config/edge_type_registry.json` — JSON seed data for 7 edge types with is_symmetric flag and description
+- `api/tests/test_typed_node_edge_primitives.py` — pytest tests for all new constraints, registry endpoints, lifecycle defaults, and proof endpoint
 
 ---
 
