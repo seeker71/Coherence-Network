@@ -2,52 +2,64 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from datetime import datetime
+from typing import Literal, Optional
 from pydantic import BaseModel
 
 
-class EndpointEdge(BaseModel):
-    type: str  # "implements_spec", "traces_idea", "defined_in_module"
-    target_id: str
-    target_label: Optional[str] = None
-
-
-class EndpointNode(BaseModel):
-    id: str  # e.g. "GET /api/ideas"
-    method: str
+class MetaEndpointNode(BaseModel):
     path: str
-    name: str
-    summary: Optional[str] = None
-    tags: list[str] = []
-    spec_id: Optional[str] = None
-    idea_id: Optional[str] = None
-    module: Optional[str] = None
-    edges: list[EndpointEdge] = []
+    method: str  # GET, POST, PUT, DELETE, PATCH
+    path_hash: str  # SHA-1 of "{method}:{path}"
+    tag: str
+    summary: str
+    spec_ids: list[str]
+    idea_ids: list[str]
+    contributors: list[str]
+    call_count_30d: int
+    last_called_at: Optional[datetime] = None
+    status: Literal["active", "deprecated", "unknown"]
 
 
-class ModuleNode(BaseModel):
-    id: str  # module dotted path e.g. "app.routers.ideas"
+class MetaModuleNode(BaseModel):
     name: str
-    module_type: str  # "router", "service", "model", "middleware"
-    file_path: Optional[str] = None
-    spec_ids: list[str] = []
-    idea_ids: list[str] = []
-    endpoint_count: int = 0
-    edges: list[EndpointEdge] = []
+    path: str
+    type: Literal["api_router", "service", "model", "adapter", "web_page", "web_component", "middleware", "other"]
+    spec_ids: list[str]
+    idea_ids: list[str]
+    contributors: list[str]
+    line_count: int
+    last_modified: datetime
+    test_file: Optional[str] = None
 
 
 class MetaEndpointsResponse(BaseModel):
     total: int
-    endpoints: list[EndpointNode]
+    endpoints: list[MetaEndpointNode]
+    generated_at: datetime
 
 
 class MetaModulesResponse(BaseModel):
     total: int
-    modules: list[ModuleNode]
+    modules: list[MetaModuleNode]
+    generated_at: datetime
 
 
 class MetaSummaryResponse(BaseModel):
-    endpoint_count: int
-    module_count: int
-    traced_count: int  # endpoints with spec/idea links
-    spec_coverage: float  # fraction of endpoints linked to a spec
+    system: str
+    version: str
+    generated_at: datetime
+    counts: dict[str, int]
+    traceability_score: float  # 0.0-1.0
+    coverage: dict[str, int]
+
+
+class MetaTraceResult(BaseModel):
+    id: str
+    type: Literal["spec", "idea"]
+    title: str
+    endpoints: list[dict[str, str]]  # list of {"method": method, "path": path}
+    modules: list[dict[str, str]]    # list of {"name": name, "path": path}
+    contributors: list[str]
+    first_commit: Optional[datetime] = None
+    call_count_30d: int
