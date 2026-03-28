@@ -99,3 +99,62 @@ Network appears as intended.
 - Assumption: the MCP server and skill artifacts in-repo already have enough packaging and README
   clarity for registry maintainers to accept them without additional product work.
 
+## Review record — task `task_2eeb12fa477ac8ae` (2026-03-28)
+
+**Verdict: REVIEW_FAILED** (idea closure criteria not met; partial implementation quality is acceptable).
+
+### What exists and works
+
+- **API (optional per this spec):** `GET /api/discovery/registry-submissions` is implemented in
+  `api/app/routers/registry_discovery.py`, backed by `api/app/services/registry_discovery_service.py`,
+  with Pydantic models in `api/app/models/registry_discovery.py`. The router is mounted under `/api`
+  with tag `discovery` (see `api/app/main.py`). Contract tests live in
+  `api/tests/test_registry_discovery_api.py` (asserts HTTP 200, `core_requirement_met`, six target
+  registry IDs including `smithery` and `mcp-so`, mix of `mcp` and `skill`, OpenAPI tag).
+- **Readiness logic:** Targets are validated against on-disk artifacts (`mcp-server/server.json`,
+  `mcp-server/package.json`, `skills/coherence-network/SKILL.md`, `README.md` content). The code is
+  straightforward, side-effect free, and suitable for deployment as a read-only inventory.
+
+### Gaps vs this idea spec (blocking)
+
+1. **Evidence artifact missing:** Section “Data model” requires version-controlled proof under
+  `docs/` (e.g. `docs/registry-submissions.md` or `docs/registry-submissions.json`) with per-row
+  `registry_id`, listing URL or merged PR, status, and `source_paths`. **No such file exists in the
+  repository** (glob search for `registry-submissions*` under `docs/` returns nothing). Without
+  that, the “>= 5 distinct registries with documented proof” requirement cannot be verified from the
+  repo alone.
+2. **External submissions not provable from code:** Actual listings on Smithery, Glama,
+   PulseMCP, MCP.so, skills.sh, askill.sh (or substitutes) are operational/out-of-band; the current
+   implementation only proves **asset readiness**, not **acceptance** on those surfaces.
+
+### Gaps vs broader task narrative (if interpreted as named registries + metrics)
+
+- `registry_discovery_service._TARGETS` includes npm, official MCP registry, ClawHub, and
+  AgentSkills rather than first-class rows for Glama, PulseMCP, skills.sh, and askill.sh (as
+  described in `specs/task_edfa105d1d6ae46c.md` / `specs/180-mcp-skill-registry-submission.md`).
+- **Install/download counts** are explicitly out of scope in *this* idea spec (“No analytics”);
+  there is no `registry_stats_service` or metrics endpoint in-tree for the idea file’s scope.
+
+### Open questions — how to improve proof over time
+
+1. **Add the evidence table** in `docs/registry-submissions.json` (or `.md`) and optionally extend
+   the API to merge **readiness** (current) with **submitted URL / PR / last-checked** fields read
+   from that file—still no live analytics required to satisfy the narrow idea.
+2. **Adoption signal:** Where APIs exist (e.g. Smithery/npm), a follow-up idea can add cached
+   counts; where they do not, store **manual snapshot date + link** in the evidence file so proof
+   strengthens over time without pretending precision.
+3. **CI check:** A small script that fails if evidence rows &lt; 5 or mix &lt; 2 MCP / 2 skill would
+   make regression visible on every PR.
+
+### Production verification (reviewer could not execute here)
+
+Automated shell/network from this environment was unavailable; a human or runner should confirm:
+
+- `curl -sS https://api.coherencycoin.com/api/discovery/registry-submissions` → HTTP 200,
+  `summary.core_requirement_met == true`.
+- Same on Railway host if that is the canonical production URL for this deployment.
+
+### DIF
+
+No new code was written in this review task; DIF verify was not applicable.
+
