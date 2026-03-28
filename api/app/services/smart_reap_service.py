@@ -415,3 +415,104 @@ def smart_reap_task(
             pass
 
     return {"action": "reaped", "task_id": task_id, "diagnosis": diagnosis}
+
+
+def diagnose_batch(
+    tasks: list[dict[str, Any]],
+    *,
+    log_dir: Path,
+    runners: list[dict[str, Any]],
+    now: datetime,
+    max_age_minutes: int,
+) -> list[dict[str, Any]]:
+    """Diagnose a batch of stuck tasks without applying any state changes.
+
+    Returns a list of diagnosis dicts with keys used by agent_smart_reap_routes:
+        task, error_class, diagnosis_text, runner_alive, provider_pid_alive,
+        partial_pct (0.0-1.0), has_partial, partial_output,
+        should_reap, should_extend, context_patch
+    """
+    results = []
+    for task in tasks:
+        task_id = str(task.get("id") or "")
+        ctx = task.get("context") or {}
+        task_type = str(task.get("task_type") or "spec")
+        provider = str(ctx.get("provider") or "unknown")
+        extensions_granted = get_extension_count(task)
+
+        # R10 — idempotency
+        if ctx.get("reap_diagnosis"):
+            results.append({
+                "task": task,
+                "error_class": "already_reaped",
+                "diagnosis_text": "Task already has reap_diagnosis; skipping.",
+                "runner_alive": False,
+                "provider_pid_alive": False,
+                "partial_pct": 0.0,
+                "has_partial": False,
+                "partial_output": "",
+                "should_reap": False,
+                "should_extend": False,
+                "context_patch": {},
+            })
+            continue
+
+        # R1 — Runner liveness
+        try:
+            runner_alive = is_runner_alive(task, runners)
+        except Exception:
+            runner_alive = True  # Assume alive if registry unavailable
+
+        # R3 — Capture partial output
+        partial_output, partial_chars = capture_partial_output(task_id, log_dir)
+        has_partial = partial_chars > 0
+
+        # Classify error
+        _summary, error_class = classify_error(partial_output if partial_output else None)
+        if not runner_alive and not partial_output:
+            error_class = "executor_crash" if not error_class or error_class == "unknown" else error_class
+
+        # R5 — Estimate partial pct
+        target_state = task.get("target_state") or None
+        partial_pct_int = estimate_partial_pct(partial_chars, task_type, target_state)
+        partial_pct = partial_pct_int / 100.0
+
+        # R2 — Should extend?
+        should_extend = runner_alive and can_extend(task, max_age_minutes)
+        # R4 — Should reap (if not extending)?
+        should_reap = not should_extend and not ctx.get("reap_diagnosis")
+
+        # Build context_patch for reap_diagnosis
+        diagnosis = build_reap_diagnosis(
+            runner_alive=runner_alive,
+            provider=provider,
+            partial_output=partial_output,
+            partial_chars=partial_chars,
+            partial_pct=partial_pct_int,
+            extensions_granted=extensions_granted,
+            resume_task_id=None,
+            error_class=error_class,
+        )
+        context_patch: dict[str, Any] = {**ctx, "smart_reap_diagnosis": diagnosis}
+
+        # Build human-readable diagnosis text
+        diagnosis_text = (
+            f"Smart reap diagnosis: runner_alive={runner_alive}, "
+            f"error_class={error_class}, partial={partial_pct_int}%"
+        )
+
+        results.append({
+            "task": task,
+            "error_class": error_class,
+            "diagnosis_text": diagnosis_text,
+            "runner_alive": runner_alive,
+            "provider_pid_alive": runner_alive,  # best-effort proxy
+            "partial_pct": partial_pct,
+            "has_partial": has_partial,
+            "partial_output": partial_output,
+            "should_reap": should_reap,
+            "should_extend": should_extend,
+            "context_patch": context_patch,
+        })
+
+    return results
