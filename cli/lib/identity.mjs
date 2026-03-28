@@ -2,7 +2,7 @@
  * Identity-first onboarding — runs on first use if no contributor_id in config.
  *
  * Interactive:   asks for name + primary identity (e.g. github:seeker71)
- * Non-interactive: auto-generates from COHERENCE_CONTRIBUTOR env, git config,
+ * Non-interactive: auto-generates from COHERENCE_CONTRIBUTOR_ID / COHERENCE_CONTRIBUTOR env, git config,
  *                  or hostname — then registers with the network.
  */
 
@@ -11,7 +11,7 @@ import { stdin, stdout } from "node:process";
 import { execSync } from "node:child_process";
 import { hostname } from "node:os";
 import { createHash } from "node:crypto";
-import { getContributorId, saveConfig, loadKeys, saveKeys } from "./config.mjs";
+import { getContributorId, parseContributorId, saveConfig, loadKeys, saveKeys } from "./config.mjs";
 import { post } from "./api.mjs";
 
 const ONBOARD_PROVIDERS = ["github", "ethereum", "x", "discord", "email"];
@@ -23,25 +23,33 @@ async function prompt(rl, question) {
 
 /**
  * Try to detect identity from environment:
- *   1. COHERENCE_CONTRIBUTOR env var
- *   2. git config user.name (most developers have this)
- *   3. hostname-based hash (last resort)
+ *   1. COHERENCE_CONTRIBUTOR_ID env var
+ *   2. COHERENCE_CONTRIBUTOR (legacy) env var
+ *   3. git config user.name (most developers have this)
+ *   4. hostname-based hash (last resort)
  */
 function detectIdentity() {
-  // 1. Explicit env var
-  if (process.env.COHERENCE_CONTRIBUTOR) {
-    return { id: process.env.COHERENCE_CONTRIBUTOR, source: "env" };
+  // 1–2. Explicit env vars (R3)
+  const envContributorId = parseContributorId(process.env.COHERENCE_CONTRIBUTOR_ID);
+  if (envContributorId) {
+    return { id: envContributorId, source: "env" };
+  }
+  const legacyContributorId = parseContributorId(process.env.COHERENCE_CONTRIBUTOR);
+  if (legacyContributorId) {
+    return { id: legacyContributorId, source: "env" };
   }
 
-  // 2. Git config
+  // 3. Git config
   try {
-    const gitUser = execSync("git config user.name", { encoding: "utf8", timeout: 3000 }).trim();
+    const gitUser = parseContributorId(
+      execSync("git config user.name", { encoding: "utf8", timeout: 3000 }),
+    );
     if (gitUser) {
       return { id: gitUser, source: "git" };
     }
   } catch {}
 
-  // 3. Hostname hash
+  // 4. Hostname hash
   const hash = createHash("sha256").update(hostname()).digest("hex").slice(0, 8);
   return { id: `node-${hostname().split(".")[0].toLowerCase()}-${hash}`, source: "hostname" };
 }
@@ -51,7 +59,7 @@ function detectIdentity() {
  * If not, run guided onboarding (interactive) or auto-detect (non-interactive).
  */
 export async function ensureIdentity() {
-  let id = getContributorId();
+  let id = parseContributorId(getContributorId());
   if (id) return id;
 
   // Non-interactive environment — auto-detect and register silently

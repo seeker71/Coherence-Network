@@ -6,10 +6,11 @@ import json
 import logging
 import urllib.parse
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
+from app.routers.auth_keys import verify_contributor_key
 from app.services import contributor_identity_service
 from app.services.config_service import get_config
 from app.services.identity_providers import registry_as_dict
@@ -58,6 +59,25 @@ def _get_oauth_config(provider: str) -> dict:
 async def list_providers() -> dict:
     """Return all supported identity providers grouped by category."""
     return {"categories": registry_as_dict()}
+
+
+@router.get("/me", summary="Identity for authenticated API key")
+async def identity_me(x_api_key: str | None = Header(None, alias="X-API-Key")) -> dict:
+    """Resolve contributor from a personal API key (R6)."""
+    if not x_api_key or not x_api_key.strip():
+        raise HTTPException(status_code=401, detail="Missing X-API-Key header")
+    info = verify_contributor_key(x_api_key.strip())
+    if not info:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    contributor_id = info.get("contributor_id")
+    if not contributor_id:
+        return {"contributor_id": None, "source": "none", "linked_accounts": 0}
+    identities = contributor_identity_service.get_identities(contributor_id)
+    return {
+        "contributor_id": contributor_id,
+        "source": "api_key",
+        "linked_accounts": len(identities),
+    }
 
 
 @router.post("/link", summary="Link an identity to a contributor")

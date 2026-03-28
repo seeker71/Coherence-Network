@@ -119,34 +119,48 @@ _NEXT_PHASE: dict[str, str | None] = {
     "spec": "impl",
     "impl": "test",
     "test": "code-review",
-    "code-review": None,
-    "review": None,
-    "deploy": None,
-    "verify": None,
+    "code-review": "deploy",          # R1: code-review → deploy (Spec 159)
+    "deploy": "verify-production",    # R1: deploy → verify-production (Spec 159)
+    "verify-production": None,        # R1: terminal — triggers validated status (Spec 159)
+    "review": None,                   # backward compat: legacy dead-end
+    "verify": None,                   # backward compat
     "heal": None,
 }
 
 # All phases downstream of a given phase — used for cascade invalidation
 _DOWNSTREAM: dict[str, list[str]] = {
-    "spec": ["impl", "test", "code-review", "review"],
-    "impl": ["test", "code-review", "review"],
-    "test": ["code-review", "review"],
+    "spec": ["impl", "test", "code-review", "deploy", "verify-production", "review"],
+    "impl": ["test", "code-review", "deploy", "verify-production", "review"],
+    "test": ["code-review", "deploy", "verify-production", "review"],
+    "code-review": ["deploy", "verify-production"],  # R5: cascade includes deploy+verify
+    "deploy": ["verify-production"],                 # R5
 }
 
 _PHASE_TASK_TYPE: dict[str, TaskType] = {
     "spec": TaskType.SPEC,
     "impl": TaskType.IMPL,
     "test": TaskType.TEST,
-    "code-review": TaskType.REVIEW,
+    "code-review": TaskType.CODE_REVIEW,
+    "deploy": TaskType.DEPLOY,           # R1: deploy phase task type
+    "verify-production": TaskType.VERIFY, # R1: verify-production phase task type
 }
 
 # Minimum output length to consider a task genuinely completed.
 # Text-only providers (openrouter/free) often claim completion with 0 output.
 _MIN_OUTPUT_CHARS: dict[str, int] = {
-    "spec": 100,    # A real spec is at least a paragraph
-    "impl": 200,    # A real impl must describe files changed + verification
-    "test": 100,    # A real test run must show test results
-    "code-review": 30,  # A review at least says PASSED or FAILED
+    "spec": 100,             # A real spec is at least a paragraph
+    "impl": 200,             # A real impl must describe files changed + verification
+    "test": 100,             # A real test run must show test results
+    "code-review": 30,       # A review at least says PASSED or FAILED
+    "deploy": 50,            # Health check output
+    "verify-production": 50, # curl scenario output
+    "verify": 50,            # alias for verify-production (TaskType.VERIFY.value)
+}
+
+# Pass-gate tokens: if the completed task output does NOT contain this token,
+# the advance is blocked even if status is "completed".
+_PASS_GATE_TOKEN: dict[str, str] = {
+    "code-review": "CODE_REVIEW_PASSED",   # R2: must contain explicit pass signal
 }
 
 # Phases that MUST produce code (git diff). Text output alone is not enough.
@@ -262,6 +276,60 @@ def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
     return True, ""
 
 
+def _set_idea_validated(idea_id: str) -> None:
+    """Set idea manifestation_status=validated after verify-production passes (Spec 159 R5)."""
+    try:
+        from app.services import idea_service
+        idea_service.update_idea(idea_id, manifestation_status="validated")
+        log.info("IDEA_VALIDATED idea=%s after verify-production passed", idea_id)
+    except Exception:
+        log.warning("IDEA_VALIDATED failed for idea=%s", idea_id, exc_info=True)
+
+
+def _handle_verify_failure(task: dict[str, Any], idea_id: str, output: str) -> None:
+    """Handle verify-production failure — create urgent hotfix task and set regression status.
+
+    Spec 159 R4: feature is publicly broken. Creates impl task with priority=urgent
+    and context.hotfix=true. Sets manifestation_status=regression.
+    """
+    from app.services import agent_service
+    idea_name = idea_id.replace("-", " ").replace("_", " ").title()
+
+    # Create hotfix task with highest priority
+    try:
+        hotfix = agent_service.create_task(AgentTaskCreate(
+            direction=(
+                f"HOTFIX REQUIRED: '{idea_name}' ({idea_id}) verify-production FAILED.\n\n"
+                f"The feature is publicly broken. Failing output:\n\n{output[:2000]}\n\n"
+                f"Fix the regression so that all Verification Scenarios in the spec pass.\n"
+                f"This is a live incident — highest priority."
+            ),
+            task_type=TaskType.IMPL,
+            context={
+                "idea_id": idea_id,
+                "hotfix": True,
+                "priority": "urgent",
+                "failure_type": "verify_production_failure",
+                "source_task_id": task.get("id", ""),
+                "auto_advance_source": "pipeline_advance_service",
+            },
+        ))
+        log.warning(
+            "HOTFIX_CREATED idea=%s verify-production failed → hotfix task=%s",
+            idea_id, hotfix.get("id", "?"),
+        )
+    except Exception:
+        log.error("HOTFIX_CREATE_FAILED idea=%s", idea_id, exc_info=True)
+
+    # Set idea manifestation_status=regression
+    try:
+        from app.services import idea_service
+        idea_service.update_idea(idea_id, manifestation_status="regression")
+        log.warning("IDEA_REGRESSION idea=%s — verify-production failed", idea_id)
+    except Exception:
+        log.warning("IDEA_REGRESSION update failed for idea=%s", idea_id, exc_info=True)
+
+
 def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     """If the task completed successfully WITH meaningful output, create the next phase task.
 
@@ -305,12 +373,36 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     if hasattr(task_type, "value"):
         task_type = task_type.value
 
-    next_phase = _NEXT_PHASE.get(task_type)
-    if not next_phase:
-        return None
-
+    output = (task.get("output") or "").strip()
     context = task.get("context") or {}
     idea_id = context.get("idea_id", "")
+
+    # R2: Pass-gate check — code-review must contain CODE_REVIEW_PASSED (Spec 159)
+    gate_token = _PASS_GATE_TOKEN.get(task_type)
+    if gate_token and gate_token not in output:
+        log.warning(
+            "PASS_GATE blocked advance: type=%s idea=%s — output missing %s",
+            task_type, idea_id or "?", gate_token,
+        )
+        return None
+
+    # Normalize: TaskType.VERIFY has value "verify" but the phase is named "verify-production"
+    # so we treat both as equivalent for the verify-production phase (Spec 159).
+    _is_verify_phase = task_type in ("verify-production", "verify")
+
+    # R4: verify-production failure — feature publicly broken (Spec 159)
+    if _is_verify_phase and "VERIFY_FAILED" in output:
+        if idea_id:
+            _handle_verify_failure(task, idea_id, output)
+        return None
+
+    next_phase = _NEXT_PHASE.get(task_type)
+    if not next_phase:
+        # R5: verify-production with VERIFY_PASSED → set manifestation_status=validated
+        if _is_verify_phase and "VERIFY_PASSED" in output and idea_id:
+            _set_idea_validated(idea_id)
+        return None
+
     if not idea_id:
         return None
 
@@ -389,6 +481,36 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             f"3. No unrelated files were modified or deleted?\n\n"
             f"{DIF_VERIFY}"
             f"Output CODE_REVIEW_PASSED or CODE_REVIEW_FAILED with DIF results + specific findings."
+        )
+    elif next_phase == "deploy":
+        # R3: deploy phase — merge, build, deploy to VPS, health check (Spec 159)
+        direction = (
+            f"Deploy '{idea_name}' ({idea_id}) to production.\n\n"
+            f"Steps:\n"
+            f"1. Merge the feature branch to main: gh pr merge --squash --admin\n"
+            f"2. SSH deploy: ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 "
+            f"'cd /docker/coherence-network/repo && git pull origin main && "
+            f"cd /docker/coherence-network && docker compose build --no-cache api web && "
+            f"docker compose up -d api web'\n"
+            f"3. Health check: curl -s https://api.coherencycoin.com/api/health\n\n"
+            f"Pass gate: health check must return HTTP 200 with status ok.\n"
+            f"On merge failure: output DEPLOY_FAILED: merge conflict — <details>.\n"
+            f"On SSH/build failure: output DEPLOY_FAILED: <error>.\n"
+            f"On success: output DEPLOY_PASSED: SHA <sha> live at coherencycoin.com.\n"
+        )
+    elif next_phase == "verify-production":
+        # R4: verify-production phase — run spec scenarios against live production (Spec 159)
+        spec_hint = f"\nSpec at: {spec_path}\n" if spec_path else "\n"
+        direction = (
+            f"Verify '{idea_name}' ({idea_id}) works in production.{spec_hint}\n"
+            f"Run the spec's Verification Scenarios section against:\n"
+            f"  - https://api.coherencycoin.com\n"
+            f"  - https://coherencycoin.com\n\n"
+            f"For each scenario use curl with Cache-Control: no-cache.\n"
+            f"Record: URL + HTTP status + response snippet.\n\n"
+            f"If ALL scenarios pass: output VERIFY_PASSED: <summary of results>.\n"
+            f"If ANY scenario fails (404/500/wrong data): output VERIFY_FAILED: <failing scenario + output>.\n"
+            f"No retries — if verify fails, it is a live incident.\n"
         )
     else:
         direction = f"Execute '{next_phase}' phase for '{idea_name}' ({idea_id})."

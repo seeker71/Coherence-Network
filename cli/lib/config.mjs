@@ -30,12 +30,43 @@ export function saveConfig(updates) {
   return config;
 }
 
+/**
+ * R3 precedence (highest first): COHERENCE_CONTRIBUTOR_ID → COHERENCE_CONTRIBUTOR (legacy) → config.json
+ */
 export function getContributorId() {
-  return (
-    loadConfig().contributor_id ||
-    process.env.COHERENCE_CONTRIBUTOR ||
-    null
-  );
+  const eid = (process.env.COHERENCE_CONTRIBUTOR_ID || "").trim();
+  if (eid) return eid;
+  const legacy = (process.env.COHERENCE_CONTRIBUTOR || "").trim();
+  if (legacy) return legacy;
+  const fromFile = loadConfig().contributor_id;
+  if (fromFile && String(fromFile).trim()) return String(fromFile).trim();
+  return null;
+}
+
+/** Resolution source label for `cc identity` (R4). */
+export function getContributorSource() {
+  const eid = (process.env.COHERENCE_CONTRIBUTOR_ID || "").trim();
+  if (eid) return "env:COHERENCE_CONTRIBUTOR_ID";
+  const legacy = (process.env.COHERENCE_CONTRIBUTOR || "").trim();
+  if (legacy) return "env:COHERENCE_CONTRIBUTOR (legacy)";
+  const fromFile = loadConfig().contributor_id;
+  if (fromFile && String(fromFile).trim()) return "config.json";
+  return "none";
+}
+
+/** R2 — contributor_id for `cc identity set` (letters, digits, underscore, period, hyphen; max 64). */
+export const CONTRIBUTOR_ID_PATTERN = /^[\w.\-]{1,64}$/;
+
+export function normalizeContributorId(value) {
+  return String(value || "").trim();
+}
+
+export function parseContributorId(value) {
+  const contributorId = normalizeContributorId(value);
+  if (!CONTRIBUTOR_ID_PATTERN.test(contributorId)) {
+    return null;
+  }
+  return contributorId;
 }
 
 export function getHubUrl() {
