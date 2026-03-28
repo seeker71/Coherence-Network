@@ -9,6 +9,7 @@ const PRIMARY_NAV = [
   { href: "/contribute", label: "Contribute" },
   { href: "/resonance", label: "Resonance" },
   { href: "/tasks", label: "Pipeline" },
+  { href: "/live", label: "Live" },
   { href: "/nodes", label: "Nodes" },
 ];
 

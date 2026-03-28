@@ -19,6 +19,7 @@ type ContextDef = {
 
 const SHARED_RELATED: LinkItem[] = [
   { href: "/today", label: "Today" },
+  { href: "/live", label: "Live" },
   { href: "/demo", label: "Demo" },
   { href: "/search", label: "Search" },
   { href: "/ideas", label: "Ideas" },
@@ -83,6 +84,16 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/ideas", label: "Ideas API" },
       { href: "/api/agent/tasks?limit=100", label: "Tasks API" },
       { href: "/api/inventory/flow?runtime_window_seconds=86400", label: "Flow inventory API" },
+    ],
+  },
+  "/live": {
+    ideaId: "coherence-network-agent-pipeline",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/agent/live-pipeline", label: "Live pipeline API" },
+      { href: "/api/agent/pipeline-status", label: "Pipeline status" },
+      { href: "/api/agent/effectiveness", label: "Effectiveness" },
+      { href: "/api/runtime/ideas/summary?seconds=3600&limit=20", label: "Runtime ideas" },
     ],
   },
   "/ideas/[idea_id]": {
