@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
-from typing import Any
+from typing import Any, Optional
 
 from app.services import concept_service, translate_service
 from app.services.translate_service import TranslateLens
@@ -34,7 +34,6 @@ class ConceptPatch(BaseModel):
 
 
 class EdgeCreate(BaseModel):
-    from_id: str
     to_id: str
     relationship_type: str
     created_by: str = "unknown"
@@ -52,6 +51,7 @@ class ConceptTagBody(BaseModel):
 async def list_concepts(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    axis: Optional[str] = Query(default=None),
 ):
     """List concepts from the ontology (paged)."""
     return concept_service.list_concepts(limit=limit, offset=offset)

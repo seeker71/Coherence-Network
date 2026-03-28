@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 _ONTOLOGY_DIR = Path(__file__).resolve().parents[3] / "config" / "ontology"
 
+# Ontology seed data (read from JSON files at startup)
 _concepts: list[dict[str, Any]] = []
 _relationships: list[dict[str, Any]] = []
 _axes: list[dict[str, Any]] = []
@@ -71,7 +72,13 @@ def list_concepts(limit: int = 50, offset: int = 0) -> dict[str, Any]:
 
 
 def get_concept(concept_id: str) -> dict[str, Any] | None:
-    return _concept_index.get(concept_id)
+    if concept_id in _concept_index:
+        return _concept_index[concept_id]
+    # Check custom concepts
+    for c in _custom_concepts:
+        if c["id"] == concept_id:
+            return c
+    return None
 
 
 def search_concepts(query: str, limit: int = 20) -> list[dict[str, Any]]:
