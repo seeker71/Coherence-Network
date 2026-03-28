@@ -1,0 +1,62 @@
+[
+  {
+    "type": "idea",
+    "description": "A tracked concept or proposal — the primary entry point for new work",
+    "lifecycle_default": "gas",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "concept",
+    "description": "An abstract or theoretical construct that underpins multiple ideas",
+    "lifecycle_default": "gas",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "spec",
+    "description": "A written specification document defining behaviour, contracts, or requirements",
+    "lifecycle_default": "ice",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "implementation",
+    "description": "A code artifact, PR, or deployed feature that realises a spec",
+    "lifecycle_default": "water",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "service",
+    "description": "A running software service or API that the network depends on",
+    "lifecycle_default": "water",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "contributor",
+    "description": "A human or AI agent who contributes work to the network",
+    "lifecycle_default": "water",
+    "payload_schema": {"name": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "domain",
+    "description": "A knowledge domain or bounded namespace that groups related nodes",
+    "lifecycle_default": "ice",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "pipeline-run",
+    "description": "A single execution of a pipeline stage or workflow",
+    "lifecycle_default": "water",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "event",
+    "description": "A system event or signal — task-completed, score-changed, etc.",
+    "lifecycle_default": "water",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  },
+  {
+    "type": "artifact",
+    "description": "A produced output — test file, doc, report, or generated asset",
+    "lifecycle_default": "water",
+    "payload_schema": {"title": "string", "lifecycle_state": "gas|ice|water"}
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "type": "inspires",
+    "description": "A gave rise to or motivated B without directly implementing it",
+    "is_symmetric": false,
+    "example": "idea:resonance-nav → inspires → idea:fractal-primitives"
+  },
+  {
+    "type": "depends-on",
+    "description": "A requires B to function correctly or to be implemented first",
+    "is_symmetric": false,
+    "example": "spec:168 → depends-on → spec:166"
+  },
+  {
+    "type": "implements",
+    "description": "A puts B into practice — code realizes a spec, a spec realizes an idea",
+    "is_symmetric": false,
+    "example": "impl:graph-router → implements → spec:166"
+  },
+  {
+    "type": "contradicts",
+    "description": "A and B are in tension or mutually exclusive",
+    "is_symmetric": true,
+    "example": "idea:centralise-auth ↔ contradicts ↔ idea:federated-identity"
+  },
+  {
+    "type": "extends",
+    "description": "A adds to or refines B, building on its foundation without replacing it",
+    "is_symmetric": false,
+    "example": "spec:168 → extends → spec:166"
+  },
+  {
+    "type": "analogous-to",
+    "description": "A and B are structurally isomorphic or conceptually parallel",
+    "is_symmetric": true,
+    "example": "concept:ice-water-gas ↔ analogous-to ↔ concept:breath-states"
+  },
+  {
+    "type": "parent-of",
+    "description": "A hierarchically contains B — A is the container, B is the sub-unit",
+    "is_symmetric": false,
+    "example": "domain:graph-theory → parent-of → concept:edge-types"
+  }
+]
