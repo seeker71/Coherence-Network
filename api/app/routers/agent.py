@@ -1,7 +1,10 @@
 """Agent orchestration API routes. Composes sub-routers and Telegram webhook."""
 
+import logging
+
 from fastapi import APIRouter
 
+from app.models.metrics import TaskMetricRecord
 from app.routers.agent_telegram import router as telegram_router
 from app.routers.agent_execute_routes import router as execute_router
 from app.routers.agent_task_log_routes import router as task_log_router
@@ -16,6 +19,8 @@ from app.routers.agent_prompt_ab_routes import router as prompt_ab_router
 from app.routers.agent_diagnostics_routes import router as diagnostics_router
 from app.routers.agent_auto_heal_routes import router as auto_heal_router
 from app.routers.agent_smart_reap_routes import router as smart_reap_router
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 router.include_router(telegram_router)
