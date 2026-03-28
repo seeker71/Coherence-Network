@@ -597,3 +597,15 @@ showing adoption rate, match rate trend, and top worldview axes across the netwo
   safety while enabling flexibility).
 - **D3**: Should the resonance algorithm be exposed/configurable? → **Decision: hardcoded
   weights (0.4/0.4/0.2) for MVP; follow-up spec for tunable resonance** (see Spec 163).
+
+---
+
+## Metadata
+
+- **Spec ID**: 169-belief-system
+- **Task ID**: task_b975b1b7622df27d
+- **Author**: product-manager agent
+- **Date**: 2026-03-28
+- **Status**: approved
+- **Depends on**: Spec 168 (TOFU Onboarding), Spec 163 (Resonance Navigation), Spec 048 (Contributions API)
+- **Blocks**: personalized idea feed spec (follow-up), belief-driven contribution suggestions (follow-up)

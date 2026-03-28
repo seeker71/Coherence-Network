@@ -15,6 +15,36 @@ This spec replaces the flat empty state with an **organic breathing animation** 
 
 ---
 
+## Purpose
+
+Replace the dead, static empty state on the Resonance page with an organic breathing animation — soft pulsing rings, ambient particle drift, and a central heartbeat dot — combined with the last known pulse timestamp and a warm invitation to act. The heartbeat page must never feel broken, abandoned, or lifeless, even when no recent activity exists in the current 72-hour window.
+
+---
+
+## Requirements
+
+- [ ] A `ResonanceBreathingOrb` component renders pulsing SVG rings + ambient particle drift on the empty state
+- [ ] The breathing animation runs continuously without user interaction and respects `prefers-reduced-motion`
+- [ ] `GET /api/ideas/resonance` response is wrapped in `{ ideas: [], meta: { last_pulse_at, total_ever, active_in_window, window_hours } }` shape
+- [ ] `GET /api/ideas/resonance/meta` endpoint returns liveness metadata directly (HTTP 200)
+- [ ] Empty state displays "Last pulse: Xh ago" using `last_pulse_at` from meta; falls back to "Waiting for first pulse…" when null
+- [ ] Empty state displays "The network is listening." headline and a "Share an idea →" CTA link to `/`
+- [ ] No React hydration mismatch — particle positions are deterministic (not random), timestamp formatted server-side
+- [ ] Accessibility: breathing SVG is `aria-hidden`; reduced-motion CSS disables all animation keyframes
+- [ ] API response change is backwards-compatible — existing consumers reading `data.ideas` are unaffected
+
+---
+
+## Files to Create or Modify
+
+- `web/app/resonance/page.tsx` — update `FallbackIdeasSection` to read `meta.last_pulse_at` from API response; pass to `ResonanceBreathingOrb`
+- `web/components/resonance-breathing-orb.tsx` — **new** — `ResonanceBreathingOrb` SVG + CSS component
+- `web/app/globals.css` — add `@keyframes breatheRing`, `@keyframes particleDrift`, `.animate-breathe-ring`, `.animate-particle-drift-{1..6}`, `prefers-reduced-motion` block
+- `api/app/routers/ideas.py` — update `/api/ideas/resonance` to return `{ideas, meta}` shape; add `GET /api/ideas/resonance/meta` route
+- `api/app/schemas/ideas.py` — add `ResonanceMeta` and `ResonanceResponse` Pydantic models
+
+---
+
 ## Goals
 
 1. The Resonance page must **never feel dead** — even with zero recent activity.
