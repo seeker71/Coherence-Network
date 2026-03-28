@@ -32,6 +32,7 @@ import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
+import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
@@ -94,6 +95,8 @@ const COMMANDS = {
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
   meta:          () => handleMeta(args),
+  nearby:        () => showNearby(args),
+  location:      () => handleLocation(args),
   help:          () => showHelp(),
 };
 
