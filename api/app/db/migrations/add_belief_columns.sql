@@ -1,0 +1,22 @@
+-- Migration: add belief JSONB columns to contributors (spec-169)
+-- Note: Belief data is stored in the graph_nodes.properties JSONB column.
+-- This migration is informational — no schema changes are needed for the MVP
+-- because belief data is stored as keys within the existing properties JSONB column.
+-- The migration adds a comment for documentation purposes only.
+
+-- For reference: the following keys are used within graph_nodes.properties
+-- for contributors with belief profiles:
+--   worldview_axes      JSONB  DEFAULT '{}'
+--   concept_resonances  JSONB  DEFAULT '[]'
+--   interest_tags       JSONB  DEFAULT '[]'
+--   beliefs_updated_at  TEXT   (ISO-8601 UTC timestamp)
+--
+-- All keys are optional; absence is treated as empty profile.
+-- PATCH merges are performed at the application layer (belief_service.py).
+-- No separate table is needed for MVP (spec-169 § Data Model).
+
+-- If a future migration moves beliefs to dedicated columns, use:
+-- ALTER TABLE graph_nodes
+--   ADD COLUMN IF NOT EXISTS worldview_axes JSONB NOT NULL DEFAULT '{}'::jsonb,
+--   ADD COLUMN IF NOT EXISTS concept_resonances JSONB NOT NULL DEFAULT '[]'::jsonb,
+--   ADD COLUMN IF NOT EXISTS interest_tags JSONB NOT NULL DEFAULT '[]'::jsonb;

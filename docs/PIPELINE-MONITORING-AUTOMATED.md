@@ -42,6 +42,56 @@ The monitor writes a hierarchical status report each check:
 - **Resolution tracking**: When a condition clears (e.g. metrics_unavailable after API restart), the monitor records it in `api/logs/monitor_resolutions.jsonl`.
 - **Effectiveness measurement**: `GET /api/agent/effectiveness` returns throughput, success rate, issues open/resolved, progress by phase, and goal proximity (0–1).
 
+## Resolution Recording (Spec 047)
+
+When a condition that was present on the previous monitor run is no longer present on the current run, the monitor closes the failure→heal→resolution loop.
+
+### JSONL Resolution Log (`api/logs/monitor_resolutions.jsonl`)
+
+Always written (best-effort). One JSON object per line:
+
+```json
+{"condition": "stale_version", "resolved_at": "2026-03-28T10:10:00Z", "heal_task_id": "task_xyz"}
+{"condition": "api_unreachable", "resolved_at": "2026-03-28T10:20:00Z"}
+```
+
+- `heal_task_id` is included **only** when the previous issue had a `heal_task_id` (Spec 114 attribution). No null/empty key leakage.
+- Write failures are logged at DEBUG and do not crash the monitor.
+
+### Optional `resolved` Array in `monitor_issues.json` (`MONITOR_PERSIST_RESOLVED=1`)
+
+When the env var `MONITOR_PERSIST_RESOLVED=1` is set, the monitor also appends each resolved entry to a `resolved` array within `monitor_issues.json`:
+
+```json
+{
+  "issues": [],
+  "last_check": "2026-03-28T10:10:00Z",
+  "history": [],
+  "resolved_since_last": ["api_unreachable"],
+  "resolved": [
+    {
+      "condition": "api_unreachable",
+      "resolved_at": "2026-03-28T10:10:00Z",
+      "heal_task_id": "task_abc123",
+      "issue_id": "abc12345"
+    }
+  ]
+}
+```
+
+- The `resolved` array is **capped at 50 entries** (newest last). Older entries are silently dropped.
+- The `issues` array (open conditions) is **unchanged in semantics** — `resolved` is supplemental audit data only.
+- When `MONITOR_PERSIST_RESOLVED` is not set or `=0`, the `resolved` key is **not written** to `monitor_issues.json`.
+- `GET /api/agent/monitor-issues` returns file content as-is. When `resolved` is present, it appears in the response. When absent, the response is unchanged.
+
+### Heal Attribution Loop
+
+The resolution loop closes the contract started by Spec 114:
+
+1. **Spec 114** creates a `heal_task_id` when a condition fires → stored in the issue object.
+2. **Spec 047** reads `heal_task_id` from the previous issue and includes it in both the JSONL record and the optional `resolved` array entry when the condition clears.
+3. **Spec 115** consumes resolution data (including `heal_task_id`) for the quality multiplier in grounded value measurement.
+
 ## How to Check (API)
 
 ```bash
