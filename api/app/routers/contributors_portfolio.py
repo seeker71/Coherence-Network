@@ -8,6 +8,7 @@ from app.models.portfolio import (
     IdeaContributionDrilldown,
     IdeaContributionsList,
     PortfolioSummary,
+    StakeDetail,
     StakesList,
     TasksList,
 )
@@ -102,6 +103,23 @@ def get_stakes(
         return portfolio_service.get_stakes(contributor_id, sort=sort, limit=limit, offset=offset)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get(
+    "/contributors/{contributor_id}/stakes/{stake_id}",
+    response_model=StakeDetail,
+    summary="Get detail of a specific stake position",
+)
+def get_stake_detail(
+    contributor_id: str,
+    stake_id: str,
+) -> StakeDetail:
+    """Retrieve detailed stake position info including ROI, idea health, and contribution count."""
+    try:
+        return portfolio_service.get_stake_detail(contributor_id, stake_id)
+    except (ValueError, PermissionError) as exc:
+        status_code = 404 if isinstance(exc, ValueError) else 403
+        raise HTTPException(status_code=status_code, detail=str(exc))
 
 
 @router.get(
