@@ -16,3 +16,10 @@ async def get_pipeline_status() -> JSONResponse:
     if not status.get("running"):
         return JSONResponse(status_code=503, content=status)
     return JSONResponse(status_code=200, content=status)
+
+
+@router.get("/pipeline/summary")
+async def get_pipeline_summary() -> JSONResponse:
+    """Lightweight summary for the live dashboard — never returns 503."""
+    status = pipeline_service.get_status()
+    return JSONResponse(status_code=200, content=status)
