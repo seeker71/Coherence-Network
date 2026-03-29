@@ -131,6 +131,10 @@ def format_agent_status_reply(
         "\n*Public API*"
         f"\n[pipeline-status]({_join_url(api_base_url, '/api/agent/pipeline-status')}) · [monitor-issues]({_join_url(api_base_url, '/api/agent/monitor-issues')}) · [status-report]({_join_url(api_base_url, '/api/agent/status-report')}) · [effectiveness]({_join_url(api_base_url, '/api/agent/effectiveness')})"
     )
+    reply = reply.replace("[Usage]", "[Pipeline]").replace(
+        _join_url(web_base_url, "/usage"),
+        _join_url(web_base_url, "/pipeline"),
+    )
     return reply
 
 
@@ -267,6 +271,10 @@ def format_attention_reply(
     reply += (
         "\n\n*Public UI*"
         f"\n[Tasks]({_join_url(web_base_url, '/tasks')}) · [Friction]({_join_url(web_base_url, '/friction')}) · [Usage]({_join_url(web_base_url, '/usage')})"
+    )
+    reply = reply.replace("[Usage]", "[Pipeline]").replace(
+        _join_url(web_base_url, "/usage"),
+        _join_url(web_base_url, "/pipeline"),
     )
     return reply
 

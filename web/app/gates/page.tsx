@@ -155,7 +155,7 @@ export default function GatesPage() {
               { href: "/", label: "Home" },
               { href: "/tasks", label: "Tasks" },
               { href: "/flow", label: "Flow" },
-              { href: "/usage", label: "Usage" },
+              { href: "/pipeline", label: "Pipeline" },
             ].map((link) => (
               <Link
                 key={link.href}

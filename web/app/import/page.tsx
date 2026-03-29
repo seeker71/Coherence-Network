@@ -72,8 +72,8 @@ export default function ImportPage() {
         <Link href="/search" className="text-muted-foreground hover:text-foreground">
           Search
         </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
+        <Link href="/pipeline" className="text-muted-foreground hover:text-foreground">
+          Pipeline
         </Link>
         <Link href="/gates" className="text-muted-foreground hover:text-foreground">
           Gates

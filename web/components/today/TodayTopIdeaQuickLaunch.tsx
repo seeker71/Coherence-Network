@@ -660,8 +660,8 @@ export default function TodayTopIdeaQuickLaunch({
             Open work card
           </Link>{" "}
           or{" "}
-          <Link href="/remote-ops" className="underline">
-            continue from Remote Ops
+          <Link href="/pipeline" className="underline">
+            continue in Pipeline
           </Link>
           .
         </p>

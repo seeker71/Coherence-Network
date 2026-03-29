@@ -388,8 +388,13 @@
       "idea_id": "coherence-network-agent-pipeline"
     },
     {
-      "path": "/automation",
-      "purpose": "Human interface for automation provider capacity and alert visibility",
+      "path": "/nodes",
+      "purpose": "Human interface for node health, provider readiness, and federation messaging",
+      "idea_id": "coherence-network-agent-pipeline"
+    },
+    {
+      "path": "/pipeline",
+      "purpose": "Human interface for task execution, queue health, and provider performance",
       "idea_id": "coherence-network-agent-pipeline"
     },
     {

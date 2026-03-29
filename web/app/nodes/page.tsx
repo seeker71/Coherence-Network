@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 
+import { AutomationGardenPanel } from "@/components/nodes/automation-garden-panel";
 import { getApiBase } from "@/lib/api";
 import MessageForm from "./MessageForm";
 
 export const metadata: Metadata = {
   title: "Federation Nodes",
-  description: "Registered federation nodes, status, and messaging.",
+  description: "Federation nodes, provider readiness, automation garden, and messaging.",
 };
 
 type SystemMetrics = {
@@ -181,7 +183,7 @@ export default async function NodesPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">Federation Nodes</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          All registered nodes in the Coherence federation. Monitor status, view capabilities, and send messages across the network.
+          All registered nodes in the Coherence federation, plus provider readiness and the automation garden (formerly separate pages). Monitor status, send messages, and inspect capacity.
         </p>
       </div>
 
@@ -391,6 +393,16 @@ export default async function NodesPage() {
         apiBase={apiBase}
       />
 
+      <Suspense
+        fallback={
+          <p className="text-sm text-muted-foreground border-t border-border/20 pt-10 mt-10">
+            Loading automation garden…
+          </p>
+        }
+      >
+        <AutomationGardenPanel />
+      </Suspense>
+
       {/* Navigation */}
       <nav
         className="py-8 text-center space-y-2 border-t border-border/20"
@@ -400,8 +412,8 @@ export default async function NodesPage() {
           Where to go next
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/automation" className="text-amber-600 dark:text-amber-400 hover:underline">
-            Automation
+          <Link href="/pipeline" className="text-amber-600 dark:text-amber-400 hover:underline">
+            Pipeline
           </Link>
           <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">
             Flow

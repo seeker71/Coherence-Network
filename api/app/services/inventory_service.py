@@ -5820,7 +5820,7 @@ def _idea_card_row_from_sources(
         "links": {
             "web_detail_path": f"/ideas/{quote(idea_id, safe='')}",
             "api_detail_path": f"/api/ideas/{quote(idea_id, safe='')}",
-            "web_usage_path": f"/usage?idea_id={quote(idea_id, safe='')}",
+            "web_usage_path": f"/pipeline?idea_id={quote(idea_id, safe='')}",
             "web_spec_path": f"/specs/{quote(top_spec_id, safe='')}" if top_spec_id else None,
         },
     }

@@ -123,7 +123,7 @@ def next_action_for_status(task: dict[str, Any]) -> str:
     if status_norm == TaskStatus.FAILED.value:
         reason = _classify_failure_reason(task)
         if reason == "quota":
-            return "/usage"
+            return "/pipeline"
         if reason == "paid_provider":
             return f"/task {task_id}"
         if reason == "env":

@@ -161,8 +161,8 @@ export default function PortfolioPage() {
           <Link href="/specs" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
             Specs
           </Link>
-          <Link href="/usage" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-            Usage
+          <Link href="/pipeline" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
+            Pipeline
           </Link>
         </div>
       </section>

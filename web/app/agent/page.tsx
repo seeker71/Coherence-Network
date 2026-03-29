@@ -82,8 +82,8 @@ export default async function AgentPage() {
         <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
           Tasks
         </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
+        <Link href="/pipeline" className="text-muted-foreground hover:text-foreground">
+          Pipeline
         </Link>
         <Link href="/gates" className="text-muted-foreground hover:text-foreground">
           Gates

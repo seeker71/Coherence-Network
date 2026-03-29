@@ -110,6 +110,30 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/inventory/system-lineage", label: "System lineage" },
     ],
   },
+  "/pipeline": {
+    ideaId: "coherence-network-agent-pipeline",
+    focusLabel: "task execution and provider performance",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/agent/pipeline-status", label: "Pipeline status" },
+      { href: "/api/agent/tasks/activity?limit=50", label: "Recent task activity" },
+      { href: "/api/agent/tasks?status=pending&limit=20", label: "Pending tasks" },
+      { href: "/api/providers/stats", label: "Provider stats" },
+      { href: "/api/automation/usage/daily-summary?window_hours=24&top_n=8", label: "Daily summary" },
+    ],
+  },
+  "/nodes": {
+    ideaId: "coherence-network-agent-pipeline",
+    focusLabel: "node health and federation state",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/federation/nodes", label: "Federation nodes" },
+      { href: "/api/federation/nodes/stats", label: "Federation node stats" },
+      { href: "/api/automation/usage/readiness", label: "Provider readiness" },
+      { href: "/api/automation/usage/alerts", label: "Automation alerts" },
+      { href: "/api/health", label: "Health check" },
+    ],
+  },
   "/usage": {
     ideaId: "coherence-network-value-attribution",
     related: SHARED_RELATED,

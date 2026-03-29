@@ -387,7 +387,7 @@ def friction_entry_points(window_days: int = 7, limit: int = 20) -> dict[str, An
             cost_of_delay=round(failed_minutes, 4),
             wasted_minutes=round(failed_minutes, 4),
             recommended_action="Reduce repeated failures for this task type before running more CI-heavy iterations.",
-            evidence_links=["/api/agent/metrics", "/usage"],
+            evidence_links=["/api/agent/metrics", "/pipeline"],
             source="metrics",
         )
 

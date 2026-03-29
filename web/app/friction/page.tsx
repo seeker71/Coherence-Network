@@ -105,8 +105,8 @@ export default function FrictionPage() {
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Coherence Network
         </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
+        <Link href="/pipeline" className="text-muted-foreground hover:text-foreground">
+          Pipeline
         </Link>
         <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
           Tasks
