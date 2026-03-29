@@ -49,6 +49,7 @@ api/packages/
 
 # Runner progress tracking (persisted per-idea, not committed)
 .idea-progress/
+.idea-events/
 .idea-progress.md
 
 # Local / one-off audit outputs (do not merge)
