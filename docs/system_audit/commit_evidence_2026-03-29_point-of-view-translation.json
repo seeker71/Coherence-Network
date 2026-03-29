@@ -15,6 +15,12 @@
     "cli/lib/commands/concepts.mjs",
     "docs/system_audit/commit_evidence_2026-03-29_point-of-view-translation.json",
     "mcp-server/index.mjs",
+    "specs/181-invest-garden-metaphor.md",
+    "specs/181-invest-page-garden-metaphor.md",
+    "specs/task_50a6e725680b18e3.md",
+    "specs/task_ad7874ff3e085e36.md",
+    "specs/task_c7eb6f1390fdaec9.md",
+    "specs/task_d04f93663743f5e8.md",
     "web/app/concepts/[id]/page.tsx"
   ],
   "local_validation": {
@@ -99,6 +105,12 @@
     "cli/lib/commands/concepts.mjs",
     "docs/system_audit/commit_evidence_2026-03-29_point-of-view-translation.json",
     "mcp-server/index.mjs",
+    "specs/181-invest-garden-metaphor.md",
+    "specs/181-invest-page-garden-metaphor.md",
+    "specs/task_50a6e725680b18e3.md",
+    "specs/task_ad7874ff3e085e36.md",
+    "specs/task_c7eb6f1390fdaec9.md",
+    "specs/task_d04f93663743f5e8.md",
     "web/app/concepts/[id]/page.tsx"
   ],
   "change_intent": "runtime_feature"
