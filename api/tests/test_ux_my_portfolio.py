@@ -14,6 +14,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.services import graph_service
+from scripts import local_runner
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]

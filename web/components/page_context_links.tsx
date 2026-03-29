@@ -220,6 +220,25 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/inventory/routes/canonical", label: "Canonical routes" },
     ],
   },
+  "/my-portfolio": {
+    ideaId: "ux-my-portfolio",
+    focusLabel: "personal portfolio and contributions",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/contributors", label: "Contributors API" },
+      { href: "/api/contributions", label: "Contributions API" },
+      { href: "/api/inventory/page-lineage", label: "Page lineage" },
+    ],
+  },
+  "/contributors/[id]/portfolio": {
+    ideaId: "ux-my-portfolio",
+    focusLabel: "contributor portfolio surfaces",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/contributors", label: "Contributors API" },
+      { href: "/api/inventory/page-lineage", label: "Page lineage" },
+    ],
+  },
   "/project/[ecosystem]/[name]": {
     ideaId: "coherence-network-web-interface",
     related: SHARED_RELATED,
@@ -251,6 +270,12 @@ function normalizePath(pathname: string): string {
   if (pathname.startsWith("/ideas/")) return "/ideas/[idea_id]";
   if (pathname.startsWith("/specs/")) return "/specs/[spec_id]";
   if (pathname.startsWith("/project/")) return "/project/[ecosystem]/[name]";
+  if (pathname.startsWith("/contributors/")) {
+    const parts = pathname.split("/").filter(Boolean);
+    if (parts.length >= 3 && parts[2] === "portfolio") {
+      return "/contributors/[id]/portfolio";
+    }
+  }
   return pathname;
 }
 

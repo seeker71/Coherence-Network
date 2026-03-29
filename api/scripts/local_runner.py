@@ -5250,6 +5250,37 @@ def _create_worktree(
                 wt_path,
                 detail,
             )
+            # Nested or restricted checkouts sometimes cannot add a linked worktree
+            # (writes to parent gitdir) even when the repo is not a linked worktree.
+            # Standalone archive+init uses only the task directory — same path as
+            # _create_standalone_task_repo for linked repos.
+            low = detail.lower()
+            if any(
+                token in low
+                for token in (
+                    "permission denied",
+                    "operation not permitted",
+                    "cannot lock",
+                    "unable to write",
+                    "unable to update",
+                    "read-only file system",
+                )
+            ):
+                if _reclaim_worktree_slot(repo_root, wt_path, branch):
+                    standalone = _create_standalone_task_repo(
+                        task_id,
+                        wt_path,
+                        branch,
+                        base_branch=base_branch,
+                        idea_id=idea_id,
+                    )
+                    if standalone is not None:
+                        log.info(
+                            "WORKTREE_STANDALONE_FALLBACK task=%s after worktree add failed (%s)",
+                            slug,
+                            detail[:120],
+                        )
+                        return standalone
             return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
