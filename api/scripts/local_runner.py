@@ -2760,10 +2760,65 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
             }
             patch_result = api("PATCH", f"/api/ideas/{idea_id}", patch_body)
             patched = isinstance(patch_result, dict)
+
+            # Spawn follow-up ideas from unanswered open_questions
+            spawned_ids: list[str] = []
+            try:
+                idea_payload_r = api("GET", f"/api/ideas/{idea_id}")
+                if isinstance(idea_payload_r, dict):
+                    open_qs = idea_payload_r.get("open_questions") or []
+                    idea_name_r = str(idea_payload_r.get("name") or idea_id)
+                    idea_desc_r = str(idea_payload_r.get("description") or "")[:300]
+                    for q in open_qs:
+                        if not isinstance(q, dict):
+                            continue
+                        if q.get("answer") is not None:
+                            continue  # already answered — skip
+                        q_text = str(q.get("question") or "").strip()
+                        if not q_text:
+                            continue
+                        # Build a slug for the follow-up idea id
+                        import re as _re
+                        slug = _re.sub(r"[^a-z0-9]+", "-", q_text[:40].lower()).strip("-")
+                        followup_id = f"{idea_id}-followup-{slug}"[:80]
+                        followup_body: dict[str, Any] = {
+                            "id": followup_id,
+                            "name": f"Follow-up: {q_text[:80]}",
+                            "description": (
+                                f"This idea emerged from the completed implementation of "
+                                f"'{idea_name_r}' ({idea_id}).\n\n"
+                                f"Open question that was not resolved during implementation: "
+                                f"{q_text}\n\n"
+                                f"Original idea context: {idea_desc_r}"
+                            ),
+                            "potential_value": float(q.get("value_to_whole") or 20.0),
+                            "estimated_cost": float(q.get("estimated_cost") or 3.0),
+                            "confidence": 0.55,
+                            "parent_idea_id": idea_id,
+                            "idea_type": "child",
+                            "work_type": "exploration",
+                        }
+                        created_q = api("POST", "/api/ideas", followup_body)
+                        if isinstance(created_q, dict) and created_q.get("id"):
+                            spawned_ids.append(followup_id)
+                            log.info(
+                                "REFLECT_SPAWN idea=%s spawned follow-up=%s from unanswered question",
+                                idea_id, followup_id,
+                            )
+                        else:
+                            log.debug("REFLECT_SPAWN_SKIP followup_id=%s (likely already exists)", followup_id)
+            except Exception as _spawn_exc:
+                log.warning("REFLECT_SPAWN_ERROR idea=%s error=%s", idea_id, _spawn_exc)
+
+            spawn_note = (
+                f" Spawned {len(spawned_ids)} follow-up idea(s): {', '.join(spawned_ids)}."
+                if spawned_ids else ""
+            )
             output = (
                 f"REFLECT_COMPLETE: {idea_id} lifecycle validated. "
                 f"Tasks run: {task_count}, estimated actual cost: {actual_cost_estimate} CC. "
                 f"Idea PATCH {'succeeded' if patched else 'failed — check API logs'}."
+                f"{spawn_note}"
             )
         else:
             output = f"Unknown phase: {task_type}"
