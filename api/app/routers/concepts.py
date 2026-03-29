@@ -1,7 +1,7 @@
 """Concepts router — CRUD for the Living Codex ontology (184 concepts, 46 rel types, 53 axes)."""
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Any
 
 from app.services import concept_service
@@ -41,6 +41,28 @@ class EdgeCreate(BaseModel):
 
 class ConceptTagBody(BaseModel):
     concept_ids: list[str]
+
+
+class PlainConceptSuggest(BaseModel):
+    """Plain-language concept submission for non-technical contributors."""
+    plain_text: str = Field(..., min_length=2, max_length=500, description="Your idea in plain language")
+    domains: list[str] = Field(default_factory=list, description="Domains you know (e.g. 'ecology', 'music')")
+    contributor: str = Field(default="anonymous", description="Your name or handle")
+
+
+class PlainConceptSubmit(BaseModel):
+    """Submit a concept from the suggestion output (may be modified by contributor)."""
+    id: str
+    name: str
+    description: str = ""
+    type_id: str = "codex.ucore.user"
+    level: int = 3
+    keywords: list[str] = []
+    domains: list[str] = []
+    parent_concepts: list[str] = []
+    child_concepts: list[str] = []
+    axes: list[str] = []
+    contributor: str = "anonymous"
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +111,28 @@ async def list_relationships():
 async def list_axes():
     """List all 53 ontology axes."""
     return concept_service.list_axes()
+
+
+@router.get("/concepts/garden")
+async def get_garden_view(
+    limit: int = Query(default=100, ge=1, le=500),
+):
+    """
+    Garden view — simplified cards layout for non-technical contributors.
+
+    Returns concepts as cards grouped by domain, with only human-readable fields.
+    This is what non-technical contributors see; technical peers see the graph.
+    """
+    return concept_service.get_garden_view(limit=limit)
+
+
+@router.get("/concepts/domain/{domain}")
+async def get_concepts_by_domain(
+    domain: str,
+    limit: int = Query(default=50, ge=1, le=200),
+):
+    """Get concepts tagged with a specific domain (e.g. 'ecology', 'music', 'systems')."""
+    return concept_service.list_concepts_by_domain(domain=domain, limit=limit)
 
 
 @router.get("/concepts/{concept_id}")
@@ -186,3 +230,39 @@ async def tag_spec_with_concepts(spec_id: str, body: ConceptTagBody):
 async def get_spec_concepts(spec_id: str):
     """Get concepts tagged on a spec."""
     return concept_service.get_entity_concepts(entity_type="spec", entity_id=spec_id)
+
+
+# ---------------------------------------------------------------------------
+# Accessible ontology: plain-language contribution endpoints (POST only — GETs above)
+# ---------------------------------------------------------------------------
+
+@router.post("/concepts/suggest")
+async def suggest_concept(body: PlainConceptSuggest):
+    """
+    Accessible ontology entry point for non-technical contributors.
+
+    Submit an idea in plain language — the system finds where it fits in the
+    ontology, suggests relationships, and returns a ready-to-submit concept body.
+    No graph theory knowledge required.
+
+    Example: {"plain_text": "the way rivers remember their paths through stone",
+               "domains": ["ecology", "memory"], "contributor": "alice"}
+    """
+    return concept_service.suggest_concept_placement(
+        plain_text=body.plain_text,
+        domains=body.domains,
+        contributor=body.contributor,
+    )
+
+
+@router.post("/concepts/submit", status_code=201)
+async def submit_plain_concept(body: PlainConceptSubmit):
+    """
+    Commit a plain-language concept to the ontology.
+
+    Accepts the output of /concepts/suggest (possibly refined by the contributor).
+    Auto-creates relationship edges to related concepts.
+    """
+    if concept_service.get_concept(body.id):
+        raise HTTPException(status_code=409, detail=f"Concept '{body.id}' already exists")
+    return concept_service.create_concept_from_plain(body.model_dump())
