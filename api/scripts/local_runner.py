@@ -3812,6 +3812,44 @@ def _seed_task_from_open_idea() -> bool:
             _SEEDER_SKIP_CACHE.add(idea_id)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
+
+        # ── Exponential backoff: delay re-seeding ideas with high failure rates ──
+        failed_for_phase = 0
+        for g in (idea_tasks.get("groups") or []):
+            if isinstance(g, dict):
+                sc = g.get("status_counts", {})
+                failed_for_phase = max(failed_for_phase, int(sc.get("failed", 0)))
+
+        if failed_for_phase >= 3:
+            import datetime as _dt
+            last_activity = idea.get("last_activity_at", "")
+            if last_activity:
+                try:
+                    last_dt = _dt.datetime.fromisoformat(last_activity.replace("Z", "+00:00"))
+                    now = _dt.datetime.now(_dt.timezone.utc)
+                    elapsed_min = (now - last_dt).total_seconds() / 60
+                    cooldown_min = 30
+                    if failed_for_phase >= 20:
+                        cooldown_min = 360
+                    elif failed_for_phase >= 10:
+                        cooldown_min = 120
+                    elif failed_for_phase >= 5:
+                        cooldown_min = 60
+                    if elapsed_min < cooldown_min:
+                        log.info("SEED_BACKOFF idea='%s' failures=%d cooldown=%dmin elapsed=%.0fmin -- skipping",
+                                 idea_name[:30], failed_for_phase, cooldown_min, elapsed_min)
+                        _SEEDER_SKIP_CACHE.add(idea_id)
+                        return _seed_task_from_open_idea()
+                except (ValueError, TypeError):
+                    pass
+
+        if failed_for_phase >= 20:
+            log.warning("SEED_NEEDS_DECISION idea='%s' has %d failures -- marking partial",
+                        idea_name[:30], failed_for_phase)
+            _SEEDER_SKIP_CACHE.add(idea_id)
+            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
+            return _seed_task_from_open_idea()
+
         if total_tasks == 0 and idea.get("manifestation_status") == "partial":
             # Orphaned: marked partial but no tasks exist — reset to none
             log.info("SEED: idea '%s' orphaned (partial with 0 tasks) — resetting to none", idea_name[:30])
@@ -3862,6 +3900,48 @@ def _seed_task_from_open_idea() -> bool:
             task_type = "impl"
         elif "spec" in completed_phases:
             task_type = "test"
+
+    # ── Spec quality gate: ensure spec has ## Files section before impl ──
+    if task_type == "impl":
+        import glob as _glob_spec
+        spec_ok = False
+        for sp in _glob_spec.glob(str(_REPO_DIR / "specs" / f"*{idea_id}*")):
+            try:
+                with open(sp, "r", encoding="utf-8", errors="replace") as f:
+                    spec_text = f.read()
+                if "## Files" in spec_text or "## files" in spec_text.lower():
+                    spec_ok = True
+                    break
+                if len(spec_text) >= 300:
+                    spec_ok = True
+                    break
+            except Exception:
+                continue
+        if not spec_ok:
+            log.info("SPEC_GATE idea='%s' -- impl but no quality spec, re-seeding as spec",
+                     idea_name[:30])
+            task_type = "spec"
+
+    # ── Failure memory: inject previous failure outputs into retry direction ──
+    failure_context = ""
+    if isinstance(idea_tasks, dict):
+        failed_outputs = []
+        for g in (idea_tasks.get("groups") or []):
+            if not isinstance(g, dict) or g.get("task_type") != task_type:
+                continue
+            for t in (g.get("tasks") or []):
+                if t.get("status") == "failed":
+                    out = (t.get("output") or "").strip()
+                    if len(out) > 30:
+                        failed_outputs.append(out[:600])
+        if failed_outputs:
+            recent_fails = failed_outputs[-2:]
+            fail_lines = [f"Attempt {idx}: {fo}" for idx, fo in enumerate(recent_fails, 1)]
+            failure_context = (
+                "\n\nPREVIOUS FAILURES -- learn from these, do NOT repeat the same mistakes:\n"
+                + "\n---\n".join(fail_lines)
+                + "\n\nAnalyze what went wrong above. Take a DIFFERENT approach this time.\n"
+            )
 
     # Build direction
     desc = idea.get("description", "")
@@ -3920,7 +4000,7 @@ def _seed_task_from_open_idea() -> bool:
         )
 
     direction = (
-        f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}\n\n"
+        f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}{failure_context}\n\n"
         f"REQUIREMENTS:\n"
         f"- Your output MUST be substantial (not empty or trivially short)\n"
         f"- For spec: write a detailed specification with goal, files, acceptance criteria\n"
@@ -3957,6 +4037,26 @@ def _seed_task_from_open_idea() -> bool:
     }
     if workspace_git_url_seed:
         seed_ctx["workspace_git_url"] = workspace_git_url_seed
+
+    # ── Provider rotation: if one provider keeps failing, suggest a different one ──
+    if isinstance(idea_tasks, dict):
+        provider_fails = {}
+        for g in (idea_tasks.get("groups") or []):
+            if not isinstance(g, dict) or g.get("task_type") != task_type:
+                continue
+            for t in (g.get("tasks") or []):
+                if t.get("status") == "failed":
+                    t_ctx = t.get("context") if isinstance(t.get("context"), dict) else {}
+                    prov = t_ctx.get("provider", "unknown")
+                    provider_fails[prov] = provider_fails.get(prov, 0) + 1
+        if provider_fails:
+            worst_provider = max(provider_fails, key=provider_fails.get)
+            if provider_fails[worst_provider] >= 3:
+                seed_ctx["avoid_provider"] = worst_provider
+                seed_ctx["provider_failure_history"] = provider_fails
+                log.info("PROVIDER_ROTATE idea='%s' phase=%s avoiding=%s (failed %d times)",
+                         idea_name[:30], task_type, worst_provider, provider_fails[worst_provider])
+
     result = api("POST", "/api/agent/tasks", {
         "direction": direction,
         "task_type": task_type,
