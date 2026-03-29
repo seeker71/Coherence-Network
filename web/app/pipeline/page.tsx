@@ -87,6 +87,14 @@ type TaskSummary = {
   failed: number;
 };
 
+type PendingTask = {
+  id: string;
+  status: string;
+  task_type: string;
+  direction: string;
+  created_at?: string;
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function elapsed(timestamp: string): string {
@@ -251,17 +259,18 @@ function PipelineDashboardContent() {
   const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([]);
   const [providerStats, setProviderStats] = useState<ProviderStats | null>(null);
   const [taskSummary, setTaskSummary] = useState<TaskSummary | null>(null);
+  const [pendingTasks, setPendingTasks] = useState<PendingTask[]>([]);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [status, setStatus] = useState<"loading" | "ok" | "error">("loading");
 
   const load = useCallback(async () => {
     try {
-      const [nodesData, activeData, activityData, provStats, pendingData, runningData] = await Promise.allSettled([
+      const [nodesData, activeData, activityData, provStats, pendingListData, runningData] = await Promise.allSettled([
         fetchJson<NetworkNode[]>("/api/federation/nodes"),
         fetchJson<ActivityEvent[]>("/api/agent/tasks/active"),
         fetchJson<ActivityEvent[]>("/api/agent/tasks/activity?limit=50"),
         fetchJson<ProviderStats>("/api/providers/stats"),
-        fetchJson<{ total?: number }>("/api/agent/tasks?status=pending&limit=1"),
+        fetchJson<{ tasks?: PendingTask[]; total?: number }>("/api/agent/tasks?status=pending&limit=20"),
         fetchJson<{ total?: number }>("/api/agent/tasks?status=running&limit=1"),
       ]);
 
@@ -270,7 +279,10 @@ function PipelineDashboardContent() {
       if (activityData.status === "fulfilled") setRecentActivity(Array.isArray(activityData.value) ? activityData.value : []);
       if (provStats.status === "fulfilled") setProviderStats(provStats.value);
 
-      const pendingCount = pendingData.status === "fulfilled" ? (pendingData.value.total ?? 0) : 0;
+      const pendingList = pendingListData.status === "fulfilled" ? pendingListData.value : null;
+      const pendingCount = pendingList?.total ?? 0;
+      const pendingRows = pendingList?.tasks ?? [];
+      setPendingTasks(pendingRows);
       const runningCount = runningData.status === "fulfilled" ? (runningData.value.total ?? 0) : 0;
       setTaskSummary({
         total: pendingCount + runningCount,
@@ -397,6 +409,38 @@ function PipelineDashboardContent() {
                   </Link>
                 );
               })}
+            </div>
+          </section>
+        )}
+
+        {/* Pending queue */}
+        {pendingTasks.length > 0 && (
+          <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-medium">Pending Queue</h2>
+              {(taskSummary?.pending ?? 0) > pendingTasks.length && (
+                <span className="text-xs text-muted-foreground">
+                  showing {pendingTasks.length} of {taskSummary?.pending}
+                </span>
+              )}
+            </div>
+            <div className="space-y-2">
+              {pendingTasks.map((task) => (
+                <Link
+                  key={task.id}
+                  href={`/tasks/${encodeURIComponent(task.id)}`}
+                  className="flex items-center gap-3 rounded-xl border border-border/20 bg-background/40 px-4 py-2.5 hover:border-border/40 transition-all duration-200"
+                >
+                  <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/40 shrink-0" />
+                  <span className="text-sm font-mono text-muted-foreground truncate flex-1">{task.id.slice(0, 16)}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{task.task_type}</span>
+                  {task.direction && (
+                    <span className="text-xs text-muted-foreground/60 shrink-0 max-w-[200px] truncate hidden sm:block">
+                      {task.direction.slice(0, 50)}
+                    </span>
+                  )}
+                </Link>
+              ))}
             </div>
           </section>
         )}
