@@ -5033,6 +5033,25 @@ def _create_worktree(
                 wt_path,
                 detail,
             )
+            # Same recovery as linked-worktree mode: when `git worktree add` fails
+            # (permissions, branch races, dubious ownership quirks), build an isolated
+            # repo from git archive / fetch instead of failing the impl task outright.
+            if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+                log.warning(
+                    "WORKTREE_FALLBACK_RECLAIM_FAILED task=%s path=%s",
+                    slug,
+                    wt_path,
+                )
+                return None
+            fallback = _create_standalone_task_repo(
+                task_id,
+                wt_path,
+                branch,
+                base_branch=base_branch,
+                idea_id=idea_id,
+            )
+            if fallback is not None:
+                return fallback
             return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)

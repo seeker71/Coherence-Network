@@ -194,6 +194,12 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
         monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
         monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
         monkeypatch.setattr(local_runner.subprocess, "run", _run)
+        # Force standalone fallback to fail so this test stays focused on primary failure logging.
+        monkeypatch.setattr(
+            local_runner,
+            "_create_standalone_task_repo",
+            lambda *a, **k: None,
+        )
 
         with caplog.at_level(logging.WARNING, logger="local_runner"):
             result = local_runner._create_worktree(slug)
@@ -203,6 +209,55 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
             "fatal: branch already exists" in record.message
             for record in caplog.records
         ), "git stderr must be logged when worktree creation fails"
+    finally:
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+def test_create_worktree_falls_back_to_standalone_when_worktree_add_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When git worktree add fails on a normal repo, use standalone task repo."""
+    tmp_path = _sandbox_tmp_path()
+    try:
+        slug = "abc8def234567890"
+        standalone = tmp_path / "standalone-wt"
+
+        def _run(args: list[str], **_kwargs: Any) -> _Proc:
+            if args[:4] == ["git", "show-ref", "--verify", "--quiet"]:
+                return _Proc(returncode=1)
+            if args[:3] == ["git", "worktree", "list"]:
+                return _Proc(stdout="")
+            if args[:3] == ["git", "worktree", "add"]:
+                return _Proc(returncode=1, stderr="fatal: permission denied")
+            return _Proc()
+
+        called: dict[str, Any] = {}
+
+        def _standalone(
+            tid: str,
+            path: Path,
+            br: str,
+            *,
+            base_branch: str | None = None,
+            idea_id: str = "",
+        ) -> Path | None:
+            called["task_id"] = tid
+            called["path"] = path
+            called["branch"] = br
+            called["base_branch"] = base_branch
+            called["idea_id"] = idea_id
+            return standalone
+
+        monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+        monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+        monkeypatch.setattr(local_runner.subprocess, "run", _run)
+        monkeypatch.setattr(local_runner, "_create_standalone_task_repo", _standalone)
+        monkeypatch.setattr(local_runner, "_repo_is_linked_worktree", lambda _r: False)
+
+        result = local_runner._create_worktree(slug)
+        assert result == standalone
+        assert called.get("task_id") == slug
+        assert called.get("base_branch") is None
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
 
