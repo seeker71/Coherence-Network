@@ -745,12 +745,22 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
                          task_type, required, excluded)
             available = capable
         else:
-            log.warning("CAPABILITY_FILTER task=%s needs %s but no provider has all — using all", task_type, required)
+            # HARD FAIL: no provider can satisfy this task type's requirements.
+            # Do NOT fall back to incapable providers — that wastes compute and
+            # produces 0% success rate (e.g. openrouter/ollama on impl tasks).
+            log.error("CAPABILITY_FILTER task=%s needs %s but NO available provider has them. "
+                      "Available: %s with caps: %s. Task cannot be executed.",
+                      task_type, required, available,
+                      {p: _PROVIDER_CAPS.get(p, set()) for p in available})
+            raise RuntimeError(
+                f"No provider has capabilities {required} for task_type={task_type}. "
+                f"Available providers: {available}"
+            )
 
-    # Respect exclude_provider from retry context
+    # Respect exclude_provider / avoid_provider from retry context
     if task:
         ctx = task.get("context") or {}
-        exclude = ctx.get("exclude_provider", "")
+        exclude = ctx.get("exclude_provider") or ctx.get("avoid_provider") or ""
         if exclude and exclude in available and len(available) > 1:
             available = [p for p in available if p != exclude]
             log.info("PROVIDER_EXCLUDE task=%s excluded=%s remaining=%s", task_type, exclude, available)
