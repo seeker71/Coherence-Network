@@ -611,6 +611,95 @@ _PAUSED_PROVIDERS = {"openrouter"}  # Cannot produce PRs, generates hollow compl
 PROVIDERS: dict[str, dict] = {}  # populated at startup
 
 
+# ── Circuit breaker: pause pipeline on continuous failures ──
+class _CircuitBreaker:
+    """Tracks recent task outcomes and trips (pauses seeding) when the failure
+    rate exceeds a threshold over a rolling window.
+
+    Design:
+    - Records the last N task outcomes (success/failure)
+    - Trips when: ≥ `trip_threshold` consecutive failures OR failure rate > 80% over the window
+    - When tripped: blocks _seed_task_from_open_idea() and logs clearly
+    - Resets after `cooldown_seconds` to allow a probe attempt
+    - Manual reset via `cc cmd mac resume` (processed in _process_node_messages)
+    """
+
+    def __init__(self, window_size: int = 20, trip_threshold: int = 10, cooldown_seconds: int = 600):
+        self.window_size = window_size
+        self.trip_threshold = trip_threshold
+        self.cooldown_seconds = cooldown_seconds
+        self._outcomes: list[bool] = []  # True=success, False=failure
+        self._tripped = False
+        self._trip_time: float = 0.0
+        self._trip_reason = ""
+        self._consecutive_failures = 0
+
+    def record(self, success: bool) -> None:
+        """Record a task outcome."""
+        self._outcomes.append(success)
+        if len(self._outcomes) > self.window_size:
+            self._outcomes = self._outcomes[-self.window_size:]
+
+        if success:
+            self._consecutive_failures = 0
+        else:
+            self._consecutive_failures += 1
+
+        # Check trip conditions
+        if self._consecutive_failures >= self.trip_threshold:
+            self._trip(f"{self._consecutive_failures} consecutive failures")
+        elif len(self._outcomes) >= self.window_size:
+            fail_rate = self._outcomes.count(False) / len(self._outcomes)
+            if fail_rate > 0.80:
+                self._trip(f"{fail_rate:.0%} failure rate over last {len(self._outcomes)} tasks")
+
+    def _trip(self, reason: str) -> None:
+        if not self._tripped:
+            self._tripped = True
+            self._trip_time = time.time()
+            self._trip_reason = reason
+            log.error("CIRCUIT_BREAKER TRIPPED: %s — pipeline seeding paused for %ds. "
+                      "Fix the root cause, then send 'cc cmd mac resume' to reset.",
+                      reason, self.cooldown_seconds)
+
+    def allow_seeding(self) -> bool:
+        """Return True if seeding is allowed, False if tripped."""
+        if not self._tripped:
+            return True
+        # Auto-reset after cooldown to allow a probe
+        elapsed = time.time() - self._trip_time
+        if elapsed >= self.cooldown_seconds:
+            log.info("CIRCUIT_BREAKER auto-reset after %ds cooldown — allowing probe attempt", int(elapsed))
+            self.reset()
+            return True
+        return False
+
+    def reset(self) -> None:
+        """Manual reset — called when operator sends resume command."""
+        if self._tripped:
+            log.info("CIRCUIT_BREAKER reset (was tripped: %s)", self._trip_reason)
+        self._tripped = False
+        self._trip_time = 0.0
+        self._trip_reason = ""
+        self._consecutive_failures = 0
+        self._outcomes.clear()
+
+    @property
+    def status(self) -> dict:
+        total = len(self._outcomes)
+        failures = self._outcomes.count(False)
+        return {
+            "tripped": self._tripped,
+            "reason": self._trip_reason if self._tripped else "",
+            "consecutive_failures": self._consecutive_failures,
+            "window": f"{failures}/{total}",
+            "cooldown_remaining": max(0, int(self.cooldown_seconds - (time.time() - self._trip_time))) if self._tripped else 0,
+        }
+
+
+_circuit_breaker = _CircuitBreaker(window_size=20, trip_threshold=10, cooldown_seconds=600)
+
+
 def _provider_has_tools(provider: str) -> bool:
     """Does this provider have tool/file access?"""
     spec = PROVIDERS.get(provider) or {}
@@ -4094,7 +4183,7 @@ def run_all_pending(dry_run: bool = False) -> dict:
     if not tasks:
         log.info("No pending tasks")
         # Seed a new task from an open idea when the queue is empty
-        if not dry_run:
+        if not dry_run and _circuit_breaker.allow_seeding():
             _seed_task_from_open_idea()
             # Re-check after seeding
             tasks = list_pending()
@@ -4587,6 +4676,22 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
         threading.Timer(2.0, lambda: os._exit(0)).start()
         return response
 
+    elif command == "pause":
+        _circuit_breaker._trip("manual pause via command")
+        return f"Pipeline paused. Circuit breaker tripped. Send 'resume' to restart seeding."
+
+    elif command == "resume":
+        _circuit_breaker.reset()
+        return f"Pipeline resumed. Circuit breaker reset. Seeding will restart on next cycle."
+
+    elif command == "circuit-status":
+        cb = _circuit_breaker.status
+        return (f"Circuit breaker: {'TRIPPED' if cb['tripped'] else 'OK'}\n"
+                f"Reason: {cb['reason'] or 'n/a'}\n"
+                f"Consecutive failures: {cb['consecutive_failures']}\n"
+                f"Window: {cb['window']}\n"
+                f"Cooldown remaining: {cb['cooldown_remaining']}s")
+
     elif command == "deploy":
         return _deploy_to_vps()
 
@@ -4595,7 +4700,7 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
 
     else:
         log.warning("CMD_UNKNOWN: %s (not in safe command list)", command)
-        return f"Unknown command: {command}. Safe commands: {', '.join(_SAFE_COMMANDS.keys())}"
+        return f"Unknown command: {command}. Safe commands: update, status, diagnose, restart, pause, resume, circuit-status, deploy, ping"
 
 
 def _deploy_to_vps() -> str:
@@ -5626,6 +5731,7 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                         pushed = True
 
                 status = "completed" if ok else "failed"
+                _circuit_breaker.record(ok)
                 log.info("WORKER[%d] %s task=%s pushed=%s", worker_id, status.upper(), task_id[:16], pushed)
             except Exception as e:
                 log.error("WORKER[%d] ERROR task=%s: %s", worker_id, task_id[:16], e)
@@ -6052,7 +6158,12 @@ def main():
                     pending_check = api("GET", "/api/agent/tasks?status=pending&limit=1")
                     pending_list = pending_check if isinstance(pending_check, list) else (pending_check or {}).get("tasks", [])
                     if not pending_list and not args.dry_run:
-                        _seed_task_from_open_idea()
+                        if _circuit_breaker.allow_seeding():
+                            _seed_task_from_open_idea()
+                        else:
+                            cb = _circuit_breaker.status
+                            log.warning("CIRCUIT_BREAKER blocking seed — %s (cooldown %ds remaining)",
+                                        cb["reason"], cb["cooldown_remaining"])
 
                 # 5. Post-execution housekeeping
                 if not args.dry_run:
