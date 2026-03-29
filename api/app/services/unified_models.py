@@ -26,6 +26,9 @@ from app.services.idea_registry_service import (  # noqa: F401
 # Spec Registry + Governance models
 # ---------------------------------------------------------------------------
 from app.services.spec_registry_service import SpecRegistryRecord  # noqa: F401
+from app.services.traceability_links_service import (  # noqa: F401
+    TraceabilityImplementationLinkRecord,
+)
 from app.services.governance_service import (  # noqa: F401
     ChangeRequestRecord,
     ChangeRequestVoteRecord,

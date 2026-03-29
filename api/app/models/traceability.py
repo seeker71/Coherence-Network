@@ -1,5 +1,5 @@
 # spec: 181-full-code-traceability
-# idea: full-code-traceability
+# idea: full-traceability-chain
 """Pydantic models for the traceability system (Spec 181)."""
 
 from __future__ import annotations
@@ -66,6 +66,10 @@ class TraceabilityReport(BaseModel):
     summary: TraceabilitySummary
     gaps: list[TraceabilityGap]
     links: list[dict[str, Any]]
+    persisted_implementation_links: int = Field(
+        default=0,
+        description="Rows stored in traceability_implementation_links from last backfill scan.",
+    )
 
 
 class BackfillRequest(BaseModel):

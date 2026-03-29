@@ -1,6 +1,6 @@
 # spec: 181-full-code-traceability
-# idea: full-code-traceability
-"""Traceability service: report generation and backfill orchestration (Spec 181)."""
+# idea: full-traceability-chain
+"""Traceability service: report generation and backfill orchestration (Spec 181, idea full-traceability-chain)."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ from app.models.traceability import (
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+CLI_DIR = REPO_ROOT / "cli"
 SPECS_DIR = REPO_ROOT / "specs"
 API_DIR = REPO_ROOT / "api" / "app"
 WEB_DIR = REPO_ROOT / "web" / "app"
@@ -87,8 +88,8 @@ def _count_source_files() -> tuple[int, int]:
     """Return (total, with_spec_ref) for .py/.ts/.tsx files."""
     total = 0
     with_ref = 0
-    for ext in ("*.py", "*.ts", "*.tsx"):
-        for base in (API_DIR, WEB_DIR):
+    for ext in ("*.py", "*.mjs", "*.ts", "*.tsx"):
+        for base in (API_DIR, WEB_DIR, CLI_DIR):
             if not base.exists():
                 continue
             for f in base.rglob(ext):
@@ -197,7 +198,16 @@ def build_traceability_report() -> TraceabilityReport:
     )
 
     all_gaps = spec_gaps + src_gaps
-    links = [
+    try:
+        from app.services import traceability_links_service as tls
+
+        persisted = tls.list_links(limit=200)
+        link_count = tls.count_links()
+    except Exception:
+        persisted = []
+        link_count = 0
+
+    links: list[dict[str, Any]] = [
         {
             "spec_file": g.spec_file,
             "spec_id": g.spec_id,
@@ -206,8 +216,15 @@ def build_traceability_report() -> TraceabilityReport:
         }
         for g in spec_gaps[:50]
     ]
+    for row in persisted:
+        links.append({**row, "gap": False, "persisted": True})
 
-    return TraceabilityReport(summary=summary, gaps=all_gaps[:100], links=links)
+    return TraceabilityReport(
+        summary=summary,
+        gaps=all_gaps[:100],
+        links=links,
+        persisted_implementation_links=link_count,
+    )
 
 
 def _estimate_public_functions() -> int:
@@ -229,17 +246,28 @@ def _estimate_public_functions() -> int:
 
 
 def _query_db_spec_stats() -> tuple[int, int]:
-    """Query DB for spec idea_id coverage. Returns (total, with_idea_id)."""
+    """Query spec_registry_entries for idea_id coverage (unified DB)."""
     try:
-        from app.db import get_db_session  # type: ignore[import]
-        from sqlalchemy import text
+        from sqlalchemy import func
 
-        with get_db_session() as db:
-            total_row = db.execute(text("SELECT COUNT(*) FROM specs")).scalar()
-            with_idea_row = db.execute(
-                text("SELECT COUNT(*) FROM specs WHERE idea_id IS NOT NULL AND idea_id != ''")
-            ).scalar()
-            return int(total_row or 0), int(with_idea_row or 0)
+        from app.services import spec_registry_service as srs
+        from app.services.spec_registry_service import SpecRegistryRecord
+
+        srs.ensure_schema()
+        from app.services import unified_db as udb
+
+        with udb.session() as session:
+            total = int(session.query(func.count(SpecRegistryRecord.spec_id)).scalar() or 0)
+            with_idea = int(
+                session.query(func.count(SpecRegistryRecord.spec_id))
+                .filter(
+                    SpecRegistryRecord.idea_id.isnot(None),
+                    SpecRegistryRecord.idea_id != "",
+                )
+                .scalar()
+                or 0
+            )
+        return total, with_idea
     except Exception:
         return 0, 0
 
@@ -315,17 +343,12 @@ def get_lineage(idea_id: str) -> LineageResponse | None:
 
 
 def _get_idea_title(idea_id: str) -> str | None:
-    """Lookup idea title from DB or return None."""
+    """Lookup idea title from portfolio service."""
     try:
-        from app.db import get_db_session  # type: ignore[import]
-        from sqlalchemy import text
+        from app.services.idea_service import get_idea
 
-        with get_db_session() as db:
-            row = db.execute(
-                text("SELECT name FROM ideas WHERE id = :id OR slug = :id OR name = :id"),
-                {"id": idea_id},
-            ).fetchone()
-            return row[0] if row else None
+        idea = get_idea(idea_id)
+        return idea.name if idea else None
     except Exception:
         return None
 
@@ -498,6 +521,7 @@ def _run_backfill(job_id: str, dry_run: bool) -> None:
 
     try:
         results["spec_idea"] = _backfill_spec_idea_links(dry_run)
+        results["db_registry_idea"] = _backfill_db_registry_idea_ids(dry_run)
         results["code_spec"] = _backfill_code_spec_links(dry_run)
     except Exception as exc:
         results["error"] = str(exc)
@@ -554,27 +578,112 @@ def _inject_idea_id_into_spec(spec_file: Path, content: str, idea_id: str) -> No
         spec_file.write_text(new_content, encoding="utf-8")
 
 
-def _backfill_code_spec_links(dry_run: bool) -> dict[str, Any]:
-    """Phase 1.3: scan code files for spec references, build in-memory links."""
-    links = []
-    for ext in ("*.py",):
-        for f in API_DIR.rglob(ext):
-            if "__pycache__" in str(f):
+def _extract_idea_id_from_code_header(content: str) -> str | None:
+    """Match `# idea: slug` or `// idea: slug` in the first block of comments."""
+    head = "\n".join(content.splitlines()[:60])
+    for pat in (
+        re.compile(r"^#\s*idea:\s*(\S+)", re.MULTILINE | re.IGNORECASE),
+        re.compile(r"^//\s*idea:\s*(\S+)", re.MULTILINE | re.IGNORECASE),
+    ):
+        m = pat.search(head)
+        if m:
+            val = m.group(1).strip().strip("`'\"")
+            if val.lower() not in _NOISE_IDEA_IDS and len(val) >= 3:
+                return val
+    return None
+
+
+def _collect_static_spec_links() -> list[dict[str, Any]]:
+    """Scan api/, web/, cli/ for spec reference comments."""
+    links: list[dict[str, Any]] = []
+    for ext in ("*.py", "*.ts", "*.tsx", "*.mjs"):
+        for base in (API_DIR, WEB_DIR, CLI_DIR):
+            if not base.exists():
+                continue
+            for f in base.rglob(ext):
+                if "__pycache__" in str(f) or "node_modules" in str(f):
+                    continue
+                try:
+                    content = f.read_text(errors="replace")
+                except OSError:
+                    continue
+                idea_hint = _extract_idea_id_from_code_header(content)
+                for pattern in _SPEC_REF_PATTERNS:
+                    for m in pattern.finditer(content):
+                        spec_ref = (m.group(1) or "").strip().rstrip(".,;)`'\"")
+                        if not spec_ref:
+                            continue
+                        line_num = content[: m.start()].count("\n") + 1
+                        links.append({
+                            "source_file": str(f.relative_to(REPO_ROOT)),
+                            "spec_id": spec_ref,
+                            "line_number": line_num,
+                            "confidence": 1.0,
+                            "link_type": "static_comment",
+                            "idea_id": idea_hint,
+                        })
+    return links
+
+
+def _backfill_db_registry_idea_ids(dry_run: bool) -> dict[str, Any]:
+    """Set idea_id on spec_registry_entries when content_path points to a spec file with idea metadata."""
+    from app.services import spec_registry_service as srs
+    from app.services.spec_registry_service import SpecRegistryRecord
+
+    srs.ensure_schema()
+    from app.services import unified_db as udb
+
+    updated = 0
+    skipped = 0
+    with udb.session() as session:
+        rows = (
+            session.query(SpecRegistryRecord)
+            .filter(
+                (SpecRegistryRecord.idea_id.is_(None)) | (SpecRegistryRecord.idea_id == ""),
+            )
+            .all()
+        )
+        for row in rows:
+            path: Path | None = None
+            if row.content_path:
+                cand = REPO_ROOT / str(row.content_path)
+                if cand.is_file():
+                    path = cand
+            if path is None:
+                skipped += 1
                 continue
             try:
-                content = f.read_text(errors="replace")
+                text = path.read_text(errors="replace")
             except OSError:
+                skipped += 1
                 continue
-            for pattern in _SPEC_REF_PATTERNS:
-                for m in pattern.finditer(content):
-                    spec_ref = m.group(1)
-                    line_num = content[: m.start()].count("\n") + 1
-                    links.append({
-                        "source_file": str(f.relative_to(REPO_ROOT)),
-                        "spec_id": spec_ref,
-                        "line_number": line_num,
-                        "confidence": 1.0,
-                        "link_type": "static_comment",
-                    })
+            idea_id = _extract_idea_id_from_spec(text)
+            if not idea_id:
+                skipped += 1
+                continue
+            if dry_run:
+                updated += 1
+            else:
+                row.idea_id = idea_id
+                row.updated_at = datetime.now(timezone.utc)
+                session.add(row)
+                updated += 1
+        if not dry_run:
+            session.commit()
+    return {"updated": updated, "skipped": skipped, "dry_run": dry_run}
 
-    return {"links_found": len(links), "dry_run": dry_run, "sample": links[:5]}
+
+def _backfill_code_spec_links(dry_run: bool) -> dict[str, Any]:
+    """Phase 1.3: scan code files for spec references; persist to traceability_implementation_links."""
+    links = _collect_static_spec_links()
+    persisted = 0
+    if not dry_run:
+        from app.services import traceability_links_service as tls
+
+        persisted = tls.replace_all_links(links)
+    return {
+        "links_found": len(links),
+        "persisted_rows": persisted,
+        "dry_run": dry_run,
+        "sample": links[:5],
+    }
