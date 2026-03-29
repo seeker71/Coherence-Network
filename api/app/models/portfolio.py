@@ -160,6 +160,30 @@ class StakeSummary(BaseModel):
     health: HealthSignal = Field(default_factory=HealthSignal)
 
 
+class IdeaActivityEvent(BaseModel):
+    event_type: str  # contribution | valuation | status_change
+    date: Optional[datetime] = None
+    description: str = ""
+    value_change: Optional[float] = None
+
+
+class StakeDetail(BaseModel):
+    stake_id: str
+    contributor_id: str
+    idea_id: str
+    idea_title: str
+    idea_status: str = "unknown"
+    cc_staked: float
+    cc_valuation: Optional[float] = None
+    roi_pct: Optional[float] = None
+    staked_at: Optional[datetime] = None
+    last_valued_at: Optional[datetime] = None
+    health: HealthSignal = Field(default_factory=HealthSignal)
+    idea_activity_since_staking: list[IdeaActivityEvent] = Field(default_factory=list)
+    total_contributions_since_staking: int = 0
+    network_total_supply: Optional[float] = None
+
+
 class StakesList(BaseModel):
     contributor_id: str
     total: int
