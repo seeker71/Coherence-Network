@@ -3471,7 +3471,11 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     if success and reported:
         # Only advance phases if the task produced meaningful output
         if len(output_stripped) >= min_chars:
-            _run_phase_auto_advance_hook(task)
+            # Fix 4: impl/test phase advance is deferred to _worker_loop (after push confirmation).
+            # _worker_loop calls _run_phase_auto_advance_hook only after _push_branch_to_origin
+            # returns True, preventing phantom phase advance when the push subsequently fails.
+            if task_type not in ("impl", "test"):
+                _run_phase_auto_advance_hook(task)
             _auto_record_contribution(task, provider, duration)
         else:
             log.warning("SKIP_ADVANCE task=%s — output too short (%d < %d) for phase advancement", task_id, len(output_stripped), min_chars)
@@ -5442,6 +5446,19 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                         pushed = _push_branch_to_origin(task_id, wt)
                         if not pushed:
                             log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
+                            # Fix 7: tag the task record with push_failed so operators can
+                            # distinguish push failures from provider execution errors.
+                            _complete_task_with_status(
+                                task_id,
+                                "Branch push failed after provider completed. Code preserved in worktree.",
+                                "failed",
+                                {"push_failed": True, "worker_id": WORKER_ID},
+                                error_category="push_failed",
+                            )
+                        else:
+                            # Fix 4: phase advance only fires after push is confirmed for impl/test
+                            if task_type in ("impl", "test"):
+                                _run_phase_auto_advance_hook(task)
                     elif not ok and diff and task_type in ("impl", "test"):
                         # Timed out but produced real code — save the work, push branch
                         log.info("WORKER[%d] TIMEOUT_WITH_CODE task=%s type=%s diff=%d bytes — pushing partial work",
