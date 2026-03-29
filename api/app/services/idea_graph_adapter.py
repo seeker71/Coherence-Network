@@ -16,6 +16,7 @@ from app.models.idea import (
     IdeaQuestion,
     IdeaStage,
     IdeaType,
+    IdeaWorkType,
     ManifestationStatus,
 )
 from app.services import graph_service
@@ -41,6 +42,12 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         stage = IdeaStage(node.get("stage", "none") or "none")
     except (ValueError, KeyError):
         stage = IdeaStage.NONE
+
+    try:
+        work_type_str = node.get("work_type")
+        work_type = IdeaWorkType(work_type_str) if work_type_str else None
+    except (ValueError, KeyError):
+        work_type = None
 
     # Parse open questions
     raw_questions = node.get("open_questions", [])
@@ -81,6 +88,7 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         parent_idea_id=node.get("parent_idea_id"),
         child_idea_ids=child_ids,
         value_basis=value_basis,
+        work_type=work_type,
         open_questions=questions,
     )
 
@@ -92,7 +100,7 @@ def _idea_to_properties(idea: Idea) -> dict[str, Any]:
         "potential_value", "actual_value", "estimated_cost", "actual_cost",
         "resistance_risk", "confidence", "manifestation_status", "stage",
         "interfaces", "idea_type", "parent_idea_id", "child_idea_ids",
-        "value_basis",
+        "value_basis", "work_type",
     ]:
         val = getattr(idea, field, None)
         if val is not None:

@@ -977,6 +977,33 @@ _NEXT_PHASE: dict[str, str | None] = {
     "review": None,
 }
 
+# Per-work_type phase sequences — determines which phases are skipped for each work type.
+# Keys match IdeaWorkType values. None = default (full pipeline).
+_PHASE_SEQUENCES_BY_WORK_TYPE: dict[str | None, tuple[str, ...]] = {
+    "exploration": ("spec", "impl", "reflect"),
+    "research":    ("spec", "impl", "reflect"),
+    "prototype":   ("spec", "impl", "test", "reflect"),
+    "feature":     ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect"),
+    "enhancement": ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect"),
+    "bug-fix":     ("impl", "test", "code-review", "merge", "deploy", "verify", "reflect"),
+    "mvp":         ("spec", "impl", "test", "merge", "deploy", "verify", "reflect"),
+    None:          ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect"),
+}
+
+
+def _next_phase_for_work_type(current_phase: str, work_type: str | None) -> str | None:
+    """Return the next phase for an idea given its work_type.
+
+    Falls back to the global _NEXT_PHASE map if work_type is unknown.
+    """
+    seq = _PHASE_SEQUENCES_BY_WORK_TYPE.get(work_type, _PHASE_SEQUENCES_BY_WORK_TYPE[None])
+    if current_phase in seq:
+        idx = seq.index(current_phase)
+        return seq[idx + 1] if idx + 1 < len(seq) else None
+    # Phase not in this work_type's sequence — use global fallback
+    return _NEXT_PHASE.get(current_phase)
+
+
 def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> dict | list | None:
     """Call the API via httpx. Auto-retries on 429 with backoff."""
     url = f"{API_BASE}{path}"
@@ -1487,10 +1514,13 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
     if not _phase_fully_completed(idea_tasks_payload, task_type):
         return
 
-    next_phase = _NEXT_PHASE.get(task_type)
-    idea_payload: dict | None = None
+    # Fetch idea to get work_type for phase-ladder branching
+    idea_payload: dict | None = api("GET", f"/api/ideas/{idea_id}")
+    idea_work_type: str | None = None
+    if isinstance(idea_payload, dict):
+        idea_work_type = idea_payload.get("work_type")
+    next_phase = _next_phase_for_work_type(task_type, idea_work_type)
     if next_phase and not _has_any_tasks_for_phase(idea_tasks_payload, next_phase):
-        idea_payload = api("GET", f"/api/ideas/{idea_id}")
         idea_name = str((idea_payload or {}).get("name") or idea_id) if isinstance(idea_payload, dict) else idea_id
         idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
 
@@ -2717,7 +2747,24 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
             all_ok = all("200" in r for r in results)
             output = ("VERIFY_PASSED: " if all_ok else "VERIFY_FAILED: ") + " | ".join(results)
         elif task_type == "reflect":
-            output = f"REFLECT_COMPLETE: {idea_id} full lifecycle done."
+            # Count tasks to estimate actual cost (0.5 CC per task = rough provider call cost)
+            idea_tasks_r = api("GET", f"/api/ideas/{idea_id}/tasks")
+            task_count = 0
+            if isinstance(idea_tasks_r, dict):
+                task_count = idea_tasks_r.get("total", 0)
+            actual_cost_estimate = round(task_count * 0.5, 1)
+            # Mark idea as validated and record cost actuals
+            patch_body: dict[str, Any] = {
+                "manifestation_status": "validated",
+                "actual_cost": max(actual_cost_estimate, 0.5),
+            }
+            patch_result = api("PATCH", f"/api/ideas/{idea_id}", patch_body)
+            patched = isinstance(patch_result, dict)
+            output = (
+                f"REFLECT_COMPLETE: {idea_id} lifecycle validated. "
+                f"Tasks run: {task_count}, estimated actual cost: {actual_cost_estimate} CC. "
+                f"Idea PATCH {'succeeded' if patched else 'failed — check API logs'}."
+            )
         else:
             output = f"Unknown phase: {task_type}"
 
@@ -3364,6 +3411,7 @@ def _seed_task_from_open_idea() -> bool:
     candidates = [
         i for i in ideas
         if i.get("manifestation_status") in ("none", "partial", None)
+        and i.get("idea_type") != "super"   # SUPER ideas are strategic goals — never picked up
         and i.get("id", "") not in active_idea_ids
         and i.get("id", "") not in _SEEDER_SKIP_CACHE
     ]
