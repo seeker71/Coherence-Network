@@ -54,6 +54,21 @@ def _graph_node_props(node: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in node.items() if k not in _GRAPH_NODE_TOP_KEYS}
 
 
+def _parse_iso_utc(ts_raw: Any) -> Optional[datetime]:
+    """Parse ISO string into UTC-aware datetime, handling naive inputs as UTC."""
+    if not ts_raw:
+        return None
+    try:
+        # Standardize 'Z' to offset for fromisoformat compatibility in some Python versions
+        s = str(ts_raw).replace("Z", "+00:00")
+        ts = datetime.fromisoformat(s)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        return ts
+    except (ValueError, AttributeError):
+        return None
+
+
 def _linked_identities_from_store(contributor_key: str) -> list[LinkedIdentity]:
     """Merge SQLite-linked identities (OAuth / manual) with graph-derived ones."""
     try:
