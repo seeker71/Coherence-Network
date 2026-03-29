@@ -30,6 +30,8 @@ from app.models.idea import (
     IdeaUpdate,
     IdeaWithScore,
     ProgressDashboard,
+    SlugUpdateRequest,
+    SlugUpdateResponse,
     StageSetRequest,
 )
 from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service, translate_service
@@ -425,6 +427,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         work_type=data.work_type,
         lifecycle=data.lifecycle,
         duplicate_of=data.duplicate_of,
+        slug=data.slug,
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")
@@ -478,6 +481,26 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
     if updated is None:
         raise HTTPException(status_code=404, detail="Idea not found")
     return updated
+
+
+@router.patch("/ideas/{idea_id}/slug", response_model=SlugUpdateResponse)
+async def update_idea_slug(
+    idea_id: str,
+    body: SlugUpdateRequest,
+    _key: str = Depends(require_api_key),
+) -> SlugUpdateResponse:
+    """Rename an idea's slug. Old slug is kept in slug_history for permanent redirect."""
+    try:
+        updated = idea_service.update_idea_slug(idea_id, body.slug)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return SlugUpdateResponse(
+        id=updated.id,
+        slug=updated.slug,
+        slug_history=updated.slug_history,
+    )
 
 
 @router.post("/ideas/{idea_id}/questions", response_model=IdeaWithScore)

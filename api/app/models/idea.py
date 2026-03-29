@@ -98,6 +98,8 @@ class Idea(BaseModel):
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
     tags: list[str] = Field(default_factory=list, description="Normalized tags for categorization (spec 129)")
+    slug: str = Field(default="", description="URL-safe human identifier. Unique. Backfilled from id if absent.")
+    slug_history: list[str] = Field(default_factory=list, description="Previous slugs — kept so old URLs/links resolve.")
 
 
 class IdeaWithScore(Idea):
@@ -240,6 +242,7 @@ class IdeaCreate(BaseModel):
     work_type: Optional[IdeaWorkType] = None
     lifecycle: Optional[IdeaLifecycle] = None
     duplicate_of: Optional[str] = None
+    slug: Optional[str] = Field(default=None, description="Human slug; auto-derived from name if omitted.")
 
     @model_validator(mode="before")
     @classmethod
@@ -340,3 +343,15 @@ class IdeaTagUpdateResponse(BaseModel):
     """Confirmation of a tag update operation."""
     id: str
     tags: list[str] = Field(default_factory=list)
+
+
+class SlugUpdateRequest(BaseModel):
+    """Body for PATCH /api/ideas/{id_or_slug}/slug."""
+    slug: str = Field(min_length=1, max_length=100, description="New slug. May be namespaced: 'pillar/concept'.")
+
+
+class SlugUpdateResponse(BaseModel):
+    """Confirmation of a slug rename."""
+    id: str
+    slug: str
+    slug_history: list[str] = Field(default_factory=list)
