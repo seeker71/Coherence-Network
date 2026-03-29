@@ -333,13 +333,14 @@ def _seed_portfolio_graph(*, contributor_uuid: str) -> None:
 @pytest.mark.asyncio
 async def test_portfolio_api_full_cycle_seeded_graph() -> None:
     """Create contributor, seed graph CC/ideas/stakes/tasks, exercise all portfolio GET routes."""
+    suffix = uuid.uuid4().hex[:6]
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         create = await client.post(
             "/api/contributors",
             json={
                 "type": "HUMAN",
-                "name": "PortfolioSeedUser",
-                "email": "portfolioseed@coherence.network",
+                "name": f"PortfolioSeedUser_{suffix}",
+                "email": f"portfolioseed_{suffix}@coherence.network",
             },
         )
         assert create.status_code == 201, create.text
@@ -418,13 +419,14 @@ async def test_portfolio_api_unknown_contributor_404() -> None:
 
 @pytest.mark.asyncio
 async def test_portfolio_idea_drilldown_forbidden_when_no_matching_contributions() -> None:
+    suffix = uuid.uuid4().hex[:6]
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         create = await client.post(
             "/api/contributors",
             json={
                 "type": "HUMAN",
-                "name": "NoDrillUser",
-                "email": "nodrill@coherence.network",
+                "name": f"NoDrillUser_{suffix}",
+                "email": f"nodrill_{suffix}@coherence.network",
             },
         )
         assert create.status_code == 201
@@ -436,19 +438,20 @@ async def test_portfolio_idea_drilldown_forbidden_when_no_matching_contributions
 
 @pytest.mark.asyncio
 async def test_portfolio_summary_include_cc_false() -> None:
+    suffix = uuid.uuid4().hex[:6]
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         create = await client.post(
             "/api/contributors",
             json={
                 "type": "HUMAN",
-                "name": "NoCCUser",
-                "email": "nocc@coherence.network",
+                "name": f"NoCCUser_{suffix}",
+                "email": f"nocc_{suffix}@coherence.network",
             },
         )
         assert create.status_code == 201
         cid = create.json()["id"]
         graph_service.create_node(
-            id=f"idea:nocc",
+            id=f"idea:nocc_{suffix}",
             type="idea",
             name="I",
             description="",
@@ -456,14 +459,14 @@ async def test_portfolio_summary_include_cc_false() -> None:
             properties={"status": "unknown"},
         )
         graph_service.create_node(
-            id="contrib-nocc",
+            id=f"contrib-nocc_{suffix}",
             type="contribution",
             name="c",
             description="",
             phase="water",
             properties={
                 "contributor_id": str(cid),
-                "idea_id": "nocc",
+                "idea_id": f"nocc_{suffix}",
                 "cost_amount": 1.0,
                 "contribution_type": "code",
             },
@@ -477,13 +480,14 @@ async def test_portfolio_summary_include_cc_false() -> None:
 
 @pytest.mark.asyncio
 async def test_cc_history_invalid_bucket_returns_404() -> None:
+    suffix = uuid.uuid4().hex[:6]
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         create = await client.post(
             "/api/contributors",
             json={
                 "type": "HUMAN",
-                "name": "BucketUser",
-                "email": "bucket@coherence.network",
+                "name": f"BucketUser_{suffix}",
+                "email": f"bucket_{suffix}@coherence.network",
             },
         )
         cid = create.json()["id"]
@@ -494,13 +498,14 @@ async def test_cc_history_invalid_bucket_returns_404() -> None:
 
 @pytest.mark.asyncio
 async def test_portfolio_pagination_invalid_limit_returns_422() -> None:
+    suffix = uuid.uuid4().hex[:6]
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         create = await client.post(
             "/api/contributors",
             json={
                 "type": "HUMAN",
-                "name": "PageUser",
-                "email": "pageuser@coherence.network",
+                "name": f"PageUser_{suffix}",
+                "email": f"pageuser_{suffix}@coherence.network",
             },
         )
         cid = create.json()["id"]
@@ -510,19 +515,20 @@ async def test_portfolio_pagination_invalid_limit_returns_422() -> None:
 
 @pytest.mark.asyncio
 async def test_contribution_lineage_endpoint() -> None:
+    suffix = uuid.uuid4().hex[:6]
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         create = await client.post(
             "/api/contributors",
             json={
                 "type": "HUMAN",
-                "name": "LineageUser",
-                "email": "lineage@coherence.network",
+                "name": f"LineageUser_{suffix}",
+                "email": f"lineage_{suffix}@coherence.network",
             },
         )
         assert create.status_code == 201
         cid = create.json()["id"]
         graph_service.create_node(
-            id="idea:lineage-test",
+            id=f"idea:lineage-test_{suffix}",
             type="idea",
             name="Lineage Idea",
             description="",
@@ -530,23 +536,23 @@ async def test_contribution_lineage_endpoint() -> None:
             properties={"status": "active"},
         )
         graph_service.create_node(
-            id="contrib-lineage-1",
+            id=f"contrib-lineage-1_{suffix}",
             type="contribution",
             name="c1",
             description="",
             phase="water",
             properties={
                 "contributor_id": str(cid),
-                "idea_id": "lineage-test",
+                "idea_id": f"lineage-test_{suffix}",
                 "cost_amount": 2.5,
                 "contribution_type": "code",
                 "lineage_chain_id": "vl-nonexistent-999",
             },
         )
-        r = await client.get(f"/api/contributors/{cid}/contributions/contrib-lineage-1/lineage")
+        r = await client.get(f"/api/contributors/{cid}/contributions/contrib-lineage-1_{suffix}/lineage")
         assert r.status_code == 200
         j = r.json()
-        assert j["contribution_id"] == "contrib-lineage-1"
+        assert j["contribution_id"] == f"contrib-lineage-1_{suffix}"
         assert j["cc_attributed"] == pytest.approx(2.5)
         assert j["lineage_chain_id"] == "vl-nonexistent-999"
         assert j["lineage_resolution_note"] is not None
@@ -574,13 +580,14 @@ async def test_me_portfolio_requires_valid_api_key(mock_verify: mock.MagicMock) 
 @pytest.mark.asyncio
 @mock.patch("app.routers.me_portfolio.verify_contributor_key")
 async def test_me_portfolio_ok_when_key_matches_contributor(mock_verify: mock.MagicMock) -> None:
+    suffix = uuid.uuid4().hex[:6]
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         create = await client.post(
             "/api/contributors",
             json={
                 "type": "HUMAN",
-                "name": "MePortfolioUser",
-                "email": "meport@coherence.network",
+                "name": f"MePortfolioUser_{suffix}",
+                "email": f"meport_{suffix}@coherence.network",
             },
         )
         cid = str(create.json()["id"])
