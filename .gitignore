@@ -78,3 +78,7 @@ api/pytest-cache-files-*
 __pycache__/
 .task-*
 data/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
