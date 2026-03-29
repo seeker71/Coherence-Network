@@ -22,7 +22,9 @@ class TestIdea4deb5HappyPath:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             resp = await client.get("/api/discovery/registry-submissions")
         assert resp.status_code == 200
-        summary = resp.json()["summary"]
+        body = resp.json()
+        summary = body["summary"]
+        assert len(body["items"]) >= 5
         assert summary["submission_ready_count"] >= 5
         assert summary["categories"]["mcp"] >= 2
         assert summary["categories"]["skill"] >= 2
