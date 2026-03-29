@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Optional
+from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.coherence_credit import CostVector, ValueVector
 
@@ -41,6 +42,23 @@ class IdeaType(str, Enum):
     STANDALONE = "standalone"  # No parent; backward compatible default
 
 
+class IdeaWorkType(str, Enum):
+    EXPLORATION = "exploration"   # Open-ended discovery; no deploy phase needed
+    RESEARCH    = "research"      # Study + synthesis; no deploy phase needed
+    PROTOTYPE   = "prototype"     # Build to evaluate; no code-review/merge/deploy
+    FEATURE     = "feature"       # Full pipeline: spec→impl→test→review→merge→deploy→verify
+    ENHANCEMENT = "enhancement"   # Full pipeline; extends existing feature
+    BUG_FIX     = "bug-fix"       # No spec phase; straight to impl→test→merge→deploy
+    MVP         = "mvp"           # Full pipeline without dedicated code-review phase
+
+
+class IdeaLifecycle(str, Enum):
+    ACTIVE   = "active"    # Default — open for work
+    PAUSED   = "paused"    # Deliberately parked; not abandoned
+    ARCHIVED = "archived"  # Done and no longer relevant
+    RETIRED  = "retired"   # Was a bad idea; shouldn't be repeated
+
+
 class IdeaQuestion(BaseModel):
     question: str = Field(min_length=1)
     value_to_whole: float = Field(ge=0.0)
@@ -72,10 +90,17 @@ class Idea(BaseModel):
     parent_idea_id: Optional[str] = None
     child_idea_ids: list[str] = Field(default_factory=list)
     stage: IdeaStage = IdeaStage.NONE
+    work_type: Optional[IdeaWorkType] = None
+    lifecycle: IdeaLifecycle = IdeaLifecycle.ACTIVE
+    duplicate_of: Optional[str] = None
+    last_activity_at: Optional[str] = None
     value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
     tags: list[str] = Field(default_factory=list, description="Normalized tags for categorization (spec 129)")
+    workspace_git_url: Optional[str] = Field(default=None, description="Git remote URL of the repo this idea lives in. Enables multi-repo pipeline routing.")
+    slug: str = Field(default="", description="URL-safe human identifier. Unique. Backfilled from id if absent.")
+    slug_history: list[str] = Field(default_factory=list, description="Previous slugs — kept so old URLs/links resolve.")
 
 
 class IdeaWithScore(Idea):
@@ -186,10 +211,18 @@ class IdeaUpdate(BaseModel):
     # Text fields
     description: Optional[str] = Field(default=None, min_length=1, description="Update idea description")
     name: Optional[str] = Field(default=None, min_length=1, description="Rename the idea")
+    work_type: Optional[IdeaWorkType] = None
+    lifecycle: Optional[IdeaLifecycle] = None
+    duplicate_of: Optional[str] = Field(default=None, description="ID of the idea this duplicates")
+    workspace_git_url: Optional[str] = Field(default=None, description="Update the workspace repo URL.")
 
 
 class IdeaCreate(BaseModel):
-    id: str = Field(min_length=1)
+    id: Optional[str] = Field(
+        default=None,
+        description="UUID4 identifier. Auto-generated as UUID4 when omitted. "
+                    "Legacy slug IDs are accepted for seeding backward-compat data.",
+    )
     name: str = Field(min_length=1)
     description: str = Field(min_length=1)
     potential_value: float = Field(ge=0.0)
@@ -208,6 +241,19 @@ class IdeaCreate(BaseModel):
     manifestation_status: Optional[ManifestationStatus] = None
     stage: Optional[IdeaStage] = None
     value_basis: Optional[dict[str, str]] = None
+    work_type: Optional[IdeaWorkType] = None
+    lifecycle: Optional[IdeaLifecycle] = None
+    duplicate_of: Optional[str] = None
+    workspace_git_url: Optional[str] = Field(default=None, description="Git remote URL of the workspace repo for this idea.")
+    slug: Optional[str] = Field(default=None, description="Human slug; auto-derived from name if omitted.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _auto_uuid_id(cls, values: dict) -> dict:
+        """Auto-generate a UUID4 when 'id' is absent or empty."""
+        if not values.get("id"):
+            values["id"] = str(uuid4())
+        return values
 
 
 class IdeaQuestionAnswerUpdate(BaseModel):
@@ -300,3 +346,15 @@ class IdeaTagUpdateResponse(BaseModel):
     """Confirmation of a tag update operation."""
     id: str
     tags: list[str] = Field(default_factory=list)
+
+
+class SlugUpdateRequest(BaseModel):
+    """Body for PATCH /api/ideas/{id_or_slug}/slug."""
+    slug: str = Field(min_length=1, max_length=100, description="New slug. May be namespaced: 'pillar/concept'.")
+
+
+class SlugUpdateResponse(BaseModel):
+    """Confirmation of a slug rename."""
+    id: str
+    slug: str
+    slug_history: list[str] = Field(default_factory=list)

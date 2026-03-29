@@ -12,9 +12,11 @@ API: /api/ideas/{id}/translate?view=<lens>
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
+from app.models.belief import BeliefAxis
 from app.services import concept_service
 
 
@@ -28,6 +30,11 @@ class TranslateLens(str, Enum):
     spiritual = "spiritual"
     artistic = "artistic"
     philosophical = "philosophical"
+    libertarian = "libertarian"
+    engineer = "engineer"
+    institutionalist = "institutionalist"
+    entrepreneur = "entrepreneur"
+    systemic = "systemic"
 
 
 # ---------------------------------------------------------------------------
@@ -44,6 +51,7 @@ _LENS_META: dict[str, dict[str, Any]] = {
             "physics", "chemistry", "biology", "computation", "metric", "variable",
         ],
         "axes": ["analytical", "causal", "empirical", "systematic"],
+        "category": "discipline",
     },
     "economic": {
         "description": "The economic lens focuses on value, incentives, costs, and allocation of scarce resources.",
@@ -54,6 +62,7 @@ _LENS_META: dict[str, dict[str, Any]] = {
             "strategy", "supply", "demand", "benefit", "budget", "portfolio",
         ],
         "axes": ["transactional", "incentive", "value-driven", "strategic"],
+        "category": "discipline",
     },
     "spiritual": {
         "description": "The spiritual lens explores meaning, consciousness, resonance, and transcendent connection.",
@@ -64,6 +73,7 @@ _LENS_META: dict[str, dict[str, Any]] = {
             "sacred geometry", "divine", "transcendence", "being", "essence", "breath",
         ],
         "axes": ["transcendent", "resonant", "holistic", "contemplative"],
+        "category": "worldview",
     },
     "artistic": {
         "description": "The artistic lens sees form, beauty, expression, rhythm, and aesthetic composition.",
@@ -74,6 +84,7 @@ _LENS_META: dict[str, dict[str, Any]] = {
             "pattern", "emergence", "play", "imagination", "style", "medium",
         ],
         "axes": ["expressive", "aesthetic", "compositional", "imaginative"],
+        "category": "discipline",
     },
     "philosophical": {
         "description": "The philosophical lens interrogates existence, truth, ethics, and foundational assumptions.",
@@ -84,6 +95,72 @@ _LENS_META: dict[str, dict[str, Any]] = {
             "ontology", "epistemology", "phenomenology", "dialectic", "metaphysics",
         ],
         "axes": ["reflective", "dialectic", "normative", "foundational"],
+        "category": "discipline",
+    },
+    "libertarian": {
+        "description": (
+            "The libertarian / decentralist lens emphasizes individual sovereignty, voluntary cooperation, "
+            "and resistance to coercion — freedom as a primary design constraint."
+        ),
+        "keywords": [
+            "freedom", "sovereignty", "voluntary", "decentralization", "autonomy", "rights",
+            "non-aggression", "consent", "peer", "permissionless", "censorship", "self-custody",
+            "open", "neutral", "exit", "choice", "liberty", "minimal", "trustless",
+        ],
+        "axes": ["autonomy", "voluntary-cooperation", "anti-coercion"],
+        "category": "worldview",
+    },
+    "engineer": {
+        "description": (
+            "The systems engineer lens prioritizes efficiency, scalability, reliability, and explicit trade-offs — "
+            "what works under load and how to measure it."
+        ),
+        "keywords": [
+            "efficiency", "scalability", "reliability", "latency", "throughput", "trade-off",
+            "architecture", "abstraction", "interface", "testing", "observability", "sla",
+            "performance", "robustness", "constraint", "optimization", "bottleneck", "metric",
+        ],
+        "axes": ["precision", "scalability", "measurement"],
+        "category": "worldview",
+    },
+    "institutionalist": {
+        "description": (
+            "The institutional / policy lens foregrounds governance, compliance, precedent, and risk management — "
+            "stability and accountability to collective rules."
+        ),
+        "keywords": [
+            "governance", "compliance", "regulation", "policy", "risk", "precedent",
+            "accountability", "oversight", "audit", "standard", "jurisdiction", "fiduciary",
+            "stability", "mandate", "authority", "rule", "enforcement", "liability",
+        ],
+        "axes": ["governance", "risk-management", "precedent"],
+        "category": "worldview",
+    },
+    "entrepreneur": {
+        "description": (
+            "The entrepreneur lens reads ideas as market opportunities: users, timing, monetization, "
+            "and speed to validated learning."
+        ),
+        "keywords": [
+            "opportunity", "market", "customer", "revenue", "growth", "pitch", "traction",
+            "mvp", "go-to-market", "monetization", "competitive", "moat", "adoption", "pivot",
+            "venture", "value proposition", "scale", "distribution", "founder",
+        ],
+        "axes": ["opportunity", "speed", "commercialization"],
+        "category": "worldview",
+    },
+    "systemic": {
+        "description": (
+            "The systemic / complexity lens emphasizes feedback loops, emergence, unintended consequences, "
+            "and leverage points — not just parts but couplings."
+        ),
+        "keywords": [
+            "feedback", "emergence", "leverage", "coupling", "unintended", "second-order",
+            "complexity", "adaptation", "ecosystem", "boundary", "stock", "flow", "delay",
+            "nonlinear", "resilience", "path dependence", "holon", "interaction",
+        ],
+        "axes": ["feedback", "emergence", "leverage"],
+        "category": "worldview",
     },
 }
 
@@ -94,6 +171,11 @@ _LENS_CONCEPT_KEYWORDS: dict[str, list[str]] = {
     "spiritual": ["harmony", "unity", "consciousness", "meaning", "resonance", "sacred"],
     "artistic": ["form", "beauty", "expression", "rhythm", "composition", "aesthetic"],
     "philosophical": ["truth", "being", "identity", "ethics", "existence", "knowledge"],
+    "libertarian": ["freedom", "autonomy", "voluntary", "decentralization", "rights", "sovereignty"],
+    "engineer": ["efficiency", "scalability", "reliability", "architecture", "metric", "optimization"],
+    "institutionalist": ["governance", "compliance", "risk", "policy", "precedent", "accountability"],
+    "entrepreneur": ["opportunity", "market", "revenue", "growth", "traction", "customer"],
+    "systemic": ["feedback", "emergence", "leverage", "complexity", "coupling", "resilience"],
 }
 
 
@@ -284,3 +366,162 @@ def translate_concept(
         "target_axes": to_meta.get("axes", []),
         "target_bridging_concepts": target_bridging,
     }
+
+
+# BeliefAxis-aligned weights for resonance_delta (spec-169 / spec-181 bridge)
+_LENS_BELIEF_VECTORS: dict[str, dict[str, float]] = {
+    "scientific": {"scientific": 0.95, "systemic": 0.45, "pragmatic": 0.5, "spiritual": 0.1, "holistic": 0.2, "relational": 0.15},
+    "economic": {"pragmatic": 0.85, "scientific": 0.35, "relational": 0.4, "systemic": 0.3, "spiritual": 0.1, "holistic": 0.2},
+    "spiritual": {"spiritual": 0.95, "holistic": 0.75, "relational": 0.5, "systemic": 0.25, "scientific": 0.15, "pragmatic": 0.2},
+    "artistic": {"holistic": 0.7, "spiritual": 0.45, "relational": 0.55, "scientific": 0.2, "pragmatic": 0.25, "systemic": 0.2},
+    "philosophical": {"scientific": 0.4, "spiritual": 0.5, "holistic": 0.45, "relational": 0.35, "systemic": 0.4, "pragmatic": 0.35},
+    "libertarian": {"pragmatic": 0.75, "relational": 0.35, "scientific": 0.25, "spiritual": 0.2, "holistic": 0.2, "systemic": 0.3},
+    "engineer": {"scientific": 0.9, "systemic": 0.75, "pragmatic": 0.85, "relational": 0.25, "spiritual": 0.1, "holistic": 0.25},
+    "institutionalist": {"relational": 0.7, "holistic": 0.45, "systemic": 0.55, "pragmatic": 0.5, "scientific": 0.35, "spiritual": 0.2},
+    "entrepreneur": {"pragmatic": 0.95, "relational": 0.55, "scientific": 0.35, "spiritual": 0.15, "holistic": 0.3, "systemic": 0.4},
+    "systemic": {"systemic": 0.95, "holistic": 0.6, "scientific": 0.55, "relational": 0.4, "spiritual": 0.25, "pragmatic": 0.45},
+}
+
+
+def list_all_lens_ids() -> list[str]:
+    """Return every registered lens id (enum values plus any operator-registered lenses)."""
+    builtin = {e.value for e in TranslateLens}
+    builtin |= set(_LENS_META.keys())
+    return sorted(builtin)
+
+
+def register_lens_definition(
+    lens_id: str,
+    name: str,
+    description: str,
+    archetype_axes: dict[str, float],
+) -> None:
+    """Register or replace an operator-defined lens (mutates in-memory registries)."""
+    valid_axes = {a.value for a in BeliefAxis}
+    axes_labels = [k for k in archetype_axes if k in valid_axes]
+    kw_extra = [a for a in axes_labels]
+    _LENS_META[lens_id] = {
+        "description": f"{name}. {description}",
+        "keywords": _tokenize(description) + kw_extra,
+        "axes": axes_labels or ["custom"],
+        "category": "custom",
+        "display_name": name,
+        "archetype_axes": {k: float(v) for k, v in archetype_axes.items() if k in valid_axes},
+        "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+    }
+    merged_kw = _tokenize(description) + kw_extra
+    _LENS_CONCEPT_KEYWORDS[lens_id] = list(dict.fromkeys(_LENS_CONCEPT_KEYWORDS.get(lens_id, []) + merged_kw))[:32]
+    _LENS_BELIEF_VECTORS[lens_id] = {k: float(v) for k, v in archetype_axes.items() if k in valid_axes}
+
+
+def get_lens_meta(lens_id: str) -> dict[str, Any] | None:
+    """Return metadata dict for a lens id, or None if unknown."""
+    return _LENS_META.get(lens_id)
+
+
+def get_lens_belief_vector(lens_id: str) -> dict[str, float]:
+    """BeliefAxis weights used for resonance_delta (may be empty for unknown lenses)."""
+    return dict(_LENS_BELIEF_VECTORS.get(lens_id, {}))
+
+
+def score_text_pov_affinity(text: str, lens_id: str) -> float:
+    """Score how strongly plain text aligns with a POV lens (0.0–1.0) for news filtering."""
+    meta = _LENS_META.get(lens_id)
+    if not meta:
+        return 0.0
+    tokens = set(_tokenize(text))
+    kws = set()
+    for w in meta.get("keywords", []):
+        kws.update(_tokenize(w))
+    kws.update(_LENS_CONCEPT_KEYWORDS.get(lens_id, []))
+    if not tokens or not kws:
+        return 0.05
+    overlap = len(tokens & kws) / max(1, min(len(tokens), len(kws)))
+    return round(min(1.0, 0.08 + overlap * 0.92), 4)
+
+
+def compute_belief_resonance_delta(contributor_axes: dict[str, float], lens_id: str) -> float:
+    """Map contributor worldview axes to a [-1.0, 1.0] delta vs this lens profile."""
+    lv = _LENS_BELIEF_VECTORS.get(lens_id)
+    if not lv:
+        return 0.0
+    keys = set(lv.keys()) | set(contributor_axes.keys())
+    dot = sum(float(contributor_axes.get(k, 0.0)) * float(lv.get(k, 0.0)) for k in keys)
+    nc = sum(float(contributor_axes.get(k, 0.0)) ** 2 for k in keys) ** 0.5
+    nl = sum(float(lv.get(k, 0.0)) ** 2 for k in keys) ** 0.5
+    if nc < 1e-9 or nl < 1e-9:
+        return 0.0
+    cos = dot / (nc * nl)
+    return round(max(-1.0, min(1.0, cos * 2.0 - 1.0)), 4)
+
+
+def build_emphasis_tags(idea_name: str, idea_desc: str, tags: list[str], lens_id: str) -> list[str]:
+    """Top emphasis tokens for spec-181 IdeaTranslation."""
+    meta = _LENS_META.get(lens_id, {})
+    idea_tokens = set(_tokenize(f"{idea_name} {idea_desc} {' '.join(tags)}"))
+    lens_kws = set(_LENS_CONCEPT_KEYWORDS.get(lens_id, []))
+    for w in meta.get("keywords", [])[:40]:
+        lens_kws.update(_tokenize(w))
+    hits = sorted(idea_tokens & lens_kws)[:8]
+    if not hits:
+        return (meta.get("axes") or [])[:5]
+    return hits[:8]
+
+
+def build_risk_opportunity_framing(idea_name: str, lens_id: str) -> tuple[str, str]:
+    """Short risk vs opportunity sentences for a lens (deterministic, no LLM)."""
+    templates: dict[str, tuple[str, str]] = {
+        "libertarian": (
+            "Risk: centralized choke points or coercive defaults could undermine voluntary participation.",
+            "Opportunity: expand permissionless entry and user-held guarantees that reduce reliance on trusted third parties.",
+        ),
+        "engineer": (
+            "Risk: operational complexity, failure modes, and unclear SLOs under production load.",
+            "Opportunity: measurable reliability gains and cleaner interfaces that reduce cost-to-change.",
+        ),
+        "institutionalist": (
+            "Risk: governance gaps, compliance exposure, or ambiguous accountability under scrutiny.",
+            "Opportunity: clearer rules, auditability, and precedents that make adoption safer for institutions.",
+        ),
+        "entrepreneur": (
+            "Risk: slow iteration, weak distribution, or unclear monetization path versus alternatives.",
+            "Opportunity: sharper wedge, faster learning loops, and a story that compels early adopters.",
+        ),
+        "scientific": (
+            "Risk: hypotheses outrun evidence; metrics may not capture the phenomenon that matters.",
+            "Opportunity: tighter measurement loops and clearer causal claims grounded in reproducible data.",
+        ),
+        "economic": (
+            "Risk: hidden costs, misaligned incentives, or unsustainable subsidy of the wrong behavior.",
+            "Opportunity: clearer value capture and incentive design that makes honest participation the best move.",
+        ),
+        "spiritual": (
+            "Risk: instrumentalizing meaning without care for the humans in the loop.",
+            "Opportunity: deepen coherence between stated purpose and lived practice for participants.",
+        ),
+        "artistic": (
+            "Risk: style without substance; novelty that obscures the underlying problem.",
+            "Opportunity: expressive clarity that makes the idea memorable and emotionally legible.",
+        ),
+        "philosophical": (
+            "Risk: endless abstraction without grounding in concrete decisions.",
+            "Opportunity: sharper definitions and ethical clarity that reduce avoidable conflict.",
+        ),
+        "systemic": (
+            "Risk: second-order effects and coupling surprises; local fixes that create global failure.",
+            "Opportunity: identify leverage points where small changes shift the whole system trajectory.",
+        ),
+    }
+    risk, opp = templates.get(
+        lens_id,
+        (
+            f"Risk: '{idea_name}' may face friction where assumptions meet reality.",
+            f"Opportunity: reframe '{idea_name}' so the next step is obvious to stakeholders aligned with this lens.",
+        ),
+    )
+    return risk, opp
+</think>
+
+
+<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
+Read

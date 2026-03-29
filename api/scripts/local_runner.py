@@ -977,6 +977,33 @@ _NEXT_PHASE: dict[str, str | None] = {
     "review": None,
 }
 
+# Per-work_type phase sequences — determines which phases are skipped for each work type.
+# Keys match IdeaWorkType values. None = default (full pipeline).
+_PHASE_SEQUENCES_BY_WORK_TYPE: dict[str | None, tuple[str, ...]] = {
+    "exploration": ("spec", "impl", "reflect"),
+    "research":    ("spec", "impl", "reflect"),
+    "prototype":   ("spec", "impl", "test", "reflect"),
+    "feature":     ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect"),
+    "enhancement": ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect"),
+    "bug-fix":     ("impl", "test", "code-review", "merge", "deploy", "verify", "reflect"),
+    "mvp":         ("spec", "impl", "test", "merge", "deploy", "verify", "reflect"),
+    None:          ("spec", "impl", "test", "code-review", "merge", "deploy", "verify", "reflect"),
+}
+
+
+def _next_phase_for_work_type(current_phase: str, work_type: str | None) -> str | None:
+    """Return the next phase for an idea given its work_type.
+
+    Falls back to the global _NEXT_PHASE map if work_type is unknown.
+    """
+    seq = _PHASE_SEQUENCES_BY_WORK_TYPE.get(work_type, _PHASE_SEQUENCES_BY_WORK_TYPE[None])
+    if current_phase in seq:
+        idx = seq.index(current_phase)
+        return seq[idx + 1] if idx + 1 < len(seq) else None
+    # Phase not in this work_type's sequence — use global fallback
+    return _NEXT_PHASE.get(current_phase)
+
+
 def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> dict | list | None:
     """Call the API via httpx. Auto-retries on 429 with backoff."""
     url = f"{API_BASE}{path}"
@@ -1487,21 +1514,30 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
     if not _phase_fully_completed(idea_tasks_payload, task_type):
         return
 
-    next_phase = _NEXT_PHASE.get(task_type)
-    idea_payload: dict | None = None
+    # Fetch idea to get work_type for phase-ladder branching
+    idea_payload: dict | None = api("GET", f"/api/ideas/{idea_id}")
+    idea_work_type: str | None = None
+    idea_workspace_git_url: str = ""
+    if isinstance(idea_payload, dict):
+        idea_work_type = idea_payload.get("work_type")
+        idea_workspace_git_url = idea_payload.get("workspace_git_url") or ""
+    next_phase = _next_phase_for_work_type(task_type, idea_work_type)
     if next_phase and not _has_any_tasks_for_phase(idea_tasks_payload, next_phase):
-        idea_payload = api("GET", f"/api/ideas/{idea_id}")
         idea_name = str((idea_payload or {}).get("name") or idea_id) if isinstance(idea_payload, dict) else idea_id
         idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
 
-        extra_context = {}  # PR/branch info passed to downstream phases
+        extra_context: dict = {}  # PR/branch info passed to downstream phases
+        if idea_workspace_git_url:
+            extra_context["workspace_git_url"] = idea_workspace_git_url
 
         # Idea scope header prepended to every direction so providers know exactly what they're working on
+        _workspace_line = f"workspace: {idea_workspace_git_url}\n" if idea_workspace_git_url else ""
         _idea_scope_header = (
             f"─── IDEA SCOPE ───\n"
             f"idea_id: {idea_id}\n"
             f"idea_name: {idea_name}\n"
             f"phase: {next_phase}\n"
+            f"{_workspace_line}"
             f"───────────────────\n\n"
         )
 
@@ -1722,7 +1758,12 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 },
             },
         )
-        if not isinstance(created, dict):
+        if isinstance(created, dict):
+            _append_idea_event(idea_id, "phase_advanced", {
+                "from_phase": task_type,
+                "to_phase": next_phase,
+            })
+        else:
             log.warning(
                 "AUTO_PHASE enqueue failed idea_id=%s from=%s to=%s",
                 idea_id,
@@ -1824,6 +1865,125 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
 
 # ── Execution ────────────────────────────────────────────────────────
 
+def _read_file_capped(path: "Path | str", cap: int = 3000) -> str:
+    """Read a file and cap at `cap` chars. Returns '' if missing."""
+    try:
+        raw = Path(path).read_text(errors="replace")
+        if len(raw) > cap:
+            return raw[:cap] + f"\n…(truncated at {cap} chars)"
+        return raw
+    except Exception:
+        return ""
+
+
+def _resolve_related_files(spec_content: str, direction: str, repo_dir: "Path") -> list[str]:
+    """Extract file paths mentioned in spec/direction and filter to ones that exist."""
+    import re as _re
+    combined = spec_content + "\n" + direction
+    # Match path-like tokens: optional leading /, then word/word... ending with a known extension
+    pattern = _re.compile(
+        r"(?<![`\"\'])"           # not in a quote (avoid URLs)
+        r"(?:[\w.-]+/)+[\w.-]+"   # path segments
+        r"\.(?:py|tsx?|mjs|md|json|yaml|yml|sh|sql|toml)"
+    )
+    seen: dict[str, None] = {}
+    for m in pattern.finditer(combined):
+        token = m.group(0).lstrip("/")
+        if token not in seen:
+            seen[token] = None
+    # Keep only paths that exist in the repo
+    result = []
+    for rel in seen:
+        full = repo_dir / rel
+        if full.exists():
+            result.append(rel)
+    return result[:20]  # cap list
+
+
+def _module_tree(repo_dir: "Path", subdirs: list[str], max_files: int = 30) -> str:
+    """Return a compact file listing for given subdirectories."""
+    lines: list[str] = []
+    for sub in subdirs:
+        d = repo_dir / sub
+        if not d.exists():
+            continue
+        files = sorted(d.rglob("*"))
+        shown = [f for f in files if f.is_file() and f.suffix in (".py", ".tsx", ".mjs", ".ts", ".md")]
+        for f in shown[:max_files]:
+            lines.append("  " + str(f.relative_to(repo_dir)))
+        if len(shown) > max_files:
+            lines.append(f"  …({len(shown) - max_files} more)")
+    return "\n".join(lines)
+
+
+def _build_context_block(
+    task_type: str,
+    idea_id: str,
+    spec_path: str,
+    direction: str,
+    repo_dir: "Path",
+) -> str:
+    """Assemble the ## CONTEXT block injected into every impl/test/review prompt."""
+    parts: list[str] = []
+
+    # 1. Spec file — actual content, not just the path
+    if spec_path and spec_path != "none":
+        # Try absolute first, then relative to repo_dir
+        spec_file = Path(spec_path) if Path(spec_path).is_absolute() else repo_dir / spec_path
+        spec_raw = _read_file_capped(spec_file, cap=4000)
+        if spec_raw:
+            parts.append(f"### Spec: {spec_path}\n```markdown\n{spec_raw}\n```")
+        else:
+            # Fallback: glob for idea_id in specs/
+            import glob as _glob
+            matches = _glob.glob(str(repo_dir / "specs" / f"*{idea_id}*"))
+            if matches:
+                spec_raw = _read_file_capped(matches[0], cap=4000)
+                if spec_raw:
+                    parts.append(f"### Spec: {matches[0]}\n```markdown\n{spec_raw}\n```")
+
+    # 2. CLAUDE.md — project conventions, agent guardrails, workflow
+    for claude_md_path in [repo_dir / "CLAUDE.md", repo_dir / ".claude" / "CLAUDE.md"]:
+        if claude_md_path.exists():
+            content = _read_file_capped(claude_md_path, cap=2500)
+            if content:
+                parts.append(f"### Project conventions (CLAUDE.md)\n```\n{content}\n```")
+            break
+
+    # 3. Repo runbook — operational guidance
+    for runbook_path in [
+        repo_dir / "docs" / "RUNBOOK.md",
+        repo_dir / "RUNBOOK.md",
+        repo_dir / "docs" / "runbook.md",
+    ]:
+        if runbook_path.exists():
+            content = _read_file_capped(runbook_path, cap=1500)
+            if content:
+                parts.append(f"### Runbook\n```\n{content}\n```")
+            break
+
+    # 4. Related files — mentioned in spec or direction, confirmed to exist
+    related = _resolve_related_files(
+        parts[0] if parts else "",   # spec content already gathered above
+        direction,
+        repo_dir,
+    )
+    if related:
+        parts.append("### Related files in this repo\n" + "\n".join(f"  {r}" for r in related))
+
+    # 5. Module map — directory listing for impl/test tasks
+    if task_type in ("impl", "test"):
+        subdirs = ["api/app/routers", "api/app/services", "api/app/models",
+                   "web/app", "cli/lib", "specs"]
+        tree = _module_tree(repo_dir, subdirs, max_files=25)
+        if tree:
+            parts.append(f"### Module map (key directories)\n{tree}")
+
+    if not parts:
+        return ""
+    return "\n\n## CONTEXT\n\n" + "\n\n---\n\n".join(parts)
+
+
 def build_prompt(task: dict) -> str:
     direction = task.get("direction", "")
     task_type = task.get("task_type", "unknown")
@@ -1853,6 +2013,12 @@ SPEC INSTRUCTIONS:
 - Write a detailed spec file at specs/<idea_id>.md
 - Include: Summary, Requirements, API changes, Data model, Verification criteria, Risks
 - Minimum 500 chars of spec content.
+- For each requirement, name the exact file(s) that will change, e.g.:
+    - `api/app/models/idea.py` — add X field
+    - `api/app/services/idea_service.py` — add Y function
+    - `web/app/ideas/page.tsx` — update Z component
+  This file list is read by the impl task — the more precise, the faster impl runs.
+- Include a ## Files section listing every file the impl agent should create or modify.
 
 BEFORE FINISHING — you MUST run these commands:
   echo "*.pyc\n__pycache__/\n.task-*\ndata/coherence.db" >> .gitignore
@@ -1904,6 +2070,16 @@ Output a summary: files created/modified, validation results, errors encountered
 
     idea_id = context.get("idea_id", "unknown") if isinstance(context, dict) else "unknown"
     spec_path = context.get("spec_path", "none") if isinstance(context, dict) else "none"
+    workspace_git_url = context.get("workspace_git_url", "") if isinstance(context, dict) else ""
+
+    # Build rich context block — spec content, CLAUDE.md, runbook, related files, module map
+    context_block = _build_context_block(
+        task_type=task_type,
+        idea_id=idea_id,
+        spec_path=spec_path,
+        direction=direction,
+        repo_dir=_REPO_DIR,
+    )
 
     prompt = f"""EXECUTE THIS TASK NOW. Do NOT ask what to do — the task is described below. Start working immediately.
 
@@ -1911,13 +2087,14 @@ Task type: {task_type}
 Task ID: {task.get('id', 'unknown')}
 Idea ID: {idea_id}
 Spec file: {spec_path}
+Workspace: {workspace_git_url or "(coherence-network default repo)"}
 Role: {agent} for Coherence Network
 
 SCOPE RULE: Only modify files related to idea '{idea_id}'. Do NOT work on any other idea.
 
 TASK:
 {direction}
-{type_instructions}
+{type_instructions}{context_block}
 
 CRITICAL: Start executing immediately. Do NOT respond with "I'm ready" or "What should I do?" — the task is above. Do the work, write files, commit, and output results."""
     # Resume from checkpoint — either from explicit resume mode or from reaper retry
@@ -2717,7 +2894,88 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
             all_ok = all("200" in r for r in results)
             output = ("VERIFY_PASSED: " if all_ok else "VERIFY_FAILED: ") + " | ".join(results)
         elif task_type == "reflect":
-            output = f"REFLECT_COMPLETE: {idea_id} full lifecycle done."
+            # Count tasks to estimate actual cost (0.5 CC per task = rough provider call cost)
+            idea_tasks_r = api("GET", f"/api/ideas/{idea_id}/tasks")
+            task_count = 0
+            if isinstance(idea_tasks_r, dict):
+                task_count = idea_tasks_r.get("total", 0)
+            actual_cost_estimate = round(task_count * 0.5, 1)
+            # Mark idea as validated and record cost actuals
+            patch_body: dict[str, Any] = {
+                "manifestation_status": "validated",
+                "actual_cost": max(actual_cost_estimate, 0.5),
+            }
+            patch_result = api("PATCH", f"/api/ideas/{idea_id}", patch_body)
+            patched = isinstance(patch_result, dict)
+
+            # Spawn follow-up ideas from unanswered open_questions
+            spawned_ids: list[str] = []
+            try:
+                idea_payload_r = api("GET", f"/api/ideas/{idea_id}")
+                if isinstance(idea_payload_r, dict):
+                    open_qs = idea_payload_r.get("open_questions") or []
+                    idea_name_r = str(idea_payload_r.get("name") or idea_id)
+                    idea_desc_r = str(idea_payload_r.get("description") or "")[:300]
+                    for q in open_qs:
+                        if not isinstance(q, dict):
+                            continue
+                        if q.get("answer") is not None:
+                            continue  # already answered — skip
+                        q_text = str(q.get("question") or "").strip()
+                        if not q_text:
+                            continue
+                        # Build a slug for the follow-up idea id
+                        import re as _re
+                        slug = _re.sub(r"[^a-z0-9]+", "-", q_text[:40].lower()).strip("-")
+                        followup_id = f"{idea_id}-followup-{slug}"[:80]
+                        followup_body: dict[str, Any] = {
+                            "id": followup_id,
+                            "name": f"Follow-up: {q_text[:80]}",
+                            "description": (
+                                f"This idea emerged from the completed implementation of "
+                                f"'{idea_name_r}' ({idea_id}).\n\n"
+                                f"Open question that was not resolved during implementation: "
+                                f"{q_text}\n\n"
+                                f"Original idea context: {idea_desc_r}"
+                            ),
+                            "potential_value": float(q.get("value_to_whole") or 20.0),
+                            "estimated_cost": float(q.get("estimated_cost") or 3.0),
+                            "confidence": 0.55,
+                            "parent_idea_id": idea_id,
+                            "idea_type": "child",
+                            "work_type": "exploration",
+                        }
+                        created_q = api("POST", "/api/ideas", followup_body)
+                        if isinstance(created_q, dict) and created_q.get("id"):
+                            spawned_ids.append(followup_id)
+                            log.info(
+                                "REFLECT_SPAWN idea=%s spawned follow-up=%s from unanswered question",
+                                idea_id, followup_id,
+                            )
+                        else:
+                            log.debug("REFLECT_SPAWN_SKIP followup_id=%s (likely already exists)", followup_id)
+            except Exception as _spawn_exc:
+                log.warning("REFLECT_SPAWN_ERROR idea=%s error=%s", idea_id, _spawn_exc)
+
+            _append_idea_event(idea_id, "reflected", {
+                "task_count": task_count,
+                "actual_cost": max(actual_cost_estimate, 0.5),
+                "manifestation_status": "validated",
+                "spawned_idea_ids": spawned_ids,
+            })
+
+
+
+            spawn_note = (
+                f" Spawned {len(spawned_ids)} follow-up idea(s): {', '.join(spawned_ids)}."
+                if spawned_ids else ""
+            )
+            output = (
+                f"REFLECT_COMPLETE: {idea_id} lifecycle validated. "
+                f"Tasks run: {task_count}, estimated actual cost: {actual_cost_estimate} CC. "
+                f"Idea PATCH {'succeeded' if patched else 'failed — check API logs'}."
+                f"{spawn_note}"
+            )
         else:
             output = f"Unknown phase: {task_type}"
 
@@ -3364,6 +3622,8 @@ def _seed_task_from_open_idea() -> bool:
     candidates = [
         i for i in ideas
         if i.get("manifestation_status") in ("none", "partial", None)
+        and i.get("idea_type") != "super"   # SUPER ideas are strategic goals — never picked up
+        and i.get("lifecycle", "active") not in ("archived", "retired")
         and i.get("id", "") not in active_idea_ids
         and i.get("id", "") not in _SEEDER_SKIP_CACHE
     ]
@@ -3557,16 +3817,20 @@ def _seed_task_from_open_idea() -> bool:
         f"{validation_guidance}"
     )
 
+    workspace_git_url_seed = idea.get("workspace_git_url") or ""
+    seed_ctx: dict = {
+        "idea_id": idea_id,
+        "idea_name": idea_name,
+        "seed_generated": True,
+        "seed_source": "local_runner_smart_seed",
+    }
+    if workspace_git_url_seed:
+        seed_ctx["workspace_git_url"] = workspace_git_url_seed
     result = api("POST", "/api/agent/tasks", {
         "direction": direction,
         "task_type": task_type,
         "idea_id": idea_id,  # top-level for API linking
-        "context": {
-            "idea_id": idea_id,
-            "idea_name": idea_name,
-            "seed_generated": True,
-            "seed_source": "local_runner_smart_seed",
-        },
+        "context": seed_ctx,
         "target_state": f"{task_type.title()} completed for: {idea_name}",
         "success_evidence": f"{task_type} artifact exists and meets quality criteria",
         "abort_evidence": f"Cannot make progress — blocked or unclear requirements",
@@ -4185,6 +4449,51 @@ def _deploy_to_vps() -> str:
 _MAX_PARALLEL = rc("execution", "parallel", 2)
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 _PROGRESS_DIR = _REPO_DIR / ".idea-progress"
+# Mirror cache for external workspace repos — one clone per remote, shared across tasks.
+_WORKSPACE_REPOS_DIR = Path.home() / ".coherence-network" / "repos"
+
+
+def _get_or_update_workspace_repo(git_url: str) -> "Path | None":
+    """Clone or update a local mirror of an external git repo.
+
+    Returns the local clone path, or None on failure.
+    Path convention: ~/.coherence-network/repos/{host}/{org}/{repo}/
+    Multiple tasks against the same remote reuse the same clone.
+    """
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(git_url)
+        host = parsed.hostname or "unknown"
+        path_segment = parsed.path.strip("/")
+        if path_segment.endswith(".git"):
+            path_segment = path_segment[:-4]
+        local_path = _WORKSPACE_REPOS_DIR / host / path_segment
+
+        if local_path.exists():
+            log.info("WORKSPACE_REPO_UPDATE url=%s path=%s", git_url, local_path)
+            fetch = _run_git_command(
+                ["git", "fetch", "--all", "--prune", "--quiet"],
+                capture_output=True, text=True, timeout=60, cwd=str(local_path),
+            )
+            if fetch.returncode != 0:
+                log.warning("WORKSPACE_REPO_FETCH_FAILED url=%s: %s", git_url,
+                            (fetch.stderr or fetch.stdout or "").strip())
+        else:
+            log.info("WORKSPACE_REPO_CLONE url=%s → %s", git_url, local_path)
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            clone = _run_git_command(
+                ["git", "clone", "--quiet", git_url, str(local_path)],
+                capture_output=True, text=True, timeout=120,
+            )
+            if clone.returncode != 0:
+                log.error("WORKSPACE_REPO_CLONE_FAILED url=%s: %s", git_url,
+                          (clone.stderr or clone.stdout or "").strip())
+                return None
+
+        return local_path
+    except Exception as exc:
+        log.error("WORKSPACE_REPO_ERROR url=%s: %s", git_url, exc)
+        return None
 
 
 def _inject_idea_progress(idea_id: str, wt_path: Path) -> None:
@@ -4222,6 +4531,23 @@ def _persist_idea_progress(idea_id: str, wt_path: Path) -> None:
         log.info("PROGRESS_PERSISTED idea=%s (%d bytes)", idea_id, dst.stat().st_size)
     except Exception as e:
         log.warning("PROGRESS_PERSIST_FAILED idea=%s error=%s", idea_id, e)
+
+
+_EVENTS_DIR = _REPO_DIR / ".idea-events"
+
+
+def _append_idea_event(idea_id: str, event_type: str, payload: dict) -> None:
+    """Append a versioned event to .idea-events/{idea_id}.jsonl (local, not committed)."""
+    import json as _json_ev
+    _EVENTS_DIR.mkdir(exist_ok=True)
+    entry = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "event": event_type,
+        **payload,
+    }
+    path = _EVENTS_DIR / f"{idea_id}.jsonl"
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(_json_ev.dumps(entry) + "\n")
 
 
 def _repo_is_linked_worktree(repo_root: str) -> bool:
@@ -4492,20 +4818,40 @@ def _reclaim_worktree_slot(repo_root: str, wt_path: Path, branch: str) -> bool:
     return slot_clear
 
 
-def _create_worktree(task_id: str, base_branch: str | None = None, *, idea_id: str = "") -> Path | None:
+def _create_worktree(
+    task_id: str,
+    base_branch: str | None = None,
+    *,
+    idea_id: str = "",
+    workspace_git_url: str = "",
+) -> "Path | None":
     """Create a git worktree for isolated task execution.
 
     base_branch: optional remote branch to base on (e.g. 'worker/impl/idea/task_abc').
     If None, defaults to origin/main. Used by test/review/code-review phases
     to checkout the impl PR branch so the provider can see the actual code.
     idea_id: if provided, injects the persisted .idea-progress.md into the worktree.
+    workspace_git_url: if provided, worktree is created inside a local mirror of
+    that remote repo instead of the default _REPO_DIR. Enables multi-repo pipeline.
     """
     slug = task_id[:16]
-    wt_path = _WORKTREE_BASE / f"task-{slug}"
+
+    # Determine which repo and worktree base to use
+    if workspace_git_url:
+        workspace_repo = _get_or_update_workspace_repo(workspace_git_url)
+        if workspace_repo is None:
+            log.error("WORKTREE_WORKSPACE_REPO_FAILED task=%s url=%s", slug, workspace_git_url)
+            return None
+        repo_root = str(workspace_repo)
+        worktree_base = workspace_repo / ".worktrees"
+    else:
+        repo_root = str(_REPO_DIR)
+        worktree_base = _WORKTREE_BASE
+
+    wt_path = worktree_base / f"task-{slug}"
     branch = f"task/{slug}"
-    repo_root = str(_REPO_DIR)
     try:
-        _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
+        worktree_base.mkdir(parents=True, exist_ok=True)
         if not _reclaim_worktree_slot(repo_root, wt_path, branch):
             return None
         if _repo_is_linked_worktree(repo_root):
@@ -4939,8 +5285,10 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             # Create worktree — for test/review phases, checkout the impl PR branch
             task_type = task.get("task_type", "spec")
             impl_branch = ctx.get("impl_branch", "")
+            workspace_git_url = ctx.get("workspace_git_url", "")
             base_branch = impl_branch if task_type in ("test", "code-review", "review") and impl_branch else None
-            wt = _create_worktree(task_id, base_branch=base_branch, idea_id=idea_id)
+            wt = _create_worktree(task_id, base_branch=base_branch, idea_id=idea_id,
+                                  workspace_git_url=workspace_git_url)
             pushed = False
             try:
                 # Fix 6+7: deploy and verify are RUNNER actions, not provider

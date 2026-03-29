@@ -41,68 +41,143 @@ function miniBar(value, max, width = 5) {
 }
 
 export async function listIdeas(args) {
-  const limit = parseInt(args[0]) || 20;
-  const raw = await get("/api/ideas", { limit });
-  // API may return { ideas: [...] } or a raw array
-  const data = Array.isArray(raw) ? raw : raw?.ideas;
-  if (!data || !Array.isArray(data)) {
-    console.log("Could not fetch ideas.");
-    return;
+  // Parse flags: --type <work_type>, --status <none|partial|validated>, --parent <id>, --limit N
+  const flags = {};
+  const positional = [];
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === "--type" || args[i] === "-t") && args[i+1]) flags.type = args[++i];
+    else if ((args[i] === "--status" || args[i] === "-s") && args[i+1]) flags.status = args[++i];
+    else if ((args[i] === "--parent" || args[i] === "-p") && args[i+1]) flags.parent = args[++i];
+    else if ((args[i] === "--limit" || args[i] === "-n") && args[i+1]) flags.limit = parseInt(args[++i]);
+    else positional.push(args[i]);
   }
-  if (data.length === 0) {
-    console.log("No ideas in the portfolio yet.");
-    return;
-  }
+  const limit = flags.limit || parseInt(positional[0]) || 40;
+
+  const raw = await get("/api/ideas", { limit: Math.min(limit, 400) });
+  let data = Array.isArray(raw) ? raw : raw?.ideas;
+  if (!data || !Array.isArray(data)) { console.log("Could not fetch ideas."); return; }
+
+  // Apply local filters
+  if (flags.type)   data = data.filter(i => i.work_type === flags.type);
+  if (flags.status) data = data.filter(i => (i.manifestation_status || "none") === flags.status);
+  if (flags.parent) data = data.filter(i => i.parent_idea_id === flags.parent);
+
+  if (data.length === 0) { console.log("No ideas match the filter."); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m";
+  const filterNote = [
+    flags.type   ? `type=${flags.type}` : null,
+    flags.status ? `status=${flags.status}` : null,
+    flags.parent ? `parent=${flags.parent}` : null,
+  ].filter(Boolean).join(", ");
 
   console.log();
-  console.log(`\x1b[1m  IDEAS\x1b[0m (${data.length})`);
-  console.log(`  ${"─".repeat(74)}`);
+  console.log(`${B}  IDEAS${R} (${data.length})${filterNote ? `  ${D}[${filterNote}]${R}` : ""}`);
+  console.log(`  ${"─".repeat(82)}`);
+  console.log(`  ${D}${"".padEnd(2)}  ${"Name".padEnd(42)} ${"Type".padEnd(12)} ${"FE".padStart(6)}  ${"Status".padEnd(10)}${R}`);
   for (const idea of data) {
-    const status = (idea.manifestation_status || "NONE").toUpperCase();
-    const dot = status === "VALIDATED" ? "\x1b[32m●\x1b[0m"
-      : status === "PARTIAL" ? "\x1b[33m●\x1b[0m"
+    const status = (idea.manifestation_status || "none");
+    const dot = status === "validated" ? "\x1b[32m●\x1b[0m"
+      : status === "partial" ? "\x1b[33m●\x1b[0m"
       : "\x1b[2m○\x1b[0m";
-    const name = truncate(idea.name || idea.id, 45).padEnd(47);
-    const roi = idea.roi_cc != null ? String(idea.roi_cc.toFixed(1)).padStart(6) : "     -";
-    const fe = idea.free_energy_score != null ? idea.free_energy_score.toFixed(2) : null;
-    const feStr = fe != null ? `${String(fe).padStart(5)} ${miniBar(idea.free_energy_score, 20)}` : "";
-    console.log(`  ${dot} ${name} ${roi}  ${feStr}`);
+    const name = truncate(idea.name || idea.id, 40).padEnd(42);
+    const wt = (idea.work_type || "—").padEnd(12);
+    const fe = idea.free_energy_score != null ? idea.free_energy_score.toFixed(2) : "    —";
+    const st = D + status.padEnd(10) + R;
+    console.log(`  ${dot}  ${name} ${C}${wt}${R} ${String(fe).padStart(6)}  ${st}`);
   }
-  console.log(`  ${"─".repeat(74)}`);
-  console.log(`\x1b[2m  ${"Name".padEnd(49)} ${"ROI".padStart(6)}  ${"FE".padStart(5)}\x1b[0m`);
+  console.log(`  ${"─".repeat(82)}`);
   console.log();
 }
 
 export async function showIdea(args) {
+  // Route subcommands: cc idea <id> <subcommand>
   const id = args[0];
-  if (!id) {
-    console.log("Usage: cc idea <id>");
-    return;
-  }
+  if (!id) { console.log("Usage: cc idea <id> [tasks|translate|children|...]"); return; }
+
+  const sub = args[1];
+  // Subcommand routing
+  if (sub === "translate") return showIdeaTranslate([id, args[2]]);
+  if (sub === "tasks")     return showIdeaTasks([id]);
+  if (sub === "deps")      return showIdeaDeps([id, ...args.slice(2)]);
+  if (sub === "children")  return showIdeaChildren([id]);
+  if (sub === "activity")  return showIdeaActivity([id]);
+  if (sub === "progress")  return showIdeaItemProgress([id]);
+  if (sub === "resonance") return showIdeaConceptResonance([id]);
+  if (sub === "advance")   return advanceIdea([id]);
+  if (sub === "stage")     return setIdeaStage([id, args[2]]);
+  if (sub === "tag")       return updateIdeaTags([id, ...args.slice(2)]);
+  if (sub === "question")  return addIdeaQuestion([id, ...args.slice(2)]);
+  if (sub === "answer")    return answerIdeaQuestion([id, ...args.slice(2)]);
+  if (sub === "type")      return setIdeaWorkType([id, args[2]]);
+  if (sub === "link")      return linkIdea([id, ...args.slice(2)]);
+  if (sub === "archive")   return archiveIdea([id, ...args.slice(2)]);
+  if (sub === "retire")    return retireIdea([id, ...args.slice(2)]);
+
+  // Default: show detail
   const data = await get(`/api/ideas/${encodeURIComponent(id)}`);
-  if (!data) {
-    console.log(`Idea '${id}' not found.`);
-    return;
-  }
+  if (!data) { console.log(`Idea '${id}' not found.`); return; }
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", C = "\x1b[36m", Y = "\x1b[33m";
+  const status = data.manifestation_status || "none";
+  const dot = status === "validated" ? `${G}●${R}` : status === "partial" ? `${Y}●${R}` : `${D}○${R}`;
+
   console.log();
-  console.log(`\x1b[1m  ${data.name || data.id}\x1b[0m`);
-  if (data.description) console.log(`  \x1b[2m${truncate(data.description, 72)}\x1b[0m`);
-  console.log(`  ${"─".repeat(50)}`);
-  console.log(`  Status:      ${data.manifestation_status || "NONE"}`);
-  console.log(`  Potential:    ${data.potential_value ?? "?"}`);
-  console.log(`  Actual:       ${data.actual_value ?? 0}`);
-  console.log(`  Est. Cost:    ${data.estimated_cost ?? "?"}`);
-  console.log(`  Confidence:   ${data.confidence ?? "?"}`);
+  console.log(`${B}  ${data.name || data.id}${R}  ${dot}`);
+  console.log(`  ${D}${data.id}${R}`);
+  if (data.description) console.log(`\n  ${D}${truncate(data.description, 76)}${R}`);
+  console.log(`\n  ${"─".repeat(54)}`);
+  if (data.work_type)         console.log(`  Work Type:    ${C}${data.work_type}${R}`);
+  if (data.idea_type)         console.log(`  Idea Type:    ${data.idea_type}`);
+  if (data.parent_idea_id)    console.log(`  Parent:       ${D}${data.parent_idea_id}${R}`);
+  if (data.child_idea_ids?.length) console.log(`  Children:     ${data.child_idea_ids.length} ideas`);
+  console.log(`  Status:       ${status}`);
+  console.log(`  Stage:        ${data.stage || "none"}`);
+  console.log(`  ${"─".repeat(54)}`);
+  console.log(`  Potential:    ${data.potential_value ?? "?"} CC`);
+  console.log(`  Actual:       ${data.actual_value ?? 0} CC`);
+  console.log(`  Est. Cost:    ${data.estimated_cost ?? "?"} CC`);
+  console.log(`  Actual Cost:  ${data.actual_cost ?? 0} CC`);
+  console.log(`  Confidence:   ${((data.confidence ?? 0) * 100).toFixed(0)}%`);
   if (data.free_energy_score != null) console.log(`  Free Energy:  ${data.free_energy_score.toFixed(3)}`);
-  if (data.roi_cc != null) console.log(`  ROI (CC):     ${data.roi_cc.toFixed(2)}`);
+  if (data.roi_cc != null)            console.log(`  ROI (CC):     ${data.roi_cc.toFixed(2)}`);
   if (data.open_questions?.length) {
-    console.log();
-    console.log("  \x1b[1mOpen Questions:\x1b[0m");
+    console.log(`\n  ${B}Open Questions${R} (${data.open_questions.length}):`);
     for (const q of data.open_questions) {
-      const qText = typeof q === "string" ? q : q.question || q.text || JSON.stringify(q);
-      console.log(`    ? ${truncate(qText, 68)}`);
+      const qText = typeof q === "string" ? q : q.question || JSON.stringify(q);
+      const answered = (typeof q === "object" && q.answer) ? ` ${G}✓${R}` : "";
+      console.log(`    ${D}?${R}${answered} ${truncate(qText, 66)}`);
     }
   }
+  console.log();
+}
+
+/** Point-of-view translation: cc idea <id> translate [lens_id] */
+export async function showIdeaTranslate(args) {
+  const id = args[0];
+  const lens = args[1] || "libertarian";
+  if (!id) {
+    console.log("Usage: cc idea <id> translate [lens_id]");
+    return;
+  }
+  const data = await get(
+    `/api/ideas/${encodeURIComponent(id)}/translations/${encodeURIComponent(lens)}`,
+  );
+  if (!data || data.detail) {
+    console.log(data?.detail || `Translation not found for idea '${id}' lens '${lens}'.`);
+    return;
+  }
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  console.log();
+  console.log(`${B}  POV: ${data.lens_id}${R}  (${data.idea_id})`);
+  console.log(`  ${D}${data.original_name}${R}`);
+  console.log();
+  console.log(`  ${data.translated_summary || ""}`);
+  console.log();
+  if (data.emphasis?.length) console.log(`  Emphasis: ${data.emphasis.join(", ")}`);
+  console.log(`  Risk: ${data.risk_framing}`);
+  console.log(`  Opportunity: ${data.opportunity_framing}`);
+  if (data.resonance_delta != null) console.log(`  Resonance Δ: ${data.resonance_delta}`);
   console.log();
 }
 
@@ -210,6 +285,185 @@ export async function createIdea(args) {
     console.log("Failed to create idea.");
     process.exit(1);
   }
+}
+
+export async function triageIdeas(args) {
+  const raw = await get("/api/ideas", { limit: 400 });
+  let data = Array.isArray(raw) ? raw : raw?.ideas;
+  if (!data) { console.log("Could not fetch ideas."); return; }
+
+  // Filter: open ideas, not super, sorted by free_energy_score desc
+  data = data
+    .filter(i => (i.manifestation_status || "none") !== "validated")
+    .filter(i => i.idea_type !== "super")
+    .sort((a, b) => (b.free_energy_score || 0) - (a.free_energy_score || 0))
+    .slice(0, 20);
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m", G = "\x1b[32m", Y = "\x1b[33m";
+  console.log();
+  console.log(`${B}  TRIAGE — Next Ideas to Work On${R}`);
+  console.log(`  ${D}Ranked by free-energy score. Top 20 open, non-strategic ideas.${R}`);
+  console.log(`  ${"─".repeat(82)}`);
+  console.log(`  ${D}#   ${"Name".padEnd(40)} ${"Type".padEnd(12)} ${"FE".padStart(6)}  ${"Status".padEnd(9)} ${"Parent"}${R}`);
+  const cutoff30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  data.forEach((idea, i) => {
+    const rank = String(i + 1).padStart(2);
+    const name = truncate(idea.name || idea.id, 38).padEnd(40);
+    const wt = (idea.work_type || "—").padEnd(12);
+    const fe = idea.free_energy_score != null ? idea.free_energy_score.toFixed(2) : "    —";
+    const status = (idea.manifestation_status || "none").padEnd(9);
+    const parent = idea.parent_idea_id ? D + truncate(idea.parent_idea_id, 20) + R : "";
+    const isStale = !idea.last_activity_at || idea.last_activity_at < cutoff30;
+    const staleTag = isStale ? ` ${Y}[stale]${R}` : "";
+    console.log(`  ${G}${rank}${R}  ${name} ${C}${wt}${R} ${String(fe).padStart(6)}  ${D}${status}${R} ${parent}${staleTag}`);
+  });
+  console.log(`  ${"─".repeat(82)}`);
+  console.log();
+}
+
+export async function setIdeaWorkType(args) {
+  const id = args[0];
+  const workType = args[1];
+  const validTypes = ["exploration", "research", "prototype", "feature", "enhancement", "bug-fix", "mvp"];
+  if (!id || !workType) {
+    console.log(`Usage: cc idea <id> type <work_type>`);
+    console.log(`  Valid types: ${validTypes.join(", ")}`);
+    return;
+  }
+  if (!validTypes.includes(workType)) {
+    console.log(`Unknown work_type '${workType}'. Valid: ${validTypes.join(", ")}`);
+    return;
+  }
+  const result = await patch(`/api/ideas/${encodeURIComponent(id)}`, { work_type: workType });
+  if (result?.id) {
+    console.log(`\x1b[32m✓\x1b[0m ${id} → work_type: ${workType}`);
+  } else {
+    console.log("Failed to set work_type.");
+  }
+}
+
+export async function linkIdea(args) {
+  // cc idea <id> link <relation> <target-id>
+  // relation: blocks, enables, supersedes, depends-on, related-to
+  const fromId = args[0];
+  const rel = args[1];
+  const toId = args[2];
+  const validRels = ["blocks", "enables", "supersedes", "depends-on", "related-to"];
+  if (!fromId || !rel || !toId) {
+    console.log("Usage: cc idea <id> link <relation> <target-id>");
+    console.log(`  Relations: ${validRels.join(", ")}`);
+    return;
+  }
+  if (!validRels.includes(rel)) {
+    console.log(`Unknown relation '${rel}'. Valid: ${validRels.join(", ")}`);
+    return;
+  }
+  // Use edges API
+  const result = await post("/api/graph/edges", {
+    from_id: fromId,
+    to_id: toId,
+    type: rel,
+    metadata: { source: "cc-idea-link" },
+  });
+  if (result) {
+    console.log(`\x1b[32m✓\x1b[0m ${fromId} --[${rel}]--> ${toId}`);
+    if (result.id) console.log(`  Edge ID: ${result.id}`);
+  } else {
+    console.log("Failed to create edge.");
+  }
+}
+
+export async function showIdeaChildren(args) {
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea <id> children"); return; }
+  const raw = await get("/api/ideas", { limit: 400 });
+  const all = Array.isArray(raw) ? raw : raw?.ideas || [];
+  const children = all.filter(i => i.parent_idea_id === id);
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m";
+  console.log();
+  console.log(`${B}  CHILDREN of ${id}${R} (${children.length})`);
+  console.log(`  ${"─".repeat(70)}`);
+  if (!children.length) { console.log(`  No child ideas found.`); console.log(); return; }
+  for (const child of children.sort((a,b) => (b.free_energy_score||0)-(a.free_energy_score||0))) {
+    const status = child.manifestation_status || "none";
+    const dot = status === "validated" ? "\x1b[32m●\x1b[0m" : status === "partial" ? "\x1b[33m●\x1b[0m" : "\x1b[2m○\x1b[0m";
+    const name = truncate(child.name || child.id, 40).padEnd(42);
+    const wt = D + (child.work_type || "—").padEnd(12) + R;
+    const fe = child.free_energy_score != null ? child.free_energy_score.toFixed(2) : "   —";
+    console.log(`  ${dot}  ${name} ${wt} ${fe}`);
+  }
+  console.log();
+}
+
+export async function showIdeaDeps(args) {
+  // cc idea <id> deps [--type blocks|enables|supersedes|depends-on|related-to]
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea <id> deps [--type <relation>]"); return; }
+
+  let edgeType = null;
+  for (let i = 1; i < args.length; i++) {
+    if ((args[i] === "--type" || args[i] === "-t") && args[i+1]) edgeType = args[++i];
+  }
+
+  const params = { direction: "both" };
+  if (edgeType) params.type = edgeType;
+
+  const data = await get(`/api/graph/nodes/${encodeURIComponent(id)}/edges`, params);
+  const edges = Array.isArray(data) ? data : data?.edges || data?.items || [];
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m";
+  const G = "\x1b[32m", Y = "\x1b[33m", RED = "\x1b[31m";
+
+  // Colour per relation type
+  const relColor = {
+    "blocks":      RED,
+    "enables":     G,
+    "supersedes":  Y,
+    "depends-on":  Y,
+    "related-to":  C,
+  };
+
+  console.log();
+  console.log(`${B}  DEPENDENCIES: ${id}${R}${edgeType ? `  ${D}[type=${edgeType}]${R}` : ""}`);
+
+  if (!edges.length) {
+    console.log(`  ${D}No dependency edges found.${R}`);
+    console.log(`  ${D}Add one: cc idea ${id} link blocks|enables|supersedes <target-id>${R}`);
+    console.log();
+    return;
+  }
+
+  // Split into outgoing (this idea → other) and incoming (other → this idea)
+  const outgoing = edges.filter(e => e.from_id === id || e.source === id || e.from === id);
+  const incoming = edges.filter(e => e.to_id   === id || e.target === id || e.to   === id);
+
+  if (outgoing.length) {
+    console.log(`\n  ${B}This idea →${R}  ${D}(outgoing)${R}`);
+    console.log(`  ${"─".repeat(60)}`);
+    for (const e of outgoing) {
+      const rel  = e.type || e.edge_type || e.relation || "?";
+      const col  = relColor[rel] || C;
+      const peer = e.to_id || e.target || e.to || "?";
+      const label = truncate(peer, 40).padEnd(42);
+      console.log(`  ${col}──[${rel}]──▶${R}  ${label}`);
+    }
+  }
+
+  if (incoming.length) {
+    console.log(`\n  ${B}→ This idea${R}  ${D}(incoming)${R}`);
+    console.log(`  ${"─".repeat(60)}`);
+    for (const e of incoming) {
+      const rel  = e.type || e.edge_type || e.relation || "?";
+      const col  = relColor[rel] || C;
+      const peer = e.from_id || e.source || e.from || "?";
+      const label = truncate(peer, 40).padEnd(42);
+      console.log(`  ${col}◀──[${rel}]──${R}  ${label}`);
+    }
+  }
+
+  console.log();
+  console.log(`  ${D}Total edges: ${edges.length}  |  cc idea <id> link <rel> <target> to add more${R}`);
+  console.log();
 }
 
 // ─── Extended idea commands ────────────────────────────────────────────────
@@ -470,4 +724,87 @@ export async function answerIdeaQuestion(args) {
   } else {
     console.log("Failed to record answer.");
   }
+}
+
+export async function archiveIdea(args) {
+  // cc idea <id> archive [--reason "..."] [--duplicate-of <id>]
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea <id> archive [--reason \"...\"] [--duplicate-of <id>]"); return; }
+  const flags = {};
+  for (let i = 1; i < args.length; i++) {
+    if ((args[i] === "--reason" || args[i] === "-r") && args[i+1]) flags.reason = args[++i];
+    if ((args[i] === "--duplicate-of") && args[i+1]) flags.duplicateOf = args[++i];
+  }
+  const body = { lifecycle: "archived" };
+  if (flags.duplicateOf) body.duplicate_of = flags.duplicateOf;
+  if (flags.reason) body.name = undefined; // reason goes in a note, not name
+  const result = await patch(`/api/ideas/${encodeURIComponent(id)}`, body);
+  if (result?.id) {
+    console.log(`\x1b[32m✓\x1b[0m ${id} → archived`);
+    if (flags.duplicateOf) console.log(`  Duplicate of: ${flags.duplicateOf}`);
+    if (flags.reason) console.log(`  Reason: ${flags.reason}`);
+  } else {
+    console.log("Failed to archive idea.");
+  }
+}
+
+export async function retireIdea(args) {
+  // cc idea <id> retire [--duplicate-of <id>]
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea <id> retire [--duplicate-of <id>]"); return; }
+  const flags = {};
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === "--duplicate-of" && args[i+1]) flags.duplicateOf = args[++i];
+  }
+  const body = { lifecycle: "retired" };
+  if (flags.duplicateOf) body.duplicate_of = flags.duplicateOf;
+  const result = await patch(`/api/ideas/${encodeURIComponent(id)}`, body);
+  if (result?.id) {
+    console.log(`\x1b[32m✓\x1b[0m ${id} → retired${flags.duplicateOf ? ` (duplicate of: ${flags.duplicateOf})` : ""}`);
+  } else {
+    console.log("Failed to retire idea.");
+  }
+}
+
+export async function showStaleIdeas(args) {
+  // cc idea stale [--days N]   — ideas with lifecycle=active not touched in N days (default 30)
+  let days = 30;
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === "--days" || args[i] === "-d") && args[i+1]) days = parseInt(args[++i]);
+  }
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  const raw = await get("/api/ideas", { limit: 400 });
+  let data = Array.isArray(raw) ? raw : raw?.ideas || [];
+
+  // Filter: active, not validated, no activity since cutoff
+  const stale = data.filter(i => {
+    if ((i.lifecycle || "active") !== "active") return false;
+    if (i.manifestation_status === "validated") return false;
+    if (i.idea_type === "super") return false;
+    const lastActivity = i.last_activity_at;
+    if (!lastActivity) return true; // no recorded activity = stale
+    return lastActivity < cutoff;
+  }).sort((a, b) => {
+    const ta = a.last_activity_at || "0";
+    const tb = b.last_activity_at || "0";
+    return ta < tb ? -1 : 1; // oldest first
+  });
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", Y = "\x1b[33m", C = "\x1b[36m";
+  console.log();
+  console.log(`${B}  STALE IDEAS${R}  ${D}(no activity in ${days}+ days, ${stale.length} found)${R}`);
+  if (!stale.length) { console.log(`  All active ideas touched in last ${days} days. ✓`); console.log(); return; }
+  console.log(`  ${"─".repeat(76)}`);
+  console.log(`  ${D}${"Name".padEnd(42)} ${"Last active".padEnd(14)} ${"Type".padEnd(12)} Status${R}`);
+  for (const idea of stale) {
+    const name = truncate(idea.name || idea.id, 40).padEnd(42);
+    const last = idea.last_activity_at ? idea.last_activity_at.slice(0, 10) : D+"never"+R;
+    const wt = (idea.work_type || "—").padEnd(12);
+    const status = idea.manifestation_status || "none";
+    console.log(`  ${Y}⚠${R}  ${name} ${String(last).padEnd(14)} ${C}${wt}${R} ${D}${status}${R}`);
+  }
+  console.log(`  ${"─".repeat(76)}`);
+  console.log(`  ${D}Archive: cc idea <id> archive | Retire duplicate: cc idea <id> retire --duplicate-of <id>${R}`);
+  console.log();
 }

@@ -1,11 +1,10 @@
-"""Registry submission readiness for MCP and skill discovery surfaces."""
+"""Registry submission inventory backed by static repo-tracked evidence."""
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
+from typing import Any
 
 from app.models.registry_discovery import (
     RegistrySubmissionInventory,
@@ -14,191 +13,116 @@ from app.models.registry_discovery import (
     RegistrySubmissionSummary,
 )
 
-
-@dataclass(frozen=True)
-class _RegistryTarget:
-    registry_id: str
-    registry_name: str
-    category: str
-    asset_name: str
-    install_hint: str
-    required_files: tuple[str, ...]
-    validator: Callable[[Path], bool]
-    notes: str
+_INVENTORY_PATH = "docs/registry-submissions.json"
 
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
-def _read_json(repo_root: Path, rel_path: str) -> dict:
+def _read_json(repo_root: Path, rel_path: str) -> dict[str, Any]:
     path = repo_root / rel_path
     if not path.exists():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
+    return payload if isinstance(payload, dict) else {}
 
 
-def _read_text(repo_root: Path, rel_path: str) -> str:
-    path = repo_root / rel_path
-    if not path.exists():
-        return ""
-    try:
-        return path.read_text(encoding="utf-8")
-    except OSError:
-        return ""
+def _as_list(raw_value: Any) -> list[str]:
+    if not isinstance(raw_value, list):
+        return []
+    values: list[str] = []
+    for item in raw_value:
+        text = str(item).strip()
+        if text:
+            values.append(text)
+    return values
 
 
-def _mcp_manifest_ready(repo_root: Path) -> bool:
-    manifest = _read_json(repo_root, "mcp-server/server.json")
-    packages = manifest.get("packages")
-    return (
-        manifest.get("name") == "coherence-mcp-server"
-        and "registry.modelcontextprotocol.io/schemas/server.json" in str(manifest.get("$schema") or "")
-        and isinstance(packages, list)
-        and any(
-            isinstance(item, dict)
-            and item.get("registry") == "npm"
-            and item.get("name") == "coherence-mcp-server"
-            for item in packages
+def _as_text(raw_value: Any) -> str | None:
+    text = str(raw_value).strip() if raw_value is not None else ""
+    return text or None
+
+
+def _missing_paths(repo_root: Path, rel_paths: list[str]) -> list[str]:
+    missing: list[str] = []
+    for rel_path in rel_paths:
+        if not (repo_root / rel_path).exists():
+            missing.append(rel_path)
+    return missing
+
+
+def _load_records(repo_root: Path) -> list[RegistrySubmissionRecord]:
+    payload = _read_json(repo_root, _INVENTORY_PATH)
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list):
+        return []
+
+    items: list[RegistrySubmissionRecord] = []
+    for raw_item in raw_items:
+        if not isinstance(raw_item, dict):
+            continue
+
+        source_paths = _as_list(raw_item.get("source_paths"))
+        required_files = _as_list(raw_item.get("required_files"))
+        proof_url = _as_text(raw_item.get("proof_url"))
+        proof_path = _as_text(raw_item.get("proof_path"))
+
+        check_paths = list(dict.fromkeys([*source_paths, *required_files, *([proof_path] if proof_path else [])]))
+        missing_files = _missing_paths(repo_root, check_paths)
+        has_proof = bool(proof_url or proof_path)
+
+        items.append(
+            RegistrySubmissionRecord(
+                registry_id=str(raw_item.get("registry_id") or "").strip(),
+                registry_name=str(raw_item.get("registry_name") or "").strip(),
+                category=str(raw_item.get("category") or "").strip(),
+                asset_name=str(raw_item.get("asset_name") or "").strip(),
+                status=(
+                    RegistrySubmissionStatus.SUBMISSION_READY
+                    if not missing_files and has_proof
+                    else RegistrySubmissionStatus.MISSING_ASSETS
+                ),
+                install_hint=str(raw_item.get("install_hint") or "").strip(),
+                source_paths=source_paths,
+                required_files=required_files,
+                missing_files=missing_files,
+                proof_url=proof_url,
+                proof_path=proof_path,
+                proof_note=str(raw_item.get("proof_note") or "").strip(),
+                notes=str(raw_item.get("notes") or "").strip(),
+            )
         )
-    )
-
-
-def _npm_package_ready(repo_root: Path) -> bool:
-    package_json = _read_json(repo_root, "mcp-server/package.json")
-    bins = package_json.get("bin")
-    return (
-        package_json.get("name") == "coherence-mcp-server"
-        and isinstance(bins, dict)
-        and bins.get("coherence-mcp-server") == "index.mjs"
-    )
-
-
-def _skill_manifest_ready(repo_root: Path) -> bool:
-    skill_md = _read_text(repo_root, "skills/coherence-network/SKILL.md")
-    return (
-        skill_md.startswith("<!-- AUTO-GENERATED")
-        and "name: coherence-network" in skill_md
-        and "metadata:" in skill_md
-        and "cc inbox" in skill_md
-    )
-
-
-def _readme_install_ready(repo_root: Path) -> bool:
-    readme = _read_text(repo_root, "README.md")
-    return (
-        "coherence-mcp-server" in readme
-        and "coherence-cli" in readme
-        and "ClawHub: coherence-network" in readme
-    )
-
-
-_TARGETS: tuple[_RegistryTarget, ...] = (
-    _RegistryTarget(
-        registry_id="modelcontextprotocol-registry",
-        registry_name="Model Context Protocol Registry",
-        category="mcp",
-        asset_name="coherence-mcp-server",
-        install_hint="npx coherence-mcp-server",
-        required_files=("mcp-server/server.json", "mcp-server/package.json", "mcp-server/README.md"),
-        validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _npm_package_ready(repo_root),
-        notes="Canonical MCP registry submission built from the typed server manifest and npm package metadata.",
-    ),
-    _RegistryTarget(
-        registry_id="npm",
-        registry_name="npm",
-        category="mcp",
-        asset_name="coherence-mcp-server",
-        install_hint="npx coherence-mcp-server",
-        required_files=("mcp-server/package.json", "mcp-server/README.md"),
-        validator=lambda repo_root: _npm_package_ready(repo_root),
-        notes="Package discovery for MCP clients that install the server directly from npm.",
-    ),
-    _RegistryTarget(
-        registry_id="smithery",
-        registry_name="Smithery",
-        category="mcp",
-        asset_name="coherence-mcp-server",
-        install_hint="npx coherence-mcp-server",
-        required_files=("mcp-server/server.json", "mcp-server/package.json", "mcp-server/README.md"),
-        validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _readme_install_ready(repo_root),
-        notes="Submission packet is covered by the existing MCP manifest, package metadata, and install docs.",
-    ),
-    _RegistryTarget(
-        registry_id="mcp-so",
-        registry_name="MCP.so",
-        category="mcp",
-        asset_name="coherence-mcp-server",
-        install_hint="npx coherence-mcp-server",
-        required_files=("mcp-server/server.json", "mcp-server/package.json", "README.md"),
-        validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _readme_install_ready(repo_root),
-        notes="Directory discovery can reuse the same MCP manifest, package identity, and install instructions.",
-    ),
-    _RegistryTarget(
-        registry_id="clawhub",
-        registry_name="ClawHub",
-        category="skill",
-        asset_name="coherence-network",
-        install_hint="clawhub install coherence-network",
-        required_files=("skills/coherence-network/SKILL.md", "README.md"),
-        validator=lambda repo_root: _skill_manifest_ready(repo_root) and _readme_install_ready(repo_root),
-        notes="OpenClaw skill registry entry anchored to the published SKILL.md and repository install docs.",
-    ),
-    _RegistryTarget(
-        registry_id="agentskills",
-        registry_name="AgentSkills",
-        category="skill",
-        asset_name="coherence-network",
-        install_hint="copy skills/coherence-network/SKILL.md into a compatible skills directory",
-        required_files=("skills/coherence-network/SKILL.md", "README.md"),
-        validator=lambda repo_root: _skill_manifest_ready(repo_root),
-        notes="Portable skill packaging for AgentSkills-compatible discovery catalogs and workspace registries.",
-    ),
-)
+    return items
 
 
 def build_registry_submission_inventory() -> RegistrySubmissionInventory:
     repo_root = _repo_root()
-    items: list[RegistrySubmissionRecord] = []
-
-    for target in _TARGETS:
-        missing_files = [rel_path for rel_path in target.required_files if not (repo_root / rel_path).exists()]
-        ready = not missing_files and target.validator(repo_root)
-        items.append(
-            RegistrySubmissionRecord(
-                registry_id=target.registry_id,
-                registry_name=target.registry_name,
-                category=target.category,
-                asset_name=target.asset_name,
-                status=(
-                    RegistrySubmissionStatus.SUBMISSION_READY
-                    if ready
-                    else RegistrySubmissionStatus.MISSING_ASSETS
-                ),
-                install_hint=target.install_hint,
-                source_paths=list(target.required_files),
-                required_files=list(target.required_files),
-                missing_files=missing_files,
-                notes=target.notes,
-            )
-        )
+    items = _load_records(repo_root)
 
     items.sort(key=lambda item: (item.category, item.registry_name.lower()))
-    ready_count = sum(item.status == RegistrySubmissionStatus.SUBMISSION_READY for item in items)
+    ready_items = [item for item in items if item.status == RegistrySubmissionStatus.SUBMISSION_READY]
+
     category_counts: dict[str, int] = {}
-    for item in items:
+    for item in ready_items:
         category_counts[item.category] = category_counts.get(item.category, 0) + 1
+
+    core_requirement_met = (
+        len(ready_items) >= 5
+        and category_counts.get("mcp", 0) >= 2
+        and category_counts.get("skill", 0) >= 2
+    )
 
     return RegistrySubmissionInventory(
         summary=RegistrySubmissionSummary(
             target_count=len(items),
-            submission_ready_count=ready_count,
-            missing_asset_count=sum(bool(item.missing_files) for item in items),
+            submission_ready_count=len(ready_items),
+            missing_asset_count=sum(item.status == RegistrySubmissionStatus.MISSING_ASSETS for item in items),
             categories=category_counts,
-            core_requirement_met=ready_count >= 5,
+            core_requirement_met=core_requirement_met,
         ),
         items=items,
     )

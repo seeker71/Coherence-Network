@@ -30,10 +30,14 @@ from app.models.idea import (
     IdeaUpdate,
     IdeaWithScore,
     ProgressDashboard,
+    SlugUpdateRequest,
+    SlugUpdateResponse,
     StageSetRequest,
 )
 from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service, translate_service
+from app.services import lens_translation_service
 from app.services.translate_service import TranslateLens
+from app.models.lens_translation import TranslationRegenerateBody
 
 router = APIRouter()
 
@@ -353,6 +357,56 @@ async def put_idea_tags(idea_id: str, body: IdeaTagUpdateRequest) -> IdeaTagUpda
     return result
 
 
+@router.get("/ideas/{idea_id}/translations")
+async def list_idea_translations_all(idea_id: str) -> dict:
+    """All worldview translations for an idea (spec-181 batch)."""
+    out = lens_translation_service.list_translations_for_idea(idea_id)
+    if out is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return out
+
+
+@router.get("/ideas/{idea_id}/translations/{lens_id}")
+async def get_idea_translation_spec181(
+    idea_id: str,
+    lens_id: str,
+    contributor_id: str | None = Query(None, description="Optional contributor for resonance_delta"),
+) -> dict:
+    """Single lens translation with optional belief resonance (spec-181)."""
+    if translate_service.get_lens_meta(lens_id) is None:
+        raise HTTPException(status_code=404, detail=f"Lens '{lens_id}' not found")
+    result = lens_translation_service.build_idea_translation(
+        idea_id,
+        lens_id,
+        contributor_id=contributor_id,
+        force_regenerate=False,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.post("/ideas/{idea_id}/translations/{lens_id}")
+async def post_idea_translation_regenerate(
+    idea_id: str,
+    lens_id: str,
+    body: TranslationRegenerateBody,
+    _key: str = Depends(require_api_key),
+) -> dict:
+    """Force-regenerate cached translation (spec-181)."""
+    if translate_service.get_lens_meta(lens_id) is None:
+        raise HTTPException(status_code=404, detail=f"Lens '{lens_id}' not found")
+    result = lens_translation_service.build_idea_translation(
+        idea_id,
+        lens_id,
+        contributor_id=body.contributor_id,
+        force_regenerate=body.force_regenerate,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
 @router.get("/ideas/{idea_id}/translate")
 async def translate_idea_view(
     idea_id: str,
@@ -422,6 +476,11 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         manifestation_status=data.manifestation_status,
         value_basis=data.value_basis,
         tags=data.tags,
+        work_type=data.work_type,
+        lifecycle=data.lifecycle,
+        duplicate_of=data.duplicate_of,
+        workspace_git_url=data.workspace_git_url,
+        slug=data.slug,
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")
@@ -443,6 +502,10 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
             data.estimated_cost,
             data.description,
             data.name,
+            data.work_type,
+            data.lifecycle,
+            data.duplicate_of,
+            data.workspace_git_url,
         )
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
@@ -465,10 +528,34 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
         estimated_cost=data.estimated_cost,
         description=data.description,
         name=data.name,
+        work_type=data.work_type,
+        lifecycle=data.lifecycle,
+        duplicate_of=data.duplicate_of,
+        workspace_git_url=data.workspace_git_url,
     )
     if updated is None:
         raise HTTPException(status_code=404, detail="Idea not found")
     return updated
+
+
+@router.patch("/ideas/{idea_id}/slug", response_model=SlugUpdateResponse)
+async def update_idea_slug(
+    idea_id: str,
+    body: SlugUpdateRequest,
+    _key: str = Depends(require_api_key),
+) -> SlugUpdateResponse:
+    """Rename an idea's slug. Old slug is kept in slug_history for permanent redirect."""
+    try:
+        updated = idea_service.update_idea_slug(idea_id, body.slug)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return SlugUpdateResponse(
+        id=updated.id,
+        slug=updated.slug,
+        slug_history=updated.slug_history,
+    )
 
 
 @router.post("/ideas/{idea_id}/questions", response_model=IdeaWithScore)
