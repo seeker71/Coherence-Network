@@ -6036,7 +6036,13 @@ def main():
                 # 4. Execute tasks (parallel or sequential)
                 if not use_parallel:
                     run_all_pending(dry_run=args.dry_run)
-                # else: workers run independently — main loop handles housekeeping only
+                else:
+                    # Parallel mode: workers poll for tasks independently, but
+                    # the main loop seeds new tasks when the queue is empty.
+                    pending_check = api("GET", "/api/agent/tasks?status=pending&limit=1")
+                    pending_list = pending_check if isinstance(pending_check, list) else (pending_check or {}).get("tasks", [])
+                    if not pending_list and not args.dry_run:
+                        _seed_task_from_open_idea()
 
                 # 5. Post-execution housekeeping
                 if not args.dry_run:
