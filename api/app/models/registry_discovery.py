@@ -22,6 +22,9 @@ class RegistrySubmissionRecord(BaseModel):
     source_paths: list[str] = Field(default_factory=list)
     required_files: list[str] = Field(default_factory=list)
     missing_files: list[str] = Field(default_factory=list)
+    proof_url: str | None = None
+    proof_path: str | None = None
+    proof_note: str = Field(min_length=1)
     notes: str = Field(min_length=1)
 
 

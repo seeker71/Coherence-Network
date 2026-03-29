@@ -21,6 +21,8 @@ async def test_registry_submission_inventory_reports_core_requirement_met() -> N
     assert payload["summary"]["target_count"] >= 5
     assert payload["summary"]["submission_ready_count"] >= 5
     assert payload["summary"]["core_requirement_met"] is True
+    assert payload["summary"]["categories"]["mcp"] >= 2
+    assert payload["summary"]["categories"]["skill"] >= 2
 
 
 @pytest.mark.asyncio
@@ -36,16 +38,17 @@ async def test_registry_submission_inventory_lists_mcp_and_skill_targets() -> No
     assert {
         "modelcontextprotocol-registry",
         "npm",
-        "smithery",
-        "mcp-so",
+        "glama",
+        "pulsemcp",
         "clawhub",
-        "agentskills",
+        "skills-sh",
+        "askill-sh",
     }.issubset(ids)
     assert categories == {"mcp", "skill"}
 
 
 @pytest.mark.asyncio
-async def test_registry_submission_inventory_anchors_targets_to_local_assets() -> None:
+async def test_registry_submission_inventory_anchors_targets_to_local_assets_and_proof() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/api/discovery/registry-submissions")
 
@@ -57,6 +60,12 @@ async def test_registry_submission_inventory_anchors_targets_to_local_assets() -
         assert item["required_files"], f"Expected required files for {item['registry_id']}"
         assert item["missing_files"] == []
         assert item["status"] == "submission_ready"
+        assert item["proof_note"], f"Expected proof note for {item['registry_id']}"
+        assert item["proof_url"] or item["proof_path"], f"Expected proof ref for {item['registry_id']}"
+        if item["proof_path"]:
+            assert (REPO_ROOT / item["proof_path"]).exists(), f"Missing proof file: {item['proof_path']}"
+        for rel_path in item["source_paths"]:
+            assert (REPO_ROOT / rel_path).exists(), f"Missing source path: {rel_path}"
         for rel_path in item["required_files"]:
             assert (REPO_ROOT / rel_path).exists(), f"Missing required file: {rel_path}"
 
