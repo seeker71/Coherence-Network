@@ -3278,7 +3278,6 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
 
 
 
-
             spawn_note = (
                 f" Spawned {len(spawned_ids)} follow-up idea(s): {', '.join(spawned_ids)}."
                 if spawned_ids else ""
