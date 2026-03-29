@@ -32,7 +32,8 @@ from app.models.idea import (
     ProgressDashboard,
     StageSetRequest,
 )
-from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service
+from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service, translate_service
+from app.services.translate_service import TranslateLens
 
 router = APIRouter()
 
@@ -352,6 +353,47 @@ async def put_idea_tags(idea_id: str, body: IdeaTagUpdateRequest) -> IdeaTagUpda
     return result
 
 
+@router.get("/ideas/{idea_id}/translate")
+async def translate_idea_view(
+    idea_id: str,
+    view: TranslateLens = Query(..., description="Target worldview lens"),
+) -> dict:
+    """Translate an idea's conceptual framing through a worldview lens.
+
+    Not machine translation of language — translation of conceptual framework.
+    Uses ontology concept graph and resonance edges to generate framing.
+    """
+    idea = idea_service.get_idea(idea_id)
+    if idea is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+
+    tags: list[str] = []
+    if hasattr(idea, "tags") and idea.tags:
+        tags = list(idea.tags)
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "tags") and idea.idea.tags:
+        tags = list(idea.idea.tags)
+
+    desc = ""
+    if hasattr(idea, "description"):
+        desc = idea.description or ""
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "description"):
+        desc = idea.idea.description or ""
+
+    name = ""
+    if hasattr(idea, "name"):
+        name = idea.name or idea_id
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "name"):
+        name = idea.idea.name or idea_id
+
+    return translate_service.translate_idea(
+        idea_id=idea_id,
+        idea_name=name,
+        idea_description=desc,
+        idea_tags=tags,
+        view=view.value,
+    )
+
+
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
 async def get_idea(idea_id: str) -> IdeaWithScore:
     idea = idea_service.get_idea(idea_id)
@@ -399,6 +441,8 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
             data.parent_idea_id,
             data.potential_value,
             data.estimated_cost,
+            data.description,
+            data.name,
         )
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
@@ -419,6 +463,8 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
         manifestation_status=data.manifestation_status,
         potential_value=data.potential_value,
         estimated_cost=data.estimated_cost,
+        description=data.description,
+        name=data.name,
     )
     if updated is None:
         raise HTTPException(status_code=404, detail="Idea not found")

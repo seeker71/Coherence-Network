@@ -1176,6 +1176,8 @@ def update_idea(
     manifestation_status: ManifestationStatus | None = None,
     potential_value: float | None = None,
     estimated_cost: float | None = None,
+    description: str | None = None,
+    name: str | None = None,
 ) -> IdeaWithScore | None:
     """Update an idea.
 
@@ -1211,7 +1213,13 @@ def update_idea(
         if estimated_cost is not None and estimated_cost != idea.estimated_cost:
             changes.append(("estimated_cost", idea.estimated_cost, float(estimated_cost)))
             idea.estimated_cost = max(0.0, float(estimated_cost))
-        
+        if description is not None and description != idea.description:
+            changes.append(("description", idea.description, description))
+            idea.description = description
+        if name is not None and name != idea.name:
+            changes.append(("name", idea.name, name))
+            idea.name = name
+
         for field, old_val, new_val in changes:
             if os.getenv("DEBUG_AUDIT"):
                 print(f"DEBUG: update_idea creating audit entry for {field}: {old_val} -> {new_val}")
