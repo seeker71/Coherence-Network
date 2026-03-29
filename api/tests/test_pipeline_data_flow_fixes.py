@@ -253,6 +253,42 @@ def test_create_worktree_retries_with_safe_directory_after_dubious_ownership(
         shutil.rmtree(tmp_path, ignore_errors=True)
 
 
+def test_create_worktree_uses_clone_fallback_for_linked_worktree(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Linked worktrees must bootstrap with a clone, not archive extraction."""
+    wt_path = tmp_path / "task-abc9def234567890"
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        calls.append(list(args))
+        if args[:2] == ["git", "clone"]:
+            wt_path.mkdir(parents=True, exist_ok=True)
+            return _Proc()
+        if args[:4] == ["git", "remote", "set-url", "origin"]:
+            return _Proc()
+        if args[:3] == ["git", "checkout", "-B"]:
+            return _Proc()
+        if args[:3] == ["git", "worktree", "list"]:
+            raise AssertionError("linked worktree fallback should not reclaim source worktrees")
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner, "_repo_is_linked_worktree", lambda _repo: True)
+    monkeypatch.setattr(local_runner, "_get_origin_remote_url", lambda _repo: "https://github.com/owner/repo.git")
+    monkeypatch.setattr(local_runner, "_resolve_available_ref", lambda _repo, refs: "origin/main")
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    result = local_runner._create_worktree("abc9def234567890")
+
+    assert result == wt_path
+    assert any(call[:2] == ["git", "clone"] for call in calls), "standalone fallback must clone the repo"
+    assert not any(call[:3] == ["git", "archive", "--format=tar"] for call in calls), (
+        "standalone fallback must not use archive extraction"
+    )
+
+
 def test_capture_worktree_diff_returns_empty_when_no_changes(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
