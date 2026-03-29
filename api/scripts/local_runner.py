@@ -1865,6 +1865,125 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
 
 # ── Execution ────────────────────────────────────────────────────────
 
+def _read_file_capped(path: "Path | str", cap: int = 3000) -> str:
+    """Read a file and cap at `cap` chars. Returns '' if missing."""
+    try:
+        raw = Path(path).read_text(errors="replace")
+        if len(raw) > cap:
+            return raw[:cap] + f"\n…(truncated at {cap} chars)"
+        return raw
+    except Exception:
+        return ""
+
+
+def _resolve_related_files(spec_content: str, direction: str, repo_dir: "Path") -> list[str]:
+    """Extract file paths mentioned in spec/direction and filter to ones that exist."""
+    import re as _re
+    combined = spec_content + "\n" + direction
+    # Match path-like tokens: optional leading /, then word/word... ending with a known extension
+    pattern = _re.compile(
+        r"(?<![`\"\'])"           # not in a quote (avoid URLs)
+        r"(?:[\w.-]+/)+[\w.-]+"   # path segments
+        r"\.(?:py|tsx?|mjs|md|json|yaml|yml|sh|sql|toml)"
+    )
+    seen: dict[str, None] = {}
+    for m in pattern.finditer(combined):
+        token = m.group(0).lstrip("/")
+        if token not in seen:
+            seen[token] = None
+    # Keep only paths that exist in the repo
+    result = []
+    for rel in seen:
+        full = repo_dir / rel
+        if full.exists():
+            result.append(rel)
+    return result[:20]  # cap list
+
+
+def _module_tree(repo_dir: "Path", subdirs: list[str], max_files: int = 30) -> str:
+    """Return a compact file listing for given subdirectories."""
+    lines: list[str] = []
+    for sub in subdirs:
+        d = repo_dir / sub
+        if not d.exists():
+            continue
+        files = sorted(d.rglob("*"))
+        shown = [f for f in files if f.is_file() and f.suffix in (".py", ".tsx", ".mjs", ".ts", ".md")]
+        for f in shown[:max_files]:
+            lines.append("  " + str(f.relative_to(repo_dir)))
+        if len(shown) > max_files:
+            lines.append(f"  …({len(shown) - max_files} more)")
+    return "\n".join(lines)
+
+
+def _build_context_block(
+    task_type: str,
+    idea_id: str,
+    spec_path: str,
+    direction: str,
+    repo_dir: "Path",
+) -> str:
+    """Assemble the ## CONTEXT block injected into every impl/test/review prompt."""
+    parts: list[str] = []
+
+    # 1. Spec file — actual content, not just the path
+    if spec_path and spec_path != "none":
+        # Try absolute first, then relative to repo_dir
+        spec_file = Path(spec_path) if Path(spec_path).is_absolute() else repo_dir / spec_path
+        spec_raw = _read_file_capped(spec_file, cap=4000)
+        if spec_raw:
+            parts.append(f"### Spec: {spec_path}\n```markdown\n{spec_raw}\n```")
+        else:
+            # Fallback: glob for idea_id in specs/
+            import glob as _glob
+            matches = _glob.glob(str(repo_dir / "specs" / f"*{idea_id}*"))
+            if matches:
+                spec_raw = _read_file_capped(matches[0], cap=4000)
+                if spec_raw:
+                    parts.append(f"### Spec: {matches[0]}\n```markdown\n{spec_raw}\n```")
+
+    # 2. CLAUDE.md — project conventions, agent guardrails, workflow
+    for claude_md_path in [repo_dir / "CLAUDE.md", repo_dir / ".claude" / "CLAUDE.md"]:
+        if claude_md_path.exists():
+            content = _read_file_capped(claude_md_path, cap=2500)
+            if content:
+                parts.append(f"### Project conventions (CLAUDE.md)\n```\n{content}\n```")
+            break
+
+    # 3. Repo runbook — operational guidance
+    for runbook_path in [
+        repo_dir / "docs" / "RUNBOOK.md",
+        repo_dir / "RUNBOOK.md",
+        repo_dir / "docs" / "runbook.md",
+    ]:
+        if runbook_path.exists():
+            content = _read_file_capped(runbook_path, cap=1500)
+            if content:
+                parts.append(f"### Runbook\n```\n{content}\n```")
+            break
+
+    # 4. Related files — mentioned in spec or direction, confirmed to exist
+    related = _resolve_related_files(
+        parts[0] if parts else "",   # spec content already gathered above
+        direction,
+        repo_dir,
+    )
+    if related:
+        parts.append("### Related files in this repo\n" + "\n".join(f"  {r}" for r in related))
+
+    # 5. Module map — directory listing for impl/test tasks
+    if task_type in ("impl", "test"):
+        subdirs = ["api/app/routers", "api/app/services", "api/app/models",
+                   "web/app", "cli/lib", "specs"]
+        tree = _module_tree(repo_dir, subdirs, max_files=25)
+        if tree:
+            parts.append(f"### Module map (key directories)\n{tree}")
+
+    if not parts:
+        return ""
+    return "\n\n## CONTEXT\n\n" + "\n\n---\n\n".join(parts)
+
+
 def build_prompt(task: dict) -> str:
     direction = task.get("direction", "")
     task_type = task.get("task_type", "unknown")
@@ -1894,6 +2013,12 @@ SPEC INSTRUCTIONS:
 - Write a detailed spec file at specs/<idea_id>.md
 - Include: Summary, Requirements, API changes, Data model, Verification criteria, Risks
 - Minimum 500 chars of spec content.
+- For each requirement, name the exact file(s) that will change, e.g.:
+    - `api/app/models/idea.py` — add X field
+    - `api/app/services/idea_service.py` — add Y function
+    - `web/app/ideas/page.tsx` — update Z component
+  This file list is read by the impl task — the more precise, the faster impl runs.
+- Include a ## Files section listing every file the impl agent should create or modify.
 
 BEFORE FINISHING — you MUST run these commands:
   echo "*.pyc\n__pycache__/\n.task-*\ndata/coherence.db" >> .gitignore
@@ -1947,6 +2072,15 @@ Output a summary: files created/modified, validation results, errors encountered
     spec_path = context.get("spec_path", "none") if isinstance(context, dict) else "none"
     workspace_git_url = context.get("workspace_git_url", "") if isinstance(context, dict) else ""
 
+    # Build rich context block — spec content, CLAUDE.md, runbook, related files, module map
+    context_block = _build_context_block(
+        task_type=task_type,
+        idea_id=idea_id,
+        spec_path=spec_path,
+        direction=direction,
+        repo_dir=_REPO_DIR,
+    )
+
     prompt = f"""EXECUTE THIS TASK NOW. Do NOT ask what to do — the task is described below. Start working immediately.
 
 Task type: {task_type}
@@ -1960,7 +2094,7 @@ SCOPE RULE: Only modify files related to idea '{idea_id}'. Do NOT work on any ot
 
 TASK:
 {direction}
-{type_instructions}
+{type_instructions}{context_block}
 
 CRITICAL: Start executing immediately. Do NOT respond with "I'm ready" or "What should I do?" — the task is above. Do the work, write files, commit, and output results."""
     # Resume from checkpoint — either from explicit resume mode or from reaper retry
