@@ -5135,7 +5135,26 @@ def _create_worktree(
                 wt_path,
                 detail,
             )
-            return None
+            # Non-linked repos can still fail `git worktree add` (permissions, FS limits,
+            # or secondary-worktree policy). Reuse the same standalone snapshot path as
+            # linked worktrees so impl/test always get a writable isolated tree when possible.
+            log.info(
+                "WORKTREE_STANDALONE_FALLBACK task=%s — worktree add failed; trying isolated task repo",
+                slug,
+            )
+            if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+                log.warning(
+                    "WORKTREE_STANDALONE_SKIPPED task=%s — could not reclaim slot after failed add",
+                    slug,
+                )
+                return None
+            return _create_standalone_task_repo(
+                task_id,
+                wt_path,
+                branch,
+                base_branch=base_branch,
+                idea_id=idea_id,
+            )
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             # Inject persisted idea progress sheet if available

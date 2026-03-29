@@ -130,6 +130,36 @@ def test_create_worktree_falls_back_to_origin_main_when_pr_branch_not_found(
     )
 
 
+def test_create_worktree_falls_back_to_standalone_when_worktree_add_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """When git worktree add fails on a normal repo, use standalone task-repo snapshot."""
+    wt_path = tmp_path / "task-abc8def234567890"
+    standalone_called = False
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:3] == ["git", "worktree", "add"]:
+            return _Proc(returncode=1, stderr="fatal: cannot lock ref")
+        return _Proc()
+
+    def _standalone(*_a: Any, **_kw: Any) -> Path:
+        nonlocal standalone_called
+        standalone_called = True
+        wt_path.mkdir(parents=True, exist_ok=True)
+        return wt_path
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(local_runner, "_repo_is_linked_worktree", lambda _repo: False)
+    monkeypatch.setattr(local_runner, "_create_standalone_task_repo", _standalone)
+
+    result = local_runner._create_worktree("abc8def234567890")
+
+    assert result == wt_path
+    assert standalone_called, "standalone task repo must run when worktree add fails"
+
+
 # ---------------------------------------------------------------------------
 # AC-2 — _capture_worktree_diff captures actual diff, not just stdout
 # ---------------------------------------------------------------------------
