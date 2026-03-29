@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import MessageForm from "./MessageForm";
+import { RemoteControlPanel } from "./RemoteControlPanel";
 
 export const metadata: Metadata = {
   title: "Federation Nodes",
@@ -160,6 +161,28 @@ function relativeTime(iso: string): string {
   return `${days}d ago`;
 }
 
+// ── Provider readiness types ──────────────────────────────────────────────────
+
+type ProviderReadinessRow = {
+  provider: string;
+  kind: string;
+  status: string;
+  required: boolean;
+  configured: boolean;
+  severity: string;
+  missing_env: string[];
+  notes: string[];
+};
+
+type ProviderReadiness = {
+  all_required_ready: boolean;
+  blocking_issues: string[];
+  recommendations: string[];
+  providers: ProviderReadinessRow[];
+} | null;
+
+// ── Data loaders ──────────────────────────────────────────────────────────────
+
 async function loadNodes(): Promise<FederationNode[]> {
   const api = getApiBase();
   try {
@@ -171,8 +194,19 @@ async function loadNodes(): Promise<FederationNode[]> {
   }
 }
 
+async function loadProviderReadiness(): Promise<ProviderReadiness> {
+  const api = getApiBase();
+  try {
+    const res = await fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as ProviderReadiness;
+  } catch {
+    return null;
+  }
+}
+
 export default async function NodesPage() {
-  const nodes = await loadNodes();
+  const [nodes, readiness] = await Promise.all([loadNodes(), loadProviderReadiness()]);
   const apiBase = getApiBase();
   const sorted = [...nodes].sort((a, b) => a.hostname.localeCompare(b.hostname));
 
@@ -391,6 +425,75 @@ export default async function NodesPage() {
         apiBase={apiBase}
       />
 
+      {/* Provider Readiness */}
+      {readiness && (
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4 text-sm">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold">Provider Readiness</h2>
+            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${readiness.all_required_ready ? "bg-green-500/10 text-green-500 border-green-500/30" : "bg-red-500/10 text-red-500 border-red-500/30"}`}>
+              {readiness.all_required_ready ? "all ready" : "issues detected"}
+            </span>
+          </div>
+
+          {readiness.blocking_issues.length > 0 && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 space-y-1">
+              {readiness.blocking_issues.map((issue, i) => (
+                <p key={i} className="text-xs text-red-400">⚠ {issue}</p>
+              ))}
+            </div>
+          )}
+
+          {readiness.recommendations.length > 0 && (
+            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 space-y-1">
+              {readiness.recommendations.map((rec, i) => (
+                <p key={i} className="text-xs text-amber-400">→ {rec}</p>
+              ))}
+            </div>
+          )}
+
+          {readiness.providers.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/20 text-muted-foreground">
+                    <th className="text-left pb-2 pr-4">Provider</th>
+                    <th className="text-left pb-2 pr-4">Kind</th>
+                    <th className="text-left pb-2 pr-4">Status</th>
+                    <th className="text-left pb-2">Notes</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/10">
+                  {readiness.providers.map((p) => (
+                    <tr key={p.provider} className="py-1">
+                      <td className="py-1.5 pr-4 font-medium">{p.provider}</td>
+                      <td className="py-1.5 pr-4 text-muted-foreground">{p.kind}</td>
+                      <td className="py-1.5 pr-4">
+                        <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                          p.status === "ready" ? "bg-green-500/10 text-green-400" :
+                          p.status === "optional_missing" ? "bg-muted text-muted-foreground" :
+                          "bg-red-500/10 text-red-400"
+                        }`}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td className="py-1.5 text-muted-foreground">
+                        {p.missing_env.length > 0 && (
+                          <span className="text-red-400">missing: {p.missing_env.join(", ")}</span>
+                        )}
+                        {p.notes.length > 0 && p.missing_env.length === 0 && p.notes[0]}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Remote Control — merged from /remote-ops */}
+      <RemoteControlPanel />
+
       {/* Navigation */}
       <nav
         className="py-8 text-center space-y-2 border-t border-border/20"
@@ -400,8 +503,8 @@ export default async function NodesPage() {
           Where to go next
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/automation" className="text-amber-600 dark:text-amber-400 hover:underline">
-            Automation
+          <Link href="/pipeline" className="text-amber-600 dark:text-amber-400 hover:underline">
+            Pipeline
           </Link>
           <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">
             Flow
