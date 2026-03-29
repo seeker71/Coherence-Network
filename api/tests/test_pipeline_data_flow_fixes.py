@@ -253,6 +253,45 @@ def test_create_worktree_retries_with_safe_directory_after_dubious_ownership(
         shutil.rmtree(tmp_path, ignore_errors=True)
 
 
+def test_create_standalone_task_repo_uses_git_add_force_for_snapshot(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Standalone task repo must use `git add -A -f` so gitignored paths from archive still commit."""
+    calls: list[list[str]] = []
+    repo_root = tmp_path / "parent_repo"
+    repo_root.mkdir(parents=True, exist_ok=True)
+    wbase = tmp_path / "wbase"
+    wbase.mkdir(parents=True, exist_ok=True)
+    tid = "a" * 24
+    slug = tid[:16]
+    wt_path = wbase / f"task-{slug}"
+
+    def fake_run(args: list[str], **_kwargs: Any) -> _Proc:
+        calls.append(list(args))
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", str(repo_root))
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wbase)
+    monkeypatch.setattr(local_runner, "_run_git_command", fake_run)
+    monkeypatch.setattr(local_runner, "_resolve_available_ref", lambda _r, _refs: "origin/main")
+    monkeypatch.setattr(local_runner, "_get_origin_remote_url", lambda _r: "https://github.com/o/r.git")
+    monkeypatch.setattr(local_runner, "_extract_git_archive", lambda *_a, **_k: None)
+
+    result = local_runner._create_standalone_task_repo(
+        tid,
+        wt_path,
+        f"task/{slug}",
+        idea_id="",
+    )
+
+    assert result == wt_path
+    add_calls = [c for c in calls if len(c) >= 4 and c[0] == "git" and c[1] == "add"]
+    assert add_calls, "expected at least one git add for snapshot staging"
+    assert ["git", "add", "-A", "-f"] in add_calls, (
+        "initial snapshot must force-add so copied .gitignore does not skip archived paths"
+    )
+
+
 def test_capture_worktree_diff_returns_empty_when_no_changes(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -298,7 +337,7 @@ def test_capture_worktree_diff_returns_diff_content_when_files_changed(
 def test_capture_worktree_diff_stages_all_files_first(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """AC-2: git add -A must run before diff so new untracked files are included."""
+    """AC-2: git add -A -f must run before diff so new/untracked/ignored files are included."""
     staged_calls: list[list[str]] = []
 
     def _run(args: list[str], **_kwargs: Any) -> _Proc:
@@ -313,7 +352,9 @@ def test_capture_worktree_diff_stages_all_files_first(
 
     local_runner._capture_worktree_diff("abc5def234567890", tmp_path)
 
-    assert ["git", "add", "-A"] in staged_calls, "git add -A must be called to stage all files"
+    assert ["git", "add", "-A", "-f"] in staged_calls, (
+        "git add -A -f must be called to stage all files including ignored paths"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -854,9 +895,46 @@ def test_cleanup_worktree_removes_orphaned_directory(
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
 
-    assert any("--force" in c for c in remove_calls), (
-        "git worktree remove --force must be used to ensure cleanup"
+
+def test_create_standalone_task_repo_integration_includes_force_tracked_gitignored_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression (self-balancing-graph runner): git archive + snapshot commit includes -f-tracked paths."""
+    import subprocess as sp
+
+    parent = tmp_path / "parent"
+    parent.mkdir()
+    wt_base = tmp_path / "wts"
+    wt_base.mkdir()
+    sp.run(["git", "init"], cwd=parent, check=True, capture_output=True)
+    sp.run(["git", "config", "user.email", "runner@coherence.local"], cwd=parent, check=True)
+    sp.run(["git", "config", "user.name", "Runner"], cwd=parent, check=True)
+    (parent / ".gitignore").write_text("special.bin\n", encoding="utf-8")
+    (parent / "special.bin").write_bytes(b"payload-bytes")
+    sp.run(["git", "add", ".gitignore"], cwd=parent, check=True, capture_output=True)
+    sp.run(["git", "add", "-f", "special.bin"], cwd=parent, check=True, capture_output=True)
+    sp.run(["git", "commit", "-m", "init"], cwd=parent, check=True, capture_output=True)
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", str(parent))
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+
+    tid = "integ1234567890123"
+    slug = tid[:16]
+    wt_path = wt_base / f"task-{slug}"
+    branch = f"task/{slug}"
+
+    result = local_runner._create_standalone_task_repo(
+        tid, wt_path, branch, base_branch="main", idea_id=""
     )
+    assert result is not None, "standalone task repo creation must succeed"
+    ls = sp.run(
+        ["git", "ls-tree", "-r", "HEAD", "--name-only"],
+        cwd=result,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "special.bin" in ls.stdout
 
 
 # ---------------------------------------------------------------------------

@@ -4813,8 +4813,11 @@ def _create_standalone_task_repo(
                 log.warning("WORKTREE_STANDALONE_BRANCH_FAILED task=%s branch=%s error=%s", slug, branch, detail)
                 return None
 
+            # Force-add: archive unpacks a copy of tracked files into a fresh repo; paths that
+            # match the copied .gitignore are skipped by plain `git add -A`, leaving nothing to
+            # commit and breaking impl/test isolation on linked worktrees (standalone fallback).
             stage = _run_git_command(
-                ["git", "add", "-A"],
+                ["git", "add", "-A", "-f"],
                 capture_output=True, text=True, timeout=30, cwd=str(wt_path),
             )
             if stage.returncode != 0:
@@ -5053,9 +5056,9 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
     """
     slug = task_id[:16]
     try:
-        # Stage everything so diff captures new files too
+        # Stage everything so diff captures new files too (including ignored paths)
         _run_git_command(
-            ["git", "add", "-A"], capture_output=True, timeout=10, cwd=str(wt_path),
+            ["git", "add", "-A", "-f"], capture_output=True, timeout=10, cwd=str(wt_path),
         )
         diff = _run_git_command(
             ["git", "diff", "--cached", "--stat"],
@@ -5122,9 +5125,9 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
     slug = task_id[:16]
     branch = f"task/{slug}"
     try:
-        # Commit any uncommitted changes in the worktree
+        # Commit any uncommitted changes in the worktree (including ignored paths)
         _run_git_command(
-            ["git", "add", "-A"],
+            ["git", "add", "-A", "-f"],
             capture_output=True, timeout=10, cwd=str(wt_path),
         )
         # Check if there's anything to commit
