@@ -1981,7 +1981,117 @@ def _build_context_block(
 
     if not parts:
         return ""
+
+    # Include parent and sibling idea context
+    try:
+        if idea_id and idea_id != "unknown":
+            idea_data = api("GET", f"/api/ideas/{idea_id}")
+            if isinstance(idea_data, dict):
+                parent_id = idea_data.get("parent_idea_id")
+                idea_name = idea_data.get("name", idea_id)
+                child_ids = idea_data.get("child_idea_ids", [])
+
+                related_lines = [f"\n\nIDEA CONTEXT — {idea_name} ({idea_id})"]
+                if parent_id:
+                    parent_data = api("GET", f"/api/ideas/{parent_id}")
+                    if isinstance(parent_data, dict):
+                        related_lines.append(f"Parent: {parent_data.get('name', parent_id)} ({parent_id})")
+                        # Get siblings (other children of same parent)
+                        siblings = [c for c in (parent_data.get("child_idea_ids") or []) if c != idea_id]
+                        if siblings:
+                            related_lines.append(f"Sister ideas (same parent): {', '.join(siblings[:6])}")
+
+                if related_lines:
+                    context_block = "\n".join(related_lines) + "\n\n## CONTEXT\n\n" + "\n\n---\n\n".join(parts)
+                    return context_block
+    except Exception:
+        pass  # context enrichment is best-effort
+
     return "\n\n## CONTEXT\n\n" + "\n\n---\n\n".join(parts)
+
+
+def _build_requirements_checklist(task_type: str, direction: str, spec_content: str) -> str:
+    """Generate a structured requirements checklist from spec content and task direction.
+
+    Agents must check off each item before marking the task complete.
+    Returns a formatted checklist block to append to the prompt.
+    """
+    lines = []
+    lines.append("\n\n" + "─" * 60)
+    lines.append("REQUIREMENTS TRACKING SHEET — fill this in as you work")
+    lines.append("─" * 60)
+    lines.append("Before finishing, ALL items below must be ✅. If any remain ❌, keep working.")
+    lines.append("")
+
+    if task_type == "spec":
+        lines += [
+            "[ ] spec file written at specs/<idea_id>.md (min 500 chars)",
+            "[ ] ## Summary section present",
+            "[ ] ## Requirements section with explicit acceptance criteria",
+            "[ ] ## Files section listing exact file paths to modify",
+            "[ ] ## Verification Scenarios section (min 3 scenarios)",
+            "[ ] ## Risks and Assumptions section",
+            "[ ] spec committed: git commit -m 'spec(<idea>): ...'",
+        ]
+    elif task_type == "impl":
+        # Extract requirements from spec if available
+        req_lines = []
+        if spec_content:
+            in_req = False
+            for line in spec_content.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("## Req") or stripped.startswith("### Req"):
+                    in_req = True
+                    continue
+                if in_req and stripped.startswith("##"):
+                    in_req = False
+                if in_req and stripped.startswith(("- ", "* ", "1.", "2.", "3.")):
+                    req_text = stripped.lstrip("- *0123456789.").strip()
+                    if len(req_text) > 10:
+                        req_lines.append(f"[ ] {req_text[:100]}")
+
+        if req_lines:
+            lines.append("Spec requirements to implement:")
+            lines += req_lines[:12]  # cap at 12
+            lines.append("")
+
+        lines += [
+            "[ ] all target files created/modified (not just described)",
+            "[ ] code is syntactically valid (no SyntaxError on import)",
+            "[ ] imports and dependencies are correct",
+            "[ ] no TODO stubs left — all functions have real implementations",
+            "[ ] git add + git commit -m 'impl(<idea>): ...' done",
+        ]
+    elif task_type == "test":
+        lines += [
+            "[ ] test file written at api/tests/test_<idea_id>.py",
+            "[ ] tests cover the happy path",
+            "[ ] tests cover at least 2 edge/error cases",
+            "[ ] pytest run: all tests PASSED (0 failures, 0 errors)",
+            "[ ] git add + git commit -m 'test(<idea>): ...' done",
+            "[ ] output includes: TESTS_FILE=<path> TESTS_RUN=<N> TESTS_PASSED=<N>",
+        ]
+    elif task_type in ("review", "code-review"):
+        lines += [
+            "[ ] read full implementation files (not just diff)",
+            "[ ] checked: implementation matches spec requirements",
+            "[ ] checked: no obvious bugs or security issues",
+            "[ ] checked: edge cases handled",
+            "[ ] posted review on PR via: gh pr review <num> --approve/--request-changes",
+            "[ ] output includes: REVIEW_PASSED or REVIEW_FAILED",
+        ]
+    else:
+        lines += [
+            "[ ] task direction fully addressed",
+            "[ ] output is substantive (not a description of what you would do)",
+            "[ ] changes committed if any files were modified",
+        ]
+
+    lines.append("")
+    lines.append("DONE SIGNAL: When ALL items above show ✅, output 'TASK_COMPLETE' and stop.")
+    lines.append("If you cannot complete an item, output 'BLOCKED: <reason>' — do NOT silently skip.")
+    lines.append("─" * 60)
+    return "\n".join(lines)
 
 
 def build_prompt(task: dict) -> str:
@@ -2150,6 +2260,23 @@ If the heartbeat curl fails, continue working — it's not critical. The checkpo
    - Record any key decisions or architectural choices in "Key decisions".
    - List unresolved issues in "Blockers".
    - This file is NOT committed to git — it's extracted by the runner after your task."""
+
+    # Build requirements checklist from spec content if available
+    spec_content = ""
+    if isinstance(context, dict) and context.get("spec_path"):
+        sp = context.get("spec_path", "")
+        try:
+            import pathlib as _pl
+            _spec_file = _pl.Path(sp)
+            if _spec_file.exists():
+                spec_content = _spec_file.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+    checklist_block = _build_requirements_checklist(task_type, direction, spec_content)
+    if checklist_block:
+        prompt += checklist_block
+
     return prompt
 
 
