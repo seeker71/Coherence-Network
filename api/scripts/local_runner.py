@@ -3599,7 +3599,7 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
             slug = task_id[:16]
             ctx = t.get("context", {}) or {}
             reap_idea_id = ctx.get("idea_id", "")
-            wt_path = _WORKTREE_BASE / f"task-{slug}"
+            wt_path = _task_worktree_base() / f"task-{slug}"
             if wt_path.exists():
                 checkpoint_file = wt_path / ".task-checkpoint.md"
                 if checkpoint_file.exists():
@@ -4584,6 +4584,59 @@ _PROGRESS_DIR = _REPO_DIR / ".idea-progress"
 _WORKSPACE_REPOS_DIR = Path.home() / ".coherence-network" / "repos"
 
 
+def _resolve_primary_repo_root() -> str:
+    """Return the filesystem root of the primary git repository (shared object database).
+
+    When the runner lives in a linked checkout (``git worktree add``), ``_REPO_DIR``
+    points at that checkout. Commands that register worktrees and refs (``git worktree add``,
+    ``git archive``, branch cleanup) must use the main repo path, not the linked path.
+    """
+    proc = _run_git_command(
+        [
+            "git",
+            "rev-parse",
+            "--path-format=absolute",
+            "--git-common-dir",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        cwd=str(_REPO_DIR),
+    )
+    if proc.returncode != 0:
+        return str(_REPO_DIR)
+    raw = (proc.stdout or "").strip()
+    if not raw:
+        return str(_REPO_DIR)
+    try:
+        common = Path(raw).resolve()
+    except OSError:
+        return str(_REPO_DIR)
+    parts = common.parts
+    if ".git" not in parts:
+        return str(_REPO_DIR)
+    idx = parts.index(".git")
+    if idx + 1 < len(parts) and parts[idx + 1] == "worktrees":
+        return str(Path(*parts[:idx]))
+    return str(Path(*parts[:idx]))
+
+
+def _task_worktree_base() -> Path:
+    """Directory for ``task-<slug>`` worktrees: ``<primary>/.worktrees`` in production.
+
+    Unit tests set ``_REPO_DIR`` and ``_WORKTREE_BASE`` to the same temp sandbox root;
+    honor that layout so existing tests keep a flat ``tmp/task-*`` layout.
+    """
+    primary = _resolve_primary_repo_root()
+    computed = Path(primary) / ".worktrees"
+    try:
+        if Path(_WORKTREE_BASE).resolve() == Path(_REPO_DIR).resolve():
+            return Path(_WORKTREE_BASE)
+    except OSError:
+        pass
+    return computed
+
+
 def _get_or_update_workspace_repo(git_url: str) -> "Path | None":
     """Clone or update a local mirror of an external git repo.
 
@@ -4681,22 +4734,6 @@ def _append_idea_event(idea_id: str, event_type: str, payload: dict) -> None:
         fh.write(_json_ev.dumps(entry) + "\n")
 
 
-def _repo_is_linked_worktree(repo_root: str) -> bool:
-    git_marker = Path(repo_root) / ".git"
-    if not git_marker.exists() or git_marker.is_dir() or not git_marker.is_file():
-        return False
-    try:
-        gitdir_line = git_marker.read_text(encoding="utf-8").strip()
-    except OSError:
-        return False
-    if not gitdir_line.startswith("gitdir:"):
-        return False
-    gitdir = Path(gitdir_line.split(":", 1)[1].strip())
-    if not gitdir.is_absolute():
-        gitdir = (git_marker.parent / gitdir).resolve()
-    return "/.git/worktrees/" in gitdir.as_posix().lower()
-
-
 def _resolve_available_ref(repo_root: str, refs: list[str]) -> str | None:
     seen: set[str] = set()
     for ref in refs:
@@ -4750,7 +4787,7 @@ def _create_standalone_task_repo(
     inside a standalone git repo rooted under ``.worktrees/``.
     """
     slug = task_id[:16]
-    repo_root = str(_REPO_DIR)
+    repo_root = _resolve_primary_repo_root()
     archive_candidates = []
     if base_branch:
         archive_candidates.extend([f"origin/{base_branch}", base_branch])
@@ -4789,7 +4826,7 @@ def _create_standalone_task_repo(
             with tempfile.NamedTemporaryFile(
                 delete=False,
                 suffix=f"-{slug}.tar",
-                dir=str(_WORKTREE_BASE),
+                dir=str(_task_worktree_base()),
             ) as tmp:
                 archive_path = Path(tmp.name)
 
@@ -4976,8 +5013,8 @@ def _create_worktree(
         repo_root = str(workspace_repo)
         worktree_base = workspace_repo / ".worktrees"
     else:
-        repo_root = str(_REPO_DIR)
-        worktree_base = _WORKTREE_BASE
+        repo_root = _resolve_primary_repo_root()
+        worktree_base = _task_worktree_base()
 
     wt_path = worktree_base / f"task-{slug}"
     branch = f"task/{slug}"
@@ -4985,20 +5022,7 @@ def _create_worktree(
         worktree_base.mkdir(parents=True, exist_ok=True)
         if not _reclaim_worktree_slot(repo_root, wt_path, branch):
             return None
-        if _repo_is_linked_worktree(repo_root):
-            log.info(
-                "WORKTREE_LINKED_REPO task=%s repo=%s -- using standalone task repo fallback",
-                slug,
-                repo_root,
-            )
-            return _create_standalone_task_repo(
-                task_id,
-                wt_path,
-                branch,
-                base_branch=base_branch,
-                idea_id=idea_id,
-            )
-        # Fetch latest remote refs
+        # Fetch latest remote refs (always from primary repo root — not the linked runner checkout)
         fetch = _run_git_command(
             ["git", "fetch", "origin", "--quiet"],
             capture_output=True, text=True, timeout=30, cwd=repo_root,
@@ -5033,6 +5057,20 @@ def _create_worktree(
                 wt_path,
                 detail,
             )
+            sw = _create_standalone_task_repo(
+                task_id,
+                wt_path,
+                branch,
+                base_branch=base_branch,
+                idea_id=idea_id,
+            )
+            if sw:
+                log.info(
+                    "WORKTREE_STANDALONE_FALLBACK task=%s path=%s",
+                    slug,
+                    wt_path,
+                )
+                return sw
             return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
@@ -5075,7 +5113,8 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
 
 def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
     """Remove worktrees older than max_age_hours. Called periodically from the loop."""
-    wt_base = _REPO_DIR / ".worktrees"
+    primary = _resolve_primary_repo_root()
+    wt_base = _task_worktree_base()
     if not wt_base.exists():
         return 0
     cleaned = 0
@@ -5088,12 +5127,12 @@ def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
             if age_hours < max_age_hours:
                 continue
             task_slug = wt_dir.name.replace("task-", "")
-            if _reclaim_worktree_slot(str(_REPO_DIR), wt_dir, f"task/{task_slug}"):
+            if _reclaim_worktree_slot(primary, wt_dir, f"task/{task_slug}"):
                 cleaned += 1
         except Exception:
             pass
     if cleaned:
-        _run_git_command(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_REPO_DIR))
+        _run_git_command(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=primary)
         log.info("SWEEP_WORKTREES cleaned %d stale worktrees", cleaned)
     return cleaned
 
@@ -5104,10 +5143,10 @@ def _cleanup_worktree(task_id: str) -> None:
     Fix 5: only called AFTER push is confirmed (or task failed).
     """
     slug = task_id[:16]
-    wt_path = _WORKTREE_BASE / f"task-{slug}"
+    wt_path = _task_worktree_base() / f"task-{slug}"
     branch = f"task/{slug}"
     try:
-        if _reclaim_worktree_slot(str(_REPO_DIR), wt_path, branch):
+        if _reclaim_worktree_slot(_resolve_primary_repo_root(), wt_path, branch):
             log.info("WORKTREE_CLEANED task=%s", slug)
     except Exception as e:
         log.warning("WORKTREE_CLEANUP_FAILED task=%s error=%s", slug, e)
@@ -5215,7 +5254,7 @@ def _merge_branch_to_main(task_id: str) -> bool:
     """
     slug = task_id[:16]
     branch = f"task/{slug}"
-    repo_root = str(_REPO_DIR)
+    repo_root = _resolve_primary_repo_root()
     try:
         # Fetch latest
         _run_git_command(

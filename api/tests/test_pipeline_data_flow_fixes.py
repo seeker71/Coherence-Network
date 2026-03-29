@@ -130,6 +130,42 @@ def test_create_worktree_falls_back_to_origin_main_when_pr_branch_not_found(
     )
 
 
+def test_resolve_primary_repo_root_maps_git_worktrees_path(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Linked runner checkout: --git-common-dir under .git/worktrees → primary repo root."""
+    primary = tmp_path / "Coherence-Network"
+    linked = primary / ".worktrees" / "agent-thread"
+    monkeypatch.setattr(local_runner, "_REPO_DIR", linked)
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:4] == ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"]:
+            return _Proc(
+                stdout=str(primary / ".git" / "worktrees" / "agent-thread") + "\n",
+            )
+        return _Proc()
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    assert local_runner._resolve_primary_repo_root() == str(primary)
+
+
+def test_resolve_primary_repo_root_main_worktree(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Standard repo: --git-common-dir is …/repo/.git → repo root."""
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:4] == ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"]:
+            return _Proc(stdout=str((tmp_path / ".git").resolve()) + "\n")
+        return _Proc()
+
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+
+    assert local_runner._resolve_primary_repo_root() == str(tmp_path.resolve())
+
+
 # ---------------------------------------------------------------------------
 # AC-2 — _capture_worktree_diff captures actual diff, not just stdout
 # ---------------------------------------------------------------------------
@@ -830,6 +866,7 @@ def test_cleanup_worktree_removes_orphaned_directory(
 ) -> None:
     """R5: cleanup must also remove stale task directories Git no longer tracks."""
     tmp_path = _sandbox_tmp_path()
+    remove_calls: list[list[str]] = []
     try:
         slug = "abcjdef234567890"
         wt_path = tmp_path / f"task-{slug}"
@@ -842,6 +879,8 @@ def test_cleanup_worktree_removes_orphaned_directory(
                 return _Proc(returncode=1)
             if args[:3] == ["git", "worktree", "list"]:
                 return _Proc(stdout="")
+            if args[:3] == ["git", "worktree", "remove"]:
+                remove_calls.append(list(args))
             return _Proc()
 
         monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
@@ -851,12 +890,11 @@ def test_cleanup_worktree_removes_orphaned_directory(
         local_runner._cleanup_worktree(slug)
 
         assert not wt_path.exists(), "orphaned worktree directory must be deleted during cleanup"
+        assert any("--force" in c for c in remove_calls), (
+            "git worktree remove --force must be used to ensure cleanup"
+        )
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
-
-    assert any("--force" in c for c in remove_calls), (
-        "git worktree remove --force must be used to ensure cleanup"
-    )
 
 
 # ---------------------------------------------------------------------------
