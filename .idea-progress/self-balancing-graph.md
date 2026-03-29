@@ -1,17 +1,19 @@
-# Idea progress — idea-0f1d59d58f25 (MCP npm/PyPI publish)
+# Idea progress — self-balancing-graph
 
 ## Current task
-- **Task ID**: task_9159679b305d7b7a
-- **Status**: COMPLETE — worktree creation fallback for impl/test when `git worktree add` fails
+- **Task ID**: task_6fc7d0ee3406bd17
+- **Status**: Added `api/tests/test_self_balancing_graph.py` (5 tests) for spec 172 acceptance: graph health snapshot contract, empty graph, single-component orphan semantics, advisory-only invariant, dangling-edge resilience.
 
 ## Completed phases
-### Runner worktree reliability (task_9159679b305d7b7a)
-- Implemented standalone-repo fallback in `api/scripts/local_runner.py` after primary `git worktree add` failure (reclaim slot → `_create_standalone_task_repo`).
-- Added regression test for fallback; adjusted failure test to mock standalone returning `None`.
-- Repaired `.gitignore` corruption (literal `\n` line from bad echo).
+### Self-balancing graph tests (task_6fc7d0ee3406bd17)
+- New file only: `api/tests/test_self_balancing_graph.py` (no edits to existing tests/modules).
+
+### Prior (task_1fa07d03691fd410)
+- Earlier note referenced `test_self_balancing_graph.py`; this task delivers that file with full coverage.
 
 ## Key decisions
-- Prefer reclaim + existing `_create_standalone_task_repo` over widening `_repo_is_linked_worktree` heuristics so any `worktree add` failure (permissions, lock, ref races) gets the same recovery path as linked worktrees.
+- Mirror `test_172_graph_health.py` patterns: minimal FastAPI app with `graph_health` router, `graph_health_repo.reset_for_tests()`, reset `_last_compute_time`.
+- Edge cases chosen to match spec 172: empty baseline, no false orphan signals on one component, no mutation of `concept_service` lists, ignore invalid edge endpoints without 500.
 
 ## Blockers
-- MCP package publication to npm/PyPI remains future work; this task addressed runner “Worktree creation failed” for impl tasks.
+- Automated pytest/DIF/git not run in agent shell (allowlist). Runner should execute verify steps and commit.
