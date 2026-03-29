@@ -4991,13 +4991,27 @@ def _create_worktree(
                 slug,
                 repo_root,
             )
-            return _create_standalone_task_repo(
+            standalone = _create_standalone_task_repo(
                 task_id,
                 wt_path,
                 branch,
                 base_branch=base_branch,
                 idea_id=idea_id,
             )
+            if standalone is not None:
+                return standalone
+            log.info(
+                "WORKTREE_STANDALONE_FALLBACK task=%s -- retrying with git worktree add",
+                slug,
+            )
+            # Standalone may have left a partial directory; clear slot before normal add.
+            if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+                log.warning(
+                    "WORKTREE_STANDALONE_FALLBACK_RECLAIM_FAILED task=%s path=%s",
+                    slug,
+                    wt_path,
+                )
+                return None
         # Fetch latest remote refs
         fetch = _run_git_command(
             ["git", "fetch", "origin", "--quiet"],

@@ -97,6 +97,8 @@ async def test_roi_signals(tmp_path, monkeypatch):
     assert roi["handle_registrations"] >= 1
     assert "verified_ratio" in roi
     assert roi["spec_ref"] == "spec-168"
+    assert roi["mvp_trust_mode"] == "tofu"
+    assert roi["idea_id"] == "identity-driven-onboarding"
 
 
 @pytest.mark.asyncio

@@ -52,10 +52,23 @@ async def test_register_roi_signals_contains_required_keys(tmp_path, monkeypatch
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         resp = await _register(c, "pre-test3")
     roi = resp.json()["roi_signals"]
-    for key in ("handle_registrations", "verified_count", "verified_ratio",
-                "avg_time_to_verify_days", "spec_ref"):
+    for key in (
+        "handle_registrations",
+        "verified_count",
+        "verified_ratio",
+        "avg_time_to_verify_days",
+        "spec_ref",
+        "idea_id",
+        "mvp_trust_mode",
+        "oauth_upgrade_spec_ref",
+        "evidence_spec_paths",
+    ):
         assert key in roi, f"Missing roi_signals key: {key}"
     assert roi["spec_ref"] == "spec-168"
+    assert roi["idea_id"] == "identity-driven-onboarding"
+    assert roi["mvp_trust_mode"] == "tofu"
+    assert roi["oauth_upgrade_spec_ref"] == "spec-169"
+    assert "specs/168-identity-driven-onboarding-tofu.md" in roi["evidence_spec_paths"]
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +215,8 @@ async def test_roi_empty_state(tmp_path, monkeypatch):
     assert roi["verified_count"] == 0
     assert roi["verified_ratio"] == 0.0
     assert roi["spec_ref"] == "spec-168"
+    assert roi["mvp_trust_mode"] == "tofu"
+    assert roi["oauth_upgrade_spec_ref"] == "spec-169"
 
 
 @pytest.mark.asyncio

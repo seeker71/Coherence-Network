@@ -17,6 +17,10 @@ type RegisterResponse = {
     verified_ratio: number;
     avg_time_to_verify_days: number | null;
     spec_ref: string;
+    idea_id: string;
+    mvp_trust_mode: "tofu" | "verified";
+    oauth_upgrade_spec_ref: string;
+    evidence_spec_paths: string[];
   };
 };
 
@@ -144,8 +148,13 @@ export default function OnboardingPage() {
           </div>
         </dl>
       </div>
-      <div className="border rounded p-3 text-xs text-muted-foreground">
-        {session.roi_signals.handle_registrations} registered · {(session.roi_signals.verified_ratio * 100).toFixed(0)}% verified
+      <div className="border rounded p-3 text-xs text-muted-foreground space-y-1">
+        <p>
+          {session.roi_signals.handle_registrations} registered · {(session.roi_signals.verified_ratio * 100).toFixed(0)}% verified
+        </p>
+        <p>
+          MVP trust: {session.roi_signals.mvp_trust_mode} · OAuth follow-up: {session.roi_signals.oauth_upgrade_spec_ref}
+        </p>
       </div>
       <p className="text-xs text-muted-foreground">
         Verify via <a href="/identity" className="underline">Identity settings</a>. OAuth: Spec 169.

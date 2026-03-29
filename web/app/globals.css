@@ -5,20 +5,20 @@
   :root {
     color-scheme: dark;
     --background: 24 22% 11%;
-    /* Slightly higher lightness for default text on layered warm gradients */
-    --foreground: 38 32% 93%;
+    /* Homepage / dark UI: push text toward white for WCAG-friendly contrast on warm gradients */
+    --foreground: 40 28% 97%;
     --card: 24 20% 14%;
-    --card-foreground: 38 30% 92%;
+    --card-foreground: 40 28% 96%;
     --popover: 24 20% 13%;
-    --popover-foreground: 38 30% 92%;
+    --popover-foreground: 40 28% 96%;
     --primary: 36 72% 58%;
     --primary-foreground: 24 28% 11%;
     --secondary: 27 20% 20%;
-    --secondary-foreground: 38 22% 92%;
+    --secondary-foreground: 40 24% 94%;
     --muted: 24 16% 18%;
-    --muted-foreground: 34 22% 90%;
+    --muted-foreground: 38 24% 92%;
     --accent: 28 24% 24%;
-    --accent-foreground: 38 26% 92%;
+    --accent-foreground: 40 26% 95%;
     --destructive: 3 68% 56%;
     --destructive-foreground: 0 0% 98%;
     --border: 28 16% 24%;
@@ -64,7 +64,7 @@
   :root.dark {
     color-scheme: dark;
     --background: 24 22% 11%;
-    --foreground: 38 32% 93%;
+    --foreground: 40 28% 97%;
     --card: 24 20% 14%;
     --card-foreground: 38 30% 92%;
     --popover: 24 20% 13%;
@@ -74,9 +74,9 @@
     --secondary: 27 20% 20%;
     --secondary-foreground: 38 22% 92%;
     --muted: 24 16% 18%;
-    --muted-foreground: 34 22% 90%;
+    --muted-foreground: 38 24% 92%;
     --accent: 28 24% 24%;
-    --accent-foreground: 38 26% 92%;
+    --accent-foreground: 40 26% 95%;
     --destructive: 3 68% 56%;
     --destructive-foreground: 0 0% 98%;
     --border: 28 16% 24%;
@@ -126,12 +126,19 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  /* Softer blooms so foreground text stays legible */
+  z-index: 0;
+  /* Softer blooms — keep opacity low so body text (above this layer) stays high-contrast */
   background:
-    radial-gradient(520px 340px at 14% 24%, hsl(28 92% 74% / 0.05), transparent 72%),
-    radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.035), transparent 76%),
-    radial-gradient(460px 300px at 54% 32%, hsl(36 96% 76% / 0.04), transparent 74%);
+    radial-gradient(520px 340px at 14% 24%, hsl(28 92% 74% / 0.035), transparent 72%),
+    radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.028), transparent 76%),
+    radial-gradient(460px 300px at 54% 32%, hsl(36 96% 76% / 0.03), transparent 74%);
   mix-blend-mode: screen;
+}
+
+/* Ensure main content paints above the decorative overlay */
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Light mode body overlay — reduced bloom intensity */

@@ -111,8 +111,19 @@ def resolve_session(token: str) -> Optional[dict]:
         }
 
 
+_IDEA_ID = "identity-driven-onboarding"
+_EVIDENCE_SPECS = (
+    "specs/168-identity-driven-onboarding-tofu.md",
+    "specs/task_957a8a7e00501874.md",
+)
+
+
 def get_roi_signals() -> dict:
-    """Compute live ROI signals for the onboarding funnel."""
+    """Compute live ROI signals for the onboarding funnel.
+
+    Includes stable decision metadata for audits: MVP uses TOFU (no verification),
+    OAuth upgrade tracked under spec-169. See spec 168 Evidence section.
+    """
     _ensure_schema()
     with _session() as db:
         rows = db.query(OnboardingSession).all()
@@ -131,4 +142,8 @@ def get_roi_signals() -> dict:
             "verified_ratio": verified_ratio,
             "avg_time_to_verify_days": avg_days,
             "spec_ref": "spec-168",
+            "idea_id": _IDEA_ID,
+            "mvp_trust_mode": "tofu",
+            "oauth_upgrade_spec_ref": "spec-169",
+            "evidence_spec_paths": list(_EVIDENCE_SPECS),
         }
