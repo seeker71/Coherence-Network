@@ -6,9 +6,9 @@ Ensure `load_backlog()` in `api/scripts/project_manager.py` is covered by a targ
 
 ---
 
-## Goal
+## Purpose
 
-Add (or verify existence of) a pytest test that exercises `_parse_backlog_file` / `load_backlog` with a deliberately malformed backlog file containing both valid numbered items and invalid unnumbered lines. The implementation already handles this correctly; this spec exists solely to lock the behaviour with a regression test.
+Add (or verify existence of) a pytest test that exercises `_parse_backlog_file` / `load_backlog` with a deliberately malformed backlog file containing both valid numbered items and invalid unnumbered lines. The implementation already handles this correctly; this spec exists solely to lock the behaviour with a regression test and prevent silent regressions in a future refactor.
 
 ---
 
