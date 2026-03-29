@@ -1102,6 +1102,7 @@ def create_idea(
     work_type: IdeaWorkType | None = None,
     lifecycle: IdeaLifecycle | None = None,
     duplicate_of: str | None = None,
+    workspace_git_url: str | None = None,
     slug: str | None = None,
 ) -> IdeaWithScore | None:
     # Auto-generate UUID4 when caller omits the ID (new convention going forward)
@@ -1143,6 +1144,7 @@ def create_idea(
         work_type=work_type,
         lifecycle=lifecycle or IdeaLifecycle.ACTIVE,
         duplicate_of=duplicate_of,
+        workspace_git_url=workspace_git_url,
         slug=final_slug,
         slug_history=[],
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
@@ -1246,6 +1248,7 @@ def update_idea(
     work_type: IdeaWorkType | None = None,
     lifecycle: IdeaLifecycle | None = None,
     duplicate_of: str | None = None,
+    workspace_git_url: str | None = None,
 ) -> IdeaWithScore | None:
     """Update an idea.
 
@@ -1300,6 +1303,8 @@ def update_idea(
         if duplicate_of is not None and duplicate_of != idea.duplicate_of:
             changes.append(("duplicate_of", idea.duplicate_of, duplicate_of))
             idea.duplicate_of = duplicate_of
+        if workspace_git_url is not None:
+            idea.workspace_git_url = workspace_git_url
 
         for field, old_val, new_val in changes:
             if os.getenv("DEBUG_AUDIT"):
