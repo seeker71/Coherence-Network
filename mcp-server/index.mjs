@@ -252,6 +252,46 @@ const TOOLS = [
     description: "List federated nodes and their capabilities.",
     inputSchema: { type: "object", properties: {} },
   },
+
+  // Concepts (Living Codex ontology)
+  {
+    name: "coherence_list_concepts",
+    description: "Browse the Living Codex ontology — 184 universal concepts with typed relationships and 53 axes. Returns paged concept list with IDs, names, descriptions, axes, and hierarchy.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        limit: { type: "number", description: "Max concepts to return (default 50, max 500)", default: 50 },
+        offset: { type: "number", description: "Pagination offset", default: 0 },
+        search: { type: "string", description: "Search query to filter concepts by name, description, or keywords" },
+      },
+    },
+  },
+  {
+    name: "coherence_get_concept",
+    description: "Get full details for a single concept from the Living Codex ontology — includes keywords, axes, parent/child concepts, and typed edges.",
+    inputSchema: {
+      type: "object",
+      required: ["concept_id"],
+      properties: {
+        concept_id: { type: "string", description: "Concept ID (e.g. 'activity', 'knowledge', 'resonance')" },
+        include_edges: { type: "boolean", description: "Include typed relationship edges for this concept", default: false },
+      },
+    },
+  },
+  {
+    name: "coherence_link_concepts",
+    description: "Create a typed relationship edge between two concepts in the Living Codex ontology (extends the graph with user-defined connections).",
+    inputSchema: {
+      type: "object",
+      required: ["from_id", "relationship_type", "to_id"],
+      properties: {
+        from_id: { type: "string", description: "Source concept ID" },
+        relationship_type: { type: "string", description: "Relationship type (e.g. 'transforms', 'contains', 'enables', 'opposes')" },
+        to_id: { type: "string", description: "Target concept ID" },
+        created_by: { type: "string", description: "Author/agent creating this edge", default: "mcp" },
+      },
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -340,6 +380,28 @@ async function handleTool(name, args) {
       ]);
       return { nodes, capabilities: caps };
     }
+
+    // Concepts (Living Codex ontology)
+    case "coherence_list_concepts":
+      if (args.search) {
+        return apiGet("/api/concepts/search", { q: args.search, limit: args.limit || 20 });
+      }
+      return apiGet("/api/concepts", { limit: args.limit || 50, offset: args.offset || 0 });
+    case "coherence_get_concept": {
+      const concept = await apiGet(`/api/concepts/${args.concept_id}`);
+      if (args.include_edges) {
+        const edges = await apiGet(`/api/concepts/${args.concept_id}/edges`);
+        return { ...concept, edges };
+      }
+      return concept;
+    }
+    case "coherence_link_concepts":
+      return apiPost(`/api/concepts/${args.from_id}/edges`, {
+        from_id: args.from_id,
+        to_id: args.to_id,
+        relationship_type: args.relationship_type,
+        created_by: args.created_by || "mcp",
+      });
 
     default:
       return { error: `Unknown tool: ${name}` };

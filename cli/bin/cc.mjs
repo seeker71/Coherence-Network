@@ -40,6 +40,7 @@ import { update } from "../lib/commands/update.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
 import { showPortfolio } from "../lib/commands/portfolio.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
+import { listConcepts, showConcept, linkConcepts } from "../lib/commands/concepts.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
 import {
   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
@@ -114,6 +115,8 @@ const COMMANDS = {
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
   meta:          () => handleMeta(args),
+  concepts:      () => listConcepts(args),
+  concept:       () => handleConcept(args),
   nearby:        () => showNearby(args),
   location:      () => handleLocation(args),
   portfolio:     () => showPortfolio(),
@@ -127,6 +130,11 @@ async function handleMeta(args) {
     case "modules":   return showMetaModules(args.slice(1));
     default:          return showMetaSummary();
   }
+}
+
+async function handleConcept(args) {
+  if (args[0] === "link") return linkConcepts(args.slice(1));
+  return showConcept(args);
 }
 
 async function handleIdea(args) {
