@@ -1,0 +1,430 @@
+# Spec: UX Overhaul — Tabs, Mobile-First, Novice/Expert Modes
+
+**Spec ID**: ux-tabs-mobile-friendly
+**Task ID**: task_2eb165131fd7a737
+**Status**: Active
+**Author**: product-manager agent
+**Date**: 2026-03-28
+**Priority**: High
+
+---
+
+## Summary
+
+Replace long-scroll page layouts with tabbed content sections across all key pages, implement a
+mobile-first responsive design with a bottom tab bar and swipeable cards, introduce a
+novice/expert mode toggle stored per contributor via a new `/api/preferences/ui` endpoint, and
+add a multi-view selector (Cards | Table | Graph) to the Ideas list.
+
+This spec covers the full API contract, web component structure, CLI behaviour (unchanged), and
+detailed verification scenarios that a reviewer can execute against production.
+
+---
+
+## Problem Statement
+
+Current pages (e.g. `/ideas/:id`, `/concepts/:id`) render all sections sequentially, forcing
+users to scroll hundreds of pixels to reach specs, tasks, contributors, or graph edges. On
+mobile the layout collapses poorly, section headers are small, and there is no quick
+navigation. Expert users want raw IDs and JSON; novice users are confused by technical
+vocabulary. Neither group has a persistent preference.
+
+---
+
+## Goals
+
+1. Every detail page uses a tab bar to segment content — no full-page scrolls.
+2. The Ideas list offers three view modes (Cards, Table, Graph).
+3. Navigation adopts a two-level scheme: primary tab bar + secondary dropdown.
+4. Mobile: bottom tab bar, swipeable cards, collapsible sections.
+5. Expert mode: IDs visible, raw JSON toggle, direct API links.
+6. Novice mode: technical fields hidden, guided tooltips, plain vocabulary.
+7. Preferences are stored per contributor and returned on each page load.
+
+---
+
+## Out of Scope
+
+- CLI changes (already tab-free by nature; no modifications needed).
+- Redesign of graph visualisation internals (Graph view uses existing `/graph` page embed).
+- Authentication/authorisation overhaul.
+
+---
+
+## Requirements
+
+### R1 — Idea Detail Tabs (`/ideas/:id`)
+
+| Tab | Content |
+|-----|---------|
+| Overview | Name, description, status badge, value metrics, open questions |
+| Specs | Linked spec files, DSSS spec builder |
+| Tasks | Task list, quick-create form |
+| Contributors | Stake holders, contributor chips |
+| Edges | Related ideas graph mini-view |
+| History | Activity feed, timestamps |
+
+- Active tab is reflected in URL query: `?tab=specs` (no full reload on tab switch).
+- Default tab on first load: `overview`.
+- In **novice mode**: `Edges` tab and `History` tab are hidden; field labels use plain English.
+- In **expert mode**: each tab header shows the raw count badge; `History` tab appears; a
+  "Copy API URL" icon appears next to the idea title; a "Raw JSON" toggle in `Overview`
+  reveals the full API response.
+
+### R2 — Ideas List View Modes (`/ideas`)
+
+Three view mode buttons appear top-right of the list header:
+
+| Mode | Key | Component |
+|------|-----|-----------|
+| Cards | `cards` | Existing card grid (default) |
+| Table | `table` | Dense sortable table: name, status, value gap, confidence |
+| Graph | `graph` | Embedded graph component (existing `/graph` page, filtered to ideas) |
+
+- Active mode stored in `localStorage` as `ideas_view_mode` (not in preferences API — no auth required).
+- URL query `?view=table` overrides localStorage on load.
+
+### R3 — Navigation
+
+**Primary tabs** (top nav / bottom bar on mobile):
+`Ideas` | `Concepts` | `Contributors` | `News` | `Tasks`
+
+**Secondary dropdown** (≤ 768 px: hidden behind a hamburger; > 768 px: visible as small sub-nav):
+`Flow` | `Graph` | `Portfolio` | `Agent` | `Dashboard` | `Settings`
+
+- Active primary tab highlighted.
+- Current route determines which tab is active.
+
+### R4 — Mobile Layout
+
+- Breakpoint: `< 768 px`.
+- **Bottom tab bar**: fixed, 5 primary tabs with icon + label, 56 px tall.
+- **Swipeable cards**: Ideas list in Cards mode uses horizontal swipe to page through batches
+  of 10 (touch events; fallback to buttons).
+- **Collapsible sections**: on detail pages each tab panel has a collapse toggle so users can
+  quickly hide sections they do not need.
+- Top nav hidden on mobile; replaced by bottom bar + hamburger for secondary nav.
+
+### R5 — Expert Mode
+
+Activated via toggle in Settings or top-right menu chip. Persisted in preferences API.
+
+When active:
+- Raw node IDs shown next to names (grey monospace).
+- "Raw JSON" toggle button appears on Overview tab — clicking reveals `<pre>` block with
+  full API response.
+- API URL badge appears on each entity (links to `GET /api/ideas/:id` etc.).
+- Coherence scores shown to 4 decimal places instead of rounded percentage.
+- `History` and `Edges` tabs visible on Idea detail.
+
+### R6 — Novice Mode
+
+Activated via preferences API (default for new contributors).
+
+When active:
+- IDs hidden.
+- Field labels simplified: "Potential Value" → "How much this could help", "Confidence" → "How sure we are".
+- Guided tooltip (?) appears next to each metric label explaining it in one sentence.
+- `Edges` and `History` tabs hidden from Idea detail tab bar.
+- Raw JSON toggle not available.
+- Coherence scores shown as percentage rounded to whole number.
+
+### R7 — UI Preferences API
+
+New endpoint set:
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/preferences/ui` | Returns current contributor's UI preferences |
+| PUT | `/api/preferences/ui` | Updates one or more UI preference fields |
+
+The `contributor_id` is determined by the `X-Contributor-Id` request header (unauthenticated
+fallback: anonymous preferences stored by session cookie key `anon_pref_id`).
+
+#### Preference Model
+
+```python
+class UIPreferences(BaseModel):
+    contributor_id: str           # FK to contributors or anon session key
+    mode: Literal["novice", "expert"] = "novice"
+    ideas_default_view: Literal["cards", "table", "graph"] = "cards"
+    nav_secondary_visible: bool = True
+    updated_at: datetime
+```
+
+#### Storage
+
+New table `ui_preferences` in PostgreSQL:
+
+```sql
+CREATE TABLE ui_preferences (
+    contributor_id TEXT PRIMARY KEY,
+    mode           TEXT NOT NULL DEFAULT 'novice',
+    ideas_default_view TEXT NOT NULL DEFAULT 'cards',
+    nav_secondary_visible BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+```
+
+#### GET `/api/preferences/ui`
+
+- **Request headers**: `X-Contributor-Id: <id>` (optional)
+- **Response 200**:
+
+```json
+{
+  "contributor_id": "alice",
+  "mode": "expert",
+  "ideas_default_view": "cards",
+  "nav_secondary_visible": true,
+  "updated_at": "2026-03-28T18:00:00Z"
+}
+```
+
+- If no record exists, returns default preferences with `updated_at` = current time (does NOT
+  persist until a PUT is made).
+
+#### PUT `/api/preferences/ui`
+
+- **Request body** (all fields optional — partial update):
+
+```json
+{ "mode": "expert" }
+```
+
+- **Response 200**: updated `UIPreferences` object.
+- **Response 422**: invalid field value (e.g. `mode: "superuser"` is not in enum).
+- Upserts on `contributor_id`; creates row if missing.
+
+---
+
+## Data Model Changes
+
+1. **New table**: `ui_preferences` (see DDL above).
+2. **New migration**: `api/migrations/add_ui_preferences.sql`.
+3. **No changes** to existing `ideas`, `concepts`, `contributors` tables.
+
+---
+
+## Web Implementation Notes
+
+### Component Architecture
+
+```
+web/app/ideas/[idea_id]/page.tsx
+  └── <IdeaDetailTabs>          ← new component
+       ├── <TabOverview>
+       ├── <TabSpecs>
+       ├── <TabTasks>
+       ├── <TabContributors>
+       ├── <TabEdges>            ← expert-only
+       └── <TabHistory>          ← expert-only
+
+web/app/ideas/page.tsx
+  └── <IdeasViewToggle>          ← new component (Cards | Table | Graph)
+       ├── <IdeasCards>          ← existing
+       ├── <IdeasTable>          ← new
+       └── <IdeasGraph>          ← new (embeds /graph filtered)
+
+web/components/layout/
+  ├── PrimaryNav.tsx             ← new (desktop top + mobile bottom)
+  └── SecondaryNav.tsx           ← new (dropdown / sub-nav)
+
+web/components/ui/
+  ├── ExpertModeToggle.tsx       ← new
+  ├── NoviceTooltip.tsx          ← new
+  └── ModeChip.tsx               ← shows "EXPERT" / "NOVICE" in header
+```
+
+### shadcn/ui Components Used
+
+- `Tabs` / `TabsList` / `TabsTrigger` / `TabsContent` — tab bars
+- `DropdownMenu` — secondary nav
+- `Toggle` — Raw JSON, Expert mode
+- `Tooltip` — novice mode tooltips
+- `Table` — Ideas table view
+- `Badge` — expert mode ID badges
+
+### URL Routing for Tabs
+
+```
+/ideas/:id?tab=overview     (default)
+/ideas/:id?tab=specs
+/ideas/:id?tab=tasks
+/ideas/:id?tab=contributors
+/ideas/:id?tab=edges        (expert only)
+/ideas/:id?tab=history      (expert only)
+```
+
+Tab changes use `router.replace` (no history entry per tab switch).
+
+---
+
+## API Files to Create/Modify
+
+| File | Change |
+|------|--------|
+| `api/app/models/ui_preferences.py` | New Pydantic model |
+| `api/app/routers/preferences.py` | New router with GET/PUT |
+| `api/app/main.py` | Register `preferences` router |
+| `api/migrations/add_ui_preferences.sql` | DDL for new table |
+
+---
+
+## Web Files to Create/Modify
+
+| File | Change |
+|------|--------|
+| `web/app/ideas/[idea_id]/page.tsx` | Wrap content in `<IdeaDetailTabs>` |
+| `web/components/ideas/IdeaDetailTabs.tsx` | New tab component |
+| `web/app/ideas/page.tsx` | Add `<IdeasViewToggle>` |
+| `web/components/ideas/IdeasViewToggle.tsx` | New view-mode toggle |
+| `web/components/ideas/IdeasTable.tsx` | New table view |
+| `web/components/layout/PrimaryNav.tsx` | New primary nav |
+| `web/components/layout/SecondaryNav.tsx` | New secondary nav |
+| `web/components/ui/ExpertModeToggle.tsx` | New expert toggle |
+| `web/components/ui/NoviceTooltip.tsx` | New tooltip wrapper |
+| `web/app/layout.tsx` | Wire PrimaryNav + bottom bar |
+
+---
+
+## Verification Scenarios
+
+### Scenario 1 — Default preferences returned for unknown contributor
+
+**Setup**: No record in `ui_preferences` for contributor `"anon-test-001"`.
+
+**Action**:
+```bash
+curl -s https://api.coherencycoin.com/api/preferences/ui \
+  -H "X-Contributor-Id: anon-test-001"
+```
+
+**Expected result**:
+- HTTP 200
+- Body contains `"mode": "novice"`, `"ideas_default_view": "cards"`, `"nav_secondary_visible": true`
+- `contributor_id` equals `"anon-test-001"`
+
+**Edge case**: Omitting `X-Contributor-Id` header returns 200 with `contributor_id` being a
+server-generated anonymous key (not null, not empty string).
+
+---
+
+### Scenario 2 — Update mode to expert and verify persistence
+
+**Setup**: Any contributor (use `"test-expert-toggle"`) — may or may not have existing record.
+
+**Action** (step 1 — update):
+```bash
+curl -s -X PUT https://api.coherencycoin.com/api/preferences/ui \
+  -H "Content-Type: application/json" \
+  -H "X-Contributor-Id: test-expert-toggle" \
+  -d '{"mode": "expert"}'
+```
+
+**Expected**: HTTP 200, body `"mode": "expert"`.
+
+**Action** (step 2 — read back):
+```bash
+curl -s https://api.coherencycoin.com/api/preferences/ui \
+  -H "X-Contributor-Id: test-expert-toggle"
+```
+
+**Expected**: HTTP 200, body `"mode": "expert"` (persisted).
+
+**Edge case**: PUT with `{"mode": "superuser"}` returns HTTP 422 with validation error body.
+
+---
+
+### Scenario 3 — Tab routing on Idea detail page
+
+**Setup**: At least one idea exists in the system (get an ID from `/api/ideas`).
+
+**Action**: Visit `https://coherencycoin.com/ideas/<idea_id>?tab=tasks` in a browser.
+
+**Expected**:
+- Page loads without error (HTTP 200, no JS console errors).
+- The "Tasks" tab trigger has `aria-selected="true"` or equivalent active class.
+- The Tasks panel content is visible; other panels are not in the DOM (or hidden via `hidden` attribute).
+
+**Edge case**: Visit `?tab=nonexistent` → page loads with default `overview` tab active (no
+crash, no 404).
+
+---
+
+### Scenario 4 — Ideas list view mode toggle
+
+**Setup**: Ideas list page at `https://coherencycoin.com/ideas`.
+
+**Action**: Visit `https://coherencycoin.com/ideas?view=table`.
+
+**Expected**:
+- Page renders without error.
+- A `<table>` element is present in the DOM.
+- Table columns include at minimum: Name, Status.
+- If ideas exist, at least one `<tr>` is present in `<tbody>`.
+
+**Edge case**: Visit `?view=graph` → graph iframe/component renders; no blank page or runtime error.
+Visit `?view=invalid` → falls back to cards view without error.
+
+---
+
+### Scenario 5 — Mode field validation (error handling)
+
+**Setup**: Any contributor header (e.g. `X-Contributor-Id: error-test`).
+
+**Action**:
+```bash
+curl -s -X PUT https://api.coherencycoin.com/api/preferences/ui \
+  -H "Content-Type: application/json" \
+  -H "X-Contributor-Id: error-test" \
+  -d '{"mode": "superuser", "ideas_default_view": "invalid_view"}'
+```
+
+**Expected**:
+- HTTP 422
+- Response body contains `"detail"` array with at least one entry mentioning the invalid field.
+- No row created or modified in `ui_preferences` for `"error-test"`.
+
+**Edge case**: Sending empty body `{}` to PUT returns 200 with unchanged defaults (empty partial
+update is a no-op, not an error).
+
+---
+
+## Risks and Assumptions
+
+| Risk | Mitigation |
+|------|------------|
+| Tab URL param conflicts with existing query params | Reserve `tab=` and `view=` as canonical; document in API readme |
+| Anonymous contributor preferences lost on browser clear | Acceptable UX; preference resets to novice (safe default) |
+| `IdeaDetailTabs` re-fetch on each tab switch | Fetch data once on page load; tabs show/hide pre-loaded panels |
+| `ui_preferences` migration may fail on VPS if Alembic not running | Provide idempotent raw SQL migration as fallback |
+| Swipeable cards on iOS Safari — touch event conflicts with scroll | Use `touch-action: pan-y` CSS to isolate horizontal swipe |
+| Expert JSON toggle may confuse novice users if they see the button | Button only visible in expert mode |
+
+---
+
+## Known Gaps and Follow-up Tasks
+
+1. **Keyboard navigation for tabs** — ARIA `tabpanel` roles needed for full accessibility; deferred to follow-up spec.
+2. **Persistent tab per idea** — storing last-visited tab per idea in `ui_preferences` is out of scope; URL param is sufficient for now.
+3. **Graph view filter in Ideas list** — requires a `filter` prop on the existing graph component; separate mini-spec needed.
+4. **Swipeable cards for Concepts and Contributors list** — only Ideas list in scope for this spec.
+5. **Theme preference** — `ui_preferences` model has extension point for `theme` field; deferred.
+
+---
+
+## Acceptance Criteria
+
+- [ ] `GET /api/preferences/ui` returns 200 with default novice preferences for unknown contributor.
+- [ ] `PUT /api/preferences/ui` with `{"mode": "expert"}` returns 200 and persists the value.
+- [ ] `PUT /api/preferences/ui` with invalid enum value returns 422.
+- [ ] `/ideas/:id?tab=tasks` loads with Tasks tab active.
+- [ ] `/ideas/:id?tab=nonexistent` falls back to overview tab without error.
+- [ ] `/ideas?view=table` renders a sortable table of ideas.
+- [ ] `/ideas?view=graph` renders graph view without crashing on zero ideas.
+- [ ] In novice mode: Edges and History tabs absent; IDs hidden; plain-English labels shown.
+- [ ] In expert mode: Edges and History tabs present; IDs shown; Raw JSON toggle present.
+- [ ] Mobile layout (< 768 px): bottom tab bar visible; top nav hidden.
+- [ ] All new shadcn/ui Tabs usage follows project shadcn conventions.
+- [ ] No existing tests broken.
