@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { ActiveNavLink } from "./active_nav_link";
 import { ThemeToggle } from "./theme-toggle";
+import { ModeSwitcher } from "./mode-switcher";
 
 /** Primary nav — 5 core actions visible to everyone. */
 const PRIMARY_NAV = [
@@ -69,6 +70,9 @@ export default function SiteHeader() {
           </nav>
 
           <div className="flex-1" />
+
+          {/* Mode switcher — expert / simple */}
+          <ModeSwitcher />
 
           {/* Theme toggle — Spec 165 */}
           <ThemeToggle />

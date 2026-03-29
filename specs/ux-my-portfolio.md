@@ -1,7 +1,7 @@
 # Spec: My Portfolio — Personal Contributor View
 
 **Idea ID**: `ux-my-portfolio`
-**Task ID**: `task_b6913f85c7d03a87`
+**Task ID**: `task_a69969850acfd8e3` (authoritative for this deliverable; prior refs may cite older task IDs)
 **Spec number**: 188 (next in sequence)
 **Status**: draft
 **Date**: 2026-03-28
@@ -41,6 +41,21 @@ As of 2026-03-28 the following is **already implemented** (spec 174):
 | `web/app/contributors/[id]/portfolio/` | Partial — status unknown |
 
 This spec defines the **complete product contract**: what the page must show, how authentication works, which API endpoints are the source of truth, what edge cases look like, and the verification scenarios that a reviewer will run against production.
+
+---
+
+## API Changes
+
+This is primarily a **read surface** over existing portfolio aggregation; mutating flows are limited to identity and API-key onboarding.
+
+| Change type | Endpoint / surface | Notes |
+|---|---|---|
+| **Read (stable)** | `GET /api/me/*` and `GET /api/contributors/{id}/*` | Portfolio summary, CC history, idea lists, stakes, tasks, contribution lineage — same payloads for `/me` (keyed) vs public contributor id paths. |
+| **Create** | `POST /api/auth/keys`, `POST /api/onboard` | Issues long-lived `X-API-Key`; key hash stored server-side. |
+| **Optional verify** | `POST /api/auth/verify/challenge`, `POST /api/auth/verify/proof` | Moves identities from unverified → verified for trust UX. |
+| **Future / gap** | `POST /api/contributors/{id}/tasks` | Not required for MVP read-only portfolio; task rows are populated from agent/runtime completion events when wired. Scenario 5 uses onboard + query toggles instead. |
+
+No breaking changes to existing idea or contributor JSON schemas are in scope for this spec.
 
 ---
 
@@ -261,6 +276,32 @@ class ContributionLineageView(BaseModel):
 | `/my-portfolio/ideas/{idea_id}` | Idea drill-down within my portfolio context |
 | `/contributors/{id}/portfolio` | Public portfolio view for any contributor |
 
+### CLI (optional; same API contract)
+
+Portfolio browsing is **web + HTTP API first**. The Coherence CLI (`cc`, spec 148) supports network messaging and attribution; there is **no dedicated `cc portfolio` subcommand** in the MVP contract. Contributors MAY:
+
+| Command | Role |
+|---|---|
+| `cc setup` / `POST /api/onboard` | Create contributor + link identity + receive `api_key` (then use `curl` with `X-API-Key` for `/api/me/*`). |
+| `cc contribute --type … --cc … --desc "…"` | Record work attribution at the network layer (complements portfolio task rows when backend joins match). |
+| `cc inbox` / `cc msg …` | Operator messaging; not used for portfolio data. |
+
+**Future follow-up**: add `cc portfolio` that wraps `GET /api/me/portfolio` and pretty-prints the five sections using `COHERENCE_API_URL` — tracked as a CLI enhancement, not blocking this spec.
+
+---
+
+## Verification criteria
+
+The feature is **accepted** when all of the following hold:
+
+1. **Auth contract**: Without `X-API-Key`, every `/api/me/*` route returns **401** with a stable `detail` string; with a valid key issued by `POST /api/onboard` or `POST /api/auth/keys`, `/api/me/portfolio` returns **200** and `contributor.id` matches the key’s subject.
+2. **Five-section data contract**: For a contributor with seeded graph data (or production data), the combined responses from `/api/me/portfolio`, `/api/me/cc-history`, `/api/me/idea-contributions`, `/api/me/stakes`, and `/api/me/tasks` contain enough fields to render identities, CC balance + history, contributed ideas (with types + health), stakes (with ROI), and tasks (with provider + outcome).
+3. **Drill-down**: `GET /api/me/idea-contributions/{idea_id}` and `GET /api/me/contributions/{contribution_id}/lineage` return **404** for wrong idea / wrong contribution, **403** when the contribution cannot be tied to the caller — never opaque **500** for bad ids.
+4. **Web routes exist**: `/my-portfolio` and `/contributors/{id}/portfolio` resolve; authenticated deep link `/my-portfolio/ideas/{idea_id}` is routable (exact shell vs modal is implementation detail).
+5. **Automated tests**: `api/tests/test_ux_my_portfolio.py` (and acceptance tests in `test_ux_my_portfolio_acceptance.py` where applicable) pass in CI.
+
+Quantitative proof is defined scenario-by-scenario below.
+
 ---
 
 ## Verification Scenarios
@@ -399,36 +440,48 @@ Expected: HTTP 200, `{"contributor_id": "new-contributor-no-stakes", "total": 0,
 
 ---
 
-### Scenario 5: Full create-read cycle — task completion and portfolio update
+### Scenario 5: Full create-read-update cycle — onboard, portfolio read, CC projection toggle
 
-**Setup**: A task `task_test_001` is marked completed for contributor `test-alice` with `provider=claude-sonnet`, `outcome=passed`, `cc_earned=5.0`.
+**Setup**: No prior contributor named `portfolio-crud-$(date +%s)` (use a fresh unique `name` below to avoid collisions).
 
 **Action**:
 ```bash
-# Register task completion
-curl -s -X POST $API/api/contributors/test-alice/tasks \
+NAME="portfolio-crud-$(date +%s)"
+# Create: one-shot onboard → API key
+RESP=$(curl -s -w "\n%{http_code}" -X POST "$API/api/onboard" \
   -H "Content-Type: application/json" \
-  -d '{"task_id":"task_test_001","description":"spec(test-task): test scenario","provider":"claude-sonnet","outcome":"passed","cc_earned":5.0,"idea_id":"ux-my-portfolio"}'
+  -d "{\"name\":\"$NAME\",\"provider\":\"github\",\"provider_id\":\"crud-test\",\"display_name\":\"CRUD Test\"}")
+CODE=$(echo "$RESP" | tail -n1)
+BODY=$(echo "$RESP" | sed '$d')
+KEY=$(echo "$BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['api_key'])")
 
-# Read back via authenticated view
-curl -s -H "X-API-Key: $KEY" "$API/api/me/tasks?sort=completed_at_desc&limit=5"
+# Read: portfolio with CC fields
+curl -s -w "\n%{http_code}" -H "X-API-Key: $KEY" "$API/api/me/portfolio?include_cc=true"
 
-# Confirm portfolio summary reflects the task
-curl -s -H "X-API-Key: $KEY" "$API/api/me/portfolio"
+# Update (same resource, different projection): hide CC numbers — must not 500
+curl -s -w "\n%{http_code}" -H "X-API-Key: $KEY" "$API/api/me/portfolio?include_cc=false"
 ```
 
 **Expected result**:
-- Task registration returns HTTP 201 (or 200) with the created task record.
-- `GET /api/me/tasks` includes `task_test_001` with `provider="claude-sonnet"`, `outcome="passed"`, `cc_earned=5.0`.
-- `GET /api/me/portfolio` shows `task_completion_count >= 1`.
+- Onboard: HTTP **201**, JSON includes `api_key` (string starting with `cc_`), `contributor_id` equals `$NAME`.
+- Read with `include_cc=true`: HTTP **200**, `PortfolioSummary` includes `cc_balance` and `cc_network_pct` when supply allows (or null only when service explicitly omits per spec).
+- Read with `include_cc=false`: HTTP **200**, `cc_balance` and `cc_network_pct` are **null** (projection disabled), while `contributor` and counts remain consistent with the prior response.
 
-**Edge — duplicate task registration**:
+**Edge — missing API key on /me after create**:
 ```bash
-curl -s -X POST $API/api/contributors/test-alice/tasks \
-  -H "Content-Type: application/json" \
-  -d '{"task_id":"task_test_001","description":"spec(test-task): test scenario","provider":"claude-sonnet","outcome":"passed","cc_earned":5.0}'
+curl -s -w "\n%{http_code}" "$API/api/me/portfolio"
 ```
-Expected: HTTP 409 (conflict) or idempotent HTTP 200 — must NOT create a duplicate entry.
+Expected: HTTP **401**, `detail` mentions missing key.
+
+**Edge — second onboard with same identity**:
+```bash
+curl -s -w "\n%{http_code}" -X POST "$API/api/onboard" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"$NAME\",\"provider\":\"github\",\"provider_id\":\"crud-test\",\"display_name\":\"CRUD Test\"}"
+```
+Expected: HTTP **201** with a **new** `api_key` (both keys valid until revocation is implemented) OR documented idempotent behavior — must **not** return **500**.
+
+**Note**: Task-level create-read-update (agent task rows appearing in `GET /api/me/tasks`) is covered by integration tests that seed the graph (`api/tests/test_ux_my_portfolio.py::test_portfolio_api_full_cycle_seeded_graph`); production reviewers validate task rows against real pipeline completions.
 
 ---
 
@@ -450,7 +503,7 @@ files_allowed:
   - api/app/models/portfolio.py
   - api/app/services/portfolio_service.py
   - api/app/services/contributor_identity_service.py
-  - api/tests/test_my_portfolio.py
+  - api/tests/test_ux_my_portfolio.py
   # Web
   - web/app/my-portfolio/page.tsx
   - web/app/my-portfolio/ideas/[idea_id]/page.tsx
@@ -464,10 +517,10 @@ done_when:
   - /my-portfolio web page renders all five sections for an authenticated user
   - Drill-down to /my-portfolio/ideas/{id} shows ContributionDetail list
   - CC toggle works (absolute vs percentage, both values rendered correctly)
-  - pytest api/tests/test_my_portfolio.py passes
+  - pytest api/tests/test_ux_my_portfolio.py passes
 
 commands:
-  - cd api && python -m pytest tests/test_my_portfolio.py -x -v
+  - cd api && python -m pytest tests/test_ux_my_portfolio.py -x -v
 
 constraints:
   - Do not modify existing contributor or idea schemas
@@ -499,9 +552,33 @@ constraints:
 3. **Web UI authentication flow** — `/my-portfolio` currently only redirects to public view; API-key-authenticated flow needs implementing in React.
 4. **CC chart component** — no React chart component for CC history time-series. Use a lightweight library (recharts/shadcn) with sparkline for summary and full chart on drill-down.
 5. **Notification digest** — weekly email/Telegram summary of portfolio delta (CC earned, new ideas, stake ROI changes). Follow-up idea, not MVP.
-6. **Contribution lineage endpoint** — `GET /api/me/contributions/{id}/lineage` not yet routed; needs adding to `me_portfolio.py` router.
-7. **Task registration endpoint** — `POST /api/contributors/{id}/tasks` may not exist yet; needed for Scenario 5.
-8. **Mobile drill-down UX** — modal vs. page navigation for idea drill-down needs design decision (use page navigation for MVP).
+6. **Task ingestion for portfolio** — `GET /api/contributors/{id}/tasks` reads from aggregated stores; there is no public `POST /api/contributors/{id}/tasks` for arbitrary task injection in production. Use pipeline/agent completion paths or test seeding.
+7. **Mobile drill-down UX** — modal vs. page navigation for idea drill-down needs design decision (use page navigation for MVP).
+
+---
+
+## Concurrency behavior
+
+- **Reads**: Portfolio endpoints are idempotent; safe under concurrent GETs.
+- **Writes**: Key generation uses in-memory store — concurrent `POST /api/onboard` for the same contributor may issue multiple valid keys until persistence lands; clients should treat the latest key as active after rotation is implemented.
+
+---
+
+## Out of scope
+
+- OAuth browser login sessions (cookies) — deferred; `X-API-Key` is the MVP session surrogate.
+- On-chain CC settlement bridges — see specs 119–122.
+- Email/Telegram weekly digest — listed under Known Gaps.
+
+---
+
+## Failure / retry reflection
+
+| Failure mode | Blind spot | Next action |
+|---|---|---|
+| API returns **404** for new contributor after onboard | Eventual consistency between contributor DB and graph | Retry GET with backoff; verify `GET /api/auth/whoami` succeeds first. |
+| **Empty** CC history while balance > 0 | Bucket alignment / timezone | Confirm `window` and `bucket` query params; check `portfolio_service.get_cc_history` logs. |
+| Key works on `/api/me/portfolio` but **401** on another host | Wrong `API_URL` or stale deploy | Compare `cc nodes` SHA with `curl $API/api/health`. |
 
 ---
 

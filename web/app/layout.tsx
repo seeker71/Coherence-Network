@@ -5,6 +5,8 @@ import RuntimeBeacon from "@/components/runtime-beacon";
 import SiteHeader from "@/components/site_header";
 import LiveUpdatesController from "@/components/live_updates_controller";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ExpertModeProvider } from "@/components/expert-mode-context";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 
 const spaceGrotesk = Space_Grotesk({
@@ -62,11 +64,14 @@ export default function RootLayout({
         </a>
         <RuntimeBeacon />
         <ThemeProvider>
-          <SiteHeader />
-          <LiveUpdatesController />
-          <main id="main-content">
-            {children}
-          </main>
+          <ExpertModeProvider>
+            <SiteHeader />
+            <LiveUpdatesController />
+            <main id="main-content" className="pb-16 md:pb-0">
+              {children}
+            </main>
+            <MobileBottomNav />
+          </ExpertModeProvider>
         </ThemeProvider>
       </body>
     </html>
