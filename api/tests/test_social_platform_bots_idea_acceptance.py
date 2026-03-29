@@ -150,3 +150,11 @@ def test_acceptance_cc_link_command_exports_slash_metadata() -> None:
     body = cmd.read_text(encoding="utf-8")
     assert ".setName('cc-link')" in body
     assert "contributor_id" in body
+
+
+def test_acceptance_spec_documents_cc_link_persistence_path() -> None:
+    """Spec 167 describes contributor mapping storage for /cc-link (acceptance doc)."""
+    spec = REPO_ROOT / "specs" / "167-social-platform-bots.md"
+    text = spec.read_text(encoding="utf-8")
+    assert "contributors" in text.lower() or "contributor_id" in text
+    assert "cc-link" in text
