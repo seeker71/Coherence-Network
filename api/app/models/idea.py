@@ -41,6 +41,16 @@ class IdeaType(str, Enum):
     STANDALONE = "standalone"  # No parent; backward compatible default
 
 
+class IdeaWorkType(str, Enum):
+    EXPLORATION = "exploration"   # Open-ended discovery; no deploy phase needed
+    RESEARCH    = "research"      # Study + synthesis; no deploy phase needed
+    PROTOTYPE   = "prototype"     # Build to evaluate; no code-review/merge/deploy
+    FEATURE     = "feature"       # Full pipeline: spec→impl→test→review→merge→deploy→verify
+    ENHANCEMENT = "enhancement"   # Full pipeline; extends existing feature
+    BUG_FIX     = "bug-fix"       # No spec phase; straight to impl→test→merge→deploy
+    MVP         = "mvp"           # Full pipeline without dedicated code-review phase
+
+
 class IdeaQuestion(BaseModel):
     question: str = Field(min_length=1)
     value_to_whole: float = Field(ge=0.0)
@@ -72,6 +82,7 @@ class Idea(BaseModel):
     parent_idea_id: Optional[str] = None
     child_idea_ids: list[str] = Field(default_factory=list)
     stage: IdeaStage = IdeaStage.NONE
+    work_type: Optional[IdeaWorkType] = None
     value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
@@ -186,6 +197,7 @@ class IdeaUpdate(BaseModel):
     # Text fields
     description: Optional[str] = Field(default=None, min_length=1, description="Update idea description")
     name: Optional[str] = Field(default=None, min_length=1, description="Rename the idea")
+    work_type: Optional[IdeaWorkType] = None
 
 
 class IdeaCreate(BaseModel):
@@ -208,6 +220,7 @@ class IdeaCreate(BaseModel):
     manifestation_status: Optional[ManifestationStatus] = None
     stage: Optional[IdeaStage] = None
     value_basis: Optional[dict[str, str]] = None
+    work_type: Optional[IdeaWorkType] = None
 
 
 class IdeaQuestionAnswerUpdate(BaseModel):

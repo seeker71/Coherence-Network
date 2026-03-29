@@ -40,6 +40,7 @@ from app.models.idea import (
     IdeaTagCatalogResponse,
     IdeaTagUpdateResponse,
     IdeaType,
+    IdeaWorkType,
     PaginationInfo,
     ProgressDashboard,
     IdeaPortfolioResponse,
@@ -1057,6 +1058,7 @@ def create_idea(
     manifestation_status: ManifestationStatus | None = None,
     value_basis: dict[str, str] | None = None,
     tags: list[str] | None = None,
+    work_type: IdeaWorkType | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas(persist_ensures=True)
     if any(existing.id == idea_id for existing in ideas):
@@ -1080,6 +1082,7 @@ def create_idea(
         child_idea_ids=child_idea_ids or [],
         value_basis=value_basis,
         tags=normalized_tags,
+        work_type=work_type,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(
@@ -1178,6 +1181,7 @@ def update_idea(
     estimated_cost: float | None = None,
     description: str | None = None,
     name: str | None = None,
+    work_type: IdeaWorkType | None = None,
 ) -> IdeaWithScore | None:
     """Update an idea.
 
@@ -1219,6 +1223,9 @@ def update_idea(
         if name is not None and name != idea.name:
             changes.append(("name", idea.name, name))
             idea.name = name
+        if work_type is not None and work_type != idea.work_type:
+            changes.append(("work_type", str(idea.work_type) if idea.work_type else None, work_type.value))
+            idea.work_type = work_type
 
         for field, old_val, new_val in changes:
             if os.getenv("DEBUG_AUDIT"):
