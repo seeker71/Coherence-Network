@@ -134,7 +134,7 @@ cd api && python3 -m pytest tests/test_project_manager.py -v
 - Optional: Property-based test (hypothesis) for random prefixes — deferred cost/benefit.
 - No production deploy requirement: test-only spec; deployment verification is N/A unless paired with a release that touches `project_manager.py`.
 
-## Task Card
+---
 
 ```yaml
 goal: Lock in pytest coverage for load_backlog() when the backlog file mixes valid numbered lines with malformed unnumbered lines.
@@ -158,7 +158,7 @@ constraints:
 - [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — orchestration context
 - [006-overnight-backlog.md](006-overnight-backlog.md) — backlog content source
 
-## See also
+---
 
 - [005-project-manager-pipeline.md](005-project-manager-pipeline.md)
 - [006-overnight-backlog.md](006-overnight-backlog.md)
