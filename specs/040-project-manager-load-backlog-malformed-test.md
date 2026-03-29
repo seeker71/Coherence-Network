@@ -38,12 +38,7 @@ constraints:
 N/A — script behavior only.
 
 
-### Input Validation
-
-- All string fields: min_length=1, max_length=1000
-- Numeric fields: appropriate min/max bounds
-- Required fields validated; missing returns 422
-- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+**Field constraints (N/A for this script-level spec):** No HTTP input validation applies; the backlog file parser only enforces the `^\d+\.\s+(.+)$` regex per line.
 
 ## Data Model (if applicable)
 
@@ -102,6 +97,107 @@ None.
 
 ## Verification
 
+Run the full test suite for the project manager, which must include `test_load_backlog_malformed_missing_number_prefix`:
+
 ```bash
 python3 -m pytest api/tests/test_project_manager.py -x -v
 ```
+
+Run only the malformed-input test:
+
+```bash
+python3 -m pytest api/tests/test_project_manager.py::test_load_backlog_malformed_missing_number_prefix -v
+```
+
+Exit code must be `0`. Any failure blocks merge.
+
+### Verification Scenarios
+
+#### Scenario 1 — Happy path: mixed numbered and unnumbered lines
+
+**Setup:** Temporary file `backlog_malformed.md` with:
+```
+1. First item
+Unnumbered line
+2. Second item
+Another line without number
+```
+
+**Action:**
+```bash
+python3 -m pytest api/tests/test_project_manager.py::test_load_backlog_malformed_missing_number_prefix -v
+```
+
+**Expected:** Exit code `0`; test output shows `PASSED`; `load_backlog()` returns `["First item", "Second item"]` — exactly two items in file order.
+
+**Edge:** Unnumbered lines are absent from the returned list; no `IndexError`, `ValueError`, or `AttributeError` raised.
+
+---
+
+#### Scenario 2 — All lines are unnumbered (degenerate malformed file)
+
+**Setup:** Temporary file containing only:
+```
+Just a header
+Some prose
+More text without numbers
+```
+
+**Action (inline assertion within pytest):**
+```python
+items = pm.load_backlog()
+assert items == []
+```
+
+**Expected:** `items` is an empty list `[]`; no exception raised.
+
+**Edge:** This exercises the "all malformed, nothing returned" path — distinct from the empty-file case.
+
+---
+
+#### Scenario 3 — Order preservation across interspersed unnumbered lines
+
+**Setup:** Temporary file:
+```
+3. Third item first
+Bad header
+1. First item second
+# comment line
+2. Second item third
+```
+
+**Action:**
+```bash
+python3 -m pytest api/tests/test_project_manager.py -k "malformed" -v
+```
+
+**Expected:** `load_backlog()` returns items in file-order: `["Third item first", "First item second", "Second item third"]`. Items are NOT sorted by the leading number; file position determines order.
+
+---
+
+#### Scenario 4 — Comment lines excluded alongside unnumbered lines
+
+**Setup:** Temporary file:
+```
+1. Valid item one
+# This is a comment
+2. Valid item two
+Not a numbered line
+```
+
+**Expected:** `["Valid item one", "Valid item two"]` — comment line and unnumbered line both excluded.
+
+**Edge:** A line `# 3. item` is also excluded because the `#` guard fires before the number regex.
+
+---
+
+#### Scenario 5 — Regression: existing tests continue to pass
+
+**Setup:** Unmodified `api/tests/test_project_manager.py` with all existing tests.
+
+**Action:**
+```bash
+python3 -m pytest api/tests/test_project_manager.py -v
+```
+
+**Expected:** All previously passing tests still pass; exit code `0`; no regressions.
