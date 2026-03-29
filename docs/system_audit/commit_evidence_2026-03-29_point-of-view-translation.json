@@ -29,6 +29,26 @@
     "status": "pass",
     "details": "Branch rebased cleanly onto origin/main. No merge conflicts."
   },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "New /api/data-retention endpoints (policy, status, run, summaries/daily) and concept CRUD layer. Worldview translation tests validate all 5 lens types. Data retention service trims telemetry with HOT/WARM/COLD tiering.",
+    "public_endpoints": [
+      "GET /api/data-retention/policy",
+      "GET /api/data-retention/status",
+      "POST /api/data-retention/run",
+      "GET /api/data-retention/summaries/daily",
+      "GET /api/concepts",
+      "GET /api/concepts/{id}",
+      "POST /api/concepts/{from_id}/link/{to_id}"
+    ],
+    "test_flows": [
+      "POST /api/ideas/{id}/translate?lens=scientific returns translated idea with distinct framing",
+      "POST /api/ideas/{id}/translate?lens=spiritual returns distinct spiritual framing",
+      "PATCH /api/contributors/{id}/belief-profile updates worldview weights",
+      "GET /api/data-retention/policy returns HOT/WARM/COLD tier configuration",
+      "POST /api/data-retention/run?dry_run=true returns affected row counts without deletion"
+    ]
+  },
   "phase_gate": {
     "can_move_next_phase": true
   },
