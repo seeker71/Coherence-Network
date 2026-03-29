@@ -57,6 +57,8 @@ from app.routers import geolocation
 from app.routers import edges as edges_router
 from app.routers import graph
 from app.routers import graph_health
+from app.routers import graph_zoom as graph_zoom_router
+from app.routers import graph_questions as graph_questions_router
 from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
 from app.routers import onboarding as onboarding_router
@@ -94,6 +96,17 @@ async def lifespan(app: FastAPI):
             _startup_logger.info("DB tables ensured via unified_models.Base")
     except Exception:
         _startup_logger.warning("DB table creation skipped", exc_info=True)
+
+    # -- Seed pillar nodes (Spec 182) — idempotent --
+    try:
+        from api.seed.pillar_seed import seed_pillars
+        seed_pillars()
+    except Exception:
+        try:
+            from seed.pillar_seed import seed_pillars as _sp
+            _sp()
+        except Exception:
+            _startup_logger.warning("pillar_seed skipped", exc_info=True)
 
     # -- Prime hot caches (migrated from @app.on_event('startup')) --
     try:
@@ -585,6 +598,8 @@ app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(graph_health.router, prefix="/api", tags=["graph-health"])
+app.include_router(graph_zoom_router.router, prefix="/api", tags=["graph"])
+app.include_router(graph_questions_router.router, prefix="/api", tags=["graph"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
