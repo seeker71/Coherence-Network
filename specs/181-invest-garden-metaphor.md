@@ -293,12 +293,40 @@ function seasonLabel(status: string, roi: number): string {
 | ROI tooltip visibility on mobile (hover doesn't exist) | Medium | Add a `title` attribute for desktop; consider making the number visible in small text on mobile |
 | Layout breaks on very long idea names | Low | Existing `min-w-0 flex-1` truncation applies; unchanged |
 
+- Garden metaphor may feel unfamiliar — numbers remain visible and accessible
+- Emoji rendering varies — test on Chrome, Firefox, Safari, iOS
+
 ---
 
 ## Known Gaps and Follow-up Tasks
 
-1. **Analytics instrumentation** — No click tracking on "Nurture" vs old "Stake". A future spec should add an event emission (`POST /api/events`) to compare engagement before/after.
-2. **Mobile ROI disclosure** — On touch devices, hover tooltips don't work. A follow-up may render the vitality multiplier as small text below the growth stage indicator on mobile.
-3. **Sorting label** — The page currently sorts by ROI descending. With the rename, the implicit sort by "vitality" should be surfaced to users (e.g., "Sorted by vitality"). Not blocking.
-4. **Dark mode emoji contrast** — The 🌱 emoji on dark backgrounds may have poor contrast. Test and add a text fallback if needed.
-5. **Balance section rename** — "Your Garden Fund" is optional polish. If implemented, the input placeholder ("Your contributor name") may also be softened to "Your garden name" for consistency.
+- Follow-up task: Analytics instrumentation — no click tracking on "Nurture" vs old "Stake"; add event emission (`POST /api/events`) in a follow-up spec.
+- Follow-up task: Mobile ROI disclosure — hover tooltips don't work on touch; follow-up may render vitality multiplier as small text on mobile.
+- Follow-up task: Sorting label — surface "Sorted by vitality" to users.
+- Follow-up task: Dark mode emoji contrast — 🌱 may have poor contrast; add text fallback.
+- Follow-up task: Balance section rename — "Your Garden Fund" is optional polish.
+
+---
+
+## Purpose
+
+Replace the financial spreadsheet metaphor on the Invest page with a garden metaphor so ideas feel like living things to nurture rather than financial instruments to evaluate. No API or data model changes are required.
+
+## Files to Modify
+
+- `web/app/invest/page.tsx` — Rewrite card rendering with garden vocabulary, growth stage icons, season badges, and Nurture CTA
+- `web/app/invest/InvestBalanceSection.tsx` — Optional: rename balance section to "Your Garden Fund"
+
+## Acceptance Criteria
+
+Manual validation (no automated tests for this UI-only change):
+- Navigate to `https://coherencycoin.com/invest` and confirm no "Value gap", "Est. cost", or "ROI" labels appear in the primary card layout
+- Verify "Growth potential", "Nourishment needed", and "Nurture" appear on idea cards
+- Verify the growth stage indicator (🌱 🪴 🌳 ✨) renders with correct opacity per stage
+
+## Out of Scope
+
+- API endpoint changes — purely presentational update
+- Backend data model changes — all values derived from existing `IdeaWithScore` fields
+- CLI command changes for the investment workflow
+- Analytics/event tracking for "Nurture" clicks (follow-up spec)
