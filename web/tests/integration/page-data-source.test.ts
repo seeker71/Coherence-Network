@@ -86,7 +86,7 @@ describe("fallback messages carry data-placeholder attribute", () => {
     const requiredAnnotations: Array<{ file: string; textHint: string }> = [
       { file: "app/page.tsx", textHint: "No recent activity yet. Be the first to share an idea." },
       { file: "app/specs/page.tsx", textHint: "No data available yet. Once the API is running, results will appear here." },
-      { file: "app/usage/page.tsx", textHint: "Provider stats are not available right now. Check back once the API is connected." },
+      { file: "app/pipeline/usage-metrics-section.tsx", textHint: "Provider stats are not available right now. Check back once the API is connected." },
       { file: "app/flow/page.tsx", textHint: "Run some tasks to see pipeline activity." },
       { file: "app/contribute/page.tsx", textHint: 'status === "loading"' },
     ];

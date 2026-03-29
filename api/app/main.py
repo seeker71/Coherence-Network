@@ -27,6 +27,7 @@ from app.routers import (
     contributions,
     contributor_identity,
     contributors,
+    data_retention,
     distributions,
     federation,
     friction,
@@ -563,6 +564,7 @@ app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
+app.include_router(data_retention.router, prefix="/api", tags=["data-retention"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(marketplace.router, prefix="/api", tags=["marketplace"])
 app.include_router(registry_discovery.router, prefix="/api", tags=["discovery"])
