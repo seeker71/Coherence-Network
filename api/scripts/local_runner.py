@@ -3481,6 +3481,7 @@ def _seed_task_from_open_idea() -> bool:
         i for i in ideas
         if i.get("manifestation_status") in ("none", "partial", None)
         and i.get("idea_type") != "super"   # SUPER ideas are strategic goals — never picked up
+        and i.get("lifecycle", "active") not in ("archived", "retired")
         and i.get("id", "") not in active_idea_ids
         and i.get("id", "") not in _SEEDER_SKIP_CACHE
     ]

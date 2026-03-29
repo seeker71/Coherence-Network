@@ -51,6 +51,13 @@ class IdeaWorkType(str, Enum):
     MVP         = "mvp"           # Full pipeline without dedicated code-review phase
 
 
+class IdeaLifecycle(str, Enum):
+    ACTIVE   = "active"    # Default — open for work
+    PAUSED   = "paused"    # Deliberately parked; not abandoned
+    ARCHIVED = "archived"  # Done and no longer relevant
+    RETIRED  = "retired"   # Was a bad idea; shouldn't be repeated
+
+
 class IdeaQuestion(BaseModel):
     question: str = Field(min_length=1)
     value_to_whole: float = Field(ge=0.0)
@@ -83,6 +90,9 @@ class Idea(BaseModel):
     child_idea_ids: list[str] = Field(default_factory=list)
     stage: IdeaStage = IdeaStage.NONE
     work_type: Optional[IdeaWorkType] = None
+    lifecycle: IdeaLifecycle = IdeaLifecycle.ACTIVE
+    duplicate_of: Optional[str] = None
+    last_activity_at: Optional[str] = None
     value_basis: Optional[dict[str, str]] = Field(default=None, description="Human-readable rationale for each numeric field")
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
@@ -198,6 +208,8 @@ class IdeaUpdate(BaseModel):
     description: Optional[str] = Field(default=None, min_length=1, description="Update idea description")
     name: Optional[str] = Field(default=None, min_length=1, description="Rename the idea")
     work_type: Optional[IdeaWorkType] = None
+    lifecycle: Optional[IdeaLifecycle] = None
+    duplicate_of: Optional[str] = Field(default=None, description="ID of the idea this duplicates")
 
 
 class IdeaCreate(BaseModel):
@@ -221,6 +233,8 @@ class IdeaCreate(BaseModel):
     stage: Optional[IdeaStage] = None
     value_basis: Optional[dict[str, str]] = None
     work_type: Optional[IdeaWorkType] = None
+    lifecycle: Optional[IdeaLifecycle] = None
+    duplicate_of: Optional[str] = None
 
 
 class IdeaQuestionAnswerUpdate(BaseModel):

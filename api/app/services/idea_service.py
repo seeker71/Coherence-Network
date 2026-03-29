@@ -31,6 +31,7 @@ from app.models.idea import (
     IdeaConceptResonanceResponse,
     IdeaCountByStatus,
     IdeaCountResponse,
+    IdeaLifecycle,
     IdeaShowcaseBudget,
     IdeaShowcaseItem,
     IdeaShowcaseResponse,
@@ -1059,6 +1060,8 @@ def create_idea(
     value_basis: dict[str, str] | None = None,
     tags: list[str] | None = None,
     work_type: IdeaWorkType | None = None,
+    lifecycle: IdeaLifecycle | None = None,
+    duplicate_of: str | None = None,
 ) -> IdeaWithScore | None:
     ideas = _read_ideas(persist_ensures=True)
     if any(existing.id == idea_id for existing in ideas):
@@ -1083,6 +1086,8 @@ def create_idea(
         value_basis=value_basis,
         tags=normalized_tags,
         work_type=work_type,
+        lifecycle=lifecycle or IdeaLifecycle.ACTIVE,
+        duplicate_of=duplicate_of,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(
@@ -1182,6 +1187,8 @@ def update_idea(
     description: str | None = None,
     name: str | None = None,
     work_type: IdeaWorkType | None = None,
+    lifecycle: IdeaLifecycle | None = None,
+    duplicate_of: str | None = None,
 ) -> IdeaWithScore | None:
     """Update an idea.
 
@@ -1199,6 +1206,8 @@ def update_idea(
         
         # Track changes for audit ledger
         changes = []
+        import datetime as _dt
+        idea.last_activity_at = _dt.datetime.now(_dt.timezone.utc).isoformat()
         if actual_value is not None and actual_value != idea.actual_value:
             changes.append(("actual_value", idea.actual_value, actual_value))
             idea.actual_value = actual_value
@@ -1226,6 +1235,12 @@ def update_idea(
         if work_type is not None and work_type != idea.work_type:
             changes.append(("work_type", str(idea.work_type) if idea.work_type else None, work_type.value))
             idea.work_type = work_type
+        if lifecycle is not None and lifecycle != idea.lifecycle:
+            changes.append(("lifecycle", str(idea.lifecycle) if idea.lifecycle else None, lifecycle.value))
+            idea.lifecycle = lifecycle
+        if duplicate_of is not None and duplicate_of != idea.duplicate_of:
+            changes.append(("duplicate_of", idea.duplicate_of, duplicate_of))
+            idea.duplicate_of = duplicate_of
 
         for field, old_val, new_val in changes:
             if os.getenv("DEBUG_AUDIT"):
