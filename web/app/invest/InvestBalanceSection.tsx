@@ -66,9 +66,12 @@ export function InvestBalanceSection() {
   if (!contributorId) {
     return (
       <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5 space-y-3">
-        <p className="text-sm font-medium text-primary">Your CC Balance</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Enter your contributor name to see your balance.
+        <div className="flex items-center gap-2">
+          <span className="text-xl">💧</span>
+          <p className="text-sm font-medium text-primary">Your watering can</p>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Enter your contributor name to see how much CC you have available to water ideas with.
         </p>
         <div className="flex gap-2">
           <input
@@ -91,14 +94,27 @@ export function InvestBalanceSection() {
     );
   }
 
+  const total = balance?.total ?? 0;
+  const dropCount = Math.min(5, Math.floor(total / 50));
+
   return (
     <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5">
-      <p className="text-sm font-medium text-primary">Your CC Balance</p>
-      <p className="mt-1 text-2xl font-light text-foreground">
-        {loading ? "Loading..." : balance ? `${balance.total.toFixed(1)} CC` : "Unavailable"}
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-xl">💧</span>
+        <p className="text-sm font-medium text-primary">Your watering can</p>
+      </div>
+      <p className="text-2xl font-light text-foreground mt-1">
+        {loading ? "Filling up…" : balance ? `${balance.total.toFixed(1)} CC` : "Unavailable"}
       </p>
-      <p className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
-        Contributor: {contributorId}
+      {balance && !loading && (
+        <p className="text-xs text-muted-foreground/70 mt-1">
+          {dropCount > 0
+            ? `${"💧".repeat(dropCount)} enough to water ${dropCount} idea${dropCount !== 1 ? "s" : ""} generously`
+            : "Keep contributing to fill your can"}
+        </p>
+      )}
+      <p className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+        Gardener: {contributorId}
         <button
           type="button"
           onClick={() => {
