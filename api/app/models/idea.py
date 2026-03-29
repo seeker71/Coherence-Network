@@ -183,6 +183,9 @@ class IdeaUpdate(BaseModel):
     parent_idea_id: Optional[str] = Field(default=None, description="Set parent idea for hierarchy")
     potential_value: Optional[float] = Field(default=None, ge=0.0, description="Revise potential value estimate")
     estimated_cost: Optional[float] = Field(default=None, ge=0.0, description="Revise cost estimate")
+    # Text fields
+    description: Optional[str] = Field(default=None, min_length=1, description="Update idea description")
+    name: Optional[str] = Field(default=None, min_length=1, description="Rename the idea")
 
 
 class IdeaCreate(BaseModel):
