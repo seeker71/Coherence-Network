@@ -1,0 +1,68 @@
+name: coherence-mcp-server
+description: >
+  MCP server for the Coherence Network — 20 typed tools for AI agents to browse ideas,
+  trace value chains, link identities, record contributions, and explore the knowledge graph.
+  Works with Claude, Cursor, Windsurf, and any MCP client. No local node required.
+
+homepage: https://coherencycoin.com
+repository: https://github.com/seeker71/Coherence-Network
+license: MIT
+
+install:
+  type: npm
+  package: coherence-mcp-server
+  command: npx coherence-mcp-server
+
+env:
+  COHERENCE_API_URL:
+    description: Coherence Network API base URL
+    default: https://api.coherencycoin.com
+    required: false
+  COHERENCE_API_KEY:
+    description: API key for write operations (governance, spec creation, federation). Read-only access works without a key.
+    required: false
+
+categories:
+  - collaboration
+  - project-management
+  - knowledge-graph
+
+tags:
+  - ideas
+  - collaboration
+  - investment
+  - federation
+  - coherence
+  - open-source
+  - value-attribution
+  - knowledge-graph
+
+tools:
+  - name: list_ideas
+    description: Browse ideas sorted by free energy score
+  - name: get_idea
+    description: Get idea details including tasks and progress
+  - name: create_idea
+    description: Share a new idea
+  - name: list_specs
+    description: Browse registered specs
+  - name: list_nodes
+    description: List federation compute nodes
+  - name: get_coherence_score
+    description: Get coherence score with signal breakdown
+  - name: ask_question
+    description: Ask a question on an idea
+  - name: stake
+    description: Invest CC in an idea (triggers compute tasks)
+  - name: record_contribution
+    description: Record a contribution to the network
+  - name: list_tasks
+    description: List agent tasks by status
+  - name: get_resonance
+    description: Get recent network activity
+  - name: link_identity
+    description: Link an external identity to a contributor
+  - name: get_portfolio
+    description: Get idea portfolio summary
+  - name: get_provider_stats
+    description: Get provider execution statistics

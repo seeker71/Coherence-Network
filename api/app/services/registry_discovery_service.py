@@ -51,6 +51,32 @@ def _read_text(repo_root: Path, rel_path: str) -> str:
         return ""
 
 
+def _smithery_ready(repo_root: Path) -> bool:
+    smithery_yaml = _read_text(repo_root, "mcp-server/smithery.yaml")
+    return (
+        "name: coherence-mcp-server" in smithery_yaml
+        and "install:" in smithery_yaml
+        and "npx coherence-mcp-server" in smithery_yaml
+    )
+
+
+def _glama_ready(repo_root: Path) -> bool:
+    glama = _read_json(repo_root, "mcp-server/glama.json")
+    return (
+        glama.get("name") == "coherence-network"
+        and "url" in glama
+        and "npx" in str(glama.get("install") or "")
+    )
+
+
+def _pulsemcp_ready(repo_root: Path) -> bool:
+    pulsemcp = _read_json(repo_root, "mcp-server/pulsemcp.json")
+    return (
+        pulsemcp.get("slug") == "coherence-network"
+        and bool(pulsemcp.get("npm_package"))
+    )
+
+
 def _mcp_manifest_ready(repo_root: Path) -> bool:
     manifest = _read_json(repo_root, "mcp-server/server.json")
     packages = manifest.get("packages")
@@ -123,9 +149,29 @@ _TARGETS: tuple[_RegistryTarget, ...] = (
         category="mcp",
         asset_name="coherence-mcp-server",
         install_hint="npx coherence-mcp-server",
-        required_files=("mcp-server/server.json", "mcp-server/package.json", "mcp-server/README.md"),
-        validator=lambda repo_root: _mcp_manifest_ready(repo_root) and _readme_install_ready(repo_root),
-        notes="Submission packet is covered by the existing MCP manifest, package metadata, and install docs.",
+        required_files=("mcp-server/smithery.yaml", "mcp-server/package.json", "mcp-server/README.md"),
+        validator=lambda repo_root: _smithery_ready(repo_root) and _npm_package_ready(repo_root),
+        notes="Smithery auto-indexes npm packages with a smithery.yaml at the package root.",
+    ),
+    _RegistryTarget(
+        registry_id="glama",
+        registry_name="Glama",
+        category="mcp",
+        asset_name="coherence-mcp-server",
+        install_hint="npx coherence-mcp-server",
+        required_files=("mcp-server/glama.json", "mcp-server/package.json"),
+        validator=lambda repo_root: _glama_ready(repo_root) and _npm_package_ready(repo_root),
+        notes="Glama ingests from awesome-mcp-servers; glama.json provides required listing metadata.",
+    ),
+    _RegistryTarget(
+        registry_id="pulsemcp",
+        registry_name="PulseMCP",
+        category="mcp",
+        asset_name="coherence-mcp-server",
+        install_hint="npx coherence-mcp-server",
+        required_files=("mcp-server/pulsemcp.json", "mcp-server/package.json"),
+        validator=lambda repo_root: _pulsemcp_ready(repo_root) and _npm_package_ready(repo_root),
+        notes="PulseMCP indexes npm packages tagged with the mcp keyword; pulsemcp.json adds supplementary metadata.",
     ),
     _RegistryTarget(
         registry_id="mcp-so",
