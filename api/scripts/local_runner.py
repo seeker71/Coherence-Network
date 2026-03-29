@@ -4682,19 +4682,28 @@ def _append_idea_event(idea_id: str, event_type: str, payload: dict) -> None:
 
 
 def _repo_is_linked_worktree(repo_root: str) -> bool:
+    """True when this checkout is not a primary clone (``.git`` is a file, not a directory).
+
+    Secondary worktrees, submodules, and similar layouts store ``gitdir: …`` in
+    ``.git``. Running ``git worktree add`` from those checkouts can fail with
+    permission errors when updating the shared parent gitdir, so we use
+    :func:`_create_standalone_task_repo` instead.
+
+    The previous check required ``/.git/worktrees/`` inside the resolved gitdir
+    path. Repos on paths like ``…/project.git/worktrees/name`` were treated as
+    primary checkouts (no ``/.git/worktrees/`` substring), so ``git worktree add``
+    failed and impl tasks ended with "Worktree creation failed…". Any ``gitdir:``
+    pointer means this working tree is not the primary ``.git`` directory layout.
+    """
     git_marker = Path(repo_root) / ".git"
     if not git_marker.exists() or git_marker.is_dir() or not git_marker.is_file():
         return False
     try:
-        gitdir_line = git_marker.read_text(encoding="utf-8").strip()
+        first = git_marker.read_text(encoding="utf-8").strip().splitlines()
+        gitdir_line = (first[0] if first else "").strip()
     except OSError:
         return False
-    if not gitdir_line.startswith("gitdir:"):
-        return False
-    gitdir = Path(gitdir_line.split(":", 1)[1].strip())
-    if not gitdir.is_absolute():
-        gitdir = (git_marker.parent / gitdir).resolve()
-    return "/.git/worktrees/" in gitdir.as_posix().lower()
+    return gitdir_line.startswith("gitdir:")
 
 
 def _resolve_available_ref(repo_root: str, refs: list[str]) -> str | None:

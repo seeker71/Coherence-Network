@@ -77,6 +77,49 @@ def test_create_worktree_fetches_origin_before_create(
     assert fetch_idx < worktree_add_idx, "fetch must happen before worktree add"
 
 
+def test_repo_is_linked_worktree_true_when_dot_git_is_gitdir_file(
+    tmp_path: Path,
+) -> None:
+    """Non-primary checkouts use a .git file; all such layouts need standalone impl worktrees."""
+    (tmp_path / ".git").write_text(
+        "gitdir: /fake/project.git/worktrees/agent-checkout\n",
+        encoding="utf-8",
+    )
+    assert local_runner._repo_is_linked_worktree(str(tmp_path)) is True
+
+
+def test_repo_is_linked_worktree_false_for_primary_clone(tmp_path: Path) -> None:
+    """Primary clones have a .git directory — nested git worktree add is supported."""
+    (tmp_path / ".git").mkdir()
+    assert local_runner._repo_is_linked_worktree(str(tmp_path)) is False
+
+
+def test_create_worktree_routes_to_standalone_for_gitdir_file_without_git_worktrees_substring(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Regression: paths like …/project.git/worktrees/foo must not skip standalone fallback."""
+    (tmp_path / ".git").write_text(
+        "gitdir: /fake/project.git/worktrees/agent-checkout\n",
+        encoding="utf-8",
+    )
+    called: list[str] = []
+
+    def _fake_standalone(task_id: str, wt_path: Path, branch: str, **kwargs: Any) -> Path:
+        called.append(task_id)
+        wt_path.mkdir(parents=True, exist_ok=True)
+        return wt_path
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path / ".worktrees")
+    monkeypatch.setattr(local_runner, "_create_standalone_task_repo", _fake_standalone)
+
+    slug = "abc1def234567890"
+    result = local_runner._create_worktree(slug)
+
+    assert result is not None
+    assert called == [slug]
+
+
 def test_create_worktree_uses_origin_main_as_base_ref(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
