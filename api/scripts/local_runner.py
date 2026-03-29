@@ -1517,21 +1517,27 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
     # Fetch idea to get work_type for phase-ladder branching
     idea_payload: dict | None = api("GET", f"/api/ideas/{idea_id}")
     idea_work_type: str | None = None
+    idea_workspace_git_url: str = ""
     if isinstance(idea_payload, dict):
         idea_work_type = idea_payload.get("work_type")
+        idea_workspace_git_url = idea_payload.get("workspace_git_url") or ""
     next_phase = _next_phase_for_work_type(task_type, idea_work_type)
     if next_phase and not _has_any_tasks_for_phase(idea_tasks_payload, next_phase):
         idea_name = str((idea_payload or {}).get("name") or idea_id) if isinstance(idea_payload, dict) else idea_id
         idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
 
-        extra_context = {}  # PR/branch info passed to downstream phases
+        extra_context: dict = {}  # PR/branch info passed to downstream phases
+        if idea_workspace_git_url:
+            extra_context["workspace_git_url"] = idea_workspace_git_url
 
         # Idea scope header prepended to every direction so providers know exactly what they're working on
+        _workspace_line = f"workspace: {idea_workspace_git_url}\n" if idea_workspace_git_url else ""
         _idea_scope_header = (
             f"─── IDEA SCOPE ───\n"
             f"idea_id: {idea_id}\n"
             f"idea_name: {idea_name}\n"
             f"phase: {next_phase}\n"
+            f"{_workspace_line}"
             f"───────────────────\n\n"
         )
 
@@ -1939,6 +1945,7 @@ Output a summary: files created/modified, validation results, errors encountered
 
     idea_id = context.get("idea_id", "unknown") if isinstance(context, dict) else "unknown"
     spec_path = context.get("spec_path", "none") if isinstance(context, dict) else "none"
+    workspace_git_url = context.get("workspace_git_url", "") if isinstance(context, dict) else ""
 
     prompt = f"""EXECUTE THIS TASK NOW. Do NOT ask what to do — the task is described below. Start working immediately.
 
@@ -1946,6 +1953,7 @@ Task type: {task_type}
 Task ID: {task.get('id', 'unknown')}
 Idea ID: {idea_id}
 Spec file: {spec_path}
+Workspace: {workspace_git_url or "(coherence-network default repo)"}
 Role: {agent} for Coherence Network
 
 SCOPE RULE: Only modify files related to idea '{idea_id}'. Do NOT work on any other idea.
@@ -3675,16 +3683,20 @@ def _seed_task_from_open_idea() -> bool:
         f"{validation_guidance}"
     )
 
+    workspace_git_url_seed = idea.get("workspace_git_url") or ""
+    seed_ctx: dict = {
+        "idea_id": idea_id,
+        "idea_name": idea_name,
+        "seed_generated": True,
+        "seed_source": "local_runner_smart_seed",
+    }
+    if workspace_git_url_seed:
+        seed_ctx["workspace_git_url"] = workspace_git_url_seed
     result = api("POST", "/api/agent/tasks", {
         "direction": direction,
         "task_type": task_type,
         "idea_id": idea_id,  # top-level for API linking
-        "context": {
-            "idea_id": idea_id,
-            "idea_name": idea_name,
-            "seed_generated": True,
-            "seed_source": "local_runner_smart_seed",
-        },
+        "context": seed_ctx,
         "target_state": f"{task_type.title()} completed for: {idea_name}",
         "success_evidence": f"{task_type} artifact exists and meets quality criteria",
         "abort_evidence": f"Cannot make progress — blocked or unclear requirements",
@@ -4303,6 +4315,51 @@ def _deploy_to_vps() -> str:
 _MAX_PARALLEL = rc("execution", "parallel", 2)
 _WORKTREE_BASE = _REPO_DIR / ".worktrees"
 _PROGRESS_DIR = _REPO_DIR / ".idea-progress"
+# Mirror cache for external workspace repos — one clone per remote, shared across tasks.
+_WORKSPACE_REPOS_DIR = Path.home() / ".coherence-network" / "repos"
+
+
+def _get_or_update_workspace_repo(git_url: str) -> "Path | None":
+    """Clone or update a local mirror of an external git repo.
+
+    Returns the local clone path, or None on failure.
+    Path convention: ~/.coherence-network/repos/{host}/{org}/{repo}/
+    Multiple tasks against the same remote reuse the same clone.
+    """
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(git_url)
+        host = parsed.hostname or "unknown"
+        path_segment = parsed.path.strip("/")
+        if path_segment.endswith(".git"):
+            path_segment = path_segment[:-4]
+        local_path = _WORKSPACE_REPOS_DIR / host / path_segment
+
+        if local_path.exists():
+            log.info("WORKSPACE_REPO_UPDATE url=%s path=%s", git_url, local_path)
+            fetch = _run_git_command(
+                ["git", "fetch", "--all", "--prune", "--quiet"],
+                capture_output=True, text=True, timeout=60, cwd=str(local_path),
+            )
+            if fetch.returncode != 0:
+                log.warning("WORKSPACE_REPO_FETCH_FAILED url=%s: %s", git_url,
+                            (fetch.stderr or fetch.stdout or "").strip())
+        else:
+            log.info("WORKSPACE_REPO_CLONE url=%s → %s", git_url, local_path)
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            clone = _run_git_command(
+                ["git", "clone", "--quiet", git_url, str(local_path)],
+                capture_output=True, text=True, timeout=120,
+            )
+            if clone.returncode != 0:
+                log.error("WORKSPACE_REPO_CLONE_FAILED url=%s: %s", git_url,
+                          (clone.stderr or clone.stdout or "").strip())
+                return None
+
+        return local_path
+    except Exception as exc:
+        log.error("WORKSPACE_REPO_ERROR url=%s: %s", git_url, exc)
+        return None
 
 
 def _inject_idea_progress(idea_id: str, wt_path: Path) -> None:
@@ -4627,20 +4684,40 @@ def _reclaim_worktree_slot(repo_root: str, wt_path: Path, branch: str) -> bool:
     return slot_clear
 
 
-def _create_worktree(task_id: str, base_branch: str | None = None, *, idea_id: str = "") -> Path | None:
+def _create_worktree(
+    task_id: str,
+    base_branch: str | None = None,
+    *,
+    idea_id: str = "",
+    workspace_git_url: str = "",
+) -> "Path | None":
     """Create a git worktree for isolated task execution.
 
     base_branch: optional remote branch to base on (e.g. 'worker/impl/idea/task_abc').
     If None, defaults to origin/main. Used by test/review/code-review phases
     to checkout the impl PR branch so the provider can see the actual code.
     idea_id: if provided, injects the persisted .idea-progress.md into the worktree.
+    workspace_git_url: if provided, worktree is created inside a local mirror of
+    that remote repo instead of the default _REPO_DIR. Enables multi-repo pipeline.
     """
     slug = task_id[:16]
-    wt_path = _WORKTREE_BASE / f"task-{slug}"
+
+    # Determine which repo and worktree base to use
+    if workspace_git_url:
+        workspace_repo = _get_or_update_workspace_repo(workspace_git_url)
+        if workspace_repo is None:
+            log.error("WORKTREE_WORKSPACE_REPO_FAILED task=%s url=%s", slug, workspace_git_url)
+            return None
+        repo_root = str(workspace_repo)
+        worktree_base = workspace_repo / ".worktrees"
+    else:
+        repo_root = str(_REPO_DIR)
+        worktree_base = _WORKTREE_BASE
+
+    wt_path = worktree_base / f"task-{slug}"
     branch = f"task/{slug}"
-    repo_root = str(_REPO_DIR)
     try:
-        _WORKTREE_BASE.mkdir(parents=True, exist_ok=True)
+        worktree_base.mkdir(parents=True, exist_ok=True)
         if not _reclaim_worktree_slot(repo_root, wt_path, branch):
             return None
         if _repo_is_linked_worktree(repo_root):
@@ -5074,8 +5151,10 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             # Create worktree — for test/review phases, checkout the impl PR branch
             task_type = task.get("task_type", "spec")
             impl_branch = ctx.get("impl_branch", "")
+            workspace_git_url = ctx.get("workspace_git_url", "")
             base_branch = impl_branch if task_type in ("test", "code-review", "review") and impl_branch else None
-            wt = _create_worktree(task_id, base_branch=base_branch, idea_id=idea_id)
+            wt = _create_worktree(task_id, base_branch=base_branch, idea_id=idea_id,
+                                  workspace_git_url=workspace_git_url)
             pushed = False
             try:
                 # Fix 6+7: deploy and verify are RUNNER actions, not provider

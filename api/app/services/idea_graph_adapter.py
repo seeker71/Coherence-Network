@@ -92,6 +92,9 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
             raw_history = []
     slug_history: list[str] = raw_history if isinstance(raw_history, list) else []
 
+    # Parse workspace git url
+    workspace_git_url = node.get("workspace_git_url") or None
+
     return Idea(
         id=node["id"],
         name=node.get("name", ""),
@@ -116,6 +119,7 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         open_questions=questions,
         slug=slug,
         slug_history=slug_history,
+        workspace_git_url=workspace_git_url,
     )
 
 
@@ -127,7 +131,7 @@ def _idea_to_properties(idea: Idea) -> dict[str, Any]:
         "resistance_risk", "confidence", "manifestation_status", "stage",
         "interfaces", "idea_type", "parent_idea_id", "child_idea_ids",
         "value_basis", "work_type", "lifecycle", "duplicate_of", "last_activity_at",
-        "slug",
+        "slug", "workspace_git_url",
     ]:
         val = getattr(idea, field, None)
         if val is not None:

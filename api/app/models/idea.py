@@ -98,6 +98,7 @@ class Idea(BaseModel):
     cost_vector: Optional[CostVector] = None
     value_vector: Optional[ValueVector] = None
     tags: list[str] = Field(default_factory=list, description="Normalized tags for categorization (spec 129)")
+    workspace_git_url: Optional[str] = Field(default=None, description="Git remote URL of the repo this idea lives in. Enables multi-repo pipeline routing.")
     slug: str = Field(default="", description="URL-safe human identifier. Unique. Backfilled from id if absent.")
     slug_history: list[str] = Field(default_factory=list, description="Previous slugs — kept so old URLs/links resolve.")
 
@@ -213,6 +214,7 @@ class IdeaUpdate(BaseModel):
     work_type: Optional[IdeaWorkType] = None
     lifecycle: Optional[IdeaLifecycle] = None
     duplicate_of: Optional[str] = Field(default=None, description="ID of the idea this duplicates")
+    workspace_git_url: Optional[str] = Field(default=None, description="Update the workspace repo URL.")
 
 
 class IdeaCreate(BaseModel):
@@ -242,6 +244,7 @@ class IdeaCreate(BaseModel):
     work_type: Optional[IdeaWorkType] = None
     lifecycle: Optional[IdeaLifecycle] = None
     duplicate_of: Optional[str] = None
+    workspace_git_url: Optional[str] = Field(default=None, description="Git remote URL of the workspace repo for this idea.")
     slug: Optional[str] = Field(default=None, description="Human slug; auto-derived from name if omitted.")
 
     @model_validator(mode="before")
