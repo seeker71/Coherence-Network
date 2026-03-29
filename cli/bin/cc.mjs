@@ -7,7 +7,12 @@
  * Zero dependencies. Node 18+ required.
  */
 
-import { listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea } from "../lib/commands/ideas.mjs";
+import {
+  listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea,
+  triageIdeas, setIdeaWorkType, linkIdea, showIdeaChildren,
+  showIdeaTags, showIdeaHealth, showIdeaShowcase, showIdeaResonance,
+  showIdeasProgress, showIdeasCount,
+} from "../lib/commands/ideas.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
 import { ontology } from "../lib/commands/ontology.mjs";
@@ -112,8 +117,18 @@ async function handleMeta(args) {
 }
 
 async function handleIdea(args) {
-  if (args[0] === "create") return createIdea(args.slice(1));
-  return showIdea(args);
+  const sub = args[0];
+  switch (sub) {
+    case "create":   return createIdea(args.slice(1));
+    case "triage":   return triageIdeas(args.slice(1));
+    case "tags":     return showIdeaTags();
+    case "health":   return showIdeaHealth();
+    case "showcase": return showIdeaShowcase();
+    case "resonance":return showIdeaResonance();
+    case "progress": return showIdeasProgress();
+    case "count":    return showIdeasCount();
+    default:         return showIdea(args);  // routes sub-subcommands internally
+  }
 }
 
 async function handleEdge(args) {
@@ -387,8 +402,19 @@ function showHelp() {
 
 \x1b[1mExplore:\x1b[0m
   ideas [limit]           Browse ideas by ROI
-  idea <id>               View idea detail
+  ideas --type <type>     Filter by work_type (feature|bug-fix|enhancement|exploration|research|prototype|mvp)
+  ideas --status <s>      Filter by status (none|partial|validated)
+  ideas --parent <id>     Filter by parent idea
+  idea triage             Ranked ready-to-work list (by free-energy score)
+  idea <id>               View idea detail (work_type, parent, children, phase)
   idea create <id> <name> [--desc "..." --value N --cost N --parent <id>]
+  idea <id> type <t>      Set work type
+  idea <id> link <r> <t>  Link ideas: blocks|enables|supersedes|depends-on|related-to
+  idea <id> children      List child ideas
+  idea <id> tasks         Show tasks for an idea
+  idea <id> stage <s>     Set stage
+  idea <id> question <q>  Add open question
+  idea <id> answer <a>    Answer open question
   specs [limit]           List feature specs
   spec <id>               View spec detail
   resonance               What's alive right now
