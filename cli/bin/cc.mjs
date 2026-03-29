@@ -50,6 +50,16 @@ import {
   showUsage as difUsage, showLimits as difLimits, showFunding as difFunding,
   showFeedback as difFeedback,
 } from "../lib/commands/dif.mjs";
+import { basename } from 'path';
+
+// Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
+const _invokedAs = basename(process.argv[1] || '');
+if (_invokedAs === 'cc') {
+  process.stderr.write(
+    '\x1b[33m[coherence-cli] Warning: `cc` shadows the system C compiler.\n' +
+    'Use `coh` instead — it\'s the same CLI without the conflict.\n\x1b[0m'
+  );
+}
 
 const [command, ...args] = process.argv.slice(2);
 
