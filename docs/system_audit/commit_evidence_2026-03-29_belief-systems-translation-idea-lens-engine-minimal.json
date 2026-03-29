@@ -1,0 +1,87 @@
+{
+  "date": "2026-03-29",
+  "thread_branch": "worker/impl/fractal-zoom-navigation/task_68f",
+  "commit_scope": "Write a minimal product spec for the Belief Systems Translation Idea Lens Engine with only the core on-demand lens translation contract and required audit artifacts.",
+  "files_owned": [
+    "specs/task_ce07a558035576f9.md",
+    ".gitignore",
+    "docs/system_audit/commit_evidence_2026-03-29_belief-systems-translation-idea-lens-engine-minimal.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "specs/task_ce07a558035576f9.md",
+    ".gitignore",
+    "docs/system_audit/commit_evidence_2026-03-29_belief-systems-translation-idea-lens-engine-minimal.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "belief-systems-translation-idea-lens-engine"
+  ],
+  "spec_ids": [
+    "task_ce07a558035576f9"
+  ],
+  "task_ids": [
+    "task_ce07a558035576f9"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "product_manager",
+        "spec_authoring"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "manual prompt-gate equivalent: git rev-parse --abbrev-ref HEAD",
+    "manual prompt-gate equivalent: python scripts/worktree_continuity_guard.py --fail-on-risk",
+    "python scripts/validate_spec_quality.py --file specs/task_ce07a558035576f9.md",
+    "node cli/bin/cc.mjs inbox",
+    "curl.exe POST https://api.coherencycoin.com/api/agent/tasks/task_ce07a558035576f9/activity",
+    "git fetch origin main",
+    "git rebase origin/main",
+    "python scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "cmd /c \"(echo *.pyc& echo __pycache__/& echo .task-*& echo data/coherence.db) >> .gitignore\"",
+    "git add -A",
+    "git diff --cached --stat",
+    "git commit -m \"spec(belief-systems-translation-idea-lens-engine): define minimal lens translation contract\"",
+    "python scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-29_belief-systems-translation-idea-lens-engine-minimal.json"
+  ],
+  "change_intent": "docs_only",
+  "local_validation": {
+    "status": "fail",
+    "commands": [
+      "python scripts/validate_spec_quality.py --file specs/task_ce07a558035576f9.md",
+      "git fetch origin main",
+      "git rebase origin/main",
+      "python scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "git add -A",
+      "git diff --cached --stat",
+      "git commit -m \"spec(belief-systems-translation-idea-lens-engine): define minimal lens translation contract\""
+    ],
+    "notes": [
+      "Spec quality validation passed.",
+      "Git fetch/add/commit were blocked because the linked-worktree git metadata directory is outside the writable sandbox.",
+      "GitHub network access was also blocked for the followthrough check."
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-applicable-spec-only"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Full commit contract blocked by sandbox Permission denied on C:/source/Coherence-Network/.git/worktrees/worker/FETCH_HEAD and index.lock, plus outbound GitHub access restrictions."
+  }
+}
