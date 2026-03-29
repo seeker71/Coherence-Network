@@ -60,11 +60,12 @@ export async function createIdea(payload) {
 }
 
 /**
- * POST /api/investments
- * @param {{ idea_id: string, amount_cc: number, rationale?: string, contributor_id: string }} payload
+ * POST /api/ideas/:ideaId/stake
+ * @param {string} ideaId
+ * @param {{ amount_cc: number, rationale?: string, contributor_id: string, metadata?: Object }} payload
  */
-export async function createInvestment(payload) {
-  return request('POST', '/api/investments', payload);
+export async function createInvestment(ideaId, payload) {
+  return request('POST', `/api/ideas/${ideaId}/stake`, payload);
 }
 
 /**
