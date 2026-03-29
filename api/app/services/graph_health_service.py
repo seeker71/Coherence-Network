@@ -16,6 +16,7 @@ from app.models.graph_health import (
     OrphanCluster,
     SurfaceCandidate,
 )
+from app.services.self_balancing_graph_idea import IDEA_ID, IDEA_NAME
 
 # Spec thresholds — gravity well when outgoing has_child count reaches these bounds.
 SPLIT_THRESHOLD = 10
@@ -338,4 +339,6 @@ def roi_snapshot() -> dict[str, Any]:
         "merge_signals_actioned": mg,
         "surface_signals_actioned": sf,
         "spec_ref": "spec-172",
+        "idea_id": IDEA_ID,
+        "idea_name": IDEA_NAME,
     }

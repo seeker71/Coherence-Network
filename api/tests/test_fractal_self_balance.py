@@ -1,7 +1,8 @@
 """Tests for Fractal Self Balance (fractal-self-balance).
 
 Idea: "Self-balancing graph — anti-collapse, organic expansion, entropy management"
-Idea ID: fractal-self-balance
+Idea ID (product): self-balancing-graph
+Legacy slug: fractal-self-balance (same feature area as spec-172)
 
 Acceptance criteria derived from idea description:
   1. The system monitors its own shape → health endpoint returns structural metrics

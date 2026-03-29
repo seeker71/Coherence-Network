@@ -75,12 +75,4 @@ data/coherence.db
 .codex*
 pytest-cache-files-*
 api/pytest-cache-files-*
-*.pyc\n__pycache__/\n.task-*\ndata/coherence.db
-*.pyc
-__pycache__/
-.task-*
-data/coherence.db
-*.pyc
-__pycache__/
-.task-*
-data/coherence.db
+
