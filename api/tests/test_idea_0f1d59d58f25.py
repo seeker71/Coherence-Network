@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -42,7 +43,6 @@ def _load_server_json() -> dict:
 
 def _load_mcp_pyproject_version_and_name() -> tuple[str, str]:
     assert MCP_PYPROJECT.exists(), f"Missing {MCP_PYPROJECT}"
-    import tomllib
 
     data = tomllib.loads(MCP_PYPROJECT.read_text(encoding="utf-8"))
     project = data.get("project", {})
