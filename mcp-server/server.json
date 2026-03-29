@@ -1,35 +1,49 @@
 {
   "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
   "name": "coherence-mcp-server",
-  "version": "0.2.0",
-  "description": "MCP server for the Coherence Network — 20 typed tools for AI agents to browse ideas, trace value chains, link identities, and record contributions.",
+  "version": "0.3.1",
+  "description": "MCP server for the Coherence Network — 22 typed tools for AI agents to browse ideas, trace value chains, link identities, record contributions, and explore the Living Codex ontology.",
   "repository": "https://github.com/seeker71/Coherence-Network",
   "homepage": "https://coherencycoin.com",
   "license": "MIT",
   "authors": ["coherence-network"],
-  "categories": ["collaboration", "project-management", "open-source"],
-  "tags": ["ideas", "collaboration", "investment", "federation", "coherence", "open-source", "value-attribution"],
+  "categories": ["collaboration", "project-management", "open-source", "knowledge-graph"],
+  "tags": ["ideas", "collaboration", "investment", "federation", "coherence", "open-source", "value-attribution", "ontology", "living-codex"],
   "packages": [
     {
       "registry": "npm",
       "name": "coherence-mcp-server",
-      "version": "0.2.0"
+      "version": "0.3.1"
+    },
+    {
+      "registry": "pypi",
+      "name": "coherence-mcp-server",
+      "version": "0.3.1"
     }
   ],
   "tools": [
-    {"name": "list_ideas", "description": "Browse ideas sorted by free energy score"},
-    {"name": "get_idea", "description": "Get idea details including tasks and progress"},
-    {"name": "create_idea", "description": "Share a new idea"},
-    {"name": "list_specs", "description": "Browse registered specs"},
-    {"name": "list_nodes", "description": "List federation compute nodes"},
-    {"name": "get_coherence_score", "description": "Get coherence score with signal breakdown"},
-    {"name": "ask_question", "description": "Ask a question on an idea"},
-    {"name": "stake", "description": "Invest CC in an idea (triggers compute tasks)"},
-    {"name": "record_contribution", "description": "Record a contribution to the network"},
-    {"name": "list_tasks", "description": "List agent tasks by status"},
-    {"name": "get_resonance", "description": "Get recent network activity"},
-    {"name": "link_identity", "description": "Link an external identity to a contributor"},
-    {"name": "get_portfolio", "description": "Get idea portfolio summary"},
-    {"name": "get_provider_stats", "description": "Get provider execution statistics"}
+    {"name": "coherence_list_ideas", "description": "Browse ideas ranked by ROI and free-energy score"},
+    {"name": "coherence_get_idea", "description": "Get full details for a single idea"},
+    {"name": "coherence_idea_progress", "description": "Get progress for an idea: stage, tasks, CC staked"},
+    {"name": "coherence_select_idea", "description": "Let the portfolio engine select the next highest-ROI idea"},
+    {"name": "coherence_showcase", "description": "List validated, shipped ideas"},
+    {"name": "coherence_resonance", "description": "Show which ideas are generating the most energy"},
+    {"name": "coherence_list_specs", "description": "Browse registered specs with ROI metrics"},
+    {"name": "coherence_get_spec", "description": "Get full spec detail including implementation plan"},
+    {"name": "coherence_list_lineage", "description": "List value lineage chains"},
+    {"name": "coherence_lineage_valuation", "description": "Get ROI valuation for a lineage chain"},
+    {"name": "coherence_list_providers", "description": "List all 37 supported identity providers"},
+    {"name": "coherence_link_identity", "description": "Link an external identity to a contributor"},
+    {"name": "coherence_lookup_identity", "description": "Find which contributor owns a provider identity"},
+    {"name": "coherence_get_identities", "description": "Get all linked identities for a contributor"},
+    {"name": "coherence_record_contribution", "description": "Record a contribution to the network"},
+    {"name": "coherence_contributor_ledger", "description": "Get CC balance and contribution history"},
+    {"name": "coherence_status", "description": "Get network health: API status, nodes, idea count"},
+    {"name": "coherence_friction_report", "description": "Get friction report — where the pipeline struggles"},
+    {"name": "coherence_list_change_requests", "description": "List governance change requests"},
+    {"name": "coherence_list_federation_nodes", "description": "List federated nodes and capabilities"},
+    {"name": "coherence_list_concepts", "description": "Browse the Living Codex ontology concepts"},
+    {"name": "coherence_get_concept", "description": "Get full details for a Living Codex concept"},
+    {"name": "coherence_link_concepts", "description": "Create a typed relationship between two concepts"}
   ]
 }
