@@ -151,8 +151,8 @@ python scripts/local_runner.py --timeout 300`}</code></pre>
 
         <p>
           The data is at{" "}
-          <a href="https://coherencycoin.com/automation" className="text-amber-600 dark:text-amber-400 hover:underline">
-            coherencycoin.com/automation
+          <a href="https://coherencycoin.com/nodes" className="text-amber-600 dark:text-amber-400 hover:underline">
+            coherencycoin.com/nodes
           </a>
           . The ideas are at{" "}
           <a href="https://coherencycoin.com/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">
