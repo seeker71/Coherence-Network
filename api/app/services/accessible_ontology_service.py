@@ -1,281 +1,346 @@
-"""Accessible ontology service — plain-language contributions by non-technical users.
+"""In-memory store for contributor-submitted ontology concepts (accessible ontology layer).
 
-Supports:
-- Concept suggestions (plain text, no IDs required)
-- Relationship suggestions between concepts
-- Endorsements (upvotes on existing concepts)
-- Review queue: pending → approved/rejected
-
-Approved concept suggestions are auto-promoted into the live concept store.
+Plain-language concepts with domain tags, resonance, and inferred relations. This is the
+non-technical extension path; Living Codex core concepts remain on /api/concepts.
 """
 
 from __future__ import annotations
 
-import re
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any
-
-from app.services import concept_service
+from typing import Any, Optional
 
 # ---------------------------------------------------------------------------
-# In-memory stores
+# Seeded domain vocabulary (labels for slugs contributors use in tags)
 # ---------------------------------------------------------------------------
 
-_concept_suggestions: dict[str, dict[str, Any]] = {}
-_relationship_suggestions: dict[str, dict[str, Any]] = {}
-_endorsements: dict[str, list[str]] = {}  # concept_id -> [contributor_ids]
+SEEDED_DOMAINS: list[dict[str, str]] = [
+    {"slug": "science", "label": "Science"},
+    {"slug": "music", "label": "Music"},
+    {"slug": "ecology", "label": "Ecology"},
+    {"slug": "finance", "label": "Finance"},
+    {"slug": "technology", "label": "Technology"},
+]
+
+_store: dict[str, dict[str, Any]] = {}
+_relations: dict[str, list[dict[str, Any]]] = defaultdict(list)
+_resonances: dict[str, set[str]] = defaultdict(set)
+_activity: list[dict[str, Any]] = []
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _now() -> str:
+def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _slugify(name: str) -> str:
-    """Convert a plain name to a URL-safe concept ID."""
-    slug = name.lower().strip()
-    slug = re.sub(r"[^\w\s-]", "", slug)
-    slug = re.sub(r"[\s_-]+", "-", slug)
-    slug = re.sub(r"^-+|-+$", "", slug)
-    return f"user.suggested.{slug[:60]}"
+def _record(event: str, concept_id: str) -> None:
+    _activity.append({"date": _now_iso()[:10], "event": event, "concept_id": concept_id})
 
 
-# ---------------------------------------------------------------------------
-# Concept suggestions
-# ---------------------------------------------------------------------------
+def reset_for_tests() -> None:
+    """Clear all state (tests only)."""
+    _store.clear()
+    _relations.clear()
+    _resonances.clear()
+    _activity.clear()
 
-def suggest_concept(
-    *,
-    name: str,
-    plain_description: str,
-    contributor: str = "anonymous",
-    example_use: str = "",
-    related_to: list[str] | None = None,
+
+def _domain_label(slug: str) -> str:
+    for s in SEEDED_DOMAINS:
+        if s["slug"] == slug:
+            return s["label"]
+    return slug.replace("_", " ").title()
+
+
+def _web_status(api_status: str) -> str:
+    if api_status == "confirmed":
+        return "placed"
+    if api_status == "deprecated":
+        return "orphan"
+    return "pending"
+
+
+def _get_relations(concept_id: str) -> list[dict[str, Any]]:
+    return list(_relations.get(concept_id, []))
+
+
+def create_concept(
+    title: str,
+    body: str,
+    domains: list[str],
+    contributor_id: str | None,
 ) -> dict[str, Any]:
-    """Create a concept suggestion without requiring technical knowledge."""
-    suggestion_id = str(uuid.uuid4())
-    proposed_id = _slugify(name)
+    cid = str(uuid.uuid4())
+    now = _now_iso()
     record: dict[str, Any] = {
-        "id": suggestion_id,
-        "proposed_concept_id": proposed_id,
-        "name": name,
-        "plain_description": plain_description,
-        "example_use": example_use,
-        "related_to": related_to or [],
-        "contributor": contributor,
+        "id": cid,
+        "title": title,
+        "body": body,
+        "domains": domains,
+        "contributor_id": contributor_id,
         "status": "pending",
-        "created_at": _now(),
-        "reviewed_at": None,
-        "reviewed_by": None,
-        "review_note": None,
-        "promoted_concept_id": None,
+        "resonance_score": 0.0,
+        "confirmation_count": 0,
+        "view_count": 0,
+        "created_at": now,
+        "updated_at": now,
+        "deleted_at": None,
     }
-    _concept_suggestions[suggestion_id] = record
-    return record
+    _store[cid] = record
+    _record("submission", cid)
+    return {**record, "inferred_relations": []}
 
 
-def list_concept_suggestions(
-    status: str | None = None,
-    limit: int = 50,
-    offset: int = 0,
-) -> dict[str, Any]:
-    items = list(_concept_suggestions.values())
-    if status:
-        items = [s for s in items if s["status"] == status]
-    items.sort(key=lambda x: x["created_at"], reverse=True)
+def list_concepts(
+    domain: str | None,
+    status: str | None,
+    search: str | None,
+) -> list[dict[str, Any]]:
+    results = []
+    for rec in _store.values():
+        if rec["deleted_at"] is not None:
+            continue
+        if domain and domain not in rec["domains"]:
+            continue
+        if status and rec["status"] != status:
+            continue
+        if search and search.lower() not in rec["title"].lower():
+            continue
+        results.append({**rec, "inferred_relations": _get_relations(rec["id"])})
+    return results
+
+
+def get_concept(concept_id: str) -> dict[str, Any] | None:
+    rec = _store.get(concept_id)
+    if rec is None or rec["deleted_at"] is not None:
+        return None
+    rec["view_count"] += 1
+    return {**rec, "inferred_relations": _get_relations(concept_id)}
+
+
+def patch_concept(
+    concept_id: str,
+    title: str | None,
+    body: str | None,
+    domains: list[str] | None,
+    status: str | None,
+) -> dict[str, Any] | None:
+    rec = _store.get(concept_id)
+    if rec is None or rec["deleted_at"] is not None:
+        return None
+    if title is not None:
+        rec["title"] = title
+    if body is not None:
+        rec["body"] = body
+    if domains is not None:
+        rec["domains"] = domains
+    if status is not None:
+        rec["status"] = status
+        if status == "confirmed":
+            rec["confirmation_count"] += 1
+            _record("confirmation", concept_id)
+    rec["updated_at"] = _now_iso()
+    return {**rec, "inferred_relations": _get_relations(concept_id)}
+
+
+def delete_concept(concept_id: str) -> bool:
+    rec = _store.get(concept_id)
+    if rec is None or rec["deleted_at"] is not None:
+        return False
+    rec["deleted_at"] = _now_iso()
+    return True
+
+
+def resonate(concept_id: str, contributor_id: str | None) -> dict[str, Any] | None:
+    rec = _store.get(concept_id)
+    if rec is None or rec["deleted_at"] is not None:
+        return None
+    contributor = contributor_id or "anonymous"
+    if contributor not in _resonances[concept_id]:
+        _resonances[concept_id].add(contributor)
+        rec["resonance_score"] = min(1.0, float(rec["resonance_score"]) + 0.1)
+        _record("resonance", concept_id)
+    return {**rec, "inferred_relations": _get_relations(concept_id)}
+
+
+def get_related(concept_id: str, min_confidence: float) -> list[dict[str, Any]] | None:
+    rec = _store.get(concept_id)
+    if rec is None or rec["deleted_at"] is not None:
+        return None
+    return [r for r in _relations.get(concept_id, []) if r["confidence"] >= min_confidence]
+
+
+def get_garden_payload(limit: int = 200) -> dict[str, Any]:
+    """Domains (API contract) plus clusters/concepts (web Ontology Garden page)."""
+    domain_map: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    active: list[dict[str, Any]] = []
+    for rec in _store.values():
+        if rec["deleted_at"] is not None:
+            continue
+        active.append(rec)
+        for d in rec["domains"]:
+            domain_map[d].append(rec)
+
+    active = active[: max(0, limit)]
+
+    domains_out: list[dict[str, Any]] = []
+    for slug, recs in sorted(domain_map.items()):
+        label = _domain_label(slug)
+        cards = [
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "domains": r["domains"],
+                "resonance_score": r["resonance_score"],
+                "status": r["status"],
+            }
+            for r in recs[:limit]
+        ]
+        domains_out.append(
+            {"slug": slug, "label": label, "concept_count": len(cards), "concepts": cards}
+        )
+
+    clusters: list[dict[str, Any]] = []
+    flat_concepts: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    idx = 0
+    for slug, recs in sorted(domain_map.items()):
+        members: list[dict[str, Any]] = []
+        for r in recs:
+            if r["id"] in seen:
+                continue
+            seen.add(r["id"])
+            rel_count = len(_relations.get(r["id"], []))
+            gc = {
+                "id": r["id"],
+                "title": r["title"],
+                "plain_text": r["body"],
+                "domains": r["domains"],
+                "status": _web_status(r["status"]),
+                "garden_position": {
+                    "cluster": slug,
+                    "x": float(idx % 12),
+                    "y": float(idx // 12),
+                },
+                "relationship_count": rel_count,
+                "core_concept_match": None,
+                "contributor_id": (r["contributor_id"] or "anonymous"),
+            }
+            members.append(gc)
+            flat_concepts.append(gc)
+            idx += 1
+            if len(flat_concepts) >= limit:
+                break
+        if members:
+            clusters.append({"name": slug, "size": len(members), "members": members})
+        if len(flat_concepts) >= limit:
+            break
+
+    # Concepts tagged with no domain still appear as a synthetic cluster
+    orphan_recs = [r for r in _store.values() if r["deleted_at"] is None and not r["domains"]]
+    if orphan_recs and len(flat_concepts) < limit:
+        members = []
+        for r in orphan_recs[: limit - len(flat_concepts)]:
+            rel_count = len(_relations.get(r["id"], []))
+            gc = {
+                "id": r["id"],
+                "title": r["title"],
+                "plain_text": r["body"],
+                "domains": r["domains"],
+                "status": _web_status(r["status"]),
+                "garden_position": {"cluster": "general", "x": 0.0, "y": 0.0},
+                "relationship_count": rel_count,
+                "core_concept_match": None,
+                "contributor_id": (r["contributor_id"] or "anonymous"),
+            }
+            members.append(gc)
+            flat_concepts.append(gc)
+        if members:
+            clusters.append({"name": "general", "size": len(members), "members": members})
+
+    contributors = {r["contributor_id"] or "anonymous" for r in _store.values() if r["deleted_at"] is None}
+    placed = sum(1 for r in _store.values() if r["deleted_at"] is None and r["status"] == "confirmed")
+    total_live = sum(1 for r in _store.values() if r["deleted_at"] is None)
+    placement_rate = (placed / total_live) if total_live else 0.0
+
     return {
-        "items": items[offset : offset + limit],
-        "total": len(items),
-        "limit": limit,
-        "offset": offset,
+        "domains": domains_out,
+        "clusters": clusters,
+        "concepts": flat_concepts,
+        "total": total_live,
+        "contributor_count": len(contributors),
+        "domain_count": len(domain_map),
+        "placement_rate": placement_rate,
     }
 
 
-def get_concept_suggestion(suggestion_id: str) -> dict[str, Any] | None:
-    return _concept_suggestions.get(suggestion_id)
+def get_domains_list() -> list[dict[str, Any]]:
+    domain_map: dict[str, int] = defaultdict(int)
+    for rec in _store.values():
+        if rec["deleted_at"] is None:
+            for d in rec["domains"]:
+                domain_map[d] += 1
+    result = []
+    for seed in SEEDED_DOMAINS:
+        result.append(
+            {
+                "slug": seed["slug"],
+                "label": seed["label"],
+                "concept_count": domain_map[seed["slug"]],
+            }
+        )
+    return result
 
 
-def approve_concept_suggestion(
-    suggestion_id: str,
-    *,
-    reviewer: str = "maintainer",
-    review_note: str = "",
-    final_id: str | None = None,
-    final_name: str | None = None,
-) -> dict[str, Any]:
-    """Approve a suggestion and auto-promote it into the live ontology."""
-    record = _concept_suggestions.get(suggestion_id)
-    if not record:
-        raise KeyError(f"Suggestion '{suggestion_id}' not found")
-    if record["status"] != "pending":
-        raise ValueError(f"Suggestion is already '{record['status']}'")
-
-    concept_id = final_id or record["proposed_concept_id"]
-    name = final_name or record["name"]
-
-    # Ensure unique ID
-    if concept_service.get_concept(concept_id):
-        concept_id = f"{concept_id}-{suggestion_id[:8]}"
-
-    concept_service.create_concept(
-        {
-            "id": concept_id,
-            "name": name,
-            "description": record["plain_description"],
-            "type_id": "codex.ucore.user",
-            "level": 0,
-            "keywords": [],
-            "parent_concepts": [],
-            "child_concepts": [],
-            "axes": [],
-        }
+def get_activity(since: str | None) -> list[dict[str, Any]]:
+    date_buckets: dict[str, dict[str, int]] = defaultdict(
+        lambda: {"submissions": 0, "confirmations": 0, "resonances": 0}
     )
-
-    record.update(
-        {
-            "status": "approved",
-            "reviewed_at": _now(),
-            "reviewed_by": reviewer,
-            "review_note": review_note,
-            "promoted_concept_id": concept_id,
-        }
-    )
-    return record
-
-
-def reject_concept_suggestion(
-    suggestion_id: str,
-    *,
-    reviewer: str = "maintainer",
-    review_note: str = "",
-) -> dict[str, Any]:
-    record = _concept_suggestions.get(suggestion_id)
-    if not record:
-        raise KeyError(f"Suggestion '{suggestion_id}' not found")
-    if record["status"] != "pending":
-        raise ValueError(f"Suggestion is already '{record['status']}'")
-    record.update(
-        {
-            "status": "rejected",
-            "reviewed_at": _now(),
-            "reviewed_by": reviewer,
-            "review_note": review_note,
-        }
-    )
-    return record
+    for ev in _activity:
+        if since and ev["date"] < since[:10]:
+            continue
+        event_type = ev["event"]
+        if event_type == "submission":
+            date_buckets[ev["date"]]["submissions"] += 1
+        elif event_type == "confirmation":
+            date_buckets[ev["date"]]["confirmations"] += 1
+        elif event_type == "resonance":
+            date_buckets[ev["date"]]["resonances"] += 1
+    return [{"date": d, **counts} for d, counts in sorted(date_buckets.items())]
 
 
-# ---------------------------------------------------------------------------
-# Relationship suggestions
-# ---------------------------------------------------------------------------
-
-def suggest_relationship(
-    *,
-    from_concept_name: str,
-    to_concept_name: str,
-    plain_relationship: str,
-    contributor: str = "anonymous",
-    example_sentence: str = "",
-) -> dict[str, Any]:
-    """Suggest a relationship in plain language ('X leads to Y', 'X is a type of Y')."""
-    suggestion_id = str(uuid.uuid4())
-    record: dict[str, Any] = {
-        "id": suggestion_id,
-        "from_concept_name": from_concept_name,
-        "to_concept_name": to_concept_name,
-        "plain_relationship": plain_relationship,
-        "example_sentence": example_sentence,
-        "contributor": contributor,
-        "status": "pending",
-        "created_at": _now(),
-        "reviewed_at": None,
-        "reviewed_by": None,
-        "review_note": None,
-    }
-    _relationship_suggestions[suggestion_id] = record
-    return record
-
-
-def list_relationship_suggestions(
-    status: str | None = None,
-    limit: int = 50,
-    offset: int = 0,
-) -> dict[str, Any]:
-    items = list(_relationship_suggestions.values())
-    if status:
-        items = [s for s in items if s["status"] == status]
-    items.sort(key=lambda x: x["created_at"], reverse=True)
+def get_stats() -> dict[str, Any]:
+    live = [r for r in _store.values() if r["deleted_at"] is None]
+    total = len(live)
+    placed = sum(1 for r in live if r["status"] == "confirmed")
+    pending = sum(1 for r in live if r["status"] == "pending")
+    orphan = sum(1 for r in live if r["status"] == "deprecated")
+    domain_counts: dict[str, int] = defaultdict(int)
+    for r in live:
+        for d in r["domains"]:
+            domain_counts[d] += 1
+    top_domains = sorted(
+        [{"domain": k, "count": v} for k, v in domain_counts.items()],
+        key=lambda x: (-x["count"], x["domain"]),
+    )[:12]
+    recent: list[str] = []
+    seen_c: set[str] = set()
+    for r in sorted(live, key=lambda x: x["created_at"], reverse=True):
+        cid = r["contributor_id"] or "anonymous"
+        if cid not in seen_c:
+            seen_c.add(cid)
+            recent.append(cid)
+        if len(recent) >= 10:
+            break
+    inferred_edges = sum(len(_relations[k]) for k in _relations)
+    placement_rate = (placed / total) if total else 0.0
     return {
-        "items": items[offset : offset + limit],
-        "total": len(items),
-        "limit": limit,
-        "offset": offset,
+        "total_contributions": total,
+        "placed_count": placed,
+        "pending_count": pending,
+        "orphan_count": orphan,
+        "placement_rate": placement_rate,
+        "top_domains": top_domains,
+        "recent_contributors": recent,
+        "inferred_edges_count": inferred_edges,
     }
-
-
-def review_relationship_suggestion(
-    suggestion_id: str,
-    *,
-    action: str,  # "approve" | "reject"
-    reviewer: str = "maintainer",
-    review_note: str = "",
-) -> dict[str, Any]:
-    record = _relationship_suggestions.get(suggestion_id)
-    if not record:
-        raise KeyError(f"Relationship suggestion '{suggestion_id}' not found")
-    if record["status"] != "pending":
-        raise ValueError(f"Suggestion is already '{record['status']}'")
-    if action not in ("approve", "reject"):
-        raise ValueError("action must be 'approve' or 'reject'")
-    record.update(
-        {
-            "status": "approved" if action == "approve" else "rejected",
-            "reviewed_at": _now(),
-            "reviewed_by": reviewer,
-            "review_note": review_note,
-        }
-    )
-    return record
-
-
-# ---------------------------------------------------------------------------
-# Endorsements
-# ---------------------------------------------------------------------------
-
-def endorse_concept(concept_id: str, contributor: str = "anonymous") -> dict[str, Any]:
-    """Upvote / endorse a concept to signal its importance."""
-    if not concept_service.get_concept(concept_id):
-        raise KeyError(f"Concept '{concept_id}' not found")
-    endorsers = _endorsements.setdefault(concept_id, [])
-    if contributor not in endorsers:
-        endorsers.append(contributor)
-    return {
-        "concept_id": concept_id,
-        "endorsement_count": len(endorsers),
-        "contributor": contributor,
-    }
-
-
-def get_endorsements(concept_id: str) -> dict[str, Any]:
-    if not concept_service.get_concept(concept_id):
-        raise KeyError(f"Concept '{concept_id}' not found")
-    endorsers = _endorsements.get(concept_id, [])
-    return {
-        "concept_id": concept_id,
-        "endorsement_count": len(endorsers),
-        "endorsers": endorsers,
-    }
-
-
-def top_endorsed(limit: int = 20) -> list[dict[str, Any]]:
-    """Return concepts ranked by endorsement count."""
-    ranked = [
-        {"concept_id": cid, "endorsement_count": len(endorsers)}
-        for cid, endorsers in _endorsements.items()
-    ]
-    ranked.sort(key=lambda x: x["endorsement_count"], reverse=True)
-    return ranked[:limit]
