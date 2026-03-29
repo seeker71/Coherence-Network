@@ -687,3 +687,9 @@ def _backfill_code_spec_links(dry_run: bool) -> dict[str, Any]:
         "dry_run": dry_run,
         "sample": links[:5],
     }
+
+
+if __name__ == "__main__":
+    _rep = build_traceability_report()
+    print("persisted_implementation_links", _rep.persisted_implementation_links)
+    print("overall_traceability_pct", _rep.summary.overall_traceability_pct)
