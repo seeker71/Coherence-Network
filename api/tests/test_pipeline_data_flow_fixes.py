@@ -211,7 +211,7 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
 
 def test_resolve_main_repo_from_linked_worktree() -> None:
     """Linked-checkout .git file → primary repository root (for worktree retry)."""
-    tmp = Path(tempfile.mkdtemp(dir=Path.cwd() / ".tmp-pytest-fixtures"))
+    tmp = _sandbox_tmp_path()
     try:
         main = tmp / "mainrepo"
         main.mkdir()
