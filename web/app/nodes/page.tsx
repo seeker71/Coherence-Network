@@ -5,9 +5,11 @@ import { getApiBase } from "@/lib/api";
 import MessageForm from "./MessageForm";
 
 export const metadata: Metadata = {
-  title: "Federation Nodes",
-  description: "Registered federation nodes, status, and messaging.",
+  title: "Nodes",
+  description: "Federation nodes, provider health, remote control, and network messaging.",
 };
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type SystemMetrics = {
   cpu_percent?: number;
@@ -82,6 +84,47 @@ type FederationNode = {
   git_sha_updated_at?: string;
   streak?: NodeStreak;
 };
+
+type ProviderExecStatsEntry = {
+  total_runs: number;
+  successes: number;
+  failures: number;
+  success_rate: number;
+  last_5_rate: number;
+  avg_duration_s: number;
+  selection_probability: number;
+  blocked: boolean;
+  needs_attention: boolean;
+  error_breakdown: Record<string, number>;
+};
+
+type ProviderExecStatsResponse = {
+  providers: Record<string, ProviderExecStatsEntry>;
+  alerts: Array<{ provider: string; metric: string; value: number; threshold: number; message: string }>;
+  summary: { total_providers: number; healthy_providers: number; attention_needed: number; total_measurements: number };
+};
+
+type ProviderReadinessRow = {
+  provider: string;
+  kind: string;
+  status: string;
+  required: boolean;
+  configured: boolean;
+  severity: string;
+  missing_env: string[];
+  notes: string[];
+};
+
+type ProviderReadinessResponse = {
+  generated_at: string;
+  required_providers: string[];
+  all_required_ready: boolean;
+  blocking_issues: string[];
+  recommendations: string[];
+  providers: ProviderReadinessRow[];
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function osIcon(osType: string): string {
   const lower = osType.toLowerCase();
@@ -160,32 +203,52 @@ function relativeTime(iso: string): string {
   return `${days}d ago`;
 }
 
-async function loadNodes(): Promise<FederationNode[]> {
+// ─── Data loader ─────────────────────────────────────────────────────────────
+
+async function loadData() {
   const api = getApiBase();
-  try {
-    const res = await fetch(`${api}/api/federation/nodes`, { cache: "no-store" });
-    if (!res.ok) return [];
-    return (await res.json()) as FederationNode[];
-  } catch {
-    return [];
+  const [nodesRes, execStatsRes, readinessRes] = await Promise.all([
+    fetch(`${api}/api/federation/nodes`, { cache: "no-store" }).catch(() => null),
+    fetch(`${api}/api/providers/stats`, { cache: "no-store" }).catch(() => null),
+    fetch(`${api}/api/automation/usage/readiness?force_refresh=true`, { cache: "no-store" }).catch(() => null),
+  ]);
+
+  const nodes: FederationNode[] = nodesRes?.ok ? ((await nodesRes.json()) as FederationNode[]) : [];
+
+  let execStats: ProviderExecStatsResponse | null = null;
+  if (execStatsRes?.ok) {
+    execStats = (await execStatsRes.json()) as ProviderExecStatsResponse;
   }
+
+  const readiness: ProviderReadinessResponse | null = readinessRes?.ok
+    ? ((await readinessRes.json()) as ProviderReadinessResponse)
+    : null;
+
+  return { nodes, execStats, readiness };
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default async function NodesPage() {
-  const nodes = await loadNodes();
+  const { nodes, execStats, readiness } = await loadData();
   const apiBase = getApiBase();
   const sorted = [...nodes].sort((a, b) => a.hostname.localeCompare(b.hostname));
+
+  const onlineCount = nodes.filter((n) => statusColor(n.last_seen_at) === "green").length;
+  const totalOk = nodes.reduce((s, n) => s + (n.streak?.completed ?? 0), 0);
+  const totalResolved = nodes.reduce((s, n) => s + (n.streak?.total_resolved ?? 0), 0);
+  const fleetRate = totalResolved > 0 ? Math.round((totalOk / totalResolved) * 100) : 0;
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Federation Nodes</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Nodes</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          All registered nodes in the Coherence federation. Monitor status, view capabilities, and send messages across the network.
+          All registered federation nodes — status, capabilities, provider health, and remote messaging.
         </p>
       </div>
 
-      {/* Summary */}
+      {/* Fleet summary */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 text-sm">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
@@ -193,9 +256,7 @@ export default async function NodesPage() {
             <p className="text-xs text-muted-foreground">total nodes</p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-green-500">
-              {nodes.filter((n) => statusColor(n.last_seen_at) === "green").length}
-            </p>
+            <p className="text-2xl font-bold text-green-500">{onlineCount}</p>
             <p className="text-xs text-muted-foreground">online</p>
           </div>
           <div>
@@ -205,22 +266,132 @@ export default async function NodesPage() {
             <p className="text-xs text-muted-foreground">tasks running</p>
           </div>
           <div>
-            {(() => {
-              const totalOk = nodes.reduce((s, n) => s + (n.streak?.completed ?? 0), 0);
-              const totalResolved = nodes.reduce((s, n) => s + (n.streak?.total_resolved ?? 0), 0);
-              const rate = totalResolved > 0 ? Math.round((totalOk / totalResolved) * 100) : 0;
-              return (
-                <>
-                  <p className={`text-2xl font-bold ${rate >= 70 ? "text-green-500" : rate >= 40 ? "text-yellow-500" : "text-red-500"}`}>
-                    {rate}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">fleet success</p>
-                </>
-              );
-            })()}
+            <p className={`text-2xl font-bold ${fleetRate >= 70 ? "text-green-500" : fleetRate >= 40 ? "text-yellow-500" : "text-red-500"}`}>
+              {fleetRate}%
+            </p>
+            <p className="text-xs text-muted-foreground">fleet success</p>
           </div>
         </div>
       </section>
+
+      {/* Provider health */}
+      {execStats && (
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Provider Health</h2>
+            <span className="text-xs text-muted-foreground">
+              {execStats.summary.healthy_providers}/{execStats.summary.total_providers} healthy · {execStats.summary.total_measurements} measurements
+            </span>
+          </div>
+
+          {execStats.alerts.length > 0 && (
+            <ul className="space-y-1">
+              {execStats.alerts.map((alert, i) => (
+                <li
+                  key={`alert-${alert.provider}-${alert.metric}-${i}`}
+                  className={`rounded-xl px-3 py-1.5 text-sm font-medium ${
+                    alert.value < alert.threshold * 0.5
+                      ? "bg-red-500/10 text-red-600 dark:text-red-400"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  }`}
+                >
+                  {alert.message}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/30 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <th className="pb-2 pr-4">Provider</th>
+                  <th className="pb-2 pr-4">Overall Rate</th>
+                  <th className="pb-2 pr-4">Last 5</th>
+                  <th className="pb-2 pr-4">Avg Speed</th>
+                  <th className="pb-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(execStats.providers)
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([name, entry]) => (
+                    <tr key={`prov-${name}`} className="border-b border-border/30">
+                      <td className="py-1.5 pr-4 font-medium">{name}</td>
+                      <td className="py-1.5 pr-4">{(entry.success_rate * 100).toFixed(0)}%</td>
+                      <td
+                        className={`py-1.5 pr-4 ${
+                          entry.last_5_rate < 0.5
+                            ? "text-red-600 dark:text-red-400"
+                            : entry.last_5_rate < 0.8
+                              ? "text-amber-600 dark:text-amber-400"
+                              : ""
+                        }`}
+                      >
+                        {(entry.last_5_rate * 100).toFixed(0)}%
+                      </td>
+                      <td className="py-1.5 pr-4">{entry.avg_duration_s.toFixed(1)}s</td>
+                      <td className="py-1.5">
+                        {entry.blocked ? (
+                          <span className="text-red-600 dark:text-red-400">blocked</span>
+                        ) : entry.needs_attention ? (
+                          <span className="text-amber-600 dark:text-amber-400">attention</span>
+                        ) : (
+                          <span className="text-green-600 dark:text-green-400">ok</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile stacked cards */}
+          <div className="md:hidden space-y-2">
+            {Object.entries(execStats.providers)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([name, entry]) => (
+                <div key={`prov-mob-${name}`} className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
+                  <p className="font-medium text-sm">{name}</p>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <p className="text-muted-foreground">Overall</p>
+                      <p>{(entry.success_rate * 100).toFixed(0)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Last 5</p>
+                      <p className={entry.last_5_rate < 0.5 ? "text-red-600 dark:text-red-400" : entry.last_5_rate < 0.8 ? "text-amber-600 dark:text-amber-400" : ""}>
+                        {(entry.last_5_rate * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Status</p>
+                      <p>{entry.blocked ? "blocked" : entry.needs_attention ? "attention" : "ok"}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
+      {/* Provider readiness */}
+      {readiness && !readiness.all_required_ready && (
+        <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6 space-y-3">
+          <h2 className="text-xl font-semibold text-red-600 dark:text-red-400">Provider Configuration Issues</h2>
+          {readiness.blocking_issues.map((issue, i) => (
+            <p key={`issue-${i}`} className="text-sm text-red-600 dark:text-red-400">⚠ {issue}</p>
+          ))}
+          {readiness.recommendations.length > 0 && (
+            <ul className="space-y-1 text-sm text-muted-foreground">
+              {readiness.recommendations.map((rec, i) => (
+                <li key={`rec-${i}`}>→ {rec}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* Node list */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
@@ -259,7 +430,6 @@ export default async function NodesPage() {
                 {/* Row 2: Streak visualization + success rate + running count */}
                 {node.streak && (
                   <div className="flex items-center gap-3">
-                    {/* Streak dots */}
                     <div className="flex items-center gap-0.5 font-mono text-sm">
                       {(node.streak.last_10 ?? []).map((result, idx) => {
                         const dot = streakDot(result);
@@ -270,7 +440,6 @@ export default async function NodesPage() {
                         );
                       })}
                     </div>
-                    {/* Success rate */}
                     {node.streak.success_rate != null && (
                       <span className={`text-xs font-medium ${
                         node.streak.success_rate >= 0.8 ? "text-green-500" :
@@ -279,7 +448,6 @@ export default async function NodesPage() {
                         {Math.round(node.streak.success_rate * 100)}%
                       </span>
                     )}
-                    {/* Running count */}
                     {(node.streak.executing ?? 0) > 0 && (
                       <span className="text-xs text-amber-500 font-medium">
                         {node.streak.executing} running
@@ -344,7 +512,7 @@ export default async function NodesPage() {
                     <div className="flex gap-3">
                       {gauges.map(g => {
                         const pct = Math.min(100, ((g.value ?? 0) / g.max) * 100);
-                        const color = pct > 80 ? "bg-red-500" : pct > 60 ? "bg-yellow-500" : "bg-green-500";
+                        const barColor = pct > 80 ? "bg-red-500" : pct > 60 ? "bg-yellow-500" : "bg-green-500";
                         return (
                           <div key={g.label} className="flex-1 min-w-0">
                             <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
@@ -352,7 +520,7 @@ export default async function NodesPage() {
                               <span>{Math.round(g.value ?? 0)}{g.unit}</span>
                             </div>
                             <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                              <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
                             </div>
                           </div>
                         );
@@ -365,6 +533,7 @@ export default async function NodesPage() {
                     </div>
                   ) : null;
                 })()}
+
                 {/* Row 7: Platform + registered */}
                 <p className="text-[10px] text-muted-foreground">
                   {node.capabilities?.hardware?.platform && (
@@ -386,6 +555,7 @@ export default async function NodesPage() {
         </ul>
       </section>
 
+      {/* Send message to nodes */}
       <MessageForm
         nodes={sorted.map((n) => ({ node_id: n.node_id, hostname: n.hostname }))}
         apiBase={apiBase}
@@ -400,8 +570,8 @@ export default async function NodesPage() {
           Where to go next
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/automation" className="text-amber-600 dark:text-amber-400 hover:underline">
-            Automation
+          <Link href="/pipeline" className="text-amber-600 dark:text-amber-400 hover:underline">
+            Pipeline
           </Link>
           <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">
             Flow
