@@ -3,8 +3,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
-
 from pydantic import BaseModel, Field
 
 
@@ -108,6 +106,28 @@ class ContributionDetail(BaseModel):
     cc_attributed: float = 0.0
     coherence_score: float = 0.0
     lineage_chain_id: Optional[str] = None
+
+
+class LineageLinkBrief(BaseModel):
+    """Subset of value-lineage link for portfolio audit drill-down."""
+
+    id: str
+    idea_id: str
+    spec_id: str
+    estimated_cost: float = 0.0
+
+
+class ContributionLineageView(BaseModel):
+    """Single contribution with optional linkage into the value-lineage ledger."""
+
+    contributor_id: str
+    contribution_id: str
+    idea_id: str
+    contribution_type: str = "unknown"
+    cc_attributed: float = 0.0
+    lineage_chain_id: Optional[str] = None
+    value_lineage_link: Optional[LineageLinkBrief] = None
+    lineage_resolution_note: Optional[str] = None
 
 
 class ValueLineageSummary(BaseModel):

@@ -101,6 +101,7 @@ export default function IdeaDrilldownPage() {
                 <th className="pb-2 pr-4">Date</th>
                 <th className="pb-2 pr-4">CC attributed</th>
                 <th className="pb-2 pr-4">Coherence score</th>
+                <th className="pb-2 pr-4">Lineage</th>
                 <th className="pb-2">ID</th>
               </tr>
             </thead>
@@ -122,7 +123,21 @@ export default function IdeaDrilldownPage() {
                       <span className="text-muted-foreground text-xs">{(c.coherence_score * 100).toFixed(0)}%</span>
                     </div>
                   </td>
-                  <td className="py-3 text-muted-foreground font-mono text-xs truncate max-w-24">{c.id}</td>
+                  <td className="py-3 pr-4 text-xs text-muted-foreground font-mono truncate max-w-[7rem]">
+                    {c.lineage_chain_id ?? "—"}
+                  </td>
+                  <td className="py-3 text-muted-foreground font-mono text-xs truncate max-w-24">
+                    {c.id && id ? (
+                      <Link
+                        href={`/contributors/${encodeURIComponent(id)}/portfolio/contributions/${encodeURIComponent(c.id)}`}
+                        className="text-primary hover:underline"
+                      >
+                        {c.id}
+                      </Link>
+                    ) : (
+                      c.id
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
