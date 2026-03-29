@@ -78,6 +78,20 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
     raw_vb = node.get("value_basis")
     value_basis = raw_vb if isinstance(raw_vb, dict) else None
 
+    # Parse slug — backfill from id for legacy nodes
+    raw_slug = node.get("slug") or ""
+    slug = raw_slug if raw_slug else node["id"]
+
+    # Parse slug_history
+    raw_history = node.get("slug_history", [])
+    if isinstance(raw_history, str):
+        try:
+            import json as _json
+            raw_history = _json.loads(raw_history)
+        except Exception:
+            raw_history = []
+    slug_history: list[str] = raw_history if isinstance(raw_history, list) else []
+
     return Idea(
         id=node["id"],
         name=node.get("name", ""),
@@ -100,6 +114,8 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         duplicate_of=node.get("duplicate_of"),
         last_activity_at=node.get("last_activity_at"),
         open_questions=questions,
+        slug=slug,
+        slug_history=slug_history,
     )
 
 
@@ -111,6 +127,7 @@ def _idea_to_properties(idea: Idea) -> dict[str, Any]:
         "resistance_risk", "confidence", "manifestation_status", "stage",
         "interfaces", "idea_type", "parent_idea_id", "child_idea_ids",
         "value_basis", "work_type", "lifecycle", "duplicate_of", "last_activity_at",
+        "slug",
     ]:
         val = getattr(idea, field, None)
         if val is not None:
@@ -118,6 +135,10 @@ def _idea_to_properties(idea: Idea) -> dict[str, Any]:
             if hasattr(val, "value"):
                 val = val.value
             props[field] = val
+
+    # Serialize slug_history as JSON list
+    if hasattr(idea, "slug_history"):
+        props["slug_history"] = idea.slug_history if isinstance(idea.slug_history, list) else []
 
     # Serialize questions
     if idea.open_questions:
