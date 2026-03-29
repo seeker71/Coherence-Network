@@ -1752,7 +1752,12 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 },
             },
         )
-        if not isinstance(created, dict):
+        if isinstance(created, dict):
+            _append_idea_event(idea_id, "phase_advanced", {
+                "from_phase": task_type,
+                "to_phase": next_phase,
+            })
+        else:
             log.warning(
                 "AUTO_PHASE enqueue failed idea_id=%s from=%s to=%s",
                 idea_id,
@@ -2809,6 +2814,13 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
                             log.debug("REFLECT_SPAWN_SKIP followup_id=%s (likely already exists)", followup_id)
             except Exception as _spawn_exc:
                 log.warning("REFLECT_SPAWN_ERROR idea=%s error=%s", idea_id, _spawn_exc)
+
+            _append_idea_event(idea_id, "reflected", {
+                "task_count": task_count,
+                "actual_cost": max(actual_cost_estimate, 0.5),
+                "manifestation_status": "validated",
+                "spawned_idea_ids": spawned_ids,
+            })
 
             spawn_note = (
                 f" Spawned {len(spawned_ids)} follow-up idea(s): {', '.join(spawned_ids)}."
@@ -4325,6 +4337,23 @@ def _persist_idea_progress(idea_id: str, wt_path: Path) -> None:
         log.info("PROGRESS_PERSISTED idea=%s (%d bytes)", idea_id, dst.stat().st_size)
     except Exception as e:
         log.warning("PROGRESS_PERSIST_FAILED idea=%s error=%s", idea_id, e)
+
+
+_EVENTS_DIR = _REPO_DIR / ".idea-events"
+
+
+def _append_idea_event(idea_id: str, event_type: str, payload: dict) -> None:
+    """Append a versioned event to .idea-events/{idea_id}.jsonl (local, not committed)."""
+    import json as _json_ev
+    _EVENTS_DIR.mkdir(exist_ok=True)
+    entry = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "event": event_type,
+        **payload,
+    }
+    path = _EVENTS_DIR / f"{idea_id}.jsonl"
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(_json_ev.dumps(entry) + "\n")
 
 
 def _repo_is_linked_worktree(repo_root: str) -> bool:
