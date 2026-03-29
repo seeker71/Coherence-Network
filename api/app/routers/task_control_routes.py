@@ -44,7 +44,7 @@ async def task_control_sse(task_id: str, last_event_id: Optional[uuid.UUID] = Qu
                 last_seen_id = cmd.command_id
 
             # Wait for new commands
-            await task_control_service.wait_for_commands(task_id, timeout=20.0)
+            await asyncio.sleep(1.0)
             
             # Send heartbeat ping
             yield ": ping\n\n"

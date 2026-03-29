@@ -57,11 +57,9 @@ async def issue_command(task_id: str, request: CommandIssueRequest) -> CommandIs
         task_id=task_id,
         command=request.command,
         payload=request.payload,
-        state=ControlCommandStatus.QUEUED
+        state=ControlCommandStatus.QUEUED,
+        client_command_id=request.client_command_id
     )
-
-    # Store for duplicate check (optional in model, but good for service)
-    setattr(command, "client_command_id", request.client_command_id)
 
     if task_id not in _command_queues:
         _command_queues[task_id] = []

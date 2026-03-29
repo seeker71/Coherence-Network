@@ -92,7 +92,7 @@ def test_control_sse_stream():
     )
     
     # Read stream (partial read)
-    with client.get(f"/api/agent/tasks/{task_id}/control-stream", stream=True) as response:
+    with client.stream("GET", f"/api/agent/tasks/{task_id}/control-stream") as response:
         assert response.status_code == 200
         # Check first data line
         for line in response.iter_lines():

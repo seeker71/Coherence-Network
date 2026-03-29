@@ -31,6 +31,7 @@ class ControlCommand(BaseModel):
     issuer: str = "operator"
     payload: Dict[str, Any] = Field(default_factory=dict)
     state: ControlCommandStatus = ControlCommandStatus.QUEUED
+    client_command_id: Optional[UUID] = None
 
 
 class ControlAckStatus(str, Enum):
