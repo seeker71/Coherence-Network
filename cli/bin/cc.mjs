@@ -9,9 +9,10 @@
 
 import {
   listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea,
-  triageIdeas, setIdeaWorkType, linkIdea, showIdeaChildren,
+  triageIdeas, setIdeaWorkType, linkIdea, showIdeaChildren, showIdeaDeps,
   showIdeaTags, showIdeaHealth, showIdeaShowcase, showIdeaResonance,
   showIdeasProgress, showIdeasCount,
+  archiveIdea, retireIdea, showStaleIdeas,
 } from "../lib/commands/ideas.mjs";
 import { listSpecs, showSpec } from "../lib/commands/specs.mjs";
 import { contribute } from "../lib/commands/contribute.mjs";
@@ -127,6 +128,7 @@ async function handleIdea(args) {
     case "resonance":return showIdeaResonance();
     case "progress": return showIdeasProgress();
     case "count":    return showIdeasCount();
+    case "stale":    return showStaleIdeas(args.slice(1));
     default:         return showIdea(args);  // routes sub-subcommands internally
   }
 }
@@ -410,6 +412,8 @@ function showHelp() {
   idea create <id> <name> [--desc "..." --value N --cost N --parent <id>]
   idea <id> type <t>      Set work type
   idea <id> link <r> <t>  Link ideas: blocks|enables|supersedes|depends-on|related-to
+  idea <id> deps              Show dependency edges (blocks/enables/supersedes)
+  idea <id> deps --type blocks  Filter by relation type
   idea <id> children      List child ideas
   idea <id> tasks         Show tasks for an idea
   idea <id> stage <s>     Set stage
