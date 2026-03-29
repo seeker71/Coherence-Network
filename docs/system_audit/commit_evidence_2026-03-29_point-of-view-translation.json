@@ -68,6 +68,7 @@
   ],
   "change_files": [
     ".gitignore",
+    ".task-checkpoint.md",
     "api/app/main.py",
     "api/app/routers/data_retention.py",
     "api/app/services/data_retention_service.py",
@@ -76,8 +77,9 @@
     "api/tests/test_worldview_translation.py",
     "cli/bin/cc.mjs",
     "cli/lib/commands/concepts.mjs",
+    "docs/system_audit/commit_evidence_2026-03-29_point-of-view-translation.json",
     "mcp-server/index.mjs",
     "web/app/concepts/[id]/page.tsx"
   ],
-  "change_intent": "test_only"
+  "change_intent": "runtime_feature"
 }
