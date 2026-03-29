@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from enum import Enum
 from typing import Optional
+from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.coherence_credit import CostVector, ValueVector
 
@@ -213,7 +214,11 @@ class IdeaUpdate(BaseModel):
 
 
 class IdeaCreate(BaseModel):
-    id: str = Field(min_length=1)
+    id: Optional[str] = Field(
+        default=None,
+        description="UUID4 identifier. Auto-generated as UUID4 when omitted. "
+                    "Legacy slug IDs are accepted for seeding backward-compat data.",
+    )
     name: str = Field(min_length=1)
     description: str = Field(min_length=1)
     potential_value: float = Field(ge=0.0)
@@ -235,6 +240,14 @@ class IdeaCreate(BaseModel):
     work_type: Optional[IdeaWorkType] = None
     lifecycle: Optional[IdeaLifecycle] = None
     duplicate_of: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _auto_uuid_id(cls, values: dict) -> dict:
+        """Auto-generate a UUID4 when 'id' is absent or empty."""
+        if not values.get("id"):
+            values["id"] = str(uuid4())
+        return values
 
 
 class IdeaQuestionAnswerUpdate(BaseModel):

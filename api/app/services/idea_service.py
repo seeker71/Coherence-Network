@@ -17,6 +17,7 @@ import re
 import threading
 import time
 from typing import Any
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
@@ -1041,7 +1042,7 @@ def get_idea(idea_id: str) -> IdeaWithScore | None:
 
 
 def create_idea(
-    idea_id: str,
+    idea_id: str | None,
     name: str,
     description: str,
     potential_value: float,
@@ -1063,14 +1064,17 @@ def create_idea(
     lifecycle: IdeaLifecycle | None = None,
     duplicate_of: str | None = None,
 ) -> IdeaWithScore | None:
+    # Auto-generate UUID4 when caller omits the ID (new convention going forward)
+    resolved_id: str = idea_id or str(uuid4())
+
     ideas = _read_ideas(persist_ensures=True)
-    if any(existing.id == idea_id for existing in ideas):
+    if any(existing.id == resolved_id for existing in ideas):
         return None
 
     normalized_tags = normalize_tags(tags or [])
 
     idea = Idea(
-        id=idea_id,
+        id=resolved_id,
         name=name,
         description=description,
         potential_value=potential_value,
