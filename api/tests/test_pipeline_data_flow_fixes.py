@@ -194,6 +194,8 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
         monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
         monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
         monkeypatch.setattr(local_runner.subprocess, "run", _run)
+        # Non-linked path tries standalone after add fails; force standalone off so we assert full failure.
+        monkeypatch.setattr(local_runner, "_create_standalone_task_repo", lambda *a, **k: None)
 
         with caplog.at_level(logging.WARNING, logger="local_runner"):
             result = local_runner._create_worktree(slug)
@@ -205,6 +207,54 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
         ), "git stderr must be logged when worktree creation fails"
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+def test_resolve_main_repo_from_linked_worktree() -> None:
+    """Linked-checkout .git file → primary repository root (for worktree retry)."""
+    tmp = Path(tempfile.mkdtemp(dir=Path.cwd() / ".tmp-pytest-fixtures"))
+    try:
+        main = tmp / "mainrepo"
+        main.mkdir()
+        (main / ".git").mkdir()
+        assert local_runner._resolve_main_repo_from_linked_worktree(str(main)) is None
+
+        link = tmp / "linkedwt"
+        link.mkdir()
+        gitdir = main / ".git" / "worktrees" / "linkedwt"
+        gitdir.mkdir(parents=True)
+        (link / ".git").write_text(f"gitdir: {gitdir.resolve().as_posix()}\n", encoding="utf-8")
+        assert local_runner._resolve_main_repo_from_linked_worktree(str(link)) == main.resolve()
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_create_worktree_non_linked_falls_back_to_standalone_when_add_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """When git worktree add fails on a normal repo, try standalone snapshot (impl path)."""
+    calls: list[str] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:3] == ["git", "worktree", "add"]:
+            return _Proc(returncode=1, stderr="fatal: simulated add failure")
+        return _Proc()
+
+    fake_wt = tmp_path / "task-abcd000000000000"
+
+    def _standalone(*_a: Any, **_k: Any) -> Path:
+        calls.append("standalone")
+        return fake_wt
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner, "_repo_is_linked_worktree", lambda _r: False)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(local_runner, "_create_standalone_task_repo", _standalone)
+    monkeypatch.setattr(local_runner, "_reclaim_worktree_slot", lambda *a, **k: True)
+
+    result = local_runner._create_worktree("abcd00000000000000000000000000")
+    assert result == fake_wt
+    assert calls == ["standalone"]
 
 
 def test_create_worktree_retries_with_safe_directory_after_dubious_ownership(

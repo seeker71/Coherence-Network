@@ -4754,7 +4754,8 @@ def _create_standalone_task_repo(
     archive_candidates = []
     if base_branch:
         archive_candidates.extend([f"origin/{base_branch}", base_branch])
-    archive_candidates.extend(["origin/main", "main", "HEAD"])
+    # HEAD first: linked worktrees sometimes lack origin/main until fetch; archive uses local refs.
+    archive_candidates.extend(["HEAD", "origin/main", "main"])
     archive_ref = _resolve_available_ref(repo_root, archive_candidates)
     origin_url = _get_origin_remote_url(repo_root)
     archive_path: Path | None = None
@@ -4949,6 +4950,90 @@ def _reclaim_worktree_slot(repo_root: str, wt_path: Path, branch: str) -> bool:
     return slot_clear
 
 
+def _resolve_main_repo_from_linked_worktree(repo_root: str) -> Path | None:
+    """If ``repo_root`` is a git *linked* worktree, return the primary repository root.
+
+    Linked checkouts use a ``.git`` *file* pointing at ``.../repo/.git/worktrees/<name>``.
+    Impl tasks run there when the runner uses ``git worktree add`` for isolation; if
+    standalone snapshot creation fails, we can ``git worktree add`` from the main repo
+    (writable refs) instead of failing immediately.
+    """
+    git_marker = Path(repo_root) / ".git"
+    if not git_marker.is_file():
+        return None
+    try:
+        gitdir_line = git_marker.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    if not gitdir_line.startswith("gitdir:"):
+        return None
+    gitdir = Path(gitdir_line.split(":", 1)[1].strip())
+    if not gitdir.is_absolute():
+        gitdir = (git_marker.parent / gitdir).resolve()
+    parts = gitdir.parts
+    try:
+        wi = next(i for i, p in enumerate(parts) if p == "worktrees")
+    except StopIteration:
+        return None
+    if wi < 2 or parts[wi - 1] != ".git":
+        return None
+    return Path(*parts[: wi - 1])
+
+
+def _try_git_worktree_add(
+    repo_root: str,
+    wt_path: Path,
+    branch: str,
+    base_branch: str | None,
+    slug: str,
+    idea_id: str,
+) -> Path | None:
+    """Fetch, resolve base ref, ``git worktree add``, inject idea progress."""
+    fetch = _run_git_command(
+        ["git", "fetch", "origin", "--quiet"],
+        capture_output=True, text=True, timeout=30, cwd=repo_root,
+    )
+    if fetch.returncode != 0:
+        detail = (fetch.stderr or fetch.stdout or "unknown failure").strip()
+        log.warning("WORKTREE_FETCH_FAILED task=%s error=%s", slug, detail)
+    base_ref = "origin/main"
+    if base_branch:
+        check = _run_git_command(
+            ["git", "rev-parse", "--verify", f"origin/{base_branch}"],
+            capture_output=True, text=True, timeout=5, cwd=repo_root,
+        )
+        if check.returncode == 0:
+            base_ref = f"origin/{base_branch}"
+            log.info("WORKTREE_FROM_PR task=%s branch=%s", slug, base_branch)
+        else:
+            log.info(
+                "WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main",
+                slug,
+                base_branch,
+            )
+
+    create = _run_git_command(
+        ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
+        capture_output=True, text=True, timeout=30, cwd=repo_root,
+    )
+    if create.returncode != 0:
+        detail = (create.stderr or create.stdout or "unknown failure").strip()
+        log.warning(
+            "WORKTREE_CREATE_FAILED task=%s base=%s path=%s error=%s",
+            slug,
+            base_ref,
+            wt_path,
+            detail,
+        )
+        return None
+    if wt_path.exists():
+        log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
+        if idea_id:
+            _inject_idea_progress(idea_id, wt_path)
+        return wt_path
+    return None
+
+
 def _create_worktree(
     task_id: str,
     base_branch: str | None = None,
@@ -4987,10 +5072,61 @@ def _create_worktree(
             return None
         if _repo_is_linked_worktree(repo_root):
             log.info(
-                "WORKTREE_LINKED_REPO task=%s repo=%s -- using standalone task repo fallback",
+                "WORKTREE_LINKED_REPO task=%s repo=%s — standalone first, then main-repo worktree if needed",
                 slug,
                 repo_root,
             )
+            standalone = _create_standalone_task_repo(
+                task_id,
+                wt_path,
+                branch,
+                base_branch=base_branch,
+                idea_id=idea_id,
+            )
+            if standalone is not None:
+                return standalone
+
+            main_repo = _resolve_main_repo_from_linked_worktree(repo_root)
+            if main_repo is not None:
+                try:
+                    main_resolved = main_repo.resolve()
+                    linked_resolved = Path(repo_root).resolve()
+                except OSError:
+                    main_resolved = main_repo
+                    linked_resolved = Path(repo_root)
+                if main_resolved != linked_resolved:
+                    log.warning(
+                        "WORKTREE_STANDALONE_FAILED task=%s — retrying via main repo at %s",
+                        slug,
+                        main_repo,
+                    )
+                    wt_main = main_repo / ".worktrees" / f"task-{slug}"
+                    wb_main = main_repo / ".worktrees"
+                    wb_main.mkdir(parents=True, exist_ok=True)
+                    if _reclaim_worktree_slot(str(main_repo), wt_main, branch):
+                        added = _try_git_worktree_add(
+                            str(main_repo),
+                            wt_main,
+                            branch,
+                            base_branch,
+                            slug,
+                            idea_id,
+                        )
+                        if added is not None:
+                            return added
+            return None
+
+        added = _try_git_worktree_add(
+            repo_root, wt_path, branch, base_branch, slug, idea_id,
+        )
+        if added is not None:
+            return added
+
+        log.warning(
+            "WORKTREE_CREATE_FAILED task=%s — falling back to standalone task repo snapshot",
+            slug,
+        )
+        if _reclaim_worktree_slot(repo_root, wt_path, branch):
             return _create_standalone_task_repo(
                 task_id,
                 wt_path,
@@ -4998,48 +5134,7 @@ def _create_worktree(
                 base_branch=base_branch,
                 idea_id=idea_id,
             )
-        # Fetch latest remote refs
-        fetch = _run_git_command(
-            ["git", "fetch", "origin", "--quiet"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
-        )
-        if fetch.returncode != 0:
-            detail = (fetch.stderr or fetch.stdout or "unknown failure").strip()
-            log.warning("WORKTREE_FETCH_FAILED task=%s error=%s", slug, detail)
-        # Determine base ref: PR branch if specified, else origin/main
-        base_ref = "origin/main"
-        if base_branch:
-            # Check if the remote branch exists
-            check = _run_git_command(
-                ["git", "rev-parse", "--verify", f"origin/{base_branch}"],
-                capture_output=True, text=True, timeout=5, cwd=repo_root,
-            )
-            if check.returncode == 0:
-                base_ref = f"origin/{base_branch}"
-                log.info("WORKTREE_FROM_PR task=%s branch=%s", slug, base_branch)
-            else:
-                log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
-
-        create = _run_git_command(
-            ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
-        )
-        if create.returncode != 0:
-            detail = (create.stderr or create.stdout or "unknown failure").strip()
-            log.warning(
-                "WORKTREE_CREATE_FAILED task=%s base=%s path=%s error=%s",
-                slug,
-                base_ref,
-                wt_path,
-                detail,
-            )
-            return None
-        if wt_path.exists():
-            log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
-            # Inject persisted idea progress sheet if available
-            if idea_id:
-                _inject_idea_progress(idea_id, wt_path)
-            return wt_path
+        return None
     except Exception as e:
         log.warning("WORKTREE_FAILED task=%s error=%s", slug, e)
     return None
