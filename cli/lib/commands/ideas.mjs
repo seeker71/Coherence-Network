@@ -98,6 +98,7 @@ export async function showIdea(args) {
   const sub = args[1];
   // Subcommand routing
   if (sub === "tasks")     return showIdeaTasks([id]);
+  if (sub === "deps")      return showIdeaDeps([id, ...args.slice(2)]);
   if (sub === "children")  return showIdeaChildren([id]);
   if (sub === "activity")  return showIdeaActivity([id]);
   if (sub === "progress")  return showIdeaItemProgress([id]);
@@ -109,6 +110,8 @@ export async function showIdea(args) {
   if (sub === "answer")    return answerIdeaQuestion([id, ...args.slice(2)]);
   if (sub === "type")      return setIdeaWorkType([id, args[2]]);
   if (sub === "link")      return linkIdea([id, ...args.slice(2)]);
+  if (sub === "archive")   return archiveIdea([id, ...args.slice(2)]);
+  if (sub === "retire")    return retireIdea([id, ...args.slice(2)]);
 
   // Default: show detail
   const data = await get(`/api/ideas/${encodeURIComponent(id)}`);
@@ -266,12 +269,13 @@ export async function triageIdeas(args) {
     .sort((a, b) => (b.free_energy_score || 0) - (a.free_energy_score || 0))
     .slice(0, 20);
 
-  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m", G = "\x1b[32m";
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m", G = "\x1b[32m", Y = "\x1b[33m";
   console.log();
   console.log(`${B}  TRIAGE — Next Ideas to Work On${R}`);
   console.log(`  ${D}Ranked by free-energy score. Top 20 open, non-strategic ideas.${R}`);
   console.log(`  ${"─".repeat(82)}`);
   console.log(`  ${D}#   ${"Name".padEnd(40)} ${"Type".padEnd(12)} ${"FE".padStart(6)}  ${"Status".padEnd(9)} ${"Parent"}${R}`);
+  const cutoff30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   data.forEach((idea, i) => {
     const rank = String(i + 1).padStart(2);
     const name = truncate(idea.name || idea.id, 38).padEnd(40);
@@ -279,7 +283,9 @@ export async function triageIdeas(args) {
     const fe = idea.free_energy_score != null ? idea.free_energy_score.toFixed(2) : "    —";
     const status = (idea.manifestation_status || "none").padEnd(9);
     const parent = idea.parent_idea_id ? D + truncate(idea.parent_idea_id, 20) + R : "";
-    console.log(`  ${G}${rank}${R}  ${name} ${C}${wt}${R} ${String(fe).padStart(6)}  ${D}${status}${R} ${parent}`);
+    const isStale = !idea.last_activity_at || idea.last_activity_at < cutoff30;
+    const staleTag = isStale ? ` ${Y}[stale]${R}` : "";
+    console.log(`  ${G}${rank}${R}  ${name} ${C}${wt}${R} ${String(fe).padStart(6)}  ${D}${status}${R} ${parent}${staleTag}`);
   });
   console.log(`  ${"─".repeat(82)}`);
   console.log();
@@ -356,6 +362,77 @@ export async function showIdeaChildren(args) {
     const fe = child.free_energy_score != null ? child.free_energy_score.toFixed(2) : "   —";
     console.log(`  ${dot}  ${name} ${wt} ${fe}`);
   }
+  console.log();
+}
+
+export async function showIdeaDeps(args) {
+  // cc idea <id> deps [--type blocks|enables|supersedes|depends-on|related-to]
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea <id> deps [--type <relation>]"); return; }
+
+  let edgeType = null;
+  for (let i = 1; i < args.length; i++) {
+    if ((args[i] === "--type" || args[i] === "-t") && args[i+1]) edgeType = args[++i];
+  }
+
+  const params = { direction: "both" };
+  if (edgeType) params.type = edgeType;
+
+  const data = await get(`/api/graph/nodes/${encodeURIComponent(id)}/edges`, params);
+  const edges = Array.isArray(data) ? data : data?.edges || data?.items || [];
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m";
+  const G = "\x1b[32m", Y = "\x1b[33m", RED = "\x1b[31m";
+
+  // Colour per relation type
+  const relColor = {
+    "blocks":      RED,
+    "enables":     G,
+    "supersedes":  Y,
+    "depends-on":  Y,
+    "related-to":  C,
+  };
+
+  console.log();
+  console.log(`${B}  DEPENDENCIES: ${id}${R}${edgeType ? `  ${D}[type=${edgeType}]${R}` : ""}`);
+
+  if (!edges.length) {
+    console.log(`  ${D}No dependency edges found.${R}`);
+    console.log(`  ${D}Add one: cc idea ${id} link blocks|enables|supersedes <target-id>${R}`);
+    console.log();
+    return;
+  }
+
+  // Split into outgoing (this idea → other) and incoming (other → this idea)
+  const outgoing = edges.filter(e => e.from_id === id || e.source === id || e.from === id);
+  const incoming = edges.filter(e => e.to_id   === id || e.target === id || e.to   === id);
+
+  if (outgoing.length) {
+    console.log(`\n  ${B}This idea →${R}  ${D}(outgoing)${R}`);
+    console.log(`  ${"─".repeat(60)}`);
+    for (const e of outgoing) {
+      const rel  = e.type || e.edge_type || e.relation || "?";
+      const col  = relColor[rel] || C;
+      const peer = e.to_id || e.target || e.to || "?";
+      const label = truncate(peer, 40).padEnd(42);
+      console.log(`  ${col}──[${rel}]──▶${R}  ${label}`);
+    }
+  }
+
+  if (incoming.length) {
+    console.log(`\n  ${B}→ This idea${R}  ${D}(incoming)${R}`);
+    console.log(`  ${"─".repeat(60)}`);
+    for (const e of incoming) {
+      const rel  = e.type || e.edge_type || e.relation || "?";
+      const col  = relColor[rel] || C;
+      const peer = e.from_id || e.source || e.from || "?";
+      const label = truncate(peer, 40).padEnd(42);
+      console.log(`  ${col}◀──[${rel}]──${R}  ${label}`);
+    }
+  }
+
+  console.log();
+  console.log(`  ${D}Total edges: ${edges.length}  |  cc idea <id> link <rel> <target> to add more${R}`);
   console.log();
 }
 
@@ -617,4 +694,87 @@ export async function answerIdeaQuestion(args) {
   } else {
     console.log("Failed to record answer.");
   }
+}
+
+export async function archiveIdea(args) {
+  // cc idea <id> archive [--reason "..."] [--duplicate-of <id>]
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea <id> archive [--reason \"...\"] [--duplicate-of <id>]"); return; }
+  const flags = {};
+  for (let i = 1; i < args.length; i++) {
+    if ((args[i] === "--reason" || args[i] === "-r") && args[i+1]) flags.reason = args[++i];
+    if ((args[i] === "--duplicate-of") && args[i+1]) flags.duplicateOf = args[++i];
+  }
+  const body = { lifecycle: "archived" };
+  if (flags.duplicateOf) body.duplicate_of = flags.duplicateOf;
+  if (flags.reason) body.name = undefined; // reason goes in a note, not name
+  const result = await patch(`/api/ideas/${encodeURIComponent(id)}`, body);
+  if (result?.id) {
+    console.log(`\x1b[32m✓\x1b[0m ${id} → archived`);
+    if (flags.duplicateOf) console.log(`  Duplicate of: ${flags.duplicateOf}`);
+    if (flags.reason) console.log(`  Reason: ${flags.reason}`);
+  } else {
+    console.log("Failed to archive idea.");
+  }
+}
+
+export async function retireIdea(args) {
+  // cc idea <id> retire [--duplicate-of <id>]
+  const id = args[0];
+  if (!id) { console.log("Usage: cc idea <id> retire [--duplicate-of <id>]"); return; }
+  const flags = {};
+  for (let i = 1; i < args.length; i++) {
+    if (args[i] === "--duplicate-of" && args[i+1]) flags.duplicateOf = args[++i];
+  }
+  const body = { lifecycle: "retired" };
+  if (flags.duplicateOf) body.duplicate_of = flags.duplicateOf;
+  const result = await patch(`/api/ideas/${encodeURIComponent(id)}`, body);
+  if (result?.id) {
+    console.log(`\x1b[32m✓\x1b[0m ${id} → retired${flags.duplicateOf ? ` (duplicate of: ${flags.duplicateOf})` : ""}`);
+  } else {
+    console.log("Failed to retire idea.");
+  }
+}
+
+export async function showStaleIdeas(args) {
+  // cc idea stale [--days N]   — ideas with lifecycle=active not touched in N days (default 30)
+  let days = 30;
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === "--days" || args[i] === "-d") && args[i+1]) days = parseInt(args[++i]);
+  }
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  const raw = await get("/api/ideas", { limit: 400 });
+  let data = Array.isArray(raw) ? raw : raw?.ideas || [];
+
+  // Filter: active, not validated, no activity since cutoff
+  const stale = data.filter(i => {
+    if ((i.lifecycle || "active") !== "active") return false;
+    if (i.manifestation_status === "validated") return false;
+    if (i.idea_type === "super") return false;
+    const lastActivity = i.last_activity_at;
+    if (!lastActivity) return true; // no recorded activity = stale
+    return lastActivity < cutoff;
+  }).sort((a, b) => {
+    const ta = a.last_activity_at || "0";
+    const tb = b.last_activity_at || "0";
+    return ta < tb ? -1 : 1; // oldest first
+  });
+
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", Y = "\x1b[33m", C = "\x1b[36m";
+  console.log();
+  console.log(`${B}  STALE IDEAS${R}  ${D}(no activity in ${days}+ days, ${stale.length} found)${R}`);
+  if (!stale.length) { console.log(`  All active ideas touched in last ${days} days. ✓`); console.log(); return; }
+  console.log(`  ${"─".repeat(76)}`);
+  console.log(`  ${D}${"Name".padEnd(42)} ${"Last active".padEnd(14)} ${"Type".padEnd(12)} Status${R}`);
+  for (const idea of stale) {
+    const name = truncate(idea.name || idea.id, 40).padEnd(42);
+    const last = idea.last_activity_at ? idea.last_activity_at.slice(0, 10) : D+"never"+R;
+    const wt = (idea.work_type || "—").padEnd(12);
+    const status = idea.manifestation_status || "none";
+    console.log(`  ${Y}⚠${R}  ${name} ${String(last).padEnd(14)} ${C}${wt}${R} ${D}${status}${R}`);
+  }
+  console.log(`  ${"─".repeat(76)}`);
+  console.log(`  ${D}Archive: cc idea <id> archive | Retire duplicate: cc idea <id> retire --duplicate-of <id>${R}`);
+  console.log();
 }

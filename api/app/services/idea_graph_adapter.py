@@ -13,6 +13,7 @@ from typing import Any
 
 from app.models.idea import (
     Idea,
+    IdeaLifecycle,
     IdeaQuestion,
     IdeaStage,
     IdeaType,
@@ -48,6 +49,12 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         work_type = IdeaWorkType(work_type_str) if work_type_str else None
     except (ValueError, KeyError):
         work_type = None
+
+    try:
+        lifecycle_str = node.get("lifecycle", "active") or "active"
+        lifecycle = IdeaLifecycle(lifecycle_str)
+    except (ValueError, KeyError):
+        lifecycle = IdeaLifecycle.ACTIVE
 
     # Parse open questions
     raw_questions = node.get("open_questions", [])
@@ -89,6 +96,9 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         child_idea_ids=child_ids,
         value_basis=value_basis,
         work_type=work_type,
+        lifecycle=lifecycle,
+        duplicate_of=node.get("duplicate_of"),
+        last_activity_at=node.get("last_activity_at"),
         open_questions=questions,
     )
 
@@ -100,7 +110,7 @@ def _idea_to_properties(idea: Idea) -> dict[str, Any]:
         "potential_value", "actual_value", "estimated_cost", "actual_cost",
         "resistance_risk", "confidence", "manifestation_status", "stage",
         "interfaces", "idea_type", "parent_idea_id", "child_idea_ids",
-        "value_basis", "work_type",
+        "value_basis", "work_type", "lifecycle", "duplicate_of", "last_activity_at",
     ]:
         val = getattr(idea, field, None)
         if val is not None:
