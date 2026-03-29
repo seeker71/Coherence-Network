@@ -4754,7 +4754,10 @@ def _create_standalone_task_repo(
     archive_candidates = []
     if base_branch:
         archive_candidates.extend([f"origin/{base_branch}", base_branch])
-    archive_candidates.extend(["origin/main", "main", "HEAD"])
+    # origin/master covers repos that never adopted main; HEAD always resolves locally
+    archive_candidates.extend(
+        ["origin/main", "origin/master", "main", "master", "HEAD"],
+    )
     archive_ref = _resolve_available_ref(repo_root, archive_candidates)
     origin_url = _get_origin_remote_url(repo_root)
     archive_path: Path | None = None
@@ -4786,10 +4789,14 @@ def _create_standalone_task_repo(
             )
 
         if archive_ref:
+            # Temp tar must live next to wt_path — wt_path.parent is always created above
+            # and matches the active worktree_base (default repo or workspace_git_url clone).
+            # Using global _WORKTREE_BASE breaks when the task uses an external workspace
+            # mirror (that path never mkdir'd the main repo's .worktrees/).
             with tempfile.NamedTemporaryFile(
                 delete=False,
                 suffix=f"-{slug}.tar",
-                dir=str(_WORKTREE_BASE),
+                dir=str(wt_path.parent),
             ) as tmp:
                 archive_path = Path(tmp.name)
 
@@ -4823,9 +4830,32 @@ def _create_standalone_task_repo(
                 return None
 
             commit = _run_git_command(
-                ["git", "commit", "--quiet", "-m", f"Task {slug}: base snapshot ({archive_ref})"],
+                [
+                    "git",
+                    "commit",
+                    "--quiet",
+                    "--no-gpg-sign",
+                    "--no-verify",
+                    "-m",
+                    f"Task {slug}: base snapshot ({archive_ref})",
+                ],
                 capture_output=True, text=True, timeout=30, cwd=str(wt_path),
             )
+            if commit.returncode != 0:
+                # Hooks/GPG or "nothing to commit" — retry empty snapshot so impl can still run
+                commit = _run_git_command(
+                    [
+                        "git",
+                        "commit",
+                        "--quiet",
+                        "--no-gpg-sign",
+                        "--no-verify",
+                        "--allow-empty",
+                        "-m",
+                        f"Task {slug}: base snapshot ({archive_ref})",
+                    ],
+                    capture_output=True, text=True, timeout=30, cwd=str(wt_path),
+                )
             if commit.returncode != 0:
                 detail = (commit.stderr or commit.stdout or "unknown failure").strip()
                 log.warning("WORKTREE_STANDALONE_COMMIT_FAILED task=%s error=%s", slug, detail)
@@ -4833,18 +4863,21 @@ def _create_standalone_task_repo(
 
             log.info("WORKTREE_STANDALONE_CREATED task=%s base=%s path=%s", slug, archive_ref, wt_path)
         else:
-            remote_ref = base_branch or "main"
             if not origin_url:
-                log.warning("WORKTREE_STANDALONE_REF_MISSING task=%s ref=%s (no origin remote)", slug, remote_ref)
+                log.warning(
+                    "WORKTREE_STANDALONE_REF_MISSING task=%s (no origin remote)",
+                    slug,
+                )
                 return None
 
+            # Full fetch — avoids hard-coding main vs master when local refs are missing
             fetch = _run_git_command(
-                ["git", "fetch", "--quiet", "origin", remote_ref],
-                capture_output=True, text=True, timeout=60, cwd=str(wt_path),
+                ["git", "fetch", "--quiet", "origin"],
+                capture_output=True, text=True, timeout=120, cwd=str(wt_path),
             )
             if fetch.returncode != 0:
                 detail = (fetch.stderr or fetch.stdout or "unknown failure").strip()
-                log.warning("WORKTREE_STANDALONE_FETCH_FAILED task=%s ref=%s error=%s", slug, remote_ref, detail)
+                log.warning("WORKTREE_STANDALONE_FETCH_FAILED task=%s error=%s", slug, detail)
                 return None
 
             checkout = _run_git_command(
@@ -4856,7 +4889,7 @@ def _create_standalone_task_repo(
                 log.warning("WORKTREE_STANDALONE_CHECKOUT_FAILED task=%s branch=%s error=%s", slug, branch, detail)
                 return None
 
-            log.info("WORKTREE_STANDALONE_FETCH_CREATED task=%s base=%s path=%s", slug, remote_ref, wt_path)
+            log.info("WORKTREE_STANDALONE_FETCH_CREATED task=%s path=%s", slug, wt_path)
 
         if idea_id:
             _inject_idea_progress(idea_id, wt_path)

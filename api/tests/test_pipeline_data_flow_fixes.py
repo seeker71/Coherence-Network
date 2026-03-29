@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -251,6 +252,50 @@ def test_create_worktree_retries_with_safe_directory_after_dubious_ownership(
         ), "dubious ownership failures must be retried with safe.directory"
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+def test_standalone_task_repo_succeeds_with_real_git(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Linked-worktree fallback (_create_standalone_task_repo) must snapshot the repo.
+
+    Regresses: impl tasks failing with 'Worktree creation failed' when the runner
+    checks out a linked git worktree (gitdir: .../.git/worktrees/...) — archive + commit
+    must succeed without GPG/hook failures and temp tar must use wt_path.parent.
+    """
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "runner@test.local"],
+        cwd=repo,
+        check=True,
+    )
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+    (repo / "tracked.txt").write_text("identity-onboarding-snapshot\n", encoding="utf-8")
+    subprocess.run(["git", "add", "tracked.txt"], cwd=repo, check=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True)
+    subprocess.run(
+        ["git", "remote", "add", "origin", "https://example.com/none.git"],
+        cwd=repo,
+        check=True,
+    )
+
+    wt_base = repo / ".worktrees"
+    monkeypatch.setattr(local_runner, "_REPO_DIR", repo)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", wt_base)
+
+    task_id = "abcd1234ef567890"
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    wt_path = wt_base / f"task-{slug}"
+
+    result = local_runner._create_standalone_task_repo(task_id, wt_path, branch, idea_id="")
+
+    assert result == wt_path
+    assert (wt_path / "tracked.txt").read_text(encoding="utf-8") == (
+        "identity-onboarding-snapshot\n"
+    )
 
 
 def test_capture_worktree_diff_returns_empty_when_no_changes(
