@@ -46,6 +46,11 @@ export async function getIdea(id) {
   return request('GET', `/api/ideas/${id}`);
 }
 
+/** GET /api/contributors/:id */
+export async function getContributor(id) {
+  return request('GET', `/api/contributors/${id}`);
+}
+
 /**
  * POST /api/ideas
  * @param {{ name: string, description: string, potential_value?: number }} payload

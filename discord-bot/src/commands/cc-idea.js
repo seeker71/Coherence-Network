@@ -47,6 +47,7 @@ export async function execute(interaction) {
   const payload = {
     name,
     description,
+    interfaces: ['discord'],
     ...(potentialValue != null ? { potential_value: potentialValue } : {}),
     ...(contributorId ? { contributor_id: contributorId } : {}),
   };

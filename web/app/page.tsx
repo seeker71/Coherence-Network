@@ -153,7 +153,7 @@ export default async function Home() {
         </div>
 
         <div className="relative max-w-2xl mx-auto space-y-6 animate-fade-in-up">
-          <h1 className="hero-headline text-3xl md:text-5xl lg:text-6xl font-normal md:font-light tracking-tight leading-[1.15]">
+          <h1 className="hero-headline text-3xl md:text-5xl lg:text-6xl font-normal tracking-tight leading-[1.15]">
             What idea are you holding?
           </h1>
           <p className="text-base md:text-lg text-foreground/90 max-w-xl mx-auto leading-relaxed">
@@ -304,7 +304,7 @@ export default async function Home() {
 
       {/* Section 6: THE GENTLE TAP */}
       <section className="px-4 sm:px-6 lg:px-8 py-16 max-w-2xl mx-auto text-center">
-        <p className="text-xl md:text-2xl font-light text-foreground/90 leading-relaxed">
+        <p className="text-xl md:text-2xl font-normal text-foreground/90 leading-relaxed">
           You don&apos;t need permission.<br />
           You don&apos;t need to know everything.<br />
           You just need one thought worth sharing.

@@ -10,6 +10,7 @@
 
 import { SlashCommandBuilder } from 'discord.js';
 import { contributors } from '../lib/db.js';
+import { getContributor } from '../lib/api.js';
 import log from '../lib/logger.js';
 
 export const data = new SlashCommandBuilder()
@@ -33,26 +34,40 @@ export async function execute(interaction) {
     return;
   }
 
-  const existing = contributors.getContributorId(interaction.user.id);
+  // Defer reply as API check might take time
+  await interaction.deferReply({ ephemeral: true });
 
-  contributors.link(interaction.user.id, contributorId);
+  try {
+    const { ok, data } = await getContributor(contributorId);
+    if (!ok) {
+      await interaction.editReply({
+        content: `❌ Contributor \`${contributorId}\` not found in the network. Use a valid name or UUID from \`/api/contributors\`.`,
+      });
+      return;
+    }
 
-  if (existing && existing !== contributorId) {
-    await interaction.reply({
-      content: `🔄 Updated: your Discord account is now mapped to contributor \`${contributorId}\` (was \`${existing}\`).`,
-      ephemeral: true,
-    });
-  } else if (existing === contributorId) {
-    await interaction.reply({
-      content: `✅ Already linked: your Discord account is mapped to contributor \`${contributorId}\`.`,
-      ephemeral: true,
-    });
-  } else {
-    await interaction.reply({
-      content: `✅ Linked! Your Discord account is now mapped to contributor \`${contributorId}\`.\nYou can now use \`/cc-idea\` and \`/cc-stake\` with automatic attribution.`,
-      ephemeral: true,
+    const existing = contributors.getContributorId(interaction.user.id);
+    contributors.link(interaction.user.id, contributorId);
+
+    if (existing && existing !== contributorId) {
+      await interaction.editReply({
+        content: `🔄 Updated: your Discord account is now mapped to contributor \`${contributorId}\` (was \`${existing}\`).`,
+      });
+    } else if (existing === contributorId) {
+      await interaction.editReply({
+        content: `✅ Already linked: your Discord account is mapped to contributor \`${contributorId}\`.`,
+      });
+    } else {
+      await interaction.editReply({
+        content: `✅ Linked! Your Discord account is now mapped to contributor \`${contributorId}\`.\nYou can now use \`/cc-idea\` and \`/cc-stake\` with automatic attribution.`,
+      });
+    }
+
+    log.info(`/cc-link: ${interaction.user.tag} → contributor ${contributorId}`);
+  } catch (err) {
+    log.error(`/cc-link error: ${err.message}`);
+    await interaction.editReply({
+      content: '❌ Failed to validate contributor ID due to an internal error. Please try again later.',
     });
   }
-
-  log.info(`/cc-link: ${interaction.user.tag} → contributor ${contributorId}`);
 }
