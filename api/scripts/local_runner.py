@@ -3838,7 +3838,9 @@ def _seed_task_from_open_idea() -> bool:
                     if elapsed_min < cooldown_min:
                         log.info("SEED_BACKOFF idea='%s' failures=%d cooldown=%dmin elapsed=%.0fmin -- skipping",
                                  idea_name[:30], failed_for_phase, cooldown_min, elapsed_min)
-                        _SEEDER_SKIP_CACHE.add(idea_id)
+                        # NOTE: do NOT add to _SEEDER_SKIP_CACHE here — cooldown is temporary.
+                        # The skip cache is session-scoped and would permanently blacklist the idea.
+                        # Instead, just try the next candidate this cycle.
                         return _seed_task_from_open_idea()
                 except (ValueError, TypeError):
                     pass
