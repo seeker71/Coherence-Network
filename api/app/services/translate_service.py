@@ -520,8 +520,3 @@ def build_risk_opportunity_framing(idea_name: str, lens_id: str) -> tuple[str, s
         ),
     )
     return risk, opp
-</think>
-
-
-<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
-Read
