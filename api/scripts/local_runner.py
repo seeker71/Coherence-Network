@@ -4773,6 +4773,9 @@ def _create_standalone_task_repo(
         for key, value in (
             ("user.name", "Coherence Task Runner"),
             ("user.email", "runner@coherence.local"),
+            # CI / operator machines often enable GPG signing globally; standalone
+            # repos must commit without signing or impl tasks fail with gpg errors.
+            ("commit.gpgsign", "false"),
         ):
             _run_git_command(
                 ["git", "config", key, value],
@@ -4968,11 +4971,16 @@ def _create_worktree(
     slug = task_id[:16]
 
     # Determine which repo and worktree base to use
+    workspace_repo: Path | None = None
     if workspace_git_url:
         workspace_repo = _get_or_update_workspace_repo(workspace_git_url)
         if workspace_repo is None:
-            log.error("WORKTREE_WORKSPACE_REPO_FAILED task=%s url=%s", slug, workspace_git_url)
-            return None
+            log.warning(
+                "WORKTREE_WORKSPACE_REPO_FAILED task=%s url=%s — falling back to default repo",
+                slug,
+                workspace_git_url,
+            )
+    if workspace_repo is not None:
         repo_root = str(workspace_repo)
         worktree_base = workspace_repo / ".worktrees"
     else:
@@ -5033,7 +5041,29 @@ def _create_worktree(
                 wt_path,
                 detail,
             )
-            return None
+            # Second chance: isolated clone under .worktrees/ (permission, lock, or
+            # rare git worktree edge cases on shared runners).
+            if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+                log.warning(
+                    "WORKTREE_RECLAIM_BEFORE_STANDALONE_FAILED task=%s path=%s",
+                    slug,
+                    wt_path,
+                )
+                return None
+            standalone = _create_standalone_task_repo(
+                task_id,
+                wt_path,
+                branch,
+                base_branch=base_branch,
+                idea_id=idea_id,
+            )
+            if standalone is not None:
+                log.info(
+                    "WORKTREE_RECOVERED_VIA_STANDALONE task=%s path=%s",
+                    slug,
+                    standalone,
+                )
+            return standalone
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             # Inject persisted idea progress sheet if available

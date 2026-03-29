@@ -194,6 +194,7 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
         monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
         monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
         monkeypatch.setattr(local_runner.subprocess, "run", _run)
+        monkeypatch.setattr(local_runner, "_create_standalone_task_repo", lambda *_a, **_k: None)
 
         with caplog.at_level(logging.WARNING, logger="local_runner"):
             result = local_runner._create_worktree(slug)
@@ -205,6 +206,65 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
         ), "git stderr must be logged when worktree creation fails"
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+def test_create_worktree_falls_back_to_standalone_when_worktree_add_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """After git worktree add fails, runner should try standalone task repo."""
+    slug = "abc8def234567890"
+    wt_path = tmp_path / f"task-{slug}"
+    fallback = Path("/tmp/coherence-standalone-fallback")
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:4] == ["git", "show-ref", "--verify", "--quiet"]:
+            return _Proc(returncode=1)
+        if args[:3] == ["git", "worktree", "list"]:
+            return _Proc(stdout="")
+        if args[:3] == ["git", "worktree", "add"]:
+            return _Proc(returncode=1, stderr="fatal: permission denied")
+        return _Proc()
+
+    def _standalone(*_a: Any, **_k: Any) -> Path:
+        return fallback
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(local_runner, "_create_standalone_task_repo", _standalone)
+
+    result = local_runner._create_worktree(slug)
+    assert result == fallback
+
+
+def test_create_worktree_uses_default_repo_when_workspace_clone_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Invalid idea workspace_git_url must not fail the task — use default repo."""
+    task_id = "wsfb1def234567890"
+    slug = task_id[:16]
+    wt_path = tmp_path / f"task-{slug}"
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:3] == ["git", "worktree", "add"]:
+            wt_path.mkdir(parents=True, exist_ok=True)
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(
+        local_runner,
+        "_get_or_update_workspace_repo",
+        lambda _url: None,
+    )
+
+    result = local_runner._create_worktree(
+        task_id,
+        workspace_git_url="https://invalid.example.invalid/repo.git",
+    )
+    assert result is not None
+    assert result == wt_path
 
 
 def test_create_worktree_retries_with_safe_directory_after_dubious_ownership(
