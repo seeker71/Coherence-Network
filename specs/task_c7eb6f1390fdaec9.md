@@ -294,6 +294,9 @@ grep -r 'href="/remote-ops"' web/
 | Cloudflare may cache the 308 response indefinitely | Set `Cache-Control: max-age=3600` on redirect responses, not indefinitely |
 | The `/remote-ops` page is a client component (`"use client"`) — its hooks (`useRemoteOps`) must be adapted for the server-rendered `/nodes` page | Extract the interactive control panel into a `"use client"` sub-component; keep the rest of `/nodes` as a server component |
 
+- `/nodes` page may become too long — use collapsible sections or tabs
+- Cloudflare 308 caching — set `Cache-Control: max-age=3600`
+
 ---
 
 ## Known Gaps and Follow-up Tasks

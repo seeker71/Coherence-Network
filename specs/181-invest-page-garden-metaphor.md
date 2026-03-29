@@ -231,6 +231,10 @@ function growthDescription(score: number | null): string {
 
 ## Verification
 
+```bash
+curl -s https://coherencycoin.com/invest | grep -Ec "Growth potential|Water needed|Nurture|Seeds available"
+```
+
 This spec constitutes a contract. The following scenarios must pass in production.
 
 ### Scenario 1 — Garden language visible on page load
@@ -345,26 +349,18 @@ how many seeds you have" (not the old "see your balance" text).
 | Animation performance on low-power devices | Use `prefers-reduced-motion` media query to disable pulse animation |
 | Next.js SSR and client hydration mismatch on hover-state details | Use `<details>`/`<summary>` for expand/collapse instead of JS-only state |
 
+- `free_energy_score` absent on some ideas — graceful fallback text required
+- Garden metaphor may confuse finance-savvy users — numbers remain accessible
+
 ---
 
 ## Known Gaps and Follow-up Tasks
 
-1. **CLI `cc invest` command**: This spec does not change CLI output. A follow-up spec should apply
-   garden metaphor to `cc invest` and `cc portfolio` output.
-
-2. **Garden metaphor consistency across pages**: `/ideas`, `/contributors/{id}/portfolio`, and
-   `/resonance` still use spreadsheet language. A follow-up audit spec should align them.
-
-3. **Growth measurement proof**: The spec answers the open question "how do we show whether it is
-   working yet" with the stage strip and growth description. However, longitudinal proof (did the
-   garden grow over time?) requires a growth history chart — deferred to a follow-up spec.
-
-4. **Animated sprout-to-tree SVG**: This spec allows CSS-based stage strip as a simpler
-   implementation. A richer animated SVG plant could be added in a visual polish pass.
-
-5. **Color palette**: This spec does not prescribe exact Tailwind classes for the green/emerald
-   garden palette. The implementor should use `emerald-*` or `green-*` Tailwind shades, consistent
-   with the existing primary color system.
+- Follow-up task: CLI `cc invest` command — apply garden metaphor to `cc invest` and `cc portfolio` output.
+- Follow-up task: Garden metaphor consistency across pages — `/ideas`, `/contributors/{id}/portfolio`, and `/resonance` still use spreadsheet language.
+- Follow-up task: Longitudinal growth proof — growth history chart deferred to follow-up spec.
+- Follow-up task: Animated sprout-to-tree SVG — richer animated SVG plant for visual polish.
+- Follow-up task: Color palette — prescribe exact Tailwind `emerald-*` / `green-*` shades.
 
 ---
 
@@ -382,3 +378,28 @@ how many seeds you have" (not the old "see your balance" text).
 - [ ] Stage strip cells have appropriate `aria-label` attributes
 - [ ] `prefers-reduced-motion` disables pulse animation
 - [ ] Page passes Lighthouse accessibility score ≥ 90
+
+---
+
+## Purpose
+
+Replace the spreadsheet metaphor on the Invest page with a garden metaphor so contributors feel they are tending living ideas, not evaluating financial instruments. All data model and API changes are out of scope — purely a presentational redesign.
+
+## Files to Modify
+
+- `web/app/invest/page.tsx` — Full rewrite: garden vocabulary, stage strip component, season badges, garden verb CTA
+- `web/app/invest/InvestBalanceSection.tsx` — Optional: rename "Your CC Balance" to "Seeds available"
+
+## Acceptance Criteria
+
+Manual validation:
+- Navigate to `https://coherencycoin.com/invest` and confirm no spreadsheet labels ("Value gap", "Est. cost", "ROI", "Stake") appear as primary visible text
+- Verify stage strip (5-cell: Seed / Seedling / Sapling / Tree / Flowering) renders with correct current-stage highlight
+- Verify action button verb changes by stage (Plant / Water / Tend)
+
+## Out of Scope
+
+- API endpoint changes — no backend modifications required
+- Data model changes — all values derived from existing `IdeaWithScore` fields
+- CLI or MCP command changes for the investment workflow
+- Analytics/event tracking for garden verb clicks
