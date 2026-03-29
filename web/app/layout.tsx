@@ -67,7 +67,7 @@ export default function RootLayout({
           <ExpertModeProvider>
             <SiteHeader />
             <LiveUpdatesController />
-            <main id="main-content" className="pb-16 md:pb-0">
+            <main id="main-content" className="relative z-[1] pb-16 md:pb-0">
               {children}
             </main>
             <MobileBottomNav />

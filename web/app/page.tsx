@@ -153,7 +153,7 @@ export default async function Home() {
         </div>
 
         <div className="relative max-w-2xl mx-auto space-y-6 animate-fade-in-up">
-          <h1 className="hero-headline text-3xl md:text-5xl lg:text-6xl font-normal md:font-light tracking-tight leading-[1.15]">
+          <h1 className="hero-headline text-3xl md:text-5xl lg:text-6xl font-medium md:font-normal tracking-tight leading-[1.15]">
             What idea are you holding?
           </h1>
           <p className="text-base md:text-lg text-foreground/90 max-w-xl mx-auto leading-relaxed">
@@ -319,14 +319,14 @@ export default async function Home() {
           <Link href="/invest" className="hover:text-foreground transition-colors">Invest</Link>
           <Link href="/contribute" className="hover:text-foreground transition-colors">Contribute</Link>
         </div>
-        <div className="flex flex-wrap justify-center gap-4 text-xs text-foreground/85 mb-4">
+        <div className="flex flex-wrap justify-center gap-4 text-xs text-foreground/90 mb-4">
           <a href="https://github.com/seeker71/Coherence-Network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
           <a href="https://www.npmjs.com/package/coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">CLI (npm)</a>
           <a href="https://www.npmjs.com/package/coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">MCP Server</a>
           <a href="https://api.coherencycoin.com/docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">API Docs</a>
           <a href="https://clawhub.ai/skills/coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">OpenClaw Skill</a>
         </div>
-        <p className="text-xs text-foreground/85 leading-relaxed">
+        <p className="text-xs text-foreground/90 leading-relaxed">
           Ideas into realization — through attention, curiosity, and collaboration.
         </p>
       </footer>

@@ -5033,6 +5033,27 @@ def _create_worktree(
                 wt_path,
                 detail,
             )
+            # Fallback: isolated repo snapshot (git archive + init) when `worktree add`
+            # fails (busy branch, filesystem quirks, or environments that block nested worktrees).
+            if wt_path.exists():
+                try:
+                    shutil.rmtree(wt_path)
+                except OSError as e:
+                    log.warning("WORKTREE_FALLBACK_RM_FAILED path=%s error=%s", wt_path, e)
+            fallback = _create_standalone_task_repo(
+                task_id,
+                wt_path,
+                branch,
+                base_branch=base_branch,
+                idea_id=idea_id,
+            )
+            if fallback is not None:
+                log.info(
+                    "WORKTREE_STANDALONE_FALLBACK task=%s path=%s (after worktree add failed)",
+                    slug,
+                    wt_path,
+                )
+                return fallback
             return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)

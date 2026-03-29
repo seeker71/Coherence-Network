@@ -6,9 +6,9 @@
     color-scheme: dark;
     --background: 24 22% 11%;
     /* Slightly higher lightness for default text on layered warm gradients */
-    --foreground: 38 32% 93%;
+    --foreground: 38 28% 96%;
     --card: 24 20% 14%;
-    --card-foreground: 38 30% 92%;
+    --card-foreground: 38 28% 95%;
     --popover: 24 20% 13%;
     --popover-foreground: 38 30% 92%;
     --primary: 36 72% 58%;
@@ -64,9 +64,9 @@
   :root.dark {
     color-scheme: dark;
     --background: 24 22% 11%;
-    --foreground: 38 32% 93%;
+    --foreground: 38 28% 96%;
     --card: 24 20% 14%;
-    --card-foreground: 38 30% 92%;
+    --card-foreground: 38 28% 95%;
     --popover: 24 20% 13%;
     --popover-foreground: 38 30% 92%;
     --primary: 36 72% 58%;
@@ -126,11 +126,12 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  /* Softer blooms so foreground text stays legible */
+  z-index: 0;
+  /* Softer blooms so foreground text stays legible (dark: keep very low — screen blend lifts midtones) */
   background:
-    radial-gradient(520px 340px at 14% 24%, hsl(28 92% 74% / 0.05), transparent 72%),
-    radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.035), transparent 76%),
-    radial-gradient(460px 300px at 54% 32%, hsl(36 96% 76% / 0.04), transparent 74%);
+    radial-gradient(520px 340px at 14% 24%, hsl(28 92% 74% / 0.035), transparent 72%),
+    radial-gradient(660px 420px at 86% 74%, hsl(168 52% 62% / 0.025), transparent 76%),
+    radial-gradient(460px 300px at 54% 32%, hsl(36 96% 76% / 0.028), transparent 74%);
   mix-blend-mode: screen;
 }
 
@@ -146,7 +147,9 @@ html.light body::before {
 /* Hero headline: full-opacity ink + soft shadow for separation from ambient gradients */
 .hero-headline {
   color: hsl(var(--foreground));
-  text-shadow: 0 2px 28px hsl(20 40% 6% / 0.55);
+  text-shadow:
+    0 1px 2px hsl(20 45% 4% / 0.85),
+    0 2px 32px hsl(20 40% 6% / 0.5);
 }
 
 html.light .hero-headline {
