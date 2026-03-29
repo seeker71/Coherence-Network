@@ -5033,7 +5033,30 @@ def _create_worktree(
                 wt_path,
                 detail,
             )
-            return None
+            # Nested worktrees can fail (permissions, shared gitdir, branch races).
+            # Clean the slot and retry as a standalone clone under .worktrees/ so
+            # impl/test tasks still get an isolated tree.
+            if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+                log.warning(
+                    "WORKTREE_FALLBACK_RECLAIM_FAILED task=%s path=%s",
+                    slug,
+                    wt_path,
+                )
+                return None
+            fallback = _create_standalone_task_repo(
+                task_id,
+                wt_path,
+                branch,
+                base_branch=base_branch,
+                idea_id=idea_id,
+            )
+            if fallback is not None:
+                log.info(
+                    "WORKTREE_STANDALONE_FALLBACK task=%s path=%s (after git worktree add failed)",
+                    slug,
+                    fallback,
+                )
+            return fallback
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
             # Inject persisted idea progress sheet if available

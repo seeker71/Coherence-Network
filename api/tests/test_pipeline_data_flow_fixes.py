@@ -191,9 +191,16 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
                 return _Proc(returncode=1, stderr="fatal: branch already exists")
             return _Proc()
 
+        def _standalone_also_fails(
+            *_a: Any,
+            **_k: Any,
+        ) -> None:
+            return None
+
         monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
         monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
         monkeypatch.setattr(local_runner.subprocess, "run", _run)
+        monkeypatch.setattr(local_runner, "_create_standalone_task_repo", _standalone_also_fails)
 
         with caplog.at_level(logging.WARNING, logger="local_runner"):
             result = local_runner._create_worktree(slug)
@@ -203,6 +210,49 @@ def test_create_worktree_logs_failure_details_when_git_add_fails(
             "fatal: branch already exists" in record.message
             for record in caplog.records
         ), "git stderr must be logged when worktree creation fails"
+    finally:
+        shutil.rmtree(tmp_path, ignore_errors=True)
+
+
+def test_create_worktree_falls_back_to_standalone_when_worktree_add_fails(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    """When git worktree add fails, reclaim the slot and use standalone task repo."""
+    tmp_path = _sandbox_tmp_path()
+    try:
+        slug = "abc8def234567890"
+        wt_path = tmp_path / f"task-{slug[:16]}"
+
+        def _run(args: list[str], **_kwargs: Any) -> _Proc:
+            if args[:4] == ["git", "show-ref", "--verify", "--quiet"]:
+                return _Proc(returncode=1)
+            if args[:3] == ["git", "worktree", "list"]:
+                return _Proc(stdout="")
+            if args[:3] == ["git", "worktree", "add"]:
+                return _Proc(returncode=1, stderr="fatal: cannot lock ref")
+            return _Proc()
+
+        def _standalone_ok(
+            _task_id: str,
+            path: Path,
+            _branch: str,
+            **_kwargs: Any,
+        ) -> Path:
+            path.mkdir(parents=True, exist_ok=True)
+            return path
+
+        monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+        monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+        monkeypatch.setattr(local_runner.subprocess, "run", _run)
+        monkeypatch.setattr(local_runner, "_create_standalone_task_repo", _standalone_ok)
+
+        with caplog.at_level(logging.INFO, logger="local_runner"):
+            result = local_runner._create_worktree(slug)
+
+        assert result == wt_path
+        assert any(
+            "WORKTREE_STANDALONE_FALLBACK" in record.message for record in caplog.records
+        ), "must log fallback when standalone succeeds after worktree add failure"
     finally:
         shutil.rmtree(tmp_path, ignore_errors=True)
 
