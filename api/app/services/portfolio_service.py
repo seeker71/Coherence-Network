@@ -233,11 +233,8 @@ def get_cc_history(contributor_id: str, window: str = "90d", bucket: str = "7d")
         if props.get("contributor_id") != contributor_id and props.get("contributor_name") != c_name:
             continue
         ts_raw = c.get("created_at") or c.get("updated_at")
-        if not ts_raw:
-            continue
-        try:
-            ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-        except (ValueError, AttributeError):
+        ts = _parse_iso_utc(ts_raw)
+        if not ts:
             continue
         if ts < start:
             continue
