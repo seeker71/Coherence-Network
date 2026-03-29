@@ -20,11 +20,6 @@ router = APIRouter(prefix="/api/preferences", tags=["ui-preferences"])
 # In production this would be backed by the unified DB.
 _STORE: dict[str, dict] = {}
 
-ALLOWED_VIEW_MODES = {"tabs", "cards", "table", "graph"}
-ALLOWED_NAV_LAYOUTS = {"top", "bottom_bar"}
-ALLOWED_IDEA_TABS = {"overview", "specs", "tasks", "contributors", "edges", "history"}
-ALLOWED_IDEAS_VIEWS = {"cards", "table", "graph"}
-
 
 class UIPreferences(BaseModel):
     contributor_id: str = Field(..., description="Identifier of the contributor")
@@ -92,13 +87,9 @@ def _defaults(contributor_id: str) -> dict:
     "/ui",
     response_model=UIPreferences,
     summary="Get UI preferences for a contributor",
-    description=(
-        "Returns UI preferences for the given contributor. "
-        "If no preferences have been saved, returns defaults. "
-        "Pass ?contributor_id=<id> to scope to a specific contributor."
-    ),
 )
 def get_ui_preferences(contributor_id: str = "anonymous") -> UIPreferences:
+    """Return UI preferences for the contributor. Returns defaults if none saved."""
     data = _STORE.get(contributor_id, _defaults(contributor_id))
     return UIPreferences(**data)
 
@@ -108,9 +99,7 @@ def get_ui_preferences(contributor_id: str = "anonymous") -> UIPreferences:
     response_model=UIPreferences,
     summary="Upsert UI preferences for a contributor",
 )
-def upsert_ui_preferences(
-    body: UIPreferences,
-) -> UIPreferences:
+def upsert_ui_preferences(body: UIPreferences) -> UIPreferences:
     """Create or fully replace UI preferences for a contributor."""
     if not body.contributor_id or not body.contributor_id.strip():
         raise HTTPException(status_code=422, detail="contributor_id is required")
@@ -130,7 +119,6 @@ def patch_ui_preferences(
     """Partial update — only supplied fields are changed."""
     if not contributor_id or not contributor_id.strip():
         raise HTTPException(status_code=422, detail="contributor_id query param is required")
-
     current = _STORE.get(contributor_id, _defaults(contributor_id))
     patch = body.model_dump(exclude_none=True)
     current.update(patch)

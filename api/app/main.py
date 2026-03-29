@@ -61,6 +61,7 @@ from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
 from app.routers import onboarding as onboarding_router
 from app.routers import pipeline
+from app.routers import ui_preferences as ui_preferences_router
 from app.routers import provider_stats
 from app.routers import service_registry_router
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -598,6 +599,9 @@ app.include_router(brief_router.router)
 
 # Identity-driven onboarding - TOFU MVP (spec-168)
 app.include_router(onboarding_router.router, tags=["onboarding"])
+
+# UX tabs mobile-friendly — per-contributor UI preferences (spec ux-tabs-mobile-friendly)
+app.include_router(ui_preferences_router.router)
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained

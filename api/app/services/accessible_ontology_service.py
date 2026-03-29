@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from collections import defaultdict
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Seeded domain vocabulary (labels for slugs contributors use in tags)
@@ -170,22 +170,40 @@ def get_related(concept_id: str, min_confidence: float) -> list[dict[str, Any]] 
     return [r for r in _relations.get(concept_id, []) if r["confidence"] >= min_confidence]
 
 
+def _to_garden_concept(r: dict[str, Any], idx: int, cluster: str) -> dict[str, Any]:
+    rel_count = len(_relations.get(r["id"], []))
+    return {
+        "id": r["id"],
+        "title": r["title"],
+        "plain_text": r["body"],
+        "domains": r["domains"],
+        "status": _web_status(r["status"]),
+        "garden_position": {
+            "cluster": cluster,
+            "x": float(idx % 12),
+            "y": float(idx // 12),
+        },
+        "relationship_count": rel_count,
+        "core_concept_match": None,
+        "contributor_id": (r["contributor_id"] or "anonymous"),
+    }
+
+
 def get_garden_payload(limit: int = 200) -> dict[str, Any]:
     """Domains (API contract) plus clusters/concepts (web Ontology Garden page)."""
     domain_map: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    active: list[dict[str, Any]] = []
     for rec in _store.values():
         if rec["deleted_at"] is not None:
             continue
-        active.append(rec)
-        for d in rec["domains"]:
-            domain_map[d].append(rec)
-
-    active = active[: max(0, limit)]
+        if rec["domains"]:
+            for d in rec["domains"]:
+                domain_map[d].append(rec)
+        else:
+            domain_map["general"].append(rec)
 
     domains_out: list[dict[str, Any]] = []
     for slug, recs in sorted(domain_map.items()):
-        label = _domain_label(slug)
+        label = _domain_label(slug) if slug != "general" else "General"
         cards = [
             {
                 "id": r["id"],
@@ -202,61 +220,17 @@ def get_garden_payload(limit: int = 200) -> dict[str, Any]:
 
     clusters: list[dict[str, Any]] = []
     flat_concepts: list[dict[str, Any]] = []
-    seen: set[str] = set()
+    seen_ids: set[str] = set()
     idx = 0
     for slug, recs in sorted(domain_map.items()):
-        members: list[dict[str, Any]] = []
-        for r in recs:
-            if r["id"] in seen:
-                continue
-            seen.add(r["id"])
-            rel_count = len(_relations.get(r["id"], []))
-            gc = {
-                "id": r["id"],
-                "title": r["title"],
-                "plain_text": r["body"],
-                "domains": r["domains"],
-                "status": _web_status(r["status"]),
-                "garden_position": {
-                    "cluster": slug,
-                    "x": float(idx % 12),
-                    "y": float(idx // 12),
-                },
-                "relationship_count": rel_count,
-                "core_concept_match": None,
-                "contributor_id": (r["contributor_id"] or "anonymous"),
-            }
-            members.append(gc)
-            flat_concepts.append(gc)
-            idx += 1
-            if len(flat_concepts) >= limit:
-                break
-        if members:
-            clusters.append({"name": slug, "size": len(members), "members": members})
-        if len(flat_concepts) >= limit:
-            break
-
-    # Concepts tagged with no domain still appear as a synthetic cluster
-    orphan_recs = [r for r in _store.values() if r["deleted_at"] is None and not r["domains"]]
-    if orphan_recs and len(flat_concepts) < limit:
-        members = []
-        for r in orphan_recs[: limit - len(flat_concepts)]:
-            rel_count = len(_relations.get(r["id"], []))
-            gc = {
-                "id": r["id"],
-                "title": r["title"],
-                "plain_text": r["body"],
-                "domains": r["domains"],
-                "status": _web_status(r["status"]),
-                "garden_position": {"cluster": "general", "x": 0.0, "y": 0.0},
-                "relationship_count": rel_count,
-                "core_concept_match": None,
-                "contributor_id": (r["contributor_id"] or "anonymous"),
-            }
-            members.append(gc)
-            flat_concepts.append(gc)
-        if members:
-            clusters.append({"name": "general", "size": len(members), "members": members})
+        members = [_to_garden_concept(r, idx + i, slug) for i, r in enumerate(recs[:limit])]
+        idx += len(members)
+        clusters.append({"name": slug, "size": len(members), "members": members})
+        for m in members:
+            cid = m["id"]
+            if cid not in seen_ids and len(flat_concepts) < limit:
+                seen_ids.add(cid)
+                flat_concepts.append(m)
 
     contributors = {r["contributor_id"] or "anonymous" for r in _store.values() if r["deleted_at"] is None}
     placed = sum(1 for r in _store.values() if r["deleted_at"] is None and r["status"] == "confirmed")
