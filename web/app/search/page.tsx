@@ -67,7 +67,7 @@ export default function SearchPage() {
         <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
           Ideas
         </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+        <Link href="/pipeline" className="text-muted-foreground hover:text-foreground">
           Usage
         </Link>
       </div>

@@ -95,7 +95,7 @@ export default function ApiHealthPage() {
         <Link href="/gates" className="text-muted-foreground hover:text-foreground">
           Gates
         </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+        <Link href="/pipeline" className="text-muted-foreground hover:text-foreground">
           Usage
         </Link>
       </div>

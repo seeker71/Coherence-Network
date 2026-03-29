@@ -65,7 +65,7 @@ export default function ProjectPage() {
         <Link href="/search" className="text-muted-foreground hover:text-foreground">
           ← Search
         </Link>
-        <Link href="/usage" className="text-muted-foreground hover:text-foreground">
+        <Link href="/pipeline" className="text-muted-foreground hover:text-foreground">
           Usage
         </Link>
         <Link href="/ideas" className="text-muted-foreground hover:text-foreground">

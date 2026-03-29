@@ -30,7 +30,7 @@ const SECONDARY_NAV = [
   { href: "/search", label: "Search" },
   // Operations (power users)
   { href: "/tasks", label: "Work Cards" },
-  { href: "/automation", label: "Automation" },
+  { href: "/nodes", label: "Nodes (ops)" },
   { href: "/friction", label: "Friction" },
   { href: "/identity", label: "Identity" },
 ];

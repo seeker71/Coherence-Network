@@ -10,8 +10,9 @@ const MIN_POLL_MS = 30000;
 const VERSION_CHECK_INTERVAL_TICKS = 6;
 const DEFAULT_ROUTER_REFRESH_EVERY_TICKS = 8;
 const LIVE_UPDATES_STORAGE_KEY = "coherence_live_updates_enabled";
-const ROUTER_REFRESH_SKIP_PREFIXES = ["/automation"];
-const DEFAULT_ACTIVE_ROUTE_PREFIXES = ["/tasks", "/remote-ops", "/api-health", "/gates"];
+// /pipeline handles its own refresh client-side; /nodes is server-rendered so use router refresh
+const ROUTER_REFRESH_SKIP_PREFIXES = ["/pipeline"];
+const DEFAULT_ACTIVE_ROUTE_PREFIXES = ["/tasks", "/nodes", "/api-health", "/gates"];
 
 type WebVersionResponse = {
   web?: {
