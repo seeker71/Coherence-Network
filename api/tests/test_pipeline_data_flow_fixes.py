@@ -130,6 +130,66 @@ def test_create_worktree_falls_back_to_origin_main_when_pr_branch_not_found(
     )
 
 
+def test_create_worktree_linked_repo_falls_back_when_standalone_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Linked checkout: standalone snapshot failure must not block git worktree add."""
+    slug = "abc8def234567890"
+    wt_path = tmp_path / f"task-{slug}"
+    calls: list[list[str]] = []
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        calls.append(list(args))
+        if args[:3] == ["git", "worktree", "add"]:
+            wt_path.mkdir(parents=True, exist_ok=True)
+        return _Proc()
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(local_runner, "_repo_is_linked_worktree", lambda _r: True)
+    monkeypatch.setattr(local_runner, "_create_standalone_task_repo", lambda *a, **k: None)
+
+    with caplog.at_level(logging.WARNING, logger="local_runner"):
+        result = local_runner._create_worktree(slug)
+
+    assert result == wt_path
+    assert any(c[:3] == ["git", "worktree", "add"] for c in calls)
+    assert any("WORKTREE_STANDALONE_FAILED" in r.message for r in caplog.records)
+
+
+def test_create_worktree_uses_standalone_when_worktree_add_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Non-linked repo: if git worktree add fails, retry via standalone snapshot."""
+    tid = "abc9def234567890"
+    slug = tid[:16]
+    wt_path = tmp_path / f"task-{slug}"
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:3] == ["git", "worktree", "add"]:
+            return _Proc(returncode=1, stderr="fatal: permission denied")
+        return _Proc()
+
+    def _standalone(_task_id: str, path: Path, _branch: str, **kwargs: Any) -> Path | None:
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(local_runner, "_repo_is_linked_worktree", lambda _r: False)
+    monkeypatch.setattr(local_runner, "_create_standalone_task_repo", _standalone)
+
+    with caplog.at_level(logging.INFO, logger="local_runner"):
+        result = local_runner._create_worktree(tid)
+
+    assert result == wt_path
+    assert any(
+        "WORKTREE_STANDALONE_RECOVERY" in r.message for r in caplog.records
+    ), "recovery path must log WORKTREE_STANDALONE_RECOVERY"
+
+
 # ---------------------------------------------------------------------------
 # AC-2 — _capture_worktree_diff captures actual diff, not just stdout
 # ---------------------------------------------------------------------------

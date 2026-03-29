@@ -4741,6 +4741,7 @@ def _create_standalone_task_repo(
     *,
     base_branch: str | None = None,
     idea_id: str = "",
+    archive_temp_dir: Path | None = None,
 ) -> Path | None:
     """Create an isolated task repo when nested git worktrees are not writable.
 
@@ -4786,10 +4787,12 @@ def _create_standalone_task_repo(
             )
 
         if archive_ref:
+            tar_dir = (archive_temp_dir or _WORKTREE_BASE).resolve()
+            tar_dir.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(
                 delete=False,
                 suffix=f"-{slug}.tar",
-                dir=str(_WORKTREE_BASE),
+                dir=str(tar_dir),
             ) as tmp:
                 archive_path = Path(tmp.name)
 
@@ -4983,21 +4986,61 @@ def _create_worktree(
     branch = f"task/{slug}"
     try:
         worktree_base.mkdir(parents=True, exist_ok=True)
-        if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+        linked_repo = _repo_is_linked_worktree(repo_root)
+        # Full reclaim touches the shared gitdir; on linked checkouts it can fail and
+        # block impl/test before any fallback. Prefer path cleanup + branch delete here;
+        # use full reclaim for normal clones and after standalone failure.
+        if linked_repo:
+            if wt_path.exists():
+                try:
+                    shutil.rmtree(wt_path)
+                except OSError as exc:
+                    log.warning(
+                        "WORKTREE_LINKED_ORPHAN_RM_FAILED task=%s path=%s error=%s",
+                        slug,
+                        wt_path,
+                        exc,
+                    )
+                    if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+                        return None
+            if _branch_exists(repo_root, branch):
+                _run_git_command(
+                    ["git", "branch", "-D", branch],
+                    capture_output=True, text=True, timeout=10, cwd=repo_root,
+                )
+        elif not _reclaim_worktree_slot(repo_root, wt_path, branch):
             return None
-        if _repo_is_linked_worktree(repo_root):
+
+        standalone_attempted = False
+        if linked_repo:
+            # Prefer standalone when nested under a linked worktree (avoids writing shared gitdir).
             log.info(
-                "WORKTREE_LINKED_REPO task=%s repo=%s -- using standalone task repo fallback",
+                "WORKTREE_LINKED_REPO task=%s repo=%s -- trying standalone task repo first",
                 slug,
                 repo_root,
             )
-            return _create_standalone_task_repo(
+            standalone_attempted = True
+            wt_standalone = _create_standalone_task_repo(
                 task_id,
                 wt_path,
                 branch,
                 base_branch=base_branch,
                 idea_id=idea_id,
+                archive_temp_dir=worktree_base,
             )
+            if wt_standalone is not None:
+                return wt_standalone
+            log.warning(
+                "WORKTREE_STANDALONE_FAILED task=%s — falling back to git worktree add",
+                slug,
+            )
+            if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+                log.warning(
+                    "WORKTREE_RECLAIM_AFTER_STANDALONE_FAILED task=%s — cannot clear slot",
+                    slug,
+                )
+                return None
+
         # Fetch latest remote refs
         fetch = _run_git_command(
             ["git", "fetch", "origin", "--quiet"],
@@ -5033,6 +5076,23 @@ def _create_worktree(
                 wt_path,
                 detail,
             )
+            if not standalone_attempted:
+                if not _reclaim_worktree_slot(repo_root, wt_path, branch):
+                    return None
+                fb = _create_standalone_task_repo(
+                    task_id,
+                    wt_path,
+                    branch,
+                    base_branch=base_branch,
+                    idea_id=idea_id,
+                    archive_temp_dir=worktree_base,
+                )
+                if fb is not None:
+                    log.info(
+                        "WORKTREE_STANDALONE_RECOVERY task=%s — created after worktree add failed",
+                        slug,
+                    )
+                    return fb
             return None
         if wt_path.exists():
             log.info("WORKTREE_CREATED task=%s base=%s path=%s", slug, base_ref, wt_path)
