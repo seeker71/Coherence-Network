@@ -117,3 +117,7 @@ data/coherence.db
 __pycache__/
 .task-*
 data/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
