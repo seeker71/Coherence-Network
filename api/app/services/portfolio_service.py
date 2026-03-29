@@ -10,11 +10,13 @@ from app.models.portfolio import (
     CCHistory,
     CCHistoryBucket,
     ContributionDetail,
+    ContributionLineageView,
     ContributorSummary,
     HealthSignal,
     IdeaContributionDrilldown,
     IdeaContributionsList,
     IdeaContributionSummary,
+    LineageLinkBrief,
     LinkedIdentity,
     NetworkStats,
     PortfolioSummary,
@@ -435,6 +437,7 @@ def get_idea_contribution_detail(contributor_id: str, idea_id: str) -> IdeaContr
             asset_id=props.get("asset_id"),
             cc_attributed=float(props.get("cost_amount", 0) or 0),
             coherence_score=float(props.get("coherence_score", 0) or 0),
+            lineage_chain_id=props.get("lineage_chain_id"),
         ))
 
     if not details:
@@ -550,3 +553,65 @@ def get_tasks(contributor_id: str, status: str = "completed", limit: int = 20, o
 
     items.sort(key=lambda x: x.completed_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return TasksList(contributor_id=contributor_id, total=len(items), items=items[offset: offset + limit])
+
+
+# ── Single contribution → lineage audit ───────────────────────────────
+
+
+def get_contribution_lineage(contributor_id: str, contribution_id: str) -> ContributionLineageView:
+    """Return one contribution plus optional value-lineage ledger link (technical audit trail)."""
+    node = _find_contributor(contributor_id)
+    if not node:
+        raise ValueError(f"Contributor not found: {contributor_id}")
+
+    c_name = node.get("name", "")
+    contributions = graph_service.list_nodes(type="contribution", limit=10000)
+    target: dict[str, Any] | None = None
+    for c in contributions.get("items", []):
+        cid = str(c.get("id") or c.get("legacy_id") or "")
+        if cid == contribution_id:
+            target = c
+            break
+    if not target:
+        raise ValueError(f"Contribution not found: {contribution_id}")
+
+    props = _graph_node_props(target)
+    if props.get("contributor_id") != contributor_id and props.get("contributor_name") != c_name:
+        raise PermissionError("Contribution does not belong to this contributor")
+
+    idea_id = str(props.get("idea_id") or "")
+    cc = float(props.get("cost_amount", 0) or 0)
+    ctype = str(props.get("contribution_type", "unknown"))
+    chain_id = props.get("lineage_chain_id")
+    chain_s = str(chain_id).strip() if chain_id else None
+
+    brief: LineageLinkBrief | None = None
+    note: str | None = None
+    if chain_s:
+        try:
+            from app.services import value_lineage_service
+
+            link = value_lineage_service.get_link(chain_s)
+            if link:
+                brief = LineageLinkBrief(
+                    id=link.id,
+                    idea_id=link.idea_id,
+                    spec_id=link.spec_id,
+                    estimated_cost=float(link.estimated_cost or 0),
+                )
+            else:
+                note = "lineage_chain_id set on contribution but no matching value-lineage link in store"
+        except Exception:
+            log.debug("portfolio: value lineage lookup failed for %s", chain_s, exc_info=True)
+            note = "value-lineage store unavailable or lookup failed"
+
+    return ContributionLineageView(
+        contributor_id=contributor_id,
+        contribution_id=contribution_id,
+        idea_id=idea_id,
+        contribution_type=ctype,
+        cc_attributed=cc,
+        lineage_chain_id=chain_s,
+        value_lineage_link=brief,
+        lineage_resolution_note=note,
+    )

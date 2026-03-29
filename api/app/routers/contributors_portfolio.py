@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.models.portfolio import (
     CCHistory,
+    ContributionLineageView,
     IdeaContributionDrilldown,
     IdeaContributionsList,
     PortfolioSummary,
@@ -120,3 +121,18 @@ def get_tasks(
         return portfolio_service.get_tasks(contributor_id, status=status, limit=limit, offset=offset)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get(
+    "/contributors/{contributor_id}/contributions/{contribution_id}/lineage",
+    response_model=ContributionLineageView,
+    summary="Audit trail for one contribution (CC + value lineage link)",
+)
+def get_contribution_lineage(contributor_id: str, contribution_id: str) -> ContributionLineageView:
+    """Return CC attributed to this contribution and optional lineage ledger linkage."""
+    try:
+        return portfolio_service.get_contribution_lineage(contributor_id, contribution_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc

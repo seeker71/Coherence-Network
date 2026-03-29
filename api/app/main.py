@@ -46,6 +46,7 @@ from app.routers import (
     treasury,
     value_lineage,
     contributors_portfolio,
+    me_portfolio,
 )
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
@@ -545,6 +546,7 @@ async def reset_database(x_admin_key: str = Header(None)):
 app.include_router(contributors.router, prefix="/api", tags=["contributors"])
 app.include_router(contributor_recognition.router, prefix="/api", tags=["contributors"])
 app.include_router(contributors_portfolio.router, prefix="/api", tags=["contributors"])
+app.include_router(me_portfolio.router, prefix="/api")
 app.include_router(assets.router, prefix="/api", tags=["assets"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
 app.include_router(contributions.router, prefix="/api", tags=["contributions"])

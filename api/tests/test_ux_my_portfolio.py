@@ -506,3 +506,85 @@ async def test_portfolio_pagination_invalid_limit_returns_422() -> None:
         cid = create.json()["id"]
         r = await client.get(f"/api/contributors/{cid}/tasks?limit=0")
         assert r.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_contribution_lineage_endpoint() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "LineageUser",
+                "email": "lineage@coherence.network",
+            },
+        )
+        assert create.status_code == 201
+        cid = create.json()["id"]
+        graph_service.create_node(
+            id="idea:lineage-test",
+            type="idea",
+            name="Lineage Idea",
+            description="",
+            phase="gas",
+            properties={"status": "active"},
+        )
+        graph_service.create_node(
+            id="contrib-lineage-1",
+            type="contribution",
+            name="c1",
+            description="",
+            phase="water",
+            properties={
+                "contributor_id": str(cid),
+                "idea_id": "lineage-test",
+                "cost_amount": 2.5,
+                "contribution_type": "code",
+                "lineage_chain_id": "vl-nonexistent-999",
+            },
+        )
+        r = await client.get(f"/api/contributors/{cid}/contributions/contrib-lineage-1/lineage")
+        assert r.status_code == 200
+        j = r.json()
+        assert j["contribution_id"] == "contrib-lineage-1"
+        assert j["cc_attributed"] == pytest.approx(2.5)
+        assert j["lineage_chain_id"] == "vl-nonexistent-999"
+        assert j["lineage_resolution_note"] is not None
+
+        r404 = await client.get(f"/api/contributors/{cid}/contributions/does-not-exist/lineage")
+        assert r404.status_code == 404
+
+
+@pytest.mark.asyncio
+@mock.patch("app.routers.me_portfolio.verify_contributor_key")
+async def test_me_portfolio_requires_valid_api_key(mock_verify: mock.MagicMock) -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.get("/api/me/portfolio")
+        assert r.status_code == 401
+
+        mock_verify.return_value = None
+        r2 = await client.get("/api/me/portfolio", headers={"X-API-Key": "bad"})
+        assert r2.status_code == 401
+
+        mock_verify.return_value = {"contributor_id": "not-a-real-contributor-uuid-99"}
+        r3 = await client.get("/api/me/portfolio", headers={"X-API-Key": "k"})
+        assert r3.status_code == 404
+
+
+@pytest.mark.asyncio
+@mock.patch("app.routers.me_portfolio.verify_contributor_key")
+async def test_me_portfolio_ok_when_key_matches_contributor(mock_verify: mock.MagicMock) -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        create = await client.post(
+            "/api/contributors",
+            json={
+                "type": "HUMAN",
+                "name": "MePortfolioUser",
+                "email": "meport@coherence.network",
+            },
+        )
+        cid = str(create.json()["id"])
+        mock_verify.return_value = {"contributor_id": cid}
+        r = await client.get("/api/me/portfolio", headers={"X-API-Key": "test-key"})
+        assert r.status_code == 200
+        assert r.json()["contributor"]["id"] == cid
