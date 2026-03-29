@@ -102,6 +102,42 @@ def validate_raw_tags(raw_tags: list[str]) -> tuple[list[str], bool]:
     return normalize_tags(normalized), True
 
 
+def slugify(text: str) -> str:
+    """Convert free-form text to a URL-safe slug.
+
+    Rules: lowercase → strip non-alphanum/slash/hyphen → collapse hyphens →
+    strip leading/trailing hyphens per segment → max 80 chars.
+    Slashes are preserved to allow namespaced slugs like 'finance/cc-minting'.
+    """
+    import unicodedata
+    # Normalize unicode
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+    text = text.lower()
+    # Replace spaces and non-slug chars (keeping / for namespacing) with -
+    text = re.sub(r"[^a-z0-9/]+", "-", text)
+    # Clean up per-segment
+    segments = [re.sub(r"-+", "-", s).strip("-") for s in text.split("/")]
+    slug = "/".join(s for s in segments if s)
+    return slug[:80]
+
+
+def _resolve_idea_raw(id_or_slug: str, ideas: list) -> "Idea | None":
+    """Resolve UUID, current slug, or historical slug to an Idea object."""
+    # 1. Exact id match (UUID or legacy slug)
+    for idea in ideas:
+        if idea.id == id_or_slug:
+            return idea
+    # 2. Current slug match
+    for idea in ideas:
+        if idea.slug == id_or_slug:
+            return idea
+    # 3. Historical slug match
+    for idea in ideas:
+        if id_or_slug in (idea.slug_history or []):
+            return idea
+    return None
+
+
 # Known internal idea IDs — these were previously loaded from derived_metadata
 # in seed_ideas.json and are used for internal-idea classification only.
 # The DB is the sole source of truth for idea data; this set is only for
@@ -671,6 +707,8 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
         idea_type=idea_type,
         parent_idea_id=parent_idea_id,
         child_idea_ids=child_idea_ids,
+        slug=idea_id,
+        slug_history=[],
     )
 
 
@@ -1030,9 +1068,10 @@ def list_ideas(
 
 
 def get_idea(idea_id: str) -> IdeaWithScore | None:
-    for idea in _read_ideas():
-        if idea.id == idea_id:
-            return _with_score(idea)
+    ideas = _read_ideas()
+    idea = _resolve_idea_raw(idea_id, ideas)
+    if idea is not None:
+        return _with_score(idea)
     # Some runtime/inventory idea ids are derived and may not be persisted in the
     # portfolio store yet. Expose them so UI links remain walkable.
     if idea_id in _KNOWN_INTERNAL_IDEA_IDS:
@@ -1063,6 +1102,7 @@ def create_idea(
     work_type: IdeaWorkType | None = None,
     lifecycle: IdeaLifecycle | None = None,
     duplicate_of: str | None = None,
+    slug: str | None = None,
 ) -> IdeaWithScore | None:
     # Auto-generate UUID4 when caller omits the ID (new convention going forward)
     resolved_id: str = idea_id or str(uuid4())
@@ -1072,6 +1112,17 @@ def create_idea(
         return None
 
     normalized_tags = normalize_tags(tags or [])
+
+    # Derive and uniquify slug
+    raw_slug = slug or slugify(name)
+    existing_slugs = {i.slug for i in ideas}
+    if raw_slug not in existing_slugs or any(i.id == resolved_id and i.slug == raw_slug for i in ideas):
+        final_slug = raw_slug
+    else:
+        suffix = 2
+        while f"{raw_slug}-{suffix}" in existing_slugs:
+            suffix += 1
+        final_slug = f"{raw_slug}-{suffix}"
 
     idea = Idea(
         id=resolved_id,
@@ -1092,6 +1143,8 @@ def create_idea(
         work_type=work_type,
         lifecycle=lifecycle or IdeaLifecycle.ACTIVE,
         duplicate_of=duplicate_of,
+        slug=final_slug,
+        slug_history=[],
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(
@@ -1201,11 +1254,13 @@ def update_idea(
     estimated_cost for ROI normalization/calibration flows.
     """
     ideas = _read_ideas(persist_ensures=True)
+    resolved = _resolve_idea_raw(idea_id, ideas)
+    resolved_id = resolved.id if resolved else idea_id
     updated: Idea | None = None
     updated_idx: int = -1
 
     for idx, idea in enumerate(ideas):
-        if idea.id != idea_id:
+        if idea.id != resolved_id:
             continue
         
         # Track changes for audit ledger
@@ -1275,6 +1330,38 @@ def update_idea(
 
     _write_single_idea(updated, position=updated_idx)
     return _with_score(updated)
+
+
+def update_idea_slug(
+    id_or_slug: str,
+    new_slug: str,
+) -> "IdeaWithScore | None":
+    """Rename an idea's slug. Appends old slug to history for permanent redirect."""
+    ideas = _read_ideas(persist_ensures=True)
+    idea = _resolve_idea_raw(id_or_slug, ideas)
+    if idea is None:
+        return None
+
+    # Validate: new slug must not be current slug of a different idea
+    new_slug_norm = slugify(new_slug) if new_slug else ""
+    if not new_slug_norm:
+        return None
+    for other in ideas:
+        if other.id != idea.id and other.slug == new_slug_norm:
+            raise ValueError(f"Slug '{new_slug_norm}' is already used by idea '{other.id}'")
+
+    old_slug = idea.slug
+    if old_slug != new_slug_norm:
+        if old_slug and old_slug not in idea.slug_history:
+            idea.slug_history = list(idea.slug_history) + [old_slug]
+        idea.slug = new_slug_norm
+
+    from datetime import datetime, timezone
+    idea.last_activity_at = datetime.now(timezone.utc).isoformat()
+
+    idx = next((i for i, x in enumerate(ideas) if x.id == idea.id), 0)
+    _write_single_idea(idea, position=idx)
+    return _with_score(idea)
 
 
 def set_parent_idea(idea_id: str, parent_idea_id: str) -> bool:
