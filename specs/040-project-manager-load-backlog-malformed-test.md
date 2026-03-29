@@ -1,106 +1,360 @@
-# Spec: Project Manager load_backlog — Malformed File (Missing Numbers) Test
+# Spec 040: Project Manager `load_backlog` — Malformed File (Missing Number Prefix) Test
 
-## Purpose
+## Summary
 
-Ensure the project manager's `load_backlog` behavior is tested when the backlog file contains lines that lack the required number prefix (`N. `). Parsing must skip such lines and return only valid numbered items, with no crash or inclusion of malformed content.
+This spec defines the test coverage requirement for `load_backlog()` in
+`api/scripts/project_manager.py` when the backlog file contains a mixture of
+properly-numbered lines and lines that lack the required `\d+\. ` prefix. The
+implementation already skips malformed lines; this spec formalises the test
+that **proves** that behaviour under all relevant edge cases, so regressions
+are caught immediately by pytest in CI.
+
+---
+
+## Goal
+
+Guarantee that `load_backlog()` (and its inner helper `_parse_backlog_file()`)
+is covered by at least one targeted test that:
+
+1. Feeds a real temporary file (no mocks) containing both valid and malformed
+   lines into `load_backlog()`.
+2. Asserts that only items from lines matching `^\d+\.\s+(.+)$` are returned.
+3. Asserts that the returned order matches the physical line order of the
+   numbered items (order-preserving).
+4. Asserts that malformed lines — including lines that start with text, blank
+   lines, Markdown headings, comment lines, and lines that begin with a number
+   but lack a dot-space separator — are silently skipped (no exception raised).
+
+---
+
+## Background
+
+`_parse_backlog_file(path)` in `api/scripts/project_manager.py` iterates every
+line, strips whitespace, and runs:
+
+```python
+m = re.match(r"^\d+\.\s+(.+)$", line)
+if m and not line.startswith("#"):
+    items.append(m.group(1).strip())
+```
+
+Lines that do not match are ignored. This is the correct and intended
+behaviour. What was missing (prior to spec 040) was an explicit test whose
+*only* purpose is to assert that malformed lines are silently dropped and do
+not corrupt the output list.
+
+---
 
 ## Requirements
 
-- [ ] A test exists that uses a backlog file containing **both** numbered lines and lines missing the `\d+\.\s+` prefix.
-- [ ] The test asserts that `load_backlog()` returns only the parsed items from numbered lines (order preserved); lines without a leading number are skipped.
-- [ ] The test does not rely on mocks; it uses real file I/O and the real `load_backlog` (or `_parse_backlog_file` via `load_backlog` with a single-file setup).
+- [ ] A test named `test_load_backlog_malformed_missing_number_prefix` exists
+  in `api/tests/test_project_manager.py`.
+- [ ] The test creates a `tmp_path`-scoped real file (no mock, no patch).
+- [ ] The file contains at least two valid numbered lines and at least two
+  lines that lack the `\d+\. ` prefix.
+- [ ] The test calls `pm.load_backlog()` after setting `pm.BACKLOG_FILE` to the
+  temp file path.
+- [ ] The assertion is exact: only the text portions of the numbered lines are
+  returned, in source order.
+- [ ] `pytest api/tests/test_project_manager.py -x -v` exits 0.
+- [ ] No modifications to `_parse_backlog_file` or `load_backlog` are made; the
+  spec is test-only.
 
+---
 
-## Research Inputs
+## Files to Create / Modify
 
-- Codebase analysis of existing implementation
-- Related specs: 005, 006
+| File | Action |
+|------|--------|
+| `api/tests/test_project_manager.py` | Add (or confirm presence of) `test_load_backlog_malformed_missing_number_prefix` |
 
-## Task Card
+No other files are modified.
 
-```yaml
-goal: Ensure the project manager's `load_backlog` behavior is tested when the backlog file contains lines that lack the required number prefix (`N.
-files_allowed:
-  - api/tests/test_project_manager.py
-done_when:
-  - A test exists that uses a backlog file containing both numbered lines and lines missing the `\d+\.\s+` prefix.
-  - The test asserts that `load_backlog()` returns only the parsed items from numbered lines (order preserved); lines wit...
-  - The test does not rely on mocks; it uses real file I/O and the real `load_backlog` (or `_parse_backlog_file` via `loa...
-commands:
-  - python3 -m pytest api/tests/test_project_manager.py -x -v
-constraints:
-  - changes scoped to listed files only
-  - no schema migrations without explicit approval
+---
+
+## Data Model
+
+No database schema changes. The backlog file format is plain text:
+
+```
+^\d+\.\s+(.+)$   → valid item — captured group 1 is the task description
+^#.*              → comment — skipped (starts with #)
+.*                → everything else — silently skipped
 ```
 
-## API Contract (if applicable)
+Empty lines and blank-only lines are also skipped by the `strip()` + regex
+pair.
 
-N/A — script behavior only.
+---
 
+## API Contract
 
-### Input Validation
+N/A — this feature is a test-only change for a CLI script, not an HTTP endpoint.
 
-- All string fields: min_length=1, max_length=1000
-- Numeric fields: appropriate min/max bounds
-- Required fields validated; missing returns 422
-- Unknown fields rejected (Pydantic extra="forbid" where applicable)
+---
 
-## Data Model (if applicable)
+## Acceptance Criteria
 
-N/A. Backlog format: lines matching `^\d+\.\s+(.+)$` are included; other lines are ignored. Comments (`#`) are excluded.
+| # | Criterion | Done-when |
+|---|-----------|-----------|
+| 1 | Test exists in `api/tests/test_project_manager.py` | `grep test_load_backlog_malformed_missing_number_prefix` succeeds |
+| 2 | Test uses real file I/O | No `mock`, `patch`, or `MagicMock` in the test body |
+| 3 | Malformed lines silently skipped | `items == ["First item", "Second item"]` for the canonical input |
+| 4 | Order preserved | Numbered lines appear in the same order as in the file |
+| 5 | pytest passes | `pytest api/tests/test_project_manager.py -x -v` exits 0 |
 
-## Files to Create/Modify
+---
 
-- `api/tests/test_project_manager.py` — add or expand test for `load_backlog` with a malformed file (mixed numbered and unnumbered lines).
+## Verification Scenarios
 
-## Acceptance Tests
+### Scenario 1 — Canonical Malformed File (Happy Path)
 
-- [ ] New or expanded test in `api/tests/test_project_manager.py`: e.g. backlog file content like:
-  - `1. First item`
-  - `Unnumbered line`
-  - `2. Second item`
-  - `Another line without number`
-  - Expected: `load_backlog()` returns `["First item", "Second item"]`.
-- [ ] `pytest api/tests/test_project_manager.py -v` passes.
+**Setup:** A temp file with two numbered items interleaved with two unnumbered
+lines.
+
+```
+1. First item
+Unnumbered line
+2. Second item
+Another line without number
+```
+
+**Action (in pytest):**
+
+```python
+pm.BACKLOG_FILE = str(p)
+items = pm.load_backlog()
+assert items == ["First item", "Second item"]
+```
+
+**Expected result:** `["First item", "Second item"]` — exactly two items, order
+preserved, no crash.
+
+**Edge case:** If the file contained *only* unnumbered lines, `load_backlog()`
+must return `[]` (empty list), not raise an exception.
+
+---
+
+### Scenario 2 — All Lines Malformed (Edge: Nothing to Parse)
+
+**Setup:** A temp file whose every line lacks a digit prefix.
+
+```
+This is a heading
+Another prose line
+- bullet point
+```
+
+**Action:**
+
+```python
+p = tmp_path / "all_malformed.md"
+p.write_text("This is a heading\nAnother prose line\n- bullet point\n")
+pm.BACKLOG_FILE = str(p)
+items = pm.load_backlog()
+assert items == []
+```
+
+**Expected result:** `[]` — empty list, no exception.
+
+**Edge case:** No crash even if the file is entirely whitespace (`"   \n   \n"`).
+
+---
+
+### Scenario 3 — Comment Lines Are Also Skipped
+
+**Setup:** A file mixing valid items, unnumbered prose, and comment lines.
+
+```
+# This is a comment
+1. Valid task one
+Prose without number
+# Another comment
+2. Valid task two
+```
+
+**Action:**
+
+```python
+p = tmp_path / "with_comments.md"
+p.write_text(
+    "# This is a comment\n"
+    "1. Valid task one\n"
+    "Prose without number\n"
+    "# Another comment\n"
+    "2. Valid task two\n"
+)
+pm.BACKLOG_FILE = str(p)
+items = pm.load_backlog()
+assert items == ["Valid task one", "Valid task two"]
+```
+
+**Expected result:** `["Valid task one", "Valid task two"]`.
+
+**Edge case:** A line like `#1. Not a task` starts with `#` so it is treated as
+a comment and excluded even though it matches the number pattern.
+
+---
+
+### Scenario 4 — Number Present But Missing Dot-Space Separator
+
+**Setup:** Lines that look numbered but use an invalid separator.
+
+```
+1) No dot separator
+2- Dash separator
+3 No separator at all
+4. Valid item
+```
+
+**Action:**
+
+```python
+p = tmp_path / "bad_separator.md"
+p.write_text(
+    "1) No dot separator\n"
+    "2- Dash separator\n"
+    "3 No separator at all\n"
+    "4. Valid item\n"
+)
+pm.BACKLOG_FILE = str(p)
+items = pm.load_backlog()
+assert items == ["Valid item"]
+```
+
+**Expected result:** `["Valid item"]` — only the line with `\d+\. ` matches.
+
+**Edge case:** `10. Double-digit number` must also be parsed correctly.
+
+---
+
+### Scenario 5 — Order Preservation With Gaps in Numbering
+
+**Setup:** A file where numbers are non-sequential and interspersed with prose.
+
+```
+prose header
+3. Third (in file position 2)
+more prose
+1. First (in file position 4)
+99. Ninety-ninth (in file position 6)
+```
+
+**Action:**
+
+```python
+p = tmp_path / "gaps.md"
+p.write_text(
+    "prose header\n"
+    "3. Third (in file position 2)\n"
+    "more prose\n"
+    "1. First (in file position 4)\n"
+    "99. Ninety-ninth (in file position 6)\n"
+)
+pm.BACKLOG_FILE = str(p)
+items = pm.load_backlog()
+assert items == [
+    "Third (in file position 2)",
+    "First (in file position 4)",
+    "Ninety-ninth (in file position 6)",
+]
+```
+
+**Expected result:** Items appear in **file line order**, not numeric-label
+order.
+
+**Edge case:** The function does not sort or deduplicate; the numeric label is
+irrelevant to ordering.
+
+---
+
+## CLI Commands (Verification)
+
+```bash
+# Run the targeted test in isolation
+python3 -m pytest api/tests/test_project_manager.py \
+  -k "malformed" -v
+
+# Run the full test module (must all pass)
+python3 -m pytest api/tests/test_project_manager.py -x -v
+```
+
+Expected exit code: `0`.
+
+---
 
 ## Out of Scope
 
-- Changing `_parse_backlog_file` or `load_backlog` behavior (implementation is already correct; this spec adds test coverage).
-- Testing empty file or comment-only file (already covered by `test_load_backlog_empty_and_malformed`).
-- Meta-backlog or `--backlog` flag (covered by other tests).
+- Changing `_parse_backlog_file` or `load_backlog` implementation (the parsing
+  logic is already correct).
+- Testing empty file or comment-only file beyond what is covered by
+  `test_load_backlog_empty_file` and the edge cases above.
+- Meta-backlog interleaving (PIPELINE_META_BACKLOG env var) — covered by spec
+  028.
+- Concurrent access or file-locking concerns.
+- Web UI or API endpoint changes.
 
-## See also
+---
 
-- [005-project-manager-pipeline.md](005-project-manager-pipeline.md) — project manager orchestrator
+## Risks and Assumptions
+
+| Risk | Mitigation |
+|------|-----------|
+| `pm.BACKLOG_FILE` is a module-level global; one test mutating it may affect others | Each test uses `tmp_path` and sets `pm.BACKLOG_FILE` at the start; pytest isolation is sufficient |
+| Regex `^\d+\.\s+(.+)$` may behave differently on Windows (`\r\n` endings) | `line.strip()` normalises line endings before matching |
+| Future refactor renames `_parse_backlog_file` | Test calls `load_backlog()` (the public API), not the private helper directly |
+
+---
+
+## Known Gaps and Follow-up Tasks
+
+- **Gap:** The test does not cover Unicode content in backlog items (e.g. CJK
+  characters, emoji). If needed, add a follow-up test.
+- **Follow-up:** Consider adding a pytest fixture that resets `pm.BACKLOG_FILE`
+  after each test to avoid global-state leakage between tests in the module.
+- **Follow-up:** Property-based testing (Hypothesis) could generate arbitrary
+  malformed lines and verify no exception is ever raised.
+
+---
+
+## Concurrency Behaviour
+
+- **Read operations:** `_parse_backlog_file` opens the file in read-only mode;
+  safe for concurrent access with no locking required.
+- **Write operations:** N/A for this spec (tests do not write to the real
+  backlog file).
+
+---
+
+## Failure and Retry Behaviour
+
+- **Missing file:** `_parse_backlog_file` returns `[]` if the path does not
+  exist (`os.path.isfile(path)` check).
+- **Permission error:** Not handled; caller receives an `OSError`. No retry
+  logic needed for a local test environment.
+
+---
+
+## See Also
+
+- [005-project-manager-orchestrator.md](005-project-manager-orchestrator.md) —
+  project manager orchestrator
 - [006-overnight-backlog.md](006-overnight-backlog.md) — backlog item 21
+- [041-project-manager-state-file-flag-test.md](041-project-manager-state-file-flag-test.md) —
+  companion test spec for state-file flag
+- [042-project-manager-reset-clears-state-test.md](042-project-manager-reset-clears-state-test.md) —
+  companion test spec for reset behaviour
 
-## Decision Gates (if any)
+---
 
-None.
+## Decision Gates
 
-## Concurrency Behavior
+None required. The implementation is already correct; this spec only adds test
+coverage.
 
-- **Read operations**: Safe for concurrent access; no locking required.
-- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
-- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
+---
 
-## Failure and Retry Behavior
-
-- **Task failure**: Log error, mark task failed, advance to next item or pause for human review.
-- **Retry logic**: Failed tasks retry up to 3 times with exponential backoff (initial 2s, max 60s).
-- **Partial completion**: State persisted after each phase; resume from last checkpoint on restart.
-- **External dependency down**: Pause pipeline, alert operator, resume when dependency recovers.
-- **Timeout**: Individual task phases timeout after 300s; safe to retry from last phase.
-
-## Risks and Known Gaps
-
-- **No auth gate**: Endpoints unprotected until C1 auth middleware applied.
-- **No rate limiting**: Subject to abuse until M1 rate limiter active.
-- **Single-node only**: No distributed locking; concurrent access may race.
-- **Follow-up**: Add distributed locking for multi-worker pipelines.
-
-
-## Verification
+## Verification Command
 
 ```bash
 python3 -m pytest api/tests/test_project_manager.py -x -v
