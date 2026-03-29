@@ -589,3 +589,52 @@ async def test_me_portfolio_ok_when_key_matches_contributor(mock_verify: mock.Ma
         r = await client.get("/api/me/portfolio", headers={"X-API-Key": "test-key"})
         assert r.status_code == 200
         assert r.json()["contributor"]["id"] == cid
+
+
+class _Proc:
+    """Minimal subprocess.CompletedProcess stand-in for local_runner git mocks."""
+
+    def __init__(self, returncode: int = 0, stdout: str = "", stderr: str = "") -> None:
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def test_impl_worktree_permission_denied_falls_back_to_standalone(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Runner: permission-denied git worktree add triggers standalone fallback (impl tasks)."""
+    slug = "abc8def234567890"
+    wt_path = tmp_path / f"task-{slug[:16]}"
+    sentinel = wt_path
+
+    def _run(args: list[str], **_kwargs: Any) -> _Proc:
+        if args[:3] == ["git", "worktree", "add"]:
+            return _Proc(returncode=1, stderr="fatal: Permission denied writing to .git")
+        if args[:3] == ["git", "worktree", "add"]:
+            return _Proc(returncode=1, stderr="fatal: Permission denied writing to .git")
+        if args[:3] == ["git", "worktree", "remove"]:
+            return _Proc()
+        if args[:3] == ["git", "branch", "-D"]:
+            return _Proc()
+        return _Proc()
+
+    def fake_standalone(
+        tid: str,
+        wp: Path,
+        br: str,
+        *,
+        base_branch: str | None = None,
+        idea_id: str = "",
+    ) -> Path | None:
+        assert tid == slug
+        assert br == f"task/{slug[:16]}"
+        return sentinel
+
+    monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)
+    monkeypatch.setattr(local_runner, "_WORKTREE_BASE", tmp_path)
+    monkeypatch.setattr(local_runner.subprocess, "run", _run)
+    monkeypatch.setattr(local_runner, "_create_standalone_task_repo", fake_standalone)
+
+    result = local_runner._create_worktree(slug)
+    assert result == sentinel
