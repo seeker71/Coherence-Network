@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
+from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class SpecRegistryEntry(BaseModel):
@@ -33,7 +34,11 @@ class SpecRegistryEntry(BaseModel):
 
 
 class SpecRegistryCreate(BaseModel):
-    spec_id: str = Field(min_length=1)
+    spec_id: Optional[str] = Field(
+        default=None,
+        description="UUID4 identifier. Auto-generated when omitted. "
+                    "Legacy numeric/slug IDs accepted for backward-compat seeding.",
+    )
     title: str = Field(min_length=1)
     summary: str = Field(min_length=1)
     potential_value: float = Field(ge=0.0, default=0.0)
@@ -47,6 +52,14 @@ class SpecRegistryCreate(BaseModel):
     created_by_contributor_id: Optional[str] = None
     content_path: Optional[str] = None
     content_hash: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _auto_uuid_spec_id(cls, values: dict) -> dict:
+        """Auto-generate a UUID4 when 'spec_id' is absent or empty."""
+        if not values.get("spec_id"):
+            values["spec_id"] = str(uuid4())
+        return values
 
 
 class SpecRegistryUpdate(BaseModel):
