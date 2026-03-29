@@ -1,0 +1,82 @@
+# Smithery registry manifest for coherence-mcp-server
+# https://smithery.ai/server/coherence-mcp-server
+
+name: coherence-mcp-server
+description: >
+  MCP server for the Coherence Network — 22 typed tools for AI agents to browse
+  ideas, trace value chains, link identities, record contributions, and explore
+  the Living Codex ontology.
+
+homepage: https://coherencycoin.com
+repository: https://github.com/seeker71/Coherence-Network
+license: MIT
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      COHERENCE_API_URL:
+        type: string
+        description: API base URL (defaults to https://api.coherencycoin.com)
+        default: https://api.coherencycoin.com
+      COHERENCE_API_KEY:
+        type: string
+        description: API key for write operations (optional — reads work without a key)
+  commandFunction: |-
+    (config) => ({
+      command: "npx",
+      args: ["coherence-mcp-server"],
+      env: {
+        COHERENCE_API_URL: config.COHERENCE_API_URL || "https://api.coherencycoin.com",
+        ...(config.COHERENCE_API_KEY ? { COHERENCE_API_KEY: config.COHERENCE_API_KEY } : {}),
+      }
+    })
+
+tools:
+  - name: coherence_list_ideas
+    description: Browse ideas ranked by ROI and free-energy score
+  - name: coherence_get_idea
+    description: Get full details for a single idea
+  - name: coherence_idea_progress
+    description: Stage, tasks, CC staked, contributors for an idea
+  - name: coherence_select_idea
+    description: Portfolio engine picks the next highest-ROI idea
+  - name: coherence_showcase
+    description: Validated shipped ideas
+  - name: coherence_resonance
+    description: Ideas generating the most energy right now
+  - name: coherence_list_specs
+    description: Browse specs with ROI metrics and value gaps
+  - name: coherence_get_spec
+    description: Full spec detail including implementation plan
+  - name: coherence_list_lineage
+    description: Value lineage chains idea → spec → implementation → payout
+  - name: coherence_lineage_valuation
+    description: ROI valuation for a lineage chain
+  - name: coherence_list_providers
+    description: All 37 supported identity providers
+  - name: coherence_link_identity
+    description: Link GitHub, Discord, Ethereum, etc. to a contributor
+  - name: coherence_lookup_identity
+    description: Reverse lookup — find contributor by provider handle
+  - name: coherence_get_identities
+    description: All linked identities for a contributor
+  - name: coherence_record_contribution
+    description: Record work by contributor name or provider identity
+  - name: coherence_contributor_ledger
+    description: CC balance and contribution history
+  - name: coherence_status
+    description: Network health — API, nodes, idea count
+  - name: coherence_friction_report
+    description: Where the pipeline struggles
+  - name: coherence_list_change_requests
+    description: Open governance proposals
+  - name: coherence_list_federation_nodes
+    description: Federated nodes and capabilities
+  - name: coherence_list_concepts
+    description: Browse the Living Codex 184-concept ontology
+  - name: coherence_get_concept
+    description: Full details for a Living Codex concept with edges
+  - name: coherence_link_concepts
+    description: Create a typed relationship between two concepts
