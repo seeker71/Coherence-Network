@@ -35,6 +35,7 @@ from app.routers import (
     health,
     ideas,
     inventory,
+    lenses,
     marketplace,
     registry_discovery,
     news,
@@ -554,6 +555,7 @@ app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
+app.include_router(lenses.router, prefix="/api", tags=["lenses"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(coherence.router, prefix="/api", tags=["coherence"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])

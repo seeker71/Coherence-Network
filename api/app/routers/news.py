@@ -13,6 +13,7 @@ from app.services import news_ingestion_service
 from app.services import news_resonance_service
 from app.services import idea_service
 from app.services import contribution_ledger_service
+from app.services import translate_service
 
 router = APIRouter()
 
@@ -108,17 +109,38 @@ async def get_news_feed(
     limit: int = Query(50, ge=1, le=200),
     source: Optional[str] = Query(None, description="Filter by source name"),
     refresh: bool = Query(False, description="Force refresh feeds"),
+    pov: Optional[str] = Query(
+        None,
+        description="Point-of-view lens id: rank items by affinity (e.g. libertarian, engineer, institutionalist).",
+    ),
+    pov_min_score: float = Query(0.0, ge=0.0, le=1.0, description="When pov is set, drop items below this affinity."),
 ):
     """Latest news items from RSS feeds."""
     items = await news_ingestion_service.fetch_feeds(force_refresh=refresh)
     if source:
         source_lower = source.lower()
         items = [i for i in items if source_lower in i.source.lower()]
-    items = items[:limit]
-    return {
-        "count": len(items),
-        "items": [i.to_dict() for i in items],
+    out_items = items
+    if pov:
+        if translate_service.get_lens_meta(pov) is None:
+            raise HTTPException(status_code=422, detail=f"Unknown POV lens '{pov}'")
+        scored: list[tuple[float, object]] = []
+        for it in items:
+            d = it.to_dict()
+            text = f"{d.get('title', '')} {d.get('summary', '')} {d.get('source', '')}"
+            sc = translate_service.score_text_pov_affinity(text, pov)
+            scored.append((sc, it))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        out_items = [it for sc, it in scored if sc >= pov_min_score]
+    out_items = out_items[:limit]
+    payload = {
+        "count": len(out_items),
+        "items": [i.to_dict() for i in out_items],
     }
+    if pov:
+        payload["pov"] = pov
+        payload["pov_min_score"] = pov_min_score
+    return payload
 
 
 @router.get("/news/resonance")

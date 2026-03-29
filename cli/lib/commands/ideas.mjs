@@ -93,10 +93,11 @@ export async function listIdeas(args) {
 export async function showIdea(args) {
   // Route subcommands: cc idea <id> <subcommand>
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> [tasks|children|type|link|stage|advance|question|answer|activity|progress|resonance]"); return; }
+  if (!id) { console.log("Usage: cc idea <id> [tasks|translate|children|...]"); return; }
 
   const sub = args[1];
   // Subcommand routing
+  if (sub === "translate") return showIdeaTranslate([id, args[2]]);
   if (sub === "tasks")     return showIdeaTasks([id]);
   if (sub === "deps")      return showIdeaDeps([id, ...args.slice(2)]);
   if (sub === "children")  return showIdeaChildren([id]);
@@ -148,6 +149,35 @@ export async function showIdea(args) {
       console.log(`    ${D}?${R}${answered} ${truncate(qText, 66)}`);
     }
   }
+  console.log();
+}
+
+/** Point-of-view translation: cc idea <id> translate [lens_id] */
+export async function showIdeaTranslate(args) {
+  const id = args[0];
+  const lens = args[1] || "libertarian";
+  if (!id) {
+    console.log("Usage: cc idea <id> translate [lens_id]");
+    return;
+  }
+  const data = await get(
+    `/api/ideas/${encodeURIComponent(id)}/translations/${encodeURIComponent(lens)}`,
+  );
+  if (!data || data.detail) {
+    console.log(data?.detail || `Translation not found for idea '${id}' lens '${lens}'.`);
+    return;
+  }
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
+  console.log();
+  console.log(`${B}  POV: ${data.lens_id}${R}  (${data.idea_id})`);
+  console.log(`  ${D}${data.original_name}${R}`);
+  console.log();
+  console.log(`  ${data.translated_summary || ""}`);
+  console.log();
+  if (data.emphasis?.length) console.log(`  Emphasis: ${data.emphasis.join(", ")}`);
+  console.log(`  Risk: ${data.risk_framing}`);
+  console.log(`  Opportunity: ${data.opportunity_framing}`);
+  if (data.resonance_delta != null) console.log(`  Resonance Δ: ${data.resonance_delta}`);
   console.log();
 }
 

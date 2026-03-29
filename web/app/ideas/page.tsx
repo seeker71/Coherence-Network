@@ -3,11 +3,9 @@ import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
 import {
-  formatConfidence,
   formatUsd,
-  humanizeManifestationStatus,
 } from "@/lib/humanize";
-import { IdeaCopyLink } from "@/components/idea_share";
+import IdeasListView from "@/components/ideas/IdeasListView";
 
 export const metadata: Metadata = {
   title: "Ideas",
@@ -152,54 +150,6 @@ async function loadProgressDashboard(ideas: IdeaWithScore[]): Promise<ProgressDa
   };
 }
 
-function stageIndicator(status: string): { emoji: string; label: string } {
-  const s = status.trim().toLowerCase();
-  if (s === "validated") return { emoji: "\u2705", label: "Complete" };
-  if (s === "partial") return { emoji: "\uD83D\uDD28", label: "In progress" };
-  return { emoji: "\uD83D\uDCCB", label: "Not started" };
-}
-
-function whatItNeeds(idea: IdeaWithScore): string {
-  const s = idea.manifestation_status.trim().toLowerCase();
-  if (s === "validated") return "Proven — ready to scale";
-  if (s === "partial") return "Needs more validation";
-  if (idea.open_questions && idea.open_questions.some((q) => !q.answer)) return "Has open questions";
-  return "Needs a spec";
-}
-
-function hierarchyRoleLabel(idea: IdeaWithScore): string | null {
-  const t = (idea.idea_type ?? "").toLowerCase();
-  if (t === "super") return "Super-idea";
-  if (t === "child") return "Child idea";
-  return null;
-}
-
-function getChildrenForParent(
-  parentId: string,
-  allIdeas: IdeaWithScore[],
-  byId: Map<string, IdeaWithScore>,
-): IdeaWithScore[] {
-  const linked = allIdeas.filter((i) => i.parent_idea_id === parentId);
-  const parent = byId.get(parentId);
-  const childOrder = parent?.child_idea_ids ?? [];
-  if (childOrder.length === 0) {
-    return [...linked].sort((a, b) => b.free_energy_score - a.free_energy_score);
-  }
-  const seen = new Set<string>();
-  const ordered: IdeaWithScore[] = [];
-  for (const id of childOrder) {
-    const idea = byId.get(id);
-    if (idea && idea.parent_idea_id === parentId && linked.some((x) => x.id === id)) {
-      ordered.push(idea);
-      seen.add(id);
-    }
-  }
-  const extras = linked
-    .filter((i) => !seen.has(i.id))
-    .sort((a, b) => b.free_energy_score - a.free_energy_score);
-  return [...ordered, ...extras];
-}
-
 function getRootIdeas(allIdeas: IdeaWithScore[]): IdeaWithScore[] {
   const byId = new Map(allIdeas.map((i) => [i.id, i]));
   return allIdeas
@@ -210,124 +160,11 @@ function getRootIdeas(allIdeas: IdeaWithScore[]): IdeaWithScore[] {
     .sort((a, b) => b.free_energy_score - a.free_energy_score);
 }
 
-function IdeaHierarchySubtree({
-  idea,
-  depth,
-  rank,
-  allIdeas,
-  byId,
-}: {
-  idea: IdeaWithScore;
-  depth: number;
-  rank?: number;
-  allIdeas: IdeaWithScore[];
-  byId: Map<string, IdeaWithScore>;
-}) {
-  const kids = getChildrenForParent(idea.id, allIdeas, byId);
-  const role = hierarchyRoleLabel(idea);
-  const valueGapPct = idea.potential_value > 0
-    ? Math.min(((idea.potential_value - idea.actual_value) / idea.potential_value) * 100, 100)
-    : 0;
-  const titlePrefix = rank !== undefined ? `${rank}. ` : "";
-
-  return (
-    <div className={depth > 0 ? "border-l border-border/40 pl-4 ml-1 sm:ml-2" : undefined}>
-      <article
-        className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-3"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Link
-            href={`/ideas/${encodeURIComponent(idea.id)}`}
-            className="text-lg font-medium hover:text-primary transition-colors duration-300"
-          >
-            {titlePrefix}
-            {idea.name}
-          </Link>
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {role ? (
-              <span className="text-xs rounded-full border border-primary/30 px-2 py-0.5 bg-primary/10 text-primary/90">
-                {role}
-              </span>
-            ) : null}
-            <span className="text-sm" title={humanizeManifestationStatus(idea.manifestation_status)} aria-label={stageIndicator(idea.manifestation_status).label} role="img">
-              {stageIndicator(idea.manifestation_status).emoji}
-            </span>
-            <span className="text-xs rounded-full border border-border/40 px-3 py-1 bg-muted/30 text-muted-foreground">
-              {humanizeManifestationStatus(idea.manifestation_status)}
-            </span>
-          </div>
-        </div>
-        <p className="text-sm text-foreground/80 leading-relaxed">
-          {idea.description}
-        </p>
-
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs text-foreground/70">
-            <span>Value realized</span>
-            <span>{formatUsd(idea.actual_value)} / {formatUsd(idea.potential_value)}</span>
-          </div>
-          <div className="h-2 rounded-full bg-muted/40 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-primary/40 to-primary/80 transition-all duration-500"
-              style={{ width: `${Math.max(100 - valueGapPct, 2)}%` }}
-            />
-          </div>
-        </div>
-
-        <p className="text-xs text-primary/80">
-          {whatItNeeds(idea)}
-        </p>
-
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary/60"
-              style={{ width: `${Math.min(idea.confidence * 100, 100)}%` }}
-            />
-          </div>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {formatConfidence(idea.confidence)} confidence
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-4 text-sm">
-          <Link
-            href={`/ideas/${encodeURIComponent(idea.id)}`}
-            className="text-primary hover:text-foreground transition-colors duration-300"
-          >
-            Open idea &rarr;
-          </Link>
-          <Link
-            href={`/flow?idea_id=${encodeURIComponent(idea.id)}`}
-            className="text-muted-foreground hover:text-foreground transition-colors duration-300"
-          >
-            View progress
-          </Link>
-          <IdeaCopyLink url={`https://coherencycoin.com/ideas/${encodeURIComponent(idea.id)}`} />
-        </div>
-      </article>
-      {kids.length > 0 ? (
-        <div className="mt-3 space-y-3">
-          {kids.map((child) => (
-            <IdeaHierarchySubtree
-              key={child.id}
-              idea={child}
-              depth={depth + 1}
-              allIdeas={allIdeas}
-              byId={byId}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export default async function IdeasPage() {
   const data = await loadIdeas();
   const progress = await loadProgressDashboard(data.ideas);
 
   const allIdeas = data.ideas;
-  const byId = new Map(allIdeas.map((i) => [i.id, i]));
   const roots = getRootIdeas([...allIdeas]);
   const completionPct = Math.round(Math.max(0, Math.min(progress.completion_pct, 1)) * 100);
 
@@ -358,17 +195,16 @@ export default async function IdeasPage() {
         </div>
       </section>
 
-      <section className="space-y-4" aria-labelledby="ideas-hierarchy-heading">
+      <section className="space-y-4" aria-labelledby="ideas-list-heading">
         <div className="space-y-2">
-          <h2 id="ideas-hierarchy-heading" className="text-xl font-semibold tracking-tight">
-            Portfolio hierarchy
+          <h2 id="ideas-list-heading" className="text-xl font-semibold tracking-tight">
+            Portfolio
           </h2>
           <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-            Super-ideas group related child ideas; everything else stays at the top level.
-            Child ideas nest under their parent when lineage data is present.
+            Switch between Cards and Table views. Toggle Expert mode in the header for IDs and raw data.
           </p>
         </div>
-        {roots.length === 0 ? (
+        {allIdeas.length === 0 ? (
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
             <p className="text-lg text-muted-foreground">No ideas yet. Be the first to share one.</p>
             <Link
@@ -379,18 +215,7 @@ export default async function IdeasPage() {
             </Link>
           </div>
         ) : (
-        <div className="space-y-3">
-          {roots.map((idea, index) => (
-            <IdeaHierarchySubtree
-              key={idea.id}
-              idea={idea}
-              depth={0}
-              rank={index + 1}
-              allIdeas={allIdeas}
-              byId={byId}
-            />
-          ))}
-        </div>
+          <IdeasListView ideas={roots} />
         )}
       </section>
 
