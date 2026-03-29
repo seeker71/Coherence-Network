@@ -3,6 +3,11 @@ name: Public Deploy Contract
 on:
   push:
     branches: [main]
+    paths:
+      - 'api/**'
+      - 'web/**'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
   schedule:
     - cron: "17 6,18 * * *"  # twice daily (was every 2h)
   workflow_dispatch:
