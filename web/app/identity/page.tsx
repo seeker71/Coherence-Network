@@ -73,10 +73,11 @@ const STATIC_PROVIDERS: Record<string, ProviderInfo[]> = {
     { key: "pgp", label: "PGP", placeholder: "key fingerprint", category: "Identity" },
     { key: "fediverse", label: "Fediverse", placeholder: "user@instance", category: "Identity" },
   ],
-  Agent: [
-    { key: "agent", label: "AI Agent", placeholder: "provider.model", category: "Agent" },
-    { key: "openrouter", label: "OpenRouter", placeholder: "openrouter/model-name", category: "Agent" },
-    { key: "ollama", label: "Ollama (local)", placeholder: "model:tag", category: "Agent" },
+  Platform: [
+    { key: "agent", label: "AI Agent", placeholder: "provider.model", category: "Platform" },
+    { key: "openrouter", label: "OpenRouter", placeholder: "openrouter/model-name", category: "Platform" },
+    { key: "ollama", label: "Ollama (local)", placeholder: "model:tag", category: "Platform" },
+    { key: "openclaw", label: "OpenClaw", placeholder: "node ID or handle", category: "Platform" },
   ],
 };
 
