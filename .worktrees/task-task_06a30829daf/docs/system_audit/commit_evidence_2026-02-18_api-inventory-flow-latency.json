@@ -1,0 +1,91 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/api-slow-fix",
+  "commit_scope": "Add request-time slow-endpoint telemetry and optimize synchronous read endpoints to reduce event-loop blocking for flow/inventory and contributor endpoints.",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/routers/contributors.py",
+    "api/app/routers/contributions.py",
+    "api/app/routers/inventory.py",
+    "docs/system_audit/commit_evidence_2026-02-18_api-inventory-flow-latency.json"
+  ],
+  "idea_ids": [
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "006"
+  ],
+  "task_ids": [
+    "api-flow-latency-debug"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5.3-codex"
+  },
+  "evidence_refs": [
+    "python3 - <<'PY'\nimport time, urllib.request\n\n# local\nfor i in range(1, 6):\n    start = time.perf_counter()\n    urllib.request.urlopen('http://127.0.0.1:18130/api/inventory/flow', timeout=20)\n    print('local_flow_ms', (time.perf_counter()-start)*1000)\nPY",
+    "python3 - <<'PY'\nimport time, urllib.request\n\n# production\nfor i in range(1, 3):\n    start = time.perf_counter()\n    urllib.request.urlopen('https://coherence-network-production.up.railway.app/api/inventory/flow', timeout=40)\n    print('prod_flow_ms', (time.perf_counter()-start)*1000)\nPY",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/routers/contributors.py",
+    "api/app/routers/contributions.py",
+    "api/app/routers/inventory.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Slow request telemetry identifies API endpoints above threshold, and inventory flow endpoint no longer blocks the asyncio loop; production latency regressions are reduced by avoiding slow synchronous handling on key read routes.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/flow",
+      "https://coherence-network-production.up.railway.app/api/contributors?limit=5000",
+      "https://coherence-network-production.up.railway.app/api/contributions?limit=10000"
+    ],
+    "test_flows": [
+      "run local timing probe against /api/inventory/flow and contributor/contribution read endpoints and compare P95 to baseline",
+      "verify slow_endpoint logs emit for /api/inventory/flow when threshold is exceeded",
+      "run production endpoint timing probe and capture delta after deploy"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-18T11:20:00Z",
+    "environment": {
+      "python": "3.11"
+    },
+    "commands": [
+      "python3 - <<'PY'\nimport time, urllib.request\nfor i in range(1, 6):\n    start=time.perf_counter(); urllib.request.urlopen('http://127.0.0.1:18130/api/inventory/flow', timeout=20); print((time.perf_counter()-start)*1000)\nPY"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and production deploy re-verification before opening next phase."
+  }
+}

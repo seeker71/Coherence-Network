@@ -1,0 +1,94 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/public-observability-deploy-realign",
+  "commit_scope": "Add explicit paid-provider override header path and improve deploy de-risk telemetry defaults",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    ".github/workflows/public-deploy-contract.yml",
+    "AGENTS.md",
+    "docs/DEPLOY.md"
+  ],
+  "idea_ids": [
+    "tool-failure-awareness"
+  ],
+  "spec_ids": [
+    "074-tool-failure-awareness"
+  ],
+  "task_ids": [
+    "task_paid_provider_override_header"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "validation",
+        "direction"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5.3"
+  },
+  "evidence_refs": [
+    "cd api && PYTHONPATH=. pytest -q tests/test_agent_execute_endpoint.py",
+    "./scripts/verify_web_api_deploy.sh",
+    "python3 scripts/validate_pr_to_public.py --branch codex/public-observability-deploy-realign"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    ".github/workflows/public-deploy-contract.yml",
+    "AGENTS.md",
+    "docs/DEPLOY.md"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && PYTHONPATH=. pytest -q tests/test_agent_execute_endpoint.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_paid-provider-override-header-defaults.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pass",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "environment": "railway-production",
+    "expected_result": "public deployment contract, persistence contract, and CORS verified"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Paid-provider overrides can be forced via header or query, and paid usage is emitted as runtime diagnostics with override visibility.",
+    "public_endpoints": [
+      "/api/agent/tasks/{id}/execute",
+      "/api/runtime/events",
+      "/api/runtime/endpoints/summary",
+      "/api/runtime/endpoints/attention",
+      "/api/gates/public-deploy-contract"
+    ],
+    "test_flows": [
+      "Create a paid-route task and execute with X-Force-Paid-Providers header to validate override is honored.",
+      "Create a paid-route task and execute with query override to validate route guard behavior and diagnostics.",
+      "Run public deployment verification to confirm API/web reachability and deploy-gate health."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Runtime e2e and CI pass are pending follow-up production validation and PR merge."
+  }
+}

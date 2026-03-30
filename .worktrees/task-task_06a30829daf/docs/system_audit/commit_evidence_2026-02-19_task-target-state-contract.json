@@ -1,0 +1,85 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/b480",
+  "commit_scope": "Add explicit task target-state contract fields and runner observation reactions: target_state, success_evidence, abort_evidence, observation_window_sec.",
+  "files_owned": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_task-target-state-contract.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "030-task-runner-reliability"
+  ],
+  "task_ids": [
+    "task_target_state_contract"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex:railway-runner-1",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "Task API now exposes explicit target-state contract fields",
+    "Runner normalizes and observes target-state contract and marks failure on abort evidence"
+  ],
+  "change_files": [
+    "api/app/models/agent.py",
+    "api/app/routers/agent.py",
+    "api/app/services/agent_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_agent_integration_api.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "docs/system_audit/commit_evidence_2026-02-19_task-target-state-contract.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pending",
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_task-target-state-contract.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting local guards, CI, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Each task carries explicit target-state contract fields and runner stores observation results with abort-evidence reaction.",
+    "public_endpoints": [
+      "/api/agent/tasks",
+      "/api/agent/tasks/{task_id}"
+    ],
+    "test_flows": [
+      "create task with target_state, success_evidence, abort_evidence, observation_window_sec",
+      "runner normalizes contract into task context before execution",
+      "runner writes target_state_observation and marks failure when abort evidence appears"
+    ]
+  }
+}

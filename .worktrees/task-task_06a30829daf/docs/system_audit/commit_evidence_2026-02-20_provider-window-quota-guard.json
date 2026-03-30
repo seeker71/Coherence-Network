@@ -1,0 +1,83 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/provider-quota-awareness",
+  "commit_scope": "Add automatic provider quota awareness and execution guardrails so paid tasks are blocked when hourly/weekly/monthly remaining usage crosses configured thresholds.",
+  "files_owned": [
+    "api/.env.example",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/system_audit/commit_evidence_2026-02-20_provider-window-quota-guard.json"
+  ],
+  "local_validation": {
+    "status": "pass"
+  },
+  "ci_validation": {
+    "status": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "provider-readiness-contract"
+  ],
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "provider-quota-awareness-window-guard"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && .venv/bin/ruff check app/services/automation_usage_service.py app/services/agent_execution_service.py tests/test_automation_usage_api.py tests/test_agent_execute_endpoint.py",
+    "cd api && .venv/bin/pytest -q tests/test_automation_usage_api.py::test_provider_limit_guard_decision_blocks_low_monthly_remaining tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_blocks",
+    "cd api && .venv/bin/pytest -q tests/test_agent_execute_endpoint.py::test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded tests/test_automation_usage_api.py::test_evaluate_usage_alerts_flags_remaining_tracking_gap_for_required_provider tests/test_automation_usage_api.py::test_evaluate_usage_alerts_suppresses_openai_permission_only_degraded"
+  ],
+  "change_files": [
+    "api/.env.example",
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_automation_usage_api.py"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Paid provider execution now consults provider quota telemetry and blocks automatically when remaining ratio in hourly/weekly/monthly windows is below configured policy thresholds.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/automation/usage",
+      "https://coherence-network-production.up.railway.app/api/automation/usage/alerts",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}/execute"
+    ],
+    "test_flows": [
+      "provider_limit_guard_decision returns blocked decision for low monthly remaining quota",
+      "execute endpoint fails paid task with provider_usage_limit_exceeded friction when guard blocks",
+      "legacy paid window policy blocking remains active as fallback"
+    ]
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "date": "2026-02-21",
+  "thread_branch": "codex/host-runner-telegram-noise-reduction",
+  "commit_scope": "Define a 2-tier cheap/executive model contract in AGENTS and add a reusable task-card template for deployable executions.",
+  "files_owned": [
+    "AGENTS.md",
+    "docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "000-model-routing"
+  ],
+  "task_ids": [
+    "task-2026-02-21-cheap-executor-contract"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "AGENTS.md",
+    "docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md"
+  ],
+  "change_files": [
+    "AGENTS.md",
+    "api/app/routers/agent.py",
+    "api/app/routers/agent_telegram.py",
+    "docs/CHEAP_EXECUTOR_TASK_CARD_TEMPLATE.md",
+    "docs/system_audit/maintainability_baseline.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pending",
+    "commands": [
+      "make start-gate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-21_cheap-executor-contract.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-staging"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting local PR gate, PR checks, and deployment verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Template-driven execution should preserve the established alert-noise reduction behavior and introduce repeatable 2-tier execution task cards.",
+    "public_endpoints": [
+      "/api/agent/tasks/{task_id}",
+      "/api/agent/telegram/webhook"
+    ],
+    "test_flows": [
+      "Create a docs-only task card and run it through a cheap executor with explicit constraints.",
+      "Verify evidence validation enforces runtime change scope and model-routing proof capture."
+    ]
+  }
+}

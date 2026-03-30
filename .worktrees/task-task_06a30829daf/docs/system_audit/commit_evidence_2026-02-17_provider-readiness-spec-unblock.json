@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/provider-readiness-spec",
+  "commit_scope": "Add provider readiness contract spec and register it to close spec-stage ROI blocker",
+  "files_owned": [
+    "specs/096-provider-readiness-contract-automation.md"
+  ],
+  "idea_ids": [
+    "provider-readiness-contract-automation"
+  ],
+  "spec_ids": [
+    "096-provider-readiness-contract-automation"
+  ],
+  "task_ids": [
+    "task_af9cc3b4aaefd6f5"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "review"]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": ["idea", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_spec_quality.py --file specs/096-provider-readiness-contract-automation.md",
+    "curl -fsS -X POST https://coherence-network-production.up.railway.app/api/spec-registry ...",
+    "curl -fsS https://coherence-network-production.up.railway.app/api/inventory/flow?idea_id=provider-readiness-contract-automation ..."
+  ],
+  "change_files": [
+    "specs/096-provider-readiness-contract-automation.md",
+    "docs/system_audit/commit_evidence_2026-02-17_provider-readiness-spec-unblock.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_spec_quality.py --file specs/096-provider-readiness-contract-automation.md"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The provider-readiness-contract-automation idea is no longer blocked at spec stage once spec 096 is tracked in the registry and inventory flow.",
+    "public_endpoints": [
+      "/api/spec-registry",
+      "/api/inventory/flow",
+      "/api/inventory/flow/next-unblock-task"
+    ],
+    "test_flows": [
+      "Register spec 096 for provider-readiness-contract-automation through /api/spec-registry.",
+      "Verify /api/inventory/flow?idea_id=provider-readiness-contract-automation reports with_spec=1 and spec id 096."
+    ]
+  }
+}

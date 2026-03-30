@@ -1,0 +1,80 @@
+{
+  "date": "2026-02-23",
+  "thread_branch": "codex/n8n-premerge-guard-integration",
+  "commit_scope": "Implement Open Responses-compatible normalization envelope across agent routing/task context and persist normalized route evidence in completion telemetry, with cross-executor parity tests.",
+  "files_owned": [
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/models/agent.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "docs/system_audit/maintainability_baseline.json"
+  ],
+  "idea_ids": [
+    "coherence-network-overall"
+  ],
+  "spec_ids": [
+    "109-open-responses-interoperability-layer"
+  ],
+  "task_ids": [
+    "task-2026-02-23-open-responses-normalization"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["analysis", "implementation", "testing", "delivery"]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_usage_tracking_api.py"
+  ],
+  "change_files": [
+    "api/app/models/agent.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_service.py",
+    "api/tests/test_agent_executor_policy.py",
+    "api/tests/test_agent_usage_tracking_api.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-02-23_open-responses-interoperability-layer.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -v tests/test_agent_executor_policy.py tests/test_agent_usage_tracking_api.py",
+      "python3 api/scripts/run_maintainability_audit.py --baseline docs/system_audit/maintainability_baseline.json --write-baseline --output api/logs/maintainability_audit_report.worktree_guard.json",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, merge, and public deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Task contexts and completion telemetry now carry Open Responses-compatible schema/model/provider evidence for cross-provider auditability.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "Create tasks with cursor/openclaw executors and verify normalized_response_call in context.",
+      "Complete task and verify runtime completion metadata includes request_schema/normalized_model/normalized_provider."
+    ]
+  }
+}

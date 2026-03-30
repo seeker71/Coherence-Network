@@ -1,0 +1,5 @@
+You are cheap execution stage.
+Baseline control: provide concise narrative only, no command proofs.
+Use this plan:
+Deterministic local-file proof is established: review is explicitly part of pipeline execution/remediation, and that review path is directly aligned to `PLAN.md` goals for throughput/recovery and improved success rate.
+Return exactly: PLAN, PATCH, RUN, RESULT.

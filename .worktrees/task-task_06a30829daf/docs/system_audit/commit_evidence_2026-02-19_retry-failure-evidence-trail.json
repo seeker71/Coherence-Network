@@ -1,0 +1,111 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/retry-evidence-ui-walk-20260219",
+  "commit_scope": "Add single-retry failure recovery with failure hit tracking and retry hints in task execution, expose derived runtime ideas through the ideas API, and surface walkable task evidence trails in the web UI.",
+  "files_owned": [
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/agent_execution_metrics.py",
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/idea_service.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_ideas.py",
+    "web/app/tasks/page.tsx",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-19_retry-failure-evidence-trail.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "074-tool-failure-awareness"
+  ],
+  "task_ids": [
+    "task_d1b255a3a9a55fe3",
+    "task_d4059b30093f2eb3"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_agent_execute_endpoint.py tests/test_ideas.py",
+    "cd web && NEXT_PUBLIC_API_URL='http://127.0.0.1:18115' npm run build",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_retry-failure-evidence-trail.json"
+  ],
+  "change_files": [
+    "api/app/services/agent_execution_service.py",
+    "api/app/services/agent_execution_task_flow.py",
+    "api/app/services/agent_execution_metrics.py",
+    "api/app/services/agent_execution_retry.py",
+    "api/app/services/idea_service.py",
+    "api/tests/test_agent_execute_endpoint.py",
+    "api/tests/test_ideas.py",
+    "web/app/tasks/page.tsx",
+    "maintainability_audit_report.json"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Failed task executions increment failure_hits, retry once with explicit retry guidance injected into the next prompt, and Tasks UI can walk task -> idea -> flow evidence links with retry telemetry and runtime event proof.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/tasks",
+      "https://coherence-network.vercel.app/ideas/coherence-network-agent-pipeline",
+      "https://coherence-network.vercel.app/flow?idea_id=coherence-network-agent-pipeline",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/{task_id}/log",
+      "https://coherence-network-production.up.railway.app/api/runtime/events",
+      "https://coherence-network-production.up.railway.app/api/ideas/coherence-network-agent-pipeline"
+    ],
+    "test_flows": [
+      "api: execute a failing task and verify context.failure_hits increments, context.retry_count increments, context.retry_hint is present, and final status completes after retry",
+      "web: open /tasks?task_id=<failed-task-id> and verify Evidence Trail shows retry telemetry, runtime event rows with failed then completed final status, and task log proof",
+      "web: follow linked idea and flow routes from /tasks?task_id=<id> and verify they render task-linked data"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-19T18:06:00Z",
+    "commands": [
+      "cd api && pytest -q tests/test_agent_execute_endpoint.py tests/test_ideas.py",
+      "cd web && NEXT_PUBLIC_API_URL='http://127.0.0.1:18115' npm run build",
+      "python3 api/scripts/run_maintainability_audit.py --output maintainability_audit_report.json --fail-on-regression",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy verification on the pushed branch."
+  }
+}

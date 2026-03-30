@@ -1,0 +1,115 @@
+{
+  "date": "2026-03-28T13:00:00Z",
+  "thread_branch": "fix/geolocation-clean-merge",
+  "commit_scope": "impl(geolocation-interface): Geo-location — nearby contributors, local ideas, regional news resonance",
+  "files_owned": [
+    ".gitignore",
+    "api/app/main.py",
+    "api/app/models/geolocation.py",
+    "api/app/models/metrics.py",
+    "api/app/models/portfolio.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/geolocation.py",
+    "api/app/services/geolocation_service.py",
+    "api/app/services/metrics_service.py",
+    "api/app/services/portfolio_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_concept_resonance_kernel.py",
+    "api/tests/test_fractal_self_balance.py",
+    "api/tests/test_geo_location.py",
+    "cli/bin/cc.mjs",
+    "cli/lib/commands/geolocation.mjs",
+    "docs/system_audit/commit_evidence_2026-03-28_geolocation-interface.json",
+    "specs/176-idea-lifecycle-closure.md",
+    "web/app/contributors/[id]/portfolio/ideas/[idea_id]/page.tsx",
+    "web/app/contributors/[id]/portfolio/page.tsx",
+    "web/app/contributors/[id]/portfolio/stakes/[stake_id]/page.tsx",
+    "web/app/contributors/[id]/portfolio/tasks/[task_id]/page.tsx",
+    "web/app/my-portfolio/page.tsx"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Geolocation API endpoints implemented. Models, router, and service created. CLI commands cc nearby and cc location wired. Tests cover nearby contributors, local ideas, and regional news resonance endpoints."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Geolocation interface implementation. Router registered in main.py. All geolocation tests included."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "Clean branch from main with only geolocation-specific changes. No merge conflicts."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "geolocation-interface"
+  ],
+  "spec_ids": [
+    "geolocation-interface"
+  ],
+  "task_ids": [
+    "task_761e9dd6c721cd7f",
+    "task_bcbc166"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "claude-sonnet-4-6",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "QA"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Claude Sonnet 4.6",
+    "version": "claude-sonnet-4-6"
+  },
+  "evidence_refs": [
+    "api/tests/test_geo_location.py",
+    "api/app/routers/geolocation.py",
+    "api/app/services/geolocation_service.py"
+  ],
+  "change_files": [
+    ".gitignore",
+    "api/app/main.py",
+    "api/app/models/geolocation.py",
+    "api/app/models/metrics.py",
+    "api/app/models/portfolio.py",
+    "api/app/routers/agent.py",
+    "api/app/routers/geolocation.py",
+    "api/app/services/geolocation_service.py",
+    "api/app/services/metrics_service.py",
+    "api/app/services/portfolio_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_concept_resonance_kernel.py",
+    "api/tests/test_fractal_self_balance.py",
+    "api/tests/test_geo_location.py",
+    "cli/bin/cc.mjs",
+    "cli/lib/commands/geolocation.mjs",
+    "docs/system_audit/commit_evidence_2026-03-28_geolocation-interface.json",
+    "specs/176-idea-lifecycle-closure.md",
+    "web/app/contributors/[id]/portfolio/ideas/[idea_id]/page.tsx",
+    "web/app/contributors/[id]/portfolio/page.tsx",
+    "web/app/contributors/[id]/portfolio/stakes/[stake_id]/page.tsx",
+    "web/app/contributors/[id]/portfolio/tasks/[task_id]/page.tsx",
+    "web/app/my-portfolio/page.tsx"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Geolocation API now available. Users can find nearby contributors, browse local ideas, and see regional news resonance scores.",
+    "public_endpoints": [
+      "GET /api/geo/nearby-contributors",
+      "GET /api/geo/local-ideas",
+      "GET /api/geo/regional-news-resonance",
+      "GET /api/geo/location-stats"
+    ],
+    "test_flows": [
+      "GET /api/geo/nearby-contributors?lat=0&lon=0 -> returns contributor list with distances",
+      "GET /api/geo/local-ideas?lat=0&lon=0 -> returns ideas with location context",
+      "GET /api/geo/regional-news-resonance?lat=0&lon=0 -> returns news items with resonance scores"
+    ]
+  }
+}

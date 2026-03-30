@@ -1,0 +1,5 @@
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+.codex*

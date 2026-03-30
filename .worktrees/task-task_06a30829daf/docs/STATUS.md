@@ -1,0 +1,68 @@
+# Coherence Network — Status
+
+> Implementation status for the active execution scope.
+
+## Current State
+
+### Phase Visibility
+
+- Milestone Tag: **A** (Core Stability)
+- Progress source: [`docs/SPEC-TRACKING.md`](SPEC-TRACKING.md)
+
+| Area | Status |
+|------|--------|
+| API baseline and health endpoints | ✅ Complete |
+| Graph indexing + project retrieval | ✅ Complete |
+| Coherence endpoint support | ✅ Complete |
+| Import stack support (lockfile + requirements) | ✅ Complete |
+| Agent orchestration endpoints | ✅ Complete |
+| Production deployment | ⚠️ Blocked (Railway account/project unavailable) |
+| Pipeline monitoring + attention workflow | 🚧 In progress |
+| Full unattended effectiveness loop | 🚧 In progress |
+
+## Public Deployments
+
+| Service | Platform | URL | Status |
+|---------|----------|-----|--------|
+| API | Railway (previous) | https://coherence-network-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-03-09) |
+| Web | Vercel (current) | https://coherence-network.vercel.app | ✅ Active / Migration Target |
+
+### Deployment Health
+- API health endpoint: ❌ Not reachable on previous Railway URL (HTTP 404)
+- Web root: ✅ Reachable on Vercel
+- Web API health page: ⚠️ Likely failing due to blocked API
+- CORS configuration: ⚙️ Pending new hosting cutover for API
+
+## Specs Implemented (Selected)
+
+- 001–005 core API/pipeline foundations
+- 007–014 platform baseline and safeguards
+- 016–025 holdout/web/coherence/import capabilities
+- 027–028 pipeline automation structure
+- 030, 032, 034, 035, 037–044 hardening and status features
+
+See [SPEC-COVERAGE.md](SPEC-COVERAGE.md) and [SPEC-TRACKING.md](SPEC-TRACKING.md) for full mapping.
+
+## Active Priorities
+
+1. Improve pipeline effectiveness and issue resolution loop.
+2. Keep status/coverage artifacts in sync with shipped behavior.
+3. Continue graph + coherence quality improvements through scoped specs.
+4. Standardize estimate-to-measurement execution for new ideas (see [IDEA-MEASUREMENT-FLOW.md](IDEA-MEASUREMENT-FLOW.md)).
+5. Execute non-software MVP marketplace track with ROI ordering (see [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md)).
+
+## Non-Software MVP Track
+
+- Current highest-ROI item: 30-day OKRs and dashboard metrics (Objective 1).
+- Status + continuation plan: [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md).
+- OKRs + operations docs:
+  - [MVP-MARKETPLACE-STATUS.md](MVP-MARKETPLACE-STATUS.md) (`30-Day OKRs (v1)`)
+  - [MVP-PARTNER-OUTREACH.md](MVP-PARTNER-OUTREACH.md)
+  - [MVP-DASHBOARD-METRICS.md](MVP-DASHBOARD-METRICS.md)
+- Next execution step: run first 10-contact outreach sprint and log week-1 dashboard baseline.
+
+## Validation Snapshot
+
+- API endpoint set is implemented and locally testable; public deployment is currently blocked pending new hosting cutover.
+- Test suite remains the release gate.
+- Overnight pipeline remains the main autonomous execution path.

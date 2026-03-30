@@ -1,0 +1,81 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/telegram-deploy-proof",
+  "commit_scope": "Harden npm install flows with --allow-git=none, extend agent manifest provenance with code references, and stabilize PM/orchestration pipeline output contract used by guard tests.",
+  "files_owned": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "api/scripts/agent_runner.py",
+    "api/scripts/check_pipeline.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_pr_check_failure_triage.py",
+    "api/tests/test_worktree_pr_guard.py",
+    "scripts/pr_check_failure_triage.py",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/worktree_pr_guard.py",
+    "docs/system_audit/commit_evidence_2026-02-19_npm-hardening-telegram-proof.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "003-agent-telegram-decision-loop",
+    "054-commit-provenance-contract-gate"
+  ],
+  "task_ids": [
+    "task_npm-hardening-telegram-proof"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex:gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deployment"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "pytest -q tests/test_pr_check_failure_triage.py tests/test_worktree_pr_guard.py tests/test_agent_runner_tool_failure_telemetry.py",
+    "python3 scripts/validate_workflow_references.py",
+    "API_PORT=18100 WEB_PORT=3110 ./scripts/verify_worktree_local_web.sh --start",
+    "./scripts/verify_web_api_deploy.sh"
+  ],
+  "change_files": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    "api/scripts/agent_runner.py",
+    "api/scripts/check_pipeline.py",
+    "api/tests/test_agent_runner_tool_failure_telemetry.py",
+    "api/tests/test_pr_check_failure_triage.py",
+    "api/tests/test_worktree_pr_guard.py",
+    "scripts/pr_check_failure_triage.py",
+    "scripts/verify_worktree_local_web.sh",
+    "scripts/worktree_pr_guard.py"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "pytest -q tests/test_pr_check_failure_triage.py tests/test_worktree_pr_guard.py tests/test_agent_runner_tool_failure_telemetry.py",
+      "python3 scripts/validate_workflow_references.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting PR CI and public deploy + Telegram verification on main."
+  }
+}

@@ -1,0 +1,285 @@
+{
+  "run": {
+    "required_providers": [
+      "coherence-internal",
+      "openai-codex",
+      "github",
+      "railway",
+      "claude"
+    ],
+    "probes": [
+      {
+        "provider": "coherence-internal",
+        "ok": true,
+        "detail": "ok",
+        "runtime_ms": 0.0005
+      },
+      {
+        "provider": "openai-codex",
+        "ok": true,
+        "detail": "ok_via_runtime_usage",
+        "runtime_ms": 0.7118
+      },
+      {
+        "provider": "github",
+        "ok": true,
+        "detail": "ok",
+        "runtime_ms": 218.9214
+      },
+      {
+        "provider": "railway",
+        "ok": true,
+        "detail": "ok_via_railway_cli",
+        "runtime_ms": 236.2103
+      },
+      {
+        "provider": "claude",
+        "ok": true,
+        "detail": "ok_via_runtime_usage_after_api_error",
+        "runtime_ms": 115.7338
+      }
+    ]
+  },
+  "report": {
+    "generated_at": "2026-02-16T22:13:08.760760Z",
+    "required_providers": [
+      "coherence-internal",
+      "openai-codex",
+      "github",
+      "railway",
+      "claude"
+    ],
+    "runtime_window_seconds": 86400,
+    "min_execution_events": 1,
+    "all_required_validated": true,
+    "blocking_issues": [],
+    "providers": [
+      {
+        "provider": "coherence-internal",
+        "configured": true,
+        "readiness_status": "ok",
+        "usage_events": 1,
+        "successful_events": 1,
+        "validated_execution": true,
+        "last_event_at": "2026-02-16T22:13:07.366531Z",
+        "notes": [
+          "Execution success rate 100.0%"
+        ]
+      },
+      {
+        "provider": "openai-codex",
+        "configured": true,
+        "readiness_status": "ok",
+        "usage_events": 1,
+        "successful_events": 1,
+        "validated_execution": true,
+        "last_event_at": "2026-02-16T22:13:07.367574Z",
+        "notes": [
+          "Using runtime Codex execution evidence (no direct OpenAI API key in environment).",
+          "OpenAI Codex observed in runtime usage; treating as configured by active execution context."
+        ]
+      },
+      {
+        "provider": "github",
+        "configured": true,
+        "readiness_status": "ok",
+        "usage_events": 1,
+        "successful_events": 1,
+        "validated_execution": true,
+        "last_event_at": "2026-02-16T22:13:07.587723Z",
+        "notes": [
+          "GitHub billing data unavailable: billing_owner_or_scope_not_configured"
+        ]
+      },
+      {
+        "provider": "railway",
+        "configured": true,
+        "readiness_status": "ok",
+        "usage_events": 1,
+        "successful_events": 1,
+        "validated_execution": true,
+        "last_event_at": "2026-02-16T22:13:07.829193Z",
+        "notes": [
+          "Using Railway CLI auth session as execution evidence.",
+          "Configured via Railway CLI auth session."
+        ]
+      },
+      {
+        "provider": "claude",
+        "configured": true,
+        "readiness_status": "ok",
+        "usage_events": 1,
+        "successful_events": 1,
+        "validated_execution": true,
+        "last_event_at": "2026-02-16T22:13:07.946928Z",
+        "notes": [
+          "Claude models probe failed (Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/models'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401); using runtime execution evidence fallback."
+        ]
+      }
+    ]
+  },
+  "readiness": {
+    "generated_at": "2026-02-16T22:13:09.560494Z",
+    "required_providers": [
+      "claude",
+      "coherence-internal",
+      "github",
+      "openai-codex",
+      "openclaw",
+      "openrouter",
+      "railway"
+    ],
+    "all_required_ready": false,
+    "blocking_issues": [
+      "openclaw: status=unavailable, configured=False"
+    ],
+    "recommendations": [
+      "Configure provider 'openclaw' (OPENCLAW_API_KEY) and re-run /api/automation/usage/readiness."
+    ],
+    "providers": [
+      {
+        "provider": "anthropic",
+        "kind": "custom",
+        "status": "ok",
+        "required": false,
+        "configured": true,
+        "severity": "info",
+        "missing_env": [],
+        "notes": [
+          "configuration keys detected"
+        ]
+      },
+      {
+        "provider": "claude",
+        "kind": "custom",
+        "status": "ok",
+        "required": true,
+        "configured": true,
+        "severity": "info",
+        "missing_env": [],
+        "notes": [
+          "Claude models probe failed (Client error '401 Unauthorized' for url 'https://api.anthropic.com/v1/models'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/401); using runtime execution evidence fallback."
+        ]
+      },
+      {
+        "provider": "coherence-internal",
+        "kind": "internal",
+        "status": "ok",
+        "required": true,
+        "configured": true,
+        "severity": "info",
+        "missing_env": [],
+        "notes": [
+          "Execution success rate 100.0%"
+        ]
+      },
+      {
+        "provider": "cursor",
+        "kind": "custom",
+        "status": "ok",
+        "required": false,
+        "configured": true,
+        "severity": "info",
+        "missing_env": [],
+        "notes": [
+          "configuration keys detected"
+        ]
+      },
+      {
+        "provider": "github",
+        "kind": "github",
+        "status": "ok",
+        "required": true,
+        "configured": true,
+        "severity": "info",
+        "missing_env": [],
+        "notes": [
+          "GitHub billing data unavailable: billing_owner_or_scope_not_configured"
+        ]
+      },
+      {
+        "provider": "openai",
+        "kind": "openai",
+        "status": "unavailable",
+        "required": false,
+        "configured": false,
+        "severity": "warning",
+        "missing_env": [
+          "one_of(OPENAI_ADMIN_API_KEY,OPENAI_API_KEY)"
+        ],
+        "notes": [
+          "Set OPENAI_ADMIN_API_KEY (preferred) or OPENAI_API_KEY to enable usage collection.",
+          "missing_env=one_of(OPENAI_ADMIN_API_KEY,OPENAI_API_KEY)"
+        ]
+      },
+      {
+        "provider": "openai-codex",
+        "kind": "custom",
+        "status": "ok",
+        "required": true,
+        "configured": true,
+        "severity": "info",
+        "missing_env": [],
+        "notes": [
+          "Using runtime Codex execution evidence (no direct OpenAI API key in environment).",
+          "OpenAI Codex observed in runtime usage; treating as configured by active execution context."
+        ]
+      },
+      {
+        "provider": "openclaw",
+        "kind": "custom",
+        "status": "unavailable",
+        "required": true,
+        "configured": false,
+        "severity": "critical",
+        "missing_env": [
+          "OPENCLAW_API_KEY"
+        ],
+        "notes": [
+          "missing_env=OPENCLAW_API_KEY",
+          "provider observed in runtime usage but key/config is missing or provider checks are failing"
+        ]
+      },
+      {
+        "provider": "openrouter",
+        "kind": "custom",
+        "status": "ok",
+        "required": true,
+        "configured": true,
+        "severity": "info",
+        "missing_env": [],
+        "notes": [
+          "configuration keys detected"
+        ]
+      },
+      {
+        "provider": "railway",
+        "kind": "custom",
+        "status": "ok",
+        "required": true,
+        "configured": true,
+        "severity": "info",
+        "missing_env": [],
+        "notes": [
+          "Using Railway CLI auth session as execution evidence.",
+          "Configured via Railway CLI auth session."
+        ]
+      },
+      {
+        "provider": "vercel",
+        "kind": "custom",
+        "status": "unavailable",
+        "required": false,
+        "configured": false,
+        "severity": "warning",
+        "missing_env": [
+          "VERCEL_TOKEN",
+          "VERCEL_PROJECT_ID"
+        ],
+        "notes": [
+          "missing_env=VERCEL_TOKEN,VERCEL_PROJECT_ID"
+        ]
+      }
+    ]
+  }
+}

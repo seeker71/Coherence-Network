@@ -1,0 +1,100 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/public-ui-hydration-fix-20260219b",
+  "commit_scope": "Fix public web hydration mismatch introduced by mixed server/client API base resolution, force tasks client to same-origin API fetch paths, and make usage page resilient to transient upstream failures so /runtime redirects never crash with server exceptions.",
+  "files_owned": [
+    "web/lib/api.ts",
+    "web/app/tasks/page.tsx",
+    "web/app/usage/page.tsx",
+    "docs/system_audit/commit_evidence_2026-02-19_public-ui-hydration-and-usage-fallback.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "coherence-network-api-runtime",
+    "coherence-network-value-attribution"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration-api",
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task_b4c49be570ad0e28",
+    "task_68e7eb1a555be31b",
+    "task_bc95e91205261492"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "deployment"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm run build",
+    "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+    "Playwright local verification artifacts: /tmp/coherence_local_verify_round2 and /tmp/coherence_local_round2_playwright_artifacts",
+    "WORKTREE_PR_GUARD_MAINTAINABILITY_REPORT=/tmp/maintainability_audit_report_guard.json python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_public-ui-hydration-and-usage-fallback.json"
+  ],
+  "change_files": [
+    "web/lib/api.ts",
+    "web/app/tasks/page.tsx",
+    "web/app/usage/page.tsx"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public tasks and api-health routes no longer remain indefinitely loading from hydration failure, and /runtime -> /usage no longer crashes when runtime/friction/subscription upstream calls are transiently unavailable.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/tasks",
+      "https://coherence-network.vercel.app/tasks?task_id=task_b4c49be570ad0e28",
+      "https://coherence-network.vercel.app/runtime",
+      "https://coherence-network.vercel.app/usage",
+      "https://coherence-network.vercel.app/api-health"
+    ],
+    "test_flows": [
+      "web: open /tasks and verify page resolves to data or explicit error state instead of perpetual loading",
+      "web: open /tasks?task_id=<id> and verify same non-perpetual state behavior",
+      "web: open /runtime and verify redirect target /usage renders without server-side application crash",
+      "web: open /api-health and verify it transitions to ok/error state (not first-response waiting forever)"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-19T21:02:00Z",
+    "commands": [
+      "cd web && npm run build",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "Local Playwright check: /tasks, /tasks?task_id=..., /ideas/portfolio-governance, /runtime, /api-health"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and post-deploy public verification."
+  }
+}

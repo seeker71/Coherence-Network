@@ -1,0 +1,120 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/deploy-first-local-1771414255",
+  "commit_scope": "Add API slow-endpoint telemetry and inventory response-speed improvements, then validate deployment checks.",
+  "files_owned": [
+    "api/app/adapters/postgres_store.py",
+    "api/app/main.py",
+    "api/app/routers/gates.py",
+    "api/app/routers/inventory.py",
+    "api/app/services/commit_evidence_service.py",
+    "api/app/services/idea_registry_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/spec_registry_service.py",
+    "scripts/verify_web_api_deploy.sh",
+    "web/app/api/health-proxy/route.ts",
+    "web/app/flow/page.tsx",
+    "web/app/page.tsx",
+    "web/lib/fetch.ts",
+    "docs/system_audit/maintainability_baseline.json"
+  ],
+  "idea_ids": [
+    "runtime-api-slow-telemetry-fixes"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation"
+  ],
+  "task_ids": [
+    "task_2026_02_18_api_slow_performance_deploy"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "validation",
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_web_api_deploy.sh",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_deploy-first-local-api-performance.json --base origin/main --head HEAD --require-changed-evidence",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "git diff --name-only --diff-filter=ACMR origin/main..HEAD",
+    "python3 api/scripts/run_maintainability_audit.py --write-baseline --json --output /tmp/maint-audit.json"
+  ],
+  "change_files": [
+    "api/app/adapters/postgres_store.py",
+    "api/app/main.py",
+    "api/app/routers/gates.py",
+    "api/app/routers/inventory.py",
+    "api/app/services/commit_evidence_service.py",
+    "api/app/services/idea_registry_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/release_gate_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/spec_registry_service.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "scripts/verify_web_api_deploy.sh",
+    "web/app/api/health-proxy/route.ts",
+    "web/app/flow/page.tsx",
+    "web/app/page.tsx",
+    "web/lib/fetch.ts"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Slow API endpoints now emit structured runtime telemetry and slow-request logs; inventory fetch paths prefer direct fast-path reads with fallback behavior preserved.",
+    "public_endpoints": [
+      "/api/ideas",
+      "/api/inventory/system-lineage",
+      "/api/runtime/endpoints/summary",
+      "/api/health",
+      "/api/health/persistence"
+    ],
+    "test_flows": [
+      "local_api_web_validation",
+      "deploy_web_api_contract_check"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_deploy-first-local-api-performance.json --base origin/main --head HEAD --require-changed-evidence",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "./scripts/verify_web_api_deploy.sh",
+      "python3 api/scripts/run_maintainability_audit.py --write-baseline --json --output /tmp/maint-audit.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local evidence complete; CI deployment review pending."
+  }
+}

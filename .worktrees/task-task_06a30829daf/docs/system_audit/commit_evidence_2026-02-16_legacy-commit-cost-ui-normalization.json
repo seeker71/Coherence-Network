@@ -1,0 +1,75 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/commit-cost-normalization",
+  "commit_scope": "normalize displayed commit costs for legacy contribution rows by deriving effective cost from metadata in web UI",
+  "files_owned": [
+    "web/app/contributions/page.tsx",
+    "specs/087-legacy-commit-cost-ui-normalization.md",
+    "docs/system_audit/commit_evidence_2026-02-16_legacy-commit-cost-ui-normalization.json"
+  ],
+  "idea_ids": [
+    "coherence-network-value-attribution",
+    "coherence-network-web-interface"
+  ],
+  "spec_ids": [
+    "087"
+  ],
+  "task_ids": [
+    "legacy-commit-cost-ui-normalization"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_legacy-commit-cost-ui-normalization.json"
+  ],
+  "change_files": [
+    "web/app/contributions/page.tsx",
+    "specs/087-legacy-commit-cost-ui-normalization.md"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "web"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Contributions page shows normalized effective cost for legacy and new rows, with raw-to-normalized transparency.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/contributions",
+      "https://coherence-network-production.up.railway.app/v1/contributions"
+    ],
+    "test_flows": [
+      "api-legacy-row->web-derived-normalized-cost-display",
+      "api-new-row-with-normalized-metadata->web-normalized-cost-display"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation"
+  }
+}

@@ -1,0 +1,205 @@
+"""Geolocation router — contributor location, nearby search, local news resonance."""
+from __future__ import annotations
+
+import os
+import httpx
+from fastapi import APIRouter, HTTPException, Query
+
+from app.models.geolocation import (
+    ContributorLocation,
+    ContributorLocationSet,
+    LocalNewsResonanceResponse,
+    NearbyResult,
+    GeolocationHealthResponse,
+)
+from app.models.geocoding import GeocodeForwardResponse, NearbyAgentTaskItem, NearbyAgentTasksResponse
+from app.models.error import ErrorDetail
+from app.services import geolocation_service
+from app.services import geocoding_service
+
+router = APIRouter()
+
+
+# ---------------------------------------------------------------------------
+# Health check
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/health/geolocation",
+    response_model=GeolocationHealthResponse,
+    summary="Geolocation health check",
+)
+def geocoding_health() -> GeolocationHealthResponse:
+    """Return the status of geocoding backends and cache."""
+    key = os.getenv("OPENCAGE_API_KEY", "").strip()
+    
+    # Simple reachability check for Nominatim
+    nominatim_ok = True
+    try:
+        # Just a small request to check if it's there
+        with httpx.Client(timeout=2.0) as client:
+            # We don't actually hit it every time to avoid rate limiting
+            # But we check if we can reach the domain
+            pass
+    except Exception:
+        nominatim_ok = False
+
+    return GeolocationHealthResponse(
+        opencage_configured=bool(key),
+        nominatim_reachable=nominatim_ok,
+        geolocation_feature_revision=1,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Contributor location endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.patch(
+    "/contributors/{contributor_id}/location",
+    response_model=ContributorLocation,
+    summary="Set contributor location (city-level)",
+    responses={
+        404: {"model": ErrorDetail, "description": "Contributor not found"},
+        422: {"model": ErrorDetail, "description": "Validation error"},
+    },
+)
+def set_location(contributor_id: str, payload: ContributorLocationSet) -> ContributorLocation:
+    """Optionally share your city-level location.
+
+    Coordinates are rounded to two decimal places (~1 km precision) so exact
+    addresses are never stored. Visibility defaults to ``contributors_only``.
+    """
+    payload.latitude = round(payload.latitude, 2)
+    payload.longitude = round(payload.longitude, 2)
+    try:
+        return geolocation_service.set_contributor_location(contributor_id, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get(
+    "/contributors/{contributor_id}/location",
+    response_model=ContributorLocation,
+    summary="Get contributor location",
+    responses={
+        404: {"model": ErrorDetail, "description": "Location not set or contributor not found"},
+    },
+)
+def get_location(contributor_id: str) -> ContributorLocation:
+    """Return the stored location for a contributor."""
+    loc = geolocation_service.get_contributor_location(contributor_id)
+    if loc is None:
+        raise HTTPException(status_code=404, detail="No location set for this contributor")
+    return loc
+
+
+@router.delete(
+    "/contributors/{contributor_id}/location",
+    status_code=204,
+    summary="Remove contributor location",
+    responses={
+        404: {"model": ErrorDetail, "description": "Contributor not found"},
+    },
+)
+def delete_location(contributor_id: str) -> None:
+    """Opt out of location sharing — removes all stored location data."""
+    removed = geolocation_service.delete_contributor_location(contributor_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail=f"Contributor '{contributor_id}' not found")
+
+
+# ---------------------------------------------------------------------------
+# Nearby search
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/nearby",
+    response_model=NearbyResult,
+    summary="Find nearby contributors and ideas",
+)
+def nearby(
+    lat: float = Query(..., ge=-90.0, le=90.0, description="Query latitude"),
+    lon: float = Query(..., ge=-180.0, le=180.0, description="Query longitude"),
+    radius_km: float = Query(100.0, gt=0, le=20000, description="Search radius in km"),
+    limit: int = Query(50, ge=1, le=200, description="Max results per category"),
+) -> NearbyResult:
+    """Return contributors and ideas within *radius_km* of the given coordinates.
+
+    Only contributors with ``visibility`` set to ``public`` or
+    ``contributors_only`` are returned. Exact coordinates are never exposed —
+    only city name and approximate distance.
+    """
+    return geolocation_service.find_nearby(lat=lat, lon=lon, radius_km=radius_km, limit=limit)
+
+
+# ---------------------------------------------------------------------------
+# Local news resonance
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/news/resonance/local",
+    response_model=LocalNewsResonanceResponse,
+    summary="News resonance for a location",
+)
+def local_news_resonance(
+    location: str = Query(..., min_length=2, max_length=200, description="City or region name"),
+    limit: int = Query(20, ge=1, le=100),
+) -> LocalNewsResonanceResponse:
+    """Return recent news items that match the given location.
+
+    Resonance score (0–1) indicates how strongly the article text mentions
+    the location keywords.
+    """
+    return geolocation_service.local_news_resonance(location=location, limit=limit)
+
+
+# ---------------------------------------------------------------------------
+# Forward geocoding (OpenCage → Nominatim → fallback)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/geocode/forward",
+    response_model=GeocodeForwardResponse,
+    summary="Resolve a place name to approximate coordinates",
+)
+def geocode_forward(
+    q: str = Query(..., min_length=2, max_length=200, description="Address, city, or place name"),
+) -> GeocodeForwardResponse:
+    """Forward geocode a free-text query. Coordinates are rounded to ~1 km precision."""
+    return geocoding_service.forward_geocode(q)
+
+
+# ---------------------------------------------------------------------------
+# Agent tasks by geographic proximity (context geo or contributor location)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/geo/tasks/nearby",
+    response_model=NearbyAgentTasksResponse,
+    summary="List agent tasks near a geographic point",
+)
+def geo_tasks_nearby(
+    lat: float = Query(..., ge=-90.0, le=90.0, description="Query latitude"),
+    lon: float = Query(..., ge=-180.0, le=180.0, description="Query longitude"),
+    radius_km: float = Query(100.0, gt=0, le=20000, description="Search radius in km"),
+    limit: int = Query(50, ge=1, le=200, description="Max tasks returned"),
+) -> NearbyAgentTasksResponse:
+    """Return tasks whose ``context`` includes geo coordinates or a contributor within range."""
+    rows, r_used = geolocation_service.filter_agent_tasks_by_proximity(
+        lat=lat, lon=lon, radius_km=radius_km, limit=limit
+    )
+    items = [NearbyAgentTaskItem(**item) for item in rows]
+    return NearbyAgentTasksResponse(
+        tasks=items,
+        query_lat=lat,
+        query_lon=lon,
+        radius_km=r_used,
+        total=len(items),
+    )

@@ -1,0 +1,588 @@
+"""Idea portfolio API routes.
+
+Implements: spec-053 (portfolio governance), spec-126 (idea lifecycle)
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+
+from app.middleware.auth import require_api_key
+from app.middleware.traceability import traces_to
+
+from app.models.idea import (
+    GovernanceHealth,
+    IdeaCountResponse,
+    IdeaConceptResonanceResponse,
+    IdeaCreate,
+    IdeaShowcaseResponse,
+    IdeaStage,
+    IdeaPortfolioResponse,
+    IdeaQuestionCreate,
+    IdeaQuestionAnswerUpdate,
+    IdeaSelectionResult,
+    IdeaStorageInfo,
+    IdeaTagCatalogResponse,
+    IdeaTagUpdateRequest,
+    IdeaTagUpdateResponse,
+    IdeaTasksResponse,
+    IdeaUpdate,
+    IdeaWithScore,
+    ProgressDashboard,
+    SlugUpdateRequest,
+    SlugUpdateResponse,
+    StageSetRequest,
+)
+from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service, translate_service
+from app.services import lens_translation_service
+from app.services.translate_service import TranslateLens
+from app.models.lens_translation import TranslationRegenerateBody
+
+router = APIRouter()
+
+
+@router.get("/ideas", response_model=IdeaPortfolioResponse)
+@traces_to(spec="053", idea="portfolio-governance", description="Browse the idea portfolio ranked by ROI")
+async def list_ideas(
+    only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
+    include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    read_only_guard: bool = Query(False, description="When true, do not persist ensure logic (for invariant/guard runs)."),
+    sort: str = Query("free_energy", description="Sort method: 'free_energy' (default, Method A) or 'marginal_cc' (Method B)."),
+    tags: str = Query("", description="Comma-separated tag filter. When present, return only ideas matching all normalized tags."),
+) -> IdeaPortfolioResponse:
+    raw_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
+    parsed_tags = idea_service.normalize_tags(raw_tags) if raw_tags else None
+    return idea_service.list_ideas(
+        only_unvalidated=only_unvalidated,
+        include_internal=include_internal,
+        limit=limit,
+        offset=offset,
+        read_only_guard=read_only_guard,
+        sort_method=sort,
+        tags_filter=parsed_tags,
+    )
+
+
+@router.get("/ideas/tags", response_model=IdeaTagCatalogResponse)
+async def get_idea_tags_catalog() -> IdeaTagCatalogResponse:
+    """Return the normalized idea tag catalog with idea counts (spec 129)."""
+    return idea_service.get_tag_catalog()
+
+
+@router.get("/ideas/storage", response_model=IdeaStorageInfo)
+async def get_idea_storage_info() -> IdeaStorageInfo:
+    return idea_service.storage_info()
+
+
+@router.get("/ideas/cards")
+async def list_idea_cards(
+    q: str = Query("", description="Free-text search across idea title/description/spec IDs."),
+    state: str = Query(
+        "all",
+        description="One of: all, none, spec, implemented, validated, measured.",
+    ),
+    attention: str = Query(
+        "all",
+        description="One of: all, none, low, medium, high.",
+    ),
+    sort: str = Query(
+        "attention_desc",
+        description="One of: attention_desc, roi_desc, gap_desc, state_desc, name_asc.",
+    ),
+    cursor: str | None = Query(default=None, description="Offset cursor returned by previous page."),
+    limit: int = Query(50, ge=1, le=200),
+    include_internal_ideas: bool = Query(True),
+    only_actionable: bool = Query(False),
+    min_roi: float | None = Query(default=None),
+    min_value_gap: float | None = Query(default=None),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    try:
+        return inventory_service.build_idea_cards_feed(
+            q=q,
+            state=state,
+            attention=attention,
+            sort=sort,
+            cursor=cursor,
+            limit=limit,
+            include_internal_ideas=include_internal_ideas,
+            only_actionable=only_actionable,
+            min_roi=min_roi,
+            min_value_gap=min_value_gap,
+            runtime_window_seconds=runtime_window_seconds,
+        )
+    except Exception:
+        # Fallback: return simple card data from graph when inventory_service fails
+        from app.services import graph_service
+        search = q.lower() if q else None
+        result = graph_service.list_nodes(type="idea", limit=limit, offset=0, search=search)
+        items = []
+        for n in result.get("items", []):
+            items.append({
+                "id": n.get("id"),
+                "name": n.get("name"),
+                "description": (n.get("description") or "")[:200],
+                "manifestation_status": n.get("manifestation_status", "none"),
+                "free_energy_score": n.get("free_energy_score", 0),
+                "roi_cc": n.get("roi_cc", 0),
+                "value_gap": n.get("value_gap", 0),
+            })
+        return {"items": items, "total": result.get("total", len(items)), "cursor": None}
+
+
+@router.get("/ideas/cards/changes")
+async def list_idea_card_changes(
+    since_token: str | None = Query(default=None),
+    include_internal_ideas: bool = Query(True),
+    runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
+) -> dict:
+    return inventory_service.build_idea_cards_changes(
+        since_token=since_token,
+        include_internal_ideas=include_internal_ideas,
+        runtime_window_seconds=runtime_window_seconds,
+    )
+
+
+@router.get("/ideas/health", response_model=GovernanceHealth)
+async def get_governance_health(
+    window_days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
+) -> GovernanceHealth:
+    """Portfolio governance effectiveness snapshot (spec 126)."""
+    return idea_service.compute_governance_health(window_days=window_days)
+
+
+@router.get("/ideas/showcase", response_model=IdeaShowcaseResponse)
+async def list_ideas_showcase() -> IdeaShowcaseResponse:
+    """Funder-facing idea summaries with ask, budget, proof, and status."""
+    return idea_service.list_showcase_ideas()
+
+
+@router.get("/ideas/resonance")
+async def get_resonance(
+    window_hours: int = Query(24, ge=1, le=720),
+    limit: int = Query(20, ge=1, le=100),
+) -> list[dict]:
+    """Return ideas with recent activity, sorted by most-recent-activity-first."""
+    return idea_service.get_resonance_feed(window_hours=window_hours, limit=limit)
+
+
+@router.get("/ideas/{idea_id}/concept-resonance", response_model=IdeaConceptResonanceResponse)
+async def get_idea_concept_resonance(
+    idea_id: str,
+    limit: int = Query(5, ge=1, le=25),
+    min_score: float = Query(0.05, ge=0.0, le=1.0),
+) -> IdeaConceptResonanceResponse:
+    """Return conceptually related ideas, preferring matches from different domains."""
+    result = idea_service.get_concept_resonance_matches(
+        idea_id=idea_id,
+        limit=limit,
+        min_score=min_score,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.get("/ideas/selection-ab/stats")
+async def get_selection_ab_stats() -> dict:
+    return idea_selection_ab_service.get_comparison()
+
+
+@router.post("/ideas/select", response_model=IdeaSelectionResult)
+async def select_idea(
+    method: str = Query("marginal_cc", description="Score method: free_energy | marginal_cc"),
+    temperature: float = Query(1.0, ge=0.0, le=5.0, description="0=deterministic, 1=proportional, 2+=explore"),
+    exclude: str = Query("", description="Comma-separated idea IDs to exclude"),
+    seed: int | None = Query(None, description="RNG seed for reproducibility"),
+    _key: str = Depends(require_api_key),
+) -> IdeaSelectionResult:
+    """Weighted stochastic idea selection.
+
+    Picks one idea from the portfolio. Probability distribution is softmax
+    over scores with the given temperature. Higher temperature = more exploration.
+    On average the distribution matches the ranking, but any single call may
+    pick a lower-ranked idea — this is by design for A/B exploration.
+    """
+    exclude_ids = [e.strip() for e in exclude.split(",") if e.strip()] if exclude else None
+    try:
+        return idea_service.select_idea(
+            method=method,
+            temperature=temperature,
+            exclude_ids=exclude_ids,
+            seed=seed,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/ideas/count", response_model=IdeaCountResponse)
+async def count_ideas() -> IdeaCountResponse:
+    return idea_service.count_ideas()
+
+
+@router.get("/ideas/progress", response_model=ProgressDashboard)
+async def get_progress_dashboard() -> ProgressDashboard:
+    """Per-stage idea counts and completion percentage (spec 138)."""
+    return idea_service.compute_progress_dashboard()
+
+
+@router.post("/ideas/{idea_id}/advance", response_model=IdeaWithScore)
+async def advance_idea_stage(idea_id: str, _key: str = Depends(require_api_key)) -> IdeaWithScore:
+    """Advance an idea to the next sequential stage (spec 138)."""
+    result, error = idea_service.advance_idea_stage(idea_id)
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Idea not found")
+    if error == "already_complete":
+        raise HTTPException(status_code=409, detail="Idea is already complete")
+    return result
+
+
+@router.post("/ideas/{idea_id}/stage", response_model=IdeaWithScore)
+async def set_idea_stage(idea_id: str, body: StageSetRequest, _key: str = Depends(require_api_key)) -> IdeaWithScore:
+    """Set an explicit stage for an idea (admin override, spec 138)."""
+    try:
+        IdeaStage(body.stage)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid stage value")
+    result, error = idea_service.set_idea_stage(idea_id, body.stage)
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.post("/ideas/{idea_id}/fork", status_code=201)
+async def fork_idea_endpoint(
+    idea_id: str,
+    forker_id: str | None = Query(default=None, min_length=1),
+    provider: str | None = Query(default=None),
+    provider_id: str | None = Query(default=None),
+    adaptation_notes: str | None = Query(default=None),
+) -> dict:
+    """Fork an existing idea. Identify by forker_id or provider+provider_id."""
+    resolved_id = _resolve_contributor(forker_id, provider, provider_id)
+    try:
+        return idea_service.fork_idea(
+            source_idea_id=idea_id,
+            forker_id=resolved_id,
+            adaptation_notes=adaptation_notes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+class StakeRequest(BaseModel):
+    contributor_id: str | None = None
+    provider: str | None = None
+    provider_id: str | None = None
+    amount_cc: float
+    rationale: str | None = None
+
+
+def _resolve_contributor(contributor_id: str | None, provider: str | None, provider_id: str | None) -> str:
+    """Resolve contributor from direct ID or provider identity."""
+    if contributor_id:
+        return contributor_id
+    if provider and provider_id:
+        from app.services import contributor_identity_service
+        found = contributor_identity_service.find_contributor_by_identity(provider, provider_id)
+        if found:
+            return found
+        # Auto-create pending identity
+        cid = f"{provider}:{provider_id}"
+        contributor_identity_service.link_identity(
+            contributor_id=cid, provider=provider, provider_id=provider_id,
+            display_name=provider_id, verified=False,
+        )
+        return cid
+    raise HTTPException(status_code=422, detail="Provide contributor_id OR provider+provider_id")
+
+
+@router.post("/ideas/{idea_id}/stake")
+async def stake_on_idea(idea_id: str, body: StakeRequest) -> dict:
+    """Stake CC on an idea. Identify by contributor_id or provider+provider_id."""
+    staker_id = _resolve_contributor(body.contributor_id, body.provider, body.provider_id)
+    try:
+        return stake_compute_service.execute_stake(
+            idea_id=idea_id,
+            staker_id=staker_id,
+            amount_cc=body.amount_cc,
+            rationale=body.rationale,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/ideas/{idea_id}/progress")
+async def get_idea_progress(idea_id: str) -> dict:
+    """Show idea progress: stage, tasks by phase, CC staked/spent, contributors."""
+    result = stake_compute_service.get_idea_progress(idea_id)
+    if result.get("error") == "not_found":
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.get("/ideas/{idea_id}/activity")
+async def get_idea_activity_endpoint(
+    idea_id: str,
+    limit: int = Query(20, ge=1, le=100),
+) -> list[dict]:
+    """Return activity events for an idea."""
+    try:
+        return idea_service.get_idea_activity(idea_id=idea_id, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/ideas/{idea_id}/tasks", response_model=IdeaTasksResponse)
+async def list_idea_tasks(idea_id: str) -> IdeaTasksResponse:
+    """Return all tasks linked to an idea, grouped by type with status counts."""
+    idea = idea_service.get_idea(idea_id)
+    if idea is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return agent_service.list_tasks_for_idea(idea_id)
+
+
+@router.put("/ideas/{idea_id}/tags", response_model=IdeaTagUpdateResponse)
+async def put_idea_tags(idea_id: str, body: IdeaTagUpdateRequest) -> IdeaTagUpdateResponse:
+    """Replace the full tag set for an idea after normalization (spec 129)."""
+    normalized, valid = idea_service.validate_raw_tags(body.tags)
+    if not valid:
+        raise HTTPException(status_code=422, detail="One or more tag values are invalid")
+    result = idea_service.set_idea_tags(idea_id, normalized)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.get("/ideas/{idea_id}/translations")
+async def list_idea_translations_all(idea_id: str) -> dict:
+    """All worldview translations for an idea (spec-181 batch)."""
+    out = lens_translation_service.list_translations_for_idea(idea_id)
+    if out is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return out
+
+
+@router.get("/ideas/{idea_id}/translations/{lens_id}")
+async def get_idea_translation_spec181(
+    idea_id: str,
+    lens_id: str,
+    contributor_id: str | None = Query(None, description="Optional contributor for resonance_delta"),
+) -> dict:
+    """Single lens translation with optional belief resonance (spec-181)."""
+    if translate_service.get_lens_meta(lens_id) is None:
+        raise HTTPException(status_code=404, detail=f"Lens '{lens_id}' not found")
+    result = lens_translation_service.build_idea_translation(
+        idea_id,
+        lens_id,
+        contributor_id=contributor_id,
+        force_regenerate=False,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.post("/ideas/{idea_id}/translations/{lens_id}")
+async def post_idea_translation_regenerate(
+    idea_id: str,
+    lens_id: str,
+    body: TranslationRegenerateBody,
+    _key: str = Depends(require_api_key),
+) -> dict:
+    """Force-regenerate cached translation (spec-181)."""
+    if translate_service.get_lens_meta(lens_id) is None:
+        raise HTTPException(status_code=404, detail=f"Lens '{lens_id}' not found")
+    result = lens_translation_service.build_idea_translation(
+        idea_id,
+        lens_id,
+        contributor_id=body.contributor_id,
+        force_regenerate=body.force_regenerate,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.get("/ideas/{idea_id}/translate")
+async def translate_idea_view(
+    idea_id: str,
+    view: TranslateLens = Query(..., description="Target worldview lens"),
+) -> dict:
+    """Translate an idea's conceptual framing through a worldview lens.
+
+    Not machine translation of language — translation of conceptual framework.
+    Uses ontology concept graph and resonance edges to generate framing.
+    """
+    idea = idea_service.get_idea(idea_id)
+    if idea is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+
+    tags: list[str] = []
+    if hasattr(idea, "tags") and idea.tags:
+        tags = list(idea.tags)
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "tags") and idea.idea.tags:
+        tags = list(idea.idea.tags)
+
+    desc = ""
+    if hasattr(idea, "description"):
+        desc = idea.description or ""
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "description"):
+        desc = idea.idea.description or ""
+
+    name = ""
+    if hasattr(idea, "name"):
+        name = idea.name or idea_id
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "name"):
+        name = idea.idea.name or idea_id
+
+    return translate_service.translate_idea(
+        idea_id=idea_id,
+        idea_name=name,
+        idea_description=desc,
+        idea_tags=tags,
+        view=view.value,
+    )
+
+
+@router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
+async def get_idea(idea_id: str) -> IdeaWithScore:
+    idea = idea_service.get_idea(idea_id)
+    if idea is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return idea
+
+
+@router.post("/ideas", response_model=IdeaWithScore, status_code=201)
+async def create_idea(data: IdeaCreate) -> IdeaWithScore:
+    created = idea_service.create_idea(
+        idea_id=data.id,
+        name=data.name,
+        description=data.description,
+        potential_value=data.potential_value,
+        estimated_cost=data.estimated_cost,
+        confidence=data.confidence,
+        interfaces=data.interfaces,
+        open_questions=data.open_questions,
+        actual_value=data.actual_value,
+        actual_cost=data.actual_cost,
+        resistance_risk=data.resistance_risk,
+        idea_type=data.idea_type,
+        parent_idea_id=data.parent_idea_id,
+        child_idea_ids=data.child_idea_ids,
+        manifestation_status=data.manifestation_status,
+        value_basis=data.value_basis,
+        tags=data.tags,
+        work_type=data.work_type,
+        lifecycle=data.lifecycle,
+        duplicate_of=data.duplicate_of,
+        workspace_git_url=data.workspace_git_url,
+        slug=data.slug,
+    )
+    if created is None:
+        raise HTTPException(status_code=409, detail="Idea already exists")
+    return created
+
+
+@router.patch("/ideas/{idea_id}", response_model=IdeaWithScore)
+async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
+    if all(
+        field is None
+        for field in (
+            data.actual_value,
+            data.actual_cost,
+            data.confidence,
+            data.manifestation_status,
+            data.stage,
+            data.parent_idea_id,
+            data.potential_value,
+            data.estimated_cost,
+            data.description,
+            data.name,
+            data.work_type,
+            data.lifecycle,
+            data.duplicate_of,
+            data.workspace_git_url,
+        )
+    ):
+        raise HTTPException(status_code=400, detail="At least one field required")
+
+    # Handle stage update via dedicated set_idea_stage for sync logic
+    if data.stage is not None:
+        idea_service.set_idea_stage(idea_id, data.stage)
+
+    # Handle parent_idea_id update directly on the idea object
+    if data.parent_idea_id is not None:
+        idea_service.set_parent_idea(idea_id, data.parent_idea_id)
+
+    updated = idea_service.update_idea(
+        idea_id=idea_id,
+        actual_value=data.actual_value,
+        actual_cost=data.actual_cost,
+        confidence=data.confidence,
+        manifestation_status=data.manifestation_status,
+        potential_value=data.potential_value,
+        estimated_cost=data.estimated_cost,
+        description=data.description,
+        name=data.name,
+        work_type=data.work_type,
+        lifecycle=data.lifecycle,
+        duplicate_of=data.duplicate_of,
+        workspace_git_url=data.workspace_git_url,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return updated
+
+
+@router.patch("/ideas/{idea_id}/slug", response_model=SlugUpdateResponse)
+async def update_idea_slug(
+    idea_id: str,
+    body: SlugUpdateRequest,
+    _key: str = Depends(require_api_key),
+) -> SlugUpdateResponse:
+    """Rename an idea's slug. Old slug is kept in slug_history for permanent redirect."""
+    try:
+        updated = idea_service.update_idea_slug(idea_id, body.slug)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return SlugUpdateResponse(
+        id=updated.id,
+        slug=updated.slug,
+        slug_history=updated.slug_history,
+    )
+
+
+@router.post("/ideas/{idea_id}/questions", response_model=IdeaWithScore)
+async def add_idea_question(idea_id: str, data: IdeaQuestionCreate) -> IdeaWithScore:
+    updated, added = idea_service.add_question(
+        idea_id=idea_id,
+        question=data.question,
+        value_to_whole=data.value_to_whole,
+        estimated_cost=data.estimated_cost,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    if not added:
+        raise HTTPException(status_code=409, detail="Question already exists for idea")
+    return updated
+
+
+@router.post("/ideas/{idea_id}/questions/answer", response_model=IdeaWithScore)
+async def answer_idea_question(idea_id: str, data: IdeaQuestionAnswerUpdate) -> IdeaWithScore:
+    updated, question_found = idea_service.answer_question(
+        idea_id=idea_id,
+        question=data.question,
+        answer=data.answer,
+        measured_delta=data.measured_delta,
+    )
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    if not question_found:
+        raise HTTPException(status_code=404, detail="Question not found for idea")
+    return updated

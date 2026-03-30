@@ -1,0 +1,172 @@
+#!/bin/bash
+# Autonomous pipeline: starts API + pipeline, restarts on failure, reports fatal issues only.
+# Maximize autonomy, minimize user interaction. Run once; no further interaction needed.
+#
+# Usage: ./scripts/run_autonomous.sh
+# Fatal issues written to api/logs/fatal_issues.json (check only when unrecoverable).
+
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+API_DIR="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$API_DIR")"
+LOG_DIR="$API_DIR/logs"
+FATAL_FILE="$LOG_DIR/fatal_issues.json"
+API_LOG="$LOG_DIR/autonomous_api.log"
+mkdir -p "$LOG_DIR"
+cd "$API_DIR"
+
+[ -f .env ] && set -a && source .env && set +a
+
+PORT="${PORT:-8000}"
+# Autonomous mode: we start the API, so point everything at it
+export AGENT_API_BASE="http://127.0.0.1:$PORT"
+BASE="$AGENT_API_BASE"
+PYTHON="${API_DIR}/.venv/bin/python"
+[ -x "$PYTHON" ] || PYTHON="python3"
+export PIPELINE_AUTO_FIX_ENABLED="${PIPELINE_AUTO_FIX_ENABLED:-1}"
+export PIPELINE_AUTO_RECOVER="${PIPELINE_AUTO_RECOVER:-1}"
+export PIPELINE_AUTONOMOUS="${PIPELINE_AUTONOMOUS:-1}"
+export PIPELINE_AUTO_COMMIT="${PIPELINE_AUTO_COMMIT:-1}"
+export PIPELINE_AUTO_PUSH="${PIPELINE_AUTO_PUSH:-0}"
+export PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS="${PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS:-24}"
+export PR_FOLLOWTHROUGH_GUARD="${PR_FOLLOWTHROUGH_GUARD:-1}"
+export PR_STALE_MINUTES="${PR_STALE_MINUTES:-90}"
+export PR_FAIL_ON_ANY_OPEN="${PR_FAIL_ON_ANY_OPEN:-0}"
+
+_api_alive() { curl -s --max-time 5 "${BASE}/api/health" >/dev/null 2>&1; }
+_metrics_ok() { curl -s --max-time 5 -o /dev/null -w "%{http_code}" "${BASE}/api/agent/metrics" 2>/dev/null | grep -q 200; }
+_write_fatal() {
+  local reason="$1"
+  local detail="${2:-}"
+  echo "{\"at\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\", \"reason\": \"$reason\", \"detail\": \"$detail\", \"recovery_attempted\": true}" > "$FATAL_FILE"
+  echo "FATAL: $reason — see $FATAL_FILE"
+}
+
+_check_pr_followthrough() {
+  if [ "${PR_FOLLOWTHROUGH_GUARD}" != "1" ]; then
+    return 0
+  fi
+  local cmd=(
+    "$PYTHON" "$PROJECT_ROOT/scripts/check_pr_followthrough.py"
+    --stale-minutes "$PR_STALE_MINUTES"
+    --fail-on-stale
+    --strict
+  )
+  if [ "${PR_FAIL_ON_ANY_OPEN}" = "1" ]; then
+    cmd+=(--fail-on-open)
+  fi
+  if ! "${cmd[@]}"; then
+    _write_fatal "pr_followthrough_blocked" "Open/stale codex PRs detected; merge/close or update PRs before continuing."
+    return 1
+  fi
+}
+
+_start_api() {
+  pkill -f "uvicorn app.main" 2>/dev/null || true
+  sleep 2
+  $PYTHON -m uvicorn app.main:app --port "$PORT" --host 127.0.0.1 >> "$API_LOG" 2>&1 &
+  echo $!
+}
+
+echo "=== Autonomous Pipeline ==="
+echo "API: $BASE | Auto-fix: on | Auto-recover: on | Auto-commit: ${PIPELINE_AUTO_COMMIT:-0} | Auto-push: ${PIPELINE_AUTO_PUSH:-0}"
+echo "Fatal issues: $FATAL_FILE"
+echo ""
+
+echo "Checking PR follow-through gate..."
+if ! _check_pr_followthrough; then
+  exit 1
+fi
+
+# Start or reuse API
+API_PID=""
+if _api_alive; then
+  echo "[OK] API already running"
+else
+  echo "Starting API..."
+  API_PID=$(_start_api)
+  for i in $(seq 1 30); do
+    sleep 1
+    if _api_alive; then echo "  API ready."; API_PID=""; break; fi
+    [ $i -eq 30 ] && { _write_fatal "api_start_failed" "API did not become healthy in 30s"; exit 1; }
+  done
+fi
+
+# Start pipeline watchdog (runs pipeline, restarts on stale version or exit)
+echo "Starting pipeline watchdog (autonomous mode, needs_decision timeout=${PIPELINE_NEEDS_DECISION_TIMEOUT_HOURS}h)..."
+"$SCRIPT_DIR/run_overnight_pipeline_watchdog.sh" --hours=0 &
+WATCHDOG_PID=$!
+echo "  Watchdog PID: $WATCHDOG_PID"
+echo ""
+echo "Running. Ctrl+C to stop. Fatal issues only in $FATAL_FILE"
+echo ""
+
+# Monitor loop: restart API if down, restart watchdog if died, report fatal on repeated failure
+API_RESTART_COUNT=0
+WATCHDOG_RESTART_COUNT=0
+MAX_API_RESTARTS=5
+MAX_WATCHDOG_RESTARTS=10
+FOLLOWTHROUGH_CHECK_SECONDS=900
+FOLLOWTHROUGH_ELAPSED=0
+
+while true; do
+  sleep 120
+  FOLLOWTHROUGH_ELAPSED=$((FOLLOWTHROUGH_ELAPSED + 120))
+
+  # Check API (and metrics route: if health OK but metrics 404, restart to load new routes)
+  if ! _api_alive; then
+    echo "[$(date '+%H:%M:%S')] API down, restarting..."
+    pkill -f "uvicorn app.main" 2>/dev/null || true
+    sleep 2
+    API_PID=$(_start_api)
+    for i in $(seq 1 20); do
+      sleep 1
+      if _api_alive; then
+        echo "  API restarted."
+        API_RESTART_COUNT=0
+        break
+      fi
+    done
+    if ! _api_alive; then
+      API_RESTART_COUNT=$((API_RESTART_COUNT + 1))
+      if [ "$API_RESTART_COUNT" -ge "$MAX_API_RESTARTS" ]; then
+        _write_fatal "api_restart_failed" "API failed to start after $MAX_API_RESTARTS attempts"
+        exit 1
+      fi
+    fi
+  elif ! _metrics_ok; then
+    echo "[$(date '+%H:%M:%S')] API up but metrics 404, restarting to load routes..."
+    pkill -f "uvicorn app.main" 2>/dev/null || true
+    sleep 2
+    API_PID=$(_start_api)
+    for i in $(seq 1 20); do
+      sleep 1
+      if _api_alive && _metrics_ok; then
+        echo "  API restarted with new routes."
+        API_RESTART_COUNT=0
+        break
+      fi
+    done
+  fi
+
+  # Check watchdog (pipeline)
+  if ! kill -0 $WATCHDOG_PID 2>/dev/null; then
+    echo "[$(date '+%H:%M:%S')] Pipeline watchdog exited, restarting..."
+    WATCHDOG_RESTART_COUNT=$((WATCHDOG_RESTART_COUNT + 1))
+    if [ "$WATCHDOG_RESTART_COUNT" -ge "$MAX_WATCHDOG_RESTARTS" ]; then
+      _write_fatal "pipeline_restart_failed" "Watchdog exited $MAX_WATCHDOG_RESTARTS times"
+      exit 1
+    fi
+    "$SCRIPT_DIR/run_overnight_pipeline_watchdog.sh" --hours=0 &
+    WATCHDOG_PID=$!
+    sleep 5
+  fi
+
+  if [ "$FOLLOWTHROUGH_ELAPSED" -ge "$FOLLOWTHROUGH_CHECK_SECONDS" ]; then
+    FOLLOWTHROUGH_ELAPSED=0
+    echo "[$(date '+%H:%M:%S')] Re-checking PR follow-through gate..."
+    if ! _check_pr_followthrough; then
+      exit 1
+    fi
+  fi
+done

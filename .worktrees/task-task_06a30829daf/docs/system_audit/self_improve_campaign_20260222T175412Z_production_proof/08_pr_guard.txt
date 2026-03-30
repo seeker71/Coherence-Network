@@ -1,0 +1,5 @@
+PR guard report: /Users/ursmuff/.codex/worktrees/d3b0/Coherence-Network/docs/system_audit/pr_check_failures/pr_check_guard_20260222T175509Z_codex-self-improve-report-parse-hotfix.json
+ready_for_push=False
+Blocking failures detected; see local_preflight/remote_pr_checks details.
+local_preflight=fail
+remote_pr_checks=skipped

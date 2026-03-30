@@ -1,0 +1,41 @@
+{
+  "$schema": "https://registry.modelcontextprotocol.io/schemas/server.json",
+  "name": "coherence-mcp-server",
+  "version": "0.3.1",
+  "description": "MCP server for the Coherence Network — 20 typed tools for AI agents to browse ideas, trace value chains, link identities, and record contributions.",
+  "repository": "https://github.com/seeker71/Coherence-Network",
+  "homepage": "https://coherencycoin.com",
+  "license": "MIT",
+  "authors": ["coherence-network"],
+  "categories": ["collaboration", "project-management", "open-source"],
+  "tags": ["ideas", "collaboration", "investment", "federation", "coherence", "open-source", "value-attribution"],
+  "packages": [
+    {
+      "registry": "npm",
+      "name": "coherence-mcp-server",
+      "version": "0.3.1"
+    }
+  ],
+  "tools": [
+    {"name": "list_ideas", "description": "Browse the idea portfolio ranked by ROI and free-energy score"},
+    {"name": "get_idea", "description": "Get full details for a single idea including scores and open questions"},
+    {"name": "idea_progress", "description": "Get progress for an idea: stage, tasks, CC staked/spent, contributors"},
+    {"name": "select_idea", "description": "Let the portfolio engine select the next highest-ROI idea to work on"},
+    {"name": "showcase", "description": "List validated, shipped ideas that have proven their value"},
+    {"name": "resonance", "description": "Show which ideas are generating the most energy and activity right now"},
+    {"name": "list_specs", "description": "List feature specs with ROI metrics, value gaps, and implementation summaries"},
+    {"name": "get_spec", "description": "Get full spec detail including implementation summary, pseudocode, and ROI"},
+    {"name": "list_lineage", "description": "List value lineage chains connecting ideas to specs and implementations"},
+    {"name": "lineage_valuation", "description": "Get ROI valuation for a lineage chain"},
+    {"name": "list_providers", "description": "List all supported identity providers grouped by category"},
+    {"name": "link_identity", "description": "Link a provider identity to a contributor"},
+    {"name": "lookup_identity", "description": "Find which contributor owns a specific provider identity"},
+    {"name": "get_identities", "description": "Get all linked identities for a contributor"},
+    {"name": "record_contribution", "description": "Record a contribution to the network"},
+    {"name": "contributor_ledger", "description": "Get the contribution ledger for a contributor"},
+    {"name": "status", "description": "Get Coherence Network system status"},
+    {"name": "friction_report", "description": "Get the friction report showing where contributors are getting stuck"},
+    {"name": "list_change_requests", "description": "List open change requests / governance proposals"},
+    {"name": "list_federation_nodes", "description": "List federation compute nodes"}
+  ]
+}

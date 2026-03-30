@@ -1,0 +1,16 @@
+You are the strong review stage.
+Review the execution against the plan and project goals.
+PASS criteria (all required):
+- at least 2 command proofs with concrete output values
+- at least 1 project-goal citation with file:line
+- explicit confirmation this was strong-cheap-strong model flow
+If any criterion missing => FAIL.
+Plan:
+Start-gate and effectiveness proof are currently blocked locally by auth (`gh`) and API bind/connect failures. Planning is aligned to project goals and includes the required API guardrail path to recover and then capture `success_rate` + `goal_proximity` with concrete curl output.
+Execution:
+  - `curl -sS 'http://127.0.0.1:8000/api/agent/effectiveness' | jq '{success_rate,goal_proximity,completed_7d:.throughput.completed_7d}'`
+Return exactly sections:
+PASS_FAIL
+FINDINGS
+REQUIRED_RETRIES
+UNBLOCK_GUIDANCE

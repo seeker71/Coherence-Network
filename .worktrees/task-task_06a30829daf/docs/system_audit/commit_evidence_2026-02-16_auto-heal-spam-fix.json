@@ -1,0 +1,69 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/auto-heal-spam",
+  "commit_scope": "reduce Auto Heal Deploy Gates workflow spam by filtering trigger scope and blocking bot rerun loops",
+  "files_owned": [
+    ".github/workflows/auto-heal-deploy-gates.yml",
+    "docs/system_audit/commit_evidence_2026-02-16_auto-heal-spam-fix.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "054",
+    "055"
+  ],
+  "task_ids": [
+    "auto-heal-spam-throttle"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "ruby -ryaml -e 'YAML.load_file(\".github/workflows/auto-heal-deploy-gates.yml\")'",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_auto-heal-spam-fix.json"
+  ],
+  "change_files": [
+    ".github/workflows/auto-heal-deploy-gates.yml"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "ruby -ryaml -e 'YAML.load_file(\".github/workflows/auto-heal-deploy-gates.yml\")'",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_auto-heal-spam-fix.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI validation"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/pr-check-failure-guard-2",
+  "commit_scope": "Document and automate PR check failure detection with remediation mapping and scheduled triage workflow that retries flaky failed actions checks.",
+  "files_owned": [
+    ".github/workflows/pr-check-failure-triage.yml",
+    "scripts/pr_check_failure_triage.py",
+    "api/tests/test_pr_check_failure_triage.py",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/RUNBOOK.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_2026-02-17_pr-check-failure-triage-automation.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "002-agent-orchestration"
+  ],
+  "task_ids": [
+    "task-pr-check-failure-triage-automation"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "scripts/pr_check_failure_triage.py",
+    ".github/workflows/pr-check-failure-triage.yml",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md"
+  ],
+  "change_files": [
+    ".github/workflows/pr-check-failure-triage.yml",
+    "scripts/pr_check_failure_triage.py",
+    "api/tests/test_pr_check_failure_triage.py",
+    "docs/PR-CHECK-FAILURE-TRIAGE.md",
+    "docs/RUNBOOK.md",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "AGENTS.md",
+    "docs/system_audit/commit_evidence_2026-02-17_pr-check-failure-triage-automation.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/pr_check_failure_triage.py --help",
+      "cd api && pytest -q tests/test_pr_check_failure_triage.py",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_pr-check-failure-triage-automation.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting PR checks and merge."
+  }
+}

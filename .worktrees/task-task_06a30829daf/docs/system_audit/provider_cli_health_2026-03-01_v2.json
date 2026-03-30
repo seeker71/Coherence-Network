@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-03-01T09:58:57.901873Z",
+  "runs": [
+    {
+      "label": "paid_codex",
+      "returncode": 0,
+      "success_detected": true,
+      "strict_retry_marker_present": false,
+      "strict_fallback_marker_present": false,
+      "stdout_excerpt": "{\"type\":\"thread.started\",\"thread_id\":\"019ca8d6-3ce0-7962-b012-3ba1204448d7\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_0\",\"type\":\"reasoning\",\"text\":\"**Searching for AGENTS instructions**\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc pwd\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_1\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc pwd\",\"aggregated_output\":\"/private/tmp\\n\",\"exit_code\":0,\"status\":\"completed\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_2\",\"type\":\"reasoning\",\"text\":\"**Searching for AGENTS.md files**\"}}\n{\"type\":\"item.started\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc ls\",\"aggregated_output\":\"\",\"exit_code\":null,\"status\":\"in_progress\"}}\n{\"type\":\"item.completed\",\"item\":{\"id\":\"item_3\",\"type\":\"command_execution\",\"command\":\"/bin/zsh -lc ls\",\"aggregated_output\":\"Coherence-E2E-output.bak\\nCoherence-E2E-pl",
+      "stderr_excerpt": "2026-03-01T09:58:58.528896Z  WARN codex_protocol::openai_models: Model personality requested but model_messages is missing, falling back to base instructions. model=gpt-5-codex personality=pragmatic\n2026-03-01T09:58:59.609905Z  WARN codex_state::runtime: failed to open state db at /Users/ursmuff/.codex/state_5.sqlite: migration 9 was previously applied but is missing in the resolved migrations\n2026-03-01T09:58:59.633108Z ERROR codex_core::rollout::list: state db missing rollout path for thread 0"
+    },
+    {
+      "label": "paid_claude",
+      "returncode": 0,
+      "success_detected": true,
+      "strict_retry_marker_present": false,
+      "strict_fallback_marker_present": false,
+      "stdout_excerpt": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":3237,\"duration_api_ms\":3219,\"num_turns\":1,\"result\":\"HEALTH2_PAID_CLAUDE_OK\",\"stop_reason\":null,\"session_id\":\"4b1c43b1-20ce-4e24-93a3-35fdd4960893\",\"total_cost_usd\":0.03221575,\"usage\":{\"input_tokens\":2,\"cache_creation_input_tokens\":3655,\"cache_read_input_tokens\":18024,\"output_tokens\":14,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":3655,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{\"claude-sonnet-4-5-20250929\":{\"inputTokens\":2,\"outputTokens\":14,\"cacheReadInputTokens\":18024,\"cacheCreationInputTokens\":3655,\"webSearchRequests\":0,\"costUSD\":0.03221575,\"contextWindow\":200000,\"maxOutputTokens\":32000}},\"permission_denials\":[],\"uuid\":\"b072a10c-e5b0-44a9-88a6-f696f5e47545\"}\n",
+      "stderr_excerpt": ""
+    },
+    {
+      "label": "paid_cursor",
+      "returncode": 0,
+      "success_detected": true,
+      "strict_retry_marker_present": false,
+      "strict_fallback_marker_present": false,
+      "stdout_excerpt": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"duration_ms\":3319,\"duration_api_ms\":3319,\"result\":\"\\nHEALTH2_PAID_CURSOR_OK\",\"session_id\":\"8e7a61ec-e1a2-485f-8139-d1ff1192a9b0\",\"request_id\":\"208cf4b6-0eda-483c-80b2-606307ef6d96\",\"usage\":{\"inputTokens\":15099,\"outputTokens\":54,\"cacheReadTokens\":4096,\"cacheWriteTokens\":11003}}\n",
+      "stderr_excerpt": ""
+    },
+    {
+      "label": "free_openrouter_route",
+      "returncode": 1,
+      "success_detected": false,
+      "strict_retry_marker_present": false,
+      "strict_fallback_marker_present": false,
+      "stdout_excerpt": "{\"type\":\"thread.started\",\"thread_id\":\"019ca8d6-cd19-78f2-962b-631fc5a11f7c\"}\n{\"type\":\"turn.started\"}\n{\"type\":\"error\",\"message\":\"{\\\"detail\\\":\\\"The 'openrouter/free' model is not supported when using Codex with a ChatGPT account.\\\"}\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"{\\\"detail\\\":\\\"The 'openrouter/free' model is not supported when using Codex with a ChatGPT account.\\\"}\"}}\n",
+      "stderr_excerpt": "2026-03-01T09:59:35.449595Z  WARN codex_core::models_manager::model_info: Unknown model openrouter/free is used. This will use fallback model metadata.\n2026-03-01T09:59:35.449614Z  WARN codex_protocol::openai_models: Model personality requested but model_messages is missing, falling back to base instructions. model=openrouter/free personality=pragmatic\n2026-03-01T09:59:36.156558Z  WARN codex_core::models_manager::model_info: Unknown model openrouter/free is used. This will use fallback model met"
+    }
+  ]
+}
