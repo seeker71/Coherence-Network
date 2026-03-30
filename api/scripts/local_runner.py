@@ -631,7 +631,7 @@ _TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor", "opencode", "pi"}
 # They should NEVER be selected for impl, test, or code-producing tasks.
 _TEXT_ONLY_PROVIDERS = {"ollama-local", "ollama-cloud", "openrouter"}
 # Providers that are paused — detected but never selected
-_PAUSED_PROVIDERS = {"openrouter"}  # Cannot produce PRs, generates hollow completions
+_PAUSED_PROVIDERS = {"openrouter", "codex"}  # openrouter: no PRs; codex: quota reserved until 2026-04-04
 
 PROVIDERS: dict[str, dict] = {}  # populated at startup
 
