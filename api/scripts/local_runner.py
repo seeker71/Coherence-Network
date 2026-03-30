@@ -1777,8 +1777,10 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 if spec_files:
                     resolved_spec_path = spec_files[0]
                     with open(resolved_spec_path, "r", encoding="utf-8", errors="replace") as sf:
-                        spec_content = sf.read()[:3000]
-                    spec_ref = f"\n\nSpec ({resolved_spec_path}):\n```\n{spec_content}\n```\n"
+                        # DG-002 fix: cap spec content to keep total direction < 5000 chars.
+                        # Spec path is stored in context so the provider can read the full file.
+                        spec_content = sf.read()[:1200]
+                    spec_ref = f"\n\nSpec ({resolved_spec_path}):\n```\n{spec_content}\n```\n(Full spec at {resolved_spec_path})\n"
             except Exception:
                 pass
             extra_context["spec_path"] = resolved_spec_path or "none"
@@ -1842,6 +1844,16 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             )
         # Prepend idea scope header so every provider prompt starts with clear context
         direction = _idea_scope_header + direction
+
+        # DG-002 hard cap: API enforces 5000 char limit on direction.
+        # Truncate with notice so providers know there's more context in the spec file.
+        _MAX_DIRECTION = 4900
+        if len(direction) > _MAX_DIRECTION:
+            log.warning(
+                "AUTO_PHASE direction overflow idea=%s phase=%s len=%d — truncating to %d",
+                idea_id, next_phase, len(direction), _MAX_DIRECTION,
+            )
+            direction = direction[:_MAX_DIRECTION] + "\n...[direction truncated — see spec file in context for full details]"
 
         created = api(
             "POST",
@@ -3996,11 +4008,12 @@ def _seed_task_from_open_idea() -> bool:
                 log.info("SEED: idea '%s' review completed but FAILED — needs re-review", idea_name[:30])
                 task_type = "review"  # re-run review
         elif "impl" in completed_phases:
-            task_type = "review"
-        elif "test" in completed_phases:
-            task_type = "impl"
+            task_type = "code-review"
         elif "spec" in completed_phases:
-            task_type = "test"
+            # DG-001 fix: spec done → impl (NOT test).
+            # test requires impl_branch which only exists after impl runs.
+            # The old code had this backwards (spec→test) causing immediate failures.
+            task_type = "impl"
 
     # ── Spec quality gate: ensure spec has ## Files section before impl ──
     if task_type == "impl":
@@ -5688,13 +5701,20 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                           "no impl_branch in context. The impl phase must push a branch "
                           "and pass it forward. Failing this task.",
                           worker_id, task_id[:16], task_type)
-                complete_task(task_id,
+                # DG-003 fix: use specific error_category so failures are triageable.
+                # DG-010 note: do NOT count this against the circuit breaker — it is a
+                # seeder logic error (wrong phase seeded), not a provider execution failure.
+                _complete_task_with_status(
+                    task_id,
                     f"FAILED: {task_type} requires impl_branch in context but none was provided. "
                     f"The impl phase must push a branch and create a PR before {task_type} can run.",
-                    False)
+                    "failed",
+                    error_category="impl_branch_missing",
+                )
                 with _active_lock:
                     _active_idea_ids.discard(idea_id)
-                _circuit_breaker.record(False)
+                # Intentionally NOT recording to circuit breaker — this is a seeder logic error
+                # (DG-010): counting seeder mistakes as provider failures trips the breaker unfairly.
                 continue
 
             base_branch = impl_branch if task_type in ("test", "code-review", "review") else None
