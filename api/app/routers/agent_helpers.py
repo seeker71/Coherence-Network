@@ -163,6 +163,8 @@ def task_to_item(task: dict) -> dict:
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
         "decision": task.get("decision"),
+        "error_summary": task.get("error_summary"),    # DG-015 fix
+        "error_category": task.get("error_category"),  # DG-015 fix
         "target_state": ctx.get("target_state"),
         "success_evidence": ctx.get("success_evidence"),
         "abort_evidence": ctx.get("abort_evidence"),
@@ -197,6 +199,8 @@ def task_to_full(task: dict) -> dict:
         "current_step": task.get("current_step"),
         "decision_prompt": task.get("decision_prompt"),
         "decision": task.get("decision"),
+        "error_summary": task.get("error_summary"),    # DG-015 fix
+        "error_category": task.get("error_category"),  # DG-015 fix
         "target_state": ctx.get("target_state"),
         "success_evidence": ctx.get("success_evidence"),
         "abort_evidence": ctx.get("abort_evidence"),
@@ -218,6 +222,8 @@ def task_update_has_fields(data: AgentTaskUpdate) -> bool:
         "decision",
         "context",
         "worker_id",
+        "error_category",    # DG-015 fix
+        "error_summary",     # DG-015 fix
         "target_state",
         "success_evidence",
         "abort_evidence",
