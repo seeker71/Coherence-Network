@@ -241,6 +241,21 @@ async def fetch_feeds(force_refresh: bool = False) -> list[NewsItem]:
 
 
 def get_cached_items() -> list[NewsItem]:
+
+
+def get_recent_articles(limit: int = 200) -> list[dict[str, Any]]:
+    """Return recently fetched news articles as dicts (compatible with resonance search)."""
+    return [
+        {
+            "id": item.url,
+            "title": item.title,
+            "summary": item.description,
+            "url": item.url,
+            "source": item.source,
+            "published_at": item.published_at,
+        }
+        for item in _cached_items[:limit]
+    ]
     """Return currently cached items without fetching."""
     return list(_cached_items)
 
