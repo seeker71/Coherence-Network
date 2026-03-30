@@ -106,6 +106,10 @@ class HealthResponse(_BaseHealthResponse):
         bool,
         Field(description="True if core tables (contributions, contributors, assets) exist"),
     ] = True
+    opencode_enabled: Annotated[
+        bool,
+        Field(description="True if opencode integration is enabled"),
+    ] = True
 
 
 class ReadyResponse(_BaseHealthResponse):
