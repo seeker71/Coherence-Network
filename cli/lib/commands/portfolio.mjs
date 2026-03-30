@@ -73,19 +73,36 @@ function classify(idea) {
 }
 
 // ── extract idea_id from a task direction string ───────────────────────────
-// direction examples:
-//   "Implement 'Foo bar' (foo-bar).\n..."
-//   "Write a spec for 'Foo bar' (foo-bar).\n..."
-//   "Code review for 'Foo bar' (foo-bar).\n..."
 function extractIdeaId(direction) {
   if (!direction) return null;
   const m = direction.match(/\(([a-z0-9][a-z0-9-]{2,})\)[.\n]/);
   return m ? m[1] : null;
 }
 
+// ── relative time helper ──────────────────────────────────────────────────
+
+function relativeTime(iso) {
+  try {
+    const ms  = Date.now() - new Date(iso).getTime();
+    const min = Math.floor(ms / 60_000);
+    const hr  = Math.floor(min / 60);
+    const day = Math.floor(hr / 24);
+    if (day > 0) return `${day}d ago`;
+    if (hr  > 0) return `${hr}h ago`;
+    if (min > 0) return `${min}m ago`;
+    return "just now";
+  } catch {
+    return "?";
+  }
+}
+
 // ── main ──────────────────────────────────────────────────────────────────
 
-export async function showPortfolio() {
+/**
+ * showIdeaPortfolio()
+ * Network-wide idea portfolio by category.
+ */
+export async function showIdeaPortfolio() {
   // Parallel fetch: ideas + pipeline status (has recent tasks + task type counts)
   const [ideasRaw, pipeline, effectiveness] = await Promise.all([
     get("/api/ideas", { limit: 400, lifecycle: "active" }),
@@ -117,15 +134,13 @@ export async function showPortfolio() {
   const runningTasks = (pipeline?.running ?? []);
   const allRecentTasks = [...runningTasks, ...recentTasks];
 
-  // Build per-category task type counts from recent tasks
-  // Map idea_id → category
   const ideaToCategory = {};
   for (const idea of ideas) {
     ideaToCategory[idea.id] = classify(idea);
     if (idea.slug) ideaToCategory[idea.slug] = classify(idea);
   }
 
-  const catTaskCounts = {}; // catName → { spec:0, impl:0, test:0, review:0, heal:0, total:0 }
+  const catTaskCounts = {};
   for (const c of sorted) {
     catTaskCounts[c.name] = { spec:0, impl:0, test:0, review:0, heal:0, total:0 };
   }
@@ -140,24 +155,19 @@ export async function showPortfolio() {
     }
   }
 
-  // Compute streak: how many of the last N recent tasks were in this category (consecutive from head)
-  // We order tasks most-recent-first from recentTasks (already ordered by API)
   const catStreaks = {};
   const streakWindow = recentTasks.slice(0, 20);
   for (const c of sorted) catStreaks[c.name] = 0;
-  // streak = count of the most-recent contiguous run for each category
   for (const c of sorted) {
     let streak = 0;
     for (const t of streakWindow) {
       const ideaId = extractIdeaId(t.direction);
-      const catName = ideaId ? ideaToCategory[ideaId] : null;
-      if (catName === c.name) streak++;
+      if (ideaId && ideaToCategory[ideaId] === c.name) streak++;
     }
     catStreaks[c.name] = streak;
   }
 
-  // ── effort data from recent completed tasks ──────────────────────────────
-  const effortByType = {}; // type → [duration_seconds, ...]
+  const effortByType = {};
   for (const t of recentTasks) {
     if (t.duration_seconds && t.duration_seconds > 0) {
       const tt = t.task_type || "other";
@@ -165,42 +175,31 @@ export async function showPortfolio() {
       effortByType[tt].push(t.duration_seconds);
     }
   }
-  // Totals from effectiveness endpoint
   const progressTotals = effectiveness?.progress || {};
 
-  // ── top new experiences: validated ideas with actual_value, sorted by last_activity ─
   const validated = ideas
     .filter(i => i.manifestation_status === "validated" && (i.actual_value || 0) > 0)
     .sort((a, b) => (b.last_activity_at || "").localeCompare(a.last_activity_at || ""))
     .slice(0, 8);
 
-  // ── render ───────────────────────────────────────────────────────────────
   const totalPot  = sorted.reduce((s, c) => s + c.pot, 0);
   const totalAct  = sorted.reduce((s, c) => s + c.act, 0);
   const totalGap  = totalPot - totalAct;
   const totalPct  = totalPot > 0 ? Math.round(100 * totalAct / totalPot) : 0;
 
   console.log();
-  console.log(`${B}  PORTFOLIO${R}  ${D}${ideas.length} active ideas · ${fmtCC(totalGap)} CC gap · ${valBadge(totalPct)} captured${R}`);
+  console.log(`${B}  NETWORK PORTFOLIO${R}  ${D}${ideas.length} active ideas · ${fmtCC(totalGap)} CC gap · ${valBadge(totalPct)} captured${R}`);
   console.log(`  ${hr(72)}`);
 
-  // Header
   const COL = [24, 4, 7, 5, 5, 22];
-  console.log(
-    `  ${D}${pad("Category", COL[0])} ${pad("N", COL[1], true)} ${pad("Gap CC", COL[2], true)}` +
-    ` ${pad("Val%", COL[3], true)} ${pad("Streak", COL[4], true)}  Task mix (recent)${R}`
-  );
+  console.log(`  ${D}${pad("Category", COL[0])} ${pad("N", COL[1], true)} ${pad("Gap CC", COL[2], true)} ${pad("Val%", COL[3], true)} ${pad("Streak", COL[4], true)}  Task mix (recent)${R}`);
   console.log(`  ${hr(72)}`);
-
-  const maxGap = sorted[0] ? (sorted[0].pot - sorted[0].act) : 1;
 
   for (const c of sorted) {
     const gap  = c.pot - c.act;
     const pct  = c.pot > 0 ? Math.round(100 * c.act / c.pot) : 0;
     const tc   = catTaskCounts[c.name] || {};
     const streak = catStreaks[c.name] || 0;
-
-    // task mix text: only show types with > 0
     const mixParts = [];
     for (const tt of ["spec", "impl", "test", "review"]) {
       if (tc[tt]) mixParts.push(`${D}${tt}${R} ${tc[tt]}`);
@@ -211,25 +210,16 @@ export async function showPortfolio() {
       `  ${B}${pad(c.name, COL[0])}${R}` +
       ` ${pad(c.ideas.length, COL[1], true)}` +
       ` ${C}${pad(fmtCC(gap), COL[2], true)}${R}` +
-      ` ${valBadge(pct).padEnd(14)}` +   // padded wider to account for escape codes
+      ` ${valBadge(pct).padEnd(14)}` +
       ` ${streakBar(streak, Math.max(...Object.values(catStreaks), 1))}` +
       `  ${mixStr}`
     );
   }
-
   console.log(`  ${hr(72)}`);
-  console.log(
-    `  ${B}${pad("Total", COL[0])}${R}` +
-    ` ${pad(ideas.length, COL[1], true)}` +
-    ` ${C}${pad(fmtCC(totalGap), COL[2], true)}${R}` +
-    ` ${valBadge(totalPct)}`
-  );
 
-  // ── task effort breakdown ─────────────────────────────────────────────────
-  console.log();
-  console.log(`${B}  Task Effort${R}  ${D}(recent sample + lifetime totals)${R}`);
+  // Task Effort
+  console.log(`\n${B}  Task Effort${R}  ${D}(recent sample + lifetime totals)${R}`);
   console.log(`  ${hr(55)}`);
-
   const typeOrder = ["spec", "impl", "test", "review", "heal"];
   const typeLabel = { spec: "Spec", impl: "Impl", test: "Test", review: "Review", heal: "Heal" };
   const typeColor = { spec: C, impl: G, test: Y, review: M, heal: D };
@@ -238,77 +228,130 @@ export async function showPortfolio() {
     const samples = effortByType[tt] || [];
     const total   = progressTotals[tt] || 0;
     if (total === 0 && samples.length === 0) continue;
-
     const avg  = samples.length ? samples.reduce((a, b) => a + b, 0) / samples.length : null;
-    const max_ = samples.length ? Math.max(...samples) : null;
-
-    const avgStr = avg  ? fmtDur(avg)  : "—";
-    const maxStr = max_ ? fmtDur(max_) : "—";
-
-    console.log(
-      `  ${typeColor[tt]}${pad(typeLabel[tt], 7)}${R}` +
-      `  avg ${pad(avgStr, 6)}  max ${pad(maxStr, 6)}` +
-      `  ${D}${total.toLocaleString()} total${R}`
-    );
+    const avgStr = avg ? fmtDur(avg) : "—";
+    console.log(`  ${typeColor[tt]}${pad(typeLabel[tt], 7)}${R}  avg ${pad(avgStr, 6)}  ${D}${total.toLocaleString()} total${R}`);
   }
 
-  // ── top new experiences ───────────────────────────────────────────────────
+  // New Experiences
   if (validated.length > 0) {
-    console.log();
-    console.log(`${B}  Top New Experiences${R}  ${D}(recently validated, by last activity)${R}`);
+    console.log(`\n${B}  Top New Experiences${R}  ${D}(recently validated)${R}`);
     console.log(`  ${hr(65)}`);
-
     for (let i = 0; i < validated.length; i++) {
       const v = validated[i];
-      const ago = v.last_activity_at
-        ? relativeTime(v.last_activity_at)
-        : "unknown";
-      const name = (v.name || v.id).slice(0, 42);
-      const gain = (v.actual_value || 0).toFixed(1);
-      const cat  = classify(v);
+      console.log(`  ${D}${i + 1}.${R} ${B}${pad((v.name || v.id).slice(0, 42), 44)}${R} ${G}+${(v.actual_value || 0).toFixed(1)} CC${R}  ${D}${classify(v)}${R}`);
+    }
+  }
+
+  // Running
+  if (runningTasks.length > 0) {
+    console.log(`\n${B}  Running now${R}  ${D}(${runningTasks.length} active)${R}`);
+    console.log(`  ${hr(65)}`);
+    for (const t of runningTasks.slice(0, 5)) {
+      const elapsed = t.running_seconds ? fmtDur(t.running_seconds) : "?";
+      const dir = (t.direction || "").split("\n")[0].slice(0, 50);
+      console.log(`  ${typeColor[t.task_type] || D}${pad(t.task_type || "?", 7)}${R}  ${D}${elapsed}${R}  ${dir}`);
+    }
+  }
+  console.log();
+}
+
+/**
+ * showPortfolio(args)
+ * Personal contributor view.
+ * If args[0] is present, show public portfolio for that ID.
+ * Otherwise, show /api/me/portfolio using current API key.
+ */
+export async function showPortfolio(args) {
+  const contributorId = args[0];
+  const isMe = !contributorId;
+  const base = isMe ? "/api/me" : `/api/contributors/${encodeURIComponent(contributorId)}`;
+
+  console.log(`${D}  Loading portfolio...${R}`);
+
+  const [summary, history, ideas, stakes, tasks] = await Promise.all([
+    get(`${base}/portfolio`),
+    get(`${base}/cc-history`, { window: "90d", bucket: "7d" }),
+    get(`${base}/idea-contributions`, { sort: "cc_attributed_desc", limit: 10 }),
+    get(`${base}/stakes`, { sort: "roi_desc", limit: 10 }),
+    get(`${base}/tasks`, { status: "completed", limit: 10 }),
+  ]);
+
+  if (!summary) {
+    console.log(`${RED}  Portfolio not found.${R}`);
+    if (isMe) console.log(`  ${D}Try running 'cc setup' or providing an ID: cc portfolio <id>${R}`);
+    return;
+  }
+
+  const { contributor } = summary;
+  console.log(`\n${B}  ${isMe ? "MY" : "CONTRIBUTOR"} PORTFOLIO${R}  ${D}${contributor.display_name} (${contributor.id})${R}`);
+  console.log(`  ${hr(60)}`);
+
+  // Identities
+  if (contributor.identities?.length) {
+    const ids = contributor.identities.map(i => `${D}${i.type}:${R}${i.handle}${i.verified ? G+"✓"+R : ""}`).join("  ");
+    console.log(`  ${ids}`);
+    console.log(`  ${hr(60)}`);
+  }
+
+  // Quick Stats
+  const QCOL = [15, 10, 10, 10];
+  console.log(
+    `  ${pad("CC Balance", QCOL[0])} ${pad("Ideas", QCOL[1])} ${pad("Stakes", QCOL[2])} ${pad("Tasks", QCOL[3])}`
+  );
+  console.log(
+    `  ${B}${pad(summary.cc_balance?.toFixed(2) ?? "0.00", QCOL[0])}${R} ` +
+    `${pad(summary.idea_contribution_count, QCOL[1])} ` +
+    `${pad(summary.stake_count, QCOL[2])} ` +
+    `${pad(summary.task_completion_count, QCOL[3])}`
+  );
+  if (summary.cc_network_pct !== null) {
+    console.log(`  ${D}${summary.cc_network_pct.toFixed(4)}% of network${R}`);
+  }
+  console.log(`  ${hr(60)}`);
+
+  // Earning History Chart (ASCII)
+  if (history?.series?.length) {
+    console.log(`\n  ${B}CC Earning History${R} ${D}(90d · 7d buckets)${R}`);
+    const maxEarned = Math.max(...history.series.map(b => b.cc_earned), 0.1);
+    const bars = history.series.map(b => {
+      const h = Math.round((b.cc_earned / maxEarned) * 5);
+      return " ▂▃▄▅▆▇".charAt(h);
+    }).join("");
+    console.log(`  ${G}${bars}${R} ${D}total: ${history.series.at(-1)?.running_total.toFixed(1)} CC${R}`);
+  }
+
+  // Ideas
+  if (ideas?.items?.length) {
+    console.log(`\n  ${B}Ideas Contributed To${R}`);
+    for (const idea of ideas.items) {
+      const type = (idea.contribution_types[0] || "other").slice(0, 6);
       console.log(
-        `  ${D}${i + 1}.${R}` +
-        ` ${B}${pad(name, 44)}${R}` +
-        ` ${G}+${gain} CC${R}` +
-        `  ${D}${cat} · ${ago}${R}`
+        `  ${D}${pad(type, 7)}${R} ${B}${pad(idea.idea_title.slice(0, 30), 31)}${R} ` +
+        `${G}${pad(idea.cc_attributed.toFixed(1), 6, true)}${R} ${D}CC${R}`
       );
     }
   }
 
-  // ── running right now ─────────────────────────────────────────────────────
-  if (runningTasks.length > 0) {
-    console.log();
-    console.log(`${B}  Running now${R}  ${D}(${runningTasks.length} active)${R}`);
-    console.log(`  ${hr(65)}`);
-    const shown = runningTasks.slice(0, 6);
-    for (const t of shown) {
-      const elapsed = t.running_seconds ? fmtDur(t.running_seconds) : "?";
-      const dir = (t.direction || "").split("\n")[0].slice(0, 50);
-      const tt  = t.task_type || "?";
-      const typeC = typeColor[tt] || D;
-      console.log(`  ${typeC}${pad(tt, 7)}${R}  ${D}${elapsed}${R}  ${dir}`);
+  // Stakes
+  if (stakes?.items?.length) {
+    console.log(`\n  ${B}Stakes${R}`);
+    for (const stake of stakes.items) {
+      const roi = stake.roi_pct !== null ? (stake.roi_pct >= 0 ? G : RED) + stake.roi_pct.toFixed(1) + "%" + R : D + "—" + R;
+      console.log(
+        `  ${pad(stake.idea_title.slice(0, 30), 31)} ${pad(stake.cc_staked.toFixed(1), 6, true)} ${D}staked${R}  ${roi}`
+      );
     }
-    if (runningTasks.length > 6) {
-      console.log(`  ${D}  … and ${runningTasks.length - 6} more${R}`);
+  }
+
+  // Tasks
+  if (tasks?.items?.length) {
+    console.log(`\n  ${B}Recent Tasks${R}`);
+    for (const task of tasks.items.slice(0, 5)) {
+      const date = task.completed_at ? new Date(task.completed_at).toLocaleDateString("en-US", {month:"short", day:"numeric"}) : "—";
+      console.log(`  ${D}${pad(date, 6)}${R} ${task.description.slice(0, 50)}`);
     }
   }
 
   console.log();
-}
-
-// ── relative time helper ──────────────────────────────────────────────────
-
-function relativeTime(iso) {
-  try {
-    const ms  = Date.now() - new Date(iso).getTime();
-    const min = Math.floor(ms / 60_000);
-    const hr  = Math.floor(min / 60);
-    const day = Math.floor(hr / 24);
-    if (day > 0) return `${day}d ago`;
-    if (hr  > 0) return `${hr}h ago`;
-    if (min > 0) return `${min}m ago`;
-    return "just now";
-  } catch {
-    return "?";
-  }
 }

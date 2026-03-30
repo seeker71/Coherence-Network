@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, getApiKey } from "@/lib/api";
 
 const API = getApiBase();
 
-// ── Types ────────────────────────────────────────────────────────────
+// ... (rest of the Types)
 
 interface LinkedIdentity {
   type: string;
@@ -196,13 +196,34 @@ export default function ContributorPortfolioPage() {
     setError(null);
 
     try {
-      const base = `${API}/api/contributors/${encodeURIComponent(contributorId)}`;
+      const apiKey = getApiKey();
+      const headers: Record<string, string> = {};
+      if (apiKey) headers["X-API-Key"] = apiKey;
+
+      // Check if we can use /api/me (if id matches or we're in 'me' mode)
+      let base = `${API}/api/contributors/${encodeURIComponent(contributorId)}`;
+
+      // Try to verify if we are the owner
+      if (apiKey) {
+        try {
+          const whoRes = await fetch(`${API}/api/auth/whoami`, { headers });
+          if (whoRes.ok) {
+            const who = await whoRes.json();
+            if (who.authenticated && who.contributor_id === contributorId) {
+              base = `${API}/api/me`;
+            }
+          }
+        } catch (e) {
+          console.debug("Auth whoami check failed", e);
+        }
+      }
+
       const [sumRes, histRes, ideasRes, stakesRes, tasksRes] = await Promise.all([
-        fetch(`${base}/portfolio`),
-        fetch(`${base}/cc-history?window=90d&bucket=7d`),
-        fetch(`${base}/idea-contributions?sort=cc_attributed_desc&limit=20`),
-        fetch(`${base}/stakes?sort=roi_desc&limit=20`),
-        fetch(`${base}/tasks?status=completed&limit=20`),
+        fetch(`${base}/portfolio`, { headers }),
+        fetch(`${base}/cc-history?window=90d&bucket=7d`, { headers }),
+        fetch(`${base}/idea-contributions?sort=cc_attributed_desc&limit=20`, { headers }),
+        fetch(`${base}/stakes?sort=roi_desc&limit=20`, { headers }),
+        fetch(`${base}/tasks?status=completed&limit=20`, { headers }),
       ]);
 
       if (!sumRes.ok) {

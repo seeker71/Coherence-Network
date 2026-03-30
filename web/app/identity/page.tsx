@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getApiBase } from "@/lib/api";
+import { getApiBase, getApiKey, setApiKey } from "@/lib/api";
 
 const API = getApiBase();
 
@@ -98,6 +98,7 @@ function StatusDot({ verified, linked }: { verified: boolean; linked: boolean })
 
 export default function IdentityPage() {
   const [name, setName] = useState("");
+  const [apiKey, setApiKeyLocal] = useState("");
   const [identities, setIdentities] = useState<Identity[]>([]);
   const [providers, setProviders] = useState<Record<string, ProviderInfo[]>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -105,7 +106,7 @@ export default function IdentityPage() {
   const [message, setMessage] = useState<{ text: string; type: "ok" | "error" } | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
-  // Load providers from API, fall back to static list
+  // Load providers from API
   useEffect(() => {
     fetch(`${API}/api/identity/providers`)
       .then((res) => res.json())
@@ -121,10 +122,12 @@ export default function IdentityPage() {
       });
   }, []);
 
-  // Load name from localStorage
+  // Load from localStorage
   useEffect(() => {
     const stored = localStorage.getItem("coherence_contributor_id") || "";
+    const key = getApiKey() || "";
     setName(stored);
+    setApiKeyLocal(key);
     if (stored) {
       loadIdentities(stored);
     }
@@ -139,9 +142,43 @@ export default function IdentityPage() {
         setIdentities(data);
       }
     } catch {
-      // Silently fail — identities are optional
+      // Silently fail
     }
   }, []);
+
+  const onboard = useCallback(async (provider: string, providerId: string) => {
+    if (!name.trim()) return;
+    setBusy("onboard");
+    try {
+      const res = await fetch(`${API}/api/onboard`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          provider,
+          provider_id: providerId,
+          display_name: providerId,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.api_key) {
+          setApiKey(data.api_key);
+          setApiKeyLocal(data.api_key);
+          localStorage.setItem("coherence_contributor_id", data.contributor_id);
+          setMessage({ text: "Onboarded successfully! API key saved.", type: "ok" });
+          loadIdentities(data.contributor_id);
+        }
+      } else {
+        const err = await res.json().catch(() => ({}));
+        setMessage({ text: err.detail || "Onboarding failed.", type: "error" });
+      }
+    } catch {
+      setMessage({ text: "Network error during onboarding.", type: "error" });
+    }
+    setBusy(null);
+    setTimeout(() => setMessage(null), 5000);
+  }, [name, loadIdentities]);
 
   const saveName = useCallback(() => {
     if (!name.trim()) return;
@@ -242,7 +279,6 @@ export default function IdentityPage() {
   const toggleCategory = (cat: string) =>
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }));
 
-  // Default-open categories: those with links, plus Social and Professional
   const isCategoryOpen = (cat: string, providerList: ProviderInfo[]): boolean => {
     if (collapsed[cat] !== undefined) return !collapsed[cat];
     if (cat === "Social" || cat === "Professional") return true;
@@ -273,12 +309,11 @@ export default function IdentityPage() {
         </div>
       )}
 
-      {/* Your Name */}
+      {/* Your Name & API Key */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-4">
         <h2 className="text-lg font-semibold">Your name</h2>
         <p className="text-sm text-muted-foreground">
-          This is your contributor identity on the Coherence Network. All linked
-          accounts will be associated with this name.
+          This is your contributor identity on the Coherence Network.
         </p>
         <div className="flex gap-3">
           <input
@@ -296,11 +331,34 @@ export default function IdentityPage() {
             Save
           </button>
         </div>
+
+        {apiKey && (
+          <div className="pt-4 border-t border-border/10 space-y-2">
+            <h3 className="text-sm font-medium">Personal API Key</h3>
+            <div className="rounded-xl bg-muted/40 px-4 py-3 font-mono text-xs break-all border border-border/20 flex justify-between items-center group">
+              <span>{apiKey.slice(0, 10)}****************{apiKey.slice(-4)}</span>
+              <button
+                onClick={() => { navigator.clipboard.writeText(apiKey); }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-primary underline"
+              >
+                Copy
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              This key allows you to see private views of your portfolio. Keep it safe.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* Link Accounts — categorized */}
       <section className="space-y-6">
-        <h2 className="text-lg font-semibold">Link accounts</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Link accounts</h2>
+          {!apiKey && identities.length > 0 && (
+             <span className="text-xs text-amber-400">Get an API key by onboarding with a linked account below</span>
+          )}
+        </div>
         {categories.map(([cat, providerList]) => {
           const open = isCategoryOpen(cat, providerList);
           const linkedCount = providerList.filter((p) => !!getLinked(p.key)).length;
@@ -333,13 +391,24 @@ export default function IdentityPage() {
                             <h3 className="font-medium">{p.label}</h3>
                           </div>
                           {linked && (
-                            <button
-                              onClick={() => unlinkProvider(p.key)}
-                              disabled={busy === p.key}
-                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              Unlink
-                            </button>
+                            <div className="flex gap-3">
+                               {!apiKey && (
+                                 <button
+                                   onClick={() => onboard(p.key, linked.provider_id)}
+                                   disabled={!!busy}
+                                   className="text-xs text-primary hover:underline font-medium"
+                                 >
+                                   Onboard & Get Key
+                                 </button>
+                               )}
+                               <button
+                                 onClick={() => unlinkProvider(p.key)}
+                                 disabled={busy === p.key}
+                                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                               >
+                                 Unlink
+                               </button>
+                            </div>
                           )}
                         </div>
                         {linked ? (

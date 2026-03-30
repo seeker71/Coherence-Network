@@ -47,3 +47,23 @@ export function getApiBase(): string {
   if (isBrowser) return "";
   return DEV_API_URL;
 }
+
+export function getApiKey(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("coherence_api_key");
+}
+
+export function setApiKey(key: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("coherence_api_key", key);
+}
+
+export function getContributorId(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("coherence_contributor_id");
+}
+
+export function setContributorId(id: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem("coherence_contributor_id", id);
+}

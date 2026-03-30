@@ -37,8 +37,8 @@ import { showMetaSummary, showMetaEndpoints, showMetaModules } from "../lib/comm
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
-import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
-import { showPortfolio } from "../lib/commands/portfolio.mjs";
+import { showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
+import { showPortfolio, showIdeaPortfolio } from "../lib/commands/portfolio.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
 import {
@@ -116,7 +116,7 @@ const COMMANDS = {
   meta:          () => handleMeta(args),
   nearby:        () => showNearby(args),
   location:      () => handleLocation(args),
-  portfolio:     () => showPortfolio(),
+  portfolio:     () => showPortfolio(args),
   help:          () => showHelp(),
 };
 
@@ -132,6 +132,7 @@ async function handleMeta(args) {
 async function handleIdea(args) {
   const sub = args[0];
   switch (sub) {
+    case "portfolio":return showIdeaPortfolio();
     case "create":   return createIdea(args.slice(1));
     case "triage":   return triageIdeas(args.slice(1));
     case "tags":     return showIdeaTags();
@@ -415,7 +416,8 @@ function showHelp() {
 \x1b[1mUsage:\x1b[0m cc <command> [args]
 
 \x1b[1mExplore:\x1b[0m
-  portfolio               Ideas by category — gap, streak, effort, new experiences
+  portfolio [id]          Your portfolio (or another contributor's) — balance, history, ideas, stakes
+  ideas portfolio         Network portfolio — gap, streak, effort, new experiences
   ideas [limit]           Browse ideas by ROI
   ideas --type <type>     Filter by work_type (feature|bug-fix|enhancement|exploration|research|prototype|mvp)
   ideas --status <s>      Filter by status (none|partial|validated)
