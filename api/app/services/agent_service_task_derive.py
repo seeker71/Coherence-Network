@@ -262,6 +262,24 @@ def ensure_failed_task_diagnostics(task: dict[str, Any]) -> None:
         "source": source,
     }
     task["context"] = next_context
+    # DG-015 fix: also populate top-level error_category and error_summary if not already set.
+    # These are persisted to DB columns and returned by the API — they must be populated
+    # for observability (circuit breaker classification, monitoring, dashboards).
+    if not task.get("error_category"):
+        bucket = classified["bucket"]
+        # Map failure_classification bucket to valid API error_category values
+        _bucket_to_category = {
+            "timeout": "timeout",
+            "provider_error": "execution_error",
+            "no_code": "no_diff",
+            "hollow": "no_diff",
+            "impl_branch_missing": "impl_branch_missing",
+            "worktree_failed": "worktree_failed",
+            "push_failed": "push_failed",
+        }
+        task["error_category"] = _bucket_to_category.get(bucket, "execution_error")
+    if not task.get("error_summary"):
+        task["error_summary"] = classified["summary"][:500]
 
 
 def task_type_name(value: Any) -> str:

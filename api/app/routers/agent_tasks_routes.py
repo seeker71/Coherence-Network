@@ -282,6 +282,8 @@ async def update_task(
             decision=data.decision,
             context=context_patch if context_patch else None,
             worker_id=data.worker_id,
+            error_category=data.error_category,  # DG-015 fix: pass through from runner
+            error_summary=data.error_summary,     # DG-015 fix: pass through from runner
         )
     except agent_service.TaskClaimConflictError as exc:
         if data.decision:
