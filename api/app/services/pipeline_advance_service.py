@@ -529,6 +529,16 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     }
     if context.get("impl_branch"):
         next_context["impl_branch"] = context["impl_branch"]
+    elif next_phase in ("test", "code-review", "review"):
+        # DG-012/017: impl_branch is required for test/code-review. If it's absent, the
+        # downstream task will fail immediately with impl_branch_missing. Log now so the
+        # root cause is visible at advance time, not at execution time.
+        log.warning(
+            "ADVANCE_MISSING_IMPL_BRANCH %s→%s for idea=%s — "
+            "impl_branch not in source task context; downstream task may fail. "
+            "Verify DG-012 runner fix is active and impl_branch PATCH succeeded.",
+            task_type, next_phase, idea_id,
+        )
     if context.get("pr_url"):
         next_context["pr_url"] = context["pr_url"]
 
