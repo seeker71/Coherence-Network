@@ -304,13 +304,14 @@ def _detect_providers() -> dict[str, dict]:
             "model_select": _select_ollama_cloud_provider_model,
             "env": {"OPENCODE_ENABLE_EXA": "1"},
         },
-        # pi -p --model provider/model <prompt>
-        "pi": {
-            "cmd": ["pi", "-p", "--model"],
-            "append_prompt": True,
-            "check": _check_ollama_cloud,
-            "model_select": _select_ollama_cloud_provider_model,
-        },
+        # pi: reserved — no verified public CLI exists yet with this interface.
+        # Will be enabled when a confirmed binary is available.
+        # "pi": {
+        #     "cmd": ["pi", "-p", "--model"],
+        #     "append_prompt": True,
+        #     "check": _check_ollama_cloud,
+        #     "model_select": _select_ollama_cloud_provider_model,
+        # },
         # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
@@ -344,14 +345,14 @@ def _detect_providers() -> dict[str, dict]:
         # Detect provider version
         version = "unknown"
         try:
-            version_flags = {"claude": "--version", "codex": "--version", "gemini": "--version", "agent": "--version", "ollama": "--version", "opencode": "--version", "pi": "--version"}
+            version_flags = {"claude": "--version", "codex": "--version", "gemini": "--version", "agent": "--version", "ollama": "--version", "opencode": "--version"}
             vflag = version_flags.get(binary.split("/")[-1] if "/" in binary else binary, "--version")
             vresult = subprocess.run([resolved, vflag], capture_output=True, text=True, timeout=5)
             vout = (vresult.stdout or vresult.stderr or "").strip()
             # Extract version string — first line, strip common prefixes
             if vout:
                 vline = vout.split("\n")[0].strip()
-                for prefix in ["claude ", "codex-cli ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent ", "opencode ", "pi "]:
+                for prefix in ["claude ", "codex-cli ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent ", "opencode "]:
                     if vline.lower().startswith(prefix):
                         vline = vline[len(prefix):].strip()
                         break
@@ -623,7 +624,7 @@ def _run_openrouter(prompt: str, cwd: str, timeout: int, model: str) -> tuple[bo
 
 
 # Providers with tool/file access (can actually create/modify files)
-_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor", "opencode", "pi"}
+_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor", "opencode"}
 # Providers that are text-only (no file access — good for review, bad for impl/spec/test)
 # Text-only providers cannot create files, run tests, or push branches.
 # They should NEVER be selected for impl, test, or code-producing tasks.
@@ -843,7 +844,7 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
         "cursor":       {"file_write", "git", "tools", "gh", "reasoning"},  # v2026.03.25 + --trust fixes file editing
         "gemini":       {"file_write", "git", "tools", "gh", "reasoning"},
         "opencode":     {"file_write", "git", "tools", "gh", "reasoning"},
-        "pi":           {"file_write", "git", "tools", "gh", "reasoning"},
+        # "pi" reserved — no verified CLI available yet
         "ollama-local": {"text_only"},                   # no tools, no file access
         "ollama-cloud": {"text_only"},                   # raw ollama path stays text-only
         "openrouter":   {"text_only"},                   # API only, no tools

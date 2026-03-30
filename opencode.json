@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ollama": {
+      "name": "Ollama",
+      "models": {
+        "minimax-m2.7:cloud": {
+          "name": "MiniMax M2.7 Cloud"
+        },
+        "glm-5:cloud": {
+          "name": "GLM-5 Cloud"
+        }
+      },
+      "options": {
+        "baseURL": "http://localhost:11434/v1"
+      }
+    }
+  }
+}
