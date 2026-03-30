@@ -304,14 +304,15 @@ def _detect_providers() -> dict[str, dict]:
             "model_select": _select_ollama_cloud_provider_model,
             "env": {"OPENCODE_ENABLE_EXA": "1"},
         },
-        # pi: reserved — no verified public CLI exists yet with this interface.
-        # Will be enabled when a confirmed binary is available.
-        # "pi": {
-        #     "cmd": ["pi", "-p", "--model"],
-        #     "append_prompt": True,
-        #     "check": _check_ollama_cloud,
-        #     "model_select": _select_ollama_cloud_provider_model,
-        # },
+        # pi: openclaw's embedded coding agent via --local mode
+        # Command shape: openclaw agent --local --agent pi -m <prompt>
+        # Model is configured in the openclaw pi agent config (ollama/minimax-m2.7:cloud)
+        "pi": {
+            "cmd": ["openclaw", "agent", "--local", "--agent", "pi", "-m"],
+            "append_prompt": True,
+            "check_binary": "openclaw",
+            "check": _check_ollama_cloud,
+        },
         # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
@@ -624,7 +625,7 @@ def _run_openrouter(prompt: str, cwd: str, timeout: int, model: str) -> tuple[bo
 
 
 # Providers with tool/file access (can actually create/modify files)
-_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor", "opencode"}
+_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor", "opencode", "pi"}
 # Providers that are text-only (no file access — good for review, bad for impl/spec/test)
 # Text-only providers cannot create files, run tests, or push branches.
 # They should NEVER be selected for impl, test, or code-producing tasks.
@@ -844,7 +845,7 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
         "cursor":       {"file_write", "git", "tools", "gh", "reasoning"},  # v2026.03.25 + --trust fixes file editing
         "gemini":       {"file_write", "git", "tools", "gh", "reasoning"},
         "opencode":     {"file_write", "git", "tools", "gh", "reasoning"},
-        # "pi" reserved — no verified CLI available yet
+        "pi":           {"file_write", "git", "tools", "gh", "reasoning"},
         "ollama-local": {"text_only"},                   # no tools, no file access
         "ollama-cloud": {"text_only"},                   # raw ollama path stays text-only
         "openrouter":   {"text_only"},                   # API only, no tools
