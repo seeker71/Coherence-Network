@@ -5337,6 +5337,50 @@ def _cleanup_worktree(task_id: str) -> None:
         log.warning("WORKTREE_CLEANUP_FAILED task=%s error=%s", slug, e)
 
 
+def _create_pr_for_branch(task_id: str, task: dict, wt_path: "Path") -> str | None:
+    """Create a GitHub PR for the task branch after a successful push.
+
+    Returns the PR URL on success, None on failure. Non-fatal — if PR creation
+    fails, the branch is still on origin and can be found manually.
+    """
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    idea_id = ctx.get("idea_id", "unknown")
+    task_type = task.get("task_type", "impl")
+
+    try:
+        pr_title = f"{task_type}({idea_id}): task {slug}"[:70]
+        pr_body = (
+            f"## Automated {task_type} by {_NODE_NAME}\n\n"
+            f"**Idea:** {idea_id}\n"
+            f"**Task:** {task_id}\n"
+        )
+        pr_result = subprocess.run(
+            ["gh", "pr", "create", "--title", pr_title, "--body", pr_body,
+             "--base", "main", "--head", branch],
+            capture_output=True, text=True, timeout=30, cwd=str(wt_path),
+        )
+        if pr_result.returncode == 0:
+            pr_url = pr_result.stdout.strip()
+            log.info("PR_CREATED task=%s branch=%s url=%s", slug, branch, pr_url)
+            # Store PR URL in task context for downstream phases
+            api("PATCH", f"/api/agent/tasks/{task_id}", {
+                "context": {**ctx, "pr_url": pr_url, "impl_branch": branch},
+            })
+            return pr_url
+        else:
+            # PR may already exist (from a retry) — that's OK
+            if "already exists" in (pr_result.stderr or "").lower():
+                log.info("PR_EXISTS task=%s branch=%s — PR already created", slug, branch)
+                return None
+            log.warning("PR_CREATE_FAILED task=%s error=%s", slug, pr_result.stderr.strip()[:200])
+            return None
+    except Exception as e:
+        log.warning("PR_CREATE_ERROR task=%s: %s", slug, e)
+        return None
+
+
 def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
     """Push the task branch to origin so other nodes can see the code.
 
@@ -5433,57 +5477,51 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
 
 
 def _merge_branch_to_main(task_id: str) -> bool:
-    """Merge task branch to main AND push. Only called after code-review passes.
+    """Merge task PR to main via GitHub. Only called after code-review passes.
 
-    This is the gate — code only reaches main after review.
+    Uses `gh pr merge --squash --admin` instead of local git merge + push.
+    This is the proper path — avoids auth issues and merge conflicts with
+    concurrent runner pushes.
     """
     slug = task_id[:16]
     branch = f"task/{slug}"
     repo_root = str(_REPO_DIR)
     try:
-        # Fetch latest
-        _run_git_command(
-            ["git", "fetch", "origin"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        # Find the PR for this branch
+        pr_list = subprocess.run(
+            ["gh", "pr", "list", "--head", branch, "--json", "number,state", "--limit", "1"],
+            capture_output=True, text=True, timeout=15, cwd=repo_root,
         )
-        # Check if branch exists on origin
-        check = _run_git_command(
-            ["git", "rev-parse", "--verify", f"origin/{branch}"],
-            capture_output=True, text=True, timeout=10, cwd=repo_root,
-        )
-        if check.returncode != 0:
-            log.info("MERGE_SKIP task=%s — branch not on origin (no code changes)", slug)
-            return True
+        prs = json.loads(pr_list.stdout) if pr_list.returncode == 0 else []
 
-        # Merge origin/branch into local main
-        _run_git_command(
-            ["git", "checkout", "main"],
-            capture_output=True, text=True, timeout=10, cwd=repo_root,
-        )
-        merge = _run_git_command(
-            ["git", "merge", "--no-ff", f"origin/{branch}", "-m", f"Merge reviewed task {slug}"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
-        )
-        if merge.returncode != 0:
-            _run_git_command(["git", "merge", "--abort"], capture_output=True, timeout=10, cwd=repo_root)
-            log.warning("MERGE_CONFLICT task=%s", slug)
+        if not prs:
+            # No PR found — try searching by idea_id
+            log.info("MERGE_NO_PR task=%s branch=%s — no PR found for branch", slug, branch)
             return False
 
-        # Push main to origin
-        push = _run_git_command(
-            ["git", "push", "origin", "main"],
+        pr_num = prs[0]["number"]
+        pr_state = prs[0].get("state", "")
+        if pr_state == "MERGED":
+            log.info("MERGE_ALREADY_DONE task=%s PR #%s already merged", slug, pr_num)
+            return True
+
+        # Merge via GitHub API
+        merge_result = subprocess.run(
+            ["gh", "pr", "merge", str(pr_num), "--squash", "--admin",
+             "--body", f"Merge reviewed task {slug}"],
             capture_output=True, text=True, timeout=60, cwd=repo_root,
         )
-        if push.returncode == 0:
-            log.info("MERGED_TO_MAIN task=%s", slug)
-            # Clean up remote branch
+        if merge_result.returncode == 0:
+            log.info("MERGED_VIA_PR task=%s PR #%s", slug, pr_num)
+            # Pull the merged main locally so worktree base is up to date
             _run_git_command(
-                ["git", "push", "origin", "--delete", branch],
+                ["git", "pull", "--ff-only", "origin", "main"],
                 capture_output=True, text=True, timeout=30, cwd=repo_root,
             )
             return True
         else:
-            log.warning("MAIN_PUSH_FAILED task=%s error=%s", slug, push.stderr.strip()[:200])
+            err = merge_result.stderr.strip()[:200]
+            log.warning("MERGE_PR_FAILED task=%s PR #%s error=%s", slug, pr_num, err)
             return False
     except Exception as e:
         log.warning("MERGE_TO_MAIN_FAILED task=%s error=%s", slug, e)
@@ -5698,6 +5736,9 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                                 error_category="push_failed",
                             )
                         else:
+                            # Create PR after successful branch push for impl tasks
+                            if task_type == "impl":
+                                _create_pr_for_branch(task_id, task, wt)
                             # Fix 4: phase advance only fires after push is confirmed for impl/test
                             if task_type in ("impl", "test"):
                                 _run_phase_auto_advance_hook(task)
