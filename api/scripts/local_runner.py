@@ -42,13 +42,25 @@ import httpx
 # Resolve paths
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _API_DIR = _SCRIPT_DIR.parent
-_REPO_DIR = _API_DIR.parent
-# DG-013 fix: cache the ORIGINAL repo dir at module init.
-# _run_task_in_worktree mutates _REPO_DIR to point to the task worktree, which is
-# correct for single-threaded use but races with parallel workers who read _REPO_DIR
-# for git operations. All infrastructure functions (_create_worktree, _push_branch_to_origin,
-# _seed_task_from_open_idea, etc.) must use _ORIGINAL_REPO_DIR — never the mutable global.
-_ORIGINAL_REPO_DIR: "Path" = _REPO_DIR  # type: ignore[assignment]  # immutable, set once
+_ORIGINAL_REPO_DIR = _API_DIR.parent  # immutable — set once at startup, never mutated
+
+# DG-013 / DG-016 fix: thread-local repo dir for parallel worker safety.
+# With --parallel N, each worker thread runs _run_task_in_worktree which sets
+# _thread_local.repo_dir to its own worktree path. _get_repo_dir() reads the
+# thread-local value, falling back to _ORIGINAL_REPO_DIR for the main loop thread.
+# This eliminates the race where Thread 2 clobbered the global _REPO_DIR between
+# Thread 1's assignment and Thread 1's cwd capture in execute_with_provider,
+# causing Thread 1's agent to run in Thread 2's worktree → empty diff on Thread 1.
+_thread_local = threading.local()
+
+
+def _get_repo_dir() -> Path:
+    """Return this thread's active repo dir (worktree if in a task, else main repo)."""
+    return getattr(_thread_local, "repo_dir", _ORIGINAL_REPO_DIR)
+
+
+# Legacy alias — points to main repo at startup; do NOT write to this from threads.
+_REPO_DIR = _ORIGINAL_REPO_DIR
 _LOG_DIR = _API_DIR / "logs"
 
 # ── Runner config — single source of truth, no env vars ──────────────
@@ -195,7 +207,7 @@ def _run_git_command(args: list[str], **kwargs: Any) -> subprocess.CompletedProc
 
 def _get_git_info() -> dict[str, str]:
     """Get git version info for this node."""
-    repo = str(_REPO_DIR)
+    repo = str(_get_repo_dir())
     info = {"local_sha": "unknown", "origin_sha": "unknown", "branch": "unknown", "dirty": "unknown", "repo": repo}
     git = "/usr/bin/git"  # Use absolute path -- launchd may not have git on PATH
     if not os.path.exists(git):
@@ -1717,7 +1729,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             try:
                 pr_check = subprocess.run(
                     ["gh", "pr", "list", "--search", idea_id, "--json", "number,title,url", "--limit", "1"],
-                    capture_output=True, text=True, timeout=10, cwd=str(_REPO_DIR),
+                    capture_output=True, text=True, timeout=10, cwd=str(_get_repo_dir()),
                     shell=(sys.platform == "win32"),
                 )
                 if pr_check.returncode == 0:
@@ -1841,11 +1853,11 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             try:
                 import glob as _glob
                 # Exact match first, then glob fallback
-                exact = _REPO_DIR / "specs" / f"{idea_id}.md"
+                exact = _get_repo_dir() / "specs" / f"{idea_id}.md"
                 if exact.exists():
                     spec_files = [str(exact)]
                 else:
-                    spec_files = _glob.glob(str(_REPO_DIR / "specs" / f"*{idea_id}*"))
+                    spec_files = _glob.glob(str(_get_repo_dir() / "specs" / f"*{idea_id}*"))
                 if spec_files:
                     resolved_spec_path = spec_files[0]
                     with open(resolved_spec_path, "r", encoding="utf-8", errors="replace") as sf:
@@ -2322,7 +2334,7 @@ Do NOT push or create PRs — the runner handles that."""
     elif task_type == "impl":
         type_instructions = f"""
 IMPL INSTRUCTIONS:
-- Write actual Python/TypeScript code files in the repository at {_REPO_DIR}
+- Write actual Python/TypeScript code files in the repository at {_get_repo_dir()}
 - You MUST create or modify real files, not just describe what you would do.
 - If you cannot write files, output the FULL file contents inline (not summaries).
 - Minimum 200 chars of real code or detailed inline output.
@@ -2344,7 +2356,7 @@ Do NOT just describe what you would do — WRITE THE FILES."""
     elif task_type == "test":
         type_instructions = f"""
 TEST INSTRUCTIONS:
-- Write pytest test files in the repository at {_REPO_DIR}
+- Write pytest test files in the repository at {_get_repo_dir()}
 - Place tests in api/tests/ following existing patterns.
 - Run tests after writing: cd api && python -m pytest <test_file> -v
 - If tests fail, fix them until they pass.
@@ -2358,7 +2370,7 @@ Do NOT push or create PRs — the runner handles that.
 Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>"""
     else:
         type_instructions = f"""
-Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
+Work in the repository at {_get_repo_dir()}. Follow the project's CLAUDE.md conventions.
 Output a summary: files created/modified, validation results, errors encountered."""
 
     idea_id = context.get("idea_id", "unknown") if isinstance(context, dict) else "unknown"
@@ -2371,7 +2383,7 @@ Output a summary: files created/modified, validation results, errors encountered
         idea_id=idea_id,
         spec_path=spec_path,
         direction=direction,
-        repo_dir=_REPO_DIR,
+        repo_dir=_get_repo_dir(),
     )
 
     prompt = f"""EXECUTE THIS TASK NOW. Do NOT ask what to do — the task is described below. Start working immediately.
@@ -2476,7 +2488,7 @@ def _push_and_pr(
     branch = f"worker/{task_type}/{idea_id}/{task_id[:8]}"
 
     try:
-        cwd = str(_REPO_DIR)
+        cwd = str(_get_repo_dir())
 
         # Ensure all changes are committed (exclude control files from staging)
         _CONTROL_FILES = {".task-control", ".task-checkpoint.md", ".idea-progress.md", "data/coherence.db"}
@@ -2570,8 +2582,8 @@ def _push_and_pr(
         log.warning("PR_ERROR task=%s error=%s", task_id, exc)
         # Try to get back to clean state
         try:
-            subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=str(_REPO_DIR))
-            subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=str(_REPO_DIR))
+            subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=str(_get_repo_dir()))
+            subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=str(_get_repo_dir()))
         except Exception:
             pass
         return None
@@ -2582,7 +2594,7 @@ def _push_to_existing_branch(
     branch: str, new_changes: set[str], output: str,
 ) -> str | None:
     """Push test/review changes to an existing impl branch (same PR)."""
-    cwd = str(_REPO_DIR)
+    cwd = str(_get_repo_dir())
     try:
         # Checkout the impl branch
         subprocess.run(["git", "fetch", "origin", branch], capture_output=True, timeout=15, cwd=cwd)
@@ -2630,7 +2642,7 @@ def _git_status_lines() -> list[str]:
             capture_output=True,
             text=True,
             timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
     except Exception:
         return []
@@ -2665,7 +2677,7 @@ def _git_diff_for_paths(paths: set[str] | None = None) -> str:
             capture_output=True,
             text=True,
             timeout=10,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
         tracked_diff = tracked_result.stdout
     except Exception:
@@ -2682,17 +2694,17 @@ def _git_diff_for_paths(paths: set[str] | None = None) -> str:
                 capture_output=True,
                 text=True,
                 timeout=5,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             if not listed.stdout.strip():
                 continue
-            abs_path = _REPO_DIR / rel_path
+            abs_path = _get_repo_dir() / rel_path
             untracked = subprocess.run(
                 ["git", "diff", "--binary", "--no-index", "--", "/dev/null", str(abs_path)],
                 capture_output=True,
                 text=True,
                 timeout=10,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             if untracked.stdout.strip():
                 untracked_patches.append(untracked.stdout)
@@ -2853,7 +2865,7 @@ def execute_with_provider(
         model = _select_openrouter_model(task_type)
         spec["_selected_model"] = model
         log.info("OPENROUTER_MODEL task=%s model=%s", task_type, model)
-        return _run_openrouter(prompt, str(_REPO_DIR), timeout, model)
+        return _run_openrouter(prompt, str(_get_repo_dir()), timeout, model)
 
     cmd = list(spec["cmd"])
     stdin_input = None
@@ -2871,7 +2883,7 @@ def execute_with_provider(
     # Write prompt to file for debugging, deliver via stdin for all providers
     # stdin avoids shell arg length limits and is more reliable than CLI args
     _task_id = getattr(execute_with_provider, "_current_task_id", "unknown")
-    prompt_file = os.path.join(str(_REPO_DIR), f".task-prompt-{_task_id[:12]}.md")
+    prompt_file = os.path.join(str(_get_repo_dir()), f".task-prompt-{_task_id[:12]}.md")
     try:
         with open(prompt_file, "w", encoding="utf-8") as pf:
             pf.write(prompt)
@@ -2988,18 +3000,18 @@ def execute_with_provider(
     if _current_task_id:
         heartbeat_thread = threading.Thread(
             target=_heartbeat_loop,
-            args=(_current_task_id, str(_REPO_DIR), provider, task_type),
+            args=(_current_task_id, str(_get_repo_dir()), provider, task_type),
             daemon=True,
         )
         heartbeat_thread.start()
 
     # Use ProviderWrapper for process-level control (checkpoint, steer, abort)
-    control_dir = Path(rc("execution", "work_dir") or str(_REPO_DIR))
+    control_dir = Path(rc("execution", "work_dir") or str(_get_repo_dir()))
     try:
         from provider_wrapper import ProviderWrapper
         wrapper = ProviderWrapper(
             cmd=cmd,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
             timeout=timeout,
             control_dir=control_dir,
             stdin_input=stdin_input,
@@ -3041,7 +3053,7 @@ def execute_with_provider(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             stdin=subprocess.PIPE if stdin_input else None,
             text=True, encoding="utf-8", errors="replace",
-            cwd=str(_REPO_DIR), creationflags=creation_flags,
+            cwd=str(_get_repo_dir()), creationflags=creation_flags,
             shell=use_shell,
             start_new_session=True,  # Own process group so killpg doesn't kill the runner
             env=env,
@@ -3158,7 +3170,7 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
     """Run merge/deploy/verify/reflect directly — these are commands, not AI tasks."""
     context = task.get("context") if isinstance(task.get("context"), dict) else {}
     idea_id = context.get("idea_id", "unknown")
-    cwd = str(_REPO_DIR)
+    cwd = str(_get_repo_dir())
     start = time.time()
     log.info("OPERATIONAL task=%s type=%s idea=%s", task_id, task_type, idea_id)
     try:
@@ -3361,7 +3373,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     task_work_dir = _REPO_DIR  # default; worktree overrides this
     try:
         from task_control_channel import TaskControlChannel, inject_control_instructions
-        task_work_dir = Path(rc("execution", "work_dir") or str(_REPO_DIR))
+        task_work_dir = Path(rc("execution", "work_dir") or str(_get_repo_dir()))
         control_channel = TaskControlChannel(
             node_id=_NODE_ID,
             task_id=task_id,
@@ -3401,7 +3413,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         try:
             post_result = subprocess.run(
                 ["git", "status", "--porcelain"], capture_output=True, text=True,
-                timeout=5, cwd=str(_REPO_DIR),
+                timeout=5, cwd=str(_get_repo_dir()),
             )
             post_diff = post_result.stdout.strip()
             new_changes = set(post_diff.splitlines()) - set(pre_status_lines)
@@ -3445,7 +3457,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                         lang = ext_to_lang.get(ext)
                         if not lang:
                             continue
-                        full_path = os.path.join(str(_REPO_DIR), fpath)
+                        full_path = os.path.join(str(_get_repo_dir()), fpath)
                         if not os.path.isfile(full_path):
                             continue
                         try:
@@ -3502,7 +3514,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                             output += f"\n  {dr['file']}: trust={dr['trust_signal']} verification={dr['verification']} anomalies={dr['anomalies']} event={dr['event_id'][:16]}"
 
                     # Runner stages and commits — don't rely on provider to do it
-                    cwd = str(_REPO_DIR)
+                    cwd = str(_get_repo_dir())
                     subprocess.run(["git", "add", "-A"], capture_output=True, timeout=10, cwd=cwd)
                     idea_id = context.get("idea_id", "unknown")
                     subprocess.run(
@@ -3631,7 +3643,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                     partial_patch_path = _LOG_DIR / f"partial_task_{task_id}.patch"
                     partial_patch_path.write_text(patch_body)
                     try:
-                        patch_rel_path = str(partial_patch_path.relative_to(_REPO_DIR))
+                        patch_rel_path = str(partial_patch_path.relative_to(_get_repo_dir()))
                     except ValueError:
                         patch_rel_path = str(partial_patch_path)
                     completion_context["partial_patch_path"] = patch_rel_path
@@ -3804,7 +3816,7 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
                         capture_output=True, text=True, timeout=10, cwd=str(wt_path),
                     )
                     if diff_result.stdout.strip():
-                        patch_dir = _REPO_DIR / "api" / "task_patches"
+                        patch_dir = _get_repo_dir() / "api" / "task_patches"
                         patch_dir.mkdir(parents=True, exist_ok=True)
                         patch_file = patch_dir / f"task_{task_id}.patch"
                         patch_file.write_text(diff_result.stdout)
@@ -4095,7 +4107,7 @@ def _seed_task_from_open_idea() -> bool:
     if task_type == "impl":
         import glob as _glob_spec
         spec_ok = False
-        for sp in _glob_spec.glob(str(_REPO_DIR / "specs" / f"*{idea_id}*")):
+        for sp in _glob_spec.glob(str(_get_repo_dir() / "specs" / f"*{idea_id}*")):
             try:
                 with open(sp, "r", encoding="utf-8", errors="replace") as f:
                     spec_text = f.read()
@@ -4662,19 +4674,19 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
             steps = []
             # First: stash any local changes
             stash = subprocess.run(
-                ["git", "stash"], capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
+                ["git", "stash"], capture_output=True, text=True, timeout=15, cwd=str(_get_repo_dir()),
             )
             if "Saved" in stash.stdout:
                 steps.append("stashed local changes")
             # Switch to main if not already there
             branch = subprocess.run(
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                capture_output=True, text=True, timeout=5, cwd=str(_REPO_DIR),
+                capture_output=True, text=True, timeout=5, cwd=str(_get_repo_dir()),
             ).stdout.strip()
             if branch != "main":
                 checkout = subprocess.run(
                     ["git", "checkout", "main"],
-                    capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
+                    capture_output=True, text=True, timeout=15, cwd=str(_get_repo_dir()),
                 )
                 if checkout.returncode == 0:
                     steps.append(f"switched from {branch} to main")
@@ -4683,20 +4695,20 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
             # Pull latest
             pull = subprocess.run(
                 ["git", "pull", "origin", "main", "--ff-only"],
-                capture_output=True, text=True, timeout=60, cwd=str(_REPO_DIR),
+                capture_output=True, text=True, timeout=60, cwd=str(_get_repo_dir()),
             )
             if pull.returncode != 0:
                 # Try reset if ff-only fails
                 subprocess.run(
                     ["git", "reset", "--hard", "origin/main"],
-                    capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
+                    capture_output=True, text=True, timeout=15, cwd=str(_get_repo_dir()),
                 )
                 steps.append("reset to origin/main (ff-only failed)")
             else:
                 steps.append("pulled latest main")
             new_sha = subprocess.run(
                 ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True, text=True, timeout=5, cwd=str(_REPO_DIR),
+                capture_output=True, text=True, timeout=5, cwd=str(_get_repo_dir()),
             ).stdout.strip()
             steps.append(f"now at {new_sha}")
             summary = " → ".join(steps)
@@ -4731,14 +4743,14 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
             git_status = subprocess.run(
                 ["git", "status", "--short"],
                 capture_output=True, text=True, timeout=10,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             lines.append(f"Git status: {git_status.stdout.strip()[:200] or 'clean'}")
 
             git_log = subprocess.run(
                 ["git", "log", "--oneline", "-5"],
                 capture_output=True, text=True, timeout=10,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             lines.append(f"Recent commits:\n{git_log.stdout.strip()}")
 
@@ -5580,7 +5592,7 @@ def _merge_branch_to_main(task_id: str) -> bool:
     """
     slug = task_id[:16]
     branch = f"task/{slug}"
-    repo_root = str(_REPO_DIR)
+    repo_root = str(_get_repo_dir())
     try:
         # Find the PR for this branch
         pr_list = subprocess.run(
@@ -5626,22 +5638,21 @@ def _merge_branch_to_main(task_id: str) -> bool:
 def _run_task_in_worktree(task: dict, wt_path: Path) -> tuple[bool, str]:
     """Execute a task inside a worktree directory.
 
-    Fix 2: returns (success, git_diff) — diff captured after provider runs.
+    DG-016: Uses thread-local repo dir so parallel workers never clobber each other.
+    Previously used a global _REPO_DIR mutation that raced with other workers, causing
+    agents to run in the wrong worktree and produce empty diffs.
     """
     task_id = task["id"]
-    global _REPO_DIR
-    original_repo = _REPO_DIR
+    _thread_local.repo_dir = wt_path      # thread-local — no race with other workers
     try:
-        _REPO_DIR = wt_path
         ok = run_one(task, dry_run=False)
-        # Fix 2: capture what the provider actually wrote
         diff = _capture_worktree_diff(task_id, wt_path)
         return ok, diff
     except Exception as e:
         log.error("WORKTREE_EXEC_FAILED task=%s error=%s", task_id[:16], e)
         return False, ""
     finally:
-        _REPO_DIR = original_repo
+        _thread_local.repo_dir = _ORIGINAL_REPO_DIR  # restore to main repo
 
 
 _active_idea_ids: set[str] = set()
@@ -6016,7 +6027,7 @@ def _check_for_updates_and_restart() -> bool:
         fetch = subprocess.run(
             ["git", "fetch", "origin", "main", "--quiet"],
             capture_output=True, text=True, timeout=15,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
         if fetch.returncode != 0:
             log.debug("SELF-UPDATE: git fetch failed: %s", fetch.stderr.strip())
@@ -6026,13 +6037,13 @@ def _check_for_updates_and_restart() -> bool:
         local_sha = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             capture_output=True, text=True, timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         ).stdout.strip()
 
         remote_sha = subprocess.run(
             ["git", "rev-parse", "origin/main"],
             capture_output=True, text=True, timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         ).stdout.strip()
 
         if local_sha == remote_sha:
@@ -6045,42 +6056,42 @@ def _check_for_updates_and_restart() -> bool:
         status = subprocess.run(
             ["git", "status", "--porcelain"],
             capture_output=True, text=True, timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
         if status.stdout.strip():
             log.warning("SELF-UPDATE: uncommitted changes — stashing before pull")
             subprocess.run(
                 ["git", "stash", "--include-untracked"],
                 capture_output=True, text=True, timeout=10,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
 
         # Ensure we're on main — worktree branches can't ff-only pull main
         current_branch = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True, text=True, timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         ).stdout.strip()
         if current_branch != "main":
             log.info("SELF-UPDATE: on branch '%s', switching to main first", current_branch)
             checkout = subprocess.run(
                 ["git", "checkout", "main"],
                 capture_output=True, text=True, timeout=15,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             if checkout.returncode != 0:
                 log.warning("SELF-UPDATE: checkout main failed: %s — trying reset", checkout.stderr.strip())
                 subprocess.run(
                     ["git", "checkout", "-B", "main", "origin/main"],
                     capture_output=True, text=True, timeout=15,
-                    cwd=str(_REPO_DIR),
+                    cwd=str(_get_repo_dir()),
                 )
 
         # Pull latest
         pull = subprocess.run(
             ["git", "pull", "origin", "main", "--ff-only"],
             capture_output=True, text=True, timeout=30,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
         if pull.returncode != 0:
             # ff-only failed — force reset to origin/main
@@ -6088,7 +6099,7 @@ def _check_for_updates_and_restart() -> bool:
             subprocess.run(
                 ["git", "reset", "--hard", "origin/main"],
                 capture_output=True, text=True, timeout=15,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
 
         log.info("SELF-UPDATE: pulled latest → %s. Restarting (workers are idle).", remote_sha[:8])
