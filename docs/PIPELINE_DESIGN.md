@@ -181,6 +181,7 @@ Providers are assigned by the `select_provider()` capability gate:
 | DG-010 | 2026-03-30 | OPEN | Circuit breaker counts seeder-logic failures (impl_branch_missing) as provider failures |
 | DG-011 | 2026-03-30 | OPEN | Test tasks for wrong phase consume worker slots before circuit breaker trips |
 | DG-012 | 2026-03-30 | OPEN | Seeder does not verify impl_branch exists before seeding test phase |
+| DG-013 | 2026-03-30 | FIXED | Global _REPO_DIR mutated by worker thread, race condition breaks all subsequent worktree creation in parallel mode |
 
 ---
 
