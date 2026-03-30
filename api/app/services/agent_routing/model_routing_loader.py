@@ -188,9 +188,8 @@ _PROVIDER_MODEL_PREFIXES: dict[str, list[str]] = {
     "cursor": ["auto", "cursor-"],
     "gemini": ["gemini-"],
     "openrouter": ["openrouter/"],
-    # opencode and pi run Ollama Cloud models; CLI expects "ollama/<model>" refs
+    # opencode runs Ollama Cloud models; CLI expects "ollama/<model>" refs
     "opencode": ["ollama/"],
-    "pi": ["ollama/"],
 }
 
 

@@ -7,8 +7,7 @@
     "cursor",
     "gemini",
     "openrouter",
-    "opencode",
-    "pi"
+    "opencode"
   ],
   "runner_auth_context_key_by_executor": {
     "claude": "runner_claude_auth_mode",
@@ -22,7 +21,6 @@
     "cursor": "cursor",
     "gemini": "gemini",
     "openrouter": "openrouter",
-    "opencode": "opencode",
-    "pi": "pi"
+    "opencode": "opencode"
   }
 }
