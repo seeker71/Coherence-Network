@@ -36,6 +36,10 @@
     "opencode": {
       "strong": "ollama/minimax-m2.7:cloud",
       "fast": "ollama/minimax-m2.7:cloud"
+    },
+    "pi": {
+      "strong": "ollama/minimax-m2.7:cloud",
+      "fast": "ollama/minimax-m2.7:cloud"
     }
   },
   "openrouter_models_by_task_type": {
@@ -66,6 +70,9 @@
       "openrouter/free"
     ],
     "opencode": [
+      "ollama/minimax-m2.7:cloud"
+    ],
+    "pi": [
       "ollama/minimax-m2.7:cloud"
     ]
   }
