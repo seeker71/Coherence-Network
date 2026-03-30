@@ -1756,6 +1756,10 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             impl_branch = _task_ctx.get("impl_branch", "") if task_type == "impl" else ""
             if not impl_branch:
                 impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            if not impl_branch:
+                log.warning("ADVANCE_HOOK impl_branch missing for review phase idea=%s — "
+                            "review task will fail with impl_branch_missing. "
+                            "Ensure DG-012 patch succeeded before advance.", idea_id[:30])
             pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
             pr_instruction = ""
             if pr_number:
@@ -1782,6 +1786,10 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             impl_branch = _task_ctx.get("impl_branch", "") if task_type == "impl" else ""
             if not impl_branch:
                 impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            if not impl_branch:
+                log.warning("ADVANCE_HOOK impl_branch missing for test phase idea=%s — "
+                            "test task will fail with impl_branch_missing. "
+                            "Ensure DG-012 patch succeeded before advance.", idea_id[:30])
             pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
             branch_instruction = ""
             if impl_branch:
@@ -5811,14 +5819,24 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                             # this must be set BEFORE _run_phase_auto_advance_hook fires.
                             if task_type == "impl":
                                 impl_branch_name = f"task/{task_id[:16]}"
-                                api("PATCH", f"/api/agent/tasks/{task_id}", {
+                                branch_patch_result = api("PATCH", f"/api/agent/tasks/{task_id}", {
                                     "context": {**ctx, "impl_branch": impl_branch_name},
                                 })
-                                log.info("IMPL_BRANCH_SET task=%s branch=%s", task_id[:16], impl_branch_name)
-                                # Update local state so downstream code in this iteration sees it
-                                ctx = {**ctx, "impl_branch": impl_branch_name}
-                                if isinstance(task.get("context"), dict):
-                                    task["context"]["impl_branch"] = impl_branch_name
+                                if branch_patch_result:
+                                    log.info("IMPL_BRANCH_SET task=%s branch=%s", task_id[:16], impl_branch_name)
+                                    # Update local state so downstream code in this iteration sees it
+                                    ctx = {**ctx, "impl_branch": impl_branch_name}
+                                    if isinstance(task.get("context"), dict):
+                                        task["context"]["impl_branch"] = impl_branch_name
+                                else:
+                                    log.warning("IMPL_BRANCH_PATCH_FAILED task=%s branch=%s — "
+                                                "impl_branch not persisted; downstream test task may fail "
+                                                "with impl_branch_missing. Check API health.",
+                                                task_id[:16], impl_branch_name)
+                                    # Still update local state — advance hook runs in same process
+                                    ctx = {**ctx, "impl_branch": impl_branch_name}
+                                    if isinstance(task.get("context"), dict):
+                                        task["context"]["impl_branch"] = impl_branch_name
                             # Create PR after successful branch push for impl tasks
                             if task_type == "impl":
                                 _create_pr_for_branch(task_id, task, wt)
@@ -6206,7 +6224,9 @@ def main():
             if isinstance(stale, dict):
                 own_stale = [
                     t for t in stale.get("tasks", [])
-                    if WORKER_ID.split(":")[0] in (t.get("claimed_by") or "")
+                    # API response exposes "claimed_by"; runner PATCHes "worker_id".
+                    # Check both to handle either field name being present.
+                    if WORKER_ID.split(":")[0] in (t.get("claimed_by") or t.get("worker_id") or "")
                 ]
                 for t in own_stale:
                     api("PATCH", f"/api/agent/tasks/{t['id']}", {
