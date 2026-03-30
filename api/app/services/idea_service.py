@@ -618,7 +618,7 @@ def _find_closest_graph_idea(idea_id: str, graph_ideas: list) -> Any | None:
 
 def _idea_to_metadata(idea: Any) -> dict[str, Any]:
     """Extract metadata dict from an Idea object for signal inheritance."""
-    return {
+    d: dict[str, Any] = {
         "name": idea.name,
         "description": idea.description,
         "interfaces": idea.interfaces,
@@ -633,6 +633,11 @@ def _idea_to_metadata(idea: Any) -> dict[str, Any]:
         "child_idea_ids": idea.child_idea_ids or [],
         "manifestation_status": idea.manifestation_status.value if idea.manifestation_status else "none",
     }
+    if getattr(idea, "lifecycle", None) is not None:
+        d["lifecycle"] = idea.lifecycle.value if hasattr(idea.lifecycle, "value") else str(idea.lifecycle)
+    if getattr(idea, "duplicate_of", None) is not None:
+        d["duplicate_of"] = idea.duplicate_of
+    return d
 
 
 def _derived_idea_for_id(idea_id: str) -> Idea:
@@ -645,6 +650,25 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
             if idea.id == idea_id:
                 metadata = _idea_to_metadata(idea)
                 break
+        # Node-type fallback — idea may exist as a non-idea node (e.g. spec).
+        # Read its actual stored properties so updates via the idea API persist.
+        if not metadata:
+            try:
+                from app.services import graph_service as _gs
+                raw = _gs.get_node(idea_id)
+                if raw:
+                    # Flatten the node dict (to_dict() already merges properties)
+                    metadata = {k: raw[k] for k in [
+                        "name", "description", "potential_value", "actual_value",
+                        "estimated_cost", "actual_cost", "confidence",
+                        "resistance_risk", "idea_type", "parent_idea_id",
+                        "child_idea_ids", "manifestation_status", "duplicate_of",
+                        "lifecycle", "interfaces",
+                    ] if raw.get(k) is not None}
+                    logger.debug("Node-type fallback for derived idea %s (type=%s)", idea_id, raw.get("type"))
+            except Exception:
+                logger.debug("Node-type fallback failed for derived idea %s", idea_id, exc_info=True)
+
         # Fuzzy match — inherit scores from closest graph idea
         if not metadata:
             closest = _find_closest_graph_idea(idea_id, db_ideas)
@@ -691,6 +715,15 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
     except ValueError:
         status = ManifestationStatus.NONE
 
+    # Lifecycle
+    lifecycle_str = metadata.get("lifecycle", "active") or "active"
+    try:
+        lifecycle = IdeaLifecycle(lifecycle_str)
+    except (ValueError, AttributeError):
+        lifecycle = IdeaLifecycle.ACTIVE
+
+    duplicate_of = metadata.get("duplicate_of") or None
+
     return Idea(
         id=idea_id,
         name=name,
@@ -702,6 +735,8 @@ def _derived_idea_for_id(idea_id: str) -> Idea:
         resistance_risk=resistance_risk,
         confidence=max(0.0, min(confidence, 1.0)),
         manifestation_status=status,
+        lifecycle=lifecycle,
+        duplicate_of=duplicate_of,
         interfaces=interfaces,
         open_questions=[],
         idea_type=idea_type,
