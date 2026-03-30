@@ -576,6 +576,18 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
     if not idea_id:
         return None
 
+    # DG-016 fix: do NOT retry structural prerequisite failures — retrying guaranteed to fail again.
+    # impl_branch_missing means the impl phase hasn't pushed a branch yet; retrying the test/
+    # code-review task immediately will hit the same gate and trigger another retry indefinitely.
+    error_category = task.get("error_category") or ""
+    _NO_RETRY_CATEGORIES = {"impl_branch_missing", "worktree_failed"}
+    if error_category in _NO_RETRY_CATEGORIES:
+        log.info(
+            "AUTO_RETRY skip — %s for %s has non-retriable error_category=%s (structural prerequisite)",
+            task_type, idea_id, error_category,
+        )
+        return None
+
     retry_count = int(context.get("retry_count", 0))
     if retry_count >= _MAX_RETRIES:
         log.info("AUTO_RETRY exhausted — %s for %s retried %d times, escalating", task_type, idea_id, retry_count)
@@ -617,19 +629,27 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
 
     task_type_enum = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
 
+    # DG-016 fix: carry impl_branch and pr_url forward so downstream phases don't
+    # lose the branch reference on retry.
+    retry_context: dict[str, Any] = {
+        "idea_id": idea_id,
+        "retry_count": retry_count + 1,
+        "retry_of": task.get("id", ""),
+        "failed_provider": failed_provider,
+        "exclude_provider": failed_provider,
+        "auto_retry_source": "pipeline_advance_service",
+        "executor": "federation",
+    }
+    if context.get("impl_branch"):
+        retry_context["impl_branch"] = context["impl_branch"]
+    if context.get("pr_url"):
+        retry_context["pr_url"] = context["pr_url"]
+
     try:
         created = agent_service.create_task(AgentTaskCreate(
             direction=direction,
             task_type=task_type_enum,
-            context={
-                "idea_id": idea_id,
-                "retry_count": retry_count + 1,
-                "retry_of": task.get("id", ""),
-                "failed_provider": failed_provider,
-                "exclude_provider": failed_provider,
-                "auto_retry_source": "pipeline_advance_service",
-                "executor": "federation",
-            },
+            context=retry_context,
         ))
         log.info(
             "AUTO_RETRY %s #%d for idea=%s (failed_provider=%s) → task=%s",
