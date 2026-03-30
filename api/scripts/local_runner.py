@@ -3664,6 +3664,12 @@ def _count_active_tasks() -> int:
 
 _MAX_RETRIES_PER_IDEA_PHASE = 2
 
+# Maximum tasks allowed per idea per phase. Once reached, the seeder stops
+# creating new tasks for that phase and adds the idea to the session skip cache.
+# Prevents unbounded duplication (e.g. 5.4x spec multiplication). Raise if
+# evidence shows phases legitimately need more attempts.
+MAX_TASKS_PER_PHASE = 3
+
 
 def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
     """Smart reap: diagnose why tasks are stuck, capture partial work, resume from checkpoint.
@@ -3955,14 +3961,13 @@ def _seed_task_from_open_idea() -> bool:
             if completed > 0:
                 completed_phases.add(phase)
 
-        # Cap: if any single phase has 10+ tasks, truly stuck — skip for THIS cycle
-        # but don't permanently orphan it. If all tasks are gone (reaper cleaned up),
-        # reset to none so we can start fresh next cycle.
+        # Cap: if any single phase has >= MAX_TASKS_PER_PHASE tasks, truly stuck —
+        # add to session skip cache so it is not retried within this runner process.
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
         total_tasks = sum(phase_counts.values())
-        if max_phase_tasks >= 10:
-            log.info("SEED: idea '%s' truly stuck (%d tasks in one phase) — skipping this session",
-                     idea_name[:30], max_phase_tasks)
+        if max_phase_tasks >= MAX_TASKS_PER_PHASE:
+            log.warning("SEED: idea '%s' phase-capped — will not retry this session",
+                        idea_name[:30])
             _SEEDER_SKIP_CACHE.add(idea_id)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
@@ -4078,6 +4083,20 @@ def _seed_task_from_open_idea() -> bool:
             log.info("SPEC_GATE idea='%s' -- impl but no quality spec, re-seeding as spec",
                      idea_name[:30])
             task_type = "spec"
+
+    # ── R1: Completed-phase guard — skip if this phase already fully completed ──
+    if isinstance(idea_tasks, dict) and _phase_fully_completed(idea_tasks, task_type):
+        log.info("SEED: skipping %s for %s — already completed", task_type, idea_id)
+        return _seed_task_from_open_idea()  # try next idea
+
+    # ── R2: Per-phase cap guard — skip if MAX_TASKS_PER_PHASE reached ──
+    if isinstance(idea_tasks, dict):
+        phase_task_count = phase_counts.get(task_type, 0)
+        if phase_task_count >= MAX_TASKS_PER_PHASE:
+            log.warning("SEED: capping %s for %s (%d tasks exist, limit %d)",
+                        task_type, idea_id, phase_task_count, MAX_TASKS_PER_PHASE)
+            _SEEDER_SKIP_CACHE.add(idea_id)
+            return _seed_task_from_open_idea()  # try next idea
 
     # ── Failure memory: inject previous failure outputs into retry direction ──
     failure_context = ""
