@@ -180,9 +180,10 @@ Providers are assigned by the `select_provider()` capability gate:
 | DG-009 | 2026-03-29 | FIXED | Exponential backoff using _SEEDER_SKIP_CACHE: permanently blacklisted ideas |
 | DG-010 | 2026-03-30 | OPEN | Circuit breaker counts seeder-logic failures (impl_branch_missing) as provider failures |
 | DG-011 | 2026-03-30 | OPEN | Test tasks for wrong phase consume worker slots before circuit breaker trips |
-| DG-012 | 2026-03-30 | OPEN | Seeder does not verify impl_branch exists before seeding test phase |
+| DG-012 | 2026-03-30 | FIXED | `impl_branch` never propagated to test tasks — set in impl task context immediately after branch push in runner, and forwarded by `pipeline_advance_service.maybe_advance()` to downstream tasks. PR creation failure no longer blocks phase advancement. |
 | DG-013 | 2026-03-30 | FIXED | Global _REPO_DIR mutated by worker thread, race condition breaks all subsequent worktree creation in parallel mode |
 | DG-014 | 2026-03-30 | FIXED | Evidence check used fuzzy full-text GitHub PR search — spec/doc PRs mentioning idea names marked them as "implemented", blocking them from ever being seeded for impl |
+| DG-015 | 2026-03-30 | FIXED | `error_category` and `error_summary` never persisted — API router received them but didn't pass to `update_task()`, service didn't accept them, store didn't write them, `_row_to_payload` didn't load them. All 4 broken links fixed. |
 
 ---
 
