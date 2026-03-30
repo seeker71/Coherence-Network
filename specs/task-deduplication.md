@@ -1,278 +1,343 @@
-# Spec: Task Deduplication in the Pipeline Seeder
+# Spec: Task Deduplication — Never Create Duplicate Tasks for the Same Idea+Phase
 
 ## Purpose
 
-The pipeline seeder is creating an average of 5.4 spec tasks per idea against an expected ratio
-of 1. With 799 spec tasks for 147 ideas, roughly 52% of pipeline capacity is being burned on
-duplicate work that produces no additional signal. Three root causes combine: the seed check only
-skips ideas that have *active* (pending/running) tasks — not completed ones — so a successfully
-completed spec phase immediately becomes eligible to receive a second spec task on the next poll;
-when a spec task completes with hollow output and the phase does not advance, the condition above
-triggers again; and two concurrent workers can both observe the same pending task as unclaimed
-before either acquires the lock, resulting in a double-claim. This spec closes all three gaps by
-adding a completed-phase guard, a per-phase task cap, and a cross-session stuck-detection
-escalation path.
+The pipeline creates far too many tasks per idea. With 799 spec tasks across 147 ideas
+(5.4 per idea average), most ideas have redundant work burning ~52% of pipeline capacity.
+
+**Root causes:**
+
+1. **Seeder in `local_runner.py`** checks for active (pending/running) tasks but not completed
+   ones. A successfully completed spec task makes the idea eligible for a *second* spec task on
+   the next poll.
+
+2. **Pipeline advance hook** (`pipeline_advance_service.py:maybe_advance()`) checks for
+   pending/running tasks of the next phase but not completed tasks. If `impl` already completed,
+   it can create a duplicate `impl` task when a redundant spec completes.
+
+3. **Idea-to-task bridge** (`scripts/idea_to_task_bridge.py`) relies on `idea.stage` which may
+   be stale, and has no task-history check at all.
+
+4. **No per-phase retry cap.** A failing task can be retried indefinitely within the global retry
+   budget, spawning many tasks for the same idea+phase.
+
+This spec closes all four gaps with a unified dedup gate and a hard cap of 2 retries per
+idea+phase combination.
+
+## Current State
+
+### Task creation entry points
+
+| Entry Point | File | Dedup Today |
+|---|---|---|
+| Seeder | `api/scripts/local_runner.py` `_seed_task_from_open_idea()` | Checks active only, not completed |
+| Auto-advance | `api/app/services/pipeline_advance_service.py:maybe_advance()` | Checks pending/running only |
+| Auto-retry | `api/app/services/pipeline_advance_service.py:_maybe_auto_retry()` | Checks pending/running only |
+| Bridge | `scripts/idea_to_task_bridge.py:run_cycle()` | None — only global capacity |
+| Manual API | `POST /api/agent/tasks` | Fingerprint-only (optional) |
+
+### Phase sequence (canonical)
+
+`spec → impl → test → code-review → deploy → verify-production`
+
+### Task statuses
+
+`pending`, `running`, `completed`, `failed`, `timed_out`, `needs_decision`
 
 ## Requirements
 
-- [ ] R1 — Before seeding any new task for a phase, call `_phase_fully_completed` against the
-      fetched `idea_tasks_payload`. If it returns `True`, skip seeding that phase for this idea
-      during this poll cycle. Log at `INFO` level: `SEED: skipping <phase> for <idea_id> — already completed`.
-- [ ] R2 — Introduce a module-level constant `MAX_TASKS_PER_PHASE = 3`. Before seeding, count all
-      tasks for the target phase (all statuses). If the count is `>= MAX_TASKS_PER_PHASE`, skip
-      seeding and log at `WARNING` level:
-      `SEED: capping <phase> for <idea_id> (<N> tasks exist, limit <MAX>)`.
-- [ ] R3 — Change the stuck-detection threshold from `>= 10` (session-only skip) to `>= MAX_TASKS_PER_PHASE`.
-      Permanently add the idea to `_SEEDER_SKIP_CACHE` for the session when the cap is hit, so it
-      is not retried within the same runner process. Log at `WARNING` level:
-      `SEED: idea '<name>' phase-capped — will not retry this session`.
-- [ ] R4 — The `MAX_TASKS_PER_PHASE` constant must be defined near the top of the seeder section
-      (above `_seed_task_from_open_idea`) so it is easy to locate and tune without searching.
-- [ ] R5 — The completed-phase guard (R1) must execute *before* the per-phase cap guard (R2) in
-      code order, so a legitimately completed phase is reported as "already completed" rather than
-      "capped". This distinction matters for log triage.
-- [ ] R6 — No existing behaviour for ideas that have *zero* tasks for a phase may be broken:
-      ideas at their first poll must still receive a spec task normally.
-- [ ] R7 — The hollow-output path (task completes but phase does not advance) must be covered by
-      the cap guard (R2): after `MAX_TASKS_PER_PHASE` hollow attempts the idea is session-skipped
-      so a human can investigate rather than the pipeline spinning indefinitely.
+- [ ] R1 — Create `check_idea_phase_history(idea_id, phase)` in new `api/app/services/task_dedup_service.py`.
+      Returns `IdeaPhaseHistory` dataclass with `completed_count`, `failed_count`, `active_count`,
+      `total_count`, `latest_completed_task`, `should_skip` (True if completed >= 1),
+      `retry_budget_left` (max(0, MAX_RETRIES_PER_PHASE - failed_count)).
+      Constants: `MAX_RETRIES_PER_PHASE = 2`, `MAX_TASKS_PER_PHASE = 3`.
 
-## Research Inputs (Required)
+- [ ] R2 — In `local_runner.py:_seed_task_from_open_idea()`, after fetching `idea_tasks_payload`:
+      (a) Call `_phase_fully_completed()` — if True, skip with log `SEED: skipping <phase> for <idea_id> — already completed`.
+      (b) Count total tasks for phase; if >= MAX_TASKS_PER_PHASE, skip with log `SEED: capping <phase> for <idea_id> (<N> tasks exist, limit <MAX>)` and add to `_SEEDER_SKIP_CACHE`.
+      (c) Replace hardcoded `>= 10` stuck threshold with `>= MAX_TASKS_PER_PHASE`.
+      (d) Define `MAX_TASKS_PER_PHASE = 3` as module-level constant above `_seed_task_from_open_idea`.
+      (e) Completed-phase guard must execute before cap guard in code order.
+      (f) Ideas with zero tasks must still receive a task normally.
 
-- `2026-03-28` - Live task database (799 spec tasks / 147 ideas) — direct evidence of 5.4x
-  multiplication confirming the bug scope
-- `2026-03-28` - `api/scripts/local_runner.py` lines 1401-1413 — `_phase_fully_completed`
-  implementation; confirmed it returns `True` only when `completed > 0` and no pending/running/
-  failed/needs_decision tasks remain
-- `2026-03-28` - `api/scripts/local_runner.py` lines 3584-3683 — `_seed_task_from_open_idea`
-  implementation; confirmed the seeder does not call `_phase_fully_completed` before emitting a
-  new spec task; confirmed `_SEEDER_SKIP_CACHE` is session-scoped only; confirmed stuck threshold
-  is hardcoded at `>= 10` separate from any cap constant
+- [ ] R3 — In `pipeline_advance_service.py:maybe_advance()`, before creating next-phase task:
+      call `check_idea_phase_history(idea_id, next_phase)`. If `should_skip`, skip and check
+      the phase after that (skip-ahead). If `active_count > 0`, return None. If
+      `retry_budget_left <= 0` and `completed_count == 0`, escalate to `needs-decision`.
 
-## Task Card (Required)
+- [ ] R4 — In `pipeline_advance_service.py:_maybe_auto_retry()`, before creating retry task:
+      call `check_idea_phase_history(idea_id, current_phase)`. If `should_skip`, do not retry.
+      If `retry_budget_left <= 0`, escalate to `needs-decision`. If `active_count > 0`, skip.
 
-```yaml
-goal: >
-  Prevent the seeder from creating duplicate tasks for a phase that has already completed or
-  has reached the MAX_TASKS_PER_PHASE cap, eliminating the 5.4x spec multiplication.
-files_allowed:
-  - api/scripts/local_runner.py
-done_when:
-  - MAX_TASKS_PER_PHASE = 3 constant is defined above _seed_task_from_open_idea
-  - _phase_fully_completed is called before seeding; matching log line emitted when True
-  - per-phase task count is checked against MAX_TASKS_PER_PHASE; capping log emitted when hit
-  - stuck-detection threshold changed from >= 10 to >= MAX_TASKS_PER_PHASE
-  - existing ideas with zero tasks for a phase still receive a spec task on first poll
-  - all five verification scenarios in this spec pass without manual intervention
-commands:
-  - grep -n "MAX_TASKS_PER_PHASE" api/scripts/local_runner.py
-  - grep -n "_phase_fully_completed" api/scripts/local_runner.py
-  - python3 -c "import ast, sys; ast.parse(open('api/scripts/local_runner.py').read()); print('syntax OK')"
-constraints:
-  - Do NOT modify _phase_fully_completed logic — the function is correct, only its call site is missing
-  - Do NOT change task statuses or outputs
-  - Do NOT alter any other seeder logic outside lines 3650-3690 and the new constant definition
-  - MAX_TASKS_PER_PHASE must be a single integer constant, not computed dynamically
-```
+- [ ] R5 — In `idea_to_task_bridge.py`, replace `determine_task_type()` to use live task history
+      from `GET /api/ideas/{id}/tasks` instead of stale `idea.stage`. Walk the phase sequence
+      forward, skipping completed phases. If all phases complete, skip idea entirely. If chosen
+      phase has MAX_RETRIES_PER_PHASE+ failures with no completion, skip (needs human).
 
-## API Contract
+- [ ] R6 — Extend `GET /api/ideas/{id}/tasks` response to include `phase_summary` dict keyed
+      by phase name, each value containing `completed`, `failed`, `active`, `should_skip`,
+      `retry_budget_left`. Add `PhaseSummary` model to `api/app/models/idea.py`.
 
-N/A - no API contract changes in this spec.
+- [ ] R7 — When skip-ahead occurs (R3), propagate context from the completed task of the
+      skipped phase: `impl_branch`, spec file path, `pr_number`. Create `build_skip_context()`
+      in `task_dedup_service.py`.
 
-## Data Model
-
-N/A - no model changes in this spec.
+- [ ] R8 — For auto-advance and auto-retry tasks, set `context.task_fingerprint` to
+      `{idea_id}:{phase}:auto` to prevent concurrent duplicate creation via the existing
+      fingerprint dedup in `agent_service_crud.py`.
 
 ## Files to Create/Modify
 
-- `api/scripts/local_runner.py` — two change sites:
-  1. New constant `MAX_TASKS_PER_PHASE = 3` inserted above the `_seed_task_from_open_idea`
-     function definition (near line 3583).
-  2. Seeder body (~lines 3654-3684): add completed-phase guard (R1) and per-phase cap guard (R2)
-     immediately after the `idea_tasks` payload is fetched and `phase_counts` is populated, before
-     the `task_type` assignment block. Replace the hardcoded `>= 10` stuck threshold with
-     `>= MAX_TASKS_PER_PHASE`.
+- `api/app/services/task_dedup_service.py` — **Create**: `check_idea_phase_history()`, `build_skip_context()`, `MAX_RETRIES_PER_PHASE`, `MAX_TASKS_PER_PHASE` constants
+- `api/scripts/local_runner.py` — Modify: add completed-phase guard + cap guard to `_seed_task_from_open_idea()` (R2)
+- `api/app/services/pipeline_advance_service.py` — Modify: gate `maybe_advance()` (R3) and `_maybe_auto_retry()` (R4) with dedup checks; add deterministic fingerprint (R8)
+- `api/app/services/agent_service_list.py` — Modify: add `phase_summary` to `list_tasks_for_idea()` (R6)
+- `api/app/models/idea.py` — Modify: add `PhaseSummary` model, update `IdeaTasksResponse` (R6)
+- `scripts/idea_to_task_bridge.py` — Modify: add dedup gate, fix `determine_task_type()` to use task history (R5)
+- `api/tests/test_task_dedup_service.py` — **Create**: unit tests for dedup gate and context propagation
+
+## Data Model Changes
+
+### New Pydantic model in `api/app/models/idea.py`
+
+```python
+class PhaseSummary(BaseModel):
+    """Per-phase task summary for dedup visibility."""
+    completed: int = 0
+    failed: int = 0
+    active: int = 0
+    should_skip: bool = False
+    retry_budget_left: int = 2
+```
+
+No database schema changes — dedup operates on the existing task store by querying task lists
+filtered by `context.idea_id` and `task_type`.
 
 ## Acceptance Tests
 
-The following scenarios are concrete and independently executable. "Poll" means one full execution
-of `_seed_task_from_open_idea`. `$API` is the base URL of the running API (e.g.,
-`http://localhost:8000`). `$IDEA` is the UUID of the test idea created in setup.
+### Scenario 1: Completed spec phase is not re-seeded
 
-### Scenario 1 — Completed spec phase is not re-seeded
+**Setup**: Idea `test-dedup-A` exists with one `spec` task in `completed` status, no other tasks.
 
-Setup: One idea exists with exactly one spec task in `completed` status and no other tasks.
-
-Action: Trigger one seeder poll that selects this idea.
-
-Expected:
-- No new task is created for the idea.
-- Log contains: `SEED: skipping spec for <IDEA_ID> — already completed`
-- `GET $API/api/ideas/$IDEA/tasks` returns a total task count of 1 (unchanged).
-
-Edge: If the completed task's output is later deleted (task count drops to 0), the idea must
-become eligible again on the next poll (existing orphan-reset logic handles this).
-
-### Scenario 2 — Per-phase cap prevents a fourth spec task
-
-Setup: One idea exists with exactly 3 spec tasks in any mix of `pending`, `failed`, and
-`completed` statuses, none of which satisfy `_phase_fully_completed` (e.g., 2 failed + 1 pending).
-
-Action: Trigger one seeder poll that selects this idea.
-
-Expected:
-- No new task is created.
-- Log contains: `SEED: capping spec for <IDEA_ID> (3 tasks exist, limit 3)`
-- `GET $API/api/ideas/$IDEA/tasks` still shows total = 3.
-
-Edge: An idea with only 2 spec tasks (all failed) must still be eligible to receive a third task
-on the next poll.
-
-### Scenario 3 — Hollow output does not produce unbounded retries
-
-Setup: One idea has `MAX_TASKS_PER_PHASE` (3) spec tasks all in `completed` status but with
-outputs shorter than the minimum meaningful length (hollow), so `_phase_fully_completed` returns
-`False` due to business-logic output validation being absent from that function. Phase has not
-advanced to `test`.
-
-Action: Trigger one seeder poll that selects this idea.
-
-Expected:
-- The per-phase cap guard fires before a 4th task is created.
-- The idea is added to `_SEEDER_SKIP_CACHE`.
-- Log contains the capping warning for this idea.
-- On the *next* seeder poll in the same runner process, the idea is not selected (it is in the
-  skip cache).
-
-### Scenario 4 — New ideas are unaffected (first poll creates spec task normally)
-
-Setup: One idea exists with zero tasks (just created via `POST /api/ideas`).
-
-Action: Trigger one seeder poll that selects this idea.
-
-Expected:
-- Exactly one spec task is created.
-- `GET $API/api/ideas/$IDEA/tasks` returns total = 1, task_type = `spec`, status = `pending`.
-- No capping or skipping log line is emitted for this idea.
-
-### Scenario 5 — Task list cap is observable via the API
-
-Setup: After running enough polls to exercise the cap, query task history for any idea that
-triggered the cap guard during this session.
-
-Action:
+**Action**:
+```bash
+curl -s "$API/api/ideas/test-dedup-A/tasks" | jq '.phase_summary.spec'
 ```
-curl -s "$API/api/ideas/$IDEA/tasks" | jq '.groups[] | select(.task_type=="spec") | .count'
+**Expected**: `{"completed": 1, "failed": 0, "active": 0, "should_skip": true, "retry_budget_left": 2}`
+
+**Action**: Trigger one seeder poll selecting this idea.
+**Expected**:
+- No new spec task created.
+- Log: `SEED: skipping spec for test-dedup-A — already completed`
+- `GET $API/api/ideas/test-dedup-A/tasks` returns total = 1 (unchanged).
+
+**Edge**: If the completed task is later patched to `failed`, the idea becomes eligible for
+a new spec task on the next poll.
+
+### Scenario 2: Auto-advance skips already-completed phase
+
+**Setup**: Idea `test-dedup-B` has completed `spec` + completed `impl` tasks. A redundant
+spec task completes.
+
+**Action**:
+```bash
+curl -s -X PATCH "$API/api/agent/tasks/$TASK_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "completed", "output": "Spec written at specs/test-dedup-B.md"}'
 ```
 
-Expected:
-- The returned count is `<= MAX_TASKS_PER_PHASE` (3).
-- The count is never 4 or higher for any single phase across any idea in the database after
-  this fix is deployed.
+**Expected**: The advance hook skips `impl` (already completed) and creates a `test` task
+instead. Log: `AUTO_ADVANCE skip — impl already completed for test-dedup-B, advancing to test`
 
-## Concurrency Behavior
+The new test task's context includes `impl_branch` from the completed impl task.
 
-- The completed-phase guard and cap guard both read from the `GET /api/ideas/{id}/tasks` payload
-  fetched once per seeder poll. This is a single point-in-time read; two workers may both pass
-  the guard if they fetch simultaneously and each sees a count of 2 against a cap of 3.
-- This spec does not introduce a distributed lock. The cap of 3 is chosen to be tolerant of one
-  race collision per phase: even if two workers both create a task simultaneously when count = 2,
-  the resulting count of 4 is bounded and far below the previous unbounded growth.
-- True atomic claim prevention (advisory locking at the DB layer) is out of scope for this spec
-  and tracked as a follow-up.
+**Edge**: If all downstream phases are completed, advance does nothing and logs:
+`AUTO_ADVANCE skip — all phases completed for test-dedup-B`
+
+### Scenario 3: Retry budget exhausted after 2 failures
+
+**Setup**: Idea `test-dedup-C` has 2 failed `impl` tasks (no completed impl, no active impl).
+
+**Action**: A third `impl` task fails:
+```bash
+curl -s -X PATCH "$API/api/agent/tasks/$TASK_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "failed", "output": "Build error", "error_category": "execution_error"}'
+```
+
+**Expected**: Auto-retry does NOT create a 4th impl task. Log:
+`AUTO_RETRY exhausted — impl for test-dedup-C has 2 prior failures, max retries reached`
+
+**Verify**:
+```bash
+curl -s "$API/api/ideas/test-dedup-C/tasks" | jq '.phase_summary.impl'
+```
+Returns: `{"completed": 0, "failed": 3, "active": 0, "should_skip": false, "retry_budget_left": 0}`
+
+**Edge**: `timed_out` status counts toward the retry budget equally with `failed`.
+
+### Scenario 4: Per-phase cap prevents unbounded task creation
+
+**Setup**: Idea `test-dedup-D` has 3 spec tasks (2 failed + 1 pending), none completed.
+
+**Action**: Trigger seeder poll selecting this idea.
+
+**Expected**:
+- No new task created.
+- Log: `SEED: capping spec for test-dedup-D (3 tasks exist, limit 3)`
+- Idea added to `_SEEDER_SKIP_CACHE`.
+
+**Verify**:
+```bash
+curl -s "$API/api/ideas/test-dedup-D/tasks" | jq '.groups[] | select(.task_type=="spec") | .count'
+```
+Returns: `3` (not 4+).
+
+**Edge**: An idea with only 2 spec tasks (all failed) is still eligible for a 3rd task.
+
+### Scenario 5: Bridge uses task history instead of stale stage
+
+**Setup**: Idea `test-dedup-E` has `stage=none` (stale) but a completed spec task exists.
+
+**Action**:
+```bash
+python scripts/idea_to_task_bridge.py --dry-run 2>&1 | grep -i "test-dedup-E"
+```
+
+**Expected**: If selected, bridge creates an `impl` task (not a second `spec`). Log includes:
+`spec already completed for test-dedup-E, advancing to impl`
+
+**Edge**: If both `spec` and `impl` are completed, bridge skips to `test`. If all phases done,
+bridge skips this idea entirely.
+
+### Scenario 6: Context propagation on skip-ahead (create-read cycle)
+
+**Setup**: Idea `test-dedup-F` has:
+- Completed `spec` task with `context.spec_file = "specs/test-dedup-F.md"`
+- Completed `impl` task with `context.impl_branch = "feat/test-dedup-F"`
+
+A new spec task completes, triggering advance.
+
+**Action**: Advance hook skips `impl` and creates a `test` task.
+
+**Verify**:
+```bash
+curl -s "$API/api/agent/tasks/$NEW_TEST_TASK_ID" | jq '.context'
+```
+
+**Expected**:
+```json
+{
+  "idea_id": "test-dedup-F",
+  "impl_branch": "feat/test-dedup-F",
+  "auto_advance_source": "spec → test (skipped impl)"
+}
+```
+
+**Edge**: If the completed impl task has no `impl_branch` in context, the test task is still
+created but the log includes a warning: `"impl_branch missing from completed impl for test-dedup-F"`.
+
+### Scenario 7: Error handling — non-existent idea
+
+**Action**:
+```bash
+curl -s "$API/api/ideas/nonexistent-idea/tasks"
+```
+
+**Expected**: HTTP 404 with error message.
+
+Internal call to `check_idea_phase_history("nonexistent-idea", "spec")` returns
+`IdeaPhaseHistory` with all zeros — does not raise exception (fail-open for unknown ideas).
 
 ## Verification
 
-Before marking this spec implemented, run the following:
+Before marking this spec implemented, run:
 
 ```bash
-# 1. Syntax check — no regressions introduced
-python3 -c "import ast, sys; ast.parse(open('api/scripts/local_runner.py').read()); print('syntax OK')"
+# 1. Syntax check — new service module parses
+python3 -c "import ast; ast.parse(open('api/app/services/task_dedup_service.py').read()); print('OK')"
 
-# 2. Constant exists
-grep -n "MAX_TASKS_PER_PHASE" api/scripts/local_runner.py
+# 2. Constants exist
+grep -n "MAX_TASKS_PER_PHASE\|MAX_RETRIES_PER_PHASE" api/app/services/task_dedup_service.py
 
-# 3. _phase_fully_completed is called in the seeder (must show >= 2 lines: definition + call site)
-grep -n "_phase_fully_completed" api/scripts/local_runner.py
+# 3. Dedup gate called in advance hook
+grep -n "check_idea_phase_history" api/app/services/pipeline_advance_service.py
 
-# 4. Old hardcoded threshold is gone
-grep -n ">= 10" api/scripts/local_runner.py
-# Expected: no matches inside _seed_task_from_open_idea (only outside if used elsewhere)
+# 4. Dedup gate called in seeder
+grep -n "MAX_TASKS_PER_PHASE\|_phase_fully_completed" api/scripts/local_runner.py
+
+# 5. Phase summary in API response
+curl -s "$API/api/ideas/test-dedup-A/tasks" | jq '.phase_summary'
+
+# 6. Existing tests pass
+cd api && python -m pytest tests/test_task_dedup_service.py -v
 ```
 
-For Scenario 1 and Scenario 4, use the staging environment or a local runner invocation with a
-test idea. Verify via API call and runner log tail (`tail -f runner.log | grep SEED`).
+## Concurrency Behavior
+
+- The dedup gate reads from `GET /api/ideas/{id}/tasks` (point-in-time snapshot). Two workers
+  may both pass the check simultaneously.
+- **R8 (fingerprint)** closes this gap: `task_fingerprint = "{idea_id}:{phase}:auto"` causes
+  the second concurrent `create_task()` to return the existing task instead of creating a
+  duplicate.
+- `MAX_TASKS_PER_PHASE = 3` provides an additional backstop.
+- True distributed locking is out of scope (follow-up).
 
 ## Out of Scope
 
-- Distributed advisory locking to prevent true simultaneous double-claim across two parallel
-  workers — follow-up task.
+- Distributed advisory locking (`pg_try_advisory_lock`) to prevent true simultaneous double-claim
+  across parallel workers — follow-up task.
 - Purging or archiving existing duplicate tasks already in the database — separate ops task.
 - Tuning `MAX_TASKS_PER_PHASE` dynamically per idea type or work type — future enhancement.
 - Changes to `_phase_fully_completed` logic — the function is correct as written.
-- Changes to the `review`, `impl`, `test`, or `merge` phase seeding paths beyond the new guards
-  which apply uniformly to all phases.
-- Any web UI or API surface changes.
+- Any web UI changes (dashboard progress bars, etc.).
+- Cross-idea semantic deduplication (detecting two ideas describing the same feature).
 
 ## Risks and Assumptions
 
-- **Risk — false cap on legitimately retried phases**: If a phase genuinely needs more than 3
-  attempts (e.g., 3 sequential provider failures followed by a real attempt), the cap blocks it.
-  Mitigation: the session-skip is process-scoped only; restarting the runner resets the skip
-  cache, allowing manual re-enable. The cap of 3 can be raised via the constant with a single
-  commit if evidence emerges that 3 is too low.
-- **Risk — `_phase_fully_completed` returns `False` for hollow completions**: The function checks
-  status fields but not output quality. A phase with 3 hollow-completed tasks passes the status
-  check (`completed > 0`, others zero) and would return `True`, causing the seeder to skip rather
-  than flag as stuck. This is actually the correct behaviour — the phase is "done" even if poorly.
-  If output quality gating is needed, it is a separate spec.
-- **Assumption — `idea_tasks_payload` returned by `GET /api/ideas/{id}/tasks` is the canonical
-  source of truth for phase state**: If the endpoint caches stale data, guards based on it will
-  make decisions on stale state. Assumed to be live as of the current codebase.
-- **Assumption — the seeder runs as a single process per environment**: If multiple runner
-  processes share the same API, `_SEEDER_SKIP_CACHE` is not shared between them. The cap guard
-  still bounds total tasks; only the session-skip optimisation is lost. Acceptable for current
-  single-runner deployment.
-- **Assumption — `MAX_TASKS_PER_PHASE = 3` is sufficient headroom**: Based on observed pipeline
-  behaviour where a spec phase rarely needs more than one successful attempt and failures are
-  retried at most once or twice before human review is warranted.
+### Risks
+
+1. **False cap on retried phases**: If a phase genuinely needs 3+ attempts (e.g., sequential
+   provider failures), the cap blocks it. Mitigation: `MAX_TASKS_PER_PHASE = 3` is a session-
+   scoped backstop; restarting the runner resets `_SEEDER_SKIP_CACHE`. The retry budget of 2
+   can be raised with a one-line constant change.
+
+2. **Hollow completion trap**: A phase with a completed task whose output is hollow passes
+   `should_skip = True`, preventing re-seeding even though advance never fired. Mitigation:
+   this is correct behavior — the existing advance-hook output validation catches hollow
+   completions separately. If a hollow task is stuck, operators can PATCH it to `failed` to
+   re-enable seeding.
+
+3. **Performance**: `check_idea_phase_history()` scans all tasks for an idea. Current task
+   count (<1000) makes this negligible. At 10k+ tasks, add an index on `(idea_id, task_type)`.
+
+4. **Skip-ahead context loss**: If the completed task for a skipped phase has incomplete
+   context (e.g., missing `impl_branch`), downstream tasks may fail. Mitigation: log warning
+   and proceed — the downstream task will fail at its own validation and escalate normally.
+
+### Assumptions
+
+- The task store is queryable by `idea_id` via `list_tasks_for_idea()`.
+- `MAX_RETRIES_PER_PHASE = 2` and `MAX_TASKS_PER_PHASE = 3` are reasonable defaults.
+- All task creation flows go through the five entry points listed above.
+- Phase sequence is stable and will not change during implementation.
+- The seeder runs as a single process per environment.
 
 ## Known Gaps and Follow-up Tasks
 
-- **Follow-up**: Implement a distributed advisory lock (PostgreSQL `pg_try_advisory_lock` or
-  equivalent) to prevent the race window identified in the Concurrency Behavior section. This
-  eliminates the residual 4-task edge case under concurrent workers.
-- **Follow-up**: Write an ops script (`scripts/dedup_tasks.py`) to collapse the existing 799
-  duplicate spec tasks down to the canonical one per idea. The fix only prevents future
-  duplication; historical duplicates remain.
-- **Follow-up**: Add a Prometheus / structured-log metric counter `seeder_phase_capped_total`
-  labelled by `phase` so the ops dashboard surfaces cap events without log scraping.
-- **Gap**: `MAX_TASKS_PER_PHASE` applies equally to all phases. Some phases (e.g., `merge`) are
-  by nature one-shot and could warrant a cap of 1. A per-phase cap map is deferred pending
-  evidence of merge duplication.
+- **Distributed advisory lock**: `pg_try_advisory_lock` or equivalent to prevent the race window under concurrent workers. Eliminates the residual 4-task edge case.
+- **Historical cleanup script**: `scripts/dedup_tasks.py` to collapse existing 799 duplicate spec tasks. This spec only prevents future duplication.
+- **Dashboard integration**: `phase_summary` is API-only. A follow-up adds per-idea progress bars to the web UI.
+- **Per-phase cap map**: Some phases (e.g., `merge`, `deploy`) are one-shot and could have `MAX_TASKS_PER_PHASE = 1`. Deferred pending evidence.
+- **Metrics**: Add `seeder_phase_capped_total` and `advance_phase_skipped_total` counters for pipeline observability.
 
-## Failure/Retry Reflection
+## Measuring Success
 
-- **Failure mode**: Runner log shows `SEED: skipping spec for X — already completed` but the
-  idea never advances to `test`.
-- **Blind spot**: `_phase_fully_completed` returned `True` for a task whose output did not meet
-  the quality bar for phase advancement; the auto-advance hook never fired; now the seeder also
-  won't re-try because it sees "completed".
-- **Next action**: Inspect the completed spec task output via
-  `GET /api/agent/tasks?idea_id=<X>&status=completed`. If output is hollow, manually PATCH the
-  task status to `failed` and restart the runner — the seeder will see no completed tasks and
-  re-seed.
+| Metric | Before (baseline) | Target | How to measure |
+|---|---|---|---|
+| Tasks per idea (mean) | 5.4 | < 2.0 | `GET /api/ideas` → sum tasks / count ideas |
+| Duplicate spec tasks (new) | ~4/day | 0 | Count spec tasks per idea where completed > 1 |
+| Retry-exhausted escalations | 0 (infinite retries) | > 0 visible | Count ideas with needs-decision + retry-exhausted |
+| Phase skip-aheads | 0 | > 0 | Log grep: `"already completed.*advancing"` |
 
-- **Failure mode**: Per-phase cap fires on an idea that legitimately needs a 4th attempt after
-  3 infrastructure failures.
-- **Blind spot**: The cap is applied regardless of failure reason; provider outages count against
-  the budget.
-- **Next action**: Raise `MAX_TASKS_PER_PHASE` to 5 in a one-line commit, or manually add the
-  idea to `_SEEDER_SKIP_CACHE` reset by restarting the runner.
-
-## Decision Gates (if any)
-
-- **Threshold value**: `MAX_TASKS_PER_PHASE = 3` was chosen based on current observed data (5.4x
-  duplication). If the pipeline team believes 3 is too restrictive for any active work type,
-  raise to 5 before implementation. No architectural changes required — just the constant value.
-  Owner: pipeline lead. Must be decided before implementation begins.
+Track weekly for 2 weeks post-deploy. If tasks/idea drops below 2.0, feature is working.
