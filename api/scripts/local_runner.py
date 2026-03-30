@@ -1526,33 +1526,60 @@ def _has_any_tasks_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> 
 
 
 def _check_existing_evidence(idea_id: str) -> tuple[str, str] | None:
-    """Check if an idea is already implemented on main by searching merged PRs and commits.
+    """Check if an idea is already IMPLEMENTED on main.
 
-    Returns (pr_or_sha, evidence_type) if found, None if not.
+    DG-014 fix: requires implementation-specific evidence only.
+    A spec PR or any PR that merely MENTIONS the idea_id is NOT evidence of
+    implementation — it causes false positives (ideas marked validated and never
+    implemented).
+
+    Valid evidence:
+    1. Merged PR whose HEAD branch follows agent impl conventions:
+       worker/impl/<idea_id>/..., task/<slug> containing idea_id, codex/<idea_id>
+    2. A commit on main with message starting with `impl(<idea_id>):` (the runner's
+       commit format for implementation tasks).
+
+    NOT valid evidence: any PR whose body/title/diff mentions the idea_id string
+    (this matches spec PRs, doc PRs, etc. and produces false positives).
     """
-    cwd = str(_REPO_DIR)
+    # Use _ORIGINAL_REPO_DIR (DG-013: _REPO_DIR may be a worktree in parallel mode)
+    cwd = str(_ORIGINAL_REPO_DIR)
 
-    # 1. Search for merged PRs mentioning this idea_id
+    # 1. Search for merged PRs with agent impl branch patterns
+    # Filter: only PRs whose head branch looks like an agent impl branch.
+    # Spec PRs (e.g. claude/funny-bhaskara) must NOT match.
+    _IMPL_BRANCH_PREFIXES = ("worker/impl/", "worker/test/", f"codex/{idea_id}", f"task/")
     try:
         result = subprocess.run(
             ["gh", "pr", "list", "--state", "merged", "--search", idea_id,
-             "--json", "number,mergedAt", "--limit", "5"],
+             "--json", "number,mergedAt,headRefName", "--limit", "10"],
             capture_output=True, text=True, timeout=15, cwd=cwd,
             shell=(sys.platform == "win32"),
         )
         if result.returncode == 0 and result.stdout.strip():
             prs = json.loads(result.stdout)
-            if prs:
-                # Pick most recently merged
-                prs.sort(key=lambda p: p.get("mergedAt", ""), reverse=True)
-                return (str(prs[0]["number"]), "merged" if len(prs) == 1 else f"merged({len(prs)})")
+            # Filter to only agent implementation branches
+            impl_prs = [
+                p for p in prs
+                if any(
+                    str(p.get("headRefName", "")).startswith(prefix)
+                    for prefix in _IMPL_BRANCH_PREFIXES
+                )
+            ]
+            if impl_prs:
+                impl_prs.sort(key=lambda p: p.get("mergedAt", ""), reverse=True)
+                n = len(impl_prs)
+                return (str(impl_prs[0]["number"]), "merged" if n == 1 else f"merged({n})")
     except Exception as e:
         log.debug("EVIDENCE_CHECK gh pr failed for %s: %s", idea_id, e)
 
-    # 2. Search for commits on main mentioning this idea_id
+    # 2. Search for impl-specific commits on main.
+    # Require message to start with "impl(<idea_id>):" — the runner's commit format.
+    # This excludes spec(), docs(), fix() commits that mention the idea in passing.
     try:
         result = subprocess.run(
-            ["git", "log", "origin/main", "--oneline", "--grep", idea_id, "-3"],
+            ["git", "log", "origin/main", "--oneline",
+             "--grep", f"^impl({idea_id}):", "-3"],
             capture_output=True, text=True, timeout=10, cwd=cwd,
         )
         if result.returncode == 0 and result.stdout.strip():
