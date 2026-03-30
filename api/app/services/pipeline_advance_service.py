@@ -517,17 +517,26 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
 
     next_task_type = _PHASE_TASK_TYPE.get(next_phase, TaskType.IMPL)
 
+    # DG-012 fix: propagate impl_branch so test/code-review tasks don't fail the
+    # IMPL_BRANCH_REQUIRED gate. The runner sets impl_branch in task context after
+    # push; we forward it here so server-side advance creates tasks that can run.
+    next_context: dict[str, Any] = {
+        "idea_id": idea_id,
+        "auto_advanced_from": task_type,
+        "auto_advance_source": "pipeline_advance_service",
+        "source_task_id": task.get("id", ""),
+        "executor": "federation",
+    }
+    if context.get("impl_branch"):
+        next_context["impl_branch"] = context["impl_branch"]
+    if context.get("pr_url"):
+        next_context["pr_url"] = context["pr_url"]
+
     try:
         created = agent_service.create_task(AgentTaskCreate(
             direction=direction,
             task_type=next_task_type,
-            context={
-                "idea_id": idea_id,
-                "auto_advanced_from": task_type,
-                "auto_advance_source": "pipeline_advance_service",
-                "source_task_id": task.get("id", ""),
-                "executor": "federation",
-            },
+            context=next_context,
         ))
         log.info(
             "AUTO_ADVANCE %s→%s for idea=%s created task=%s",

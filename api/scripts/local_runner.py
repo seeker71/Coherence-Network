@@ -5795,6 +5795,20 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                                 error_category="push_failed",
                             )
                         else:
+                            # DG-012 fix: set impl_branch in task context immediately after
+                            # branch push — don't wait for PR creation which can fail/skip.
+                            # _extract_branch_from_completed_tasks reads ctx.impl_branch, so
+                            # this must be set BEFORE _run_phase_auto_advance_hook fires.
+                            if task_type == "impl":
+                                impl_branch_name = f"task/{task_id[:16]}"
+                                api("PATCH", f"/api/agent/tasks/{task_id}", {
+                                    "context": {**ctx, "impl_branch": impl_branch_name},
+                                })
+                                log.info("IMPL_BRANCH_SET task=%s branch=%s", task_id[:16], impl_branch_name)
+                                # Update local state so downstream code in this iteration sees it
+                                ctx = {**ctx, "impl_branch": impl_branch_name}
+                                if isinstance(task.get("context"), dict):
+                                    task["context"]["impl_branch"] = impl_branch_name
                             # Create PR after successful branch push for impl tasks
                             if task_type == "impl":
                                 _create_pr_for_branch(task_id, task, wt)
