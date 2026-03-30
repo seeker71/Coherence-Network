@@ -1,11 +1,9 @@
 {
-  "version": "2026-03-26",
+  "version": "2026-03-30",
   "description": "Provider model registry. Each provider has its own model catalog. Fallback chains stay within the same provider. Task tier determines strong vs fast model selection.",
-
   "openrouter_free_model": "openrouter/free",
   "auto_execute_default_model": "",
   "roi_spec_cheap_model": "gpt-5.3-codex-spark",
-
   "task_type_tier": {
     "spec": "strong",
     "impl": "strong",
@@ -14,7 +12,6 @@
     "heal": "strong",
     "code-review": "strong"
   },
-
   "tiers_by_executor": {
     "claude": {
       "strong": "claude-sonnet-4-6",
@@ -35,9 +32,16 @@
     "openrouter": {
       "strong": "openrouter/free",
       "fast": "openrouter/free"
+    },
+    "opencode": {
+      "strong": "ollama/minimax-m2.7:cloud",
+      "fast": "ollama/minimax-m2.7:cloud"
+    },
+    "pi": {
+      "strong": "ollama/minimax-m2.7:cloud",
+      "fast": "ollama/minimax-m2.7:cloud"
     }
   },
-
   "openrouter_models_by_task_type": {
     "spec": "openrouter/free",
     "test": "openrouter/free",
@@ -45,12 +49,31 @@
     "review": "openrouter/free",
     "heal": "openrouter/free"
   },
-
   "fallback_chains": {
-    "claude": ["claude-sonnet-4-6", "claude-sonnet-4-5", "claude-3-5-haiku-20241022"],
-    "codex": ["gpt-5.3-codex-spark"],
-    "cursor": ["auto"],
-    "gemini": ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash-001"],
-    "openrouter": ["openrouter/free"]
+    "claude": [
+      "claude-sonnet-4-6",
+      "claude-sonnet-4-5",
+      "claude-3-5-haiku-20241022"
+    ],
+    "codex": [
+      "gpt-5.3-codex-spark"
+    ],
+    "cursor": [
+      "auto"
+    ],
+    "gemini": [
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.0-flash-001"
+    ],
+    "openrouter": [
+      "openrouter/free"
+    ],
+    "opencode": [
+      "ollama/minimax-m2.7:cloud"
+    ],
+    "pi": [
+      "ollama/minimax-m2.7:cloud"
+    ]
   }
 }
