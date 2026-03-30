@@ -185,6 +185,7 @@ Providers are assigned by the `select_provider()` capability gate:
 | DG-014 | 2026-03-30 | FIXED | Evidence check used fuzzy full-text GitHub PR search — spec/doc PRs mentioning idea names marked them as "implemented", blocking them from ever being seeded for impl |
 | DG-015 | 2026-03-30 | FIXED | `error_category` and `error_summary` never persisted — API router received them but didn't pass to `update_task()`, service didn't accept them, store didn't write them, `_row_to_payload` didn't load them. All 4 broken links fixed. |
 | DG-016 | 2026-03-30 | FIXED | `maybe_retry()` created retries for `impl_branch_missing` and `worktree_failed` — structural prerequisite failures that retrying cannot fix. Each retry also failed instantly, triggering another retry, creating an infinite cascade that consumed all task slots. Fixed: skip retry for non-retriable error categories; also propagate `impl_branch`/`pr_url` in retry context so valid retries don't lose branch ref. |
+| DG-017 | 2026-03-30 | FIXED | `_run_phase_auto_advance_hook()` fires BEFORE the impl task is marked completed. `_extract_branch_from_completed_tasks()` only matches tasks with `status=="completed"`, so it returned "" — test/review tasks were created with no `impl_branch`. The correctly-contexted task that `maybe_advance()` would have created was blocked by the dedup check on the already-existing (broken) task. Fixed: for test/review phases, first check `task.context.impl_branch` (set by DG-012 runner fix before the hook fires) before falling back to the completed-task lookup. |
 
 ---
 

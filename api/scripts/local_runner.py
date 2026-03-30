@@ -1748,9 +1748,15 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"this is a HOTFIX priority — note what needs immediate fixing."
             )
         elif next_phase == "review":
-            # Extract PR info from the completed impl task
+            # DG-017 fix: check the advancing task's own context first.
+            # _extract_branch_from_completed_tasks only finds tasks with status="completed",
+            # but this hook fires BEFORE the impl task is marked completed. The runner sets
+            # impl_branch in the task's context (DG-012 fix) before calling this hook.
+            _task_ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+            impl_branch = _task_ctx.get("impl_branch", "") if task_type == "impl" else ""
+            if not impl_branch:
+                impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
             pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
-            impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
             pr_instruction = ""
             if pr_number:
                 pr_instruction = (
@@ -1770,8 +1776,12 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             extra_context["pr_number"] = pr_number
             extra_context["impl_branch"] = impl_branch
         elif next_phase == "test":
-            # Extract PR branch from completed impl task so tests push to same PR
-            impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            # DG-017 fix: check the advancing task's own context first — same as review phase.
+            # Hook fires before impl task is marked completed, so completed-task lookup is empty.
+            _task_ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+            impl_branch = _task_ctx.get("impl_branch", "") if task_type == "impl" else ""
+            if not impl_branch:
+                impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
             pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
             branch_instruction = ""
             if impl_branch:
