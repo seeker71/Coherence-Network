@@ -368,6 +368,8 @@ def update_task(
     decision: Optional[str] = None,
     context: Optional[dict[str, Any]] = None,
     worker_id: Optional[str] = None,
+    error_category: Optional[str] = None,
+    error_summary: Optional[str] = None,
 ) -> Optional[dict]:
     """Update task. Returns updated task or None if not found."""
     _ensure_store_loaded(include_output=False)
@@ -399,6 +401,11 @@ def update_task(
         task["decision_prompt"] = decision_prompt
     if decision is not None and task.get("decision") is None:
         task["decision"] = decision
+    # DG-015 fix: persist error_category and error_summary from runner
+    if error_category is not None:
+        task["error_category"] = error_category
+    if error_summary is not None:
+        task["error_summary"] = error_summary
     if context is not None:
         existing = task.get("context")
         if isinstance(existing, dict):
