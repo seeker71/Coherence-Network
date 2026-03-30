@@ -8,7 +8,7 @@ import json
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from app.services import federation_service
 from app.services.slot_selection_service import SlotSelector
@@ -198,10 +198,14 @@ async def get_provider_stats() -> dict:
 
 
 @router.get("/stats/network")
-async def get_network_provider_stats(window_days: int | None = None) -> dict:
+async def get_network_provider_stats(
+    window_days: int | None = Query(default=None, ge=1, le=365),
+) -> dict:
     """Network-wide provider stats from federation nodes.
 
     Shaped to be compatible with /api/providers/stats response plus a `nodes` field.
+    The ``data_source`` field indicates whether the underlying database was reachable
+    (``"live"``) or not (``"unavailable"``).
     """
     agg = federation_service.get_aggregated_node_stats(window_days=window_days)
 
@@ -240,4 +244,5 @@ async def get_network_provider_stats(window_days: int | None = None) -> dict:
         },
         "nodes": agg.get("nodes", {}),
         "window_days": agg.get("window_days", window_days),
+        "data_source": agg.get("data_source", "live"),
     }

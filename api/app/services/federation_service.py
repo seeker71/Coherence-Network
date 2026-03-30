@@ -882,12 +882,30 @@ def get_aggregated_node_stats(window_days: int | None = None) -> dict:
     """Aggregate cross-node measurement summaries into fleet-wide provider stats.
 
     Returns a dict with keys: nodes, providers, task_types, alerts, window_days,
-    total_measurements.
+    total_measurements, data_source.
+
+    The ``data_source`` field is ``"live"`` when the database query succeeds and
+    ``"unavailable"`` when it does not, so consumers (web dashboards, CLI) can
+    surface an appropriate message instead of silently showing stale/empty data.
     """
     if window_days is None:
         window_days = int(os.environ.get("FEDERATION_STATS_WINDOW_DAYS", "7"))
 
-    _ensure_schema()
+    _empty = {
+        "nodes": {},
+        "providers": {},
+        "task_types": {},
+        "alerts": [],
+        "window_days": window_days,
+        "total_measurements": 0,
+    }
+
+    try:
+        _ensure_schema()
+    except Exception:
+        logger.warning("Federation schema unavailable — returning empty stats", exc_info=True)
+        return {**_empty, "data_source": "unavailable"}
+
     cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=window_days)).isoformat().replace("+00:00", "Z")
 
     with _session() as s:
@@ -934,6 +952,7 @@ def get_aggregated_node_stats(window_days: int | None = None) -> dict:
             "alerts": [],
             "window_days": window_days,
             "total_measurements": 0,
+            "data_source": "live",
         }
 
     # Aggregate per provider (slot_id)
@@ -1060,6 +1079,7 @@ def get_aggregated_node_stats(window_days: int | None = None) -> dict:
         "alerts": alerts,
         "window_days": window_days,
         "total_measurements": total_measurements,
+        "data_source": "live",
     }
 
 

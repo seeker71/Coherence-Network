@@ -93,6 +93,7 @@ def test_aggregated_stats_empty_returns_defaults(client):
     assert body["alerts"] == []
     assert body["window_days"] == 7
     assert body["total_measurements"] == 0
+    assert body["data_source"] == "live"
 
 
 def test_aggregated_stats_single_node(client):
@@ -215,6 +216,16 @@ def test_window_filter_excludes_old_data(client):
     assert body["providers"] == {}
 
 
+def test_window_days_validation(client):
+    """Invalid window_days values rejected with 422."""
+    for bad in [0, -1, 366]:
+        resp = client.get(f"/api/federation/nodes/stats?window_days={bad}")
+        assert resp.status_code == 422, f"Expected 422 for window_days={bad}, got {resp.status_code}"
+    for bad_net in [0, -1, 366]:
+        resp = client.get(f"/api/providers/stats/network?window_days={bad_net}")
+        assert resp.status_code == 422, f"Expected 422 for /stats/network?window_days={bad_net}, got {resp.status_code}"
+
+
 def test_network_endpoint_compatible_shape(client):
     """/stats/network shape matches /stats plus nodes."""
     _register_node(client, NODE_A)
@@ -252,5 +263,7 @@ def test_network_endpoint_compatible_shape(client):
     assert "node_count" in p
     assert "per_node" in p
 
+    # Data source field present
+    assert body["data_source"] == "live"
     # Nodes present
     assert NODE_A in body["nodes"]
