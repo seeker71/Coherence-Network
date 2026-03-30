@@ -417,21 +417,10 @@ async def record_open_contribution(body: OpenContributionRequest) -> dict:
 
     # Resolve via provider identity if contributor_id not given
     if not contributor_id and body.provider and body.provider_id:
-        found = contributor_identity_service.find_contributor_by_identity(
-            body.provider, body.provider_id,
+        contributor_id = contributor_identity_service.get_or_create_contributor_by_identity(
+            provider=body.provider,
+            provider_id=body.provider_id,
         )
-        if found:
-            contributor_id = found
-        else:
-            # Auto-create a pending identity
-            contributor_id = f"{body.provider}:{body.provider_id}"
-            contributor_identity_service.link_identity(
-                contributor_id=contributor_id,
-                provider=body.provider,
-                provider_id=body.provider_id,
-                display_name=body.provider_id,
-                verified=False,
-            )
 
     if not contributor_id:
         raise HTTPException(

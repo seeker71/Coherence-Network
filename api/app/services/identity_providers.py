@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -16,31 +16,27 @@ class ProviderInfo:
 
 
 # ---------------------------------------------------------------------------
-# Registry — grouped by category
+# Registry — grouped by 6 categories (Social, Dev, Crypto/Web3, Professional, Identity, Platform)
+# Total: 37 providers
 # ---------------------------------------------------------------------------
 
 PROVIDER_REGISTRY: dict[str, list[ProviderInfo]] = {
     "Social": [
-        ProviderInfo("github", "GitHub", "username", "Social", can_oauth=True),
         ProviderInfo("x", "X (Twitter)", "@handle", "Social"),
         ProviderInfo("discord", "Discord", "username#0000 or user ID", "Social"),
         ProviderInfo("telegram", "Telegram", "@username", "Social"),
+        ProviderInfo("reddit", "Reddit", "u/username", "Social"),
         ProviderInfo("mastodon", "Mastodon", "user@instance.social", "Social"),
         ProviderInfo("bluesky", "Bluesky", "handle.bsky.social", "Social"),
-        ProviderInfo("linkedin", "LinkedIn", "profile slug or URL", "Social"),
-        ProviderInfo("reddit", "Reddit", "u/username", "Social"),
         ProviderInfo("youtube", "YouTube", "channel ID or @handle", "Social"),
-        ProviderInfo("twitch", "Twitch", "username", "Social"),
-        ProviderInfo("instagram", "Instagram", "@handle", "Social"),
-        ProviderInfo("tiktok", "TikTok", "@handle", "Social"),
     ],
     "Dev": [
+        ProviderInfo("github", "GitHub", "username", "Dev", can_oauth=True),
         ProviderInfo("gitlab", "GitLab", "username", "Dev"),
         ProviderInfo("bitbucket", "Bitbucket", "username", "Dev"),
         ProviderInfo("npm", "npm", "npm username", "Dev"),
-        ProviderInfo("crates", "crates.io", "crates.io username", "Dev"),
         ProviderInfo("pypi", "PyPI", "PyPI username", "Dev"),
-        ProviderInfo("hackernews", "Hacker News", "HN username", "Dev"),
+        ProviderInfo("crates", "crates.io", "crates.io username", "Dev"),
         ProviderInfo("stackoverflow", "Stack Overflow", "user ID", "Dev"),
     ],
     "Crypto / Web3": [
@@ -53,6 +49,7 @@ PROVIDER_REGISTRY: dict[str, list[ProviderInfo]] = {
         ProviderInfo("lens", "Lens Protocol", "handle.lens", "Crypto / Web3"),
     ],
     "Professional": [
+        ProviderInfo("linkedin", "LinkedIn", "profile slug or URL", "Professional"),
         ProviderInfo("email", "Email", "you@example.com", "Professional"),
         ProviderInfo("google", "Google", "Google email", "Professional", can_oauth=True),
         ProviderInfo("apple", "Apple", "Apple ID email", "Professional"),
@@ -60,19 +57,18 @@ PROVIDER_REGISTRY: dict[str, list[ProviderInfo]] = {
         ProviderInfo("orcid", "ORCID", "0000-0000-0000-0000", "Professional"),
     ],
     "Identity": [
-        ProviderInfo("name", "Display Name", "Your name", "Identity"),
         ProviderInfo("did", "DID (W3C)", "did:method:identifier", "Identity"),
         ProviderInfo("keybase", "Keybase", "username", "Identity"),
         ProviderInfo("pgp", "PGP", "key fingerprint", "Identity"),
-        ProviderInfo("fediverse", "Fediverse", "user@instance", "Identity"),
+        ProviderInfo("okta", "Okta", "Okta ID", "Identity"),
+        ProviderInfo("auth0", "Auth0", "Auth0 ID", "Identity"),
     ],
-    "Agent": [
-        ProviderInfo("agent", "AI Agent", "provider.model (e.g. anthropic.claude-opus-4-6)", "Agent"),
-        ProviderInfo("openrouter", "OpenRouter", "openrouter/model-name", "Agent"),
-        ProviderInfo("ollama", "Ollama (local)", "model:tag (e.g. llama3.3:70b)", "Agent"),
-    ],
-    "Custom": [
-        ProviderInfo("openclaw", "OpenClaw", "node ID or handle", "Custom"),
+    "Platform": [
+        ProviderInfo("slack", "Slack", "workspace:username", "Platform"),
+        ProviderInfo("zoom", "Zoom", "Zoom email", "Platform"),
+        ProviderInfo("notion", "Notion", "Notion username or ID", "Platform"),
+        ProviderInfo("trello", "Trello", "Trello username", "Platform"),
+        ProviderInfo("asana", "Asana", "Asana email", "Platform"),
     ],
 }
 

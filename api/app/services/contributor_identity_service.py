@@ -168,6 +168,49 @@ def find_contributor_by_identity(provider: str, provider_id: str) -> str | None:
     return None
 
 
+def get_or_create_contributor_by_identity(
+    provider: str,
+    provider_id: str,
+    display_name: str | None = None,
+    avatar_url: str | None = None,
+) -> str:
+    """Get or create a contributor by identity (auto-attach attribution).
+
+    If the identity is already linked, return the existing contributor_id.
+    If not, create a new contributor using provider_id as the name and link it.
+    """
+    from app.services import contributor_service
+
+    contributor_id = find_contributor_by_identity(provider, provider_id)
+    if contributor_id:
+        return contributor_id
+
+    # Create a new contributor shell
+    # Use provider_id as name, but ensure it's a valid contributor name
+    name = provider_id
+    if provider == "ethereum":
+        name = provider_id[:8] + "..." + provider_id[-4:] if len(provider_id) > 12 else provider_id
+    elif "@" in provider_id:
+        name = provider_id.split("@")[0]
+
+    # Check if contributor with this name already exists (collision)
+    existing_contributor = contributor_service.get_contributor(name)
+    if existing_contributor:
+        # If name exists, add suffix
+        name = f"{name}_{uuid4().hex[:4]}"
+
+    contributor_service.create_contributor(name=name)
+    link_identity(
+        contributor_id=name,
+        provider=provider,
+        provider_id=provider_id,
+        display_name=display_name or name,
+        avatar_url=avatar_url,
+        verified=False,
+    )
+    return name
+
+
 def unlink_identity(contributor_id: str, provider: str) -> bool:
     """Remove a linked identity. Returns True if something was deleted."""
     _ensure_schema()

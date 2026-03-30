@@ -287,16 +287,10 @@ def _resolve_contributor(contributor_id: str | None, provider: str | None, provi
         return contributor_id
     if provider and provider_id:
         from app.services import contributor_identity_service
-        found = contributor_identity_service.find_contributor_by_identity(provider, provider_id)
-        if found:
-            return found
-        # Auto-create pending identity
-        cid = f"{provider}:{provider_id}"
-        contributor_identity_service.link_identity(
-            contributor_id=cid, provider=provider, provider_id=provider_id,
-            display_name=provider_id, verified=False,
+        return contributor_identity_service.get_or_create_contributor_by_identity(
+            provider=provider,
+            provider_id=provider_id,
         )
-        return cid
     raise HTTPException(status_code=422, detail="Provide contributor_id OR provider+provider_id")
 
 
