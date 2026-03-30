@@ -1,0 +1,67 @@
+{
+  "date": "2026-03-29T23:59:00Z",
+  "thread_branch": "task/task_4bd6e413342",
+  "commit_scope": "impl(self-balancing-graph): fix grouped impl branch handoff for downstream test seeding",
+  "files_owned": [
+    ".gitignore",
+    ".task-checkpoint.md",
+    "api/scripts/local_runner.py",
+    "api/tests/test_local_runner.py",
+    "docs/system_audit/commit_evidence_2026-03-29_self-balancing-graph-runner-fix.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "python3 -m pytest -q api/tests/test_local_runner.py -k \"grouped_idea_tasks or post_task_hook\" exited 0 (3 passed, 20 deselected). python3 -m pytest -q api/tests/test_fractal_self_balance.py api/tests/test_172_graph_health.py exited 0 (30 passed). make prompt-gate was blocked by invalid gh auth, and GHX_SKIP_AUTH_CHECK=1 make prompt-gate was then blocked by sibling worktree continuity risk."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "details": "Not run in this local implementation task."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "details": "Not applicable for this runner fix."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false
+  },
+  "idea_ids": [
+    "self-balancing-graph"
+  ],
+  "spec_ids": [
+    "172-fractal-self-balance"
+  ],
+  "task_ids": [
+    "task_4bd6e413342ac8c8"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "Implementation",
+        "Validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/scripts/local_runner.py",
+    "api/tests/test_local_runner.py",
+    "api/tests/test_fractal_self_balance.py",
+    "api/tests/test_172_graph_health.py",
+    "docs/system_audit/commit_evidence_2026-03-29_self-balancing-graph-runner-fix.json"
+  ],
+  "change_files": [
+    ".gitignore",
+    ".task-checkpoint.md",
+    "api/scripts/local_runner.py",
+    "api/tests/test_local_runner.py",
+    "docs/system_audit/commit_evidence_2026-03-29_self-balancing-graph-runner-fix.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "process_only"
+}

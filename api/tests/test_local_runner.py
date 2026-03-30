@@ -469,6 +469,66 @@ def test_post_task_hook_marks_validated_after_review_phase(monkeypatch: pytest.M
     ) in calls
 
 
+def test_post_task_hook_passes_impl_branch_from_grouped_idea_tasks(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, str, dict[str, Any] | None]] = []
+
+    def _api(method: str, path: str, body: dict[str, Any] | None = None) -> dict[str, Any] | None:
+        calls.append((method, path, body))
+        if method == "GET" and path == "/api/ideas/idea-3/tasks":
+            return {
+                "idea_id": "idea-3",
+                "groups": [
+                    {
+                        "task_type": "impl",
+                        "count": 1,
+                        "status_counts": {
+                            "pending": 0,
+                            "running": 0,
+                            "completed": 1,
+                            "failed": 0,
+                            "needs_decision": 0,
+                        },
+                        "tasks": [
+                            {
+                                "id": "task-impl-1",
+                                "task_type": "impl",
+                                "status": "completed",
+                                "context": {
+                                    "idea_id": "idea-3",
+                                    "impl_branch": "task/task-impl-1",
+                                    "pr_url": "https://github.com/owner/repo/pull/42",
+                                },
+                            }
+                        ],
+                    }
+                ],
+            }
+        if method == "GET" and path == "/api/ideas/idea-3":
+            return {"id": "idea-3", "name": "Idea Three"}
+        if method == "POST" and path == "/api/agent/tasks":
+            return {"id": "task-test-1"}
+        if method == "PATCH" and path == "/api/ideas/idea-3":
+            return {"id": "idea-3", "manifestation_status": "partial"}
+        return None
+
+    monkeypatch.setattr(local_runner, "api", _api)
+
+    local_runner._run_phase_auto_advance_hook(
+        {
+            "id": "task-impl-1",
+            "task_type": "impl",
+            "context": {"idea_id": "idea-3"},
+        }
+    )
+
+    create_calls = [row for row in calls if row[0] == "POST" and row[1] == "/api/agent/tasks"]
+    assert len(create_calls) == 1
+    payload = create_calls[0][2] or {}
+    assert payload["task_type"] == "test"
+    assert payload["context"]["impl_branch"] == "task/task-impl-1"
+    assert payload["context"]["pr_number"] == "42"
+
+
 def test_seed_task_from_open_idea_sets_idea_id_at_top_level(monkeypatch: pytest.MonkeyPatch) -> None:
     """_seed_task_from_open_idea must set idea_id at top level so /api/ideas/{id}/tasks works."""
     calls: list[tuple[str, str, dict[str, Any] | None]] = []

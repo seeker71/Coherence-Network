@@ -1593,10 +1593,28 @@ def _check_existing_evidence(idea_id: str) -> tuple[str, str] | None:
     return None
 
 
+def _completed_phase_tasks(idea_tasks: dict, phase: str) -> list[dict[str, Any]]:
+    """Return completed tasks for a phase from either legacy or grouped idea-task payloads."""
+    tasks = idea_tasks.get("tasks")
+    if isinstance(tasks, list) and tasks:
+        return [
+            t for t in tasks
+            if isinstance(t, dict) and t.get("task_type") == phase and t.get("status") == "completed"
+        ]
+
+    completed: list[dict[str, Any]] = []
+    for group in idea_tasks.get("groups", []):
+        if not isinstance(group, dict) or group.get("task_type") != phase:
+            continue
+        for task in group.get("tasks", []):
+            if isinstance(task, dict) and task.get("status") == "completed":
+                completed.append(task)
+    return completed
+
+
 def _extract_pr_from_completed_tasks(idea_tasks: dict, phase: str) -> str:
     """Extract PR number from a completed task's output for a given phase."""
-    tasks = idea_tasks.get("tasks", [])
-    for t in reversed(tasks):
+    for t in reversed(_completed_phase_tasks(idea_tasks, phase)):
         if t.get("task_type") == phase and t.get("status") == "completed":
             output = str(t.get("output") or t.get("result") or "")
             # Look for PR_NUMBER: 123 or PR: .../pull/123
@@ -1611,13 +1629,16 @@ def _extract_pr_from_completed_tasks(idea_tasks: dict, phase: str) -> str:
             ctx = t.get("context") or {}
             if ctx.get("pr_number"):
                 return str(ctx["pr_number"])
+            pr_url = str(ctx.get("pr_url") or "")
+            m = re.search(r"pull/(\d+)", pr_url)
+            if m:
+                return m.group(1)
     return ""
 
 
 def _extract_branch_from_completed_tasks(idea_tasks: dict, phase: str) -> str:
     """Extract impl branch name from a completed task's output."""
-    tasks = idea_tasks.get("tasks", [])
-    for t in reversed(tasks):
+    for t in reversed(_completed_phase_tasks(idea_tasks, phase)):
         if t.get("task_type") == phase and t.get("status") == "completed":
             output = str(t.get("output") or t.get("result") or "")
             import re
