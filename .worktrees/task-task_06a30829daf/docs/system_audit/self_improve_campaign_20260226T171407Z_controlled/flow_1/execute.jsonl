@@ -1,4 +1,0 @@
-{"type":"thread.started","thread_id":"019c9af1-d661-7463-88b1-5e8e1c46683d"}
-{"type":"turn.started"}
-{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"EVIDENCE success_rate=0.63 goal_proximity=0.63\nGOAL_REF docs/PLAN.md:9"}}
-{"type":"turn.completed","usage":{"input_tokens":13107,"cached_input_tokens":3840,"output_tokens":189}}

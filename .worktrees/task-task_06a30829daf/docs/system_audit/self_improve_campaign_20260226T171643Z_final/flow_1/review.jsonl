@@ -1,5 +1,0 @@
-{"type":"thread.started","thread_id":"019c9af4-2e8a-7ed1-a316-ea13ef93476f"}
-{"type":"turn.started"}
-{"type":"item.completed","item":{"id":"item_0","type":"reasoning","text":"**Returning condition-based string**"}}
-{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"PASS_FAIL: FAIL"}}
-{"type":"turn.completed","usage":{"input_tokens":12906,"cached_input_tokens":12672,"output_tokens":72}}

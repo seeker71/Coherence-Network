@@ -1,1 +1,0 @@
-start-gate pre-edit passed earlier in clean worktree (see terminal history); post-edit start-gate blocked by expected local changes.

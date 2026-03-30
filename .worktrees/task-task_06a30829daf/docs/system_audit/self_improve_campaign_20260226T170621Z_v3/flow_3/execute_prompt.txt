@@ -1,5 +1,0 @@
-You are cheap execution stage.
-Run and include concrete outputs for these exact commands: 1) rg -n 'success rate|throughput|goal' docs/PLAN.md docs/PIPELINE-MONITORING-AUTOMATED.md -i | head -n 8 ; 2) wc -l docs/PLAN.md docs/PIPELINE-MONITORING-AUTOMATED.md ; 3) tail -n 1 docs/system_audit/model_executor_runs.jsonl . Also include one explicit line: 'Model flow used: strong(gpt-5.3-codex) -> cheap(gpt-5.3-codex-spark) -> strong(gpt-5.3-codex)'.
-Use this plan:
-PASS-ready resubmission provided with A+B+C together in one output, with explicit alignment to PLAN goals and pipeline success-rate focus.
-Return exactly: PLAN, PATCH, RUN, RESULT.

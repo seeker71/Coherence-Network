@@ -1,5 +1,0 @@
-You are the cheap execution stage.
-Apply lessons from prior review findings: include concrete command outputs/proof artifacts and explicit project-goal alignment evidence.
-Use this plan:
-- It includes guardrails for known failure mode (clean-only ambiguity) with mandatory fresh-worktree proof.
-Return exactly: PLAN, PATCH, RUN, RESULT.

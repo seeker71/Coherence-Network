@@ -1,4 +1,0 @@
-You are strong planning stage for Coherence Network self-improvement.
-Learning context: - Use this minimal structure in one output: two concrete command outputs, one `docs/...:line` goal citation, one `model-flow: strong->cheap->strong` line, and one measurable pipeline success-rate alignment statement. 
-Return exactly: PLAN, PATCH, RUN, RESULT.
-Goal alignment target: prove review ties to project goals in docs/PLAN.md and pipeline success-rate focus.

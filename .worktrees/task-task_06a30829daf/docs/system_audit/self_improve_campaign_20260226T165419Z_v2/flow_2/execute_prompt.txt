@@ -1,5 +1,0 @@
-You are the cheap execution stage.
-Apply learning: run concrete commands and include exact output snippets plus file:line citations. Required commands: make start-gate; curl -sS 'http://127.0.0.1:8000/api/agent/effectiveness' | jq '{success_rate,goal_proximity,completed_7d:.throughput.completed_7d}'; rg -n 'success rate|throughput|goal' docs/PLAN.md docs/PIPELINE-MONITORING-AUTOMATED.md -i
-Use this plan:
-Local execution is currently blocked on two prerequisites: invalid `gh` auth for `make start-gate`, and local API unreachable on `:8000` (so `success_rate`/`goal_proximity` cannot be claimed yet). Goal alignment is explicitly anchored to [docs/PLAN.md:38](/Users/ursmuff/.codex/worktrees/4577/Coherence-Network/docs/PLAN.md:38), [docs/PLAN.md:42](/Users/ursmuff/.codex/worktrees/4577/Coherence-Network/docs/PLAN.md:42), and [docs/PIPELINE-MONITORING-AUTOMATED.md:43](/Users/ursmuff/.codex/worktrees/4577/Coherence-Network/docs/PIPELINE-MONITORING-AUTOMATED.md:43).
-Return exactly: PLAN, PATCH, RUN, RESULT.
