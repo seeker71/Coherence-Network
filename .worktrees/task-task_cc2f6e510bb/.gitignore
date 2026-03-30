@@ -1,6 +1,0 @@
-*.pyc
-__pycache__/
-.task-*
-data/coherence.db
-.idea-progress.md
-.task-checkpoint.md
