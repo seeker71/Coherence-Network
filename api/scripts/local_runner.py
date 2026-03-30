@@ -296,12 +296,27 @@ def _detect_providers() -> dict[str, dict]:
         "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
         # cursor agent -p: Cursor's headless agent mode
         "cursor": {"cmd": ["agent", "--model", "auto", "--trust", "-p"], "append_prompt": True, "check_binary": "agent"},
+        # opencode run --agent build --model provider/model <prompt>
+        "opencode": {
+            "cmd": ["opencode", "run", "--agent", "build", "--model"],
+            "append_prompt": True,
+            "check": _check_ollama_cloud,
+            "model_select": _select_ollama_cloud_provider_model,
+            "env": {"OPENCODE_ENABLE_EXA": "1"},
+        },
+        # pi -p --model provider/model <prompt>
+        "pi": {
+            "cmd": ["pi", "-p", "--model"],
+            "append_prompt": True,
+            "check": _check_ollama_cloud,
+            "model_select": _select_ollama_cloud_provider_model,
+        },
         # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
             "check": _check_ollama_local, "model_select": _select_ollama_model,
         },
-        # ollama-cloud: ollama cloud models (glm-5, etc.) via stdin
+        # ollama-cloud: raw ollama cloud models via stdin (kept text-only)
         "ollama-cloud": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
             "check": _check_ollama_cloud, "model_select": _select_ollama_cloud_model,
@@ -329,14 +344,14 @@ def _detect_providers() -> dict[str, dict]:
         # Detect provider version
         version = "unknown"
         try:
-            version_flags = {"claude": "--version", "codex": "--version", "gemini": "--version", "agent": "--version", "ollama": "--version"}
+            version_flags = {"claude": "--version", "codex": "--version", "gemini": "--version", "agent": "--version", "ollama": "--version", "opencode": "--version", "pi": "--version"}
             vflag = version_flags.get(binary.split("/")[-1] if "/" in binary else binary, "--version")
             vresult = subprocess.run([resolved, vflag], capture_output=True, text=True, timeout=5)
             vout = (vresult.stdout or vresult.stderr or "").strip()
             # Extract version string — first line, strip common prefixes
             if vout:
                 vline = vout.split("\n")[0].strip()
-                for prefix in ["claude ", "codex-cli ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent "]:
+                for prefix in ["claude ", "codex-cli ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent ", "opencode ", "pi "]:
                     if vline.lower().startswith(prefix):
                         vline = vline[len(prefix):].strip()
                         break
@@ -355,6 +370,7 @@ def _detect_providers() -> dict[str, dict]:
                 log.info("Provider skipped (no model): %s", name)
                 continue
             spec["cmd"].append(model)
+            spec["_selected_model"] = model
             log.info("Provider detected: %s model=%s version=%s", name, model, version)
         else:
             log.info("Provider detected: %s (%s) version=%s", name, resolved, version)
@@ -375,69 +391,70 @@ def _detect_providers() -> dict[str, dict]:
     return providers
 
 
-def _check_ollama_local() -> bool:
-    """Check if ollama server is running with local models."""
+def _list_ollama_models() -> list[str]:
+    """Return model names from ``ollama list``.
+
+    Uses the CLI output rather than API introspection so the runner works with the
+    same model visibility the operator sees locally, including Ollama Cloud models.
+    """
     try:
         result = subprocess.run(
             ["ollama", "list"], capture_output=True, text=True, timeout=5,
         )
         if result.returncode != 0:
-            return False
-        # At least one non-cloud model
-        lines = result.stdout.strip().split("\n")[1:]  # skip header
-        return any("cloud" not in line.split()[0] if line.strip() else False for line in lines)
+            return []
+        models: list[str] = []
+        for line in result.stdout.strip().split("\n")[1:]:  # skip header
+            if not line.strip():
+                continue
+            name = line.split()[0]
+            if name:
+                models.append(name)
+        return models
     except Exception:
-        return False
+        return []
+
+
+def _check_ollama_local() -> bool:
+    """Check if ollama server is running with local models."""
+    return any("cloud" not in model for model in _list_ollama_models())
 
 
 def _check_ollama_cloud() -> bool:
     """Check if ollama has cloud models available."""
-    try:
-        result = subprocess.run(
-            ["ollama", "list"], capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode != 0:
-            return False
-        return any("cloud" in line.split()[0] if line.strip() else False for line in result.stdout.split("\n"))
-    except Exception:
-        return False
+    return _select_ollama_cloud_model() is not None
 
 
 def _select_ollama_model() -> str | None:
     """Select the best available local ollama model."""
-    try:
-        result = subprocess.run(
-            ["ollama", "list"], capture_output=True, text=True, timeout=5,
-        )
-        lines = result.stdout.strip().split("\n")[1:]  # skip header
-        local_models = []
-        for line in lines:
-            name = line.split()[0] if line.strip() else ""
-            if name and "cloud" not in name:
-                local_models.append(name)
-        # Prefer larger/newer models
-        preferred = ["llama3.3:70b", "qwen2.5:72b", "deepseek-r1:32b", "dolphin-mixtral:8x22b-v2.9-q6_K"]
-        for pref in preferred:
-            if pref in local_models:
-                return pref
-        return local_models[0] if local_models else None
-    except Exception:
-        return None
+    local_models = [model for model in _list_ollama_models() if "cloud" not in model]
+    preferred = ["llama3.3:70b", "qwen2.5:72b", "deepseek-r1:32b", "dolphin-mixtral:8x22b-v2.9-q6_K"]
+    for pref in preferred:
+        if pref in local_models:
+            return pref
+    return local_models[0] if local_models else None
 
 
 def _select_ollama_cloud_model() -> str | None:
-    """Select the best available ollama cloud model."""
-    try:
-        result = subprocess.run(
-            ["ollama", "list"], capture_output=True, text=True, timeout=5,
-        )
-        for line in result.stdout.split("\n"):
-            parts = line.split()
-            if parts and "cloud" in parts[0]:
-                return parts[0]
+    """Select the best available ollama cloud model.
+
+    Prefer MiniMax M2.7 when available, otherwise fall back to the first visible
+    cloud model from ``ollama list``.
+    """
+    cloud_models = [model for model in _list_ollama_models() if model.endswith(":cloud")]
+    preferred = ["minimax-m2.7:cloud"]
+    for pref in preferred:
+        if pref in cloud_models:
+            return pref
+    return cloud_models[0] if cloud_models else None
+
+
+def _select_ollama_cloud_provider_model() -> str | None:
+    """Select the best Ollama Cloud model and return an OpenCode/Pi model ref."""
+    model = _select_ollama_cloud_model()
+    if not model:
         return None
-    except Exception:
-        return None
+    return f"ollama/{model}"
 
 
 # ---------------------------------------------------------------------------
@@ -606,7 +623,7 @@ def _run_openrouter(prompt: str, cwd: str, timeout: int, model: str) -> tuple[bo
 
 
 # Providers with tool/file access (can actually create/modify files)
-_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor"}
+_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor", "opencode", "pi"}
 # Providers that are text-only (no file access — good for review, bad for impl/spec/test)
 # Text-only providers cannot create files, run tests, or push branches.
 # They should NEVER be selected for impl, test, or code-producing tasks.
@@ -825,8 +842,10 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
         "codex":        {"file_write", "git", "tools", "gh", "reasoning"},
         "cursor":       {"file_write", "git", "tools", "gh", "reasoning"},  # v2026.03.25 + --trust fixes file editing
         "gemini":       {"file_write", "git", "tools", "gh", "reasoning"},
+        "opencode":     {"file_write", "git", "tools", "gh", "reasoning"},
+        "pi":           {"file_write", "git", "tools", "gh", "reasoning"},
         "ollama-local": {"text_only"},                   # no tools, no file access
-        "ollama-cloud": {"text_only"},                   # no tools, no file access
+        "ollama-cloud": {"text_only"},                   # raw ollama path stays text-only
         "openrouter":   {"text_only"},                   # API only, no tools
     }
 
@@ -2836,6 +2855,8 @@ def execute_with_provider(
 
     cmd = list(spec["cmd"])
     stdin_input = None
+    env = os.environ.copy()
+    env.update({str(k): str(v) for k, v in spec.get("env", {}).items()})
 
     # All providers use their default invocation with full tool access.
     # No special-casing per task type — the prompt guides behavior, not the CLI flags.
@@ -2856,9 +2877,9 @@ def execute_with_provider(
     except OSError as e:
         log.warning("Could not write prompt file: %s", e)
 
-    # Prompt delivery: stdin for most, CLI arg for gemini (doesn't read stdin)
+    # Prompt delivery: stdin for providers that support it, CLI args for headless one-shot CLIs
     _STDIN_PROVIDERS = {"claude", "codex", "cursor", "ollama-local", "ollama-cloud"}
-    _CLI_ARG_PROVIDERS = {"gemini"}  # gemini -y -p <prompt> — must be positional arg
+    _CLI_ARG_PROVIDERS = {"gemini", "opencode", "pi"}
 
     if spec.get("stdin_prompt") or provider in _STDIN_PROVIDERS:
         stdin_input = prompt
@@ -2980,6 +3001,7 @@ def execute_with_provider(
             timeout=timeout,
             control_dir=control_dir,
             stdin_input=stdin_input,
+            env=env,
         )
         log.info("WRAPPER executing %s (timeout=%ds)", provider, timeout)
         result = wrapper.run()
@@ -3020,6 +3042,7 @@ def execute_with_provider(
             cwd=str(_REPO_DIR), creationflags=creation_flags,
             shell=use_shell,
             start_new_session=True,  # Own process group so killpg doesn't kill the runner
+            env=env,
         )
 
         # Stream stdout line-by-line for live progress
