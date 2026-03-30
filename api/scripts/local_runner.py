@@ -670,27 +670,30 @@ class _CircuitBreaker:
         self._trip_time: float = 0.0
         self._trip_reason = ""
         self._consecutive_failures = 0
+        self._lock = threading.RLock()  # RLock: allow_seeding() calls reset() under same lock
 
     def record(self, success: bool) -> None:
         """Record a task outcome."""
-        self._outcomes.append(success)
-        if len(self._outcomes) > self.window_size:
-            self._outcomes = self._outcomes[-self.window_size:]
+        with self._lock:
+            self._outcomes.append(success)
+            if len(self._outcomes) > self.window_size:
+                self._outcomes = self._outcomes[-self.window_size:]
 
-        if success:
-            self._consecutive_failures = 0
-        else:
-            self._consecutive_failures += 1
+            if success:
+                self._consecutive_failures = 0
+            else:
+                self._consecutive_failures += 1
 
-        # Check trip conditions
-        if self._consecutive_failures >= self.trip_threshold:
-            self._trip(f"{self._consecutive_failures} consecutive failures")
-        elif len(self._outcomes) >= self.window_size:
-            fail_rate = self._outcomes.count(False) / len(self._outcomes)
-            if fail_rate > 0.80:
-                self._trip(f"{fail_rate:.0%} failure rate over last {len(self._outcomes)} tasks")
+            # Check trip conditions
+            if self._consecutive_failures >= self.trip_threshold:
+                self._trip(f"{self._consecutive_failures} consecutive failures")
+            elif len(self._outcomes) >= self.window_size:
+                fail_rate = self._outcomes.count(False) / len(self._outcomes)
+                if fail_rate > 0.80:
+                    self._trip(f"{fail_rate:.0%} failure rate over last {len(self._outcomes)} tasks")
 
     def _trip(self, reason: str) -> None:
+        # Called under self._lock — no re-acquisition needed
         if not self._tripped:
             self._tripped = True
             self._trip_time = time.time()
@@ -701,37 +704,40 @@ class _CircuitBreaker:
 
     def allow_seeding(self) -> bool:
         """Return True if seeding is allowed, False if tripped."""
-        if not self._tripped:
-            return True
-        # Auto-reset after cooldown to allow a probe
-        elapsed = time.time() - self._trip_time
-        if elapsed >= self.cooldown_seconds:
-            log.info("CIRCUIT_BREAKER auto-reset after %ds cooldown — allowing probe attempt", int(elapsed))
-            self.reset()
-            return True
-        return False
+        with self._lock:
+            if not self._tripped:
+                return True
+            # Auto-reset after cooldown to allow a probe
+            elapsed = time.time() - self._trip_time
+            if elapsed >= self.cooldown_seconds:
+                log.info("CIRCUIT_BREAKER auto-reset after %ds cooldown — allowing probe attempt", int(elapsed))
+                self.reset()  # safe: RLock allows re-entry from same thread
+                return True
+            return False
 
     def reset(self) -> None:
         """Manual reset — called when operator sends resume command."""
-        if self._tripped:
-            log.info("CIRCUIT_BREAKER reset (was tripped: %s)", self._trip_reason)
-        self._tripped = False
-        self._trip_time = 0.0
-        self._trip_reason = ""
-        self._consecutive_failures = 0
-        self._outcomes.clear()
+        with self._lock:
+            if self._tripped:
+                log.info("CIRCUIT_BREAKER reset (was tripped: %s)", self._trip_reason)
+            self._tripped = False
+            self._trip_time = 0.0
+            self._trip_reason = ""
+            self._consecutive_failures = 0
+            self._outcomes.clear()
 
     @property
     def status(self) -> dict:
-        total = len(self._outcomes)
-        failures = self._outcomes.count(False)
-        return {
-            "tripped": self._tripped,
-            "reason": self._trip_reason if self._tripped else "",
-            "consecutive_failures": self._consecutive_failures,
-            "window": f"{failures}/{total}",
-            "cooldown_remaining": max(0, int(self.cooldown_seconds - (time.time() - self._trip_time))) if self._tripped else 0,
-        }
+        with self._lock:
+            total = len(self._outcomes)
+            failures = self._outcomes.count(False)
+            return {
+                "tripped": self._tripped,
+                "reason": self._trip_reason if self._tripped else "",
+                "consecutive_failures": self._consecutive_failures,
+                "window": f"{failures}/{total}",
+                "cooldown_remaining": max(0, int(self.cooldown_seconds - (time.time() - self._trip_time))) if self._tripped else 0,
+            }
 
 
 _circuit_breaker = _CircuitBreaker(window_size=20, trip_threshold=10, cooldown_seconds=600)
@@ -752,6 +758,7 @@ _MIN_SUCCESS_RATE = 0.40   # providers below 40% success for a task type are exc
 _MIN_SAMPLES = 3           # need at least 3 samples before excluding
 _ROUTING_CACHE: dict[str, tuple[list[str], float]] = {}  # task_type -> (eligible, timestamp)
 _ROUTING_CACHE_TTL = 300   # refresh every 5 minutes
+_ROUTING_CACHE_LOCK = threading.Lock()  # guards check-then-write on _ROUTING_CACHE
 
 
 def _compute_eligible_providers(task_type: str, available: list[str]) -> list[str]:
@@ -760,12 +767,13 @@ def _compute_eligible_providers(task_type: str, available: list[str]) -> list[st
     now = _time.time()
 
     cache_key = task_type
-    if cache_key in _ROUTING_CACHE:
-        cached, ts = _ROUTING_CACHE[cache_key]
-        if now - ts < _ROUTING_CACHE_TTL:
-            result = [p for p in cached if p in available]
-            if result:
-                return result
+    with _ROUTING_CACHE_LOCK:
+        if cache_key in _ROUTING_CACHE:
+            cached, ts = _ROUTING_CACHE[cache_key]
+            if now - ts < _ROUTING_CACHE_TTL:
+                result = [p for p in cached if p in available]
+                if result:
+                    return result
 
     # Read measurement file for this task type
     measurement_file = Path("api/logs/slot_measurements") / f"provider_{task_type}.json"
@@ -816,7 +824,8 @@ def _compute_eligible_providers(task_type: str, available: list[str]) -> list[st
             log.warning("ROUTING_DATA all providers below threshold for %s — using all", task_type)
             eligible = available
 
-        _ROUTING_CACHE[cache_key] = (eligible, now)
+        with _ROUTING_CACHE_LOCK:
+            _ROUTING_CACHE[cache_key] = (eligible, now)
         return [p for p in eligible if p in available]
 
     except Exception as e:
@@ -1041,8 +1050,7 @@ def record_provider_outcome(
 
         # OpenRouter: free model per task_type (Thompson Sampling over OPENROUTER_FREE_MODELS)
         if provider == "openrouter":
-            spec = PROVIDERS.get("openrouter", {})
-            model = spec.get("_selected_model")
+            model = getattr(_thread_local, "selected_model", None)  # set in execute_with_provider
             if model:
                 or_selector = SlotSelector(f"openrouter_free_model_{task_type}")
                 or_selector.record(
@@ -2863,7 +2871,7 @@ def execute_with_provider(
     # API-based providers (openrouter)
     if spec.get("api"):
         model = _select_openrouter_model(task_type)
-        spec["_selected_model"] = model
+        _thread_local.selected_model = model  # thread-local — no race with parallel workers
         log.info("OPENROUTER_MODEL task=%s model=%s", task_type, model)
         return _run_openrouter(prompt, str(_get_repo_dir()), timeout, model)
 
@@ -2882,7 +2890,7 @@ def execute_with_provider(
 
     # Write prompt to file for debugging, deliver via stdin for all providers
     # stdin avoids shell arg length limits and is more reliable than CLI args
-    _task_id = getattr(execute_with_provider, "_current_task_id", "unknown")
+    _task_id = getattr(_thread_local, "task_id", "unknown")
     prompt_file = os.path.join(str(_get_repo_dir()), f".task-prompt-{_task_id[:12]}.md")
     try:
         with open(prompt_file, "w", encoding="utf-8") as pf:
@@ -2902,7 +2910,7 @@ def execute_with_provider(
 
     # ── Start heartbeat monitoring (works for both wrapper and raw subprocess) ──
     start = time.time()
-    _current_task_id = getattr(execute_with_provider, "_current_task_id", "")
+    _current_task_id = getattr(_thread_local, "task_id", "")
     _heartbeat_stop = threading.Event()
     # CC_DIAG_LEVEL: normal (10s, file list) | high (5s, file list + diff stats + process info)
     _diag_level = rc("diagnostics", "level", "normal")
@@ -3038,8 +3046,8 @@ def execute_with_provider(
 
     # Fallback: raw subprocess with live progress reporting
     start = time.time()
-    # task_id for progress reporting (set by caller context)
-    _current_task_id = getattr(execute_with_provider, "_current_task_id", "")
+    # task_id for progress reporting (set by caller context, thread-local)
+    _current_task_id = getattr(_thread_local, "task_id", "")
 
     creation_flags = 0
     if sys.platform == "win32":
@@ -3394,10 +3402,10 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     log.info("EXECUTING task=%s type=%s provider=%s", task_id, task_type, provider)
     _post_activity(task_id, "executing", {"provider": provider, "task_type": task_type})
 
-    # Pass task_id to execute_with_provider for live progress reporting
-    execute_with_provider._current_task_id = task_id
+    # Pass task_id to execute_with_provider for live progress reporting (thread-local, no race)
+    _thread_local.task_id = task_id
     success, output, duration = execute_with_provider(provider, prompt, task_type, complexity_estimate)
-    execute_with_provider._current_task_id = ""
+    _thread_local.task_id = ""
 
     # Stop control channel
     if control_channel:
@@ -3565,7 +3573,8 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     task_log = _LOG_DIR / f"task_{task_id}.log"
     spec_info = PROVIDERS.get(provider, {})
     cmd_line = " ".join(str(c) for c in spec_info.get("cmd", []))
-    model_info = spec_info.get("_selected_model", "default")
+    # For openrouter, model is picked per-task and stored in thread-local; for others it's in spec
+    model_info = getattr(_thread_local, "selected_model", None) or spec_info.get("_selected_model", "default")
     task_log.write_text(
         f"=== Task {task_id} | Provider: {provider} | Type: {task_type} ===\n"
         f"Time: {datetime.now(timezone.utc).isoformat()}\n"
@@ -3616,7 +3625,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         "complexity_estimate": complexity_estimate,
     }
     if provider == "openrouter":
-        om = (PROVIDERS.get("openrouter") or {}).get("_selected_model")
+        om = getattr(_thread_local, "selected_model", None)
         if om:
             completion_context["openrouter_model"] = om
             completion_context["openrouter_free_model_slots"] = len(OPENROUTER_FREE_MODELS)
