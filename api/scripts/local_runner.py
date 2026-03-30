@@ -1416,6 +1416,16 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         idea_desc = str((idea_payload or {}).get("description") or "") if isinstance(idea_payload, dict) else ""
 
         extra_context = {}  # PR/branch info passed to downstream phases
+        extra_context["idea_id"] = idea_id  # Fix 6: always propagate idea_id into downstream context
+
+        # Fix 6: Prepend idea scope header to every direction so providers never work on wrong idea.
+        _idea_header = (
+            f"─── IDEA SCOPE ───\n"
+            f"idea_id: {idea_id}\n"
+            f"idea_name: {idea_name}\n"
+            f"phase: {next_phase}\n"
+            f"───────────────────\n\n"
+        )
 
         # Phase-specific direction with quality requirements
         if next_phase == "spec":
@@ -1492,9 +1502,14 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"this is a HOTFIX priority — note what needs immediate fixing."
             )
         elif next_phase == "review":
-            # Extract PR info from the completed impl task
+            # DG-017: Check the current task's context first (set by DG-012 immediately after push).
+            # _extract_branch_from_completed_tasks() only finds COMPLETED impl tasks — but the
+            # advance hook fires BEFORE the task is marked completed on the server, so fall back.
+            _task_ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+            impl_branch = _task_ctx.get("impl_branch") or ""
+            if not impl_branch:
+                impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
             pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
-            impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
             pr_instruction = ""
             if pr_number:
                 pr_instruction = (
@@ -1514,8 +1529,13 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             extra_context["pr_number"] = pr_number
             extra_context["impl_branch"] = impl_branch
         elif next_phase == "test":
-            # Extract PR branch from completed impl task so tests push to same PR
-            impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            # DG-017: Check the current task's context first (set by DG-012 immediately after push).
+            # _extract_branch_from_completed_tasks() only finds COMPLETED impl tasks — but the
+            # advance hook fires BEFORE the task is marked completed on the server, so fall back.
+            _task_ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+            impl_branch = _task_ctx.get("impl_branch") or ""
+            if not impl_branch:
+                impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
             pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
             branch_instruction = ""
             if impl_branch:
@@ -1540,23 +1560,32 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             extra_context["impl_branch"] = impl_branch
             extra_context["pr_number"] = pr_number
         elif next_phase == "impl":
-            # Read the spec content directly to give the provider full context
+            # Fix 2: Exact spec path match first; fall back to glob to avoid cross-idea matches.
             spec_ref = ""
+            _resolved_spec_path = None
             try:
                 import glob as _glob
-                spec_patterns = [
-                    str(_REPO_DIR / "specs" / f"*{idea_id}*"),
-                    str(_REPO_DIR / "specs" / f"*{idea_id.split('-')[0]}*{idea_id.split('-')[-1]}*"),
-                ]
-                spec_files = []
-                for pat in spec_patterns:
-                    spec_files.extend(_glob.glob(pat))
+                # Try exact match first (specs/{idea_id}.md)
+                _exact = _REPO_DIR / "specs" / f"{idea_id}.md"
+                if _exact.exists():
+                    spec_files = [str(_exact)]
+                else:
+                    spec_patterns = [
+                        str(_REPO_DIR / "specs" / f"*{idea_id}*"),
+                        str(_REPO_DIR / "specs" / f"*{idea_id.split('-')[0]}*{idea_id.split('-')[-1]}*"),
+                    ]
+                    spec_files = []
+                    for pat in spec_patterns:
+                        spec_files.extend(_glob.glob(pat))
                 if spec_files:
-                    with open(spec_files[0], "r", encoding="utf-8", errors="replace") as sf:
+                    _resolved_spec_path = spec_files[0]
+                    with open(_resolved_spec_path, "r", encoding="utf-8", errors="replace") as sf:
                         spec_content = sf.read()[:3000]
-                    spec_ref = f"\n\nSpec ({spec_files[0]}):\n```\n{spec_content}\n```\n"
+                    spec_ref = f"\n\nSpec ({_resolved_spec_path}):\n```\n{spec_content}\n```\n"
             except Exception:
                 pass
+            if _resolved_spec_path:
+                extra_context["spec_path"] = _resolved_spec_path
 
             direction = (
                 f"Implement '{idea_name}' ({idea_id}).\n\n"
@@ -1619,7 +1648,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             "POST",
             "/api/agent/tasks",
             {
-                "direction": direction,
+                "direction": _idea_header + direction,  # Fix 6: prepend idea scope header
                 "task_type": next_phase,
                 "context": {
                     "idea_id": idea_id,
@@ -1809,10 +1838,16 @@ Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>"""
 Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
 Output a summary: files created/modified, validation results, errors encountered."""
 
+    _idea_id_for_prompt = context.get("idea_id", "unknown") if isinstance(context, dict) else "unknown"
+    _spec_path_for_prompt = context.get("spec_path", "none") if isinstance(context, dict) else "none"
     prompt = f"""You are acting as a {agent} for the Coherence Network project.
 
 Task type: {task_type}
 Task ID: {task.get('id', 'unknown')}
+Idea ID: {_idea_id_for_prompt}
+Spec file: {_spec_path_for_prompt}
+
+SCOPE RULE: Only modify files related to idea '{_idea_id_for_prompt}'. Do NOT work on any other idea.
 
 Direction:
 {direction}
@@ -2518,7 +2553,7 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
             else:
                 output = f"MERGE_PASSED: No open PR for {idea_id} — code already on main."
         elif task_type == "deploy":
-            ssh_key = os.path.expanduser("~/.ssh/hostinger_openclaw_key_rsa")
+            ssh_key = os.path.expanduser("~/.ssh/hostinger-openclaw")  # Fix 5: correct key name
             if os.path.exists(ssh_key):
                 deploy_result = subprocess.run(
                     ["ssh", "-o", "StrictHostKeyChecking=no", "-i", ssh_key, "root@187.77.152.42",
@@ -2893,6 +2928,12 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                             log.info("TIMEOUT resume task created source=%s resume=%s", task_id, resume_task_id)
                         else:
                             log.warning("TIMEOUT resume task create failed source=%s", task_id)
+
+    # DG-012: Carry impl_branch into completion context so server-side pipeline_advance_service
+    # can propagate it when creating downstream test/code-review tasks.
+    context = task.get("context") if isinstance(task.get("context"), dict) else {}
+    if task_type == "impl" and context.get("impl_branch"):
+        completion_context["impl_branch"] = context["impl_branch"]
 
     # Report to API
     if completion_status == "completed":
@@ -4394,6 +4435,15 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                     if ok and diff:
                         # Push BRANCH (not main) — code stays on branch until code-review
                         pushed = _push_branch_to_origin(task_id, wt)
+                        if pushed and task_type == "impl":
+                            # DG-012: Set impl_branch in context immediately after push so the
+                            # advance hook (_run_phase_auto_advance_hook) and downstream tasks
+                            # (test, code-review) can find the branch without waiting for PR creation.
+                            _impl_branch_name = f"task/{task_id[:16]}"
+                            ctx["impl_branch"] = _impl_branch_name
+                            if isinstance(task.get("context"), dict):
+                                task["context"]["impl_branch"] = _impl_branch_name
+                            log.info("IMPL_BRANCH_SET task=%s branch=%s", task_id[:16], _impl_branch_name)
                         if not pushed:
                             log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
                     elif not ok and diff and task_type in ("impl", "test"):
@@ -4484,7 +4534,8 @@ def _recover_in_flight_tasks() -> int:
         task_list = running if isinstance(running, list) else running.get("tasks", [])
         recovered = 0
         for t in task_list:
-            claimed = str(t.get("claimed_by") or "")
+            # Fix 4: claim writes "worker_id" but recovery was checking "claimed_by" — check both.
+            claimed = str(t.get("claimed_by") or t.get("worker_id") or "")
             # Match tasks claimed by this node (hostname or node_id prefix)
             if _NODE_ID[:8] not in claimed and _NODE_NAME not in claimed:
                 continue
