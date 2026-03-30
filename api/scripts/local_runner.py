@@ -43,6 +43,12 @@ import httpx
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _API_DIR = _SCRIPT_DIR.parent
 _REPO_DIR = _API_DIR.parent
+# DG-013 fix: cache the ORIGINAL repo dir at module init.
+# _run_task_in_worktree mutates _REPO_DIR to point to the task worktree, which is
+# correct for single-threaded use but races with parallel workers who read _REPO_DIR
+# for git operations. All infrastructure functions (_create_worktree, _push_branch_to_origin,
+# _seed_task_from_open_idea, etc.) must use _ORIGINAL_REPO_DIR — never the mutable global.
+_ORIGINAL_REPO_DIR: "Path" = _REPO_DIR  # type: ignore[assignment]  # immutable, set once
 _LOG_DIR = _API_DIR / "logs"
 
 # ── Runner config — single source of truth, no env vars ──────────────
@@ -4980,7 +4986,8 @@ def _create_standalone_task_repo(
     inside a standalone git repo rooted under ``.worktrees/``.
     """
     slug = task_id[:16]
-    repo_root = str(_REPO_DIR)
+    # DG-013 fix: use _ORIGINAL_REPO_DIR — _REPO_DIR may be a worktree path in parallel mode
+    repo_root = str(_ORIGINAL_REPO_DIR)
     archive_candidates = []
     if base_branch:
         archive_candidates.extend([f"origin/{base_branch}", base_branch])
@@ -5197,7 +5204,10 @@ def _create_worktree(
     """
     slug = task_id[:16]
 
-    # Determine which repo and worktree base to use
+    # Determine which repo and worktree base to use.
+    # DG-013 fix: ALWAYS use _ORIGINAL_REPO_DIR, never _REPO_DIR.
+    # _REPO_DIR is mutated per-thread by _run_task_in_worktree to point to the
+    # active task worktree — a parallel worker reading it would get the wrong path.
     if workspace_git_url:
         workspace_repo = _get_or_update_workspace_repo(workspace_git_url)
         if workspace_repo is None:
@@ -5206,8 +5216,8 @@ def _create_worktree(
         repo_root = str(workspace_repo)
         worktree_base = workspace_repo / ".worktrees"
     else:
-        repo_root = str(_REPO_DIR)
-        worktree_base = _WORKTREE_BASE
+        repo_root = str(_ORIGINAL_REPO_DIR)
+        worktree_base = _ORIGINAL_REPO_DIR / ".worktrees"
 
     wt_path = worktree_base / f"task-{slug}"
     branch = f"task/{slug}"
@@ -5312,7 +5322,8 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
 
 def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
     """Remove worktrees older than max_age_hours. Called periodically from the loop."""
-    wt_base = _REPO_DIR / ".worktrees"
+    # DG-013 fix: use _ORIGINAL_REPO_DIR (never the mutable _REPO_DIR)
+    wt_base = _ORIGINAL_REPO_DIR / ".worktrees"
     if not wt_base.exists():
         return 0
     cleaned = 0
@@ -5325,12 +5336,12 @@ def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
             if age_hours < max_age_hours:
                 continue
             task_slug = wt_dir.name.replace("task-", "")
-            if _reclaim_worktree_slot(str(_REPO_DIR), wt_dir, f"task/{task_slug}"):
+            if _reclaim_worktree_slot(str(_ORIGINAL_REPO_DIR), wt_dir, f"task/{task_slug}"):
                 cleaned += 1
         except Exception:
             pass
     if cleaned:
-        _run_git_command(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_REPO_DIR))
+        _run_git_command(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_ORIGINAL_REPO_DIR))
         log.info("SWEEP_WORKTREES cleaned %d stale worktrees", cleaned)
     return cleaned
 
@@ -5341,10 +5352,11 @@ def _cleanup_worktree(task_id: str) -> None:
     Fix 5: only called AFTER push is confirmed (or task failed).
     """
     slug = task_id[:16]
-    wt_path = _WORKTREE_BASE / f"task-{slug}"
+    # DG-013 fix: use _ORIGINAL_REPO_DIR
+    wt_path = _ORIGINAL_REPO_DIR / ".worktrees" / f"task-{slug}"
     branch = f"task/{slug}"
     try:
-        if _reclaim_worktree_slot(str(_REPO_DIR), wt_path, branch):
+        if _reclaim_worktree_slot(str(_ORIGINAL_REPO_DIR), wt_path, branch):
             log.info("WORKTREE_CLEANED task=%s", slug)
     except Exception as e:
         log.warning("WORKTREE_CLEANUP_FAILED task=%s error=%s", slug, e)
