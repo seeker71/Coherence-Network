@@ -5235,7 +5235,14 @@ def _create_worktree(
                 base_ref = f"origin/{base_branch}"
                 log.info("WORKTREE_FROM_PR task=%s branch=%s", slug, base_branch)
             else:
-                log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
+                # HARD FAIL: the PR branch was expected but doesn't exist on origin.
+                # Do NOT fall back to origin/main — the agent would work against code
+                # that doesn't contain the implementation, guaranteeing failure.
+                log.error("WORKTREE_PR_BRANCH_MISSING task=%s branch=%s — "
+                          "cannot create worktree without the impl branch. "
+                          "The impl phase must push a branch and create a PR first.",
+                          slug, base_branch)
+                return None
 
         create = _run_git_command(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
@@ -5634,7 +5641,25 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             task_type = task.get("task_type", "spec")
             impl_branch = ctx.get("impl_branch", "")
             workspace_git_url = ctx.get("workspace_git_url", "")
-            base_branch = impl_branch if task_type in ("test", "code-review", "review") and impl_branch else None
+
+            # HARD GATE: test/code-review/review REQUIRE impl_branch.
+            # Without it, the agent works against origin/main which doesn't
+            # contain the implementation — guaranteed failure + wasted compute.
+            if task_type in ("test", "code-review", "review") and not impl_branch:
+                log.error("WORKER[%d] IMPL_BRANCH_REQUIRED task=%s type=%s — "
+                          "no impl_branch in context. The impl phase must push a branch "
+                          "and pass it forward. Failing this task.",
+                          worker_id, task_id[:16], task_type)
+                complete_task(task_id,
+                    f"FAILED: {task_type} requires impl_branch in context but none was provided. "
+                    f"The impl phase must push a branch and create a PR before {task_type} can run.",
+                    False)
+                with _active_lock:
+                    _active_idea_ids.discard(idea_id)
+                _circuit_breaker.record(False)
+                continue
+
+            base_branch = impl_branch if task_type in ("test", "code-review", "review") else None
             wt = _create_worktree(task_id, base_branch=base_branch, idea_id=idea_id,
                                   workspace_git_url=workspace_git_url)
             pushed = False
