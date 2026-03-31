@@ -73,7 +73,15 @@ export default async function ConceptsPage() {
     <main className="max-w-7xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Concepts</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-3xl font-bold tracking-tight">Concepts</h1>
+          <a
+            href="/concepts/garden"
+            className="text-xs bg-primary/10 text-primary border border-primary/20 rounded px-2 py-1 hover:bg-primary/20 transition-colors font-medium"
+          >
+            Garden view (contribute)
+          </a>
+        </div>
         <p className="text-muted-foreground text-sm max-w-2xl">
           The Living Codex ontology — {stats.concepts} universal concepts spanning {stats.axes} axes
           with {stats.relationship_types} typed relationship patterns. Click any concept to explore
