@@ -225,3 +225,230 @@ def get_related_items(concept_id: str) -> dict[str, Any]:
         "specs": specs,
         "total": len(ideas) + len(specs),
     }
+
+
+# ---------------------------------------------------------------------------
+# Accessible ontology: plain-language contribution helpers
+# ---------------------------------------------------------------------------
+
+import re
+
+
+def _slugify(text: str) -> str:
+    """Convert plain text to a safe concept ID slug."""
+    slug = text.lower().strip()
+    slug = re.sub(r"[^\w\s-]", "", slug)
+    slug = re.sub(r"[\s_-]+", "-", slug)
+    slug = slug.strip("-")[:48]
+    return f"user.{slug}"
+
+
+def _extract_keywords(text: str) -> list[str]:
+    """Extract meaningful keywords from plain text (stopword-free)."""
+    stopwords = {
+        "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+        "of", "with", "by", "from", "up", "about", "into", "through", "is",
+        "are", "was", "were", "be", "been", "being", "have", "has", "had",
+        "do", "does", "did", "will", "would", "could", "should", "may", "might",
+        "can", "that", "this", "it", "its", "they", "their", "we", "our", "you",
+        "your", "i", "my", "he", "she", "his", "her", "which", "who", "what",
+        "when", "where", "how", "not", "no", "so", "as", "if", "then",
+    }
+    words = re.findall(r"\b[a-zA-Z]{3,}\b", text.lower())
+    seen: set[str] = set()
+    keywords: list[str] = []
+    for w in words:
+        if w not in stopwords and w not in seen:
+            seen.add(w)
+            keywords.append(w)
+    return keywords[:12]
+
+
+def _score_similarity(concept: dict[str, Any], keywords: list[str]) -> float:
+    """Score how well a concept matches a set of keywords (0.0–1.0)."""
+    if not keywords:
+        return 0.0
+    target_text = " ".join([
+        concept.get("name", ""),
+        concept.get("description", ""),
+        " ".join(concept.get("keywords", [])),
+    ]).lower()
+    hits = sum(1 for kw in keywords if kw in target_text)
+    return round(hits / len(keywords), 3)
+
+
+def suggest_concept_placement(
+    plain_text: str,
+    domains: list[str] | None = None,
+    contributor: str = "anonymous",
+) -> dict[str, Any]:
+    """
+    Accept plain-language input and return a placement suggestion.
+
+    Non-technical contributors share an idea; the system:
+    - auto-generates a concept ID and keywords
+    - finds the top related existing concepts by keyword overlap
+    - suggests relationship types based on language cues
+    - returns a ready-to-submit concept body that can be accepted as-is
+
+    Technical peers see the full graph; everyone else sees gardens, cards,
+    and conversations.
+    """
+    name = plain_text.strip()
+    concept_id = _slugify(name)
+
+    # If ID already exists, append a short uuid fragment
+    if concept_id in _concept_index:
+        concept_id = f"{concept_id}-{str(uuid.uuid4())[:6]}"
+
+    keywords = _extract_keywords(name)
+    domains_clean = [d.strip().lower() for d in (domains or [])]
+
+    # Find related concepts by keyword overlap
+    scored: list[tuple[float, dict[str, Any]]] = []
+    for c in _concepts:
+        score = _score_similarity(c, keywords)
+        if score > 0:
+            scored.append((score, c))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    related = [
+        {
+            "id": c["id"],
+            "name": c.get("name", c["id"]),
+            "score": score,
+            "relationship_hint": "is_related_to",
+        }
+        for score, c in scored[:5]
+    ]
+
+    # Suggest relationship types based on language cues
+    suggested_relationships: list[str] = ["is_related_to"]
+    if any(kw in keywords for kw in ["part", "component", "aspect", "element"]):
+        suggested_relationships.append("is_part_of")
+    if any(kw in keywords for kw in ["type", "kind", "form", "variant"]):
+        suggested_relationships.append("is_a")
+    if any(kw in keywords for kw in ["leads", "causes", "enables", "produces"]):
+        suggested_relationships.append("leads_to")
+
+    ready_to_submit = {
+        "id": concept_id,
+        "name": name,
+        "description": f"Contributed by {contributor}: {name}",
+        "type_id": "codex.ucore.user",
+        "level": 3,
+        "keywords": keywords,
+        "domains": domains_clean,
+        "parent_concepts": [r["id"] for r in related[:1]],
+        "child_concepts": [],
+        "axes": [],
+        "contributor": contributor,
+    }
+
+    return {
+        "suggested_id": concept_id,
+        "name": name,
+        "keywords": keywords,
+        "domains": domains_clean,
+        "related_concepts": related,
+        "suggested_relationships": suggested_relationships,
+        "ready_to_submit": ready_to_submit,
+        "message": (
+            f"Found {len(related)} related concept(s). "
+            "You can submit as-is or refine the name and description before saving."
+        ),
+    }
+
+
+def create_concept_from_plain(data: dict[str, Any]) -> dict[str, Any]:
+    """
+    Create a concept from a plain-language submission (output of suggest_concept_placement).
+    Adds domain tagging and auto-creates relationship edges to related concepts.
+    """
+    concept_id = data["id"]
+    if concept_id in _concept_index:
+        concept_id = f"{concept_id}-{str(uuid.uuid4())[:6]}"
+        data = {**data, "id": concept_id}
+
+    domains = data.get("domains", [])
+    contributor = data.get("contributor", "anonymous")
+
+    concept: dict[str, Any] = {
+        "id": concept_id,
+        "name": data.get("name", concept_id),
+        "description": data.get("description", ""),
+        "typeId": data.get("type_id", "codex.ucore.user"),
+        "level": data.get("level", 3),
+        "keywords": data.get("keywords", []),
+        "parentConcepts": data.get("parent_concepts", []),
+        "childConcepts": data.get("child_concepts", []),
+        "axes": data.get("axes", []),
+        "domains": domains,
+        "contributor": contributor,
+        "createdAt": datetime.now(timezone.utc).isoformat(),
+        "userDefined": True,
+        "accessibleContribution": True,
+    }
+    _concepts.append(concept)
+    _concept_index[concept_id] = concept
+    _user_concepts.add(concept_id)
+
+    edges_created: list[dict[str, Any]] = []
+    for parent_id in concept.get("parentConcepts", []):
+        if parent_id in _concept_index:
+            edge = create_edge(
+                from_id=concept_id,
+                to_id=parent_id,
+                rel_type="is_related_to",
+                created_by=contributor,
+            )
+            edges_created.append(edge)
+
+    return {
+        "concept": concept,
+        "edges_created": edges_created,
+        "message": f"Concept '{concept['name']}' added to the ontology with {len(edges_created)} relationship(s).",
+    }
+
+
+def list_concepts_by_domain(domain: str, limit: int = 50) -> dict[str, Any]:
+    """Return concepts tagged with a specific domain."""
+    d = domain.lower().strip()
+    matching = [c for c in _concepts if d in [x.lower() for x in c.get("domains", [])]]
+    return {
+        "domain": domain,
+        "items": matching[:limit],
+        "total": len(matching),
+    }
+
+
+def get_garden_view(limit: int = 100) -> dict[str, Any]:
+    """
+    Return a simplified 'garden' view of concepts for non-technical contributors.
+    Groups concepts by domain and level, filters to accessible fields only.
+    """
+    cards: list[dict[str, Any]] = []
+    domain_groups: dict[str, list[str]] = {}
+
+    for c in _concepts[:limit]:
+        card = {
+            "id": c["id"],
+            "name": c.get("name", c["id"]),
+            "description": c.get("description", ""),
+            "level": c.get("level", 0),
+            "domains": c.get("domains", []),
+            "keywords": c.get("keywords", [])[:5],
+            "userDefined": c.get("userDefined", False),
+            "contributor": c.get("contributor"),
+        }
+        cards.append(card)
+        for domain in c.get("domains", []):
+            domain_groups.setdefault(domain, [])
+            domain_groups[domain].append(c["id"])
+
+    return {
+        "cards": cards,
+        "total": len(_concepts),
+        "shown": len(cards),
+        "domain_groups": domain_groups,
+        "hint": "Share an idea in plain language — the system finds where it fits.",
+    }
