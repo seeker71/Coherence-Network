@@ -9,6 +9,7 @@ from app.models.portfolio import (
     IdeaContributionDrilldown,
     IdeaContributionsList,
     PortfolioSummary,
+    StakeDetail,
     StakesList,
     TasksList,
 )
@@ -101,6 +102,24 @@ def get_stakes(
     """List all ideas this contributor has active stakes in, with valuation and ROI."""
     try:
         return portfolio_service.get_stakes(contributor_id, sort=sort, limit=limit, offset=offset)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get(
+    "/contributors/{contributor_id}/stakes/{stake_id}",
+    response_model=StakeDetail,
+    summary="Get full detail for a single stake position",
+)
+def get_stake_detail(
+    contributor_id: str,
+    stake_id: str,
+) -> StakeDetail:
+    """Retrieve full stake detail: position, ROI since staking, and idea activity timeline."""
+    try:
+        return portfolio_service.get_stake_detail(contributor_id, stake_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 

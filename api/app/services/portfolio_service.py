@@ -13,6 +13,7 @@ from app.models.portfolio import (
     ContributionLineageView,
     ContributorSummary,
     HealthSignal,
+    IdeaActivityEvent,
     IdeaContributionDrilldown,
     IdeaContributionsList,
     IdeaContributionSummary,
@@ -20,6 +21,7 @@ from app.models.portfolio import (
     LinkedIdentity,
     NetworkStats,
     PortfolioSummary,
+    StakeDetail,
     StakesList,
     StakeSummary,
     TasksList,
@@ -504,6 +506,99 @@ def get_stakes(contributor_id: str, sort: str = "roi_desc", limit: int = 20, off
         items.sort(key=lambda x: x.roi_pct if x.roi_pct is not None else float("-inf"), reverse=True)
 
     return StakesList(contributor_id=contributor_id, total=len(items), items=items[offset: offset + limit])
+
+
+def get_stake_detail(contributor_id: str, stake_id: str) -> StakeDetail:
+    """Return full detail for a single stake: position, ROI, and idea activity since staking."""
+    node = _find_contributor(contributor_id)
+    if not node:
+        raise ValueError(f"Contributor not found: {contributor_id}")
+
+    # Resolve stake node
+    stake_node = graph_service.get_node(f"stake:{stake_id}")
+    if not stake_node:
+        # Scan all stakes to find by id/legacy_id
+        stakes_result = graph_service.list_nodes(type="stake", limit=10000)
+        for s in stakes_result.get("items", []):
+            if s.get("id") == stake_id or s.get("legacy_id") == stake_id:
+                stake_node = s
+                break
+    if not stake_node:
+        raise ValueError(f"Stake not found: {stake_id}")
+
+    props = _graph_node_props(stake_node)
+    if props.get("contributor_id") != contributor_id:
+        raise PermissionError("Stake does not belong to this contributor")
+
+    idea_id = props.get("idea_id", "")
+    idea_node = graph_service.get_node(f"idea:{idea_id}") or {}
+    idea_title = idea_node.get("name") or idea_id
+    idea_status = _graph_node_props(idea_node).get("status", "unknown")
+
+    cc_staked = float(props.get("cc_staked", 0) or 0)
+    cc_val_raw = props.get("cc_valuation")
+    cc_val: Optional[float] = float(cc_val_raw) if cc_val_raw is not None else None
+    roi: Optional[float] = None
+    if cc_val is not None and cc_staked > 0:
+        roi = round((cc_val - cc_staked) / cc_staked * 100, 2)
+
+    staked_at: Optional[datetime] = None
+    ts_raw = props.get("staked_at") or stake_node.get("created_at")
+    if ts_raw:
+        try:
+            staked_at = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            pass
+
+    # Collect idea activity since staking
+    activity_events: list[IdeaActivityEvent] = []
+    contributions = graph_service.list_nodes(type="contribution", limit=10000)
+    activity_count = 0
+    for c in contributions.get("items", []):
+        cprops = _graph_node_props(c)
+        if cprops.get("idea_id") != idea_id:
+            continue
+        ts_raw2 = c.get("created_at") or c.get("updated_at")
+        event_ts: Optional[datetime] = None
+        if ts_raw2:
+            try:
+                event_ts = datetime.fromisoformat(str(ts_raw2).replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                pass
+        if staked_at and event_ts and event_ts < staked_at:
+            continue
+        activity_count += 1
+        ctype = cprops.get("contribution_type", "contribution")
+        activity_events.append(IdeaActivityEvent(
+            event_type=ctype,
+            date=event_ts,
+            description=f"{ctype} by {cprops.get('contributor_name') or cprops.get('contributor_id', 'unknown')}",
+            value_change=float(cprops.get("cost_amount", 0) or 0) or None,
+        ))
+
+    activity_events.sort(key=lambda e: e.date or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+
+    stats = get_network_stats()
+    health = _health_for_idea(idea_node, [
+        c for c in contributions.get("items", [])
+        if _graph_node_props(c).get("idea_id") == idea_id
+    ])
+
+    return StakeDetail(
+        stake_id=stake_id,
+        contributor_id=contributor_id,
+        idea_id=idea_id,
+        idea_title=idea_title,
+        idea_status=idea_status,
+        cc_staked=cc_staked,
+        cc_valuation=cc_val,
+        roi_pct=roi,
+        staked_at=staked_at,
+        health=health,
+        idea_activity_since_staking=activity_events[:50],
+        total_contributions_since_staking=activity_count,
+        network_total_supply=stats.total_supply,
+    )
 
 
 # ── Tasks ────────────────────────────────────────────────────────────
