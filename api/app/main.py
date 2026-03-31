@@ -52,6 +52,7 @@ from app.routers import (
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
+from app.routers import resonance as resonance_router
 from app.routers import dif_feedback
 from app.routers import geolocation
 from app.routers import edges as edges_router
