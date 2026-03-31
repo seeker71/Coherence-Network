@@ -1,0 +1,60 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/fix-start-gate-gh-degraded",
+  "commit_scope": "Allow start-gate and compatibility checks to run with degraded behavior when GitHub API access is unavailable",
+  "files_owned": [
+    "scripts/start_gate.py"
+  ],
+  "idea_ids": ["public-e2e-flow-gate-automation"],
+  "spec_ids": ["095-public-e2e-flow-gate-automation"],
+  "task_ids": ["task_2026_02_18_start_gate_fix"],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "validation",
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "START_GATE_REQUIRE_GH=0 python3 scripts/ensure_worktree_start_clean.py --json",
+    "START_GATE_REQUIRE_GH=0 make start-gate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_start-gate-gh-graceful.json"
+  ],
+  "change_files": [
+    "scripts/start_gate.py",
+    "docs/system_audit/commit_evidence_2026-02-18_start-gate-gh-graceful.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "START_GATE_REQUIRE_GH=0 python3 scripts/ensure_worktree_start_clean.py --json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "date": "2026-02-25",
+  "thread_branch": "codex/api-health-sha-freshness-20260225",
+  "commit_scope": "Add API deployed SHA visibility to health endpoints and enforce deploy-contract/runtime verification paths so stale API runtimes cannot silently pass parity checks.",
+  "files_owned": [
+    "api/app/routers/health.py",
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_health.py",
+    "api/tests/test_release_gate_service.py",
+    "scripts/verify_web_api_deploy.sh"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "095-public-e2e-flow-gate-automation",
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-02-25-api-health-sha-freshness"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260225T183627Z_codex-24h-gap-closure-20260225.json"
+  ],
+  "change_files": [
+    "api/app/routers/health.py",
+    "api/app/services/release_gate_service.py",
+    "api/tests/test_health.py",
+    "api/tests/test_release_gate_service.py",
+    "scripts/verify_web_api_deploy.sh",
+    "docs/system_audit/commit_evidence_2026-02-25_api-health-sha-freshness-contract.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_health.py tests/test_release_gate_service.py -k \"api_health_sha or unknown_web_proxy_sha or provider_readiness_required or warns_when_provider_readiness_blocked_if_not_required or evaluate_public_deploy_contract_report_live_shape\"",
+      "cd api && ruff check app/routers/health.py app/services/release_gate_service.py tests/test_health.py tests/test_release_gate_service.py",
+      "bash -n scripts/verify_web_api_deploy.sh",
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and production rollout of API health deployed SHA fields."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public deploy contract and deploy verification scripts now surface API runtime SHA parity (with optional strict mode) using /api/health deployed SHA metadata, reducing false-green stale-runtime outcomes.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-network-production.up.railway.app/api/gates/main-head",
+      "https://coherence-network-production.up.railway.app/api/gates/public-deploy/verify",
+      "https://coherence-web-production.up.railway.app/api/health-proxy"
+    ],
+    "test_flows": [
+      "Query /api/health and confirm deployed_sha/deployed_sha_source are present when runtime env exposes commit SHA.",
+      "Run public deploy contract and verify railway_health parity uses observed deployed SHA when available.",
+      "Run scripts/verify_web_api_deploy.sh and verify API runtime SHA parity output warns or fails according to VERIFY_REQUIRE_API_HEALTH_SHA.",
+      "Confirm web health proxy SHA parity remains enforced against expected main-head SHA."
+    ]
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "version": "1",
+  "agent_tasks": {
+    "path": "",
+    "persist": true,
+    "use_db": true,
+    "database_url": "",
+    "db_reload_ttl_seconds": 120,
+    "task_output_max_chars": 4000
+  },
+  "runtime": {
+    "events_path": "",
+    "idea_map_path": "",
+    "agent_tasks_path": "",
+    "cost_per_second": 0.002,
+    "endpoint_cache_max_workers": 4
+  },
+  "automation_usage": {
+    "snapshots_path": "",
+    "use_db": true,
+    "max_snapshots": 2000,
+    "endpoint_cache_max_workers": 4,
+    "overview_cache_ttl_seconds": 300,
+    "purge_imported_files": false
+  },
+  "executor": {
+    "policy_enabled": true,
+    "default": "cursor",
+    "cheap_default": "",
+    "escalate_to": "",
+    "allow_unavailable_explicit": true,
+    "allow_paid_providers": true,
+    "repo_default": "",
+    "open_question_default": "",
+    "codex_executable": "",
+    "gemini_executable": ""
+  },
+  "api": {
+    "slow_request_ms": 1500
+  },
+  "audit": {
+    "task_audit_trail": true,
+    "provider_usage_tracking": true,
+    "lifecycle_telemetry": true,
+    "snapshot_retention_min": 2000
+  },
+  "fallbacks": {
+    "description": "All fallback paths are tracked and visible. Validators should minimize fallbacks during compliance checks.",
+    "status_report": { "fallback_reason_key": "fallback_reason", "source_key": "source", "fallbacks_used_key": "fallbacks_used" },
+    "automation_usage": { "meta_data_source": "meta.data_source", "meta_fallback_reason": "meta.fallback_reason", "meta_fallbacks_used": "meta.fallbacks_used" },
+    "task_list": { "runtime_backfill_key": "meta.runtime_fallback_backfill_count" },
+    "minimize_for_validation": [ "run monitor before status-report", "use force_refresh on automation endpoints", "ensure task store and runtime DB populated" ]
+  },
+  "external_validation": {
+    "description": "Endpoints and data an external entity can use to verify provider execution and compliance. All GET unless noted.",
+    "endpoints": [
+      { "path": "/api/agent/tasks", "purpose": "Task execution history (id, status, direction, created_at, context)", "validates": "agent_execution_trail" },
+      { "path": "/api/agent/status-report", "purpose": "Hierarchical pipeline status (goal, orchestration, execution, attention)", "validates": "pipeline_state" },
+      { "path": "/api/agent/effectiveness", "purpose": "Throughput, issues, goal proximity metrics", "validates": "pipeline_effectiveness" },
+      { "path": "/api/agent/monitor-issues", "purpose": "Open monitor issues with suggested actions", "validates": "attention_signals" },
+      { "path": "/api/automation/usage/readiness", "purpose": "Provider readiness and blocking gaps", "validates": "provider_readiness" },
+      { "path": "/api/automation/usage/validation-report", "purpose": "Provider validation report (required providers, usage, execution evidence)", "validates": "provider_execution_compliance" },
+      { "path": "/api/automation/usage/overview", "purpose": "Usage metrics and remaining ratios per provider", "validates": "usage_measurability" },
+      { "path": "/api/runtime/events", "purpose": "Runtime telemetry events (tool calls, completions). Requires RUNTIME_DATABASE_URL or DATABASE_URL for persistence.", "validates": "runtime_tracking" },
+      { "path": "/api/health", "purpose": "Liveness and readiness", "validates": "service_availability" }
+    ]
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/20260216-191707-endpoint-usage-metrics",
+  "commit_scope": "Record runtime usage metrics for POST /api/runtime-beacon in success and failure paths.",
+  "files_owned": [
+    "web/app/api/runtime-beacon/route.ts",
+    "docs/system_audit/commit_evidence_2026-02-17_runtime-beacon-usage-metrics.json"
+  ],
+  "idea_ids": [
+    "oss-interface-alignment",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "050"
+  ],
+  "task_ids": [
+    "endpoint-usage-metrics"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_worktree_local_web.sh",
+    "cd api && python3.11 -m pytest -q tests/test_runtime_api.py",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "change_files": [
+    "web/app/api/runtime-beacon/route.ts"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Runtime beacon endpoint now emits a persistent self-usage runtime event for POST requests while preserving existing forwarding behavior.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/api/runtime-beacon",
+      "https://coherence-network-production.up.railway.app/api/runtime/events"
+    ],
+    "test_flows": [
+      "web: trigger runtime beacon POST from page navigation and verify endpoint usage event appears in runtime event store",
+      "api: call GET /api/runtime/events and confirm /api/runtime-beacon records are present"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T03:02:00Z",
+    "environment": {
+      "python": "3.11",
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "./scripts/verify_worktree_local_web.sh",
+      "cd api && python3.11 -m pytest -q tests/test_runtime_api.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deployment checks."
+  }
+}

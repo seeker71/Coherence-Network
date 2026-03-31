@@ -1,0 +1,91 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/fix-start-gate-bootstrap",
+  "commit_scope": "Fix commit-evidence cache source-keying when switching commit evidence DB URLs",
+  "files_owned": [
+    "api/app/services/commit_evidence_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/spec_registry_service.py",
+    "scripts/start_gate.py",
+    ".codex/environments/environment.toml"
+  ],
+  "idea_ids": ["worktree-bootstrap-resilience"],
+  "spec_ids": ["process-bootstrap-resilience-001"],
+  "task_ids": ["task-2026-02-18-start-gate-bootstrap"],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "validation",
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
+    "gh auth status",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/validate_workflow_references.py",
+    "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_bootstrap-start-gate.json"
+  ],
+  "change_files": [
+    ".codex/environments/environment.toml",
+    "scripts/start_gate.py",
+    "api/app/services/commit_evidence_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/spec_registry_service.py",
+    "docs/system_audit/commit_evidence_2026-02-18_bootstrap-start-gate.json"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "START_GATE_ENFORCE_REMOTE_FAILURES=0 make start-gate",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "cd api && pytest -q tests/test_inventory_discovery_sources.py::test_inventory_reads_commit_evidence_from_store tests/test_inventory_discovery_sources.py::test_inventory_commit_evidence_returns_empty_when_store_has_no_rows"
+    ]
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Runtime inventory and telemetry endpoints remain stable under cached env changes.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/inventory/flow",
+      "https://coherence-network-production.up.railway.app/api/runtime/events",
+      "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability"
+    ],
+    "test_flows": [
+      "runtime cache invalidation updates runtime events immediately for telemetry and flow/traceability inventories"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy validation pending"
+  }
+}

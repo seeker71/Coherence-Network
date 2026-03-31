@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/remote-ops-deploy-20260218",
+  "commit_scope": "Tighten pickup-and-execute endpoint security and harden remote-ops smoke coverage for protected execution behavior.",
+  "files_owned": [
+    "api/app/routers/agent.py",
+    "scripts/verify_remote_ops_smoke.sh"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task-remote-ops-deploy-2026-02-18"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "security-hardening",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_web_api_deploy.sh",
+    "./scripts/verify_remote_ops_smoke.sh"
+  ],
+  "change_files": [
+    "api/app/routers/agent.py",
+    "scripts/verify_remote_ops_smoke.sh"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh",
+      "./scripts/verify_remote_ops_smoke.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production",
+    "notes": "Push to main and ensure public deploy contract run after API redeploy."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "pickup-and-execute requires token when AGENT_EXECUTE_TOKEN is configured and rejects unauthenticated calls when token protection is enabled; remote-ops smoke now treats unauthenticated dispatch as the expected protected-state path.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks/pickup-and-execute",
+      "https://coherence-web-production.up.railway.app/remote-ops"
+    ],
+    "test_flows": [
+      "Run verify_remote_ops_smoke.sh with no token and confirm endpoint reports protected path on pickup-and-execute.",
+      "If execution token is configured, run pick-up execution through /api/agent/tasks/pickup-and-execute and verify a running/completed task transition."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Pending production deployment and CI verification after security-hardening change."
+  }
+}

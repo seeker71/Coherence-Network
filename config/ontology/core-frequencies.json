@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "description": "Core U-CORE frequencies aligned with Earth's Schumann resonance and chakra system",
+    "lastUpdated": "2025-09-28T00:00:00Z"
+  },
+  "frequencies": [
+    {
+      "id": "schumann-base",
+      "name": "Schumann Base",
+      "description": "Earth's fundamental heartbeat - 7.83Hz base frequency for cellular communication and biological rhythms",
+      "frequency": 7.83,
+      "typeId": "codex.frequency",
+      "level": 0,
+      "keywords": ["schumann", "earth", "base", "cellular", "biological"],
+      "benefits": ["cellular regeneration", "immune support", "stress reduction"],
+      "chakra": "root",
+      "planetary": true
+    },
+    {
+      "id": "root-chakra",
+      "name": "Root Chakra",
+      "description": "Grounding and stability - resonates with Earth's magnetic field for cellular coherence",
+      "frequency": 256.0,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["root", "grounding", "stability", "earth", "coherence"],
+      "benefits": ["grounding", "stability", "cellular coherence"],
+      "chakra": "root",
+      "planetary": true
+    },
+    {
+      "id": "sacral-chakra",
+      "name": "Sacral Chakra",
+      "description": "Creative flow and passion - harmonizes with Schumann 14.3Hz for emotional balance",
+      "frequency": 288.0,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["sacral", "creative", "passion", "emotional", "balance"],
+      "benefits": ["creative flow", "emotional balance", "passion"],
+      "chakra": "sacral",
+      "planetary": true
+    },
+    {
+      "id": "solar-plexus-chakra",
+      "name": "Solar Plexus Chakra",
+      "description": "Personal power and confidence - aligns with Schumann harmonics for personal empowerment",
+      "frequency": 320.0,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["solar-plexus", "power", "confidence", "empowerment"],
+      "benefits": ["personal power", "confidence", "empowerment"],
+      "chakra": "solar-plexus",
+      "planetary": true
+    },
+    {
+      "id": "heart-chakra",
+      "name": "Heart Chakra",
+      "description": "Unconditional love and compassion - resonates with Schumann base for collective heart coherence",
+      "frequency": 341.3,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["heart", "love", "compassion", "collective", "coherence"],
+      "benefits": ["unconditional love", "compassion", "collective coherence"],
+      "chakra": "heart",
+      "planetary": true
+    },
+    {
+      "id": "throat-chakra",
+      "name": "Throat Chakra",
+      "description": "Authentic expression and truth - facilitates clear communication with planetary consciousness",
+      "frequency": 384.0,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["throat", "expression", "truth", "communication", "consciousness"],
+      "benefits": ["authentic expression", "clear communication", "truth"],
+      "chakra": "throat",
+      "planetary": true
+    },
+    {
+      "id": "third-eye-chakra",
+      "name": "Third Eye Chakra",
+      "description": "Intuitive wisdom and insight - connects with higher Schumann harmonics for expanded awareness",
+      "frequency": 426.7,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["third-eye", "intuition", "wisdom", "insight", "awareness"],
+      "benefits": ["intuitive wisdom", "expanded awareness", "insight"],
+      "chakra": "third-eye",
+      "planetary": true
+    },
+    {
+      "id": "crown-chakra",
+      "name": "Crown Chakra",
+      "description": "Divine connection and unity consciousness - bridges individual to planetary consciousness",
+      "frequency": 480.0,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["crown", "divine", "unity", "consciousness", "connection"],
+      "benefits": ["divine connection", "unity consciousness", "planetary bridge"],
+      "chakra": "crown",
+      "planetary": true
+    },
+    {
+      "id": "soul-star-chakra",
+      "name": "Soul Star Chakra",
+      "description": "Soul connection and transcendence - DNA repair and cellular regeneration for all beings",
+      "frequency": 528.0,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["soul-star", "transcendence", "dna-repair", "regeneration"],
+      "benefits": ["soul connection", "DNA repair", "cellular regeneration"],
+      "chakra": "soul-star",
+      "planetary": true
+    },
+    {
+      "id": "divine-light-chakra",
+      "name": "Divine Light Chakra",
+      "description": "Divine love and sacred union - universal love frequency healing all life forms",
+      "frequency": 639.0,
+      "typeId": "codex.frequency",
+      "level": 1,
+      "keywords": ["divine-light", "sacred-union", "universal-love", "healing"],
+      "benefits": ["divine love", "sacred union", "universal healing"],
+      "chakra": "divine-light",
+      "planetary": true
+    }
+  ]
+}
+

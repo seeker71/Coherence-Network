@@ -1,0 +1,222 @@
+{
+  "executor_runs_source": "/Users/ursmuff/.claude-worktrees/Coherence-Network/ai-agent-research-20260228/docs/system_audit/model_executor_runs.jsonl",
+  "generated_at": "2026-02-28T10:04:17.235126Z",
+  "item_count": 10,
+  "plan": [
+    {
+      "done_when": [
+        "Monitor adds ai_agent_security_advisory_open condition when high/critical advisories exist",
+        "Issue severity reflects advisory criticality"
+      ],
+      "effort": 2,
+      "evidence_score": 82.85,
+      "failure_multiplier": 1.0,
+      "files": [
+        "api/scripts/monitor_pipeline.py"
+      ],
+      "id": "P5",
+      "impact": 5,
+      "priority_rank": 1,
+      "rio_score": 2.0712,
+      "tags": [
+        "security",
+        "agent-risk"
+      ],
+      "title": "Track open high-severity agent advisories"
+    },
+    {
+      "done_when": [
+        "Task creation records task_card_validation score and missing fields",
+        "Tests assert full and partial task-card scoring"
+      ],
+      "effort": 2,
+      "evidence_score": 80.77,
+      "failure_multiplier": 1.0,
+      "files": [
+        "api/app/services/agent_service.py",
+        "specs/TEMPLATE.md"
+      ],
+      "id": "P1",
+      "impact": 5,
+      "priority_rank": 2,
+      "rio_score": 2.0192,
+      "tags": [
+        "spec-driven",
+        "coding-agent"
+      ],
+      "title": "Enforce high-quality spec task cards"
+    },
+    {
+      "done_when": [
+        "Retry context includes reflection fields blind_spot and next_action",
+        "Failure category is persisted in task context"
+      ],
+      "effort": 2,
+      "evidence_score": 74.58,
+      "failure_multiplier": 1.0,
+      "files": [
+        "api/app/services/agent_execution_retry.py"
+      ],
+      "id": "P2",
+      "impact": 5,
+      "priority_rank": 3,
+      "rio_score": 1.8645,
+      "tags": [
+        "agent-orchestration",
+        "observability"
+      ],
+      "title": "Capture retry blind-spot reflections"
+    },
+    {
+      "done_when": [
+        "Lifecycle metadata includes failure_category and retry_count",
+        "Telemetry rows stay backward-compatible"
+      ],
+      "effort": 2,
+      "evidence_score": 89.77,
+      "failure_multiplier": 1.0,
+      "files": [
+        "api/app/services/agent_execution_hooks.py"
+      ],
+      "id": "P3",
+      "impact": 4,
+      "priority_rank": 4,
+      "rio_score": 1.7954,
+      "tags": [
+        "observability",
+        "agent-platform"
+      ],
+      "title": "Emit retry-category lifecycle telemetry"
+    },
+    {
+      "done_when": [
+        "Monitor adds ai_agent_intelligence_stale condition for outdated digest",
+        "Condition appears in monitor_issues output"
+      ],
+      "effort": 2,
+      "evidence_score": 87.11,
+      "failure_multiplier": 1.0,
+      "files": [
+        "api/scripts/monitor_pipeline.py"
+      ],
+      "id": "P4",
+      "impact": 4,
+      "priority_rank": 5,
+      "rio_score": 1.7422,
+      "tags": [
+        "observability",
+        "governance"
+      ],
+      "title": "Add stale-intelligence monitor guard"
+    },
+    {
+      "done_when": [
+        "Plan output includes ranked items with rio_score",
+        "Each item includes measurable done_when checks"
+      ],
+      "effort": 2,
+      "evidence_score": 87.11,
+      "failure_multiplier": 1.0,
+      "files": [
+        "api/scripts/build_ai_agent_improvement_plan.py"
+      ],
+      "id": "P7",
+      "impact": 4,
+      "priority_rank": 6,
+      "rio_score": 1.7422,
+      "tags": [
+        "governance",
+        "observability"
+      ],
+      "title": "Generate scored 10-point execution plan"
+    },
+    {
+      "done_when": [
+        "Evidence artifact validates with validate_commit_evidence.py",
+        "Evidence lists executed commands and outputs"
+      ],
+      "effort": 2,
+      "evidence_score": 87.11,
+      "failure_multiplier": 1.0,
+      "files": [
+        "docs/system_audit/commit_evidence_2026-02-28_ai-agent-intel-feedback-loop.json"
+      ],
+      "id": "P10",
+      "impact": 4,
+      "priority_rank": 7,
+      "rio_score": 1.7422,
+      "tags": [
+        "governance",
+        "observability"
+      ],
+      "title": "Attach commit evidence for all executed checks"
+    },
+    {
+      "done_when": [
+        "Template includes research links, task card, and retry reflection sections",
+        "Quality gate still passes"
+      ],
+      "effort": 2,
+      "evidence_score": 81.22,
+      "failure_multiplier": 1.0,
+      "files": [
+        "specs/TEMPLATE.md"
+      ],
+      "id": "P8",
+      "impact": 4,
+      "priority_rank": 8,
+      "rio_score": 1.6244,
+      "tags": [
+        "spec-driven",
+        "governance"
+      ],
+      "title": "Expand spec template for evidence-first execution"
+    },
+    {
+      "done_when": [
+        "Report documents dated developments and implications",
+        "Sources are primary and linked"
+      ],
+      "effort": 2,
+      "evidence_score": 74.41,
+      "failure_multiplier": 1.0,
+      "files": [
+        "docs/system_audit/ai_agent_biweekly_summary_2026-02-28.md"
+      ],
+      "id": "P9",
+      "impact": 3,
+      "priority_rank": 9,
+      "rio_score": 1.1161,
+      "tags": [
+        "research",
+        "framework",
+        "coding-agent"
+      ],
+      "title": "Publish biweekly ecosystem synthesis report"
+    },
+    {
+      "done_when": [
+        "Digest captures source URLs, dates, fetch status, and relevance scores",
+        "Security watch artifact is generated from digest"
+      ],
+      "effort": 3,
+      "evidence_score": 74.41,
+      "failure_multiplier": 1.0,
+      "files": [
+        "api/scripts/collect_ai_agent_intel.py"
+      ],
+      "id": "P6",
+      "impact": 4,
+      "priority_rank": 10,
+      "rio_score": 0.9921,
+      "tags": [
+        "framework",
+        "coding-agent",
+        "research"
+      ],
+      "title": "Automate biweekly intelligence collection"
+    }
+  ],
+  "recent_failure_rate": 0.0,
+  "source_digest": "/Users/ursmuff/.claude-worktrees/Coherence-Network/ai-agent-research-20260228/docs/system_audit/ai_agent_biweekly_sources_2026-02-28.json"
+}

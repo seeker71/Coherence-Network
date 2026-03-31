@@ -1,0 +1,80 @@
+{
+  "date": "2026-03-03",
+  "thread_branch": "tmp/resolve-pr-320",
+  "commit_scope": "Resolve merge conflicts for Dependabot PR #320 by merging latest main and regenerating web lockfile for @tailwindcss/postcss 4.2.1.",
+  "files_owned": [
+    "web/package.json",
+    "web/package-lock.json",
+    "docs/system_audit/commit_evidence_2026-03-03_dependabot-tailwindcss-postcss-4.2.1-merge-main.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "111-greenfield-autonomous-intelligence-system"
+  ],
+  "task_ids": [
+    "task-2026-03-03-pr320-merge-main"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "approval"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm install --package-lock-only --ignore-scripts",
+    "https://github.com/seeker71/Coherence-Network/pull/320"
+  ],
+  "change_files": [
+    "web/package.json",
+    "web/package-lock.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd web && npm install --package-lock-only --ignore-scripts"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-pr"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting PR checks and merge for Dependabot PR #320"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Dependabot PR #320 becomes mergeable against current main while preserving @tailwindcss/postcss 4.2.1 intent.",
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network/pull/320"
+    ],
+    "test_flows": [
+      "GitHub PR checks for #320 complete successfully after conflict resolution push."
+    ]
+  }
+}

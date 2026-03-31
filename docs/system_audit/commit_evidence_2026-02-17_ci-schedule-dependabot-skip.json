@@ -1,0 +1,86 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/openclaw-prod-executor",
+  "commit_scope": "Fix CI gating so dependabot PR re-runs do not require commit evidence, and ensure scheduled contract/audit workflows never fail main CI (issues/artifacts are the alert; strict failure only for manual runs).",
+  "files_owned": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    "docs/system_audit/commit_evidence_2026-02-17_ci-schedule-dependabot-skip.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "ci-schedule-dependabot-skip"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_ci-schedule-dependabot-skip.json"
+  ],
+  "change_files": [
+    ".github/workflows/test.yml",
+    ".github/workflows/thread-gates.yml",
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/provider-readiness-contract.yml"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Dependabot PR checks should pass even if a human re-runs workflows, and scheduled audits/contracts should not keep main in an 'unresolved failing workflows' state.",
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network/actions",
+      "https://github.com/seeker71/Coherence-Network/pull/165"
+    ],
+    "test_flows": [
+      "Trigger rerun of PR 165 checks and confirm evidence enforcement steps are skipped and checks pass",
+      "Rerun Asset Modularity Drift Audit and confirm it no longer fails on schedule"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T08:49:51Z",
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_ci-schedule-dependabot-skip.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting local gates, CI reruns, and start-gate green."
+  }
+}

@@ -1,0 +1,81 @@
+{
+  "date": "2026-02-17",
+  "thread_branch": "codex/ci-nonblocking-audits",
+  "commit_scope": "Make scheduled contract/audit workflows always non-blocking (issues/artifacts are the alert) and add an explicit workflow_dispatch strict input for manual failure when needed.",
+  "files_owned": [
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/provider-readiness-contract.yml",
+    "docs/system_audit/commit_evidence_2026-02-17_ci-nonblocking-audit-inputs.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "100"
+  ],
+  "task_ids": [
+    "ci-nonblocking-audit-inputs"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_ci-nonblocking-audit-inputs.json"
+  ],
+  "change_files": [
+    ".github/workflows/asset-modularity-drift.yml",
+    ".github/workflows/provider-readiness-contract.yml"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Scheduled workflow runs should not keep main in a failing state; manual strict failure requires explicit workflow_dispatch strict=true.",
+    "public_endpoints": [
+      "https://github.com/seeker71/Coherence-Network/actions"
+    ],
+    "test_flows": [
+      "Trigger workflow_dispatch for Asset Modularity Drift Audit on main and confirm it completes successfully by default (strict=false)",
+      "Trigger workflow_dispatch for Provider Readiness Contract on main and confirm it completes successfully by default (strict=false)"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-17T08:55:26Z",
+    "commands": [
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_ci-nonblocking-audit-inputs.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-actions"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting local gates and CI."
+  }
+}

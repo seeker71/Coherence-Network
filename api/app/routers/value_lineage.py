@@ -1,0 +1,73 @@
+"""API routes for value lineage and payout attribution."""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.middleware.auth import require_api_key
+from app.models.value_lineage import (
+    LineageLink,
+    LineageLinkCreate,
+    LineageLinksResponse,
+    LineageValuation,
+    MinimumE2EFlowResponse,
+    PayoutPreview,
+    PayoutPreviewRequest,
+    UsageEvent,
+    UsageEventCreate,
+)
+from app.services import value_lineage_service
+
+router = APIRouter()
+
+
+@router.post("/value-lineage/links", response_model=LineageLink, status_code=201)
+async def create_link(payload: LineageLinkCreate, _key: str = Depends(require_api_key)) -> LineageLink:
+    return value_lineage_service.create_link(payload)
+
+
+@router.get("/value-lineage/links", response_model=LineageLinksResponse)
+async def list_links(limit: int = 200) -> LineageLinksResponse:
+    links = value_lineage_service.list_links(limit=limit)
+    return LineageLinksResponse(links=links)
+
+
+@router.get("/value-lineage/links/{lineage_id}", response_model=LineageLink)
+async def get_link(lineage_id: str) -> LineageLink:
+    link = value_lineage_service.get_link(lineage_id)
+    if link is None:
+        raise HTTPException(status_code=404, detail="Lineage link not found")
+    return link
+
+
+@router.post(
+    "/value-lineage/links/{lineage_id}/usage-events",
+    response_model=UsageEvent,
+    status_code=201,
+)
+async def add_usage_event(lineage_id: str, payload: UsageEventCreate, _key: str = Depends(require_api_key)) -> UsageEvent:
+    event = value_lineage_service.add_usage_event(lineage_id, payload)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Lineage link not found")
+    return event
+
+
+@router.get("/value-lineage/links/{lineage_id}/valuation", response_model=LineageValuation)
+async def get_valuation(lineage_id: str) -> LineageValuation:
+    report = value_lineage_service.valuation(lineage_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Lineage link not found")
+    return report
+
+
+@router.post("/value-lineage/links/{lineage_id}/payout-preview", response_model=PayoutPreview)
+async def payout_preview(lineage_id: str, payload: PayoutPreviewRequest, _key: str = Depends(require_api_key)) -> PayoutPreview:
+    report = value_lineage_service.payout_preview(lineage_id, payload.payout_pool)
+    if report is None:
+        raise HTTPException(status_code=404, detail="Lineage link not found")
+    return report
+
+
+@router.post("/value-lineage/minimum-e2e-flow", response_model=MinimumE2EFlowResponse)
+async def run_minimum_e2e_flow(_key: str = Depends(require_api_key)) -> MinimumE2EFlowResponse:
+    return value_lineage_service.run_minimum_e2e_flow()

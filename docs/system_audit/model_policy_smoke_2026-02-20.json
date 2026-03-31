@@ -1,0 +1,16 @@
+{
+  "date": "2026-02-20",
+  "topic": "openclaw-model-fallback-smoke",
+  "thread_branch": "codex/fix-start-gate-and-clawwork",
+  "policy": {
+    "default_openclaw_model": "gpt-5.3-codex-spark",
+    "escalation_model": "gpt-5.3-codex",
+    "escalation_trigger": "retry after failed spark attempt"
+  },
+  "smoke_checks": {
+    "route_model_probe": "route_model openclaw/gpt-5.3-codex-spark",
+    "retry_override_model": "gpt-5.3-codex",
+    "retry_force_paid_providers": true
+  },
+  "run_reference": "api/.venv/bin/python smoke script executed in .venv"
+}

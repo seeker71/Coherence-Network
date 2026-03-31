@@ -1,0 +1,28 @@
+{
+  "version": "2026-03-30",
+  "description": "Canonical executor list and per-executor keys. One name per executor; no aliasing. Model prefix is uniform: every executor has executor/model_id.",
+  "executors": [
+    "claude",
+    "codex",
+    "cursor",
+    "gemini",
+    "openrouter",
+    "opencode",
+    "pi"
+  ],
+  "runner_auth_context_key_by_executor": {
+    "claude": "runner_claude_auth_mode",
+    "codex": "runner_codex_auth_mode",
+    "cursor": "runner_cursor_auth_mode",
+    "gemini": "runner_gemini_auth_mode"
+  },
+  "model_prefix_by_executor": {
+    "claude": "claude",
+    "codex": "codex",
+    "cursor": "cursor",
+    "gemini": "gemini",
+    "openrouter": "openrouter",
+    "opencode": "opencode",
+    "pi": "pi"
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "date": "2026-03-06",
+  "thread_branch": "main",
+  "commit_scope": "Idea portfolio-governance (spec 053): PATCH restricted to four fields; acceptance script with proof; idea marked validated.",
+  "files_owned": [
+    "api/app/models/idea.py",
+    "api/app/routers/ideas.py",
+    "api/app/services/idea_service.py",
+    "scripts/run_pinned_idea_acceptance.py",
+    "docs/AGENT-DEBUGGING.md",
+    "specs/053-ideas-prioritization.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/run_pinned_idea_acceptance.py --force",
+      "cd api && pytest -q tests/test_ideas.py"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "notes": "Awaiting push and CI."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "notes": "After merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "PATCH /api/ideas/{id} accepts only actual_value, actual_cost, confidence, manifestation_status; GET /api/ideas returns real data; acceptance script proves no_placeholder, spec_quality, pytest, live_api.",
+    "public_endpoints": ["/api/ideas", "/api/ideas/{id}"],
+    "test_flows": ["run_pinned_idea_acceptance"]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI and deploy pending."
+  },
+  "idea_ids": ["portfolio-governance"],
+  "spec_ids": ["053-ideas-prioritization"],
+  "task_ids": ["portfolio-governance-acceptance-2026-03-06"],
+  "contributors": [
+    {
+      "contributor_id": "cursor",
+      "contributor_type": "machine",
+      "roles": ["implementation", "verification"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "agent"
+  },
+  "evidence_refs": [
+    "docs/system_audit/commit_evidence_2026-03-06_portfolio-governance-spec-053.json"
+  ],
+  "change_files": [
+    "api/app/models/idea.py",
+    "api/app/routers/ideas.py",
+    "api/app/services/idea_service.py",
+    "api/scripts/agent_runner.py",
+    "api/tests/test_automation_usage_api.py",
+    "docs/AGENT-DEBUGGING.md",
+    "docs/SPEC-TRACKING.md",
+    "scripts/run_pinned_idea_acceptance.py",
+    "specs/053-ideas-prioritization.md",
+    "docs/system_audit/commit_evidence_2026-03-06_portfolio-governance-spec-053.json",
+    "docs/system_audit/commit_evidence_2026-03-06_spec-114-tracking.json"
+  ],
+  "change_intent": "runtime_fix"
+}

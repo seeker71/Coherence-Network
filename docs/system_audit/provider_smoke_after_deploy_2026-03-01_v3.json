@@ -1,0 +1,1702 @@
+{
+  "generated_at": "2026-03-01T10:29:20.624221+00:00",
+  "api_url": "https://coherence-network-production.up.railway.app",
+  "all_terminal": true,
+  "active_remaining": [],
+  "max_wait_seconds": 1200,
+  "results": [
+    {
+      "label": "paid_codex",
+      "requested": {
+        "label": "paid_codex",
+        "executor": "codex",
+        "model_override": "openai/gpt-5.3-codex",
+        "force_paid_providers": true,
+        "is_paid_expected": true
+      },
+      "create_http": 201,
+      "create_body": {
+        "id": "task_fddd86b53cf1343d",
+        "direction": "Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+        "task_type": "impl",
+        "status": "pending",
+        "model": "codex/gpt-5.3-codex",
+        "command": "codex exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.\" --model gpt-5.3-codex --skip-git-repo-check --json",
+        "output": null,
+        "context": {
+          "executor": "codex",
+          "model_override": "openai/gpt-5.3-codex",
+          "retry_max": 0,
+          "auto_retry_openai_override": false,
+          "force_paid_providers": true,
+          "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+          "success_evidence": [],
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "target_state_contract": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+            "success_evidence": [],
+            "abort_evidence": [],
+            "observation_window_sec": 900
+          },
+          "executor_policy": {
+            "policy_applied": true,
+            "reason": "explicit_executor_forced",
+            "explicit_executor": "codex",
+            "availability": "unavailable_on_api_node"
+          },
+          "runner_codex_auth_mode": "oauth",
+          "task_agent": "dev-engineer",
+          "route_decision": {
+            "executor": "codex",
+            "task_type": "impl",
+            "tier": "codex",
+            "model": "codex/gpt-5.3-codex",
+            "provider": "openai-codex",
+            "billing_provider": "openai-codex",
+            "is_paid_provider": true,
+            "request_schema": "open_responses_v1",
+            "policy": {
+              "policy_applied": true,
+              "reason": "explicit_executor_forced",
+              "explicit_executor": "codex",
+              "availability": "unavailable_on_api_node"
+            }
+          },
+          "normalized_response_call": {
+            "task_id": "task_fddd86b53cf1343d",
+            "executor": "codex",
+            "provider": "openai-codex",
+            "model": "gpt-5.3-codex",
+            "request_schema": "open_responses_v1",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success."
+                  }
+                ]
+              }
+            ]
+          },
+          "agent_graph_state_schema": {
+            "schema_id": "coherence_agent_graph_state_v1",
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ]
+          },
+          "agent_graph_state": {
+            "task_id": "task_fddd86b53cf1343d",
+            "task_type": "impl",
+            "phase": "queued",
+            "direction": "Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+            "attempt": 0,
+            "model": "codex/gpt-5.3-codex",
+            "provider": "openai-codex",
+            "route_decision": {
+              "executor": "codex",
+              "task_type": "impl",
+              "tier": "codex",
+              "model": "codex/gpt-5.3-codex",
+              "provider": "openai-codex",
+              "billing_provider": "openai-codex",
+              "is_paid_provider": true,
+              "request_schema": "open_responses_v1",
+              "policy": {
+                "policy_applied": true,
+                "reason": "explicit_executor_forced",
+                "explicit_executor": "codex",
+                "availability": "unavailable_on_api_node"
+              }
+            }
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_status": "valid"
+        },
+        "progress_pct": null,
+        "current_step": null,
+        "decision_prompt": null,
+        "decision": null,
+        "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+        "success_evidence": [],
+        "abort_evidence": [],
+        "observation_window_sec": 900,
+        "claimed_by": null,
+        "claimed_at": null,
+        "created_at": "2026-03-01T10:28:10.973015Z",
+        "updated_at": null
+      },
+      "id": "task_fddd86b53cf1343d",
+      "execute_http": 403,
+      "execute_body": {
+        "detail": "Forbidden"
+      },
+      "task_http": 200,
+      "task": {
+        "id": "task_fddd86b53cf1343d",
+        "direction": "Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+        "task_type": "impl",
+        "status": "failed",
+        "model": "codex/gpt-5.3-codex",
+        "command": "codex exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.\" --model gpt-5.3-codex --skip-git-repo-check --json",
+        "output": "[runner-codex-auth] requested_mode=oauth effective_mode=oauth oauth_session=true oauth_source=session_file:/root/.codex/auth.json api_key_present=false oauth_missing=false\n[runner-model-alias] requested_model=gpt-5.3-codex effective_model=gpt-5-codex\n[runner-command-exec] mode=argv\n2026-03-01T10:29:09.513462Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T10:29:09.513535Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T10:29:09.608694Z ERROR codex_core::models_manager::manager: failed to refresh available models: unexpected status 401 Unauthorized: Provided authentication token is expired. Please try signing in again., url: https://chatgpt.com/backend-api/codex/models?client_version=0.106.0, cf-ray: 9d577a9e98241f2f-SJC, request id: 076f274a-01c2-497f-8eb5-90218d9c9355\n2026-03-01T10:29:09.718512Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T10:29:09.718542Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n{\"type\":\"thread.started\",\"thread_id\":\"019ca8f1-df69-7c73-b0a6-6062aedef44b\"}\n{\"type\":\"turn.started\"}\n2026-03-01T10:29:09.821829Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T10:29:09.821865Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T10:29:10.032977Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n2026-03-01T10:29:10.033012Z ERROR codex_core::auth: Failed to refresh token: Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\n2026-03-01T10:29:10.238226Z ERROR codex_core::auth: Failed to refresh token: 401 Unauthorized: {\n  \"error\": {\n    \"message\": \"Your refresh token has already been used to generate a new access token. Please try signing in again.\",\n    \"type\": \"invalid_request_error\",\n    \"param\": null,\n    \"code\": \"refresh_token_reused\"\n  }\n}\n{\"type\":\"error\",\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}\n{\"type\":\"turn.failed\",\"error\":{\"message\":\"Your access token could not be refreshed because your refresh token was already used. Please log out and sign in again.\"}}\n\n[runner-codex-auth-retry] oauth refresh token reuse detected;  oauth session refresh ok (oauth_session_overwritten:/root/.codex/auth.json); retry disabled by explicit retry_max=0.",
+        "context": {
+          "executor": "codex",
+          "model_override": "openai/gpt-5.3-codex",
+          "retry_max": 0,
+          "auto_retry_openai_override": false,
+          "force_paid_providers": true,
+          "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+          "success_evidence": [],
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "target_state_contract": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+            "success_evidence": [],
+            "abort_evidence": [],
+            "observation_window_sec": 900
+          },
+          "executor_policy": {
+            "policy_applied": true,
+            "reason": "explicit_executor_forced",
+            "explicit_executor": "codex",
+            "availability": "unavailable_on_api_node"
+          },
+          "runner_codex_auth_mode": "oauth",
+          "task_agent": "dev-engineer",
+          "route_decision": {
+            "executor": "codex",
+            "task_type": "impl",
+            "tier": "codex",
+            "model": "codex/gpt-5.3-codex",
+            "provider": "openai-codex",
+            "billing_provider": "openai-codex",
+            "is_paid_provider": true,
+            "request_schema": "open_responses_v1",
+            "policy": {
+              "policy_applied": true,
+              "reason": "explicit_executor_forced",
+              "explicit_executor": "codex",
+              "availability": "unavailable_on_api_node"
+            }
+          },
+          "normalized_response_call": {
+            "task_id": "task_fddd86b53cf1343d",
+            "executor": "codex",
+            "provider": "openai-codex",
+            "model": "gpt-5.3-codex",
+            "request_schema": "open_responses_v1",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success."
+                  }
+                ]
+              }
+            ]
+          },
+          "agent_graph_state_schema": {
+            "schema_id": "coherence_agent_graph_state_v1",
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ]
+          },
+          "agent_graph_state": {
+            "task_id": "task_fddd86b53cf1343d",
+            "task_type": "impl",
+            "phase": "queued",
+            "direction": "Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+            "attempt": 0,
+            "model": "codex/gpt-5.3-codex",
+            "provider": "openai-codex",
+            "route_decision": {
+              "executor": "codex",
+              "task_type": "impl",
+              "tier": "codex",
+              "model": "codex/gpt-5.3-codex",
+              "provider": "openai-codex",
+              "billing_provider": "openai-codex",
+              "is_paid_provider": true,
+              "request_schema": "open_responses_v1",
+              "policy": {
+                "policy_applied": true,
+                "reason": "explicit_executor_forced",
+                "explicit_executor": "codex",
+                "availability": "unavailable_on_api_node"
+              }
+            }
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_status": "valid",
+          "observer_context_last_snapshot": {
+            "transition": "start",
+            "status": "running",
+            "current_step": "command started",
+            "at": "2026-03-01T10:29:08.926240+00:00",
+            "run_id": "run_aec57f159d42",
+            "worker_id": "openai-codex:railway-runner-1",
+            "failure_class": "",
+            "state": {
+              "active_run_id": "run_aec57f159d42",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "active_branch": "",
+              "last_attempt": 1,
+              "runner_state": "running",
+              "next_action": "execute_command",
+              "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+              "observation_window_sec": 900
+            },
+            "delta": {
+              "next_action": "execute_command",
+              "runner_state": "running"
+            }
+          },
+          "observer_context_snapshots": [
+            {
+              "transition": "claim",
+              "status": "claimed",
+              "current_step": "lease claimed",
+              "at": "2026-03-01T10:29:05.194489+00:00",
+              "run_id": "run_aec57f159d42",
+              "worker_id": "openai-codex:railway-runner-1",
+              "failure_class": "",
+              "state": {
+                "active_run_id": "run_aec57f159d42",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "active_branch": "",
+                "last_attempt": 1,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+                "observation_window_sec": 900
+              },
+              "delta": {
+                "active_branch": "",
+                "active_run_id": "run_aec57f159d42",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success."
+              },
+              "details": {
+                "task_type": "impl",
+                "direction": "Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+                "repo_path": ""
+              }
+            },
+            {
+              "transition": "start",
+              "status": "running",
+              "current_step": "command started",
+              "at": "2026-03-01T10:29:08.926240+00:00",
+              "run_id": "run_aec57f159d42",
+              "worker_id": "openai-codex:railway-runner-1",
+              "failure_class": "",
+              "state": {
+                "active_run_id": "run_aec57f159d42",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "active_branch": "",
+                "last_attempt": 1,
+                "runner_state": "running",
+                "next_action": "execute_command",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+                "observation_window_sec": 900
+              },
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              }
+            }
+          ],
+          "awareness_events_total": 2,
+          "awareness_interventions_total": 0,
+          "awareness_blocks_total": 0,
+          "awareness_transition_total": 2,
+          "awareness_successful_transition_total": 2,
+          "awareness_hold_pattern_total": 0,
+          "awareness_transition_cost_total": 1.02,
+          "awareness_estimated_roi_total": 0.0,
+          "awareness_measured_roi_total": 0.0,
+          "awareness_state_transition_quality": 1.0,
+          "awareness_hold_pattern_rate": 0.0,
+          "awareness_estimated_to_measured_roi_conversion": null,
+          "awareness_cost_per_successful_transition": 0.51,
+          "awareness_quality": {
+            "score": 0.7262,
+            "policy_discipline": 1.0,
+            "context_coverage": 0.4,
+            "state_transition_quality": 1.0,
+            "hold_pattern_rate": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "cost_per_successful_transition": 0.51,
+            "events_total": 2,
+            "interventions_total": 0,
+            "blocks_total": 0,
+            "snapshot_count": 2,
+            "transition_total": 2,
+            "successful_transition_total": 2,
+            "hold_pattern_total": 0,
+            "estimated_roi_total": 0.0,
+            "measured_roi_total": 0.0,
+            "transition_cost_total": 1.02,
+            "updated_at": "2026-03-01T10:29:12.105701+00:00"
+          },
+          "active_run_id": "run_aec57f159d42",
+          "active_worker_id": "openai-codex:railway-runner-1",
+          "active_branch": "",
+          "last_attempt": 1,
+          "runner_cli_bootstrap": {
+            "ok": true,
+            "detail": "runner_cli_present:codex:codex:/usr/local/bin/codex",
+            "at": "2026-03-01T10:29:08.095659+00:00"
+          },
+          "runner_codex_auth": {
+            "requested_mode": "oauth",
+            "effective_mode": "oauth",
+            "oauth_session": true,
+            "oauth_source": "session_file:/root/.codex/auth.json",
+            "api_key_present": false,
+            "oauth_fallback_allowed": false,
+            "oauth_missing": false,
+            "oauth_session_bootstrapped": false,
+            "oauth_session_bootstrap_detail": "oauth_session_preserved_existing:/root/.codex/auth.json",
+            "api_key_login_bootstrapped": false,
+            "api_key_login_source": "",
+            "at": "2026-03-01T10:29:08.095687+00:00"
+          },
+          "runner_model_alias": {
+            "requested_model": "gpt-5.3-codex",
+            "effective_model": "gpt-5-codex",
+            "at": "2026-03-01T10:29:08.095693+00:00"
+          },
+          "target_state_observation": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+            "success_evidence": [],
+            "success_evidence_hits": [],
+            "success_evidence_met": false,
+            "abort_evidence": [],
+            "abort_evidence_hits": [],
+            "abort_evidence_met": false,
+            "observation_window_sec": 900,
+            "observation_window_exceeded": false,
+            "attempt_status": "failed",
+            "observed_at": "2026-03-01T10:29:11.174521+00:00"
+          },
+          "target_state_last_observed_at": "2026-03-01T10:29:11.174599+00:00",
+          "runner_metrics": {
+            "runs_total": 1,
+            "runs_success": 0,
+            "runs_failed": 1,
+            "success_rate": 0.0,
+            "retries_total": 0,
+            "paid_calls_total": 1,
+            "paid_calls_success": 0,
+            "paid_calls_failed": 1,
+            "paid_retry_calls": 0,
+            "paid_success_rate": 0.0,
+            "total_runtime_seconds": 2.0,
+            "avg_runtime_seconds": 2.0,
+            "last_attempt": 1,
+            "last_status": "failed",
+            "last_failure_class": "command_failed",
+            "last_model": "codex/gpt-5.3-codex",
+            "last_tool": "codex",
+            "awareness_quality_score": 0.7262,
+            "state_transition_quality": 1.0,
+            "hold_pattern_rate": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "cost_per_successful_transition": 0.51,
+            "awareness_events_total": 2,
+            "awareness_interventions_total": 0,
+            "awareness_blocks_total": 0,
+            "awareness_transition_total": 2,
+            "awareness_successful_transition_total": 2,
+            "awareness_hold_pattern_total": 0,
+            "awareness_transition_cost_total": 1.02,
+            "updated_at": "2026-03-01T10:29:12.105729+00:00"
+          },
+          "runner_last_result": {
+            "attempt": 1,
+            "status": "failed",
+            "failure_class": "command_failed",
+            "duration_seconds": 2.0,
+            "paid_call": true,
+            "task_type": "impl",
+            "model": "codex/gpt-5.3-codex",
+            "command_tool": "codex",
+            "at": "2026-03-01T10:29:12.105734+00:00"
+          },
+          "failure_reason_bucket": "auth",
+          "failure_signature": "oauth_refresh_token_reused",
+          "failure_summary": "OAuth refresh token became invalid/reused; session refresh and relogin path required.",
+          "failure_diagnostics_source": "output",
+          "failure_diagnostics_present": true
+        },
+        "progress_pct": null,
+        "current_step": null,
+        "decision_prompt": null,
+        "decision": null,
+        "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_codex. Return exactly: paid_codex success.",
+        "success_evidence": [],
+        "abort_evidence": [],
+        "observation_window_sec": 900,
+        "claimed_by": "openai-codex:railway-runner-1",
+        "claimed_at": "2026-03-01T10:29:08.202802Z",
+        "created_at": "2026-03-01T10:28:10.973015Z",
+        "updated_at": "2026-03-01T10:29:12.643640Z"
+      },
+      "summary": {
+        "status": "failed",
+        "route_executor": "codex",
+        "route_model": "codex/gpt-5.3-codex",
+        "route_provider": "openai-codex",
+        "is_paid_provider": true,
+        "retry_count": 0,
+        "retry_max": 0,
+        "tool_call_count": 0,
+        "tool_call_status_codes": [],
+        "friction_open_count": 0,
+        "friction_block_types": [],
+        "output_excerpt": "[runner-codex-auth] requested_mode=oauth effective_mode=oauth oauth_session=true oauth_source=session_file:/root/.codex/auth.json api_key_present=false oauth_missing=false\n[runner-model-alias] requested_model=gpt-5.3-codex effective_model=g",
+        "error_excerpt": ""
+      }
+    },
+    {
+      "label": "paid_claude",
+      "requested": {
+        "label": "paid_claude",
+        "executor": "claude",
+        "model_override": "claude/claude-sonnet-4-5-20250929",
+        "force_paid_providers": true,
+        "is_paid_expected": true
+      },
+      "create_http": 201,
+      "create_body": {
+        "id": "task_99fa12d7dfe369c1",
+        "direction": "Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+        "task_type": "impl",
+        "status": "pending",
+        "model": "claude/claude-sonnet-4-5-20250929",
+        "command": "claude -p \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.\" --model claude/claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+        "output": null,
+        "context": {
+          "executor": "claude",
+          "model_override": "claude/claude-sonnet-4-5-20250929",
+          "retry_max": 0,
+          "auto_retry_openai_override": false,
+          "force_paid_providers": true,
+          "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+          "success_evidence": [],
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "target_state_contract": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+            "success_evidence": [],
+            "abort_evidence": [],
+            "observation_window_sec": 900
+          },
+          "executor_policy": {
+            "policy_applied": true,
+            "reason": "explicit_executor_forced",
+            "explicit_executor": "claude",
+            "availability": "unavailable_on_api_node"
+          },
+          "task_agent": "dev-engineer",
+          "route_decision": {
+            "executor": "claude",
+            "task_type": "impl",
+            "tier": "claude",
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "provider": "claude",
+            "billing_provider": "claude",
+            "is_paid_provider": true,
+            "request_schema": "open_responses_v1",
+            "policy": {
+              "policy_applied": true,
+              "reason": "explicit_executor_forced",
+              "explicit_executor": "claude",
+              "availability": "unavailable_on_api_node"
+            }
+          },
+          "normalized_response_call": {
+            "task_id": "task_99fa12d7dfe369c1",
+            "executor": "claude",
+            "provider": "claude",
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "request_schema": "open_responses_v1",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success."
+                  }
+                ]
+              }
+            ]
+          },
+          "agent_graph_state_schema": {
+            "schema_id": "coherence_agent_graph_state_v1",
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ]
+          },
+          "agent_graph_state": {
+            "task_id": "task_99fa12d7dfe369c1",
+            "task_type": "impl",
+            "phase": "queued",
+            "direction": "Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+            "attempt": 0,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "provider": "claude",
+            "route_decision": {
+              "executor": "claude",
+              "task_type": "impl",
+              "tier": "claude",
+              "model": "claude/claude-sonnet-4-5-20250929",
+              "provider": "claude",
+              "billing_provider": "claude",
+              "is_paid_provider": true,
+              "request_schema": "open_responses_v1",
+              "policy": {
+                "policy_applied": true,
+                "reason": "explicit_executor_forced",
+                "explicit_executor": "claude",
+                "availability": "unavailable_on_api_node"
+              }
+            }
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_status": "valid"
+        },
+        "progress_pct": null,
+        "current_step": null,
+        "decision_prompt": null,
+        "decision": null,
+        "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+        "success_evidence": [],
+        "abort_evidence": [],
+        "observation_window_sec": 900,
+        "claimed_by": null,
+        "claimed_at": null,
+        "created_at": "2026-03-01T10:28:11.413771Z",
+        "updated_at": null
+      },
+      "id": "task_99fa12d7dfe369c1",
+      "execute_http": 403,
+      "execute_body": {
+        "detail": "Forbidden"
+      },
+      "task_http": 200,
+      "task": {
+        "id": "task_99fa12d7dfe369c1",
+        "direction": "Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+        "task_type": "impl",
+        "status": "failed",
+        "model": "claude/claude-sonnet-4-5-20250929",
+        "command": "claude -p \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.\" --model claude/claude-sonnet-4-5-20250929 --dangerously-skip-permissions --output-format json --max-budget-usd 2.00",
+        "output": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":true,\"duration_ms\":373,\"duration_api_ms\":0,\"num_turns\":1,\"result\":\"There's an issue with the selected model (claude/claude-sonnet-4-5-20250929). It may not exist or you may not have access to it. Run --model to pick a different model.\",\"stop_reason\":\"stop_sequence\",\"session_id\":\"05774384-5ec5-4a41-8a3b-5c4d8fff4291\",\"total_cost_usd\":0,\"usage\":{\"input_tokens\":0,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"output_tokens\":0,\"server_tool_use\":{\"web_search_requests\":0,\"web_fetch_requests\":0},\"service_tier\":\"standard\",\"cache_creation\":{\"ephemeral_1h_input_tokens\":0,\"ephemeral_5m_input_tokens\":0},\"inference_geo\":\"\",\"iterations\":[],\"speed\":\"standard\"},\"modelUsage\":{},\"permission_denials\":[],\"fast_mode_state\":\"off\",\"uuid\":\"84beac17-4c0e-41fd-b633-f3b9d98378f6\"}\n",
+        "context": {
+          "executor": "claude",
+          "model_override": "claude/claude-sonnet-4-5-20250929",
+          "retry_max": 0,
+          "auto_retry_openai_override": false,
+          "force_paid_providers": true,
+          "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+          "success_evidence": [],
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "target_state_contract": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+            "success_evidence": [],
+            "abort_evidence": [],
+            "observation_window_sec": 900
+          },
+          "executor_policy": {
+            "policy_applied": true,
+            "reason": "explicit_executor_forced",
+            "explicit_executor": "claude",
+            "availability": "unavailable_on_api_node"
+          },
+          "task_agent": "dev-engineer",
+          "route_decision": {
+            "executor": "claude",
+            "task_type": "impl",
+            "tier": "claude",
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "provider": "claude",
+            "billing_provider": "claude",
+            "is_paid_provider": true,
+            "request_schema": "open_responses_v1",
+            "policy": {
+              "policy_applied": true,
+              "reason": "explicit_executor_forced",
+              "explicit_executor": "claude",
+              "availability": "unavailable_on_api_node"
+            }
+          },
+          "normalized_response_call": {
+            "task_id": "task_99fa12d7dfe369c1",
+            "executor": "claude",
+            "provider": "claude",
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "request_schema": "open_responses_v1",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success."
+                  }
+                ]
+              }
+            ]
+          },
+          "agent_graph_state_schema": {
+            "schema_id": "coherence_agent_graph_state_v1",
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ]
+          },
+          "agent_graph_state": {
+            "task_id": "task_99fa12d7dfe369c1",
+            "task_type": "impl",
+            "phase": "queued",
+            "direction": "Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+            "attempt": 0,
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "provider": "claude",
+            "route_decision": {
+              "executor": "claude",
+              "task_type": "impl",
+              "tier": "claude",
+              "model": "claude/claude-sonnet-4-5-20250929",
+              "provider": "claude",
+              "billing_provider": "claude",
+              "is_paid_provider": true,
+              "request_schema": "open_responses_v1",
+              "policy": {
+                "policy_applied": true,
+                "reason": "explicit_executor_forced",
+                "explicit_executor": "claude",
+                "availability": "unavailable_on_api_node"
+              }
+            }
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_status": "valid",
+          "observer_context_last_snapshot": {
+            "transition": "start",
+            "status": "running",
+            "current_step": "command started",
+            "at": "2026-03-01T10:28:46.892883+00:00",
+            "run_id": "run_62871182fe72",
+            "worker_id": "openai-codex:railway-runner-1",
+            "failure_class": "",
+            "state": {
+              "active_run_id": "run_62871182fe72",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "active_branch": "",
+              "last_attempt": 1,
+              "runner_state": "running",
+              "next_action": "execute_command",
+              "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+              "observation_window_sec": 900
+            },
+            "delta": {
+              "next_action": "execute_command",
+              "runner_state": "running"
+            }
+          },
+          "observer_context_snapshots": [
+            {
+              "transition": "claim",
+              "status": "claimed",
+              "current_step": "lease claimed",
+              "at": "2026-03-01T10:28:45.745448+00:00",
+              "run_id": "run_62871182fe72",
+              "worker_id": "openai-codex:railway-runner-1",
+              "failure_class": "",
+              "state": {
+                "active_run_id": "run_62871182fe72",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "active_branch": "",
+                "last_attempt": 1,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+                "observation_window_sec": 900
+              },
+              "delta": {
+                "active_branch": "",
+                "active_run_id": "run_62871182fe72",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success."
+              },
+              "details": {
+                "task_type": "impl",
+                "direction": "Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+                "repo_path": ""
+              }
+            },
+            {
+              "transition": "start",
+              "status": "running",
+              "current_step": "command started",
+              "at": "2026-03-01T10:28:46.892883+00:00",
+              "run_id": "run_62871182fe72",
+              "worker_id": "openai-codex:railway-runner-1",
+              "failure_class": "",
+              "state": {
+                "active_run_id": "run_62871182fe72",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "active_branch": "",
+                "last_attempt": 1,
+                "runner_state": "running",
+                "next_action": "execute_command",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+                "observation_window_sec": 900
+              },
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              }
+            }
+          ],
+          "awareness_events_total": 2,
+          "awareness_interventions_total": 0,
+          "awareness_blocks_total": 0,
+          "awareness_transition_total": 2,
+          "awareness_successful_transition_total": 2,
+          "awareness_hold_pattern_total": 0,
+          "awareness_transition_cost_total": 1.02,
+          "awareness_estimated_roi_total": 0.0,
+          "awareness_measured_roi_total": 0.0,
+          "awareness_state_transition_quality": 1.0,
+          "awareness_hold_pattern_rate": 0.0,
+          "awareness_estimated_to_measured_roi_conversion": null,
+          "awareness_cost_per_successful_transition": 0.51,
+          "awareness_quality": {
+            "score": 0.7262,
+            "policy_discipline": 1.0,
+            "context_coverage": 0.4,
+            "state_transition_quality": 1.0,
+            "hold_pattern_rate": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "cost_per_successful_transition": 0.51,
+            "events_total": 2,
+            "interventions_total": 0,
+            "blocks_total": 0,
+            "snapshot_count": 2,
+            "transition_total": 2,
+            "successful_transition_total": 2,
+            "hold_pattern_total": 0,
+            "estimated_roi_total": 0.0,
+            "measured_roi_total": 0.0,
+            "transition_cost_total": 1.02,
+            "updated_at": "2026-03-01T10:28:50.008814+00:00"
+          },
+          "active_run_id": "run_62871182fe72",
+          "active_worker_id": "openai-codex:railway-runner-1",
+          "active_branch": "",
+          "last_attempt": 1,
+          "runner_cli_bootstrap": {
+            "ok": true,
+            "detail": "runner_cli_present:claude:claude:/usr/local/bin/claude",
+            "at": "2026-03-01T10:28:45.989787+00:00"
+          },
+          "runner_exec_user": {
+            "ok": true,
+            "detail": "runner_non_root_exec_user:runner:1000:1000",
+            "at": "2026-03-01T10:28:45.989803+00:00"
+          },
+          "target_state_observation": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+            "success_evidence": [],
+            "success_evidence_hits": [],
+            "success_evidence_met": false,
+            "abort_evidence": [],
+            "abort_evidence_hits": [],
+            "abort_evidence_met": false,
+            "observation_window_sec": 900,
+            "observation_window_exceeded": false,
+            "attempt_status": "failed",
+            "observed_at": "2026-03-01T10:28:49.206385+00:00"
+          },
+          "target_state_last_observed_at": "2026-03-01T10:28:49.206436+00:00",
+          "runner_metrics": {
+            "runs_total": 1,
+            "runs_success": 0,
+            "runs_failed": 1,
+            "success_rate": 0.0,
+            "retries_total": 0,
+            "paid_calls_total": 1,
+            "paid_calls_success": 0,
+            "paid_calls_failed": 1,
+            "paid_retry_calls": 0,
+            "paid_success_rate": 0.0,
+            "total_runtime_seconds": 2.0,
+            "avg_runtime_seconds": 2.0,
+            "last_attempt": 1,
+            "last_status": "failed",
+            "last_failure_class": "command_failed",
+            "last_model": "claude/claude-sonnet-4-5-20250929",
+            "last_tool": "claude",
+            "awareness_quality_score": 0.7262,
+            "state_transition_quality": 1.0,
+            "hold_pattern_rate": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "cost_per_successful_transition": 0.51,
+            "awareness_events_total": 2,
+            "awareness_interventions_total": 0,
+            "awareness_blocks_total": 0,
+            "awareness_transition_total": 2,
+            "awareness_successful_transition_total": 2,
+            "awareness_hold_pattern_total": 0,
+            "awareness_transition_cost_total": 1.02,
+            "updated_at": "2026-03-01T10:28:50.008843+00:00"
+          },
+          "runner_last_result": {
+            "attempt": 1,
+            "status": "failed",
+            "failure_class": "command_failed",
+            "duration_seconds": 2.0,
+            "paid_call": true,
+            "task_type": "impl",
+            "model": "claude/claude-sonnet-4-5-20250929",
+            "command_tool": "claude",
+            "at": "2026-03-01T10:28:50.008849+00:00"
+          },
+          "failure_reason_bucket": "other",
+          "failure_signature": "other_type_result_subtype_success_error_aac24026",
+          "failure_summary": "Failure did not match a known taxonomy signature; grouped by normalized fallback fingerprint.",
+          "failure_diagnostics_source": "output",
+          "failure_diagnostics_present": true
+        },
+        "progress_pct": null,
+        "current_step": null,
+        "decision_prompt": null,
+        "decision": null,
+        "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_claude. Return exactly: paid_claude success.",
+        "success_evidence": [],
+        "abort_evidence": [],
+        "observation_window_sec": 900,
+        "claimed_by": "openai-codex:railway-runner-1",
+        "claimed_at": "2026-03-01T10:28:46.101901Z",
+        "created_at": "2026-03-01T10:28:11.413771Z",
+        "updated_at": "2026-03-01T10:28:50.538209Z"
+      },
+      "summary": {
+        "status": "failed",
+        "route_executor": "claude",
+        "route_model": "claude/claude-sonnet-4-5-20250929",
+        "route_provider": "claude",
+        "is_paid_provider": true,
+        "retry_count": 0,
+        "retry_max": 0,
+        "tool_call_count": 0,
+        "tool_call_status_codes": [],
+        "friction_open_count": 0,
+        "friction_block_types": [],
+        "output_excerpt": "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":true,\"duration_ms\":373,\"duration_api_ms\":0,\"num_turns\":1,\"result\":\"There's an issue with the selected model (claude/claude-sonnet-4-5-20250929). It may not exist or you may not have access to ",
+        "error_excerpt": ""
+      }
+    },
+    {
+      "label": "paid_cursor",
+      "requested": {
+        "label": "paid_cursor",
+        "executor": "cursor",
+        "model_override": "auto",
+        "force_paid_providers": true,
+        "is_paid_expected": true
+      },
+      "create_http": 201,
+      "create_body": {
+        "id": "task_4922fdcb7259f375",
+        "direction": "Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+        "task_type": "impl",
+        "status": "pending",
+        "model": "cursor/auto",
+        "command": "agent --trust --print --output-format json \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.\" --model auto",
+        "output": null,
+        "context": {
+          "executor": "cursor",
+          "model_override": "auto",
+          "retry_max": 0,
+          "auto_retry_openai_override": false,
+          "force_paid_providers": true,
+          "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+          "success_evidence": [],
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "target_state_contract": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+            "success_evidence": [],
+            "abort_evidence": [],
+            "observation_window_sec": 900
+          },
+          "executor_policy": {
+            "policy_applied": true,
+            "reason": "explicit_executor_forced",
+            "explicit_executor": "cursor",
+            "availability": "unavailable_on_api_node"
+          },
+          "runner_cursor_auth_mode": "oauth",
+          "task_agent": "dev-engineer",
+          "route_decision": {
+            "executor": "cursor",
+            "task_type": "impl",
+            "tier": "cursor",
+            "model": "cursor/auto",
+            "provider": "cursor",
+            "billing_provider": "cursor",
+            "is_paid_provider": true,
+            "request_schema": "open_responses_v1",
+            "policy": {
+              "policy_applied": true,
+              "reason": "explicit_executor_forced",
+              "explicit_executor": "cursor",
+              "availability": "unavailable_on_api_node"
+            }
+          },
+          "normalized_response_call": {
+            "task_id": "task_4922fdcb7259f375",
+            "executor": "cursor",
+            "provider": "cursor",
+            "model": "auto",
+            "request_schema": "open_responses_v1",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success."
+                  }
+                ]
+              }
+            ]
+          },
+          "agent_graph_state_schema": {
+            "schema_id": "coherence_agent_graph_state_v1",
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ]
+          },
+          "agent_graph_state": {
+            "task_id": "task_4922fdcb7259f375",
+            "task_type": "impl",
+            "phase": "queued",
+            "direction": "Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+            "attempt": 0,
+            "model": "cursor/auto",
+            "provider": "cursor",
+            "route_decision": {
+              "executor": "cursor",
+              "task_type": "impl",
+              "tier": "cursor",
+              "model": "cursor/auto",
+              "provider": "cursor",
+              "billing_provider": "cursor",
+              "is_paid_provider": true,
+              "request_schema": "open_responses_v1",
+              "policy": {
+                "policy_applied": true,
+                "reason": "explicit_executor_forced",
+                "explicit_executor": "cursor",
+                "availability": "unavailable_on_api_node"
+              }
+            }
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_status": "valid"
+        },
+        "progress_pct": null,
+        "current_step": null,
+        "decision_prompt": null,
+        "decision": null,
+        "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+        "success_evidence": [],
+        "abort_evidence": [],
+        "observation_window_sec": 900,
+        "claimed_by": null,
+        "claimed_at": null,
+        "created_at": "2026-03-01T10:28:11.764711Z",
+        "updated_at": null
+      },
+      "id": "task_4922fdcb7259f375",
+      "execute_http": 403,
+      "execute_body": {
+        "detail": "Forbidden"
+      },
+      "task_http": 200,
+      "task": {
+        "id": "task_4922fdcb7259f375",
+        "direction": "Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+        "task_type": "impl",
+        "status": "failed",
+        "model": "cursor/auto",
+        "command": "agent --trust --print --output-format json \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.\" --model auto",
+        "output": "Error: Authentication required. Please run 'agent login' first, or set CURSOR_API_KEY environment variable.\n",
+        "context": {
+          "executor": "cursor",
+          "model_override": "auto",
+          "retry_max": 0,
+          "auto_retry_openai_override": false,
+          "force_paid_providers": true,
+          "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+          "success_evidence": [],
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "target_state_contract": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+            "success_evidence": [],
+            "abort_evidence": [],
+            "observation_window_sec": 900
+          },
+          "executor_policy": {
+            "policy_applied": true,
+            "reason": "explicit_executor_forced",
+            "explicit_executor": "cursor",
+            "availability": "unavailable_on_api_node"
+          },
+          "runner_cursor_auth_mode": "oauth",
+          "task_agent": "dev-engineer",
+          "route_decision": {
+            "executor": "cursor",
+            "task_type": "impl",
+            "tier": "cursor",
+            "model": "cursor/auto",
+            "provider": "cursor",
+            "billing_provider": "cursor",
+            "is_paid_provider": true,
+            "request_schema": "open_responses_v1",
+            "policy": {
+              "policy_applied": true,
+              "reason": "explicit_executor_forced",
+              "explicit_executor": "cursor",
+              "availability": "unavailable_on_api_node"
+            }
+          },
+          "normalized_response_call": {
+            "task_id": "task_4922fdcb7259f375",
+            "executor": "cursor",
+            "provider": "cursor",
+            "model": "auto",
+            "request_schema": "open_responses_v1",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success."
+                  }
+                ]
+              }
+            ]
+          },
+          "agent_graph_state_schema": {
+            "schema_id": "coherence_agent_graph_state_v1",
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ]
+          },
+          "agent_graph_state": {
+            "task_id": "task_4922fdcb7259f375",
+            "task_type": "impl",
+            "phase": "queued",
+            "direction": "Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+            "attempt": 0,
+            "model": "cursor/auto",
+            "provider": "cursor",
+            "route_decision": {
+              "executor": "cursor",
+              "task_type": "impl",
+              "tier": "cursor",
+              "model": "cursor/auto",
+              "provider": "cursor",
+              "billing_provider": "cursor",
+              "is_paid_provider": true,
+              "request_schema": "open_responses_v1",
+              "policy": {
+                "policy_applied": true,
+                "reason": "explicit_executor_forced",
+                "explicit_executor": "cursor",
+                "availability": "unavailable_on_api_node"
+              }
+            }
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_status": "valid",
+          "observer_context_last_snapshot": {
+            "transition": "complete",
+            "status": "failed",
+            "current_step": "finalized",
+            "at": "2026-03-01T10:28:37.598799+00:00",
+            "run_id": "run_0b3c14309820",
+            "worker_id": "openai-codex:railway-runner-1",
+            "failure_class": "command_failed",
+            "state": {
+              "active_run_id": "run_0b3c14309820",
+              "active_worker_id": "openai-codex:railway-runner-1",
+              "active_branch": "",
+              "last_attempt": 1,
+              "runner_state": "finished",
+              "next_action": "needs_attention",
+              "last_failure_class": "command_failed",
+              "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+              "observation_window_sec": 900
+            },
+            "delta": {
+              "last_failure_class": "command_failed",
+              "next_action": "needs_attention",
+              "runner_state": "finished"
+            }
+          },
+          "observer_context_snapshots": [
+            {
+              "transition": "claim",
+              "status": "claimed",
+              "current_step": "lease claimed",
+              "at": "2026-03-01T10:28:29.954046+00:00",
+              "run_id": "run_0b3c14309820",
+              "worker_id": "openai-codex:railway-runner-1",
+              "failure_class": "",
+              "state": {
+                "active_run_id": "run_0b3c14309820",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "active_branch": "",
+                "last_attempt": 1,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+                "observation_window_sec": 900
+              },
+              "delta": {
+                "active_branch": "",
+                "active_run_id": "run_0b3c14309820",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "last_attempt": 1,
+                "observation_window_sec": 900,
+                "runner_state": "claimed",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success."
+              },
+              "details": {
+                "task_type": "impl",
+                "direction": "Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+                "repo_path": ""
+              }
+            },
+            {
+              "transition": "start",
+              "status": "running",
+              "current_step": "command started",
+              "at": "2026-03-01T10:28:31.030543+00:00",
+              "run_id": "run_0b3c14309820",
+              "worker_id": "openai-codex:railway-runner-1",
+              "failure_class": "",
+              "state": {
+                "active_run_id": "run_0b3c14309820",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "active_branch": "",
+                "last_attempt": 1,
+                "runner_state": "running",
+                "next_action": "execute_command",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+                "observation_window_sec": 900
+              },
+              "delta": {
+                "next_action": "execute_command",
+                "runner_state": "running"
+              }
+            },
+            {
+              "transition": "complete",
+              "status": "failed",
+              "current_step": "finalized",
+              "at": "2026-03-01T10:28:37.598799+00:00",
+              "run_id": "run_0b3c14309820",
+              "worker_id": "openai-codex:railway-runner-1",
+              "failure_class": "command_failed",
+              "state": {
+                "active_run_id": "run_0b3c14309820",
+                "active_worker_id": "openai-codex:railway-runner-1",
+                "active_branch": "",
+                "last_attempt": 1,
+                "runner_state": "finished",
+                "next_action": "needs_attention",
+                "last_failure_class": "command_failed",
+                "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+                "observation_window_sec": 900
+              },
+              "delta": {
+                "last_failure_class": "command_failed",
+                "next_action": "needs_attention",
+                "runner_state": "finished"
+              }
+            }
+          ],
+          "awareness_events_total": 3,
+          "awareness_interventions_total": 0,
+          "awareness_blocks_total": 0,
+          "awareness_transition_total": 3,
+          "awareness_successful_transition_total": 2,
+          "awareness_hold_pattern_total": 0,
+          "awareness_transition_cost_total": 1.01,
+          "awareness_estimated_roi_total": 0.0,
+          "awareness_measured_roi_total": 0.0,
+          "awareness_state_transition_quality": 0.6667,
+          "awareness_hold_pattern_rate": 0.0,
+          "awareness_estimated_to_measured_roi_conversion": null,
+          "awareness_cost_per_successful_transition": 0.505,
+          "awareness_quality": {
+            "score": 0.6898,
+            "policy_discipline": 1.0,
+            "context_coverage": 0.6,
+            "state_transition_quality": 0.6667,
+            "hold_pattern_rate": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "cost_per_successful_transition": 0.505,
+            "events_total": 3,
+            "interventions_total": 0,
+            "blocks_total": 0,
+            "snapshot_count": 3,
+            "transition_total": 3,
+            "successful_transition_total": 2,
+            "hold_pattern_total": 0,
+            "estimated_roi_total": 0.0,
+            "measured_roi_total": 0.0,
+            "transition_cost_total": 1.01,
+            "updated_at": "2026-03-01T10:28:37.598859+00:00"
+          },
+          "active_run_id": "run_0b3c14309820",
+          "active_worker_id": "openai-codex:railway-runner-1",
+          "active_branch": "",
+          "last_attempt": 1,
+          "runner_cli_bootstrap": {
+            "ok": true,
+            "detail": "runner_cli_present:cursor:agent:/root/.local/bin/agent:cursor_node_shim_present:/root/.local/share/cursor-agent/versions/2026.02.27-e7d2ef6/node:cursor_runtime_layout_ok:/root/.local/share/cursor-agent/versions/2026.02.27-e7d2ef6",
+            "at": "2026-03-01T10:28:30.168709+00:00"
+          },
+          "target_state_observation": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+            "success_evidence": [],
+            "success_evidence_hits": [],
+            "success_evidence_met": false,
+            "abort_evidence": [],
+            "abort_evidence_hits": [],
+            "abort_evidence_met": false,
+            "observation_window_sec": 900,
+            "observation_window_exceeded": false,
+            "attempt_status": "failed",
+            "observed_at": "2026-03-01T10:28:32.236266+00:00"
+          },
+          "target_state_last_observed_at": "2026-03-01T10:28:32.236306+00:00",
+          "runner_metrics": {
+            "runs_total": 1,
+            "runs_success": 0,
+            "runs_failed": 1,
+            "success_rate": 0.0,
+            "retries_total": 0,
+            "paid_calls_total": 1,
+            "paid_calls_success": 0,
+            "paid_calls_failed": 1,
+            "paid_retry_calls": 0,
+            "paid_success_rate": 0.0,
+            "total_runtime_seconds": 1.0,
+            "avg_runtime_seconds": 1.0,
+            "last_attempt": 1,
+            "last_status": "failed",
+            "last_failure_class": "command_failed",
+            "last_model": "cursor/auto",
+            "last_tool": "agent",
+            "awareness_quality_score": 0.7264,
+            "state_transition_quality": 1.0,
+            "hold_pattern_rate": 0.0,
+            "estimated_to_measured_roi_conversion": null,
+            "cost_per_successful_transition": 0.505,
+            "awareness_events_total": 2,
+            "awareness_interventions_total": 0,
+            "awareness_blocks_total": 0,
+            "awareness_transition_total": 2,
+            "awareness_successful_transition_total": 2,
+            "awareness_hold_pattern_total": 0,
+            "awareness_transition_cost_total": 1.01,
+            "updated_at": "2026-03-01T10:28:33.178142+00:00"
+          },
+          "runner_last_result": {
+            "attempt": 1,
+            "status": "failed",
+            "failure_class": "command_failed",
+            "duration_seconds": 1.0,
+            "paid_call": true,
+            "task_type": "impl",
+            "model": "cursor/auto",
+            "command_tool": "agent",
+            "at": "2026-03-01T10:28:33.178149+00:00"
+          },
+          "failure_reason_bucket": "auth",
+          "failure_signature": "auth_unauthorized_or_missing_credentials",
+          "failure_summary": "Authentication or authorization failed for required provider/session.",
+          "failure_diagnostics_source": "output",
+          "failure_diagnostics_present": true
+        },
+        "progress_pct": null,
+        "current_step": null,
+        "decision_prompt": null,
+        "decision": null,
+        "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): paid_cursor. Return exactly: paid_cursor success.",
+        "success_evidence": [],
+        "abort_evidence": [],
+        "observation_window_sec": 900,
+        "claimed_by": "openai-codex:railway-runner-1",
+        "claimed_at": "2026-03-01T10:28:30.262763Z",
+        "created_at": "2026-03-01T10:28:11.764711Z",
+        "updated_at": "2026-03-01T10:28:37.716671Z"
+      },
+      "summary": {
+        "status": "failed",
+        "route_executor": "cursor",
+        "route_model": "cursor/auto",
+        "route_provider": "cursor",
+        "is_paid_provider": true,
+        "retry_count": 0,
+        "retry_max": 0,
+        "tool_call_count": 0,
+        "tool_call_status_codes": [],
+        "friction_open_count": 0,
+        "friction_block_types": [],
+        "output_excerpt": "Error: Authentication required. Please run 'agent login' first, or set CURSOR_API_KEY environment variable.\n",
+        "error_excerpt": ""
+      }
+    },
+    {
+      "label": "free_openrouter",
+      "requested": {
+        "label": "free_openrouter",
+        "executor": "openrouter",
+        "model_override": "openrouter/free",
+        "force_paid_providers": false,
+        "is_paid_expected": false
+      },
+      "create_http": 201,
+      "create_body": {
+        "id": "task_ab6506f28461fc68",
+        "direction": "Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+        "task_type": "impl",
+        "status": "pending",
+        "model": "openrouter/free",
+        "command": "openrouter-exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.\" --model openrouter/free",
+        "output": null,
+        "context": {
+          "executor": "openrouter",
+          "model_override": "openrouter/free",
+          "retry_max": 0,
+          "auto_retry_openai_override": false,
+          "force_paid_providers": false,
+          "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+          "success_evidence": [],
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "target_state_contract": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+            "success_evidence": [],
+            "abort_evidence": [],
+            "observation_window_sec": 900
+          },
+          "task_agent": "dev-engineer",
+          "route_decision": {
+            "executor": "openrouter",
+            "task_type": "impl",
+            "tier": "openrouter",
+            "model": "openrouter/free",
+            "provider": "openrouter",
+            "billing_provider": "openrouter",
+            "is_paid_provider": false,
+            "request_schema": "open_responses_v1",
+            "policy": {
+              "policy_applied": false,
+              "reason": "explicit_executor"
+            }
+          },
+          "normalized_response_call": {
+            "task_id": "task_ab6506f28461fc68",
+            "executor": "openrouter",
+            "provider": "openrouter",
+            "model": "openrouter/free",
+            "request_schema": "open_responses_v1",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success."
+                  }
+                ]
+              }
+            ]
+          },
+          "agent_graph_state_schema": {
+            "schema_id": "coherence_agent_graph_state_v1",
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ]
+          },
+          "agent_graph_state": {
+            "task_id": "task_ab6506f28461fc68",
+            "task_type": "impl",
+            "phase": "queued",
+            "direction": "Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+            "attempt": 0,
+            "model": "openrouter/free",
+            "provider": "openrouter",
+            "route_decision": {
+              "executor": "openrouter",
+              "task_type": "impl",
+              "tier": "openrouter",
+              "model": "openrouter/free",
+              "provider": "openrouter",
+              "billing_provider": "openrouter",
+              "is_paid_provider": false,
+              "request_schema": "open_responses_v1",
+              "policy": {
+                "policy_applied": false,
+                "reason": "explicit_executor"
+              }
+            }
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_status": "valid"
+        },
+        "progress_pct": null,
+        "current_step": null,
+        "decision_prompt": null,
+        "decision": null,
+        "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+        "success_evidence": [],
+        "abort_evidence": [],
+        "observation_window_sec": 900,
+        "claimed_by": null,
+        "claimed_at": null,
+        "created_at": "2026-03-01T10:28:12.106507Z",
+        "updated_at": null
+      },
+      "id": "task_ab6506f28461fc68",
+      "execute_http": 403,
+      "execute_body": {
+        "detail": "Forbidden"
+      },
+      "task_http": 200,
+      "task": {
+        "id": "task_ab6506f28461fc68",
+        "direction": "Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+        "task_type": "impl",
+        "status": "completed",
+        "model": "openrouter/free",
+        "command": "openrouter-exec \"Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.\" --model openrouter/free",
+        "output": "```\nfree_openrouter success\n```\n",
+        "context": {
+          "executor": "openrouter",
+          "model_override": "openrouter/free",
+          "retry_max": 0,
+          "auto_retry_openai_override": false,
+          "force_paid_providers": false,
+          "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+          "success_evidence": [],
+          "abort_evidence": [],
+          "observation_window_sec": 900,
+          "target_state_contract": {
+            "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+            "success_evidence": [],
+            "abort_evidence": [],
+            "observation_window_sec": 900
+          },
+          "task_agent": "dev-engineer",
+          "route_decision": {
+            "executor": "openrouter",
+            "task_type": "impl",
+            "tier": "openrouter",
+            "model": "openrouter/free",
+            "provider": "openrouter",
+            "billing_provider": "openrouter",
+            "is_paid_provider": false,
+            "request_schema": "open_responses_v1",
+            "policy": {
+              "policy_applied": false,
+              "reason": "explicit_executor"
+            }
+          },
+          "normalized_response_call": {
+            "task_id": "task_ab6506f28461fc68",
+            "executor": "openrouter",
+            "provider": "openrouter",
+            "model": "openrouter/free",
+            "request_schema": "open_responses_v1",
+            "input": [
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Role agent: dev-engineer. Task type: impl. Respect role boundaries, spec scope, and acceptance criteria. Direction: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success."
+                  }
+                ]
+              }
+            ]
+          },
+          "agent_graph_state_schema": {
+            "schema_id": "coherence_agent_graph_state_v1",
+            "required_fields": [
+              "task_id",
+              "task_type",
+              "phase",
+              "direction"
+            ],
+            "allowed_phases": [
+              "queued",
+              "running",
+              "needs_decision",
+              "completed",
+              "failed"
+            ]
+          },
+          "agent_graph_state": {
+            "task_id": "task_ab6506f28461fc68",
+            "task_type": "impl",
+            "phase": "queued",
+            "direction": "Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+            "attempt": 0,
+            "model": "openrouter/free",
+            "provider": "openrouter",
+            "route_decision": {
+              "executor": "openrouter",
+              "task_type": "impl",
+              "tier": "openrouter",
+              "model": "openrouter/free",
+              "provider": "openrouter",
+              "billing_provider": "openrouter",
+              "is_paid_provider": false,
+              "request_schema": "open_responses_v1",
+              "policy": {
+                "policy_applied": false,
+                "reason": "explicit_executor"
+              }
+            }
+          },
+          "agent_graph_state_errors": [],
+          "agent_graph_state_status": "valid"
+        },
+        "progress_pct": null,
+        "current_step": null,
+        "decision_prompt": null,
+        "decision": null,
+        "target_state": "impl task reaches intended target state: Provider smoke after deploy (healthy host): free_openrouter. Return exactly: free_openrouter success.",
+        "success_evidence": [],
+        "abort_evidence": [],
+        "observation_window_sec": 900,
+        "claimed_by": "codex-worker:server",
+        "claimed_at": "2026-03-01T10:28:18.273678Z",
+        "created_at": "2026-03-01T10:28:12.106507Z",
+        "updated_at": "2026-03-01T10:28:19.911664Z"
+      },
+      "summary": {
+        "status": "completed",
+        "route_executor": "openrouter",
+        "route_model": "openrouter/free",
+        "route_provider": "openrouter",
+        "is_paid_provider": false,
+        "retry_count": 0,
+        "retry_max": 0,
+        "tool_call_count": 1,
+        "tool_call_status_codes": [
+          200
+        ],
+        "friction_open_count": 0,
+        "friction_block_types": [],
+        "output_excerpt": "```\nfree_openrouter success\n```\n",
+        "error_excerpt": ""
+      }
+    }
+  ]
+}

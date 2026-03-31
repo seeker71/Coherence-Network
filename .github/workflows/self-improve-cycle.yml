@@ -1,0 +1,256 @@
+name: Self Improve Cycle
+
+on:
+  schedule:
+    - cron: "37 10 * * *"  # daily (was every 8h)
+  workflow_dispatch:
+
+concurrency:
+  group: self-improve-cycle-main
+  cancel-in-progress: false
+
+jobs:
+  self-improve:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      SELF_IMPROVE_API_URL: ${{ vars.SELF_IMPROVE_API_URL || 'https://api.coherencycoin.com' }}
+      SELF_IMPROVE_USAGE_THRESHOLD_RATIO: ${{ vars.SELF_IMPROVE_USAGE_THRESHOLD_RATIO || '0.15' }}
+      SELF_IMPROVE_STAGE_TIMEOUT_SECONDS: ${{ vars.SELF_IMPROVE_STAGE_TIMEOUT_SECONDS || '300' }}
+      SELF_IMPROVE_ATTEMPT_WALL_TIMEOUT_SECONDS: ${{ vars.SELF_IMPROVE_ATTEMPT_WALL_TIMEOUT_SECONDS || '900' }}
+      SELF_IMPROVE_MAX_ATTEMPTS: ${{ vars.SELF_IMPROVE_MAX_ATTEMPTS || '3' }}
+      AGENT_EXECUTE_TOKEN: ${{ secrets.AGENT_EXECUTE_TOKEN }}
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install API dependencies
+        run: |
+          cd api && pip install -e ".[dev]"
+
+      - name: Run self-improve cycle
+        id: self_improve
+        run: |
+          set +e
+          final_status="unknown"
+          final_code=2
+          max_attempts="${SELF_IMPROVE_MAX_ATTEMPTS}"
+          : > self_improve_cycle_attempts.jsonl
+          for attempt in $(seq 1 "${max_attempts}"); do
+            report_file="self_improve_cycle_report_attempt_${attempt}.json"
+            timeout "${SELF_IMPROVE_ATTEMPT_WALL_TIMEOUT_SECONDS}" python api/scripts/run_self_improve_cycle.py \
+              --base-url "${SELF_IMPROVE_API_URL}" \
+              --usage-threshold-ratio "${SELF_IMPROVE_USAGE_THRESHOLD_RATIO}" \
+              --poll-interval-seconds 5 \
+              --timeout-seconds "${SELF_IMPROVE_STAGE_TIMEOUT_SECONDS}" \
+              --infra-preflight-attempts 4 \
+              --infra-preflight-consecutive-successes 1 \
+              --checkpoint-file self_improve_checkpoint.json \
+              --json > "${report_file}"
+            code=$?
+            if [ ! -s "${report_file}" ]; then
+              printf '%s\n' '{"status":"failed","failed_stage":"bootstrap","error":"self_improve_cycle_report_missing_or_empty"}' > "${report_file}"
+              code=2
+            fi
+            status=$(python - <<PY
+          import json
+          try:
+              with open("${report_file}", "r", encoding="utf-8") as fh:
+                  data = json.load(fh)
+              print(str(data.get("status") or "unknown"))
+          except Exception:
+              print("unknown")
+          PY
+          )
+            python - <<PY >> self_improve_cycle_attempts.jsonl
+          import json
+          report = {}
+          try:
+              with open("${report_file}", "r", encoding="utf-8") as fh:
+                  report = json.load(fh)
+          except Exception:
+              report = {"status": "unknown"}
+          print(json.dumps({
+              "attempt": ${attempt},
+              "status": report.get("status", "unknown"),
+              "failed_stage": report.get("failed_stage", ""),
+              "data_quality_mode": report.get("data_quality_mode", ""),
+              "stages": report.get("stages", []),
+          }))
+          PY
+            cat "${report_file}"
+            final_status="${status}"
+            final_code="${code}"
+            cp "${report_file}" self_improve_cycle_report.json
+            if [ "${status}" = "completed" ] || [ "${status}" = "skipped" ]; then
+              break
+            fi
+            if [ "${attempt}" -lt "${max_attempts}" ]; then
+              sleep_seconds=$((20 * attempt))
+              sleep "${sleep_seconds}"
+            fi
+          done
+
+          if [ ! -s self_improve_cycle_report.json ]; then
+            printf '%s\n' '{"status":"failed","failed_stage":"bootstrap","error":"self_improve_cycle_report_missing_or_empty"}' > self_improve_cycle_report.json
+          fi
+          echo "exit_code=${final_code}" >> "$GITHUB_OUTPUT"
+          echo "report_status=${final_status}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload self-improve report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: self_improve_cycle_report_${{ github.sha }}
+          path: |
+            self_improve_cycle_report.json
+            self_improve_cycle_report_attempt_*.json
+            self_improve_cycle_attempts.jsonl
+            self_improve_checkpoint.json
+
+      - name: Create or update self-improve failure issue
+        if: ${{ steps.self_improve.outputs.exit_code != '0' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            let report = {};
+            try {
+              const raw = fs.readFileSync('self_improve_cycle_report.json', 'utf8');
+              report = JSON.parse(raw || '{}');
+            } catch (err) {
+              report = {
+                status: 'failed',
+                failed_stage: 'report_parse',
+                error: String(err || 'json_parse_error'),
+              };
+            }
+            const title = 'Self-improve cycle failing';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const stages = Array.isArray(report.stages) ? report.stages : [];
+            const body = [
+              'Scheduled self-improve cycle failed.',
+              '',
+              `- Workflow run: ${runUrl}`,
+              `- Status: ${report.status || 'unknown'}`,
+              `- Failed stage: ${report.failed_stage || 'unknown'}`,
+              '',
+              'Stages:',
+              ...(stages.length
+                ? stages.map((s) => `- ${s.stage}: task=${s.task_id || 'n/a'} status=${s.status || 'n/a'}`)
+                : ['- (none)']),
+              '',
+              'Raw report:',
+              '```json',
+              JSON.stringify(report, null, 2).slice(0, 6000),
+              '```',
+            ].join('\n');
+
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data.items[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Resolve self-improve issue when cycle passes
+        if: ${{ steps.self_improve.outputs.exit_code == '0' && steps.self_improve.outputs.report_status != 'infra_blocked' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = 'Self-improve cycle failing';
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length === 0) {
+              return;
+            }
+            const issue = existing.data.items[0];
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: `Resolved by workflow run ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}.`,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              state: 'closed',
+            });
+
+      - name: Create or update self-improve infra blocked issue
+        if: ${{ steps.self_improve.outputs.report_status == 'infra_blocked' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            let report = {};
+            try {
+              const raw = fs.readFileSync('self_improve_cycle_report.json', 'utf8');
+              report = JSON.parse(raw || '{}');
+            } catch (err) {
+              report = {
+                status: 'infra_blocked',
+                failed_stage: 'report_parse',
+                error: String(err || 'json_parse_error'),
+              };
+            }
+            const title = 'Self-improve infra blocked';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const history = Array.isArray(report?.infra_preflight?.history) ? report.infra_preflight.history : [];
+            const body = [
+              'Self-improve cycle skipped because infrastructure preflight failed.',
+              '',
+              `- Workflow run: ${runUrl}`,
+              `- Status: ${report.status || 'unknown'}`,
+              `- Skip reason: ${report.skip_reason || 'unknown'}`,
+              `- Preflight error: ${report?.infra_preflight?.preflight_error || 'unknown'}`,
+              '',
+              'Preflight history:',
+              ...(history.length
+                ? history.map((row) => `- attempt=${row.attempt} ok=${row.ok} error=${row.error || 'none'}`)
+                : ['- (none)']),
+            ].join('\n');
+
+            const query = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${title}"`;
+            const existing = await github.rest.search.issuesAndPullRequests({ q: query, per_page: 1 });
+            if (existing.data.items.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data.items[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Fail when cycle is not successful
+        if: ${{ steps.self_improve.outputs.exit_code != '0' }}
+        run: |
+          echo "Self-improve cycle failed"
+          exit 1

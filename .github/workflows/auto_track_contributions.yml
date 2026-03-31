@@ -1,0 +1,83 @@
+name: Auto-Track Contributions
+
+on:
+  push:
+    branches: [main, develop]
+    paths-ignore:
+      - 'specs/**'
+      - '*.md'
+      - 'docs/**'
+      - '.github/workflows/**'
+
+jobs:
+  track-contribution:
+    runs-on: ubuntu-latest
+    env:
+      API_URL: ${{ secrets.COHERENCE_API_URL }}
+      API_KEY: ${{ secrets.COHERENCE_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get commit info
+        id: commit_info
+        run: |
+          AUTHOR_EMAIL=$(git log -1 --format='%ae')
+          COMMIT_HASH=$(git log -1 --format='%H')
+          FILES_CHANGED=$(git diff-tree --no-commit-id --name-only -r $COMMIT_HASH | wc -l)
+          LINES_ADDED=$(git diff-tree --no-commit-id --numstat -r $COMMIT_HASH | awk '{sum+=$1} END {print sum}')
+
+          echo "author_email=$AUTHOR_EMAIL" >> $GITHUB_OUTPUT
+          echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+          echo "files_changed=$FILES_CHANGED" >> $GITHUB_OUTPUT
+          echo "lines_added=$LINES_ADDED" >> $GITHUB_OUTPUT
+
+      - name: Calculate contribution cost
+        id: calc_cost
+        run: |
+          FILES=${{ steps.commit_info.outputs.files_changed }}
+          LINES=${{ steps.commit_info.outputs.lines_added }}
+
+          # Normalized v2 estimator:
+          # base 0.10 + 0.15/file + 0.002/line, clamped to [0.05, 10.00]
+          COST=$(awk -v files="$FILES" -v lines="$LINES" 'BEGIN {
+            c = 0.10 + (files * 0.15) + (lines * 0.002);
+            if (c < 0.05) c = 0.05;
+            if (c > 10.00) c = 10.00;
+            printf "%.2f", c
+          }')
+
+          echo "cost=$COST" >> $GITHUB_OUTPUT
+
+      - name: Record contribution
+        if: env.API_URL != '' && env.API_KEY != ''
+        run: |
+          curl -X POST "$API_URL/v1/contributions/github" \
+            -H "Content-Type: application/json" \
+            -H "X-API-Key: $API_KEY" \
+            -d '{
+              "contributor_email": "${{ steps.commit_info.outputs.author_email }}",
+              "repository": "${{ github.repository }}",
+              "commit_hash": "${{ steps.commit_info.outputs.commit_hash }}",
+              "cost_amount": ${{ steps.calc_cost.outputs.cost }},
+              "metadata": {
+                "files_changed": ${{ steps.commit_info.outputs.files_changed }},
+                "lines_added": ${{ steps.commit_info.outputs.lines_added }}
+              }
+            }'
+
+      - name: Skip tracking when API secrets are unavailable
+        if: env.API_URL == '' || env.API_KEY == ''
+        run: |
+          echo "Skipping contribution tracking because COHERENCE_API_URL/COHERENCE_API_KEY is not configured for this run."
+
+      - name: Log contribution tracking result
+        if: env.API_URL != '' && env.API_KEY != ''
+        run: |
+          echo "✅ Contribution recorded!"
+          echo "Cost: \$${{ steps.calc_cost.outputs.cost }}"
+          echo "Commit: ${{ steps.commit_info.outputs.commit_hash }}"
+          echo "Verify at: https://api.coherencycoin.com/v1/contributions/commit/${{ steps.commit_info.outputs.commit_hash }}"

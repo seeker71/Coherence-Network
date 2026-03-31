@@ -1,0 +1,132 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/maintainability-architecture-gate",
+  "commit_scope": "Add global live-refresh behavior and cross-entity page links so web pages auto-update and support contributor navigation flow",
+  "files_owned": [
+    "web/app/api-health/page.tsx",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/app/friction/page.tsx",
+    "web/app/gates/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/import/page.tsx",
+    "web/app/layout.tsx",
+    "web/app/portfolio/page.tsx",
+    "web/app/project/[ecosystem]/[name]/page.tsx",
+    "web/app/search/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/usage/page.tsx",
+    "web/components/live_updates_controller.tsx",
+    "web/lib/live_refresh.ts",
+    "specs/091-web-live-refresh-and-link-parity.md",
+    "docs/SPEC-TRACKING.md",
+    "docs/system_audit/commit_evidence_2026-02-16_web-live-refresh-link-parity.json"
+  ],
+  "idea_ids": [
+    "coherence-network-web-interface",
+    "oss-interface-alignment",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "091"
+  ],
+  "task_ids": [
+    "web-live-refresh-link-parity"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "spec",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd web && npm run build",
+    "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
+  ],
+  "change_files": [
+    "web/app/api-health/page.tsx",
+    "web/app/assets/page.tsx",
+    "web/app/contributions/page.tsx",
+    "web/app/contributors/page.tsx",
+    "web/app/flow/page.tsx",
+    "web/app/friction/page.tsx",
+    "web/app/gates/page.tsx",
+    "web/app/ideas/[idea_id]/page.tsx",
+    "web/app/ideas/page.tsx",
+    "web/app/import/page.tsx",
+    "web/app/layout.tsx",
+    "web/app/portfolio/page.tsx",
+    "web/app/project/[ecosystem]/[name]/page.tsx",
+    "web/app/search/page.tsx",
+    "web/app/specs/page.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/usage/page.tsx",
+    "web/components/live_updates_controller.tsx",
+    "web/lib/live_refresh.ts",
+    "specs/091-web-live-refresh-and-link-parity.md",
+    "docs/SPEC-TRACKING.md"
+  ],
+  "change_intent": "runtime_feature",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Web pages now auto-refresh data, reload after detected web deployment version changes, and expose richer interlinks across contributors, contributions, assets, tasks, ideas, and gates.",
+    "public_endpoints": [
+      "https://coherence-network.vercel.app/",
+      "https://coherence-network.vercel.app/portfolio",
+      "https://coherence-network.vercel.app/contributors",
+      "https://coherence-network.vercel.app/contributions",
+      "https://coherence-network.vercel.app/assets",
+      "https://coherence-network.vercel.app/tasks",
+      "https://coherence-network.vercel.app/gates"
+    ],
+    "test_flows": [
+      "web: observe live updates indicator and confirm data pages refresh without manual reload",
+      "web: navigate from contributors -> contributions filter -> assets filter -> tasks links",
+      "web: trigger gates view and verify live snapshot updates"
+    ]
+  },
+  "local_validation": {
+    "status": "pass",
+    "ran_at": "2026-02-16T11:38:13Z",
+    "environment": {
+      "node": "v25.2.1",
+      "npm": "11.6.2"
+    },
+    "commands": [
+      "cd web && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "https://github.com/seeker71/Coherence-Network/actions"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "vercel+railway"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment validation"
+  }
+}

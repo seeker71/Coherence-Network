@@ -1,0 +1,75 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/remote-ops-web-fix-20260219",
+  "commit_scope": "Make web API URL resolution resilient to legacy env values and increase health-proxy upstream timeout to avoid false failures under production latency.",
+  "files_owned": [
+    "web/lib/api.ts",
+    "web/app/api/health-proxy/route.ts"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task-remote-ops-web-health-proxy-2026-02-19"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "verification"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "./scripts/verify_web_api_deploy.sh",
+    "https://coherence-web-production.up.railway.app/api/health-proxy"
+  ],
+  "change_files": [
+    "web/lib/api.ts",
+    "web/app/api/health-proxy/route.ts"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pending",
+    "commands": [
+      "npm --prefix web run build",
+      "REMOTE_OPS_RUN_EXEC=1 REMOTE_OPS_CURL_TIMEOUT=90 ./scripts/verify_remote_ops_smoke.sh",
+      "./scripts/verify_web_api_deploy.sh"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production",
+    "notes": "Needs successful GitHub deploy-to-production workflow after PR merge."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Legacy NEXT_PUBLIC_API_URL values (api.coherencycoin.com) are ignored in web API base resolution, and /api/health-proxy can tolerate slower upstream API responses up to 15s without returning false 502 states.",
+    "public_endpoints": [
+      "https://coherence-web-production.up.railway.app/api/health-proxy",
+      "https://coherence-web-production.up.railway.app/remote-ops",
+      "https://coherence-network-production.up.railway.app/api/health"
+    ],
+    "test_flows": [
+      "Call /api/health-proxy and verify it returns 200 with the API payload.",
+      "Use verify_web_api_deploy.sh to confirm web + API deployment contract passes."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Deployment and public verification pending."
+  }
+}

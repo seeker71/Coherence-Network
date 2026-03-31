@@ -1,0 +1,146 @@
+{
+  "date": "2026-03-05",
+  "thread_branch": "main",
+  "commit_scope": "Integrate local tool guard (baseline script, read_only_guard, matrix non-blocking-executors and spec fallback), agent/runtime/inventory refactor packages, web flow/tasks/usage and api-coverage, cleanup playwright and gitignore audit temp.",
+  "files_owned": [],
+  "local_validation": {
+    "status": "pass",
+    "commands_run": [
+      "python3 api/scripts/capture_local_tool_baseline.py",
+      "python api/scripts/test_routing.py http://127.0.0.1:8000",
+      "run_cli_task_flow_matrix.py --executors cursor --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push and Railway auto-deploy"
+  },
+  "idea_ids": ["oss-interface-alignment", "portfolio-governance"],
+  "spec_ids": ["001-api-coverage", "002-agent-orchestration"],
+  "task_ids": ["integrate-2026-03-05"],
+  "contributors": [
+    {
+      "contributor_id": "cursor",
+      "contributor_type": "machine",
+      "roles": ["implementation", "integration"]
+    }
+  ],
+  "agent": {
+    "name": "cursor",
+    "version": "local"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Local tool guard flow (baseline, matrix cursor gate, inventory safe-mode, runner once) and agent/runtime refactor plus web flow/tasks/usage pages deploy to Railway.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/health",
+      "https://coherence-web-production.up.railway.app/"
+    ],
+    "test_flows": [
+      "Run capture_local_tool_baseline.py and verify invariant diff. Run run_cli_task_flow_matrix.py --executors cursor --strict and verify flow_success."
+    ]
+  },
+  "evidence_refs": [
+    "docs/LOCAL-TOOL-GUARD.md",
+    "docs/LOCAL_CHANGES_EXPLAINED_2026-03-05.md"
+  ],
+  "change_files": [
+    ".gitignore",
+    "api/app/adapters/postgres_models.py",
+    "api/app/adapters/postgres_store.py",
+    "api/app/routers/ideas.py",
+    "api/app/services/agent_routing/__init__.py",
+    "api/app/services/agent_routing/command_templates.py",
+    "api/app/services/agent_routing/executor_config.py",
+    "api/app/services/agent_routing/model_config.py",
+    "api/app/services/agent_routing/provider_classification.py",
+    "api/app/services/agent_routing/routing_config.py",
+    "api/app/services/agent_routing_service.py",
+    "api/app/services/agent_run_state/__init__.py",
+    "api/app/services/agent_run_state/db.py",
+    "api/app/services/agent_run_state/helpers.py",
+    "api/app/services/agent_run_state/local_store.py",
+    "api/app/services/agent_run_state/models.py",
+    "api/app/services/agent_run_state/row_payload.py",
+    "api/app/services/agent_run_state/service.py",
+    "api/app/services/agent_run_state_service.py",
+    "api/app/services/agent_service.py",
+    "api/app/services/agent_service_active_task.py",
+    "api/app/services/agent_service_completion_tracking.py",
+    "api/app/services/agent_service_crud.py",
+    "api/app/services/agent_service_executor.py",
+    "api/app/services/agent_service_friction.py",
+    "api/app/services/agent_service_list.py",
+    "api/app/services/agent_service_pipeline_status.py",
+    "api/app/services/agent_service_store.py",
+    "api/app/services/agent_service_task_derive.py",
+    "api/app/services/automation_usage/__init__.py",
+    "api/app/services/automation_usage/constants.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory/__init__.py",
+    "api/app/services/inventory/cache.py",
+    "api/app/services/inventory/constants.py",
+    "api/app/services/inventory/evidence.py",
+    "api/app/services/inventory/flow_helpers.py",
+    "api/app/services/inventory/impl_questions.py",
+    "api/app/services/inventory/lineage.py",
+    "api/app/services/inventory/proactive.py",
+    "api/app/services/inventory/route_evidence.py",
+    "api/app/services/inventory/spec_discovery.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/runtime/__init__.py",
+    "api/app/services/runtime/cache.py",
+    "api/app/services/runtime/events.py",
+    "api/app/services/runtime/ideas.py",
+    "api/app/services/runtime/paths.py",
+    "api/app/services/runtime/routes.py",
+    "api/app/services/runtime/store.py",
+    "api/scripts/capture_local_tool_baseline.py",
+    "api/scripts/cleanup_pending_agent_test_tasks.py",
+    "api/scripts/run_cli_task_flow_matrix.py",
+    "docs/LOCAL-TOOL-GUARD.md",
+    "docs/LOCAL_CHANGES_EXPLAINED_2026-03-05.md",
+    "docs/MERGE_PROGRESS_2026-03-05.md",
+    "docs/RUNBOOK.md",
+    "docs/system_audit/commit_evidence_2026-03-05_integrate-local-guard-refactor-deploy.json",
+    "scripts/integrate_one_branch.sh",
+    "web/app/api-coverage/lib.ts",
+    "web/app/api-coverage/page.tsx",
+    "web/app/api-coverage/types.ts",
+    "web/app/api-coverage/use-api-coverage.ts",
+    "web/app/flow/FlowItemCard.tsx",
+    "web/app/flow/FlowSummaryCards.tsx",
+    "web/app/flow/FlowTopContributors.tsx",
+    "web/app/flow/FlowUnblockQueue.tsx",
+    "web/app/flow/load-flow-data.ts",
+    "web/app/flow/page.tsx",
+    "web/app/flow/types.ts",
+    "web/app/flow/utils.ts",
+    "web/app/tasks/EvidenceTrail.tsx",
+    "web/app/tasks/TasksListSection.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/tasks/types.ts",
+    "web/app/tasks/utils.ts",
+    "web/app/usage/data.ts",
+    "web/app/usage/page.tsx",
+    "web/app/usage/sections/FrictionSection.tsx",
+    "web/app/usage/sections/HostRunnerSection.tsx",
+    "web/app/usage/sections/NavLinksSection.tsx",
+    "web/app/usage/sections/ProvidersSection.tsx",
+    "web/app/usage/sections/QualityAwarenessSection.tsx",
+    "web/app/usage/sections/RuntimeCostSection.tsx",
+    "web/app/usage/sections/TopToolsAttentionSection.tsx",
+    "web/app/usage/sections/ViewPerformanceSection.tsx",
+    "web/app/usage/sections/index.ts",
+    "web/app/usage/types.ts"
+  ],
+  "change_intent": "runtime_feature"
+}

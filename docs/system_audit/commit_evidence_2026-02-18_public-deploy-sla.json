@@ -1,0 +1,80 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/public-observability-deploy-realign",
+  "commit_scope": "Add tunable public deployment contract retry variables and codex paid-override runbook guidance with context-budget reminders.",
+  "files_owned": [
+    "AGENTS.md",
+    ".github/workflows/public-deploy-contract.yml"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "054-commit-evidence-phase-gates"
+  ],
+  "task_ids": [
+    "task-deploy-contract-sla-overrides"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && PYTHONPATH=. python3 scripts/validate_public_deploy_contract.py --json --timeout 20",
+    "python3 scripts/context_budget.py --token-budget 50000 AGENTS.md .github/workflows/public-deploy-contract.yml",
+    "curl -X POST https://coherence-network-production.up.railway.app/api/agent/tasks -H 'Content-Type: application/json' -d '{\"direction\":\"public paid smoke\",\"task_type\":\"impl\",\"context\":{\"executor\":\"openclaw\",\"model_override\":\"openai/gpt-4o-mini\",\"force_paid_providers\":true}}'"
+  ],
+  "change_files": [
+    ".github/workflows/public-deploy-contract.yml",
+    "AGENTS.md"
+  ],
+  "change_intent": "docs_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && PYTHONPATH=. python3 scripts/validate_public_deploy_contract.py --json --timeout 20",
+      "python3 scripts/context_budget.py --token-budget 50000 AGENTS.md .github/workflows/public-deploy-contract.yml"
+    ],
+    "environment": {
+      "python": "3.13",
+      "notes": "Validation passed; public deploy contract reported PASS with pre-existing /api-health-proxy SHA warning."
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production",
+    "notes": "Pending merge to main and push-driven Public Deploy Contract workflow execution. Variables now set in GitHub repository metadata."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "Public deploy contract retry defaults become configurable via repository variables; AGENTS adds deterministic paid-override smoke check path and context-size management guidance.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/agent/tasks",
+      "https://coherence-network-production.up.railway.app/api/runtime/endpoints/summary",
+      "https://coherence-network-production.up.railway.app/api/runtime/events",
+      "https://coherence-network-production.up.railway.app/api/friction/events"
+    ],
+    "test_flows": [
+      "Create a task with force_paid_providers=true in context and confirm `agent_task_execution` + `agent_tool_call` events include paid metadata.",
+      "Check runtime endpoint summary for openrouter charged usage and endpoint-level failure ratios."
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Runtime CI/deploy for the new workflow defaults has not been observed after a full merge."
+  }
+}

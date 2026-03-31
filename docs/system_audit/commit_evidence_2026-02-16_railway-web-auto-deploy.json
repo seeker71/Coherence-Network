@@ -1,0 +1,66 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/railway-web-auto-deploy",
+  "commit_scope": "Switch to Railway-native web auto-deploy configuration and add explicit skip diagnostics guidance.",
+  "files_owned": [
+    "docs/DEPLOY.md",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/commit_evidence_2026-02-16_railway-web-auto-deploy.json"
+  ],
+  "idea_ids": [
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "014-deploy-readiness"
+  ],
+  "task_ids": [
+    "task-railway-web-auto-deploy-on-main-push"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation",
+        "documentation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/DEPLOY.md",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md"
+  ],
+  "change_files": [
+    "docs/DEPLOY.md",
+    "docs/API-KEYS-SETUP.md",
+    "docs/PIPELINE-MONITORING-AUTOMATED.md",
+    "docs/system_audit/commit_evidence_2026-02-16_railway-web-auto-deploy.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_railway-web-auto-deploy.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-web"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and public deployment execution after merge to main."
+  }
+}

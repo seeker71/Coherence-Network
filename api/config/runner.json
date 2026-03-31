@@ -1,0 +1,49 @@
+{
+  "_doc": "Runner configuration — all settings for local_runner.py. No env vars needed.",
+
+  "api": {
+    "_doc": "API connection. The runner polls this for tasks and reports results.",
+    "base_url": "https://api.coherencycoin.com",
+    "api_key": "dev-key"
+  },
+
+  "execution": {
+    "_doc": "How tasks are executed. parallel=max concurrent tasks. timeout=default seconds per task.",
+    "parallel": 2,
+    "timeout_default_s": 300,
+    "work_dir": null,
+    "_work_dir_doc": "Override working directory for task execution. null = repo root."
+  },
+
+  "providers": {
+    "_doc": "Provider-specific config. paused=list of providers to never select.",
+    "paused": ["openrouter"],
+    "openrouter_api_key": null,
+    "openrouter_referer": "https://coherencycoin.com",
+    "_openrouter_doc": "openrouter_api_key: null = read from ~/.coherence-network/keys.json"
+  },
+
+  "heartbeat": {
+    "_doc": "External heartbeat hooks. Both fire on every heartbeat cycle (5-10s). Neither blocks tasks.",
+    "url": null,
+    "cmd": null,
+    "_url_doc": "POST JSON {node_id, task_id, provider, elapsed_s, files_changed, git_summary} to this URL.",
+    "_cmd_doc": "Shell command with CC_TASK_ID, CC_PROVIDER, CC_ELAPSED etc. in env. 10s timeout."
+  },
+
+  "diagnostics": {
+    "_doc": "Observability level. normal=10s heartbeat, file list. high=5s, diff stats, process info.",
+    "level": "normal"
+  },
+
+  "deploy": {
+    "_doc": "Production verification URLs. Used by deploy and verify phases.",
+    "api_base": "https://api.coherencycoin.com",
+    "web_base": "https://coherencycoin.com"
+  },
+
+  "self_update": {
+    "_doc": "Auto-pull origin/main when idle. Disable with enabled=false for pinned-version runners.",
+    "enabled": true
+  }
+}

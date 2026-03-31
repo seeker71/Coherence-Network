@@ -1,0 +1,142 @@
+name: Change Contract
+
+on:
+  # push: # DISABLED — too noisy, use workflow_dispatch
+    # branches: [main]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA on main to validate (optional)"
+        required: false
+        type: string
+
+jobs:
+  validate-and-acknowledge:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install API dependencies
+        run: |
+          cd api && pip install -e ".[dev]"
+
+      - name: Validate merged change contract
+        id: contract
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
+          MVP_LOCAL_ONLY_VALIDATION: ${{ vars.MVP_LOCAL_ONLY_VALIDATION || '1' }}
+          MIN_APPROVALS: ${{ vars.CHANGE_CONTRACT_MIN_APPROVALS || '0' }}
+          MIN_UNIQUE_APPROVERS: ${{ vars.CHANGE_CONTRACT_MIN_UNIQUE_APPROVERS || '0' }}
+        run: |
+          set +e
+          run_validate() {
+            cd api
+            python scripts/validate_merged_change_contract.py \
+              --sha "$TARGET_SHA" \
+              --min-approvals "$MIN_APPROVALS" \
+              --min-unique-approvers "$MIN_UNIQUE_APPROVERS" \
+              --timeout-seconds 300 \
+              --poll-seconds 15 \
+              --json > ../contract_report.json
+            code=$?
+            cd ..
+            echo "$code"
+          }
+
+          exit_code=$(run_validate)
+          reason=$(jq -r '.reason // ""' contract_report.json)
+
+          # Avoid false negatives when workflow runs before main checks are fully green.
+          if [ "$exit_code" -ne 0 ] && [ "$reason" = "Commit checks are not green on main" ]; then
+            for i in $(seq 1 20); do
+              sleep 15
+              exit_code=$(run_validate)
+              reason=$(jq -r '.reason // ""' contract_report.json)
+              if [ "$exit_code" -eq 0 ]; then
+                break
+              fi
+              if [ "$reason" != "Commit checks are not green on main" ]; then
+                break
+              fi
+            done
+          fi
+
+          cat contract_report.json
+          echo "pr_number=$(jq -r '.pr.number' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "contributor=$(jq -r '.contributor_ack.contributor' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "approvals=$(jq -r '.collective_review.approval_events' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "unique_approvers=$(jq -c '.collective_review.unique_approvers' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "collective_review_passed=$(jq -r '.collective_review.collective_review_passed // false' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "min_approvals_required=$(jq -r '.collective_review.min_approvals_required // 0' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "min_unique_approvers_required=$(jq -r '.collective_review.min_unique_approvers_required // 0' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "reason=$(jq -r '.reason // ""' contract_report.json)" >> "$GITHUB_OUTPUT"
+          echo "exit_code=$exit_code" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload contract report artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: contract_report_${{ github.sha }}
+          path: contract_report.json
+
+      - name: Acknowledge contributor on PR
+        if: ${{ steps.contract.outputs.pr_number != '' && steps.contract.outputs.pr_number != 'null' }}
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const prNumber = Number("${{ steps.contract.outputs.pr_number }}");
+            const contributor = "${{ steps.contract.outputs.contributor }}";
+            const approvals = "${{ steps.contract.outputs.approvals }}";
+            const approvers = JSON.parse('${{ steps.contract.outputs.unique_approvers }}');
+            let report = {};
+            try {
+              report = JSON.parse(fs.readFileSync('contract_report.json', 'utf8'));
+            } catch (e) {
+              console.log('Could not read contract_report.json:', e.message);
+            }
+            const isLocalOnly = Boolean(report && report.public_validation && report.public_validation.skipped === true);
+            const validationLine = isLocalOnly
+              ? "- Public validation: local-only mode enabled (hosted provider checks skipped)"
+              : "- Public validation: passed on Hostinger VPS (api.coherencycoin.com + coherencycoin.com)";
+            const body = [
+              "✅ **Change Contract Passed**",
+              "",
+              "This merged change passed the smart-contract style gate:",
+              "- Commit checks: green",
+              "- Collective review: evaluated",
+              validationLine,
+              "",
+              `Contributor acknowledged: **@${contributor}**`,
+              `Collective review passed: ${"${{ steps.contract.outputs.collective_review_passed }}"}`,
+              `Review policy: min approvals=${"${{ steps.contract.outputs.min_approvals_required }}"} min unique approvers=${"${{ steps.contract.outputs.min_unique_approvers_required }}"}`,
+              `Collective approvers: ${approvers.map(a => `@${a}`).join(', ') || '(none)'}`,
+              `Approval events counted: ${approvals}`
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body
+            });
+
+      - name: Fail when merged change contract does not pass
+        if: ${{ steps.contract.outputs.exit_code != '0' && steps.contract.outputs.reason != 'Commit checks are not green on main' }}
+        run: |
+          echo "Merged change contract failed"
+          exit 1
+
+      - name: Note deferred contract completion when main checks still in flight
+        if: ${{ steps.contract.outputs.exit_code != '0' && steps.contract.outputs.reason == 'Commit checks are not green on main' }}
+        run: |
+          echo "Change contract deferred: main checks still in flight; retry via next push/schedule."

@@ -1,0 +1,99 @@
+{
+  "date": "2026-03-12",
+  "thread_branch": "codex/humanize-tasks-page-20260312",
+  "commit_scope": "Rewrite the MVP tasks page in plain language so a first-time user can understand active work, blocked work, updates, and linked ideas without reading internal execution jargon.",
+  "files_owned": [
+    "web/app/tasks/EvidenceTrail.tsx",
+    "web/app/tasks/TaskQuickUpdate.tsx",
+    "web/app/tasks/TasksListSection.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/tasks/utils.ts",
+    "web/components/page_context_links.tsx",
+    "docs/system_audit/commit_evidence_2026-03-12_tasks-plain-language.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_files": [
+    "web/app/tasks/EvidenceTrail.tsx",
+    "web/app/tasks/TaskQuickUpdate.tsx",
+    "web/app/tasks/TasksListSection.tsx",
+    "web/app/tasks/page.tsx",
+    "web/app/tasks/utils.ts",
+    "web/components/page_context_links.tsx",
+    "docs/system_audit/commit_evidence_2026-03-12_tasks-plain-language.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "portfolio-governance"
+  ],
+  "spec_ids": [
+    "076-ui-alignment-overhaul"
+  ],
+  "task_ids": [
+    "task-2026-03-12-tasks-plain-language",
+    "task_7f0d61af6819c4b4"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "ux_review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make prompt-gate",
+    "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+    "http://127.0.0.1:3103/tasks",
+    "http://127.0.0.1:3103/tasks?task_id=task_7f0d61af6819c4b4",
+    "/var/folders/xt/5zt6_wmn77x22yf_wgv97cb40000gn/T/playwright-mcp-output/1773302145236/page-2026-03-12T09-28-46-839Z.png",
+    "/var/folders/xt/5zt6_wmn77x22yf_wgv97cb40000gn/T/playwright-mcp-output/1773302145236/page-2026-03-12T09-29-02-329Z.png",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_tasks-plain-language.json",
+    "git fetch origin main && git rebase --autostash origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd web && NEXT_PUBLIC_API_URL=http://127.0.0.1:18000 npm run build",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-03-12_tasks-plain-language.json",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "local-only-mvp-mode"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting push, PR checks, and merge."
+  },
+  "e2e_validation": {
+    "status": "pass",
+    "expected_behavior_delta": "The tasks page now reads like a human work board, summarizes current work states in plain language, hides internal telemetry behind a disclosure, and keeps linked idea/progress paths easy to reach.",
+    "public_endpoints": [
+      "http://127.0.0.1:3103/tasks",
+      "http://127.0.0.1:3103/tasks?task_id=task_7f0d61af6819c4b4"
+    ],
+    "test_flows": [
+      "Open /tasks on desktop and confirm the page headline, summary cards, and list rows describe work in plain language rather than internal task jargon.",
+      "Open /tasks?task_id=task_7f0d61af6819c4b4 and confirm the selected work card shows a plain-language status summary, human-readable update controls, and linked idea/progress paths.",
+      "Open the same selected task on mobile and confirm the page remains readable, keeps the main actions visible, and moves raw technical details behind the Behind the scenes disclosure."
+    ]
+  }
+}

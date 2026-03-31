@@ -1,0 +1,128 @@
+{
+  "date": "2026-02-20",
+  "thread_branch": "codex/paid-observability",
+  "commit_scope": "Add paid-provider observability and proactive monitor alerts (OpenAI/OpenRouter/Railway/Supabase), reduce high-frequency refresh pressure, and introduce a runtime change-token gate so expensive UI refreshes only run when data changes.",
+  "files_owned": [
+    "api/app/main.py",
+    "api/app/models/automation_usage.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/routers/runtime.py",
+    "api/app/services/agent_task_store_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_exerciser_service.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_monitor_pipeline_stale_running.py",
+    "api/tests/test_runtime_api.py",
+    "web/app/automation/page.tsx",
+    "web/components/live_updates_controller.tsx",
+    "maintainability_audit_report.json",
+    "docs/system_audit/commit_evidence_2026-02-20_paid-observability-smart-refresh.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline",
+    "oss-interface-alignment"
+  ],
+  "spec_ids": [
+    "027-fully-automated-pipeline",
+    "049-system-lineage-inventory-and-runtime-telemetry",
+    "050-canonical-route-registry-and-runtime-mapping",
+    "100-automation-provider-usage-and-readiness-api"
+  ],
+  "task_ids": [
+    "task_paid_observability_and_smart_refresh_20260220"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "Added OpenRouter and Supabase provider snapshot/probe coverage and included them in required readiness/validation defaults",
+    "Added proactive paid-service monitor issue detection and Telegram monitor alert push with dedupe state",
+    "Added runtime change-token endpoint and lightweight checkpoint aggregation to gate heavy UI refreshes",
+    "Updated live updates controller to poll change token and skip expensive reloads when no change",
+    "cd api && pytest -q tests/test_runtime_api.py tests/test_automation_usage_api.py tests/test_monitor_pipeline_stale_running.py tests/test_monitor_pipeline_github_actions.py",
+    "cd api && ruff check app/main.py app/routers/runtime.py app/services/runtime_service.py app/services/runtime_exerciser_service.py app/services/runtime_event_store.py app/services/agent_task_store_service.py app/services/telemetry_persistence_service.py app/services/automation_usage_service.py app/models/automation_usage.py app/routers/automation_usage.py scripts/monitor_pipeline.py tests/test_runtime_api.py tests/test_automation_usage_api.py tests/test_monitor_pipeline_stale_running.py",
+    "python3 api/scripts/run_maintainability_audit.py --json --output maintainability_audit_report.json",
+    "git fetch origin main && git rebase origin/main",
+    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+    "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-20_paid-observability-smart-refresh.json"
+  ],
+  "change_files": [
+    "api/app/main.py",
+    "api/app/models/automation_usage.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/routers/runtime.py",
+    "api/app/services/agent_task_store_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/app/services/runtime_event_store.py",
+    "api/app/services/runtime_exerciser_service.py",
+    "api/app/services/runtime_service.py",
+    "api/app/services/telemetry_persistence_service.py",
+    "api/scripts/monitor_pipeline.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_monitor_pipeline_stale_running.py",
+    "api/tests/test_runtime_api.py",
+    "web/app/automation/page.tsx",
+    "web/components/live_updates_controller.tsx",
+    "maintainability_audit_report.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "cd api && pytest -q tests/test_runtime_api.py tests/test_automation_usage_api.py tests/test_monitor_pipeline_stale_running.py tests/test_monitor_pipeline_github_actions.py",
+      "cd api && ruff check app/main.py app/routers/runtime.py app/services/runtime_service.py app/services/runtime_exerciser_service.py app/services/runtime_event_store.py app/services/agent_task_store_service.py app/services/telemetry_persistence_service.py app/services/automation_usage_service.py app/models/automation_usage.py app/routers/automation_usage.py scripts/monitor_pipeline.py tests/test_runtime_api.py tests/test_automation_usage_api.py tests/test_monitor_pipeline_stale_running.py",
+      "python3 api/scripts/run_maintainability_audit.py --json --output maintainability_audit_report.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-20_paid-observability-smart-refresh.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting PR checks, merge to main, and Railway production deployment verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Live updates now perform a lightweight change-token check first, triggering expensive refresh/data reload only when underlying runtime/tasks/telemetry state changes; paid-provider readiness/alerts become proactive across monitor and Telegram paths.",
+    "public_endpoints": [
+      "/api/runtime/change-token",
+      "/api/automation/usage",
+      "/api/automation/usage/alerts",
+      "/api/automation/usage/readiness",
+      "/api/automation/usage/provider-validation",
+      "/api/agent/monitor-issues"
+    ],
+    "test_flows": [
+      "Call /api/runtime/change-token twice without state change and verify token stability; write runtime event and verify token changes",
+      "Open /automation and verify backend refresh traffic drops when token unchanged",
+      "Trigger paid-provider degradation and verify monitor issues + Telegram monitor alert publication"
+    ]
+  }
+}

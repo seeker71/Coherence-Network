@@ -1,0 +1,135 @@
+{
+  "date": "2026-02-28",
+  "thread_branch": "codex/revenue-readiness-20260228-064024",
+  "commit_scope": "Separate internal/synthetic data from actionable marketplace signals, enforce contributor identity hygiene, require explicit real-name human registration, prevent ingestion-time auto-creation of new human contributors, and remove runtime placeholder wording that trips maintainability regression guards.",
+  "files_owned": [
+    "api/app/adapters/graph_store.py",
+    "api/app/adapters/postgres_store.py",
+    "api/app/routers/contributions.py",
+    "api/app/routers/contributors.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/inventory.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/contributor_hygiene.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/cleanup_contributor_identities.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_contributions.py",
+    "api/tests/test_contributor_hygiene.py",
+    "api/tests/test_contributors.py",
+    "api/tests/test_distributions.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_api.py",
+    "docs/SPEC-COVERAGE.md",
+    "scripts/verify_full_deployment.sh",
+    "specs/113-public-validation-gates-api.md"
+  ],
+  "idea_ids": [
+    "real-data-only-test-contract",
+    "contributor-registry-api",
+    "idea-lifecycle-api"
+  ],
+  "spec_ids": [
+    "113-public-validation-gates-api"
+  ],
+  "task_ids": [
+    "task-2026-02-28-internal-vs-actionable-cleanup"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "testing",
+        "delivery"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260228T171214Z_codex-revenue-readiness-20260228-064024.json"
+  ],
+  "change_files": [
+    "api/app/adapters/graph_store.py",
+    "api/app/adapters/postgres_store.py",
+    "api/app/routers/contributions.py",
+    "api/app/routers/contributors.py",
+    "api/app/routers/ideas.py",
+    "api/app/routers/inventory.py",
+    "api/app/routers/automation_usage.py",
+    "api/app/services/contributor_hygiene.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/inventory_service.py",
+    "api/app/services/automation_usage_service.py",
+    "api/scripts/cleanup_contributor_identities.py",
+    "api/tests/test_automation_usage_api.py",
+    "api/tests/test_contributions.py",
+    "api/tests/test_contributor_hygiene.py",
+    "api/tests/test_contributors.py",
+    "api/tests/test_distributions.py",
+    "api/tests/test_governance_api.py",
+    "api/tests/test_ideas.py",
+    "api/tests/test_inventory_api.py",
+    "docs/SPEC-COVERAGE.md",
+    "scripts/verify_full_deployment.sh",
+    "specs/113-public-validation-gates-api.md",
+    "docs/system_audit/commit_evidence_2026-02-28_internal-actionable-hygiene.json"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "cd api && ruff check app/services/contributor_hygiene.py app/routers/contributors.py app/routers/contributions.py tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py",
+      "cd api && pytest -q tests/test_contributor_hygiene.py tests/test_contributors.py tests/test_contributions.py tests/test_distributions.py tests/test_governance_api.py tests/test_inventory_api.py",
+      "cd api && python3 scripts/run_maintainability_audit.py --output logs/maintainability_audit_report.worktree_guard.json --fail-on-regression"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit/push, PR checks, merge, and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Actionable-only filters exclude internal synthetic ideas by default on flow/proactive endpoints, duplicate contributor aliases are normalized, and production unblock tasks/open-question answers can be executed with cleaner contracts.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/api/contributors",
+      "https://coherence-network-production.up.railway.app/api/contributions/github",
+      "https://coherence-network-production.up.railway.app/api/inventory/flow",
+      "https://coherence-network-production.up.railway.app/api/inventory/flow/next-unblock-task",
+      "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",
+      "https://coherence-network-production.up.railway.app/api/ideas/{idea_id}/questions/answer"
+    ],
+    "test_flows": [
+      "Create unblock tasks for blocked high-priority ideas using POST /api/inventory/flow/next-unblock-task?create_task=true&idea_id=...",
+      "Submit contract-style answers for high-ROI questions via POST /api/ideas/{idea_id}/questions/answer.",
+      "Validate updated open-question and unblock-task state through inventory endpoints."
+    ]
+  }
+}

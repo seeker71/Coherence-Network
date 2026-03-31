@@ -1,0 +1,73 @@
+{
+  "date": "2026-02-19",
+  "thread_branch": "codex/b480",
+  "commit_scope": "Prioritize execution of tasks tied to ideas with measured value and enforce a 50% minimum scheduling share when eligible tasks exist.",
+  "files_owned": [
+    "api/scripts/agent_runner.py",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-measured-value-priority.json"
+  ],
+  "idea_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "spec_ids": [
+    "030-task-runner-reliability"
+  ],
+  "task_ids": [
+    "task_f4b6f2e540d85073"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex:railway-runner-1",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "make start-gate",
+    "Runner scheduling policy now uses measured-value target share and idea actual_value lookups"
+  ],
+  "change_files": [
+    "api/scripts/agent_runner.py",
+    "docs/system_audit/commit_evidence_2026-02-19_runner-measured-value-priority.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make start-gate",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-19_runner-measured-value-priority.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "railway-production"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting CI and deploy verification."
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Runner selects measured-value-backed tasks at least 50% of selections when such tasks are available.",
+    "public_endpoints": [
+      "/api/agent/tasks",
+      "/api/ideas/{idea_id}"
+    ],
+    "test_flows": [
+      "runner fetches pending task pool and computes measured-value signals",
+      "scheduler enforces AGENT_MEASURED_VALUE_TARGET_SHARE with default 0.5",
+      "runner records selection stats and executes prioritized tasks"
+    ]
+  }
+}

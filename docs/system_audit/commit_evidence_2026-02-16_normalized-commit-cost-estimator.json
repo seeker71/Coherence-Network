@@ -1,0 +1,90 @@
+{
+  "date": "2026-02-16",
+  "thread_branch": "codex/commit-cost-normalization",
+  "commit_scope": "normalize github contribution cost-per-commit estimation and prevent inflated values in API/workflow/UI",
+  "files_owned": [
+    "api/app/services/contribution_cost_service.py",
+    "api/app/routers/contributions.py",
+    "api/tests/test_contribution_cost_service.py",
+    "api/tests/test_contributions.py",
+    ".github/workflows/auto_track_contributions.yml",
+    "web/app/contributions/page.tsx",
+    "specs/086-normalize-github-commit-cost-estimation.md",
+    "docs/system_audit/commit_evidence_2026-02-16_normalized-commit-cost-estimator.json"
+  ],
+  "idea_ids": [
+    "coherence-network-value-attribution",
+    "portfolio-governance",
+    "deployment-gate-reliability"
+  ],
+  "spec_ids": [
+    "086"
+  ],
+  "task_ids": [
+    "normalize-commit-cost-estimator"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": ["direction", "review"]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": ["implementation", "validation"]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "cd api && pytest -q tests/test_contribution_cost_service.py tests/test_contributions.py",
+    "cd web && npm ci --cache .npm-cache && npm run build",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-16_normalized-commit-cost-estimator.json"
+  ],
+  "change_files": [
+    "api/app/services/contribution_cost_service.py",
+    "api/app/routers/contributions.py",
+    "api/tests/test_contribution_cost_service.py",
+    "api/tests/test_contributions.py",
+    ".github/workflows/auto_track_contributions.yml",
+    "web/app/contributions/page.tsx",
+    "specs/086-normalize-github-commit-cost-estimation.md"
+  ],
+  "change_intent": "runtime_feature",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_contribution_cost_service.py tests/test_contributions.py",
+      "cd web && npm ci --cache .npm-cache && npm run build"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "api+web"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "GitHub auto-tracked contribution costs are normalized and capped; web UI shows effective normalized cost with raw-to-normalized traceability.",
+    "public_endpoints": [
+      "https://coherence-network-production.up.railway.app/v1/contributions",
+      "https://coherence-network-production.up.railway.app/v1/contributions/github",
+      "https://coherence-network.vercel.app/contributions"
+    ],
+    "test_flows": [
+      "github-payload->api-normalizes-cost->stored-cost-bounded",
+      "api-list-contributions->metadata-contains-raw-and-normalized-cost",
+      "web-contributions-page->effective-cost-renders-and-adjustment-visible"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Awaiting CI and deploy validation"
+  }
+}

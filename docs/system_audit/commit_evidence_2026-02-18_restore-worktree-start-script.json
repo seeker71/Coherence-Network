@@ -1,0 +1,62 @@
+{
+  "date": "2026-02-18",
+  "thread_branch": "codex/fix-worktree-start-script",
+  "commit_scope": "Restore ensure_worktree_start_clean compatibility script and allow primary worktree gate checks",
+  "files_owned": [
+    "scripts/start_gate.py",
+    "scripts/ensure_worktree_start_clean.py"
+  ],
+  "idea_ids": ["public-e2e-flow-gate-automation"],
+  "spec_ids": ["095-public-e2e-flow-gate-automation"],
+  "task_ids": ["task_2026_02_18_start_gate_fix"],
+  "contributors": [
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation"
+      ]
+    },
+    {
+      "contributor_id": "ursmuff",
+      "contributor_type": "human",
+      "roles": [
+        "validation",
+        "decision"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "openai-codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "python3 scripts/ensure_worktree_start_clean.py --json",
+    "make start-gate",
+    "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-18_restore-worktree-start-script.json"
+  ],
+  "change_files": [
+    "scripts/start_gate.py",
+    "scripts/ensure_worktree_start_clean.py",
+    "docs/system_audit/commit_evidence_2026-02-18_restore-worktree-start-script.json"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "python3 scripts/ensure_worktree_start_clean.py --json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": "pending"
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "pending"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "CI/deploy pending"
+  }
+}
