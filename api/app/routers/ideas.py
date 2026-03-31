@@ -186,6 +186,18 @@ async def get_idea_concept_resonance(
     return result
 
 
+@router.get("/ideas/{idea_id}/translate", response_model=IdeaTranslationResponse)
+async def translate_idea_view(
+    idea_id: str,
+    view: TranslationLens = Query(..., description="Worldview lens (conceptual framing, not MT)."),
+) -> IdeaTranslationResponse:
+    """Reframe an idea through a worldview using the ontology graph and resonance edges."""
+    result = concept_translation_service.translate_idea(idea_id, view.value)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
 @router.get("/ideas/selection-ab/stats")
 async def get_selection_ab_stats() -> dict:
     return idea_selection_ab_service.get_comparison()
