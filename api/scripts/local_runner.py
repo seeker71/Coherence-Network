@@ -42,7 +42,25 @@ import httpx
 # Resolve paths
 _SCRIPT_DIR = Path(__file__).resolve().parent
 _API_DIR = _SCRIPT_DIR.parent
-_REPO_DIR = _API_DIR.parent
+_ORIGINAL_REPO_DIR = _API_DIR.parent  # immutable — set once at startup, never mutated
+
+# DG-013 / DG-016 fix: thread-local repo dir for parallel worker safety.
+# With --parallel N, each worker thread runs _run_task_in_worktree which sets
+# _thread_local.repo_dir to its own worktree path. _get_repo_dir() reads the
+# thread-local value, falling back to _ORIGINAL_REPO_DIR for the main loop thread.
+# This eliminates the race where Thread 2 clobbered the global _REPO_DIR between
+# Thread 1's assignment and Thread 1's cwd capture in execute_with_provider,
+# causing Thread 1's agent to run in Thread 2's worktree → empty diff on Thread 1.
+_thread_local = threading.local()
+
+
+def _get_repo_dir() -> Path:
+    """Return this thread's active repo dir (worktree if in a task, else main repo)."""
+    return getattr(_thread_local, "repo_dir", _ORIGINAL_REPO_DIR)
+
+
+# Legacy alias — points to main repo at startup; do NOT write to this from threads.
+_REPO_DIR = _ORIGINAL_REPO_DIR
 _LOG_DIR = _API_DIR / "logs"
 
 # ── Runner config — single source of truth, no env vars ──────────────
@@ -189,7 +207,7 @@ def _run_git_command(args: list[str], **kwargs: Any) -> subprocess.CompletedProc
 
 def _get_git_info() -> dict[str, str]:
     """Get git version info for this node."""
-    repo = str(_REPO_DIR)
+    repo = str(_get_repo_dir())
     info = {"local_sha": "unknown", "origin_sha": "unknown", "branch": "unknown", "dirty": "unknown", "repo": repo}
     git = "/usr/bin/git"  # Use absolute path -- launchd may not have git on PATH
     if not os.path.exists(git):
@@ -290,12 +308,29 @@ def _detect_providers() -> dict[str, dict]:
         "gemini": {"cmd": ["gemini", "-y", "-p"], "append_prompt": True},
         # cursor agent -p: Cursor's headless agent mode
         "cursor": {"cmd": ["agent", "--model", "auto", "--trust", "-p"], "append_prompt": True, "check_binary": "agent"},
+        # opencode run --agent build --model provider/model <prompt>
+        "opencode": {
+            "cmd": ["opencode", "run", "--agent", "build", "--model"],
+            "append_prompt": True,
+            "check": _check_ollama_cloud,
+            "model_select": _select_ollama_cloud_provider_model,
+            "env": {"OPENCODE_ENABLE_EXA": "1"},
+        },
+        # pi: openclaw's embedded coding agent via --local mode
+        # Command shape: openclaw agent --local --agent pi -m <prompt>
+        # Model is configured in the openclaw pi agent config (ollama/minimax-m2.7:cloud)
+        "pi": {
+            "cmd": ["openclaw", "agent", "--local", "--agent", "pi", "-m"],
+            "append_prompt": True,
+            "check_binary": "openclaw",
+            "check": _check_ollama_cloud,
+        },
         # ollama-local: local LLM via stdin (long prompts need stdin, not args)
         "ollama-local": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
             "check": _check_ollama_local, "model_select": _select_ollama_model,
         },
-        # ollama-cloud: ollama cloud models (glm-5, etc.) via stdin
+        # ollama-cloud: raw ollama cloud models via stdin (kept text-only)
         "ollama-cloud": {
             "cmd": ["ollama", "run"], "stdin_prompt": True,
             "check": _check_ollama_cloud, "model_select": _select_ollama_cloud_model,
@@ -323,14 +358,14 @@ def _detect_providers() -> dict[str, dict]:
         # Detect provider version
         version = "unknown"
         try:
-            version_flags = {"claude": "--version", "codex": "--version", "gemini": "--version", "agent": "--version", "ollama": "--version"}
+            version_flags = {"claude": "--version", "codex": "--version", "gemini": "--version", "agent": "--version", "ollama": "--version", "opencode": "--version"}
             vflag = version_flags.get(binary.split("/")[-1] if "/" in binary else binary, "--version")
             vresult = subprocess.run([resolved, vflag], capture_output=True, text=True, timeout=5)
             vout = (vresult.stdout or vresult.stderr or "").strip()
             # Extract version string — first line, strip common prefixes
             if vout:
                 vline = vout.split("\n")[0].strip()
-                for prefix in ["claude ", "codex-cli ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent "]:
+                for prefix in ["claude ", "codex-cli ", "codex ", "gemini ", "ollama version is ", "ollama version ", "agent ", "opencode "]:
                     if vline.lower().startswith(prefix):
                         vline = vline[len(prefix):].strip()
                         break
@@ -349,6 +384,7 @@ def _detect_providers() -> dict[str, dict]:
                 log.info("Provider skipped (no model): %s", name)
                 continue
             spec["cmd"].append(model)
+            spec["_selected_model"] = model
             log.info("Provider detected: %s model=%s version=%s", name, model, version)
         else:
             log.info("Provider detected: %s (%s) version=%s", name, resolved, version)
@@ -369,69 +405,70 @@ def _detect_providers() -> dict[str, dict]:
     return providers
 
 
-def _check_ollama_local() -> bool:
-    """Check if ollama server is running with local models."""
+def _list_ollama_models() -> list[str]:
+    """Return model names from ``ollama list``.
+
+    Uses the CLI output rather than API introspection so the runner works with the
+    same model visibility the operator sees locally, including Ollama Cloud models.
+    """
     try:
         result = subprocess.run(
             ["ollama", "list"], capture_output=True, text=True, timeout=5,
         )
         if result.returncode != 0:
-            return False
-        # At least one non-cloud model
-        lines = result.stdout.strip().split("\n")[1:]  # skip header
-        return any("cloud" not in line.split()[0] if line.strip() else False for line in lines)
+            return []
+        models: list[str] = []
+        for line in result.stdout.strip().split("\n")[1:]:  # skip header
+            if not line.strip():
+                continue
+            name = line.split()[0]
+            if name:
+                models.append(name)
+        return models
     except Exception:
-        return False
+        return []
+
+
+def _check_ollama_local() -> bool:
+    """Check if ollama server is running with local models."""
+    return any("cloud" not in model for model in _list_ollama_models())
 
 
 def _check_ollama_cloud() -> bool:
     """Check if ollama has cloud models available."""
-    try:
-        result = subprocess.run(
-            ["ollama", "list"], capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode != 0:
-            return False
-        return any("cloud" in line.split()[0] if line.strip() else False for line in result.stdout.split("\n"))
-    except Exception:
-        return False
+    return _select_ollama_cloud_model() is not None
 
 
 def _select_ollama_model() -> str | None:
     """Select the best available local ollama model."""
-    try:
-        result = subprocess.run(
-            ["ollama", "list"], capture_output=True, text=True, timeout=5,
-        )
-        lines = result.stdout.strip().split("\n")[1:]  # skip header
-        local_models = []
-        for line in lines:
-            name = line.split()[0] if line.strip() else ""
-            if name and "cloud" not in name:
-                local_models.append(name)
-        # Prefer larger/newer models
-        preferred = ["llama3.3:70b", "qwen2.5:72b", "deepseek-r1:32b", "dolphin-mixtral:8x22b-v2.9-q6_K"]
-        for pref in preferred:
-            if pref in local_models:
-                return pref
-        return local_models[0] if local_models else None
-    except Exception:
-        return None
+    local_models = [model for model in _list_ollama_models() if "cloud" not in model]
+    preferred = ["llama3.3:70b", "qwen2.5:72b", "deepseek-r1:32b", "dolphin-mixtral:8x22b-v2.9-q6_K"]
+    for pref in preferred:
+        if pref in local_models:
+            return pref
+    return local_models[0] if local_models else None
 
 
 def _select_ollama_cloud_model() -> str | None:
-    """Select the best available ollama cloud model."""
-    try:
-        result = subprocess.run(
-            ["ollama", "list"], capture_output=True, text=True, timeout=5,
-        )
-        for line in result.stdout.split("\n"):
-            parts = line.split()
-            if parts and "cloud" in parts[0]:
-                return parts[0]
+    """Select the best available ollama cloud model.
+
+    Prefer MiniMax M2.7 when available, otherwise fall back to the first visible
+    cloud model from ``ollama list``.
+    """
+    cloud_models = [model for model in _list_ollama_models() if model.endswith(":cloud")]
+    preferred = ["minimax-m2.7:cloud"]
+    for pref in preferred:
+        if pref in cloud_models:
+            return pref
+    return cloud_models[0] if cloud_models else None
+
+
+def _select_ollama_cloud_provider_model() -> str | None:
+    """Select the best Ollama Cloud model and return an OpenCode/Pi model ref."""
+    model = _select_ollama_cloud_model()
+    if not model:
         return None
-    except Exception:
-        return None
+    return f"ollama/{model}"
 
 
 # ---------------------------------------------------------------------------
@@ -600,15 +637,110 @@ def _run_openrouter(prompt: str, cwd: str, timeout: int, model: str) -> tuple[bo
 
 
 # Providers with tool/file access (can actually create/modify files)
-_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor"}
+_TOOL_PROVIDERS = {"claude", "codex", "gemini", "cursor", "opencode", "pi"}
 # Providers that are text-only (no file access — good for review, bad for impl/spec/test)
 # Text-only providers cannot create files, run tests, or push branches.
 # They should NEVER be selected for impl, test, or code-producing tasks.
 _TEXT_ONLY_PROVIDERS = {"ollama-local", "ollama-cloud", "openrouter"}
 # Providers that are paused — detected but never selected
-_PAUSED_PROVIDERS = {"openrouter"}  # Cannot produce PRs, generates hollow completions
+_PAUSED_PROVIDERS = {"openrouter", "codex"}  # openrouter: no PRs; codex: quota reserved until 2026-04-04
 
 PROVIDERS: dict[str, dict] = {}  # populated at startup
+
+
+# ── Circuit breaker: pause pipeline on continuous failures ──
+class _CircuitBreaker:
+    """Tracks recent task outcomes and trips (pauses seeding) when the failure
+    rate exceeds a threshold over a rolling window.
+
+    Design:
+    - Records the last N task outcomes (success/failure)
+    - Trips when: ≥ `trip_threshold` consecutive failures OR failure rate > 80% over the window
+    - When tripped: blocks _seed_task_from_open_idea() and logs clearly
+    - Resets after `cooldown_seconds` to allow a probe attempt
+    - Manual reset via `cc cmd mac resume` (processed in _process_node_messages)
+    """
+
+    def __init__(self, window_size: int = 20, trip_threshold: int = 10, cooldown_seconds: int = 600):
+        self.window_size = window_size
+        self.trip_threshold = trip_threshold
+        self.cooldown_seconds = cooldown_seconds
+        self._outcomes: list[bool] = []  # True=success, False=failure
+        self._tripped = False
+        self._trip_time: float = 0.0
+        self._trip_reason = ""
+        self._consecutive_failures = 0
+        self._lock = threading.RLock()  # RLock: allow_seeding() calls reset() under same lock
+
+    def record(self, success: bool) -> None:
+        """Record a task outcome."""
+        with self._lock:
+            self._outcomes.append(success)
+            if len(self._outcomes) > self.window_size:
+                self._outcomes = self._outcomes[-self.window_size:]
+
+            if success:
+                self._consecutive_failures = 0
+            else:
+                self._consecutive_failures += 1
+
+            # Check trip conditions
+            if self._consecutive_failures >= self.trip_threshold:
+                self._trip(f"{self._consecutive_failures} consecutive failures")
+            elif len(self._outcomes) >= self.window_size:
+                fail_rate = self._outcomes.count(False) / len(self._outcomes)
+                if fail_rate > 0.80:
+                    self._trip(f"{fail_rate:.0%} failure rate over last {len(self._outcomes)} tasks")
+
+    def _trip(self, reason: str) -> None:
+        # Called under self._lock — no re-acquisition needed
+        if not self._tripped:
+            self._tripped = True
+            self._trip_time = time.time()
+            self._trip_reason = reason
+            log.error("CIRCUIT_BREAKER TRIPPED: %s — pipeline seeding paused for %ds. "
+                      "Fix the root cause, then send 'cc cmd mac resume' to reset.",
+                      reason, self.cooldown_seconds)
+
+    def allow_seeding(self) -> bool:
+        """Return True if seeding is allowed, False if tripped."""
+        with self._lock:
+            if not self._tripped:
+                return True
+            # Auto-reset after cooldown to allow a probe
+            elapsed = time.time() - self._trip_time
+            if elapsed >= self.cooldown_seconds:
+                log.info("CIRCUIT_BREAKER auto-reset after %ds cooldown — allowing probe attempt", int(elapsed))
+                self.reset()  # safe: RLock allows re-entry from same thread
+                return True
+            return False
+
+    def reset(self) -> None:
+        """Manual reset — called when operator sends resume command."""
+        with self._lock:
+            if self._tripped:
+                log.info("CIRCUIT_BREAKER reset (was tripped: %s)", self._trip_reason)
+            self._tripped = False
+            self._trip_time = 0.0
+            self._trip_reason = ""
+            self._consecutive_failures = 0
+            self._outcomes.clear()
+
+    @property
+    def status(self) -> dict:
+        with self._lock:
+            total = len(self._outcomes)
+            failures = self._outcomes.count(False)
+            return {
+                "tripped": self._tripped,
+                "reason": self._trip_reason if self._tripped else "",
+                "consecutive_failures": self._consecutive_failures,
+                "window": f"{failures}/{total}",
+                "cooldown_remaining": max(0, int(self.cooldown_seconds - (time.time() - self._trip_time))) if self._tripped else 0,
+            }
+
+
+_circuit_breaker = _CircuitBreaker(window_size=20, trip_threshold=10, cooldown_seconds=600)
 
 
 def _provider_has_tools(provider: str) -> bool:
@@ -626,6 +758,7 @@ _MIN_SUCCESS_RATE = 0.40   # providers below 40% success for a task type are exc
 _MIN_SAMPLES = 3           # need at least 3 samples before excluding
 _ROUTING_CACHE: dict[str, tuple[list[str], float]] = {}  # task_type -> (eligible, timestamp)
 _ROUTING_CACHE_TTL = 300   # refresh every 5 minutes
+_ROUTING_CACHE_LOCK = threading.Lock()  # guards check-then-write on _ROUTING_CACHE
 
 
 def _compute_eligible_providers(task_type: str, available: list[str]) -> list[str]:
@@ -634,12 +767,13 @@ def _compute_eligible_providers(task_type: str, available: list[str]) -> list[st
     now = _time.time()
 
     cache_key = task_type
-    if cache_key in _ROUTING_CACHE:
-        cached, ts = _ROUTING_CACHE[cache_key]
-        if now - ts < _ROUTING_CACHE_TTL:
-            result = [p for p in cached if p in available]
-            if result:
-                return result
+    with _ROUTING_CACHE_LOCK:
+        if cache_key in _ROUTING_CACHE:
+            cached, ts = _ROUTING_CACHE[cache_key]
+            if now - ts < _ROUTING_CACHE_TTL:
+                result = [p for p in cached if p in available]
+                if result:
+                    return result
 
     # Read measurement file for this task type
     measurement_file = Path("api/logs/slot_measurements") / f"provider_{task_type}.json"
@@ -690,7 +824,8 @@ def _compute_eligible_providers(task_type: str, available: list[str]) -> list[st
             log.warning("ROUTING_DATA all providers below threshold for %s — using all", task_type)
             eligible = available
 
-        _ROUTING_CACHE[cache_key] = (eligible, now)
+        with _ROUTING_CACHE_LOCK:
+            _ROUTING_CACHE[cache_key] = (eligible, now)
         return [p for p in eligible if p in available]
 
     except Exception as e:
@@ -730,8 +865,10 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
         "codex":        {"file_write", "git", "tools", "gh", "reasoning"},
         "cursor":       {"file_write", "git", "tools", "gh", "reasoning"},  # v2026.03.25 + --trust fixes file editing
         "gemini":       {"file_write", "git", "tools", "gh", "reasoning"},
+        "opencode":     {"file_write", "git", "tools", "gh", "reasoning"},
+        "pi":           {"file_write", "git", "tools", "gh", "reasoning"},
         "ollama-local": {"text_only"},                   # no tools, no file access
-        "ollama-cloud": {"text_only"},                   # no tools, no file access
+        "ollama-cloud": {"text_only"},                   # raw ollama path stays text-only
         "openrouter":   {"text_only"},                   # API only, no tools
     }
 
@@ -745,12 +882,22 @@ def select_provider(task_type: str, task: dict | None = None) -> str:
                          task_type, required, excluded)
             available = capable
         else:
-            log.warning("CAPABILITY_FILTER task=%s needs %s but no provider has all — using all", task_type, required)
+            # HARD FAIL: no provider can satisfy this task type's requirements.
+            # Do NOT fall back to incapable providers — that wastes compute and
+            # produces 0% success rate (e.g. openrouter/ollama on impl tasks).
+            log.error("CAPABILITY_FILTER task=%s needs %s but NO available provider has them. "
+                      "Available: %s with caps: %s. Task cannot be executed.",
+                      task_type, required, available,
+                      {p: _PROVIDER_CAPS.get(p, set()) for p in available})
+            raise RuntimeError(
+                f"No provider has capabilities {required} for task_type={task_type}. "
+                f"Available providers: {available}"
+            )
 
-    # Respect exclude_provider from retry context
+    # Respect exclude_provider / avoid_provider from retry context
     if task:
         ctx = task.get("context") or {}
-        exclude = ctx.get("exclude_provider", "")
+        exclude = ctx.get("exclude_provider") or ctx.get("avoid_provider") or ""
         if exclude and exclude in available and len(available) > 1:
             available = [p for p in available if p != exclude]
             log.info("PROVIDER_EXCLUDE task=%s excluded=%s remaining=%s", task_type, exclude, available)
@@ -903,8 +1050,7 @@ def record_provider_outcome(
 
         # OpenRouter: free model per task_type (Thompson Sampling over OPENROUTER_FREE_MODELS)
         if provider == "openrouter":
-            spec = PROVIDERS.get("openrouter", {})
-            model = spec.get("_selected_model")
+            model = getattr(_thread_local, "selected_model", None)  # set in execute_with_provider
             if model:
                 or_selector = SlotSelector(f"openrouter_free_model_{task_type}")
                 or_selector.record(
@@ -1421,33 +1567,60 @@ def _has_any_tasks_for_phase(idea_tasks_payload: dict[str, Any], phase: str) -> 
 
 
 def _check_existing_evidence(idea_id: str) -> tuple[str, str] | None:
-    """Check if an idea is already implemented on main by searching merged PRs and commits.
+    """Check if an idea is already IMPLEMENTED on main.
 
-    Returns (pr_or_sha, evidence_type) if found, None if not.
+    DG-014 fix: requires implementation-specific evidence only.
+    A spec PR or any PR that merely MENTIONS the idea_id is NOT evidence of
+    implementation — it causes false positives (ideas marked validated and never
+    implemented).
+
+    Valid evidence:
+    1. Merged PR whose HEAD branch follows agent impl conventions:
+       worker/impl/<idea_id>/..., task/<slug> containing idea_id, codex/<idea_id>
+    2. A commit on main with message starting with `impl(<idea_id>):` (the runner's
+       commit format for implementation tasks).
+
+    NOT valid evidence: any PR whose body/title/diff mentions the idea_id string
+    (this matches spec PRs, doc PRs, etc. and produces false positives).
     """
-    cwd = str(_REPO_DIR)
+    # Use _ORIGINAL_REPO_DIR (DG-013: _REPO_DIR may be a worktree in parallel mode)
+    cwd = str(_ORIGINAL_REPO_DIR)
 
-    # 1. Search for merged PRs mentioning this idea_id
+    # 1. Search for merged PRs with agent impl branch patterns
+    # Filter: only PRs whose head branch looks like an agent impl branch.
+    # Spec PRs (e.g. claude/funny-bhaskara) must NOT match.
+    _IMPL_BRANCH_PREFIXES = ("worker/impl/", "worker/test/", f"codex/{idea_id}", f"task/")
     try:
         result = subprocess.run(
             ["gh", "pr", "list", "--state", "merged", "--search", idea_id,
-             "--json", "number,mergedAt", "--limit", "5"],
+             "--json", "number,mergedAt,headRefName", "--limit", "10"],
             capture_output=True, text=True, timeout=15, cwd=cwd,
             shell=(sys.platform == "win32"),
         )
         if result.returncode == 0 and result.stdout.strip():
             prs = json.loads(result.stdout)
-            if prs:
-                # Pick most recently merged
-                prs.sort(key=lambda p: p.get("mergedAt", ""), reverse=True)
-                return (str(prs[0]["number"]), "merged" if len(prs) == 1 else f"merged({len(prs)})")
+            # Filter to only agent implementation branches
+            impl_prs = [
+                p for p in prs
+                if any(
+                    str(p.get("headRefName", "")).startswith(prefix)
+                    for prefix in _IMPL_BRANCH_PREFIXES
+                )
+            ]
+            if impl_prs:
+                impl_prs.sort(key=lambda p: p.get("mergedAt", ""), reverse=True)
+                n = len(impl_prs)
+                return (str(impl_prs[0]["number"]), "merged" if n == 1 else f"merged({n})")
     except Exception as e:
         log.debug("EVIDENCE_CHECK gh pr failed for %s: %s", idea_id, e)
 
-    # 2. Search for commits on main mentioning this idea_id
+    # 2. Search for impl-specific commits on main.
+    # Require message to start with "impl(<idea_id>):" — the runner's commit format.
+    # This excludes spec(), docs(), fix() commits that mention the idea in passing.
     try:
         result = subprocess.run(
-            ["git", "log", "origin/main", "--oneline", "--grep", idea_id, "-3"],
+            ["git", "log", "origin/main", "--oneline",
+             "--grep", f"^impl({idea_id}):", "-3"],
             capture_output=True, text=True, timeout=10, cwd=cwd,
         )
         if result.returncode == 0 and result.stdout.strip():
@@ -1564,7 +1737,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             try:
                 pr_check = subprocess.run(
                     ["gh", "pr", "list", "--search", idea_id, "--json", "number,title,url", "--limit", "1"],
-                    capture_output=True, text=True, timeout=10, cwd=str(_REPO_DIR),
+                    capture_output=True, text=True, timeout=10, cwd=str(_get_repo_dir()),
                     shell=(sys.platform == "win32"),
                 )
                 if pr_check.returncode == 0:
@@ -1616,9 +1789,19 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"this is a HOTFIX priority — note what needs immediate fixing."
             )
         elif next_phase == "review":
-            # Extract PR info from the completed impl task
+            # DG-017 fix: check the advancing task's own context first.
+            # _extract_branch_from_completed_tasks only finds tasks with status="completed",
+            # but this hook fires BEFORE the impl task is marked completed. The runner sets
+            # impl_branch in the task's context (DG-012 fix) before calling this hook.
+            _task_ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+            impl_branch = _task_ctx.get("impl_branch", "") if task_type == "impl" else ""
+            if not impl_branch:
+                impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            if not impl_branch:
+                log.warning("ADVANCE_HOOK impl_branch missing for review phase idea=%s — "
+                            "review task will fail with impl_branch_missing. "
+                            "Ensure DG-012 patch succeeded before advance.", idea_id[:30])
             pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
-            impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
             pr_instruction = ""
             if pr_number:
                 pr_instruction = (
@@ -1638,8 +1821,16 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             extra_context["pr_number"] = pr_number
             extra_context["impl_branch"] = impl_branch
         elif next_phase == "test":
-            # Extract PR branch from completed impl task so tests push to same PR
-            impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            # DG-017 fix: check the advancing task's own context first — same as review phase.
+            # Hook fires before impl task is marked completed, so completed-task lookup is empty.
+            _task_ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+            impl_branch = _task_ctx.get("impl_branch", "") if task_type == "impl" else ""
+            if not impl_branch:
+                impl_branch = _extract_branch_from_completed_tasks(idea_tasks_payload, "impl")
+            if not impl_branch:
+                log.warning("ADVANCE_HOOK impl_branch missing for test phase idea=%s — "
+                            "test task will fail with impl_branch_missing. "
+                            "Ensure DG-012 patch succeeded before advance.", idea_id[:30])
             pr_number = _extract_pr_from_completed_tasks(idea_tasks_payload, "impl")
             branch_instruction = ""
             if impl_branch:
@@ -1670,16 +1861,18 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             try:
                 import glob as _glob
                 # Exact match first, then glob fallback
-                exact = _REPO_DIR / "specs" / f"{idea_id}.md"
+                exact = _get_repo_dir() / "specs" / f"{idea_id}.md"
                 if exact.exists():
                     spec_files = [str(exact)]
                 else:
-                    spec_files = _glob.glob(str(_REPO_DIR / "specs" / f"*{idea_id}*"))
+                    spec_files = _glob.glob(str(_get_repo_dir() / "specs" / f"*{idea_id}*"))
                 if spec_files:
                     resolved_spec_path = spec_files[0]
                     with open(resolved_spec_path, "r", encoding="utf-8", errors="replace") as sf:
-                        spec_content = sf.read()[:3000]
-                    spec_ref = f"\n\nSpec ({resolved_spec_path}):\n```\n{spec_content}\n```\n"
+                        # DG-002 fix: cap spec content to keep total direction < 5000 chars.
+                        # Spec path is stored in context so the provider can read the full file.
+                        spec_content = sf.read()[:1200]
+                    spec_ref = f"\n\nSpec ({resolved_spec_path}):\n```\n{spec_content}\n```\n(Full spec at {resolved_spec_path})\n"
             except Exception:
                 pass
             extra_context["spec_path"] = resolved_spec_path or "none"
@@ -1743,6 +1936,16 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             )
         # Prepend idea scope header so every provider prompt starts with clear context
         direction = _idea_scope_header + direction
+
+        # DG-002 hard cap: API enforces 5000 char limit on direction.
+        # Truncate with notice so providers know there's more context in the spec file.
+        _MAX_DIRECTION = 4900
+        if len(direction) > _MAX_DIRECTION:
+            log.warning(
+                "AUTO_PHASE direction overflow idea=%s phase=%s len=%d — truncating to %d",
+                idea_id, next_phase, len(direction), _MAX_DIRECTION,
+            )
+            direction = direction[:_MAX_DIRECTION] + "\n...[direction truncated — see spec file in context for full details]"
 
         created = api(
             "POST",
@@ -1981,7 +2184,117 @@ def _build_context_block(
 
     if not parts:
         return ""
+
+    # Include parent and sibling idea context
+    try:
+        if idea_id and idea_id != "unknown":
+            idea_data = api("GET", f"/api/ideas/{idea_id}")
+            if isinstance(idea_data, dict):
+                parent_id = idea_data.get("parent_idea_id")
+                idea_name = idea_data.get("name", idea_id)
+                child_ids = idea_data.get("child_idea_ids", [])
+
+                related_lines = [f"\n\nIDEA CONTEXT — {idea_name} ({idea_id})"]
+                if parent_id:
+                    parent_data = api("GET", f"/api/ideas/{parent_id}")
+                    if isinstance(parent_data, dict):
+                        related_lines.append(f"Parent: {parent_data.get('name', parent_id)} ({parent_id})")
+                        # Get siblings (other children of same parent)
+                        siblings = [c for c in (parent_data.get("child_idea_ids") or []) if c != idea_id]
+                        if siblings:
+                            related_lines.append(f"Sister ideas (same parent): {', '.join(siblings[:6])}")
+
+                if related_lines:
+                    context_block = "\n".join(related_lines) + "\n\n## CONTEXT\n\n" + "\n\n---\n\n".join(parts)
+                    return context_block
+    except Exception:
+        pass  # context enrichment is best-effort
+
     return "\n\n## CONTEXT\n\n" + "\n\n---\n\n".join(parts)
+
+
+def _build_requirements_checklist(task_type: str, direction: str, spec_content: str) -> str:
+    """Generate a structured requirements checklist from spec content and task direction.
+
+    Agents must check off each item before marking the task complete.
+    Returns a formatted checklist block to append to the prompt.
+    """
+    lines = []
+    lines.append("\n\n" + "─" * 60)
+    lines.append("REQUIREMENTS TRACKING SHEET — fill this in as you work")
+    lines.append("─" * 60)
+    lines.append("Before finishing, ALL items below must be ✅. If any remain ❌, keep working.")
+    lines.append("")
+
+    if task_type == "spec":
+        lines += [
+            "[ ] spec file written at specs/<idea_id>.md (min 500 chars)",
+            "[ ] ## Summary section present",
+            "[ ] ## Requirements section with explicit acceptance criteria",
+            "[ ] ## Files section listing exact file paths to modify",
+            "[ ] ## Verification Scenarios section (min 3 scenarios)",
+            "[ ] ## Risks and Assumptions section",
+            "[ ] spec committed: git commit -m 'spec(<idea>): ...'",
+        ]
+    elif task_type == "impl":
+        # Extract requirements from spec if available
+        req_lines = []
+        if spec_content:
+            in_req = False
+            for line in spec_content.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("## Req") or stripped.startswith("### Req"):
+                    in_req = True
+                    continue
+                if in_req and stripped.startswith("##"):
+                    in_req = False
+                if in_req and stripped.startswith(("- ", "* ", "1.", "2.", "3.")):
+                    req_text = stripped.lstrip("- *0123456789.").strip()
+                    if len(req_text) > 10:
+                        req_lines.append(f"[ ] {req_text[:100]}")
+
+        if req_lines:
+            lines.append("Spec requirements to implement:")
+            lines += req_lines[:12]  # cap at 12
+            lines.append("")
+
+        lines += [
+            "[ ] all target files created/modified (not just described)",
+            "[ ] code is syntactically valid (no SyntaxError on import)",
+            "[ ] imports and dependencies are correct",
+            "[ ] no TODO stubs left — all functions have real implementations",
+            "[ ] git add + git commit -m 'impl(<idea>): ...' done",
+        ]
+    elif task_type == "test":
+        lines += [
+            "[ ] test file written at api/tests/test_<idea_id>.py",
+            "[ ] tests cover the happy path",
+            "[ ] tests cover at least 2 edge/error cases",
+            "[ ] pytest run: all tests PASSED (0 failures, 0 errors)",
+            "[ ] git add + git commit -m 'test(<idea>): ...' done",
+            "[ ] output includes: TESTS_FILE=<path> TESTS_RUN=<N> TESTS_PASSED=<N>",
+        ]
+    elif task_type in ("review", "code-review"):
+        lines += [
+            "[ ] read full implementation files (not just diff)",
+            "[ ] checked: implementation matches spec requirements",
+            "[ ] checked: no obvious bugs or security issues",
+            "[ ] checked: edge cases handled",
+            "[ ] posted review on PR via: gh pr review <num> --approve/--request-changes",
+            "[ ] output includes: REVIEW_PASSED or REVIEW_FAILED",
+        ]
+    else:
+        lines += [
+            "[ ] task direction fully addressed",
+            "[ ] output is substantive (not a description of what you would do)",
+            "[ ] changes committed if any files were modified",
+        ]
+
+    lines.append("")
+    lines.append("DONE SIGNAL: When ALL items above show ✅, output 'TASK_COMPLETE' and stop.")
+    lines.append("If you cannot complete an item, output 'BLOCKED: <reason>' — do NOT silently skip.")
+    lines.append("─" * 60)
+    return "\n".join(lines)
 
 
 def build_prompt(task: dict) -> str:
@@ -2029,7 +2342,7 @@ Do NOT push or create PRs — the runner handles that."""
     elif task_type == "impl":
         type_instructions = f"""
 IMPL INSTRUCTIONS:
-- Write actual Python/TypeScript code files in the repository at {_REPO_DIR}
+- Write actual Python/TypeScript code files in the repository at {_get_repo_dir()}
 - You MUST create or modify real files, not just describe what you would do.
 - If you cannot write files, output the FULL file contents inline (not summaries).
 - Minimum 200 chars of real code or detailed inline output.
@@ -2051,7 +2364,7 @@ Do NOT just describe what you would do — WRITE THE FILES."""
     elif task_type == "test":
         type_instructions = f"""
 TEST INSTRUCTIONS:
-- Write pytest test files in the repository at {_REPO_DIR}
+- Write pytest test files in the repository at {_get_repo_dir()}
 - Place tests in api/tests/ following existing patterns.
 - Run tests after writing: cd api && python -m pytest <test_file> -v
 - If tests fail, fix them until they pass.
@@ -2065,7 +2378,7 @@ Do NOT push or create PRs — the runner handles that.
 Output: TESTS_FILE=<path>, TESTS_RUN=<count>, TESTS_PASSED=<count>"""
     else:
         type_instructions = f"""
-Work in the repository at {_REPO_DIR}. Follow the project's CLAUDE.md conventions.
+Work in the repository at {_get_repo_dir()}. Follow the project's CLAUDE.md conventions.
 Output a summary: files created/modified, validation results, errors encountered."""
 
     idea_id = context.get("idea_id", "unknown") if isinstance(context, dict) else "unknown"
@@ -2078,7 +2391,7 @@ Output a summary: files created/modified, validation results, errors encountered
         idea_id=idea_id,
         spec_path=spec_path,
         direction=direction,
-        repo_dir=_REPO_DIR,
+        repo_dir=_get_repo_dir(),
     )
 
     prompt = f"""EXECUTE THIS TASK NOW. Do NOT ask what to do — the task is described below. Start working immediately.
@@ -2150,6 +2463,23 @@ If the heartbeat curl fails, continue working — it's not critical. The checkpo
    - Record any key decisions or architectural choices in "Key decisions".
    - List unresolved issues in "Blockers".
    - This file is NOT committed to git — it's extracted by the runner after your task."""
+
+    # Build requirements checklist from spec content if available
+    spec_content = ""
+    if isinstance(context, dict) and context.get("spec_path"):
+        sp = context.get("spec_path", "")
+        try:
+            import pathlib as _pl
+            _spec_file = _pl.Path(sp)
+            if _spec_file.exists():
+                spec_content = _spec_file.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+    checklist_block = _build_requirements_checklist(task_type, direction, spec_content)
+    if checklist_block:
+        prompt += checklist_block
+
     return prompt
 
 
@@ -2166,7 +2496,7 @@ def _push_and_pr(
     branch = f"worker/{task_type}/{idea_id}/{task_id[:8]}"
 
     try:
-        cwd = str(_REPO_DIR)
+        cwd = str(_get_repo_dir())
 
         # Ensure all changes are committed (exclude control files from staging)
         _CONTROL_FILES = {".task-control", ".task-checkpoint.md", ".idea-progress.md", "data/coherence.db"}
@@ -2260,8 +2590,8 @@ def _push_and_pr(
         log.warning("PR_ERROR task=%s error=%s", task_id, exc)
         # Try to get back to clean state
         try:
-            subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=str(_REPO_DIR))
-            subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=str(_REPO_DIR))
+            subprocess.run(["git", "checkout", "worker-main"], capture_output=True, timeout=5, cwd=str(_get_repo_dir()))
+            subprocess.run(["git", "reset", "--hard", "origin/main"], capture_output=True, timeout=5, cwd=str(_get_repo_dir()))
         except Exception:
             pass
         return None
@@ -2272,7 +2602,7 @@ def _push_to_existing_branch(
     branch: str, new_changes: set[str], output: str,
 ) -> str | None:
     """Push test/review changes to an existing impl branch (same PR)."""
-    cwd = str(_REPO_DIR)
+    cwd = str(_get_repo_dir())
     try:
         # Checkout the impl branch
         subprocess.run(["git", "fetch", "origin", branch], capture_output=True, timeout=15, cwd=cwd)
@@ -2320,7 +2650,7 @@ def _git_status_lines() -> list[str]:
             capture_output=True,
             text=True,
             timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
     except Exception:
         return []
@@ -2355,7 +2685,7 @@ def _git_diff_for_paths(paths: set[str] | None = None) -> str:
             capture_output=True,
             text=True,
             timeout=10,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
         tracked_diff = tracked_result.stdout
     except Exception:
@@ -2372,17 +2702,17 @@ def _git_diff_for_paths(paths: set[str] | None = None) -> str:
                 capture_output=True,
                 text=True,
                 timeout=5,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             if not listed.stdout.strip():
                 continue
-            abs_path = _REPO_DIR / rel_path
+            abs_path = _get_repo_dir() / rel_path
             untracked = subprocess.run(
                 ["git", "diff", "--binary", "--no-index", "--", "/dev/null", str(abs_path)],
                 capture_output=True,
                 text=True,
                 timeout=10,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             if untracked.stdout.strip():
                 untracked_patches.append(untracked.stdout)
@@ -2541,12 +2871,14 @@ def execute_with_provider(
     # API-based providers (openrouter)
     if spec.get("api"):
         model = _select_openrouter_model(task_type)
-        spec["_selected_model"] = model
+        _thread_local.selected_model = model  # thread-local — no race with parallel workers
         log.info("OPENROUTER_MODEL task=%s model=%s", task_type, model)
-        return _run_openrouter(prompt, str(_REPO_DIR), timeout, model)
+        return _run_openrouter(prompt, str(_get_repo_dir()), timeout, model)
 
     cmd = list(spec["cmd"])
     stdin_input = None
+    env = os.environ.copy()
+    env.update({str(k): str(v) for k, v in spec.get("env", {}).items()})
 
     # All providers use their default invocation with full tool access.
     # No special-casing per task type — the prompt guides behavior, not the CLI flags.
@@ -2558,8 +2890,8 @@ def execute_with_provider(
 
     # Write prompt to file for debugging, deliver via stdin for all providers
     # stdin avoids shell arg length limits and is more reliable than CLI args
-    _task_id = getattr(execute_with_provider, "_current_task_id", "unknown")
-    prompt_file = os.path.join(str(_REPO_DIR), f".task-prompt-{_task_id[:12]}.md")
+    _task_id = getattr(_thread_local, "task_id", "unknown")
+    prompt_file = os.path.join(str(_get_repo_dir()), f".task-prompt-{_task_id[:12]}.md")
     try:
         with open(prompt_file, "w", encoding="utf-8") as pf:
             pf.write(prompt)
@@ -2567,9 +2899,9 @@ def execute_with_provider(
     except OSError as e:
         log.warning("Could not write prompt file: %s", e)
 
-    # Prompt delivery: stdin for most, CLI arg for gemini (doesn't read stdin)
+    # Prompt delivery: stdin for providers that support it, CLI args for headless one-shot CLIs
     _STDIN_PROVIDERS = {"claude", "codex", "cursor", "ollama-local", "ollama-cloud"}
-    _CLI_ARG_PROVIDERS = {"gemini"}  # gemini -y -p <prompt> — must be positional arg
+    _CLI_ARG_PROVIDERS = {"gemini", "opencode", "pi"}
 
     if spec.get("stdin_prompt") or provider in _STDIN_PROVIDERS:
         stdin_input = prompt
@@ -2578,7 +2910,7 @@ def execute_with_provider(
 
     # ── Start heartbeat monitoring (works for both wrapper and raw subprocess) ──
     start = time.time()
-    _current_task_id = getattr(execute_with_provider, "_current_task_id", "")
+    _current_task_id = getattr(_thread_local, "task_id", "")
     _heartbeat_stop = threading.Event()
     # CC_DIAG_LEVEL: normal (10s, file list) | high (5s, file list + diff stats + process info)
     _diag_level = rc("diagnostics", "level", "normal")
@@ -2676,21 +3008,22 @@ def execute_with_provider(
     if _current_task_id:
         heartbeat_thread = threading.Thread(
             target=_heartbeat_loop,
-            args=(_current_task_id, str(_REPO_DIR), provider, task_type),
+            args=(_current_task_id, str(_get_repo_dir()), provider, task_type),
             daemon=True,
         )
         heartbeat_thread.start()
 
     # Use ProviderWrapper for process-level control (checkpoint, steer, abort)
-    control_dir = Path(rc("execution", "work_dir") or str(_REPO_DIR))
+    control_dir = Path(rc("execution", "work_dir") or str(_get_repo_dir()))
     try:
         from provider_wrapper import ProviderWrapper
         wrapper = ProviderWrapper(
             cmd=cmd,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
             timeout=timeout,
             control_dir=control_dir,
             stdin_input=stdin_input,
+            env=env,
         )
         log.info("WRAPPER executing %s (timeout=%ds)", provider, timeout)
         result = wrapper.run()
@@ -2713,8 +3046,8 @@ def execute_with_provider(
 
     # Fallback: raw subprocess with live progress reporting
     start = time.time()
-    # task_id for progress reporting (set by caller context)
-    _current_task_id = getattr(execute_with_provider, "_current_task_id", "")
+    # task_id for progress reporting (set by caller context, thread-local)
+    _current_task_id = getattr(_thread_local, "task_id", "")
 
     creation_flags = 0
     if sys.platform == "win32":
@@ -2728,9 +3061,10 @@ def execute_with_provider(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             stdin=subprocess.PIPE if stdin_input else None,
             text=True, encoding="utf-8", errors="replace",
-            cwd=str(_REPO_DIR), creationflags=creation_flags,
+            cwd=str(_get_repo_dir()), creationflags=creation_flags,
             shell=use_shell,
             start_new_session=True,  # Own process group so killpg doesn't kill the runner
+            env=env,
         )
 
         # Stream stdout line-by-line for live progress
@@ -2844,7 +3178,7 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
     """Run merge/deploy/verify/reflect directly — these are commands, not AI tasks."""
     context = task.get("context") if isinstance(task.get("context"), dict) else {}
     idea_id = context.get("idea_id", "unknown")
-    cwd = str(_REPO_DIR)
+    cwd = str(_get_repo_dir())
     start = time.time()
     log.info("OPERATIONAL task=%s type=%s idea=%s", task_id, task_type, idea_id)
     try:
@@ -3047,7 +3381,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     task_work_dir = _REPO_DIR  # default; worktree overrides this
     try:
         from task_control_channel import TaskControlChannel, inject_control_instructions
-        task_work_dir = Path(rc("execution", "work_dir") or str(_REPO_DIR))
+        task_work_dir = Path(rc("execution", "work_dir") or str(_get_repo_dir()))
         control_channel = TaskControlChannel(
             node_id=_NODE_ID,
             task_id=task_id,
@@ -3068,10 +3402,10 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     log.info("EXECUTING task=%s type=%s provider=%s", task_id, task_type, provider)
     _post_activity(task_id, "executing", {"provider": provider, "task_type": task_type})
 
-    # Pass task_id to execute_with_provider for live progress reporting
-    execute_with_provider._current_task_id = task_id
+    # Pass task_id to execute_with_provider for live progress reporting (thread-local, no race)
+    _thread_local.task_id = task_id
     success, output, duration = execute_with_provider(provider, prompt, task_type, complexity_estimate)
-    execute_with_provider._current_task_id = ""
+    _thread_local.task_id = ""
 
     # Stop control channel
     if control_channel:
@@ -3087,7 +3421,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         try:
             post_result = subprocess.run(
                 ["git", "status", "--porcelain"], capture_output=True, text=True,
-                timeout=5, cwd=str(_REPO_DIR),
+                timeout=5, cwd=str(_get_repo_dir()),
             )
             post_diff = post_result.stdout.strip()
             new_changes = set(post_diff.splitlines()) - set(pre_status_lines)
@@ -3131,7 +3465,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                         lang = ext_to_lang.get(ext)
                         if not lang:
                             continue
-                        full_path = os.path.join(str(_REPO_DIR), fpath)
+                        full_path = os.path.join(str(_get_repo_dir()), fpath)
                         if not os.path.isfile(full_path):
                             continue
                         try:
@@ -3188,7 +3522,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                             output += f"\n  {dr['file']}: trust={dr['trust_signal']} verification={dr['verification']} anomalies={dr['anomalies']} event={dr['event_id'][:16]}"
 
                     # Runner stages and commits — don't rely on provider to do it
-                    cwd = str(_REPO_DIR)
+                    cwd = str(_get_repo_dir())
                     subprocess.run(["git", "add", "-A"], capture_output=True, timeout=10, cwd=cwd)
                     idea_id = context.get("idea_id", "unknown")
                     subprocess.run(
@@ -3239,7 +3573,8 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     task_log = _LOG_DIR / f"task_{task_id}.log"
     spec_info = PROVIDERS.get(provider, {})
     cmd_line = " ".join(str(c) for c in spec_info.get("cmd", []))
-    model_info = spec_info.get("_selected_model", "default")
+    # For openrouter, model is picked per-task and stored in thread-local; for others it's in spec
+    model_info = getattr(_thread_local, "selected_model", None) or spec_info.get("_selected_model", "default")
     task_log.write_text(
         f"=== Task {task_id} | Provider: {provider} | Type: {task_type} ===\n"
         f"Time: {datetime.now(timezone.utc).isoformat()}\n"
@@ -3290,7 +3625,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
         "complexity_estimate": complexity_estimate,
     }
     if provider == "openrouter":
-        om = (PROVIDERS.get("openrouter") or {}).get("_selected_model")
+        om = getattr(_thread_local, "selected_model", None)
         if om:
             completion_context["openrouter_model"] = om
             completion_context["openrouter_free_model_slots"] = len(OPENROUTER_FREE_MODELS)
@@ -3317,7 +3652,7 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
                     partial_patch_path = _LOG_DIR / f"partial_task_{task_id}.patch"
                     partial_patch_path.write_text(patch_body)
                     try:
-                        patch_rel_path = str(partial_patch_path.relative_to(_REPO_DIR))
+                        patch_rel_path = str(partial_patch_path.relative_to(_get_repo_dir()))
                     except ValueError:
                         patch_rel_path = str(partial_patch_path)
                     completion_context["partial_patch_path"] = patch_rel_path
@@ -3344,7 +3679,11 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     if success and reported:
         # Only advance phases if the task produced meaningful output
         if len(output_stripped) >= min_chars:
-            _run_phase_auto_advance_hook(task)
+            # Fix 4: impl/test phase advance is deferred to _worker_loop (after push confirmation).
+            # _worker_loop calls _run_phase_auto_advance_hook only after _push_branch_to_origin
+            # returns True, preventing phantom phase advance when the push subsequently fails.
+            if task_type not in ("impl", "test"):
+                _run_phase_auto_advance_hook(task)
             _auto_record_contribution(task, provider, duration)
         else:
             log.warning("SKIP_ADVANCE task=%s — output too short (%d < %d) for phase advancement", task_id, len(output_stripped), min_chars)
@@ -3486,7 +3825,7 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
                         capture_output=True, text=True, timeout=10, cwd=str(wt_path),
                     )
                     if diff_result.stdout.strip():
-                        patch_dir = _REPO_DIR / "api" / "task_patches"
+                        patch_dir = _get_repo_dir() / "api" / "task_patches"
                         patch_dir.mkdir(parents=True, exist_ok=True)
                         patch_file = patch_dir / f"task_{task_id}.patch"
                         patch_file.write_text(diff_result.stdout)
@@ -3681,6 +4020,46 @@ def _seed_task_from_open_idea() -> bool:
             _SEEDER_SKIP_CACHE.add(idea_id)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
+
+        # ── Exponential backoff: delay re-seeding ideas with high failure rates ──
+        failed_for_phase = 0
+        for g in (idea_tasks.get("groups") or []):
+            if isinstance(g, dict):
+                sc = g.get("status_counts", {})
+                failed_for_phase = max(failed_for_phase, int(sc.get("failed", 0)))
+
+        if failed_for_phase >= 3:
+            import datetime as _dt
+            last_activity = idea.get("last_activity_at", "")
+            if last_activity:
+                try:
+                    last_dt = _dt.datetime.fromisoformat(last_activity.replace("Z", "+00:00"))
+                    now = _dt.datetime.now(_dt.timezone.utc)
+                    elapsed_min = (now - last_dt).total_seconds() / 60
+                    cooldown_min = 30
+                    if failed_for_phase >= 20:
+                        cooldown_min = 360
+                    elif failed_for_phase >= 10:
+                        cooldown_min = 120
+                    elif failed_for_phase >= 5:
+                        cooldown_min = 60
+                    if elapsed_min < cooldown_min:
+                        log.info("SEED_BACKOFF idea='%s' failures=%d cooldown=%dmin elapsed=%.0fmin -- skipping",
+                                 idea_name[:30], failed_for_phase, cooldown_min, elapsed_min)
+                        # NOTE: do NOT add to _SEEDER_SKIP_CACHE here — cooldown is temporary.
+                        # The skip cache is session-scoped and would permanently blacklist the idea.
+                        # Instead, just try the next candidate this cycle.
+                        return _seed_task_from_open_idea()
+                except (ValueError, TypeError):
+                    pass
+
+        if failed_for_phase >= 20:
+            log.warning("SEED_NEEDS_DECISION idea='%s' has %d failures -- marking partial",
+                        idea_name[:30], failed_for_phase)
+            _SEEDER_SKIP_CACHE.add(idea_id)
+            api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
+            return _seed_task_from_open_idea()
+
         if total_tasks == 0 and idea.get("manifestation_status") == "partial":
             # Orphaned: marked partial but no tasks exist — reset to none
             log.info("SEED: idea '%s' orphaned (partial with 0 tasks) — resetting to none", idea_name[:30])
@@ -3726,11 +4105,54 @@ def _seed_task_from_open_idea() -> bool:
                 log.info("SEED: idea '%s' review completed but FAILED — needs re-review", idea_name[:30])
                 task_type = "review"  # re-run review
         elif "impl" in completed_phases:
-            task_type = "review"
-        elif "test" in completed_phases:
-            task_type = "impl"
+            task_type = "code-review"
         elif "spec" in completed_phases:
-            task_type = "test"
+            # DG-001 fix: spec done → impl (NOT test).
+            # test requires impl_branch which only exists after impl runs.
+            # The old code had this backwards (spec→test) causing immediate failures.
+            task_type = "impl"
+
+    # ── Spec quality gate: ensure spec has ## Files section before impl ──
+    if task_type == "impl":
+        import glob as _glob_spec
+        spec_ok = False
+        for sp in _glob_spec.glob(str(_get_repo_dir() / "specs" / f"*{idea_id}*")):
+            try:
+                with open(sp, "r", encoding="utf-8", errors="replace") as f:
+                    spec_text = f.read()
+                if "## Files" in spec_text or "## files" in spec_text.lower():
+                    spec_ok = True
+                    break
+                if len(spec_text) >= 300:
+                    spec_ok = True
+                    break
+            except Exception:
+                continue
+        if not spec_ok:
+            log.info("SPEC_GATE idea='%s' -- impl but no quality spec, re-seeding as spec",
+                     idea_name[:30])
+            task_type = "spec"
+
+    # ── Failure memory: inject previous failure outputs into retry direction ──
+    failure_context = ""
+    if isinstance(idea_tasks, dict):
+        failed_outputs = []
+        for g in (idea_tasks.get("groups") or []):
+            if not isinstance(g, dict) or g.get("task_type") != task_type:
+                continue
+            for t in (g.get("tasks") or []):
+                if t.get("status") == "failed":
+                    out = (t.get("output") or "").strip()
+                    if len(out) > 30:
+                        failed_outputs.append(out[:600])
+        if failed_outputs:
+            recent_fails = failed_outputs[-2:]
+            fail_lines = [f"Attempt {idx}: {fo}" for idx, fo in enumerate(recent_fails, 1)]
+            failure_context = (
+                "\n\nPREVIOUS FAILURES -- learn from these, do NOT repeat the same mistakes:\n"
+                + "\n---\n".join(fail_lines)
+                + "\n\nAnalyze what went wrong above. Take a DIFFERENT approach this time.\n"
+            )
 
     # Build direction
     desc = idea.get("description", "")
@@ -3789,7 +4211,7 @@ def _seed_task_from_open_idea() -> bool:
         )
 
     direction = (
-        f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}\n\n"
+        f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}{failure_context}\n\n"
         f"REQUIREMENTS:\n"
         f"- Your output MUST be substantial (not empty or trivially short)\n"
         f"- For spec: write a detailed specification with goal, files, acceptance criteria\n"
@@ -3826,6 +4248,26 @@ def _seed_task_from_open_idea() -> bool:
     }
     if workspace_git_url_seed:
         seed_ctx["workspace_git_url"] = workspace_git_url_seed
+
+    # ── Provider rotation: if one provider keeps failing, suggest a different one ──
+    if isinstance(idea_tasks, dict):
+        provider_fails = {}
+        for g in (idea_tasks.get("groups") or []):
+            if not isinstance(g, dict) or g.get("task_type") != task_type:
+                continue
+            for t in (g.get("tasks") or []):
+                if t.get("status") == "failed":
+                    t_ctx = t.get("context") if isinstance(t.get("context"), dict) else {}
+                    prov = t_ctx.get("provider", "unknown")
+                    provider_fails[prov] = provider_fails.get(prov, 0) + 1
+        if provider_fails:
+            worst_provider = max(provider_fails, key=provider_fails.get)
+            if provider_fails[worst_provider] >= 3:
+                seed_ctx["avoid_provider"] = worst_provider
+                seed_ctx["provider_failure_history"] = provider_fails
+                log.info("PROVIDER_ROTATE idea='%s' phase=%s avoiding=%s (failed %d times)",
+                         idea_name[:30], task_type, worst_provider, provider_fails[worst_provider])
+
     result = api("POST", "/api/agent/tasks", {
         "direction": direction,
         "task_type": task_type,
@@ -3851,7 +4293,7 @@ def run_all_pending(dry_run: bool = False) -> dict:
     if not tasks:
         log.info("No pending tasks")
         # Seed a new task from an open idea when the queue is empty
-        if not dry_run:
+        if not dry_run and _circuit_breaker.allow_seeding():
             _seed_task_from_open_idea()
             # Re-check after seeding
             tasks = list_pending()
@@ -4241,19 +4683,19 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
             steps = []
             # First: stash any local changes
             stash = subprocess.run(
-                ["git", "stash"], capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
+                ["git", "stash"], capture_output=True, text=True, timeout=15, cwd=str(_get_repo_dir()),
             )
             if "Saved" in stash.stdout:
                 steps.append("stashed local changes")
             # Switch to main if not already there
             branch = subprocess.run(
                 ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-                capture_output=True, text=True, timeout=5, cwd=str(_REPO_DIR),
+                capture_output=True, text=True, timeout=5, cwd=str(_get_repo_dir()),
             ).stdout.strip()
             if branch != "main":
                 checkout = subprocess.run(
                     ["git", "checkout", "main"],
-                    capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
+                    capture_output=True, text=True, timeout=15, cwd=str(_get_repo_dir()),
                 )
                 if checkout.returncode == 0:
                     steps.append(f"switched from {branch} to main")
@@ -4262,20 +4704,20 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
             # Pull latest
             pull = subprocess.run(
                 ["git", "pull", "origin", "main", "--ff-only"],
-                capture_output=True, text=True, timeout=60, cwd=str(_REPO_DIR),
+                capture_output=True, text=True, timeout=60, cwd=str(_get_repo_dir()),
             )
             if pull.returncode != 0:
                 # Try reset if ff-only fails
                 subprocess.run(
                     ["git", "reset", "--hard", "origin/main"],
-                    capture_output=True, text=True, timeout=15, cwd=str(_REPO_DIR),
+                    capture_output=True, text=True, timeout=15, cwd=str(_get_repo_dir()),
                 )
                 steps.append("reset to origin/main (ff-only failed)")
             else:
                 steps.append("pulled latest main")
             new_sha = subprocess.run(
                 ["git", "rev-parse", "--short", "HEAD"],
-                capture_output=True, text=True, timeout=5, cwd=str(_REPO_DIR),
+                capture_output=True, text=True, timeout=5, cwd=str(_get_repo_dir()),
             ).stdout.strip()
             steps.append(f"now at {new_sha}")
             summary = " → ".join(steps)
@@ -4310,14 +4752,14 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
             git_status = subprocess.run(
                 ["git", "status", "--short"],
                 capture_output=True, text=True, timeout=10,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             lines.append(f"Git status: {git_status.stdout.strip()[:200] or 'clean'}")
 
             git_log = subprocess.run(
                 ["git", "log", "--oneline", "-5"],
                 capture_output=True, text=True, timeout=10,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             lines.append(f"Recent commits:\n{git_log.stdout.strip()}")
 
@@ -4344,6 +4786,22 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
         threading.Timer(2.0, lambda: os._exit(0)).start()
         return response
 
+    elif command == "pause":
+        _circuit_breaker._trip("manual pause via command")
+        return f"Pipeline paused. Circuit breaker tripped. Send 'resume' to restart seeding."
+
+    elif command == "resume":
+        _circuit_breaker.reset()
+        return f"Pipeline resumed. Circuit breaker reset. Seeding will restart on next cycle."
+
+    elif command == "circuit-status":
+        cb = _circuit_breaker.status
+        return (f"Circuit breaker: {'TRIPPED' if cb['tripped'] else 'OK'}\n"
+                f"Reason: {cb['reason'] or 'n/a'}\n"
+                f"Consecutive failures: {cb['consecutive_failures']}\n"
+                f"Window: {cb['window']}\n"
+                f"Cooldown remaining: {cb['cooldown_remaining']}s")
+
     elif command == "deploy":
         return _deploy_to_vps()
 
@@ -4352,7 +4810,7 @@ def _execute_node_command(node_id: str, payload: dict, text: str) -> str:
 
     else:
         log.warning("CMD_UNKNOWN: %s (not in safe command list)", command)
-        return f"Unknown command: {command}. Safe commands: {', '.join(_SAFE_COMMANDS.keys())}"
+        return f"Unknown command: {command}. Safe commands: update, status, diagnose, restart, pause, resume, circuit-status, deploy, ping"
 
 
 def _deploy_to_vps() -> str:
@@ -4619,7 +5077,8 @@ def _create_standalone_task_repo(
     inside a standalone git repo rooted under ``.worktrees/``.
     """
     slug = task_id[:16]
-    repo_root = str(_REPO_DIR)
+    # DG-013 fix: use _ORIGINAL_REPO_DIR — _REPO_DIR may be a worktree path in parallel mode
+    repo_root = str(_ORIGINAL_REPO_DIR)
     archive_candidates = []
     if base_branch:
         archive_candidates.extend([f"origin/{base_branch}", base_branch])
@@ -4836,7 +5295,10 @@ def _create_worktree(
     """
     slug = task_id[:16]
 
-    # Determine which repo and worktree base to use
+    # Determine which repo and worktree base to use.
+    # DG-013 fix: ALWAYS use _ORIGINAL_REPO_DIR, never _REPO_DIR.
+    # _REPO_DIR is mutated per-thread by _run_task_in_worktree to point to the
+    # active task worktree — a parallel worker reading it would get the wrong path.
     if workspace_git_url:
         workspace_repo = _get_or_update_workspace_repo(workspace_git_url)
         if workspace_repo is None:
@@ -4845,8 +5307,8 @@ def _create_worktree(
         repo_root = str(workspace_repo)
         worktree_base = workspace_repo / ".worktrees"
     else:
-        repo_root = str(_REPO_DIR)
-        worktree_base = _WORKTREE_BASE
+        repo_root = str(_ORIGINAL_REPO_DIR)
+        worktree_base = _ORIGINAL_REPO_DIR / ".worktrees"
 
     wt_path = worktree_base / f"task-{slug}"
     branch = f"task/{slug}"
@@ -4887,7 +5349,14 @@ def _create_worktree(
                 base_ref = f"origin/{base_branch}"
                 log.info("WORKTREE_FROM_PR task=%s branch=%s", slug, base_branch)
             else:
-                log.info("WORKTREE_PR_BRANCH_NOT_FOUND task=%s branch=%s — falling back to origin/main", slug, base_branch)
+                # HARD FAIL: the PR branch was expected but doesn't exist on origin.
+                # Do NOT fall back to origin/main — the agent would work against code
+                # that doesn't contain the implementation, guaranteeing failure.
+                log.error("WORKTREE_PR_BRANCH_MISSING task=%s branch=%s — "
+                          "cannot create worktree without the impl branch. "
+                          "The impl phase must push a branch and create a PR first.",
+                          slug, base_branch)
+                return None
 
         create = _run_git_command(
             ["git", "worktree", "add", "-b", branch, str(wt_path), base_ref],
@@ -4944,7 +5413,8 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
 
 def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
     """Remove worktrees older than max_age_hours. Called periodically from the loop."""
-    wt_base = _REPO_DIR / ".worktrees"
+    # DG-013 fix: use _ORIGINAL_REPO_DIR (never the mutable _REPO_DIR)
+    wt_base = _ORIGINAL_REPO_DIR / ".worktrees"
     if not wt_base.exists():
         return 0
     cleaned = 0
@@ -4957,12 +5427,12 @@ def _sweep_stale_worktrees(max_age_hours: int = 2) -> int:
             if age_hours < max_age_hours:
                 continue
             task_slug = wt_dir.name.replace("task-", "")
-            if _reclaim_worktree_slot(str(_REPO_DIR), wt_dir, f"task/{task_slug}"):
+            if _reclaim_worktree_slot(str(_ORIGINAL_REPO_DIR), wt_dir, f"task/{task_slug}"):
                 cleaned += 1
         except Exception:
             pass
     if cleaned:
-        _run_git_command(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_REPO_DIR))
+        _run_git_command(["git", "worktree", "prune"], capture_output=True, timeout=10, cwd=str(_ORIGINAL_REPO_DIR))
         log.info("SWEEP_WORKTREES cleaned %d stale worktrees", cleaned)
     return cleaned
 
@@ -4973,13 +5443,58 @@ def _cleanup_worktree(task_id: str) -> None:
     Fix 5: only called AFTER push is confirmed (or task failed).
     """
     slug = task_id[:16]
-    wt_path = _WORKTREE_BASE / f"task-{slug}"
+    # DG-013 fix: use _ORIGINAL_REPO_DIR
+    wt_path = _ORIGINAL_REPO_DIR / ".worktrees" / f"task-{slug}"
     branch = f"task/{slug}"
     try:
-        if _reclaim_worktree_slot(str(_REPO_DIR), wt_path, branch):
+        if _reclaim_worktree_slot(str(_ORIGINAL_REPO_DIR), wt_path, branch):
             log.info("WORKTREE_CLEANED task=%s", slug)
     except Exception as e:
         log.warning("WORKTREE_CLEANUP_FAILED task=%s error=%s", slug, e)
+
+
+def _create_pr_for_branch(task_id: str, task: dict, wt_path: "Path") -> str | None:
+    """Create a GitHub PR for the task branch after a successful push.
+
+    Returns the PR URL on success, None on failure. Non-fatal — if PR creation
+    fails, the branch is still on origin and can be found manually.
+    """
+    slug = task_id[:16]
+    branch = f"task/{slug}"
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    idea_id = ctx.get("idea_id", "unknown")
+    task_type = task.get("task_type", "impl")
+
+    try:
+        pr_title = f"{task_type}({idea_id}): task {slug}"[:70]
+        pr_body = (
+            f"## Automated {task_type} by {_NODE_NAME}\n\n"
+            f"**Idea:** {idea_id}\n"
+            f"**Task:** {task_id}\n"
+        )
+        pr_result = subprocess.run(
+            ["gh", "pr", "create", "--title", pr_title, "--body", pr_body,
+             "--base", "main", "--head", branch],
+            capture_output=True, text=True, timeout=30, cwd=str(wt_path),
+        )
+        if pr_result.returncode == 0:
+            pr_url = pr_result.stdout.strip()
+            log.info("PR_CREATED task=%s branch=%s url=%s", slug, branch, pr_url)
+            # Store PR URL in task context for downstream phases
+            api("PATCH", f"/api/agent/tasks/{task_id}", {
+                "context": {**ctx, "pr_url": pr_url, "impl_branch": branch},
+            })
+            return pr_url
+        else:
+            # PR may already exist (from a retry) — that's OK
+            if "already exists" in (pr_result.stderr or "").lower():
+                log.info("PR_EXISTS task=%s branch=%s — PR already created", slug, branch)
+                return None
+            log.warning("PR_CREATE_FAILED task=%s error=%s", slug, pr_result.stderr.strip()[:200])
+            return None
+    except Exception as e:
+        log.warning("PR_CREATE_ERROR task=%s: %s", slug, e)
+        return None
 
 
 def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
@@ -5078,57 +5593,51 @@ def _push_branch_to_origin(task_id: str, wt_path: Path) -> bool:
 
 
 def _merge_branch_to_main(task_id: str) -> bool:
-    """Merge task branch to main AND push. Only called after code-review passes.
+    """Merge task PR to main via GitHub. Only called after code-review passes.
 
-    This is the gate — code only reaches main after review.
+    Uses `gh pr merge --squash --admin` instead of local git merge + push.
+    This is the proper path — avoids auth issues and merge conflicts with
+    concurrent runner pushes.
     """
     slug = task_id[:16]
     branch = f"task/{slug}"
-    repo_root = str(_REPO_DIR)
+    repo_root = str(_get_repo_dir())
     try:
-        # Fetch latest
-        _run_git_command(
-            ["git", "fetch", "origin"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
+        # Find the PR for this branch
+        pr_list = subprocess.run(
+            ["gh", "pr", "list", "--head", branch, "--json", "number,state", "--limit", "1"],
+            capture_output=True, text=True, timeout=15, cwd=repo_root,
         )
-        # Check if branch exists on origin
-        check = _run_git_command(
-            ["git", "rev-parse", "--verify", f"origin/{branch}"],
-            capture_output=True, text=True, timeout=10, cwd=repo_root,
-        )
-        if check.returncode != 0:
-            log.info("MERGE_SKIP task=%s — branch not on origin (no code changes)", slug)
-            return True
+        prs = json.loads(pr_list.stdout) if pr_list.returncode == 0 else []
 
-        # Merge origin/branch into local main
-        _run_git_command(
-            ["git", "checkout", "main"],
-            capture_output=True, text=True, timeout=10, cwd=repo_root,
-        )
-        merge = _run_git_command(
-            ["git", "merge", "--no-ff", f"origin/{branch}", "-m", f"Merge reviewed task {slug}"],
-            capture_output=True, text=True, timeout=30, cwd=repo_root,
-        )
-        if merge.returncode != 0:
-            _run_git_command(["git", "merge", "--abort"], capture_output=True, timeout=10, cwd=repo_root)
-            log.warning("MERGE_CONFLICT task=%s", slug)
+        if not prs:
+            # No PR found — try searching by idea_id
+            log.info("MERGE_NO_PR task=%s branch=%s — no PR found for branch", slug, branch)
             return False
 
-        # Push main to origin
-        push = _run_git_command(
-            ["git", "push", "origin", "main"],
+        pr_num = prs[0]["number"]
+        pr_state = prs[0].get("state", "")
+        if pr_state == "MERGED":
+            log.info("MERGE_ALREADY_DONE task=%s PR #%s already merged", slug, pr_num)
+            return True
+
+        # Merge via GitHub API
+        merge_result = subprocess.run(
+            ["gh", "pr", "merge", str(pr_num), "--squash", "--admin",
+             "--body", f"Merge reviewed task {slug}"],
             capture_output=True, text=True, timeout=60, cwd=repo_root,
         )
-        if push.returncode == 0:
-            log.info("MERGED_TO_MAIN task=%s", slug)
-            # Clean up remote branch
+        if merge_result.returncode == 0:
+            log.info("MERGED_VIA_PR task=%s PR #%s", slug, pr_num)
+            # Pull the merged main locally so worktree base is up to date
             _run_git_command(
-                ["git", "push", "origin", "--delete", branch],
+                ["git", "pull", "--ff-only", "origin", "main"],
                 capture_output=True, text=True, timeout=30, cwd=repo_root,
             )
             return True
         else:
-            log.warning("MAIN_PUSH_FAILED task=%s error=%s", slug, push.stderr.strip()[:200])
+            err = merge_result.stderr.strip()[:200]
+            log.warning("MERGE_PR_FAILED task=%s PR #%s error=%s", slug, pr_num, err)
             return False
     except Exception as e:
         log.warning("MERGE_TO_MAIN_FAILED task=%s error=%s", slug, e)
@@ -5138,22 +5647,21 @@ def _merge_branch_to_main(task_id: str) -> bool:
 def _run_task_in_worktree(task: dict, wt_path: Path) -> tuple[bool, str]:
     """Execute a task inside a worktree directory.
 
-    Fix 2: returns (success, git_diff) — diff captured after provider runs.
+    DG-016: Uses thread-local repo dir so parallel workers never clobber each other.
+    Previously used a global _REPO_DIR mutation that raced with other workers, causing
+    agents to run in the wrong worktree and produce empty diffs.
     """
     task_id = task["id"]
-    global _REPO_DIR
-    original_repo = _REPO_DIR
+    _thread_local.repo_dir = wt_path      # thread-local — no race with other workers
     try:
-        _REPO_DIR = wt_path
         ok = run_one(task, dry_run=False)
-        # Fix 2: capture what the provider actually wrote
         diff = _capture_worktree_diff(task_id, wt_path)
         return ok, diff
     except Exception as e:
         log.error("WORKTREE_EXEC_FAILED task=%s error=%s", task_id[:16], e)
         return False, ""
     finally:
-        _REPO_DIR = original_repo
+        _thread_local.repo_dir = _ORIGINAL_REPO_DIR  # restore to main repo
 
 
 _active_idea_ids: set[str] = set()
@@ -5286,7 +5794,32 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             task_type = task.get("task_type", "spec")
             impl_branch = ctx.get("impl_branch", "")
             workspace_git_url = ctx.get("workspace_git_url", "")
-            base_branch = impl_branch if task_type in ("test", "code-review", "review") and impl_branch else None
+
+            # HARD GATE: test/code-review/review REQUIRE impl_branch.
+            # Without it, the agent works against origin/main which doesn't
+            # contain the implementation — guaranteed failure + wasted compute.
+            if task_type in ("test", "code-review", "review") and not impl_branch:
+                log.error("WORKER[%d] IMPL_BRANCH_REQUIRED task=%s type=%s — "
+                          "no impl_branch in context. The impl phase must push a branch "
+                          "and pass it forward. Failing this task.",
+                          worker_id, task_id[:16], task_type)
+                # DG-003 fix: use specific error_category so failures are triageable.
+                # DG-010 note: do NOT count this against the circuit breaker — it is a
+                # seeder logic error (wrong phase seeded), not a provider execution failure.
+                _complete_task_with_status(
+                    task_id,
+                    f"FAILED: {task_type} requires impl_branch in context but none was provided. "
+                    f"The impl phase must push a branch and create a PR before {task_type} can run.",
+                    "failed",
+                    error_category="impl_branch_missing",
+                )
+                with _active_lock:
+                    _active_idea_ids.discard(idea_id)
+                # Intentionally NOT recording to circuit breaker — this is a seeder logic error
+                # (DG-010): counting seeder mistakes as provider failures trips the breaker unfairly.
+                continue
+
+            base_branch = impl_branch if task_type in ("test", "code-review", "review") else None
             wt = _create_worktree(task_id, base_branch=base_branch, idea_id=idea_id,
                                   workspace_git_url=workspace_git_url)
             pushed = False
@@ -5315,6 +5848,46 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                         pushed = _push_branch_to_origin(task_id, wt)
                         if not pushed:
                             log.warning("WORKER[%d] BRANCH_PUSH_FAILED task=%s — phase will NOT advance", worker_id, task_id[:16])
+                            # Fix 7: tag the task record with push_failed so operators can
+                            # distinguish push failures from provider execution errors.
+                            _complete_task_with_status(
+                                task_id,
+                                "Branch push failed after provider completed. Code preserved in worktree.",
+                                "failed",
+                                {"push_failed": True, "worker_id": WORKER_ID},
+                                error_category="push_failed",
+                            )
+                        else:
+                            # DG-012 fix: set impl_branch in task context immediately after
+                            # branch push — don't wait for PR creation which can fail/skip.
+                            # _extract_branch_from_completed_tasks reads ctx.impl_branch, so
+                            # this must be set BEFORE _run_phase_auto_advance_hook fires.
+                            if task_type == "impl":
+                                impl_branch_name = f"task/{task_id[:16]}"
+                                branch_patch_result = api("PATCH", f"/api/agent/tasks/{task_id}", {
+                                    "context": {**ctx, "impl_branch": impl_branch_name},
+                                })
+                                if branch_patch_result:
+                                    log.info("IMPL_BRANCH_SET task=%s branch=%s", task_id[:16], impl_branch_name)
+                                    # Update local state so downstream code in this iteration sees it
+                                    ctx = {**ctx, "impl_branch": impl_branch_name}
+                                    if isinstance(task.get("context"), dict):
+                                        task["context"]["impl_branch"] = impl_branch_name
+                                else:
+                                    log.warning("IMPL_BRANCH_PATCH_FAILED task=%s branch=%s — "
+                                                "impl_branch not persisted; downstream test task may fail "
+                                                "with impl_branch_missing. Check API health.",
+                                                task_id[:16], impl_branch_name)
+                                    # Still update local state — advance hook runs in same process
+                                    ctx = {**ctx, "impl_branch": impl_branch_name}
+                                    if isinstance(task.get("context"), dict):
+                                        task["context"]["impl_branch"] = impl_branch_name
+                            # Create PR after successful branch push for impl tasks
+                            if task_type == "impl":
+                                _create_pr_for_branch(task_id, task, wt)
+                            # Fix 4: phase advance only fires after push is confirmed for impl/test
+                            if task_type in ("impl", "test"):
+                                _run_phase_auto_advance_hook(task)
                     elif not ok and diff and task_type in ("impl", "test"):
                         # Timed out but produced real code — save the work, push branch
                         log.info("WORKER[%d] TIMEOUT_WITH_CODE task=%s type=%s diff=%d bytes — pushing partial work",
@@ -5370,6 +5943,7 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                         pushed = True
 
                 status = "completed" if ok else "failed"
+                _circuit_breaker.record(ok)
                 log.info("WORKER[%d] %s task=%s pushed=%s", worker_id, status.upper(), task_id[:16], pushed)
             except Exception as e:
                 log.error("WORKER[%d] ERROR task=%s: %s", worker_id, task_id[:16], e)
@@ -5462,7 +6036,7 @@ def _check_for_updates_and_restart() -> bool:
         fetch = subprocess.run(
             ["git", "fetch", "origin", "main", "--quiet"],
             capture_output=True, text=True, timeout=15,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
         if fetch.returncode != 0:
             log.debug("SELF-UPDATE: git fetch failed: %s", fetch.stderr.strip())
@@ -5472,13 +6046,13 @@ def _check_for_updates_and_restart() -> bool:
         local_sha = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             capture_output=True, text=True, timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         ).stdout.strip()
 
         remote_sha = subprocess.run(
             ["git", "rev-parse", "origin/main"],
             capture_output=True, text=True, timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         ).stdout.strip()
 
         if local_sha == remote_sha:
@@ -5491,42 +6065,42 @@ def _check_for_updates_and_restart() -> bool:
         status = subprocess.run(
             ["git", "status", "--porcelain"],
             capture_output=True, text=True, timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
         if status.stdout.strip():
             log.warning("SELF-UPDATE: uncommitted changes — stashing before pull")
             subprocess.run(
                 ["git", "stash", "--include-untracked"],
                 capture_output=True, text=True, timeout=10,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
 
         # Ensure we're on main — worktree branches can't ff-only pull main
         current_branch = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True, text=True, timeout=5,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         ).stdout.strip()
         if current_branch != "main":
             log.info("SELF-UPDATE: on branch '%s', switching to main first", current_branch)
             checkout = subprocess.run(
                 ["git", "checkout", "main"],
                 capture_output=True, text=True, timeout=15,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
             if checkout.returncode != 0:
                 log.warning("SELF-UPDATE: checkout main failed: %s — trying reset", checkout.stderr.strip())
                 subprocess.run(
                     ["git", "checkout", "-B", "main", "origin/main"],
                     capture_output=True, text=True, timeout=15,
-                    cwd=str(_REPO_DIR),
+                    cwd=str(_get_repo_dir()),
                 )
 
         # Pull latest
         pull = subprocess.run(
             ["git", "pull", "origin", "main", "--ff-only"],
             capture_output=True, text=True, timeout=30,
-            cwd=str(_REPO_DIR),
+            cwd=str(_get_repo_dir()),
         )
         if pull.returncode != 0:
             # ff-only failed — force reset to origin/main
@@ -5534,7 +6108,7 @@ def _check_for_updates_and_restart() -> bool:
             subprocess.run(
                 ["git", "reset", "--hard", "origin/main"],
                 capture_output=True, text=True, timeout=15,
-                cwd=str(_REPO_DIR),
+                cwd=str(_get_repo_dir()),
             )
 
         log.info("SELF-UPDATE: pulled latest → %s. Restarting (workers are idle).", remote_sha[:8])
@@ -5695,7 +6269,9 @@ def main():
             if isinstance(stale, dict):
                 own_stale = [
                     t for t in stale.get("tasks", [])
-                    if WORKER_ID.split(":")[0] in (t.get("claimed_by") or "")
+                    # API response exposes "claimed_by"; runner PATCHes "worker_id".
+                    # Check both to handle either field name being present.
+                    if WORKER_ID.split(":")[0] in (t.get("claimed_by") or t.get("worker_id") or "")
                 ]
                 for t in own_stale:
                     api("PATCH", f"/api/agent/tasks/{t['id']}", {
@@ -5790,7 +6366,18 @@ def main():
                 # 4. Execute tasks (parallel or sequential)
                 if not use_parallel:
                     run_all_pending(dry_run=args.dry_run)
-                # else: workers run independently — main loop handles housekeeping only
+                else:
+                    # Parallel mode: workers poll for tasks independently, but
+                    # the main loop seeds new tasks when the queue is empty.
+                    pending_check = api("GET", "/api/agent/tasks?status=pending&limit=1")
+                    pending_list = pending_check if isinstance(pending_check, list) else (pending_check or {}).get("tasks", [])
+                    if not pending_list and not args.dry_run:
+                        if _circuit_breaker.allow_seeding():
+                            _seed_task_from_open_idea()
+                        else:
+                            cb = _circuit_breaker.status
+                            log.warning("CIRCUIT_BREAKER blocking seed — %s (cooldown %ds remaining)",
+                                        cb["reason"], cb["cooldown_remaining"])
 
                 # 5. Post-execution housekeeping
                 if not args.dry_run:

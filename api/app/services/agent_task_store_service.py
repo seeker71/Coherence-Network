@@ -187,6 +187,8 @@ def _row_to_payload(
         "current_step": row.current_step,
         "decision_prompt": row.decision_prompt,
         "decision": row.decision,
+        "error_summary": row.error_summary,
+        "error_category": row.error_category,
         "claimed_by": row.claimed_by,
         "claimed_at": _serialize_dt(row.claimed_at),
         "created_at": _serialize_dt(row.created_at),
@@ -208,6 +210,8 @@ def _minimal_columns(*, include_output: bool, include_command: bool) -> tuple[An
         AgentTaskRecord.current_step,
         AgentTaskRecord.decision_prompt,
         AgentTaskRecord.decision,
+        AgentTaskRecord.error_summary,
+        AgentTaskRecord.error_category,
         AgentTaskRecord.claimed_by,
         AgentTaskRecord.claimed_at,
         AgentTaskRecord.created_at,
@@ -386,6 +390,8 @@ def upsert_task(payload: dict[str, Any]) -> None:
                 current_step=payload.get("current_step"),
                 decision_prompt=payload.get("decision_prompt"),
                 decision=payload.get("decision"),
+                error_summary=payload.get("error_summary"),
+                error_category=payload.get("error_category"),
                 claimed_by=payload.get("claimed_by"),
                 claimed_at=_parse_dt(payload.get("claimed_at")),
                 created_at=_parse_dt(payload.get("created_at")) or datetime.now(timezone.utc),
@@ -408,6 +414,13 @@ def upsert_task(payload: dict[str, Any]) -> None:
         row.current_step = payload.get("current_step")
         row.decision_prompt = payload.get("decision_prompt")
         row.decision = payload.get("decision")
+        # DG-015 fix: persist error fields when provided (don't overwrite with None)
+        incoming_error_summary = payload.get("error_summary")
+        if incoming_error_summary is not None:
+            row.error_summary = incoming_error_summary
+        incoming_error_category = payload.get("error_category")
+        if incoming_error_category is not None:
+            row.error_category = incoming_error_category
         row.claimed_by = payload.get("claimed_by")
         row.claimed_at = _parse_dt(payload.get("claimed_at"))
         row.created_at = _parse_dt(payload.get("created_at")) or row.created_at

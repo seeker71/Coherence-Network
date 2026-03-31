@@ -517,17 +517,36 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
 
     next_task_type = _PHASE_TASK_TYPE.get(next_phase, TaskType.IMPL)
 
+    # DG-012 fix: propagate impl_branch so test/code-review tasks don't fail the
+    # IMPL_BRANCH_REQUIRED gate. The runner sets impl_branch in task context after
+    # push; we forward it here so server-side advance creates tasks that can run.
+    next_context: dict[str, Any] = {
+        "idea_id": idea_id,
+        "auto_advanced_from": task_type,
+        "auto_advance_source": "pipeline_advance_service",
+        "source_task_id": task.get("id", ""),
+        "executor": "federation",
+    }
+    if context.get("impl_branch"):
+        next_context["impl_branch"] = context["impl_branch"]
+    elif next_phase in ("test", "code-review", "review"):
+        # DG-012/017: impl_branch is required for test/code-review. If it's absent, the
+        # downstream task will fail immediately with impl_branch_missing. Log now so the
+        # root cause is visible at advance time, not at execution time.
+        log.warning(
+            "ADVANCE_MISSING_IMPL_BRANCH %s→%s for idea=%s — "
+            "impl_branch not in source task context; downstream task may fail. "
+            "Verify DG-012 runner fix is active and impl_branch PATCH succeeded.",
+            task_type, next_phase, idea_id,
+        )
+    if context.get("pr_url"):
+        next_context["pr_url"] = context["pr_url"]
+
     try:
         created = agent_service.create_task(AgentTaskCreate(
             direction=direction,
             task_type=next_task_type,
-            context={
-                "idea_id": idea_id,
-                "auto_advanced_from": task_type,
-                "auto_advance_source": "pipeline_advance_service",
-                "source_task_id": task.get("id", ""),
-                "executor": "federation",
-            },
+            context=next_context,
         ))
         log.info(
             "AUTO_ADVANCE %s→%s for idea=%s created task=%s",
@@ -565,6 +584,18 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
     context = task.get("context") or {}
     idea_id = context.get("idea_id", "")
     if not idea_id:
+        return None
+
+    # DG-016 fix: do NOT retry structural prerequisite failures — retrying guaranteed to fail again.
+    # impl_branch_missing means the impl phase hasn't pushed a branch yet; retrying the test/
+    # code-review task immediately will hit the same gate and trigger another retry indefinitely.
+    error_category = task.get("error_category") or ""
+    _NO_RETRY_CATEGORIES = {"impl_branch_missing", "worktree_failed"}
+    if error_category in _NO_RETRY_CATEGORIES:
+        log.info(
+            "AUTO_RETRY skip — %s for %s has non-retriable error_category=%s (structural prerequisite)",
+            task_type, idea_id, error_category,
+        )
         return None
 
     retry_count = int(context.get("retry_count", 0))
@@ -608,19 +639,27 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
 
     task_type_enum = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
 
+    # DG-016 fix: carry impl_branch and pr_url forward so downstream phases don't
+    # lose the branch reference on retry.
+    retry_context: dict[str, Any] = {
+        "idea_id": idea_id,
+        "retry_count": retry_count + 1,
+        "retry_of": task.get("id", ""),
+        "failed_provider": failed_provider,
+        "exclude_provider": failed_provider,
+        "auto_retry_source": "pipeline_advance_service",
+        "executor": "federation",
+    }
+    if context.get("impl_branch"):
+        retry_context["impl_branch"] = context["impl_branch"]
+    if context.get("pr_url"):
+        retry_context["pr_url"] = context["pr_url"]
+
     try:
         created = agent_service.create_task(AgentTaskCreate(
             direction=direction,
             task_type=task_type_enum,
-            context={
-                "idea_id": idea_id,
-                "retry_count": retry_count + 1,
-                "retry_of": task.get("id", ""),
-                "failed_provider": failed_provider,
-                "exclude_provider": failed_provider,
-                "auto_retry_source": "pipeline_advance_service",
-                "executor": "federation",
-            },
+            context=retry_context,
         ))
         log.info(
             "AUTO_RETRY %s #%d for idea=%s (failed_provider=%s) → task=%s",

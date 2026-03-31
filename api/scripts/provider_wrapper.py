@@ -34,12 +34,14 @@ class ProviderWrapper:
         timeout: int = 300,
         control_dir: Path | None = None,
         stdin_input: str | None = None,
+        env: dict[str, str] | None = None,
     ):
         self.cmd = cmd
         self.cwd = cwd
         self.timeout = timeout
         self.control_dir = Path(control_dir) if control_dir else None
         self.stdin_input = stdin_input
+        self.env = env or {}
 
         # State
         self._proc: subprocess.Popen | None = None
@@ -63,6 +65,8 @@ class ProviderWrapper:
         if sys.platform == "win32":
             creation_flags = subprocess.CREATE_NEW_PROCESS_GROUP
 
+        use_shell = sys.platform == "win32" and self.cmd and str(self.cmd[0]).lower().endswith((".cmd", ".bat"))
+
         try:
             self._proc = subprocess.Popen(
                 self.cmd,
@@ -75,6 +79,8 @@ class ProviderWrapper:
                 cwd=self.cwd,
                 creationflags=creation_flags,
                 start_new_session=True,  # Own process group so killpg doesn't kill the runner
+                shell=use_shell,
+                env={**os.environ, **self.env},
             )
         except Exception as e:
             return False, f"Failed to start provider: {e}", time.time() - start
