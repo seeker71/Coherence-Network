@@ -46,5 +46,8 @@
   "bugs": {
     "url": "https://github.com/seeker71/Coherence-Network/issues"
   },
-  "author": "Coherence Network Contributors"
+  "author": "Coherence Network Contributors",
+  "publishConfig": {
+    "access": "public"
+  }
 }
