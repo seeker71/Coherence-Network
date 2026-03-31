@@ -34,6 +34,7 @@ from app.models.idea import (
     SlugUpdateResponse,
     StageSetRequest,
 )
+from app.models.translation import IdeaTranslationResponse
 from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service, translate_service
 from app.services import lens_translation_service
 from app.services.translate_service import TranslateLens
