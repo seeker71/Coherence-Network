@@ -7,7 +7,7 @@ import { InvestBalanceSection } from "./InvestBalanceSection";
 
 export const metadata: Metadata = {
   title: "Invest",
-  description: "Direct compute toward ideas you believe in.",
+  description: "Nurture ideas you believe in. Your attention becomes someone's working code.",
 };
 
 export const revalidate = 90;
@@ -30,11 +30,42 @@ type IdeaPortfolioResponse = {
   ideas: IdeaWithScore[];
 };
 
-function stageIcon(status: string): string {
+/** Map manifestation_status to a garden growth stage label and emoji */
+function growthStage(status: string): { label: string; emoji: string; stage: number } {
   const s = status.trim().toLowerCase();
-  if (s === "validated") return "\u2705";
-  if (s === "partial") return "\uD83D\uDD28";
-  return "\uD83D\uDCCB";
+  if (s === "validated") return { label: "Blooming", emoji: "🌸", stage: 4 };
+  if (s === "partial") return { label: "Sprouting", emoji: "🌱", stage: 2 };
+  if (s === "in_progress" || s === "inprogress") return { label: "Growing", emoji: "🌿", stage: 3 };
+  return { label: "Seed", emoji: "🫘", stage: 1 };
+}
+
+/** Sprout-to-tree visual: 5 stages rendered as inline SVG plant icons */
+function GrowthBar({ roi }: { roi: number }) {
+  // Map roi (0–20+) to a 1–5 growth stage
+  const stage = Math.min(5, Math.max(1, Math.ceil((roi / 20) * 5)));
+  const stages = [
+    { label: "🫘", title: "Seed" },
+    { label: "🌱", title: "Sprout" },
+    { label: "🌿", title: "Sapling" },
+    { label: "🌳", title: "Tree" },
+    { label: "🌲", title: "Forest" },
+  ];
+
+  return (
+    <div className="flex items-center gap-1" title={`Growth stage ${stage}/5`} aria-label={`Growth potential: stage ${stage} of 5`}>
+      {stages.map((s, i) => (
+        <span
+          key={s.title}
+          className={`text-base leading-none transition-all duration-300 ${
+            i < stage ? "opacity-100 scale-100" : "opacity-20 scale-90"
+          }`}
+          title={s.title}
+        >
+          {s.label}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 async function loadIdeas(): Promise<IdeaWithScore[]> {
@@ -54,15 +85,20 @@ function computeRoi(idea: IdeaWithScore): number {
   return idea.value_gap / cost;
 }
 
-function roiBarWidth(roi: number): number {
-  // Cap the visual at 20x for display purposes
-  return Math.min((roi / 20) * 100, 100);
+/** How many compute tasks a nurture action spawns */
+function nurtureDescription(cost: number): string {
+  if (cost <= 0) return "Nurturing this idea triggers compute tasks";
+  const tasks = Math.max(1, Math.round(10 / Math.max(cost, 0.01)));
+  return `10 CC of care → ~${tasks} spec task${tasks > 1 ? "s" : ""} sprouted`;
 }
 
-function stakeDescription(cost: number): string {
-  if (cost <= 0) return "Stake triggers compute tasks";
-  const tasks = Math.max(1, Math.round(10 / Math.max(cost, 0.01)));
-  return `10 CC = ~${tasks} spec task${tasks > 1 ? "s" : ""} created`;
+/** Secondary numeric details hidden behind a softer label */
+function growthPotentialLabel(valueGap: number): string {
+  if (valueGap <= 0) return "Untapped";
+  if (valueGap < 500) return "Budding";
+  if (valueGap < 2000) return "Promising";
+  if (valueGap < 5000) return "Abundant";
+  return "Exceptional";
 }
 
 export default async function InvestPage() {
@@ -74,11 +110,11 @@ export default async function InvestPage() {
     <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <header>
         <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Invest
+          Garden of Ideas
         </h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          When you invest in an idea, real compute runs against it. Your attention
-          becomes someone else&apos;s working code.
+          Every idea you nurture grows into real code. Your attention is water —
+          direct it toward the seeds you believe in most.
         </p>
       </header>
 
@@ -86,8 +122,9 @@ export default async function InvestPage() {
 
       {sorted.length === 0 ? (
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
+          <p className="text-4xl">🌱</p>
           <p className="text-lg text-muted-foreground">
-            No ideas yet. Be the first to share one.
+            The garden is empty. Plant the first seed.
           </p>
           <Link
             href="/"
@@ -100,11 +137,15 @@ export default async function InvestPage() {
         <div className="space-y-3">
           {sorted.map((idea) => {
             const roi = computeRoi(idea);
+            const { label: stageLabel, emoji: stageEmoji } = growthStage(idea.manifestation_status);
+            const potentialLabel = growthPotentialLabel(idea.value_gap);
+
             return (
               <div
                 key={idea.id}
                 className="hover-lift rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-3"
               >
+                {/* Header row */}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <Link
@@ -115,7 +156,7 @@ export default async function InvestPage() {
                     </Link>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs rounded-full border border-border/40 px-2.5 py-0.5 bg-muted/30 text-muted-foreground">
-                        {stageIcon(idea.manifestation_status)} {humanizeManifestationStatus(idea.manifestation_status)}
+                        {stageEmoji} {stageLabel}
                       </span>
                     </div>
                   </div>
@@ -123,35 +164,42 @@ export default async function InvestPage() {
                     href={`/ideas/${encodeURIComponent(idea.id)}`}
                     className="shrink-0 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
                   >
-                    Stake
+                    Nurture
                   </Link>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground/80">Value gap</p>
-                    <p className="font-medium">{formatUsd(idea.value_gap)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground/80">Est. cost</p>
-                    <p className="text-muted-foreground">{formatUsd(idea.estimated_cost)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground/80">ROI</p>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden max-w-[80px]">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-primary/40 to-primary/80"
-                          style={{ width: `${roiBarWidth(roi)}%` }}
-                        />
-                      </div>
-                      <span className="font-medium text-primary">{roi.toFixed(1)}x</span>
-                    </div>
-                  </div>
+                {/* Growth visualization */}
+                <div className="space-y-1">
+                  <GrowthBar roi={roi} />
+                  <p className="text-xs text-muted-foreground/70">
+                    Growth potential: <span className="font-medium text-foreground/80">{potentialLabel}</span>
+                  </p>
                 </div>
 
+                {/* Secondary numeric details — accessible but quieter */}
+                <details className="group">
+                  <summary className="cursor-pointer text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors list-none flex items-center gap-1 select-none">
+                    <span className="group-open:rotate-90 inline-block transition-transform">›</span>
+                    Show metrics
+                  </summary>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground/80">Growth potential</p>
+                      <p className="font-medium">{formatUsd(idea.value_gap)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground/80">Nutrients needed</p>
+                      <p className="text-muted-foreground">{formatUsd(idea.estimated_cost)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground/80">Bloom rate</p>
+                      <p className="font-medium text-primary">{roi.toFixed(1)}x</p>
+                    </div>
+                  </div>
+                </details>
+
                 <p className="text-xs text-muted-foreground/80">
-                  {stakeDescription(idea.estimated_cost)}
+                  {nurtureDescription(idea.estimated_cost)}
                 </p>
               </div>
             );
