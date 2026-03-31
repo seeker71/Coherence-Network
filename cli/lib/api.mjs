@@ -7,6 +7,11 @@ import { getHubUrl, getApiKey } from "./config.mjs";
 
 const TIMEOUT_MS = 12_000;
 
+/** Normalized API origin (no trailing slash). Used by SSE watchers and `cc rest`. */
+export function getApiBase() {
+  return getHubUrl().replace(/\/$/, "");
+}
+
 function authHeaders(extra = {}) {
   const key = getApiKey();
   const headers = { ...extra };
@@ -99,5 +104,49 @@ export async function del(path) {
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Low-level HTTP for `cc rest` — any method, optional JSON body and extra headers.
+ * @returns {{ ok: boolean, status: number, path: string, text: string, json: any | null }}
+ */
+export async function request(method, path, options = {}) {
+  const m = String(method || "GET").toUpperCase();
+  const { params, body, headers: extraHeaders } = options;
+  const url = buildUrl(path, params);
+  const headers = authHeaders({ ...(extraHeaders || {}) });
+  if (body !== undefined && body !== null && m !== "GET" && m !== "HEAD") {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
+  const init = {
+    method: m,
+    headers,
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+  };
+  if (body !== undefined && body !== null && m !== "GET" && m !== "HEAD") {
+    init.body = typeof body === "string" ? body : JSON.stringify(body);
+  }
+  try {
+    const res = await fetch(url, init);
+    const text = await res.text();
+    let json = null;
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("application/json") && text.length) {
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = null;
+      }
+    }
+    return { ok: res.ok, status: res.status, path, text, json };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      path: url,
+      text: err?.message || String(err),
+      json: null,
+    };
   }
 }

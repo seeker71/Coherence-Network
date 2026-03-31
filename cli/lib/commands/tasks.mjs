@@ -256,6 +256,30 @@ export async function seedTask(args) {
   }
 }
 
+export async function showTaskCount() {
+  const data = await get("/api/agent/tasks/count");
+  if (!data) {
+    console.log("Could not fetch /api/agent/tasks/count.");
+    return;
+  }
+  console.log(JSON.stringify(data, null, 2));
+}
+
+export async function showTaskEvents(args) {
+  const id = args[0];
+  if (!id) {
+    console.log("Usage: cc task events <task_id>");
+    console.log("  Fetches stored event list from GET /api/agent/tasks/<id>/stream (not the SSE /events endpoint).");
+    return;
+  }
+  const data = await get(`/api/agent/tasks/${encodeURIComponent(id)}/stream`);
+  if (!data) {
+    console.log(`No stream data or task not found: ${id}`);
+    return;
+  }
+  console.log(JSON.stringify(data, null, 2));
+}
+
 function timeSince(iso) {
   const ms = Date.now() - new Date(iso).getTime();
   const min = Math.floor(ms / 60000);

@@ -194,6 +194,8 @@ async function handleTask(args) {
     case "report":  return reportTask(args.slice(1));
     case "seed":    return seedTask(args.slice(1));
     case "watch":   return watchTask(args.slice(1));
+    case "count":   return showTaskCount();
+    case "events":  return showTaskEvents(args.slice(1));
     default:        return showTask(args);
   }
 }
@@ -482,6 +484,22 @@ function showHelp() {
   task claim <id>         Claim a specific task
   task report <id> <completed|failed> [output]  Report result
   task seed <idea> [type] Create task from idea (spec|test|impl|review)
+  task count              JSON task counts (/api/agent/tasks/count)
+  task events <id> [N]    Paginated activity events for a task
+
+\x1b[1mUniversal API (full coverage):\x1b[0m
+  rest coverage           Canonical route count + proof JSON
+  rest GET /api/...       Raw authenticated GET (any path)
+  rest POST /api/... --body '{"k":"v"}'   Raw POST/PATCH/PUT/DELETE
+  rest ... -q limit=10 -H "X-Custom: 1"   Query + extra headers
+
+\x1b[1mAgent pipeline:\x1b[0m
+  agent                   Status report (default)
+  agent route [type]      Routing hint for task_type (default impl)
+  agent execute <id>      POST execute (set AGENT_EXECUTE_TOKEN)
+  agent pickup [task_id]  Pickup-and-execute pending task
+  agent smart-reap        Preview; agent smart-reap run
+  agent metrics|issues|effectiveness|...  (see agent.mjs)
 
 \x1b[1mAssets:\x1b[0m
   assets [limit]          List assets

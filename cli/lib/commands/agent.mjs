@@ -21,7 +21,7 @@
  *   cc agent execute <task_id>        — execute a task (agent use)
  */
 
-import { get, post, patch } from "../api.mjs";
+import { get, post, patch, request } from "../api.mjs";
 
 function truncate(str, len) {
   if (!str) return "";
@@ -559,6 +559,68 @@ export async function showRunState(args) {
   console.log();
 }
 
+export async function showAgentRoute(args) {
+  const taskType = args[0] || "impl";
+  const data = await get("/api/agent/route", { task_type: taskType });
+  if (!data) {
+    console.log("Could not fetch /api/agent/route (check task_type and API availability).");
+    return;
+  }
+  console.log(JSON.stringify(data, null, 2));
+}
+
+export async function executeAgentTask(args) {
+  const taskId = args[0];
+  if (!taskId) {
+    console.log("Usage: cc agent execute <task_id>");
+    console.log("  Requires AGENT_EXECUTE_TOKEN in env for server-side execute.");
+    return;
+  }
+  const token = (process.env.AGENT_EXECUTE_TOKEN || "").trim();
+  const headers = {};
+  if (token) headers["X-Agent-Execute-Token"] = token;
+  const res = await request("POST", `/api/agent/tasks/${encodeURIComponent(taskId)}/execute`, {
+    headers,
+    body: {},
+  });
+  if (res.json != null) console.log(JSON.stringify(res.json, null, 2));
+  else console.log(res.text || "");
+  if (!res.ok) process.exitCode = 1;
+}
+
+export async function pickupExecute(args) {
+  const token = (process.env.AGENT_EXECUTE_TOKEN || "").trim();
+  const headers = {};
+  if (token) headers["X-Agent-Execute-Token"] = token;
+  const q = {};
+  if (args[0] && args[0].startsWith("task_")) q.task_id = args[0];
+  const res = await request("POST", "/api/agent/tasks/pickup-and-execute", {
+    headers,
+    body: {},
+    params: Object.keys(q).length ? q : undefined,
+  });
+  if (res.json != null) console.log(JSON.stringify(res.json, null, 2));
+  else console.log(res.text || "");
+  if (!res.ok) process.exitCode = 1;
+}
+
+export async function smartReapAgent(args) {
+  const sub = args[0] || "preview";
+  if (sub === "run") {
+    const res = await request("POST", "/api/agent/smart-reap/run", { body: {} });
+    if (res.json != null) console.log(JSON.stringify(res.json, null, 2));
+    else console.log(res.text || "");
+    if (!res.ok) process.exitCode = 1;
+    return;
+  }
+  const data = await get("/api/agent/smart-reap/preview");
+  if (!data) {
+    console.log("Could not fetch smart-reap preview.");
+    return;
+  }
+  console.log(JSON.stringify(data, null, 2));
+}
+
 export function handleAgent(args) {
   const sub = args[0];
   const rest = args.slice(1);
@@ -582,6 +644,10 @@ export function handleAgent(args) {
     case "reap-history":  return showReapHistory(rest);
     case "attention":     return showAttentionTasks();
     case "run-state":     return showRunState(rest);
+    case "route":         return showAgentRoute(rest);
+    case "execute":       return executeAgentTask(rest);
+    case "pickup":        return pickupExecute(rest);
+    case "smart-reap":    return smartReapAgent(rest);
     default:
       return showAgentStatusReport();
   }
