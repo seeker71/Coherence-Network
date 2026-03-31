@@ -7,8 +7,8 @@
   "homepage": "https://coherencycoin.com",
   "license": "MIT",
   "authors": ["coherence-network"],
-  "categories": ["collaboration", "project-management", "open-source"],
-  "tags": ["ideas", "collaboration", "investment", "federation", "coherence", "open-source", "value-attribution"],
+  "categories": ["collaboration", "project-management", "open-source", "knowledge-graph"],
+  "tags": ["ideas", "collaboration", "investment", "federation", "coherence", "open-source", "value-attribution", "ontology", "living-codex"],
   "packages": [
     {
       "registry": "npm",
