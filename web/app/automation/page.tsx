@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AutomationGarden } from "@/components/automation/automation_garden";
 import { getApiBase } from "@/lib/api";
 import { GardenMap } from "@/components/automation/garden-map";
 import type {
@@ -167,6 +168,7 @@ export default async function AutomationPage() {
     await loadAutomationData();
 
   const providers = [...usage.providers].sort((a, b) => a.provider.localeCompare(b.provider));
+  const apiBase = getApiBase();
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-6">
