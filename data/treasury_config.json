@@ -1,0 +1,21 @@
+{
+  "btc_wallet_address": "",
+  "eth_wallet_address": "",
+  "multisig_signers": ["signer-a", "signer-b", "signer-c"],
+  "multisig_threshold_low": 2,
+  "multisig_threshold_high": 3,
+  "high_value_threshold_btc": 1.0,
+  "high_value_threshold_eth": 10.0,
+  "min_deposit_btc": 0.0001,
+  "min_deposit_eth": 0.001,
+  "max_deposit_btc": 10.0,
+  "max_deposit_eth": 100.0,
+  "btc_confirmations": 6,
+  "eth_confirmations": 12,
+  "spread_pct": 1.0,
+  "withdrawal_fee_pct": 0.5,
+  "min_reserve_ratio": 1.0,
+  "price_oracle_url": "https://api.coingecko.com/api/v3",
+  "price_cache_ttl_seconds": 300,
+  "deposit_expiry_minutes": 60
+}

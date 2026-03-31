@@ -28,6 +28,7 @@ class ChangeRequestType(str, Enum):
     SPEC_CREATE = "spec_create"
     SPEC_UPDATE = "spec_update"
     FEDERATION_IMPORT = "federation_import"
+    TREASURY_WITHDRAWAL = "treasury_withdrawal"
 
 
 class ChangeRequestStatus(str, Enum):
