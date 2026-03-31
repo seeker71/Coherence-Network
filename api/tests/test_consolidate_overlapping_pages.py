@@ -128,7 +128,9 @@ async def test_api_pipeline_and_tasks_contract() -> None:
     assert pipeline.status_code == 200
     assert isinstance(pipeline.json(), dict)
     assert tasks.status_code == 200
-    assert isinstance(tasks.json(), list)
+    tasks_data = tasks.json()
+    assert isinstance(tasks_data, dict)
+    assert isinstance(tasks_data.get("tasks", []), list)
     assert missing.status_code == 404
 
 
