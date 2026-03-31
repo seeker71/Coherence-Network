@@ -27,7 +27,6 @@ from app.routers import (
     contributions,
     contributor_identity,
     contributors,
-    data_retention,
     distributions,
     federation,
     friction,
@@ -53,14 +52,11 @@ from app.routers import (
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
-from app.routers import resonance as resonance_router
 from app.routers import dif_feedback
 from app.routers import geolocation
 from app.routers import edges as edges_router
 from app.routers import graph
 from app.routers import graph_health
-from app.routers import graph_zoom as graph_zoom_router
-from app.routers import graph_questions as graph_questions_router
 from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
 from app.routers import onboarding as onboarding_router
@@ -98,17 +94,6 @@ async def lifespan(app: FastAPI):
             _startup_logger.info("DB tables ensured via unified_models.Base")
     except Exception:
         _startup_logger.warning("DB table creation skipped", exc_info=True)
-
-    # -- Seed pillar nodes (Spec 182) — idempotent --
-    try:
-        from api.seed.pillar_seed import seed_pillars
-        seed_pillars()
-    except Exception:
-        try:
-            from seed.pillar_seed import seed_pillars as _sp
-            _sp()
-        except Exception:
-            _startup_logger.warning("pillar_seed skipped", exc_info=True)
 
     # -- Prime hot caches (migrated from @app.on_event('startup')) --
     try:
@@ -495,14 +480,19 @@ app.add_middleware(RequestDurationMiddleware, threshold_seconds=1.0)
 app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
 
 # Initialize graph store based on environment
-database_url = os.getenv("DATABASE_URL")
-if database_url:
-    # Production: Use PostgreSQL
-    app.state.graph_store = PostgresGraphStore(database_url)
-else:
-    # Development/Testing: Use in-memory store with optional JSON persistence
+if os.getenv("COHERENCE_ENV") == "test":
+    # Use in-memory store for testing
     persist_path = os.getenv("GRAPH_STORE_PATH")
     app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
+else:
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        # Production: Use PostgreSQL
+        app.state.graph_store = PostgresGraphStore(database_url)
+    else:
+        # Development/Testing: Use in-memory store with optional JSON persistence
+        persist_path = os.getenv("GRAPH_STORE_PATH")
+        app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
 
 # Operational endpoints
 @app.get("/", include_in_schema=False)
@@ -581,7 +571,6 @@ app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(value_lineage.router, prefix="/api", tags=["value-lineage"])
 app.include_router(runtime.router, prefix="/api", tags=["runtime"])
-app.include_router(data_retention.router, prefix="/api", tags=["data-retention"])
 app.include_router(inventory.router, prefix="/api", tags=["inventory"])
 app.include_router(marketplace.router, prefix="/api", tags=["marketplace"])
 app.include_router(registry_discovery.router, prefix="/api", tags=["discovery"])
@@ -601,8 +590,6 @@ app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
 app.include_router(graph_health.router, prefix="/api", tags=["graph-health"])
-app.include_router(graph_zoom_router.router, prefix="/api", tags=["graph"])
-app.include_router(graph_questions_router.router, prefix="/api", tags=["graph"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
