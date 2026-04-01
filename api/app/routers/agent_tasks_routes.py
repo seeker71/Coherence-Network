@@ -1,7 +1,6 @@
 """Agent task CRUD and list routes."""
 
 import logging
-import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -25,11 +24,9 @@ from app.routers.agent_helpers import (
     task_to_item,
     task_status_value,
     task_update_has_fields,
-    truthy,
 )
 from app.routers.agent_telegram import format_task_alert, is_runner_task_update
 from app.services import agent_service
-from app.services.agent_routing.model_routing_loader import get_auto_execute_default_model
 
 logger = logging.getLogger(__name__)
 

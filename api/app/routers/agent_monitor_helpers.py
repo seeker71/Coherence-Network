@@ -8,6 +8,7 @@ from typing import Any
 
 from app.routers.agent_helpers import issue_priority_map
 from app.services import agent_service
+from app.services.config_service import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -17,38 +18,52 @@ def agent_logs_dir() -> str:
     return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
 
 
+def _get_config_int(key: str, default: int) -> int:
+    """Get integer config value with fallback chain."""
+    config = get_config()
+    value = config.get(key)
+    if value is not None:
+        try:
+            return max(60, int(value))
+        except (TypeError, ValueError):
+            pass
+    return default
+
+
 def orphan_threshold_seconds() -> int:
-    try:
-        return max(
-            60,
-            int(
-                os.environ.get(
-                    "PIPELINE_ORPHAN_RUNNING_SECONDS",
-                    os.environ.get("PIPELINE_STALE_RUNNING_SECONDS", "1800"),
-                )
-            ),
-        )
-    except (TypeError, ValueError):
-        return 1800
+    """Get orphan threshold seconds from config."""
+    config = get_config()
+    threshold = config.get("pipeline_orphan_running_seconds")
+    if threshold is not None:
+        try:
+            return max(60, int(threshold))
+        except (TypeError, ValueError):
+            pass
+    return 1800
 
 
 def monitor_max_age_seconds() -> int:
-    raw = os.environ.get(
-        "MONITOR_ISSUES_MAX_AGE_SECONDS",
-        os.environ.get("PIPELINE_MONITOR_MAX_AGE_SECONDS", "900"),
-    )
-    try:
-        return max(60, int(raw))
-    except (TypeError, ValueError):
-        return 900
+    """Get monitor max age seconds from config."""
+    config = get_config()
+    age = config.get("monitor_issues_max_age_seconds")
+    if age is not None:
+        try:
+            return max(60, int(age))
+        except (TypeError, ValueError):
+            pass
+    return 900
 
 
 def status_report_max_age_seconds() -> int:
-    raw = os.environ.get("PIPELINE_STATUS_REPORT_MAX_AGE_SECONDS", str(monitor_max_age_seconds()))
-    try:
-        return max(60, int(raw))
-    except (TypeError, ValueError):
-        return monitor_max_age_seconds()
+    """Get status report max age seconds from config."""
+    config = get_config()
+    age = config.get("pipeline_status_report_max_age_seconds")
+    if age is not None:
+        try:
+            return max(60, int(age))
+        except (TypeError, ValueError):
+            pass
+    return 900
 
 
 def parse_iso_datetime(value: Any) -> datetime | None:

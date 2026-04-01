@@ -1,7 +1,7 @@
 """Telegram adapter — outbound alerts and inbound webhook handling.
 
 Borrows from OpenClaw: bot token, allowed users, sendMessage.
-Config: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_IDS (comma-separated), TELEGRAM_ALLOWED_USER_IDS.
+Config: telegram.bot_token, telegram.chat_ids (comma-separated), telegram.allowed_user_ids.
 """
 
 import logging
@@ -14,6 +14,8 @@ from typing import Optional, Union
 
 import httpx
 
+from app.config_loader import get_int, get_list, get_str
+
 logger = logging.getLogger(__name__)
 
 TELEGRAM_API = "https://api.telegram.org"
@@ -23,20 +25,12 @@ _FAILED_STATUS_PATTERN = re.compile(r"(?im)^status:\s*`?failed`?\b")
 
 
 def _failed_alert_window_seconds() -> int:
-    raw = (os.environ.get("TELEGRAM_FAILED_ALERT_WINDOW_SECONDS") or "1800").strip()
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 1800
+    value = get_int("telegram", "failed_alert_window_seconds", 1800)
     return max(60, min(value, 86400))
 
 
 def _failed_alert_max_per_window() -> int:
-    raw = (os.environ.get("TELEGRAM_FAILED_ALERT_MAX_PER_WINDOW") or "1").strip()
-    try:
-        value = int(raw)
-    except ValueError:
-        value = 1
+    value = get_int("telegram", "failed_alert_max_per_window", 5)
     return max(0, min(value, 100))
 
 
@@ -62,15 +56,24 @@ def _should_suppress_failed_alert(message: str) -> bool:
 
 
 def _get_token() -> Optional[str]:
+    token = get_str("telegram", "bot_token")
+    if token:
+        return token
     return os.environ.get("TELEGRAM_BOT_TOKEN") or None
 
 
 def _get_chat_ids() -> list[str]:
+    chat_ids = get_list("telegram", "chat_ids")
+    if chat_ids:
+        return chat_ids
     raw = os.environ.get("TELEGRAM_CHAT_IDS", "")
     return [s.strip() for s in raw.split(",") if s.strip()]
 
 
 def _get_allowed_user_ids() -> set[str]:
+    user_ids = get_list("telegram", "allowed_user_ids")
+    if user_ids:
+        return {s.strip() for s in user_ids if s.strip()}
     raw = os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "")
     return {s.strip() for s in raw.split(",") if s.strip()}
 

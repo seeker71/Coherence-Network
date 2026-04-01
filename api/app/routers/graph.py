@@ -138,7 +138,7 @@ async def delete_node(node_id: str):
 @router.get("/graph/nodes/{node_id}/edges")
 async def get_edges(
     node_id: str,
-    direction: str = Query(default="both", regex="^(both|outgoing|incoming)$"),
+    direction: str = Query(default="both", pattern="^(both|outgoing|incoming)$"),
     type: str | None = None,
 ):
     """Get edges for a node."""
@@ -192,7 +192,7 @@ async def get_neighbors(
     rel_type: str | None = None,
     node_type: str | None = None,
     lifecycle_state: str | None = None,
-    direction: str = Query(default="both", regex="^(both|outgoing|incoming)$"),
+    direction: str = Query(default="both", pattern="^(both|outgoing|incoming)$"),
     depth: int = Query(default=1, ge=1, le=2),
 ):
     """Get neighboring nodes (1–2 hops).

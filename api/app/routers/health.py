@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.services import persistence_contract_service
 from app.services import unified_db
 from app.services import audit_ledger_service
+from app.services.config_service import get_config
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -69,10 +70,11 @@ def _uptime_human(seconds: int) -> str:
 
 
 def _deployed_sha() -> tuple[str | None, str | None]:
-    for env_key in _DEPLOY_SHA_ENV_KEYS:
-        value = str(os.getenv(env_key, "")).strip()
-        if value:
-            return value, env_key
+    """Get deployed SHA from config."""
+    config = get_config()
+    sha = config.get("deployed_sha")
+    if sha:
+        return str(sha), "config:deployed_sha"
     return None, None
 
 

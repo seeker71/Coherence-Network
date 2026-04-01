@@ -8,12 +8,13 @@ import os
 from fastapi import APIRouter, HTTPException, Query
 
 from app.services import release_gate_service as gates
+from app.services.config_service import get_config, get_github_token
 
 router = APIRouter()
 
 
 def _github_token() -> str | None:
-    return os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    return get_github_token()
 
 
 @router.get("/gates/pr-to-public")

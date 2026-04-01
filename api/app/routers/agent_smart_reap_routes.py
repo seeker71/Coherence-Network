@@ -20,21 +20,37 @@ from app.models.agent import TaskStatus
 from app.services import agent_service
 from app.services.agent_runner_registry_service import list_runners
 from app.services.smart_reaper_service import diagnose_batch
+from app.services.config_service import get_config
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Default log directory for per-task log files
-_DEFAULT_LOG_DIR = Path(os.getenv("AGENT_TASK_LOG_DIR", "data/task_logs"))
 
-# Default age threshold before a task is eligible for reaping
-_DEFAULT_MAX_AGE_MINUTES = int(os.getenv("SMART_REAP_MAX_AGE_MINUTES", "15"))
+def _get_log_dir_default() -> Path:
+    """Get default log directory from config."""
+    config = get_config()
+    log_dir = config.get("agent_task_log_dir")
+    if log_dir:
+        return Path(log_dir)
+    return Path("data/task_logs")
+
+
+def _get_max_age_minutes_default() -> int:
+    """Get default max age minutes from config."""
+    config = get_config()
+    max_age = config.get("smart_reap_max_age_minutes")
+    if max_age is not None:
+        try:
+            return int(max_age)
+        except (TypeError, ValueError):
+            pass
+    return 15
 
 
 def _get_log_dir() -> Path:
     """Return the task log directory, ensuring it exists."""
-    d = _DEFAULT_LOG_DIR
+    d = _get_log_dir_default()
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -111,10 +127,12 @@ def _apply_extend_result(task: dict[str, Any], diag: dict[str, Any]) -> dict[str
 
 
 def _run_smart_reap(
-    max_age_minutes: int = _DEFAULT_MAX_AGE_MINUTES,
+    max_age_minutes: int | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Core smart-reap logic shared by preview and run endpoints."""
+    if max_age_minutes is None:
+        max_age_minutes = _get_max_age_minutes_default()
     now = datetime.now(timezone.utc)
     stuck_tasks = _load_stuck_tasks(max_age_minutes)
 
@@ -194,7 +212,7 @@ def _run_smart_reap(
 
 @router.get("/smart-reap/preview")
 async def smart_reap_preview(
-    max_age_minutes: int = Query(_DEFAULT_MAX_AGE_MINUTES, ge=1, le=1440),
+    max_age_minutes: int | None = Query(None, ge=1, le=1440),
 ) -> dict:
     """Preview which stuck tasks would be reaped or extended — no state changes."""
     return _run_smart_reap(max_age_minutes=max_age_minutes, dry_run=True)
@@ -202,7 +220,7 @@ async def smart_reap_preview(
 
 @router.post("/smart-reap/run")
 async def smart_reap_run(
-    max_age_minutes: int = Query(_DEFAULT_MAX_AGE_MINUTES, ge=1, le=1440),
+    max_age_minutes: int | None = Query(None, ge=1, le=1440),
 ) -> dict:
     """Diagnose stuck running tasks and reap or extend them.
 

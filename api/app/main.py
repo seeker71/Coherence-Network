@@ -75,13 +75,15 @@ _startup_logger = logging.getLogger("coherence.api.slow")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # -- L1: CORS production warning --
-    _ao = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
-    _db = os.getenv("DATABASE_URL", "")
+    from app.services.config_service import get_cors_origins, get_database_url
+    _ao_list = get_cors_origins()
+    _ao = _ao_list[0] if _ao_list else "http://localhost:3000"
+    _db = get_database_url()
     if _ao == "http://localhost:3000" and "postgres" in _db:
         _startup_logger.warning(
             "CORS_DEFAULT_IN_PRODUCTION ALLOWED_ORIGINS is still 'http://localhost:3000' "
-            "but DATABASE_URL contains 'postgres', indicating a production database. "
-            "Set ALLOWED_ORIGINS to your production domain(s)."
+            "but database contains 'postgres', indicating a production database. "
+            "Set CORS origins in config to your production domain(s)."
         )
 
     # -- Ensure all DB tables exist (non-destructive) --

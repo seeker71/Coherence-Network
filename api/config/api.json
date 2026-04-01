@@ -15,6 +15,7 @@
     "commit_evidence": null,
     "runtime": null,
     "telemetry": null,
+    "runtime_events": null,
     "_doc2": "Set these only if a service needs its own database (e.g., separate PostgreSQL instance)."
   },
 
@@ -48,6 +49,7 @@
     "_doc": "File paths for local storage (dev mode). Production uses database.url.",
     "graph_store_path": null,
     "idea_portfolio_path": null,
+    "value_lineage_path": null,
     "_doc2": "null = use database. Set paths only for file-based dev mode."
   },
 
@@ -65,6 +67,7 @@
     "path": null,
     "db_reload_ttl_seconds": 1800,
     "output_max_chars": 50000,
+    "task_output_max_chars": 4000,
     "retry_max": 3,
     "runtime_fallback_mode": "disabled",
     "runtime_fallback_limit": 100,
@@ -92,6 +95,7 @@
     "max_cost_usd": 2.0,
     "estimated_cost_usd": 0.5,
     "cost_slack_ratio": 1.5,
+    "runtime_cost_per_second": 0.002,
     "external_input_cost_per_1k": 0.003,
     "external_output_cost_per_1k": 0.015,
     "allow_paid_providers": false,
@@ -107,6 +111,14 @@
     "subscribers": []
   },
 
+  "metrics": {
+    "_doc": "Metrics collection and aggregation settings.",
+    "file_path": null,
+    "use_db": null,
+    "purge_legacy_file": true,
+    "max_rows": 50000
+  },
+
   "agent_providers": {
     "_doc": "Provider-specific API config for the executor.",
     "codex_home": null,
@@ -115,6 +127,84 @@
     "retry_openai_model_override": null,
     "auto_retry_openai_override": false,
     "api_base_url": "https://api.coherencycoin.com",
-    "web_ui_base_url": "https://coherencycoin.com"
-  }
+    "web_ui_base_url": "https://coherencycoin.com",
+    "openrouter_chat_url": null,
+    "openrouter_http_referer": null,
+    "openrouter_x_title": null,
+    "openrouter_temperature": 0.2,
+    "openrouter_disable_stream": "1"
+  },
+
+  "pipeline": {
+    "_doc": "Pipeline monitoring and threshold settings.",
+    "orphan_running_seconds": 1800,
+    "stale_running_seconds": 1800,
+    "monitor_max_age_seconds": 900,
+    "status_report_max_age_seconds": 900
+  },
+
+  "agent_tasks": {
+    "_doc": "Agent task configuration (additional fields).",
+    "task_log_dir": "data/task_logs",
+    "smart_reap_max_age_minutes": 15
+  },
+
+  "inventory": {
+    "_doc": "Inventory service configuration.",
+    "cache_ttl_seconds": 30.0,
+    "timing_log_ms": 750.0,
+    "timing_enabled": false,
+    "project_root": null,
+    "tracking_repository": null,
+    "tracking_repository_ref": null
+  },
+
+  "ideas": {
+    "_doc": "Idea service configuration.",
+    "internal_idea_id_prefixes": null,
+    "internal_idea_id_exact": null,
+    "internal_idea_interface_tags": null,
+    "sync_enable_domain_discovery": null,
+    "sync_runtime_window_seconds": 86400,
+    "sync_runtime_event_limit": 2000,
+    "sync_contribution_limit": 3000
+  },
+
+  "runtime": {
+    "_doc": "Runtime events configuration.",
+    "events_path": null,
+    "idea_map_path": null,
+    "tool_success_streak_target": 3
+  },
+
+  "commit_evidence": {
+    "_doc": "Commit evidence configuration.",
+    "directory": null
+  },
+
+  "route_evidence": {
+    "_doc": "Route evidence configuration.",
+    "probe_directory": null
+  },
+
+  "github": {
+    "_doc": "GitHub integration settings.",
+    "token": null,
+    "api_token": null
+  },
+
+  "release_gates": {
+    "_doc": "Release gate configuration.",
+    "verification_jobs_path": null,
+    "verification_max_attempts": 8,
+    "verification_retry_seconds": 60,
+    "branch_head_sha_timeout_seconds": 6.0,
+    "branch_head_sha_cache_ttl_seconds": 45.0
+  },
+
+  "railway_logs_url": null,
+
+  "deployed_sha": null,
+
+  "github_token": null
 }

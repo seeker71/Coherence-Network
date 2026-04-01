@@ -85,8 +85,6 @@ def _int_env(name: str, default: int) -> int:
 
 
 def _executor_policy_enabled() -> bool:
-    if os.environ.get("AGENT_EXECUTOR_POLICY_ENABLED") is not None:
-        return os.environ.get("AGENT_EXECUTOR_POLICY_ENABLED", "").strip().lower() not in {"0", "false", "no", "off"}
     return _config_bool("executor", "policy_enabled", True)
 
 
@@ -95,15 +93,15 @@ def _normalize_executor(value: str | None, default: str = "claude") -> str:
 
 
 def _cheap_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_CHEAP_DEFAULT") or _config_str("executor", "cheap_default")
+    configured = _config_str("executor", "cheap_default")
     if configured:
         return _normalize_executor(configured, default="cursor")
-    fallback = os.environ.get("AGENT_EXECUTOR_DEFAULT") or _config_str("executor", "default") or "cursor"
+    fallback = _config_str("executor", "default") or "cursor"
     return _normalize_executor(fallback, default="cursor")
 
 
 def _escalation_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_ESCALATE_TO") or _config_str("executor", "escalate_to")
+    configured = _config_str("executor", "escalate_to")
     if configured:
         return _normalize_executor(configured, default="claude")
     cheap = _cheap_executor_default()
@@ -127,8 +125,6 @@ def _executor_available(executor: str) -> bool:
 
 
 def _allow_unavailable_explicit_executor() -> bool:
-    if os.environ.get("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT") is not None:
-        return os.environ.get("AGENT_EXECUTOR_ALLOW_UNAVAILABLE_EXPLICIT", "").strip().lower() not in {"0", "false", "no", "off"}
     return _config_bool("executor", "allow_unavailable_explicit", True)
 
 
@@ -141,8 +137,6 @@ def _truthy_flag(value: Any) -> bool:
 
 
 def _paid_providers_enabled() -> bool:
-    if os.environ.get("AGENT_ALLOW_PAID_PROVIDERS") is not None:
-        return _truthy_flag(os.environ.get("AGENT_ALLOW_PAID_PROVIDERS"))
     return _config_bool("executor", "allow_paid_providers", True)
 
 
@@ -208,17 +202,13 @@ def _first_available_executor(preferred: list[str]) -> str:
         candidate = _normalize_executor(executor, default="")
         if candidate and _executor_available(candidate):
             return candidate
-    configured_default = _normalize_executor(
-        os.environ.get("AGENT_EXECUTOR_DEFAULT") or _config_str("executor", "default"), default=""
-    )
+    configured_default = _normalize_executor(_config_str("executor", "default"), default="")
     if configured_default and _executor_available(configured_default):
         return configured_default
     for candidate in ("gemini", "cursor", "claude", "openrouter"):
         if _executor_available(candidate):
             return candidate
-    return _normalize_executor(
-        os.environ.get("AGENT_EXECUTOR_DEFAULT") or _config_str("executor", "default"), default="claude"
-    )
+    return _normalize_executor(_config_str("executor", "default"), default="claude")
 
 
 def _executor_fallback_candidates() -> list[str]:
@@ -489,14 +479,14 @@ def _is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
 
 
 def _repo_question_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_REPO_DEFAULT") or _config_str("executor", "repo_default")
+    configured = _config_str("executor", "repo_default")
     if configured:
         return _normalize_executor(configured, default="cursor")
     return "cursor"
 
 
 def _open_question_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT") or _config_str("executor", "open_question_default")
+    configured = _config_str("executor", "open_question_default")
     if configured:
         return _normalize_executor(configured, default="cursor")
     return "cursor"
@@ -521,7 +511,7 @@ def select_executor(
 
     if not _executor_policy_enabled():
         default_executor = _normalize_executor(
-            os.environ.get("AGENT_EXECUTOR_DEFAULT") or _config_str("executor", "default"), default="claude"
+            _config_str("executor", "default"), default="claude"
         )
         if _executor_available(default_executor):
             return default_executor, {"policy_applied": False, "reason": "policy_disabled"}

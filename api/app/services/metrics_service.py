@@ -3,13 +3,15 @@
 import json
 import logging
 import os
-from pathlib import Path
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, List
 
-logger = logging.getLogger(__name__)
-
+from app.config_loader import get_bool, get_int, get_str
 from app.services import telemetry_persistence_service
+from app.services.config_service import get_database_url
+
+logger = logging.getLogger(__name__)
 
 _api_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 METRICS_FILE = os.path.join(_api_dir, "logs", "metrics.jsonl")
@@ -21,32 +23,32 @@ def _default_metrics_file() -> str:
 
 
 def _metrics_file_path() -> Path:
-    configured = os.getenv("METRICS_FILE_PATH")
+    configured = get_str("metrics", "file_path")
     if configured:
         return Path(configured)
     return Path(_default_metrics_file())
 
 
 def _is_postgres_backend() -> bool:
-    url = str(os.getenv("DATABASE_URL") or os.getenv("TELEMETRY_DATABASE_URL") or "").strip().lower()
-    return "postgres" in url
+    url = get_database_url()
+    return "postgres" in url.lower()
 
 
 def _use_db_metrics() -> bool:
-    override = str(os.getenv("METRICS_USE_DB", "")).strip().lower()
-    if override in {"1", "true", "yes", "on"}:
-        return True
-    if override in {"0", "false", "no", "off"}:
-        return False
-    # Default: only use DB-backed metrics in PostgreSQL deployments.
+    override = get_str("metrics", "use_db")
+    if override:
+        override = override.strip().lower()
+        if override in {"1", "true", "yes", "on"}:
+            return True
+        if override in {"0", "false", "no", "off"}:
+            return False
     return _is_postgres_backend()
 
 
 def _purge_legacy_metrics_file_if_enabled(imported_from_file: bool) -> None:
     if not imported_from_file:
         return
-    raw = str(os.getenv("METRICS_PURGE_IMPORTED_FILE", "1")).strip().lower()
-    if raw in {"0", "false", "no", "off"}:
+    if not get_bool("metrics", "purge_legacy_file", True):
         return
     path = _metrics_file_path()
     if not path.exists():
@@ -105,7 +107,7 @@ def record_task(
 
     if _use_db_metrics():
         _bootstrap_db_metrics_if_needed()
-        max_rows = max(100, min(int(os.getenv("METRICS_MAX_ROWS", "50000")), 200000))
+        max_rows = get_int("metrics", "max_rows", 50000)
         telemetry_persistence_service.append_task_metric(record, max_rows=max_rows)
         return
 

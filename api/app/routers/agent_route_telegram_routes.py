@@ -9,8 +9,33 @@ from fastapi import APIRouter, Query
 from app.models.agent import RouteResponse, TaskType
 
 from app.services import agent_service
+from app.services.config_service import get_config
 
 router = APIRouter()
+
+
+def _get_telegram_config() -> dict:
+    """Get telegram configuration from config."""
+    config = get_config()
+    telegram = config.get("telegram", {})
+    
+    bot_token = telegram.get("bot_token") if isinstance(telegram, dict) else None
+    if not bot_token:
+        bot_token = config.get("telegram_bot_token")
+    
+    chat_ids = telegram.get("chat_ids") if isinstance(telegram, dict) else None
+    if chat_ids is None:
+        chat_ids = []
+    
+    allowed_user_ids = telegram.get("allowed_user_ids") if isinstance(telegram, dict) else None
+    if allowed_user_ids is None:
+        allowed_user_ids = []
+    
+    return {
+        "bot_token": bot_token,
+        "chat_ids": chat_ids,
+        "allowed_user_ids": allowed_user_ids,
+    }
 
 
 @router.get("/route", response_model=RouteResponse)
@@ -74,18 +99,15 @@ async def telegram_diagnostics() -> dict:
     send_success = sum(1 for item in send_results if isinstance(item, dict) and bool(item.get("ok")))
     send_failures = sum(1 for item in send_results if isinstance(item, dict) and not bool(item.get("ok")))
 
-    token = (
-        (os.environ.get("TELEGRAM_BOT_TOKEN") or "")[:8] + "..." if os.environ.get("TELEGRAM_BOT_TOKEN") else None
-    )
+    telegram_config = _get_telegram_config()
+    token = telegram_config["bot_token"]
+    token_prefix = (token[:8] + "...") if token else None
     return {
         "config": {
             "has_token": telegram_adapter.has_token(),
-            "token_prefix": token,
-            "chat_ids": os.environ.get("TELEGRAM_CHAT_IDS", "").split(",") if os.environ.get("TELEGRAM_CHAT_IDS") else [],
-            "allowed_user_ids": (
-                os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "").split(",")
-                if os.environ.get("TELEGRAM_ALLOWED_USER_IDS") else []
-            ),
+            "token_prefix": token_prefix,
+            "chat_ids": telegram_config["chat_ids"],
+            "allowed_user_ids": telegram_config["allowed_user_ids"],
         },
         "summary": {
             "webhook_event_count": len(webhook_events),
@@ -107,15 +129,16 @@ async def telegram_diagnostics() -> dict:
 async def telegram_test_send(
     text: Optional[str] = Query(None, description="Optional message text"),
 ) -> dict:
-    """Send a test message to TELEGRAM_CHAT_IDS. Returns raw Telegram API response for debugging."""
+    """Send a test message to configured chat IDs. Returns raw Telegram API response for debugging."""
     import httpx
     from app.services import telegram_diagnostics as diag
 
     message_text = text or "Test from diagnostics"
-    token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    chat_ids = [s.strip() for s in (os.environ.get("TELEGRAM_CHAT_IDS") or "").split(",") if s.strip()]
+    telegram_config = _get_telegram_config()
+    token = telegram_config["bot_token"]
+    chat_ids = telegram_config["chat_ids"]
     if not token or not chat_ids:
-        return {"ok": False, "error": "TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_IDS not set"}
+        return {"ok": False, "error": "telegram bot_token or chat_ids not configured"}
 
     results = []
     async with httpx.AsyncClient(timeout=10.0) as client:

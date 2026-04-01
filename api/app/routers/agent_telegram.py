@@ -11,6 +11,7 @@ from fastapi import APIRouter, Body
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 from app.services import agent_service
 from app.services import telegram_report_formatter
+from app.services.config_service import get_api_base, get_hub_url, get_config
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -29,23 +30,50 @@ _WEB_BASE_ENV_KEYS = (
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_WEB_URL",
 )
-_DEFAULT_WEB_BASE_URL = "https://coherence-web-production.up.railway.app"
-_API_BASE_ENV_KEYS = (
-    "AGENT_API_BASE_URL",
-    "API_BASE_URL",
-    "PUBLIC_API_URL",
-    "NEXT_PUBLIC_API_URL",
-    "RAILWAY_API_URL",
-    "API_URL",
-    "PUBLIC_APP_URL",
-    "NEXT_PUBLIC_APP_URL",
-)
-_DEFAULT_API_BASE_URL = "https://coherence-network-production.up.railway.app"
 _RAILWAY_LOGS_ENV_KEYS = (
     "AGENT_RAILWAY_LOGS_URL",
     "RAILWAY_LOGS_URL",
     "RAILWAY_DEPLOY_LOGS_URL",
 )
+
+
+def _get_web_base_url() -> str:
+    """Get web base URL from config only."""
+    config = get_config()
+    web_url = config.get("web_ui_base_url")
+    if web_url:
+        return web_url
+    
+    # Default: derive from API base URL
+    api_base = get_api_base()
+    if api_base:
+        return api_base.replace("api.", "")
+    
+    return "https://coherencycoin.com"
+
+
+def _get_api_base_url(context: dict[str, Any] | None = None) -> str:
+    """Get API base URL from config only."""
+    context = context or {}
+    
+    # Primary: config service
+    config = get_config()
+    api_url = config.get("api_base")
+    if api_url:
+        return api_url
+    
+    # Fallback: context keys
+    for context_key in ("api_base_url", "api_url", "public_api_url"):
+        context_value = context.get(context_key)
+        if context_value:
+            return context_value
+    
+    # Default: use config service
+    return get_api_base()
+
+
+_DEFAULT_WEB_BASE_URL = "https://coherencycoin.com"
+_DEFAULT_API_BASE_URL = "https://api.coherencycoin.com"
 
 def _escape_markdown(text: str) -> str:
     out = text or ""
@@ -191,30 +219,28 @@ def _idea_id_from_context(context: dict[str, Any]) -> str:
     return ""
 
 def _base_web_url(context: dict[str, Any]) -> str:
+    # Use config-based URL with context override support
+    base = _get_web_base_url()
+    # Allow context to override
     for context_key in ("web_ui_base_url", "web_base_url", "web_url"):
         context_value = _normalize_base_url(context.get(context_key))
         if context_value:
             return context_value
-    for env_key in _WEB_BASE_ENV_KEYS:
-        value = _normalize_base_url(os.getenv(env_key))
-        if value:
-            return value
-    return _DEFAULT_WEB_BASE_URL
+    return base
 
 def _tasks_web_url(context: dict[str, Any]) -> str:
     return f"{_base_web_url(context).rstrip('/')}/tasks"
 
 def _base_api_url(context: dict[str, Any] | None = None) -> str:
     context = context or {}
+    # Use config-based URL with context override support
+    base = _get_api_base_url(context)
+    # Allow context to override
     for context_key in ("api_base_url", "api_url", "public_api_url"):
         context_value = _normalize_base_url(context.get(context_key))
         if context_value:
             return context_value
-    for env_key in _API_BASE_ENV_KEYS:
-        value = _normalize_base_url(os.getenv(env_key))
-        if value:
-            return value
-    return _DEFAULT_API_BASE_URL
+    return base
 
 def _join_url(base: str, path: str) -> str:
     return f"{(base or '').rstrip('/')}{path}"
@@ -249,18 +275,15 @@ def _load_status_report() -> dict[str, Any]:
     return {}
 
 def _orphan_threshold_seconds() -> int:
-    try:
-        return max(
-            60,
-            int(
-                os.environ.get(
-                    "PIPELINE_ORPHAN_RUNNING_SECONDS",
-                    os.environ.get("PIPELINE_STALE_RUNNING_SECONDS", "1800"),
-                )
-            ),
-        )
-    except (TypeError, ValueError):
-        return 1800
+    """Get orphan threshold seconds from config."""
+    config = get_config()
+    threshold = config.get("pipeline_orphan_running_seconds")
+    if threshold is not None:
+        try:
+            return max(60, int(threshold))
+        except (TypeError, ValueError):
+            pass
+    return 1800
 
 def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
     task_path = f"/tasks?task_id={quote(task_id, safe='')}"
@@ -275,18 +298,23 @@ def _task_log_url(task_id: str, context: dict[str, Any]) -> str:
     return f"{_base_api_url(context).rstrip('/')}/api/agent/tasks/{quote(task_id, safe='')}/log"
 
 def _railway_logs_url(task_id: str, context: dict[str, Any]) -> str:
+    """Get railway logs URL from config."""
+    config = get_config()
+    railway_url = config.get("railway_logs_url")
+    if railway_url:
+        if "{task_id}" in railway_url:
+            return railway_url.replace("{task_id}", quote(task_id, safe=""))
+        return railway_url
+    
+    # Fallback: context keys
     for context_key in ("railway_logs_url", "railway_log_url"):
         context_value = str(context.get(context_key) or "").strip()
         if context_value:
             if "{task_id}" in context_value:
                 return context_value.replace("{task_id}", quote(task_id, safe=""))
             return context_value
-    for env_key in _RAILWAY_LOGS_ENV_KEYS:
-        env_value = str(os.getenv(env_key) or "").strip()
-        if env_value:
-            if "{task_id}" in env_value:
-                return env_value.replace("{task_id}", quote(task_id, safe=""))
-            return env_value
+    
+    # Default: use task log URL
     return _task_log_url(task_id, context)
 
 def is_runner_task_update(worker_id: str | None = None, context_patch: dict[str, Any] | None = None) -> bool:

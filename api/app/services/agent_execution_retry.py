@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from typing import Any, Callable
 
+from app.config_loader import get_bool, get_str
 from app.services import failure_taxonomy_service
 from app.services.agent_routing.model_routing_loader import get_fallback_model, get_model_for_executor
 
@@ -175,7 +175,7 @@ def _truthy(value: Any) -> bool:
 
 
 def _codex_executor_disabled() -> bool:
-    return _truthy(os.environ.get("AGENT_DISABLE_CODEX_EXECUTOR", "1"))
+    return get_bool("agent_executor", "disable_codex_executor", True)
 
 
 def _is_paid_provider_retry_candidate(*, failure_output: str, result_error: str) -> bool:
@@ -191,7 +191,7 @@ def _is_paid_provider_retry_candidate(*, failure_output: str, result_error: str)
 def _auto_retry_openai_override_enabled(context: dict[str, Any]) -> bool:
     if "auto_retry_openai_override" in context:
         return _truthy(context.get("auto_retry_openai_override"))
-    return _truthy(os.environ.get("AGENT_AUTO_RETRY_OPENAI_OVERRIDE", "0"))
+    return get_bool("agent_providers", "auto_retry_openai_override", False)
 
 
 def _resolve_retry_model_override(context: dict[str, Any]) -> str:
@@ -199,9 +199,9 @@ def _resolve_retry_model_override(context: dict[str, Any]) -> str:
         value = str(context.get(key) or "").strip()
         if value:
             return value
-    env_override = str(os.environ.get("AGENT_RETRY_OPENAI_MODEL_OVERRIDE", "")).strip()
-    if env_override:
-        return env_override
+    config_override = get_str("agent_providers", "retry_openai_model_override")
+    if config_override:
+        return config_override
     context_model_override = str(context.get("model_override") or "").strip()
     if context_model_override:
         return context_model_override

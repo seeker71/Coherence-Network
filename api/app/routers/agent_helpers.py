@@ -9,6 +9,7 @@ from fastapi import HTTPException, Request
 
 from app.models.agent import AgentTaskUpdate, TaskStatus
 from app.services import agent_service
+from app.services.config_service import get_config
 
 _ISSUE_PRIORITY = {"high": 0, "medium": 1, "low": 2}
 
@@ -28,6 +29,24 @@ def truthy(value: str | bool | None) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on", "y"}
 
 
+def _get_execute_token() -> str:
+    """Get execute token from config."""
+    config = get_config()
+    token = config.get("agent_execute_token")
+    if token:
+        return str(token).strip()
+    return ""
+
+
+def _is_execute_token_allow_unauth() -> bool:
+    """Get whether execute token allows unauth from config."""
+    config = get_config()
+    allow = config.get("agent_execute_token_allow_unauth")
+    if allow is not None:
+        return truthy(allow)
+    return False
+
+
 def require_execute_token(
     route_name: str,
     x_agent_execute_token: str | None,
@@ -36,22 +55,22 @@ def require_execute_token(
 ) -> None:
     import logging
     logger = logging.getLogger(__name__)
-    expected = os.environ.get("AGENT_EXECUTE_TOKEN", "").strip()
+    expected = _get_execute_token()
     if expected:
         if (x_agent_execute_token or "").strip() != expected:
             raise HTTPException(status_code=403, detail="Forbidden")
         return
     if require_when_token_not_configured:
         logger.warning(
-            "%s called without AGENT_EXECUTE_TOKEN configured; denying execution request",
+            "%s called without agent_execute_token configured; denying execution request",
             route_name,
         )
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
 def require_execute_token_when_unset() -> bool:
-    """Whether execute endpoints should require a token when AGENT_EXECUTE_TOKEN is unset."""
-    return not truthy(os.environ.get("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", ""))
+    """Whether execute endpoints should require a token when agent_execute_token is unset."""
+    return not _is_execute_token_allow_unauth()
 
 
 def coerce_force_paid_override(request: Request) -> bool:
