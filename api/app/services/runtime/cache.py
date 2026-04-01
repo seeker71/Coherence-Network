@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import hashlib
 import logging
@@ -12,6 +11,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any, Callable
 
+from app.config_loader import get_int
 from app.services import runtime_event_store, telemetry_persistence_service
 
 from app.services.runtime import paths as runtime_paths
@@ -24,7 +24,7 @@ RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS = 120.0
 RUNTIME_ENDPOINT_CACHE_MAX_STALE_SECONDS = 7 * 24 * 60 * 60
 RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
 RUNTIME_ENDPOINT_CACHE_REFRESH_POOL = ThreadPoolExecutor(
-    max_workers=max(2, min(int(os.getenv("RUNTIME_ENDPOINT_CACHE_MAX_WORKERS", "4")), 8)),
+    max_workers=max(2, min(get_int("runtime", "endpoint_cache_max_workers", default=4), 8)),
     thread_name_prefix="runtime-endpoint-cache-refresh",
 )
 RUNTIME_ENDPOINT_CACHE_BUSTER = 0
