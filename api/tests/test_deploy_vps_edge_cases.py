@@ -7,21 +7,86 @@ specs/156-deploy-latest-to-vps.md.
 
 from __future__ import annotations
 
+import re
+from typing import Any
+
 import pytest
 
-from tests.test_deploy_latest_to_vps import (
-    COMPOSE_PATH,
-    PUBLIC_API_BASE,
-    PUBLIC_WEB_BASE,
-    REPO_PATH,
-    SSH_KEY_FRAGMENT,
-    SSH_USER_HOST,
-    VPS_HOST,
-    assert_health_contract,
-    assert_services_payload_ok,
-    compose_ps_indicates_api_web_running,
-    deploy_ssh_commands,
-)
+# --- Spec constants (specs/156-deploy-latest-to-vps.md task card + CLAUDE.md) ---
+VPS_HOST = "187.77.152.42"
+SSH_USER_HOST = f"root@{VPS_HOST}"
+SSH_KEY_FRAGMENT = "~/.ssh/hostinger-openclaw"
+REPO_PATH = "/docker/coherence-network/repo"
+COMPOSE_PATH = "/docker/coherence-network"
+PUBLIC_API_BASE = "https://api.coherencycoin.com"
+PUBLIC_WEB_BASE = "https://coherencycoin.com"
+
+
+def deploy_ssh_commands() -> list[str]:
+    """Exact deploy sequence from the spec task card (verification contract)."""
+    return [
+        f"ssh -i {SSH_KEY_FRAGMENT} {SSH_USER_HOST} "
+        f"'cd {REPO_PATH} && git pull origin main'",
+        f"ssh -i {SSH_KEY_FRAGMENT} {SSH_USER_HOST} "
+        f"'cd {COMPOSE_PATH} && docker compose build --no-cache api web'",
+        f"ssh -i {SSH_KEY_FRAGMENT} {SSH_USER_HOST} "
+        f"'cd {COMPOSE_PATH} && docker compose up -d api web'",
+    ]
+
+
+def assert_health_contract(data: dict[str, Any]) -> None:
+    """Acceptance test 3 + API contract: health JSON status and schema_ok."""
+    assert data.get("status") == "ok", data
+    assert data.get("schema_ok") is True, data
+
+
+def assert_services_payload_ok(body: Any) -> None:
+    """Acceptance test 2: JSON service list structure (list or wrapped)."""
+    if isinstance(body, list):
+        for item in body:
+            assert isinstance(item, dict), item
+            assert "id" in item and "name" in item, item
+        return
+    if isinstance(body, dict) and "services" in body:
+        services = body["services"]
+        assert isinstance(services, list), body
+        for item in services:
+            assert isinstance(item, dict), item
+            assert "id" in item and "name" in item, item
+        return
+    raise AssertionError(f"Unexpected /api/services body shape: {type(body)!r}")
+
+
+def compose_ps_indicates_api_web_running(ps_output: str) -> bool:
+    """Docker compose ps must show api and web up."""
+    lines = [ln.strip() for ln in ps_output.strip().splitlines() if ln.strip()]
+    if len(lines) < 2:
+        return False
+    has_api = False
+    has_web = False
+    for line in lines[1:]:
+        if not line or line.startswith("-"):
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        service_name = None
+        for tok in parts:
+            if tok in {"api", "web"}:
+                service_name = tok
+                break
+        status_blob = " ".join(parts)
+        if "Up" not in status_blob:
+            continue
+        if service_name == "api":
+            has_api = True
+        elif service_name == "web":
+            has_web = True
+        if "api" in line and "Up" in status_blob and re.search(r"[-_]api[-_0-9]", line):
+            has_api = True
+        if "web" in line and "Up" in status_blob and re.search(r"[-_]web[-_0-9]", line):
+            has_web = True
+    return has_api and has_web
 
 
 # ---------------------------------------------------------------------------

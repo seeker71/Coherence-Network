@@ -19,10 +19,9 @@ import time
 from typing import Any
 from uuid import uuid4
 
-logger = logging.getLogger(__name__)
-
 from sqlalchemy import text
 
+from app.config_loader import get_int, get_str
 from app.models.coherence_credit import CostVector, ValueVector
 from app.models.idea import (
     IDEA_STAGE_ORDER,
@@ -62,6 +61,8 @@ from app.services import commit_evidence_service
 from app.services import runtime_service
 from app.services import spec_registry_service
 from app.services import value_lineage_service
+
+logger = logging.getLogger(__name__)
 
 
 _TAG_SLUG_PATTERN = re.compile(r"[^a-z0-9-]")
@@ -189,7 +190,7 @@ DISCOVERED_INTERNAL_ID_ALIASES: tuple[tuple[re.Pattern[str], str], ...] = (
 
 
 def _configured_internal_idea_prefixes() -> set[str]:
-    raw = str(os.getenv("INTERNAL_IDEA_ID_PREFIXES", "")).strip()
+    raw = get_str("ideas", "internal_idea_id_prefixes")
     if not raw:
         return set(DEFAULT_INTERNAL_IDEA_PREFIXES)
     out = {item.strip().lower() for item in raw.split(",") if item.strip()}
@@ -198,14 +199,14 @@ def _configured_internal_idea_prefixes() -> set[str]:
 
 def _configured_internal_idea_exact_ids() -> set[str]:
     out = set(_KNOWN_INTERNAL_IDEA_IDS)
-    raw = str(os.getenv("INTERNAL_IDEA_ID_EXACT", "")).strip()
+    raw = get_str("ideas", "internal_idea_id_exact")
     if raw:
         out.update(item.strip().lower() for item in raw.split(",") if item.strip())
     return out
 
 
 def _configured_internal_idea_interface_tags() -> set[str]:
-    raw = str(os.getenv("INTERNAL_IDEA_INTERFACE_TAGS", "")).strip()
+    raw = get_str("ideas", "internal_idea_interface_tags")
     if not raw:
         return set(DEFAULT_INTERNAL_IDEA_INTERFACE_TAGS)
     out = {item.strip().lower() for item in raw.split(",") if item.strip()}
@@ -323,9 +324,9 @@ def _ideas_cache_key() -> str:
     from app.services import unified_db as _udb
     return (
         f"{_udb.database_url()}|"
-        f"{os.getenv('IDEA_SYNC_RUNTIME_WINDOW_SECONDS','')}|"
-        f"{os.getenv('IDEA_SYNC_RUNTIME_EVENT_LIMIT','')}|"
-        f"{os.getenv('IDEA_SYNC_CONTRIBUTION_LIMIT','')}"
+        f"{get_int('ideas', 'sync_runtime_window_seconds')}|"
+        f"{get_int('ideas', 'sync_runtime_event_limit')}|"
+        f"{get_int('ideas', 'sync_contribution_limit')}"
     )
 
 
@@ -367,15 +368,15 @@ def _tracked_idea_ids() -> list[str]:
 def _should_discover_registry_domain_ideas() -> bool:
     if not _should_include_default_tracked_ideas():
         return False
-    explicit = str(os.getenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "")).strip().lower()
-    if explicit in {"1", "true", "yes", "on"}:
-        return True
-    if explicit in {"0", "false", "no", "off"}:
-        return False
-    # Keep isolated pytest runs deterministic unless explicitly enabled.
+    explicit = get_str("ideas", "sync_enable_domain_discovery")
+    if explicit:
+        explicit = explicit.strip().lower()
+        if explicit in {"1", "true", "yes", "on"}:
+            return True
+        if explicit in {"0", "false", "no", "off"}:
+            return False
     if os.getenv("PYTEST_CURRENT_TEST"):
         return False
-    # In runtime/deploy environments, always discover registry-domain ideas.
     return True
 
 
@@ -411,16 +412,10 @@ def _discover_registry_domain_idea_ids() -> list[str]:
         if canonical_id:
             discovered.add(canonical_id)
 
-    try:
-        runtime_window_raw = int(str(os.getenv("IDEA_SYNC_RUNTIME_WINDOW_SECONDS", "86400")).strip() or "86400")
-    except ValueError:
-        runtime_window_raw = 86400
+    runtime_window_raw = get_int("ideas", "sync_runtime_window_seconds") or 86400
     runtime_window_seconds = max(60, min(runtime_window_raw, 60 * 60 * 24 * 30))
 
-    try:
-        runtime_limit_raw = int(str(os.getenv("IDEA_SYNC_RUNTIME_EVENT_LIMIT", "2000")).strip() or "2000")
-    except ValueError:
-        runtime_limit_raw = 2000
+    runtime_limit_raw = get_int("ideas", "sync_runtime_event_limit") or 2000
     runtime_event_limit = max(1, min(runtime_limit_raw, 5000))
     try:
         runtime_rows = runtime_service.summarize_by_idea(
@@ -448,10 +443,7 @@ def _discover_registry_domain_idea_ids() -> list[str]:
 def _contribution_metadata_idea_ids() -> list[str]:
     from app.services import unified_db as _udb
 
-    try:
-        contribution_limit_raw = int(str(os.getenv("IDEA_SYNC_CONTRIBUTION_LIMIT", "3000")).strip() or "3000")
-    except ValueError:
-        contribution_limit_raw = 3000
+    contribution_limit_raw = get_int("ideas", "sync_contribution_limit") or 3000
     contribution_limit = max(1, min(contribution_limit_raw, 20000))
 
     rows: list[Any] = []

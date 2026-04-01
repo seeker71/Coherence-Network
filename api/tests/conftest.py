@@ -95,6 +95,7 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     from app.services import (
         agent_service,
         automation_usage_service,
+        config_service,
         idea_service,
         unified_db,
         unified_models,  # noqa: F401 — ensures all table models are registered
@@ -106,6 +107,9 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     # Ideas now live in graph_nodes (unified DB) — don't set file-based portfolio path
     os.environ.pop("IDEA_PORTFOLIO_PATH", None)
     os.environ["AGENT_TASKS_USE_DB"] = "0"
+
+    # Reset config cache so env var changes take effect
+    config_service.reset_config_cache()
 
     # Reset the unified engine — all services delegate to this
     unified_db.reset_engine()
@@ -154,3 +158,12 @@ def seeded_db(tmp_path: Path) -> None:
             )
     except Exception as e:
         print(f"Warning: seeded_db graph seed: {e}")
+
+
+@pytest.fixture
+def production_urls(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set production URLs for tests that verify production URL formatting."""
+    from app.services import config_service
+    config_service.reset_config_cache()
+    # Force production URLs in config
+    monkeypatch.setenv("COHERENCE_ENV", "production")

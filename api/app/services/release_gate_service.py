@@ -17,6 +17,8 @@ from urllib.parse import quote
 
 import httpx
 
+from app.config_loader import get_float, get_int, get_str
+
 _BRANCH_HEAD_SHA_CACHE: dict[tuple[str, str], tuple[float, str]] = {}
 
 try:  # noqa: SIM105
@@ -34,18 +36,18 @@ DEFAULT_BRANCH_HEAD_SHA_CACHE_TTL_SECONDS = 45.0
 def _env_to_float(name: str, fallback: float) -> float:
     raw = os.getenv(name)
     if raw is None:
-        return float(fallback)
+        return fallback
     try:
         value = float(raw)
     except (TypeError, ValueError):
-        return float(fallback)
+        return fallback
     if value <= 0:
-        return float(fallback)
+        return fallback
     return value
 
 
 def _branch_head_lookup_timeout_seconds(timeout: float) -> float:
-    configured = _env_to_float("BRANCH_HEAD_SHA_TIMEOUT_SECONDS", timeout)
+    configured = get_float("release_gates", "branch_head_sha_timeout_seconds", DEFAULT_BRANCH_HEAD_SHA_TIMEOUT_SECONDS)
     return max(1.0, min(float(timeout), configured))
 
 
@@ -117,12 +119,14 @@ def _record_gate_friction_event(
 def _github_token_fallback(github_token: str | None = None) -> str | None:
     if github_token is not None and github_token.strip():
         return github_token.strip()
-    token = (os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or "").strip()
-    return token or None
+    token = get_str("github", "token") or get_str("github", "api_token")
+    if token:
+        return token
+    return os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or None
 
 
 def _public_deploy_verification_jobs_path() -> Path:
-    configured = os.getenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH")
+    configured = get_str("release_gates", "verification_jobs_path")
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[2] / "logs" / "public_deploy_verification_jobs.json"
@@ -162,7 +166,7 @@ def _normalize_job_payload(job: dict[str, Any]) -> dict[str, Any]:
 
 
 def _branch_head_cache_ttl_seconds() -> float:
-    return _env_to_float("BRANCH_HEAD_SHA_CACHE_TTL_SECONDS", DEFAULT_BRANCH_HEAD_SHA_CACHE_TTL_SECONDS)
+    return get_float("release_gates", "branch_head_sha_cache_ttl_seconds", DEFAULT_BRANCH_HEAD_SHA_CACHE_TTL_SECONDS)
 
 
 def _read_cached_branch_head_sha(repository: str, branch: str) -> str | None:
@@ -220,11 +224,8 @@ def _ensure_job_defaults(
     timeout: float,
     poll_seconds: float,
 ) -> dict[str, Any]:
-    resolved_max_attempts = int(max_attempts) if max_attempts else int(
-        os.getenv(
-            "PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS",
-            str(DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS),
-        )
+    resolved_max_attempts = int(max_attempts) if max_attempts else get_int(
+        "release_gates", "verification_max_attempts", DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS
     )
     if resolved_max_attempts < 1:
         resolved_max_attempts = 1
@@ -389,12 +390,7 @@ def tick_public_deploy_verification_job(
 
     delay_seconds = _next_retry_delay_seconds(
         attempts,
-        base_seconds=int(
-            os.getenv(
-                "PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS",
-                str(DEFAULT_PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS),
-            )
-        ),
+        base_seconds=get_int("release_gates", "verification_retry_seconds", DEFAULT_PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS),
     )
     _record_gate_friction_event(
         job_id=job.get("job_id", ""),

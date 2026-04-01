@@ -6,14 +6,12 @@ from background workers in production.
 
 from __future__ import annotations
 
-import json
-import os
 import time
-from pathlib import Path
 from typing import Any
 
 import httpx
 
+from app.config_loader import get_float, get_str
 from app.services.config_service import get_openrouter_key, get_hub_url
 
 
@@ -37,27 +35,24 @@ def chat_completion(
     """
     api_key = get_openrouter_key()
 
-    url = os.getenv("OPENROUTER_CHAT_URL", "https://openrouter.ai/api/v1/chat/completions").strip()
+    url = get_str("agent_providers", "openrouter_chat_url") or "https://openrouter.ai/api/v1/chat/completions"
     if not url:
         raise OpenRouterError("OPENROUTER_CHAT_URL is empty")
 
     headers: dict[str, str] = {
         "Content-Type": "application/json",
-        # Referer and title help OpenRouter attribute traffic and are
-        # recommended even without an API key.
-        "HTTP-Referer": (os.getenv("OPENROUTER_HTTP_REFERER") or os.getenv("PUBLIC_APP_URL") or "https://coherencycoin.com").strip(),
-        "X-Title": (os.getenv("OPENROUTER_X_TITLE") or "Coherence-Network").strip(),
+        "HTTP-Referer": get_str("agent_providers", "openrouter_http_referer") or get_hub_url(),
+        "X-Title": get_str("agent_providers", "openrouter_x_title") or "Coherence-Network",
     }
-    # API key is optional — free models work without one (with rate limits)
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
     payload: dict[str, Any] = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
-        "temperature": float(os.getenv("OPENROUTER_TEMPERATURE", "0.2") or 0.2),
+        "temperature": get_float("agent_providers", "openrouter_temperature", 0.2),
     }
-    if _truthy(os.getenv("OPENROUTER_DISABLE_STREAM", "1")):
+    if _truthy(get_str("agent_providers", "openrouter_disable_stream") or "1"):
         payload["stream"] = False
 
     started = time.perf_counter()

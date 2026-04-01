@@ -11,6 +11,8 @@ from app.config_loader import get_bool, get_float, get_int, get_str
 from app.models.agent import TaskStatus, TaskType
 from app.services import agent_task_store_service
 
+PYTEST_CURRENT_TEST = os.environ.get("PYTEST_CURRENT_TEST")
+
 
 class TaskClaimConflictError(RuntimeError):
     """Raised when attempting to start/claim a task already claimed by another worker."""
@@ -36,38 +38,23 @@ def _default_store_path() -> Path:
 
 
 def _store_path() -> Path:
-    configured = get_str("agent_tasks", "path") or os.getenv("AGENT_TASKS_PATH", "").strip()
+    configured = get_str("agent_tasks", "path")
     if configured:
         return Path(configured)
     return _default_store_path()
 
 
 def _persistence_enabled() -> bool:
-    env_val = os.getenv("AGENT_TASKS_PERSIST")
-    if env_val is not None:
-        return env_val.strip().lower() not in {"0", "false", "no", "off"}
-    if os.getenv("PYTEST_CURRENT_TEST"):
+    if PYTEST_CURRENT_TEST:
         return False
     return get_bool("agent_tasks", "persist", default=False)
 
 
 def _db_store_reload_ttl_seconds() -> float:
-    env_val = os.getenv("AGENT_TASKS_DB_RELOAD_TTL_SECONDS")
-    if env_val is not None:
-        try:
-            return max(0.0, min(float(env_val.strip()), 300.0))
-        except ValueError:
-            pass
     return max(0.0, min(get_float("agent_tasks", "db_reload_ttl_seconds", 120.0), 300.0))
 
 
 def _max_task_output_chars() -> int:
-    env_val = os.getenv("AGENT_TASK_OUTPUT_MAX_CHARS")
-    if env_val is not None:
-        try:
-            return max(500, min(int(env_val.strip()), 200000))
-        except ValueError:
-            pass
     return max(500, min(get_int("agent_tasks", "task_output_max_chars", 4000), 200000))
 
 
@@ -203,7 +190,7 @@ def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = F
     global _store_loaded_includes_output, _store_loaded_at_monotonic
     store_path = _store_path()
     current_path = str(store_path)
-    current_test = os.getenv("PYTEST_CURRENT_TEST")
+    current_test = PYTEST_CURRENT_TEST
 
     if not _persistence_enabled() and current_test and _store_loaded_test_context != current_test:
         _store.clear()

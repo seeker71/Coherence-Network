@@ -22,7 +22,7 @@ import httpx
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool
 
-from app.config_loader import get_bool, get_float, get_int, get_str
+from app.config_loader import database_url, get_bool, get_float, get_int, get_str
 from app.models.automation_usage import (
     ProviderValidationReport,
     ProviderValidationRow,
@@ -210,21 +210,14 @@ def _dedupe_preserve_order(items: list[str]) -> list[str]:
 
 
 def _snapshots_path() -> Path:
-    configured = get_str("automation_usage", "snapshots_path") or os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", "").strip()
+    configured = get_str("automation_usage", "snapshots_path")
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[2] / "logs" / "automation_usage_snapshots.json"
 
 
 def _use_db_snapshots() -> bool:
-    override = os.getenv("AUTOMATION_USAGE_USE_DB")
-    if override is not None:
-        o = str(override).strip().lower()
-        if o in {"1", "true", "yes", "on"}:
-            return True
-        if o in {"0", "false", "no", "off"}:
-            return False
-    if get_str("automation_usage", "snapshots_path") or os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH"):
+    if get_str("automation_usage", "snapshots_path"):
         return False
     return get_bool("automation_usage", "use_db", True)
 
@@ -236,9 +229,6 @@ def _ensure_store() -> None:
         report = telemetry_persistence_service.import_automation_snapshots_from_file(legacy_path)
         if int(report.get("imported") or 0) > 0:
             purge = get_bool("automation_usage", "purge_imported_files", True)
-            env_purge = os.getenv("TRACKING_PURGE_IMPORTED_FILES")
-            if env_purge is not None:
-                purge = str(env_purge).strip().lower() in {"1", "true", "yes", "on"}
             if purge:
                 try:
                     legacy_path.unlink(missing_ok=True)
@@ -270,15 +260,7 @@ def _read_store() -> list[dict[str, Any]]:
 def _write_store(rows: list[dict[str, Any]]) -> None:
     if _use_db_snapshots():
         telemetry_persistence_service.ensure_schema()
-        max_rows = get_int("automation_usage", "max_snapshots", 800)
-        env_max = os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS")
-        if env_max is not None:
-            try:
-                max_rows = int(env_max)
-            except ValueError:
-                pass
-        max_rows = max(10, min(max_rows, 5000))
-        # Rewrite in insertion order using append behavior.
+        max_rows = max(10, min(get_int("automation_usage", "max_snapshots", 800), 5000))
         for row in rows[-max_rows:]:
             if isinstance(row, dict):
                 telemetry_persistence_service.append_automation_snapshot(row, max_rows=max_rows)
@@ -289,12 +271,6 @@ def _write_store(rows: list[dict[str, Any]]) -> None:
 
 
 def _automation_max_snapshots() -> int:
-    env_val = os.getenv("AUTOMATION_USAGE_MAX_SNAPSHOTS")
-    if env_val is not None:
-        try:
-            return max(10, min(int(env_val), 5000))
-        except ValueError:
-            pass
     return max(10, min(get_int("automation_usage", "max_snapshots", 800), 5000))
 
 
@@ -351,11 +327,6 @@ def _coerce_float(value: Any) -> float | None:
 
 
 def _usage_overview_cache_ttl_seconds(default: float = _CACHE_TTL_SECONDS) -> float:
-    env_val = os.getenv("AUTOMATION_USAGE_OVERVIEW_CACHE_TTL_SECONDS")
-    if env_val is not None:
-        parsed = _coerce_float(env_val)
-        if parsed is not None:
-            return max(10.0, min(float(parsed), 86400.0))
     cfg = get_float("automation_usage", "overview_cache_ttl_seconds", 0)
     if cfg > 0:
         return max(10.0, min(cfg, 86400.0))
@@ -363,20 +334,20 @@ def _usage_overview_cache_ttl_seconds(default: float = _CACHE_TTL_SECONDS) -> fl
 
 
 def _endpoint_cache_ttl_seconds(cache_name: str, default: float = _ENDPOINT_CACHE_DEFAULT_TTL_SECONDS) -> float:
-    env_suffix = re.sub(r"[^A-Za-z0-9]+", "_", cache_name).strip("_").upper()
-    env_key = f"AUTOMATION_ENDPOINT_CACHE_TTL_{env_suffix}"
-    parsed = _coerce_float(os.getenv(env_key))
-    if parsed is None:
-        return max(1.0, min(float(default), 86400.0))
-    return max(1.0, min(float(parsed), 86400.0))
+    env_suffix = re.sub(r"[^A-Za-z0-9]+", "_", cache_name).strip("_").lower()
+    cfg_key = f"endpoint_cache_ttl_{env_suffix}"
+    parsed = get_float("automation_usage", cfg_key, None)
+    if parsed is not None and parsed > 0:
+        return max(1.0, min(parsed, 86400.0))
+    return max(1.0, min(float(default), 86400.0))
 
 
 def _endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | None = None) -> str:
     scope_parts = [
-        str(os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH") or ""),
-        str(os.getenv("TELEMETRY_DATABASE_URL") or ""),
-        str(os.getenv("DATABASE_URL") or ""),
-        str(os.getenv("RUNTIME_EVENTS_PATH") or ""),
+        get_str("automation_usage", "snapshots_path") or "",
+        database_url("telemetry") or "",
+        database_url(None) or "",
+        get_str("runtime", "events_path") or "",
         str(os.getenv("PYTEST_CURRENT_TEST") or ""),
     ]
     scope_digest = hashlib.sha1("||".join(scope_parts).encode("utf-8")).hexdigest()[:12]
@@ -529,14 +500,14 @@ def _truncate_text(value: Any, *, max_len: int) -> str:
 
 
 def _runtime_events_cache_ttl_seconds() -> float:
-    parsed = _coerce_float(os.getenv("AUTOMATION_RUNTIME_EVENTS_CACHE_SECONDS"))
+    parsed = get_float("automation_usage", "runtime_events_cache_seconds")
     if parsed is None:
         return 20.0
     return max(0.0, min(float(parsed), 300.0))
 
 
 def _runtime_event_scan_limit(default: int = 1500) -> int:
-    parsed = _coerce_float(os.getenv("AUTOMATION_RUNTIME_EVENT_SCAN_LIMIT"))
+    parsed = get_int("automation_usage", "runtime_event_scan_limit")
     if parsed is None:
         return max(100, min(int(default), 5000))
     return max(100, min(int(parsed), 5000))

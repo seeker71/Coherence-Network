@@ -9,6 +9,7 @@ import tempfile
 import time
 from typing import Any
 
+from app.config_loader import get_float
 from app.models.runtime import RuntimeEventCreate
 from app.services import agent_service, runtime_service
 
@@ -25,11 +26,7 @@ def _extract_underlying_model(task_model: str) -> str:
 
 
 def _runtime_cost_per_second() -> float:
-    raw = os.getenv("RUNTIME_COST_PER_SECOND", "0.002").strip()
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 0.002
+    value = get_float("agent_cost", "runtime_cost_per_second", 0.002)
     return value if value > 0.0 else 0.002
 
 
@@ -38,20 +35,12 @@ def _runtime_cost_usd(runtime_ms: int) -> float:
 
 
 def _external_provider_cost_per_1k_input_tokens() -> float:
-    raw = os.getenv("AGENT_EXTERNAL_INPUT_COST_PER_1K", "0.00015").strip()
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 0.00015
+    value = get_float("agent_cost", "external_input_cost_per_1k", 0.00015)
     return value if value > 0.0 else 0.00015
 
 
 def _external_provider_cost_per_1k_output_tokens() -> float:
-    raw = os.getenv("AGENT_EXTERNAL_OUTPUT_COST_PER_1K", "0.0006").strip()
-    try:
-        value = float(raw)
-    except ValueError:
-        value = 0.0006
+    value = get_float("agent_cost", "external_output_cost_per_1k", 0.0006)
     return value if value > 0.0 else 0.0006
 
 

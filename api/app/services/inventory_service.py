@@ -6,7 +6,6 @@ import copy
 import hashlib
 import json
 import logging
-import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -16,6 +15,7 @@ from urllib.parse import quote, urlparse
 
 import httpx
 
+from app.config_loader import get_bool, get_float, get_str
 from app.models.agent import AgentTaskCreate, TaskType
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryUpdate
 from app.services import (
@@ -189,24 +189,15 @@ _INVENTORY_CACHE: dict[str, dict[str, Any]] = {
 
 
 def _inventory_cache_ttl_seconds() -> float:
-    raw = os.getenv("INVENTORY_CACHE_TTL_SECONDS", "30").strip()
-    try:
-        return max(1.0, float(raw))
-    except ValueError:
-        return 30.0
+    return max(1.0, get_float("inventory", "cache_ttl_seconds", 30.0))
 
 
 def _inventory_timing_ms_threshold() -> float:
-    raw = os.getenv("INVENTORY_TIMING_LOG_MS", "750").strip()
-    try:
-        return max(50.0, float(raw))
-    except ValueError:
-        return 750.0
+    return max(50.0, get_float("inventory", "timing_log_ms", 750.0))
 
 
 def _inventory_timing_enabled() -> bool:
-    raw = os.getenv("INVENTORY_TIMING_ENABLED", "0").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    return get_bool("inventory", "timing_enabled", False)
 
 
 def _cache_key(*parts: object) -> str:
@@ -218,10 +209,10 @@ def _inventory_environment_cache_key() -> str:
     return "|".join(
         [
             f"db={_udb.database_url()}",
-            f"idea_portfolio={os.getenv('IDEA_PORTFOLIO_PATH', '')}",
-            f"value_lineage={os.getenv('VALUE_LINEAGE_PATH', '')}",
-            f"runtime_events={os.getenv('RUNTIME_EVENTS_PATH', '')}",
-            f"runtime_idea_map={os.getenv('RUNTIME_IDEA_MAP_PATH', '')}",
+            f"idea_portfolio={get_str('storage', 'idea_portfolio_path')}",
+            f"value_lineage={get_str('storage', 'value_lineage_path')}",
+            f"runtime_events={get_str('runtime', 'events_path')}",
+            f"runtime_idea_map={get_str('runtime', 'idea_map_path')}",
         ]
     )
 
@@ -527,7 +518,7 @@ _ROUTE_PROBE_LATEST_FILE = "route_evidence_probe_latest.json"
 
 
 def _project_root() -> Path:
-    configured = os.getenv("COHERENCE_PROJECT_ROOT", "").strip()
+    configured = get_str("inventory", "project_root")
     if configured:
         configured_path = Path(configured).expanduser().resolve()
         if configured_path.exists():
@@ -535,12 +526,10 @@ def _project_root() -> Path:
 
     source_path = Path(__file__).resolve()
 
-    # Prefer monorepo roots that include top-level specs/.
     for candidate in [source_path, *source_path.parents]:
         if (candidate / "api" / "app").exists():
             return candidate
 
-    # Fallback for API-only packaging layouts.
     for candidate in [source_path, *source_path.parents]:
         if (candidate / "app").exists() and (candidate / "scripts").exists():
             return candidate
@@ -558,11 +547,11 @@ _SPEC_COVERAGE_SKIP_HINTS = (
 
 
 def _tracking_repository() -> str:
-    return os.getenv("TRACKING_REPOSITORY", "seeker71/Coherence-Network")
+    return get_str("inventory", "tracking_repository") or "seeker71/Coherence-Network"
 
 
 def _tracking_ref() -> str:
-    return os.getenv("TRACKING_REPOSITORY_REF", "main")
+    return get_str("inventory", "tracking_repository_ref") or "main"
 
 
 def _github_headers() -> dict[str, str]:
@@ -570,7 +559,7 @@ def _github_headers() -> dict[str, str]:
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    token = os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN")
+    token = get_str("github", "token") or get_str("github", "api_token")
     if token:
         headers["Authorization"] = f"Bearer {token}"
     return headers
@@ -2173,7 +2162,7 @@ def sync_roi_progress_tasks(
 
 
 def _commit_evidence_dir() -> Path:
-    custom = os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+    custom = get_str("commit_evidence", "directory")
     if custom:
         return Path(custom)
     return _project_root() / "docs" / "system_audit"
@@ -2213,7 +2202,7 @@ def _read_commit_evidence_records_from_github(limit: int) -> list[dict[str, Any]
     ref = _tracking_ref()
     list_url = f"https://api.github.com/repos/{repository}/contents/docs/system_audit"
     remote_out: list[dict[str, Any]] = []
-    has_token = bool(os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN"))
+    has_token = bool(get_str("github", "token") or get_str("github", "api_token"))
     try:
         with httpx.Client(timeout=8.0, headers=_github_headers()) as client:
             response = client.get(list_url, params={"ref": ref})
@@ -2346,7 +2335,7 @@ def build_commit_evidence_inventory(limit: int = 50) -> dict[str, Any]:
 
 
 def _route_evidence_probe_dir() -> Path:
-    custom = os.getenv("ROUTE_EVIDENCE_PROBE_DIR")
+    custom = get_str("route_evidence", "probe_directory")
     if custom:
         return Path(custom)
     return _project_root() / "docs" / "system_audit"

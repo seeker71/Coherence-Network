@@ -8,6 +8,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any
 
+from app.config_loader import get_str
 from app.services import release_gate_service
 
 logger = logging.getLogger(__name__)
@@ -27,8 +28,10 @@ def _escape_markdown(text: str) -> str:
 
 
 def _github_token() -> str | None:
-    token = (os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or "").strip()
-    return token or None
+    token = get_str("github", "token") or get_str("github", "api_token")
+    if token:
+        return token
+    return os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN") or None
 
 
 def _short_sha(value: Any) -> str:
@@ -64,14 +67,14 @@ def _normalized_url(raw_value: str, *, fallback: str) -> str:
 
 def _api_base_url() -> str:
     return _normalized_url(
-        os.getenv("AGENT_API_BASE_URL") or os.getenv("PUBLIC_APP_URL") or "",
+        get_str("agent_providers", "api_base_url") or get_str("server", "public_app_url") or "",
         fallback=_DEFAULT_API_BASE,
     )
 
 
 def _web_base_url() -> str:
     return _normalized_url(
-        os.getenv("AGENT_WEB_UI_BASE_URL") or os.getenv("WEB_UI_BASE_URL") or os.getenv("NEXT_PUBLIC_WEB_URL") or "",
+        get_str("agent_providers", "web_ui_base_url") or get_str("server", "web_ui_base_url") or "",
         fallback=_DEFAULT_WEB_BASE,
     )
 

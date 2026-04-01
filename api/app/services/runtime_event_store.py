@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
@@ -12,6 +11,7 @@ from sqlalchemy import DateTime, Float, Integer, String, Text, create_engine, fu
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
+from app.config_loader import database_url
 from app.models.runtime import RuntimeEvent
 
 
@@ -47,11 +47,10 @@ _SCHEMA_INITIALIZED_URL = ""
 
 
 def _database_url() -> str:
-    return (
-        os.getenv("RUNTIME_DATABASE_URL")
-        or os.getenv("DATABASE_URL")
-        or ""
-    ).strip()
+    url = database_url("runtime")
+    if url:
+        return url
+    return database_url(None) or ""
 
 
 def enabled() -> bool:
@@ -63,11 +62,13 @@ def enabled() -> bool:
 def backend_info() -> dict[str, Any]:
     url = _database_url()
     backend = "postgresql" if "postgres" in url else ("sqlite" if url else "none")
+    from app.config_loader import get_str
+    events_file = get_str("runtime", "events_path")
     return {
         "enabled": enabled(),
         "backend": backend,
         "database_url": _redact_database_url(url) if url else "",
-        "events_file_override": bool(os.getenv("RUNTIME_EVENTS_PATH", "").strip()),
+        "events_file_override": bool(events_file.strip()) if events_file else False,
     }
 
 

@@ -21,7 +21,7 @@ import httpx
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
-from app.config_loader import get_float, get_int, get_str
+from app.config_loader import database_url, get_float, get_int, get_str
 from app.models.runtime import (
     EndpointAttentionReport,
     EndpointAttentionRow,
@@ -64,12 +64,6 @@ _RUNTIME_ENDPOINT_CACHE_MAX_STALE_SECONDS = 7 * 24 * 60 * 60
 _RUNTIME_ENDPOINT_CACHE_REFRESH_FUTURES: dict[str, Future[Any]] = {}
 _RUNTIME_ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
 def _runtime_endpoint_cache_max_workers() -> int:
-    env_val = os.getenv("RUNTIME_ENDPOINT_CACHE_MAX_WORKERS")
-    if env_val is not None:
-        try:
-            return max(2, min(int(env_val), 8))
-        except ValueError:
-            pass
     return max(2, min(get_int("runtime", "endpoint_cache_max_workers", 4), 8))
 
 
@@ -180,7 +174,7 @@ def _default_events_path() -> Path:
 
 
 def _events_path() -> Path:
-    configured = get_str("runtime", "events_path") or os.getenv("RUNTIME_EVENTS_PATH", "").strip()
+    configured = get_str("runtime", "events_path", "")
     return Path(configured) if configured else _default_events_path()
 
 
@@ -189,7 +183,7 @@ def _default_idea_map_path() -> Path:
 
 
 def _idea_map_path() -> Path:
-    configured = get_str("runtime", "idea_map_path") or os.getenv("RUNTIME_IDEA_MAP_PATH", "").strip()
+    configured = get_str("runtime", "idea_map_path", "")
     return Path(configured) if configured else _default_idea_map_path()
 
 
@@ -198,7 +192,7 @@ def _logs_dir() -> Path:
 
 
 def _agent_tasks_path() -> Path:
-    configured = get_str("runtime", "agent_tasks_path") or os.getenv("AGENT_TASKS_PATH", "").strip()
+    configured = get_str("runtime", "agent_tasks_path", "")
     if configured:
         return Path(configured)
     return _logs_dir() / "agent_tasks.json"
@@ -225,12 +219,6 @@ def _path_signature(path: Path) -> dict[str, Any]:
 
 
 def _runtime_cost_per_second() -> float:
-    env_val = os.getenv("RUNTIME_COST_PER_SECOND")
-    if env_val is not None:
-        try:
-            return float(env_val)
-        except ValueError:
-            pass
     return get_float("runtime", "cost_per_second", 0.002)
 
 
@@ -240,11 +228,8 @@ def estimate_runtime_cost(runtime_ms: float) -> float:
 
 def _runtime_events_store_cache_key() -> str:
     if runtime_event_store.enabled():
-        url = (
-            os.getenv("RUNTIME_DATABASE_URL", "").strip()
-            or os.getenv("DATABASE_URL", "").strip()
-            or "<runtime-database>"
-        )
+        db_url = database_url("runtime") or database_url(None)
+        url = db_url or "<runtime-database>"
         return f"db:{url}"
     return f"file:{_events_path()}"
 
@@ -273,9 +258,9 @@ def _runtime_endpoint_cache_ttl_seconds(cache_name: str, default: float = _RUNTI
 
 def _runtime_endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | None = None) -> str:
     scope_parts = [
-        str(os.getenv("RUNTIME_EVENTS_PATH") or ""),
-        str(os.getenv("RUNTIME_DATABASE_URL") or ""),
-        str(os.getenv("DATABASE_URL") or ""),
+        get_str("runtime", "events_path") or "",
+        get_str("database_overrides", "runtime") or "",
+        database_url(None) or "",
         str(os.getenv("PYTEST_CURRENT_TEST") or ""),
         str(_runtime_events_store_cache_key()),
         str(_RUNTIME_ENDPOINT_CACHE_BUSTER),
@@ -1731,12 +1716,7 @@ def _safe_int(value: Any, default: int = 0) -> int:
 
 
 def _tool_success_streak_target() -> int:
-    raw = str(os.getenv("TOOL_SUCCESS_STREAK_TARGET", "3")).strip()
-    try:
-        parsed = int(raw)
-    except (TypeError, ValueError):
-        parsed = 3
-    return max(1, min(parsed, 20))
+    return max(1, min(get_int("runtime", "tool_success_streak_target", 3), 20))
 
 
 def _is_success_status_code(status_code: int) -> bool:

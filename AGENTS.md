@@ -245,6 +245,19 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 
 ## Conventions
 
+### Configuration: NO ENV VARIABLES (HARD RULE)
+
+**ALL configuration must come from config files ONLY. NO environment variable fallbacks.**
+
+Pattern: `~/.coherence-network/config.json` → `api/config/api.json` → sensible defaults
+
+- NEVER use `os.getenv()` or `os.environ.get()` as fallbacks in application code
+- NEVER add `or os.getenv(...)` patterns
+- All config goes in `api/config/api.json` or `~/.coherence-network/config.json`
+- Only exception: CI/CD secrets handled by the runner, NOT application code
+
+### Other Conventions
+
 - **Holdout tests** — `api/tests/holdout/` excluded from agent context; CI runs full suite
 - **Overnight backlog** — `specs/006-overnight-backlog.md` (85+ items)
 - **Spec cross-links** — specs have "See also" sections
