@@ -66,9 +66,9 @@ export function InvestBalanceSection() {
   if (!contributorId) {
     return (
       <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5 space-y-3">
-        <p className="text-sm font-medium text-primary">Your CC Balance</p>
+        <p className="text-sm font-medium text-primary">Seeds available</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Enter your contributor name to see your balance.
+          Enter your contributor name to see how many seeds you have.
         </p>
         <div className="flex gap-2">
           <input
@@ -93,9 +93,9 @@ export function InvestBalanceSection() {
 
   return (
     <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5">
-      <p className="text-sm font-medium text-primary">Your CC Balance</p>
-      <p className="mt-1 text-2xl font-light text-foreground">
-        {loading ? "Loading..." : balance ? `${balance.total.toFixed(1)} CC` : "Unavailable"}
+      <p className="text-sm font-medium text-primary">Seeds available</p>
+      <p className="mt-1 text-2xl font-light text-foreground" aria-label={`${balance ? Math.round(balance.total) : 0} seeds available`}>
+        {loading ? "Loading..." : balance ? `${Math.round(balance.total)} seeds` : "Unavailable"}
       </p>
       <p className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
         Contributor: {contributorId}
