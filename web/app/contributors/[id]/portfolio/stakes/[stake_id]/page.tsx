@@ -55,14 +55,23 @@ function fmtCC(val: number | null): string {
 }
 
 function activityColor(signal: string): string {
-  if (signal === "active") return "text-green-400";
+  if (signal === "active") return "text-emerald-400";
   if (signal === "slow") return "text-yellow-400";
+  if (signal === "dormant") return "text-muted-foreground";
   return "text-muted-foreground";
+}
+
+function gardenHealth(signal: string): { label: string; emoji: string; color: string } {
+  const s = signal.trim().toLowerCase();
+  if (s === "active") return { label: "Thriving", emoji: "🌿", color: "text-emerald-400" };
+  if (s === "slow") return { label: "Growing", emoji: "🌱", color: "text-yellow-400" };
+  if (s === "dormant") return { label: "Dormant", emoji: "🍂", color: "text-muted-foreground" };
+  return { label: "Untested", emoji: "🫘", color: "text-muted-foreground" };
 }
 
 function roiColor(roi: number | null): string {
   if (roi === null) return "text-muted-foreground";
-  return roi >= 0 ? "text-green-400" : "text-red-400";
+  return roi >= 0 ? "text-emerald-400" : "text-muted-foreground";
 }
 
 export default function StakeDrilldownPage() {
@@ -126,14 +135,14 @@ export default function StakeDrilldownPage() {
     <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link href={back} className="hover:text-foreground transition-colors">← Portfolio</Link>
+        <Link href={back} className="hover:text-foreground transition-colors">← Garden</Link>
         <span>/</span>
-        <span>Stake</span>
+        <span>Seed</span>
       </div>
 
       {/* Header */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-widest">Stake position</p>
+        <p className="text-xs text-muted-foreground uppercase tracking-widest">Seed position</p>
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-2xl md:text-3xl font-light">
@@ -148,13 +157,17 @@ export default function StakeDrilldownPage() {
               <span className="rounded-full border border-border/30 px-2 py-0.5 text-muted-foreground">
                 {stake.idea_status}
               </span>
-              <span className={`rounded-full border border-border/30 px-2 py-0.5 ${activityColor(stake.health.activity_signal)}`}>
-                {stake.health.activity_signal}
+              <span
+                className={`rounded-full border border-border/30 px-2 py-0.5 ${gardenHealth(stake.health.activity_signal).color}`}
+                aria-label={`Garden health: ${gardenHealth(stake.health.activity_signal).label}`}
+              >
+                <span aria-hidden="true">{gardenHealth(stake.health.activity_signal).emoji}</span>{" "}
+                {gardenHealth(stake.health.activity_signal).label}
               </span>
             </div>
           </div>
           <div className="text-right shrink-0">
-            <p className="text-xs text-muted-foreground mb-1">Staked {fmtDate(stake.staked_at)}</p>
+            <p className="text-xs text-muted-foreground mb-1">Planted {fmtDate(stake.staked_at)}</p>
             <p className="text-xs font-mono text-muted-foreground truncate max-w-40">{stake.stake_id}</p>
           </div>
         </div>
@@ -163,35 +176,35 @@ export default function StakeDrilldownPage() {
       {/* Position metrics */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-xs text-muted-foreground">CC Staked</p>
+          <p className="text-xs text-muted-foreground">Seeds Planted</p>
           <p className="text-2xl font-light text-primary">{fmtCC(stake.cc_staked)}</p>
           {networkPct && (
-            <p className="text-xs text-muted-foreground">{networkPct}% of network</p>
+            <p className="text-xs text-muted-foreground">{networkPct}% of garden</p>
           )}
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
           <p className="text-xs text-muted-foreground">Current Value</p>
           <p className="text-2xl font-light">
             {stake.cc_valuation != null ? (
-              <span className={roiColor(stake.roi_pct)}>{fmtCC(stake.cc_valuation)}</span>
+              <span className={roiColor(stake.roi_pct)}>{fmtCC(stake.cc_valuation)} seeds</span>
             ) : (
               <span className="text-muted-foreground">—</span>
             )}
           </p>
           {currentPct && (
-            <p className="text-xs text-muted-foreground">{currentPct}% of network</p>
+            <p className="text-xs text-muted-foreground">{currentPct}% of garden</p>
           )}
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-xs text-muted-foreground">ROI</p>
+          <p className="text-xs text-muted-foreground">Yield</p>
           <p className={`text-2xl font-light font-mono ${roiColor(stake.roi_pct)}`}>
             {stake.roi_pct != null
-              ? `${stake.roi_pct >= 0 ? "+" : ""}${stake.roi_pct.toFixed(2)}%`
+              ? `×${(1 + stake.roi_pct / 100).toFixed(2)} (${stake.roi_pct >= 0 ? "+" : ""}${stake.roi_pct.toFixed(2)}%)`
               : "—"}
           </p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-xs text-muted-foreground">Activity Since Stake</p>
+          <p className="text-xs text-muted-foreground">Growth Since Planting</p>
           <p className="text-2xl font-light text-primary">{stake.total_contributions_since_staking}</p>
           <p className="text-xs text-muted-foreground">contributions</p>
         </div>
@@ -200,7 +213,7 @@ export default function StakeDrilldownPage() {
       {/* Activity timeline since staking */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-medium">Idea Activity Since Staking</h2>
+          <h2 className="text-lg font-medium">Growth Since Planting</h2>
           <span className="text-xs text-muted-foreground">
             {stake.total_contributions_since_staking} total
             {stake.idea_activity_since_staking.length < stake.total_contributions_since_staking
@@ -225,7 +238,7 @@ export default function StakeDrilldownPage() {
                   </div>
                   <p className="text-sm text-muted-foreground">{evt.description}</p>
                   {evt.value_change != null && evt.value_change > 0 && (
-                    <p className="text-xs font-mono text-primary">+{evt.value_change.toFixed(2)} CC</p>
+                    <p className="text-xs font-mono text-primary">+{evt.value_change.toFixed(2)} seeds</p>
                   )}
                 </div>
               </li>
@@ -233,7 +246,7 @@ export default function StakeDrilldownPage() {
           </ol>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No activity on this idea since you staked. Check back later.
+            No growth on this seed since you planted. Check back later.
           </p>
         )}
       </section>
@@ -241,11 +254,11 @@ export default function StakeDrilldownPage() {
       {/* Health detail */}
       {stake.health.value_delta_pct != null && (
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">
-          <h2 className="text-base font-medium">Idea Health</h2>
+          <h2 className="text-base font-medium">Plant Health</h2>
           <div className="flex flex-wrap gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Value delta: </span>
-              <span className={stake.health.value_delta_pct >= 0 ? "text-green-400" : "text-red-400"}>
+              <span className={stake.health.value_delta_pct >= 0 ? "text-emerald-400" : "text-muted-foreground"}>
                 {stake.health.value_delta_pct >= 0 ? "+" : ""}
                 {stake.health.value_delta_pct.toFixed(1)}%
               </span>
@@ -260,7 +273,7 @@ export default function StakeDrilldownPage() {
 
       {/* Footer nav */}
       <div className="flex gap-4 text-sm text-muted-foreground pt-2">
-        <Link href={back} className="hover:text-foreground transition-colors">← Back to Portfolio</Link>
+        <Link href={back} className="hover:text-foreground transition-colors">← Back to Garden</Link>
         <Link
           href={`/ideas/${encodeURIComponent(stake.idea_id)}`}
           className="hover:text-foreground transition-colors"
