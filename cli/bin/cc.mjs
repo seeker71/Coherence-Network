@@ -43,14 +43,17 @@ import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/c
 import { listConcepts, showConcept, linkConcepts } from "../lib/commands/concepts.mjs";
 import { showNearby, handleLocation } from "../lib/commands/geolocation.mjs";
 import {
-  showConfig as difConfig, setBaseUrl as difSetBaseUrl,
-  whoami as difWhoami, verify as difVerify, smoke as difSmoke,
-  keyList as difKeyList, keyCreate as difKeyCreate, keyRevoke as difKeyRevoke,
-  keyRotate as difKeyRotate, keyUpdate as difKeyUpdate, keyUse as difKeyUse, keyShow as difKeyShow,
-  keyEnsure as difKeyEnsure, keyStatus as difKeyStatus,
-  showUsage as difUsage, showLimits as difLimits, showFunding as difFunding,
-  showFeedback as difFeedback,
+   showConfig as difConfig, setBaseUrl as difSetBaseUrl,
+   whoami as difWhoami, verify as difVerify, smoke as difSmoke,
+   keyList as difKeyList, keyCreate as difKeyCreate, keyRevoke as difKeyRevoke,
+   keyRotate as difKeyRotate, keyUpdate as difKeyUpdate, keyUse as difKeyUse, keyShow as difKeyShow,
+   keyEnsure as difKeyEnsure, keyStatus as difKeyStatus,
+   showUsage as difUsage, showLimits as difLimits, showFunding as difFunding,
+   showFeedback as difFeedback,
 } from "../lib/commands/dif.mjs";
+import { marketplacePublish, marketplaceBrowse, marketplaceFork } from "../lib/commands/marketplace.mjs";
+import { listGraphNodes, createGraphNode, listGraphEdges, createGraphEdge, getGraphNeighbors } from "../lib/commands/graph.mjs";
+import { onboardingRegister, onboardingSession, onboardingUpgrade } from "../lib/commands/onboarding.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -87,26 +90,20 @@ const COMMANDS = {
   contributor:   () => handleContributor(args),
   assets:        () => listAssets(args),
   asset:         () => handleAsset(args),
-  news:          () => handleNews(args),
-  treasury:      () => handleTreasury(args),
-  lineage:       () => handleLineage(args),
-  governance:    () => handleGovernance(args),
-  services:      () => handleServices(args),
-  service:       () => showService(args),
-  friction:      () => handleFriction(args),
-  providers:     () => handleProviders(args),
-  trace:         () => handleTrace(args),
-  diag:          () => handleDiag(args),
-  tasks:         () => listTasks(args),
-  task:          () => handleTask(args),
-  edges:         () => listEntityEdges(args),
-  edg:           () => listEntityEdges(args),
-  edge:          () => handleEdge(args),
-  update:        () => update(args),
-  deploy:        () => deploy(args),
-  listen:        () => listen(args),
-  dif:           () => handleDif(args),
-  setup:         () => setup(args),
+   news:          () => handleNews(args),
+   treasury:      () => handleTreasury(args),
+   lineage:       () => handleLineage(args),
+   governance:    () => handleGovernance(args),
+   services:      () => handleServices(args),
+   friction:      () => handleFriction(args),
+   providers:     () => handleProviders(args),
+   trace:         () => handleTrace(args),
+   diag:          () => handleDiag(args),
+   dif:           () => handleDif(args),
+   marketplace:   () => handleMarketplace(args),
+   graph:         () => handleGraph(args),
+   onboarding:    () => handleOnboarding(args),
+   setup:         () => setup(args),
   whoami:        () => showWhoami(),
   login:         () => handleLogin(args),
   logout:        () => handleLogout(args),
@@ -318,48 +315,87 @@ async function handleLogout(args) {
 }
 
 async function handleAuth(args) {
-  const sub = (args[0] || "status").toLowerCase();
-  const jsonMode = args.includes("--json");
+   const sub = (args[0] || "status").toLowerCase();
+   const jsonMode = args.includes("--json");
 
-  if (sub === "status") {
-    const { getMerlySession, isLoggedIn, getIdentity } = await import("../lib/merly_auth.mjs");
-    const { getDifKey } = await import("../lib/dif.mjs");
+   if (sub === "status") {
+      const { getMerlySession, isLoggedIn, getIdentity } = await import("../lib/merly_auth.mjs");
+      const { getDifKey } = await import("../lib/dif.mjs");
 
-    const session = getMerlySession();
-    const loggedIn = isLoggedIn();
-    const key = getDifKey();
+      const session = getMerlySession();
+      const loggedIn = isLoggedIn();
+      const key = getDifKey();
 
-    if (jsonMode) {
-      const result = {
-        merly: {
-          authenticated: loggedIn,
-          access_token: loggedIn ? "present" : null,
-          identity: session?.identity || null,
-          logged_in_at: session?.logged_in_at || null,
-          expires_at: session?.expires_at ? new Date(session.expires_at).toISOString() : null,
-        },
-        dif: {
-          key_configured: !!key.api_key,
-          key_id: key.key_id || null,
-          source: key.source || null,
-        },
-      };
-      console.log(JSON.stringify(result, null, 2));
-    } else {
-      const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", RED = "\x1b[31m";
-      console.log(`\n${B}  AUTH STATUS${R}`);
-      console.log(`  ${"─".repeat(50)}`);
-      console.log(`  Merly:     ${loggedIn ? G + "logged in" + R : RED + "not logged in" + R}`);
-      if (session?.identity) {
-        const id = session.identity;
-        console.log(`  Identity:  ${id.display_name || id.email || id.contributor_id || "?"}`);
+      if (jsonMode) {
+         const result = {
+            merly: {
+               authenticated: loggedIn,
+               access_token: loggedIn ? "present" : null,
+               identity: session?.identity || null,
+               logged_in_at: session?.logged_in_at || null,
+               expires_at: session?.expires_at ? new Date(session.expires_at).toISOString() : null,
+            },
+            dif: {
+               key_configured: !!key.api_key,
+               key_id: key.key_id || null,
+               source: key.source || null,
+            },
+         };
+         console.log(JSON.stringify(result, null, 2));
+      } else {
+         const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m", RED = "\x1b[31m";
+         console.log(`\n${B}  AUTH STATUS${R}`);
+         console.log(`  ${"─".repeat(50)}`);
+         console.log(`  Merly:     ${loggedIn ? G + "logged in" + R : RED + "not logged in" + R}`);
+         if (session?.identity) {
+            const id = session.identity;
+            console.log(`  Identity:  ${id.display_name || id.email || id.contributor_id || "?"}`);
+         }
+         console.log(`  DIF key:   ${key.api_key ? G + "configured" + R : D + "not set" + R}`);
+         if (key.api_key) {
+            console.log(`  Key ID:    ${key.key_id || "?"}`);
+         }
+         console.log();
       }
-      console.log(`  DIF key:   ${key.api_key ? G + "configured" + R : D + "not set" + R}`);
-      if (key.api_key) {
-        console.log(`  Key ID:    ${key.key_id || "?"}`);
-      }
-      console.log();
-    }
+   }
+}
+
+async function handleMarketplace(args) {
+   const sub = args[0];
+   switch (sub) {
+      case "publish": return marketplacePublish(args.slice(1));
+      case "browse":  return marketplaceBrowse(args.slice(1));
+      case "fork":    return marketplaceFork(args.slice(1));
+      default:
+         console.log("Usage: cc marketplace <publish|browse|fork>");
+         console.log("  cc marketplace publish --idea-id <id> --tags <tags> --author <name>");
+         console.log("  cc marketplace browse --page <n> --sort <recent|popular|value>");
+         console.log("  cc marketplace fork --listing-id <id> --forker-id <id>");
+   }
+}
+
+async function handleGraph(args) {
+   const sub = args[0];
+   switch (sub) {
+      case "nodes":   return listGraphNodes(args.slice(1));
+      case "edges":   return listGraphEdges(args.slice(1));
+      case "neighbors": return getGraphNeighbors(args.slice(1));
+      default:
+         console.log("Usage: cc graph <nodes|edges|neighbors>");
+         console.log("  cc graph nodes list|create");
+         console.log("  cc graph edges list|create|neighbors");
+         console.log("  cc graph neighbors --node-id <id>");
+   }
+}
+
+async function handleOnboarding(args) {
+   const sub = args[0];
+   switch (sub) {
+      case "register": return onboardingRegister(args.slice(1));
+      case "session":  return onboardingSession(args.slice(1));
+      case "upgrade":  return onboardingUpgrade(args.slice(1));
+      default:
+         console.log("Usage: cc onboarding <register|session|upgrade>");
   }
 }
 
@@ -574,12 +610,19 @@ function showHelp() {
   dif config              Show DIF configuration
   dif smoke               Run DIF smoke test
 
-\x1b[1mDiagnostics:\x1b[0m
-  diag                    Agent effectiveness + pipeline
-  diag health             Collective health
-  diag issues             Fatal + monitor issues
-  diag runners            Agent runners
-  diag visibility         Agent visibility
+   \x1b[1mMarketplace:\x1b[0m
+   marketplace publish     Publish an idea to the cross-instance marketplace
+   marketplace browse      Browse marketplace listings
+   marketplace fork        Fork a marketplace listing
+
+   \x1b[1mGraph:\x1b[0m
+   graph nodes             Manage universal graph nodes (list, create)
+   graph edges             Manage universal graph edges (list, create, neighbors)
+
+   \x1b[1mOnboarding:\x1b[0m
+   onboarding register     Register a new contributor (Trust-on-First-Use)
+   onboarding session      Get contributor profile from session token
+   onboarding upgrade      Upgrade trust level to verified (stub)
 
 \x1b[2mHub: https://api.coherencycoin.com\x1b[0m
 \x1b[2mDocs: https://coherencycoin.com\x1b[0m
