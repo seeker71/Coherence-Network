@@ -137,10 +137,10 @@ export default function PortfolioPage() {
   return (
     <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto space-y-6">
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
-        <p className="text-sm text-muted-foreground">Portfolio</p>
-        <h1 className="text-3xl md:text-4xl font-light tracking-tight">Portfolio Overview</h1>
+        <p className="text-sm text-muted-foreground">Garden Cockpit</p>
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight">Garden Overview</h1>
         <p className="max-w-3xl text-muted-foreground">
-          Track idea governance at a glance: unanswered questions, runtime cost, and value gaps across the portfolio.
+          Track idea governance at a glance: unanswered questions, runtime cost, and growth potential across the portfolio.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link href="/contributors" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
@@ -174,7 +174,7 @@ export default function PortfolioPage() {
         <>
           <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-              <p className="text-muted-foreground">Ideas in portfolio</p>
+              <p className="text-muted-foreground">Plants tracked</p>
               <p className="text-2xl font-light text-primary">{inventory.ideas.summary.total_ideas}</p>
             </div>
             <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
@@ -204,7 +204,7 @@ export default function PortfolioPage() {
 
           <p className="text-xs text-muted-foreground">
             Spec source: {inventory.specs.source} | Runtime events: {inventory.tracking.runtime_events_count} | Unanswered questions:{" "}
-            {inventory.questions.unanswered_count} | Value gap: {inventory.ideas.summary.total_value_gap}
+            {inventory.questions.unanswered_count} | Growth potential: {inventory.ideas.summary.total_value_gap}
           </p>
 
           <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
@@ -224,7 +224,7 @@ export default function PortfolioPage() {
                       <Link href={`/ideas/${encodeURIComponent(q.idea_id)}`} className="underline hover:text-foreground">
                         {q.idea_id}
                       </Link>{" "}
-                      | value: {q.value_to_whole} | cost: {q.estimated_cost} | ROI:{" "}
+                      | value: {q.value_to_whole} | cost: {q.estimated_cost} | expected yield:{" "}
                       {roi.toFixed(2)}
                     </p>
                     <div className="flex flex-col md:flex-row gap-2">
@@ -252,7 +252,7 @@ export default function PortfolioPage() {
           </section>
 
           <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">
-            <h2 className="text-xl font-medium">Runtime Cost by Idea (24h)</h2>
+            <h2 className="text-xl font-medium">Runtime Cost by Plant (24h)</h2>
             <ul className="space-y-2 text-sm">
               {topRuntime.map((row) => (
                 <li key={row.idea_id} className="flex justify-between rounded-xl border border-border/20 bg-background/40 p-4">
