@@ -3,32 +3,23 @@
 from __future__ import annotations
 
 import copy
-import os
 import time
 from typing import Any
 
+from app.config_loader import get_bool, get_float, get_str
 from app.services.inventory.constants import _INVENTORY_CACHE
 
 
 def _inventory_cache_ttl_seconds() -> float:
-    raw = os.getenv("INVENTORY_CACHE_TTL_SECONDS", "30").strip()
-    try:
-        return max(1.0, float(raw))
-    except ValueError:
-        return 30.0
+    return max(1.0, get_float("inventory", "cache_ttl_seconds", 30.0))
 
 
 def _inventory_timing_ms_threshold() -> float:
-    raw = os.getenv("INVENTORY_TIMING_LOG_MS", "750").strip()
-    try:
-        return max(50.0, float(raw))
-    except ValueError:
-        return 750.0
+    return max(50.0, get_float("inventory", "timing_log_ms", 750.0))
 
 
 def _inventory_timing_enabled() -> bool:
-    raw = os.getenv("INVENTORY_TIMING_ENABLED", "0").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    return get_bool("inventory", "timing_enabled", False)
 
 
 def _cache_key(*parts: object) -> str:
@@ -40,10 +31,10 @@ def _inventory_environment_cache_key() -> str:
     return "|".join(
         [
             f"db={_udb.database_url()}",
-            f"idea_portfolio={os.getenv('IDEA_PORTFOLIO_PATH', '')}",
-            f"value_lineage={os.getenv('VALUE_LINEAGE_PATH', '')}",
-            f"runtime_events={os.getenv('RUNTIME_EVENTS_PATH', '')}",
-            f"runtime_idea_map={os.getenv('RUNTIME_IDEA_MAP_PATH', '')}",
+            f"idea_portfolio={get_str('storage', 'idea_portfolio_path')}",
+            f"value_lineage={get_str('storage', 'value_lineage_path')}",
+            f"runtime_events={get_str('runtime', 'events_path')}",
+            f"runtime_idea_map={get_str('runtime', 'idea_map_path')}",
         ]
     )
 

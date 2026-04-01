@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +13,7 @@ def _default_events_path() -> Path:
 
 
 def events_path() -> Path:
-    configured = get_str("runtime", "events_path") or os.getenv("RUNTIME_EVENTS_PATH", "").strip()
+    configured = get_str("runtime", "events_path")
     return Path(configured) if configured else _default_events_path()
 
 
@@ -23,7 +22,7 @@ def _default_idea_map_path() -> Path:
 
 
 def idea_map_path() -> Path:
-    configured = get_str("runtime", "idea_map_path") or os.getenv("RUNTIME_IDEA_MAP_PATH", "").strip()
+    configured = get_str("runtime", "idea_map_path")
     return Path(configured) if configured else _default_idea_map_path()
 
 
@@ -32,7 +31,7 @@ def logs_dir() -> Path:
 
 
 def agent_tasks_path() -> Path:
-    configured = get_str("runtime", "agent_tasks_path") or os.getenv("AGENT_TASKS_PATH", "").strip()
+    configured = get_str("agent_tasks", "path")
     if configured:
         return Path(configured)
     return logs_dir() / "agent_tasks.json"
@@ -59,13 +58,7 @@ def path_signature(path: Path) -> dict[str, Any]:
 
 
 def runtime_cost_per_second() -> float:
-    env_val = os.getenv("RUNTIME_COST_PER_SECOND")
-    if env_val is not None:
-        try:
-            return float(env_val)
-        except ValueError:
-            pass
-    return get_float("runtime", "cost_per_second", 0.002)
+    return get_float("agent_cost", "runtime_cost_per_second", 0.002)
 
 
 def estimate_runtime_cost(runtime_ms: float) -> float:

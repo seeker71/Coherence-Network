@@ -15,7 +15,7 @@ def _canonical_executors() -> tuple[str, ...]:
     executors = _loader_executors()
     if executors:
         return executors
-    raw = os.environ.get("AGENT_EXECUTORS", "").strip()
+    raw = get_str("agent_executor", "executors")
     if not raw:
         return ()
     return tuple(s.strip().lower() for s in raw.split(",") if s.strip())
@@ -51,9 +51,7 @@ def int_env(name: str, default: int) -> int:
 
 
 def executor_policy_enabled() -> bool:
-    if os.environ.get("AGENT_EXECUTOR_POLICY_ENABLED") is not None:
-        return os.environ.get("AGENT_EXECUTOR_POLICY_ENABLED", "").strip().lower() not in {"0", "false", "no", "off"}
-    return get_bool("executor", "policy_enabled", True)
+    return get_bool("agent_executor", "policy_enabled", True)
 
 
 def normalize_executor(value: str | None, default: str = "claude") -> str:
@@ -64,15 +62,15 @@ def normalize_executor(value: str | None, default: str = "claude") -> str:
 
 
 def cheap_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_CHEAP_DEFAULT") or get_str("executor", "cheap_default")
+    configured = get_str("agent_executor", "cheap_default")
     if configured:
         return normalize_executor(configured, default="cursor")
-    fallback = os.environ.get("AGENT_EXECUTOR_DEFAULT") or get_str("executor", "default") or "cursor"
+    fallback = get_str("agent_executor", "default") or "cursor"
     return normalize_executor(fallback, default="cursor")
 
 
 def escalation_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_ESCALATE_TO") or get_str("executor", "escalate_to")
+    configured = get_str("agent_executor", "escalate_to")
     if configured:
         return normalize_executor(configured, default="claude")
     cheap = cheap_executor_default()
@@ -86,16 +84,12 @@ def executor_binary_name(executor: str) -> str:
     if normalized == "cursor":
         return "agent"
     if normalized == "codex":
-        configured = (
-            os.environ.get("CODEX_EXECUTABLE")
-            or os.environ.get("OPENCLAW_EXECUTABLE")
-            or get_str("executor", "codex_executable")
-        )
+        configured = get_str("agent_executor", "codex_executable")
         if configured and str(configured).strip():
             return str(configured).strip()
         return "codex"
     if normalized == "gemini":
-        configured = os.environ.get("GEMINI_EXECUTABLE") or get_str("executor", "gemini_executable")
+        configured = get_str("agent_executor", "gemini_executable")
         if configured and str(configured).strip():
             return str(configured).strip()
         return "gemini"
@@ -115,7 +109,7 @@ def first_available_executor(preferred: list[str]) -> str:
         candidate = normalize_executor(executor, default="")
         if candidate and executor_available(candidate):
             return candidate
-    default_raw = os.environ.get("AGENT_EXECUTOR_DEFAULT") or get_str("executor", "default")
+    default_raw = get_str("agent_executor", "default")
     return normalize_executor(default_raw, default="claude")
 
 
@@ -133,14 +127,14 @@ def is_repo_scoped_question(direction: str, context: dict[str, Any]) -> bool:
 
 
 def repo_question_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_REPO_DEFAULT") or get_str("executor", "repo_default")
+    configured = get_str("agent_executor", "repo_default")
     if configured:
         return normalize_executor(configured, default="cursor")
     return "cursor"
 
 
 def open_question_executor_default() -> str:
-    configured = os.environ.get("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT") or get_str("executor", "open_question_default")
+    configured = get_str("agent_executor", "open_question_default")
     if configured:
         return normalize_executor(configured, default="cursor")
     return "cursor"
