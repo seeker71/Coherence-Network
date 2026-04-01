@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from datetime import datetime, timezone
 from pathlib import Path
+
+from app.config_loader import get_str
 
 logger = logging.getLogger(__name__)
 
@@ -28,16 +29,14 @@ def _default_registry() -> dict:
 
 
 def _registry_path() -> Path:
-    env_value = os.getenv("CANONICAL_ROUTES_PATH", "").strip()
+    env_value = get_str("route_registry", "canonical_routes_path", default="").strip()
     if env_value:
-        env_override = Path(env_value)
-        return env_override
+        return Path(env_value)
 
     repo_level = Path(__file__).resolve().parents[3] / "config" / "canonical_routes.json"
     if repo_level.exists():
         return repo_level
 
-    # Railway API deployments can use api/ as service root; keep a mirrored config there.
     api_level = Path(__file__).resolve().parents[2] / "config" / "canonical_routes.json"
     if api_level.exists():
         return api_level

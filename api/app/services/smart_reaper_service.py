@@ -12,19 +12,19 @@ Upgrades the reaper from blind timeout to diagnostic-first:
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.config_loader import get_int
 from app.services.failed_task_diagnostics_service import classify_error
 
 logger = logging.getLogger(__name__)
 
 # --- Constants ---
 REAP_MAX_EXTENSIONS: int = 2
-REAP_RUNNER_LIVENESS_SECONDS: int = int(os.environ.get("REAP_RUNNER_LIVENESS_SECONDS", "270"))
-REAP_HUMAN_ATTENTION_THRESHOLD: int = int(os.environ.get("REAP_HUMAN_ATTENTION_THRESHOLD", "3"))
+REAP_RUNNER_LIVENESS_SECONDS: int = get_int("smart_reap", "runner_liveness_seconds", default=270)
+REAP_HUMAN_ATTENTION_THRESHOLD: int = get_int("smart_reap", "human_attention_threshold", default=3)
 PARTIAL_RESUME_THRESHOLD_PCT: int = 20
 MAX_LOG_BYTES: int = 4096
 MAX_PARTIAL_IN_DIRECTION: int = 3000

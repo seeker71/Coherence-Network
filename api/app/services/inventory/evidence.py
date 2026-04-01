@@ -11,6 +11,7 @@ from typing import Any
 
 import httpx
 
+from app.config_loader import get_str
 from app.services import commit_evidence_service
 from app.services.inventory.spec_discovery import (
     _github_headers,
@@ -26,7 +27,7 @@ _DB_EVIDENCE_CACHE_TTL_SECONDS = 60.0
 
 
 def _commit_evidence_dir() -> Path:
-    custom = os.getenv("IDEA_COMMIT_EVIDENCE_DIR")
+    custom = get_str("commit_evidence", "directory", default="")
     if custom:
         return Path(custom)
     return _project_root() / "docs" / "system_audit"

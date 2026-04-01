@@ -16,7 +16,7 @@ from starlette.responses import Response
 
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
-from app.config_loader import get_float
+from app.config_loader import get_bool, get_float, get_str
 from app.routers import (
     agent,
     automation_usage,
@@ -453,7 +453,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-        if os.getenv("ENABLE_HSTS", "").strip().lower() in {"1", "true", "yes"}:
+        if get_bool("server", "enable_hsts", default=False):
             response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
         return response
 
@@ -483,17 +483,14 @@ app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
 
 # Initialize graph store based on environment
 if os.getenv("COHERENCE_ENV") == "test":
-    # Use in-memory store for testing
-    persist_path = os.getenv("GRAPH_STORE_PATH")
+    persist_path = get_str("storage", "graph_store_path", default=None)
     app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
 else:
     database_url = os.getenv("DATABASE_URL")
     if database_url:
-        # Production: Use PostgreSQL
         app.state.graph_store = PostgresGraphStore(database_url)
     else:
-        # Development/Testing: Use in-memory store with optional JSON persistence
-        persist_path = os.getenv("GRAPH_STORE_PATH")
+        persist_path = get_str("storage", "graph_store_path", default=None)
         app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
 
 # Operational endpoints
@@ -505,7 +502,7 @@ async def root():
 @app.post("/api/admin/reset-database")
 async def reset_database(x_admin_key: str = Header(None)):
     """Drop and recreate all database tables. DESTRUCTIVE - use with caution!"""
-    admin_key = os.getenv("ADMIN_API_KEY") or os.getenv("COHERENCE_API_KEY")
+    admin_key = get_str("auth", "admin_key", default="dev-admin")
     if not admin_key or x_admin_key != admin_key:
         raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -621,7 +618,7 @@ app.include_router(distributions.router, prefix="/v1", include_in_schema=False)
 
 @app.middleware("http")
 async def capture_runtime_metrics(request: Request, call_next):
-    if os.getenv("RUNTIME_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
+    if not get_bool("runtime", "telemetry_enabled", default=True):
         return await call_next(request)
 
     start = time.perf_counter()
