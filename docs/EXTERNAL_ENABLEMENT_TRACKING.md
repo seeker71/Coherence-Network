@@ -9,6 +9,7 @@ Ideas that produce/track code outside this repo — federation, CLI, marketplace
 3. **Reflect after every step** — update the Progress Log with all required fields.
 4. **Continue without interruption** — after each step, immediately start the next. Do not stop, do not ask for confirmation, do not wait for review. Continue until ALL tasks in this sheet are completed, verified, deployed, and publicly tested.
 5. **Deploy and publicly test** — every spec must pass local gates, push, open PR, monitor CI green, deploy to production, and verify live. No spec is "done" until it works in public.
+6. **Publish after merge** — after every merge to main, run the deploy contract: local gates → push → open PR → monitor CI → merge → verify live. Nothing is "done" until it's in production.
 
 ## Critical Path
 
