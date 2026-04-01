@@ -151,7 +151,7 @@ export function TreasuryDepositForm() {
             href="/invest"
             className="inline-block text-primary hover:text-foreground transition-colors underline underline-offset-4 text-sm"
           >
-            Stake CC on ideas directly &rarr;
+            Water seeds on ideas directly &rarr;
           </a>
         </div>
       ) : null}

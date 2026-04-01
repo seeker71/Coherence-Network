@@ -302,7 +302,7 @@ async function FallbackIdeasSection() {
                 {statusIcon(idea.manifestation_status)} {idea.name}
               </Link>
               <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-                <span>Value gap: {formatUsd(idea.value_gap)}</span>
+                <span>Growth potential: {formatUsd(idea.value_gap)}</span>
                 <span>&middot;</span>
                 <span>{idea.manifestation_status}</span>
               </div>
