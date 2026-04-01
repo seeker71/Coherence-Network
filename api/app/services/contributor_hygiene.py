@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import os
 import re
+
+from app.config_loader import get_list, get_str
 
 DEFAULT_TEST_EMAIL_DOMAINS = {
     "example.com",
@@ -30,7 +31,7 @@ DEFAULT_INTERNAL_EMAIL_PREFIXES = {
 
 
 def _configured_test_domains() -> set[str]:
-    raw = os.getenv("TEST_CONTRIBUTOR_EMAIL_DOMAINS", "").strip()
+    raw = get_str("contributor_hygiene", "test_email_domains", default="")
     if not raw:
         return set(DEFAULT_TEST_EMAIL_DOMAINS)
     domains = {chunk.strip().lower() for chunk in raw.split(",") if chunk.strip()}
@@ -38,7 +39,7 @@ def _configured_test_domains() -> set[str]:
 
 
 def _configured_plus_alias_domains() -> set[str]:
-    raw = os.getenv("CONTRIBUTOR_PLUS_ALIAS_DOMAINS", "").strip()
+    raw = get_str("contributor_hygiene", "plus_alias_domains", default="")
     if not raw:
         return set(DEFAULT_PLUS_ALIAS_DOMAINS)
     domains = {chunk.strip().lower() for chunk in raw.split(",") if chunk.strip()}
@@ -46,7 +47,7 @@ def _configured_plus_alias_domains() -> set[str]:
 
 
 def _configured_alias_map() -> dict[str, str]:
-    raw = os.getenv("CONTRIBUTOR_EMAIL_ALIAS_MAP", "").strip()
+    raw = get_str("contributor_hygiene", "email_alias_map", default="")
     if not raw:
         return {}
     mapping: dict[str, str] = {}
@@ -63,7 +64,7 @@ def _configured_alias_map() -> dict[str, str]:
 
 
 def _configured_internal_prefixes() -> set[str]:
-    raw = os.getenv("INTERNAL_CONTRIBUTOR_EMAIL_PREFIXES", "").strip()
+    raw = get_str("contributor_hygiene", "internal_email_prefixes", default="")
     if not raw:
         return set(DEFAULT_INTERNAL_EMAIL_PREFIXES)
     prefixes = {chunk.strip().lower() for chunk in raw.split(",") if chunk.strip()}

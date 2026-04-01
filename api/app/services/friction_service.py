@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+from app.config_loader import get_bool, get_str
 from app.models.friction import FrictionEvent
 from app.services import metrics_service, telemetry_persistence_service
 
@@ -22,30 +22,32 @@ def _default_path() -> Path:
 
 
 def friction_file_path() -> Path:
-    configured = os.getenv("FRICTION_EVENTS_PATH")
+    configured = get_str("friction", "events_path")
     return Path(configured) if configured else _default_path()
 
 
 def _use_db_events() -> bool:
-    override = str(os.getenv("FRICTION_USE_DB", "")).strip().lower()
-    if override in {"1", "true", "yes", "on"}:
-        return True
-    if override in {"0", "false", "no", "off"}:
-        return False
-    if os.getenv("FRICTION_EVENTS_PATH"):
+    override = get_str("friction", "use_db")
+    if override:
+        override = override.strip().lower()
+        if override in {"1", "true", "yes", "on"}:
+            return True
+        if override in {"0", "false", "no", "off"}:
+            return False
+    if get_str("friction", "events_path"):
         return False
     return True
 
 
 def monitor_issues_file_path() -> Path:
-    configured = os.getenv("MONITOR_ISSUES_PATH")
+    configured = get_str("monitor", "issues_path")
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[2] / "logs" / "monitor_issues.json"
 
 
 def github_actions_health_file_path() -> Path:
-    configured = os.getenv("GITHUB_ACTIONS_HEALTH_PATH")
+    configured = get_str("github_actions", "health_path")
     if configured:
         return Path(configured)
     return Path(__file__).resolve().parents[2] / "logs" / "github_actions_health.json"
@@ -65,7 +67,7 @@ def load_events(path: Path | None = None) -> tuple[list[FrictionEvent], int]:
         legacy_path = friction_file_path()
         report = telemetry_persistence_service.import_friction_events_from_file(legacy_path)
         if int(report.get("imported") or 0) > 0:
-            purge_raw = str(os.getenv("TRACKING_PURGE_IMPORTED_FILES", "1")).strip().lower()
+            purge_raw = get_str("friction", "purge_imported_files", default="1").strip().lower()
             if purge_raw not in {"0", "false", "no", "off"}:
                 try:
                     legacy_path.unlink(missing_ok=True)

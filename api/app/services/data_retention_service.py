@@ -9,25 +9,24 @@ Never delete: ideas, specs, contributions, identities, audit ledger,
               coherence_credits, value_lineage, idea_lineage.
 
 Safe to trim:
-  - runtime_events                        (HOT_DAYS detail + daily summaries)
-  - telemetry_automation_usage_snapshots  (WARM_DAYS detail)
-  - telemetry_task_metrics                (WARM_DAYS detail)
-  - telemetry_friction_events             (WARM_DAYS detail)
-  - telemetry_external_tool_usage_events  (WARM_DAYS detail)
+  - runtime_events                        (hot_days detail + daily summaries)
+  - telemetry_automation_usage_snapshots  (warm_days detail)
+  - telemetry_task_metrics                (warm_days detail)
+  - telemetry_friction_events             (warm_days detail)
+  - telemetry_external_tool_usage_events  (warm_days detail)
 
 Backup format: JSONL files in data/retention-backups/<table>/<YYYY-MM>.jsonl
-Environment vars:
-  RETENTION_HOT_DAYS   (default 7)
-  RETENTION_WARM_DAYS  (default 30)
-  RETENTION_COLD_DAYS  (default 90)
-  RETENTION_BACKUP_DIR (default data/retention-backups)
+Config keys (in api/config/api.json):
+  data_retention.hot_days   (default 7)
+  data_retention.warm_days  (default 30)
+  data_retention.cold_days  (default 90)
+  data_retention.backup_dir (default data/retention-backups)
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -35,6 +34,7 @@ from typing import Any
 
 from sqlalchemy import func
 
+from app.config_loader import get_int, get_str
 from app.services import unified_db as _udb
 from app.services.telemetry_persistence.models import (
     AutomationUsageSnapshotRecord,
@@ -47,34 +47,61 @@ from app.services.runtime_event_store import RuntimeEventRecord
 
 logger = logging.getLogger(__name__)
 
-HOT_DAYS = int(os.getenv("RETENTION_HOT_DAYS", "7"))
-WARM_DAYS = int(os.getenv("RETENTION_WARM_DAYS", "30"))
-COLD_DAYS = int(os.getenv("RETENTION_COLD_DAYS", "90"))
-BACKUP_ROOT = Path(os.getenv("RETENTION_BACKUP_DIR", "data/retention-backups"))
 
-POLICY: dict[str, Any] = {
-    "hot_days": HOT_DAYS,
-    "warm_days": WARM_DAYS,
-    "cold_days": COLD_DAYS,
-    "backup_dir": str(BACKUP_ROOT),
-    "never_delete": [
-        "ideas",
-        "specs",
-        "contributions",
-        "contributor_identities",
-        "audit_ledger",
-        "coherence_credits",
-        "value_lineage",
-        "idea_lineage",
-    ],
-    "safe_to_trim": [
-        "runtime_events",
-        "telemetry_automation_usage_snapshots",
-        "telemetry_task_metrics",
-        "telemetry_friction_events",
-        "telemetry_external_tool_usage_events",
-    ],
-}
+def _get_hot_days() -> int:
+    return get_int("data_retention", "hot_days", default=7)
+
+
+def _get_warm_days() -> int:
+    return get_int("data_retention", "warm_days", default=30)
+
+
+def _get_cold_days() -> int:
+    return get_int("data_retention", "cold_days", default=90)
+
+
+def _get_backup_root() -> Path:
+    configured = get_str("data_retention", "backup_dir", default="data/retention-backups")
+    return Path(configured)
+
+
+def _get_policy() -> dict[str, Any]:
+    hot = _get_hot_days()
+    warm = _get_warm_days()
+    cold = _get_cold_days()
+    backup = _get_backup_root()
+    return {
+        "hot_days": hot,
+        "warm_days": warm,
+        "cold_days": cold,
+        "backup_dir": str(backup),
+        "never_delete": [
+            "ideas",
+            "specs",
+            "contributions",
+            "contributor_identities",
+            "audit_ledger",
+            "coherence_credits",
+            "value_lineage",
+            "idea_lineage",
+        ],
+        "safe_to_trim": [
+            "runtime_events",
+            "telemetry_automation_usage_snapshots",
+            "telemetry_task_metrics",
+            "telemetry_friction_events",
+            "telemetry_external_tool_usage_events",
+        ],
+    }
+
+
+def get_policy() -> dict[str, Any]:
+    """Return the current retention policy configuration."""
+    return {
+        **_get_policy(),
+        "backup_root_abs": str(_get_backup_root().resolve()),
+        "backup_dir_exists": _get_backup_root().exists(),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -117,7 +144,7 @@ def _append_backup(table: str, records: list[dict[str, Any]]) -> int:
         ts = _parse_ts(ts_raw)
         by_month[ts.strftime("%Y-%m")].append(rec)
     for month_key, month_recs in by_month.items():
-        path = BACKUP_ROOT / table / f"{month_key}.jsonl"
+        path = _get_backup_root() / table / f"{month_key}.jsonl"
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as fh:
             for rec in month_recs:
@@ -150,10 +177,11 @@ def _meta_get(key: str) -> str:
 def _trim_runtime_events(dry_run: bool = False) -> dict[str, Any]:
     """Export then delete runtime_events older than HOT_DAYS."""
     _udb.ensure_schema()
-    cutoff = _cutoff(HOT_DAYS)
+    hot_days = _get_hot_days()
+    cutoff = _cutoff(hot_days)
     stats: dict[str, Any] = {
         "table": "runtime_events",
-        "cutoff_days": HOT_DAYS,
+        "cutoff_days": hot_days,
         "exported": 0,
         "deleted": 0,
     }
@@ -256,7 +284,7 @@ def _trim_automation_snapshots(dry_run: bool = False) -> dict[str, Any]:
         AutomationUsageSnapshotRecord,
         "collected_at",
         "telemetry_automation_usage_snapshots",
-        WARM_DAYS,
+        _get_warm_days(),
         5000,
         {"collected_at": "collected_at"},
         dry_run,
@@ -268,7 +296,7 @@ def _trim_task_metrics(dry_run: bool = False) -> dict[str, Any]:
         TaskMetricRecord,
         "occurred_at",
         "telemetry_task_metrics",
-        WARM_DAYS,
+        _get_warm_days(),
         10000,
         {"task_id": "task_id", "occurred_at": "occurred_at"},
         dry_run,
@@ -280,7 +308,7 @@ def _trim_friction_events(dry_run: bool = False) -> dict[str, Any]:
         FrictionEventRecord,
         "timestamp",
         "telemetry_friction_events",
-        WARM_DAYS,
+        _get_warm_days(),
         10000,
         {"event_id": "event_id", "timestamp": "timestamp"},
         dry_run,
@@ -292,7 +320,7 @@ def _trim_external_tool_usage(dry_run: bool = False) -> dict[str, Any]:
         ExternalToolUsageEventRecord,
         "occurred_at",
         "telemetry_external_tool_usage_events",
-        WARM_DAYS,
+        _get_warm_days(),
         10000,
         {
             "event_id": "event_id",
@@ -370,15 +398,6 @@ def build_daily_summaries(days_back: int = 7) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def get_policy() -> dict[str, Any]:
-    """Return the current retention policy configuration."""
-    return {
-        **POLICY,
-        "backup_root_abs": str(BACKUP_ROOT.resolve()),
-        "backup_dir_exists": BACKUP_ROOT.exists(),
-    }
-
-
 def run_retention_pass(dry_run: bool = False) -> dict[str, Any]:
     """Execute a full retention pass: summarize, export to backup, trim rows.
 
@@ -390,7 +409,7 @@ def run_retention_pass(dry_run: bool = False) -> dict[str, Any]:
 
     daily_summaries: list[dict] = []
     try:
-        daily_summaries = build_daily_summaries(days_back=HOT_DAYS + 1)
+        daily_summaries = build_daily_summaries(days_back=_get_hot_days() + 1)
     except Exception as exc:
         logger.warning("data_retention: daily summary build failed: %s", exc)
 
@@ -452,14 +471,15 @@ def get_status() -> dict[str, Any]:
         fc = int(s.query(func.count(FrictionEventRecord.id)).scalar() or 0)
         tc = int(s.query(func.count(ExternalToolUsageEventRecord.id)).scalar() or 0)
     backup_sizes: dict[str, int] = {}
-    if BACKUP_ROOT.exists():
-        for td in BACKUP_ROOT.iterdir():
+    backup_root = _get_backup_root()
+    if backup_root.exists():
+        for td in backup_root.iterdir():
             if td.is_dir():
                 backup_sizes[td.name] = sum(
                     f.stat().st_size for f in td.glob("*.jsonl") if f.is_file()
                 )
     return {
-        "policy": get_policy(),
+        "policy": _get_policy(),
         "current_row_counts": {
             "runtime_events": rc,
             "telemetry_automation_usage_snapshots": sc,
