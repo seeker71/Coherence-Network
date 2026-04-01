@@ -144,8 +144,8 @@ export function AutomationGarden({ payload, apiBase }: Props) {
             <ul className="space-y-4">
               {providers.map((provider) => {
                 const execName =
-                  execStats && Object.keys(execStats.providers).find((k) => k.toLowerCase() === provider.provider.toLowerCase());
-                const { pct, label } = plotGaugePercent(provider, execName, payload);
+                  execStats?.providers ? Object.keys(execStats.providers).find((k) => k.toLowerCase() === provider.provider.toLowerCase()) : undefined;
+                const { pct, label } = plotGaugePercent(provider, execName ?? undefined, payload);
                 const mood = plotMood(pct);
                 return (
                   <li
