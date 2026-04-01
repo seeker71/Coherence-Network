@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
+from app.config_loader import get_bool, get_float, get_int
 from app.models.agent import TaskStatus
 from app.models.friction import FrictionEvent
 from app.models.runtime import RuntimeEventCreate
@@ -57,13 +58,11 @@ def _truthy_any(value: object) -> bool:
 
 
 def _paid_providers_allowed() -> bool:
-    # Default: paid providers allowed. Set AGENT_ALLOW_PAID_PROVIDERS=0 to hard-block.
-    return _truthy(os.getenv("AGENT_ALLOW_PAID_PROVIDERS", "1"))
+    return get_bool("agent_cost", "allow_paid_providers", default=True)
 
 
 def _codex_execution_disabled() -> bool:
-    # Temporary safety switch: keep Codex execution paths off on hosted runners.
-    return _truthy(os.getenv("AGENT_DISABLE_CODEX_EXECUTOR", "1"))
+    return get_bool("agent_executor", "disable_codex_executor", default=True)
 
 
 def _paid_route_override_requested(task: dict[str, Any]) -> bool:
@@ -518,7 +517,7 @@ def _to_float(value: Any) -> float | None:
 
 
 def _paid_provider_block_on_soft_quota_threshold() -> bool:
-    return _truthy(os.getenv("AGENT_BLOCK_ON_SOFT_PROVIDER_QUOTA_THRESHOLD", "0"))
+    return get_bool("agent_cost", "block_on_soft_quota_threshold", default=False)
 
 
 def _quota_guard_indicates_exhausted(quota_guard: dict[str, Any]) -> bool:
@@ -549,23 +548,15 @@ def _quota_guard_indicates_exhausted(quota_guard: dict[str, Any]) -> bool:
     return bool(re.search(r"(remaining|ratio)\s*[:=]\s*0+(?:\.0+)?\b", reason))
 
 
-def _resolve_window_paid_tool_limit(env_name: str) -> int | None:
-    raw = os.getenv(env_name)
-    return _normalize_int(raw, default=None)
-
-
 def _paid_tool_windows_budget() -> tuple[int | None, int | None, float]:
-    env_limit_8h = _resolve_window_paid_tool_limit("PAID_TOOL_8H_LIMIT")
-    env_limit_week = _resolve_window_paid_tool_limit("PAID_TOOL_WEEK_LIMIT")
+    env_limit_8h = get_int("agent_cost", "paid_tool_8h_limit", default=None)
+    env_limit_week = get_int("agent_cost", "paid_tool_week_limit", default=None)
     if env_limit_8h is not None:
         env_limit_8h = max(1, env_limit_8h)
     if env_limit_week is not None:
         env_limit_week = max(1, env_limit_week)
 
-    budget_fraction = _normalize_ratio_0_to_1(
-        os.getenv("PAID_TOOL_WINDOW_BUDGET_FRACTION"),
-        default=1.0 / 3.0,
-    )
+    budget_fraction = get_float("agent_cost", "paid_tool_window_budget_fraction", default=1.0 / 3.0)
     return env_limit_8h, env_limit_week, budget_fraction
 
 
@@ -662,7 +653,7 @@ def _check_paid_provider_window_budget(
 
 
 def _runtime_cost_per_second() -> float:
-    return _normalize_positive_float(os.getenv("RUNTIME_COST_PER_SECOND", "0.002"), default=0.002) or 0.002
+    return get_float("agent_cost", "runtime_cost_per_second", default=0.002)
 
 
 def _runtime_cost_usd(runtime_ms: int) -> float:
@@ -670,17 +661,11 @@ def _runtime_cost_usd(runtime_ms: int) -> float:
 
 
 def _external_provider_cost_per_1k_input_tokens() -> float:
-    return _normalize_positive_float(
-        os.getenv("AGENT_EXTERNAL_INPUT_COST_PER_1K", "0.00015"),
-        default=0.00015,
-    ) or 0.00015
+    return get_float("agent_cost", "external_input_cost_per_1k", default=0.00015)
 
 
 def _external_provider_cost_per_1k_output_tokens() -> float:
-    return _normalize_positive_float(
-        os.getenv("AGENT_EXTERNAL_OUTPUT_COST_PER_1K", "0.0006"),
-        default=0.0006,
-    ) or 0.0006
+    return get_float("agent_cost", "external_output_cost_per_1k", default=0.0006)
 
 
 def _external_provider_cost_usd(

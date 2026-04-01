@@ -100,8 +100,22 @@
     "runtime_cost_per_second": 0.002,
     "external_input_cost_per_1k": 0.003,
     "external_output_cost_per_1k": 0.015,
-    "allow_paid_providers": false,
-    "block_on_soft_quota_threshold": 0.8
+    "allow_paid_providers": true,
+    "block_on_soft_quota_threshold": false,
+    "paid_tool_8h_limit": null,
+    "paid_tool_week_limit": null,
+    "paid_tool_window_budget_fraction": 0.333
+  },
+
+  "automation_usage": {
+    "_doc": "Automation usage service configuration.",
+    "endpoint_cache_max_workers": 4,
+    "quality_awareness_ttl_seconds": 300.0
+  },
+
+  "route_registry": {
+    "_doc": "Route registry configuration.",
+    "canonical_routes_path": null
   },
 
   "agent_lifecycle": {
@@ -179,7 +193,8 @@
     "events_path": null,
     "idea_map_path": null,
     "tool_success_streak_target": 3,
-    "endpoint_cache_max_workers": 4
+    "endpoint_cache_max_workers": 4,
+    "telemetry_enabled": true
   },
 
   "commit_evidence": {

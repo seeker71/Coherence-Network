@@ -18,6 +18,7 @@ from typing import Any
 
 from sqlalchemy import and_
 
+from app.config_loader import get_int
 from app.models.graph import Edge, Node
 from app.models.graph_zoom import (
     OpenQuestion,
@@ -41,8 +42,7 @@ EDGE_WEIGHTS: dict[str, float] = {
 DEFAULT_EDGE_WEIGHT = 1.0
 
 # Nodes with child_count >= GARDEN_THRESHOLD get view_hint="garden"
-import os as _os
-_GARDEN_THRESHOLD = int(_os.environ.get("ZOOM_GARDEN_THRESHOLD", "2"))
+_GARDEN_THRESHOLD = get_int("zoom", "garden_threshold", default=2)
 
 
 def _lifecycle_state(node: Node) -> str:

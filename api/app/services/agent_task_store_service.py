@@ -66,12 +66,9 @@ def _database_url() -> str:
 
 
 def enabled() -> bool:
-    toggle = os.getenv("AGENT_TASKS_USE_DB")
-    if toggle is not None:
-        return _truthy(toggle)
     if not _database_url():
         return False
-    return get_bool("agent_tasks", "use_db", True)
+    return get_bool("agent_tasks", "use_db", default=True)
 
 
 def _create_engine(url: str):

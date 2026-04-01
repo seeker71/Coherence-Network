@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.config_loader import get_float
 from app.services import maintainability_audit_service
 
 _QUALITY_AWARENESS_CACHE: dict[str, Any] = {"expires_at": 0.0, "summary": None}
-_QUALITY_AWARENESS_TTL_SECONDS = float(os.getenv("AUTOMATION_QUALITY_AWARENESS_TTL_SECONDS", "300"))
+_QUALITY_AWARENESS_TTL_SECONDS = get_float("automation_usage", "quality_awareness_ttl_seconds", default=300.0)
 
 
 def _maintainability_baseline_path() -> Path:

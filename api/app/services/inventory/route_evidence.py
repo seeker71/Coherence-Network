@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from app.config_loader import get_str
 from app.services import route_registry_service, runtime_service
 from app.services.inventory.evidence import _read_commit_evidence_records
 from app.services.inventory.spec_discovery import (
@@ -28,7 +29,7 @@ _ROUTE_PROBE_LATEST_FILE = "route_evidence_probe_latest.json"
 
 
 def _route_evidence_probe_dir() -> Path:
-    custom = os.getenv("ROUTE_EVIDENCE_PROBE_DIR")
+    custom = get_str("route_evidence", "probe_directory", default="")
     if custom:
         return Path(custom)
     return _project_root() / "docs" / "system_audit"

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import os
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any
+
+from app.config_loader import get_int
 
 # Overview cache
 CACHE_TTL_SECONDS = 1800.0
@@ -18,7 +19,7 @@ ENDPOINT_CACHE_DEFAULT_TTL_SECONDS = 180.0
 ENDPOINT_CACHE_REFRESH_FUTURES: dict[str, Future[Any]] = {}
 ENDPOINT_CACHE_REFRESH_LOCK = threading.Lock()
 ENDPOINT_CACHE_REFRESH_POOL = ThreadPoolExecutor(
-    max_workers=max(2, min(int(os.getenv("AUTOMATION_ENDPOINT_CACHE_MAX_WORKERS", "4")), 8)),
+    max_workers=max(2, min(get_int("automation_usage", "endpoint_cache_max_workers", default=4), 8)),
     thread_name_prefix="automation-endpoint-cache-refresh",
 )
 

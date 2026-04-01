@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.config_loader import get_float, get_str
 from app.services import agent_execution_service as execution_service
+
+
+def _get_config_float(key: str, default: float | None = None) -> float | None:
+    value = get_str("agent_cost", key, default=str(default) if default is not None else None)
+    if value is None:
+        return default
+    return execution_service._normalize_positive_float(value)
 
 
 def resolve_cost_controls(
@@ -22,17 +30,17 @@ def resolve_cost_controls(
     )
     context_slack = execution_service._normalize_ratio(ctx.get("cost_slack_ratio"), default=1.25)
 
-    env_max_cost = execution_service._normalize_positive_float(execution_service.os.getenv("AGENT_TASK_MAX_COST_USD"))
-    env_estimated_cost = execution_service._normalize_positive_float(execution_service.os.getenv("AGENT_TASK_ESTIMATED_COST_USD"))
-    env_slack = execution_service._normalize_ratio(execution_service.os.getenv("AGENT_TASK_COST_SLACK_RATIO"), default=1.25)
+    config_max_cost = _get_config_float("max_cost_usd", default=2.0)
+    config_estimated_cost = _get_config_float("estimated_cost_usd", default=0.5)
+    config_slack = get_float("agent_cost", "cost_slack_ratio", default=1.5)
 
-    resolved_max_cost = execution_service._normalize_positive_float(max_cost_usd) or context_max_cost or env_max_cost
+    resolved_max_cost = execution_service._normalize_positive_float(max_cost_usd) or context_max_cost or config_max_cost
     resolved_estimated_cost = (
         execution_service._normalize_positive_float(estimated_cost_usd)
         or context_estimated_cost
-        or env_estimated_cost
+        or config_estimated_cost
     )
-    resolved_slack = execution_service._normalize_ratio(cost_slack_ratio, default=context_slack or env_slack or 1.25)
+    resolved_slack = execution_service._normalize_ratio(cost_slack_ratio, default=context_slack or config_slack or 1.25)
 
     if resolved_max_cost is None and resolved_estimated_cost is not None:
         resolved_max_cost = max(resolved_estimated_cost * resolved_slack, 0.0001)

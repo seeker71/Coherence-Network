@@ -8,25 +8,20 @@ Three auth levels:
 Keys configured in api/config/api.json under auth.api_key and auth.admin_key.
 """
 
-import os
 from fastapi import Header, HTTPException, Depends
 
+from app.config_loader import get_str
 from app.services.config_service import get_api_key, is_production
 
-try:
-    from app.config_loader import api_config
-    _API_KEY = api_config("auth", "api_key", "dev-key") or get_api_key()
-    _ADMIN_KEY = api_config("auth", "admin_key", "dev-admin") or "dev-admin"
-except ImportError:
-    _API_KEY = get_api_key()
-    _ADMIN_KEY = os.environ.get("COHERENCE_ADMIN_KEY", "") or "dev-admin"
+_API_KEY = get_str("auth", "api_key", default="dev-key") or get_api_key()
+_ADMIN_KEY = get_str("auth", "admin_key", default="dev-admin") or "dev-admin"
 _PRODUCTION = is_production()
 
 # Fail-fast: refuse to start in production with default keys
 if _PRODUCTION and _API_KEY == "dev-key":
-    raise RuntimeError("COHERENCE_API_KEY must be set for production (not 'dev-key')")
+    raise RuntimeError("API auth.api_key must be set for production (not 'dev-key')")
 if _PRODUCTION and _ADMIN_KEY == "dev-admin":
-    raise RuntimeError("COHERENCE_ADMIN_KEY must be set for production (not 'dev-admin')")
+    raise RuntimeError("API auth.admin_key must be set for production (not 'dev-admin')")
 
 
 def require_api_key(x_api_key: str = Header(None, alias="X-API-Key")) -> str:

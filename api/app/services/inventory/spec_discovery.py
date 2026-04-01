@@ -11,12 +11,13 @@ from urllib.parse import quote
 
 import httpx
 
+from app.config_loader import get_str
 from app.models.agent import AgentTaskCreate, TaskType
 from app.services import agent_service, spec_registry_service
 
 
 def _project_root() -> Path:
-    configured = os.getenv("COHERENCE_PROJECT_ROOT", "").strip()
+    configured = get_str("inventory", "project_root", default="").strip()
     if configured:
         configured_path = Path(configured).expanduser().resolve()
         if configured_path.exists():
@@ -45,11 +46,11 @@ _SPEC_COVERAGE_SKIP_HINTS = (
 
 
 def _tracking_repository() -> str:
-    return os.getenv("TRACKING_REPOSITORY", "seeker71/Coherence-Network")
+    return get_str("inventory", "tracking_repository", default="seeker71/Coherence-Network")
 
 
 def _tracking_ref() -> str:
-    return os.getenv("TRACKING_REPOSITORY_REF", "main")
+    return get_str("inventory", "tracking_repository_ref", default="main")
 
 
 def _github_headers() -> dict[str, str]:
