@@ -3,7 +3,7 @@
 import os
 from typing import Any, List, Optional, Tuple
 
-from app.config_loader import get_bool
+from app.config_loader import get_bool, get_int, get_str
 from app.models.agent import TaskStatus, TaskType
 
 from app.services import agent_task_store_service
@@ -16,7 +16,7 @@ from app.services.agent_service_store import (
 
 
 def _should_backfill_runtime_tasks(existing_count: int) -> bool:
-    fallback_mode = str(os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_MODE", "empty_only")).strip().lower()
+    fallback_mode = get_str("agent_tasks", "runtime_fallback_mode", default="empty_only").strip().lower()
     if fallback_mode in {"0", "off", "false", "disabled", "none"}:
         return False
     if fallback_mode in {"always", "all", "1", "on", "true"}:
@@ -25,16 +25,14 @@ def _should_backfill_runtime_tasks(existing_count: int) -> bool:
 
 
 def _runtime_fallback_events_for_tasks(existing_count: int) -> list[Any]:
-    fallback_in_tests = os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "").strip().lower() in {
-        "1", "true", "yes", "on",
-    }
+    fallback_in_tests = get_bool("agent_tasks", "runtime_fallback_in_tests", default=False)
     if os.getenv("PYTEST_CURRENT_TEST") and not fallback_in_tests:
         return []
     if not _should_backfill_runtime_tasks(existing_count):
         return []
     try:
         from app.services import runtime_service
-        limit = max(50, min(int(os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_LIMIT", "200")), 5000))
+        limit = max(50, min(get_int("agent_tasks", "runtime_fallback_limit", default=200), 5000))
         return runtime_service.list_events(limit=limit)
     except Exception:
         return []
@@ -95,10 +93,7 @@ def list_tasks(
 ) -> tuple[list[dict[str, Any]], int, int]:
     """List tasks with optional filters. Sorted by created_at descending.
     Returns (items, total, runtime_fallback_backfill_count)."""
-    raw = os.getenv("AGENT_TASKS_USE_DB")
-    if raw is None:
-        raw = "1" if get_bool("agent_tasks", "use_db") else "0"
-    use_db = str(raw).strip().lower() not in ("0", "false", "no", "off")
+    use_db = get_bool("agent_tasks", "use_db", default=True)
     if use_db and agent_task_store_service.enabled():
         status_value = status.value if isinstance(status, TaskStatus) else None
         task_type_value = task_type.value if isinstance(task_type, TaskType) else None

@@ -178,7 +178,8 @@
     "_doc": "Runtime events configuration.",
     "events_path": null,
     "idea_map_path": null,
-    "tool_success_streak_target": 3
+    "tool_success_streak_target": 3,
+    "endpoint_cache_max_workers": 4
   },
 
   "commit_evidence": {
