@@ -65,11 +65,11 @@ export default function IdeaDrilldownPage() {
   return (
     <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto space-y-6">
       <div className="flex items-center gap-2">
-        <Link href={back} className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Portfolio</Link>
+        <Link href={back} className="text-sm text-muted-foreground hover:text-foreground transition-colors">← Garden</Link>
       </div>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-2">
-        <p className="text-sm text-muted-foreground">Idea drill-down</p>
+        <p className="text-sm text-muted-foreground">Plant detail</p>
         <h1 className="text-2xl md:text-3xl font-light">{data.idea_title}</h1>
         <p className="text-sm text-muted-foreground">{data.contributions.length} contribution{data.contributions.length !== 1 ? "s" : ""}</p>
       </section>
@@ -77,15 +77,15 @@ export default function IdeaDrilldownPage() {
       {/* Value lineage summary */}
       <section className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-muted-foreground">Total CC attributed</p>
+          <p className="text-muted-foreground">Total seeds earned</p>
           <p className="text-2xl font-light text-primary">{lineage.total_value.toFixed(2)}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-muted-foreground">ROI ratio</p>
+          <p className="text-muted-foreground">Yield ratio</p>
           <p className="text-2xl font-light text-primary">{lineage.roi_ratio != null ? `${lineage.roi_ratio.toFixed(2)}×` : "—"}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-muted-foreground">Stage events</p>
+          <p className="text-muted-foreground">Growth events</p>
           <p className="text-2xl font-light text-primary">{lineage.stage_events}</p>
         </div>
       </section>
@@ -99,7 +99,7 @@ export default function IdeaDrilldownPage() {
               <tr className="text-left text-muted-foreground border-b border-border/20">
                 <th className="pb-2 pr-4">Type</th>
                 <th className="pb-2 pr-4">Date</th>
-                <th className="pb-2 pr-4">CC attributed</th>
+                <th className="pb-2 pr-4">Seeds earned</th>
                 <th className="pb-2 pr-4">Coherence score</th>
                 <th className="pb-2 pr-4">Lineage</th>
                 <th className="pb-2">ID</th>
@@ -114,7 +114,7 @@ export default function IdeaDrilldownPage() {
                   <td className="py-3 pr-4 text-muted-foreground">
                     {c.date ? new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                   </td>
-                  <td className="py-3 pr-4 font-mono">{c.cc_attributed.toFixed(2)}</td>
+                  <td className="py-3 pr-4 font-mono">{c.cc_attributed.toFixed(2)} seeds</td>
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-24 bg-zinc-700/40 rounded-full overflow-hidden">
