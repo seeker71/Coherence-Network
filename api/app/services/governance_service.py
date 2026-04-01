@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
@@ -14,6 +13,7 @@ from sqlalchemy import Boolean, DateTime, Integer, String, Text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
+from app.config_loader import get_int
 from app.models.governance import (
     ChangeRequest,
     ChangeRequestCreate,
@@ -89,13 +89,7 @@ def ensure_schema() -> None:
 
 
 def _default_required_approvals() -> int:
-    raw = os.getenv("CHANGE_REQUEST_MIN_APPROVALS", "1").strip()
-    try:
-        value = int(raw)
-    except ValueError:
-        logger.warning("Invalid CHANGE_REQUEST_MIN_APPROVALS value %r, defaulting to 1", raw)
-        return 1
-    return max(1, min(value, 10))
+    return get_int("governance", "min_approvals", default=1)
 
 
 def _load_payload(raw: str) -> dict[str, Any]:

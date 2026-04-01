@@ -13,7 +13,6 @@ import hmac
 import json
 import logging
 from contextlib import contextmanager
-import os
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -23,6 +22,7 @@ from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, Index, f
 from sqlalchemy.orm import Mapped, Session, mapped_column
 from sqlalchemy.types import JSON
 
+from app.config_loader import get_int
 from app.models.federation import (
     FederatedInstance,
     FederatedPayload,
@@ -885,7 +885,7 @@ def get_aggregated_node_stats(window_days: int | None = None) -> dict:
     total_measurements.
     """
     if window_days is None:
-        window_days = int(os.environ.get("FEDERATION_STATS_WINDOW_DAYS", "7"))
+        window_days = get_int("federation", "stats_window_days", default=7)
 
     _ensure_schema()
     cutoff = (datetime.now(tz=timezone.utc) - timedelta(days=window_days)).isoformat().replace("+00:00", "Z")

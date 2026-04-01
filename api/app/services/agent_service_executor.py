@@ -7,13 +7,12 @@ Orchestration/crud must not branch on executor; they call these helpers.
 """
 
 import hashlib
-import os
 import re
 import shutil
 from pathlib import Path
 from typing import Any, Optional
 
-from app.config_loader import get_bool as _config_bool, get_str as _config_str
+from app.config_loader import get_bool as _config_bool, get_int as _config_int, get_str as _config_str
 from app.models.agent import TaskType
 from app.services import agent_routing_service as routing_service
 from app.services.agent_routing.executor_routing_loader import (
@@ -71,17 +70,6 @@ _TASK_CARD_REQUIRED_FIELDS: tuple[str, ...] = (
     "commands",
     "constraints",
 )
-
-
-def _int_env(name: str, default: int) -> int:
-    raw = os.environ.get(name)
-    if raw is None:
-        return default
-    try:
-        value = int(str(raw).strip())
-    except ValueError:
-        return default
-    return max(0, value)
 
 
 def _executor_policy_enabled() -> bool:
@@ -384,8 +372,8 @@ def _select_executor_with_retry_policy(
     budget_reasons: list[str],
     tasks: list[dict[str, Any]],
 ) -> tuple[str, dict[str, Any]]:
-    retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
-    failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
+    retry_threshold = _config_int("agent_executor", "escalate_retry_threshold", default=2)
+    failure_threshold = _config_int("agent_executor", "escalate_failure_threshold", default=1)
     cheap = _cheap_executor_default()
     escalate_to = _escalation_executor_default()
     if escalate_to == cheap:
@@ -559,8 +547,8 @@ def select_executor(
     if budget_pressure:
         open_candidates = ["openrouter"] + open_candidates
     selected_open = _first_available_executor(open_candidates)
-    failure_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", 1)
-    retry_threshold = _int_env("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", 2)
+    failure_threshold = _config_int("agent_executor", "escalate_failure_threshold", default=1)
+    retry_threshold = _config_int("agent_executor", "escalate_retry_threshold", default=2)
     stats = _prior_attempt_stats(task_fingerprint, tasks)
     retry_hint = _task_retry_hint(context)
     effective_retry_count = max(retry_hint, max(0, stats["attempts"]))

@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import json
-import os
 import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from app.config_loader import get_int
 from app.models.idea import IdeaStage
 
-DEFAULT_POLL_INTERVAL = int(os.getenv("PIPELINE_POLL_INTERVAL", "60"))
-DEFAULT_CONCURRENCY = max(1, int(os.getenv("PIPELINE_CONCURRENCY", "1")))
+DEFAULT_POLL_INTERVAL = get_int("pipeline", "poll_interval_seconds", default=60)
+DEFAULT_CONCURRENCY = max(1, get_int("pipeline", "concurrency", default=1))
 RETRY_BACKOFF_SECONDS = (2, 8, 32)
 STATE_FILE = Path(__file__).resolve().parents[2] / "logs" / "agent_pipeline_state.json"
 LOG_FILE = Path(__file__).resolve().parents[2] / "logs" / "agent_pipeline.log"

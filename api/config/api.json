@@ -87,6 +87,8 @@
     "executors": [],
     "execute_token": null,
     "execute_token_allow_unauth": false,
+    "escalate_failure_threshold": 1,
+    "escalate_retry_threshold": 2,
     "_doc2": "default=federation means tasks go to node runners, not API-side execution."
   },
 
@@ -140,7 +142,9 @@
     "orphan_running_seconds": 1800,
     "stale_running_seconds": 1800,
     "monitor_max_age_seconds": 900,
-    "status_report_max_age_seconds": 900
+    "status_report_max_age_seconds": 900,
+    "poll_interval_seconds": 60,
+    "concurrency": 1
   },
 
   "agent_tasks": {
@@ -218,6 +222,22 @@
     "plus_alias_domains": null,
     "email_alias_map": null,
     "internal_email_prefixes": null
+  },
+
+  "smart_reap": {
+    "_doc": "Smart reap service configuration.",
+    "runner_liveness_seconds": 270,
+    "human_attention_threshold": 3
+  },
+
+  "governance": {
+    "_doc": "Governance service configuration.",
+    "min_approvals": 1
+  },
+
+  "federation": {
+    "_doc": "Federation service configuration.",
+    "stats_window_days": 7
   },
 
   "github": {
