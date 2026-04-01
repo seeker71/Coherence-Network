@@ -108,7 +108,7 @@ interface TasksList {
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
   } catch {
     return iso;
   }
@@ -119,11 +119,33 @@ function fmtCC(val: number | null): string {
   return val.toFixed(2);
 }
 
+// Garden health mapping (Spec 186 R1)
+type GardenHealth = { label: string; emoji: string; color: string };
+
+function gardenHealth(signal: string): GardenHealth {
+  const s = signal.trim().toLowerCase();
+  if (s === "active") return { label: "Thriving", emoji: "🌿", color: "text-emerald-400" };
+  if (s === "slow") return { label: "Growing", emoji: "🌱", color: "text-yellow-400" };
+  if (s === "dormant") return { label: "Dormant", emoji: "🍂", color: "text-muted-foreground" };
+  return { label: "Untested", emoji: "🫘", color: "text-muted-foreground" };
+}
+
+// Garden description for idea cards (Spec 186 R4)
+function plantDescription(signal: string, contributionTypes: string[]): string {
+  const s = signal.trim().toLowerCase();
+  if (s === "active" && contributionTypes.length > 1)
+    return "This plant is thriving — your diverse contributions are paying off.";
+  if (s === "active")
+    return "Growing well — focused care on this one area.";
+  if (s === "slow")
+    return "Steady growth — a little more attention could accelerate it.";
+  if (s === "dormant")
+    return "Resting — no recent activity, but the roots are still there.";
+  return "Empty plot — nothing growing here yet.";
+}
+
 function activityColor(signal: string): string {
-  if (signal === "active") return "text-green-400";
-  if (signal === "slow") return "text-yellow-400";
-  if (signal === "dormant") return "text-muted-foreground";
-  return "text-muted-foreground";
+  return gardenHealth(signal).color;
 }
 
 function outcomeColor(outcome: string | null): string {
@@ -259,7 +281,7 @@ export default function ContributorPortfolioPage() {
 
       {/* ── Header ── */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-widest">My Portfolio</p>
+        <p className="text-xs text-muted-foreground uppercase tracking-widest">My Garden</p>
         <h1 className="text-3xl font-light tracking-tight">{contributor.display_name}</h1>
 
         {/* Linked identities */}
@@ -271,99 +293,114 @@ export default function ContributorPortfolioPage() {
           </div>
         )}
 
-        {/* Quick stats */}
+        {/* Quick stats — garden framing (Spec 186 R2, R7) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
           <div className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
-            <p className="text-xs text-muted-foreground">CC Balance</p>
-            <p className="text-xl font-light text-primary">{fmtCC(summary.cc_balance)}</p>
+            <p className="text-xs text-muted-foreground">Harvest</p>
+            <p className="text-xl font-light text-primary">{fmtCC(summary.cc_balance)} seeds</p>
             {summary.cc_network_pct !== null && (
-              <p className="text-xs text-muted-foreground">{summary.cc_network_pct.toFixed(4)}% of network</p>
+              <p className="text-xs text-muted-foreground">{summary.cc_network_pct.toFixed(4)}% share of garden</p>
             )}
           </div>
           <div className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
-            <p className="text-xs text-muted-foreground">Ideas</p>
+            <p className="text-xs text-muted-foreground">Plants</p>
             <p className="text-xl font-light text-primary">{summary.idea_contribution_count}</p>
           </div>
           <div className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
-            <p className="text-xs text-muted-foreground">Stakes</p>
+            <p className="text-xs text-muted-foreground">Seeds Planted</p>
             <p className="text-xl font-light text-primary">{summary.stake_count}</p>
           </div>
           <div className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
-            <p className="text-xs text-muted-foreground">Tasks Done</p>
+            <p className="text-xs text-muted-foreground">Garden Work</p>
             <p className="text-xl font-light text-primary">{summary.task_completion_count}</p>
           </div>
         </div>
       </section>
 
-      {/* ── CC History Chart ── */}
+      {/* ── CC History Chart — Harvest Over Time (Spec 186 R2, R7) ── */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-medium">CC Earning History</h2>
+          <h2 className="text-lg font-medium">Harvest Over Time</h2>
           <span className="text-xs text-muted-foreground">90 days · 7d buckets</span>
         </div>
         {history ? (
           <>
             <CCChart series={history.series} />
             <p className="text-xs text-muted-foreground">
-              Hover bar for CC earned per period. Running total: {fmtCC(history.series.at(-1)?.running_total ?? null)} CC
+              Hover bar for seeds harvested per period. Running total: {fmtCC(history.series.at(-1)?.running_total ?? null)} seeds
             </p>
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">No history data.</p>
+          <p className="text-sm text-muted-foreground">No harvest data yet.</p>
         )}
       </section>
 
-      {/* ── Ideas I Contributed To ── */}
+      {/* ── Plants I Tend (Spec 186 R2, R4) ── */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-        <h2 className="text-lg font-medium">Ideas I Contributed To</h2>
+        <h2 className="text-lg font-medium">Plants I Tend</h2>
         {ideas && ideas.items.length > 0 ? (
           <ul className="space-y-2">
-            {ideas.items.map((idea) => (
-              <li key={idea.idea_id}>
-                <Link
-                  href={`/contributors/${encodeURIComponent(contributorId)}/portfolio/ideas/${encodeURIComponent(idea.idea_id)}`}
-                  className="block rounded-xl border border-border/20 bg-background/40 p-4 hover:border-primary/40 hover:bg-background/60 transition-all group"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1 min-w-0">
-                      <p className="font-medium truncate group-hover:text-primary transition-colors">{idea.idea_title}</p>
-                      <div className="flex flex-wrap gap-1.5 text-xs">
-                        <span className="rounded-full border border-border/30 px-2 py-0.5 text-muted-foreground">{idea.idea_status}</span>
-                        {idea.contribution_types.map((t) => (
-                          <span key={t} className="rounded-full border border-primary/30 px-2 py-0.5 text-primary/80">{t}</span>
-                        ))}
+            {ideas.items.map((idea) => {
+              const health = gardenHealth(idea.health.activity_signal);
+              const desc = plantDescription(idea.health.activity_signal, idea.contribution_types);
+              return (
+                <li key={idea.idea_id}>
+                  <Link
+                    href={`/contributors/${encodeURIComponent(contributorId)}/portfolio/ideas/${encodeURIComponent(idea.idea_id)}`}
+                    className="block rounded-xl border border-border/20 bg-background/40 p-4 hover:border-primary/40 hover:bg-background/60 transition-all group"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="space-y-1 min-w-0">
+                        <p className="font-medium truncate group-hover:text-primary transition-colors">{idea.idea_title}</p>
+                        <div className="flex flex-wrap gap-1.5 text-xs">
+                          <span
+                            className={`rounded-full border border-border/30 px-2 py-0.5 ${health.color}`}
+                            aria-label={`Garden health: ${health.label}`}
+                          >
+                            <span aria-hidden="true">{health.emoji}</span> {health.label}
+                          </span>
+                          {idea.contribution_types.map((t) => (
+                            <span key={t} className="rounded-full border border-primary/30 px-2 py-0.5 text-primary/80">{t}</span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 space-y-1">
+                        <p className="text-sm font-mono text-primary">{fmtCC(idea.cc_attributed)} seeds</p>
                       </div>
                     </div>
-                    <div className="text-right shrink-0 space-y-1">
-                      <p className="text-sm font-mono text-primary">{fmtCC(idea.cc_attributed)} CC</p>
-                      <p className={`text-xs ${activityColor(idea.health.activity_signal)}`}>
-                        {idea.health.activity_signal}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {idea.contribution_count} contribution{idea.contribution_count !== 1 ? "s" : ""} · last {fmtDate(idea.last_contributed_at)}
-                    {idea.health.value_delta_pct !== null && (
-                      <span className={idea.health.value_delta_pct >= 0 ? " text-green-400" : " text-red-400"}>
-                        {" "}· {idea.health.value_delta_pct >= 0 ? "+" : ""}{idea.health.value_delta_pct.toFixed(1)}% value
-                      </span>
-                    )}
-                  </p>
-                </Link>
-              </li>
-            ))}
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {desc}
+                    </p>
+                    <details className="group/details mt-2">
+                      <summary className="cursor-pointer text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors list-none flex items-center gap-1 select-none">
+                        <span className="group-open/details:rotate-90 inline-block transition-transform">›</span>
+                        See details
+                      </summary>
+                      <div className="mt-1 text-xs text-muted-foreground space-y-1">
+                        <p>{idea.contribution_count} contribution{idea.contribution_count !== 1 ? "s" : ""} · last {fmtDate(idea.last_contributed_at)}</p>
+                        {idea.health.value_delta_pct !== null && (
+                          <p className={idea.health.value_delta_pct >= 0 ? "text-emerald-400" : "text-red-400"}>
+                            {idea.health.value_delta_pct >= 0 ? "+" : ""}{idea.health.value_delta_pct.toFixed(1)}% value change
+                          </p>
+                        )}
+                      </div>
+                    </details>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No idea contributions found.</p>
+          <p className="text-sm text-muted-foreground">No plants yet — start by contributing to an idea.</p>
         )}
         {ideas && ideas.total > ideas.items.length && (
           <p className="text-xs text-muted-foreground">Showing {ideas.items.length} of {ideas.total}</p>
         )}
       </section>
 
-      {/* ── Stakes ── */}
+      {/* ── Seeds I Planted (Spec 186 R2, R5) ── */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-        <h2 className="text-lg font-medium">Ideas I Staked On</h2>
+        <h2 className="text-lg font-medium">Seeds I Planted</h2>
         {stakes && stakes.items.length > 0 ? (
           <ul className="space-y-2">
             {stakes.items.map((stake) => (
@@ -376,31 +413,39 @@ export default function ContributorPortfolioPage() {
                     >
                       {stake.idea_title}
                     </Link>
-                    <p className="text-xs text-muted-foreground">Staked {fmtDate(stake.staked_at)}</p>
+                    <p className="text-xs text-muted-foreground">Planted {fmtDate(stake.staked_at)}</p>
                   </div>
                   <div className="text-right shrink-0 space-y-1">
-                    <p className="text-sm font-mono">{fmtCC(stake.cc_staked)} CC staked</p>
-                    {stake.roi_pct !== null && (
-                      <p className={`text-sm font-mono font-medium ${stake.roi_pct >= 0 ? "text-green-400" : "text-red-400"}`}>
-                        {stake.roi_pct >= 0 ? "+" : ""}{stake.roi_pct.toFixed(2)}% ROI
-                      </p>
-                    )}
+                    <p className="text-sm font-mono">{fmtCC(stake.cc_staked)} seeds planted</p>
                     {stake.cc_valuation !== null && (
-                      <p className="text-xs text-muted-foreground">Now: {fmtCC(stake.cc_valuation)} CC</p>
+                      <p className="text-xs text-muted-foreground">Now: {fmtCC(stake.cc_valuation)} seeds</p>
                     )}
                   </div>
                 </div>
+                <details className="group/details mt-2">
+                  <summary className="cursor-pointer text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors list-none flex items-center gap-1 select-none">
+                    <span className="group-open/details:rotate-90 inline-block transition-transform">›</span>
+                    See yield
+                  </summary>
+                  <div className="mt-1 text-xs text-muted-foreground space-y-1">
+                    {stake.roi_pct !== null && (
+                      <p className={`font-mono font-medium ${stake.roi_pct >= 0 ? "text-emerald-400" : "text-muted-foreground"}`}>
+                        ×{(1 + stake.roi_pct / 100).toFixed(2)} yield ({stake.roi_pct >= 0 ? "+" : ""}{stake.roi_pct.toFixed(2)}%)
+                      </p>
+                    )}
+                  </div>
+                </details>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No stakes recorded yet.</p>
+          <p className="text-sm text-muted-foreground">No seeds planted yet — water an idea on the Invest page.</p>
         )}
       </section>
 
-      {/* ── Tasks ── */}
+      {/* ── Garden Work (Spec 186 R2, R6) ── */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-        <h2 className="text-lg font-medium">Tasks I Completed</h2>
+        <h2 className="text-lg font-medium">Garden Work</h2>
         {tasks && tasks.items.length > 0 ? (
           <ul className="space-y-2">
             {tasks.items.map((task) => (
@@ -409,7 +454,7 @@ export default function ContributorPortfolioPage() {
                   <div className="space-y-1 min-w-0 flex-1">
                     <p className="text-sm truncate">{task.description || task.task_id}</p>
                     <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground">
-                      {task.provider && <span className="rounded-full border border-border/30 px-2 py-0.5">{task.provider}</span>}
+                      {task.provider && <span className="rounded-full border border-border/30 px-2 py-0.5">Tool: {task.provider}</span>}
                       {task.idea_title && (
                         <Link
                           href={`/ideas/${encodeURIComponent(task.idea_id ?? "")}`}
@@ -423,10 +468,10 @@ export default function ContributorPortfolioPage() {
                   </div>
                   <div className="text-right shrink-0 space-y-1">
                     {task.outcome && (
-                      <p className={`text-xs font-medium ${outcomeColor(task.outcome)}`}>{task.outcome}</p>
+                      <p className={`text-xs font-medium ${outcomeColor(task.outcome)}`}>Result: {task.outcome}</p>
                     )}
                     {task.cc_earned > 0 && (
-                      <p className="text-xs font-mono text-primary">+{fmtCC(task.cc_earned)} CC</p>
+                      <p className="text-xs font-mono text-primary">+{fmtCC(task.cc_earned)} seeds harvested</p>
                     )}
                   </div>
                 </div>
@@ -434,7 +479,7 @@ export default function ContributorPortfolioPage() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">No completed tasks found.</p>
+          <p className="text-sm text-muted-foreground">No garden work yet — pick up a task to get started.</p>
         )}
         {tasks && tasks.total > tasks.items.length && (
           <p className="text-xs text-muted-foreground">Showing {tasks.items.length} of {tasks.total}</p>
@@ -446,6 +491,9 @@ export default function ContributorPortfolioPage() {
         <Link href="/my-portfolio" className="hover:text-foreground transition-colors">← Change Contributor</Link>
         <Link href={`/contributors/${encodeURIComponent(contributorId)}`} className="hover:text-foreground transition-colors">
           Full Profile →
+        </Link>
+        <Link href="/invest" className="hover:text-foreground transition-colors">
+          Visit the Garden →
         </Link>
       </div>
     </main>
