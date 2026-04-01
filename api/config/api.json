@@ -187,6 +187,39 @@
     "probe_directory": null
   },
 
+  "friction": {
+    "_doc": "Friction ledger service configuration.",
+    "events_path": null,
+    "use_db": null,
+    "purge_imported_files": "1"
+  },
+
+  "monitor": {
+    "_doc": "Monitor issues configuration.",
+    "issues_path": null
+  },
+
+  "github_actions": {
+    "_doc": "GitHub Actions health configuration.",
+    "health_path": null
+  },
+
+  "data_retention": {
+    "_doc": "Data retention service configuration.",
+    "hot_days": 7,
+    "warm_days": 30,
+    "cold_days": 90,
+    "backup_dir": "data/retention-backups"
+  },
+
+  "contributor_hygiene": {
+    "_doc": "Contributor hygiene configuration.",
+    "test_email_domains": null,
+    "plus_alias_domains": null,
+    "email_alias_map": null,
+    "internal_email_prefixes": null
+  },
+
   "github": {
     "_doc": "GitHub integration settings.",
     "token": null,
@@ -199,7 +232,11 @@
     "verification_max_attempts": 8,
     "verification_retry_seconds": 60,
     "branch_head_sha_timeout_seconds": 6.0,
-    "branch_head_sha_cache_ttl_seconds": 45.0
+    "branch_head_sha_cache_ttl_seconds": 45.0,
+    "require_telegram_alerts": false,
+    "require_provider_readiness": false,
+    "require_api_health_sha": false,
+    "require_web_health_proxy_sha": false
   },
 
   "railway_logs_url": null,

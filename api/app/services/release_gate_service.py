@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import binascii
-import os
 import json
 import re
 import subprocess
@@ -17,7 +16,7 @@ from urllib.parse import quote
 
 import httpx
 
-from app.config_loader import get_float, get_int, get_str
+from app.config_loader import get_bool, get_float, get_int, get_str
 
 _BRANCH_HEAD_SHA_CACHE: dict[tuple[str, str], tuple[float, str]] = {}
 
@@ -31,19 +30,6 @@ DEFAULT_PUBLIC_DEPLOY_VERIFICATION_MAX_ATTEMPTS = 8
 DEFAULT_PUBLIC_DEPLOY_VERIFICATION_RETRY_SECONDS = 60
 DEFAULT_BRANCH_HEAD_SHA_TIMEOUT_SECONDS = 6.0
 DEFAULT_BRANCH_HEAD_SHA_CACHE_TTL_SECONDS = 45.0
-
-
-def _env_to_float(name: str, fallback: float) -> float:
-    raw = os.getenv(name)
-    if raw is None:
-        return fallback
-    try:
-        value = float(raw)
-    except (TypeError, ValueError):
-        return fallback
-    if value <= 0:
-        return fallback
-    return value
 
 
 def _branch_head_lookup_timeout_seconds(timeout: float) -> float:
@@ -201,17 +187,6 @@ def _headers(github_token: str | None = None) -> dict[str, str]:
         headers["Authorization"] = f"Bearer {resolved_token}"
     return headers
 
-
-def _env_to_bool(name: str, default: bool = False) -> bool:
-    raw = os.getenv(name)
-    if raw is None:
-        return default
-    normalized = str(raw).strip().lower()
-    if normalized in {"1", "true", "yes", "on"}:
-        return True
-    if normalized in {"0", "false", "no", "off"}:
-        return False
-    return default
 
 
 def _ensure_job_defaults(
@@ -1443,10 +1418,10 @@ def evaluate_public_deploy_contract_report(
         return report
 
     checks: list[dict[str, Any]] = []
-    require_telegram_alerts = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_TELEGRAM_ALERTS", default=False)
-    require_provider_readiness = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", default=False)
-    require_api_health_sha = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA", default=False)
-    require_web_health_proxy_sha = _env_to_bool("PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA", default=False)
+    require_telegram_alerts = get_bool("release_gates", "require_telegram_alerts", default=False)
+    require_provider_readiness = get_bool("release_gates", "require_provider_readiness", default=False)
+    require_api_health_sha = get_bool("release_gates", "require_api_health_sha", default=False)
+    require_web_health_proxy_sha = get_bool("release_gates", "require_web_health_proxy_sha", default=False)
 
     api_health_url = f"{report['api_base']}/api/health"
     api_health = check_http_json_endpoint(api_health_url, timeout=timeout)
