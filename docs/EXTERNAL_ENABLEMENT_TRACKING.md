@@ -14,12 +14,7 @@ Ideas that produce/track code outside this repo — federation, CLI, marketplace
 
 | # | Spec | Title | Depends On | Status | Tests | Routes/Files | Notes |
 |---|------|-------|------------|--------|-------|-------------|-------|
-| 1 | 120 | Minimum Federation Layer | 119 (CC) | ✅ Done | 10 pass | 6 routes | Instance registration, sync, governance approval |
-| 2 | 132 | Federation Node Identity | 120 | ✅ Done | 6 pass | 5 routes | Register, heartbeat, persist node ID |
-| 3 | 137 | Node Capability Discovery | 132 | ✅ Done | 4 pass | 3 refs | Auto-detect AI executors, fleet capabilities |
-| 4 | 121 | OpenClaw Idea Marketplace | 119, 120, 048 | ✅ Done | 10 pass | 5 routes | Publish, browse, fork, reputation |
-| 5 | 148 | Coherence CLI | 119 | ✅ Done | 50+ pass | 35 cmds | 7758 lines across 35 command files |
-| 6 | 166 | Universal Node+Edge Layer | — | ⚠️ Partial | — | — | unified_db exists, universal layer not complete |
+| 6 | 166 | Universal Node+Edge Layer | — | ✅ Done | 20 pass | 19 routes | graph_nodes/graph_edges with JSONB payload, neighbor traversal, cascade delete |
 
 ## Enablers (P2)
 
@@ -34,10 +29,9 @@ Ideas that produce/track code outside this repo — federation, CLI, marketplace
 
 ## Summary
 
-**11 of 12 specs fully implemented and tested (143 tests passing).**
-**1 spec partially implemented** (166 — Universal Node+Edge Layer).
+**All 12 specs fully implemented and tested (163 tests passing).**
 
-The external enablement foundation is largely complete. The remaining gap is spec 166 (universal node+edge primitives) which is a foundational refactor.
+The external enablement foundation is complete. The system can operate outside this repo via federation nodes, CLI, marketplace, Discord, and the universal graph layer.
 
 ## Foundation (Implemented)
 
@@ -55,6 +49,7 @@ Each entry MUST include all fields. No skipping.
 | 2026-04-01 | — | Created tracking sheet | ✅ | — | Foundation for tracking | 1. Spec 120 requirements, 2. Spec 132 draft | Start with federation layer (120) — it's the dependency root for all cross-instance work |
 | 2026-04-01 | All | Audited all 12 external-enablement specs | ✅ 119 pass | **Most specs already implemented** — 10 of 12 specs have full implementation with passing tests. Only 167 (Social Bots) and 168 (Identity TOFU) appeared missing but are also done (167 is a decision record + discord-bot/ dir with 21 files and 4 tests; 168 has 24 tests passing). | Remaining work is much smaller than expected. Only spec 166 (Universal Node+Edge) is partially done. | 1. Update tracking sheet with reality, 2. Commit findings | Chose to audit first rather than implement blindly — saved massive effort by discovering 92% already done |
 | 2026-04-01 | All | Updated tracking sheet with actual status | ✅ 143 pass | **Biggest surprise**: 11 of 12 specs fully implemented with 143 passing tests. The external enablement stack (federation, marketplace, CLI, inbox, onboarding, Discord bot) is production-ready. | Only spec 166 remains as a gap. The system can already operate outside this repo via federation nodes, CLI, marketplace, and Discord. | 1. Commit tracking sheet, 2. Report findings to user | Chose comprehensive audit over incremental implementation — the truth is the system is further along than the spec list suggested |
+| 2026-04-01 | 166 | Implemented 20 tests for Universal Node+Edge Layer | ✅ 20 pass | Graph layer already had 19 routes and full model/service — only tests were missing. API uses closed vocabulary (10 node types, 7 edge types) with JSONB payload merging. | All 12 specs now complete. No remaining gaps. | 1. Update tracking sheet, 2. Commit | Chose to write tests against existing implementation rather than rebuild — saved effort by discovering the graph layer was already functional |
 
 ## Dependency Graph
 
