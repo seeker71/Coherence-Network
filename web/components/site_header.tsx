@@ -5,17 +5,21 @@ import { ActiveNavLink } from "./active_nav_link";
 import { ThemeToggle } from "./theme-toggle";
 import { ModeSwitcher } from "./mode-switcher";
 
-/** Primary nav — 5 core actions visible to everyone. */
-const PRIMARY_NAV = [
+/** Navigation item with optional heartbeat flag. */
+interface NavItem {
+  href: string;
+  label: string;
+  isHeartbeat?: boolean;
+}
+
+/** Single source of truth for primary navigation. */
+const PRIMARY_NAV: NavItem[] = [
   { href: "/ideas", label: "Ideas" },
   { href: "/contribute", label: "Contribute" },
-  { href: "/resonance", label: "Resonance" },
+  { href: "/resonance", label: "Resonance", isHeartbeat: true },
   { href: "/pipeline", label: "Pipeline" },
   { href: "/nodes", label: "Nodes" },
 ];
-
-/** Always visible — the heartbeat of the network. */
-const HEARTBEAT_NAV = { href: "/resonance", label: "Resonance" };
 
 /** Secondary nav — grouped by purpose, accessible via Menu dropdown. */
 const SECONDARY_NAV = [
@@ -34,6 +38,15 @@ const SECONDARY_NAV = [
   { href: "/friction", label: "Friction" },
   { href: "/identity", label: "Identity" },
 ];
+
+function HeartbeatIcon() {
+  return (
+    <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
+      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary/80" />
+    </span>
+  );
+}
 
 export default function SiteHeader() {
   const apiBase = getApiBase();
@@ -60,13 +73,9 @@ export default function SiteHeader() {
                 key={n.href}
                 href={n.href}
                 label={n.label}
+                isHeartbeat={n.isHeartbeat}
               />
             ))}
-            <ActiveNavLink
-              href={HEARTBEAT_NAV.href}
-              label={HEARTBEAT_NAV.label}
-              isHeartbeat
-            />
           </nav>
 
           <div className="flex-1" />
@@ -130,21 +139,16 @@ export default function SiteHeader() {
                   <Link
                     key={n.href}
                     href={n.href}
-                    className="block rounded-lg px-3 py-2 text-sm hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
+                    className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring ${
+                      n.isHeartbeat
+                        ? "text-primary/80 hover:text-primary hover:bg-accent/60"
+                        : "hover:bg-accent/60"
+                    }`}
                   >
+                    {n.isHeartbeat && <HeartbeatIcon />}
                     {n.label}
                   </Link>
                 ))}
-                <Link
-                  href={HEARTBEAT_NAV.href}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-primary/80 hover:text-primary hover:bg-accent/60 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
-                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary/80" />
-                  </span>
-                  {HEARTBEAT_NAV.label}
-                </Link>
                 <div className="border-t border-border/30 my-2" />
                 <p className="px-3 pt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">More</p>
                 {SECONDARY_NAV.map((n) => (
