@@ -7,6 +7,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
+from app.config_loader import get_bool
 from app.models.spec_registry import SpecRegistryUpdate
 from app.services import agent_execution_completion as completion_service
 from app.services import agent_execution_hooks as hooks_service
@@ -18,12 +19,7 @@ from app.services import agent_task_continuation_service as continuation_service
 
 
 def _codex_executor_disabled() -> bool:
-    return str(execution_service.os.getenv("AGENT_DISABLE_CODEX_EXECUTOR", "1")).strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    return get_bool("agent_executor", "disable_codex_executor", True)
 
 
 def _emit_lifecycle_event(
