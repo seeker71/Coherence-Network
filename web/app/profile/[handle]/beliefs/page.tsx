@@ -80,7 +80,7 @@ export default function BeliefProfilePage() {
 
   if (!profile) return null;
 
-  const axes = profile.worldview_axes as WorldviewAxes;
+  const axes = (profile.worldview_axes || {}) as WorldviewAxes;
 
   function resonanceLabel(score: number): { label: string; color: string } {
     if (score >= 0.7) return { label: "High resonance", color: "text-green-600 dark:text-green-400" };
@@ -88,9 +88,10 @@ export default function BeliefProfilePage() {
     return { label: "Low resonance", color: "text-muted-foreground" };
   }
 
+  const axesValues = Object.values(axes).filter((v): v is number => v !== undefined);
   const avgAxes =
-    Object.values(axes).reduce((s, v) => s + v, 0) /
-    Math.max(Object.values(axes).length, 1);
+    axesValues.reduce((s: number, v: number) => s + v, 0) /
+    Math.max(axesValues.length, 1);
   const { label: resLabel, color: resColor } = resonanceLabel(avgAxes);
 
   return (
@@ -136,7 +137,9 @@ export default function BeliefProfilePage() {
         </h2>
         <WorldviewSelector
           contributorId={handle}
-          initialAxes={axes}
+          initialAxes={Object.fromEntries(
+            Object.entries(axes).filter(([, v]) => v !== undefined).map(([k, v]) => [k, v as number])
+          )}
           onSaved={handleAxesSaved}
         />
       </section>
