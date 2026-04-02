@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Generator
 
 from sqlalchemy import create_engine, event, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -107,6 +108,17 @@ def _create_engine(url: str):
     return eng
 
 
+def _create_all_idempotent(*, bind, url: str) -> None:
+    try:
+        Base.metadata.create_all(bind=bind, checkfirst=True)
+    except OperationalError as exc:
+        message = str(exc).lower()
+        if url.startswith("sqlite") and "already exists" in message:
+            # SQLite schema setup can race across separate connections during tests.
+            return
+        raise
+
+
 def engine():
     """Get or create the shared engine."""
     cache = _normalize_engine_cache()
@@ -123,7 +135,7 @@ def engine():
     # Auto-create tables on new engine (safe: checkfirst=True)
     try:
         from app.services import unified_models  # noqa: F401
-        Base.metadata.create_all(bind=eng, checkfirst=True)
+        _create_all_idempotent(bind=eng, url=url)
         _SCHEMA_INITIALIZED[url] = True
     except Exception:
         pass
@@ -163,7 +175,7 @@ def ensure_schema() -> None:
     with _SCHEMA_LOCK:
         if _SCHEMA_INITIALIZED.get(url):
             return
-        Base.metadata.create_all(bind=eng, checkfirst=True)
+        _create_all_idempotent(bind=eng, url=url)
         _SCHEMA_INITIALIZED[url] = True
 
 
