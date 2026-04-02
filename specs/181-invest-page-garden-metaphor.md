@@ -4,7 +4,7 @@
 **Idea ID**: task_57f054c23b57dbbd
 **Status**: Draft
 **Depends on**: Spec 157 (Investment UX), Spec 052 (Portfolio Cockpit)
-**Depended on by**: Spec 186 (My Portfolio — Garden vs Ledger)
+**Depended on by**: Spec 186 (My Portfolio — Garden vs Ledger) — ✅ Implemented
 
 ---
 

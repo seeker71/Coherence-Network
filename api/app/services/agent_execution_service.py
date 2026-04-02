@@ -58,6 +58,11 @@ def _truthy_any(value: object) -> bool:
 
 
 def _paid_providers_allowed() -> bool:
+    explicit = str(os.getenv("AGENT_ALLOW_PAID_PROVIDERS", "")).strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
     return get_bool("agent_cost", "allow_paid_providers", default=True)
 
 

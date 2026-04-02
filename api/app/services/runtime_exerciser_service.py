@@ -42,15 +42,22 @@ _EXERCISER_QUERY_DEFAULTS: dict[str, dict[str, str]] = {
 }
 
 
-def _sample_path_value(param_name: str) -> str:
+def _sample_path_value(param_name: str, *, path_template: str = "") -> str:
     key = (param_name or "").strip().lower()
     if key == "task_id":
         try:
-            from app.services import agent_service
+            from app.services import agent_run_state_service, agent_service
 
             rows, total, _ = agent_service.list_tasks(limit=1)
-            if total > 0 and rows:
-                value = str(rows[0].get("id") or "").strip()
+            candidates = rows if total > 0 and isinstance(rows, list) else []
+            if path_template.startswith("/api/agent/run-state/"):
+                for row in candidates:
+                    value = str((row or {}).get("id") or "").strip()
+                    if value and agent_run_state_service.get_run_state(value) is not None:
+                        return value
+                return ""
+            if candidates:
+                value = str(candidates[0].get("id") or "").strip()
                 if value:
                     return value
         except Exception:
@@ -79,11 +86,21 @@ def _sample_path_value(param_name: str) -> str:
     return f"{key}_sample"
 
 
-def _materialize_route_path(path_template: str) -> str:
-    def _replace(match: re.Match[str]) -> str:
-        return _sample_path_value(match.group(1))
+def _materialize_route_path(path_template: str) -> str | None:
+    missing_required_value = False
 
-    return re.sub(r"\{([^{}]+)\}", _replace, path_template)
+    def _replace(match: re.Match[str]) -> str:
+        nonlocal missing_required_value
+        value = _sample_path_value(match.group(1), path_template=path_template)
+        if not str(value or "").strip():
+            missing_required_value = True
+            return match.group(0)
+        return value
+
+    materialized = re.sub(r"\{([^{}]+)\}", _replace, path_template)
+    if missing_required_value:
+        return None
+    return materialized
 
 
 def _discover_get_api_paths(app) -> list[str]:
@@ -98,6 +115,8 @@ def _discover_get_api_paths(app) -> list[str]:
         if not path.startswith("/api/"):
             continue
         if path.startswith("/api/runtime/exerciser"):
+            continue
+        if path.endswith("/stream"):
             continue
         paths.append(path)
     return sorted(set(paths))
@@ -135,12 +154,17 @@ async def _run_get_endpoint_exerciser_calls(
         for cycle in range(1, total_cycles + 1):
             for path_template in paths:
                 path = _materialize_route_path(path_template)
+                if not path:
+                    continue
                 params = dict(_EXERCISER_QUERY_DEFAULTS.get(path_template, {}))
                 started = time.perf_counter()
                 status_code = 599
                 error = None
                 try:
-                    response = await client.get(path, params=params, headers={"x-endpoint-exerciser": "1"})
+                    response = await asyncio.wait_for(
+                        client.get(path, params=params, headers={"x-endpoint-exerciser": "1"}),
+                        timeout=timeout,
+                    )
                     status_code = int(response.status_code)
                 except Exception as exc:
                     error = str(exc)
@@ -177,7 +201,12 @@ async def run_get_endpoint_exerciser(
     endpoint_limit = max(1, min(int(max_endpoints), 2000))
     per_call_delay = max(0, min(int(delay_ms), 30000))
     timeout = max(1.0, min(float(timeout_seconds), 60.0))
-    paths = _discover_get_api_paths(app)[:endpoint_limit]
+    candidate_paths = _discover_get_api_paths(app)[:endpoint_limit]
+    paths = [
+        path_template
+        for path_template in candidate_paths
+        if _materialize_route_path(path_template) is not None
+    ]
 
     before_with_usage, before_total = _exerciser_inventory_snapshot(
         runtime_window_seconds=runtime_window_seconds

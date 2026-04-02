@@ -84,6 +84,7 @@
     "policy_enabled": true,
     "allow_unavailable_explicit": false,
     "disable_codex_executor": true,
+    "auto_execute": false,
     "executors": [],
     "execute_token": null,
     "execute_token_allow_unauth": false,
@@ -253,7 +254,8 @@
 
   "federation": {
     "_doc": "Federation service configuration.",
-    "stats_window_days": 7
+    "stats_window_days": 7,
+    "bridge_token": null
   },
 
   "github": {

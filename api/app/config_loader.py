@@ -125,3 +125,13 @@ def reload_config() -> None:
     global _LOADED
     _LOADED = False
     _load()
+
+
+def set_config_value(section: str, key: str, value: Any) -> None:
+    """Override one loaded config value without leaving the JSON config path."""
+    config = _load()
+    section_config = config.setdefault(section, {})
+    if not isinstance(section_config, dict):
+        section_config = {}
+        config[section] = section_config
+    section_config[key] = value

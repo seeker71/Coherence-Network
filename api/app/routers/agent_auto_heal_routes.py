@@ -11,6 +11,10 @@ router = APIRouter()
 @router.get("/auto-heal/stats")
 async def get_auto_heal_stats() -> dict:
     """Auto-heal statistics: heals created, rates, by-category breakdown."""
-    tasks_response = list_tasks()
-    failed = [t.model_dump() for t in tasks_response.tasks if t.status.value == "failed"]
+    items, _total, _runtime_backfill = list_tasks()
+    failed = [
+        dict(task)
+        for task in items
+        if isinstance(task, dict) and str(task.get("status") or "") == "failed"
+    ]
     return auto_heal_service.compute_auto_heal_stats(failed)

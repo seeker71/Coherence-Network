@@ -11,9 +11,6 @@ from app.config_loader import get_bool, get_float, get_int, get_str
 from app.models.agent import TaskStatus, TaskType
 from app.services import agent_task_store_service
 
-PYTEST_CURRENT_TEST = os.environ.get("PYTEST_CURRENT_TEST")
-
-
 class TaskClaimConflictError(RuntimeError):
     """Raised when attempting to start/claim a task already claimed by another worker."""
 
@@ -38,6 +35,9 @@ def _default_store_path() -> Path:
 
 
 def _store_path() -> Path:
+    explicit = os.getenv("AGENT_TASKS_PATH", "").strip()
+    if explicit:
+        return Path(explicit)
     configured = get_str("agent_tasks", "path")
     if configured:
         return Path(configured)
@@ -45,7 +45,12 @@ def _store_path() -> Path:
 
 
 def _persistence_enabled() -> bool:
-    if PYTEST_CURRENT_TEST:
+    explicit = os.getenv("AGENT_TASKS_PERSIST", "").strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
+    if os.getenv("PYTEST_CURRENT_TEST"):
         return False
     return get_bool("agent_tasks", "persist", default=False)
 
@@ -55,6 +60,12 @@ def _db_store_reload_ttl_seconds() -> float:
 
 
 def _max_task_output_chars() -> int:
+    explicit = os.getenv("AGENT_TASK_OUTPUT_MAX_CHARS", "").strip()
+    if explicit:
+        try:
+            return max(500, min(int(explicit), 200000))
+        except ValueError:
+            pass
     return max(500, min(get_int("agent_tasks", "task_output_max_chars", 4000), 200000))
 
 
@@ -190,7 +201,7 @@ def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = F
     global _store_loaded_includes_output, _store_loaded_at_monotonic
     store_path = _store_path()
     current_path = str(store_path)
-    current_test = PYTEST_CURRENT_TEST
+    current_test = os.getenv("PYTEST_CURRENT_TEST")
 
     if not _persistence_enabled() and current_test and _store_loaded_test_context != current_test:
         _store.clear()

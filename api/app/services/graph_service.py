@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.models.graph import (
     Edge, Node,
-    CANONICAL_EDGE_TYPE_SET, CANONICAL_NODE_TYPE_SET,
+    CANONICAL_EDGE_TYPE_SET, CANONICAL_NODE_TYPE_SET, NODE_TYPE_SET,
     LIFECYCLE_DEFAULTS, SYMMETRIC_EDGE_TYPES,
 )
 from app.services.unified_db import session
@@ -36,8 +36,8 @@ _VALID_LIFECYCLE_STATES = frozenset({"gas", "ice", "water"})
 
 
 def validate_node_type(node_type: str) -> None:
-    """Raise ValueError if node_type is not in the canonical 10-type vocabulary."""
-    if node_type not in CANONICAL_NODE_TYPE_SET:
+    """Raise ValueError if node_type is not in the supported graph vocabulary."""
+    if node_type not in NODE_TYPE_SET:
         raise ValueError(
             f"node_type '{node_type}' is not a recognized node type. "
             f"See /api/graph/node-types for valid values."

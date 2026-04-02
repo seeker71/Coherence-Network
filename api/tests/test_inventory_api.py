@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app import config_loader
 from app.main import app
 from app.services import agent_execution_service
 from app.services import agent_service
@@ -138,7 +139,7 @@ async def test_canonical_routes_fallback_when_config_missing(
 
 
 @pytest.mark.asyncio
-async def test_canonical_routes_uses_env_override_path(
+async def test_canonical_routes_uses_config_override_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     override = tmp_path / "canonical_routes_override.json"
@@ -160,7 +161,7 @@ async def test_canonical_routes_uses_env_override_path(
         ),
         encoding="utf-8",
     )
-    monkeypatch.setenv("CANONICAL_ROUTES_PATH", str(override))
+    config_loader.set_config_value("route_registry", "canonical_routes_path", str(override))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/api/inventory/routes/canonical")
@@ -964,7 +965,7 @@ async def test_sync_spec_implementation_gap_tasks_auto_executes_when_enabled(
             SimpleNamespace(spec_id="036-check-pipeline-hierarchical-view", estimated_roi=2.0),
         ],
     )
-    monkeypatch.setenv("AGENT_AUTO_EXECUTE", "1")
+    config_loader.set_config_value("agent_executor", "auto_execute", True)
 
     queued: list[str] = []
 
@@ -1213,7 +1214,7 @@ async def test_next_unblock_task_auto_executes_created_task_when_enabled(
     monkeypatch.setenv("VALUE_LINEAGE_PATH", str(tmp_path / "value_lineage.json"))
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("AGENT_AUTO_EXECUTE", "1")
+    config_loader.set_config_value("agent_executor", "auto_execute", True)
 
     (tmp_path / "ideas.json").write_text(
         json.dumps(

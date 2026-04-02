@@ -60,6 +60,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if _TESTING:
             return await call_next(request)
+        if request.headers.get("x-endpoint-exerciser") == "1":
+            return await call_next(request)
         # Exempt federation/runner paths from rate limiting
         path = request.url.path
         if any(path.startswith(p) for p in _EXEMPT_PATHS):

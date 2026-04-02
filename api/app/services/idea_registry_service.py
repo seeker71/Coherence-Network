@@ -368,6 +368,52 @@ def storage_info() -> dict[str, Any]:
     }
 
 
+def _normalize_tag_payload(raw: Any) -> list[str]:
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    if isinstance(raw, str) and raw.strip():
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+    return []
+
+
+def set_idea_tags(idea_id: str, tags: list[str]) -> None:
+    """Persist the normalized tag list for one idea."""
+    ensure_schema()
+    normalized = [str(tag).strip() for tag in tags if str(tag).strip()]
+    with _session() as session:
+        row = session.get(IdeaTagRecord, idea_id)
+        payload = json.dumps(normalized)
+        if row is None:
+            session.add(IdeaTagRecord(idea_id=idea_id, tags_json=payload))
+        else:
+            row.tags_json = payload
+
+
+def load_all_idea_tags() -> dict[str, list[str]]:
+    """Return tag lists keyed by idea id for all persisted tag rows."""
+    ensure_schema()
+    with _session() as session:
+        rows = session.query(IdeaTagRecord).all()
+        return {
+            str(row.idea_id): _normalize_tag_payload(row.tags_json)
+            for row in rows
+        }
+
+
+def get_all_tag_counts() -> dict[str, int]:
+    """Return idea counts per normalized tag."""
+    counts: dict[str, int] = {}
+    for tags in load_all_idea_tags().values():
+        for tag in set(tags):
+            counts[tag] = counts.get(tag, 0) + 1
+    return counts
+
+
 def _redact_database_url(url: str) -> str:
     if "@" not in url or "://" not in url:
         return url

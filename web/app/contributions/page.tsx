@@ -41,6 +41,8 @@ type Contribution = {
   coherence_score: number;
   timestamp: string;
   metadata?: {
+    description?: string;
+    summary?: string;
     commit_hash?: string;
     raw_cost_amount?: string;
     normalized_cost_amount?: string;
@@ -58,6 +60,10 @@ type CoherenceScoreResponse = {
 };
 
 type NameLookup = Map<string, string>;
+
+function formatCount(value: number): string {
+  return value.toLocaleString("en-US");
+}
 
 function ContributionsPageContent() {
   const searchParams = useSearchParams();
@@ -131,6 +137,32 @@ function ContributionsPageContent() {
     });
   }, [rows, contributorFilter, assetFilter]);
 
+  const filteredSummary = useMemo(() => {
+    const contributors = new Set<string>();
+    const assets = new Set<string>();
+    let totalCost = 0;
+    let coherenceSum = 0;
+    let coherenceCount = 0;
+
+    for (const row of filteredRows) {
+      contributors.add(row.contributor_id);
+      assets.add(row.asset_id);
+      const raw = Number(row.cost_amount);
+      if (Number.isFinite(raw)) totalCost += raw;
+      if (Number.isFinite(row.coherence_score)) {
+        coherenceSum += row.coherence_score;
+        coherenceCount += 1;
+      }
+    }
+
+    return {
+      totalCost,
+      contributors: contributors.size,
+      assets: assets.size,
+      averageCoherence: coherenceCount > 0 ? coherenceSum / coherenceCount : null,
+    };
+  }, [filteredRows]);
+
   const toFinite = (value: string | number | undefined): number | null => {
     if (value === undefined) return null;
     const parsed = typeof value === "number" ? value : Number(value);
@@ -164,7 +196,7 @@ function ContributionsPageContent() {
   };
 
   return (
-    <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-6">
+    <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
           ← Home
@@ -182,7 +214,12 @@ function ContributionsPageContent() {
           Tasks
         </Link>
       </div>
-      <h1 className="text-2xl font-bold">Contributions</h1>
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Contribution Ledger</h1>
+        <p className="max-w-3xl text-muted-foreground">
+          This is the network’s proof trail: who contributed, which asset was touched, what it cost, and how coherent the work looked when it landed.
+        </p>
+      </div>
       <p className="text-muted-foreground">
         Track all value contributions to the network.
         {contributorFilter ? (
@@ -199,11 +236,32 @@ function ContributionsPageContent() {
         ) : null}
       </p>
 
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Visible Entries</p>
+          <p className="mt-2 text-3xl font-light">{formatCount(filteredRows.length)}</p>
+        </div>
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Tracked Cost</p>
+          <p className="mt-2 text-3xl font-light">CC {filteredSummary.totalCost.toFixed(2)}</p>
+        </div>
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Contributors</p>
+          <p className="mt-2 text-3xl font-light">{filteredSummary.contributors}</p>
+        </div>
+        <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Avg Coherence</p>
+          <p className="mt-2 text-3xl font-light">
+            {filteredSummary.averageCoherence === null ? "—" : filteredSummary.averageCoherence.toFixed(2)}
+          </p>
+        </div>
+      </section>
+
       {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
       {status === "error" && <p className="text-destructive">Error: {error}</p>}
 
       {status === "ok" && (
-        <section className="rounded border p-4 space-y-3">
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
           <p className="text-sm text-muted-foreground">
             Total: {filteredRows.length}
             {(contributorFilter || assetFilter) ? (
@@ -220,16 +278,21 @@ function ContributionsPageContent() {
               const displayCoherence = c.coherence_score > 0 ? c.coherence_score : liveCoherenceScore;
               const coherenceValue = displayCoherence !== null ? Math.min(1, Math.max(0, displayCoherence)) : null;
               return (
-              <li key={c.id} className="rounded border p-3 space-y-2">
+              <li key={c.id} className="rounded-2xl border border-border/20 bg-background/40 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
-                  <span className="font-medium text-muted-foreground">#{idx + 1}</span>
-                  <span className="text-muted-foreground text-xs">{formatDate(c.timestamp)}</span>
+                  <div>
+                    <p className="font-medium">
+                      {c.metadata?.summary || c.metadata?.description || (c.metadata?.commit_hash ? "Tracked contribution" : `Ledger entry #${idx + 1}`)}
+                    </p>
+                    <span className="text-muted-foreground text-xs">{formatDate(c.timestamp)}</span>
+                  </div>
+                  <span className="font-medium whitespace-nowrap">CC {cost.effective.toFixed(2)}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-xs">
                   <span>
                     by{" "}
                     <Link
-                      href={`/contributors?contributor_id=${encodeURIComponent(c.contributor_id)}`}
+                      href={`/contributors/${encodeURIComponent(c.contributor_id)}/portfolio`}
                       className="underline hover:text-foreground font-medium"
                     >
                       {contributorNames.get(c.contributor_id) || truncateId(c.contributor_id)}
@@ -238,13 +301,24 @@ function ContributionsPageContent() {
                   <span className="text-muted-foreground">→</span>
                   <span>
                     <Link
-                      href={`/assets?asset_id=${encodeURIComponent(c.asset_id)}`}
+                      href={`/assets/${encodeURIComponent(c.asset_id)}`}
                       className="underline hover:text-foreground font-medium"
                     >
                       {assetNames.get(c.asset_id) || truncateId(c.asset_id)}
                     </Link>
                   </span>
-                  <span className="font-medium">CC {cost.effective.toFixed(2)}</span>
+                  <Link
+                    href={`/contributions?asset_id=${encodeURIComponent(c.asset_id)}`}
+                    className="underline hover:text-foreground"
+                  >
+                    Asset ledger
+                  </Link>
+                  <Link
+                    href={`/contributors/${encodeURIComponent(c.contributor_id)}/portfolio/contributions/${encodeURIComponent(c.id)}`}
+                    className="underline hover:text-foreground"
+                  >
+                    Contribution audit
+                  </Link>
                 </div>
                 {coherenceValue !== null && (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -290,6 +364,11 @@ function ContributionsPageContent() {
               </li>
               );
             })}
+            {filteredRows.length === 0 ? (
+              <li className="rounded-2xl border border-dashed border-border/30 bg-background/30 p-6 text-sm text-muted-foreground">
+                No contributions match the current filters yet. When the ledger fills in, this page will show contributor-to-asset links, normalized cost, and coherence at a glance.
+              </li>
+            ) : null}
           </ul>
         </section>
       )}
@@ -299,7 +378,19 @@ function ContributionsPageContent() {
 
 export default function ContributionsPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen p-8 max-w-5xl mx-auto"><p className="text-muted-foreground">Loading contributions…</p></main>}>
+    <Suspense
+      fallback={
+        <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-4">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Contribution Ledger</h1>
+            <p className="max-w-3xl text-muted-foreground">
+              This is the network’s proof trail: who contributed, which asset was touched, and what it cost.
+            </p>
+          </div>
+          <p className="text-muted-foreground">Loading contributions…</p>
+        </main>
+      }
+    >
       <ContributionsPageContent />
     </Suspense>
   );

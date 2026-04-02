@@ -171,19 +171,6 @@ def list_endpoints(app: Any) -> MetaEndpointsResponse:
                     target_id=module_name,
                     target_label=module_name.split(".")[-1],
                 ))
-            if response_model_id:
-                edges.append(EndpointEdge(
-                    type="returns_type",
-                    target_id=response_model_id,
-                    target_label=response_model_id.split("/")[-1],
-                ))
-            if request_model_id:
-                edges.append(EndpointEdge(
-                    type="accepts_type",
-                    target_id=request_model_id,
-                    target_label=request_model_id.split("/")[-1],
-                ))
-
             nodes.append(EndpointNode(
                 id=node_id,
                 method=method,

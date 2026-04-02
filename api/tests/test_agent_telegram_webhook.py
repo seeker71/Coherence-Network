@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app import config_loader
 from app.main import app
 from app.models.agent import TaskStatus
 from app.routers.agent_telegram import (
@@ -26,10 +27,21 @@ def _telegram_update(text: str) -> dict:
     }
 
 
+@pytest.fixture
+def telegram_config() -> None:
+    previous_token = config_loader.api_config("telegram", "bot_token")
+    previous_allowed_user_ids = config_loader.api_config("telegram", "allowed_user_ids")
+    config_loader.set_config_value("telegram", "bot_token", "test-token")
+    config_loader.set_config_value("telegram", "allowed_user_ids", [])
+    try:
+        yield
+    finally:
+        config_loader.set_config_value("telegram", "bot_token", previous_token)
+        config_loader.set_config_value("telegram", "allowed_user_ids", previous_allowed_user_ids)
+
+
 @pytest.mark.asyncio
-async def test_telegram_railway_status_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
+async def test_telegram_railway_status_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
 
     sent: dict[str, str] = {}
 
@@ -74,9 +86,8 @@ async def test_telegram_railway_status_command(monkeypatch: pytest.MonkeyPatch) 
 @pytest.mark.asyncio
 async def test_telegram_railway_verify_command_creates_and_ticks_job(
     monkeypatch: pytest.MonkeyPatch,
+    telegram_config,
 ) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -128,9 +139,8 @@ async def test_telegram_railway_verify_command_creates_and_ticks_job(
 @pytest.mark.asyncio
 async def test_telegram_railway_jobs_command_lists_recent_jobs(
     monkeypatch: pytest.MonkeyPatch,
+    telegram_config,
 ) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -166,9 +176,7 @@ async def test_telegram_railway_jobs_command_lists_recent_jobs(
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_tick_requires_job_id(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
+async def test_telegram_railway_tick_requires_job_id(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -192,9 +200,7 @@ async def test_telegram_railway_tick_requires_job_id(monkeypatch: pytest.MonkeyP
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_head_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
+async def test_telegram_railway_head_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -225,9 +231,7 @@ async def test_telegram_railway_head_command(monkeypatch: pytest.MonkeyPatch) ->
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_tick_due_command(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
+async def test_telegram_railway_tick_due_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -281,9 +285,8 @@ async def test_telegram_railway_tick_due_command(monkeypatch: pytest.MonkeyPatch
 @pytest.mark.asyncio
 async def test_telegram_railway_schedule_command_creates_job_without_tick(
     monkeypatch: pytest.MonkeyPatch,
+    telegram_config,
 ) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
     tick_called = {"value": False}
 
@@ -336,9 +339,8 @@ async def test_telegram_railway_schedule_command_creates_job_without_tick(
 @pytest.mark.asyncio
 async def test_telegram_status_command_reports_checked_and_attention(
     monkeypatch: pytest.MonkeyPatch,
+    telegram_config,
 ) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -377,9 +379,8 @@ async def test_telegram_status_command_reports_checked_and_attention(
 @pytest.mark.asyncio
 async def test_telegram_status_includes_public_links_and_stale_running(
     monkeypatch: pytest.MonkeyPatch,
+    telegram_config,
 ) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -443,9 +444,8 @@ async def test_telegram_status_includes_public_links_and_stale_running(
 @pytest.mark.asyncio
 async def test_telegram_attention_includes_monitor_summary_and_public_links(
     monkeypatch: pytest.MonkeyPatch,
+    telegram_config,
 ) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -553,9 +553,8 @@ def test_telegram_card_helpers_summarize_runtime_and_action() -> None:
 @pytest.mark.asyncio
 async def test_telegram_tasks_command_renders_status_values(
     monkeypatch: pytest.MonkeyPatch,
+    telegram_config,
 ) -> None:
-    monkeypatch.delenv("TELEGRAM_ALLOWED_USER_IDS", raising=False)
-    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "test-token")
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:

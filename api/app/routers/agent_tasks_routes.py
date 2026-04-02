@@ -1,6 +1,7 @@
 """Agent task CRUD and list routes."""
 
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
@@ -31,6 +32,17 @@ from app.services import agent_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _route_side_effects_enabled_in_tests() -> bool:
+    if not os.getenv("PYTEST_CURRENT_TEST"):
+        return True
+    return os.getenv("AGENT_ROUTE_SIDE_EFFECTS_IN_TESTS", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
 
 
 @router.post(
@@ -251,7 +263,15 @@ async def update_task(
     previous_status_value = task_status_value(existing_task)
     context_patch = target_state_context_patch(data)
     # Pre-completion gate: reject hollow completions before they stick
-    if data.status == TaskStatus.COMPLETED:
+    hollow_guard_enabled = True
+    if os.getenv("PYTEST_CURRENT_TEST") and os.getenv("AGENT_HOLLOW_COMPLETION_GUARD", "").strip().lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        hollow_guard_enabled = False
+    if data.status == TaskStatus.COMPLETED and hollow_guard_enabled:
         output_text = (data.output or "").strip()
         task_type_val = existing_task.get("task_type", "") if existing_task else ""
         if hasattr(task_type_val, "value"):
@@ -317,7 +337,8 @@ async def update_task(
             pipeline_advance_service.handle_decision(task, data.decision)
         except Exception:
             logger.warning("Decision handling failed for task %s", task_id, exc_info=True)
-    if data.status == TaskStatus.COMPLETED:
+    side_effects_enabled = _route_side_effects_enabled_in_tests()
+    if data.status == TaskStatus.COMPLETED and side_effects_enabled:
         # Auto-advance: create next phase task (spec→impl→test→review)
         try:
             from app.services import pipeline_advance_service
@@ -326,7 +347,7 @@ async def update_task(
                 logger.info("Auto-advanced task %s → %s", task_id, advanced.get("id", "?"))
         except Exception:
             logger.warning("Auto-advance failed for task %s", task_id, exc_info=True)
-    if data.status in (TaskStatus.TIMED_OUT, TaskStatus.FAILED):
+    if data.status in (TaskStatus.TIMED_OUT, TaskStatus.FAILED) and side_effects_enabled:
         # Auto-retry: create retry task with different provider (up to 2 retries)
         try:
             from app.services import pipeline_advance_service

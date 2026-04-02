@@ -1436,11 +1436,9 @@ def test_coalesce_usage_overview_families_maps_anthropic_to_claude() -> None:
 
 
 @pytest.mark.asyncio
-async def test_automation_usage_endpoint_times_out_to_snapshot_fallback(
+async def test_automation_usage_endpoint_force_refresh_returns_current_payload_without_blocking(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS", "0.05")
-
     fallback_overview = ProviderUsageOverview(
         providers=[
             ProviderUsageSnapshot(
@@ -1467,83 +1465,50 @@ async def test_automation_usage_endpoint_times_out_to_snapshot_fallback(
         limit_coverage={"providers_considered": 1},
     )
 
-    def _slow_collect(force_refresh: bool = False) -> ProviderUsageOverview:
-        time.sleep(0.3)
-        return fallback_overview
+    payload = fallback_overview.model_dump(mode="json")
 
-    monkeypatch.setattr(automation_usage_service, "collect_usage_overview", _slow_collect)
     monkeypatch.setattr(
         automation_usage_service,
-        "usage_overview_from_snapshots",
-        lambda: fallback_overview,
+        "latest_usage_overview_payload",
+        lambda *, compact=False, include_raw=False: payload,
     )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.get("/api/automation/usage", params={"force_refresh": True})
     assert response.status_code == 200
-    payload = response.json()
-    assert payload["tracked_providers"] == 1
-    assert payload["providers"][0]["provider"] == "openai"
+    response_payload = response.json()
+    assert response_payload["tracked_providers"] == 1
+    assert response_payload["providers"][0]["provider"] == "openai"
+    assert response_payload["meta"]["fallback_reason"] == "force_refresh_deferred"
 
 
 @pytest.mark.asyncio
-async def test_provider_readiness_endpoint_times_out_to_cached_fallback(
+async def test_provider_readiness_endpoint_force_refresh_returns_current_payload_without_blocking(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS", "0.05")
-    refresh_calls: list[dict[str, object]] = []
-    fallback_calls: list[dict[str, object]] = []
+    current_payload = ProviderReadinessReport(
+        required_providers=["openai"],
+        all_required_ready=True,
+        blocking_issues=[],
+        recommendations=[],
+        providers=[
+            ProviderReadinessRow(
+                provider="openai",
+                kind="openai",
+                status="ok",
+                required=True,
+                configured=True,
+                severity="info",
+                missing_env=[],
+                notes=[],
+            )
+        ],
+    ).model_dump(mode="json")
 
-    def _fake_readiness(
-        *,
-        required_providers: list[str] | None = None,
-        force_refresh: bool = True,
-    ) -> ProviderReadinessReport:
-        refresh_calls.append(
-            {
-                "required_providers": list(required_providers or []),
-                "force_refresh": force_refresh,
-            }
-        )
-        if force_refresh:
-            time.sleep(0.3)
-        return ProviderReadinessReport(
-            required_providers=list(required_providers or []),
-            all_required_ready=True,
-            blocking_issues=[],
-            recommendations=[],
-            providers=[],
-        )
-
-    def _fake_snapshot_fallback(
-        *,
-        required_providers: list[str] | None = None,
-    ) -> ProviderReadinessReport:
-        fallback_calls.append({"required_providers": list(required_providers or [])})
-        return ProviderReadinessReport(
-            required_providers=list(required_providers or []),
-            all_required_ready=True,
-            blocking_issues=[],
-            recommendations=[],
-            providers=[
-                ProviderReadinessRow(
-                    provider="openai",
-                    kind="openai",
-                    status="ok",
-                    required=True,
-                    configured=True,
-                    severity="info",
-                    missing_env=[],
-                    notes=[],
-                )
-            ],
-        )
-
-    monkeypatch.setattr(automation_usage_service, "provider_readiness_report", _fake_readiness)
     monkeypatch.setattr(
         automation_usage_service,
-        "provider_readiness_report_from_snapshots",
-        _fake_snapshot_fallback,
+        "latest_provider_readiness_payload",
+        lambda *, required_providers=None: current_payload,
     )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -1554,9 +1519,7 @@ async def test_provider_readiness_endpoint_times_out_to_cached_fallback(
     assert response.status_code == 200
     payload = response.json()
     assert payload["providers"][0]["provider"] == "openai"
-    assert len(refresh_calls) >= 1
-    assert refresh_calls[0]["force_refresh"] is True
-    assert fallback_calls == [{"required_providers": ["openai"]}]
+    assert payload["meta"]["fallback_reason"] == "force_refresh_deferred"
 
 
 @pytest.mark.asyncio
@@ -2898,18 +2861,18 @@ def test_cached_provider_readiness_payload_stale_refresh_singleflight(
 
     seeded = automation_usage_service.cached_provider_readiness_payload(
         required_providers=["openai"],
-        force_refresh=True,
+        force_refresh=False,
     )
     assert seeded["providers"][0]["notes"] == ["refresh-1"]
     assert calls["refresh"] == 1
 
     first_stale = automation_usage_service.cached_provider_readiness_payload(
         required_providers=["openai"],
-        force_refresh=False,
+        force_refresh=True,
     )
     second_stale = automation_usage_service.cached_provider_readiness_payload(
         required_providers=["openai"],
-        force_refresh=False,
+        force_refresh=True,
     )
     assert first_stale["providers"][0]["notes"] == ["refresh-1"]
     assert second_stale["providers"][0]["notes"] == ["refresh-1"]

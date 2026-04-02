@@ -7,6 +7,7 @@
  * Zero dependencies. Node 18+ required.
  */
 
+import { appendFileSync } from "node:fs";
 import {
   listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea,
   triageIdeas, setIdeaWorkType, linkIdea, showIdeaChildren, showIdeaDeps,
@@ -66,6 +67,15 @@ if (_invokedAs === 'cc') {
 }
 
 const [command, ...args] = process.argv.slice(2);
+
+function debugPytest(message) {
+  if (!process.env.PYTEST_CURRENT_TEST) return;
+  try {
+    appendFileSync("/tmp/coherence-cc-pytest.log", `${new Date().toISOString()} ${message}\n`);
+  } catch {}
+}
+
+debugPytest(`argv=${JSON.stringify(process.argv.slice(1))}`);
 
 const COMMANDS = {
   ideas:         () => listIdeas(args),
@@ -629,17 +639,28 @@ function showHelp() {
 `);
 }
 
-// Run
-const handler = COMMANDS[command];
-if (handler) {
-  Promise.resolve(handler()).catch((err) => {
-    console.error(err.message);
-    process.exit(1);
-  });
-} else if (!command) {
-  showHelp();
-} else {
+async function main() {
+  const handler = COMMANDS[command];
+  debugPytest(`command=${String(command)} args=${JSON.stringify(args)} handler=${handler ? "yes" : "no"}`);
+  if (handler) {
+    await handler();
+    debugPytest(`command=${String(command)} completed`);
+    await new Promise((resolve) => process.stdout.write("", resolve));
+    await new Promise((resolve) => process.stderr.write("", resolve));
+    return;
+  }
+  if (!command) {
+    debugPytest("showHelp(no-command)");
+    showHelp();
+    return;
+  }
+  debugPytest(`unknown-command=${String(command)}`);
   console.log(`Unknown command: ${command}`);
   console.log("Run 'cc help' for available commands.");
   process.exit(1);
 }
+
+main().catch((err) => {
+  console.error(err.message);
+  process.exit(1);
+});

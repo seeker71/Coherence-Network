@@ -16,11 +16,6 @@ AUTH_HEADERS = {"X-API-Key": "dev-key"}
 
 
 @pytest.fixture(autouse=True)
-def _allow_legacy_unauthenticated_execute_in_tests(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_EXECUTE_TOKEN_ALLOW_UNAUTH", "1")
-
-
-@pytest.fixture(autouse=True)
 def _stub_codex_exec_with_chat_completion(monkeypatch: pytest.MonkeyPatch) -> None:
     """Avoid running the real codex CLI during endpoint tests.
 
@@ -97,11 +92,11 @@ def _reset_agent_store() -> None:
 
 
 @pytest.mark.asyncio
-async def test_execute_endpoint_requires_token_when_configured(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_EXECUTE_TOKEN", "secret")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
+async def test_execute_endpoint_requires_token_when_configured(tmp_path, monkeypatch: pytest.MonkeyPatch, set_config) -> None:
+    set_config("agent_tasks", "persist", False)
+    set_config("agent_executor", "execute_token", "secret")
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
     _reset_agent_store()
 
     task = agent_service.create_task(
@@ -137,12 +132,13 @@ async def test_execute_endpoint_requires_token_when_configured(tmp_path, monkeyp
 
 @pytest.mark.asyncio
 async def test_execute_endpoint_completes_task_when_openrouter_is_stubbed(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path, monkeypatch: pytest.MonkeyPatch, set_config
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -178,14 +174,14 @@ async def test_execute_endpoint_completes_task_when_openrouter_is_stubbed(
 
 @pytest.mark.asyncio
 async def test_execute_endpoint_retries_once_with_retry_hint_after_failure(
-    tmp_path,
-    monkeypatch: pytest.MonkeyPatch,
+    tmp_path, monkeypatch: pytest.MonkeyPatch, set_config
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "1")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -246,12 +242,14 @@ async def test_execute_endpoint_retries_once_with_retry_hint_after_failure(
 async def test_execute_endpoint_stops_retry_after_single_retry_budget(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "1")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -294,15 +292,17 @@ async def test_execute_endpoint_stops_retry_after_single_retry_budget(
 async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_override(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "0")
-    monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "1")
-    monkeypatch.setenv("AGENT_AUTO_RETRY_OPENAI_OVERRIDE", "1")
-    monkeypatch.setenv("AGENT_RETRY_OPENAI_MODEL_OVERRIDE", "gpt-5-codex")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_tasks", "persist", False)
+    set_config("agent_cost", "allow_paid_providers", False)
+    set_config("agent_tasks", "retry_max", 1)
+    set_config("agent_providers", "auto_retry_openai_override", True)
+    set_config("agent_providers", "retry_openai_model_override", "gpt-5-codex")
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -351,12 +351,14 @@ async def test_execute_endpoint_auto_retries_paid_provider_failure_with_openai_o
 async def test_execute_endpoint_blocks_paid_provider_until_forced(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_tasks", "persist", False)
+    set_config("agent_cost", "allow_paid_providers", False)
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -427,12 +429,14 @@ async def test_execute_endpoint_blocks_paid_provider_until_forced(
 async def test_execute_endpoint_allows_paid_provider_by_default_when_not_disabled(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.delenv("AGENT_ALLOW_PAID_PROVIDERS", raising=False)
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -468,12 +472,14 @@ async def test_execute_endpoint_allows_paid_provider_by_default_when_not_disable
 async def test_execute_endpoint_uses_codex_cli_for_codex_executor(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_DISABLE_CODEX_EXECUTOR", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -528,12 +534,14 @@ async def test_execute_endpoint_uses_codex_cli_for_codex_executor(
 async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_for_codex_model(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_DISABLE_CODEX_EXECUTOR", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -582,11 +590,13 @@ async def test_execute_endpoint_falls_back_to_codex_when_openrouter_key_missing_
 async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_keys(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -638,12 +648,14 @@ async def test_execute_endpoint_accepts_force_paid_query_numeric_and_alternate_k
 async def test_execute_endpoint_requeues_failed_task_for_manual_rerun(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_TASK_RETRY_MAX", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -696,11 +708,13 @@ async def test_execute_endpoint_requeues_failed_task_for_manual_rerun(
 async def test_execute_endpoint_accepts_hyphenated_force_paid_query_key(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -738,11 +752,13 @@ async def test_execute_endpoint_accepts_hyphenated_force_paid_query_key(
 async def test_execute_endpoint_accepts_case_insensitive_force_paid_query_key(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -780,11 +796,13 @@ async def test_execute_endpoint_accepts_case_insensitive_force_paid_query_key(
 async def test_execute_endpoint_accepts_force_paid_header_override(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -835,15 +853,17 @@ async def test_execute_endpoint_accepts_force_paid_header_override(
 async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_exceeded(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
-    monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "1")
-    monkeypatch.setenv("PAID_TOOL_8H_LIMIT", "1")
-    monkeypatch.setenv("PAID_TOOL_WINDOW_BUDGET_FRACTION", "0.333333")
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_tasks", "persist", False)
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("friction", "events_path", str(tmp_path / "friction_events.jsonl"))
+    set_config("agent_cost", "allow_paid_providers", True)
+    set_config("agent_cost", "paid_tool_8h_limit", 1)
+    set_config("agent_cost", "paid_tool_window_budget_fraction", 0.333333)
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -937,6 +957,7 @@ async def test_execute_endpoint_blocks_paid_provider_when_usage_window_budget_ex
 async def test_execute_endpoint_allows_paid_provider_when_provider_quota_guard_is_soft_threshold_only(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
@@ -1001,6 +1022,7 @@ async def test_execute_endpoint_allows_paid_provider_when_provider_quota_guard_i
 async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_reports_exhausted(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
@@ -1010,6 +1032,7 @@ async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_r
     monkeypatch.delenv("PAID_TOOL_8H_LIMIT", raising=False)
     monkeypatch.delenv("PAID_TOOL_WEEK_LIMIT", raising=False)
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -1076,11 +1099,13 @@ async def test_execute_endpoint_blocks_paid_provider_when_provider_quota_guard_r
 async def test_review_task_can_return_confidence_with_paid_override(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -1125,13 +1150,15 @@ async def test_review_task_can_return_confidence_with_paid_override(
 async def test_execute_task_fails_on_cost_limit_and_posts_friction(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
-    monkeypatch.setenv("RUNTIME_COST_PER_SECOND", "1.0")
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_tasks", "persist", False)
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("friction", "events_path", str(tmp_path / "friction_events.jsonl"))
+    set_config("agent_cost", "runtime_cost_per_second", 1.0)
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -1178,6 +1205,7 @@ async def test_execution_updates_cost_value_targets(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
     seeded_db,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
@@ -1187,6 +1215,7 @@ async def test_execution_updates_cost_value_targets(
     monkeypatch.setenv("GOVERNANCE_DATABASE_URL", f"sqlite:///{tmp_path / 'governance.db'}")
     # Ideas now live in graph_nodes (unified DB), not a separate registry DB
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -1295,7 +1324,7 @@ def test_seed_next_tasks_falls_back_from_specs_to_idea_roi(monkeypatch: pytest.M
 
 @pytest.mark.asyncio
 async def test_execute_endpoint_continuous_autofill_schedules_followup_when_queue_empty(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path, monkeypatch: pytest.MonkeyPatch, set_config
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_CONTINUOUS_AUTOFILL", "1")
@@ -1303,6 +1332,7 @@ async def test_execute_endpoint_continuous_autofill_schedules_followup_when_queu
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -1347,7 +1377,7 @@ async def test_execute_endpoint_continuous_autofill_schedules_followup_when_queu
 
 @pytest.mark.asyncio
 async def test_execute_endpoint_continuous_autofill_skips_when_open_tasks_exist(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path, monkeypatch: pytest.MonkeyPatch, set_config
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_CONTINUOUS_AUTOFILL", "1")
@@ -1355,6 +1385,7 @@ async def test_execute_endpoint_continuous_autofill_skips_when_open_tasks_exist(
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_service
@@ -1412,11 +1443,13 @@ async def test_execute_endpoint_continuous_autofill_skips_when_open_tasks_exist(
 async def test_execute_endpoint_emits_lifecycle_runtime_events(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_hooks, agent_execution_service
@@ -1476,11 +1509,13 @@ async def test_execute_endpoint_emits_lifecycle_runtime_events(
 async def test_execute_endpoint_hook_error_listener_does_not_fail_execution(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_hooks, agent_execution_service
@@ -1531,12 +1566,14 @@ async def test_execute_endpoint_hook_error_listener_does_not_fail_execution(
 async def test_execute_endpoint_lifecycle_summary_endpoint_reports_recent_events(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "runtime")
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_hooks, agent_execution_service
@@ -1587,12 +1624,14 @@ async def test_execute_endpoint_lifecycle_summary_endpoint_reports_recent_events
 async def test_execute_endpoint_lifecycle_summary_respects_disabled_runtime_subscriber(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "none")
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_tasks", "persist", False)
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("agent_lifecycle", "subscribers", "none")
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_hooks, agent_execution_service
@@ -1641,14 +1680,16 @@ async def test_execute_endpoint_lifecycle_summary_respects_disabled_runtime_subs
 async def test_execute_endpoint_lifecycle_jsonl_subscriber_writes_audit_lines_and_summary(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "jsonl")
+    set_config("agent_tasks", "persist", False)
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("agent_lifecycle", "subscribers", "jsonl")
     audit_path = tmp_path / "agent_lifecycle_events.jsonl"
-    monkeypatch.setenv("AGENT_LIFECYCLE_JSONL_PATH", str(audit_path))
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_lifecycle", "jsonl_path", str(audit_path))
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_hooks, agent_execution_service
@@ -1714,14 +1755,16 @@ async def test_execute_endpoint_lifecycle_jsonl_subscriber_writes_audit_lines_an
 async def test_execute_endpoint_lifecycle_source_override_uses_jsonl_when_requested(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "all")
+    set_config("agent_tasks", "persist", False)
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("agent_lifecycle", "subscribers", "all")
     audit_path = tmp_path / "agent_lifecycle_events.jsonl"
-    monkeypatch.setenv("AGENT_LIFECYCLE_JSONL_PATH", str(audit_path))
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_lifecycle", "jsonl_path", str(audit_path))
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_hooks, agent_execution_service
@@ -1768,15 +1811,17 @@ async def test_execute_endpoint_lifecycle_source_override_uses_jsonl_when_reques
 async def test_execute_endpoint_lifecycle_jsonl_retention_caps_audit_file(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "jsonl")
-    monkeypatch.setenv("AGENT_LIFECYCLE_JSONL_MAX_LINES", "5")
+    set_config("agent_tasks", "persist", False)
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("agent_lifecycle", "subscribers", "jsonl")
+    set_config("agent_lifecycle", "jsonl_max_lines", 5)
     audit_path = tmp_path / "agent_lifecycle_events.jsonl"
-    monkeypatch.setenv("AGENT_LIFECYCLE_JSONL_PATH", str(audit_path))
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_lifecycle", "jsonl_path", str(audit_path))
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_hooks, agent_execution_service
@@ -1819,12 +1864,14 @@ async def test_execute_endpoint_lifecycle_jsonl_retention_caps_audit_file(
 async def test_execute_endpoint_lifecycle_guidance_warns_when_no_subscribers_enabled(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
-    monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
-    monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "none")
-    monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_tasks", "persist", False)
+    set_config("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+    set_config("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+    set_config("agent_lifecycle", "subscribers", "none")
+    set_config("agent_executor", "execute_token", None)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -1841,6 +1888,7 @@ async def test_execute_endpoint_lifecycle_guidance_warns_when_no_subscribers_ena
 async def test_execute_endpoint_lifecycle_guidance_flags_paid_guard_blocks(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
+    set_config,
 ) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
     monkeypatch.setenv("AGENT_ALLOW_PAID_PROVIDERS", "0")
@@ -1848,6 +1896,7 @@ async def test_execute_endpoint_lifecycle_guidance_flags_paid_guard_blocks(
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
     monkeypatch.setenv("AGENT_LIFECYCLE_SUBSCRIBERS", "runtime")
     monkeypatch.delenv("AGENT_EXECUTE_TOKEN", raising=False)
+    set_config("agent_executor", "execute_token_allow_unauth", True)
     _reset_agent_store()
 
     from app.services import agent_execution_hooks, agent_execution_service

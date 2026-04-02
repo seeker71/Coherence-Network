@@ -18,7 +18,7 @@ from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, Index, func
+from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, Index, func, inspect, text
 from sqlalchemy.orm import Mapped, Session, mapped_column
 from sqlalchemy.types import JSON
 
@@ -199,6 +199,33 @@ class FederatedAggregationRecord(Base):
 
 def _ensure_schema() -> None:
     _udb.ensure_schema()
+    _ensure_node_measurement_summary_columns()
+
+
+def _ensure_node_measurement_summary_columns() -> None:
+    """Backfill lightweight schema additions for older SQLite snapshots."""
+    eng = _udb.engine()
+    try:
+        inspector = inspect(eng)
+        if "node_measurement_summaries" not in inspector.get_table_names():
+            return
+        existing = {str(col.get("name")) for col in inspector.get_columns("node_measurement_summaries")}
+        with eng.begin() as conn:
+            if "dedup_key" not in existing:
+                conn.execute(
+                    text(
+                        "ALTER TABLE node_measurement_summaries "
+                        "ADD COLUMN dedup_key VARCHAR(64) NULL"
+                    )
+                )
+            conn.execute(
+                text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_nms_dedup_key "
+                    "ON node_measurement_summaries (dedup_key)"
+                )
+            )
+    except Exception:
+        logger.exception("Failed to ensure node_measurement_summaries runtime columns")
 
 
 @contextmanager

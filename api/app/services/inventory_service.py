@@ -5221,6 +5221,15 @@ def build_spec_process_implementation_validation_flow(
     unblock_queue: list[dict[str, Any]] = []
     active_task_cache: dict[str, dict[str, Any] | None] = {}
     for current_idea_id in sorted(flows.keys()):
+        if (
+            requested_idea_id is None
+            and not include_internal_ideas
+            and idea_service.is_internal_idea_id(
+                current_idea_id,
+                idea_interfaces_map.get(current_idea_id, []),
+            )
+        ):
+            continue
         flow = flows[current_idea_id]
         spec_count = len(flow["_spec_ids"])
         spec_ids = sorted(flow["_spec_ids"])
@@ -5786,6 +5795,7 @@ def _idea_card_row_from_sources(
     top_spec_id = spec_ids[0] if spec_ids else ""
     metrics = _idea_card_metrics(idea_model, flow_row)
     return {
+        "id": idea_id,
         "idea_id": idea_id,
         "title": title,
         "subtitle": str(getattr(idea_model, "description", "") or "").strip(),

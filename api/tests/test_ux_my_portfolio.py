@@ -256,6 +256,61 @@ def test_get_cc_balance_rejects_unknown_contributor(
         portfolio_service.get_cc_balance("missing-user")
 
 
+@mock.patch("app.services.portfolio_service.graph_service")
+def test_get_idea_contributions_accepts_naive_sqlite_timestamps(
+    mock_graph_service: mock.MagicMock,
+) -> None:
+    from app.services import portfolio_service
+
+    contributor = _make_contributor_node()
+    idea = {
+        "id": "idea:idea-1",
+        "name": "Idea One",
+        "properties": {"status": "active", "coherence_score": 0.72},
+    }
+    contributions = [
+        _make_contribution(
+            contributor_id="alice",
+            idea_id="idea-1",
+            amount=5.0,
+            contribution_type="spec",
+            timestamp="2026-03-25T15:30:00",
+        ),
+        _make_contribution(
+            contributor_id="alice",
+            idea_id="idea-1",
+            amount=3.0,
+            contribution_type="task",
+            timestamp="2026-03-26T09:15:00",
+        ),
+    ]
+
+    def get_node(node_id: str) -> dict[str, Any] | None:
+        if node_id == "contributor:alice":
+            return contributor
+        if node_id == "idea:idea-1":
+            return idea
+        return None
+
+    def list_nodes(type: str, limit: int = 100) -> dict[str, Any]:
+        if type == "contribution":
+            return {"items": contributions, "total": len(contributions)}
+        if type == "contributor":
+            return {"items": [contributor], "total": 1}
+        return {"items": [], "total": 0}
+
+    mock_graph_service.get_node.side_effect = get_node
+    mock_graph_service.list_nodes.side_effect = list_nodes
+
+    result = portfolio_service.get_idea_contributions("alice")
+
+    assert result.total == 1
+    assert result.items[0].idea_id == "idea-1"
+    assert result.items[0].cc_attributed == pytest.approx(8.0)
+    assert result.items[0].last_contributed_at == datetime(2026, 3, 26, 9, 15, tzinfo=timezone.utc)
+    assert result.items[0].health.activity_signal in {"slow", "dormant", "active"}
+
+
 # ── HTTP API integration (ASGI) — portfolio sub-resources per spec 174 ─────
 
 
@@ -334,12 +389,13 @@ def _seed_portfolio_graph(*, contributor_uuid: str) -> None:
 async def test_portfolio_api_full_cycle_seeded_graph() -> None:
     """Create contributor, seed graph CC/ideas/stakes/tasks, exercise all portfolio GET routes."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        suffix = uuid.uuid4().hex[:8]
         create = await client.post(
             "/api/contributors",
             json={
                 "type": "HUMAN",
-                "name": "PortfolioSeedUser",
-                "email": "portfolioseed@coherence.network",
+                "name": f"PortfolioSeedUser-{suffix}",
+                "email": f"portfolioseed+{suffix}@coherence.network",
             },
         )
         assert create.status_code == 201, create.text
@@ -399,6 +455,15 @@ async def test_portfolio_api_full_cycle_seeded_graph() -> None:
         assert tj["items"][0]["provider"] == "openclaw"
         assert tj["items"][0]["outcome"] == "passed"
         assert tj["items"][0]["cc_earned"] == 3.0
+
+        task_detail = await client.get(f"/api/contributors/{cid}/tasks/task-{str(cid)[:8]}")
+        assert task_detail.status_code == 200
+        tdj = task_detail.json()
+        assert tdj["task_id"] == f"task-{str(cid)[:8]}"
+        assert tdj["provider"] == "openclaw"
+        assert tdj["status"] == "completed"
+        assert tdj["idea_id"] == "pf-seed-idea"
+        assert tdj["cc_earned"] == 3.0
 
 
 @pytest.mark.asyncio
