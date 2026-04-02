@@ -585,7 +585,7 @@ class TestSSEFederationStream:
             assert resp.headers.get("cache-control") == "no-cache"
 
     def test_message_posted_to_node_appears_in_sse_stream(self) -> None:
-        """POST a command message to a node → it should appear in its SSE stream."""
+        """POST a command message to a node → it should appear in the next SSE poll."""
         from fastapi.testclient import TestClient
         from app.main import app
 
@@ -605,33 +605,6 @@ class TestSSEFederationStream:
                 },
             )
 
-        collected: list[dict] = []
-        stream_ready = threading.Event()
-        stream_done = threading.Event()
-
-        def _listen():
-            with client.stream("GET", f"/api/federation/nodes/{node_id}/stream") as resp:
-                stream_ready.set()
-                for chunk in resp.iter_lines():
-                    if stream_done.is_set():
-                        break
-                    chunk = chunk.strip()
-                    if chunk.startswith("data: "):
-                        try:
-                            event = json.loads(chunk[6:])
-                            collected.append(event)
-                            if event.get("type") == "command":
-                                stream_done.set()
-                                break
-                        except json.JSONDecodeError:
-                            pass
-
-        listener = threading.Thread(target=_listen, daemon=True)
-        listener.start()
-
-        stream_ready.wait(timeout=3)
-        time.sleep(0.1)
-
         resp = client.post(
             f"/api/federation/nodes/{sender_id}/messages",
             json={
@@ -644,8 +617,19 @@ class TestSSEFederationStream:
         )
         assert resp.status_code == 201
 
-        stream_done.wait(timeout=3)
-        listener.join(timeout=2)
+        collected: list[dict] = []
+        with client.stream("GET", f"/api/federation/nodes/{node_id}/stream") as stream_resp:
+            assert stream_resp.status_code == 200
+            for chunk in stream_resp.iter_lines():
+                chunk = chunk.strip()
+                if chunk.startswith("data: "):
+                    try:
+                        event = json.loads(chunk[6:])
+                        collected.append(event)
+                        if event.get("type") == "command":
+                            break
+                    except json.JSONDecodeError:
+                        pass
 
         cmd_events = [e for e in collected if e.get("type") == "command"]
         assert cmd_events, f"Expected command event in stream, got: {collected}"

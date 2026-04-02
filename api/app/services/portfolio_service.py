@@ -24,6 +24,7 @@ from app.models.portfolio import (
     StakeDetail,
     StakesList,
     StakeSummary,
+    TaskDetail,
     TasksList,
     TaskSummary,
     ValueLineageSummary,
@@ -54,6 +55,19 @@ def _graph_node_props(node: dict[str, Any]) -> dict[str, Any]:
     if isinstance(nested, dict) and nested:
         return nested
     return {k: v for k, v in node.items() if k not in _GRAPH_NODE_TOP_KEYS}
+
+
+def _parse_graph_timestamp(value: Any) -> Optional[datetime]:
+    """Parse graph timestamps and normalize naive values to UTC."""
+    if value in (None, ""):
+        return None
+    try:
+        parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (ValueError, TypeError, AttributeError):
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
 
 
 def _linked_identities_from_store(contributor_key: str) -> list[LinkedIdentity]:
@@ -222,9 +236,8 @@ def get_cc_history(contributor_id: str, window: str = "90d", bucket: str = "7d")
         ts_raw = c.get("created_at") or c.get("updated_at")
         if not ts_raw:
             continue
-        try:
-            ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-        except (ValueError, AttributeError):
+        ts = _parse_graph_timestamp(ts_raw)
+        if ts is None:
             continue
         if ts < start:
             continue
@@ -277,12 +290,9 @@ def get_portfolio_summary(contributor_id: str, include_cc: bool = True) -> Portf
             task_count += 1
         ts_raw = c.get("updated_at") or c.get("created_at")
         if ts_raw:
-            try:
-                ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-                if recent is None or ts > recent:
-                    recent = ts
-            except (ValueError, AttributeError):
-                pass
+            ts = _parse_graph_timestamp(ts_raw)
+            if ts is not None and (recent is None or ts > recent):
+                recent = ts
 
     stake_count = 0
     stakes_scan = graph_service.list_nodes(type="stake", limit=10000)
@@ -322,12 +332,9 @@ def _health_for_idea(idea_node: dict[str, Any], contributions_in_idea: list[dict
     for c in contributions_in_idea:
         ts_raw = c.get("updated_at") or c.get("created_at")
         if ts_raw:
-            try:
-                ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-                if ts >= cutoff:
-                    recent_count += 1
-            except (ValueError, AttributeError):
-                pass
+            ts = _parse_graph_timestamp(ts_raw)
+            if ts is not None and ts >= cutoff:
+                recent_count += 1
 
     if recent_count >= 3:
         activity = "active"
@@ -380,12 +387,9 @@ def get_idea_contributions(
         for c in conts:
             ts_raw = c.get("updated_at") or c.get("created_at")
             if ts_raw:
-                try:
-                    ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-                    if last_ts is None or ts > last_ts:
-                        last_ts = ts
-                except (ValueError, AttributeError):
-                    pass
+                ts = _parse_graph_timestamp(ts_raw)
+                if ts is not None and (last_ts is None or ts > last_ts):
+                    last_ts = ts
         health = _health_for_idea(idea_node, conts)
         items.append(IdeaContributionSummary(
             idea_id=idea_id,
@@ -428,10 +432,7 @@ def get_idea_contribution_detail(contributor_id: str, idea_id: str) -> IdeaContr
         ts_raw = c.get("created_at") or c.get("updated_at")
         ts: Optional[datetime] = None
         if ts_raw:
-            try:
-                ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                pass
+            ts = _parse_graph_timestamp(ts_raw)
         details.append(ContributionDetail(
             id=c.get("id") or c.get("legacy_id") or "",
             type=props.get("contribution_type", "unknown"),
@@ -486,10 +487,7 @@ def get_stakes(contributor_id: str, sort: str = "roi_desc", limit: int = 20, off
         staked_at: Optional[datetime] = None
         ts_raw = props.get("staked_at") or s.get("created_at")
         if ts_raw:
-            try:
-                staked_at = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                pass
+            staked_at = _parse_graph_timestamp(ts_raw)
 
         items.append(StakeSummary(
             stake_id=s.get("id") or s.get("legacy_id") or "",
@@ -545,10 +543,7 @@ def get_stake_detail(contributor_id: str, stake_id: str) -> StakeDetail:
     staked_at: Optional[datetime] = None
     ts_raw = props.get("staked_at") or stake_node.get("created_at")
     if ts_raw:
-        try:
-            staked_at = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-        except (ValueError, AttributeError):
-            pass
+        staked_at = _parse_graph_timestamp(ts_raw)
 
     # Collect idea activity since staking
     activity_events: list[IdeaActivityEvent] = []
@@ -561,10 +556,7 @@ def get_stake_detail(contributor_id: str, stake_id: str) -> StakeDetail:
         ts_raw2 = c.get("created_at") or c.get("updated_at")
         event_ts: Optional[datetime] = None
         if ts_raw2:
-            try:
-                event_ts = datetime.fromisoformat(str(ts_raw2).replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                pass
+            event_ts = _parse_graph_timestamp(ts_raw2)
         if staked_at and event_ts and event_ts < staked_at:
             continue
         activity_count += 1
@@ -624,10 +616,7 @@ def get_tasks(contributor_id: str, status: str = "completed", limit: int = 20, o
         completed_at: Optional[datetime] = None
         ts_raw = props.get("completed_at") or t.get("updated_at")
         if ts_raw:
-            try:
-                completed_at = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                pass
+            completed_at = _parse_graph_timestamp(ts_raw)
 
         idea_id = props.get("idea_id")
         idea_title: Optional[str] = None
@@ -648,6 +637,50 @@ def get_tasks(contributor_id: str, status: str = "completed", limit: int = 20, o
 
     items.sort(key=lambda x: x.completed_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     return TasksList(contributor_id=contributor_id, total=len(items), items=items[offset: offset + limit])
+
+
+def get_task_detail(contributor_id: str, task_id: str) -> TaskDetail:
+    """Return one portfolio task owned by the contributor."""
+    node = _find_contributor(contributor_id)
+    if not node:
+        raise ValueError(f"Contributor not found: {contributor_id}")
+
+    c_name = node.get("name", "")
+    task_node = graph_service.get_node(f"task:{task_id}")
+    if not task_node:
+        tasks_result = graph_service.list_nodes(type="task", limit=10000)
+        for candidate in tasks_result.get("items", []):
+            if candidate.get("id") == task_id or candidate.get("legacy_id") == task_id:
+                task_node = candidate
+                break
+    if not task_node:
+        raise ValueError(f"Task not found: {task_id}")
+
+    props = _graph_node_props(task_node)
+    executor = props.get("executor_contributor_id") or props.get("contributor_id") or props.get("contributor_name", "")
+    if executor not in (contributor_id, c_name):
+        raise PermissionError("Task does not belong to this contributor")
+
+    completed_at = _parse_graph_timestamp(props.get("completed_at") or task_node.get("updated_at"))
+    idea_id = props.get("idea_id")
+    idea_title: Optional[str] = None
+    if idea_id:
+        idea_node = graph_service.get_node(f"idea:{idea_id}") or {}
+        idea_title = idea_node.get("name")
+
+    return TaskDetail(
+        task_id=task_node.get("id") or task_node.get("legacy_id") or task_id,
+        description=(task_node.get("description") or task_node.get("name") or "")[:500],
+        idea_id=idea_id,
+        idea_title=idea_title,
+        provider=props.get("provider"),
+        outcome=props.get("outcome") or props.get("result"),
+        status=props.get("status"),
+        task_type=props.get("task_type") or task_node.get("phase"),
+        cc_earned=float(props.get("cc_earned", 0) or 0),
+        completed_at=completed_at,
+        result=props.get("result_text") or props.get("result"),
+    )
 
 
 # ── Single contribution → lineage audit ───────────────────────────────

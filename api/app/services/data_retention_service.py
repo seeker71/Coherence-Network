@@ -48,21 +48,26 @@ from app.services.runtime_event_store import RuntimeEventRecord
 logger = logging.getLogger(__name__)
 
 
+HOT_DAYS = get_int("data_retention", "hot_days", default=7)
+WARM_DAYS = get_int("data_retention", "warm_days", default=30)
+COLD_DAYS = get_int("data_retention", "cold_days", default=90)
+BACKUP_ROOT = Path(get_str("data_retention", "backup_dir", default="data/retention-backups"))
+
+
 def _get_hot_days() -> int:
-    return get_int("data_retention", "hot_days", default=7)
+    return int(HOT_DAYS)
 
 
 def _get_warm_days() -> int:
-    return get_int("data_retention", "warm_days", default=30)
+    return int(WARM_DAYS)
 
 
 def _get_cold_days() -> int:
-    return get_int("data_retention", "cold_days", default=90)
+    return int(COLD_DAYS)
 
 
 def _get_backup_root() -> Path:
-    configured = get_str("data_retention", "backup_dir", default="data/retention-backups")
-    return Path(configured)
+    return Path(BACKUP_ROOT)
 
 
 def _get_policy() -> dict[str, Any]:

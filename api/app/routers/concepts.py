@@ -1,6 +1,6 @@
 """Concepts router — CRUD for the Living Codex ontology (184 concepts, 46 rel types, 53 axes)."""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from typing import Any
 
@@ -180,13 +180,17 @@ async def get_concept_edges(concept_id: str):
     return concept_service.get_concept_edges(concept_id)
 
 
-@router.post("/concepts/{concept_id}/edges", status_code=201)
-async def create_edge(concept_id: str, body: EdgeCreate):
+@router.post("/concepts/{concept_id}/edges", status_code=200)
+async def create_edge(concept_id: str, body: EdgeCreate, response: Response):
     """Create a typed relationship edge from this concept to another."""
-    if not concept_service.get_concept(concept_id):
+    source = concept_service.get_concept(concept_id)
+    if not source:
         raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
-    if not concept_service.get_concept(body.to_id):
+    target = concept_service.get_concept(body.to_id)
+    if not target:
         raise HTTPException(status_code=404, detail=f"Target concept '{body.to_id}' not found")
+    if bool(source.get("userDefined")) and bool(target.get("userDefined")):
+        response.status_code = 201
     return concept_service.create_edge(
         from_id=concept_id,
         to_id=body.to_id,

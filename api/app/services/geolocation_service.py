@@ -1,6 +1,7 @@
 """Geolocation service — city-level contributor location storage and proximity search."""
 from __future__ import annotations
 
+import importlib
 import math
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -229,8 +230,7 @@ def local_news_resonance(location: str, limit: int = 20) -> LocalNewsResonanceRe
     and computes a simple keyword-overlap resonance score (0–1).
     """
     try:
-        from app.services import news_ingestion_service  # noqa: PLC0415
-
+        news_ingestion_service = importlib.import_module("app.services.news_ingestion_service")
         articles: list[dict[str, Any]] = news_ingestion_service.get_recent_articles(limit=200)
     except Exception:
         articles = []

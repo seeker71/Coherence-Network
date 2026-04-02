@@ -5,7 +5,6 @@ Config: telegram.bot_token, telegram.chat_ids (comma-separated), telegram.allowe
 """
 
 import logging
-import os
 import re
 import time
 from collections import deque
@@ -57,25 +56,17 @@ def _should_suppress_failed_alert(message: str) -> bool:
 
 def _get_token() -> Optional[str]:
     token = get_str("telegram", "bot_token")
-    if token:
-        return token
-    return os.environ.get("TELEGRAM_BOT_TOKEN") or None
+    return token or None
 
 
 def _get_chat_ids() -> list[str]:
     chat_ids = get_list("telegram", "chat_ids")
-    if chat_ids:
-        return chat_ids
-    raw = os.environ.get("TELEGRAM_CHAT_IDS", "")
-    return [s.strip() for s in raw.split(",") if s.strip()]
+    return [str(chat_id).strip() for chat_id in chat_ids if str(chat_id).strip()]
 
 
 def _get_allowed_user_ids() -> set[str]:
     user_ids = get_list("telegram", "allowed_user_ids")
-    if user_ids:
-        return {s.strip() for s in user_ids if s.strip()}
-    raw = os.environ.get("TELEGRAM_ALLOWED_USER_IDS", "")
-    return {s.strip() for s in raw.split(",") if s.strip()}
+    return {str(user_id).strip() for user_id in user_ids if str(user_id).strip()}
 
 
 def is_configured() -> bool:

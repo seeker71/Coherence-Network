@@ -104,6 +104,24 @@ npm_ci_hardened() {
   fi
 }
 
+prepare_standalone_bundle() {
+  local standalone_dir="${WEB_DIR}/.next/standalone"
+  local standalone_next_dir="${standalone_dir}/.next"
+
+  if [[ ! -f "${standalone_dir}/server.js" ]]; then
+    return 0
+  fi
+
+  mkdir -p "${standalone_next_dir}"
+  rm -rf "${standalone_next_dir}/static"
+  cp -R "${WEB_DIR}/.next/static" "${standalone_next_dir}/static"
+
+  if [[ -d "${WEB_DIR}/public" ]]; then
+    rm -rf "${standalone_dir}/public"
+    cp -R "${WEB_DIR}/public" "${standalone_dir}/public"
+  fi
+}
+
 select_python() {
   local candidate
   for candidate in "${API_DIR}/.venv/bin/python" "${API_DIR}/.venv/bin/python3" "$(command -v python3.11 || true)" "$(command -v python3 || true)"; do
@@ -188,6 +206,177 @@ check_url() {
   fi
 
   echo "PASS"
+}
+
+check_web_static_asset() {
+  local sample_asset
+  sample_asset="$(find "${WEB_DIR}/.next/static/chunks" -maxdepth 1 -type f -name '*.js' | sort | head -n 1)"
+  if [[ -z "${sample_asset}" ]]; then
+    echo "FAIL: could not find a built Next static chunk to verify"
+    return 1
+  fi
+
+  local relative_path
+  relative_path="${sample_asset#${WEB_DIR}/.next/static/}"
+  check_url "Web static asset" "${WEB_BASE}/_next/static/${relative_path}"
+}
+
+sample_contributor_id() {
+  python3 - "${API_BASE}" <<'PY'
+import json
+import sys
+import urllib.request
+
+base = sys.argv[1].rstrip("/")
+url = f"{base}/api/contributors?limit=1"
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.load(response)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+items = payload.get("items", []) if isinstance(payload, dict) else payload
+if items:
+    print(items[0].get("id", ""))
+else:
+    print("")
+PY
+}
+
+sample_contributor_task_id() {
+  local contributor_id="$1"
+  python3 - "${API_BASE}" "${contributor_id}" <<'PY'
+import json
+import sys
+import urllib.request
+
+base = sys.argv[1].rstrip("/")
+contributor_id = sys.argv[2]
+url = f"{base}/api/contributors/{contributor_id}/tasks?status=completed&limit=1"
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.load(response)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+items = payload.get("items", []) if isinstance(payload, dict) else payload
+if items:
+    print(items[0].get("task_id", ""))
+else:
+    print("")
+PY
+}
+
+sample_contributor_idea_id() {
+  local contributor_id="$1"
+  python3 - "${API_BASE}" "${contributor_id}" <<'PY'
+import json
+import sys
+import urllib.request
+
+base = sys.argv[1].rstrip("/")
+contributor_id = sys.argv[2]
+url = f"{base}/api/contributors/{contributor_id}/idea-contributions?limit=1"
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.load(response)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+items = payload.get("items", []) if isinstance(payload, dict) else payload
+if items:
+    print(items[0].get("idea_id", ""))
+else:
+    print("")
+PY
+}
+
+sample_contributor_stake_id() {
+  local contributor_id="$1"
+  python3 - "${API_BASE}" "${contributor_id}" <<'PY'
+import json
+import sys
+import urllib.request
+
+base = sys.argv[1].rstrip("/")
+contributor_id = sys.argv[2]
+url = f"{base}/api/contributors/{contributor_id}/stakes?limit=1"
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.load(response)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+items = payload.get("items", []) if isinstance(payload, dict) else payload
+if items:
+    print(items[0].get("stake_id", ""))
+else:
+    print("")
+PY
+}
+
+sample_spec_id() {
+  python3 - "${API_BASE}" <<'PY'
+import json
+import time
+import sys
+import urllib.request
+
+base = sys.argv[1].rstrip("/")
+urls = [
+    f"{base}/api/inventory/system-lineage?runtime_window_seconds=86400",
+    f"{base}/api/spec-registry",
+]
+for url in urls:
+    for _ in range(3):
+        try:
+            with urllib.request.urlopen(url, timeout=5) as response:
+                payload = json.load(response)
+            break
+        except Exception:
+            payload = None
+            time.sleep(1)
+    if payload is None:
+        continue
+
+    if isinstance(payload, dict):
+        specs = ((payload.get("specs") or {}).get("items")) or []
+        if specs:
+            print(specs[0].get("spec_id", ""))
+            raise SystemExit(0)
+    if isinstance(payload, list) and payload:
+        print(payload[0].get("spec_id", ""))
+        raise SystemExit(0)
+
+print("")
+PY
+}
+
+sample_asset_id() {
+  python3 - "${API_BASE}" <<'PY'
+import json
+import sys
+import urllib.request
+
+base = sys.argv[1].rstrip("/")
+url = f"{base}/api/assets?limit=1"
+try:
+    with urllib.request.urlopen(url, timeout=5) as response:
+        payload = json.load(response)
+except Exception:
+    print("")
+    raise SystemExit(0)
+
+items = payload.get("items", []) if isinstance(payload, dict) else payload
+if items:
+    print(items[0].get("id", ""))
+else:
+    print("")
+PY
 }
 
 configure_ports() {
@@ -278,7 +467,18 @@ start_web_if_needed() {
   NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" API_URL="${API_URL}" npm run build
   (
     cd "${WEB_DIR}"
-    NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" API_URL="${API_URL}" npm run start -- --hostname 127.0.0.1 --port "${WEB_PORT}"
+    if [[ -f ".next/standalone/server.js" ]]; then
+      prepare_standalone_bundle
+      NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" \
+      NEXT_PUBLIC_API_BASE="${NEXT_PUBLIC_API_URL}" \
+      API_URL="${API_URL}" \
+      API_BASE="${API_URL}" \
+      HOSTNAME="127.0.0.1" \
+      PORT="${WEB_PORT}" \
+      node .next/standalone/server.js
+    else
+      NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL}" API_URL="${API_URL}" npm run start -- --hostname 127.0.0.1 --port "${WEB_PORT}"
+    fi
   ) >"${WEB_LOG}" 2>&1 &
   WEB_PID=$!
   WEB_STARTED=1
@@ -322,18 +522,70 @@ run_validations() {
   check_url "API tasks" "${API_BASE}/api/agent/tasks"
   check_url "API system lineage" "${API_BASE}/api/inventory/system-lineage"
   check_url "API endpoint runtime summary" "${API_BASE}/api/runtime/endpoints/summary"
+  python3 "${ROOT_DIR}/scripts/validate_local_api_matrix.py" --api-base "${API_BASE}"
+  (
+    cd "${WEB_DIR}"
+    API_BASE="${API_BASE}" node scripts/check_api_parity.js
+  )
+  sleep 2
 
   check_url "Web root" "${WEB_BASE}/" "/ideas"
-  check_url "Web root nav flow" "${WEB_BASE}/" "/flow"
-  check_url "Web root nav specs" "${WEB_BASE}/" "/specs"
-  check_url "Web root nav tasks" "${WEB_BASE}/" "/tasks"
+  check_url "Web root nav resonance" "${WEB_BASE}/" "/resonance"
+  check_url "Web root nav pipeline" "${WEB_BASE}/" "/pipeline"
+  check_url "Web root nav nodes" "${WEB_BASE}/" "/nodes"
   check_url "Web root nav contribute" "${WEB_BASE}/" "/contribute"
-  check_url "Web root nav gates" "${WEB_BASE}/" "/gates"
+  check_web_static_asset
   check_url "Web ideas" "${WEB_BASE}/ideas"
   check_url "Web specs" "${WEB_BASE}/specs"
+  local spec_id
+  spec_id="$(sample_spec_id)"
+  if [[ -n "${spec_id}" ]]; then
+    check_url "Web spec detail" "${WEB_BASE}/specs/${spec_id}" "${spec_id}"
+  fi
   check_url "Web flow" "${WEB_BASE}/flow"
   check_url "Web tasks" "${WEB_BASE}/tasks"
   check_url "Web gates" "${WEB_BASE}/gates"
+  check_url "Web API coverage page" "${WEB_BASE}/api-coverage" "API Coverage Verification"
+  check_url "Web assets" "${WEB_BASE}/assets" "Asset Catalog"
+  local asset_id
+  asset_id="$(sample_asset_id)"
+  if [[ -n "${asset_id}" ]]; then
+    check_url "Web asset detail" "${WEB_BASE}/assets/${asset_id}" "${asset_id}"
+  fi
+  check_url "Web contributions" "${WEB_BASE}/contributions" "Contribution Ledger"
+  check_url "Web contributors" "${WEB_BASE}/contributors" "Contributors"
+  local contributor_id
+  contributor_id="$(sample_contributor_id)"
+  if [[ -n "${contributor_id}" ]]; then
+    check_url \
+      "Web contributor portfolio" \
+      "${WEB_BASE}/contributors/${contributor_id}/portfolio" \
+      "Loading portfolio for"
+    local contributor_idea_id
+    contributor_idea_id="$(sample_contributor_idea_id "${contributor_id}")"
+    if [[ -n "${contributor_idea_id}" ]]; then
+      check_url \
+        "Web contributor portfolio idea detail" \
+        "${WEB_BASE}/contributors/${contributor_id}/portfolio/ideas/${contributor_idea_id}" \
+        "Loading"
+    fi
+    local contributor_stake_id
+    contributor_stake_id="$(sample_contributor_stake_id "${contributor_id}")"
+    if [[ -n "${contributor_stake_id}" ]]; then
+      check_url \
+        "Web contributor portfolio stake detail" \
+        "${WEB_BASE}/contributors/${contributor_id}/portfolio/stakes/${contributor_stake_id}" \
+        "Loading stake detail"
+    fi
+    local contributor_task_id
+    contributor_task_id="$(sample_contributor_task_id "${contributor_id}")"
+    if [[ -n "${contributor_task_id}" ]]; then
+      check_url \
+        "Web contributor portfolio task detail" \
+        "${WEB_BASE}/contributors/${contributor_id}/portfolio/tasks/${contributor_task_id}" \
+        "Loading"
+    fi
+  fi
   check_url "Web contribute" "${WEB_BASE}/contribute"
   check_url "Web API health page" "${WEB_BASE}/api-health"
 }

@@ -3,16 +3,20 @@
 from __future__ import annotations
 
 import json
+import logging
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import DateTime, Float, Integer, String, Text, create_engine, func, inspect
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from app.config_loader import database_url
+from app.config_loader import api_config, database_url, get_str
 from app.models.runtime import RuntimeEvent
+
+logger = logging.getLogger(__name__)
 
 
 class Base(DeclarativeBase):
@@ -47,28 +51,36 @@ _SCHEMA_INITIALIZED_URL = ""
 
 
 def _database_url() -> str:
-    url = database_url("runtime")
+    override_url = str(api_config("database_overrides", "runtime", "") or "").strip()
+    if override_url:
+        return override_url
+    url = database_url(None)
     if url:
         return url
-    return database_url(None) or ""
+    return ""
 
 
 def enabled() -> bool:
-    # If a runtime database is configured, prefer DB persistence even when a JSON
-    # events path is configured (legacy/optional file store).
-    return bool(_database_url())
+    override_url = str(api_config("database_overrides", "runtime", "") or "").strip()
+    if override_url:
+        return True
+    if str(get_str("runtime", "events_path", "")).strip():
+        return False
+    return bool(database_url(None) or "")
 
 
 def backend_info() -> dict[str, Any]:
-    url = _database_url()
+    override_url = str(api_config("database_overrides", "runtime", "") or "").strip()
+    url = override_url or str(database_url(None) or "")
+    configured_events_path = str(get_str("runtime", "events_path", "")).strip()
     backend = "postgresql" if "postgres" in url else ("sqlite" if url else "none")
-    from app.config_loader import get_str
-    events_file = get_str("runtime", "events_path")
+    if not override_url and configured_events_path:
+        backend = "file"
     return {
         "enabled": enabled(),
         "backend": backend,
         "database_url": _redact_database_url(url) if url else "",
-        "events_file_override": bool(events_file.strip()) if events_file else False,
+        "events_file_override": bool(configured_events_path),
     }
 
 
@@ -139,23 +151,26 @@ def _session() -> Session:
 
 
 def write_event(event: RuntimeEvent) -> None:
-    ensure_schema()
-    with _session() as session:
-        row = RuntimeEventRecord(
-            id=event.id,
-            source=event.source,
-            endpoint=event.endpoint,
-            raw_endpoint=event.raw_endpoint or event.endpoint,
-            method=event.method,
-            status_code=int(event.status_code),
-            runtime_ms=float(event.runtime_ms),
-            idea_id=event.idea_id,
-            origin_idea_id=event.origin_idea_id,
-            metadata_json=json.dumps(event.metadata or {}),
-            runtime_cost_estimate=float(event.runtime_cost_estimate),
-            recorded_at=event.recorded_at,
-        )
-        session.add(row)
+    try:
+        ensure_schema()
+        with _session() as session:
+            row = RuntimeEventRecord(
+                id=event.id,
+                source=event.source,
+                endpoint=event.endpoint,
+                raw_endpoint=event.raw_endpoint or event.endpoint,
+                method=event.method,
+                status_code=int(event.status_code),
+                runtime_ms=float(event.runtime_ms),
+                idea_id=event.idea_id,
+                origin_idea_id=event.origin_idea_id,
+                metadata_json=json.dumps(event.metadata or {}),
+                runtime_cost_estimate=float(event.runtime_cost_estimate),
+                recorded_at=event.recorded_at,
+            )
+            session.add(row)
+    except SQLAlchemyError as exc:
+        logger.warning("runtime_event_store write failed; dropping event: %s", exc)
 
 
 def list_events(
@@ -163,18 +178,26 @@ def list_events(
     since: datetime | None = None,
     source: str | None = None,
 ) -> list[RuntimeEvent]:
-    ensure_schema()
+    try:
+        ensure_schema()
+    except SQLAlchemyError as exc:
+        logger.warning("runtime_event_store schema check failed; returning no events: %s", exc)
+        return []
     if since is not None and since.tzinfo is None:
         since = since.replace(tzinfo=timezone.utc)
     source_value = str(source or "").strip()
-    with _session() as session:
-        query = session.query(RuntimeEventRecord)
-        if since is not None:
-            query = query.filter(RuntimeEventRecord.recorded_at >= since)
-        if source_value:
-            query = query.filter(RuntimeEventRecord.source == source_value)
-        query = query.order_by(RuntimeEventRecord.recorded_at.desc()).limit(max(1, min(limit, 5000)))
-        rows = query.all()
+    try:
+        with _session() as session:
+            query = session.query(RuntimeEventRecord)
+            if since is not None:
+                query = query.filter(RuntimeEventRecord.recorded_at >= since)
+            if source_value:
+                query = query.filter(RuntimeEventRecord.source == source_value)
+            query = query.order_by(RuntimeEventRecord.recorded_at.desc()).limit(max(1, min(limit, 5000)))
+            rows = query.all()
+    except SQLAlchemyError as exc:
+        logger.warning("runtime_event_store read failed; returning no events: %s", exc)
+        return []
 
     out: list[RuntimeEvent] = []
     for row in rows:
@@ -209,16 +232,24 @@ def list_events(
 def checkpoint(*, exclude_endpoints: list[str] | None = None) -> dict[str, Any]:
     if not enabled():
         return {"enabled": False, "count": 0, "max_recorded_at": None}
-    ensure_schema()
+    try:
+        ensure_schema()
+    except SQLAlchemyError as exc:
+        logger.warning("runtime_event_store checkpoint schema check failed: %s", exc)
+        return {"enabled": True, "count": 0, "max_recorded_at": None}
     normalized_excludes = [str(item).strip() for item in (exclude_endpoints or []) if str(item).strip()]
-    with _session() as session:
-        query = session.query(
-            func.count(RuntimeEventRecord.id),
-            func.max(RuntimeEventRecord.recorded_at),
-        )
-        if normalized_excludes:
-            query = query.filter(~RuntimeEventRecord.endpoint.in_(normalized_excludes))
-        count_raw, max_recorded_at = query.one()
+    try:
+        with _session() as session:
+            query = session.query(
+                func.count(RuntimeEventRecord.id),
+                func.max(RuntimeEventRecord.recorded_at),
+            )
+            if normalized_excludes:
+                query = query.filter(~RuntimeEventRecord.endpoint.in_(normalized_excludes))
+            count_raw, max_recorded_at = query.one()
+    except SQLAlchemyError as exc:
+        logger.warning("runtime_event_store checkpoint read failed: %s", exc)
+        return {"enabled": True, "count": 0, "max_recorded_at": None}
     count = int(count_raw or 0)
     if isinstance(max_recorded_at, datetime) and max_recorded_at.tzinfo is None:
         max_recorded_at = max_recorded_at.replace(tzinfo=timezone.utc)

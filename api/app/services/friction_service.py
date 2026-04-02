@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -22,11 +23,30 @@ def _default_path() -> Path:
 
 
 def friction_file_path() -> Path:
+    explicit = str(os.getenv("FRICTION_EVENTS_PATH", "")).strip()
+    if explicit:
+        return Path(explicit)
     configured = get_str("friction", "events_path")
     return Path(configured) if configured else _default_path()
 
 
+def report_window_limit_days() -> int:
+    """Return the safe report horizon for the current friction event backend."""
+    if str(os.getenv("FRICTION_EVENTS_PATH", "")).strip():
+        return 365
+    if get_str("friction", "events_path"):
+        return 365
+    return 90
+
+
 def _use_db_events() -> bool:
+    explicit_use_db = str(os.getenv("FRICTION_USE_DB", "")).strip().lower()
+    if explicit_use_db in {"1", "true", "yes", "on"}:
+        return True
+    if explicit_use_db in {"0", "false", "no", "off"}:
+        return False
+    if str(os.getenv("FRICTION_EVENTS_PATH", "")).strip():
+        return False
     override = get_str("friction", "use_db")
     if override:
         override = override.strip().lower()
@@ -40,6 +60,9 @@ def _use_db_events() -> bool:
 
 
 def monitor_issues_file_path() -> Path:
+    explicit = str(os.getenv("MONITOR_ISSUES_PATH", "")).strip()
+    if explicit:
+        return Path(explicit)
     configured = get_str("monitor", "issues_path")
     if configured:
         return Path(configured)
@@ -47,6 +70,9 @@ def monitor_issues_file_path() -> Path:
 
 
 def github_actions_health_file_path() -> Path:
+    explicit = str(os.getenv("GITHUB_ACTIONS_HEALTH_PATH", "")).strip()
+    if explicit:
+        return Path(explicit)
     configured = get_str("github_actions", "health_path")
     if configured:
         return Path(configured)

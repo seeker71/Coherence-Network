@@ -3,6 +3,11 @@
  */
 
 import { get } from "../api.mjs";
+import { writeSync } from "node:fs";
+
+function out(line = "") {
+  writeSync(1, `${line}\n`);
+}
 
 /** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
@@ -58,7 +63,7 @@ export async function listProviders() {
 export async function showProviderStats() {
   const data = await get("/api/federation/nodes/stats");
   if (!data) {
-    console.log("Could not fetch provider stats.");
+    out("Could not fetch provider stats.");
     return;
   }
 
@@ -66,13 +71,22 @@ export async function showProviderStats() {
   const alerts = data.alerts || [];
   const native = ["claude", "codex", "cursor", "gemini", "ollama-local", "ollama-cloud", "openrouter"];
 
-  console.log();
-  console.log(`\x1b[1m  PROVIDER STATS\x1b[0m (${data.window_days || 7}d window)`);
-  console.log(`  ${"─".repeat(72)}`);
-  console.log(`  ${"Provider".padEnd(28)} ${"Rate".padEnd(18)} ${"Samples".padStart(8)} ${"Avg".padStart(6)}`);
-  console.log(`  ${"─".repeat(72)}`);
+  out();
+  out(`\x1b[1m  PROVIDER STATS\x1b[0m (${data.window_days || 7}d window)`);
+  out(`  ${"─".repeat(72)}`);
+  out(`  ${"Provider".padEnd(28)} ${"Rate".padEnd(18)} ${"Samples".padStart(8)} ${"Avg".padStart(6)}`);
+  out(`  ${"─".repeat(72)}`);
 
-  for (const name of native) {
+  const providerNames = [
+    ...native.filter((name) => providers[name]),
+    ...Object.keys(providers).filter((name) => !name.includes("/") && !native.includes(name)),
+  ];
+
+  if (providerNames.length === 0) {
+    out("  \x1b[2mNo provider measurements found.\x1b[0m");
+  }
+
+  for (const name of providerNames) {
     const stats = providers[name];
     if (!stats) continue;
     const rate = stats.overall_success_rate ?? 0;

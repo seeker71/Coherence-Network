@@ -70,7 +70,11 @@ def _uptime_human(seconds: int) -> str:
 
 
 def _deployed_sha() -> tuple[str | None, str | None]:
-    """Get deployed SHA from config."""
+    """Get deployed SHA from runtime environment or config."""
+    for key in _DEPLOY_SHA_ENV_KEYS:
+        value = str(os.getenv(key, "")).strip()
+        if value:
+            return value, key
     config = get_config()
     sha = config.get("deployed_sha")
     if sha:

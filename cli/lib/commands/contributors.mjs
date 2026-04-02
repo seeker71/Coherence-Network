@@ -85,8 +85,17 @@ export async function showContributions(args) {
   console.log(`\x1b[1m  CONTRIBUTIONS\x1b[0m for ${id} (${list.length})`);
   console.log(`  ${"─".repeat(60)}`);
   for (const c of list) {
-    const desc = truncate(c.description || c.type || "?", 45);
-    const cc = c.cc_amount != null ? `${c.cc_amount} CC` : "";
+    const desc = truncate(
+      c.description
+        || c.metadata?.description
+        || c.metadata?.summary
+        || c.metadata?.type
+        || c.type
+        || "Contribution",
+      45,
+    );
+    const amount = c.cost_amount ?? c.cc_amount ?? null;
+    const cc = amount != null ? `${amount} CC` : "";
     console.log(`  ${desc.padEnd(47)} ${cc}`);
   }
   console.log();

@@ -51,6 +51,7 @@ _RUNTIME_EVENTS_CACHE: dict[str, Any] = {
     "rows": [],
 }
 _RUNTIME_EVENTS_CACHE_TTL_SECONDS = 30.0
+_RUNTIME_EVENTS_FILE_LOCK = threading.Lock()
 
 _LIVE_CHANGE_CACHE: dict[str, Any] = {
     "expires_at": 0.0,
@@ -174,6 +175,9 @@ def _default_events_path() -> Path:
 
 
 def _events_path() -> Path:
+    explicit = str(os.getenv("RUNTIME_EVENTS_PATH", "")).strip()
+    if explicit:
+        return Path(explicit)
     configured = get_str("runtime", "events_path", "")
     return Path(configured) if configured else _default_events_path()
 
@@ -183,6 +187,9 @@ def _default_idea_map_path() -> Path:
 
 
 def _idea_map_path() -> Path:
+    explicit = str(os.getenv("RUNTIME_IDEA_MAP_PATH", "")).strip()
+    if explicit:
+        return Path(explicit)
     configured = get_str("runtime", "idea_map_path", "")
     return Path(configured) if configured else _default_idea_map_path()
 
@@ -628,9 +635,10 @@ def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
     if runtime_event_store.enabled():
         runtime_event_store.write_event(event)
     else:
-        data = _read_store()
-        data["events"].append(event.model_dump(mode="json"))
-        _write_store(data)
+        with _RUNTIME_EVENTS_FILE_LOCK:
+            data = _read_store()
+            data["events"].append(event.model_dump(mode="json"))
+            _write_store(data)
     _invalidate_runtime_events_cache()
     return event
 

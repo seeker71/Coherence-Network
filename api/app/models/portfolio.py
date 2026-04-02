@@ -208,3 +208,17 @@ class TasksList(BaseModel):
     contributor_id: str
     total: int
     items: list[TaskSummary] = Field(default_factory=list)
+
+
+class TaskDetail(BaseModel):
+    task_id: str
+    description: str
+    idea_id: Optional[str] = None
+    idea_title: Optional[str] = None
+    provider: Optional[str] = None
+    outcome: Optional[str] = None
+    status: Optional[str] = None
+    task_type: Optional[str] = None
+    cc_earned: float = 0.0
+    completed_at: Optional[datetime] = None
+    result: Optional[str] = None

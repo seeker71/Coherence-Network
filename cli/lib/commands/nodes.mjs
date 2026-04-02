@@ -3,7 +3,12 @@
  */
 
 import { get, post } from "../api.mjs";
+import { writeSync } from "node:fs";
 import { hostname } from "node:os";
+
+function out(line = "") {
+  writeSync(1, `${line}\n`);
+}
 
 /**
  * Resolve a node target to a full node_id.
@@ -54,13 +59,19 @@ async function getMyNodeId() {
 export async function listNodes() {
   const nodes = await get("/api/federation/nodes");
   if (!nodes || !Array.isArray(nodes)) {
-    console.log("Could not fetch federation nodes.");
+    out("Could not fetch federation nodes.");
     return;
   }
 
-  console.log();
-  console.log("\x1b[1m  FEDERATION NODES\x1b[0m");
-  console.log(`  ${"─".repeat(50)}`);
+  out();
+  out("\x1b[1m  FEDERATION NODES\x1b[0m");
+  out(`  ${"─".repeat(50)}`);
+
+  if (nodes.length === 0) {
+    out("  \x1b[2mNo nodes registered.\x1b[0m");
+    out();
+    return;
+  }
 
   /** Format relative time */
   function relativeTime(min) {

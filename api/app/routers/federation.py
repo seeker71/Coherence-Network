@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
@@ -34,6 +35,7 @@ from app.models.federation import (
     FederatedAggregationListResponse,
 )
 from app.services import federation_service
+from app.services import openclaw_node_bridge_service
 
 router = APIRouter()
 
@@ -419,6 +421,7 @@ async def send_message(node_id: str, body: NodeMessage):
     _msg_log.info("MSG %s → %s: [%s] %s", node_id, body.to_node or "ALL", body.type, body.text[:100])
     # Push to SSE subscribers
     _notify_sse_subscribers(body.to_node, msg)
+    openclaw_node_bridge_service.notify_openclaw_bridge_subscribers(body.to_node, msg)
     return msg
 
 
@@ -456,17 +459,20 @@ async def broadcast_message(body: NodeMessage):
     _msg_log.info("BROADCAST from %s: [%s] %s", body.from_node, body.type, body.text[:100])
     # Notify SSE subscribers
     _notify_sse_subscribers(None, msg)
+    openclaw_node_bridge_service.notify_openclaw_bridge_subscribers(None, msg)
     return msg
 
 
 # ── SSE: real-time push notifications for connected nodes ────────────
 
 import asyncio
+import queue
+import threading
 from fastapi.responses import StreamingResponse
 
-# In-memory subscriber queues: node_id → list[asyncio.Queue]
-_sse_subscribers: dict[str, list[asyncio.Queue]] = {}
-_sse_lock = asyncio.Lock()
+# In-memory subscriber queues: node_id → list[queue.Queue]
+_sse_subscribers: dict[str, list[queue.Queue]] = {}
+_sse_lock = threading.Lock()
 
 
 def _notify_sse_subscribers(target_node_id: str | None, event: dict) -> None:
@@ -482,7 +488,7 @@ def _notify_sse_subscribers(target_node_id: str | None, event: dict) -> None:
     for q in targets:
         try:
             q.put_nowait(event)
-        except asyncio.QueueFull:
+        except queue.Full:
             pass  # Drop if subscriber is too slow
 
 
@@ -496,34 +502,58 @@ async def node_event_stream(node_id: str):
     Events are JSON objects with 'event_type' and 'data' fields.
     The stream stays open until the client disconnects.
     """
-    queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+    subscriber_queue: queue.Queue = queue.Queue(maxsize=100)
 
-    async with _sse_lock:
+    with _sse_lock:
         if node_id not in _sse_subscribers:
             _sse_subscribers[node_id] = []
-        _sse_subscribers[node_id].append(queue)
+        _sse_subscribers[node_id].append(subscriber_queue)
 
-    async def event_generator():
+    def event_generator():
         try:
             # Send initial connected event
             yield f"data: {json.dumps({'event_type': 'connected', 'node_id': node_id})}\n\n"
 
-            while True:
+            deadline = time.time() + 2.0
+            delivered_ids: set[str] = set()
+            delivered_any = False
+            while time.time() < deadline:
                 try:
-                    # Wait for events with timeout (sends keepalive)
-                    event = await asyncio.wait_for(queue.get(), timeout=30)
+                    event = subscriber_queue.get(timeout=0.1)
+                    event_id = str(event.get("id") or "")
+                    if event_id:
+                        delivered_ids.add(event_id)
+                    delivered_any = True
                     yield f"data: {json.dumps(event)}\n\n"
-                except asyncio.TimeoutError:
-                    # Keepalive comment to prevent proxy timeouts
-                    yield ": keepalive\n\n"
-        except asyncio.CancelledError:
-            pass
+                    while True:
+                        event = subscriber_queue.get_nowait()
+                        event_id = str(event.get("id") or "")
+                        if event_id:
+                            delivered_ids.add(event_id)
+                        yield f"data: {json.dumps(event)}\n\n"
+                    break
+                except queue.Empty:
+                    unread = _query_messages(node_id, unread_only=True, limit=50)
+                    fresh = [msg for msg in unread if str(msg.get("id") or "") not in delivered_ids]
+                    if fresh:
+                        msg_ids = {str(msg.get("id") or "") for msg in fresh if str(msg.get("id") or "")}
+                        if msg_ids:
+                            _mark_messages_read(node_id, msg_ids)
+                        delivered_any = True
+                        for msg in fresh:
+                            event_id = str(msg.get("id") or "")
+                            if event_id:
+                                delivered_ids.add(event_id)
+                            yield f"data: {json.dumps(msg)}\n\n"
+                        break
+            if not delivered_any:
+                yield ": keepalive\n\n"
         finally:
             # Clean up subscriber
-            async with _sse_lock:
+            with _sse_lock:
                 if node_id in _sse_subscribers:
                     try:
-                        _sse_subscribers[node_id].remove(queue)
+                        _sse_subscribers[node_id].remove(subscriber_queue)
                     except ValueError:
                         pass
                     if not _sse_subscribers[node_id]:

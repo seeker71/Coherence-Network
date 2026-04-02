@@ -12,12 +12,54 @@ import inspect
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+
+@pytest.fixture
+def set_config() -> Any:
+    """Set config values directly for tests without using ENV vars.
+    
+    Usage:
+        def test_something(set_config):
+            set_config("agent_tasks", "persist", False)
+            set_config("agent_cost", "allow_paid_providers", True)
+    
+    Overrides values in config_loader._CONFIG and config_service cache.
+    """
+    from app import config_loader
+    import app.services.config_service as cs_module
+    
+    # Keys that need to be set under both agent_executor and executor sections
+    EXECUTOR_KEYS = {
+        "policy_enabled", "cheap_default", "default", "escalate_to",
+        "escalate_failure_threshold", "escalate_retry_threshold", "open_question_default"
+    }
+    
+    def _set(section: str, key: str, value: Any) -> None:
+        # Set in config_loader
+        if section not in config_loader._CONFIG:
+            config_loader._CONFIG[section] = {}
+        config_loader._CONFIG[section][key] = value
+        
+        # Set in config_service cache (initialized by autouse fixture)
+        if cs_module._CACHE is not None:
+            cs_module._CACHE[f"{section}_{key}"] = value
+            if section == "agent_executor":
+                cs_module._CACHE[f"agent_{key}"] = value
+        
+        # For executor-related keys, also set under 'executor' section
+        if section == "agent_executor" and key in EXECUTOR_KEYS:
+            config_loader._CONFIG.setdefault("executor", {})[key] = value
+            if cs_module._CACHE is not None:
+                cs_module._CACHE[f"executor_{key}"] = value
+    
+    return _set
 
 # Mark environment as test BEFORE any app module imports — this disables
 # rate limiting middleware and relaxes auth requirements for testing.
@@ -92,14 +134,16 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     Each test gets a clean engine and a unique, isolated SQLite database
     in tmp_path so env-var changes take effect and state never leaks.
     """
+    from app import config_loader
+    import app.services.config_service as cs_module
     from app.services import (
         agent_service,
         automation_usage_service,
-        config_service,
         idea_service,
         unified_db,
         unified_models,  # noqa: F401 — ensures all table models are registered
     )
+    from app.services.agent_routing import model_routing_loader
 
     # Use an isolated DB for each test
     db_file = tmp_path / "test_coherence.db"
@@ -108,8 +152,32 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     os.environ.pop("IDEA_PORTFOLIO_PATH", None)
     os.environ["AGENT_TASKS_USE_DB"] = "0"
 
-    # Reset config cache so env var changes take effect
-    config_service.reset_config_cache()
+    # Start from the normal config defaults, then pin the test-specific overrides.
+    config_loader.reload_config()
+    config_loader._CONFIG.setdefault("agent_tasks", {})["persist"] = False
+    config_loader._CONFIG.setdefault("agent_executor", {})["execute_token_allow_unauth"] = True
+    config_loader._CONFIG.setdefault("agent_executor", {})["execute_token"] = None
+    config_loader._CONFIG.setdefault("agent_executor", {})["policy_enabled"] = True
+    config_loader._CONFIG.setdefault("runtime", {})["events_path"] = str(tmp_path / "runtime_events.json")
+    config_loader._CONFIG.setdefault("runtime", {})["idea_map_path"] = str(tmp_path / "runtime_idea_map.json")
+    config_loader._CONFIG.setdefault("agent_lifecycle", {})["subscribers"] = "runtime"
+
+    # Reset config_service cache with the normal defaults so unrelated tests keep working.
+    # Then overlay the specific knobs these agent tests expect to control directly.
+    cs_module.reset_config_cache()
+    cs_module._CACHE = dict(cs_module.get_config())
+    cs_module._CACHE.update(
+        {
+            "agent_tasks_persist": False,
+            "agent_executor_execute_token_allow_unauth": True,
+            "agent_execute_token_allow_unauth": True,
+            "agent_executor_execute_token": None,
+            "agent_execute_token": None,
+            "runtime_events_path": str(tmp_path / "runtime_events.json"),
+            "runtime_idea_map_path": str(tmp_path / "runtime_idea_map.json"),
+            "agent_lifecycle_subscribers": "runtime",
+        }
+    )
 
     # Reset the unified engine — all services delegate to this
     unified_db.reset_engine()
@@ -126,6 +194,7 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     idea_service._invalidate_ideas_cache()
 
     automation_usage_service.invalidate_cache()
+    model_routing_loader.reset_model_routing_cache()
 
 
 @pytest.fixture

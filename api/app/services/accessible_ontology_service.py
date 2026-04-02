@@ -28,6 +28,11 @@ _relations: dict[str, list[dict[str, Any]]] = defaultdict(list)
 _resonances: dict[str, set[str]] = defaultdict(set)
 _activity: list[dict[str, Any]] = []
 
+# Backward-compatible aliases kept for older tests and internal call sites.
+_contributions = _store
+_inferred_edges = _relations
+_domain_index: dict[str, set[str]] = defaultdict(set)
+
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()

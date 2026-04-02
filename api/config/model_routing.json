@@ -3,7 +3,7 @@
   "description": "Provider model registry. Each provider has its own model catalog. Fallback chains stay within the same provider. Task tier determines strong vs fast model selection.",
   "openrouter_free_model": "openrouter/free",
   "auto_execute_default_model": "",
-  "roi_spec_cheap_model": "gpt-5.3-codex-spark",
+  "roi_spec_cheap_model": "openai/gpt-4o-mini",
   "task_type_tier": {
     "spec": "strong",
     "impl": "strong",

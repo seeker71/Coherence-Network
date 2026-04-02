@@ -1193,11 +1193,12 @@ async def test_runtime_get_endpoint_exerciser_runs_safe_calls_and_reports_covera
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         run = await client.post(
             "/api/runtime/exerciser/run",
-            params={"cycles": 1, "max_endpoints": 30, "delay_ms": 0, "timeout_seconds": 8.0},
+            json={"cycles": 1, "max_endpoints": 30, "delay_ms": 0, "timeout_seconds": 2.0},
         )
         assert run.status_code == 200
         payload = run.json()
         assert payload["result"] == "runtime_get_endpoint_exerciser_completed"
+        assert payload["config"]["max_endpoints"] == 30
         assert payload["summary"]["discovered_get_endpoints"] >= 1
         assert payload["summary"]["total_calls"] >= 1
         assert payload["coverage"]["after_with_usage_events"] >= payload["coverage"]["before_with_usage_events"]

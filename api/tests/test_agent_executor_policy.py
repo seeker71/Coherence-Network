@@ -194,10 +194,10 @@ def test_explicit_executor_always_honored_even_when_unavailable(monkeypatch: pyt
     assert policy.get("availability") == "unavailable_on_api_node"
 
 
-def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "0")
-    monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "claude")
+def test_policy_disabled_falls_back_when_default_unavailable(set_config, monkeypatch: pytest.MonkeyPatch) -> None:
+    set_config("agent_tasks", "persist", False)
+    set_config("agent_executor", "policy_enabled", False)
+    set_config("agent_executor", "default", "claude")
     _which = {"agent": None, "claude": None, "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
@@ -213,10 +213,10 @@ def test_policy_disabled_falls_back_when_default_unavailable(monkeypatch: pytest
     assert policy.get("fallback_executor") == "codex"
 
 
-def test_unknown_executor_gets_policy_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unknown_executor_gets_policy_default(set_config, monkeypatch: pytest.MonkeyPatch) -> None:
     """Unknown executor name (not in canonical list) is ignored; policy selects executor (e.g. codex for open question)."""
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "codex")
+    set_config("agent_tasks", "persist", False)
+    set_config("agent_executor", "open_question_default", "codex")
     _which = {"agent": "/usr/bin/agent", "claude": "/usr/bin/claude", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
@@ -282,10 +282,10 @@ def test_repo_scoped_question_prefers_repo_executor(monkeypatch: pytest.MonkeyPa
     assert str(task["command"]).startswith("agent ")
 
 
-def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
-    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "codex")
+def test_open_question_prefers_codex(set_config, monkeypatch: pytest.MonkeyPatch) -> None:
+    set_config("agent_tasks", "persist", False)
+    set_config("agent_executor", "policy_enabled", True)
+    set_config("agent_executor", "open_question_default", "codex")
     _which = {"agent": "/usr/bin/agent", "aider": "/usr/bin/aider", "codex": "/usr/bin/codex"}
     monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()
@@ -304,14 +304,14 @@ def test_open_question_prefers_codex(monkeypatch: pytest.MonkeyPatch) -> None:
     assert str(task["model"]).startswith("codex/")
 
 
-def test_policy_does_not_escalate_away_from_gemini_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_EXECUTOR_POLICY_ENABLED", "1")
-    monkeypatch.setenv("AGENT_EXECUTOR_CHEAP_DEFAULT", "gemini")
-    monkeypatch.setenv("AGENT_EXECUTOR_OPEN_QUESTION_DEFAULT", "gemini")
-    monkeypatch.delenv("AGENT_EXECUTOR_ESCALATE_TO", raising=False)
-    monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_FAILURE_THRESHOLD", "1")
-    monkeypatch.setenv("AGENT_EXECUTOR_ESCALATE_RETRY_THRESHOLD", "10")
+def test_policy_does_not_escalate_away_from_gemini_default(set_config, monkeypatch: pytest.MonkeyPatch) -> None:
+    set_config("agent_tasks", "persist", False)
+    set_config("agent_executor", "policy_enabled", True)
+    set_config("agent_executor", "cheap_default", "gemini")
+    set_config("agent_executor", "open_question_default", "gemini")
+    set_config("agent_executor", "escalate_to", None)
+    set_config("agent_executor", "escalate_failure_threshold", 1)
+    set_config("agent_executor", "escalate_retry_threshold", 10)
     _which = {"agent": None, "claude": "/usr/bin/claude", "codex": None, "gemini": "/usr/bin/gemini"}
     monkeypatch.setattr(agent_service_executor.shutil, "which", lambda name: _which.get(name))
     _reset_agent_store()

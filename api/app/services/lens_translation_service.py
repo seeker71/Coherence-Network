@@ -16,6 +16,7 @@ def _source_hash(name: str, description: str, tags: list[str]) -> str:
 
 # (idea_id, lens_id, source_hash) -> payload
 _translation_cache: dict[tuple[str, str, str], dict[str, Any]] = {}
+_source_snapshot_cache: dict[str, tuple[str, str, list[str]]] = {}
 
 _roi: dict[str, Any] = {
     "total_translations_generated": 0,
@@ -61,16 +62,18 @@ def get_roi_payload() -> dict[str, Any]:
 
 def _resolve_idea_fields(idea_id: str) -> tuple[str, str, list[str]] | None:
     idea = idea_service.get_idea(idea_id)
-    if idea is None:
-        return None
-    name = getattr(idea, "name", None) or idea_id
-    desc = getattr(idea, "description", None) or ""
-    tags: list[str] = []
-    if hasattr(idea, "tags") and idea.tags:
-        tags = list(idea.tags)
-    elif hasattr(idea, "idea") and getattr(idea.idea, "tags", None):
-        tags = list(idea.idea.tags)
-    return name, desc, tags
+    if idea is not None:
+        name = getattr(idea, "name", None) or idea_id
+        desc = getattr(idea, "description", None) or ""
+        tags: list[str] = []
+        if hasattr(idea, "tags") and idea.tags:
+            tags = list(idea.tags)
+        elif hasattr(idea, "idea") and getattr(idea.idea, "tags", None):
+            tags = list(idea.idea.tags)
+        snapshot = (name, desc, tags)
+        _source_snapshot_cache[idea_id] = snapshot
+        return snapshot
+    return _source_snapshot_cache.get(idea_id)
 
 
 def build_idea_translation(

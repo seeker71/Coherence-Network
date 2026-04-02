@@ -71,6 +71,15 @@ async def test_all_ten_canonical_node_types_accepted():
             assert r.json()["type"] == node_type
 
 
+@pytest.mark.asyncio
+async def test_legacy_task_node_type_still_accepted():
+    """Legacy graph CRUD types like task remain valid even though the registry is canonical-only."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await _post_node(client, "task", "Legacy Task")
+    assert r.status_code == 200, r.text
+    assert r.json()["type"] == "task"
+
+
 # ── Edge type validation ─────────────────────────────────────────────
 
 

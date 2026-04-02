@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+from app import config_loader
 from app.services import (
     commit_evidence_service,
     idea_service,
@@ -73,8 +74,8 @@ def test_idea_service_derives_missing_ideas_from_other_registry_domains(
     monkeypatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
-    monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "1")
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+    config_loader.set_config_value("ideas", "sync_enable_domain_discovery", True)
 
     monkeypatch.setattr(
         spec_registry_service,
@@ -106,9 +107,9 @@ def test_idea_service_domain_discovery_default_on_outside_pytest(
     monkeypatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
-    monkeypatch.delenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", raising=False)
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+    config_loader.set_config_value("ideas", "sync_enable_domain_discovery", None)
 
     monkeypatch.setattr(
         spec_registry_service,
@@ -136,8 +137,8 @@ def test_idea_service_derives_missing_ideas_from_contribution_metadata_domain(
     monkeypatch, tmp_path: Path
 ) -> None:
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "idea_portfolio.json"))
-    monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "1")
     monkeypatch.delenv("IDEA_COMMIT_EVIDENCE_DIR", raising=False)
+    config_loader.set_config_value("ideas", "sync_enable_domain_discovery", True)
 
     monkeypatch.setattr(spec_registry_service, "list_specs", lambda limit=200, offset=0: [])
     monkeypatch.setattr(value_lineage_service, "list_links", lambda limit=200: [])

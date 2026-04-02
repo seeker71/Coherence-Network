@@ -3687,10 +3687,6 @@ def _prepend_cli_path(binary_path: str, env: dict[str, str]) -> None:
     parts = [item for item in current.split(os.pathsep) if item]
     if directory not in parts:
         env["PATH"] = directory + (os.pathsep + current if current else "")
-    process_current = str(os.environ.get("PATH", ""))
-    process_parts = [item for item in process_current.split(os.pathsep) if item]
-    if directory not in process_parts:
-        os.environ["PATH"] = directory + (os.pathsep + process_current if process_current else "")
 
 
 def _resolve_node_binary(env: dict[str, str]) -> str:
