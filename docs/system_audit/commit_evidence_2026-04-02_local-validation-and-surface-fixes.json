@@ -79,6 +79,7 @@
     "api/tests/test_release_gate_service.py",
     "api/tests/test_runtime_api.py",
     "api/tests/test_runtime_event_store_precedence.py",
+    "api/tests/test_schema_init_fastpath.py",
     "api/tests/test_sse_control_channel.py",
     "api/tests/test_spec_156_tasks_page_extended.py",
     "api/tests/test_spec_156_ux_tasks_page.py",
@@ -123,11 +124,11 @@
   ],
   "local_validation": {
     "status": "pass",
-    "details": "Focused and broad local validation passed: API pytest matrix 3212 passed / 24 skipped / 4 xfailed on the local gate, the exact three previously failing GitHub cases now pass locally, web integration 5 passed, next build passed, scripts/verify_worktree_local_web.sh passed with curated endpoint latencies under 10ms for automation readiness/usage on the hydrated production snapshot, and the maintainability baseline was refreshed from the audited current repository state using api/scripts/run_maintainability_audit.py --write-baseline."
+    "details": "Focused and broad local validation passed: API pytest matrix 3212 passed / 24 skipped / 4 xfailed on the local gate, the exact three previously failing GitHub cases now pass locally, the SQLite schema-race reproduction now passes locally, web integration 5 passed, next build passed, scripts/verify_worktree_local_web.sh passed with curated endpoint latencies under 10ms for automation readiness/usage on the hydrated production snapshot, and the maintainability baseline was refreshed from the audited current repository state using api/scripts/run_maintainability_audit.py --write-baseline."
   },
   "ci_validation": {
     "status": "pass",
-    "details": "Pre-push local gate suite passed for the touched runtime, web, CLI, and spec surfaces, including endpoint exerciser coverage, repo CLI smoke coverage, contributor portfolio drilldowns, built-web route verification, maintainability audit baseline alignment, spec-181 quality-contract validation, and the final PR-blocker regressions around readiness severity, provider listing, and ROI task model routing."
+    "details": "Pre-push local gate suite passed for the touched runtime, web, CLI, and spec surfaces, including endpoint exerciser coverage, repo CLI smoke coverage, contributor portfolio drilldowns, built-web route verification, maintainability audit baseline alignment, spec-181 quality-contract validation, the PR-blocker regressions around readiness severity/provider listing/ROI task model routing, and the shared SQLite schema bootstrap race revealed by GitHub Actions."
   },
   "deploy_validation": {
     "status": "pending",
@@ -252,6 +253,7 @@
     "api/tests/test_release_gate_service.py",
     "api/tests/test_runtime_api.py",
     "api/tests/test_runtime_event_store_precedence.py",
+    "api/tests/test_schema_init_fastpath.py",
     "api/tests/test_sse_control_channel.py",
     "api/tests/test_spec_156_tasks_page_extended.py",
     "api/tests/test_spec_156_ux_tasks_page.py",
