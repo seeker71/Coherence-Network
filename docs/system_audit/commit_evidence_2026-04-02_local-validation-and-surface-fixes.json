@@ -127,7 +127,7 @@
   },
   "ci_validation": {
     "status": "pass",
-    "details": "Pre-push local gate suite passed for the touched runtime, web, and CLI surfaces, including endpoint exerciser coverage, repo CLI smoke coverage, contributor portfolio drilldowns, built-web route verification, and maintainability audit baseline alignment."
+    "details": "Pre-push local gate suite passed for the touched runtime, web, CLI, and spec surfaces, including endpoint exerciser coverage, repo CLI smoke coverage, contributor portfolio drilldowns, built-web route verification, maintainability audit baseline alignment, and spec-181 quality-contract validation."
   },
   "deploy_validation": {
     "status": "pending",
