@@ -157,6 +157,7 @@ _PROVIDER_FAMILY_ALIASES: dict[str, str] = {
 }
 
 _READINESS_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "railway", "gemini"})
+_READINESS_BLOCKING_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini", "railway"})
 _OPTIONAL_REQUIRED_PROVIDER_CANDIDATES = ("railway",)
 _LIMIT_TELEMETRY_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
 _LIMIT_COVERAGE_EXCLUDED_PROVIDERS = frozenset({"coherence-internal", "railway"})
@@ -5709,23 +5710,15 @@ def _provider_readiness_report_for_overview(
         status = snapshot.status if snapshot is not None else ("ok" if configured else "unavailable")
         is_required = provider in required_set
 
-        if is_required and status != "ok":
-            severity = "critical"
-            reason = f"{provider}: status={status}"
-            blocking.append(reason)
-            recommendations.append(
-                f"Restore provider telemetry for '{provider}' and re-run /api/automation/usage/readiness."
-            )
-        elif status != "ok":
-            severity = "warning"
-        else:
-            severity = "info"
-
-        notes = list(snapshot.notes) if snapshot is not None else []
-        if missing:
-            notes.append(f"missing_env={','.join(missing)}")
-        notes.extend(configured_notes)
-        notes = list(dict.fromkeys(notes))
+        severity = _provider_readiness_severity(provider=provider, status=status, is_required=is_required)
+        _append_provider_readiness_blockers(
+            provider=provider,
+            status=status,
+            severity=severity,
+            blocking=blocking,
+            recommendations=recommendations,
+        )
+        notes = _provider_readiness_notes(snapshot=snapshot, missing=missing, configured_notes=configured_notes)
 
         rows.append(
             ProviderReadinessRow(
@@ -5770,6 +5763,43 @@ def _provider_readiness_report_for_overview(
         providers=rows,
         limit_telemetry=limit_telemetry,
     )
+
+
+def _provider_readiness_severity(*, provider: str, status: str, is_required: bool) -> str:
+    if status == "ok":
+        return "info"
+    if is_required and provider in _READINESS_BLOCKING_REQUIRED_PROVIDER_ALLOWLIST:
+        return "critical"
+    return "warning"
+
+
+def _append_provider_readiness_blockers(
+    *,
+    provider: str,
+    status: str,
+    severity: str,
+    blocking: list[str],
+    recommendations: list[str],
+) -> None:
+    if severity != "critical":
+        return
+    blocking.append(f"{provider}: status={status}")
+    recommendations.append(
+        f"Restore provider telemetry for '{provider}' and re-run /api/automation/usage/readiness."
+    )
+
+
+def _provider_readiness_notes(
+    *,
+    snapshot: ProviderUsageSnapshot | None,
+    missing: list[str],
+    configured_notes: list[str],
+) -> list[str]:
+    notes = list(snapshot.notes) if snapshot is not None else []
+    if missing:
+        notes.append(f"missing_env={','.join(missing)}")
+    notes.extend(configured_notes)
+    return list(dict.fromkeys(notes))
 
 
 def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:

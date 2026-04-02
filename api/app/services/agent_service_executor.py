@@ -608,7 +608,12 @@ COMMAND_TEMPLATES: dict[TaskType, str] = {
 
 
 def list_available_task_execution_providers() -> list[str]:
-    """Return available task execution providers in deterministic order."""
+    """Return supported task execution providers in deterministic order.
+
+    This route backs user-facing inventory and CLI surfaces, so it should
+    remain stable across machines even when a local API node does not have
+    every executor binary installed.
+    """
     configured = list(routing_service.EXECUTOR_VALUES)
     candidates = configured if configured else ["claude", "cursor", "codex", "gemini", "openrouter"]
     providers: list[str] = []
@@ -618,8 +623,7 @@ def list_available_task_execution_providers() -> list[str]:
         if not normalized or normalized in seen:
             continue
         seen.add(normalized)
-        if _executor_available(normalized):
-            providers.append(normalized)
+        providers.append(normalized)
     return providers
 
 

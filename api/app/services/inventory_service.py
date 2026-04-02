@@ -188,6 +188,23 @@ _INVENTORY_CACHE: dict[str, dict[str, Any]] = {
 }
 
 
+def _executor_for_model_override(model_name: str | None) -> str | None:
+    normalized = str(model_name or "").strip().lower()
+    if not normalized:
+        return None
+    if normalized.startswith(("gpt", "o1", "o3", "o4", "openai/")):
+        return "codex"
+    if "claude" in normalized:
+        return "claude"
+    if "gemini" in normalized:
+        return "gemini"
+    if normalized.startswith("cursor/"):
+        return "cursor"
+    if normalized.startswith("openrouter/") or "openrouter" in normalized:
+        return "openrouter"
+    return None
+
+
 def _inventory_cache_ttl_seconds() -> float:
     return max(1.0, get_float("inventory", "cache_ttl_seconds", 30.0))
 
@@ -1914,6 +1931,8 @@ def _create_idea_progress_tasks(rows: list[dict[str, Any]], requested: int) -> t
 
 def _create_spec_progress_tasks(rows: list[dict[str, Any]], requested: int) -> tuple[list[dict[str, Any]], int]:
     chunk_rows = _spec_chunk_rows_for_cheap_execution(rows)
+    roi_spec_model = get_roi_spec_cheap_model()
+    roi_spec_executor = _executor_for_model_override(roi_spec_model)
     return _create_progress_tasks(
         rows=chunk_rows,
         per_category=requested,
@@ -1925,7 +1944,8 @@ def _create_spec_progress_tasks(rows: list[dict[str, Any]], requested: int) -> t
             "spec_title": row["title"],
             "estimated_roi": row["estimated_roi"],
             "actual_roi": row["actual_roi"],
-            "model_override": get_roi_spec_cheap_model(),
+            "model_override": roi_spec_model,
+            **({"executor": roi_spec_executor} if roi_spec_executor else {}),
             "max_input_tokens": _ROI_SPEC_TASK_INPUT_MAX_TOKENS,
             "max_output_tokens": _ROI_SPEC_TASK_OUTPUT_MAX_TOKENS,
             "spec_chunk": row.get("spec_chunk"),
