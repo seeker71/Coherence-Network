@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "coherence-mcp-server"
-version = "0.3.2"
-description = "Unified MCP server for the Coherence Network — 22 typed tools for ideas, specs, lineage, identity, contributions, and the Living Codex ontology."
+version = "0.4.0"
+description = "Unified MCP server for the Coherence Network — 51 typed tools for AI agents to browse ideas, manage tasks, link identities, and navigate the universal graph."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

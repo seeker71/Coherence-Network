@@ -1,7 +1,7 @@
 {
   "name": "coherence-mcp-server",
-  "version": "0.3.1",
-  "description": "MCP server for the Coherence Network \u2014 20 typed tools for AI agents to browse ideas, trace value chains, link identities, and record contributions. Works with Claude, Cursor, Windsurf, and any MCP client.",
+  "version": "0.4.0",
+  "description": "Unified MCP server for the Coherence Network \u2014 51 typed tools for AI agents to browse ideas, manage tasks, link identities, and navigate the universal graph.",
   "type": "module",
   "bin": {
     "coherence-mcp-server": "index.mjs"
@@ -14,7 +14,9 @@
   },
   "files": [
     "index.mjs",
-    "README.md"
+    "README.md",
+    "coherence_mcp_server/",
+    "pyproject.toml"
   ],
   "keywords": [
     "mcp",
