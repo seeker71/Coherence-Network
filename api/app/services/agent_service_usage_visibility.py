@@ -144,7 +144,7 @@ def _is_host_runner_claimant(claimed_by: str) -> bool:
     cleaned = claimed_by.strip().lower()
     if not cleaned:
         return False
-    return "railway-runner" in cleaned or cleaned.startswith("openai-codex:")
+    return "hosted-runner" in cleaned or cleaned.startswith("openai-codex:")
 
 
 def _host_runner_usage_summary(tasks: list[dict[str, Any]], *, window_hours: int = 24) -> dict[str, Any]:

@@ -123,7 +123,6 @@ _PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "anthropic": {"kind": "subscription_window", "all_of": []},
     "cursor": {"kind": "subscription_window", "all_of": []},
     "codex": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
-    "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
     "supabase": {"kind": "custom", "any_of": ["SUPABASE_ACCESS_TOKEN", "SUPABASE_TOKEN"]},
     "db-host": {"kind": "custom", "any_of": ["RUNTIME_DATABASE_URL", "DATABASE_URL"]},
 }
@@ -133,14 +132,12 @@ _DEFAULT_REQUIRED_PROVIDERS = (
     "claude",
     "cursor",
     "gemini",
-    "railway",
 )
 _DEFAULT_PROVIDER_VALIDATION_REQUIRED = (
     "openai",
     "claude",
     "cursor",
     "gemini",
-    "railway",
 )
 
 _PROVIDER_ALIASES: dict[str, str] = {
@@ -156,11 +153,11 @@ _PROVIDER_FAMILY_ALIASES: dict[str, str] = {
     "claude-code": "claude",
 }
 
-_READINESS_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "railway", "gemini"})
-_READINESS_BLOCKING_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini", "railway"})
-_OPTIONAL_REQUIRED_PROVIDER_CANDIDATES = ("railway",)
+_READINESS_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
+_READINESS_BLOCKING_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
+_OPTIONAL_REQUIRED_PROVIDER_CANDIDATES: tuple[str, ...] = ()
 _LIMIT_TELEMETRY_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
-_LIMIT_COVERAGE_EXCLUDED_PROVIDERS = frozenset({"coherence-internal", "railway"})
+_LIMIT_COVERAGE_EXCLUDED_PROVIDERS = frozenset({"coherence-internal"})
 _LLM_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
 
 _CURSOR_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {
@@ -1031,45 +1028,6 @@ def _apply_quota_probe_to_snapshot(
     return snapshot
 
 
-def _railway_api_probe_snapshot(*, ok: bool, response_headers: httpx.Headers, gql_url: str) -> ProviderUsageSnapshot:
-    metrics = [
-        _metric(
-            id="api_probe",
-            label="Railway API probe",
-            unit="requests",
-            used=1.0 if ok else 0.0,
-            window="probe",
-        )
-    ]
-    has_limit_headers = _append_rate_limit_metrics(
-        metrics=metrics,
-        headers=response_headers,
-        request_limit_keys=("x-ratelimit-limit", "ratelimit-limit"),
-        request_remaining_keys=("x-ratelimit-remaining", "ratelimit-remaining"),
-        request_window="hourly",
-        request_label="Railway API request quota",
-    )
-    notes = [] if ok else ["Railway API probe returned unexpected payload."]
-    if ok and not has_limit_headers:
-        notes.append("Railway probe succeeded, but no request remaining headers were returned.")
-    return ProviderUsageSnapshot(
-        id=f"provider_railway_{int(time.time())}",
-        provider="railway",
-        kind="custom",
-        status="ok" if ok else "degraded",
-        data_source="provider_api",
-        metrics=metrics,
-        notes=notes,
-        raw={
-            "probe_url": gql_url,
-            "rate_limit_headers": _subset_headers(
-                response_headers,
-                ("x-ratelimit-limit", "x-ratelimit-remaining", "ratelimit-limit", "ratelimit-remaining"),
-            ),
-        },
-    )
-
-
 def _default_official_records(provider: str) -> list[str]:
     links: dict[str, list[str]] = {
         "coherence-internal": [
@@ -1101,9 +1059,6 @@ def _default_official_records(provider: str) -> list[str]:
         "gemini": [
             "https://ai.google.dev/gemini-api/docs/models",
         ],
-        "railway": [
-            "https://docs.railway.com/reference/public-api",
-        ],
         "openrouter": [
             "https://openrouter.ai/docs/api-reference/overview",
         ],
@@ -1114,7 +1069,6 @@ def _default_official_records(provider: str) -> list[str]:
         ],
         "db-host": [
             "https://www.postgresql.org/docs/current/monitoring-stats.html",
-            "https://docs.railway.com/reference/metrics",
         ],
     }
     return links.get(provider, [])
@@ -1333,9 +1287,9 @@ def _finalize_snapshot(snapshot: ProviderUsageSnapshot) -> ProviderUsageSnapshot
         configured_keys = snapshot.raw.get("configured_env_keys")
         if snapshot.provider == "coherence-internal":
             snapshot.data_source = "runtime_events"
-        elif snapshot.raw.get("probe") == "railway_cli_auth" or (
+        elif (
             isinstance(configured_keys, list)
-            and any(str(item) in {"gh_auth", "railway_cli_auth"} for item in configured_keys)
+            and any(str(item) == "gh_auth" for item in configured_keys)
         ):
             snapshot.data_source = "provider_cli"
         elif any(metric.id == "runtime_task_runs" for metric in snapshot.metrics):
@@ -1386,12 +1340,6 @@ def _gh_auth_available() -> bool:
     if shutil.which("gh") is None:
         return False
     return _cli_ok(["gh", "auth", "status"])
-
-
-def _railway_auth_available() -> bool:
-    if shutil.which("railway") is None:
-        return False
-    return _cli_ok(["railway", "whoami"])
 
 
 def _abs_expanded_path(path: str) -> str:
@@ -2163,8 +2111,6 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
 
     if provider_name == "github" and _gh_auth_available():
         return True, [], ["gh_auth"], ["Configured via gh CLI auth session."]
-    if provider_name == "railway" and _railway_auth_available():
-        return True, [], ["railway_cli_auth"], ["Configured via Railway CLI auth session."]
     if provider_name == "codex" and active_runs > 0:
         openai_key = bool(
             os.getenv("OPENAI_ADMIN_API_KEY", "").strip()
@@ -2202,8 +2148,7 @@ def _required_providers_from_env() -> list[str]:
             continue
         configured_by_env, _missing, _present = _configured_env_status(normalized)
         runtime_active = int(active_counts.get(normalized, 0)) > 0
-        configured_via_cli = normalized == "railway" and _railway_auth_available()
-        if configured_by_env or runtime_active or configured_via_cli:
+        if configured_by_env or runtime_active:
             out.append(normalized)
     return out if out else list(_DEFAULT_REQUIRED_PROVIDERS)
 
@@ -4157,103 +4102,6 @@ def _build_claude_code_snapshot() -> ProviderUsageSnapshot:
     return snapshot
 
 
-def _is_running_on_railway() -> bool:
-    """True when this process is the deployed app on Railway (Railway injects RAILWAY_SERVICE_ID at runtime). We skip calling backboard.railway.com from the app to avoid ToS issues."""
-    return bool(os.getenv("RAILWAY_SERVICE_ID", "").strip() or os.getenv("RAILWAY_ENVIRONMENT_ID", "").strip())
-
-
-def _build_railway_snapshot() -> ProviderUsageSnapshot:
-    if _is_running_on_railway():
-        return ProviderUsageSnapshot(
-            id=f"provider_railway_{int(time.time())}",
-            provider="railway",
-            kind="custom",
-            status="ok",
-            data_source="configuration_only",
-            notes=["Railway API not called when running on Railway (ToS compliance)."],
-            raw={"skipped": "running_on_railway"},
-        )
-    token = os.getenv("RAILWAY_TOKEN", "").strip()
-    project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
-    environment = os.getenv("RAILWAY_ENVIRONMENT", "").strip()
-    service = os.getenv("RAILWAY_SERVICE", "").strip()
-    if not token or not project or not environment or not service:
-        if _railway_auth_available():
-            return ProviderUsageSnapshot(
-                id=f"provider_railway_{int(time.time())}",
-                provider="railway",
-                kind="custom",
-                status="ok",
-                data_source="provider_cli",
-                metrics=[
-                    _metric(
-                        id="api_probe",
-                        label="Railway CLI auth probe",
-                        unit="requests",
-                        used=1.0,
-                        window="probe",
-                    )
-                ],
-                notes=["Using Railway CLI auth session as execution evidence."],
-                raw={"probe": "railway_cli_auth"},
-            )
-        return ProviderUsageSnapshot(
-            id=f"provider_railway_{int(time.time())}",
-            provider="railway",
-            kind="custom",
-            status="unavailable",
-            data_source="configuration_only",
-            notes=["Set RAILWAY_TOKEN, RAILWAY_PROJECT_ID, RAILWAY_ENVIRONMENT, and RAILWAY_SERVICE."],
-        )
-
-    gql_url = os.getenv("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
-    query = {"query": "query { me { id } }"}
-    headers = {"Authorization": f"Bearer {token}"}
-    started = time.perf_counter()
-    try:
-        with httpx.Client(timeout=8.0, headers=headers) as client:
-            response = client.post(gql_url, json=query)
-            response.raise_for_status()
-            payload = response.json() if isinstance(response.json(), dict) else {}
-        _record_external_tool_usage(
-            tool_name="railway-graphql",
-            provider="railway",
-            operation="probe_me",
-            resource=gql_url,
-            status="success",
-            http_status=int(response.status_code),
-            duration_ms=int((time.perf_counter() - started) * 1000),
-        )
-    except Exception as exc:
-        status_code = None
-        response = getattr(exc, "response", None)
-        if response is not None:
-            status_code = int(getattr(response, "status_code", 0) or 0) or None
-        _record_external_tool_usage(
-            tool_name="railway-graphql",
-            provider="railway",
-            operation="probe_me",
-            resource=gql_url,
-            status="error",
-            http_status=status_code,
-            duration_ms=int((time.perf_counter() - started) * 1000),
-            payload={"error": str(exc)},
-        )
-        return ProviderUsageSnapshot(
-            id=f"provider_railway_{int(time.time())}",
-            provider="railway",
-            kind="custom",
-            status="degraded",
-            data_source="provider_api",
-            notes=[f"Railway API probe failed: {exc}"],
-            raw={"probe_url": gql_url},
-        )
-
-    me = (payload.get("data") or {}).get("me") if isinstance(payload.get("data"), dict) else None
-    ok = isinstance(me, dict) and bool(str(me.get("id") or "").strip())
-    return _railway_api_probe_snapshot(ok=ok, response_headers=response.headers, gql_url=gql_url)
-
-
 def _openai_headers() -> dict[str, str]:
     api_key = os.getenv("OPENAI_ADMIN_API_KEY", "").strip() or os.getenv("OPENAI_API_KEY", "").strip()
     headers = {"Authorization": f"Bearer {api_key}"}
@@ -4375,7 +4223,6 @@ def _collect_provider_snapshots() -> list[ProviderUsageSnapshot]:
         _build_gemini_snapshot(),
         _build_github_snapshot(),
         _build_db_host_snapshot(),
-        _build_railway_snapshot(),
     ]
     if _supabase_tracking_enabled():
         providers.append(_build_supabase_snapshot())
@@ -5376,7 +5223,7 @@ def daily_system_summary(
             if _normalize_provider_name(row.provider)
         }
 
-    provider_priority = ["github", "openai", "gemini", "openrouter", "railway", "db-host", "coherence-internal"]
+    provider_priority = ["github", "openai", "gemini", "openrouter", "db-host", "coherence-internal"]
     ordered_provider_keys = sorted(
         latest_provider_rows.keys(),
         key=lambda name: (provider_priority.index(name) if name in provider_priority else 999, name),
@@ -5915,30 +5762,6 @@ def _probe_openrouter() -> tuple[bool, str]:
         return False, f"openrouter_probe_failed:{exc}"
 
 
-def _probe_railway() -> tuple[bool, str]:
-    if _is_running_on_railway():
-        return True, "ok_skipped_on_railway_tos"
-    token = os.getenv("RAILWAY_TOKEN", "").strip()
-    project = os.getenv("RAILWAY_PROJECT_ID", "").strip()
-    environment = os.getenv("RAILWAY_ENVIRONMENT", "").strip()
-    service = os.getenv("RAILWAY_SERVICE", "").strip()
-    if not token or not project or not environment or not service:
-        if shutil.which("railway") is not None and _cli_ok(["railway", "list", "--json"]):
-            return True, "ok_via_railway_cli"
-        return False, "missing_railway_env"
-    gql_url = os.getenv("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
-    try:
-        with httpx.Client(timeout=8.0, headers={"Authorization": f"Bearer {token}"}) as client:
-            response = client.post(gql_url, json={"query": "query { me { id } }"})
-            response.raise_for_status()
-            payload = response.json() if isinstance(response.json(), dict) else {}
-        me = (payload.get("data") or {}).get("me") if isinstance(payload.get("data"), dict) else None
-        ok = isinstance(me, dict) and bool(str(me.get("id") or "").strip())
-        return (ok, "ok" if ok else "railway_probe_bad_payload")
-    except Exception as exc:
-        return False, f"railway_probe_failed:{exc}"
-
-
 def _probe_supabase() -> tuple[bool, str]:
     token = os.getenv("SUPABASE_ACCESS_TOKEN", "").strip() or os.getenv("SUPABASE_TOKEN", "").strip()
     project_ref = os.getenv("SUPABASE_PROJECT_REF", "").strip()
@@ -6049,7 +5872,6 @@ def _provider_probe_map() -> dict[str, Callable[[], tuple[bool, str]]]:
         "cursor": _probe_cursor,
         "supabase": _probe_supabase,
         "github": _probe_github,
-        "railway": _probe_railway,
         "claude": _probe_claude,
         "claude-code": _probe_claude_code,
         "codex": _probe_codex,

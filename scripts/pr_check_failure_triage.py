@@ -283,8 +283,8 @@ def main() -> int:
     parser.add_argument("--poll-seconds", type=int, default=20)
     parser.add_argument(
         "--optional-status-contexts",
-        default=os.getenv("PR_GUARD_OPTIONAL_STATUS_CONTEXTS", "Vercel"),
-        help="Comma-separated commit status contexts treated as non-blocking (default: Vercel).",
+        default=os.getenv("PR_GUARD_OPTIONAL_STATUS_CONTEXTS", ""),
+        help="Comma-separated commit status contexts treated as non-blocking.",
     )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()

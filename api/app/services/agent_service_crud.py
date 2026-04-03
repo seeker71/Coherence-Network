@@ -3,6 +3,7 @@
 import os
 from typing import Any, Optional
 
+from app.config_loader import get_bool
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 
 from app.services import agent_routing_service as routing_service
@@ -39,6 +40,7 @@ from app.services.agent_service_task_derive import (
 )
 from app.services.agent_service_completion_tracking import record_completion_tracking_event
 from app.services.agent_service_friction import record_task_failure_friction
+from app.services.context_hygiene_service import annotate_task_context
 
 _TARGET_STATE_DEFAULT_WINDOW_SEC = 900
 _TARGET_STATE_MAX_TEXT = 600
@@ -284,6 +286,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         "tier": tier,
     }
     apply_agent_graph_state_contract(task)
+    task["context"] = annotate_task_context(task)
     _store[task_id] = task
     if agent_task_store_service.enabled():
         agent_task_store_service.upsert_task(_serialize_task(task))
@@ -302,9 +305,11 @@ def get_task(task_id: str) -> Optional[dict]:
     task = _store.get(task_id)
     if task is not None:
         return task
-    if os.getenv("PYTEST_CURRENT_TEST") and os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "").strip().lower() not in {
-        "1", "true", "yes", "on",
-    }:
+    if os.getenv("PYTEST_CURRENT_TEST") and not get_bool(
+        "agent_tasks",
+        "runtime_fallback_in_tests",
+        default=False,
+    ):
         return None
     try:
         from app.services import runtime_service
@@ -433,6 +438,7 @@ def update_task(
     if isinstance(task_context.get("agent_graph_state"), dict):
         preferred_graph_state = dict(task_context.get("agent_graph_state") or {})
     apply_agent_graph_state_contract(task, preferred_state=preferred_graph_state)
+    task["context"] = annotate_task_context(task)
     ensure_failed_task_diagnostics(task)
     task["updated_at"] = _now()
     record_completion_tracking_event(task)

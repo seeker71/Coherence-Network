@@ -5,6 +5,7 @@ import os
 import re
 import socket
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.request
@@ -50,22 +51,81 @@ def _serve_app() -> str:
         thread.join(timeout=5)
 
 
-def _run_cli(api_base: str, *args: str) -> str:
+def _write_cli_config(home_dir: Path, *, api_base: str | None = None, admin_key: str | None = None) -> None:
+    config_dir = home_dir / ".coherence-network"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "config.json"
+    if config_path.exists():
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    else:
+        payload = {}
+    if api_base:
+        payload["hub_url"] = api_base
+    if admin_key:
+        auth = dict(payload.get("auth") or {})
+        auth["admin_key"] = admin_key
+        payload["auth"] = auth
+    config_path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _run_cli(
+    api_base: str | None,
+    *args: str,
+    admin_key: str | None = None,
+    home_dir: Path | None = None,
+) -> str:
     env = os.environ.copy()
-    env["COHERENCE_API_URL"] = api_base
-    env.pop("COHERENCE_HUB_URL", None)
-    completed = subprocess.run(
-        ["node", str(CLI_ENTRYPOINT), *args],
-        cwd=REPO_ROOT,
-        capture_output=True,
-        text=True,
-        timeout=20,
-        check=False,
-        env=env,
-    )
+    if home_dir is not None:
+        _write_cli_config(home_dir, api_base=api_base, admin_key=admin_key)
+        env["HOME"] = str(home_dir)
+        env.pop("COHERENCE_API_URL", None)
+        env.pop("COHERENCE_HUB_URL", None)
+        env.pop("COHERENCE_API_KEY", None)
+        completed = subprocess.run(
+            ["node", str(CLI_ENTRYPOINT), *args],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+            env=env,
+        )
+    else:
+        with tempfile.TemporaryDirectory() as home:
+            _write_cli_config(Path(home), api_base=api_base, admin_key=admin_key)
+            env["HOME"] = home
+            env.pop("COHERENCE_API_URL", None)
+            env.pop("COHERENCE_HUB_URL", None)
+            env.pop("COHERENCE_API_KEY", None)
+            completed = subprocess.run(
+                ["node", str(CLI_ENTRYPOINT), *args],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+                timeout=20,
+                check=False,
+                env=env,
+            )
     output = ANSI_RE.sub("", completed.stdout)
     assert completed.returncode == 0, completed.stderr or output
     return output
+
+
+def _json_request(api_base: str, method: str, path: str, body: dict | None = None) -> dict | list:
+    data = None
+    headers = {}
+    if body is not None:
+        data = json.dumps(body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    request = urllib.request.Request(
+        f"{api_base}{path}",
+        data=data,
+        headers=headers,
+        method=method,
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        payload = response.read().decode("utf-8")
+    return json.loads(payload) if payload else {}
 
 
 def test_repo_cli_reports_honest_empty_states() -> None:
@@ -273,3 +333,149 @@ def test_repo_cli_lists_snapshot_providers() -> None:
     assert "PROVIDERS" in providers_output
     assert "openrouter" in providers_output
     assert "cursor" in providers_output
+
+
+def test_repo_cli_ops_snapshot_and_remote_config_show(monkeypatch, tmp_path: Path) -> None:
+    from app import config_loader
+
+    user_config = tmp_path / "config.json"
+    user_config.write_text(
+        json.dumps(
+                {
+                    "server": {"environment": "production"},
+                    "database": {"url": f"sqlite:///{(tmp_path / 'ops-smoke.db').as_posix()}"},
+                    "agent_providers": {
+                        "api_base_url": "https://api.coherencycoin.com",
+                        "web_ui_base_url": "https://coherencycoin.com",
+                    },
+                    "live_updates": {"poll_ms": 45000, "global": True},
+                    "runtime_beacon": {"sample_rate": 0.4},
+                    "cli": {"provider": "codex", "active_task_id": "task_demo"},
+                    "auth": {"admin_key": "dev-admin"},
+                }
+        ),
+        encoding="utf-8",
+    )
+    repo_config = tmp_path / "api.json"
+    repo_config.write_text(json.dumps({"auth": {"admin_key": "dev-admin"}}), encoding="utf-8")
+
+    monkeypatch.setattr(config_loader, "_find_config_paths", lambda: [repo_config, user_config])
+    monkeypatch.setattr(config_loader, "user_config_path", lambda: user_config)
+    monkeypatch.setattr(config_loader, "_user_config_path", lambda: user_config)
+    config_loader.reload_config()
+
+    with _serve_app() as api_base:
+        _json_request(
+            api_base,
+            "POST",
+            "/api/agent/tasks",
+            {
+                "direction": "ops snapshot context budget " * 90,
+                "task_type": "impl",
+                "context": {
+                    "files_allowed": [f"web/app/file_{idx}.tsx" for idx in range(14)],
+                    "commands": [f"npm test -- file_{idx}" for idx in range(7)],
+                },
+            },
+        )
+        ops_output = _run_cli(api_base, "ops", "--snapshot", admin_key="dev-admin")
+        config_output = _run_cli(api_base, "config", "show", admin_key="dev-admin")
+
+    assert "OPS SNAPSHOT" in ops_output
+    assert "Health:" in ops_output
+    assert "Context:" in ops_output
+    assert "Context Actions" in ops_output
+    assert "REMOTE CONFIG" in config_output
+    assert "Environment: production" in config_output
+    assert "Live updates poll ms: 45000" in config_output
+    assert "Runtime beacon sample rate: 0.4" in config_output
+    assert "CLI provider: codex" in config_output
+
+
+def test_repo_cli_local_config_set_and_unset(tmp_path: Path) -> None:
+    cli_home = tmp_path / "cli-home"
+
+    _run_cli(None, "config", "set", "hub_url", "http://127.0.0.1:9999", "--local", home_dir=cli_home)
+    show_output = _run_cli(None, "config", "show", "--local", "--json", home_dir=cli_home)
+    assert '"hub_url": "http://127.0.0.1:9999"' in show_output
+
+    _run_cli(None, "config", "unset", "hub_url", "--local", home_dir=cli_home)
+    unset_output = _run_cli(None, "config", "show", "--local", "--json", home_dir=cli_home)
+    assert '"hub_url"' not in unset_output
+
+
+def test_repo_cli_ops_events_renders_task_activity() -> None:
+    with _serve_app() as api_base:
+        created = _json_request(
+            api_base,
+            "POST",
+            "/api/agent/tasks",
+            {
+                "direction": "Watch task activity from cc ops",
+                "task_type": "impl",
+            },
+        )
+        task_id = created["id"]
+        _json_request(
+            api_base,
+            "POST",
+            f"/api/agent/tasks/{task_id}/activity",
+            {
+                "node_name": "cli-ops-node",
+                "provider": "cli",
+                "event_type": "progress",
+                "data": {"message": "Compiling proof"},
+            },
+        )
+        _json_request(
+            api_base,
+            "POST",
+            f"/api/agent/tasks/{task_id}/activity",
+            {
+                "node_name": "cli-ops-node",
+                "provider": "cli",
+                "event_type": "completed",
+                "data": {"message": "Finished cleanly"},
+            },
+        )
+
+        output = _run_cli(api_base, "ops", "events", task_id)
+
+    assert "TASK EVENTS" in output
+    assert "progress" in output
+    assert "Compiling proof" in output
+    assert "completed" in output
+
+
+def test_repo_cli_ops_runner_command_dispatches_to_registered_node() -> None:
+    with _serve_app() as api_base:
+        node_id = "runnernode000000"
+        _json_request(
+            api_base,
+            "POST",
+            "/api/federation/nodes",
+            {
+                "node_id": node_id,
+                "hostname": "runner-host",
+                "os_type": "linux",
+                "providers": ["openrouter"],
+                "capabilities": {},
+            },
+        )
+        _json_request(
+            api_base,
+            "POST",
+            "/api/agent/runners/heartbeat",
+            {
+                "runner_id": "runner-cli-1",
+                "status": "idle",
+                "host": "runner-host",
+                "active_task_id": None,
+            },
+        )
+
+        output = _run_cli(api_base, "ops", "runner", "runner-cli-1", "pause")
+        messages = _json_request(api_base, "GET", f"/api/federation/nodes/{node_id}/messages?unread_only=false&limit=20")
+
+    assert "Command 'pause' sent" in output
+    assert any(message.get("type") == "command" and message.get("text") == "pause" for message in messages["messages"])

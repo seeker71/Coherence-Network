@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { loadPublicWebConfig } from "@/lib/app-config";
 import { getApiBase } from "@/lib/api";
 
 const API_URL = getApiBase();
-const RUNTIME_BEACON_UPSTREAM_TIMEOUT_MS = Number.parseInt(
-  process.env.RUNTIME_BEACON_UPSTREAM_TIMEOUT_MS || "5000",
-  10,
-);
-const RUNTIME_BEACON_FAILURE_THRESHOLD = Math.max(
-  1,
-  Number.parseInt(process.env.RUNTIME_BEACON_FAILURE_THRESHOLD || "3", 10) || 3,
-);
-const RUNTIME_BEACON_COOLDOWN_MS = Math.max(
-  1000,
-  Number.parseInt(process.env.RUNTIME_BEACON_COOLDOWN_MS || "30000", 10) || 30000,
-);
+const WEB_CONFIG = loadPublicWebConfig();
+const RUNTIME_BEACON_UPSTREAM_TIMEOUT_MS = WEB_CONFIG.runtimeBeacon.upstreamTimeoutMs || 5000;
+const RUNTIME_BEACON_FAILURE_THRESHOLD = Math.max(1, WEB_CONFIG.runtimeBeacon.failureThreshold || 3);
+const RUNTIME_BEACON_COOLDOWN_MS = Math.max(1000, WEB_CONFIG.runtimeBeacon.cooldownMs || 30000);
 
 let runtimeBeaconConsecutiveFailures = 0;
 let runtimeBeaconCooldownUntilMs = 0;

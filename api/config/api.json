@@ -71,7 +71,9 @@
     "retry_max": 3,
     "runtime_fallback_mode": "disabled",
     "runtime_fallback_limit": 100,
-    "runtime_fallback_in_tests": false
+    "runtime_fallback_in_tests": false,
+    "task_log_dir": "data/task_logs",
+    "smart_reap_max_age_minutes": 15
   },
 
   "agent_executor": {
@@ -162,12 +164,6 @@
     "concurrency": 1
   },
 
-  "agent_tasks": {
-    "_doc": "Agent task configuration (additional fields).",
-    "task_log_dir": "data/task_logs",
-    "smart_reap_max_age_minutes": 15
-  },
-
   "inventory": {
     "_doc": "Inventory service configuration.",
     "cache_ttl_seconds": 30.0,
@@ -193,9 +189,62 @@
     "_doc": "Runtime events configuration.",
     "events_path": null,
     "idea_map_path": null,
+    "agent_tasks_path": null,
     "tool_success_streak_target": 3,
+    "endpoint_cache_ttl_seconds": 120.0,
     "endpoint_cache_max_workers": 4,
     "telemetry_enabled": true
+  },
+
+  "api": {
+    "_doc": "API process settings.",
+    "slow_request_ms": 1500.0,
+    "testing": false,
+    "log_all_requests": false
+  },
+
+  "web": {
+    "_doc": "Shared web settings consumed by the Next.js app.",
+    "api_base_url": "https://api.coherencycoin.com",
+    "local_api_base_url": "http://localhost:8000",
+    "deployed_sha": null,
+    "updated_at": null
+  },
+
+  "live_updates": {
+    "_doc": "Client-side live refresh controls.",
+    "poll_ms": 120000,
+    "router_refresh_every_ticks": 8,
+    "global": false,
+    "active_route_prefixes": [
+      "/tasks",
+      "/remote-ops",
+      "/api-health",
+      "/gates"
+    ],
+    "router_refresh_skip_prefixes": [
+      "/automation"
+    ]
+  },
+
+  "runtime_beacon": {
+    "_doc": "Client runtime beacon sampling and proxy behavior.",
+    "sample_rate": 0.2,
+    "upstream_timeout_ms": 5000,
+    "failure_threshold": 3,
+    "cooldown_ms": 30000
+  },
+
+  "health_proxy": {
+    "_doc": "Health proxy failure/cooldown behavior for the web app.",
+    "failure_threshold": 2,
+    "cooldown_ms": 30000
+  },
+
+  "cli": {
+    "_doc": "Shared CLI defaults stored in config.json.",
+    "provider": "cli",
+    "active_task_id": null
   },
 
   "commit_evidence": {
@@ -277,7 +326,7 @@
     "require_web_health_proxy_sha": false
   },
 
-  "railway_logs_url": null,
+  "deploy_logs_url": null,
 
   "deployed_sha": null,
 

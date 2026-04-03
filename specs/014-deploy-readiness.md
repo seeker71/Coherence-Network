@@ -11,8 +11,8 @@ Define minimum checklist for deploying the API and web to a hosted environment (
 - [x] Environment: all required vars documented in .env.example
 - [x] No hardcoded secrets; use env vars
 - [x] CORS: configurable via ALLOWED_ORIGINS in main.py
-- [x] docs/DEPLOY.md: comprehensive deploy checklist for Railway + Vercel
-- [x] Production deployment: Railway (API) + Vercel (web)
+- [x] docs/DEPLOY.md: comprehensive deploy checklist for current public hosting
+- [x] Production deployment: public API + public web on the VPS
 - [x] Verification script: scripts/verify_web_api_deploy.sh
 
 
@@ -74,7 +74,7 @@ Returns 200, JSON `{"status": "ok", "service": "coherence-contribution-network",
 Returns 200, JSON `{"status": "ready"}` — future: check DB connectivity
 
 
-### Input Validation
+### Field Constraints
 
 - All string fields: min_length=1, max_length=1000
 - Numeric fields: appropriate min/max bounds
@@ -85,7 +85,7 @@ Returns 200, JSON `{"status": "ready"}` — future: check DB connectivity
 
 ### Live Environments
 - **API**: https://coherence-network-production.up.railway.app (Railway)
-- **Web**: https://coherence-network.vercel.app (Vercel)
+- **Web**: https://coherencycoin.com (legacy web host)
 
 ### Concurrency Behavior
 
@@ -96,6 +96,9 @@ Returns 200, JSON `{"status": "ready"}` — future: check DB connectivity
 ## Verification
 ```bash
 ./scripts/verify_web_api_deploy.sh
+curl -fsS https://api.coherencycoin.com/api/health
+curl -fsS https://api.coherencycoin.com/api/ready
+curl -fsS https://coherencycoin.com/api-health
 ```
 
 Checks:
@@ -106,8 +109,9 @@ Checks:
 
 ## Acceptance Tests
 
-- GET /api/health, /api/ready, /api/version return 200
-- docs/DEPLOY.md exists and lists env vars and checklist
+- Manual validation: `curl -fsS https://api.coherencycoin.com/api/health`, `curl -fsS https://api.coherencycoin.com/api/ready`, and `curl -fsS https://coherencycoin.com/api-health` all succeed.
+- `docs/DEPLOY.md` exists and lists deploy checklist steps for the public Hostinger API and web surfaces.
+- `scripts/verify_web_api_deploy.sh` passes against the public production endpoints.
 
 ## Failure and Retry Behavior
 

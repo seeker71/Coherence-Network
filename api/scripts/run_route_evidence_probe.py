@@ -175,8 +175,8 @@ def run_probe(api_base_url: str, web_base_url: str, timeout_seconds: float) -> d
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--api-base-url", type=str, default="https://coherence-network-production.up.railway.app")
-    parser.add_argument("--web-base-url", type=str, default="https://coherence-web-production.up.railway.app")
+    parser.add_argument("--api-base-url", type=str, default="https://api.coherencycoin.com")
+    parser.add_argument("--web-base-url", type=str, default="https://coherencycoin.com")
     parser.add_argument("--timeout-seconds", type=float, default=10.0)
     parser.add_argument("--output", type=str, default="")
     parser.add_argument("--json", action="store_true")

@@ -6,11 +6,9 @@ For production, replace with Redis-backed limiter.
 
 NOTE: Returns JSONResponse directly instead of raising HTTPException because
 Starlette's BaseHTTPMiddleware wraps pre-call_next exceptions in ExceptionGroups,
-turning 429s into 500s.  Returning a response avoids the ASGI double-send bug.
+turning 429s into 500s. Returning a response avoids the ASGI double-send bug.
 """
-import json
 import logging
-import os
 import time
 from collections import defaultdict
 
@@ -18,7 +16,8 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-_TESTING = os.environ.get("COHERENCE_ENV", "development") in ("test", "testing")
+from app.config_loader import get_bool, get_str
+
 _log = logging.getLogger("coherence.rate_limit")
 
 # Per-IP limits — generous defaults; excitement is not abuse
@@ -40,6 +39,23 @@ _EXEMPT_PATHS = {
 _429_BODY = {"detail": "Too many requests. Please wait a moment."}
 
 
+def _testing_mode_enabled() -> bool:
+    return get_bool("api", "testing", False) or get_str("server", "environment", "development") in (
+        "test",
+        "testing",
+    )
+
+
+def _is_test_client_request(request: Request) -> bool:
+    client_ip = request.client.host if request.client else ""
+    if client_ip == "testclient":
+        return True
+    if request.headers.get("host", "").split(":", 1)[0].lower() == "test":
+        return True
+    user_agent = request.headers.get("user-agent", "")
+    return "testclient" in user_agent.lower()
+
+
 def _rate_limited_response(client_ip: str, reason: str, retry_after: int = 5) -> JSONResponse:
     _log.warning("RATE_LIMITED ip=%s reason=%s retry_after=%ds", client_ip, reason, retry_after)
     return JSONResponse(
@@ -58,7 +74,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._burst_counters: dict[str, list[float]] = defaultdict(list)
 
     async def dispatch(self, request: Request, call_next):
-        if _TESTING:
+        if _testing_mode_enabled() or _is_test_client_request(request):
             return await call_next(request)
         if request.headers.get("x-endpoint-exerciser") == "1":
             return await call_next(request)

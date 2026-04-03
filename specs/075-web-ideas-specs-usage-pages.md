@@ -1,7 +1,7 @@
 # Spec 075: Web Pages For Ideas, Specs, Usage (Human Parity)
 
-## Goal
-On `https://coherence-network.vercel.app/`, provide human-browsable pages for:
+## Purpose
+On `https://coherencycoin.com/`, provide human-browsable pages for:
 - ideas
 - specs
 - usage (runtime + friction)
@@ -17,8 +17,8 @@ Also ensure web pages that fetch the API work in production even when `NEXT_PUBL
    - `/usage`
 
 ### API Base Default
-2. Client pages must default API base to production Railway when `NEXT_PUBLIC_API_URL` is unset.
-   - Production default: `https://coherence-network-production.up.railway.app`
+2. Client pages must default API base to the public Hostinger API when the local config does not override it.
+   - Production default: `https://api.coherencycoin.com`
    - Dev default: `http://localhost:8000`
 
 ### New Pages
@@ -58,7 +58,7 @@ constraints:
 - Full editing UI (create/update ideas) in web.
 - Complex visualizations.
 
-## Implementation (Allowed Files)
+## Files to Create/Modify
 - `specs/075-web-ideas-specs-usage-pages.md`
 - `web/lib/api.ts`
 - `web/app/page.tsx`
@@ -84,6 +84,9 @@ constraints:
 ## Validation
 - `cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit && npm run build`
 - `python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_web-ideas-specs-usage-pages.json`
+- `curl -fsS https://coherencycoin.com/ideas`
+- `curl -fsS https://coherencycoin.com/specs`
+- `curl -fsS https://coherencycoin.com/usage`
 
 ## Failure and Retry Behavior
 
@@ -104,3 +107,12 @@ constraints:
 
 See `api/tests/test_web_ideas_specs_usage_pages.py` for test cases covering this spec's requirements.
 
+## Verification
+
+```bash
+cd web && npm ci --cache ./tmp-npm-cache --no-fund --no-audit && npm run build
+python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-15_web-ideas-specs-usage-pages.json
+curl -fsS https://coherencycoin.com/ideas
+curl -fsS https://coherencycoin.com/specs
+curl -fsS https://coherencycoin.com/usage
+```

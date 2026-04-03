@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { getApiBase } from "@/lib/api";
 
 export function IdeaSubmitForm() {
   const [idea, setIdea] = useState("");
@@ -46,7 +47,7 @@ export function IdeaSubmitForm() {
       .slice(0, 60);
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL || "";
+      const apiBase = getApiBase();
       const body: Record<string, unknown> = {
         id: slug || `idea-${Date.now()}`,
         name: idea.slice(0, 120),

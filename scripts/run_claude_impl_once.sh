@@ -3,7 +3,7 @@
 # create task on local API with executor=claude, then run agent once.
 # Prereqs: Claude Code CLI in PATH; local API at LOCAL_API_URL with AGENT_AUTO_EXECUTE=0.
 set -e
-PUBLIC_API_URL="${PUBLIC_API_URL:-https://coherence-network-production.up.railway.app}"
+PUBLIC_API_URL="${PUBLIC_API_URL:-https://api.coherencycoin.com}"
 LOCAL_API_URL="${LOCAL_API_URL:-http://127.0.0.1:8000}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 API_DIR="$REPO_ROOT/api"

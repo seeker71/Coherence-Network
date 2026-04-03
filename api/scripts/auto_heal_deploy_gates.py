@@ -122,7 +122,7 @@ def _emit(payload: dict[str, Any], as_json: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Auto-heal required check failures that block Railway deployment."
+        description="Auto-heal required check failures that block public deployment."
     )
     parser.add_argument("--repo", default="seeker71/Coherence-Network")
     parser.add_argument("--branch", default="main")

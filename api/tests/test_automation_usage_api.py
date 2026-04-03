@@ -651,36 +651,7 @@ def test_required_providers_include_cursor_when_cursor_executor_default(
     monkeypatch.setenv("AUTOMATION_REQUIRED_PROVIDERS", "coherence-internal,openai")
     monkeypatch.setenv("AGENT_EXECUTOR_DEFAULT", "cursor")
     required = automation_usage_service._required_providers_from_env()
-    assert required == ["openai", "claude", "cursor", "gemini", "railway"]
-
-
-def test_railway_snapshot_skipped_when_running_on_railway(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """When RAILWAY_SERVICE_ID is set (app running on Railway), we skip calling backboard to comply with ToS."""
-    monkeypatch.setenv("RAILWAY_SERVICE_ID", "svc-uuid")
-    monkeypatch.setenv("RAILWAY_TOKEN", "token")
-    monkeypatch.setenv("RAILWAY_PROJECT_ID", "proj")
-    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "production")
-    monkeypatch.setenv("RAILWAY_SERVICE", "api")
-    snapshot = automation_usage_service._build_railway_snapshot()
-    assert snapshot.provider == "railway"
-    assert snapshot.status == "ok"
-    assert any("ToS" in n or "not called" in n for n in snapshot.notes)
-    assert snapshot.raw.get("skipped") == "running_on_railway"
-
-
-def test_required_providers_auto_include_railway_when_host_configured(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("AUTOMATION_REQUIRED_PROVIDERS", "openai,claude,cursor")
-    monkeypatch.setenv("RAILWAY_TOKEN", "test-token")
-    monkeypatch.setenv("RAILWAY_PROJECT_ID", "project")
-    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "production")
-    monkeypatch.setenv("RAILWAY_SERVICE", "api")
-    monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
-    required = automation_usage_service._required_providers_from_env()
-    assert "railway" in required
+    assert required == ["openai", "claude", "cursor", "gemini"]
 
 
 def test_configured_status_cursor_accepts_runtime_active_without_env(
@@ -1806,7 +1777,7 @@ async def test_subscription_estimator_reports_upgrade_cost_and_benefit(
 
 
 @pytest.mark.asyncio
-async def test_provider_readiness_reports_blocking_required_provider_gaps(
+async def test_provider_readiness_excludes_removed_provider_from_required_set(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -1818,10 +1789,6 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
     monkeypatch.setenv("GH_TOKEN", "")
     monkeypatch.setenv("GITHUB_BILLING_OWNER", "")
     monkeypatch.setenv("GITHUB_BILLING_SCOPE", "")
-    monkeypatch.setenv("RAILWAY_TOKEN", "")
-    monkeypatch.setenv("RAILWAY_PROJECT_ID", "")
-    monkeypatch.setenv("RAILWAY_ENVIRONMENT", "")
-    monkeypatch.setenv("RAILWAY_SERVICE", "")
     monkeypatch.setattr(automation_usage_service, "_codex_oauth_available", lambda: (False, "missing_codex_oauth_session"))
     monkeypatch.setattr(automation_usage_service, "_active_provider_usage_counts", lambda: {})
     monkeypatch.setattr(automation_usage_service, "_runner_provider_telemetry_rows", lambda force_refresh=False: [])
@@ -1835,8 +1802,7 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
         "_cursor_cli_about_context",
         lambda: {"cli_available": False, "logged_in": False, "tier": ""},
     )
-    monkeypatch.setattr(automation_usage_service, "_railway_auth_available", lambda: False)
-
+    monkeypatch.setattr(automation_usage_service, "_gh_auth_available", lambda: False)
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         report = await client.get(
             "/api/automation/usage/readiness",
@@ -1844,16 +1810,16 @@ async def test_provider_readiness_reports_blocking_required_provider_gaps(
         )
         assert report.status_code == 200
         payload = report.json()
-        assert payload["all_required_ready"] is False
-        assert any(str(item).startswith("railway:") for item in payload["blocking_issues"])
+        assert payload["all_required_ready"] is True
+        assert payload["blocking_issues"] == []
         providers = {row["provider"]: row for row in payload["providers"]}
         assert providers["openai"]["severity"] == "info"
         assert providers["claude"]["severity"] == "info"
         assert providers["cursor"]["severity"] == "info"
         assert providers["gemini"]["severity"] == "info"
-        assert providers["railway"]["severity"] == "critical"
         assert providers["github"]["severity"] in {"info", "warning"}
         assert providers["coherence-internal"]["severity"] in {"info", "warning"}
+        assert set(providers) >= {"openai", "claude", "cursor", "gemini", "github", "coherence-internal"}
 
 
 @pytest.mark.asyncio
@@ -1966,7 +1932,7 @@ async def test_provider_validation_contract_blocks_without_execution_events(
     monkeypatch.setenv("RUNTIME_EVENTS_PATH", str(tmp_path / "runtime_events.json"))
     monkeypatch.setenv("RUNTIME_IDEA_MAP_PATH", str(tmp_path / "runtime_idea_map.json"))
 
-    required = ["coherence-internal", "openai-codex", "codex", "github", "railway", "claude"]
+    required = ["coherence-internal", "openai-codex", "codex", "github", "claude"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -2022,7 +1988,7 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
     monkeypatch.delenv("DATABASE_URL", raising=False)
     monkeypatch.setattr(runtime_event_store, "enabled", lambda: False)
 
-    required = ["coherence-internal", "openai-codex", "codex", "github", "railway", "claude"]
+    required = ["coherence-internal", "openai-codex", "codex", "github", "claude"]
     monkeypatch.setattr(
         automation_usage_service,
         "provider_readiness_report",
@@ -2050,7 +2016,6 @@ async def test_provider_validation_run_creates_execution_evidence_and_passes_con
     monkeypatch.setattr(automation_usage_service, "_probe_openai", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_codex", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_github", lambda: (True, "ok"))
-    monkeypatch.setattr(automation_usage_service, "_probe_railway", lambda: (True, "ok"))
     monkeypatch.setattr(automation_usage_service, "_probe_claude", lambda: (True, "ok"))
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -2329,7 +2294,7 @@ def test_daily_summary_backfills_missing_host_failure_observability(
         "current_step": None,
         "decision_prompt": None,
         "decision": None,
-        "claimed_by": "openai-codex:railway-runner",
+        "claimed_by": "openai-codex:hosted-runner",
         "claimed_at": now,
         "created_at": now,
         "updated_at": now,

@@ -126,7 +126,7 @@ Your PR will be reviewed according to the project's quality standards.
 Coherence Network is live on:
 
 - **API**: https://coherence-network-production.up.railway.app (Railway)
-- **Web**: https://coherence-network.vercel.app (Vercel)
+- **Web**: https://coherencycoin.com
 
 ### Verify Deployments
 

@@ -23,7 +23,6 @@ Usage:
 import argparse
 import hashlib
 import json
-import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -31,8 +30,9 @@ from pathlib import Path
 
 import httpx
 
-API_BASE = os.environ.get("COHERENCE_API_BASE", "https://api.coherencycoin.com")
-API_KEY = os.environ.get("COHERENCE_API_KEY", "dev-key")
+CONFIG_PATH = Path.home() / ".coherence-network" / "config.json"
+API_BASE = "https://api.coherencycoin.com"
+API_KEY = "dev-key"
 
 _client = httpx.Client(timeout=30.0, headers={"X-Api-Key": API_KEY})
 
@@ -62,14 +62,19 @@ def _fmt_cc(v: float) -> str:
 
 
 def _resolve_contributor_id(cli_arg: str | None) -> str:
-    """R3: explicit CLI arg → COHERENCE_CONTRIBUTOR_ID → COHERENCE_CONTRIBUTOR → anonymous."""
+    """Resolve contributor identity from explicit arg, then config.json, then anonymous."""
     if cli_arg and str(cli_arg).strip():
         return str(cli_arg).strip()
-    return (
-        os.environ.get("COHERENCE_CONTRIBUTOR_ID", "").strip()
-        or os.environ.get("COHERENCE_CONTRIBUTOR", "").strip()
-        or "anonymous"
-    )
+    try:
+        if CONFIG_PATH.exists():
+            payload = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                contributor_id = str(payload.get("contributor_id") or "").strip()
+                if contributor_id:
+                    return contributor_id
+    except (OSError, json.JSONDecodeError, TypeError, AttributeError):
+        pass
+    return "anonymous"
 
 
 # ── Commands ──────────────────────────────────────────────────────────

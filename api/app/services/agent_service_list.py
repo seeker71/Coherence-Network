@@ -25,16 +25,15 @@ def _should_backfill_runtime_tasks(existing_count: int) -> bool:
 
 
 def _runtime_fallback_events_for_tasks(existing_count: int) -> list[Any]:
-    explicit = os.getenv("AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS", "").strip().lower()
-    if explicit in {"1", "true", "yes", "on"}:
-        fallback_in_tests = True
-    elif explicit in {"0", "false", "no", "off"}:
-        fallback_in_tests = False
+    fallback_in_tests = get_bool("agent_tasks", "runtime_fallback_in_tests", default=False)
+    running_under_pytest = bool(os.getenv("PYTEST_CURRENT_TEST"))
+    if running_under_pytest:
+        if not fallback_in_tests:
+            return []
+        should_backfill = existing_count == 0 or _should_backfill_runtime_tasks(existing_count)
     else:
-        fallback_in_tests = get_bool("agent_tasks", "runtime_fallback_in_tests", default=False)
-    if os.getenv("PYTEST_CURRENT_TEST") and not fallback_in_tests:
-        return []
-    if not _should_backfill_runtime_tasks(existing_count):
+        should_backfill = _should_backfill_runtime_tasks(existing_count)
+    if not should_backfill:
         return []
     try:
         from app.services import runtime_service

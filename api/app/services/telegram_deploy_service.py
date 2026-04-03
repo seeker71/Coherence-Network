@@ -1,4 +1,4 @@
-"""Railway management command handlers for Telegram webhook."""
+"""Deploy verification command handlers for Telegram webhook."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_REPOSITORY = "seeker71/Coherence-Network"
 _DEFAULT_BRANCH = "main"
-_DEFAULT_API_BASE = "https://coherence-network-production.up.railway.app"
-_DEFAULT_WEB_BASE = "https://coherence-web-production.up.railway.app"
+_DEFAULT_API_BASE = "https://api.coherencycoin.com"
+_DEFAULT_WEB_BASE = "https://coherencycoin.com"
 _JOB_LIST_LIMIT = 8
 
 
@@ -91,17 +91,17 @@ def _tasks_url() -> str:
     return f"{_web_base_url()}/tasks"
 
 
-def railway_help_reply() -> str:
+def deploy_help_reply() -> str:
     return (
-        "*Railway commands*\n"
-        "`/railway head`\n"
-        "`/railway status`\n"
-        "`/railway jobs`\n"
-        "`/railway schedule [max_attempts]`\n"
-        "`/railway verify`\n"
-        "`/railway tick due`\n"
-        "`/railway tick all`\n"
-        "`/railway tick {job_id}`"
+        "*Deploy commands*\n"
+        "`/deploy head`\n"
+        "`/deploy status`\n"
+        "`/deploy jobs`\n"
+        "`/deploy schedule [max_attempts]`\n"
+        "`/deploy verify`\n"
+        "`/deploy tick due`\n"
+        "`/deploy tick all`\n"
+        "`/deploy tick {job_id}`"
     )
 
 
@@ -111,7 +111,7 @@ def _format_status_reply(report: dict[str, Any]) -> str:
     failing = report.get("failing_checks")
     warnings = report.get("warnings")
     reply = (
-        "*Railway status*\n"
+        "*Deploy status*\n"
         f"Checked: `{_now_utc_label()}`\n"
         f"Repository: `{report.get('repository', _DEFAULT_REPOSITORY)}`\n"
         f"Branch: `{report.get('branch', _DEFAULT_BRANCH)}`\n"
@@ -125,9 +125,9 @@ def _format_status_reply(report: dict[str, Any]) -> str:
     if reason:
         reply += f"\nReason: {_escape_markdown(reason[:200])}"
     if result == "public_contract_passed":
-        reply += "\nNext: `/railway schedule 8` to monitor future deploy checks"
+        reply += "\nNext: `/deploy schedule 8` to monitor future deploy checks"
     else:
-        reply += "\nNext: `/railway verify` to create+run a verification job"
+        reply += "\nNext: `/deploy verify` to create+run a verification job"
     reply += f"\nLinks: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
     return reply
 
@@ -135,14 +135,14 @@ def _format_status_reply(report: dict[str, Any]) -> str:
 def _format_jobs_reply(jobs: list[dict[str, Any]]) -> str:
     if not jobs:
         reply = (
-            "*Railway jobs*\n"
+            "*Deploy jobs*\n"
             f"Checked: `{_now_utc_label()}`\n"
             "No verification jobs found."
         )
         reply += f"\nLinks: [tasks]({_tasks_url()}) | [telegram diagnostics]({_telegram_diag_url()})"
         return reply
     reply = (
-        f"*Railway jobs* ({len(jobs)} total)\n"
+        f"*Deploy jobs* ({len(jobs)} total)\n"
         f"Checked: `{_now_utc_label()}`"
     )
     latest = list(reversed(jobs))[:_JOB_LIST_LIMIT]
@@ -176,7 +176,7 @@ def _format_verify_reply(created: dict[str, Any], ticked: dict[str, Any]) -> str
         else ""
     )
     reply = (
-        "*Railway verify*\n"
+        "*Deploy verify*\n"
         f"Checked: `{_now_utc_label()}`\n"
         f"Job: `{job_id}`\n"
         f"Status: `{status}`\n"
@@ -186,11 +186,11 @@ def _format_verify_reply(created: dict[str, Any], ticked: dict[str, Any]) -> str
     if reason:
         reply += f"\nReason: {_escape_markdown(reason[:200])}"
     if status == "retrying":
-        reply += f"\nNext: `/railway tick {job_id}`"
+        reply += f"\nNext: `/deploy tick {job_id}`"
     elif status == "failed":
-        reply += f"\nNext: inspect `/railway status` then retry `/railway tick {job_id}`"
+        reply += f"\nNext: inspect `/deploy status` then retry `/deploy tick {job_id}`"
     elif status == "completed":
-        reply += "\nNext: `/railway status`"
+        reply += "\nNext: `/deploy status`"
     reply += f"\nLinks: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
     return reply
 
@@ -199,7 +199,7 @@ def _format_tick_reply(job: dict[str, Any]) -> str:
     status = str(job.get("status") or "unknown")
     job_id = str(job.get("job_id") or "?")
     if status == "not_found":
-        return f"Railway job `{job_id}` not found"
+        return f"Deploy job `{job_id}` not found"
     attempts = int(job.get("attempts") or 0)
     max_attempts = int(job.get("max_attempts") or 0)
     last_result = job.get("last_result")
@@ -214,7 +214,7 @@ def _format_tick_reply(job: dict[str, Any]) -> str:
         else str(job.get("last_error") or "").strip()
     )
     reply = (
-        "*Railway tick*\n"
+        "*Deploy tick*\n"
         f"Checked: `{_now_utc_label()}`\n"
         f"Job: `{job_id}`\n"
         f"Status: `{status}`\n"
@@ -224,11 +224,11 @@ def _format_tick_reply(job: dict[str, Any]) -> str:
     if reason:
         reply += f"\nReason: {_escape_markdown(reason[:200])}"
     if status == "retrying":
-        reply += f"\nNext: `/railway tick {job_id}`"
+        reply += f"\nNext: `/deploy tick {job_id}`"
     elif status == "failed":
-        reply += "\nNext: `/railway status` and `/railway verify`"
+        reply += "\nNext: `/deploy status` and `/deploy verify`"
     elif status == "completed":
-        reply += "\nNext: `/railway jobs`"
+        reply += "\nNext: `/deploy jobs`"
     reply += f"\nLinks: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
     return reply
 
@@ -238,12 +238,12 @@ def _format_tick_many_reply(result: dict[str, Any], *, due_only: bool) -> str:
     mode = "due" if due_only else "all"
     if not jobs:
         return (
-            f"*Railway tick {mode}*\n"
+            f"*Deploy tick {mode}*\n"
             f"Checked: `{_now_utc_label()}`\n"
             "No jobs were updated."
         )
     reply = (
-        f"*Railway tick {mode}* ({len(jobs)} updated)\n"
+        f"*Deploy tick {mode}* ({len(jobs)} updated)\n"
         f"Checked: `{_now_utc_label()}`"
     )
     for job in jobs[:_JOB_LIST_LIMIT]:
@@ -258,7 +258,7 @@ def _format_tick_many_reply(result: dict[str, Any], *, due_only: bool) -> str:
             else "unknown"
         )
         reply += f"\n`{job_id}` {status} ({attempts}/{max_attempts or '?'}) `{result_name}`"
-    reply += "\nNext: `/railway jobs`"
+    reply += "\nNext: `/deploy jobs`"
     reply += f"\nLinks: [tasks]({_tasks_url()}) | [telegram diagnostics]({_telegram_diag_url()})"
     return reply
 
@@ -269,12 +269,12 @@ def _format_schedule_reply(created: dict[str, Any]) -> str:
     attempts = int(created.get("attempts") or 0)
     max_attempts = int(created.get("max_attempts") or 0)
     return (
-        "*Railway schedule*\n"
+        "*Deploy schedule*\n"
         f"Checked: `{_now_utc_label()}`\n"
         f"Job: `{job_id}`\n"
         f"Status: `{status}`\n"
         f"Attempts: `{attempts}/{max_attempts or '?'}`\n"
-        "Next: `/railway tick due`\n"
+        "Next: `/deploy tick due`\n"
         f"Links: [tasks]({_tasks_url()}) | [telegram diagnostics]({_telegram_diag_url()})"
     )
 
@@ -298,14 +298,14 @@ async def _command_head(token: str | None) -> str:
     )
     if not sha:
         return (
-            "*Railway head*\n"
+            "*Deploy head*\n"
             f"Repository: `{_DEFAULT_REPOSITORY}`\n"
             f"Branch: `{_DEFAULT_BRANCH}`\n"
             "SHA: `unavailable`\n"
             f"Links: [main head]({_main_head_url()}) | [tasks]({_tasks_url()})"
         )
     return (
-        "*Railway head*\n"
+        "*Deploy head*\n"
         f"Repository: `{_DEFAULT_REPOSITORY}`\n"
         f"Branch: `{_DEFAULT_BRANCH}`\n"
         f"SHA: `{_short_sha(sha)}`\n"
@@ -349,17 +349,17 @@ async def _create_job(token: str | None, *, max_attempts: int | None) -> dict[st
 async def _command_schedule(token: str | None, rest: list[str]) -> str:
     created = await _create_job(token, max_attempts=_parse_max_attempts(rest))
     if not created:
-        return "Railway schedule failed: unable to create verification job"
+        return "Deploy schedule failed: unable to create verification job"
     return _format_schedule_reply(created)
 
 
 async def _command_verify(token: str | None, rest: list[str]) -> str:
     created = await _create_job(token, max_attempts=_parse_max_attempts(rest))
     if not created:
-        return "Railway verify failed: unable to create verification job"
+        return "Deploy verify failed: unable to create verification job"
     job_id = str(created.get("job_id") or "").strip()
     if not job_id:
-        return "Railway verify failed: missing job id"
+        return "Deploy verify failed: missing job id"
     ticked = await asyncio.to_thread(
         release_gate_service.tick_public_deploy_verification_job,
         job_id=job_id,
@@ -370,7 +370,7 @@ async def _command_verify(token: str | None, rest: list[str]) -> str:
 
 async def _command_tick(token: str | None, rest: list[str]) -> str:
     if not rest:
-        return "Usage: /railway tick {job_id}"
+        return "Usage: /deploy tick {job_id}"
     target = rest[0].strip().lower()
     if target in {"due", "all"}:
         due_only = target != "all"
@@ -380,12 +380,12 @@ async def _command_tick(token: str | None, rest: list[str]) -> str:
             due_only=due_only,
         )
         if not isinstance(ticked_many, dict):
-            return "Railway tick failed: unable to update verification jobs"
+            return "Deploy tick failed: unable to update verification jobs"
         return _format_tick_many_reply(ticked_many, due_only=due_only)
 
     job_id = rest[0].strip()
     if not job_id:
-        return "Usage: /railway tick {job_id}"
+        return "Usage: /deploy tick {job_id}"
     ticked = await asyncio.to_thread(
         release_gate_service.tick_public_deploy_verification_job,
         job_id=job_id,
@@ -394,7 +394,7 @@ async def _command_tick(token: str | None, rest: list[str]) -> str:
     return _format_tick_reply(ticked if isinstance(ticked, dict) else {})
 
 
-async def handle_railway_command(arg: str) -> str:
+async def handle_deploy_command(arg: str) -> str:
     args = (arg or "").split()
     action = args[0].lower() if args else "help"
     rest = args[1:] if len(args) > 1 else []
@@ -409,13 +409,13 @@ async def handle_railway_command(arg: str) -> str:
         "tick": lambda: _command_tick(token, rest),
     }
     if action in {"help", "h", "?"}:
-        return railway_help_reply()
+        return deploy_help_reply()
     if action not in handlers:
-        return railway_help_reply()
+        return deploy_help_reply()
 
     try:
         return await handlers[action]()
     except Exception as exc:
-        logger.exception("Telegram railway command failed: action=%s", action)
+        logger.exception("Telegram deploy command failed: action=%s", action)
         msg = str(exc).strip() or "unknown error"
-        return f"Railway command failed: {_escape_markdown(msg[:240])}"
+        return f"Deploy command failed: {_escape_markdown(msg[:240])}"

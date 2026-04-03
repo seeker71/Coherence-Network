@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { loadPublicWebConfig } from "./lib/app-config";
 
 const securityHeaders = [
   {
@@ -23,12 +24,7 @@ const securityHeaders = [
   },
 ];
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.API_BASE ||
-  process.env.API_URL ||
-  "http://api:8000";
+const API_BASE = loadPublicWebConfig().localApiBaseUrl || "http://api:8000";
 
 const nextConfig: NextConfig = {
   output: "standalone",

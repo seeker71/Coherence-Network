@@ -35,9 +35,6 @@ def _default_store_path() -> Path:
 
 
 def _store_path() -> Path:
-    explicit = os.getenv("AGENT_TASKS_PATH", "").strip()
-    if explicit:
-        return Path(explicit)
     configured = get_str("agent_tasks", "path")
     if configured:
         return Path(configured)
@@ -45,13 +42,6 @@ def _store_path() -> Path:
 
 
 def _persistence_enabled() -> bool:
-    explicit = os.getenv("AGENT_TASKS_PERSIST", "").strip().lower()
-    if explicit in {"1", "true", "yes", "on"}:
-        return True
-    if explicit in {"0", "false", "no", "off"}:
-        return False
-    if os.getenv("PYTEST_CURRENT_TEST"):
-        return False
     return get_bool("agent_tasks", "persist", default=False)
 
 
@@ -60,12 +50,6 @@ def _db_store_reload_ttl_seconds() -> float:
 
 
 def _max_task_output_chars() -> int:
-    explicit = os.getenv("AGENT_TASK_OUTPUT_MAX_CHARS", "").strip()
-    if explicit:
-        try:
-            return max(500, min(int(explicit), 200000))
-        except ValueError:
-            pass
     return max(500, min(get_int("agent_tasks", "task_output_max_chars", 4000), 200000))
 
 

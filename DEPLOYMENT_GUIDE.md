@@ -1,8 +1,8 @@
 # Coherence Network — Deployment Guide (Managed Hosting)
 
 This guide standardizes deployment on low-cost managed services:
-- **API**: Railway
-- **Web**: Vercel
+- **API**: Hostinger
+- **Web**: Hostinger
 - **PostgreSQL**: Neon or Supabase (free tiers)
 - **Neo4j**: AuraDB Free
 
@@ -14,11 +14,11 @@ Required minimum:
 - `OPENROUTER_API_KEY` (or your preferred model provider key)
 - `DATABASE_URL`
 - `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` (if graph features enabled)
-- `ALLOWED_ORIGINS` (Vercel domain)
+- `ALLOWED_ORIGINS` (public web domain)
 
-## 2) Deploy API (Railway)
+## 2) Deploy API
 
-1. Create Railway project and connect GitHub repo.
+1. Build and deploy the API container on the VPS.
 2. Set root directory to `api/`.
 3. Configure start command:
 
@@ -29,14 +29,14 @@ uvicorn app.main:app --host 0.0.0.0 --port $PORT
 4. Add environment variables.
 5. Deploy and copy API public URL.
 
-## 3) Deploy Web (Vercel)
+## 3) Deploy Web
 
-1. Import same repo in Vercel.
+1. Build and deploy the web container on the VPS.
 2. Set root directory to `web/`.
 3. Set env var:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://<railway-api-domain>
+NEXT_PUBLIC_API_URL=https://api.coherencycoin.com
 ```
 
 4. Deploy and test the app.

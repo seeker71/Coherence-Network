@@ -44,7 +44,7 @@ export default function RemoteOpsPage() {
       <section className="space-y-3 border rounded-md p-4">
         <h1 className="text-2xl font-bold">Remote Ops</h1>
         <p className="text-muted-foreground">
-          Work from anywhere: verify Railway deploy status, monitor queue, and dispatch Codex on the
+          Work from anywhere: verify public deploy status, monitor queue, and dispatch Codex on the
           deployed API.
         </p>
         <p className="text-xs text-muted-foreground">

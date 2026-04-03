@@ -19,15 +19,27 @@ async def test_auto_heal_stats_route_handles_list_tasks_tuple(monkeypatch: pytes
         lambda: (
             [
                 {"id": "task_failed", "status": "failed", "output": "boom"},
+                {"id": "task_running", "status": "running", "output": ""},
                 {"id": "task_ok", "status": "completed", "output": ""},
             ],
-            2,
+            3,
             0,
         ),
     )
+    monkeypatch.setattr(agent_auto_heal_routes.agent_service, "get_task_count", lambda: {"total": 3, "by_status": {"running": 1, "failed": 1}})
+    monkeypatch.setattr(agent_auto_heal_routes.agent_runner_registry_service, "list_runners", lambda **_kwargs: [])
 
-    def _fake_stats(failed: list[dict]) -> dict:
+    def _fake_stats(
+        failed: list[dict],
+        *,
+        task_counts: dict | None = None,
+        runner_rows: list[dict] | None = None,
+        running_tasks: list[dict] | None = None,
+    ) -> dict:
         captured["failed"] = failed
+        captured["task_counts"] = task_counts
+        captured["runner_rows"] = runner_rows
+        captured["running_tasks"] = running_tasks
         return {"failed_count": len(failed)}
 
     monkeypatch.setattr(agent_auto_heal_routes.auto_heal_service, "compute_auto_heal_stats", _fake_stats)
@@ -38,6 +50,9 @@ async def test_auto_heal_stats_route_handles_list_tasks_tuple(monkeypatch: pytes
     assert response.status_code == 200
     assert response.json() == {"failed_count": 1}
     assert captured["failed"] == [{"id": "task_failed", "status": "failed", "output": "boom"}]
+    assert captured["task_counts"] == {"total": 3, "by_status": {"running": 1, "failed": 1}}
+    assert captured["runner_rows"] == []
+    assert captured["running_tasks"] == [{"id": "task_running", "status": "running", "output": ""}]
 
 
 @pytest.mark.asyncio

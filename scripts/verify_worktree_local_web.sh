@@ -20,6 +20,7 @@ START_SERVERS=0
 AUTO_HEAL=0
 SHOW_PORTS=0
 DB_URL="${DB_URL:-${DATABASE_URL:-sqlite+pysqlite:///${ROOT_DIR}/.cache/local-instance/coherence_local.db}}"
+ADMIN_KEY=""
 
 THREAD_RUNTIME_HELPER="${ROOT_DIR}/scripts/thread_runtime_ports.sh"
 if [[ -f "${THREAD_RUNTIME_HELPER}" ]]; then
@@ -175,15 +176,50 @@ web_ready() {
   http_ok "${WEB_BASE}/"
 }
 
+resolve_admin_key() {
+  python3 - "${ROOT_DIR}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+merged = {}
+for path in (root / "api" / "config" / "api.json", Path.home() / ".coherence-network" / "config.json"):
+    if not path.exists():
+        continue
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        continue
+    if isinstance(payload, dict):
+        merged.update(payload)
+auth = merged.get("auth") or {}
+if isinstance(auth, dict) and str(auth.get("admin_key") or "").strip():
+    print(str(auth["admin_key"]).strip())
+else:
+    print("dev-admin")
+PY
+}
+
 check_url() {
   local name="$1"
   local url="$2"
   local required_text="${3:-}"
+  local curl_args=()
+  if (( $# > 3 )); then
+    shift 3
+    curl_args=("$@")
+  fi
   local headers_file="${TMP_DIR}/$(echo "${name}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_').headers"
   local body_file="${TMP_DIR}/$(echo "${name}" | tr '[:upper:]' '[:lower:]' | tr -cs 'a-z0-9' '_').body"
+  local curl_cmd=(curl -sS -L -D "${headers_file}" -o "${body_file}")
+  if (( ${#curl_args[@]} > 0 )); then
+    curl_cmd+=("${curl_args[@]}")
+  fi
+  curl_cmd+=("${url}")
 
   echo "==> ${name}: ${url}"
-  curl -sS -L -D "${headers_file}" -o "${body_file}" "${url}" >/dev/null
+  "${curl_cmd[@]}" >/dev/null
 
   local status
   status="$(awk 'toupper($1) ~ /^HTTP\// { code=$2 } END { print code }' "${headers_file}")"
@@ -520,6 +556,8 @@ run_validations() {
   check_url "API health" "${API_BASE}/api/health"
   check_url "API ideas" "${API_BASE}/api/ideas"
   check_url "API tasks" "${API_BASE}/api/agent/tasks"
+  check_url "API diagnostics overview" "${API_BASE}/api/agent/diagnostics/overview" "" \
+    -H "X-Admin-Key: ${ADMIN_KEY}"
   check_url "API system lineage" "${API_BASE}/api/inventory/system-lineage"
   check_url "API endpoint runtime summary" "${API_BASE}/api/runtime/endpoints/summary"
   python3 "${ROOT_DIR}/scripts/validate_local_api_matrix.py" --api-base "${API_BASE}"
@@ -545,6 +583,7 @@ run_validations() {
   check_url "Web flow" "${WEB_BASE}/flow"
   check_url "Web tasks" "${WEB_BASE}/tasks"
   check_url "Web gates" "${WEB_BASE}/gates"
+  check_url "Web diagnostics" "${WEB_BASE}/diagnostics" "Diagnostics Console"
   check_url "Web API coverage page" "${WEB_BASE}/api-coverage" "API Coverage Verification"
   check_url "Web assets" "${WEB_BASE}/assets" "Asset Catalog"
   local asset_id
@@ -591,6 +630,7 @@ run_validations() {
 }
 
 parse_args "$@"
+ADMIN_KEY="$(resolve_admin_key)"
 configure_ports
 maybe_dump_thread_ports
 

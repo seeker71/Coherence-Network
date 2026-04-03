@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { loadPublicWebConfig } from "@/lib/app-config";
 
-const WEB_UPDATED_AT = process.env.WEB_UPDATED_AT || process.env.VERCEL_GIT_COMMIT_SHA || "unknown";
+const WEB_CONFIG = loadPublicWebConfig();
+const WEB_UPDATED_AT = WEB_CONFIG.updatedAt || WEB_CONFIG.deployedSha || "unknown";
 
 export async function GET() {
   return NextResponse.json(

@@ -8,9 +8,45 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 
 export const CONFIG_DIR = join(homedir(), ".coherence-network");
-const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+export const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
 const DEFAULT_HUB_URL = "https://api.coherencycoin.com";
+
+function ensureConfigDir() {
+  if (!existsSync(CONFIG_DIR)) {
+    mkdirSync(CONFIG_DIR, { recursive: true });
+  }
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function deepMerge(base, updates) {
+  if (!isPlainObject(base) || !isPlainObject(updates)) {
+    return updates;
+  }
+  const merged = { ...base };
+  for (const [key, value] of Object.entries(updates)) {
+    if (isPlainObject(value) && isPlainObject(merged[key])) {
+      merged[key] = deepMerge(merged[key], value);
+      continue;
+    }
+    merged[key] = value;
+  }
+  return merged;
+}
+
+function splitConfigPath(path) {
+  return String(path || "")
+    .split(".")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+function cloneConfig(value) {
+  return JSON.parse(JSON.stringify(value));
+}
 
 export function loadConfig() {
   try {
@@ -22,22 +58,13 @@ export function loadConfig() {
 }
 
 export function saveConfig(updates) {
-  const config = { ...loadConfig(), ...updates };
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
-  }
+  const config = deepMerge(loadConfig(), updates);
+  ensureConfigDir();
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
   return config;
 }
 
-/**
- * R3 precedence (highest first): COHERENCE_CONTRIBUTOR_ID → COHERENCE_CONTRIBUTOR (legacy) → config.json
- */
 export function getContributorId() {
-  const eid = (process.env.COHERENCE_CONTRIBUTOR_ID || "").trim();
-  if (eid) return eid;
-  const legacy = (process.env.COHERENCE_CONTRIBUTOR || "").trim();
-  if (legacy) return legacy;
   const fromFile = loadConfig().contributor_id;
   if (fromFile && String(fromFile).trim()) return String(fromFile).trim();
   return null;
@@ -45,10 +72,6 @@ export function getContributorId() {
 
 /** Resolution source label for `cc identity` (R4). */
 export function getContributorSource() {
-  const eid = (process.env.COHERENCE_CONTRIBUTOR_ID || "").trim();
-  if (eid) return "env:COHERENCE_CONTRIBUTOR_ID";
-  const legacy = (process.env.COHERENCE_CONTRIBUTOR || "").trim();
-  if (legacy) return "env:COHERENCE_CONTRIBUTOR (legacy)";
   const fromFile = loadConfig().contributor_id;
   if (fromFile && String(fromFile).trim()) return "config.json";
   return "none";
@@ -70,11 +93,11 @@ export function parseContributorId(value) {
 }
 
 export function getHubUrl() {
-  // Env vars override config file (allows easy local dev testing)
+  const config = loadConfig();
   return (
-    process.env.COHERENCE_HUB_URL ||
-    process.env.COHERENCE_API_URL ||
-    loadConfig().hub_url ||
+    config.hub_url ||
+    config.web?.api_base_url ||
+    config.agent_providers?.api_base_url ||
     DEFAULT_HUB_URL
   );
 }
@@ -91,21 +114,77 @@ export function loadKeys() {
 
 export function saveKeys(updates) {
   const keys = { ...loadKeys(), ...updates };
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
-  }
+  ensureConfigDir();
   writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2) + "\n", { mode: 0o600 });
   return keys;
 }
 
-/**
- * Get the personal API key for this contributor from keys.json.
- * Falls back to COHERENCE_API_KEY env var.
- */
 export function getApiKey() {
-  return (
-    process.env.COHERENCE_API_KEY ||
-    loadKeys().api_key ||
-    null
-  );
+  return loadKeys().api_key || loadConfig().auth?.api_key || null;
+}
+
+export function getAdminKey() {
+  return loadConfig().auth?.admin_key || null;
+}
+
+export function getExecuteToken() {
+  return loadConfig().agent_executor?.execute_token || null;
+}
+
+export function getCliProvider() {
+  return loadConfig().cli?.provider || "cli";
+}
+
+export function getCliActiveTaskId() {
+  return loadConfig().cli?.active_task_id || null;
+}
+
+export function getConfigValue(path) {
+  const parts = splitConfigPath(path);
+  let current = loadConfig();
+  for (const part of parts) {
+    if (!isPlainObject(current) || !(part in current)) {
+      return undefined;
+    }
+    current = current[part];
+  }
+  return current;
+}
+
+export function setConfigValue(path, value) {
+  const parts = splitConfigPath(path);
+  if (!parts.length) {
+    throw new Error("Config path is required.");
+  }
+  const config = cloneConfig(loadConfig());
+  let node = config;
+  for (const key of parts.slice(0, -1)) {
+    if (!isPlainObject(node[key])) {
+      node[key] = {};
+    }
+    node = node[key];
+  }
+  node[parts.at(-1)] = value;
+  ensureConfigDir();
+  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+  return config;
+}
+
+export function unsetConfigValue(path) {
+  const parts = splitConfigPath(path);
+  if (!parts.length) {
+    throw new Error("Config path is required.");
+  }
+  const config = cloneConfig(loadConfig());
+  let node = config;
+  for (const key of parts.slice(0, -1)) {
+    if (!isPlainObject(node[key])) {
+      return config;
+    }
+    node = node[key];
+  }
+  delete node[parts.at(-1)];
+  ensureConfigDir();
+  writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2) + "\n");
+  return config;
 }

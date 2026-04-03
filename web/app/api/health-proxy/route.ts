@@ -1,40 +1,26 @@
 import { NextResponse } from "next/server";
+import { loadPublicWebConfig } from "@/lib/app-config";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
 
 const API_URL = getApiBase();
+const WEB_CONFIG = loadPublicWebConfig();
 const WEB_STARTED_AT = new Date();
-const WEB_DEPLOYED_SHA_ENV_KEYS = [
-  "WEB_DEPLOYED_SHA",
-  "WEB_UPDATED_AT",
-  "RAILWAY_GIT_COMMIT_SHA",
-  "RAILWAY_GIT_SHA",
-  "VERCEL_GIT_COMMIT_SHA",
-  "GIT_COMMIT_SHA",
-  "COMMIT_SHA",
-  "SOURCE_VERSION",
-] as const;
 const UPSTREAM_TIMEOUT_MS = 15000;
-const HEALTH_PROXY_FAILURE_THRESHOLD = Math.max(
-  1,
-  Number.parseInt(process.env.HEALTH_PROXY_FAILURE_THRESHOLD || "2", 10) || 2,
-);
-const HEALTH_PROXY_COOLDOWN_MS = Math.max(
-  1000,
-  Number.parseInt(process.env.HEALTH_PROXY_COOLDOWN_MS || "30000", 10) || 30000,
-);
+const HEALTH_PROXY_FAILURE_THRESHOLD = Math.max(1, WEB_CONFIG.healthProxy.failureThreshold || 2);
+const HEALTH_PROXY_COOLDOWN_MS = Math.max(1000, WEB_CONFIG.healthProxy.cooldownMs || 30000);
 
 let healthProxyConsecutiveFailures = 0;
 let healthProxyCooldownUntilMs = 0;
 
 function resolveWebDeployedSha(): { value: string; source: string } {
-  for (const key of WEB_DEPLOYED_SHA_ENV_KEYS) {
-    const candidate = process.env[key]?.trim();
-    if (candidate) {
-      return { value: candidate, source: key };
-    }
+  if (WEB_CONFIG.deployedSha && WEB_CONFIG.deployedSha !== "unknown") {
+    return { value: WEB_CONFIG.deployedSha, source: "config:web.deployed_sha" };
   }
-  return { value: "unknown", source: "unknown" };
+  if (WEB_CONFIG.updatedAt && WEB_CONFIG.updatedAt !== "unknown") {
+    return { value: WEB_CONFIG.updatedAt, source: "config:web.updated_at" };
+  }
+  return { value: "unknown", source: "config" };
 }
 
 const WEB_DEPLOYED_SHA = resolveWebDeployedSha();

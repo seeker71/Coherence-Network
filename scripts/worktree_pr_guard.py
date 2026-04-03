@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import os
 import re
@@ -23,6 +24,18 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 API_ROOT = REPO_ROOT / "api"
 DEFAULT_MAINTAINABILITY_OUTPUT = "api/logs/maintainability_audit_report.worktree_guard.json"
 AUTO_HEAL_GENERATED_ARTIFACTS = {"maintainability_audit_report.json"}
+SKIPPABLE_LOCAL_ARTIFACT_PATTERNS = (
+    "api/data/*.db",
+    "api/data/*.db-*",
+    "api/data/*.sqlite*",
+    "data/*.db",
+    "data/*.db-*",
+    "data/*.sqlite*",
+    "*.db-shm",
+    "*.db-wal",
+    "*.db-journal",
+    "web/tsconfig.tsbuildinfo",
+)
 
 # Allow importing api.app services from repo root script.
 if str(API_ROOT) not in sys.path:
@@ -247,6 +260,11 @@ def _changed_paths_worktree() -> list[str]:
     return paths
 
 
+def _is_skippable_local_artifact(path: str) -> bool:
+    normalized = path.strip()
+    return any(fnmatch.fnmatch(normalized, pattern) for pattern in SKIPPABLE_LOCAL_ARTIFACT_PATTERNS)
+
+
 def _run_rebase_freshness_guard(base_ref: str) -> StepResult:
     start = time.monotonic()
     branch_proc = subprocess.run(
@@ -401,7 +419,9 @@ def _worktree_has_runtime_changes(base_ref: str) -> bool:
 def _run_commit_evidence_guard(base_ref: str) -> StepResult:
     start = time.monotonic()
     changed, diff_error = _changed_paths_range(base_ref)
-    worktree_changed = _changed_paths_worktree()
+    raw_worktree_changed = _changed_paths_worktree()
+    ignored_artifacts = sorted(path for path in raw_worktree_changed if _is_skippable_local_artifact(path))
+    worktree_changed = [path for path in raw_worktree_changed if not _is_skippable_local_artifact(path)]
     if diff_error:
         return StepResult(
             name="commit-evidence-guard",
@@ -414,13 +434,19 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
         )
 
     if not changed and not worktree_changed:
+        artifact_note = ""
+        if ignored_artifacts:
+            artifact_note = f" Ignored local artifacts: {', '.join(ignored_artifacts)}."
         return StepResult(
             name="commit-evidence-guard",
             command=f"python3 scripts/validate_commit_evidence.py --base {base_ref} --head HEAD --require-changed-evidence",
             ok=True,
             exit_code=0,
             duration_seconds=round(time.monotonic() - start, 2),
-            output_tail=f"No changed files detected in range {base_ref}..HEAD or current worktree; evidence guard skipped.",
+            output_tail=(
+                f"No changed files detected in range {base_ref}..HEAD or current worktree; evidence guard skipped."
+                f"{artifact_note}"
+            ),
             hint="No action required.",
         )
 
@@ -525,6 +551,8 @@ def _run_commit_evidence_guard(base_ref: str) -> StepResult:
                 output_tail="\n\n".join(tails)[-5000:],
                 hint="Update change_files to include all changed worktree paths before commit.",
             )
+        if ignored_artifacts:
+            tails.append(f"Ignored local artifact paths: {ignored_artifacts}")
 
     return StepResult(
         name="commit-evidence-guard",
@@ -906,8 +934,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--optional-status-contexts",
-        default=os.getenv("PR_GUARD_OPTIONAL_STATUS_CONTEXTS", "Vercel"),
-        help="Comma-separated commit status contexts treated as non-blocking (default: Vercel).",
+        default=os.getenv("PR_GUARD_OPTIONAL_STATUS_CONTEXTS", ""),
+        help="Comma-separated commit status contexts treated as non-blocking.",
     )
     parser.add_argument(
         "--n8n-version",
