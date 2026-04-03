@@ -663,6 +663,17 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    Tool(
+        name="coherence_read_file",
+        description="Read raw file content from the repository (specs, docs, etc.) via direct link.",
+        inputSchema={
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+                "path": {"type": "string", "description": "Relative path from repo root (e.g. 'specs/169-procedural-memory.md')"},
+            },
+        },
+    ),
     # Concepts (Living Codex ontology)
     Tool(
         name="coherence_list_concepts",
@@ -968,6 +979,8 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get("/api/blueprints")
         case "coherence_apply_blueprint":
             return api_post(f"/api/blueprints/{args['blueprint_id']}/apply", {"prefix": args.get("prefix", "")})
+        case "coherence_read_file":
+            return api_get("/api/content/file", {"path": args["path"]})
         # Concepts
         case "coherence_list_concepts":
             if args.get("search"):

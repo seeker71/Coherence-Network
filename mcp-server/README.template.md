@@ -2,7 +2,7 @@
 
 **Give your AI agent native access to every idea, spec, contributor, and value chain in the Coherence Network.**
 
-An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the full Coherence Network API as 56 typed tools — so Claude, Cursor, Windsurf, or any MCP-compatible agent can browse ideas, look up specs, trace value lineage, link identities, record contributions, execute tasks, discover resonant peers, and apply project blueprints without writing a single API call.
+An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the full Coherence Network API as 57 typed tools — so Claude, Cursor, Windsurf, or any MCP-compatible agent can browse ideas, look up specs, trace value lineage, link identities, record contributions, execute tasks, discover resonant peers, apply project blueprints, and read repository content via direct links without writing a single API call.
 
 ```bash
 npx coherence-mcp-server
@@ -27,6 +27,7 @@ This MCP server changes that. It gives any agent a typed interface to:
 - **Signal** — ingest news, track trending keywords, and measure concept resonance
 - **Peers** — discover resonant contributors by shared interests or proximity
 - **Blueprint** — apply standardized project roadmaps (templates) to instantly seed work
+- **Direct Access** — read specs and documentation via direct repository links
 - **Ontology** — explore the Living Codex (184 universal concepts, 53 axes)
 - **Govern** — propose changes, vote on requests, and monitor network health
 
@@ -75,7 +76,7 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 
 ---
 
-## Tools (56)
+## Tools (57)
 
 ### Ideas — the portfolio engine
 
@@ -95,7 +96,7 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 | Tool | What it does |
 |------|-------------|
 | `coherence_list_specs` | Specs with ROI metrics and value gaps. Searchable. |
-| `coherence_get_spec" | Full spec: summary, implementation plan, pseudocode, estimated ROI. |
+| `coherence_get_spec` | Full spec: summary, implementation plan, pseudocode, estimated ROI. |
 
 ### Value lineage — end-to-end traceability
 
@@ -153,6 +154,12 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 |------|-------------|
 | `coherence_list_blueprints` | List available project roadmap templates. |
 | `coherence_apply_blueprint` | Seed a full roadmap of ideas and edges from a template. |
+
+### Repository Content — direct access
+
+| Tool | What it does |
+|------|-------------|
+| `coherence_read_file` | Read raw file content (specs, docs) via direct link. |
 
 ### Assets — tracked artifacts
 
@@ -249,7 +256,7 @@ Every part of the network links to every other. Jump in wherever makes sense.
 | **Web** | Browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
 | **API** | 100+ endpoints, full OpenAPI docs, the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
 | **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | This package — 56 typed tools for AI agents | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **MCP Server** | This package — 57 typed tools for AI agents | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | Auto-triggers in any OpenClaw instance for ideas, specs, coherence | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
 
