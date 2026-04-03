@@ -17,7 +17,7 @@ from app.services.identity_providers import registry_as_dict
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/identity", tags=["identity"])
+router = APIRouter(prefix="/identity", tags=["identity"])
 
 
 # ---------------------------------------------------------------------------

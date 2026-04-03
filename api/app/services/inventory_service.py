@@ -5704,6 +5704,8 @@ def _idea_card_state_from_manifestation(status: str | None) -> str:
         return "validated"
     if normalized == "partial":
         return "implemented"
+    if normalized == "external":
+        return "implemented"
     return "none"
 
 

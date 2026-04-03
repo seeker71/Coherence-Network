@@ -15,6 +15,7 @@ class ManifestationStatus(str, Enum):
     NONE = "none"
     PARTIAL = "partial"
     VALIDATED = "validated"
+    EXTERNAL = "external"
 
 
 class IdeaStage(str, Enum):
