@@ -14,6 +14,7 @@
 import { get, post, patch } from "../api.mjs";
 import { hostname } from "node:os";
 import { createHash } from "node:crypto";
+import { getCliActiveTaskId, getCliProvider, getHubUrl } from "../config.mjs";
 
 function nodeId() {
   return createHash("sha256").update(hostname()).digest("hex").slice(0, 16);
@@ -293,7 +294,7 @@ function timeSince(iso) {
 export async function postProgress(args) {
   const message = args.join(" ").trim();
   if (!message) { console.log("Usage: cc progress \"what you just did\""); return; }
-  let taskId = process.env.CC_TASK_ID || "";
+  let taskId = getCliActiveTaskId() || "";
   if (!taskId) {
     try { const { readFileSync } = await import("node:fs"); const ctrl = readFileSync(".task-control", "utf-8").trim(); const m = ctrl.match(/task[_-]([a-f0-9]+)/i); if (m) taskId = `task_${m[1]}`; } catch {}
   }
@@ -306,7 +307,7 @@ export async function postProgress(args) {
   const { post } = await import("../api.mjs");
   const { hostname } = await import("node:os");
   const result = await post(`/api/agent/tasks/${taskId}/activity`, {
-    node_name: hostname(), provider: process.env.CC_PROVIDER || "cli",
+    node_name: hostname(), provider: getCliProvider(),
     event_type: "progress", data: { message, source: "cc_progress_cli" },
   });
   console.log(result ? `\x1b[32m✓\x1b[0m Progress: ${message}` : "\x1b[31m✗\x1b[0m Failed");
@@ -316,7 +317,7 @@ export async function streamStart(args) {
   const label = args.join(" ").trim() || "Live agent stream";
   
   // Find current task
-  let taskId = process.env.CC_TASK_ID || "";
+  let taskId = getCliActiveTaskId() || "";
   if (!taskId) {
     try {
       const { readFileSync } = await import("node:fs");
@@ -332,7 +333,7 @@ export async function streamStart(args) {
   }
 
   if (!taskId) {
-    console.log("\x1b[33m⚠\x1b[0m No active task. Set CC_TASK_ID.");
+    console.log("\x1b[33m⚠\x1b[0m No active task. Set cli.active_task_id in config or claim a task first.");
     return;
   }
 
@@ -341,7 +342,7 @@ export async function streamStart(args) {
 
   // Open the stream
   console.log(`\x1b[36m◉\x1b[0m Stream open: ${label}`);
-  console.log(`\x1b[2m  Watch: curl -N ${process.env.CC_API_BASE || "https://api.coherencycoin.com"}/api/agent/tasks/${taskId}/events\x1b[0m`);
+  console.log(`\x1b[2m  Watch: curl -N ${getHubUrl()}/api/agent/tasks/${taskId}/events\x1b[0m`);
   console.log(`\x1b[2m  Type messages, they stream live. Ctrl+C to stop.\x1b[0m`);
   console.log();
 

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -16,7 +15,7 @@ from starlette.responses import Response
 
 from app.adapters.graph_store import InMemoryGraphStore
 from app.adapters.postgres_store import PostgresGraphStore, Base
-from app.config_loader import get_bool, get_float, get_str
+from app.config_loader import database_url, get_bool, get_float, get_str
 from app.routers import (
     agent,
     automation_usage,
@@ -77,10 +76,16 @@ from app.services import runtime_service
 _startup_logger = logging.getLogger("coherence.api.slow")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # -- L1: CORS production warning --
+def _startup_compat_row(node: dict) -> dict:
+    row = dict(node)
+    if row.get("legacy_id"):
+        row["id"] = row["legacy_id"]
+    return row
+
+
+def _warn_on_suspect_cors_config() -> None:
     from app.services.config_service import get_cors_origins, get_database_url
+
     _ao_list = get_cors_origins()
     _ao = _ao_list[0] if _ao_list else "http://localhost:3000"
     _db = get_database_url()
@@ -91,10 +96,12 @@ async def lifespan(app: FastAPI):
             "Set CORS origins in config to your production domain(s)."
         )
 
-    # -- Ensure all DB tables exist (non-destructive) --
+
+def _ensure_db_tables() -> None:
     try:
         from app.services.unified_models import Base as _UnifiedBase
         from app.services.unified_db import engine as _get_engine
+
         _eng = _get_engine()
         if _eng:
             _UnifiedBase.metadata.create_all(_eng, checkfirst=True)
@@ -102,15 +109,94 @@ async def lifespan(app: FastAPI):
     except Exception:
         _startup_logger.warning("DB table creation skipped", exc_info=True)
 
-    # -- Prime hot caches (migrated from @app.on_event('startup')) --
+
+def _list_graph_nodes(node_type: str, startup_errors: list[str], error_label: str) -> tuple[int, list[dict]]:
+    from app.services import graph_service as _gs
+
+    try:
+        result = _gs.list_nodes(type=node_type, limit=2000)
+        rows = [_startup_compat_row(n) for n in result.get("items", [])]
+        return len(rows), rows
+    except Exception:
+        _startup_logger.error("startup: %s graph_nodes unreadable", node_type, exc_info=True)
+        startup_errors.append(error_label)
+        return 0, []
+
+
+def _count_contribution_edges(startup_errors: list[str]) -> int:
+    try:
+        from app.models.graph import Edge
+        from app.services.unified_db import session as _sess
+
+        with _sess() as s:
+            return s.query(Edge).filter(Edge.type == "contribution").count()
+    except Exception:
+        _startup_logger.error("startup: contribution graph_edges unreadable", exc_info=True)
+        startup_errors.append("contributions_graph_unreadable")
+        return 0
+
+
+def _build_flow_items(
+    contributor_rows: list[dict],
+    contribution_rows: list[dict],
+    asset_rows: list[dict],
+) -> int:
+    from app.services import inventory_service
+
+    try:
+        flow_payload = inventory_service.build_spec_process_implementation_validation_flow(
+            runtime_window_seconds=86400,
+            contributor_rows=contributor_rows,
+            contribution_rows=contribution_rows,
+            asset_rows=asset_rows,
+            spec_registry_limit=200,
+            lineage_link_limit=300,
+            usage_event_limit=1200,
+            commit_evidence_limit=500,
+            runtime_event_limit=2000,
+        )
+        if not isinstance(flow_payload, dict):
+            return 0
+        return len(flow_payload.get("items", []))
+    except Exception:
+        _startup_logger.debug("api_startup_flow_cache_failed", exc_info=True)
+        return 0
+
+
+def _record_startup_friction_events(startup_errors: list[str]) -> None:
+    if not startup_errors:
+        return
+    try:
+        from app.models.friction import FrictionEvent as _FE
+        from app.services import friction_service as _fs
+
+        for err_label in startup_errors:
+            evt = _FE(
+                id=f"fric_{uuid4().hex[:12]}",
+                timestamp=datetime.now(timezone.utc),
+                stage="startup",
+                block_type="missing_table",
+                severity="high",
+                owner="api_startup",
+                unblock_condition=f"Ensure {err_label.replace('_', ' ')} exists; run DB migrations or restart.",
+                energy_loss_estimate=1.0,
+                cost_of_delay=0.0,
+                status="open",
+                notes=f"Startup detected: {err_label}",
+            )
+            _fs.append_event(evt)
+    except Exception:
+        _startup_logger.warning("Failed to record startup friction events", exc_info=True)
+
+
+def _warm_startup_caches() -> None:
     try:
         startup_begin = time.perf_counter()
         from app.services import (
             commit_evidence_service,
-            inventory_service,
             idea_service,
-            spec_registry_service,
             runtime_service as runtime_cache_service,
+            spec_registry_service,
         )
 
         idea_rows = idea_service.list_ideas().ideas
@@ -120,59 +206,19 @@ async def lifespan(app: FastAPI):
             limit=2000,
             since=datetime.now(timezone.utc) - timedelta(hours=24),
         )
-        from app.services import graph_service as _gs
-        contributor_rows = 0
-        contribution_rows = 0
-        asset_rows = 0
-        contributor_payload_rows: list[dict] = []
-        contribution_payload_rows: list[dict] = []
-        asset_payload_rows: list[dict] = []
         startup_errors: list[str] = []
-        def _compat_row(node: dict) -> dict:
-            row = dict(node)
-            if row.get("legacy_id"):
-                row["id"] = row["legacy_id"]
-            return row
-        try:
-            result = _gs.list_nodes(type="contributor", limit=2000)
-            contributor_payload_rows = [_compat_row(n) for n in result.get("items", [])]
-            contributor_rows = len(contributor_payload_rows)
-        except Exception:
-            _startup_logger.error("startup: contributor graph_nodes unreadable", exc_info=True)
-            startup_errors.append("contributors_graph_unreadable")
-        try:
-            result = _gs.list_nodes(type="asset", limit=2000)
-            asset_payload_rows = [_compat_row(n) for n in result.get("items", [])]
-            asset_rows = len(asset_payload_rows)
-        except Exception:
-            _startup_logger.error("startup: asset graph_nodes unreadable", exc_info=True)
-            startup_errors.append("assets_graph_unreadable")
-        try:
-            from app.models.graph import Edge
-            from app.services.unified_db import session as _sess
-            with _sess() as s:
-                contribution_rows = s.query(Edge).filter(Edge.type == "contribution").count()
-        except Exception:
-            _startup_logger.error("startup: contribution graph_edges unreadable", exc_info=True)
-            startup_errors.append("contributions_graph_unreadable")
-        try:
-            flow_payload = inventory_service.build_spec_process_implementation_validation_flow(
-                runtime_window_seconds=86400,
-                contributor_rows=contributor_payload_rows,
-                contribution_rows=contribution_payload_rows,
-                asset_rows=asset_payload_rows,
-                spec_registry_limit=200,
-                lineage_link_limit=300,
-                usage_event_limit=1200,
-                commit_evidence_limit=500,
-                runtime_event_limit=2000,
-            )
-            if not isinstance(flow_payload, dict):
-                flow_payload = {}
-            flow_items = len(flow_payload.get("items", []))
-        except Exception:
-            _startup_logger.debug("api_startup_flow_cache_failed", exc_info=True)
-            flow_items = 0
+        contributor_rows, contributor_payload_rows = _list_graph_nodes(
+            "contributor", startup_errors, "contributors_graph_unreadable"
+        )
+        asset_rows, asset_payload_rows = _list_graph_nodes(
+            "asset", startup_errors, "assets_graph_unreadable"
+        )
+        contribution_rows = _count_contribution_edges(startup_errors)
+        flow_items = _build_flow_items(
+            contributor_payload_rows,
+            [],
+            asset_payload_rows,
+        )
         startup_ms = (time.perf_counter() - startup_begin) * 1000.0
         _startup_logger.info(
             "api_startup_cache_warm elapsed_ms=%.2f idea_count=%s spec_count=%s evidence_count=%s runtime_events=%s contributors=%s contributions=%s assets=%s flow_items=%s",
@@ -186,39 +232,19 @@ async def lifespan(app: FastAPI):
             asset_rows,
             flow_items,
         )
-        # Record friction events for any DB table failures detected at startup
-        if startup_errors:
-            try:
-                from app.models.friction import FrictionEvent as _FE
-                from app.services import friction_service as _fs
-                for err_label in startup_errors:
-                    evt = _FE(
-                        id=f"fric_{uuid4().hex[:12]}",
-                        timestamp=datetime.now(timezone.utc),
-                        stage="startup",
-                        block_type="missing_table",
-                        severity="high",
-                        owner="api_startup",
-                        unblock_condition=f"Ensure {err_label.replace('_', ' ')} exists; run DB migrations or restart.",
-                        energy_loss_estimate=1.0,
-                        cost_of_delay=0.0,
-                        status="open",
-                        notes=f"Startup detected: {err_label}",
-                    )
-                    _fs.append_event(evt)
-            except Exception:
-                _startup_logger.warning("Failed to record startup friction events", exc_info=True)
+        _record_startup_friction_events(startup_errors)
     except Exception:
         _startup_logger.warning("api_startup_cache_warm_failed", exc_info=True)
 
-    # -- Service Registry: discover, register, and initialize contracts --
+
+async def _setup_service_registry(app: FastAPI) -> None:
     try:
         from app.services.service_registry import ServiceRegistry
-        from app.services.contracts.idea_contract import IdeaServiceContract
         from app.services.contracts.agent_contract import AgentServiceContract
-        from app.services.contracts.runtime_contract import RuntimeServiceContract
-        from app.services.contracts.inventory_contract import InventoryServiceContract
         from app.services.contracts.federation_contract import FederationServiceContract
+        from app.services.contracts.idea_contract import IdeaServiceContract
+        from app.services.contracts.inventory_contract import InventoryServiceContract
+        from app.services.contracts.runtime_contract import RuntimeServiceContract
 
         registry = ServiceRegistry()
         registry.register(IdeaServiceContract())
@@ -245,6 +271,13 @@ async def lifespan(app: FastAPI):
     except Exception:
         _startup_logger.warning("service_registry_setup_failed", exc_info=True)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _warn_on_suspect_cors_config()
+    _ensure_db_tables()
+    _warm_startup_caches()
+    await _setup_service_registry(app)
     yield
     # shutdown: nothing needed currently
 
@@ -295,18 +328,7 @@ logger.propagate = False
 logger.setLevel(logging.INFO)
 
 
-def _env_flag(name: str, default: bool = False) -> bool:
-    raw = os.getenv(name, "1" if default else "").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
-
-
 def _slow_request_ms_threshold() -> float:
-    raw = os.getenv("API_SLOW_REQUEST_MS")
-    if raw is not None:
-        try:
-            return max(25.0, float(raw.strip()))
-        except ValueError:
-            pass
     return max(25.0, get_float("api", "slow_request_ms", 1500.0))
 
 
@@ -362,8 +384,6 @@ def _client_identity(request) -> str:
 def _correlation_id(request) -> str:
     for key in (
         "x-request-id",
-        "x-vercel-id",
-        "x-railway-request-id",
         "x-amzn-trace-id",
         "cf-ray",
     ):
@@ -468,7 +488,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         request_id = None
-        for key in ("x-request-id", "x-vercel-id", "x-railway-request-id", "x-amzn-trace-id", "cf-ray"):
+        for key in ("x-request-id", "x-amzn-trace-id", "cf-ray"):
             value = request.headers.get(key)
             if value:
                 request_id = value
@@ -486,14 +506,14 @@ app.add_middleware(RequestIDMiddleware)
 app.add_middleware(RequestDurationMiddleware, threshold_seconds=1.0)
 app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
 
-# Initialize graph store based on environment
-if os.getenv("COHERENCE_ENV") == "test":
+# Initialize graph store based on config
+if get_bool("api", "testing", False) or get_str("server", "environment", "development") == "test":
     persist_path = get_str("storage", "graph_store_path", default=None)
     app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
 else:
-    database_url = os.getenv("DATABASE_URL")
-    if database_url:
-        app.state.graph_store = PostgresGraphStore(database_url)
+    configured_database_url = database_url()
+    if str(configured_database_url).lower().startswith("postgres"):
+        app.state.graph_store = PostgresGraphStore(configured_database_url)
     else:
         persist_path = get_str("storage", "graph_store_path", default=None)
         app.state.graph_store = InMemoryGraphStore(persist_path=persist_path)
@@ -645,7 +665,7 @@ async def capture_runtime_metrics(request: Request, call_next):
     if request_path in excluded_paths or raw_path in excluded_paths:
         should_capture = False
     slow_threshold_ms = _slow_request_ms_threshold()
-    log_all_requests = _env_flag("API_LOG_ALL_REQUESTS", False)
+    log_all_requests = get_bool("api", "log_all_requests", False)
     try:
         response = await call_next(request)
         status_code = response.status_code

@@ -45,9 +45,12 @@ def _database_url_from_env() -> str:
     return (os.getenv("AGENT_TASKS_DATABASE_URL") or os.getenv("DATABASE_URL") or "").strip()
 
 
-def _database_url_from_railway_fallback() -> str:
-    cmd = ["railway", "run", "printenv", "DATABASE_URL_RAILWAY_FALLBACK"]
-    return subprocess.check_output(cmd, cwd=REPO_ROOT, text=True).strip()
+def _database_url_from_fallback_env() -> str:
+    return (
+        os.getenv("AGENT_TASKS_DATABASE_URL_FALLBACK")
+        or os.getenv("DATABASE_URL_FALLBACK")
+        or ""
+    ).strip()
 
 
 def _table_exists(conn, table_name: str) -> bool:
@@ -73,9 +76,9 @@ def main() -> int:
     parser.add_argument("--task-type", type=str, default="test", help="Task type filter for targeted delete.")
     parser.add_argument("--database-url", type=str, default="", help="Explicit DB URL override.")
     parser.add_argument(
-        "--use-railway-fallback-url",
+        "--use-fallback-url",
         action="store_true",
-        help="Resolve DB URL via `railway run printenv DATABASE_URL_RAILWAY_FALLBACK`.",
+        help="Resolve DB URL via AGENT_TASKS_DATABASE_URL_FALLBACK or DATABASE_URL_FALLBACK.",
     )
     parser.add_argument(
         "--confirm-delete-all",
@@ -85,19 +88,19 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if args.database_url and args.use_railway_fallback_url:
-        print("Choose only one URL source: --database-url or --use-railway-fallback-url.")
+    if args.database_url and args.use_fallback_url:
+        print("Choose only one URL source: --database-url or --use-fallback-url.")
         return 2
 
     try:
         if args.database_url:
             database_url = args.database_url.strip()
-        elif args.use_railway_fallback_url:
-            database_url = _database_url_from_railway_fallback()
+        elif args.use_fallback_url:
+            database_url = _database_url_from_fallback_env()
         else:
             database_url = _database_url_from_env()
     except subprocess.CalledProcessError as exc:
-        print(f"Failed to resolve Railway fallback URL: {exc}")
+        print(f"Failed to resolve fallback DB URL: {exc}")
         return 2
 
     if not database_url:

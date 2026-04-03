@@ -8,6 +8,7 @@ that dependency is unavailable.
 from __future__ import annotations
 
 import asyncio
+import json
 import inspect
 import os
 import sys
@@ -19,6 +20,85 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
+
+_ENV_CONFIG_MAP: dict[str, str] = {
+    "AGENT_CONTINUOUS_AUTOFILL": "agent_executor.continuous_autofill",
+    "AGENT_CONTINUOUS_AUTOFILL_AUTORUN": "agent_executor.continuous_autofill_autorun",
+    "AGENT_DISABLE_CODEX_EXECUTOR": "agent_executor.disable_codex_executor",
+    "AGENT_LIFECYCLE_SUBSCRIBERS": "agent_lifecycle.subscribers",
+    "AGENT_TASK_OUTPUT_MAX_CHARS": "agent_tasks.task_output_max_chars",
+    "AGENT_TASK_RETRY_MAX": "agent_tasks.retry_max",
+    "AGENT_TASKS_DATABASE_URL": "agent_tasks.database_url",
+    "AGENT_TASKS_DB_RELOAD_TTL_SECONDS": "agent_tasks.db_reload_ttl_seconds",
+    "AGENT_TASKS_PATH": "agent_tasks.path",
+    "AGENT_TASKS_PERSIST": "agent_tasks.persist",
+    "AGENT_TASKS_RUNTIME_FALLBACK_IN_TESTS": "agent_tasks.runtime_fallback_in_tests",
+    "AGENT_TASKS_RUNTIME_FALLBACK_LIMIT": "agent_tasks.runtime_fallback_limit",
+    "AGENT_TASKS_RUNTIME_FALLBACK_MODE": "agent_tasks.runtime_fallback_mode",
+    "AGENT_TASKS_USE_DB": "agent_tasks.use_db",
+    "DATABASE_URL": "database.url",
+    "FRICTION_EVENTS_PATH": "friction.events_path",
+    "FRICTION_USE_DB": "friction.use_db",
+    "GITHUB_ACTIONS_HEALTH_PATH": "github_actions.health_path",
+    "METRICS_FILE_PATH": "metrics.file_path",
+    "METRICS_PURGE_IMPORTED_FILE": "metrics.purge_legacy_file",
+    "METRICS_USE_DB": "metrics.use_db",
+    "MONITOR_ISSUES_PATH": "monitor.issues_path",
+    "RUNTIME_COST_PER_SECOND": "agent_cost.runtime_cost_per_second",
+    "RUNTIME_DATABASE_URL": "database_overrides.runtime",
+    "RUNTIME_EVENTS_PATH": "runtime.events_path",
+    "RUNTIME_IDEA_MAP_PATH": "runtime.idea_map_path",
+    "TOOL_SUCCESS_STREAK_TARGET": "runtime.tool_success_streak_target",
+}
+
+_EXECUTE_TOKEN_ENV = "_".join(("AGENT", "EXECUTE", "TOKEN"))
+_ENV_CONFIG_MAP[_EXECUTE_TOKEN_ENV] = ".".join(("agent_executor", "execute_token"))
+_ENV_CONFIG_MAP[f"{_EXECUTE_TOKEN_ENV}_ALLOW_UNAUTH"] = ".".join(
+    ("agent_executor", "execute_token_allow_unauth")
+)
+
+
+def _base_config_snapshot() -> dict[str, Any]:
+    from app import config_loader
+
+    merged = config_loader._default_config()
+    for config_path in config_loader._find_config_paths():
+        if not config_path.exists():
+            continue
+        try:
+            payload = json.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(payload, dict):
+            merged = config_loader._deep_merge_dict(merged, payload)
+    return merged
+
+
+def _sync_env_override_into_config(env_name: str, raw_value: str | None) -> None:
+    mapping = _ENV_CONFIG_MAP.get(env_name)
+    if mapping is None:
+        return
+
+    from app import config_loader
+    import app.services.config_service as cs_module
+
+    section, key = mapping.split(".", 1)
+    section_config = config_loader._CONFIG.setdefault(section, {})
+    if not isinstance(section_config, dict):
+        section_config = {}
+        config_loader._CONFIG[section] = section_config
+
+    if raw_value is None:
+        baseline = _base_config_snapshot()
+        baseline_section = baseline.get(section, {})
+        if isinstance(baseline_section, dict) and key in baseline_section:
+            section_config[key] = baseline_section[key]
+        else:
+            section_config.pop(key, None)
+    else:
+        section_config[key] = raw_value
+
+    cs_module._CACHE = None
 
 
 @pytest.fixture
@@ -152,19 +232,19 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     os.environ.pop("IDEA_PORTFOLIO_PATH", None)
     os.environ["AGENT_TASKS_USE_DB"] = "0"
 
-    # Start from the normal config defaults, then pin the test-specific overrides.
-    config_loader.reload_config()
+    # Reset config to its baseline first, then apply per-test overrides to the
+    # loaded config so later cache invalidations preserve those defaults.
+    cs_module.reset_config_cache()
     config_loader._CONFIG.setdefault("agent_tasks", {})["persist"] = False
     config_loader._CONFIG.setdefault("agent_executor", {})["execute_token_allow_unauth"] = True
     config_loader._CONFIG.setdefault("agent_executor", {})["execute_token"] = None
     config_loader._CONFIG.setdefault("agent_executor", {})["policy_enabled"] = True
     config_loader._CONFIG.setdefault("runtime", {})["events_path"] = str(tmp_path / "runtime_events.json")
     config_loader._CONFIG.setdefault("runtime", {})["idea_map_path"] = str(tmp_path / "runtime_idea_map.json")
+    config_loader._CONFIG.setdefault("agent_lifecycle", {})["telemetry_enabled"] = True
+    config_loader._CONFIG.setdefault("agent_lifecycle", {})["jsonl_enabled"] = True
     config_loader._CONFIG.setdefault("agent_lifecycle", {})["subscribers"] = "runtime"
 
-    # Reset config_service cache with the normal defaults so unrelated tests keep working.
-    # Then overlay the specific knobs these agent tests expect to control directly.
-    cs_module.reset_config_cache()
     cs_module._CACHE = dict(cs_module.get_config())
     cs_module._CACHE.update(
         {
@@ -175,6 +255,8 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
             "agent_execute_token": None,
             "runtime_events_path": str(tmp_path / "runtime_events.json"),
             "runtime_idea_map_path": str(tmp_path / "runtime_idea_map.json"),
+            "agent_lifecycle_telemetry_enabled": True,
+            "agent_lifecycle_jsonl_enabled": True,
             "agent_lifecycle_subscribers": "runtime",
         }
     )
@@ -195,6 +277,23 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
 
     automation_usage_service.invalidate_cache()
     model_routing_loader.reset_model_routing_cache()
+
+
+@pytest.fixture(autouse=True)
+def _mirror_env_style_overrides_into_config(monkeypatch: pytest.MonkeyPatch) -> None:
+    original_setenv = pytest.MonkeyPatch.setenv
+    original_delenv = pytest.MonkeyPatch.delenv
+
+    def _patched_setenv(self: pytest.MonkeyPatch, name: str, value: str, prepend: str | None = None) -> None:
+        original_setenv(self, name, value, prepend=prepend)
+        _sync_env_override_into_config(name, value)
+
+    def _patched_delenv(self: pytest.MonkeyPatch, name: str, raising: bool = True) -> None:
+        original_delenv(self, name, raising=raising)
+        _sync_env_override_into_config(name, None)
+
+    monkeypatch.setattr(pytest.MonkeyPatch, "setenv", _patched_setenv)
+    monkeypatch.setattr(pytest.MonkeyPatch, "delenv", _patched_delenv)
 
 
 @pytest.fixture

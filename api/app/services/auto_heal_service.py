@@ -219,10 +219,69 @@ def maybe_create_heal_task(
     return heal_task
 
 
+def _coerce_int(value: Any) -> int:
+    try:
+        return max(0, int(value))
+    except Exception:
+        return 0
+
+
+def summarize_runner_gap(
+    *,
+    task_counts: dict[str, Any] | None,
+    runner_rows: list[dict[str, Any]] | None,
+    running_tasks: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Describe mismatches between running task state and the runner registry."""
+    counts = task_counts if isinstance(task_counts, dict) else {}
+    by_status = counts.get("by_status") if isinstance(counts.get("by_status"), dict) else {}
+    running_task_count = _coerce_int(by_status.get("running", counts.get("running", 0)))
+    runners = [row for row in (runner_rows or []) if isinstance(row, dict)]
+    online_runners = [row for row in runners if bool(row.get("online"))]
+    active_runners = [row for row in online_runners if str(row.get("status") or "").strip().lower() == "running"]
+
+    sampled_running_tasks = [
+        task
+        for task in (running_tasks or [])
+        if isinstance(task, dict) and str(task.get("status") or "").strip().lower() == "running"
+    ]
+    runner_task_ids = {
+        str(row.get("active_task_id") or "").strip()
+        for row in active_runners
+        if str(row.get("active_task_id") or "").strip()
+    }
+    sampled_orphaned_task_ids = [
+        str(task.get("id") or "").strip()
+        for task in sampled_running_tasks
+        if str(task.get("id") or "").strip() and str(task.get("id") or "").strip() not in runner_task_ids
+    ][:5]
+
+    open_gap = running_task_count > 0 and len(active_runners) == 0
+    severity = "high" if open_gap else "none"
+    summary = (
+        f"{running_task_count} running tasks but no active runners are registered."
+        if open_gap
+        else "No runner gap detected."
+    )
+    return {
+        "type": "runner_gap",
+        "open": open_gap,
+        "severity": severity,
+        "summary": summary,
+        "running_task_count": running_task_count,
+        "online_runner_count": len(online_runners),
+        "active_runner_count": len(active_runners),
+        "sampled_orphaned_task_ids": sampled_orphaned_task_ids,
+    }
+
+
 def compute_auto_heal_stats(
     all_failed_tasks: list[dict],
     *,
     store_path: Path | None = None,
+    task_counts: dict[str, Any] | None = None,
+    runner_rows: list[dict[str, Any]] | None = None,
+    running_tasks: list[dict[str, Any]] | None = None,
 ) -> dict:
     """Compute auto-heal statistics from heal records and failed tasks."""
     store = store_path or _default_store_path()
@@ -257,9 +316,17 @@ def compute_auto_heal_stats(
             "suppressed": max(0, f - h),
         }
 
+    runner_gap = summarize_runner_gap(
+        task_counts=task_counts,
+        runner_rows=runner_rows,
+        running_tasks=running_tasks,
+    )
+
     return {
         "total_failed": total_failed,
         "heals_created": heals_created,
         "heal_rate": round(heal_rate, 2),
         "by_category": by_category,
+        "runner_gap": runner_gap,
+        "operational_anomalies": [runner_gap] if runner_gap["open"] else [],
     }

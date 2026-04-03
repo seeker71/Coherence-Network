@@ -210,8 +210,8 @@ async def test_route_evidence_inventory_reports_api_and_web_coverage(
             {
                 "e2e_validation": {
                     "public_endpoints": [
-                        "https://coherence-network-production.up.railway.app/api/inventory/system-lineage",
-                        "https://coherence-web-production.up.railway.app/flow",
+                        "https://api.coherencycoin.com/api/inventory/system-lineage",
+                        "https://coherencycoin.com/flow",
                     ]
                 }
             }
@@ -455,8 +455,8 @@ async def test_flow_inventory_endpoint_tracks_spec_process_implementation_valida
             "status": "pass",
             "expected_behavior_delta": "Flow page and endpoint reflect end-to-end tracking.",
             "public_endpoints": [
-                "https://coherence-web-production.up.railway.app/flow",
-                "https://coherence-network-production.up.railway.app/api/inventory/flow",
+                "https://coherencycoin.com/flow",
+                "https://api.coherencycoin.com/api/inventory/flow",
             ],
             "test_flows": ["idea->spec->process->implementation->validation visible in UI and API"],
         },
@@ -636,7 +636,7 @@ async def test_endpoint_traceability_inventory_reports_coverage_and_gaps(
             "status": "pass",
             "expected_behavior_delta": "Endpoint coverage has explicit idea/spec/process traceability.",
             "public_endpoints": [
-                "https://coherence-network-production.up.railway.app/api/inventory/endpoint-traceability"
+                "https://api.coherencycoin.com/api/inventory/endpoint-traceability"
             ],
             "test_flows": ["api:/api/inventory/endpoint-traceability -> inspect summary and gaps"],
         },

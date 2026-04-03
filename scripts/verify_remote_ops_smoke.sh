@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-API_URL="${REMOTE_OPS_API_URL:-https://coherence-network-production.up.railway.app}"
-WEB_URL="${REMOTE_OPS_WEB_URL:-https://coherence-web-production.up.railway.app}"
+API_URL="${REMOTE_OPS_API_URL:-https://api.coherencycoin.com}"
+WEB_URL="${REMOTE_OPS_WEB_URL:-https://coherencycoin.com}"
 EXEC_TOKEN="${REMOTE_OPS_EXEC_TOKEN:-}"
 TASK_TYPE="${REMOTE_OPS_TASK_TYPE:-impl}"
 RUN_EXEC="${REMOTE_OPS_RUN_EXEC:-0}"

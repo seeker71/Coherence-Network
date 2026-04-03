@@ -4,14 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { LIVE_REFRESH_EVENT } from "@/lib/live_refresh";
+import { readPublicWebConfig } from "@/lib/public-config";
 
 const DEFAULT_POLL_MS = 120000;
 const MIN_POLL_MS = 30000;
 const VERSION_CHECK_INTERVAL_TICKS = 6;
 const DEFAULT_ROUTER_REFRESH_EVERY_TICKS = 8;
 const LIVE_UPDATES_STORAGE_KEY = "coherence_live_updates_enabled";
-const ROUTER_REFRESH_SKIP_PREFIXES = ["/automation"];
-const DEFAULT_ACTIVE_ROUTE_PREFIXES = ["/tasks", "/remote-ops", "/api-health", "/gates"];
 
 type WebVersionResponse = {
   web?: {
@@ -31,19 +30,19 @@ export default function LiveUpdatesController() {
   const webVersionRef = useRef<string>("");
   const changeTokenRef = useRef<string>("");
   const tickRef = useRef<number>(0);
-  const parsedPollMs = Number.parseInt(process.env.NEXT_PUBLIC_LIVE_UPDATES_POLL_MS ?? "", 10);
-  const pollMs = Number.isFinite(parsedPollMs) ? Math.max(MIN_POLL_MS, parsedPollMs) : DEFAULT_POLL_MS;
-  const parsedRefreshEveryTicks = Number.parseInt(process.env.NEXT_PUBLIC_LIVE_UPDATES_ROUTER_REFRESH_EVERY_TICKS ?? "", 10);
-  const routerRefreshEveryTicks = Number.isFinite(parsedRefreshEveryTicks)
-    ? Math.max(1, parsedRefreshEveryTicks)
-    : DEFAULT_ROUTER_REFRESH_EVERY_TICKS;
-  const pollEverywhere = process.env.NEXT_PUBLIC_LIVE_UPDATES_GLOBAL === "1";
+  const webConfig = readPublicWebConfig();
+  const pollMs = Math.max(MIN_POLL_MS, webConfig.liveUpdates.pollMs || DEFAULT_POLL_MS);
+  const routerRefreshEveryTicks = Math.max(
+    1,
+    webConfig.liveUpdates.routerRefreshEveryTicks || DEFAULT_ROUTER_REFRESH_EVERY_TICKS,
+  );
+  const pollEverywhere = Boolean(webConfig.liveUpdates.global);
   const isEligiblePath =
     pollEverywhere ||
-    DEFAULT_ACTIVE_ROUTE_PREFIXES.some((prefix) =>
+    webConfig.liveUpdates.activeRoutePrefixes.some((prefix) =>
       (pathname || "/").startsWith(prefix),
     );
-  const skipRouterRefresh = ROUTER_REFRESH_SKIP_PREFIXES.some((prefix) =>
+  const skipRouterRefresh = webConfig.liveUpdates.routerRefreshSkipPrefixes.some((prefix) =>
     (pathname || "/").startsWith(prefix)
   );
 

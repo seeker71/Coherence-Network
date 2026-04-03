@@ -26,8 +26,8 @@ import sys
 import threading
 import time
 import tempfile
-from datetime import datetime, timedelta, timezone
 import uuid
+from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import re
@@ -2736,144 +2736,25 @@ def _github_head_sha(client: httpx.Client, repo: str, branch: str, log: logging.
     return _normalize_sha(payload.get("sha"))
 
 
-def _railway_runner_commit_sha(client: httpx.Client, log: logging.Logger) -> tuple[str, str]:
-    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
-    env_id = str(os.environ.get("RAILWAY_ENVIRONMENT_ID") or os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
-    service_id = str(os.environ.get("RAILWAY_SERVICE_ID") or os.environ.get("RAILWAY_SERVICE") or "").strip()
-    if not token or not env_id or not service_id:
-        env_commit = _normalize_sha(
-            os.environ.get("RAILWAY_GIT_COMMIT_SHA")
-            or os.environ.get("AGENT_RUNNER_BUILD_SHA")
-            or os.environ.get("GIT_COMMIT_SHA")
-        )
-        return env_commit, ""
-    try:
-        uuid.UUID(env_id)
-        uuid.UUID(service_id)
-    except Exception:
-        log.warning(
-            "runner self-update: Railway IDs must be UUIDs (env=%r service=%r); skipping auto-redeploy check",
-            env_id,
-            service_id,
-        )
-        return "", ""
-
-    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
-    query = {
-        "query": (
-            "query RunnerDeployment($environmentId:String!, $serviceId:String!) { "
-            "serviceInstance(environmentId:$environmentId, serviceId:$serviceId) { "
-            "latestDeployment { id meta } } }"
-        ),
-        "variables": {"environmentId": env_id, "serviceId": service_id},
-    }
-    headers = {"Authorization": f"Bearer {token}"}
-    try:
-        response = client.post(railway_url, json=query, headers=headers, timeout=HTTP_TIMEOUT)
-    except Exception as exc:
-        log.warning("runner self-update: Railway deployment lookup failed: %s", exc)
-        return "", ""
-    if response.status_code != 200:
-        log.warning(
-            "runner self-update: Railway deployment lookup status=%s",
-            response.status_code,
-        )
-        return "", ""
-    try:
-        payload = response.json()
-    except Exception:
-        return "", ""
-    if not isinstance(payload, dict):
-        return "", ""
-    if payload.get("errors"):
-        log.warning("runner self-update: Railway deployment lookup errors=%s", str(payload.get("errors"))[:600])
-        return "", ""
-    service_instance = ((payload.get("data") or {}).get("serviceInstance") or {})
-    latest_deployment = (service_instance.get("latestDeployment") or {})
-    deployment_id = str(latest_deployment.get("id") or "").strip()
-    meta = latest_deployment.get("meta")
-    commit_sha = ""
-    if isinstance(meta, dict):
-        commit_sha = _normalize_sha(meta.get("commitHash"))
-    if not commit_sha:
-        commit_sha = _normalize_sha(
-            os.environ.get("RAILWAY_GIT_COMMIT_SHA")
-            or os.environ.get("AGENT_RUNNER_BUILD_SHA")
-            or os.environ.get("GIT_COMMIT_SHA")
-        )
-    return commit_sha, deployment_id
+def _hosted_runner_commit_sha(client: httpx.Client, log: logging.Logger) -> tuple[str, str]:
+    _ = client, log
+    env_commit = _normalize_sha(
+        os.environ.get("DEPLOYED_SHA")
+        or os.environ.get("AGENT_RUNNER_BUILD_SHA")
+        or os.environ.get("GIT_COMMIT_SHA")
+    )
+    deployment_id = str(os.environ.get("DEPLOYMENT_ID") or "").strip()
+    return env_commit, deployment_id
 
 
-def _trigger_railway_runner_redeploy(client: httpx.Client, log: logging.Logger) -> tuple[bool, str]:
-    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
-    env_id = str(os.environ.get("RAILWAY_ENVIRONMENT_ID") or os.environ.get("RAILWAY_ENVIRONMENT") or "").strip()
-    service_id = str(os.environ.get("RAILWAY_SERVICE_ID") or os.environ.get("RAILWAY_SERVICE") or "").strip()
-    if not token or not env_id or not service_id:
-        return False, "missing_railway_context"
-    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
-    mutation = {
-        "query": (
-            "mutation RunnerRedeploy($environmentId:String!, $serviceId:String!) { "
-            "serviceInstanceRedeploy(environmentId:$environmentId, serviceId:$serviceId) }"
-        ),
-        "variables": {"environmentId": env_id, "serviceId": service_id},
-    }
-    headers = {"Authorization": f"Bearer {token}"}
-    try:
-        response = client.post(railway_url, json=mutation, headers=headers, timeout=HTTP_TIMEOUT)
-    except Exception as exc:
-        return False, f"railway_request_failed:{exc}"
-    if response.status_code != 200:
-        return False, f"railway_status_{response.status_code}"
-    try:
-        payload = response.json()
-    except Exception:
-        return False, "railway_non_json_response"
-    if not isinstance(payload, dict):
-        return False, "railway_invalid_response"
-    if payload.get("errors"):
-        log.warning("runner self-update: Railway redeploy errors=%s", str(payload.get("errors"))[:800])
-        return False, "railway_graphql_errors"
-    data = payload.get("data") or {}
-    if not bool(data.get("serviceInstanceRedeploy")):
-        return False, "railway_redeploy_not_triggered"
-    return True, "redeploy_triggered"
+def _trigger_hosted_runner_redeploy(client: httpx.Client, log: logging.Logger) -> tuple[bool, str]:
+    _ = client, log
+    return False, "hosted_self_update_not_supported"
 
 
-def _trigger_railway_runner_rollback(client: httpx.Client, log: logging.Logger) -> tuple[bool, str]:
-    token = str(os.environ.get("RAILWAY_TOKEN", "")).strip()
-    if not token:
-        return False, "missing_railway_token"
-
-    _, deployment_id = _railway_runner_commit_sha(client, log)
-    if not deployment_id:
-        return False, "missing_current_deployment_id"
-
-    railway_url = os.environ.get("RAILWAY_GRAPHQL_URL", "https://backboard.railway.com/graphql/v2")
-    mutation = {
-        "query": "mutation Rollback($id:String!) { deploymentRollback(id:$id) }",
-        "variables": {"id": deployment_id},
-    }
-    headers = {"Authorization": f"Bearer {token}"}
-    try:
-        response = client.post(railway_url, json=mutation, headers=headers, timeout=HTTP_TIMEOUT)
-    except Exception as exc:
-        return False, f"railway_request_failed:{exc}"
-    if response.status_code != 200:
-        return False, f"railway_status_{response.status_code}"
-    try:
-        payload = response.json()
-    except Exception:
-        return False, "railway_non_json_response"
-    if not isinstance(payload, dict):
-        return False, "railway_invalid_response"
-    if payload.get("errors"):
-        log.warning("runner rollback: Railway rollback errors=%s", str(payload.get("errors"))[:800])
-        return False, "railway_graphql_errors"
-    data = payload.get("data") or {}
-    if not bool(data.get("deploymentRollback")):
-        return False, "railway_rollback_not_triggered"
-    return True, deployment_id
+def _trigger_hosted_runner_rollback(client: httpx.Client, log: logging.Logger) -> tuple[bool, str]:
+    _ = client, log
+    return False, "hosted_rollback_not_supported"
 
 
 def _maybe_trigger_runner_rollback(
@@ -2891,7 +2772,7 @@ def _maybe_trigger_runner_rollback(
             return
         ROLLBACK_LAST_AT = now
 
-    ok, detail = _trigger_railway_runner_rollback(client, log)
+    ok, detail = _trigger_hosted_runner_rollback(client, log)
     worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
     if not ok:
         log.warning(
@@ -2944,11 +2825,11 @@ def _maybe_trigger_runner_self_update(
     if not latest_main_sha:
         return
 
-    current_sha, deployment_id = _railway_runner_commit_sha(client, log)
+    current_sha, deployment_id = _hosted_runner_commit_sha(client, log)
     if not current_sha:
         log.info(
             "runner self-update: current deployment commit unavailable; "
-            "set Railway context vars for commit-aware redeploy checks"
+            "set hosted deploy commit vars for commit-aware restart checks"
         )
         return
 
@@ -2959,7 +2840,7 @@ def _maybe_trigger_runner_self_update(
         if SELF_UPDATE_LAST_TRIGGER_SHA == latest_main_sha:
             return
 
-    ok, reason = _trigger_railway_runner_redeploy(client, log)
+    ok, reason = _trigger_hosted_runner_redeploy(client, log)
     if not ok:
         log.warning(
             "runner self-update: redeploy failed task=%s current=%s latest=%s reason=%s",
@@ -2990,7 +2871,7 @@ def _maybe_trigger_runner_self_update(
         },
     )
     log.warning(
-        "runner self-update: triggered Railway redeploy task=%s current=%s latest=%s deployment=%s",
+        "runner self-update: triggered hosted redeploy task=%s current=%s latest=%s deployment=%s",
         last_task_id or "-",
         current_sha[:12],
         latest_main_sha[:12],

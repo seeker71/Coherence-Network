@@ -1,0 +1,65 @@
+name: Hostinger Auto Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'web/**'
+      - 'deploy/hostinger/**'
+      - 'scripts/verify_web_api_deploy.sh'
+      - '.github/workflows/hostinger-auto-deploy.yml'
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit SHA to deploy (defaults to the triggering SHA)"
+        required: false
+        type: string
+
+concurrency:
+  group: hostinger-auto-deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy-hostinger:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HOSTINGER_SSH_HOST: ${{ vars.HOSTINGER_SSH_HOST || 'root@187.77.152.42' }}
+      HOSTINGER_DEPLOY_PATH: ${{ vars.HOSTINGER_DEPLOY_PATH || '/docker/coherence-network' }}
+      PUBLIC_DEPLOY_API_BASE: ${{ vars.PUBLIC_DEPLOY_API_BASE || 'https://api.coherencycoin.com' }}
+      PUBLIC_DEPLOY_WEB_BASE: ${{ vars.PUBLIC_DEPLOY_WEB_BASE || 'https://coherencycoin.com' }}
+      TARGET_SHA: ${{ github.event.inputs.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Configure SSH
+        env:
+          HOSTINGER_SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+        run: |
+          test -n "$HOSTINGER_SSH_KEY"
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$HOSTINGER_SSH_KEY" > ~/.ssh/id_hostinger
+          chmod 600 ~/.ssh/id_hostinger
+          ssh-keyscan -H "${HOSTINGER_SSH_HOST#*@}" >> ~/.ssh/known_hosts
+
+      - name: Sync tracked deploy script to VPS
+        run: |
+          scp -i ~/.ssh/id_hostinger deploy/hostinger/auto-deploy.sh "${HOSTINGER_SSH_HOST}:${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh"
+          ssh -i ~/.ssh/id_hostinger "${HOSTINGER_SSH_HOST}" "chmod +x ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh"
+
+      - name: Roll forward VPS
+        run: |
+          ssh -i ~/.ssh/id_hostinger "${HOSTINGER_SSH_HOST}" \
+            "COMPOSE_ROOT=${HOSTINGER_DEPLOY_PATH} REPO_DIR=${HOSTINGER_DEPLOY_PATH}/repo BRANCH=main ${HOSTINGER_DEPLOY_PATH}/auto-deploy.sh ${TARGET_SHA}"
+
+      - name: Verify public deployment
+        run: |
+          ./scripts/verify_web_api_deploy.sh "${PUBLIC_DEPLOY_API_BASE}" "${PUBLIC_DEPLOY_WEB_BASE}"

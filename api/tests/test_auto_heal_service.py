@@ -224,3 +224,29 @@ def test_auto_heal_stats_exact_values(tmp_path) -> None:
     assert by_cat["timeout"] == {"failed": 1, "healed": 1, "suppressed": 0}
     assert by_cat["executor_crash"] == {"failed": 1, "healed": 1, "suppressed": 0}
     assert by_cat["unknown"] == {"failed": 1, "healed": 0, "suppressed": 1}
+    assert stats["runner_gap"]["open"] is False
+    assert stats["operational_anomalies"] == []
+
+
+def test_summarize_runner_gap_flags_orphaned_running_tasks() -> None:
+    from app.services.auto_heal_service import summarize_runner_gap
+
+    gap = summarize_runner_gap(
+        task_counts={"total": 3, "by_status": {"running": 2}},
+        runner_rows=[],
+        running_tasks=[
+            {"id": "task-a", "status": "running"},
+            {"id": "task-b", "status": "running"},
+        ],
+    )
+
+    assert gap == {
+        "type": "runner_gap",
+        "open": True,
+        "severity": "high",
+        "summary": "2 running tasks but no active runners are registered.",
+        "running_task_count": 2,
+        "online_runner_count": 0,
+        "active_runner_count": 0,
+        "sampled_orphaned_task_ids": ["task-a", "task-b"],
+    }

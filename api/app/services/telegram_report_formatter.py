@@ -25,7 +25,7 @@ def now_utc_label() -> str:
 def format_help_reply() -> str:
     return (
         "Commands: /status, /tasks [status], /task {id}, /reply {id} {decision}, "
-        "/attention, /usage, /direction \"...\", /railway ..., or just type your direction"
+        "/attention, /usage, /direction \"...\", /deploy ..., or just type your direction"
     )
 
 

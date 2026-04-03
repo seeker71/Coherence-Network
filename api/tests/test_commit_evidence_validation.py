@@ -73,7 +73,7 @@ def test_validate_commit_evidence_fails_when_runtime_intent_has_no_runtime_chang
     payload["e2e_validation"] = {
         "status": "pending",
         "expected_behavior_delta": "New endpoint returns enriched runtime data.",
-        "public_endpoints": ["https://coherence-network-production.up.railway.app/api/inventory/system-lineage"],
+        "public_endpoints": ["https://api.coherencycoin.com/api/inventory/system-lineage"],
         "test_flows": ["portfolio-load->api-summary->roi-render"],
     }
     evidence = tmp_path / "commit_evidence_runtime_missing_runtime_files.json"

@@ -9,22 +9,16 @@ from __future__ import annotations
 import threading
 from typing import Any, Callable
 
+from app.config_loader import get_bool
 from app.services import agent_execution_service as execution_service
 
 
-def _continuous_flag(env_name: str) -> bool:
-    configured = execution_service.os.getenv(env_name)
-    if configured is not None and str(configured).strip():
-        return execution_service._truthy(str(configured))
-    return bool(str(execution_service.os.getenv("RAILWAY_ENVIRONMENT") or "").strip())
-
-
 def _continuous_autofill_enabled() -> bool:
-    return _continuous_flag("AGENT_CONTINUOUS_AUTOFILL")
+    return get_bool("agent_executor", "continuous_autofill", False)
 
 
 def _continuous_autofill_autorun_enabled() -> bool:
-    return _continuous_flag("AGENT_CONTINUOUS_AUTOFILL_AUTORUN")
+    return get_bool("agent_executor", "continuous_autofill_autorun", False)
 
 
 def _open_task_count() -> int:

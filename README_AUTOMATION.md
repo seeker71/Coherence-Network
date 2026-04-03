@@ -4,8 +4,8 @@ Automation now targets managed hosting and avoids VM-specific provisioning.
 
 ## Hosting baseline
 
-- API: Railway
-- Web: Vercel
+- API: Hostinger
+- Web: Hostinger
 - PostgreSQL: Neon/Supabase
 - Neo4j: AuraDB Free
 - Optional DNS/WAF: Cloudflare

@@ -28,7 +28,7 @@ def test_status_rollup_all_green_accepts_success_rows() -> None:
             },
             {
                 "__typename": "StatusContext",
-                "context": "Vercel",
+                "context": "public-web",
                 "state": "SUCCESS",
             },
         ]

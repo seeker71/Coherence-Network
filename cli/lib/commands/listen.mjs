@@ -10,9 +10,7 @@
  */
 
 import { hostname } from "node:os";
-import { get } from "../api.mjs";
-
-const API_BASE = process.env.COHERENCE_API_URL || "https://api.coherencycoin.com";
+import { get, getApiBase } from "../api.mjs";
 
 export async function listen(args) {
   // Resolve our node ID
@@ -25,7 +23,7 @@ export async function listen(args) {
     return;
   }
 
-  const url = `${API_BASE}/api/federation/nodes/${nodeId}/stream`;
+  const url = `${getApiBase()}/api/federation/nodes/${nodeId}/stream`;
 
   console.log("\x1b[1m  LISTENING\x1b[0m");
   console.log(`  ${"─".repeat(50)}`);
