@@ -1,7 +1,7 @@
 {
   "name": "coherence-cli",
   "version": "0.11.0",
-  "description": "Coherence Network CLI \u2014 trace ideas from inception to payout, with fair attribution, coherence scoring, and 37 identity providers. No signup needed.",
+  "description": "Coherence Network CLI — trace ideas from inception to payout, with fair attribution, coherence scoring, and 37 identity providers. No signup needed.",
   "type": "module",
   "bin": {
     "cc": "bin/cc.mjs",
@@ -46,5 +46,12 @@
   "bugs": {
     "url": "https://github.com/seeker71/Coherence-Network/issues"
   },
-  "author": "Coherence Network Contributors"
+  "author": "Coherence Network Contributors",
+  "dependencies": {
+    "boxen": "^8.0.1",
+    "chalk": "^5.6.2",
+    "cli-table3": "^0.6.5",
+    "inquirer": "^13.3.2",
+    "ora": "^9.3.0"
+  }
 }

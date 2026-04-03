@@ -103,6 +103,7 @@ export function getHubUrl() {
 }
 
 const KEYS_FILE = join(CONFIG_DIR, "keys.json");
+const CONTEXT_FILE = join(CONFIG_DIR, "context.json");
 
 export function loadKeys() {
   try {
@@ -117,6 +118,29 @@ export function saveKeys(updates) {
   ensureConfigDir();
   writeFileSync(KEYS_FILE, JSON.stringify(keys, null, 2) + "\n", { mode: 0o600 });
   return keys;
+}
+
+export function loadContext() {
+  try {
+    return JSON.parse(readFileSync(CONTEXT_FILE, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+export function saveContext(updates) {
+  const context = { ...loadContext(), ...updates };
+  ensureConfigDir();
+  writeFileSync(CONTEXT_FILE, JSON.stringify(context, null, 2) + "\n");
+  return context;
+}
+
+export function getFocus() {
+  const context = loadContext();
+  return {
+    idea_id: context.focused_idea_id || null,
+    task_id: context.focused_task_id || null
+  };
 }
 
 export function getApiKey() {

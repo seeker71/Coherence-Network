@@ -22,8 +22,12 @@
 
 import { get, post, patch, put } from "../api.mjs";
 import { ensureIdentity } from "../identity.mjs";
+import { getFocus } from "../config.mjs";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+import chalk from "chalk";
+import inquirer from "inquirer";
+import ora from "ora";
 
 /** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
@@ -41,6 +45,13 @@ function miniBar(value, max, width = 5) {
 }
 
 export async function listIdeas(args) {
+  const isTTY = process.stdout.isTTY;
+
+  // Interactive picker if no args and TTY
+  if (isTTY && args.length === 0) {
+    return runInteractivePicker();
+  }
+
   // Parse flags: --type <work_type>, --status <none|partial|validated>, --parent <id>, --limit N
   const flags = {};
   const positional = [];
@@ -90,10 +101,56 @@ export async function listIdeas(args) {
   console.log();
 }
 
+async function runInteractivePicker() {
+  const spinner = ora(chalk.cyan("Loading ideas...")).start();
+  const raw = await get("/api/ideas", { limit: 100 });
+  spinner.stop();
+
+  let data = Array.isArray(raw) ? raw : raw?.ideas;
+  if (!data || !Array.isArray(data)) {
+    console.log(chalk.red("✗ Could not fetch ideas."));
+    return;
+  }
+
+  const choices = data.map(i => {
+    const status = i.manifestation_status || "none";
+    const statusColor = status === "validated" ? chalk.green : status === "partial" ? chalk.yellow : chalk.dim;
+    return {
+      name: `${truncate(i.name || i.id, 45).padEnd(47)} ${chalk.cyan(i.work_type || "—").padEnd(12)} ${statusColor(status)}`,
+      value: i.id
+    };
+  });
+
+  const { idea_id } = await inquirer.prompt([
+    {
+      type: "list",
+      name: "idea_id",
+      message: "Select an idea to view details:",
+      choices,
+      pageSize: 15
+    }
+  ]);
+
+  if (idea_id) {
+    return showIdea([idea_id]);
+  }
+}
+
 export async function showIdea(args) {
   // Route subcommands: cc idea <id> <subcommand>
-  const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> [tasks|translate|children|...]"); return; }
+  let id = args[0];
+  const focus = getFocus();
+
+  if (!id && focus.idea_id) {
+    id = focus.idea_id;
+    console.log(chalk.dim(`(Using focused idea: ${chalk.bold(id)})`));
+  }
+
+  if (!id) {
+    console.log("Usage: cc idea <id> [tasks|translate|children|...]");
+    console.log(chalk.dim("Hint: Use 'cc focus' to pick an idea once and skip the ID."));
+    return;
+  }
 
   const sub = args[1];
   // Subcommand routing
