@@ -203,6 +203,17 @@ async def get_task_count() -> dict:
     return agent_service.get_task_count()
 
 
+@router.get("/skills")
+async def list_skills(limit: int = Query(50, ge=1, le=200)) -> dict:
+    """Return all procedural skills ingested via the Hermes Learning Loop."""
+    from app.services import graph_service
+    result = graph_service.list_nodes(type="skill", limit=limit)
+    return {
+        "skills": result.get("items", []),
+        "total": result.get("total", 0)
+    }
+
+
 @router.get(
     "/tasks/{task_id}",
     responses={404: {"description": "Task not found", "model": ErrorDetail}},
@@ -357,6 +368,46 @@ async def update_task(
         except Exception:
             logger.warning("Auto-retry failed for task %s", task_id, exc_info=True)
     if data.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.TIMED_OUT):
+        # Hermes Learning Loop: Ingest Skill Document from COMPLETED reflect tasks
+        if data.status == TaskStatus.COMPLETED and str(task.get("task_type", "")).lower() == "reflect":
+            try:
+                import re
+                output = (data.output or "").strip()
+                skill_match = re.search(r'SKILL_JSON=(\{.*?\})', output, re.DOTALL)
+                if skill_match:
+                    skill_data = json.loads(skill_match.group(1))
+                    from app.services import graph_service
+                    
+                    idea_id = (task.get("context") or {}).get("idea_id", "")
+                    contributor_id = task.get("claimed_by", "anonymous")
+                    
+                    # Create the Skill Node
+                    skill_id = f"skill:{task_id[:16]}"
+                    graph_service.upsert_node(
+                        node_id=skill_id,
+                        type="skill",
+                        name=skill_data.get("name", f"Skill from {task_id[:8]}"),
+                        description=output, # The full Markdown document
+                        properties={
+                            **skill_data,
+                            "source_task_id": task_id,
+                            "source_idea_id": idea_id,
+                            "contributor_id": contributor_id,
+                        }
+                    )
+                    
+                    # Link Skill to Idea (Skill REALIZES Idea)
+                    if idea_id:
+                        graph_service.create_edge(from_id=skill_id, to_id=idea_id, type="realizes")
+                    
+                    # Link Contributor to Skill (Contributor ENABLES Skill)
+                    if contributor_id:
+                        graph_service.create_edge(from_id=f"contributor:{contributor_id}", to_id=skill_id, type="enables")
+                        
+                    logger.info("HERMES_LEARNING_LOOP: Ingested skill %s from task %s", skill_id, task_id)
+            except Exception:
+                logger.warning("HERMES_LEARNING_LOOP failed for task %s", task_id, exc_info=True)
+
         try:
             from app.services.metrics_service import record_task
 

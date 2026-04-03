@@ -121,7 +121,8 @@ _NEXT_PHASE: dict[str, str | None] = {
     "test": "code-review",
     "code-review": "deploy",          # R1: code-review → deploy (Spec 159)
     "deploy": "verify-production",    # R1: deploy → verify-production (Spec 159)
-    "verify-production": None,        # R1: terminal — triggers validated status (Spec 159)
+    "verify-production": "reflect",   # Hermes Learning Loop: verify → reflect
+    "reflect": None,                  # Terminal learning phase
     "review": None,                   # backward compat: legacy dead-end
     "verify": None,                   # backward compat
     "heal": None,
@@ -143,6 +144,7 @@ _PHASE_TASK_TYPE: dict[str, TaskType] = {
     "code-review": TaskType.CODE_REVIEW,
     "deploy": TaskType.DEPLOY,           # R1: deploy phase task type
     "verify-production": TaskType.VERIFY, # R1: verify-production phase task type
+    "reflect": TaskType.REFLECT,         # Hermes Learning Loop: reflect phase task type
 }
 
 # Minimum output length to consider a task genuinely completed.
@@ -155,6 +157,7 @@ _MIN_OUTPUT_CHARS: dict[str, int] = {
     "deploy": 50,            # Health check output
     "verify-production": 50, # curl scenario output
     "verify": 50,            # alias for verify-production (TaskType.VERIFY.value)
+    "reflect": 100,          # A real reflection must summarize lessons learned
 }
 
 # Pass-gate tokens: if the completed task output does NOT contain this token,
@@ -511,6 +514,21 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             f"If ALL scenarios pass: output VERIFY_PASSED: <summary of results>.\n"
             f"If ANY scenario fails (404/500/wrong data): output VERIFY_FAILED: <failing scenario + output>.\n"
             f"No retries — if verify fails, it is a live incident.\n"
+        )
+    elif next_phase == "reflect":
+        # Hermes Learning Loop: synthesize success into a Skill Document
+        direction = (
+            f"Reflect on the successful implementation of '{idea_name}' ({idea_id}).\n\n"
+            f"Synthesize the experience into a standardized 'Skill Document' (agentskills.io format).\n"
+            f"This will become a permanent procedural memory for the network.\n\n"
+            f"Include:\n"
+            f"1. Core problem solved\n"
+            f"2. Key technical decisions and why they were made\n"
+            f"3. Common pitfalls encountered during implementation/testing\n"
+            f"4. Reusable procedural steps for similar future tasks\n"
+            f"5. A 'Skill JSON' block for automated graph ingestion:\n"
+            f"   SKILL_JSON={{ \"name\": \"{idea_name} implementation\", \"tags\": [\"reusable-pattern\"], \"complexity\": \"...\" }}\n\n"
+            f"Output: The full Skill Document in Markdown format."
         )
     else:
         direction = f"Execute '{next_phase}' phase for '{idea_name}' ({idea_id})."
