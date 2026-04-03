@@ -209,8 +209,8 @@ def _ensure_job_defaults(
         "job_id": uuid.uuid4().hex[:16],
         "repository": repository.strip() or "seeker71/Coherence-Network",
         "branch": branch.strip() or "main",
-        "api_base": api_base.strip() or "https://coherence-network-production.up.railway.app",
-        "web_base": web_base.strip() or "https://coherence-web-production.up.railway.app",
+        "api_base": api_base.strip() or "https://api.coherencycoin.com",
+        "web_base": web_base.strip() or "https://coherencycoin.com",
         "expected_sha": (expected_sha or "").strip() or None,
         "timeout": max(1.0, float(timeout)),
         "poll_seconds": max(1.0, float(poll_seconds)),
@@ -231,8 +231,8 @@ def create_public_deploy_verification_job(
     *,
     repository: str = "seeker71/Coherence-Network",
     branch: str = "main",
-    api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-web-production.up.railway.app",
+    api_base: str = "https://api.coherencycoin.com",
+    web_base: str = "https://coherencycoin.com",
     expected_sha: str | None = None,
     max_attempts: int | None = None,
     timeout: float = 8.0,
@@ -303,8 +303,8 @@ def _run_public_deploy_verification_report(job: dict[str, Any], github_token: st
     return evaluate_public_deploy_contract_report(
         repository=str(job.get("repository") or "seeker71/Coherence-Network"),
         branch=str(job.get("branch") or "main"),
-        api_base=str(job.get("api_base") or "https://coherence-network-production.up.railway.app"),
-        web_base=str(job.get("web_base") or "https://coherence-web-production.up.railway.app"),
+        api_base=str(job.get("api_base") or "https://api.coherencycoin.com"),
+        web_base=str(job.get("web_base") or "https://coherencycoin.com"),
         expected_sha=(str(job.get("expected_sha") or "") or None),
         timeout=float(job.get("timeout") or 8.0),
         github_token=_github_token_fallback(github_token),
@@ -942,7 +942,7 @@ def check_api_execute_paid_override_header_support(api_base: str, timeout: float
     base = api_base.rstrip("/")
     openapi_url = f"{base}/openapi.json"
     report = check_http_json_endpoint(openapi_url, timeout=timeout)
-    report["name"] = "railway_api_execute_paid_override_header"
+    report["name"] = "public_api_execute_paid_override_header"
 
     if not report.get("ok") or not isinstance(report.get("json"), dict):
         report["ok"] = False
@@ -1208,8 +1208,8 @@ def evaluate_pr_to_public_report(
     repository: str,
     branch: str,
     base: str = "main",
-    api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-web-production.up.railway.app",
+    api_base: str = "https://api.coherencycoin.com",
+    web_base: str = "https://coherencycoin.com",
     wait_public: bool = False,
     timeout_seconds: int = 1200,
     poll_seconds: int = 30,
@@ -1304,8 +1304,8 @@ def _resolve_public_validation_for_merged_contract(
 def evaluate_merged_change_contract_report(
     repository: str,
     sha: str,
-    api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-web-production.up.railway.app",
+    api_base: str = "https://api.coherencycoin.com",
+    web_base: str = "https://coherencycoin.com",
     timeout_seconds: int = 1200,
     poll_seconds: int = 30,
     endpoint_urls: list[str] | None = None,
@@ -1393,8 +1393,8 @@ def evaluate_merged_change_contract_report(
 def evaluate_public_deploy_contract_report(
     repository: str = "seeker71/Coherence-Network",
     branch: str = "main",
-    api_base: str = "https://coherence-network-production.up.railway.app",
-    web_base: str = "https://coherence-web-production.up.railway.app",
+    api_base: str = "https://api.coherencycoin.com",
+    web_base: str = "https://coherencycoin.com",
     expected_sha: str | None = None,
     timeout: float = 8.0,
     github_token: str | None = None,
@@ -1426,7 +1426,7 @@ def evaluate_public_deploy_contract_report(
 
     api_health_url = f"{report['api_base']}/api/health"
     api_health = check_http_json_endpoint(api_health_url, timeout=timeout)
-    api_health["name"] = "railway_health"
+    api_health["name"] = "public_api_health"
     api_health["required_sha"] = require_api_health_sha
     if api_health.get("ok") and isinstance(api_health.get("json"), dict):
         health_payload = api_health["json"]
@@ -1448,7 +1448,7 @@ def evaluate_public_deploy_contract_report(
 
     api_gates_head_url = f"{report['api_base']}/api/gates/main-head"
     api_gates_head = check_http_json_endpoint(api_gates_head_url, timeout=timeout)
-    api_gates_head["name"] = "railway_gates_main_head"
+    api_gates_head["name"] = "public_gates_main_head"
     if api_gates_head.get("ok") and isinstance(api_gates_head.get("json"), dict):
         observed_sha = api_gates_head["json"].get("sha")
         api_gates_head["observed_sha"] = observed_sha
@@ -1458,12 +1458,12 @@ def evaluate_public_deploy_contract_report(
 
     web_gates_url = f"{report['web_base']}/gates"
     web_gates = check_http_endpoint(web_gates_url, timeout=timeout)
-    web_gates["name"] = "railway_web_gates_page"
+    web_gates["name"] = "public_web_gates_page"
     checks.append(web_gates)
 
     web_proxy_url = f"{report['web_base']}/api/health-proxy"
     web_proxy = check_http_json_endpoint(web_proxy_url, timeout=timeout)
-    web_proxy["name"] = "railway_web_health_proxy"
+    web_proxy["name"] = "public_web_health_proxy"
     web_proxy["required_sha"] = require_web_health_proxy_sha
     if web_proxy.get("ok") and isinstance(web_proxy.get("json"), dict):
         payload = web_proxy["json"]
@@ -1493,7 +1493,7 @@ def evaluate_public_deploy_contract_report(
 
     telegram_diag_url = f"{report['api_base']}/api/agent/telegram/diagnostics"
     telegram_diag = check_http_json_endpoint(telegram_diag_url, timeout=timeout)
-    telegram_diag["name"] = "railway_telegram_alert_config"
+    telegram_diag["name"] = "public_telegram_alert_config"
     telegram_diag["required"] = require_telegram_alerts
     telegram_diag["configured"] = False
     if telegram_diag.get("ok") and isinstance(telegram_diag.get("json"), dict):
@@ -1515,7 +1515,7 @@ def evaluate_public_deploy_contract_report(
     checks.append(telegram_diag)
 
     value_lineage_e2e = check_value_lineage_e2e_flow(report["api_base"], timeout=timeout)
-    value_lineage_e2e["name"] = "railway_value_lineage_e2e"
+    value_lineage_e2e["name"] = "public_value_lineage_e2e"
     checks.append(value_lineage_e2e)
 
     paid_override_header_check = check_api_execute_paid_override_header_support(report["api_base"], timeout=timeout)
@@ -1523,7 +1523,7 @@ def evaluate_public_deploy_contract_report(
 
     provider_readiness_url = f"{report['api_base']}/api/automation/usage/readiness"
     provider_readiness = check_http_json_endpoint(provider_readiness_url, timeout=timeout)
-    provider_readiness["name"] = "railway_provider_readiness"
+    provider_readiness["name"] = "public_provider_readiness"
     provider_readiness["required"] = require_provider_readiness
     if provider_readiness.get("ok") and isinstance(provider_readiness.get("json"), dict):
         payload = provider_readiness["json"]
@@ -1550,34 +1550,34 @@ def evaluate_public_deploy_contract_report(
     for check in checks:
         name = check.get("name")
         if check.get("ok"):
-            if name == "railway_health":
+            if name == "public_api_health":
                 observed_raw = str(check.get("observed_sha") or "").strip().lower()
                 if (
                     not require_api_health_sha
                     and observed_raw in {"", "unknown", "none", "n/a"}
                 ):
-                    warnings.append("railway_health_unknown_sha")
-            if name == "railway_web_health_proxy":
+                    warnings.append("public_api_health_unknown_sha")
+            if name == "public_web_health_proxy":
                 observed_raw = str(check.get("observed_sha") or "").strip().lower()
                 if (
                     not require_web_health_proxy_sha
                     and observed_raw in {"", "unknown", "none", "n/a"}
                 ):
-                    warnings.append("railway_web_health_proxy_unknown_sha")
+                    warnings.append("public_web_health_proxy_unknown_sha")
             if (
-                name == "railway_provider_readiness"
+                name == "public_provider_readiness"
                 and not require_provider_readiness
                 and check.get("all_required_ready") is False
             ):
-                warnings.append("railway_provider_readiness_blocked")
+                warnings.append("public_provider_readiness_blocked")
             if (
-                name == "railway_telegram_alert_config"
+                name == "public_telegram_alert_config"
                 and not require_telegram_alerts
                 and not bool(check.get("configured"))
             ):
-                warnings.append("railway_telegram_alert_not_configured")
+                warnings.append("public_telegram_alert_not_configured")
             continue
-        if name == "railway_web_health_proxy":
+        if name == "public_web_health_proxy":
             observed_raw = str(check.get("observed_sha") or "").strip().lower()
             if (
                 not require_web_health_proxy_sha
@@ -1586,10 +1586,10 @@ def evaluate_public_deploy_contract_report(
                 and bool(check.get("api_ok"))
                 and observed_raw in {"", "unknown", "none", "n/a"}
             ):
-                warnings.append("railway_web_health_proxy_unknown_sha")
+                warnings.append("public_web_health_proxy_unknown_sha")
                 continue
         if (
-            name == "railway_gates_main_head"
+            name == "public_gates_main_head"
             and (
                 check.get("status_code") in {401, 403, 502}
                 or (
@@ -1599,15 +1599,15 @@ def evaluate_public_deploy_contract_report(
                 )
             )
         ):
-            warnings.append("railway_gates_main_head_unavailable")
+            warnings.append("public_gates_main_head_unavailable")
             continue
-        if name == "railway_health":
+        if name == "public_api_health":
             observed_raw = str(check.get("observed_sha") or "").strip().lower()
             if not require_api_health_sha and observed_raw in {"", "unknown", "none", "n/a"}:
-                warnings.append("railway_health_unknown_sha")
+                warnings.append("public_api_health_unknown_sha")
                 continue
-        if name == "railway_provider_readiness" and not require_provider_readiness:
-            warnings.append("railway_provider_readiness_unavailable")
+        if name == "public_provider_readiness" and not require_provider_readiness:
+            warnings.append("public_provider_readiness_unavailable")
             continue
         failing.append(str(name))
     report["warnings"] = warnings

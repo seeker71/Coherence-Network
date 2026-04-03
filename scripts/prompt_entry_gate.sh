@@ -68,8 +68,9 @@ fi
 
 if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
   if ! python3 scripts/worktree_continuity_guard.py --fail-on-risk; then
-    echo "prompt-entry-gate: sibling worktree continuity risk detected."
-    echo "Resolve or park sibling worktree changes before continuing this prompt."
+    echo "prompt-entry-gate: sibling worktree integration risk detected."
+    echo "Sibling dirty branches/worktrees are treated as in-flight changes to integrate, not abandon."
+    echo "Continue from that worktree or merge/cherry-pick its branch before starting a new thread."
     echo "Temporary override (not recommended): PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate"
     exit 1
   fi

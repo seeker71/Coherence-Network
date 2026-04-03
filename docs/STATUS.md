@@ -25,11 +25,11 @@
 | Service | Platform | URL | Status |
 |---------|----------|-----|--------|
 | API | Railway (previous) | https://coherence-network-production.up.railway.app | ❌ Unavailable (`Application not found`, verified 2026-03-09) |
-| Web | Vercel (current) | https://coherence-network.vercel.app | ✅ Active / Migration Target |
+| Web | Hostinger (current) | https://coherencycoin.com | ✅ Active |
 
 ### Deployment Health
 - API health endpoint: ❌ Not reachable on previous Railway URL (HTTP 404)
-- Web root: ✅ Reachable on Vercel
+- Web root: ✅ Reachable on current public domain
 - Web API health page: ⚠️ Likely failing due to blocked API
 - CORS configuration: ⚙️ Pending new hosting cutover for API
 

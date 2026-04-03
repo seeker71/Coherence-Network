@@ -1,6 +1,6 @@
 # Spec 072: Fully Public Walkable Flow (API/Web Parity)
 
-## Goal
+## Purpose
 Provide a fully public, verifiable flow that lets a human or machine start at the system portfolio and walk to:
 ideas -> specs -> processes/routes -> implementations -> contributors/contributions/assets/tasks -> runtime usage/value usage.
 
@@ -45,7 +45,7 @@ constraints:
   - no schema migrations without explicit approval
 ```
 
-## Implementation (Allowed Files)
+## Files to Create/Modify
 - `api/app/models/value_lineage.py`
 - `api/app/routers/value_lineage.py`
 - `api/app/routers/inventory.py`
@@ -67,7 +67,7 @@ constraints:
   - `GET https://coherence-network-production.up.railway.app/api/inventory/system-lineage`
   - `GET https://coherence-network-production.up.railway.app/api/inventory/page-lineage`
   - `GET https://coherence-network-production.up.railway.app/api/value-lineage/links`
-  - `GET https://coherence-network.vercel.app/portfolio` and links to the new pages return 200
+  - `GET https://coherencycoin.com/portfolio` and links to the new pages return 200
 
 ## Failure and Retry Behavior
 
@@ -93,4 +93,11 @@ See `api/tests/test_public_walkable_flow_parity.py` for test cases covering this
 
 ```bash
 python3 -m pytest api/tests/test_runtime_drift_check.py -x -v
+cd api && /opt/homebrew/bin/python3.11 -m pytest -q tests/test_value_lineage.py tests/test_inventory_api.py
+cd web && npm run build
 ```
+
+## Out of Scope
+
+- Editing contributor/contribution/asset/task records from the public web surface.
+- Adding authenticated admin-only controls to the public walkable flow.

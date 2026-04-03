@@ -8,35 +8,55 @@ Three auth levels:
 Keys configured in api/config/api.json under auth.api_key and auth.admin_key.
 """
 
-from fastapi import Header, HTTPException, Depends
+from fastapi import Header, HTTPException
 
 from app.config_loader import get_str
 from app.services.config_service import get_api_key, is_production
 
-_API_KEY = get_str("auth", "api_key", default="dev-key") or get_api_key()
-_ADMIN_KEY = get_str("auth", "admin_key", default="dev-admin") or "dev-admin"
-_PRODUCTION = is_production()
+def _current_api_key() -> str:
+    if _API_KEY is not None:
+        return _API_KEY
+    return get_str("auth", "api_key", default="dev-key") or get_api_key()
+
+
+def _current_admin_key() -> str:
+    if _ADMIN_KEY is not None:
+        return _ADMIN_KEY
+    return get_str("auth", "admin_key", default="dev-admin") or "dev-admin"
+
+
+def _in_production() -> bool:
+    if _PRODUCTION is not None:
+        return bool(_PRODUCTION)
+    return is_production()
+
+
+_API_KEY: str | None = None
+_ADMIN_KEY: str | None = None
+_PRODUCTION: bool | None = None
 
 # Fail-fast: refuse to start in production with default keys
-if _PRODUCTION and _API_KEY == "dev-key":
+if _in_production() and _current_api_key() == "dev-key":
     raise RuntimeError("API auth.api_key must be set for production (not 'dev-key')")
-if _PRODUCTION and _ADMIN_KEY == "dev-admin":
+if _in_production() and _current_admin_key() == "dev-admin":
     raise RuntimeError("API auth.admin_key must be set for production (not 'dev-admin')")
 
 
 def require_api_key(x_api_key: str = Header(None, alias="X-API-Key")) -> str:
     """Dependency for API_KEY level auth."""
-    if _PRODUCTION and _API_KEY == "dev-key":
+    api_key = _current_api_key()
+    if _in_production() and api_key == "dev-key":
         raise HTTPException(500, "API key not configured for production")
-    if not x_api_key or x_api_key != _API_KEY:
+    if not x_api_key or x_api_key != api_key:
         raise HTTPException(401, "Invalid or missing X-API-Key header")
     return x_api_key
 
 
 def require_admin_key(x_admin_key: str = Header(None, alias="X-Admin-Key")) -> str:
     """Dependency for ADMIN level auth."""
-    if _PRODUCTION and _ADMIN_KEY == "dev-admin":
+    admin_key = _current_admin_key()
+    if _in_production() and admin_key == "dev-admin":
         raise HTTPException(500, "Admin key not configured for production")
-    if not x_admin_key or x_admin_key != _ADMIN_KEY:
+    if not x_admin_key or x_admin_key != admin_key:
         raise HTTPException(401, "Invalid or missing X-Admin-Key header")
     return x_admin_key

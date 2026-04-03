@@ -48,8 +48,8 @@ Spec → Test → Implement → CI → Review → Merge
 - For Cursor/Codex/OpenRouter/OpenAI usage-limit claims, include machine evidence from:
   1. local fact report: `cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python scripts/cursor_fact_report.py`
   2. live usage/readiness API snapshots:
-     - `curl -sS https://coherence-network-production.up.railway.app/api/automation/usage/readiness`
-     - `curl -sS https://coherence-network-production.up.railway.app/api/automation/usage`
+     - `curl -sS https://api.coherencycoin.com/api/automation/usage/readiness`
+     - `curl -sS https://api.coherencycoin.com/api/automation/usage`
   3. official provider source links (pricing/docs/limits page).
 - Required proof for routing claims:
   - include executor-policy evidence (`routing_policy_proof`) and route matrix (`route_decision_matrix`) from the fact report.
@@ -219,7 +219,7 @@ PIPELINE_AUTO_RECOVER=1 ./scripts/run_overnight_pipeline_watchdog.sh
 - Public auto-execute note: `AGENT_AUTO_EXECUTE` is enabled in deployment, so paid tasks may auto-run before manual `/execute`.
   - For deterministic smoke checks, include `"force_paid_providers": true` in create context so the auto runner inherits override.
 - Public paid-override smoke check (small verification):
-  - `API_URL=https://coherence-network-production.up.railway.app`
+  - `API_URL=https://api.coherencycoin.com`
   - `TASK_ID=$(curl -s -X POST "$API_URL/api/agent/tasks" -H 'Content-Type: application/json' -d '{"direction":"public paid smoke", "task_type":"impl", "context":{"executor":"openclaw","model_override":"openai/gpt-4o-mini","force_paid_providers":true}}' | jq -r '.id')`
   - `curl -X GET "$API_URL/api/agent/tasks/$TASK_ID"`
   - `curl "$API_URL/api/runtime/endpoints/summary?limit=20"` (look for `/tool:openrouter.chat_completion`, paid ratios/failures)

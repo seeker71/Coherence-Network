@@ -111,10 +111,57 @@ check_url() {
   echo
 
   if [[ "$status" == "404" ]]; then
-    echo "Hint: web route not found. Verify Railway web service deployment and route config."
+    echo "Hint: web route not found. Verify the public web deployment and route config."
   fi
 
   return 1
+}
+
+check_web_css_assets() {
+  local web_root_url="$1"
+  local html_file="$TMP_DIR/web_root.body.html"
+  local status
+
+  echo
+  echo "==> Web CSS asset contract: ${web_root_url}"
+
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -o "$html_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$web_root_url" || true)"
+  echo "HTML status: ${status:-unknown}"
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
+    echo "FAIL: could not fetch web root HTML for CSS asset contract"
+    return 1
+  fi
+
+  local css_paths=()
+  local css_line
+  while IFS= read -r css_line; do
+    [[ -n "$css_line" ]] && css_paths+=("$css_line")
+  done < <(grep -Eo '/_next/static/css/[^"]+\.css' "$html_file" | awk '!seen[$0]++')
+
+  if [[ "${#css_paths[@]}" -eq 0 ]]; then
+    echo "FAIL: no Next CSS assets found in web root HTML"
+    return 1
+  fi
+
+  local css_path css_url css_status
+  for css_path in "${css_paths[@]}"; do
+    css_url="${WEB_URL%/}${css_path}"
+    css_status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -o /dev/null -w "%{http_code}" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$css_url" || true)"
+    echo "CSS ${css_path} -> ${css_status:-unknown}"
+    if [[ -z "$css_status" || "$css_status" -lt 200 || "$css_status" -ge 400 ]]; then
+      echo "FAIL: referenced CSS asset is not publicly reachable"
+      return 1
+    fi
+  done
+
+  echo "PASS"
+  return 0
 }
 
 check_cors() {
@@ -457,12 +504,12 @@ check_web_runtime_sha() {
 }
 
 fail=0
-check_url "Railway API health" "${API_URL%/}/api/health" || fail=1
+check_url "Public API health" "${API_URL%/}/api/health" || fail=1
 if [[ "$VERIFY_REQUIRE_GATES_MAIN_HEAD" == "1" ]]; then
-  check_url "Railway gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
+  check_url "Public gates main head" "${API_URL%/}/api/gates/main-head" || fail=1
 else
   echo
-  echo "==> Skipping Railway gates main head check (VERIFY_REQUIRE_GATES_MAIN_HEAD=0)"
+  echo "==> Skipping public gates main head check (VERIFY_REQUIRE_GATES_MAIN_HEAD=0)"
 fi
 check_api_runtime_sha \
   "${API_URL%/}/api/health" \
@@ -475,10 +522,11 @@ else
   echo "==> Skipping API persistence contract check (VERIFY_REQUIRE_PERSISTENCE_CHECK=0)"
 fi
 check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_REQUIRE_PROVIDER_READINESS" || fail=1
-check_url "Railway web root" "${WEB_URL%/}/" || fail=1
-check_url "Railway web gates page" "${WEB_URL%/}/gates" || fail=1
-check_url "Railway web API health page" "${WEB_URL%/}/api-health" || fail=1
-check_url "Railway web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
+check_url "Public web root" "${WEB_URL%/}/" || fail=1
+check_web_css_assets "${WEB_URL%/}/" || fail=1
+check_url "Public web gates page" "${WEB_URL%/}/gates" || fail=1
+check_url "Public web API health page" "${WEB_URL%/}/api-health" || fail=1
+check_url "Public web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
 check_web_runtime_sha \
   "${WEB_URL%/}/api/health-proxy" \
   "${API_URL%/}/api/gates/main-head" \
@@ -493,7 +541,7 @@ fi
 
 if [[ "$fail" -eq 0 ]]; then
   echo
-  echo "Deployment verification passed: Railway API and Railway web are reachable and CORS is aligned."
+  echo "Deployment verification passed: public API and web are reachable and CORS is aligned."
 else
   echo
   echo "Deployment verification failed: at least one endpoint or CORS check failed."

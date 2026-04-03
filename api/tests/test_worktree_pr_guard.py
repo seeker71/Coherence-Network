@@ -111,6 +111,24 @@ def test_n8n_security_floor_step_allows_fixed_versions() -> None:
     assert v2 is not None and v2.ok is True
 
 
+def test_skippable_local_artifacts_include_repo_db_files() -> None:
+    mod = _load_module()
+    assert mod._is_skippable_local_artifact("data/coherence.db") is True
+    assert mod._is_skippable_local_artifact("api/data/coherence.db-wal") is True
+    assert mod._is_skippable_local_artifact("web/tsconfig.tsbuildinfo") is True
+    assert mod._is_skippable_local_artifact("api/app/main.py") is False
+
+
+def test_commit_evidence_guard_ignores_skippable_local_artifacts(monkeypatch) -> None:
+    mod = _load_module()
+    monkeypatch.setattr(mod, "_changed_paths_range", lambda _base_ref, head_ref="HEAD": ([], None))
+    monkeypatch.setattr(mod, "_changed_paths_worktree", lambda: ["data/coherence.db", "api/data/coherence.db-wal"])
+
+    step = mod._run_commit_evidence_guard("origin/main")
+    assert step.ok is True
+    assert "Ignored local artifacts" in step.output_tail
+
+
 def test_rebase_freshness_guard_blocks_detached_head(monkeypatch) -> None:
     mod = _load_module()
 

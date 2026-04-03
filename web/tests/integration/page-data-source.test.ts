@@ -26,6 +26,12 @@ const PAGE_ASSERTIONS: PageAssertion[] = [
     dynamicHints: [/topTraceabilityGaps\.map/, /probes\.map/, /allEndpoints\.map/],
   },
   {
+    route: "/diagnostics",
+    file: "app/diagnostics/page.tsx",
+    apiHints: ["/api/agent/diagnostics/overview", "/api/runtime/endpoints/attention", "/api/health", "ConfigEditor", "OperationsWorkbench", "getApiBase()"],
+    dynamicHints: [/diagnostics\.config\.database\.url/, /diagnostics\.tasks\.log_previews\.map/, /diagnostics\.runtime\.recent_events\.map/],
+  },
+  {
     route: "/ideas",
     file: "app/ideas/page.tsx",
     apiHints: ["/api/ideas", "/api/ideas/progress", "getApiBase()"],
@@ -46,7 +52,7 @@ const PAGE_ASSERTIONS: PageAssertion[] = [
   {
     route: "/automation",
     file: "app/automation/page.tsx",
-    apiHints: ["/api/automation/usage", "/api/providers/stats", "getApiBase()", "loadAutomationData"],
+    apiHints: ["AutomationGarden", "GardenMap", "getApiBase()", "loadAutomationData"],
     dynamicHints: [/GardenMap/, /usage\.providers/, /readiness=\{readiness\}/],
   },
   {
@@ -200,6 +206,7 @@ describe("fallback messages carry data-placeholder attribute", () => {
   it("keeps explicit fallback or loading messages in scoped pages", () => {
     const requiredAnnotations: Array<{ file: string; textHint: string }> = [
       { file: "app/page.tsx", textHint: "No recent activity yet. Be the first to share an idea." },
+      { file: "app/diagnostics/page.tsx", textHint: "The diagnostics API is not reachable right now." },
       { file: "app/specs/page.tsx", textHint: "No specs are visible yet. Once lineage or registry data lands, this page will show the linked ideas, contributors, and implementation proof automatically." },
       { file: "app/usage/page.tsx", textHint: "Provider stats are not available right now. Check back once the API is connected." },
       { file: "app/flow/page.tsx", textHint: "Run some tasks to see pipeline activity." },

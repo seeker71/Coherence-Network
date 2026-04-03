@@ -132,7 +132,7 @@ async def run_runtime_get_endpoint_exerciser(
 @router.get("/runtime/usage/verification")
 async def verify_runtime_usage_internal_vs_public(
     public_api_base: str = Query(
-        "https://coherence-network-production.up.railway.app",
+        "https://api.coherencycoin.com",
         description="Public API base used for external usage comparison",
     ),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),

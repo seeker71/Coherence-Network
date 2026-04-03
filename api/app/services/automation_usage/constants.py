@@ -50,13 +50,12 @@ PROVIDER_CONFIG_RULES: dict[str, dict[str, Any]] = {
     "anthropic": {"kind": "subscription_window", "all_of": []},
     "cursor": {"kind": "subscription_window", "all_of": []},
     "codex": {"kind": "custom", "all_of": ["OPENCLAW_API_KEY"]},
-    "railway": {"kind": "custom", "all_of": ["RAILWAY_TOKEN", "RAILWAY_PROJECT_ID", "RAILWAY_ENVIRONMENT", "RAILWAY_SERVICE"]},
     "supabase": {"kind": "custom", "any_of": ["SUPABASE_ACCESS_TOKEN", "SUPABASE_TOKEN"]},
     "db-host": {"kind": "custom", "any_of": ["RUNTIME_DATABASE_URL", "DATABASE_URL"]},
 }
 
-DEFAULT_REQUIRED_PROVIDERS = ("openai", "claude", "cursor", "gemini", "railway")
-DEFAULT_PROVIDER_VALIDATION_REQUIRED = ("openai", "claude", "cursor", "gemini", "railway")
+DEFAULT_REQUIRED_PROVIDERS = ("openai", "claude", "cursor", "gemini")
+DEFAULT_PROVIDER_VALIDATION_REQUIRED = ("openai", "claude", "cursor", "gemini")
 
 PROVIDER_ALIASES: dict[str, str] = {
     "anthropic": "claude",
@@ -71,10 +70,10 @@ PROVIDER_FAMILY_ALIASES: dict[str, str] = {
     "claude-code": "claude",
 }
 
-READINESS_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "railway", "gemini"})
-OPTIONAL_REQUIRED_PROVIDER_CANDIDATES = ("railway",)
+READINESS_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
+OPTIONAL_REQUIRED_PROVIDER_CANDIDATES: tuple[str, ...] = ()
 LIMIT_TELEMETRY_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
-LIMIT_COVERAGE_EXCLUDED_PROVIDERS = frozenset({"coherence-internal", "railway"})
+LIMIT_COVERAGE_EXCLUDED_PROVIDERS = frozenset({"coherence-internal"})
 LLM_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
 
 CURSOR_SUBSCRIPTION_LIMITS_BY_TIER: dict[str, tuple[int, int]] = {

@@ -315,7 +315,7 @@ SEED_IDEAS: list[dict] = [
         "interfaces": [
             "machine:api",
             "human:web",
-            "external:railway"
+            "external:hosted-deploy"
         ],
         "open_questions": [],
         "value_basis": {
@@ -409,7 +409,7 @@ SEED_IDEAS: list[dict] = [
     {
         "id": "deployment-ci-ops",
         "name": "CI pipelines, deploy readiness, ops runbooks, and release gates",
-        "description": "Specs covering CI pipeline setup, deploy readiness, holdout tests, troubleshooting docs, ops runbook, glossary, live gate tests, maintainability, e2e flow gates, provider readiness, Vercel config, and external tools audit.",
+        "description": "Specs covering CI pipeline setup, deploy readiness, holdout tests, troubleshooting docs, ops runbook, glossary, live gate tests, maintainability, e2e flow gates, provider readiness, hosted deploy config, and external tools audit.",
         "potential_value": 42.0,
         "actual_value": 42.0,
         "estimated_cost": 8.0,
@@ -420,7 +420,7 @@ SEED_IDEAS: list[dict] = [
         "idea_type": "child",
         "parent_idea_id": "coherence-network-api-runtime",
         "child_idea_ids": [],
-        "interfaces": ["external:github", "external:railway", "machine:api"],
+        "interfaces": ["external:github", "external:hosted-deploy", "machine:api"],
         "open_questions": [],
         "value_basis": {
             "potential_value": "42 = catch broken releases, automate deploy gates, maintain ops knowledge.",
@@ -612,7 +612,7 @@ SEED_IDEAS: list[dict] = [
         "child_idea_ids": [],
         "interfaces": [
             "external:github",
-            "external:railway"
+            "external:hosted-deploy"
         ],
         "open_questions": [],
         "value_basis": {
@@ -1154,7 +1154,6 @@ EXPLICIT_SPEC_IDEA_MAP: dict[str, str] = {
     "033-readme-quick-start-qualify": "deployment-ci-ops",
     "034-ops-runbook": "deployment-ci-ops",
     "035-glossary": "deployment-ci-ops",
-    "105-disable-vercel-pr-deployments": "deployment-ci-ops",
     "106-external-tools-audit-stability": "deployment-ci-ops",
 
     # --- deployment-gate-reliability (5 specs) ---
@@ -1257,7 +1256,7 @@ def _keyword_match_idea(title: str, content: str) -> str | None:
          "pipeline-automation"),
         (["web", "ui", "page", "landing", "theme", "refresh", "link parity"],
          "web-ui-ux"),
-        (["deploy", "ci", "cd", "release", "vercel", "runbook", "holdout"],
+        (["deploy", "ci", "cd", "release", "hosted", "runbook", "holdout"],
          "deployment-ci-ops"),
         (["graph store", "postgresql", "migration", "persistent store", "telemetry db"],
          "data-storage-migration"),

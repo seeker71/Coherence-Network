@@ -41,7 +41,7 @@ def telegram_config() -> None:
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_status_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
+async def test_telegram_deploy_status_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
 
     sent: dict[str, str] = {}
 
@@ -68,23 +68,23 @@ async def test_telegram_railway_status_command(monkeypatch: pytest.MonkeyPatch, 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/agent/telegram/webhook",
-            json=_telegram_update("/railway status"),
+            json=_telegram_update("/deploy status"),
         )
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert sent["chat_id"] == "2002"
-    assert "*Railway status*" in sent["message"]
+    assert "*Deploy status*" in sent["message"]
     assert "Checked:" in sent["message"]
     assert "public_contract_passed" in sent["message"]
     assert "`1234567890ab`" in sent["message"]
     assert "Next:" in sent["message"]
-    assert "[main head](https://coherence-network-production.up.railway.app/api/gates/main-head)" in sent["message"]
-    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
+    assert "[main head](https://api.coherencycoin.com/api/gates/main-head)" in sent["message"]
+    assert "[tasks](https://coherencycoin.com/tasks)" in sent["message"]
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_verify_command_creates_and_ticks_job(
+async def test_telegram_deploy_verify_command_creates_and_ticks_job(
     monkeypatch: pytest.MonkeyPatch,
     telegram_config,
 ) -> None:
@@ -113,31 +113,31 @@ async def test_telegram_railway_verify_command_creates_and_ticks_job(
             "status": "retrying",
             "attempts": 1,
             "max_attempts": 8,
-            "last_result": {"result": "blocked", "reason": "railway_health"},
+            "last_result": {"result": "blocked", "reason": "public_api_health"},
         },
     )
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/agent/telegram/webhook",
-            json=_telegram_update("/railway verify"),
+            json=_telegram_update("/deploy verify"),
         )
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert sent["chat_id"] == "2002"
-    assert "*Railway verify*" in sent["message"]
+    assert "*Deploy verify*" in sent["message"]
     assert "Checked:" in sent["message"]
     assert "`job_123`" in sent["message"]
     assert "`retrying`" in sent["message"]
     assert "blocked" in sent["message"]
-    assert "/railway tick job_123" in sent["message"]
-    assert "[main head](https://coherence-network-production.up.railway.app/api/gates/main-head)" in sent["message"]
-    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
+    assert "/deploy tick job_123" in sent["message"]
+    assert "[main head](https://api.coherencycoin.com/api/gates/main-head)" in sent["message"]
+    assert "[tasks](https://coherencycoin.com/tasks)" in sent["message"]
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_jobs_command_lists_recent_jobs(
+async def test_telegram_deploy_jobs_command_lists_recent_jobs(
     monkeypatch: pytest.MonkeyPatch,
     telegram_config,
 ) -> None:
@@ -161,22 +161,22 @@ async def test_telegram_railway_jobs_command_lists_recent_jobs(
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/agent/telegram/webhook",
-            json=_telegram_update("/railway jobs"),
+            json=_telegram_update("/deploy jobs"),
         )
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert sent["chat_id"] == "2002"
-    assert "*Railway jobs*" in sent["message"]
+    assert "*Deploy jobs*" in sent["message"]
     assert "Checked:" in sent["message"]
     assert "`job_a` scheduled" in sent["message"]
     assert "`job_b` completed" in sent["message"]
-    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
-    assert "[telegram diagnostics](https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics)" in sent["message"]
+    assert "[tasks](https://coherencycoin.com/tasks)" in sent["message"]
+    assert "[telegram diagnostics](https://api.coherencycoin.com/api/agent/telegram/diagnostics)" in sent["message"]
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_tick_requires_job_id(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
+async def test_telegram_deploy_tick_requires_job_id(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -190,17 +190,17 @@ async def test_telegram_railway_tick_requires_job_id(monkeypatch: pytest.MonkeyP
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/agent/telegram/webhook",
-            json=_telegram_update("/railway tick"),
+            json=_telegram_update("/deploy tick"),
         )
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert sent["chat_id"] == "2002"
-    assert "Usage: /railway tick {job_id}" in sent["message"]
+    assert "Usage: /deploy tick {job_id}" in sent["message"]
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_head_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
+async def test_telegram_deploy_head_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -218,20 +218,20 @@ async def test_telegram_railway_head_command(monkeypatch: pytest.MonkeyPatch, te
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/agent/telegram/webhook",
-            json=_telegram_update("/railway head"),
+            json=_telegram_update("/deploy head"),
         )
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert sent["chat_id"] == "2002"
-    assert "*Railway head*" in sent["message"]
+    assert "*Deploy head*" in sent["message"]
     assert "`abcdef123456`" in sent["message"]
-    assert "[main head](https://coherence-network-production.up.railway.app/api/gates/main-head)" in sent["message"]
-    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
+    assert "[main head](https://api.coherencycoin.com/api/gates/main-head)" in sent["message"]
+    assert "[tasks](https://coherencycoin.com/tasks)" in sent["message"]
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_tick_due_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
+async def test_telegram_deploy_tick_due_command(monkeypatch: pytest.MonkeyPatch, telegram_config) -> None:
     sent: dict[str, str] = {}
 
     async def _fake_send_reply(chat_id: int | str, message: str, parse_mode: str = "Markdown") -> bool:
@@ -267,23 +267,23 @@ async def test_telegram_railway_tick_due_command(monkeypatch: pytest.MonkeyPatch
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/agent/telegram/webhook",
-            json=_telegram_update("/railway tick due"),
+            json=_telegram_update("/deploy tick due"),
         )
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert sent["chat_id"] == "2002"
-    assert "*Railway tick due*" in sent["message"]
+    assert "*Deploy tick due*" in sent["message"]
     assert "Checked:" in sent["message"]
     assert "`job_due_1` retrying" in sent["message"]
     assert "`job_due_2` completed" in sent["message"]
-    assert "Next: `/railway jobs`" in sent["message"]
-    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
-    assert "[telegram diagnostics](https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics)" in sent["message"]
+    assert "Next: `/deploy jobs`" in sent["message"]
+    assert "[tasks](https://coherencycoin.com/tasks)" in sent["message"]
+    assert "[telegram diagnostics](https://api.coherencycoin.com/api/agent/telegram/diagnostics)" in sent["message"]
 
 
 @pytest.mark.asyncio
-async def test_telegram_railway_schedule_command_creates_job_without_tick(
+async def test_telegram_deploy_schedule_command_creates_job_without_tick(
     monkeypatch: pytest.MonkeyPatch,
     telegram_config,
 ) -> None:
@@ -319,20 +319,20 @@ async def test_telegram_railway_schedule_command_creates_job_without_tick(
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post(
             "/api/agent/telegram/webhook",
-            json=_telegram_update("/railway schedule 5"),
+            json=_telegram_update("/deploy schedule 5"),
         )
 
     assert response.status_code == 200
     assert response.json() == {"ok": True}
     assert sent["chat_id"] == "2002"
-    assert "*Railway schedule*" in sent["message"]
+    assert "*Deploy schedule*" in sent["message"]
     assert "Checked:" in sent["message"]
     assert "`job_sched_1`" in sent["message"]
     assert "`scheduled`" in sent["message"]
     assert "`0/5`" in sent["message"]
-    assert "Next: `/railway tick due`" in sent["message"]
-    assert "[tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
-    assert "[telegram diagnostics](https://coherence-network-production.up.railway.app/api/agent/telegram/diagnostics)" in sent["message"]
+    assert "Next: `/deploy tick due`" in sent["message"]
+    assert "[tasks](https://coherencycoin.com/tasks)" in sent["message"]
+    assert "[telegram diagnostics](https://api.coherencycoin.com/api/agent/telegram/diagnostics)" in sent["message"]
     assert tick_called["value"] is False
 
 
@@ -373,7 +373,7 @@ async def test_telegram_status_command_reports_checked_and_attention(
     assert "Total tasks: `3`" in sent["message"]
     assert "Attention: `2`" in sent["message"]
     assert "/attention" in sent["message"]
-    assert "Web UI: [open tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
+    assert "Web UI: [open tasks](https://coherencycoin.com/tasks)" in sent["message"]
 
 
 @pytest.mark.asyncio
@@ -437,8 +437,8 @@ async def test_telegram_status_includes_public_links_and_stale_running(
     assert "Stale running (>30m): `1`" in sent["message"]
     assert "task_orphan_1" in sent["message"]
     assert "Monitor issues: `1` (orphan\\_running)" in sent["message"]
-    assert "https://coherence-web-production.up.railway.app/tasks" in sent["message"]
-    assert "https://coherence-network-production.up.railway.app/api/agent/pipeline-status" in sent["message"]
+    assert "https://coherencycoin.com/tasks" in sent["message"]
+    assert "https://api.coherencycoin.com/api/agent/pipeline-status" in sent["message"]
 
 
 @pytest.mark.asyncio
@@ -492,7 +492,7 @@ async def test_telegram_attention_includes_monitor_summary_and_public_links(
     assert "Stale running (>30m): `1`" in sent["message"]
     assert "Monitor issues: `1`" in sent["message"]
     assert "`orphan_running` `high`" in sent["message"]
-    assert "https://coherence-web-production.up.railway.app/friction" in sent["message"]
+    assert "https://coherencycoin.com/friction" in sent["message"]
 
 
 def test_format_task_alert_includes_updated_and_action() -> None:
@@ -510,8 +510,8 @@ def test_format_task_alert_includes_updated_and_action() -> None:
     assert "Why: Waiting on a decision; progress is blocked until resolved." in message
     assert "Next: `/reply task\\_123 <decision>`" in message
     assert "Updated: `2026-02-19T17:00:00Z`" in message
-    assert "Proof: [task](https://coherence-web-production.up.railway.app/tasks?task_id=task_123)" in message
-    assert "[task log](https://coherence-network-production.up.railway.app/api/agent/tasks/task_123/log)" in message
+    assert "Proof: [task](https://coherencycoin.com/tasks?task_id=task_123)" in message
+    assert "[task log](https://api.coherencycoin.com/api/agent/tasks/task_123/log)" in message
     assert len(message.splitlines()) <= 10
 
 
@@ -524,7 +524,7 @@ def test_format_task_alert_defaults_to_public_web_ui_link() -> None:
     }
     message = format_task_alert(task)
     assert "Runtime: `Executor: unknown | Model: unknown" in message
-    assert "https://coherence-web-production.up.railway.app/tasks?task_id=task_link_1" in message
+    assert "https://coherencycoin.com/tasks?task_id=task_link_1" in message
 
 
 def test_format_runner_update_card_uses_clean_title_and_links() -> None:
@@ -538,8 +538,8 @@ def test_format_runner_update_card_uses_clean_title_and_links() -> None:
     assert "*runner update*" in message
     assert "runner\\_update" not in message
     assert "task\\_runner_123" not in message
-    assert "Proof: [task](https://coherence-web-production.up.railway.app/tasks?task_id=task_runner_123)" in message
-    assert "Runner logs: [open logs](https://coherence-network-production.up.railway.app/api/agent/tasks/task_runner_123/log)" in message
+    assert "Proof: [task](https://coherencycoin.com/tasks?task_id=task_runner_123)" in message
+    assert "Runner logs: [open logs](https://api.coherencycoin.com/api/agent/tasks/task_runner_123/log)" in message
 
 
 def test_telegram_card_helpers_summarize_runtime_and_action() -> None:
@@ -583,5 +583,5 @@ async def test_telegram_tasks_command_renders_status_values(
     assert sent["chat_id"] == "2002"
     assert "`pending`" in sent["message"]
     assert "TaskStatus.PENDING" not in sent["message"]
-    assert "[open](https://coherence-web-production.up.railway.app/tasks?task_id=task_1)" in sent["message"]
-    assert "Web UI: [open tasks](https://coherence-web-production.up.railway.app/tasks)" in sent["message"]
+    assert "[open](https://coherencycoin.com/tasks?task_id=task_1)" in sent["message"]
+    assert "Web UI: [open tasks](https://coherencycoin.com/tasks)" in sent["message"]

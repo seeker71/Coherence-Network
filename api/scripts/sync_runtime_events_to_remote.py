@@ -2,7 +2,7 @@
 """Sync local runtime events JSON files into a remote API runtime store.
 
 Usage examples:
-  python scripts/sync_runtime_events_to_remote.py --api-url https://coherence-network-production.up.railway.app
+  python scripts/sync_runtime_events_to_remote.py --api-url https://api.coherencycoin.com
   python scripts/sync_runtime_events_to_remote.py --api-url https://... --all-worktrees
 """
 
@@ -233,7 +233,7 @@ def _expand_event_paths(args: argparse.Namespace) -> list[Path]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Sync local runtime events to remote API runtime store.")
-    parser.add_argument("--api-url", required=True, help="Remote API base URL, e.g. https://...railway.app")
+    parser.add_argument("--api-url", required=True, help="Remote API base URL, e.g. https://api.coherencycoin.com")
     parser.add_argument(
         "--events-path",
         action="append",

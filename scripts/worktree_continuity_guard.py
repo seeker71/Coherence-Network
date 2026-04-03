@@ -9,6 +9,7 @@ Purpose:
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import subprocess
 from dataclasses import dataclass
@@ -25,6 +26,19 @@ class WorktreeRisk:
     behind_main: int
     has_upstream: bool
     risks: list[str]
+
+SKIPPABLE_LOCAL_ARTIFACT_PATTERNS = (
+    "api/data/*.db",
+    "api/data/*.db-*",
+    "api/data/*.sqlite*",
+    "data/*.db",
+    "data/*.db-*",
+    "data/*.sqlite*",
+    "*.db-shm",
+    "*.db-wal",
+    "*.db-journal",
+    "web/tsconfig.tsbuildinfo",
+)
 
 
 def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -89,6 +103,26 @@ def _status_short(worktree_path: Path) -> str:
     return proc.stdout.strip()
 
 
+def _status_paths(worktree_path: Path) -> list[str]:
+    status = _status_short(worktree_path)
+    paths: list[str] = []
+    for raw in status.splitlines():
+        if not raw.strip():
+            continue
+        payload = raw[3:] if len(raw) >= 4 else ""
+        if " -> " in payload:
+            payload = payload.split(" -> ", 1)[1]
+        payload = payload.strip()
+        if payload:
+            paths.append(payload)
+    return paths
+
+
+def _is_skippable_local_artifact(path: str) -> bool:
+    normalized = path.strip()
+    return any(fnmatch.fnmatch(normalized, pattern) for pattern in SKIPPABLE_LOCAL_ARTIFACT_PATTERNS)
+
+
 def _upstream_exists(worktree_path: Path) -> bool:
     proc = _run_git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], worktree_path)
     return proc.returncode == 0 and bool(proc.stdout.strip())
@@ -119,14 +153,16 @@ def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
             continue
         branch = _branch_name(wt_path, str(row.get("branch", "")))
         detached = branch == "HEAD"
-        dirty = bool(_status_short(wt_path))
+        dirty_paths = _status_paths(wt_path)
+        meaningful_dirty_paths = [path for path in dirty_paths if not _is_skippable_local_artifact(path)]
+        dirty = bool(meaningful_dirty_paths)
         ahead, behind = _ahead_behind_vs_main(wt_path)
         has_upstream = _upstream_exists(wt_path)
         risk_labels: list[str] = []
         if detached:
             risk_labels.append("detached_head")
         if dirty:
-            risk_labels.append("dirty_worktree")
+            risk_labels.append("dirty_integration_candidate")
         if ahead > 0 and not has_upstream:
             risk_labels.append("ahead_without_upstream")
         if risk_labels:

@@ -21,7 +21,6 @@ export async function showIdentity() {
     }
     console.log("No identity configured.");
     console.log("  Fix: cc identity set <your_id>");
-    console.log("       export COHERENCE_CONTRIBUTOR_ID=<your_id>");
     return;
   }
   const data = await get(`/api/identity/${encodeURIComponent(id)}`);
@@ -102,7 +101,6 @@ export async function lookupIdentity(args) {
 export async function setIdentity(args) {
   if (args.length !== 1) {
     console.error("Usage: cc identity set <contributor_id>");
-    console.error("Alternatively: export COHERENCE_CONTRIBUTOR_ID=<your_id>");
     process.exitCode = 1;
     return;
   }

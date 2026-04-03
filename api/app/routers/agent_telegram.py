@@ -76,15 +76,15 @@ def _get_api_base_url(context: dict[str, Any] | None = None) -> str:
             if normalized:
                 return normalized
     
-    # Default: use public Railway URL instead of localhost-style config fallbacks.
+    # Default to the public API URL instead of localhost-style fallbacks.
     fallback = _normalize_base_url(get_api_base())
     if fallback and "localhost" not in fallback and "127.0.0.1" not in fallback:
         return fallback
     return _DEFAULT_API_BASE_URL
 
 
-_DEFAULT_WEB_BASE_URL = "https://coherence-web-production.up.railway.app"
-_DEFAULT_API_BASE_URL = "https://coherence-network-production.up.railway.app"
+_DEFAULT_WEB_BASE_URL = "https://coherencycoin.com"
+_DEFAULT_API_BASE_URL = "https://api.coherencycoin.com"
 
 def _escape_markdown(text: str) -> str:
     out = text or ""
@@ -166,7 +166,7 @@ def next_action_for_status(task: dict[str, Any]) -> str:
         if reason == "paid_provider":
             return f"/task {task_id}"
         if reason == "env":
-            return "/railway verify"
+            return "/deploy verify"
         if reason == "test_lint":
             return f"/direction Fix failing tests/lint for task {task_id} and rerun with proof"
         if reason == "rebase":
@@ -308,17 +308,17 @@ def _task_web_url(task_id: str, context: dict[str, Any]) -> str:
 def _task_log_url(task_id: str, context: dict[str, Any]) -> str:
     return f"{_base_api_url(context).rstrip('/')}/api/agent/tasks/{quote(task_id, safe='')}/log"
 
-def _railway_logs_url(task_id: str, context: dict[str, Any]) -> str:
-    """Get railway logs URL from config."""
+def _deploy_logs_url(task_id: str, context: dict[str, Any]) -> str:
+    """Get deploy/task logs URL from config."""
     config = get_config()
-    railway_url = config.get("railway_logs_url")
-    if railway_url:
-        if "{task_id}" in railway_url:
-            return railway_url.replace("{task_id}", quote(task_id, safe=""))
-        return railway_url
+    deploy_url = config.get("deploy_logs_url") or config.get("task_logs_url")
+    if deploy_url:
+        if "{task_id}" in deploy_url:
+            return deploy_url.replace("{task_id}", quote(task_id, safe=""))
+        return deploy_url
     
     # Fallback: context keys
-    for context_key in ("railway_logs_url", "railway_log_url"):
+    for context_key in ("deploy_logs_url", "task_logs_url", "log_url"):
         context_value = str(context.get(context_key) or "").strip()
         if context_value:
             if "{task_id}" in context_value:
@@ -353,7 +353,7 @@ def format_task_alert(task: dict, *, runner_update: bool = False) -> str:
 
     idea_id = _idea_id_from_context(context)
     task_url = _task_web_url(task_id, context)
-    logs_url = _railway_logs_url(task_id, context) if task_id else ""
+    logs_url = _deploy_logs_url(task_id, context) if task_id else ""
     route = context.get("route_decision") if isinstance(context.get("route_decision"), dict) else {}
     executor = str(context.get("executor") or route.get("executor") or "").strip()
     model = str(task.get("model") or context.get("model_override") or route.get("model") or "").strip()
@@ -469,7 +469,7 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
     """Receive Telegram updates and run command handlers.
 
     Commands: /status, /tasks [status], /task {id}, /reply {id} {decision},
-    /attention, /usage, /direction \"...\", /railway ..., or plain text.
+    /attention, /usage, /direction \"...\", /deploy ..., or plain text.
     """
     from app.services import telegram_adapter
     from app.services import telegram_diagnostics
@@ -566,10 +566,10 @@ async def telegram_webhook(update: dict = Body(...)) -> dict:
             monitor_issues=monitor_issues if isinstance(monitor_issues, dict) else {"issues": [], "last_check": None},
             pipeline_status=pipeline_status if isinstance(pipeline_status, dict) else {},
         )
-    elif cmd in {"railway", "deploy"}:
-        from app.services import telegram_railway_service
+    elif cmd == "deploy":
+        from app.services import telegram_deploy_service
 
-        reply = await telegram_railway_service.handle_railway_command(arg)
+        reply = await telegram_deploy_service.handle_deploy_command(arg)
     elif cmd == "direction" or (not cmd and text):
         direction = arg if cmd == "direction" else text
         if not direction:

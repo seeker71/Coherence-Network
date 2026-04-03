@@ -2,7 +2,7 @@
 
 Covers acceptance criteria from spec task_a50fa999fdddd444:
   R2 — contributor_id validation pattern
-  R3 — env var precedence (COHERENCE_CONTRIBUTOR_ID > COHERENCE_CONTRIBUTOR > config)
+  R3 — config-backed contributor identity resolution
   R5 — runner startup identity logging
   R6 — GET /api/identity/me endpoint (additional edge cases)
 
@@ -112,7 +112,7 @@ class TestContributorIdValidation:
 # ---------------------------------------------------------------------------
 
 class TestResolveCLIContributorId:
-    """Unit tests for config_service.resolve_cli_contributor_id() precedence."""
+    """Unit tests for config_service.resolve_cli_contributor_id() config-backed behavior."""
 
     def test_config_json_when_no_env(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """config.json is used when no env vars are set."""
@@ -128,8 +128,12 @@ class TestResolveCLIContributorId:
         assert cid == "from-config"
         assert src == "config.json"
 
-    def test_legacy_env_overrides_config(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        """COHERENCE_CONTRIBUTOR overrides config.json (legacy support)."""
+    def test_legacy_env_is_ignored_when_config_is_present(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Legacy env no longer overrides config.json."""
         from app.services import config_service
 
         cfg = tmp_path / "config.json"
@@ -139,11 +143,15 @@ class TestResolveCLIContributorId:
         monkeypatch.setenv("COHERENCE_CONTRIBUTOR", "legacy-agent")
 
         cid, src = config_service.resolve_cli_contributor_id()
-        assert cid == "legacy-agent"
-        assert "legacy" in src.lower()
+        assert cid == "from-config"
+        assert src == "config.json"
 
-    def test_canonical_env_overrides_config(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        """COHERENCE_CONTRIBUTOR_ID overrides config.json."""
+    def test_canonical_env_is_ignored_when_config_is_present(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Canonical env no longer overrides config.json."""
         from app.services import config_service
 
         cfg = tmp_path / "config.json"
@@ -153,22 +161,26 @@ class TestResolveCLIContributorId:
         monkeypatch.delenv("COHERENCE_CONTRIBUTOR", raising=False)
 
         cid, src = config_service.resolve_cli_contributor_id()
-        assert cid == "env-agent"
-        assert "COHERENCE_CONTRIBUTOR_ID" in src
+        assert cid == "config-agent"
+        assert src == "config.json"
 
-    def test_canonical_env_beats_legacy_env(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        """COHERENCE_CONTRIBUTOR_ID wins over COHERENCE_CONTRIBUTOR when both set (AC: new var wins)."""
+    def test_config_json_beats_both_legacy_and_canonical_env(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """config.json remains the single source of truth even when legacy env vars are present."""
         from app.services import config_service
 
         cfg = tmp_path / "config.json"
-        cfg.write_text("{}", encoding="utf-8")
+        cfg.write_text(json.dumps({"contributor_id": "config-wins"}), encoding="utf-8")
         monkeypatch.setattr(config_service, "_CONFIG_PATH", cfg)
         monkeypatch.setenv("COHERENCE_CONTRIBUTOR_ID", "new-wins")
         monkeypatch.setenv("COHERENCE_CONTRIBUTOR", "old-loses")
 
         cid, src = config_service.resolve_cli_contributor_id()
-        assert cid == "new-wins"
-        assert "COHERENCE_CONTRIBUTOR_ID" in src
+        assert cid == "config-wins"
+        assert src == "config.json"
 
     def test_returns_none_when_no_identity(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """Returns (None, 'none') when nothing is configured (AC: no identity → anonymous fallback)."""
@@ -198,7 +210,7 @@ class TestResolveCLIContributorId:
         assert src == "none"
 
     def test_empty_env_falls_through_to_config(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        """Empty COHERENCE_CONTRIBUTOR_ID string is ignored (falls through to config)."""
+        """Empty env string is ignored and config.json remains authoritative."""
         from app.services import config_service
 
         cfg = tmp_path / "config.json"
@@ -212,7 +224,7 @@ class TestResolveCLIContributorId:
         assert src == "config.json"
 
     def test_whitespace_env_falls_through(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        """Whitespace-only COHERENCE_CONTRIBUTOR_ID is stripped and treated as absent."""
+        """Whitespace-only env string is ignored and config.json remains authoritative."""
         from app.services import config_service
 
         cfg = tmp_path / "config.json"
@@ -231,7 +243,7 @@ class TestResolveCLIContributorId:
 # ---------------------------------------------------------------------------
 
 class TestCCPyResolveContributorId:
-    """Unit tests for scripts/cc.py _resolve_contributor_id() (AC9, AC10)."""
+    """Unit tests for scripts/cc.py _resolve_contributor_id() config-backed behavior."""
 
     @pytest.fixture(autouse=True)
     def import_cc(self) -> None:
@@ -246,51 +258,38 @@ class TestCCPyResolveContributorId:
             import cc as _cc
             self.cc = _cc
 
-    def test_canonical_env_used_when_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """COHERENCE_CONTRIBUTOR_ID is used over COHERENCE_CONTRIBUTOR (R3 in Python CLI)."""
-        monkeypatch.setenv("COHERENCE_CONTRIBUTOR_ID", "py-agent-canonical")
-        monkeypatch.delenv("COHERENCE_CONTRIBUTOR", raising=False)
+    def test_config_json_used_when_present(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        cfg = tmp_path / "config.json"
+        cfg.write_text(json.dumps({"contributor_id": "py-config-user"}), encoding="utf-8")
+        monkeypatch.setattr(self.cc, "CONFIG_PATH", cfg)
 
         result = self.cc._resolve_contributor_id(None)
-        assert result == "py-agent-canonical"
-
-    def test_legacy_env_used_when_canonical_absent(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """COHERENCE_CONTRIBUTOR is used when COHERENCE_CONTRIBUTOR_ID is not set."""
-        monkeypatch.delenv("COHERENCE_CONTRIBUTOR_ID", raising=False)
-        monkeypatch.setenv("COHERENCE_CONTRIBUTOR", "py-legacy")
-
-        result = self.cc._resolve_contributor_id(None)
-        assert result == "py-legacy"
-
-    def test_canonical_beats_legacy_when_both_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """COHERENCE_CONTRIBUTOR_ID wins when both env vars are present (AC8 equivalent in Python)."""
-        monkeypatch.setenv("COHERENCE_CONTRIBUTOR_ID", "new-wins")
-        monkeypatch.setenv("COHERENCE_CONTRIBUTOR", "old-loses")
-
-        result = self.cc._resolve_contributor_id(None)
-        assert result == "new-wins"
+        assert result == "py-config-user"
 
     def test_falls_back_to_anonymous_when_no_identity(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Returns 'anonymous' when no identity is configured (AC10)."""
-        monkeypatch.delenv("COHERENCE_CONTRIBUTOR_ID", raising=False)
-        monkeypatch.delenv("COHERENCE_CONTRIBUTOR", raising=False)
+        """Returns 'anonymous' when no identity is configured."""
+        monkeypatch.setattr(self.cc, "CONFIG_PATH", Path("/nonexistent/config.json"))
 
         result = self.cc._resolve_contributor_id(None)
         assert result == "anonymous"
 
-    def test_cli_arg_takes_highest_priority(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Explicit CLI arg overrides all env vars."""
-        monkeypatch.setenv("COHERENCE_CONTRIBUTOR_ID", "env-id")
+    def test_cli_arg_takes_highest_priority(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """Explicit CLI arg overrides config.json."""
+        cfg = tmp_path / "config.json"
+        cfg.write_text(json.dumps({"contributor_id": "config-user"}), encoding="utf-8")
+        monkeypatch.setattr(self.cc, "CONFIG_PATH", cfg)
 
         result = self.cc._resolve_contributor_id("cli-explicit")
         assert result == "cli-explicit"
 
-    def test_empty_cli_arg_falls_through_to_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Empty CLI arg is ignored; env var is used instead."""
-        monkeypatch.setenv("COHERENCE_CONTRIBUTOR_ID", "env-fallback")
+    def test_empty_cli_arg_falls_through_to_config(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        """Empty CLI arg is ignored; config.json is used instead."""
+        cfg = tmp_path / "config.json"
+        cfg.write_text(json.dumps({"contributor_id": "config-fallback"}), encoding="utf-8")
+        monkeypatch.setattr(self.cc, "CONFIG_PATH", cfg)
 
         result = self.cc._resolve_contributor_id("")
-        assert result == "env-fallback"
+        assert result == "config-fallback"
 
 
 # ---------------------------------------------------------------------------
@@ -345,7 +344,7 @@ class TestRunnerStartupIdentityLogging:
                     "[runner] WARNING: no contributor identity configured — all contributions will be anonymous",
                 )
                 log.warning(
-                    "[runner] Fix: cc identity set <your_id>  or  export COHERENCE_CONTRIBUTOR_ID=<your_id>",
+                    "[runner] Fix: cc identity set <your_id>  or  update ~/.coherence-network/config.json",
                 )
         finally:
             log.removeHandler(handler)
@@ -382,20 +381,18 @@ class TestRunnerStartupIdentityLogging:
         """AC12: Fix instructions appear in log when no identity configured."""
         records = self._call_runner_identity_block(monkeypatch, tmp_path, contributor_id=None)
 
-        fix_lines = [r for r in records if "Fix:" in r or "cc identity set" in r or "COHERENCE_CONTRIBUTOR_ID" in r]
+        fix_lines = [r for r in records if "Fix:" in r or "cc identity set" in r or "config.json" in r]
         assert fix_lines, f"Expected fix instructions in log. Got: {records}"
 
-    def test_identity_resolved_from_env_var(
+    def test_identity_resolved_from_config_json(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """Runner log correctly reflects env-var-sourced identity."""
+        """Runner log correctly reflects config.json-sourced identity."""
         from app.services import config_service
 
         cfg = tmp_path / "config.json"
-        cfg.write_text("{}", encoding="utf-8")
+        cfg.write_text(json.dumps({"contributor_id": "config-runner-agent"}), encoding="utf-8")
         monkeypatch.setattr(config_service, "_CONFIG_PATH", cfg)
-        monkeypatch.setenv("COHERENCE_CONTRIBUTOR_ID", "env-runner-agent")
-        monkeypatch.delenv("COHERENCE_CONTRIBUTOR", raising=False)
 
         log_records: list[str] = []
 
@@ -417,8 +414,8 @@ class TestRunnerStartupIdentityLogging:
         finally:
             log.removeHandler(handler)
 
-        assert any("env-runner-agent" in r for r in log_records), log_records
-        assert any("COHERENCE_CONTRIBUTOR_ID" in r for r in log_records), log_records
+        assert any("config-runner-agent" in r for r in log_records), log_records
+        assert any("config.json" in r for r in log_records), log_records
 
 
 # ---------------------------------------------------------------------------

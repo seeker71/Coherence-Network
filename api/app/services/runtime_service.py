@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import time
 import base64
 import hashlib
 import logging
+import re
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, Callable
@@ -21,7 +21,7 @@ import httpx
 from nacl.exceptions import BadSignatureError
 from nacl.signing import VerifyKey
 
-from app.config_loader import database_url, get_float, get_int, get_str
+from app.config_loader import database_url, get_bool, get_float, get_int, get_str
 from app.models.runtime import (
     EndpointAttentionReport,
     EndpointAttentionRow,
@@ -77,7 +77,7 @@ _RUNTIME_ENDPOINT_CACHE_BUSTER = 0
 _DEFAULT_MVP_ACCEPTANCE_POLICY: dict[str, Any] = {
     "version": "2026-03-06",
     "budget": {
-        "railway_base_budget_usd": 0.0,
+        "hosted_base_budget_usd": 0.0,
         "provider_base_budget_usd": 0.0,
     },
     "revenue": {
@@ -175,9 +175,6 @@ def _default_events_path() -> Path:
 
 
 def _events_path() -> Path:
-    explicit = str(os.getenv("RUNTIME_EVENTS_PATH", "")).strip()
-    if explicit:
-        return Path(explicit)
     configured = get_str("runtime", "events_path", "")
     return Path(configured) if configured else _default_events_path()
 
@@ -187,9 +184,6 @@ def _default_idea_map_path() -> Path:
 
 
 def _idea_map_path() -> Path:
-    explicit = str(os.getenv("RUNTIME_IDEA_MAP_PATH", "")).strip()
-    if explicit:
-        return Path(explicit)
     configured = get_str("runtime", "idea_map_path", "")
     return Path(configured) if configured else _default_idea_map_path()
 
@@ -251,15 +245,7 @@ def _runtime_events_cache_key(limit: int, since: datetime | None, source: str | 
 
 
 def _runtime_endpoint_cache_ttl_seconds(cache_name: str, default: float = _RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS) -> float:
-    env_suffix = re.sub(r"[^A-Za-z0-9]+", "_", cache_name).strip("_").upper()
-    env_key = f"RUNTIME_ENDPOINT_CACHE_TTL_{env_suffix}"
-    raw = str(os.getenv(env_key) or "").strip()
-    if not raw:
-        return max(1.0, min(float(default), 86400.0))
-    try:
-        parsed = float(raw)
-    except (TypeError, ValueError):
-        return max(1.0, min(float(default), 86400.0))
+    parsed = get_float("runtime", "endpoint_cache_ttl_seconds", default)
     return max(1.0, min(float(parsed), 86400.0))
 
 
@@ -268,7 +254,7 @@ def _runtime_endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | Non
         get_str("runtime", "events_path") or "",
         get_str("database_overrides", "runtime") or "",
         database_url(None) or "",
-        str(os.getenv("PYTEST_CURRENT_TEST") or ""),
+        str(get_bool("api", "testing", False)),
         str(_runtime_events_store_cache_key()),
         str(_RUNTIME_ENDPOINT_CACHE_BUSTER),
     ]
@@ -920,9 +906,9 @@ def _allocation_ratios() -> dict[str, float]:
 
 
 def _budget_revenue_reinvestment_payload(totals: dict[str, Any]) -> dict[str, Any]:
-    railway_budget = _policy_non_negative_float("budget", "railway_base_budget_usd", default=0.0)
+    hosted_budget = _policy_non_negative_float("budget", "hosted_base_budget_usd", default=0.0)
     provider_budget = _policy_non_negative_float("budget", "provider_base_budget_usd", default=0.0)
-    base_budget = round(railway_budget + provider_budget, 6)
+    base_budget = round(hosted_budget + provider_budget, 6)
 
     revenue_per_accepted = _policy_non_negative_float("revenue", "per_accepted_review_usd", default=0.0)
     accepted_reviews = int(totals.get("accepted_reviews") or 0)
@@ -936,7 +922,7 @@ def _budget_revenue_reinvestment_payload(totals: dict[str, Any]) -> dict[str, An
 
     return {
         "budget": {
-            "railway_base_budget_usd": round(railway_budget, 6),
+            "hosted_base_budget_usd": round(hosted_budget, 6),
             "provider_base_budget_usd": round(provider_budget, 6),
             "base_budget_usd": base_budget,
         },
@@ -1473,7 +1459,7 @@ def evaluate_mvp_acceptance_judge(
             "measurement": {
                 "acceptance_rate_formula": "accepted_reviews / review_tasks_completed",
                 "total_cost_formula": "sum(task.total_cost_usd)",
-                "base_budget_formula": "railway_base_budget_usd + provider_base_budget_usd",
+                "base_budget_formula": "hosted_base_budget_usd + provider_base_budget_usd",
                 "estimated_revenue_formula": "accepted_reviews * revenue_per_accepted_review_usd",
                 "trust_adjusted_revenue_formula": "estimated_revenue_usd * trust_multiplier",
                 "trust_revenue_uplift_formula": "trust_adjusted_revenue_usd - estimated_revenue_usd",

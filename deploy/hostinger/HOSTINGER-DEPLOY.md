@@ -100,6 +100,22 @@ Just run the deploy script again:
 
 It rebuilds, uploads, and restarts services automatically.
 
+## Automatic post-merge deploys
+
+`main` can roll the VPS forward automatically after merge.
+
+How it works:
+- GitHub Actions workflow: `.github/workflows/hostinger-auto-deploy.yml`
+- Remote deploy script source of truth: `deploy/hostinger/auto-deploy.sh`
+- On every `main` push that touches `api/**`, `web/**`, deploy tooling, or the deploy workflow itself, Actions SSHes into the VPS, syncs the tracked deploy script, resets `/docker/coherence-network/repo` to the exact merged SHA, updates `GIT_COMMIT_SHA` and `DEPLOYED_SHA` in `/docker/coherence-network/.env`, rebuilds `api` + `web`, and then runs the public deploy verifier.
+
+Required GitHub configuration:
+- Repository secret: `HOSTINGER_SSH_KEY`
+- Repository variable: `HOSTINGER_SSH_HOST` (default can remain `root@187.77.152.42`)
+- Optional repository variable: `HOSTINGER_DEPLOY_PATH` (default `/docker/coherence-network`)
+
+This is a safer path than manual VPS-only edits because the deployed SHA stays tied to the merged commit and the same public verification contract runs immediately after roll-forward.
+
 ## Troubleshooting
 
 | Issue | Fix |

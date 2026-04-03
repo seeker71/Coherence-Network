@@ -22,6 +22,7 @@
  */
 
 import { get, post, patch, request } from "../api.mjs";
+import { getExecuteToken } from "../config.mjs";
 
 function truncate(str, len) {
   if (!str) return "";
@@ -573,10 +574,10 @@ export async function executeAgentTask(args) {
   const taskId = args[0];
   if (!taskId) {
     console.log("Usage: cc agent execute <task_id>");
-    console.log("  Requires AGENT_EXECUTE_TOKEN in env for server-side execute.");
+    console.log("  Requires agent_executor.execute_token in ~/.coherence-network/config.json for server-side execute.");
     return;
   }
-  const token = (process.env.AGENT_EXECUTE_TOKEN || "").trim();
+  const token = String(getExecuteToken() || "").trim();
   const headers = {};
   if (token) headers["X-Agent-Execute-Token"] = token;
   const res = await request("POST", `/api/agent/tasks/${encodeURIComponent(taskId)}/execute`, {
@@ -589,7 +590,7 @@ export async function executeAgentTask(args) {
 }
 
 export async function pickupExecute(args) {
-  const token = (process.env.AGENT_EXECUTE_TOKEN || "").trim();
+  const token = String(getExecuteToken() || "").trim();
   const headers = {};
   if (token) headers["X-Agent-Execute-Token"] = token;
   const q = {};

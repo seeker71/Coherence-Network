@@ -470,6 +470,12 @@ This gate fails when:
 - current worktree has uncommitted local changes,
 - primary workspace still has leftover local changes from unfinished tasks.
 
+SQLite working-copy policy:
+- `data/coherence.db` and `api/data/coherence.db` are operational working copies used for local validation, hydration, and runtime-state inspection.
+- They are not normal source changes for continuity or commit-evidence guards.
+- Default action on dirty DB files is to restore them before commit: `git restore data/coherence.db api/data/coherence.db`.
+- Only commit DB changes when the task intentionally updates a checked-in fixture/snapshot and the commit evidence explains why seed/config changes are not sufficient.
+
 For the full one-page startup flow, use:
 - `docs/WORKTREE-QUICKSTART.md`
 
