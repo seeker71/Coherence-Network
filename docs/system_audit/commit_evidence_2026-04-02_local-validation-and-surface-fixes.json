@@ -109,7 +109,9 @@
     "web/app/assets/[asset_id]/page.tsx",
     "web/app/assets/page.tsx",
     "web/app/automation/page.tsx",
+    "web/app/concepts/[id]/page.tsx",
     "web/app/concepts/garden/page.tsx",
+    "web/app/concepts/page.tsx",
     "web/app/contributions/page.tsx",
     "web/app/contributors/[id]/portfolio/page.tsx",
     "web/app/contributors/[id]/portfolio/tasks/[task_id]/page.tsx",
@@ -129,11 +131,11 @@
   ],
   "local_validation": {
     "status": "pass",
-    "details": "Focused and broad local validation passed: API pytest matrix 3212 passed / 24 skipped / 4 xfailed on the local gate, the exact three previously failing GitHub cases now pass locally, the SQLite schema-race reproduction now passes locally, web integration 5 passed, local web production build passes after making `/`, `/today`, `/demo`, `/concepts/garden`, and `/ontology` explicitly request-time safe, scripts/verify_worktree_local_web.sh passed with curated endpoint latencies under 10ms for automation readiness/usage on the hydrated production snapshot, and the maintainability baseline was refreshed from the audited current repository state using api/scripts/run_maintainability_audit.py --write-baseline."
+    "details": "Focused and broad local validation passed: API pytest matrix 3212 passed / 24 skipped / 4 xfailed on the local gate, the exact three previously failing GitHub cases now pass locally, the SQLite schema-race reproduction now passes locally, web integration 5 passed, local web production build passes after making `/`, `/today`, `/concepts`, `/concepts/[id]`, `/demo`, `/concepts/garden`, and `/ontology` explicitly request-time safe, scripts/verify_worktree_local_web.sh passed with curated endpoint latencies under 10ms for automation readiness/usage on the hydrated production snapshot, and the maintainability baseline was refreshed from the audited current repository state using api/scripts/run_maintainability_audit.py --write-baseline."
   },
   "ci_validation": {
     "status": "pass",
-    "details": "Pre-push local gate suite passed for the touched runtime, web, CLI, and spec surfaces, including endpoint exerciser coverage, repo CLI smoke coverage, contributor portfolio drilldowns, built-web route verification, maintainability audit baseline alignment, spec-181 quality-contract validation, the PR-blocker regressions around readiness severity/provider listing/ROI task model routing, the shared SQLite schema bootstrap race revealed by GitHub Actions, and the web build rendering-mode correction for `/`, `/today`, `/demo`, `/concepts/garden`, and `/ontology`."
+    "details": "Pre-push local gate suite passed for the touched runtime, web, CLI, and spec surfaces, including endpoint exerciser coverage, repo CLI smoke coverage, contributor portfolio drilldowns, built-web route verification, maintainability audit baseline alignment, spec-181 quality-contract validation, the PR-blocker regressions around readiness severity/provider listing/ROI task model routing, the shared SQLite schema bootstrap race revealed by GitHub Actions, and the web build rendering-mode correction for `/`, `/today`, `/concepts`, `/concepts/[id]`, `/demo`, `/concepts/garden`, and `/ontology`."
   },
   "deploy_validation": {
     "status": "pending",
@@ -288,7 +290,9 @@
     "web/app/assets/[asset_id]/page.tsx",
     "web/app/assets/page.tsx",
     "web/app/automation/page.tsx",
+    "web/app/concepts/[id]/page.tsx",
     "web/app/concepts/garden/page.tsx",
+    "web/app/concepts/page.tsx",
     "web/app/contributions/page.tsx",
     "web/app/contributors/[id]/portfolio/page.tsx",
     "web/app/contributors/[id]/portfolio/tasks/[task_id]/page.tsx",
