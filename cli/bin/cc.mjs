@@ -76,6 +76,8 @@ import { guide } from "../lib/commands/guide.mjs";
 import { runFocusCommand } from "../lib/commands/focus.mjs";
 import { runPeersCommand } from "../lib/commands/peers.mjs";
 import { runCollabCommand } from "../lib/commands/collab.mjs";
+import { runOrgCommand } from "../lib/commands/org.mjs";
+import { runBlueprintsCommand } from "../lib/commands/blueprints.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -140,6 +142,9 @@ const COMMANDS = {
   f:             () => runFocusCommand(args),
   peers:         () => runPeersCommand(args),
   collab:        () => runCollabCommand(args),
+  org:           () => runOrgCommand(args),
+  blueprints:    () => runBlueprintsCommand(args),
+  blueprint:     () => runBlueprintsCommand(args),
    setup:         () => setup(args),
   whoami:        () => showWhoami(),
   tasks:         () => listTasks(args),
@@ -548,6 +553,8 @@ function showHelp() {
 
 \x1b[1mContribute:\x1b[0m
   share                   Submit a new idea (interactive)
+  blueprints              List project roadmap templates
+  blueprint apply <id>    Seed a full roadmap from a template
   contribute              Record contribution (interactive)
   contribute --type code --cc 5 --idea <id> --desc "what I did"
   collab                  Interactive collaboration dashboard for focused idea
@@ -565,6 +572,7 @@ function showHelp() {
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity
+  org                     Show agent hierarchy and reporting lines
   credentials             Manage repo-specific tokens (add, list, remove)
   guide                   Guided experience for new contributors
 

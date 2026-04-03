@@ -44,6 +44,7 @@ from app.routers import (
     spec_registry,
     runtime,
     auth_keys,
+    blueprints,
     traceability,
     treasury,
     value_lineage,
@@ -605,6 +606,7 @@ app.include_router(registry_discovery.router, prefix="/api", tags=["discovery"])
 app.include_router(auth_keys.router, prefix="/api", tags=["auth"])
 app.include_router(news.router, prefix="/api", tags=["news"])
 app.include_router(peers.router, prefix="/api", tags=["peers"])
+app.include_router(blueprints.router, prefix="/api", tags=["blueprints"])
 app.include_router(traceability.router, prefix="/api", tags=["traceability"])
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])

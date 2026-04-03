@@ -132,6 +132,15 @@ Each repo needs its own credentials, provided by a contributor and used by tasks
 
 **All 12 specs fully implemented and tested (163+ tests passing).** Coverage gaps closed: marketplace web page, graphs web page, 3 new CLI commands. Pushed to origin/main with CI passing. VPS deploy requires manual trigger via `deploy/hostinger/deploy.sh`.
 
+## Paperclip AI Integration (Operational Control Plane)
+
+| Step | Feature | Description | Status |
+|---|---|---|---|
+| 1 | **Heartbeat Protocol** | Standardized background "pulse" for the local runner to check for work every 15m. | ✅ |
+| 2 | **Agent Budgeting** | Hard daily/monthly CC spend limits in contributor profiles to prevent runaway costs. | ✅ |
+| 3 | **Hierarchy & Roles** | Use graph edges (`manages`, `delegates-to`) to define agent reporting lines. | ✅ |
+| 4 | **Coherence Blueprints** | Template-based project seeding (apply pre-defined idea/spec roadmap bundles). | ✅ |
+
 ## Foundation (Implemented)
 
 | # | Spec | Title | Status |

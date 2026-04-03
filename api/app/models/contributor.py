@@ -28,6 +28,8 @@ class ContributorBase(BaseModel):
     email: EmailField
     wallet_address: Optional[str] = None
     hourly_rate: Optional[Decimal] = None
+    daily_cc_budget: Optional[Decimal] = Field(None, description="Max CC spend per 24h")
+    monthly_cc_budget: Optional[Decimal] = Field(None, description="Max CC spend per month")
 
 
 class ContributorCreate(ContributorBase):

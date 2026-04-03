@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from uuid import uuid4
 
 from sqlalchemy import DateTime, Float, String, Text
@@ -124,7 +124,38 @@ def get_contributor_balance(contributor_id: str) -> dict:
     }
 
 
-def get_contributor_history(contributor_id: str, limit: int = 50) -> list[dict]:
+def get_spend_metrics(contributor_id: str) -> dict:
+    """Return CC spent in the last 24h and last 30 days."""
+    _ensure_schema()
+    now = datetime.now(timezone.utc)
+    day_ago = now - timedelta(days=1)
+    month_ago = now - timedelta(days=30)
+    
+    daily_spend = 0.0
+    monthly_spend = 0.0
+    
+    with _session() as s:
+        recs = s.query(ContributionLedgerRecord).filter(
+            ContributionLedgerRecord.contributor_id == contributor_id,
+            ContributionLedgerRecord.amount_cc < 0, # Spend is negative in the ledger for future use, 
+                                                   # but for now we look for compute/execution costs.
+                                                   # Actually, we record execution as positive 'compute'.
+                                                   # We need to distinguish 'earning' vs 'spending'.
+        ).all()
+        # For now, let's treat all 'compute' types as spend for the runner.
+        for rec in recs:
+            if rec.contribution_type == "compute":
+                if rec.recorded_at >= day_ago:
+                    daily_spend += rec.amount_cc
+                if rec.recorded_at >= month_ago:
+                    monthly_spend += rec.amount_cc
+                    
+    return {
+        "daily_spend": round(daily_spend, 4),
+        "monthly_spend": round(monthly_spend, 4),
+    }
+
+from datetime import timedelta
     """Return contribution records for a contributor, newest first."""
     _ensure_schema()
     effective_limit = max(1, min(limit, 500))

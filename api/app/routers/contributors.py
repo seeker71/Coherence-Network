@@ -89,6 +89,17 @@ def get_contributor(contributor_id: str) -> Contributor:
 
 
 @router.get(
+    "/contributors/{contributor_id}/spend",
+    summary="Get contributor spend metrics (daily/monthly)",
+    tags=["contributors"],
+)
+def get_contributor_spend(contributor_id: str) -> dict:
+    """Return CC spent in the last 24h and last 30 days for budgeting."""
+    from app.services import contribution_ledger_service
+    return contribution_ledger_service.get_spend_metrics(contributor_id)
+
+
+@router.get(
     "/contributors",
     response_model=PaginatedResponse[Contributor],
     summary="List contributors",

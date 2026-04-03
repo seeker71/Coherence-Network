@@ -645,6 +645,24 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # Blueprints (Project Templates)
+    Tool(
+        name="coherence_list_blueprints",
+        description="List available project roadmap blueprints (templates).",
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_apply_blueprint",
+        description="Seed a full roadmap of ideas and edges from a blueprint template.",
+        inputSchema={
+            "type": "object",
+            "required": ["blueprint_id"],
+            "properties": {
+                "blueprint_id": {"type": "string"},
+                "prefix": {"type": "string", "description": "Optional ID prefix for created ideas"},
+            },
+        },
+    ),
     # Concepts (Living Codex ontology)
     Tool(
         name="coherence_list_concepts",
@@ -945,6 +963,11 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 "radius_km": args.get("radius_km", 100.0),
                 "limit": args.get("limit", 20)
             })
+        # Blueprints
+        case "coherence_list_blueprints":
+            return api_get("/api/blueprints")
+        case "coherence_apply_blueprint":
+            return api_post(f"/api/blueprints/{args['blueprint_id']}/apply", {"prefix": args.get("prefix", "")})
         # Concepts
         case "coherence_list_concepts":
             if args.get("search"):

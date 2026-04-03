@@ -51,6 +51,8 @@ class FederationNodeRegisterRequest(BaseModel):
     os_type: str = Field(description="macos | windows | linux | vps")
     providers: list[str] = Field(default_factory=list)
     capabilities: dict = Field(default_factory=dict)
+    is_autonomous: bool = Field(False, description="If true, node executes tasks automatically (Heartbeat Protocol)")
+    heartbeat_interval_ms: int = Field(900000, description="Target heartbeat frequency (default 15m)")
 
 
 class FederationNodeRegisterResponse(BaseModel):

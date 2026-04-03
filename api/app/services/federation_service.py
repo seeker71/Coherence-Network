@@ -71,6 +71,8 @@ class FederationNodeRecord(Base):
     registered_at: Mapped[str] = mapped_column(String, nullable=False)
     last_seen_at: Mapped[str] = mapped_column(String, nullable=False, index=True)
     status: Mapped[str] = mapped_column(String, nullable=False, default="online", index=True)
+    is_autonomous: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    heartbeat_interval_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=900000)
 
 
 class FederationSyncHistoryRecord(Base):
@@ -469,6 +471,8 @@ def register_or_update_node(data: FederationNodeRegisterRequest) -> tuple[Federa
             existing.os_type = data.os_type
             existing.providers_json = json.dumps(data.providers)
             existing.capabilities_json = json.dumps(data.capabilities)
+            existing.is_autonomous = data.is_autonomous
+            existing.heartbeat_interval_ms = data.heartbeat_interval_ms
             existing.last_seen_at = now_iso
             existing.status = "online"
             resp = FederationNodeRegisterResponse(
@@ -486,6 +490,8 @@ def register_or_update_node(data: FederationNodeRegisterRequest) -> tuple[Federa
                 os_type=data.os_type,
                 providers_json=json.dumps(data.providers),
                 capabilities_json=json.dumps(data.capabilities),
+                is_autonomous=data.is_autonomous,
+                heartbeat_interval_ms=data.heartbeat_interval_ms,
                 registered_at=now_iso,
                 last_seen_at=now_iso,
                 status="online",
@@ -704,10 +710,13 @@ def list_nodes() -> list[dict]:
                 "os_type": r.os_type,
                 "providers": json.loads(r.providers_json) if r.providers_json else [],
                 "capabilities": caps,
-                "registered_at": r.registered_at,
+                registered_at: r.registered_at,
                 "last_seen_at": r.last_seen_at,
                 "status": r.status,
+                "is_autonomous": r.is_autonomous,
+                "heartbeat_interval_ms": r.heartbeat_interval_ms,
                 "git_sha": caps.get("git_sha"),
+
                 "git_sha_updated_at": caps.get("git_sha_updated_at"),
                 "streak": streak,
             })
