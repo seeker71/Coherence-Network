@@ -26,6 +26,7 @@ from app.routers import (
     contributor_recognition,
     contributions,
     contributor_identity,
+    credentials,
     contributors,
     distributions,
     federation,
@@ -555,11 +556,13 @@ async def reset_database(x_admin_key: str = Header(None)):
 # Resource routers (canonical)
 app.include_router(contributors.router, prefix="/api", tags=["contributors"])
 app.include_router(contributor_recognition.router, prefix="/api", tags=["contributors"])
+app.include_router(credentials.router, prefix="/api/credentials", tags=["credentials"])
 app.include_router(contributors_portfolio.router, prefix="/api", tags=["contributors"])
 app.include_router(me_portfolio.router, prefix="/api")
 app.include_router(assets.router, prefix="/api", tags=["assets"])
 app.include_router(audit.router, prefix="/api", tags=["audit"])
 app.include_router(contributions.router, prefix="/api", tags=["contributions"])
+app.include_router(contributor_identity.router, prefix="/api", tags=["identity"])
 app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
@@ -584,7 +587,6 @@ app.include_router(traceability.router, prefix="/api", tags=["traceability"])
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
-app.include_router(contributor_identity.router, tags=["identity"])
 app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])

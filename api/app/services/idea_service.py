@@ -68,6 +68,30 @@ logger = logging.getLogger(__name__)
 _TAG_SLUG_PATTERN = re.compile(r"[^a-z0-9-]")
 
 
+def is_idea_external(idea_id: str) -> bool:
+    """Return True if the idea has a workspace_git_url set (external repo manifestation)."""
+    idea = get_idea(idea_id)
+    if idea is None:
+        return False
+    if hasattr(idea, "workspace_git_url") and idea.workspace_git_url:
+        return True
+    if hasattr(idea, "idea") and hasattr(idea.idea, "workspace_git_url") and idea.idea.workspace_git_url:
+        return True
+    return False
+
+
+def get_workspace_git_url(idea_id: str) -> str | None:
+    """Return the workspace_git_url for an idea if set, None otherwise."""
+    idea = get_idea(idea_id)
+    if idea is None:
+        return None
+    if hasattr(idea, "workspace_git_url"):
+        return idea.workspace_git_url
+    if hasattr(idea, "idea") and hasattr(idea.idea, "workspace_git_url"):
+        return idea.idea.workspace_git_url
+    return None
+
+
 def normalize_tags(raw_tags: list[str]) -> list[str]:
     """Normalize tags: trim, lowercase, slugify, deduplicate, sort ascending."""
     seen: set[str] = set()

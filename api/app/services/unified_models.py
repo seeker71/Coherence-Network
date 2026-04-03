@@ -84,6 +84,7 @@ from app.adapters.postgres_models import (  # noqa: F401
 # Contributor Identity models
 # ---------------------------------------------------------------------------
 from app.services.contributor_identity_service import ContributorIdentityRecord  # noqa: F401
+from app.services.repo_credential_service import RepoCredentialRecord  # noqa: F401
 
 # Graph models (Node + Edge universal data layer)
 from app.models.graph import Node, Edge  # noqa: F401

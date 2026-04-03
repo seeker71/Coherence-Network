@@ -1152,6 +1152,27 @@ def _next_phase_for_work_type(current_phase: str, work_type: str | None) -> str 
     return _NEXT_PHASE.get(current_phase)
 
 
+def _get_repo_token(repo_url: str) -> str | None:
+    """Retrieve the raw token for a repository from ~/.coherence-network/keys.json."""
+    if not repo_url:
+        return None
+    ks_path = os.path.join(os.path.expanduser("~"), ".coherence-network", "keys.json")
+    if os.path.exists(ks_path):
+        try:
+            with open(ks_path, encoding="utf-8") as f:
+                ks = json.load(f)
+            # Normalization: handle both https://github.com/user/repo and github.com/user/repo
+            normalized = repo_url.lower().replace("https://", "").replace("http://", "").rstrip("/")
+            tokens = ks.get("repo_tokens", {})
+            for rurl, token in tokens.items():
+                nrurl = rurl.lower().replace("https://", "").replace("http://", "").rstrip("/")
+                if nrurl == normalized:
+                    return token
+        except Exception:
+            pass
+    return None
+
+
 def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> dict | list | None:
     """Call the API via httpx. Auto-retries on 429 with backoff."""
     url = f"{API_BASE}{path}"
@@ -1488,14 +1509,22 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
     Validation is category-aware:
     - network: check API endpoints (non-404) and web pages (non-404)
     - infrastructure: check CI workflow exists or health endpoint
-    - external: no production check (contributor provides evidence)
+    - external: verify interface files exist in external repo (workspace_git_url)
     - general: no production check (spec completeness is sufficient)
     """
     import re
+    from app.services.idea_service import get_workspace_git_url
     desc = str(idea_payload.get("description") or "")
     interfaces = idea_payload.get("interfaces") or []
+    workspace_git_url = idea_payload.get("workspace_git_url") or get_workspace_git_url(idea_id) or ""
 
     category = _classify_idea_validation(interfaces, desc)
+
+    # External repo ideas: verify files exist in the external repo, not on production
+    if workspace_git_url and category not in ("network",):
+        log.info("EXTERNAL_REPO_CHECK idea=%s url=%s — verifying in external repo", idea_id, workspace_git_url)
+        failures = _verify_external_repo_interfaces(idea_id, workspace_git_url, interfaces, desc)
+        return failures
 
     if category not in ("network",):
         # Non-network ideas: no production endpoint check
@@ -1542,6 +1571,74 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
     else:
         log.info("PROOF_CHECK idea=%s category=%s — no endpoints claimed, skipped",
                   idea_id, category)
+
+    return failures
+
+
+def _verify_external_repo_interfaces(
+    idea_id: str,
+    workspace_git_url: str,
+    interfaces: list[str],
+    description: str,
+) -> list[str]:
+    """Verify that claimed interface files exist in the external repo.
+
+    For external-repo ideas, production checks are performed against the
+    external workspace repo (via workspace mirror) rather than the
+    coherence-network repo or production APIs.
+
+    Returns a list of failure descriptions. Empty list = all verified.
+    """
+    import re
+
+    failures = []
+    workspace_repo = _get_or_update_workspace_repo(workspace_git_url)
+    if workspace_repo is None:
+        failures.append(f"External repo mirror unavailable: {workspace_git_url}")
+        return failures
+
+    repo_path = Path(workspace_repo)
+    desc_lower = description.lower()
+
+    interface_files = []
+    for iface in interfaces:
+        iface_lower = iface.lower()
+        if iface_lower in ("machine:api", "api"):
+            api_paths_in_desc = re.findall(r'/api/[\w/{}]+', description)
+            for p in api_paths_in_desc:
+                interface_files.append(f"api/app{p.rstrip('/')}.py")
+        elif iface_lower in ("human:web", "web"):
+            web_paths = re.findall(r'/(web|app)/([\w/-]+)\s', description, re.IGNORECASE)
+            for _, path in web_paths:
+                interface_files.append(f"web/app/{path}/page.tsx")
+                interface_files.append(f"web/app/{path}/page.ts")
+        elif iface_lower.startswith("machine:"):
+            rest = iface_lower.split("machine:", 1)[1]
+            parts = rest.strip().split(":")
+            if len(parts) >= 2:
+                file_path = parts[1].strip()
+                if file_path and "." in file_path:
+                    interface_files.append(file_path)
+        elif iface_lower.startswith("file:"):
+            file_path = iface_lower.split("file:", 1)[1].strip()
+            if file_path:
+                interface_files.append(file_path)
+
+    for rel_path in interface_files:
+        full_path = repo_path / rel_path
+        if not full_path.exists():
+            failures.append(f"Interface file not found in external repo: {rel_path}")
+
+    if not interface_files:
+        log.info("EXTERNAL_REPO_CHECK idea=%s — no interface files extracted, skipping", idea_id)
+
+    if failures:
+        log.warning(
+            "EXTERNAL_REPO_CHECK idea=%s FAILED (%d issues): %s",
+            idea_id, len(failures), failures[:5],
+        )
+    else:
+        log.info("EXTERNAL_REPO_CHECK idea=%s PASSED (%d files verified)", idea_id, len(interface_files))
 
     return failures
 
@@ -2547,10 +2644,26 @@ def _push_and_pr(
         )
 
         # Push
+        workspace_git_url = context.get("workspace_git_url", "")
+        repo_token = _get_repo_token(workspace_git_url)
+        env = os.environ.copy()
+        push_cmd = ["git", "push", "origin", branch]
+        
+        if repo_token:
+            env["GITHUB_TOKEN"] = repo_token
+            import base64
+            # Use extraHeader for authenticated push without changing remote URL
+            auth_header = base64.b64encode(f":{repo_token}".encode()).decode()
+            push_cmd = [
+                "git", "-c", f"http.extraHeader=Authorization: Basic {auth_header}",
+                "push", "origin", branch
+            ]
+
         push_result = subprocess.run(
-            ["git", "push", "origin", branch],
+            push_cmd,
             capture_output=True, text=True, timeout=30, cwd=cwd,
             shell=(sys.platform == "win32"),
+            env=env
         )
         if push_result.returncode != 0:
             log.warning("PR_PUSH_FAILED task=%s stderr=%s", task_id, push_result.stderr[:200])
@@ -2573,6 +2686,7 @@ def _push_and_pr(
             ["gh", "pr", "create", "--title", pr_title, "--body", pr_body, "--base", "main"],
             capture_output=True, text=True, timeout=30, cwd=cwd,
             shell=(sys.platform == "win32"),
+            env=env
         )
 
         # Switch back to worker-main and clean up local branch
@@ -2619,10 +2733,25 @@ def _push_to_existing_branch(
         )
 
         # Push to same branch
+        workspace_git_url = context.get("workspace_git_url", "")
+        repo_token = _get_repo_token(workspace_git_url)
+        env = os.environ.copy()
+        push_cmd = ["git", "push", "origin", branch]
+
+        if repo_token:
+            env["GITHUB_TOKEN"] = repo_token
+            import base64
+            auth_header = base64.b64encode(f":{repo_token}".encode()).decode()
+            push_cmd = [
+                "git", "-c", f"http.extraHeader=Authorization: Basic {auth_header}",
+                "push", "origin", branch
+            ]
+
         push_result = subprocess.run(
-            ["git", "push", "origin", branch],
+            push_cmd,
             capture_output=True, text=True, timeout=30, cwd=cwd,
             shell=(sys.platform == "win32"),
+            env=env
         )
 
         # Switch back to worker-main
@@ -3331,7 +3460,7 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
         return False
 
 
-def run_one(task: dict, dry_run: bool = False) -> bool:
+def run_one(task: dict, dry_run: bool = False, provider_override: str | None = None) -> bool:
     """Full lifecycle: claim → select provider → execute → record → report."""
     task_id = task["id"]
     task_type = task.get("task_type", "unknown")
@@ -3360,8 +3489,12 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     if task_type in ("merge", "deploy", "verify", "reflect") and not dry_run:
         return _run_operational_phase(task, task_id, task_type)
 
-    # Select provider (data-driven)
-    provider = select_provider(task_type, task=task)
+    # Select provider (data-driven or override)
+    if provider_override:
+        provider = provider_override
+        log.info("PROVIDER_OVERRIDE task_type=%s selected=%s", task_type, provider)
+    else:
+        provider = select_provider(task_type, task=task)
 
     if dry_run:
         log.info(
@@ -6235,6 +6368,7 @@ def _check_for_updates_and_restart() -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Task runner — data-driven provider selection")
     parser.add_argument("--task", help="Run a specific task ID")
+    parser.add_argument("--provider", help="Force a specific provider (overrides Thompson Sampling)")
     parser.add_argument("--loop", action="store_true", help="Poll continuously")
     parser.add_argument("--interval", type=int, default=30, help="Poll interval (seconds)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would run")
@@ -6290,6 +6424,12 @@ def main():
         from app.services.config_service import resolve_cli_contributor_id
 
         _rcid, _rsrc = resolve_cli_contributor_id()
+        # Environment override has highest precedence
+        env_cid = os.environ.get("COHERENCE_CONTRIBUTOR_ID")
+        if env_cid:
+            _rcid = env_cid
+            _rsrc = "env"
+
         if _rcid:
             log.info("[runner] identity resolved: %s (source: %s)", _rcid, _rsrc)
         else:
@@ -6312,7 +6452,7 @@ def main():
         if not task:
             log.error("Task %s not found", args.task)
             sys.exit(1)
-        ok = run_one(task, dry_run=args.dry_run)
+        ok = run_one(task, dry_run=args.dry_run, provider_override=args.provider)
         if not args.dry_run:
             push_measurements(_NODE_ID)
         sys.exit(0 if ok else 1)
