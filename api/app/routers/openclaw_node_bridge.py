@@ -20,7 +20,7 @@ router = APIRouter()
 async def openclaw_node_bridge(
     websocket: WebSocket,
     node_id: str,
-    token: str | None = Query(None, description="Must match COHERENCE_BRIDGE_TOKEN when that env is set"),
+    token: str | None = Query(None, description="Must match federation.bridge_token when bridge auth is configured"),
 ) -> None:
     """Bidirectional-capable WebSocket; server primarily pushes federation_message events.
 

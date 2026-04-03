@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getApiBase } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 type Concept = {
   id: string;
   name: string;
@@ -35,23 +37,35 @@ type RelatedItems = {
 
 async function fetchConcept(id: string): Promise<Concept | null> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/concepts/${id}`, { next: { revalidate: 30 } });
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const res = await fetch(`${base}/api/concepts/${id}`, { next: { revalidate: 30 } });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
 
 async function fetchEdges(id: string): Promise<Edge[]> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/concepts/${id}/edges`, { next: { revalidate: 30 } });
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const res = await fetch(`${base}/api/concepts/${id}/edges`, { next: { revalidate: 30 } });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
 }
 
 async function fetchRelated(id: string): Promise<RelatedItems> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/concepts/${id}/related`, { next: { revalidate: 30 } });
-  if (!res.ok) return { concept_id: id, ideas: [], specs: [], total: 0 };
-  return res.json();
+  try {
+    const res = await fetch(`${base}/api/concepts/${id}/related`, { next: { revalidate: 30 } });
+    if (!res.ok) return { concept_id: id, ideas: [], specs: [], total: 0 };
+    return res.json();
+  } catch {
+    return { concept_id: id, ideas: [], specs: [], total: 0 };
+  }
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {

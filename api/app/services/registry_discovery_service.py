@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from app.models.registry_discovery import (
     RegistrySubmissionInventory,
@@ -14,6 +15,15 @@ from app.models.registry_discovery import (
 )
 
 _INVENTORY_PATH = "docs/registry-submissions.json"
+
+
+@dataclass(frozen=True)
+class RegistrySubmissionTarget:
+    registry_id: str
+    registry_name: str
+    category: str
+    required_files: list[str]
+    validator: Callable[[], bool]
 
 
 def _repo_root() -> Path:
@@ -53,6 +63,47 @@ def _missing_paths(repo_root: Path, rel_paths: list[str]) -> list[str]:
         if not (repo_root / rel_path).exists():
             missing.append(rel_path)
     return missing
+
+
+def _build_target_validator(repo_root: Path, required_files: list[str], proof_path: str | None, proof_url: str | None) -> Callable[[], bool]:
+    def _validator() -> bool:
+        missing_files = _missing_paths(
+            repo_root,
+            list(dict.fromkeys([*required_files, *([proof_path] if proof_path else [])])),
+        )
+        return not missing_files and bool(proof_path or proof_url)
+
+    return _validator
+
+
+def _load_targets(repo_root: Path) -> list[RegistrySubmissionTarget]:
+    payload = _read_json(repo_root, _INVENTORY_PATH)
+    raw_items = payload.get("items")
+    if not isinstance(raw_items, list):
+        return []
+
+    targets: list[RegistrySubmissionTarget] = []
+    for raw_item in raw_items:
+        if not isinstance(raw_item, dict):
+            continue
+        registry_id = str(raw_item.get("registry_id") or "").strip()
+        registry_name = str(raw_item.get("registry_name") or "").strip()
+        category = str(raw_item.get("category") or "").strip()
+        required_files = _as_list(raw_item.get("required_files"))
+        if not registry_id or not registry_name or not category or not required_files:
+            continue
+        proof_path = _as_text(raw_item.get("proof_path"))
+        proof_url = _as_text(raw_item.get("proof_url"))
+        targets.append(
+            RegistrySubmissionTarget(
+                registry_id=registry_id,
+                registry_name=registry_name,
+                category=category,
+                required_files=required_files,
+                validator=_build_target_validator(repo_root, required_files, proof_path, proof_url),
+            )
+        )
+    return targets
 
 
 def _load_records(repo_root: Path) -> list[RegistrySubmissionRecord]:
@@ -126,3 +177,6 @@ def build_registry_submission_inventory() -> RegistrySubmissionInventory:
         ),
         items=items,
     )
+
+
+_TARGETS = _load_targets(_repo_root())

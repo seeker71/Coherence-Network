@@ -9,13 +9,14 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app import config_loader
 from app.main import app
 from app.services import agent_service
 
 
 def _reset_agent_store(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
-    monkeypatch.setenv("AGENT_AUTO_EXECUTE", "0")
+    config_loader.set_config_value("agent_executor", "auto_execute", False)
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None

@@ -8,10 +8,17 @@ import { getApiBase } from "@/lib/api";
 const API = getApiBase();
 
 interface TaskDetail {
-  id: string; direction: string; task_type: string;
-  status: string; provider: string | null; outcome: string | null;
-  result: string | null; created_at: string | null; updated_at: string | null;
-  idea_id: string | null; metadata: Record<string, unknown>;
+  task_id: string;
+  description: string;
+  task_type: string | null;
+  status: string | null;
+  provider: string | null;
+  outcome: string | null;
+  result: string | null;
+  completed_at: string | null;
+  idea_id: string | null;
+  idea_title: string | null;
+  cc_earned: number;
 }
 
 export default function TaskDrilldownPage() {
@@ -25,8 +32,11 @@ export default function TaskDrilldownPage() {
     if (!task_id) return;
     setStatus("loading");
     try {
-      const res = await fetch(`${API}/api/tasks/${task_id}`);
-      if (!res.ok) throw new Error((await res.json()).detail ?? "Task not found");
+      const res = await fetch(`${API}/api/contributors/${encodeURIComponent(id ?? "")}/tasks/${encodeURIComponent(task_id)}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail ?? "Task not found");
+      }
       setTask(await res.json());
       setStatus("ok");
     } catch (e) {
@@ -57,7 +67,7 @@ export default function TaskDrilldownPage() {
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-2">
         <p className="text-sm text-muted-foreground">Task detail</p>
-        <h1 className="text-2xl font-light leading-snug">{task.direction.slice(0, 120)}{task.direction.length > 120 ? "…" : ""}</h1>
+        <h1 className="text-2xl font-light leading-snug">{task.description || task.task_id}</h1>
         <div className="flex flex-wrap gap-2 pt-1">
           {task.task_type && <span className="text-xs px-1.5 py-0.5 rounded bg-zinc-700/30 text-zinc-300">{task.task_type}</span>}
           {task.provider && <span className="text-xs px-1.5 py-0.5 rounded bg-blue-700/20 text-blue-300">{task.provider}</span>}
@@ -68,17 +78,29 @@ export default function TaskDrilldownPage() {
       <section className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1">
           <p className="text-muted-foreground">Status</p>
-          <p className="font-medium capitalize">{task.status}</p>
+          <p className="font-medium capitalize">{task.status ?? "—"}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1">
-          <p className="text-muted-foreground">Created</p>
-          <p>{task.created_at ? new Date(task.created_at).toLocaleDateString() : "—"}</p>
+          <p className="text-muted-foreground">Completed</p>
+          <p>{task.completed_at ? new Date(task.completed_at).toLocaleDateString() : "—"}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1">
-          <p className="text-muted-foreground">Updated</p>
-          <p>{task.updated_at ? new Date(task.updated_at).toLocaleDateString() : "—"}</p>
+          <p className="text-muted-foreground">Seeds earned</p>
+          <p>{task.cc_earned > 0 ? `+${task.cc_earned.toFixed(2)}` : "—"}</p>
         </div>
       </section>
+
+      {task.idea_id && (
+        <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">
+          <h2 className="text-lg font-medium">Idea</h2>
+          <Link
+            href={`/ideas/${encodeURIComponent(task.idea_id)}`}
+            className="text-primary hover:underline"
+          >
+            {task.idea_title ?? task.idea_id}
+          </Link>
+        </section>
+      )}
 
       {task.result && (
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">

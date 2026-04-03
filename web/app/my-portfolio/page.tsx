@@ -20,23 +20,24 @@ export default function MyPortfolioPage() {
     <main className="min-h-screen px-4 md:px-8 py-10 max-w-2xl mx-auto space-y-8 flex flex-col items-center justify-center">
       <div className="w-full rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 space-y-6 text-center">
         <div className="space-y-2">
+          <p className="text-sm text-muted-foreground uppercase tracking-widest">My Portfolio</p>
+          <h1 className="text-3xl md:text-4xl font-light tracking-tight">What have I built?</h1>
           <p className="text-sm text-muted-foreground uppercase tracking-widest">My Garden</p>
-          <h1 className="text-3xl md:text-4xl font-light tracking-tight">What have I grown?</h1>
           <p className="text-muted-foreground">
-            Enter your contributor name to see your harvest, plants, seeds planted, and garden work.
+            Enter your contributor ID to see your identities, CC balance, stakes, completed tasks, and the garden they add up to.
           </p>
         </div>
 
         <form onSubmit={handleGo} className="flex gap-2 max-w-md mx-auto">
           <Input
-            placeholder="Contributor name"
+            placeholder="Contributor ID or handle"
             value={contributorId}
             onChange={(e) => setContributorId(e.target.value)}
             className="flex-1"
             autoFocus
           />
           <Button type="submit" disabled={!contributorId.trim()}>
-            View Garden
+            View Portfolio
           </Button>
         </form>
 

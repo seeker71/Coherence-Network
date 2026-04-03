@@ -11,6 +11,7 @@ from app.models.portfolio import (
     IdeaContributionsList,
     PortfolioSummary,
     StakesList,
+    TaskDetail,
     TasksList,
 )
 from app.routers.auth_keys import verify_contributor_key
@@ -112,6 +113,19 @@ def me_tasks(
         return portfolio_service.get_tasks(contributor_id, status=status, limit=limit, offset=offset)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/tasks/{task_id}", response_model=TaskDetail, summary="My task detail (API key)")
+def me_task_detail(
+    task_id: str,
+    contributor_id: str = Depends(_contributor_id_from_api_key),
+) -> TaskDetail:
+    try:
+        return portfolio_service.get_task_detail(contributor_id, task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
 
 
 @router.get(

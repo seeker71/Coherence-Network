@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app import config_loader
 from app.main import app
 from app.services import agent_service
 
@@ -12,8 +13,8 @@ from app.services import agent_service
 @pytest.mark.asyncio
 async def test_list_tasks_includes_status_counts(monkeypatch: pytest.MonkeyPatch) -> None:
     """GET /api/agent/tasks total matches GET /api/agent/tasks/count aggregate."""
-    monkeypatch.setenv("AGENT_AUTO_EXECUTE", "0")
     monkeypatch.setenv("AGENT_TASKS_PERSIST", "0")
+    config_loader.set_config_value("agent_executor", "auto_execute", False)
     agent_service.clear_store()
     agent_service._store_loaded = False
 

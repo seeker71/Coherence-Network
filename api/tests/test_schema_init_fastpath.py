@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 
 import pytest
+from sqlalchemy.exc import OperationalError
 
 
 @pytest.mark.parametrize(
@@ -43,3 +44,30 @@ def test_ensure_schema_short_circuits_after_first_init(
 
     assert calls["create_all"] == 0
     assert calls["table_exists"] == 1
+
+
+def test_unified_db_ensure_schema_ignores_sqlite_already_exists_race(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = importlib.import_module("app.services.unified_db")
+    calls = {"create_all": 0}
+    sentinel_engine = object()
+
+    monkeypatch.setattr(module, "_SCHEMA_INITIALIZED", {})
+    monkeypatch.setattr(module, "database_url", lambda: "sqlite+pysqlite:////tmp/coherence-test.db")
+    monkeypatch.setattr(module, "engine", lambda: sentinel_engine)
+
+    def _fake_create_all(*, bind, checkfirst):
+        assert bind is sentinel_engine
+        assert checkfirst is True
+        calls["create_all"] += 1
+        raise OperationalError(
+            "CREATE TABLE telemetry_automation_usage_snapshots (...)", (), Exception("table already exists")
+        )
+
+    monkeypatch.setattr(module.Base.metadata, "create_all", _fake_create_all)
+
+    module.ensure_schema()
+
+    assert calls["create_all"] == 1
+    assert module._SCHEMA_INITIALIZED["sqlite+pysqlite:////tmp/coherence-test.db"] is True

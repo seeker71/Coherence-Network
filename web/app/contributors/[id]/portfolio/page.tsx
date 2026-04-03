@@ -296,22 +296,22 @@ export default function ContributorPortfolioPage() {
         {/* Quick stats — garden framing (Spec 186 R2, R7) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
           <div className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
-            <p className="text-xs text-muted-foreground">Harvest</p>
+            <p className="text-xs text-muted-foreground" aria-label={'CC Balance'}>Harvest</p>
             <p className="text-xl font-light text-primary">{fmtCC(summary.cc_balance)} seeds</p>
             {summary.cc_network_pct !== null && (
               <p className="text-xs text-muted-foreground">{summary.cc_network_pct.toFixed(4)}% share of garden</p>
             )}
           </div>
           <div className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
-            <p className="text-xs text-muted-foreground">Plants</p>
+            <p className="text-xs text-muted-foreground" aria-label={'Ideas I Contributed To'}>Plants I Tend</p>
             <p className="text-xl font-light text-primary">{summary.idea_contribution_count}</p>
           </div>
           <div className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
-            <p className="text-xs text-muted-foreground">Seeds Planted</p>
+            <p className="text-xs text-muted-foreground" aria-label={'Ideas I Staked On'}>Seeds Planted</p>
             <p className="text-xl font-light text-primary">{summary.stake_count}</p>
           </div>
           <div className="rounded-xl border border-border/20 bg-background/40 p-3 space-y-1">
-            <p className="text-xs text-muted-foreground">Garden Work</p>
+            <p className="text-xs text-muted-foreground" aria-label={'Tasks I Completed'}>Garden Work</p>
             <p className="text-xl font-light text-primary">{summary.task_completion_count}</p>
           </div>
         </div>
@@ -320,7 +320,7 @@ export default function ContributorPortfolioPage() {
       {/* ── CC History Chart — Harvest Over Time (Spec 186 R2, R7) ── */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-medium">Harvest Over Time</h2>
+          <h2 className="text-lg font-medium" aria-label={'CC Earning History'}>Harvest Over Time</h2>
           <span className="text-xs text-muted-foreground">90 days · 7d buckets</span>
         </div>
         {history ? (
@@ -408,7 +408,7 @@ export default function ContributorPortfolioPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1 min-w-0">
                     <Link
-                      href={`/ideas/${encodeURIComponent(stake.idea_id)}`}
+                      href={`/contributors/${encodeURIComponent(contributorId)}/portfolio/stakes/${encodeURIComponent(stake.stake_id)}`}
                       className="font-medium hover:text-primary transition-colors truncate block"
                     >
                       {stake.idea_title}
@@ -420,6 +420,12 @@ export default function ContributorPortfolioPage() {
                     {stake.cc_valuation !== null && (
                       <p className="text-xs text-muted-foreground">Now: {fmtCC(stake.cc_valuation)} seeds</p>
                     )}
+                    <Link
+                      href={`/contributors/${encodeURIComponent(contributorId)}/portfolio/stakes/${encodeURIComponent(stake.stake_id)}`}
+                      className="block text-xs text-primary hover:underline"
+                    >
+                      Open seed detail
+                    </Link>
                   </div>
                 </div>
                 <details className="group/details mt-2">
@@ -452,7 +458,12 @@ export default function ContributorPortfolioPage() {
               <li key={task.task_id} className="rounded-xl border border-border/20 bg-background/40 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="space-y-1 min-w-0 flex-1">
-                    <p className="text-sm truncate">{task.description || task.task_id}</p>
+                    <Link
+                      href={`/contributors/${encodeURIComponent(contributorId)}/portfolio/tasks/${encodeURIComponent(task.task_id)}`}
+                      className="block text-sm truncate hover:text-primary transition-colors"
+                    >
+                      {task.description || task.task_id}
+                    </Link>
                     <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground">
                       {task.provider && <span className="rounded-full border border-border/30 px-2 py-0.5">Tool: {task.provider}</span>}
                       {task.idea_title && (
@@ -473,6 +484,12 @@ export default function ContributorPortfolioPage() {
                     {task.cc_earned > 0 && (
                       <p className="text-xs font-mono text-primary">+{fmtCC(task.cc_earned)} seeds harvested</p>
                     )}
+                    <Link
+                      href={`/contributors/${encodeURIComponent(contributorId)}/portfolio/tasks/${encodeURIComponent(task.task_id)}`}
+                      className="block text-xs text-primary hover:underline"
+                    >
+                      Open task detail
+                    </Link>
                   </div>
                 </div>
               </li>
@@ -489,7 +506,10 @@ export default function ContributorPortfolioPage() {
       {/* ── Footer nav ── */}
       <div className="flex gap-4 text-sm text-muted-foreground pt-2">
         <Link href="/my-portfolio" className="hover:text-foreground transition-colors">← Change Contributor</Link>
-        <Link href={`/contributors/${encodeURIComponent(contributorId)}`} className="hover:text-foreground transition-colors">
+        <Link
+          href={`/contributors?contributor_id=${encodeURIComponent(contributorId)}`}
+          className="hover:text-foreground transition-colors"
+        >
           Full Profile →
         </Link>
         <Link href="/invest" className="hover:text-foreground transition-colors">

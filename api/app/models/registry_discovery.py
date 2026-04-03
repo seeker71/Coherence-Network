@@ -32,7 +32,7 @@ class RegistrySubmissionRecord(BaseModel):
     missing_files: list[str] = Field(default_factory=list)
     proof_url: str | None = None
     proof_path: str | None = None
-    proof_note: str = Field(min_length=1)
+    proof_note: str = ""
     notes: str = Field(min_length=1)
 
 

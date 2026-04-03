@@ -70,6 +70,7 @@ const HOW_IT_WORKS = [
 ];
 
 export const revalidate = 90;
+export const dynamic = "force-dynamic";
 
 async function loadIdeas(): Promise<IdeasResponse | null> {
   return fetchJsonOrNull<IdeasResponse>(`${getApiBase()}/api/ideas`, {}, 5000);

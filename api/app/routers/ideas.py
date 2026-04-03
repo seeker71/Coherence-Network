@@ -35,7 +35,8 @@ from app.models.idea import (
     StageSetRequest,
 )
 from app.models.translation import IdeaTranslationResponse
-from app.services import agent_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service, translate_service
+from app.models.translation import TranslationLens
+from app.services import agent_service, concept_translation_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service, translate_service
 from app.services import lens_translation_service
 from app.services.translate_service import TranslateLens
 from app.models.lens_translation import TranslationRegenerateBody
@@ -193,10 +194,35 @@ async def translate_idea_view(
     view: TranslationLens = Query(..., description="Worldview lens (conceptual framing, not MT)."),
 ) -> IdeaTranslationResponse:
     """Reframe an idea through a worldview using the ontology graph and resonance edges."""
-    result = concept_translation_service.translate_idea(idea_id, view.value)
-    if result is None:
+    idea = idea_service.get_idea(idea_id)
+    if idea is None:
         raise HTTPException(status_code=404, detail="Idea not found")
-    return result
+
+    tags: list[str] = []
+    if hasattr(idea, "tags") and idea.tags:
+        tags = list(idea.tags)
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "tags") and idea.idea.tags:
+        tags = list(idea.idea.tags)
+
+    desc = ""
+    if hasattr(idea, "description"):
+        desc = idea.description or ""
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "description"):
+        desc = idea.idea.description or ""
+
+    name = ""
+    if hasattr(idea, "name"):
+        name = idea.name or idea_id
+    elif hasattr(idea, "idea") and hasattr(idea.idea, "name"):
+        name = idea.idea.name or idea_id
+
+    return concept_translation_service.translate_idea(
+        idea_id=idea_id,
+        idea_name=name,
+        idea_description=desc,
+        idea_tags=tags,
+        view=view.value,
+    )
 
 
 @router.get("/ideas/selection-ab/stats")

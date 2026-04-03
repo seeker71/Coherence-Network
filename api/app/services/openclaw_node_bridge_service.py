@@ -2,7 +2,8 @@
 
 Real-time push parallel to SSE (`/api/federation/nodes/{id}/stream`), using a versioned
 JSON envelope. Backpressure: per-connection queues drop the oldest event when full.
-Optional auth: set COHERENCE_BRIDGE_TOKEN; clients pass the same value as query `token`.
+Optional auth comes from config (`federation.bridge_token`); clients pass the same value
+as query `token`.
 """
 
 from __future__ import annotations
@@ -10,9 +11,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 from datetime import datetime, timezone
 from typing import Any
+
+from app.config_loader import get_str
 
 logger = logging.getLogger(__name__)
 
@@ -82,11 +84,11 @@ async def unregister_bridge_subscriber(node_id: str, queue: asyncio.Queue) -> No
 
 
 def bridge_token_configured() -> bool:
-    return bool(os.getenv("COHERENCE_BRIDGE_TOKEN", "").strip())
+    return bool(get_str("federation", "bridge_token", "").strip())
 
 
 def bridge_token_ok(token: str | None) -> bool:
-    expected = os.getenv("COHERENCE_BRIDGE_TOKEN", "").strip()
+    expected = get_str("federation", "bridge_token", "").strip()
     if not expected:
         return True
     return (token or "").strip() == expected

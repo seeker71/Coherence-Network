@@ -44,7 +44,7 @@ export function isStaticPath(path: string): boolean {
 }
 
 export function buildProbeUrl(path: string): string {
-  const apiPath = `/api${path}`;
+  const apiPath = path.startsWith("/api/") ? path : `/api${path}`;
   const qs = REQUIRED_QUERY_OVERRIDES[path];
   if (!qs) return `${API_BASE}${apiPath}`;
   return `${API_BASE}${apiPath}?${qs}`;

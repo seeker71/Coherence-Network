@@ -42,14 +42,18 @@ def _get_web_base_url() -> str:
     config = get_config()
     web_url = config.get("web_ui_base_url")
     if web_url:
-        return web_url
+        normalized = _normalize_base_url(web_url)
+        if normalized and "localhost" not in normalized and "127.0.0.1" not in normalized:
+            return normalized
     
     # Default: derive from API base URL
     api_base = get_api_base()
     if api_base:
-        return api_base.replace("api.", "")
+        normalized = _normalize_base_url(api_base.replace("api.", ""))
+        if normalized and "localhost" not in normalized and "127.0.0.1" not in normalized:
+            return normalized
     
-    return "https://coherencycoin.com"
+    return _DEFAULT_WEB_BASE_URL
 
 
 def _get_api_base_url(context: dict[str, Any] | None = None) -> str:
@@ -60,20 +64,27 @@ def _get_api_base_url(context: dict[str, Any] | None = None) -> str:
     config = get_config()
     api_url = config.get("api_base")
     if api_url:
-        return api_url
+        normalized = _normalize_base_url(api_url)
+        if normalized and "localhost" not in normalized and "127.0.0.1" not in normalized:
+            return normalized
     
     # Fallback: context keys
     for context_key in ("api_base_url", "api_url", "public_api_url"):
         context_value = context.get(context_key)
         if context_value:
-            return context_value
+            normalized = _normalize_base_url(context_value)
+            if normalized:
+                return normalized
     
-    # Default: use config service
-    return get_api_base()
+    # Default: use public Railway URL instead of localhost-style config fallbacks.
+    fallback = _normalize_base_url(get_api_base())
+    if fallback and "localhost" not in fallback and "127.0.0.1" not in fallback:
+        return fallback
+    return _DEFAULT_API_BASE_URL
 
 
-_DEFAULT_WEB_BASE_URL = "https://coherencycoin.com"
-_DEFAULT_API_BASE_URL = "https://api.coherencycoin.com"
+_DEFAULT_WEB_BASE_URL = "https://coherence-web-production.up.railway.app"
+_DEFAULT_API_BASE_URL = "https://coherence-network-production.up.railway.app"
 
 def _escape_markdown(text: str) -> str:
     out = text or ""

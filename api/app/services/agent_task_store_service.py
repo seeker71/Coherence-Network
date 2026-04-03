@@ -66,8 +66,16 @@ def _database_url() -> str:
 
 
 def enabled() -> bool:
+    persist_override = os.getenv("AGENT_TASKS_PERSIST", "").strip().lower()
+    if persist_override in {"0", "false", "no", "off"}:
+        return False
+    use_db_override = os.getenv("AGENT_TASKS_USE_DB", "").strip().lower()
+    if use_db_override in {"0", "false", "no", "off"}:
+        return False
     if not _database_url():
         return False
+    if use_db_override in {"1", "true", "yes", "on"}:
+        return True
     return get_bool("agent_tasks", "use_db", default=True)
 
 

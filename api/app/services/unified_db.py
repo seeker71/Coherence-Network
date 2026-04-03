@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Generator
 
 from sqlalchemy import create_engine, event, text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -34,6 +35,17 @@ class Base(DeclarativeBase):
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
 _SCHEMA_LOCK = threading.Lock()
 _SCHEMA_INITIALIZED: dict[str, bool] = {}
+
+
+def _normalize_engine_cache() -> dict[str, Any]:
+    """Repair the engine cache shape after tests or helpers clear it directly."""
+    global _ENGINE_CACHE
+    if not isinstance(_ENGINE_CACHE, dict):
+        _ENGINE_CACHE = {}
+    _ENGINE_CACHE.setdefault("url", "")
+    _ENGINE_CACHE.setdefault("engine", None)
+    _ENGINE_CACHE.setdefault("sessionmaker", None)
+    return _ENGINE_CACHE
 
 
 def _repo_root() -> Path:
@@ -96,22 +108,34 @@ def _create_engine(url: str):
     return eng
 
 
+def _create_all_idempotent(*, bind, url: str) -> None:
+    try:
+        Base.metadata.create_all(bind=bind, checkfirst=True)
+    except OperationalError as exc:
+        message = str(exc).lower()
+        if url.startswith("sqlite") and "already exists" in message:
+            # SQLite schema setup can race across separate connections during tests.
+            return
+        raise
+
+
 def engine():
     """Get or create the shared engine."""
+    cache = _normalize_engine_cache()
     url = database_url()
-    if _ENGINE_CACHE["engine"] is not None and _ENGINE_CACHE["url"] == url:
-        return _ENGINE_CACHE["engine"]
+    if cache["engine"] is not None and cache["url"] == url:
+        return cache["engine"]
     eng = _create_engine(url)
     session_factory = sessionmaker(
         bind=eng, autocommit=False, autoflush=False, expire_on_commit=False,
     )
-    _ENGINE_CACHE["url"] = url
-    _ENGINE_CACHE["engine"] = eng
-    _ENGINE_CACHE["sessionmaker"] = session_factory
+    cache["url"] = url
+    cache["engine"] = eng
+    cache["sessionmaker"] = session_factory
     # Auto-create tables on new engine (safe: checkfirst=True)
     try:
         from app.services import unified_models  # noqa: F401
-        Base.metadata.create_all(bind=eng, checkfirst=True)
+        _create_all_idempotent(bind=eng, url=url)
         _SCHEMA_INITIALIZED[url] = True
     except Exception:
         pass
@@ -121,7 +145,7 @@ def engine():
 def get_sessionmaker() -> sessionmaker:
     """Get the shared session factory."""
     engine()
-    return _ENGINE_CACHE["sessionmaker"]
+    return _normalize_engine_cache()["sessionmaker"]
 
 
 @contextmanager
@@ -151,18 +175,19 @@ def ensure_schema() -> None:
     with _SCHEMA_LOCK:
         if _SCHEMA_INITIALIZED.get(url):
             return
-        Base.metadata.create_all(bind=eng, checkfirst=True)
+        _create_all_idempotent(bind=eng, url=url)
         _SCHEMA_INITIALIZED[url] = True
 
 
 def reset_engine() -> None:
     """Reset the engine cache. Useful for tests that switch databases."""
-    if _ENGINE_CACHE["engine"] is not None:
+    cache = _normalize_engine_cache()
+    if cache["engine"] is not None:
         try:
-            _ENGINE_CACHE["engine"].dispose()
+            cache["engine"].dispose()
         except Exception:
             pass
-    _ENGINE_CACHE["url"] = ""
-    _ENGINE_CACHE["engine"] = None
-    _ENGINE_CACHE["sessionmaker"] = None
+    cache["url"] = ""
+    cache["engine"] = None
+    cache["sessionmaker"] = None
     _SCHEMA_INITIALIZED.clear()

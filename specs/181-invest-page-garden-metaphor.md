@@ -4,11 +4,11 @@
 **Idea ID**: task_57f054c23b57dbbd
 **Status**: Draft
 **Depends on**: Spec 157 (Investment UX), Spec 052 (Portfolio Cockpit)
-**Depended on by**: Spec 186 (My Portfolio — Garden vs Ledger)
+**Depended on by**: Spec 186 (My Portfolio — Garden vs Ledger) — ✅ Implemented
 
 ---
 
-## Summary
+## Purpose
 
 The current `/invest` page uses spreadsheet language — "Value gap", "Est. cost", "ROI" — and a bare
 horizontal progress bar. This framing positions ideas as financial instruments to be evaluated, not
@@ -24,6 +24,24 @@ progress bar.
 The change is **additive and non-breaking**: no API changes are required. The underlying data fields
 (`value_gap`, `estimated_cost`, `free_energy_score`, `manifestation_status`) drive the same
 calculations but are displayed through new labels and visual metaphors.
+
+## Files to Modify
+
+- `web/app/invest/page.tsx`
+- `web/app/invest/InvestBalanceSection.tsx`
+
+## Acceptance Criteria
+
+- Manual validation on `/invest` confirms garden-language labels are primary visible copy, with the previous spreadsheet terms demoted to secondary accessible context only.
+- Manual validation confirms every invest card renders a stage strip derived from `manifestation_status`, an expected-yield cue, and a garden description derived from `free_energy_score`.
+- Manual validation confirms the balance section renders as "Seeds available" while preserving the existing balance data and contributor-change flow.
+
+## Out Of Scope
+
+- No backend or database changes.
+- No new API endpoints.
+- No CLI wording changes for `cc invest` or `cc portfolio`.
+- No cross-page metaphor rollout beyond the invest page and its balance section.
 
 ---
 
@@ -58,6 +76,10 @@ The page must still be navigable, accessible (WCAG AA), and fast. No backend cha
 ---
 
 ## Requirements
+
+- [ ] Replace primary visible invest-page ledger language with garden-language labels while keeping the underlying data fields intact.
+- [ ] Render a stage indicator and expected-yield treatment for every invest card using existing idea fields only.
+- [ ] Preserve accessible numeric detail access, contributor balance lookup, and `/ideas/{idea_id}` navigation behavior.
 
 ### R1 — Growth Stage Mapping
 
@@ -231,6 +253,13 @@ function growthDescription(score: number | null): string {
 
 ## Verification
 
+Run these commands as the review baseline:
+
+```bash
+python3 scripts/validate_spec_quality.py --file specs/181-invest-page-garden-metaphor.md
+curl -s https://coherencycoin.com/invest | grep -E "Growth potential|Water needed|Expected yield|Seeds available|Water|Tend|Plant"
+```
+
 This spec constitutes a contract. The following scenarios must pass in production.
 
 ### Scenario 1 — Garden language visible on page load
@@ -334,37 +363,23 @@ how many seeds you have" (not the old "see your balance" text).
 
 ---
 
-## Risks and Assumptions
+## Risks
 
-| Risk | Mitigation |
-|---|---|
-| `free_energy_score` not present on all ideas | Graceful fallback to "Young and untested" description |
-| `manifestation_status` has unexpected values | Default to Seed stage for all unrecognized values |
-| Garden metaphor confuses new users who expect financial framing | Numbers remain accessible via expand/hover; ROI multiplier badge still visible |
-| Emoji rendering inconsistent across platforms | Supplement all stage emoji with text labels ("Seedling") that are visible by default |
-| Animation performance on low-power devices | Use `prefers-reduced-motion` media query to disable pulse animation |
-| Next.js SSR and client hydration mismatch on hover-state details | Use `<details>`/`<summary>` for expand/collapse instead of JS-only state |
+- `free_energy_score` may be missing on some ideas; fall back to "Young and untested" copy rather than leaving the card blank.
+- `manifestation_status` may contain unexpected values; default to Seed stage for all unknown statuses.
+- The garden metaphor could confuse users who expect direct financial language; keep numeric details accessible on expand/hover and retain the expected-yield cue.
+- Emoji rendering can vary by platform; pair each emoji with visible stage text and accessibility labels.
+- Motion can feel noisy on low-power or accessibility-sensitive devices; respect `prefers-reduced-motion`.
+- Hover-only detail affordances can fail on touch devices; mobile must use an inline expand/toggle path.
 
 ---
 
-## Known Gaps and Follow-up Tasks
+## Known Gaps
 
-1. **CLI `cc invest` command**: This spec does not change CLI output. A follow-up spec should apply
-   garden metaphor to `cc invest` and `cc portfolio` output.
-
-2. **Garden metaphor consistency across pages**: `/ideas`, `/contributors/{id}/portfolio`, and
-   `/resonance` still use spreadsheet language. A follow-up audit spec should align them.
-
-3. **Growth measurement proof**: The spec answers the open question "how do we show whether it is
-   working yet" with the stage strip and growth description. However, longitudinal proof (did the
-   garden grow over time?) requires a growth history chart — deferred to a follow-up spec.
-
-4. **Animated sprout-to-tree SVG**: This spec allows CSS-based stage strip as a simpler
-   implementation. A richer animated SVG plant could be added in a visual polish pass.
-
-5. **Color palette**: This spec does not prescribe exact Tailwind classes for the green/emerald
-   garden palette. The implementor should use `emerald-*` or `green-*` Tailwind shades, consistent
-   with the existing primary color system.
+- Follow-up task: apply the same metaphor shift to CLI `cc invest` and `cc portfolio` output.
+- Follow-up task: align `/ideas`, `/contributors/{id}/portfolio`, and `/resonance` to the same garden-language system.
+- Follow-up task: replace the initial stage strip with a richer animated SVG plant treatment if the simpler version lands well.
+- Follow-up task: define an exact green/emerald palette token set if the current design-system colors prove too loose in review.
 
 ---
 

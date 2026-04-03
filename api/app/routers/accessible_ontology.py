@@ -28,6 +28,13 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from app.models.accessible_ontology import (
+    AccessibleConceptResponse,
+    GardenView,
+    OntologyConceptPatch,
+    OntologyContributionStats,
+    PlainLanguageContribution,
+)
 from app.services import accessible_ontology_service as svc
 
 router = APIRouter()
@@ -102,6 +109,138 @@ class ReviewRelationshipRequest(BaseModel):
 
 class EndorseRequest(BaseModel):
     contributor: str = Field(default="anonymous", max_length=120)
+
+
+def _legacy_title(plain_text: str, explicit_title: str | None) -> str:
+    title = str(explicit_title or "").strip()
+    if title:
+        return title
+    words = [part for part in plain_text.strip().split() if part]
+    return " ".join(words[:8]) or "Untitled concept"
+
+
+def _legacy_status(api_status: str) -> str:
+    if api_status == "confirmed":
+        return "placed"
+    if api_status == "deprecated":
+        return "orphan"
+    return "pending"
+
+
+def _api_status(web_status: str | None) -> str | None:
+    if web_status == "placed":
+        return "confirmed"
+    if web_status == "orphan":
+        return "deprecated"
+    if web_status == "pending":
+        return "pending"
+    return None
+
+
+def _legacy_response(record: dict, *, index: int = 0) -> AccessibleConceptResponse:
+    domains = record.get("domains") if isinstance(record.get("domains"), list) else []
+    inferred = record.get("inferred_relations") if isinstance(record.get("inferred_relations"), list) else []
+    cluster = str(domains[0] if domains else "general")
+    return AccessibleConceptResponse(
+        id=str(record.get("id") or ""),
+        title=str(record.get("title") or "Untitled concept"),
+        plain_text=str(record.get("body") or ""),
+        contributor_id=str(record.get("contributor_id") or "anonymous"),
+        domains=[str(item) for item in domains],
+        status=_legacy_status(str(record.get("status") or "pending")),
+        inferred_relationships=[
+            {
+                "concept_id": str(row.get("concept_id") or row.get("target_id") or ""),
+                "concept_name": str(row.get("concept_name") or row.get("target_label") or ""),
+                "relationship_type": str(row.get("relationship_type") or row.get("type") or "related_to"),
+                "confidence": float(row.get("confidence") or 0.0),
+                "reason": str(row.get("reason") or ""),
+            }
+            for row in inferred
+            if isinstance(row, dict)
+        ],
+        garden_position={"cluster": cluster, "x": float(index % 12), "y": float(index // 12)},
+        core_concept_match=None,
+        created_at=str(record.get("created_at") or ""),
+        updated_at=str(record.get("updated_at") or ""),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Legacy contribution endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/ontology/contribute", status_code=201, tags=["ontology"])
+async def contribute_concept(body: PlainLanguageContribution) -> AccessibleConceptResponse:
+    record = svc.create_concept(
+        title=_legacy_title(body.plain_text, body.title),
+        body=body.plain_text,
+        domains=body.domains,
+        contributor_id=body.contributor_id,
+    )
+    return _legacy_response(record)
+
+
+@router.get("/ontology/contributions", tags=["ontology"])
+async def list_contributions(
+    domain: str | None = Query(default=None),
+    status: str | None = Query(default=None),
+    search: str | None = Query(default=None),
+) -> dict[str, object]:
+    api_status = _api_status(status)
+    items = svc.list_concepts(domain=domain, status=api_status, search=search)
+    payload = [_legacy_response(item, index=index).model_dump() for index, item in enumerate(items)]
+    return {"items": payload, "total": len(payload)}
+
+
+@router.get("/ontology/contributions/{concept_id}", tags=["ontology"])
+async def get_contribution(concept_id: str) -> AccessibleConceptResponse:
+    record = svc.get_concept(concept_id)
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    return _legacy_response(record)
+
+
+@router.patch("/ontology/contributions/{concept_id}", tags=["ontology"])
+async def patch_contribution(concept_id: str, body: OntologyConceptPatch) -> AccessibleConceptResponse:
+    record = svc.patch_concept(
+        concept_id,
+        title=body.title,
+        body=body.plain_text,
+        domains=body.domains,
+        status=_api_status(body.status),
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    return _legacy_response(record)
+
+
+@router.delete("/ontology/contributions/{concept_id}", status_code=204, tags=["ontology"])
+async def delete_contribution(concept_id: str) -> None:
+    if not svc.delete_concept(concept_id):
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+
+
+@router.get("/ontology/edges", tags=["ontology"])
+async def list_ontology_edges() -> dict[str, list[dict[str, object]]]:
+    edges: list[dict[str, object]] = []
+    for concept in svc.list_concepts(domain=None, status=None, search=None):
+        for relation in concept.get("inferred_relations") or []:
+            if not isinstance(relation, dict):
+                continue
+            edges.append(relation)
+    return {"edges": edges}
+
+
+@router.get("/ontology/garden", tags=["ontology"])
+async def get_ontology_garden(limit: int = Query(default=200, ge=1, le=500)) -> GardenView:
+    return GardenView(**svc.get_garden_payload(limit=limit))
+
+
+@router.get("/ontology/stats", tags=["ontology"])
+async def get_ontology_stats() -> OntologyContributionStats:
+    return OntologyContributionStats(**svc.get_stats())
 
 
 # ---------------------------------------------------------------------------

@@ -96,6 +96,8 @@ export const metadata: Metadata = {
   description: "Walk one real-world idea through the MVP in plain language.",
 };
 
+export const dynamic = "force-dynamic";
+
 function extractTasks(payload: TaskListPayload | null): AgentTask[] {
   if (!payload) return [];
   if (Array.isArray(payload)) return payload;

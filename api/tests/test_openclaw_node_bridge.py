@@ -7,6 +7,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
+from app import config_loader
 
 @pytest.fixture()
 def client():
@@ -33,6 +34,7 @@ def test_openclaw_bridge_delivers_posted_message(client: TestClient) -> None:
         post = client.post(
             "/api/federation/nodes/node_ws_send/messages",
             json={
+                "from_node": "node_ws_send",
                 "to_node": "node_ws_recv",
                 "type": "text",
                 "text": "qa-openclaw-bridge-1",
@@ -57,14 +59,14 @@ def test_openclaw_bridge_ping_pong(client: TestClient) -> None:
         assert pong["schema"] == "coherence.openclaw.bridge.v1"
 
 
-def test_bridge_token_ok_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_bridge_token_ok_config() -> None:
     from app.services import openclaw_node_bridge_service as bridge
 
-    monkeypatch.delenv("COHERENCE_BRIDGE_TOKEN", raising=False)
+    config_loader.set_config_value("federation", "bridge_token", None)
     assert bridge.bridge_token_ok(None) is True
     assert bridge.bridge_token_ok("wrong") is True
 
-    monkeypatch.setenv("COHERENCE_BRIDGE_TOKEN", "secret-bridge")
+    config_loader.set_config_value("federation", "bridge_token", "secret-bridge")
     assert bridge.bridge_token_ok("secret-bridge") is True
     assert bridge.bridge_token_ok(None) is False
     assert bridge.bridge_token_ok("nope") is False

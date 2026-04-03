@@ -45,6 +45,10 @@ interface NeighborsResponse {
   };
 }
 
+type PaginatedItems<T> = {
+  items?: T[];
+};
+
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
   try {
@@ -92,13 +96,18 @@ export default function GraphPage() {
   const [error, setError] = useState<string | null>(null);
   const [nodeFilter, setNodeFilter] = useState("");
 
+  const extractItems = <T,>(payload: T[] | PaginatedItems<T>): T[] => {
+    if (Array.isArray(payload)) return payload;
+    return Array.isArray(payload?.items) ? payload.items : [];
+  };
+
   const loadNodes = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [nodesRes, edgesRes] = await Promise.all([
         fetch(`${API}/api/graph/nodes`),
-        fetch(`${API}/api/graph/edges`),
+        fetch(`${API}/api/edges`),
       ]);
       if (!nodesRes.ok) throw new Error(`Nodes failed (${nodesRes.status})`);
       if (!edgesRes.ok) throw new Error(`Edges failed (${edgesRes.status})`);
@@ -106,8 +115,8 @@ export default function GraphPage() {
         nodesRes.json(),
         edgesRes.json(),
       ]);
-      setNodes(nodesData);
-      setEdges(edgesData);
+      setNodes(extractItems<Node>(nodesData));
+      setEdges(extractItems<Edge>(edgesData));
     } catch (e) {
       setError(String(e));
     } finally {
