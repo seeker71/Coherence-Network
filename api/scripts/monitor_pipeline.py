@@ -798,8 +798,8 @@ def _maybe_send_monitor_telegram_alert(data: dict[str, Any], log: logging.Logger
 
     api_base = str(os.environ.get("PUBLIC_API_BASE", BASE)).strip() or BASE
     web_base = str(
-        os.environ.get("PUBLIC_WEB_BASE", "https://coherence-web-production.up.railway.app")
-    ).strip() or "https://coherence-web-production.up.railway.app"
+        os.environ.get("PUBLIC_WEB_BASE", "https://coherencycoin.com")
+    ).strip() or "https://coherencycoin.com"
     message = _format_monitor_telegram_alert(
         [row for row in issues if isinstance(row, dict)],
         api_base=api_base,
@@ -1641,7 +1641,7 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     except Exception:
         pass
 
-    # Paid-service usage/readiness/validation awareness (OpenAI/OpenRouter/Railway/Supabase, etc.).
+    # Paid-service usage/readiness/validation awareness (OpenAI/OpenRouter/hosted providers/Supabase, etc.).
     try:
         usage_alerts_resp = client.get(
             f"{BASE}/api/automation/usage/alerts",

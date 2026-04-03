@@ -27,6 +27,7 @@ const SHARED_RELATED: LinkItem[] = [
   { href: "/tasks", label: "Work" },
   { href: "/portfolio", label: "Portfolio" },
   { href: "/specs", label: "Plans" },
+  { href: "/diagnostics", label: "Diagnostics" },
 ];
 
 const CONTEXTS: Record<string, ContextDef> = {
@@ -202,6 +203,16 @@ const CONTEXTS: Record<string, ContextDef> = {
       { href: "/api/gates/main-contract", label: "Main contract" },
       { href: "/api/gates/public-deploy-contract", label: "Public deploy contract" },
       { href: "/api/gates/commit-traceability", label: "Commit traceability" },
+    ],
+  },
+  "/diagnostics": {
+    ideaId: "coherence-network-agent-pipeline",
+    related: SHARED_RELATED,
+    machinePaths: [
+      { href: "/api/agent/diagnostics/overview", label: "Diagnostics summary" },
+      { href: "/api/health", label: "Health check" },
+      { href: "/api/runtime/endpoints/attention", label: "Endpoint attention" },
+      { href: "/api/agent/tasks?limit=20", label: "Recent tasks" },
     ],
   },
   "/friction": {

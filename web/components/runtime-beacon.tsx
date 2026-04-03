@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 import { getApiBase } from "@/lib/api";
+import { readPublicWebConfig } from "@/lib/public-config";
 
 type ViewTracker = {
   id: string;
@@ -197,8 +198,7 @@ function patchFetchOnce(): void {
 
 export default function RuntimeBeacon() {
   const pathname = usePathname();
-  const parsedSampleRate = Number.parseFloat(process.env.NEXT_PUBLIC_RUNTIME_BEACON_SAMPLE_RATE || "");
-  const sampleRate = Number.isFinite(parsedSampleRate) ? Math.min(1, Math.max(0, parsedSampleRate)) : 0.2;
+  const sampleRate = readPublicWebConfig().runtimeBeacon.sampleRate || 0.2;
 
   useEffect(() => {
     if (!pathname) return;

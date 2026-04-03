@@ -224,7 +224,7 @@ async def test_failed_task_records_linked_friction_and_failed_completion_trackin
 
         running = await client.patch(
             f"/api/agent/tasks/{task_id}",
-            json={"status": "running", "worker_id": "openai-codex:railway-runner"},
+            json={"status": "running", "worker_id": "openai-codex:hosted-runner"},
         )
         assert running.status_code == 200
         failed = await client.patch(
@@ -328,7 +328,7 @@ async def test_failed_task_friction_link_is_idempotent_on_repeat_failed_patch(
 
         running = await client.patch(
             f"/api/agent/tasks/{task_id}",
-            json={"status": "running", "worker_id": "openai-codex:railway-runner"},
+            json={"status": "running", "worker_id": "openai-codex:hosted-runner"},
         )
         assert running.status_code == 200
         failed_first = await client.patch(

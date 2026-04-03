@@ -3,27 +3,30 @@ set -e
 
 echo "=== Verifying Coherence Network Deployment ==="
 
+API_BASE="${PUBLIC_API_URL:-https://api.coherencycoin.com}"
+WEB_BASE="${PUBLIC_WEB_URL:-https://coherencycoin.com}"
+
 echo ""
 echo "1. API Health Check..."
-curl -fsS https://coherence-network-production.up.railway.app/api/health | jq .
+curl -fsS "$API_BASE/api/health" | jq .
 
 echo ""
 echo "2. Database Connection Check..."
-curl -fsS https://coherence-network-production.up.railway.app/api/ready | jq .
+curl -fsS "$API_BASE/api/ready" | jq .
 
 echo ""
 echo "3. Contributors Endpoint (should be empty array or have data)..."
-curl -fsS https://coherence-network-production.up.railway.app/api/contributors | jq .
+curl -fsS "$API_BASE/api/contributors" | jq .
 
 echo ""
 echo "4. Assets Endpoint (should be empty array or have data)..."
-curl -fsS https://coherence-network-production.up.railway.app/api/assets | jq .
+curl -fsS "$API_BASE/api/assets" | jq .
 
 echo ""
 echo "5. Contribution Ingest Contract Check (read-only by default)..."
 if [[ "${ALLOW_WRITE_PROBE:-0}" == "1" ]]; then
   echo "ALLOW_WRITE_PROBE=1 set; creating a real contribution probe."
-  RESPONSE=$(curl -s -X POST https://coherence-network-production.up.railway.app/api/contributions/github \
+  RESPONSE=$(curl -s -X POST "$API_BASE/api/contributions/github" \
     -H "Content-Type: application/json" \
     -d '{
       "contributor_email": "deploy-test@coherence.network",
@@ -48,7 +51,7 @@ if [[ "${ALLOW_WRITE_PROBE:-0}" == "1" ]]; then
   fi
 else
   echo "ALLOW_WRITE_PROBE not set; running dry-run debug probe (no persistence)."
-  RESPONSE=$(curl -s -X POST "https://coherence-network-production.up.railway.app/api/contributions/github/debug?persist=false" \
+  RESPONSE=$(curl -s -X POST "$API_BASE/api/contributions/github/debug?persist=false" \
     -H "Content-Type: application/json" \
     -d '{
       "contributor_email": "deploy-test@coherence.network",
@@ -73,19 +76,19 @@ fi
 
 echo ""
 echo "6. Verify Contributor Registry Reachability..."
-CONTRIBUTORS=$(curl -fsS https://coherence-network-production.up.railway.app/api/contributors)
+CONTRIBUTORS=$(curl -fsS "$API_BASE/api/contributors")
 echo "$CONTRIBUTORS" | jq .
 CONTRIB_COUNT=$(echo "$CONTRIBUTORS" | jq 'length')
 echo "Total contributors in database: $CONTRIB_COUNT"
 
 echo ""
 echo "7. CORS Check..."
-CORS_HEADER=$(curl -sI -H "Origin: https://coherence-web-production.up.railway.app" \
-  https://coherence-network-production.up.railway.app/api/health 2>&1 \
+CORS_HEADER=$(curl -sI -H "Origin: $WEB_BASE" \
+  "$API_BASE/api/health" 2>&1 \
   | grep -i "access-control-allow-origin" || echo "CORS header not found")
 echo "$CORS_HEADER"
 
-if [[ "$CORS_HEADER" == *"coherence-web-production.up.railway.app"* ]] || [[ "$CORS_HEADER" == *"*"* ]]; then
+if [[ "$CORS_HEADER" == *"$WEB_BASE"* ]] || [[ "$CORS_HEADER" == *"*"* ]]; then
   echo "✅ CORS configured correctly"
 else
   echo "⚠️  CORS may need configuration"

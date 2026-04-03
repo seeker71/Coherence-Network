@@ -184,7 +184,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Generate hard-data cursor fact report")
     parser.add_argument(
         "--public-api-base",
-        default=os.getenv("PUBLIC_API_BASE", "https://coherence-network-production.up.railway.app"),
+        default=os.getenv("PUBLIC_API_BASE", "https://api.coherencycoin.com"),
         help="Public API base URL for usage/readiness snapshots",
     )
     parser.add_argument(

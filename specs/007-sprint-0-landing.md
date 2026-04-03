@@ -121,7 +121,7 @@ All tests above must pass for landing to be considered complete.
 
 ## Out of Scope
 
-- Actual deployment to Railway/Fly/Vercel (decision gate)
+- Actual deployment to Railway/Fly/legacy web host (decision gate)
 - Web UI landing page (Sprint 1+)
 
 ## See also

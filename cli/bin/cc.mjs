@@ -35,12 +35,26 @@ import { handleRest } from "../lib/commands/rest.mjs";
 import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
 import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility, showDiagLive } from "../lib/commands/diagnostics.mjs";
 import { publishDiag, startDiagMode } from "../lib/commands/diag_publish.mjs";
+import { handleOps } from "../lib/commands/ops.mjs";
+import { handleConfig } from "../lib/commands/config_editor.mjs";
 import { showMetaSummary, showMetaEndpoints, showMetaModules } from "../lib/commands/meta.mjs";
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
 import { handleAgent } from "../lib/commands/agent.mjs";
-import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
+import {
+  listTasks,
+  showTask,
+  claimTask,
+  claimNext,
+  reportTask,
+  seedTask,
+  showTaskCount,
+  showTaskEvents,
+  postProgress,
+  streamStart,
+  watchTask,
+} from "../lib/commands/tasks.mjs";
 import { showPortfolio } from "../lib/commands/portfolio.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
 import { listConcepts, showConcept, linkConcepts } from "../lib/commands/concepts.mjs";
@@ -126,6 +140,10 @@ const COMMANDS = {
   login:         () => handleLogin(args),
   logout:        () => handleLogout(args),
   auth:          () => handleAuth(args),
+  ops:           () => handleOps(args),
+  config:        () => handleConfig(args),
+  tasks:         () => listTasks(args),
+  task:          () => handleTask(args),
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
@@ -534,7 +552,6 @@ function showHelp() {
   identity lookup <p> <id> Find contributor by identity
   credentials             Manage repo-specific tokens (add, list, remove)
   guide                   Guided experience for new contributors
-  COHERENCE_CONTRIBUTOR_ID overrides config.json for per-process agent identity
 
 \x1b[1mFederation:\x1b[0m
   nodes                   List federation nodes
@@ -549,6 +566,12 @@ function showHelp() {
   contributor <id> contributions  View contributions
 
 \x1b[1mTasks (agent work protocol):\x1b[0m
+  ops [--snapshot|--json] Operator diagnostics snapshot
+  ops                     Interactive diagnostics console
+  ops --watch 5           Refresh operator snapshot every 5 seconds
+  ops events <task_id>    Show stored task activity events
+  ops events <task_id> --follow  Stream live task events
+  ops runner <target> <pause|resume|restart|status>  Dispatch runner command
   tasks [status] [limit]  List tasks (pending, running, completed)
   task <id>               View task detail
   task next               Claim highest-priority pending task
@@ -557,6 +580,14 @@ function showHelp() {
   task seed <idea> [type] Create task from idea (spec|test|impl|review)
   task count              JSON task counts (/api/agent/tasks/count)
   task events <id> [N]    Paginated activity events for a task
+
+\x1b[1mConfig:\x1b[0m
+  config show             Show remote allowlisted config
+  config set <path> <value>   Update remote allowlisted config
+  config unset <path>         Clear remote allowlisted config field
+  config edit             Guided remote config editor
+  config show --local     Show ~/.coherence-network/config.json
+  config set <path> <value> --local  Update local config file
 
 \x1b[1mUniversal API (full coverage):\x1b[0m
   rest coverage           Canonical route count + proof JSON

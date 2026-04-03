@@ -2,7 +2,7 @@
  * Diagnostics commands: diag, diag health, diag issues, diag runners, diag visibility
  */
 
-import { get } from "../api.mjs";
+import { get, getApiBase } from "../api.mjs";
 
 function truncate(str, len) {
   if (!str) return "";
@@ -137,7 +137,7 @@ export async function showDiagVisibility() {
  * Use node_id='*' or omit to see all nodes.
  */
 export async function showDiagLive(args) {
-  const API_BASE = process.env.COHERENCE_API_URL || "https://api.coherencycoin.com";
+  const API_BASE = getApiBase();
   const nodeId = args[0] || "*";
 
   console.log(`\x1b[1m  DIAGNOSTIC STREAM\x1b[0m`);

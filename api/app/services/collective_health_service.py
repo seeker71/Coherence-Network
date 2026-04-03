@@ -222,6 +222,7 @@ def _friction_summary(*, window_days: int) -> dict[str, Any]:
                     "recommended_action": str(row.get("recommended_action") or ""),
                 }
             )
+    queue.sort(key=lambda row: float(row.get("signal") or 0.0), reverse=True)
 
     return {
         "score": round(friction_score, 4),

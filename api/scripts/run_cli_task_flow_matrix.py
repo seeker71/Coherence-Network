@@ -33,7 +33,7 @@ from app.services.agent_routing.model_routing_loader import get_model_for_execut
 
 DEFAULT_EXECUTORS = ("codex", "claude", "cursor", "gemini")
 DEFAULT_LOCAL_BASE_URL = "http://127.0.0.1:8000"
-DEFAULT_REMOTE_BASE_URL = "https://coherence-network-production.up.railway.app"
+DEFAULT_REMOTE_BASE_URL = "https://api.coherencycoin.com"
 TERMINAL_STATUSES = {"completed", "failed", "needs_decision"}
 
 PASS_FAIL_RE = re.compile(

@@ -41,7 +41,7 @@ constraints:
 N/A - no API contract changes in this spec.
 
 
-### Input Validation
+### Field Constraints
 
 - All string fields: min_length=1, max_length=1000
 - Numeric fields: appropriate min/max bounds
@@ -84,11 +84,12 @@ N/A - no model changes in this spec.
 ```bash
 cd api && pytest -q --ignore=tests/holdout tests/test_runtime_event_store_precedence.py
 python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-02-17_runtime-telemetry-db-precedence.json
+curl -fsS https://api.coherencycoin.com/api/ready
 ```
 
 ## Out of Scope
 
-- Changing Railway/Vercel environment variables or dashboard settings.
+- Changing Railway/legacy web host environment variables or dashboard settings.
 - Mirroring runtime telemetry to both DB and JSON file.
 
 ## Risks and Assumptions
@@ -103,4 +104,3 @@ python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evid
 ## Decision Gates (if any)
 
 None.
-

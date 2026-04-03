@@ -7,6 +7,7 @@ import LiveUpdatesController from "@/components/live_updates_controller";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ExpertModeProvider } from "@/components/expert-mode-context";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { loadPublicWebConfig } from "@/lib/app-config";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 
 const spaceGrotesk = Space_Grotesk({
@@ -41,6 +42,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const publicConfig = loadPublicWebConfig();
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -52,6 +54,11 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('coherence-theme');var d=document.documentElement;if(t==='light'){d.classList.add('light');d.style.colorScheme='light';}else if(t==='dark'||!t||t==='system'){var sys=window.matchMedia('(prefers-color-scheme: light)').matches;if(t==='light'||(t!=='dark'&&sys)){d.classList.add('light');d.style.colorScheme='light';}else{d.classList.add('dark');d.style.colorScheme='dark';}}}catch(e){}})();`,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__COHERENCE_PUBLIC_CONFIG__=${JSON.stringify(publicConfig)};`,
           }}
         />
       </head>

@@ -10,7 +10,7 @@ import sys
 import httpx
 
 
-DEFAULT_REQUIRED = "coherence-internal,openai-codex,github,railway,claude"
+DEFAULT_REQUIRED = "coherence-internal,openai-codex,github,claude"
 
 
 def _parse_required(raw: str) -> str:

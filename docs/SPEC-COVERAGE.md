@@ -97,7 +97,6 @@ Audit of spec → implementation → test mapping. All implementations are spec-
 | 095 Public E2E Flow Gate Automatio | ? | ? | ? | Pending |
 | 096 Provider Readiness Contract Automatio | ? | ? | ? | Pending |
 | 104 Nonblocking Monitoring Workflow | ? | ? | ? | Pending |
-| 105 Disable Vercel Pr Deployment | ? | ? | ? | Pending |
 | 106 External Tools Audit Stabilit | ? | ? | ? | Pending |
 | 107 Runtime Telemetry Db Precedenc | ? | ? | ? | Pending |
 | 108 N8N Security And Hitl Hardenin | ? | ? | ? | Pending |

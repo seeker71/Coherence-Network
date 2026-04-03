@@ -1,4 +1,4 @@
-"""Contract tests for non-interactive identity (R3, R6)."""
+"""Contract tests for non-interactive identity (config-backed R3, R6)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def client():
     return TestClient(app)
 
 
-def test_resolve_cli_contributor_id_env_precedence(monkeypatch, tmp_path: Path) -> None:
+def test_resolve_cli_contributor_id_prefers_config_json(monkeypatch, tmp_path: Path) -> None:
     cfg = tmp_path / "config.json"
     cfg.write_text(json.dumps({"contributor_id": "from-config"}), encoding="utf-8")
     monkeypatch.setattr(config_service, "_CONFIG_PATH", cfg)
@@ -33,13 +33,13 @@ def test_resolve_cli_contributor_id_env_precedence(monkeypatch, tmp_path: Path) 
 
     monkeypatch.setenv("COHERENCE_CONTRIBUTOR", "legacy")
     cid, src = config_service.resolve_cli_contributor_id()
-    assert cid == "legacy"
-    assert "legacy" in src
+    assert cid == "from-config"
+    assert src == "config.json"
 
     monkeypatch.setenv("COHERENCE_CONTRIBUTOR_ID", "canonical")
     cid, src = config_service.resolve_cli_contributor_id()
-    assert cid == "canonical"
-    assert "COHERENCE_CONTRIBUTOR_ID" in src
+    assert cid == "from-config"
+    assert src == "config.json"
 
 
 def test_identity_me_missing_key(client: TestClient) -> None:

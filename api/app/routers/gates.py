@@ -116,8 +116,8 @@ async def gates_main_contract(
 async def gates_public_deploy_contract(
     repo: str = Query("seeker71/Coherence-Network"),
     branch: str = Query("main"),
-    api_base: str = Query("https://coherence-network-production.up.railway.app"),
-    web_base: str = Query("https://coherence-web-production.up.railway.app"),
+    api_base: str = Query("https://api.coherencycoin.com"),
+    web_base: str = Query("https://coherencycoin.com"),
     timeout: float = Query(8.0, ge=1.0, le=60.0),
 ) -> dict:
     return await asyncio.to_thread(
@@ -135,8 +135,8 @@ async def gates_public_deploy_contract(
 async def create_public_deploy_verification_job(
     repo: str = Query("seeker71/Coherence-Network"),
     branch: str = Query("main"),
-    api_base: str = Query("https://coherence-network-production.up.railway.app"),
-    web_base: str = Query("https://coherence-web-production.up.railway.app"),
+    api_base: str = Query("https://api.coherencycoin.com"),
+    web_base: str = Query("https://coherencycoin.com"),
     expected_sha: str | None = Query(None),
     timeout: float = Query(8.0, ge=1.0, le=60.0),
     poll_seconds: float = Query(30.0, ge=1.0, le=600.0),

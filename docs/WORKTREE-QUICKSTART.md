@@ -56,7 +56,14 @@ git add <files> && git commit -m "<message>"   # if changes are ready
 git push -u origin "$(git rev-parse --abbrev-ref HEAD)"   # if branch has no upstream
 ```
 
-If the work is intentionally in progress, continue from that same worktree/thread instead of starting a new one.
+If the work is intentionally in progress, continue from that same worktree/thread instead of starting a new one. Dirty sibling worktrees are integration candidates, not abandoned scratchpads: resume that branch, merge/cherry-pick it, or commit it intentionally before starting another thread.
+
+SQLite artifact rule:
+
+- `data/coherence.db`, `api/data/coherence.db`, and SQLite sidecars such as `.db-wal` / `.db-shm` are treated as local runtime artifacts by the guards.
+- DB-only dirtiness does not count as sibling continuity risk and does not need commit-evidence coverage.
+- Before push/merge, prefer `git restore data/coherence.db api/data/coherence.db` unless the task explicitly changes a committed fixture or snapshot.
+- If a task really does require a DB artifact change, document why in the commit evidence and tracking sheet.
 
 Temporary bypass (not recommended):
 

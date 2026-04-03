@@ -347,7 +347,7 @@ async def test_runtime_mvp_acceptance_summary_reports_cost_rollups_and_accepted_
         monkeypatch=monkeypatch,
         override={
             "budget": {
-                "railway_base_budget_usd": 0.1,
+                "hosted_base_budget_usd": 0.1,
                 "provider_base_budget_usd": 0.2,
             },
             "revenue": {"per_accepted_review_usd": 0.5},
@@ -473,7 +473,7 @@ async def test_runtime_mvp_acceptance_judge_contract_passes_when_budget_and_reve
         monkeypatch=monkeypatch,
         override={
             "budget": {
-                "railway_base_budget_usd": 0.05,
+                "hosted_base_budget_usd": 0.05,
                 "provider_base_budget_usd": 0.05,
             },
             "revenue": {"per_accepted_review_usd": 0.1},
@@ -564,7 +564,7 @@ async def test_runtime_mvp_acceptance_judge_requires_public_validator_quorum(
         monkeypatch=monkeypatch,
         override={
             "budget": {
-                "railway_base_budget_usd": 0.05,
+                "hosted_base_budget_usd": 0.05,
                 "provider_base_budget_usd": 0.05,
             },
             "revenue": {"per_accepted_review_usd": 0.1},
@@ -663,7 +663,7 @@ async def test_runtime_mvp_acceptance_judge_requires_public_validator_quorum(
             monkeypatch=monkeypatch,
             override={
                 "budget": {
-                    "railway_base_budget_usd": 0.05,
+                    "hosted_base_budget_usd": 0.05,
                     "provider_base_budget_usd": 0.05,
                 },
                 "revenue": {"per_accepted_review_usd": 0.1},
@@ -718,7 +718,7 @@ async def test_runtime_mvp_acceptance_judge_requires_public_transparency_anchor(
         monkeypatch=monkeypatch,
         override={
             "budget": {
-                "railway_base_budget_usd": 0.05,
+                "hosted_base_budget_usd": 0.05,
                 "provider_base_budget_usd": 0.05,
             },
             "revenue": {"per_accepted_review_usd": 0.1},
@@ -797,7 +797,7 @@ async def test_runtime_mvp_acceptance_judge_requires_public_transparency_anchor(
             monkeypatch=monkeypatch,
             override={
                 "budget": {
-                    "railway_base_budget_usd": 0.05,
+                    "hosted_base_budget_usd": 0.05,
                     "provider_base_budget_usd": 0.05,
                 },
                 "revenue": {"per_accepted_review_usd": 0.1},
@@ -877,7 +877,7 @@ async def test_runtime_mvp_acceptance_judge_trust_adjusted_revenue_proves_uplift
         monkeypatch=monkeypatch,
         override={
             "budget": {
-                "railway_base_budget_usd": 0.0,
+                "hosted_base_budget_usd": 0.0,
                 "provider_base_budget_usd": 0.0,
             },
             "revenue": {"per_accepted_review_usd": 0.1},
@@ -985,7 +985,7 @@ async def test_runtime_mvp_acceptance_judge_trust_adjusted_revenue_proves_uplift
             monkeypatch=monkeypatch,
             override={
                 "budget": {
-                    "railway_base_budget_usd": 0.0,
+                    "hosted_base_budget_usd": 0.0,
                     "provider_base_budget_usd": 0.0,
                 },
                 "revenue": {"per_accepted_review_usd": 0.1},
