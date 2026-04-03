@@ -155,7 +155,8 @@ def get_spend_metrics(contributor_id: str) -> dict:
         "monthly_spend": round(monthly_spend, 4),
     }
 
-from datetime import timedelta
+
+def get_contributor_history(contributor_id: str, limit: int = 50) -> list[dict]:
     """Return contribution records for a contributor, newest first."""
     _ensure_schema()
     effective_limit = max(1, min(limit, 500))
