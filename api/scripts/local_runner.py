@@ -1268,6 +1268,42 @@ def list_pending() -> list[dict]:
 
 
 def claim_task(task_id: str) -> dict | None:
+    # 1. Budget Check
+    try:
+        from app.services.config_service import resolve_cli_contributor_id
+        cid, _ = resolve_cli_contributor_id()
+        if cid:
+            profile = api("GET", f"/api/contributors/{encodeURIComponent(cid)}")
+            if profile:
+                daily_limit = float(profile.get("daily_cc_budget") or 0)
+                monthly_limit = float(profile.get("monthly_cc_budget") or 0)
+                
+                if daily_limit > 0 or monthly_limit > 0:
+                    spend = api("GET", f"/api/contributors/{encodeURIComponent(cid)}/spend")
+                    if spend:
+                        daily_spend = float(spend.get("daily_spend") or 0)
+                        monthly_spend = float(spend.get("monthly_spend") or 0)
+                        
+                        # Fetch task to check its estimated cost
+                        task = api("GET", f"/api/agent/tasks/{task_id}")
+                        idea_id = _idea_id_from_task(task) if task else None
+                        estimated_cost = 0.0
+                        if idea_id:
+                            idea = api("GET", f"/api/ideas/{encodeURIComponent(idea_id)}")
+                            estimated_cost = float(idea.get("estimated_cost") or 0) if idea else 0.0
+                        
+                        if daily_limit > 0 and (daily_spend + estimated_cost) > daily_limit:
+                            log.warning("BUDGET_EXCEEDED: daily limit %.1f CC reached (spend=%.1f, task=%.1f)", 
+                                        daily_limit, daily_spend, estimated_cost)
+                            return None
+                        if monthly_limit > 0 and (monthly_spend + estimated_cost) > monthly_limit:
+                            log.warning("BUDGET_EXCEEDED: monthly limit %.1f CC reached (spend=%.1f, task=%.1f)", 
+                                        monthly_limit, monthly_spend, estimated_cost)
+                            return None
+    except Exception as e:
+        log.warning("BUDGET_CHECK_ERROR: %s", e)
+
+    # 2. Claim
     result = api("PATCH", f"/api/agent/tasks/{task_id}", {
         "status": "running", "worker_id": WORKER_ID,
     })
@@ -4480,7 +4516,7 @@ def _get_git_sha() -> tuple[str, str]:
     return _NODE_GIT.get("local_sha", "unknown"), _NODE_GIT.get("origin_sha", "unknown")
 
 
-def _register_node() -> None:
+def _register_node(is_autonomous: bool = False, heartbeat_interval_ms: int = 300000) -> None:
     """Register this worker node with the federation API on startup."""
     providers = [p for p in (PROVIDERS.keys() if PROVIDERS else _detect_providers().keys()) if p not in _PAUSED_PROVIDERS]
     tools = _detect_tools()
@@ -4496,6 +4532,8 @@ def _register_node() -> None:
         "hostname": _NODE_NAME,
         "os_type": "windows" if sys.platform == "win32" else "macos" if sys.platform == "darwin" else "linux",
         "providers": providers,
+        "is_autonomous": is_autonomous,
+        "heartbeat_interval_ms": heartbeat_interval_ms,
         "capabilities": {
             "executors": providers,
             "tools": tools,
@@ -6391,7 +6429,13 @@ def main():
     )
     parser.add_argument("--parallel", type=int, default=0,
                         help="Max parallel tasks via worktrees (0=sequential)")
+    parser.add_argument("--heartbeat", action="store_true", help="Enable autonomous heartbeat mode (continuous execution)")
+    parser.add_argument("--autonomous", action="store_true", help="Register as autonomous node in federation")
     args = parser.parse_args()
+
+    # Enable loop if heartbeat is on
+    if args.heartbeat:
+        args.loop = True
 
     _TASK_TIMEOUT[0] = args.timeout
     _RESUME_MODE[0] = bool(args.resume)
@@ -6403,6 +6447,9 @@ def main():
     if not PROVIDERS:
         log.error("No provider CLIs found. Install claude, codex, cursor, or gemini.")
         sys.exit(1)
+
+    # Register node with autonomy flags
+    _register_node(is_autonomous=args.heartbeat or args.autonomous)
 
     provider_names = list(PROVIDERS.keys())
 
@@ -6459,7 +6506,7 @@ def main():
 
     if args.loop:
         log.info("Polling every %ds (Ctrl+C to stop)", args.interval)
-        _register_node()
+        _register_node(is_autonomous=args.heartbeat or args.autonomous)
         heartbeat_interval = 300  # heartbeat every 5 minutes
         last_heartbeat = 0.0
         reap_interval = 600  # reap stale tasks every 10 minutes

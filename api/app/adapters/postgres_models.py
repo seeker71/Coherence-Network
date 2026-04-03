@@ -20,6 +20,8 @@ class ContributorModel(Base):
     email = Column(String, unique=True, nullable=True, index=True)
     wallet_address = Column(String, nullable=True)
     hourly_rate = Column(Numeric(precision=10, scale=2), nullable=True)
+    daily_cc_budget = Column(Numeric(precision=20, scale=2), nullable=True)
+    monthly_cc_budget = Column(Numeric(precision=20, scale=2), nullable=True)
     created_at = Column(DateTime, nullable=False)
 
 

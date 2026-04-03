@@ -88,7 +88,7 @@ class CanonicalNodeType(str, Enum):
 
 
 class CanonicalEdgeType(str, Enum):
-    """7 canonical edge types from Spec 169 — minimal closed vocabulary."""
+    """9 canonical edge types from Spec 169 — minimal closed vocabulary."""
     INSPIRES = "inspires"
     DEPENDS_ON = "depends-on"
     IMPLEMENTS = "implements"
@@ -96,6 +96,8 @@ class CanonicalEdgeType(str, Enum):
     EXTENDS = "extends"
     ANALOGOUS_TO = "analogous-to"
     PARENT_OF = "parent-of"
+    MANAGES = "manages"
+    DELEGATES_TO = "delegates-to"
 
 
 class LifecycleState(str, Enum):

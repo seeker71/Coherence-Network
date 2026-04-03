@@ -48,6 +48,20 @@
       "symmetric": false,
       "direction_label": "A → B",
       "example": "domain:graph-theory → parent-of → concept:edge-types"
+    },
+    {
+      "type": "manages",
+      "description": "A has operational authority over B (Hierarchy & Org Chart)",
+      "symmetric": false,
+      "direction_label": "Manager → Report",
+      "example": "contributor:ceo-agent → manages → contributor:engineer-agent"
+    },
+    {
+      "type": "delegates-to",
+      "description": "A assigns specific tasks or areas of responsibility to B",
+      "symmetric": false,
+      "direction_label": "Assigner → Assignee",
+      "example": "contributor:lead-agent → delegates-to → contributor:worker-agent"
     }
   ]
 }
