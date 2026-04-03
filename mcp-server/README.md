@@ -2,7 +2,7 @@
 
 **Give your AI agent native access to every idea, spec, contributor, and value chain in the Coherence Network.**
 
-An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the full Coherence Network API as 51 typed tools — so Claude, Cursor, Windsurf, or any MCP-compatible agent can browse ideas, look up specs, trace value lineage, link identities, record contributions, execute tasks, and evolve the project graph without writing a single API call.
+An [MCP](https://modelcontextprotocol.io/) (Model Context Protocol) server that exposes the full Coherence Network API as 54 typed tools — so Claude, Cursor, Windsurf, or any MCP-compatible agent can browse ideas, look up specs, trace value lineage, link identities, record contributions, execute tasks, and discover resonant peers without writing a single API call.
 
 ```bash
 npx coherence-mcp-server
@@ -25,6 +25,7 @@ This MCP server changes that. It gives any agent a typed interface to:
 - **Evolve** — create new ideas, link dependencies, and navigate the universal graph
 - **Finance** — track treasury balances, record deposits, and monitor assets
 - **Signal** — ingest news, track trending keywords, and measure concept resonance
+- **Peers** — discover resonant contributors by shared interests or proximity
 - **Ontology** — explore the Living Codex (184 universal concepts, 53 axes)
 - **Govern** — propose changes, vote on requests, and monitor network health
 
@@ -73,7 +74,7 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 
 ---
 
-## Tools (51)
+## Tools (54)
 
 ### Ideas — the portfolio engine
 
@@ -138,6 +139,13 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 | `coherence_get_entity_edges` | Incoming and outgoing edges for any entity. |
 | `coherence_create_edge` | Create a typed edge between two entities. |
 
+### Peers — contributor discovery
+
+| Tool | What it does |
+|------|-------------|
+| `coherence_get_resonant_peers` | Discover contributors with similar interests. |
+| `coherence_get_nearby_peers` | Find contributors physically close to you. |
+
 ### Assets — tracked artifacts
 
 | Tool | What it does |
@@ -170,8 +178,8 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 |------|-------------|
 | `coherence_list_change_requests` | Open governance proposals. |
 | `coherence_get_change_request` | Detail for a specific proposal. |
-| `coherence_vote_governance` | Cast a 'yes' or 'no' vote on a proposal. |
-| `coherence_propose_governance` | Create a new governance change request. |
+| `coherence_vote_governance" | Cast a 'yes' or 'no' vote on a proposal. |
+| `coherence_propose_governance" | Create a new governance change request. |
 
 ### Living Codex ontology
 
@@ -195,7 +203,7 @@ Point your MCP client at `npx coherence-mcp-server` via stdio transport.
 
 ## CLI equivalent
 
-The Coherence CLI (`npm i -g coherence-cli`) provides the same capabilities as the MCP tools. Run `cc help` for the full list of 54 commands.
+The Coherence CLI (`npm i -g coherence-cli`) provides the same capabilities as the MCP tools. Run `cc help` for the full list of 56 commands.
 
 ---
 
@@ -206,8 +214,7 @@ Once connected, you can ask your agent things like:
 - *"What ideas have the highest ROI right now?"*
 - *"Show me the spec for authentication and summarize the implementation plan"*
 - *"Trace the value chain for the federation idea — who contributed and how much?"*
-- *"What are the trending keywords in the news today and which ideas do they resonate with?"*
-- *"Link my GitHub identity and record a code contribution for the CLI work I did"*
+- *"Who are the resonant peers I should collaborate with based on my interests?"*
 - *"What's the network friction report for the last 30 days?"*
 - *"Pick the next best idea for me to work on"*
 - *"Create a new idea for 'Automated PR reviews' and link it as enabling the 'GitHub integration' idea"*
@@ -234,7 +241,7 @@ Every part of the network links to every other. Jump in wherever makes sense.
 | **Web** | Browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
 | **API** | 100+ endpoints, full OpenAPI docs, the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
 | **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | This package — 51 typed tools for AI agents | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **MCP Server** | This package — 54 typed tools for AI agents | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | Auto-triggers in any OpenClaw instance for ideas, specs, coherence | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
 

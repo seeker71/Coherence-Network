@@ -619,6 +619,32 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # Peers (Contributor Discovery)
+    Tool(
+        name="coherence_get_resonant_peers",
+        description="Find contributors with similar interests (structural resonance) to a specific contributor.",
+        inputSchema={
+            "type": "object",
+            "required": ["contributor_id"],
+            "properties": {
+                "contributor_id": {"type": "string"},
+                "limit": {"type": "number", "default": 20},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_get_nearby_peers",
+        description="Find contributors physically close to a specific contributor.",
+        inputSchema={
+            "type": "object",
+            "required": ["contributor_id"],
+            "properties": {
+                "contributor_id": {"type": "string"},
+                "radius_km": {"type": "number", "default": 100.0},
+                "limit": {"type": "number", "default": 20},
+            },
+        },
+    ),
     # Concepts (Living Codex ontology)
     Tool(
         name="coherence_list_concepts",
@@ -910,6 +936,15 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get("/api/dif/stats")
         case "coherence_get_recent_dif":
             return api_get("/api/dif/recent", {"limit": args.get("limit", 20)})
+        # Peers
+        case "coherence_get_resonant_peers":
+            return api_get("/api/peers/resonant", {"contributor_id": args["contributor_id"], "limit": args.get("limit", 20)})
+        case "coherence_get_nearby_peers":
+            return api_get("/api/peers/nearby", {
+                "contributor_id": args["contributor_id"],
+                "radius_km": args.get("radius_km", 100.0),
+                "limit": args.get("limit", 20)
+            })
         # Concepts
         case "coherence_list_concepts":
             if args.get("search"):
