@@ -7,6 +7,7 @@ Orchestration/crud must not branch on executor; they call these helpers.
 """
 
 import hashlib
+import os
 import re
 import shutil
 from pathlib import Path
@@ -125,6 +126,11 @@ def _truthy_flag(value: Any) -> bool:
 
 
 def _paid_providers_enabled() -> bool:
+    explicit = str(os.getenv("AGENT_ALLOW_PAID_PROVIDERS", "")).strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
     return _config_bool("executor", "allow_paid_providers", True)
 
 
@@ -602,7 +608,12 @@ COMMAND_TEMPLATES: dict[TaskType, str] = {
 
 
 def list_available_task_execution_providers() -> list[str]:
-    """Return available task execution providers in deterministic order."""
+    """Return supported task execution providers in deterministic order.
+
+    This route backs user-facing inventory and CLI surfaces, so it should
+    remain stable across machines even when a local API node does not have
+    every executor binary installed.
+    """
     configured = list(routing_service.EXECUTOR_VALUES)
     candidates = configured if configured else ["claude", "cursor", "codex", "gemini", "openrouter"]
     providers: list[str] = []
@@ -612,8 +623,7 @@ def list_available_task_execution_providers() -> list[str]:
         if not normalized or normalized in seen:
             continue
         seen.add(normalized)
-        if _executor_available(normalized):
-            providers.append(normalized)
+        providers.append(normalized)
     return providers
 
 

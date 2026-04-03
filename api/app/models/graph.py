@@ -132,6 +132,9 @@ SYMMETRIC_EDGE_TYPES: frozenset[str] = frozenset({"contradicts", "analogous-to"}
 # Canonical edge type set for O(1) lookup
 CANONICAL_EDGE_TYPE_SET: frozenset[str] = frozenset(e.value for e in CanonicalEdgeType)
 
+# Supported node type set for graph CRUD compatibility
+NODE_TYPE_SET: frozenset[str] = frozenset(n.value for n in NodeType)
+
 # Canonical node type set for O(1) lookup
 CANONICAL_NODE_TYPE_SET: frozenset[str] = frozenset(n.value for n in CanonicalNodeType)
 

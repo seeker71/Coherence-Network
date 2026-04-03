@@ -8,6 +8,8 @@ export const metadata: Metadata = {
     "Extend the ontology in plain language. No graph theory required — share ideas, tag domains, and the system finds where they fit.",
 };
 
+export const dynamic = "force-dynamic";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -56,10 +58,22 @@ type StatsResponse = {
 
 async function fetchGarden(): Promise<GardenResponse> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/ontology/garden?limit=200`, {
-    next: { revalidate: 30 },
-  });
-  if (!res.ok) {
+  try {
+    const res = await fetch(`${base}/api/ontology/garden?limit=200`, {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) {
+      return {
+        clusters: [],
+        concepts: [],
+        total: 0,
+        contributor_count: 0,
+        domain_count: 0,
+        placement_rate: 0,
+      };
+    }
+    return res.json();
+  } catch {
     return {
       clusters: [],
       concepts: [],
@@ -69,15 +83,28 @@ async function fetchGarden(): Promise<GardenResponse> {
       placement_rate: 0,
     };
   }
-  return res.json();
 }
 
 async function fetchStats(): Promise<StatsResponse> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/ontology/stats`, {
-    next: { revalidate: 30 },
-  });
-  if (!res.ok) {
+  try {
+    const res = await fetch(`${base}/api/ontology/stats`, {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) {
+      return {
+        total_contributions: 0,
+        placed_count: 0,
+        pending_count: 0,
+        orphan_count: 0,
+        placement_rate: 0,
+        top_domains: [],
+        recent_contributors: [],
+        inferred_edges_count: 0,
+      };
+    }
+    return res.json();
+  } catch {
     return {
       total_contributions: 0,
       placed_count: 0,
@@ -89,7 +116,6 @@ async function fetchStats(): Promise<StatsResponse> {
       inferred_edges_count: 0,
     };
   }
-  return res.json();
 }
 
 // ---------------------------------------------------------------------------

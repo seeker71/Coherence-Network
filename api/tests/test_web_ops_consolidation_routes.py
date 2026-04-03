@@ -1,4 +1,4 @@
-"""Contract tests: consolidate /automation, /usage, /remote-ops into /nodes and /pipeline.
+"""Contract tests: consolidate /usage, /runtime, and /remote-ops into /pipeline.
 
 Product intent (verification contract):
 - /nodes — federation list, health, providers, automation-style signals.
@@ -6,14 +6,12 @@ Product intent (verification contract):
 - Legacy paths redirect permanently so bookmarks and external links keep working.
 
 Verification scenarios (run against production after deploy):
-1) Setup: cold client, no cookies.
-   Action: curl -sI https://coherencycoin.com/automation
-   Expected: HTTP 308 (or 301), Location ends with /nodes (absolute or relative).
-   Edge: curl -sI https://coherencycoin.com/automation/foo — if unmatched, 404 is OK;
-   only bare legacy paths are redirected.
+1) Setup: same.
+   Action: curl -sI https://coherencycoin.com/usage
+   Expected: 308/301 to /pipeline.
 
 2) Setup: same.
-   Action: curl -sI https://coherencycoin.com/usage
+   Action: curl -sI https://coherencycoin.com/runtime
    Expected: 308/301 to /pipeline.
 
 3) Setup: same.
@@ -54,8 +52,8 @@ WEB_APP_PIPELINE = REPO_ROOT / "web" / "app" / "pipeline" / "page.tsx"
 
 # Canonical consolidation map (single source of truth for static tests)
 EXPECTED_LEGACY_TO_TARGET: tuple[tuple[str, str], ...] = (
-    ("/automation", "/nodes"),
     ("/usage", "/pipeline"),
+    ("/runtime", "/pipeline"),
     ("/remote-ops", "/pipeline"),
 )
 
@@ -126,7 +124,8 @@ async def test_api_pipeline_status_and_tasks_contract() -> None:
     assert isinstance(body, dict)
     assert tl.status_code == 200
     tasks_body = tl.json()
-    assert isinstance(tasks_body, list)
+    assert isinstance(tasks_body, dict)
+    assert isinstance(tasks_body.get("tasks", []), list)
     assert missing.status_code == 404
 
 

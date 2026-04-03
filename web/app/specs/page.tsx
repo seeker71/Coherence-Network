@@ -5,7 +5,7 @@ import { getApiBase } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Specs",
-  description: "Browse feature specifications and their implementation status.",
+  description: "Browse feature specifications, linked ideas, and implementation proof.",
 };
 
 type SpecItem = {
@@ -62,6 +62,16 @@ type SpecRelations = {
   implementationRefs: Set<string>;
 };
 
+type SpecCard = {
+  spec_id: string;
+  title: string;
+  api_path?: string;
+  source_label: string;
+  inventoryItem: SpecItem | null;
+  registryItem: SpecRegistryEntry | null;
+  relations: SpecRelations;
+};
+
 type SpecsSearchParams = Promise<{
   spec_id?: string | string[];
 }>;
@@ -102,9 +112,26 @@ function humanizeSource(value: string): string {
   return value;
 }
 
+function formatNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  return value.toFixed(2);
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
+}
+
 async function loadSpecs(): Promise<{ source: string; items: SpecItem[]; registry: SpecRegistryEntry[]; flowItems: FlowItem[] }> {
   const API = getApiBase();
-  // 86400 seconds = 24 hours — fetch specs and flow data from the last day
   const [inventoryRes, registryRes, flowRes] = await Promise.all([
     fetch(`${API}/api/inventory/system-lineage?runtime_window_seconds=86400`, { cache: "no-store" }),
     fetch(`${API}/api/spec-registry`, { cache: "no-store" }),
@@ -124,216 +151,267 @@ async function loadSpecs(): Promise<{ source: string; items: SpecItem[]; registr
   };
 }
 
+function buildSpecCards(source: string, specs: SpecItem[], registry: SpecRegistryEntry[], flowItems: FlowItem[]): SpecCard[] {
+  const relationsBySpec = collectSpecRelations(flowItems);
+  const inventoryById = new Map(specs.map((item) => [item.spec_id, item]));
+  const registryById = new Map(registry.map((item) => [item.spec_id, item]));
+  const ids = [...new Set([...inventoryById.keys(), ...registryById.keys()])].sort((a, b) => a.localeCompare(b));
+
+  return ids.map((spec_id) => {
+    const inventoryItem = inventoryById.get(spec_id) ?? null;
+    const registryItem = registryById.get(spec_id) ?? null;
+    const relations = relationsBySpec.get(spec_id) ?? {
+      ideaIds: new Set<string>(),
+      contributorIds: new Set<string>(),
+      taskIds: new Set<string>(),
+      implementationRefs: new Set<string>(),
+    };
+
+    return {
+      spec_id,
+      title: registryItem?.title || inventoryItem?.title || spec_id,
+      api_path: registryItem ? `/api/spec-registry/${encodeURIComponent(spec_id)}` : inventoryItem?.api_path,
+      source_label: registryItem && inventoryItem ? `${humanizeSource(source)} + Registry` : registryItem ? "Registry" : humanizeSource(source),
+      inventoryItem,
+      registryItem,
+      relations,
+    };
+  });
+}
+
+function SpecsSummary({ filteredSpecs }: { filteredSpecs: SpecCard[] }) {
+  const linkedIdeas = new Set(filteredSpecs.flatMap((spec) => [...spec.relations.ideaIds]));
+  const contributors = new Set(filteredSpecs.flatMap((spec) => [...spec.relations.contributorIds]));
+  const measured = filteredSpecs.filter((spec) => Boolean(spec.registryItem)).length;
+
+  return (
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Visible Specs</p>
+        <p className="mt-2 text-3xl font-light">{filteredSpecs.length}</p>
+      </div>
+      <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Measured</p>
+        <p className="mt-2 text-3xl font-light">{measured}</p>
+        <p className="mt-1 text-xs text-muted-foreground">Specs with registry value/cost metadata</p>
+      </div>
+      <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Linked Ideas</p>
+        <p className="mt-2 text-3xl font-light">{linkedIdeas.size}</p>
+      </div>
+      <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Contributors</p>
+        <p className="mt-2 text-3xl font-light">{contributors.size}</p>
+      </div>
+    </section>
+  );
+}
+
+function LinkList({
+  values,
+  hrefBuilder,
+  fallbackHref,
+  fallbackLabel,
+}: {
+  values: string[];
+  hrefBuilder: (value: string) => string;
+  fallbackHref: string;
+  fallbackLabel: string;
+}) {
+  if (values.length === 0) {
+    return (
+      <Link href={fallbackHref} className="underline hover:text-foreground">
+        {fallbackLabel}
+      </Link>
+    );
+  }
+
+  return (
+    <>
+      {values.map((value, idx) => (
+        <span key={value}>
+          {idx > 0 ? ", " : ""}
+          <Link href={hrefBuilder(value)} className="underline hover:text-foreground" title={value}>
+            {value}
+          </Link>
+        </span>
+      ))}
+    </>
+  );
+}
+
 export default async function SpecsPage({ searchParams }: { searchParams: SpecsSearchParams }) {
   const resolvedSearchParams = await searchParams;
   const specFilter = normalizeFilter(resolvedSearchParams.spec_id);
   const { source, items: specs, registry, flowItems } = await loadSpecs();
-  const relationsBySpec = collectSpecRelations(flowItems);
-  const filteredSpecs = specFilter ? specs.filter((s) => s.spec_id === specFilter) : specs;
-  const filteredRegistry = specFilter ? registry.filter((s) => s.spec_id === specFilter) : registry;
+  const specCards = buildSpecCards(source, specs, registry, flowItems);
+  const filteredSpecs = specFilter ? specCards.filter((s) => s.spec_id === specFilter) : specCards;
+  const filteredRegistry = filteredSpecs.filter((spec) => Boolean(spec.registryItem));
 
   return (
-    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Feature Specifications</h1>
-        <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          Specs are the blueprints. They define what gets built and how to verify it worked. Each spec links back to an idea, its delivery workflow, and the implementation proof.
+    <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Specification Map</h1>
+        <p className="max-w-3xl leading-relaxed text-muted-foreground">
+          Specs are the delivery contracts between ideas, implementation work, and verification. This view shows what the repo can currently discover, what the registry knows, and where the links are still missing.
         </p>
       </div>
+
       {specFilter ? (
         <p className="text-sm text-muted-foreground">
-          Spec filter active |{" "}
+          Spec filter active for <span className="font-mono">{specFilter}</span> |{" "}
           <Link href="/specs" className="underline hover:text-foreground">
             Clear filter
           </Link>
         </p>
       ) : null}
 
+      <SpecsSummary filteredSpecs={filteredSpecs} />
+
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
-        <p className="text-sm text-muted-foreground">
-          {filteredSpecs.length} discovered specs from {humanizeSource(source)}
-        </p>
-        <ul className="space-y-2 text-sm">
-          {filteredSpecs.map((s) => {
-            const relations = relationsBySpec.get(s.spec_id);
-            const ideaIds = relations ? [...relations.ideaIds].sort() : [];
-            const contributorIds = relations ? [...relations.contributorIds].sort() : [];
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-medium">Visible Specs</h2>
+            <p className="text-sm text-muted-foreground">
+              {filteredSpecs.length} visible specs from {humanizeSource(source)} and the registry.
+            </p>
+          </div>
+          <Link href="/contribute" className="text-sm underline hover:text-foreground">
+            Add or update spec metadata
+          </Link>
+        </div>
+
+        <ul className="space-y-3 text-sm">
+          {filteredSpecs.map((spec) => {
+            const registryItem = spec.registryItem;
+            const ideaIds = [...spec.relations.ideaIds].sort();
+            const contributorIds = [...spec.relations.contributorIds].sort();
+            const taskCount = spec.relations.taskIds.size;
+            const implementationCount = spec.relations.implementationRefs.size;
+
             return (
-              <li key={s.spec_id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
-                <div className="flex justify-between gap-3">
-                  <Link
-                    href={`/specs/${encodeURIComponent(s.spec_id)}`}
-                    className="font-medium underline hover:text-foreground"
-                    title={`Spec ID: ${s.spec_id}`}
-                  >
-                    {s.title}
-                  </Link>
-                  <a
-                    href={s.api_path ?? `/api/spec-registry/${encodeURIComponent(s.spec_id)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground underline hover:text-foreground"
-                    title={`Spec ID: ${s.spec_id}`}
-                  >
-                    Open API
-                  </a>
+              <li key={spec.spec_id} className="rounded-2xl border border-border/20 bg-background/40 p-4 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/specs/${encodeURIComponent(spec.spec_id)}`}
+                        className="text-base font-medium underline hover:text-foreground"
+                        title={`Spec ID: ${spec.spec_id}`}
+                      >
+                        {spec.title}
+                      </Link>
+                      <span className="rounded-full border border-border/30 px-2 py-0.5 text-xs text-muted-foreground">
+                        {spec.spec_id}
+                      </span>
+                      <span className="rounded-full border border-border/30 px-2 py-0.5 text-xs text-muted-foreground">
+                        {spec.source_label}
+                      </span>
+                      {registryItem ? (
+                        <span className="rounded-full border border-emerald-500/30 px-2 py-0.5 text-xs text-emerald-400">
+                          measured
+                        </span>
+                      ) : (
+                        <span className="rounded-full border border-amber-500/30 px-2 py-0.5 text-xs text-amber-400">
+                          registry missing
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground">
+                      {registryItem?.summary || "Discovered from system lineage. Add registry metadata to make this spec measurable and easier to reason about."}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <Link href={`/flow?spec_id=${encodeURIComponent(spec.spec_id)}`} className="underline hover:text-foreground">
+                      Process view
+                    </Link>
+                    <Link href={`/specs/${encodeURIComponent(spec.spec_id)}`} className="underline hover:text-foreground">
+                      Spec detail
+                    </Link>
+                    {spec.api_path ? (
+                      <a href={spec.api_path} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
+                        Open API
+                      </a>
+                    ) : null}
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Idea{" "}
-                  {ideaIds.length > 0
-                    ? ideaIds.map((ideaId, idx) => (
-                        <span key={`${s.spec_id}-idea-${ideaId}`}>
-                          {idx > 0 ? ", " : ""}
-                          <Link
-                            href={`/ideas/${encodeURIComponent(ideaId)}`}
-                            className="underline hover:text-foreground"
-                            title={`Idea ID: ${ideaId}`}
-                          >
-                            Idea {idx + 1}
-                          </Link>
-                        </span>
-                      ))
-                    : (
-                      <Link href="/ideas" className="underline hover:text-foreground">
-                        missing
-                      </Link>
-                    )}{" "}
-                  | Contributors{" "}
-                  {contributorIds.length > 0
-                    ? contributorIds.slice(0, 6).map((contributorId, idx) => (
-                        <span key={`${s.spec_id}-contributor-${contributorId}`}>
-                          {idx > 0 ? ", " : ""}
-                          <Link
-                            href={`/contributors?contributor_id=${encodeURIComponent(contributorId)}`}
-                            className="underline hover:text-foreground"
-                            title={`Contributor ID: ${contributorId}`}
-                          >
-                            Contributor {idx + 1}
-                          </Link>
-                        </span>
-                      ))
-                    : (
-                      <Link href="/contributors" className="underline hover:text-foreground">
-                        missing
-                      </Link>
-                    )}{" "}
-                  |{" "}
-                  <Link href={`/flow?spec_id=${encodeURIComponent(s.spec_id)}`} className="underline hover:text-foreground">
-                    process
-                  </Link>{" "}
-                  |{" "}
-                  <Link href={`/flow?spec_id=${encodeURIComponent(s.spec_id)}`} className="underline hover:text-foreground">
-                    implementation
-                  </Link>
-                </p>
+
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-xl border border-border/20 bg-card/30 p-3">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground">Ideas</p>
+                    <p className="mt-2 font-medium">{ideaIds.length}</p>
+                  </div>
+                  <div className="rounded-xl border border-border/20 bg-card/30 p-3">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground">Contributors</p>
+                    <p className="mt-2 font-medium">{contributorIds.length}</p>
+                  </div>
+                  <div className="rounded-xl border border-border/20 bg-card/30 p-3">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground">Tasks</p>
+                    <p className="mt-2 font-medium">{taskCount}</p>
+                  </div>
+                  <div className="rounded-xl border border-border/20 bg-card/30 p-3">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground">Implementation Refs</p>
+                    <p className="mt-2 font-medium">{implementationCount}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p>
+                    Linked ideas:{" "}
+                    <LinkList
+                      values={ideaIds}
+                      hrefBuilder={(ideaId) => `/ideas/${encodeURIComponent(ideaId)}`}
+                      fallbackHref="/ideas"
+                      fallbackLabel="none yet"
+                    />
+                  </p>
+                  <p>
+                    Contributors:{" "}
+                    <LinkList
+                      values={contributorIds}
+                      hrefBuilder={(contributorId) => `/contributors?contributor_id=${encodeURIComponent(contributorId)}`}
+                      fallbackHref="/contributors"
+                      fallbackLabel="none yet"
+                    />
+                  </p>
+                  {registryItem ? (
+                    <p>
+                      ROI est {formatNumber(registryItem.estimated_roi)} | ROI actual {formatNumber(registryItem.actual_roi)} | value gap {formatNumber(registryItem.value_gap)} | updated {formatDate(registryItem.updated_at)}
+                    </p>
+                  ) : (
+                    <p>Registry metrics missing. Link this spec in the registry to expose ROI, gap, and summary data.</p>
+                  )}
+                </div>
               </li>
             );
           })}
-          {filteredSpecs.length === 0 && <li className="text-muted-foreground">No data available yet. Once the API is running, results will appear here.</li>}
+
+          {filteredSpecs.length === 0 ? (
+            <li className="rounded-2xl border border-dashed border-border/30 bg-background/30 p-6 text-sm text-muted-foreground">
+              No specs are visible yet. Once lineage or registry data lands, this page will show the linked ideas, contributors, and implementation proof automatically.
+            </li>
+          ) : null}
         </ul>
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
+        <h2 className="text-lg font-medium">Registry Coverage</h2>
         <p className="text-sm text-muted-foreground">
-          {filteredRegistry.length} team-authored specs | create or update via{" "}
-          <Link href="/contribute" className="underline hover:text-foreground">
-            Contribution Console
-          </Link>
+          {filteredRegistry.length} of {filteredSpecs.length} visible specs currently have registry metadata attached.
         </p>
-        <ul className="space-y-2 text-sm">
-          {filteredRegistry.map((s) => (
-            <li key={s.spec_id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
-              <div className="flex justify-between gap-3">
-                <Link
-                  href={`/specs/${encodeURIComponent(s.spec_id)}`}
-                  className="font-medium underline hover:text-foreground"
-                  title={`Spec ID: ${s.spec_id}`}
-                >
-                  {s.title}
-                </Link>
-                <span className="text-muted-foreground">updated {s.updated_at}</span>
-              </div>
-              <p className="text-muted-foreground">{s.summary}</p>
-              {/* ROI values: estimated_roi = potential_value / estimated_cost, actual_roi = actual_value / actual_cost.
-                 Values are displayed with 2 decimal places. No threshold filtering is applied here. */}
-              <p className="text-xs text-muted-foreground">
-                value potential {s.potential_value.toFixed(2)} | value actual {s.actual_value.toFixed(2)} | value_gap{" "}
-                {s.value_gap.toFixed(2)} | cost est {s.estimated_cost.toFixed(2)} | cost actual {s.actual_cost.toFixed(2)} | cost_gap{" "}
-                {s.cost_gap.toFixed(2)} | roi est {s.estimated_roi.toFixed(2)} | roi actual {s.actual_roi.toFixed(2)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Idea{" "}
-                {s.idea_id ? (
-                  <Link
-                    href={`/ideas/${encodeURIComponent(s.idea_id)}`}
-                    className="underline hover:text-foreground"
-                    title={`Idea ID: ${s.idea_id}`}
-                  >
-                    Open idea
-                  </Link>
-                ) : (
-                  <Link href="/ideas" className="underline hover:text-foreground">
-                    missing
-                  </Link>
-                )}{" "}
-                | Created by{" "}
-                {s.created_by_contributor_id ? (
-                  <Link
-                    href={`/contributors?contributor_id=${encodeURIComponent(s.created_by_contributor_id)}`}
-                    className="underline hover:text-foreground"
-                    title={`Contributor ID: ${s.created_by_contributor_id}`}
-                  >
-                    Contributor profile
-                  </Link>
-                ) : (
-                  <Link href="/contributors" className="underline hover:text-foreground">
-                    missing
-                  </Link>
-                )}{" "}
-                | Updated by{" "}
-                {s.updated_by_contributor_id ? (
-                  <Link
-                    href={`/contributors?contributor_id=${encodeURIComponent(s.updated_by_contributor_id)}`}
-                    className="underline hover:text-foreground"
-                    title={`Contributor ID: ${s.updated_by_contributor_id}`}
-                  >
-                    Contributor profile
-                  </Link>
-                ) : (
-                  <Link href="/contributors" className="underline hover:text-foreground">
-                    missing
-                  </Link>
-                )}{" "}
-                |{" "}
-                <Link href={`/flow?spec_id=${encodeURIComponent(s.spec_id)}`} className="underline hover:text-foreground">
-                  process
-                </Link>{" "}
-                |{" "}
-                <Link href={`/flow?spec_id=${encodeURIComponent(s.spec_id)}`} className="underline hover:text-foreground">
-                  implementation
-                </Link>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                process_summary {s.process_summary || "-"} | pseudocode_summary {s.pseudocode_summary || "-"} | implementation_summary{" "}
-                {s.implementation_summary || "-"}
-              </p>
-            </li>
-          ))}
-          {filteredRegistry.length === 0 && (
-            <li className="text-muted-foreground">No data available yet. Once the API is running, results will appear here.</li>
-          )}
-        </ul>
-      </section>
-
-      {/* Where to go next */}
-      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
-        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">Where to go next</p>
-        <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">Ideas</Link>
-          <Link href="/flow" className="text-amber-600 dark:text-amber-400 hover:underline">Flow</Link>
-          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <Link href="/contribute" className="underline hover:text-foreground">
+            Open Contribution Console
+          </Link>
+          <Link href="/flow" className="underline hover:text-foreground">
+            Review process coverage
+          </Link>
+          <Link href="/ideas" className="underline hover:text-foreground">
+            Check linked ideas
+          </Link>
         </div>
-      </nav>
+      </section>
     </main>
   );
 }

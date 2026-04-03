@@ -8,6 +8,7 @@ import httpx
 import pytest
 import respx
 
+from app import config_loader
 from app.services import release_gate_service as gates
 from app.services.release_gate_service import (
     collect_rerunnable_actions_run_ids,
@@ -453,7 +454,7 @@ def test_evaluate_public_deploy_contract_report_fails_without_paid_override_head
 
 def test_public_deploy_contract_warns_when_telegram_not_configured(monkeypatch) -> None:
     expected_sha = "t" * 40
-    monkeypatch.delenv("PUBLIC_DEPLOY_REQUIRE_TELEGRAM_ALERTS", raising=False)
+    config_loader.set_config_value("release_gates", "require_telegram_alerts", False)
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
 
     def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, Any]:
@@ -519,7 +520,7 @@ def test_public_deploy_contract_warns_when_telegram_not_configured(monkeypatch) 
 
 def test_public_deploy_contract_can_require_telegram_config(monkeypatch) -> None:
     expected_sha = "u" * 40
-    monkeypatch.setenv("PUBLIC_DEPLOY_REQUIRE_TELEGRAM_ALERTS", "1")
+    config_loader.set_config_value("release_gates", "require_telegram_alerts", True)
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
 
     def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, Any]:
@@ -584,7 +585,7 @@ def test_public_deploy_contract_can_require_telegram_config(monkeypatch) -> None
 
 def test_public_deploy_contract_warns_when_provider_readiness_blocked_if_not_required(monkeypatch) -> None:
     expected_sha = "p" * 40
-    monkeypatch.delenv("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", raising=False)
+    config_loader.set_config_value("release_gates", "require_provider_readiness", False)
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
 
     def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, Any]:
@@ -660,7 +661,7 @@ def test_public_deploy_contract_warns_when_provider_readiness_blocked_if_not_req
 
 def test_public_deploy_contract_blocks_when_provider_readiness_required(monkeypatch) -> None:
     expected_sha = "q" * 40
-    monkeypatch.setenv("PUBLIC_DEPLOY_REQUIRE_PROVIDER_READINESS", "1")
+    config_loader.set_config_value("release_gates", "require_provider_readiness", True)
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
 
     def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, Any]:
@@ -734,7 +735,11 @@ def test_public_deploy_contract_blocks_when_provider_readiness_required(monkeypa
 
 
 def test_public_deploy_verification_jobs_complete_when_contract_passes(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH", str(tmp_path / "jobs.json"))
+    config_loader.set_config_value(
+        "release_gates",
+        "verification_jobs_path",
+        str(tmp_path / "jobs.json"),
+    )
 
     monkeypatch.setattr(
         gates,
@@ -769,7 +774,11 @@ def test_public_deploy_verification_jobs_complete_when_contract_passes(tmp_path,
 
 
 def test_public_deploy_verification_job_fails_after_max_attempts(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH", str(tmp_path / "jobs.json"))
+    config_loader.set_config_value(
+        "release_gates",
+        "verification_jobs_path",
+        str(tmp_path / "jobs.json"),
+    )
 
     monkeypatch.setattr(
         gates,
@@ -792,7 +801,11 @@ def test_public_deploy_verification_job_fails_after_max_attempts(tmp_path, monke
 
 
 def test_public_deploy_verification_job_tracks_friction_events(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("PUBLIC_DEPLOY_VERIFICATION_JOBS_PATH", str(tmp_path / "jobs.json"))
+    config_loader.set_config_value(
+        "release_gates",
+        "verification_jobs_path",
+        str(tmp_path / "jobs.json"),
+    )
     monkeypatch.setenv("FRICTION_EVENTS_PATH", str(tmp_path / "friction_events.jsonl"))
 
     from app.services import friction_service
@@ -907,7 +920,7 @@ def test_public_deploy_contract_allows_unknown_web_proxy_sha_with_warning(monkey
 
 def test_public_deploy_contract_accepts_web_deployed_sha_field(monkeypatch) -> None:
     expected_sha = "d" * 40
-    monkeypatch.delenv("PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA", raising=False)
+    config_loader.set_config_value("release_gates", "require_web_health_proxy_sha", False)
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
 
     def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, object]:
@@ -983,7 +996,7 @@ def test_public_deploy_contract_accepts_web_deployed_sha_field(monkeypatch) -> N
 
 def test_public_deploy_contract_blocks_when_web_proxy_sha_required_and_missing(monkeypatch) -> None:
     expected_sha = "w" * 40
-    monkeypatch.setenv("PUBLIC_DEPLOY_REQUIRE_WEB_HEALTH_PROXY_SHA", "1")
+    config_loader.set_config_value("release_gates", "require_web_health_proxy_sha", True)
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
 
     def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, object]:
@@ -1058,7 +1071,7 @@ def test_public_deploy_contract_blocks_when_web_proxy_sha_required_and_missing(m
 
 def test_public_deploy_contract_warns_when_api_health_sha_unknown(monkeypatch) -> None:
     expected_sha = "h" * 40
-    monkeypatch.delenv("PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA", raising=False)
+    config_loader.set_config_value("release_gates", "require_api_health_sha", False)
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
 
     def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, object]:
@@ -1131,7 +1144,7 @@ def test_public_deploy_contract_warns_when_api_health_sha_unknown(monkeypatch) -
 
 def test_public_deploy_contract_blocks_when_api_health_sha_required_and_missing(monkeypatch) -> None:
     expected_sha = "j" * 40
-    monkeypatch.setenv("PUBLIC_DEPLOY_REQUIRE_API_HEALTH_SHA", "1")
+    config_loader.set_config_value("release_gates", "require_api_health_sha", True)
     monkeypatch.setattr(gates, "get_branch_head_sha", lambda *args, **kwargs: expected_sha)
 
     def _check_http_json(url: str, timeout: float = 8.0) -> dict[str, object]:

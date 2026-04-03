@@ -830,6 +830,7 @@ def test_cleanup_worktree_removes_orphaned_directory(
 ) -> None:
     """R5: cleanup must also remove stale task directories Git no longer tracks."""
     tmp_path = _sandbox_tmp_path()
+    remove_calls: list[list[str]] = []
     try:
         slug = "abcjdef234567890"
         wt_path = tmp_path / f"task-{slug}"
@@ -842,6 +843,8 @@ def test_cleanup_worktree_removes_orphaned_directory(
                 return _Proc(returncode=1)
             if args[:3] == ["git", "worktree", "list"]:
                 return _Proc(stdout="")
+            if args[:3] == ["git", "worktree", "remove"]:
+                remove_calls.append(list(args))
             return _Proc()
 
         monkeypatch.setattr(local_runner, "_REPO_DIR", tmp_path)

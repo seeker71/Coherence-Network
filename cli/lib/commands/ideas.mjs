@@ -605,7 +605,12 @@ export async function showIdeaTasks(args) {
   if (!id) { console.log("Usage: cc idea <id> tasks"); return; }
   const data = await get(`/api/ideas/${encodeURIComponent(id)}/tasks`);
   if (!data) { console.log(`No tasks for idea '${id}'.`); return; }
-  const tasks = Array.isArray(data) ? data : data?.tasks || [];
+  const groups = Array.isArray(data?.groups) ? data.groups : [];
+  const tasks = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.tasks)
+      ? data.tasks
+      : groups.flatMap((group) => (Array.isArray(group?.tasks) ? group.tasks : []));
   const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
   const G = "\x1b[32m", Y = "\x1b[33m";
   console.log();

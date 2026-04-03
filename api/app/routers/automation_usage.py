@@ -19,18 +19,36 @@ async def get_automation_usage(
     include_raw: bool = Query(False, description="Include provider raw payload in compact mode"),
 ) -> dict:
     timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
+    effective_timeout = max(timeout_seconds, 2.5)
+    if force_refresh:
+        cached_or_snapshot = automation_usage_service.latest_usage_overview_payload(
+            compact=compact,
+            include_raw=include_raw,
+        )
+        if isinstance(cached_or_snapshot, dict) and (cached_or_snapshot.get("providers") or cached_or_snapshot.get("tracked_providers")):
+            payload = cached_or_snapshot
+            if "meta" not in payload:
+                payload = {
+                    **payload,
+                    "meta": {
+                        "data_source": "cached_or_snapshot",
+                        "fallback_reason": "force_refresh_deferred",
+                        "fallbacks_used": ["force_refresh_deferred"],
+                    },
+                }
+            return payload
     try:
         payload = await asyncio.wait_for(
             asyncio.to_thread(
-                automation_usage_service.cached_usage_overview_payload,
-                force_refresh=force_refresh,
+                automation_usage_service.refresh_usage_overview_payload if force_refresh else automation_usage_service.cached_usage_overview_payload,
+                **({} if force_refresh else {"force_refresh": False}),
                 compact=compact,
                 include_raw=include_raw,
             ),
-            timeout=timeout_seconds,
+            timeout=max(effective_timeout, 5.0) if force_refresh else effective_timeout,
         )
         if isinstance(payload, dict) and "meta" not in payload:
-            payload = {**payload, "meta": {"data_source": "live_or_cache", "fallbacks_used": []}}
+            payload = {**payload, "meta": {"data_source": "live_refresh" if force_refresh else "live_or_cache", "fallbacks_used": []}}
         return payload
     except TimeoutError:
         payload = automation_usage_service.usage_overview_payload_from_snapshots(
@@ -106,17 +124,33 @@ async def get_provider_readiness(
 ) -> dict:
     requested = [item.strip().lower() for item in required_providers.split(",") if item.strip()]
     timeout_seconds = automation_usage_service.usage_endpoint_timeout_seconds()
+    effective_timeout = max(timeout_seconds, 2.5)
+    if force_refresh:
+        cached_or_snapshot = automation_usage_service.latest_provider_readiness_payload(
+            required_providers=requested or None,
+        )
+        if isinstance(cached_or_snapshot, dict) and cached_or_snapshot.get("providers"):
+            payload = cached_or_snapshot
+            if isinstance(payload, dict) and "meta" not in payload:
+                payload = {
+                    **payload,
+                    "meta": {
+                        "data_source": "cached_or_snapshot",
+                        "fallback_reason": "force_refresh_deferred",
+                        "fallbacks_used": ["force_refresh_deferred"],
+                    },
+                }
+            return payload
     try:
         payload = await asyncio.wait_for(
             asyncio.to_thread(
-                automation_usage_service.cached_provider_readiness_payload,
-                required_providers=requested or None,
-                force_refresh=force_refresh,
+                automation_usage_service.refresh_provider_readiness_payload if force_refresh else automation_usage_service.cached_provider_readiness_payload,
+                **({"required_providers": requested or None} if force_refresh else {"required_providers": requested or None, "force_refresh": False}),
             ),
-            timeout=timeout_seconds,
+            timeout=max(effective_timeout, 5.0) if force_refresh else effective_timeout,
         )
         if isinstance(payload, dict) and "meta" not in payload:
-            payload = {**payload, "meta": {"data_source": "live_or_cache", "fallbacks_used": []}}
+            payload = {**payload, "meta": {"data_source": "live_refresh" if force_refresh else "live_or_cache", "fallbacks_used": []}}
         return payload
     except TimeoutError:
         payload = automation_usage_service.provider_readiness_report_from_snapshots(

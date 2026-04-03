@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query
 
 from app.models.friction import (
     FrictionCategoryReport,
@@ -36,9 +36,15 @@ async def create_event(event: FrictionEvent) -> FrictionEvent:
 
 @router.get("/friction/report", response_model=FrictionReport)
 async def report(
-    window_days: int = Query(7, ge=1, le=90),
+    window_days: int = Query(7, ge=1),
     limit: int = Query(500, ge=1, le=5000, description="Max events to scan"),
 ) -> FrictionReport:
+    max_window_days = friction_service.report_window_limit_days()
+    if window_days > max_window_days:
+        raise HTTPException(
+            status_code=422,
+            detail=f"window_days must be between 1 and {max_window_days}",
+        )
     events, ignored = friction_service.load_events()
     # Cap events scanned to prevent slow page loads
     events = events[-limit:] if len(events) > limit else events

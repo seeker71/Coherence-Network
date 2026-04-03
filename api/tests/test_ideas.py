@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app import config_loader
 from app.main import app
 
 AUTH_HEADERS = {"X-API-Key": "dev-key"}
@@ -208,8 +209,8 @@ async def test_list_ideas_prunes_transient_public_e2e_idea_ids_from_discovery(
 ) -> None:
     portfolio_path = tmp_path / "idea_portfolio.json"
     monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(portfolio_path))
-    monkeypatch.setenv("IDEA_SYNC_ENABLE_DOMAIN_DISCOVERY", "true")
     monkeypatch.setenv("DATABASE_URL", f"sqlite+pysqlite:///{tmp_path / 'ideas.db'}")
+    config_loader.set_config_value("ideas", "sync_enable_domain_discovery", True)
     monkeypatch.setattr("app.services.spec_registry_service.list_specs", lambda *args, **kwargs: [])
     monkeypatch.setattr("app.services.runtime_service.summarize_by_idea", lambda *args, **kwargs: [])
     monkeypatch.setattr(

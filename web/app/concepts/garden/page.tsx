@@ -8,6 +8,8 @@ export const metadata: Metadata = {
     "Share an idea in plain language and the system finds where it fits in the ontology. No graph theory required.",
 };
 
+export const dynamic = "force-dynamic";
+
 type GardenCard = {
   id: string;
   name: string;

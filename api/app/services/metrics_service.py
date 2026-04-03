@@ -23,6 +23,9 @@ def _default_metrics_file() -> str:
 
 
 def _metrics_file_path() -> Path:
+    explicit = str(os.getenv("METRICS_FILE_PATH", "")).strip()
+    if explicit:
+        return Path(explicit)
     configured = get_str("metrics", "file_path")
     if configured:
         return Path(configured)
@@ -35,6 +38,11 @@ def _is_postgres_backend() -> bool:
 
 
 def _use_db_metrics() -> bool:
+    explicit = str(os.getenv("METRICS_USE_DB", "")).strip().lower()
+    if explicit in {"1", "true", "yes", "on"}:
+        return True
+    if explicit in {"0", "false", "no", "off"}:
+        return False
     override = get_str("metrics", "use_db")
     if override:
         override = override.strip().lower()
@@ -111,8 +119,9 @@ def record_task(
         telemetry_persistence_service.append_task_metric(record, max_rows=max_rows)
         return
 
-    os.makedirs(os.path.dirname(METRICS_FILE), exist_ok=True)
-    with open(METRICS_FILE, "a", encoding="utf-8") as f:
+    file_path = _metrics_file_path()
+    os.makedirs(str(file_path.parent), exist_ok=True)
+    with file_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
 
 

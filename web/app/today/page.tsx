@@ -57,6 +57,8 @@ export const metadata: Metadata = {
   description: "One-page view for the best next work, what needs attention, and how to keep progress moving.",
 };
 
+export const dynamic = "force-dynamic";
+
 function extractTasks(payload: TaskListPayload | null): Task[] {
   if (!payload) return [];
   if (Array.isArray(payload)) return payload;

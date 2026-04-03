@@ -23,15 +23,20 @@ const securityHeaders = [
   },
 ];
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || process.env.API_BASE || "http://api:8000";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.API_BASE ||
+  process.env.API_URL ||
+  "http://api:8000";
 
 const nextConfig: NextConfig = {
   output: "standalone",
   /** Legacy ops pages → consolidated surfaces (nodes vs pipeline). */
   async redirects() {
     return [
-      { source: "/automation", destination: "/nodes", permanent: true },
       { source: "/usage", destination: "/pipeline", permanent: true },
+      { source: "/runtime", destination: "/pipeline", permanent: true },
       { source: "/remote-ops", destination: "/pipeline", permanent: true },
     ];
   },

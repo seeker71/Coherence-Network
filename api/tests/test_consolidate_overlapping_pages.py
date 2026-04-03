@@ -1,13 +1,12 @@
 """Pytest contract for idea `consolidate-overlapping-pages`.
 
 Product acceptance (task / idea text):
-- Legacy routes ``/automation``, ``/usage``, and ``/remote-ops`` permanently redirect to
-  ``/nodes`` or ``/pipeline`` so bookmarks and external links keep working.
-- Consolidated surfaces: ``/nodes`` (federation / node-centric ops) and ``/pipeline``
-  (execution queue, activity, provider signals).
+- Legacy routes ``/usage``, ``/runtime``, and ``/remote-ops`` permanently redirect to
+  ``/pipeline`` so bookmarks and external links keep working.
+- Consolidated surface: ``/pipeline`` (execution queue, activity, provider signals).
 - Primary navigation should surface ``/nodes`` and ``/pipeline`` without listing the
   legacy paths in the primary bar.
-- Backend automation and agent APIs remain available; consolidation is a web IA change.
+- Backend automation and agent APIs remain available; ``/automation`` is still a live page.
 
 Static checks read the repo tree; optional live redirect checks use ``WEB_VERIFICATION_BASE``.
 """
@@ -28,8 +27,8 @@ PIPELINE_PAGE = REPO_ROOT / "web" / "app" / "pipeline" / "page.tsx"
 SITE_HEADER = REPO_ROOT / "web" / "components" / "site_header.tsx"
 
 EXPECTED_REDIRECTS: tuple[tuple[str, str], ...] = (
-    ("/automation", "/nodes"),
     ("/usage", "/pipeline"),
+    ("/runtime", "/pipeline"),
     ("/remote-ops", "/pipeline"),
 )
 
@@ -91,7 +90,7 @@ def test_site_header_primary_nav_excludes_legacy_ops_paths() -> None:
     end = body.find("];", start)
     assert end != -1
     block = body[start:end]
-    for legacy in ("/automation", "/usage", "/remote-ops"):
+    for legacy in ("/usage", "/runtime", "/remote-ops"):
         assert legacy not in block, f"{legacy} must not appear in PRIMARY_NAV"
 
 

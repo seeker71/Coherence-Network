@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import logging
-import os
 
 from fastapi import APIRouter, BackgroundTasks, Body, Query, Request
 
 from app.adapters.graph_store import GraphStore
+from app.config_loader import get_bool
+from app.services import agent_execution_service
 from app.services import agent_service
 from app.services import commit_evidence_registry_service
 from app.services import inventory_service
@@ -21,10 +22,6 @@ router = APIRouter()
 
 def get_store(request: Request) -> GraphStore:
     return request.app.state.graph_store
-
-
-def _truthy(raw: str | None) -> bool:
-    return str(raw or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _extract_created_task_ids(payload: dict) -> list[str]:
@@ -53,13 +50,11 @@ def _extract_created_task_ids(payload: dict) -> list[str]:
 
 
 def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTasks) -> None:
-    """Disabled: tasks are executed by federation node runners, not server-side.
-
-    Previously this stamped tasks with executor=openrouter and model_override=openrouter/free,
-    causing all tasks to bypass strong providers. Removed to ensure slot selector on each
-    node determines the provider based on capabilities and Thompson Sampling.
-    """
-    return
+    """Queue API-side execution only when config explicitly enables it."""
+    if not get_bool("agent_executor", "auto_execute", default=False):
+        return
+    for task_id in _extract_created_task_ids(payload):
+        background_tasks.add_task(agent_execution_service.execute_task, task_id)
 
 
 @router.get("/inventory/system-lineage")

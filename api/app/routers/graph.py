@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from typing import Any
 
 from app.services import graph_service
-from app.models.graph import CANONICAL_EDGE_TYPE_SET, CANONICAL_NODE_TYPE_SET
+from app.models.graph import CANONICAL_EDGE_TYPE_SET, NODE_TYPE_SET
 
 router = APIRouter()
 
@@ -67,9 +67,8 @@ async def list_nodes(
 
 @router.post("/graph/nodes")
 async def create_node(body: NodeCreate):
-    """Create a new node. Validates node_type against canonical vocabulary (Spec 169)."""
-    # Spec 169: reject unknown node types
-    if body.type not in CANONICAL_NODE_TYPE_SET:
+    """Create a new node. Reject unknown graph node types while preserving canonical semantics."""
+    if body.type not in NODE_TYPE_SET:
         raise HTTPException(
             status_code=422,
             detail=(

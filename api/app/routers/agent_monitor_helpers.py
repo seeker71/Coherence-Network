@@ -32,6 +32,12 @@ def _get_config_int(key: str, default: int) -> int:
 
 def orphan_threshold_seconds() -> int:
     """Get orphan threshold seconds from config."""
+    explicit = os.getenv("PIPELINE_ORPHAN_RUNNING_SECONDS")
+    if explicit is not None:
+        try:
+            return max(60, int(explicit))
+        except (TypeError, ValueError):
+            pass
     config = get_config()
     threshold = config.get("pipeline_orphan_running_seconds")
     if threshold is not None:
@@ -44,6 +50,12 @@ def orphan_threshold_seconds() -> int:
 
 def monitor_max_age_seconds() -> int:
     """Get monitor max age seconds from config."""
+    explicit = os.getenv("MONITOR_ISSUES_MAX_AGE_SECONDS")
+    if explicit is not None:
+        try:
+            return max(60, int(explicit))
+        except (TypeError, ValueError):
+            pass
     config = get_config()
     age = config.get("monitor_issues_max_age_seconds")
     if age is not None:
@@ -56,6 +68,12 @@ def monitor_max_age_seconds() -> int:
 
 def status_report_max_age_seconds() -> int:
     """Get status report max age seconds from config."""
+    explicit = os.getenv("PIPELINE_STATUS_REPORT_MAX_AGE_SECONDS")
+    if explicit is not None:
+        try:
+            return max(60, int(explicit))
+        except (TypeError, ValueError):
+            pass
     config = get_config()
     age = config.get("pipeline_status_report_max_age_seconds")
     if age is not None:

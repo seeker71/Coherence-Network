@@ -11,6 +11,7 @@ from app.models.portfolio import (
     PortfolioSummary,
     StakeDetail,
     StakesList,
+    TaskDetail,
     TasksList,
 )
 from app.services import portfolio_service
@@ -138,6 +139,24 @@ def get_tasks(
     """List tasks assigned to or completed by this contributor."""
     try:
         return portfolio_service.get_tasks(contributor_id, status=status, limit=limit, offset=offset)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get(
+    "/contributors/{contributor_id}/tasks/{task_id}",
+    response_model=TaskDetail,
+    summary="Get full detail for one portfolio task",
+)
+def get_task_detail(
+    contributor_id: str,
+    task_id: str,
+) -> TaskDetail:
+    """Retrieve one contributor-owned portfolio task."""
+    try:
+        return portfolio_service.get_task_detail(contributor_id, task_id)
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 

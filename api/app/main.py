@@ -53,13 +53,17 @@ from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
 from app.routers import dif_feedback
+from app.routers import data_retention as data_retention_router
 from app.routers import geolocation
 from app.routers import edges as edges_router
 from app.routers import graph
+from app.routers import graph_questions
+from app.routers import graph_zoom
 from app.routers import graph_health
 from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
 from app.routers import onboarding as onboarding_router
+from app.routers import openclaw_node_bridge
 from app.routers import pipeline
 from app.routers import ui_preferences as ui_preferences_router
 from app.routers import provider_stats
@@ -565,6 +569,7 @@ app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(coherence.router, prefix="/api", tags=["coherence"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])
 app.include_router(federation.router, prefix="/api", tags=["federation"])
+app.include_router(openclaw_node_bridge.router, prefix="/api", tags=["federation"])
 app.include_router(friction.router, prefix="/api", tags=["friction"])
 app.include_router(gates.router, prefix="/api", tags=["gates"])
 app.include_router(health.router, prefix="/api", tags=["health"])
@@ -585,9 +590,12 @@ app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])
+app.include_router(data_retention_router.router, prefix="/api", tags=["data-retention"])
 app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])
 app.include_router(dif_feedback.router, prefix="/api", tags=["dif"])
 app.include_router(graph.router, prefix="/api", tags=["graph"])
+app.include_router(graph_zoom.router, prefix="/api", tags=["graph"])
+app.include_router(graph_questions.router, prefix="/api", tags=["graph"])
 app.include_router(graph_health.router, prefix="/api", tags=["graph-health"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])

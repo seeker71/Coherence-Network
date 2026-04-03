@@ -36,6 +36,7 @@ from app.models.automation_usage import (
     UsageAlertReport,
     UsageMetric,
 )
+from app.models.runtime import RuntimeEvent
 from app.services import (
     agent_runner_registry_service,
     agent_service,
@@ -59,6 +60,9 @@ def invalidate_cache() -> None:
         _CACHE["expires_at"] = 0.0
         _CACHE["overview"] = None
     _RUNTIME_EVENTS_WINDOW_CACHE.clear()
+    _WORKER_PROVIDER_WINDOW_COUNTS_CACHE.clear()
+    _USAGE_SUMMARY_CACHE["expires_at"] = 0.0
+    _USAGE_SUMMARY_CACHE["summary"] = None
     _CODEX_PROVIDER_USAGE_CACHE["expires_at"] = 0.0
     _CODEX_PROVIDER_USAGE_CACHE["payload"] = None
     _RUNNER_PROVIDER_TELEMETRY_CACHE["expires_at"] = 0.0
@@ -92,6 +96,8 @@ _DB_HOST_EGRESS_SAMPLE_CACHE: dict[str, Any] = {
 _DB_HOST_EGRESS_SAMPLE_CACHE_TTL_SECONDS = 60.0
 _DB_HOST_EGRESS_ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None}
 _RUNTIME_EVENTS_WINDOW_CACHE: dict[tuple[int, str | None, int], dict[str, Any]] = {}
+_WORKER_PROVIDER_WINDOW_COUNTS_CACHE: dict[tuple[int, int], dict[str, Any]] = {}
+_USAGE_SUMMARY_CACHE: dict[str, Any] = {"expires_at": 0.0, "summary": None}
 _CODEX_PROVIDER_USAGE_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": None}
 _CODEX_PROVIDER_USAGE_CACHE_TTL_SECONDS = 90.0
 _RUNNER_PROVIDER_TELEMETRY_CACHE: dict[str, Any] = {"expires_at": 0.0, "rows": []}
@@ -151,6 +157,7 @@ _PROVIDER_FAMILY_ALIASES: dict[str, str] = {
 }
 
 _READINESS_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "railway", "gemini"})
+_READINESS_BLOCKING_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini", "railway"})
 _OPTIONAL_REQUIRED_PROVIDER_CANDIDATES = ("railway",)
 _LIMIT_TELEMETRY_REQUIRED_PROVIDER_ALLOWLIST = frozenset({"openai", "claude", "cursor", "gemini"})
 _LIMIT_COVERAGE_EXCLUDED_PROVIDERS = frozenset({"coherence-internal", "railway"})
@@ -210,6 +217,9 @@ def _dedupe_preserve_order(items: list[str]) -> list[str]:
 
 
 def _snapshots_path() -> Path:
+    explicit = str(os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", "")).strip()
+    if explicit:
+        return Path(explicit)
     configured = get_str("automation_usage", "snapshots_path")
     if configured:
         return Path(configured)
@@ -217,6 +227,9 @@ def _snapshots_path() -> Path:
 
 
 def _use_db_snapshots() -> bool:
+    explicit = os.getenv("AUTOMATION_USAGE_USE_DB")
+    if explicit is not None:
+        return explicit.strip().lower() in {"1", "true", "yes", "on"}
     if get_str("automation_usage", "snapshots_path"):
         return False
     return get_bool("automation_usage", "use_db", True)
@@ -452,6 +465,24 @@ def _endpoint_cached_payload(
     force_refresh: bool = False,
 ) -> dict[str, Any]:
     if force_refresh:
+        cached_payload, _cached_age = _endpoint_cache_read(endpoint, params=params)
+        if cached_payload is not None:
+            _endpoint_cache_schedule_refresh(
+                endpoint,
+                producer=refresh_producer,
+                params=params,
+            )
+            return cached_payload
+        if fallback_producer is not None:
+            fallback_payload = fallback_producer()
+            if isinstance(fallback_payload, dict):
+                _endpoint_cache_write(endpoint, fallback_payload, params=params)
+                _endpoint_cache_schedule_refresh(
+                    endpoint,
+                    producer=refresh_producer,
+                    params=params,
+                )
+                return fallback_payload
         payload = refresh_producer()
         if isinstance(payload, dict):
             _endpoint_cache_write(endpoint, payload, params=params)
@@ -483,6 +514,22 @@ def _endpoint_cached_payload(
         raise
 
 
+def _endpoint_cached_or_fallback_payload(
+    endpoint: str,
+    *,
+    fallback_producer: Callable[[], dict[str, Any] | None],
+    params: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    cached_payload, _cached_age = _endpoint_cache_read(endpoint, params=params)
+    if cached_payload is not None:
+        return cached_payload
+    fallback_payload = fallback_producer()
+    if isinstance(fallback_payload, dict):
+        _endpoint_cache_write(endpoint, fallback_payload, params=params)
+        return fallback_payload
+    return {}
+
+
 def _normalize_ratio_threshold(value: Any, *, default: float) -> float:
     parsed = _coerce_float(value)
     if parsed is None:
@@ -501,6 +548,13 @@ def _truncate_text(value: Any, *, max_len: int) -> str:
 
 def _runtime_events_cache_ttl_seconds() -> float:
     parsed = get_float("automation_usage", "runtime_events_cache_seconds")
+    if parsed is None:
+        return 20.0
+    return max(0.0, min(float(parsed), 300.0))
+
+
+def _usage_summary_cache_ttl_seconds() -> float:
+    parsed = get_float("automation_usage", "usage_summary_cache_seconds")
     if parsed is None:
         return 20.0
     return max(0.0, min(float(parsed), 300.0))
@@ -2128,27 +2182,21 @@ def _configured_status(provider: str) -> tuple[bool, list[str], list[str], list[
 
 def _required_providers_from_env() -> list[str]:
     raw = os.getenv("AUTOMATION_REQUIRED_PROVIDERS", ",".join(_DEFAULT_REQUIRED_PROVIDERS))
-    parsed = [
-        _provider_family_name(item)
-        for item in str(raw).split(",")
-        if str(item).strip()
-    ]
-    out = [
-        provider
-        for provider in parsed
-        if provider in _READINESS_REQUIRED_PROVIDER_ALLOWLIST
-    ]
-    out = _dedupe_preserve_order(out)
+    out = _dedupe_preserve_order(
+        [
+            _provider_family_name(item)
+            for item in str(raw).split(",")
+            if _provider_family_name(item) and _provider_family_name(item) != "coherence-internal"
+        ]
+    )
     for provider in _DEFAULT_REQUIRED_PROVIDERS:
         normalized = _provider_family_name(provider)
-        if normalized and normalized in _READINESS_REQUIRED_PROVIDER_ALLOWLIST and normalized not in out:
+        if normalized and normalized not in out:
             out.append(normalized)
     active_counts = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
     for provider in _OPTIONAL_REQUIRED_PROVIDER_CANDIDATES:
         normalized = _provider_family_name(provider)
         if not normalized:
-            continue
-        if normalized not in _READINESS_REQUIRED_PROVIDER_ALLOWLIST:
             continue
         if normalized in out:
             continue
@@ -2158,6 +2206,17 @@ def _required_providers_from_env() -> list[str]:
         if configured_by_env or runtime_active or configured_via_cli:
             out.append(normalized)
     return out if out else list(_DEFAULT_REQUIRED_PROVIDERS)
+
+
+def _explicit_required_internal_providers_from_env() -> list[str]:
+    raw = os.getenv("AUTOMATION_REQUIRED_PROVIDERS", "")
+    return _dedupe_preserve_order(
+        [
+            normalized
+            for item in str(raw).split(",")
+            if (normalized := _provider_family_name(item)) == "coherence-internal"
+        ]
+    )
 
 
 def _validation_required_providers_from_env() -> list[str]:
@@ -2201,8 +2260,32 @@ def _infer_provider_from_model(model_name: str) -> str:
     return ""
 
 
-def _active_provider_usage_counts() -> dict[str, int]:
+def _cached_usage_summary(*, force_refresh: bool = False, warm_if_missing: bool = True) -> dict[str, Any]:
+    now = time.time()
+    ttl = _usage_summary_cache_ttl_seconds()
+    cached_summary = _USAGE_SUMMARY_CACHE.get("summary")
+    if (
+        not force_refresh
+        and ttl > 0
+        and isinstance(cached_summary, dict)
+        and float(_USAGE_SUMMARY_CACHE.get("expires_at") or 0.0) > now
+    ):
+        return dict(cached_summary)
+
+    if not warm_if_missing and isinstance(cached_summary, dict):
+        return dict(cached_summary)
+    if not warm_if_missing:
+        return {}
+
     usage = agent_service.get_usage_summary()
+    normalized = usage if isinstance(usage, dict) else {}
+    _USAGE_SUMMARY_CACHE["summary"] = normalized
+    _USAGE_SUMMARY_CACHE["expires_at"] = now + ttl
+    return dict(normalized)
+
+
+def _active_provider_usage_counts(*, warm_if_missing: bool = True) -> dict[str, int]:
+    usage = _cached_usage_summary(warm_if_missing=warm_if_missing)
     by_model = usage.get("by_model") if isinstance(usage, dict) else {}
     execution = usage.get("execution") if isinstance(usage, dict) else {}
     by_executor = execution.get("by_executor") if isinstance(execution, dict) else {}
@@ -2391,50 +2474,67 @@ def _runtime_events_within_window(
     return events
 
 
-def _cursor_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
+def _worker_provider_window_counts(window_seconds: int) -> dict[str, int]:
+    normalized_window = max(60, int(window_seconds))
+    normalized_limit = _runtime_event_scan_limit()
+    cache_key = (normalized_window, normalized_limit)
+    cache_ttl = _runtime_events_cache_ttl_seconds()
+    now = time.time()
 
-    count = 0
+    if cache_ttl > 0:
+        cached = _WORKER_PROVIDER_WINDOW_COUNTS_CACHE.get(cache_key)
+        if cached and float(cached.get("expires_at") or 0.0) > now:
+            counts = cached.get("counts")
+            if isinstance(counts, dict):
+                return {
+                    str(key): int(value)
+                    for key, value in counts.items()
+                }
+
+    events = _runtime_events_within_window(
+        window_seconds=normalized_window,
+        source="worker",
+        limit=normalized_limit,
+    )
+    counts = {
+        "cursor": 0,
+        "claude": 0,
+        "openai": 0,
+        "gemini": 0,
+    }
+
     for event in events:
+        endpoint = str(getattr(event, "endpoint", "") or "").strip().lower()
         metadata = getattr(event, "metadata", {}) or {}
         if not isinstance(metadata, dict):
             continue
-        executor = str(metadata.get("executor") or "").strip().lower()
-        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
-        model = str(metadata.get("model") or "").strip().lower()
-        if executor == "cursor" or provider == "cursor" or model.startswith("cursor/"):
-            count += 1
-    return count
 
-
-def _claude_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
-
-    count = 0
-    for event in events:
-        metadata = getattr(event, "metadata", {}) or {}
-        if not isinstance(metadata, dict):
-            continue
         executor = str(metadata.get("executor") or "").strip().lower()
         provider = _normalize_provider_name(str(metadata.get("provider") or ""))
         model = str(metadata.get("model") or "").strip().lower()
         agent_id = str(metadata.get("agent_id") or "").strip().lower()
+        repeatable_tool_call = str(metadata.get("repeatable_tool_call") or "").strip().lower()
+        is_codex = bool(metadata.get("is_openai_codex"))
+
+        if executor == "cursor" or provider == "cursor" or model.startswith("cursor/"):
+            counts["cursor"] += 1
+
         if (
             executor == "claude"
             or provider in {"claude", "claude-code"}
             or "claude" in model
             or agent_id.startswith("claude")
         ):
-            count += 1
-    return count
+            counts["claude"] += 1
 
+        if (
+            executor == "gemini"
+            or provider == "gemini"
+            or model.startswith("gemini/")
+            or "gemini" in model
+        ):
+            counts["gemini"] += 1
 
-def _codex_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
-    count = 0
-    for event in events:
-        endpoint = str(getattr(event, "endpoint", "") or "").strip().lower()
-        # Avoid double-counting task wrappers; only track execution-like events.
         if endpoint in {
             "/tool:agent-task-completion",
             "tool:agent-task-completion",
@@ -2442,45 +2542,56 @@ def _codex_events_within_window(window_seconds: int) -> int:
             "tool:agent-task-execution-summary",
         }:
             continue
-        metadata = getattr(event, "metadata", {}) or {}
-        if not isinstance(metadata, dict):
-            continue
-        model = str(metadata.get("model") or "").strip().lower()
-        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
-        executor = str(metadata.get("executor") or "").strip().lower()
-        agent_id = str(metadata.get("agent_id") or "").strip().lower()
-        repeatable_tool_call = str(metadata.get("repeatable_tool_call") or "").strip().lower()
-        is_codex = bool(metadata.get("is_openai_codex"))
         if is_codex:
-            count += 1
+            counts["openai"] += 1
             continue
         if provider == "openai" and (
             "codex" in model
             or "openai-codex" in agent_id
             or repeatable_tool_call.startswith("codex ")
         ):
-            count += 1
+            counts["openai"] += 1
             continue
         if "codex" in model and (executor == "codex" or "openai-codex" in agent_id):
-            count += 1
-            continue
-    return count
+            counts["openai"] += 1
+
+    if cache_ttl > 0:
+        _WORKER_PROVIDER_WINDOW_COUNTS_CACHE[cache_key] = {
+            "expires_at": now + cache_ttl,
+            "counts": dict(counts),
+        }
+        if len(_WORKER_PROVIDER_WINDOW_COUNTS_CACHE) > 32:
+            stale_keys = [
+                key
+                for key, row in _WORKER_PROVIDER_WINDOW_COUNTS_CACHE.items()
+                if float(row.get("expires_at") or 0.0) <= now
+            ]
+            for key in stale_keys[:16]:
+                _WORKER_PROVIDER_WINDOW_COUNTS_CACHE.pop(key, None)
+    return counts
+
+
+def _active_provider_usage_counts_with_cache_policy(*, warm_if_missing: bool = True) -> dict[str, int]:
+    try:
+        return _active_provider_usage_counts(warm_if_missing=warm_if_missing)
+    except TypeError:
+        return _active_provider_usage_counts()
+
+
+def _cursor_events_within_window(window_seconds: int) -> int:
+    return int(_worker_provider_window_counts(window_seconds).get("cursor", 0))
+
+
+def _claude_events_within_window(window_seconds: int) -> int:
+    return int(_worker_provider_window_counts(window_seconds).get("claude", 0))
+
+
+def _codex_events_within_window(window_seconds: int) -> int:
+    return int(_worker_provider_window_counts(window_seconds).get("openai", 0))
 
 
 def _gemini_events_within_window(window_seconds: int) -> int:
-    events = _runtime_events_within_window(window_seconds=window_seconds, source="worker")
-
-    count = 0
-    for event in events:
-        metadata = getattr(event, "metadata", {}) or {}
-        if not isinstance(metadata, dict):
-            continue
-        executor = str(metadata.get("executor") or "").strip().lower()
-        provider = _normalize_provider_name(str(metadata.get("provider") or ""))
-        model = str(metadata.get("model") or "").strip().lower()
-        if executor == "gemini" or provider == "gemini" or model.startswith("gemini/") or "gemini" in model:
-            count += 1
-    return count
+    return int(_worker_provider_window_counts(window_seconds).get("gemini", 0))
 
 
 def _openai_subscription_limits() -> tuple[int, int, str]:
@@ -4561,9 +4672,15 @@ def collect_usage_overview(force_refresh: bool = False) -> ProviderUsageOverview
         return overview
 
 
-def refresh_usage_overview_limit_coverage(overview: ProviderUsageOverview) -> ProviderUsageOverview:
+def refresh_usage_overview_limit_coverage(
+    overview: ProviderUsageOverview,
+    *,
+    warm_usage_summary: bool = True,
+) -> ProviderUsageOverview:
     required_providers = _required_providers_from_env()
-    active_usage = _coalesce_usage_counts_by_family(_active_provider_usage_counts())
+    active_usage = _coalesce_usage_counts_by_family(
+        _active_provider_usage_counts_with_cache_policy(warm_if_missing=warm_usage_summary)
+    )
     overview.limit_coverage = _limit_coverage_summary(
         overview.providers,
         required_providers=required_providers,
@@ -4884,14 +5001,14 @@ def usage_overview_from_snapshots() -> ProviderUsageOverview:
             limit_coverage={},
         )
     )
-    return refresh_usage_overview_limit_coverage(overview)
+    return refresh_usage_overview_limit_coverage(overview, warm_usage_summary=False)
 
 
-def usage_endpoint_timeout_seconds(default: float = 3.0) -> float:
-    parsed = _coerce_float(os.getenv("AUTOMATION_USAGE_ENDPOINT_TIMEOUT_SECONDS"))
+def usage_endpoint_timeout_seconds(default: float = 1.0) -> float:
+    parsed = get_float("automation_usage", "endpoint_timeout_seconds")
     if parsed is None:
         return max(0.1, min(float(default), 10.0))
-    return max(0.1, min(float(parsed), 300.0))
+    return max(0.1, min(float(parsed), 10.0))
 
 
 def _usage_payload_from_overview(
@@ -4899,9 +5016,13 @@ def _usage_payload_from_overview(
     *,
     compact: bool,
     include_raw: bool,
+    warm_usage_summary: bool = True,
 ) -> dict[str, Any]:
     normalized = coalesce_usage_overview_families(overview)
-    normalized = refresh_usage_overview_limit_coverage(normalized)
+    normalized = refresh_usage_overview_limit_coverage(
+        normalized,
+        warm_usage_summary=warm_usage_summary,
+    )
     if compact:
         return compact_usage_overview_payload(
             normalized,
@@ -4915,6 +5036,7 @@ def usage_overview_payload_from_snapshots(*, compact: bool = False, include_raw:
         usage_overview_from_snapshots(),
         compact=compact,
         include_raw=include_raw,
+        warm_usage_summary=False,
     )
 
 
@@ -4941,6 +5063,39 @@ def cached_usage_overview_payload(
         params=params,
         force_refresh=force_refresh,
     )
+
+
+def latest_usage_overview_payload(
+    *,
+    compact: bool = False,
+    include_raw: bool = False,
+) -> dict[str, Any]:
+    params = {"compact": bool(compact), "include_raw": bool(include_raw)}
+    return _endpoint_cached_or_fallback_payload(
+        "automation_usage_overview",
+        fallback_producer=lambda: _usage_payload_from_overview(
+            usage_overview_from_snapshots(),
+            compact=compact,
+            include_raw=include_raw,
+            warm_usage_summary=False,
+        ),
+        params=params,
+    )
+
+
+def refresh_usage_overview_payload(
+    *,
+    compact: bool = False,
+    include_raw: bool = False,
+) -> dict[str, Any]:
+    params = {"compact": bool(compact), "include_raw": bool(include_raw)}
+    payload = _usage_payload_from_overview(
+        collect_usage_overview(force_refresh=True),
+        compact=compact,
+        include_raw=include_raw,
+    )
+    _endpoint_cache_write("automation_usage_overview", payload, params=params)
+    return payload
 
 
 def cached_usage_alerts_payload(
@@ -4985,6 +5140,35 @@ def cached_provider_readiness_payload(
     )
 
 
+def latest_provider_readiness_payload(
+    *,
+    required_providers: list[str] | None = None,
+) -> dict[str, Any]:
+    required = sorted(set(required_providers or []))
+    params = {"required_providers": required}
+    return _endpoint_cached_or_fallback_payload(
+        "automation_usage_readiness",
+        fallback_producer=lambda: provider_readiness_report_from_snapshots(
+            required_providers=required or None,
+        ).model_dump(mode="json"),
+        params=params,
+    )
+
+
+def refresh_provider_readiness_payload(
+    *,
+    required_providers: list[str] | None = None,
+) -> dict[str, Any]:
+    required = sorted(set(required_providers or []))
+    params = {"required_providers": required}
+    payload = provider_readiness_report(
+        required_providers=required or None,
+        force_refresh=True,
+    ).model_dump(mode="json")
+    _endpoint_cache_write("automation_usage_readiness", payload, params=params)
+    return payload
+
+
 def cached_provider_validation_payload(
     *,
     required_providers: list[str] | None = None,
@@ -5000,6 +5184,15 @@ def cached_provider_validation_payload(
         "runtime_window_seconds": window,
         "min_execution_events": min_events,
     }
+    if force_refresh:
+        payload = provider_validation_report(
+            required_providers=required or None,
+            runtime_window_seconds=window,
+            min_execution_events=min_events,
+            force_refresh=True,
+        ).model_dump(mode="json")
+        _endpoint_cache_write("automation_usage_provider_validation", payload, params=params)
+        return payload
     return _endpoint_cached_payload(
         "automation_usage_provider_validation",
         fresh_ttl_seconds=120.0,
@@ -5459,9 +5652,14 @@ def _resolved_required_provider_set(
     required = [
         _provider_family_name(item)
         for item in (required_providers or _required_providers_from_env())
-        if _provider_family_name(item) in _READINESS_REQUIRED_PROVIDER_ALLOWLIST
+        if _provider_family_name(item)
     ]
     required = _dedupe_preserve_order(required)
+    required.extend(
+        provider
+        for provider in _explicit_required_internal_providers_from_env()
+        if provider not in required
+    )
     if required:
         return set(required)
     return set(_DEFAULT_REQUIRED_PROVIDERS)
@@ -5512,23 +5710,15 @@ def _provider_readiness_report_for_overview(
         status = snapshot.status if snapshot is not None else ("ok" if configured else "unavailable")
         is_required = provider in required_set
 
-        if is_required and status != "ok":
-            severity = "critical"
-            reason = f"{provider}: status={status}"
-            blocking.append(reason)
-            recommendations.append(
-                f"Restore provider telemetry for '{provider}' and re-run /api/automation/usage/readiness."
-            )
-        elif status != "ok":
-            severity = "warning"
-        else:
-            severity = "info"
-
-        notes = list(snapshot.notes) if snapshot is not None else []
-        if missing:
-            notes.append(f"missing_env={','.join(missing)}")
-        notes.extend(configured_notes)
-        notes = list(dict.fromkeys(notes))
+        severity = _provider_readiness_severity(provider=provider, status=status, is_required=is_required)
+        _append_provider_readiness_blockers(
+            provider=provider,
+            status=status,
+            severity=severity,
+            blocking=blocking,
+            recommendations=recommendations,
+        )
+        notes = _provider_readiness_notes(snapshot=snapshot, missing=missing, configured_notes=configured_notes)
 
         rows.append(
             ProviderReadinessRow(
@@ -5573,6 +5763,43 @@ def _provider_readiness_report_for_overview(
         providers=rows,
         limit_telemetry=limit_telemetry,
     )
+
+
+def _provider_readiness_severity(*, provider: str, status: str, is_required: bool) -> str:
+    if status == "ok":
+        return "info"
+    if is_required and provider in _READINESS_BLOCKING_REQUIRED_PROVIDER_ALLOWLIST:
+        return "critical"
+    return "warning"
+
+
+def _append_provider_readiness_blockers(
+    *,
+    provider: str,
+    status: str,
+    severity: str,
+    blocking: list[str],
+    recommendations: list[str],
+) -> None:
+    if severity != "critical":
+        return
+    blocking.append(f"{provider}: status={status}")
+    recommendations.append(
+        f"Restore provider telemetry for '{provider}' and re-run /api/automation/usage/readiness."
+    )
+
+
+def _provider_readiness_notes(
+    *,
+    snapshot: ProviderUsageSnapshot | None,
+    missing: list[str],
+    configured_notes: list[str],
+) -> list[str]:
+    notes = list(snapshot.notes) if snapshot is not None else []
+    if missing:
+        notes.append(f"missing_env={','.join(missing)}")
+    notes.extend(configured_notes)
+    return list(dict.fromkeys(notes))
 
 
 def provider_readiness_report(*, required_providers: list[str] | None = None, force_refresh: bool = True) -> ProviderReadinessReport:
@@ -6032,15 +6259,6 @@ def _resolve_binary_path(binary: str) -> str:
     return ""
 
 
-def _prepend_binary_dir_to_path(binary_path: str) -> None:
-    directory = str(Path(binary_path).parent)
-    current = str(os.environ.get("PATH", ""))
-    parts = [item for item in current.split(os.pathsep) if item]
-    if directory in parts:
-        return
-    os.environ["PATH"] = directory + (os.pathsep + current if current else "")
-
-
 def _ensure_binary_symlink(binary: str, source_path: str) -> None:
     targets = [f"/usr/local/bin/{binary}", f"/usr/bin/{binary}"]
     for target in targets:
@@ -6061,7 +6279,6 @@ def _install_provider_cli(provider: str) -> tuple[bool, str]:
         return False, "install_cli_unsupported_provider"
     resolved = _resolve_binary_path(binary)
     if resolved:
-        _prepend_binary_dir_to_path(resolved)
         return False, f"install_cli_skipped_present:{binary}:{resolved}"
 
     commands = _provider_install_commands(provider)
@@ -6081,7 +6298,6 @@ def _install_provider_cli(provider: str) -> tuple[bool, str]:
         resolved = _resolve_binary_path(binary)
         if resolved and not shutil.which(binary):
             _ensure_binary_symlink(binary, resolved)
-            _prepend_binary_dir_to_path(resolved)
         resolved = _resolve_binary_path(binary)
         if resolved:
             probe_ok, probe_detail = _cli_output([resolved, "--version"])
@@ -6293,7 +6509,10 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
 
     def _providers_for_event(metadata: dict[str, Any]) -> set[str]:
         providers: set[str] = set()
-        explicit = _normalize_provider_name(str(metadata.get("provider") or ""))
+        raw_provider = str(metadata.get("provider") or "").strip().lower()
+        if raw_provider and str(metadata.get("tool_name") or "").strip() == "provider_validation_probe":
+            providers.add(raw_provider)
+        explicit = _normalize_provider_name(raw_provider)
         if explicit:
             providers.add(explicit)
 
@@ -6321,12 +6540,46 @@ def _runtime_validation_rows(*, required_providers: list[str], runtime_window_se
 
         return {item for item in providers if item}
 
-    try:
-        from app.services import runtime_service
+    explicit_events_path = str(os.getenv("RUNTIME_EVENTS_PATH", "")).strip()
+    use_explicit_events_file = False
+    if explicit_events_path:
+        try:
+            from app.services import runtime_event_store
 
-        events = runtime_service.list_events(limit=2000)
-    except Exception:
-        events = []
+            use_explicit_events_file = bool(runtime_event_store.enabled())
+        except Exception:
+            use_explicit_events_file = False
+    if use_explicit_events_file:
+        events: list[RuntimeEvent] = []
+        path = Path(explicit_events_path)
+        if path.exists():
+            try:
+                with path.open(encoding="utf-8") as handle:
+                    payload = json.load(handle)
+            except (OSError, json.JSONDecodeError):
+                payload = {}
+            raw_events = payload.get("events") if isinstance(payload, dict) else payload
+            if isinstance(raw_events, list):
+                for raw in raw_events:
+                    if not isinstance(raw, dict):
+                        continue
+                    try:
+                        event = RuntimeEvent(**raw)
+                    except Exception:
+                        continue
+                    recorded_at = event.recorded_at
+                    if recorded_at.tzinfo is None:
+                        event.recorded_at = recorded_at.replace(tzinfo=timezone.utc)
+                    events.append(event)
+        events.sort(key=lambda item: item.recorded_at, reverse=True)
+        events = events[:2000]
+    else:
+        try:
+            from app.services import runtime_service
+
+            events = runtime_service.list_events(limit=2000)
+        except Exception:
+            events = []
 
     for event in events:
         recorded_at = getattr(event, "recorded_at", None)
@@ -6406,7 +6659,7 @@ def _build_provider_validation_report(
         )
         _default_runtime_row: dict[str, Any] = {"usage_events": 0, "successful_events": 0, "last_event_at": None, "notes": []}
         _rt_raw = runtime_rows.get(provider, _default_runtime_row)
-        if not int(_rt_raw.get("usage_events") or 0):
+        if provider != "codex" and not int(_rt_raw.get("usage_events") or 0):
             _rt_normalized = runtime_rows.get(_normalize_provider_name(provider)) or runtime_rows.get(family)
             if _rt_normalized and int(_rt_normalized.get("usage_events") or 0):
                 _rt_raw = _rt_normalized
@@ -6416,8 +6669,11 @@ def _build_provider_validation_report(
         usage_events = int(runtime_row.get("usage_events") or 0)
         successful_events = int(runtime_row.get("successful_events") or 0)
         llm_provider = provider in _LLM_PROVIDER_ALLOWLIST
+        runtime_validated_provider = provider == "codex"
         if llm_provider:
             execution_validated = _provider_has_full_subscription_windows(usage_snapshot)
+        elif runtime_validated_provider:
+            execution_validated = successful_events >= min_events
         elif usage_snapshot is not None:
             execution_validated = readiness_status == "ok"
         else:
@@ -6430,6 +6686,11 @@ def _build_provider_validation_report(
                 if not buckets
                 else f"needs_subscription_windows_missing={','.join(sorted({'hourly', 'weekly'} - buckets))}"
             )
+        elif runtime_validated_provider:
+            if usage_events < min_events:
+                notes.append(f"needs_runtime_events>={min_events}")
+            if successful_events < min_events:
+                notes.append(f"needs_successful_events>={min_events}")
         elif not llm_provider and usage_snapshot is not None and readiness_status != "ok":
             notes.append("needs_provider_ready_status=ok")
         elif not llm_provider and usage_snapshot is None:
@@ -6445,6 +6706,11 @@ def _build_provider_validation_report(
                 blocking.append(
                     f"{provider}: readiness_status={readiness_status}, "
                     f"subscription_windows={'+'.join(sorted(buckets)) or 'missing'}"
+                )
+            elif runtime_validated_provider:
+                blocking.append(
+                    f"{provider}: configured={configured}, readiness_status={readiness_status}, "
+                    f"successful_events={successful_events}/{min_events}"
                 )
             elif usage_snapshot is None:
                 blocking.append(

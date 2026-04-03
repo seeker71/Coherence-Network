@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 
@@ -50,7 +50,11 @@ type RunningTask = {
 };
 
 type PulseData = {
-  bottleneck: { type: string; reason: string; recommendation: string };
+  bottleneck: {
+    type: string | null;
+    reason: string | null;
+    recommendation: string | null;
+  };
   phase_stats: Record<string, { completed: number; failed: number; pending: number; success_rate: number | null }>;
   ideas: { total_in_portfolio: number; without_spec: number; full_cycle: unknown[]; advancing: unknown[]; stuck: unknown[] };
 };
@@ -243,6 +247,13 @@ export default function DashboardPage() {
   const fleetOk = nodes.reduce((s, n) => s + (n.streak?.completed || 0), 0);
   const fleetTotal = nodes.reduce((s, n) => s + (n.streak?.total_resolved || 0), 0);
   const fleetRate = fleetTotal > 0 ? Math.round((fleetOk / fleetTotal) * 100) : 0;
+  const bottleneckTitle = pulse?.bottleneck.type
+    ? pulse.bottleneck.type.replace(/_/g, " ")
+    : "Pipeline balanced";
+  const bottleneckDetail =
+    pulse?.bottleneck.reason ||
+    pulse?.bottleneck.recommendation ||
+    "No single phase is dominating the backlog right now.";
 
   return (
     <main className="min-h-screen bg-background text-foreground p-4 space-y-4 max-w-7xl mx-auto">
@@ -285,8 +296,8 @@ export default function DashboardPage() {
           <p className="text-xs text-muted-foreground uppercase tracking-wider">Bottleneck</p>
           {pulse ? (
             <>
-              <p className="text-sm font-medium">{pulse.bottleneck.type.replace(/_/g, " ")}</p>
-              <p className="text-xs text-muted-foreground line-clamp-2">{pulse.bottleneck.reason}</p>
+              <p className="text-sm font-medium">{bottleneckTitle}</p>
+              <p className="text-xs text-muted-foreground line-clamp-2">{bottleneckDetail}</p>
             </>
           ) : (
             <p className="text-xs text-muted-foreground">Loading...</p>

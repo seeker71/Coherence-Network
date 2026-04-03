@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Body, Query, Request
+from pydantic import BaseModel
 
 from app.models.runtime import (
     EndpointAttentionReport,
@@ -13,6 +14,14 @@ from app.models.runtime import (
 from app.services import mvp_baseline_service, runtime_service
 
 router = APIRouter()
+
+
+class RuntimeExerciserRunRequest(BaseModel):
+    cycles: int | None = None
+    max_endpoints: int | None = None
+    delay_ms: int | None = None
+    timeout_seconds: float | None = None
+    runtime_window_seconds: int | None = None
 
 
 @router.post("/runtime/events", response_model=RuntimeEvent, status_code=201)
@@ -101,20 +110,22 @@ async def runtime_endpoint_attention(
 @router.post("/runtime/exerciser/run")
 async def run_runtime_get_endpoint_exerciser(
     request: Request,
+    payload: RuntimeExerciserRunRequest | None = Body(default=None),
     cycles: int = Query(1, ge=1, le=200),
-    max_endpoints: int = Query(250, ge=1, le=2000),
+    max_endpoints: int = Query(15, ge=1, le=2000),
     delay_ms: int = Query(0, ge=0, le=30000),
-    timeout_seconds: float = Query(8.0, ge=1.0, le=60.0),
+    timeout_seconds: float = Query(2.0, ge=1.0, le=60.0),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
 ) -> dict:
+    payload_values = payload.model_dump(exclude_none=True) if payload is not None else {}
     return await runtime_service.run_get_endpoint_exerciser(
         app=request.app,
         base_url=str(request.base_url),
-        cycles=cycles,
-        max_endpoints=max_endpoints,
-        delay_ms=delay_ms,
-        timeout_seconds=timeout_seconds,
-        runtime_window_seconds=runtime_window_seconds,
+        cycles=int(payload_values.get("cycles", cycles)),
+        max_endpoints=int(payload_values.get("max_endpoints", max_endpoints)),
+        delay_ms=int(payload_values.get("delay_ms", delay_ms)),
+        timeout_seconds=float(payload_values.get("timeout_seconds", timeout_seconds)),
+        runtime_window_seconds=int(payload_values.get("runtime_window_seconds", runtime_window_seconds)),
     )
 
 
