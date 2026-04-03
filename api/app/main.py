@@ -45,6 +45,7 @@ from app.routers import (
     runtime,
     auth_keys,
     blueprints,
+    content,
     traceability,
     treasury,
     value_lineage,
@@ -607,7 +608,18 @@ app.include_router(auth_keys.router, prefix="/api", tags=["auth"])
 app.include_router(news.router, prefix="/api", tags=["news"])
 app.include_router(peers.router, prefix="/api", tags=["peers"])
 app.include_router(blueprints.router, prefix="/api", tags=["blueprints"])
+app.include_router(content.router, prefix="/api", tags=["content"])
 app.include_router(traceability.router, prefix="/api", tags=["traceability"])
+
+# Auto-index repository content on startup
+@app.on_event("startup")
+async def startup_indexer():
+    try:
+        from app.services import content_indexer_service
+        stats = content_indexer_service.scan_and_index_specs()
+        _startup_logger.info("startup: content_indexer_stats=%s", stats)
+    except Exception:
+        _startup_logger.error("startup: content_indexer failed", exc_info=True)
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
