@@ -73,6 +73,7 @@ import { listGraphNodes, createGraphNode, listGraphEdges, createGraphEdge, getGr
 import { onboardingRegister, onboardingSession, onboardingUpgrade } from "../lib/commands/onboarding.mjs";
 import { credentialsAdd, credentialsList, credentialsRemove } from "../lib/commands/credentials.mjs";
 import { guide } from "../lib/commands/guide.mjs";
+import { runFocusCommand } from "../lib/commands/focus.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -133,6 +134,8 @@ const COMMANDS = {
    onboarding:    () => handleOnboarding(args),
    credentials:   () => handleCredentials(args),
    guide:         () => guide(args),
+  focus:         () => runFocusCommand(args),
+  f:             () => runFocusCommand(args),
    setup:         () => setup(args),
   whoami:        () => showWhoami(),
   tasks:         () => listTasks(args),
@@ -512,6 +515,9 @@ function showHelp() {
 \x1b[1mUsage:\x1b[0m cc <command> [args]
 
 \x1b[1mExplore:\x1b[0m
+  focus                   Interactive idea picker to set active focus
+  focus <id>              Set active focus non-interactively
+  focus --clear           Clear active focus
   portfolio               Ideas by category — gap, streak, effort, new experiences
   ideas [limit]           Browse ideas by ROI
   ideas --type <type>     Filter by work_type (feature|bug-fix|enhancement|exploration|research|prototype|mvp)
