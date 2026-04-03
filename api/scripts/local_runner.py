@@ -1488,14 +1488,22 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
     Validation is category-aware:
     - network: check API endpoints (non-404) and web pages (non-404)
     - infrastructure: check CI workflow exists or health endpoint
-    - external: no production check (contributor provides evidence)
+    - external: verify interface files exist in external repo (workspace_git_url)
     - general: no production check (spec completeness is sufficient)
     """
     import re
+    from app.services.idea_service import get_workspace_git_url
     desc = str(idea_payload.get("description") or "")
     interfaces = idea_payload.get("interfaces") or []
+    workspace_git_url = idea_payload.get("workspace_git_url") or get_workspace_git_url(idea_id) or ""
 
     category = _classify_idea_validation(interfaces, desc)
+
+    # External repo ideas: verify files exist in the external repo, not on production
+    if workspace_git_url and category not in ("network",):
+        log.info("EXTERNAL_REPO_CHECK idea=%s url=%s — verifying in external repo", idea_id, workspace_git_url)
+        failures = _verify_external_repo_interfaces(idea_id, workspace_git_url, interfaces, desc)
+        return failures
 
     if category not in ("network",):
         # Non-network ideas: no production endpoint check
@@ -1542,6 +1550,74 @@ def _verify_production_interfaces(idea_id: str, idea_payload: dict) -> list[str]
     else:
         log.info("PROOF_CHECK idea=%s category=%s — no endpoints claimed, skipped",
                   idea_id, category)
+
+    return failures
+
+
+def _verify_external_repo_interfaces(
+    idea_id: str,
+    workspace_git_url: str,
+    interfaces: list[str],
+    description: str,
+) -> list[str]:
+    """Verify that claimed interface files exist in the external repo.
+
+    For external-repo ideas, production checks are performed against the
+    external workspace repo (via workspace mirror) rather than the
+    coherence-network repo or production APIs.
+
+    Returns a list of failure descriptions. Empty list = all verified.
+    """
+    import re
+
+    failures = []
+    workspace_repo = _get_or_update_workspace_repo(workspace_git_url)
+    if workspace_repo is None:
+        failures.append(f"External repo mirror unavailable: {workspace_git_url}")
+        return failures
+
+    repo_path = Path(workspace_repo)
+    desc_lower = description.lower()
+
+    interface_files = []
+    for iface in interfaces:
+        iface_lower = iface.lower()
+        if iface_lower in ("machine:api", "api"):
+            api_paths_in_desc = re.findall(r'/api/[\w/{}]+', description)
+            for p in api_paths_in_desc:
+                interface_files.append(f"api/app{p.rstrip('/')}.py")
+        elif iface_lower in ("human:web", "web"):
+            web_paths = re.findall(r'/(web|app)/([\w/-]+)\s', description, re.IGNORECASE)
+            for _, path in web_paths:
+                interface_files.append(f"web/app/{path}/page.tsx")
+                interface_files.append(f"web/app/{path}/page.ts")
+        elif iface_lower.startswith("machine:"):
+            rest = iface_lower.split("machine:", 1)[1]
+            parts = rest.strip().split(":")
+            if len(parts) >= 2:
+                file_path = parts[1].strip()
+                if file_path and "." in file_path:
+                    interface_files.append(file_path)
+        elif iface_lower.startswith("file:"):
+            file_path = iface_lower.split("file:", 1)[1].strip()
+            if file_path:
+                interface_files.append(file_path)
+
+    for rel_path in interface_files:
+        full_path = repo_path / rel_path
+        if not full_path.exists():
+            failures.append(f"Interface file not found in external repo: {rel_path}")
+
+    if not interface_files:
+        log.info("EXTERNAL_REPO_CHECK idea=%s — no interface files extracted, skipping", idea_id)
+
+    if failures:
+        log.warning(
+            "EXTERNAL_REPO_CHECK idea=%s FAILED (%d issues): %s",
+            idea_id, len(failures), failures[:5],
+        )
+    else:
+        log.info("EXTERNAL_REPO_CHECK idea=%s PASSED (%d files verified)", idea_id, len(interface_files))
 
     return failures
 

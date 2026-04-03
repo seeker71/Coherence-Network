@@ -90,3 +90,8 @@ __pycache__/
 data/coherence.db
 .codex*
 .claude/worktrees/
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
+.codex*
