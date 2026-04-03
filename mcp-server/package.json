@@ -1,6 +1,6 @@
 {
   "name": "coherence-mcp-server",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Unified MCP server for the Coherence Network — 51 typed tools for AI agents to browse ideas, manage tasks, link identities, and navigate the universal graph.",
   "type": "module",
   "bin": {
