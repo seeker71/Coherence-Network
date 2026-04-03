@@ -78,6 +78,7 @@ import { runPeersCommand } from "../lib/commands/peers.mjs";
 import { runCollabCommand } from "../lib/commands/collab.mjs";
 import { runOrgCommand } from "../lib/commands/org.mjs";
 import { runBlueprintsCommand } from "../lib/commands/blueprints.mjs";
+import { runSkillsCommand } from "../lib/commands/skills.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -145,6 +146,7 @@ const COMMANDS = {
   org:           () => runOrgCommand(args),
   blueprints:    () => runBlueprintsCommand(args),
   blueprint:     () => runBlueprintsCommand(args),
+  skills:        () => runSkillsCommand(args),
    setup:         () => setup(args),
   whoami:        () => showWhoami(),
   tasks:         () => listTasks(args),
@@ -529,6 +531,7 @@ function showHelp() {
   peers                   Discover contributors by resonance or proximity
   peers --nearby          Focus on geographic proximity
   peers --resonance       Focus on shared interests
+  skills                  Browse the network's procedural memory library
   portfolio               Ideas by category — gap, streak, effort, new experiences
   ideas [limit]           Browse ideas by ROI
   ideas --type <type>     Filter by work_type (feature|bug-fix|enhancement|exploration|research|prototype|mvp)

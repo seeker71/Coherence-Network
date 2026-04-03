@@ -150,6 +150,15 @@ Each repo needs its own credentials, provided by a contributor and used by tasks
 | 3 | **Compact Summaries** | Summarize large command outputs in context window; fetch raw logs only on drilldown. | ✅ |
 | 4 | **Tool Overhead Controls**| Auto-prune `guard_agents` for simple tasks (short direction + small file scope). | ✅ |
 
+## Learning Loop & Skill Evolution (Hermes Inspired)
+
+| Step | Feature | Description | Status |
+|---|---|---|---|
+| 1 | **Skill Synthesis** | After a `completed` task, trigger a "Reflection" task to generate a standardized Skill node. | ✅ |
+| 2 | **Procedural Memory API**| Allow agents to query "Previous Successes" related to an idea before starting work. | ✅ |
+| 3 | **Skill Discovery CLI** | Interactive `cc skills` command to browse and search the procedural library. | ✅ |
+| 4 | **Graph Integration** | Standardized `skill` and `trajectory` node types with `enables`/`realizes` edges. | ✅ |
+
 ## Foundation (Implemented)
 
 | # | Spec | Title | Status |

@@ -70,11 +70,14 @@ class NodeType(str, Enum):
     PIPELINE_RUN = "pipeline-run"
     EVENT = "event"
     ARTIFACT = "artifact"
+    # Learning Loop additions
+    SKILL = "skill"
+    TRAJECTORY = "trajectory"
 
 
 # Spec 169: canonical closed vocabulary for the semantic layer
 class CanonicalNodeType(str, Enum):
-    """10 canonical node types from Spec 169 — the typed semantic layer."""
+    """12 canonical node types from Spec 169 + Learning Loop — the typed semantic layer."""
     IDEA = "idea"
     CONCEPT = "concept"
     SPEC = "spec"
@@ -85,10 +88,12 @@ class CanonicalNodeType(str, Enum):
     PIPELINE_RUN = "pipeline-run"
     EVENT = "event"
     ARTIFACT = "artifact"
+    SKILL = "skill"
+    TRAJECTORY = "trajectory"
 
 
 class CanonicalEdgeType(str, Enum):
-    """9 canonical edge types from Spec 169 — minimal closed vocabulary."""
+    """11 canonical edge types from Spec 169 — minimal closed vocabulary."""
     INSPIRES = "inspires"
     DEPENDS_ON = "depends-on"
     IMPLEMENTS = "implements"
@@ -98,6 +103,8 @@ class CanonicalEdgeType(str, Enum):
     PARENT_OF = "parent-of"
     MANAGES = "manages"
     DELEGATES_TO = "delegates-to"
+    ENABLES = "enables"
+    REALIZES = "realizes"
 
 
 class LifecycleState(str, Enum):
@@ -126,6 +133,8 @@ LIFECYCLE_DEFAULTS: dict[str, str] = {
     "pipeline-run": "water",
     "event": "water",
     "artifact": "water",
+    "skill": "ice",
+    "trajectory": "ice",
 }
 
 # Symmetric canonical edge types (Spec 169)
