@@ -60,7 +60,24 @@ def _sanitize_task_output(value: str | None) -> str | None:
     max_chars = _max_task_output_chars()
     if len(text) <= max_chars:
         return text
-    return text[:max_chars] + "\n...[truncated]"
+    
+    # Context Efficiency Implementation: 
+    # Create a compact summary for the context window
+    lines = text.splitlines()
+    summary = [
+        f"--- COMPACT SUMMARY (Original: {len(text)} chars) ---",
+        f"Start: {text[:200]}...",
+        f"Stats: {len(lines)} lines, {len(text.split())} words",
+    ]
+    
+    # Try to find a 'Verification' or 'Summary' section at the end
+    tail = text[-1000:]
+    if "Verification" in tail:
+        summary.append(f"End Verification: ...{tail[tail.find('Verification'):]}")
+    else:
+        summary.append(f"End: ...{text[-200:]}")
+        
+    return "\n".join(summary) + "\n\n(Full raw log available via API drilldown)"
 
 
 def _parse_dt(value: Any) -> datetime | None:

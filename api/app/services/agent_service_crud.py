@@ -251,7 +251,15 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     if primary_agent:
         ctx["task_agent"] = primary_agent
     if guard_agents:
-        ctx["guard_agents"] = list(guard_agents)
+        # Phase 4: Tool Overhead Controls (Context Efficiency)
+        # Prune guard agents if the task is simple to save tokens
+        files_allowed = _normalize_evidence_list(ctx.get("files_allowed") or ctx.get("task_card", {}).get("files_allowed"))
+        is_simple = len(data.direction) < 400 and len(files_allowed) <= 2
+        if is_simple and data.task_type not in (TaskType.REVIEW, TaskType.CODE_REVIEW):
+            ctx["guard_agents_pruned"] = list(guard_agents)
+            guard_agents = []
+        else:
+            ctx["guard_agents"] = list(guard_agents)
 
     model, tier, command, route_decision, normalized_response_call = _resolve_task_route(
         data=data,
@@ -287,6 +295,18 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     }
     apply_agent_graph_state_contract(task)
     task["context"] = annotate_task_context(task)
+    
+    # Phase 2: Enforcement (Context Hygiene Soft Gates)
+    hygiene = task["context"].get("context_hygiene", {})
+    if hygiene.get("score", 100) < 40:
+        task["status"] = TaskStatus.NEEDS_DECISION
+        task["decision_prompt"] = (
+            f"LOW_CONTEXT_HYGIENE (Score: {hygiene.get('score')}). "
+            f"This task is too bloated to execute efficiently. "
+            f"Flags: {', '.join([f['id'] for flag in hygiene.get('flags', [])])}. "
+            f"Please narrow the file scope or shorten the direction before continuing."
+        )
+
     _store[task_id] = task
     if agent_task_store_service.enabled():
         agent_task_store_service.upsert_task(_serialize_task(task))

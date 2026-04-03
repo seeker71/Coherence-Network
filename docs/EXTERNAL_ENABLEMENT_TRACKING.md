@@ -141,6 +141,15 @@ Each repo needs its own credentials, provided by a contributor and used by tasks
 | 3 | **Hierarchy & Roles** | Use graph edges (`manages`, `delegates-to`) to define agent reporting lines. | ✅ |
 | 4 | **Coherence Blueprints** | Template-based project seeding (apply pre-defined idea/spec roadmap bundles). | ✅ |
 
+## Context Efficiency Integration (Token Management)
+
+| Step | Feature | Description | Status |
+|---|---|---|---|
+| 1 | **Measurement Layer** | Annotate every task with 0-100 hygiene score based on waste heuristics. | ✅ |
+| 2 | **Enforcement Gates** | Automatically flag tasks with <40 score as `NEEDS_DECISION` to block waste. | ✅ |
+| 3 | **Compact Summaries** | Summarize large command outputs in context window; fetch raw logs only on drilldown. | ✅ |
+| 4 | **Tool Overhead Controls**| Auto-prune `guard_agents` for simple tasks (short direction + small file scope). | ✅ |
+
 ## Foundation (Implemented)
 
 | # | Spec | Title | Status |
