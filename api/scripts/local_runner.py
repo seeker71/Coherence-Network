@@ -1152,6 +1152,27 @@ def _next_phase_for_work_type(current_phase: str, work_type: str | None) -> str 
     return _NEXT_PHASE.get(current_phase)
 
 
+def _get_repo_token(repo_url: str) -> str | None:
+    """Retrieve the raw token for a repository from ~/.coherence-network/keys.json."""
+    if not repo_url:
+        return None
+    ks_path = os.path.join(os.path.expanduser("~"), ".coherence-network", "keys.json")
+    if os.path.exists(ks_path):
+        try:
+            with open(ks_path, encoding="utf-8") as f:
+                ks = json.load(f)
+            # Normalization: handle both https://github.com/user/repo and github.com/user/repo
+            normalized = repo_url.lower().replace("https://", "").replace("http://", "").rstrip("/")
+            tokens = ks.get("repo_tokens", {})
+            for rurl, token in tokens.items():
+                nrurl = rurl.lower().replace("https://", "").replace("http://", "").rstrip("/")
+                if nrurl == normalized:
+                    return token
+        except Exception:
+            pass
+    return None
+
+
 def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> dict | list | None:
     """Call the API via httpx. Auto-retries on 429 with backoff."""
     url = f"{API_BASE}{path}"
@@ -2623,10 +2644,26 @@ def _push_and_pr(
         )
 
         # Push
+        workspace_git_url = context.get("workspace_git_url", "")
+        repo_token = _get_repo_token(workspace_git_url)
+        env = os.environ.copy()
+        push_cmd = ["git", "push", "origin", branch]
+        
+        if repo_token:
+            env["GITHUB_TOKEN"] = repo_token
+            import base64
+            # Use extraHeader for authenticated push without changing remote URL
+            auth_header = base64.b64encode(f":{repo_token}".encode()).decode()
+            push_cmd = [
+                "git", "-c", f"http.extraHeader=Authorization: Basic {auth_header}",
+                "push", "origin", branch
+            ]
+
         push_result = subprocess.run(
-            ["git", "push", "origin", branch],
+            push_cmd,
             capture_output=True, text=True, timeout=30, cwd=cwd,
             shell=(sys.platform == "win32"),
+            env=env
         )
         if push_result.returncode != 0:
             log.warning("PR_PUSH_FAILED task=%s stderr=%s", task_id, push_result.stderr[:200])
@@ -2649,6 +2686,7 @@ def _push_and_pr(
             ["gh", "pr", "create", "--title", pr_title, "--body", pr_body, "--base", "main"],
             capture_output=True, text=True, timeout=30, cwd=cwd,
             shell=(sys.platform == "win32"),
+            env=env
         )
 
         # Switch back to worker-main and clean up local branch
@@ -2695,10 +2733,25 @@ def _push_to_existing_branch(
         )
 
         # Push to same branch
+        workspace_git_url = context.get("workspace_git_url", "")
+        repo_token = _get_repo_token(workspace_git_url)
+        env = os.environ.copy()
+        push_cmd = ["git", "push", "origin", branch]
+
+        if repo_token:
+            env["GITHUB_TOKEN"] = repo_token
+            import base64
+            auth_header = base64.b64encode(f":{repo_token}".encode()).decode()
+            push_cmd = [
+                "git", "-c", f"http.extraHeader=Authorization: Basic {auth_header}",
+                "push", "origin", branch
+            ]
+
         push_result = subprocess.run(
-            ["git", "push", "origin", branch],
+            push_cmd,
             capture_output=True, text=True, timeout=30, cwd=cwd,
             shell=(sys.platform == "win32"),
+            env=env
         )
 
         # Switch back to worker-main
@@ -3407,7 +3460,7 @@ def _run_operational_phase(task: dict, task_id: str, task_type: str) -> bool:
         return False
 
 
-def run_one(task: dict, dry_run: bool = False) -> bool:
+def run_one(task: dict, dry_run: bool = False, provider_override: str | None = None) -> bool:
     """Full lifecycle: claim → select provider → execute → record → report."""
     task_id = task["id"]
     task_type = task.get("task_type", "unknown")
@@ -3436,8 +3489,12 @@ def run_one(task: dict, dry_run: bool = False) -> bool:
     if task_type in ("merge", "deploy", "verify", "reflect") and not dry_run:
         return _run_operational_phase(task, task_id, task_type)
 
-    # Select provider (data-driven)
-    provider = select_provider(task_type, task=task)
+    # Select provider (data-driven or override)
+    if provider_override:
+        provider = provider_override
+        log.info("PROVIDER_OVERRIDE task_type=%s selected=%s", task_type, provider)
+    else:
+        provider = select_provider(task_type, task=task)
 
     if dry_run:
         log.info(
@@ -6311,6 +6368,7 @@ def _check_for_updates_and_restart() -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Task runner — data-driven provider selection")
     parser.add_argument("--task", help="Run a specific task ID")
+    parser.add_argument("--provider", help="Force a specific provider (overrides Thompson Sampling)")
     parser.add_argument("--loop", action="store_true", help="Poll continuously")
     parser.add_argument("--interval", type=int, default=30, help="Poll interval (seconds)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would run")
@@ -6366,6 +6424,12 @@ def main():
         from app.services.config_service import resolve_cli_contributor_id
 
         _rcid, _rsrc = resolve_cli_contributor_id()
+        # Environment override has highest precedence
+        env_cid = os.environ.get("COHERENCE_CONTRIBUTOR_ID")
+        if env_cid:
+            _rcid = env_cid
+            _rsrc = "env"
+
         if _rcid:
             log.info("[runner] identity resolved: %s (source: %s)", _rcid, _rsrc)
         else:
@@ -6388,7 +6452,7 @@ def main():
         if not task:
             log.error("Task %s not found", args.task)
             sys.exit(1)
-        ok = run_one(task, dry_run=args.dry_run)
+        ok = run_one(task, dry_run=args.dry_run, provider_override=args.provider)
         if not args.dry_run:
             push_measurements(_NODE_ID)
         sys.exit(0 if ok else 1)

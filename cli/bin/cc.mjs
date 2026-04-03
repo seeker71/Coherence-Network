@@ -31,6 +31,7 @@ import { listChangeRequests, showChangeRequest, vote, propose } from "../lib/com
 import { listServices, showService, showServicesHealth, showServicesDeps } from "../lib/commands/services.mjs";
 import { showFrictionReport, listFrictionEvents, showFrictionCategories } from "../lib/commands/friction.mjs";
 import { listProviders, showProviderStats } from "../lib/commands/providers.mjs";
+import { handleRest } from "../lib/commands/rest.mjs";
 import { showTraceability, showCoverage, traceIdea, traceSpec } from "../lib/commands/traceability.mjs";
 import { showDiag, showDiagHealth, showDiagIssues, showDiagRunners, showDiagVisibility, showDiagLive } from "../lib/commands/diagnostics.mjs";
 import { publishDiag, startDiagMode } from "../lib/commands/diag_publish.mjs";
@@ -38,6 +39,7 @@ import { showMetaSummary, showMetaEndpoints, showMetaModules } from "../lib/comm
 import { deploy } from "../lib/commands/deploy.mjs";
 import { listen } from "../lib/commands/listen.mjs";
 import { update } from "../lib/commands/update.mjs";
+import { handleAgent } from "../lib/commands/agent.mjs";
 import { listTasks, showTask, claimTask, claimNext, reportTask, seedTask, postProgress, streamStart, watchTask } from "../lib/commands/tasks.mjs";
 import { showPortfolio } from "../lib/commands/portfolio.mjs";
 import { listEntityEdges, listEdgeTypes, createEdge, deleteEdge } from "../lib/commands/edges.mjs";
@@ -55,6 +57,8 @@ import {
 import { marketplacePublish, marketplaceBrowse, marketplaceFork } from "../lib/commands/marketplace.mjs";
 import { listGraphNodes, createGraphNode, listGraphEdges, createGraphEdge, getGraphNeighbors } from "../lib/commands/graph.mjs";
 import { onboardingRegister, onboardingSession, onboardingUpgrade } from "../lib/commands/onboarding.mjs";
+import { credentialsAdd, credentialsList, credentialsRemove } from "../lib/commands/credentials.mjs";
+import { guide } from "../lib/commands/guide.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -107,20 +111,25 @@ const COMMANDS = {
    services:      () => handleServices(args),
    friction:      () => handleFriction(args),
    providers:     () => handleProviders(args),
-   trace:         () => handleTrace(args),
-   diag:          () => handleDiag(args),
+   rest:          () => handleRest(args),
+   trace:         () => handleTrace(args),   diag:          () => handleDiag(args),
    dif:           () => handleDif(args),
    marketplace:   () => handleMarketplace(args),
    graph:         () => handleGraph(args),
    onboarding:    () => handleOnboarding(args),
+   credentials:   () => handleCredentials(args),
+   guide:         () => guide(args),
    setup:         () => setup(args),
   whoami:        () => showWhoami(),
+  tasks:         () => listTasks(args),
+  task:          () => handleTask(args),
   login:         () => handleLogin(args),
   logout:        () => handleLogout(args),
   auth:          () => handleAuth(args),
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
+  agent:         () => handleAgent(args),
   meta:          () => handleMeta(args),
   concepts:      () => listConcepts(args),
   concept:       () => handleConcept(args),
@@ -409,6 +418,17 @@ async function handleOnboarding(args) {
   }
 }
 
+async function handleCredentials(args) {
+  const sub = args[0];
+  switch (sub) {
+    case "add":    return credentialsAdd(args.slice(1));
+    case "list":   return credentialsList(args.slice(1));
+    case "remove": return credentialsRemove(args.slice(1));
+    default:
+      console.log("Usage: cc credentials <add|list|remove>");
+  }
+}
+
 async function handleDif(args) {
   const sub = args[0];
   const subArgs = args.slice(1);
@@ -464,7 +484,10 @@ async function handleDiag(args) {
   }
 }
 
+import { getHubUrl } from "../lib/config.mjs";
+
 function showHelp() {
+  const hubUrl = getHubUrl();
   console.log(`
 \x1b[1mcc\x1b[0m — Coherence Network CLI
 
@@ -509,6 +532,8 @@ function showHelp() {
   identity link <p> <id>  Link a provider (github, discord, ethereum, ...)
   identity unlink <p>     Unlink a provider
   identity lookup <p> <id> Find contributor by identity
+  credentials             Manage repo-specific tokens (add, list, remove)
+  guide                   Guided experience for new contributors
   COHERENCE_CONTRIBUTOR_ID overrides config.json for per-process agent identity
 
 \x1b[1mFederation:\x1b[0m
@@ -634,7 +659,7 @@ function showHelp() {
    onboarding session      Get contributor profile from session token
    onboarding upgrade      Upgrade trust level to verified (stub)
 
-\x1b[2mHub: https://api.coherencycoin.com\x1b[0m
+\x1b[2mHub: ${hubUrl}\x1b[0m
 \x1b[2mDocs: https://coherencycoin.com\x1b[0m
 `);
 }
