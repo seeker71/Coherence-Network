@@ -74,6 +74,8 @@ import { onboardingRegister, onboardingSession, onboardingUpgrade } from "../lib
 import { credentialsAdd, credentialsList, credentialsRemove } from "../lib/commands/credentials.mjs";
 import { guide } from "../lib/commands/guide.mjs";
 import { runFocusCommand } from "../lib/commands/focus.mjs";
+import { runPeersCommand } from "../lib/commands/peers.mjs";
+import { runCollabCommand } from "../lib/commands/collab.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -136,6 +138,8 @@ const COMMANDS = {
    guide:         () => guide(args),
   focus:         () => runFocusCommand(args),
   f:             () => runFocusCommand(args),
+  peers:         () => runPeersCommand(args),
+  collab:        () => runCollabCommand(args),
    setup:         () => setup(args),
   whoami:        () => showWhoami(),
   tasks:         () => listTasks(args),
@@ -517,7 +521,9 @@ function showHelp() {
 \x1b[1mExplore:\x1b[0m
   focus                   Interactive idea picker to set active focus
   focus <id>              Set active focus non-interactively
-  focus --clear           Clear active focus
+  peers                   Discover contributors by resonance or proximity
+  peers --nearby          Focus on geographic proximity
+  peers --resonance       Focus on shared interests
   portfolio               Ideas by category — gap, streak, effort, new experiences
   ideas [limit]           Browse ideas by ROI
   ideas --type <type>     Filter by work_type (feature|bug-fix|enhancement|exploration|research|prototype|mvp)
@@ -544,6 +550,9 @@ function showHelp() {
   share                   Submit a new idea (interactive)
   contribute              Record contribution (interactive)
   contribute --type code --cc 5 --idea <id> --desc "what I did"
+  collab                  Interactive collaboration dashboard for focused idea
+  collab broadcast        Signal interest in focused idea to others
+  collab list             List active collaborators for focused idea
   stake <id> <cc>         Stake CC on an idea
   fork <id>               Fork an idea
 
