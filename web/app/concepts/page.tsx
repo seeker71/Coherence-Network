@@ -7,6 +7,8 @@ export const metadata: Metadata = {
   description: "Browse the Living Codex ontology: 184 universal concepts with typed relationships and axes.",
 };
 
+export const dynamic = "force-dynamic";
+
 type Concept = {
   id: string;
   name: string;
@@ -37,16 +39,24 @@ type StatsResponse = {
 
 async function fetchConcepts(limit = 200): Promise<ConceptsResponse> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/concepts?limit=${limit}`, { next: { revalidate: 60 } });
-  if (!res.ok) return { items: [], total: 0, limit, offset: 0 };
-  return res.json();
+  try {
+    const res = await fetch(`${base}/api/concepts?limit=${limit}`, { next: { revalidate: 60 } });
+    if (!res.ok) return { items: [], total: 0, limit, offset: 0 };
+    return res.json();
+  } catch {
+    return { items: [], total: 0, limit, offset: 0 };
+  }
 }
 
 async function fetchStats(): Promise<StatsResponse> {
   const base = getApiBase();
-  const res = await fetch(`${base}/api/concepts/stats`, { next: { revalidate: 60 } });
-  if (!res.ok) return { concepts: 0, relationship_types: 0, axes: 0, user_edges: 0, user_concepts: 0 };
-  return res.json();
+  try {
+    const res = await fetch(`${base}/api/concepts/stats`, { next: { revalidate: 60 } });
+    if (!res.ok) return { concepts: 0, relationship_types: 0, axes: 0, user_edges: 0, user_concepts: 0 };
+    return res.json();
+  } catch {
+    return { concepts: 0, relationship_types: 0, axes: 0, user_edges: 0, user_concepts: 0 };
+  }
 }
 
 function levelBadge(level?: number) {
