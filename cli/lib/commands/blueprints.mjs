@@ -9,6 +9,7 @@ import inquirer from "inquirer";
 import chalk from "chalk";
 import ora from "ora";
 import { get, post } from "../api.mjs";
+import { getContributorId } from "../config.mjs";
 
 export async function runBlueprintsCommand(args = []) {
   const isTTY = process.stdout.isTTY;
@@ -32,9 +33,12 @@ export async function runBlueprintsCommand(args = []) {
   } else {
     console.log(chalk.bold("\nAVAILABLE BLUEPRINTS:"));
     blueprints.forEach(b => {
-      console.log(`- ${chalk.cyan(b.id.padEnd(15))} ${b.name} — ${chalk.dim(b.description)}`);
+      const price = b.price_cc > 0 ? chalk.yellow(`${b.price_cc} CC`) : chalk.green("Free");
+      const author = b.author_id ? chalk.cyan(`by ${b.author_id}`) : "";
+      console.log(`- ${chalk.bold(b.id.padEnd(20))} [${price}] ${author}`);
+      console.log(`  ${chalk.dim(b.name + ' — ' + b.description)}\n`);
     });
-    console.log(chalk.dim("\nUse 'cc blueprint apply <id>' to seed a roadmap."));
+    console.log(chalk.dim("Use 'cc blueprint apply <id>' to seed a roadmap."));
   }
 }
 
@@ -44,8 +48,11 @@ async function applyBlueprint(id, prefix = "") {
     return;
   }
 
+  const cid = getContributorId();
+  const url = cid ? `/api/blueprints/${id}/apply?prefix=${prefix}&applicant_id=${encodeURIComponent(cid)}` : `/api/blueprints/${id}/apply?prefix=${prefix}`;
+
   const spinner = ora(chalk.cyan(`Applying blueprint '${id}'...`)).start();
-  const result = await post(`/api/blueprints/${id}/apply?prefix=${prefix}`);
+  const result = await post(url);
   spinner.stop();
 
   if (result?.ideas_created) {
@@ -60,10 +67,14 @@ async function applyBlueprint(id, prefix = "") {
 }
 
 async function interactiveBlueprint(blueprints) {
-  const choices = blueprints.map(b => ({
-    name: `${b.name.padEnd(25)} ${chalk.dim(b.description)}`,
-    value: b.id
-  }));
+  const choices = blueprints.map(b => {
+    const price = b.price_cc > 0 ? chalk.yellow(`${b.price_cc} CC`) : chalk.green("Free");
+    const author = b.author_id ? chalk.cyan(`by ${b.author_id}`) : "";
+    return {
+      name: `${b.name.padEnd(25)} [${price}] ${author} ${chalk.dim(b.description)}`,
+      value: b.id
+    };
+  });
 
   const { selection } = await inquirer.prompt([
     {

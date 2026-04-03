@@ -150,6 +150,14 @@ Each repo needs its own credentials, provided by a contributor and used by tasks
 | 3 | **Compact Summaries** | Summarize large command outputs in context window; fetch raw logs only on drilldown. | ✅ |
 | 4 | **Tool Overhead Controls**| Auto-prune `guard_agents` for simple tasks (short direction + small file scope). | ✅ |
 
+## Creator Economy & Packaged Knowledge
+
+| Step | Feature | Description | Status |
+|---|---|---|---|
+| 1 | **Blueprint Royalties** | Allow contributors to attach `price_cc` and `author_id` to blueprints, paying them automatically on use. | ✅ |
+| 2 | **Real World Problems** | Shift focus from practice to real-world value by promoting guides who package knowledge. | ✅ |
+| 3 | **Guide Discovery** | `cc guides` command to surface top creators and thought leaders in the network. | ✅ |
+
 ## Learning Loop & Skill Evolution (Hermes Inspired)
 
 | Step | Feature | Description | Status |

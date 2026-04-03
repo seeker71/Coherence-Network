@@ -8,7 +8,7 @@ from typing import List, Any
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException
 
-from app.services import idea_service, graph_service
+from app.services import idea_service, graph_service, contribution_ledger_service
 
 router = APIRouter()
 
@@ -33,6 +33,8 @@ class BlueprintEdge(BaseModel):
 class Blueprint(BaseModel):
     name: str
     description: str
+    author_id: str | None = None
+    price_cc: float = 0.0
     ideas: List[dict]
     edges: List[dict]
 
@@ -50,12 +52,14 @@ def list_blueprints() -> List[dict]:
                 blueprints.append({
                     "id": filename.replace(".json", ""),
                     "name": data.get("name"),
-                    "description": data.get("description")
+                    "description": data.get("description"),
+                    "author_id": data.get("author_id"),
+                    "price_cc": data.get("price_cc", 0.0)
                 })
     return blueprints
 
 @router.post("/blueprints/{blueprint_id}/apply")
-def apply_blueprint(blueprint_id: str, prefix: str = "") -> dict:
+def apply_blueprint(blueprint_id: str, prefix: str = "", applicant_id: str | None = None) -> dict:
     """Apply a blueprint by creating its ideas and edges in the network."""
     path = os.path.join(BLUEPRINTS_DIR, f"{blueprint_id}.json")
     if not os.path.exists(path):
@@ -63,6 +67,27 @@ def apply_blueprint(blueprint_id: str, prefix: str = "") -> dict:
 
     with open(path, "r") as f:
         data = json.load(f)
+
+    # Monetize packaged knowledge: Transfer CC from applicant to author
+    author_id = data.get("author_id")
+    price_cc = data.get("price_cc", 0.0)
+    
+    if price_cc > 0 and author_id and applicant_id:
+        # Pay the guide for their packaged knowledge
+        contribution_ledger_service.record_contribution(
+            contributor_id=applicant_id,
+            contribution_type="blueprint_purchase",
+            amount_cc=-price_cc,
+            idea_id=None,
+            meta={"blueprint": blueprint_id}
+        )
+        contribution_ledger_service.record_contribution(
+            contributor_id=author_id,
+            contribution_type="blueprint_royalty",
+            amount_cc=price_cc,
+            idea_id=None,
+            meta={"blueprint": blueprint_id, "buyer": applicant_id}
+        )
 
     results = {"ideas_created": [], "edges_created": []}
     

@@ -1,6 +1,8 @@
 {
   "name": "Python API Foundation",
   "description": "Base roadmap for a FastAPI-based backend service.",
+  "author_id": "onboard:f241d2611ded2d2b",
+  "price_cc": 10.0,
   "ideas": [
     {
       "id": "api-auth-foundation",
