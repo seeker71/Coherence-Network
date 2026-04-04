@@ -55,7 +55,9 @@ from app.routers import (
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
+from app.routers import debug as debug_router
 from app.routers import dif_feedback
+from app.routers import models as models_router
 from app.routers import data_retention as data_retention_router
 from app.routers import geolocation
 from app.routers import edges as edges_router
@@ -638,6 +640,8 @@ app.include_router(graph_health.router, prefix="/api", tags=["graph-health"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
+app.include_router(debug_router.router, prefix="/api", tags=["debug"])
+app.include_router(models_router.router, prefix="/api", tags=["models"])
 
 # Discord bot vote endpoint (spec-164)
 from app.routers import discord_votes  # noqa: E402

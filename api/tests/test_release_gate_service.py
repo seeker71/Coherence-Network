@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 from typing import Any
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -1265,7 +1266,8 @@ def test_get_file_content_at_ref_returns_none_when_github_keeps_5xx() -> None:
 
     route = respx.get(url).mock(return_value=httpx.Response(502, json={"message": "bad gateway"}))
 
-    out = get_file_content_at_ref(repository=repository, path=path, ref=ref, timeout=2.0)
+    with patch.object(gates, "_gh_api_json_via_cli", return_value=None):
+        out = get_file_content_at_ref(repository=repository, path=path, ref=ref, timeout=2.0)
 
     assert out is None
     assert route.call_count == 3
@@ -1281,7 +1283,8 @@ def test_list_spec_paths_at_ref_returns_empty_on_403_rate_limit() -> None:
         return_value=httpx.Response(403, json={"message": "API rate limit exceeded"})
     )
 
-    out = list_spec_paths_at_ref(repository=repository, ref=ref, timeout=2.0)
+    with patch.object(gates, "_gh_api_json_via_cli", return_value=None):
+        out = list_spec_paths_at_ref(repository=repository, ref=ref, timeout=2.0)
 
     assert out == []
     assert route.call_count == 1
@@ -1297,7 +1300,8 @@ def test_list_spec_paths_at_ref_returns_empty_on_429_rate_limit() -> None:
         return_value=httpx.Response(429, json={"message": "API rate limit exceeded"})
     )
 
-    out = list_spec_paths_at_ref(repository=repository, ref=ref, timeout=2.0)
+    with patch.object(gates, "_gh_api_json_via_cli", return_value=None):
+        out = list_spec_paths_at_ref(repository=repository, ref=ref, timeout=2.0)
 
     assert out == []
     assert route.call_count == 1

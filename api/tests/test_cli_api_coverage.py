@@ -633,50 +633,20 @@ class TestCliCommandsReferenceApiPaths:
 class TestGapTracking:
     """Document and track specific known gaps for future coverage work.
 
-    These tests PASS as long as the gap still exists (endpoints exist but
-    are NOT yet CLI-covered). They serve as living documentation of what
-    needs to be implemented. When a gap is closed, the test will fail
-    (intentionally), prompting removal of the gap test.
+    Gap tests that previously tracked /api/inventory/flow,
+    /api/runtime/endpoints/summary, /api/inventory/process-completeness,
+    /api/agent/route, and /api/agent/tasks/active have been removed — all
+    are now CLI-covered via ops.mjs, debug.mjs, and models.mjs.
     """
 
     def _endpoint_exists(self, path: str, method: str = "GET") -> bool:
         return any(e.path == path and e.method == method for e in ALL_ENDPOINTS)
-
-    def test_gap_agent_tasks_active_not_yet_cli_covered(self) -> None:
-        """GAP: GET /api/agent/tasks/active has no CLI command yet."""
-        if not self._endpoint_exists("/api/agent/tasks/active"):
-            pytest.skip("Endpoint not present in this build")
-        # This test documents the gap. It passes if NOT covered.
-        # When the gap is closed, flip this to assert _cli_covers(...) is True.
-        covered = _cli_covers("/api/agent/tasks/active")
-        if covered:
-            pytest.xfail("/api/agent/tasks/active is now CLI-covered — remove this gap test")
-        assert not covered  # Gap still open
-
-    def test_gap_inventory_flow_not_yet_cli_covered(self) -> None:
-        """GAP: GET /api/inventory/flow has no CLI command yet."""
-        if not self._endpoint_exists("/api/inventory/flow"):
-            pytest.skip("Endpoint not present in this build")
-        covered = _cli_covers("/api/inventory/flow")
-        if covered:
-            pytest.xfail("/api/inventory/flow is now CLI-covered — remove this gap test")
-        assert not covered
-
-    def test_gap_runtime_endpoints_summary_not_yet_cli_covered(self) -> None:
-        """GAP: GET /api/runtime/endpoints/summary has no CLI command yet."""
-        if not self._endpoint_exists("/api/runtime/endpoints/summary"):
-            pytest.skip("Endpoint not present in this build")
-        covered = _cli_covers("/api/runtime/endpoints/summary")
-        if covered:
-            pytest.xfail("/api/runtime/endpoints/summary is now CLI-covered — remove this gap test")
-        assert not covered
 
     def test_federation_node_messages_is_cli_covered(self) -> None:
         """COVERED: GET /api/federation/nodes/{node_id}/messages IS covered by nodes.mjs (cc inbox/msg)."""
         path = "/api/federation/nodes/{node_id}/messages"
         if not self._endpoint_exists(path):
             pytest.skip("Endpoint not present in this build")
-        # nodes.mjs uses template literals referencing this path — it IS covered
         nodes_file = CLI_COMMANDS_DIR / "nodes.mjs"
         if not nodes_file.exists():
             pytest.skip("nodes.mjs not found")
@@ -684,24 +654,6 @@ class TestGapTracking:
         assert "federation/nodes" in src and "messages" in src, (
             "nodes.mjs must reference /api/federation/nodes/.../messages"
         )
-
-    def test_gap_inventory_process_completeness_not_yet_cli_covered(self) -> None:
-        """GAP: GET /api/inventory/process-completeness has no CLI command yet."""
-        if not self._endpoint_exists("/api/inventory/process-completeness"):
-            pytest.skip("Endpoint not present in this build")
-        covered = _cli_covers("/api/inventory/process-completeness")
-        if covered:
-            pytest.xfail("/api/inventory/process-completeness is now CLI-covered")
-        assert not covered
-
-    def test_gap_agent_route_not_yet_cli_covered(self) -> None:
-        """GAP: GET /api/agent/route has no direct CLI command yet."""
-        if not self._endpoint_exists("/api/agent/route"):
-            pytest.skip("Endpoint not present in this build")
-        covered = _cli_covers("/api/agent/route")
-        if covered:
-            pytest.xfail("/api/agent/route is now CLI-covered — remove this gap test")
-        assert not covered
 
 
 # ---------------------------------------------------------------------------

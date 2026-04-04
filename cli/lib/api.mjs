@@ -19,7 +19,7 @@ function authHeaders(extra = {}) {
   return headers;
 }
 
-function buildUrl(path, params) {
+export function buildUrl(path, params) {
   const base = getHubUrl().replace(/\/$/, "");
   const url = new URL(path, base);
   if (params) {

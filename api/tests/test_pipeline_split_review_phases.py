@@ -82,9 +82,13 @@ class TestPhaseSequence:
         """After deploy, next phase is verify-production."""
         assert pipeline_advance_service._NEXT_PHASE["deploy"] == "verify-production"
 
-    def test_verify_production_is_terminal(self) -> None:
-        """verify-production has no next phase — it is the terminal step."""
-        assert pipeline_advance_service._NEXT_PHASE["verify-production"] is None
+    def test_verify_production_advances_to_reflect(self) -> None:
+        """verify-production advances to reflect (Hermes Learning Loop)."""
+        assert pipeline_advance_service._NEXT_PHASE["verify-production"] == "reflect"
+
+    def test_reflect_is_terminal(self) -> None:
+        """reflect has no next phase — it is the terminal step."""
+        assert pipeline_advance_service._NEXT_PHASE.get("reflect") is None
 
     def test_legacy_review_is_dead_end(self) -> None:
         """Legacy 'review' phase still has no next phase (backward compat)."""
@@ -101,7 +105,7 @@ class TestPhaseSequence:
         while current is not None:
             sequence.append(current)
             current = pipeline_advance_service._NEXT_PHASE.get(current)
-        assert sequence == ["spec", "impl", "test", "code-review", "deploy", "verify-production"]
+        assert sequence == ["spec", "impl", "test", "code-review", "deploy", "verify-production", "reflect"]
 
 
 class TestPhaseTaskTypes:
@@ -293,13 +297,14 @@ class TestVerifyProductionPhase:
 
         with (
             patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.create_task", side_effect=_stub_create_task),
             patch("app.services.idea_service.update_idea", side_effect=capture_update),
         ):
             result = pipeline_advance_service.maybe_advance(task)
 
-        # Terminal phase — no next task created
-        assert result is None
-        # But idea was validated
+        # Advances to reflect phase
+        assert result is not None
+        # And idea was validated
         assert "test-idea" in validated_ids
 
     def test_verify_failed_creates_hotfix_task(self) -> None:
@@ -806,7 +811,11 @@ class TestIdeaValidatedOnSuccess:
             output="VERIFY_PASSED: all 5 scenarios returned correct responses.",
         )
 
-        with patch("app.services.idea_service.update_idea", side_effect=capture_update):
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.create_task", side_effect=_stub_create_task),
+            patch("app.services.idea_service.update_idea", side_effect=capture_update),
+        ):
             pipeline_advance_service.maybe_advance(verify_task)
 
         assert "my-validated-feature" in validated_ideas

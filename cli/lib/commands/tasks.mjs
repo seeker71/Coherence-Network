@@ -386,29 +386,36 @@ export async function streamStart(args) {
 }
 
 export async function watchTask(args) {
-  const { get } = await import("../api.mjs");
-  const { getApiBase } = await import("../api.mjs");
+  const { get, post, buildUrl, getApiBase } = await import("../api.mjs");
 
   let taskId = args[0] || "";
   const verbose = args.includes("--verbose") || args.includes("-v");
+  const plain = args.includes("--plain");
 
   // If no task ID, find the most recent running task
   if (!taskId || taskId.startsWith("-")) {
     const data = await get("/api/agent/tasks", { status: "running", limit: 1 });
     if (data?.tasks?.[0]) {
       taskId = data.tasks[0].id;
-      const idea = (data.tasks[0].context || {}).idea_id || "?";
-      const provider = data.tasks[0].model || "?";
-      console.log(`\x1b[36m◉\x1b[0m Watching: ${taskId.slice(0, 16)} [${data.tasks[0].task_type}] via ${provider}`);
-      console.log(`\x1b[2m  idea: ${idea}\x1b[0m`);
     } else {
       console.log("\x1b[33m⚠\x1b[0m No running tasks to watch.");
       return;
     }
-  } else {
-    console.log(`\x1b[36m◉\x1b[0m Watching: ${taskId.slice(0, 16)}`);
   }
 
+  // Use the live panel for TTY, fall back to plain mode for pipes
+  if (!plain && process.stdout.isTTY && !process.env.CI) {
+    const { runTaskWatcher } = await import("../ui/task_watcher.mjs");
+    await runTaskWatcher(taskId, { verbose, api: { get, post, buildUrl } });
+    return;
+  }
+
+  // ── Plain/legacy mode (pipe-safe, no ANSI cursor control) ──────
+  const task = await get(`/api/agent/tasks/${taskId}`);
+  const idea = (task?.context || {}).idea_id || "?";
+  const provider = task?.model || "?";
+  console.log(`\x1b[36m◉\x1b[0m Watching: ${taskId.slice(0, 16)} [${task?.task_type || "?"}] via ${provider}`);
+  console.log(`\x1b[2m  idea: ${idea}\x1b[0m`);
   console.log(`\x1b[2m  Ctrl+C to stop\x1b[0m`);
   console.log();
 
@@ -429,7 +436,6 @@ export async function watchTask(args) {
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
 
-      // Process complete SSE events
       while (buffer.includes("\n\n")) {
         const idx = buffer.indexOf("\n\n");
         const event = buffer.slice(0, idx);

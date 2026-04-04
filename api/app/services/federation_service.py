@@ -710,7 +710,7 @@ def list_nodes() -> list[dict]:
                 "os_type": r.os_type,
                 "providers": json.loads(r.providers_json) if r.providers_json else [],
                 "capabilities": caps,
-                registered_at: r.registered_at,
+                "registered_at": r.registered_at,
                 "last_seen_at": r.last_seen_at,
                 "status": r.status,
                 "is_autonomous": r.is_autonomous,
