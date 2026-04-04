@@ -37,6 +37,11 @@ from app.models.idea import (
 from app.models.translation import IdeaTranslationResponse
 from app.models.translation import TranslationLens
 from app.services import agent_service, concept_translation_service, idea_service, idea_selection_ab_service, inventory_service, stake_compute_service, translate_service
+from app.services.workspace_scoped_validation import (
+    IdeaCreateValidationContext,
+    ValidationError as WorkspaceValidationError,
+    validate_idea_create,
+)
 from app.services import lens_translation_service
 from app.services.translate_service import TranslateLens
 from app.models.lens_translation import TranslationRegenerateBody
@@ -56,6 +61,7 @@ async def list_ideas(
     tags: str = Query("", description="Comma-separated tag filter. When present, return only ideas matching all normalized tags."),
     curated_only: bool = Query(False, description="When true, only return the 16 curated super-ideas from ideas/*.md."),
     pillar: str | None = Query(None, description="Filter by pillar: realization|pipeline|economics|surfaces|network|foundation."),
+    workspace_id: str | None = Query(None, description="Filter by owning workspace. Defaults to all workspaces."),
 ) -> IdeaPortfolioResponse:
     raw_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
     parsed_tags = idea_service.normalize_tags(raw_tags) if raw_tags else None
@@ -69,6 +75,7 @@ async def list_ideas(
         tags_filter=parsed_tags,
         curated_only=curated_only,
         pillar=pillar,
+        workspace_id=workspace_id,
     )
 
 
@@ -523,6 +530,16 @@ async def get_idea(idea_id: str) -> IdeaWithScore:
 
 @router.post("/ideas", response_model=IdeaWithScore, status_code=201)
 async def create_idea(data: IdeaCreate) -> IdeaWithScore:
+    # Layer 1 guardrails — universal across all agent provider CLIs.
+    try:
+        validate_idea_create(IdeaCreateValidationContext(
+            workspace_id=data.workspace_id or "coherence-network",
+            pillar=data.pillar,
+            parent_idea_id=data.parent_idea_id,
+        ))
+    except WorkspaceValidationError as e:
+        raise HTTPException(status_code=e.status, detail={"code": e.code, "message": e.message})
+
     created = idea_service.create_idea(
         idea_id=data.id,
         name=data.name,
@@ -546,6 +563,8 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         duplicate_of=data.duplicate_of,
         workspace_git_url=data.workspace_git_url,
         slug=data.slug,
+        pillar=data.pillar,
+        workspace_id=data.workspace_id,
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")

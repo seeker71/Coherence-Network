@@ -71,6 +71,7 @@ from app.routers import onboarding as onboarding_router
 from app.routers import openclaw_node_bridge
 from app.routers import pipeline
 from app.routers import ui_preferences as ui_preferences_router
+from app.routers import workspaces as workspaces_router
 from app.routers import provider_stats
 from app.routers import service_registry_router
 from app.middleware.rate_limit import RateLimitMiddleware
@@ -113,6 +114,12 @@ def _ensure_db_tables() -> None:
             _startup_logger.info("DB tables ensured via unified_models.Base")
     except Exception:
         _startup_logger.warning("DB table creation skipped", exc_info=True)
+    # Ensure the default workspace exists (tenant primitive).
+    try:
+        from app.services import workspace_service as _ws
+        _ws.ensure_default_workspace()
+    except Exception:
+        _startup_logger.warning("Default workspace ensure skipped", exc_info=True)
 
 
 def _list_graph_nodes(node_type: str, startup_errors: list[str], error_label: str) -> tuple[int, list[dict]]:
@@ -592,6 +599,7 @@ app.include_router(distributions.router, prefix="/api", tags=["distributions"])
 app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
+app.include_router(workspaces_router.router, prefix="/api", tags=["workspaces"])
 app.include_router(lenses.router, prefix="/api", tags=["lenses"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(coherence.router, prefix="/api", tags=["coherence"])

@@ -1063,6 +1063,7 @@ def list_ideas(
     tags_filter: list[str] | None = None,
     curated_only: bool = False,
     pillar: str | None = None,
+    workspace_id: str | None = None,
 ) -> IdeaPortfolioResponse:
     """When read_only_guard=True, ensure logic is applied in memory but not persisted (for invariant/guard runs).
 
@@ -1070,6 +1071,7 @@ def list_ideas(
     tags_filter: when provided, only return ideas that carry ALL of the given normalized tags.
     curated_only: when True, only return ideas where is_curated=True (the 16 super-ideas from ideas/*.md).
     pillar: when provided, only return ideas with this pillar value.
+    workspace_id: when provided, only return ideas that belong to that workspace.
     """
     ideas = _read_ideas(persist_ensures=not read_only_guard)
     if not include_internal:
@@ -1083,6 +1085,8 @@ def list_ideas(
         ideas = [i for i in ideas if getattr(i, "is_curated", False)]
     if pillar:
         ideas = [i for i in ideas if getattr(i, "pillar", None) == pillar]
+    if workspace_id:
+        ideas = [i for i in ideas if getattr(i, "workspace_id", "coherence-network") == workspace_id]
 
     scored = [_with_score(i) for i in ideas]
     if sort_method == "marginal_cc":
@@ -1163,6 +1167,8 @@ def create_idea(
     duplicate_of: str | None = None,
     workspace_git_url: str | None = None,
     slug: str | None = None,
+    pillar: str | None = None,
+    workspace_id: str | None = None,
 ) -> IdeaWithScore | None:
     # Auto-generate UUID4 when caller omits the ID (new convention going forward)
     resolved_id: str = idea_id or str(uuid4())
@@ -1206,6 +1212,8 @@ def create_idea(
         workspace_git_url=workspace_git_url,
         slug=final_slug,
         slug_history=[],
+        pillar=pillar,
+        workspace_id=workspace_id or "coherence-network",
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(

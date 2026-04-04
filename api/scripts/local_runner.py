@@ -2433,11 +2433,63 @@ def _build_requirements_checklist(task_type: str, direction: str, spec_content: 
     return "\n".join(lines)
 
 
+def _load_workspace_guardrails(workspace_id: str, agent_name: str) -> str:
+    """Layer 2 — load workspace-scoped persona + contribution guidelines.
+
+    Universal across all provider CLIs (claude/codex/cursor/gemini/openrouter):
+    every provider invokes build_prompt(), so whatever is returned here is
+    injected into every agent prompt regardless of which CLI runs the task.
+
+    Looks up via WorkspaceResolver so Phase N true-isolation migration is a
+    single swap point. Silently returns "" if resolution fails — never blocks
+    a task from running.
+    """
+    try:
+        import os as _os
+        from pathlib import Path as _Path
+        # Local-runner lives in api/scripts/, so repo root is parents[2].
+        repo_root = _Path(_os.environ.get("COHERENCE_REPO_ROOT") or _Path(__file__).resolve().parents[2])
+        ws_id = workspace_id or "coherence-network"
+
+        # Resolve bundle root: default workspace = repo root (legacy co-location).
+        if ws_id == "coherence-network":
+            bundle_root = repo_root
+        else:
+            bundle_root = repo_root / "workspaces" / ws_id
+
+        parts: list[str] = []
+
+        # 1. Agent persona — workspace bundle first, then legacy fallback.
+        persona_candidates = [bundle_root / ".agents" / f"{agent_name}.md"]
+        if ws_id == "coherence-network":
+            persona_candidates.append(repo_root / ".claude" / "agents" / f"{agent_name}.md")
+        for p in persona_candidates:
+            if p.is_file():
+                persona = p.read_text(encoding="utf-8").strip()
+                if persona:
+                    parts.append(f"── AGENT PERSONA ({agent_name} @ {ws_id}) ──\n{persona}")
+                break
+
+        # 2. Workspace contribution guardrails.
+        guide = bundle_root / "guides" / "contribution.md"
+        if guide.is_file():
+            guardrails = guide.read_text(encoding="utf-8").strip()
+            if guardrails:
+                parts.append(f"── WORKSPACE GUARDRAILS ({ws_id}) ──\n{guardrails}")
+
+        if not parts:
+            return ""
+        return "\n\n" + "\n\n".join(parts) + "\n"
+    except Exception:
+        return ""
+
+
 def build_prompt(task: dict) -> str:
     direction = task.get("direction", "")
     task_type = task.get("task_type", "unknown")
     context = task.get("context", {}) or {}
     agent = context.get("task_agent", "dev-engineer")
+    workspace_id = context.get("workspace_id", "coherence-network") if isinstance(context, dict) else "coherence-network"
 
     # Task-type-specific instructions
     if task_type == "review":
@@ -2530,17 +2582,19 @@ Output a summary: files created/modified, validation results, errors encountered
         repo_dir=_get_repo_dir(),
     )
 
+    workspace_guardrails = _load_workspace_guardrails(workspace_id, agent)
+
     prompt = f"""EXECUTE THIS TASK NOW. Do NOT ask what to do — the task is described below. Start working immediately.
 
 Task type: {task_type}
 Task ID: {task.get('id', 'unknown')}
 Idea ID: {idea_id}
 Spec file: {spec_path}
-Workspace: {workspace_git_url or "(coherence-network default repo)"}
-Role: {agent} for Coherence Network
+Workspace: {workspace_id} {"(repo: " + workspace_git_url + ")" if workspace_git_url else "(default)"}
+Role: {agent} for workspace '{workspace_id}'
 
-SCOPE RULE: Only modify files related to idea '{idea_id}'. Do NOT work on any other idea.
-
+SCOPE RULE: Only modify files related to idea '{idea_id}' within workspace '{workspace_id}'. Do NOT work on any other idea or cross workspace boundaries.
+{workspace_guardrails}
 TASK:
 {direction}
 {type_instructions}{context_block}
