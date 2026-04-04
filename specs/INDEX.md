@@ -1,9 +1,13 @@
-# Coherence Network — Spec Index
-
-**Mission: An idea realization platform for humanity.**
-Every idea gets tracked, funded, built, and measured. Contributors get fair attribution.
+# Spec Index
 
 59 active specs across 4 domains. 150+ archived in `docs/specs-archive/`.
+
+## How to find what you need
+
+1. Find the spec number/slug below
+2. Read `specs/{slug}.md` — frontmatter has `idea_id`, `status`, `source:` (files + symbols)
+3. Query `GET /api/spec-registry/{slug}` for value/cost/ROI data
+4. Find parent idea via `GET /api/ideas/{idea_id}` or `ideas/{idea_id}.md`
 
 ---
 
