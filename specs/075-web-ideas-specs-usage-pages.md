@@ -8,7 +8,20 @@ source:
     symbols: [specs browse page]
   - file: web/app/usage/page.tsx
     symbols: [usage analytics page]
+done_when:
+  - "Home page must link to:"
+  - "Client pages must default API base to production Railway when `NEXT_PUBLIC_API_URL` is unset."
+  - "`/ideas` lists ideas from `GET /api/ideas`."
+  - "`/ideas/[idea_id]` shows idea details, open questions, and links to relevant APIs."
+  - "`/specs` lists specs from `GET /api/inventory/system-lineage` (`specs.items`)."
+test: "cd api && python -m pytest tests/ -q"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
+> **Source**: [`web/app/ideas/page.tsx`](../web/app/ideas/page.tsx) | [`web/app/specs/page.tsx`](../web/app/specs/page.tsx) | [`web/app/usage/page.tsx`](../web/app/usage/page.tsx)
 
 # Spec 075: Web Pages For Ideas, Specs, Usage (Human Parity)
 

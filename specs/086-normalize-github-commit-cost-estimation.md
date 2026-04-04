@@ -4,7 +4,26 @@ status: done
 source:
   - file: api/app/services/contribution_cost_service.py
     symbols: [estimate_commit_cost(), estimate_commit_cost_with_provenance()]
+requirements:
+  - "GitHub contribution ingestion computes normalized commit cost from metadata (`files_changed`, `lines_added`) with bounde"
+  - "Submitted raw cost is retained in metadata for auditability while normalized cost is stored as the effective contributio"
+  - "Auto-track GitHub workflow uses the same normalized estimator model to reduce inflated payload values."
+  - "Contributions web page displays effective normalized cost and highlights raw-to-normalized adjustment when present."
+  - "Tests cover estimator behavior and GitHub contribution route normalization."
+done_when:
+  - "GitHub contribution ingestion computes normalized commit cost from metadata (`files_changed`, `lines_added`) with bou..."
+  - "Submitted raw cost is retained in metadata for auditability while normalized cost is stored as the effective contribu..."
+  - "Auto-track GitHub workflow uses the same normalized estimator model to reduce inflated payload values."
+  - "Contributions web page displays effective normalized cost and highlights raw-to-normalized adjustment when present."
+  - "Tests cover estimator behavior and GitHub contribution route normalization."
+test: "python3 -m pytest api/tests/test_contribution_cost_service.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [value-attribution](../ideas/value-attribution.md)
+> **Source**: [`api/app/services/contribution_cost_service.py`](../api/app/services/contribution_cost_service.py)
 
 # Spec 086: Normalize GitHub Commit Cost Estimation
 

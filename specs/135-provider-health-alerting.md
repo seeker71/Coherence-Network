@@ -8,7 +8,25 @@ source:
     symbols: [health aggregation]
   - file: api/app/routers/agent_status_routes.py
     symbols: [health endpoints]
+requirements:
+  - "Compute provider health from execution outcomes using a fixed `last_5` window and trigger only when `last_5_success_rate"
+  - "Automatically write a friction event when the threshold is breached, with provider identity and evidence in event notes."
+  - "De-duplicate repeated friction writes while the provider remains degraded; create a new event only on a fresh degradatio"
+  - "Support optional outbound notification through existing channels (Telegram adapter) behind configuration flags, with no "
+  - "Keep usage/readiness alert payloads aligned with the health state so API consumers can observe degraded providers withou"
+done_when:
+  - "Provider health transition to degraded is detected from a strict last-5 success-rate check (<0.50)."
+  - "A single friction event is created per degradation transition with provider and last-5 evidence."
+  - "Optional Telegram notification is emitted only when enabled and only on newly-created health events."
+test: "cd api && pytest -q tests/test_friction_api.py -k \"provider_health\""
+constraints:
+  - "no new notification providers; use existing adapter/service only"
+  - "no schema migrations without explicit approval"
+  - "preserve current usage/readiness endpoint paths"
 ---
+
+> **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
+> **Source**: [`api/app/services/automation_usage_service.py`](../api/app/services/automation_usage_service.py) | [`api/app/services/collective_health_service.py`](../api/app/services/collective_health_service.py) | [`api/app/routers/agent_status_routes.py`](../api/app/routers/agent_status_routes.py)
 
 # Spec: Provider Health Alerting from Last-5 Success Rate
 

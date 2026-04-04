@@ -6,7 +6,28 @@ source:
     symbols: [create_asset(), get_asset(), list_assets()]
   - file: api/app/models/asset.py
     symbols: [Asset, AssetCreate, AssetType]
+requirements:
+  - "POST /api/assets — Create new asset"
+  - "GET /api/assets/{id} — Retrieve asset by ID (404 if not found)"
+  - "GET /api/assets — List all assets with pagination (limit parameter)"
+  - "Asset types: CODE, MODEL, CONTENT, DATA"
+  - "total_cost auto-updates when contributions are recorded"
+  - "All responses are Pydantic models (JSON-serialized)"
+  - "Assets have unique UUID identifiers"
+done_when:
+  - "POST /api/assets — Create new asset"
+  - "GET /api/assets/{id} — Retrieve asset by ID (404 if not found)"
+  - "GET /api/assets — List all assets with pagination (limit parameter)"
+  - "Asset types: CODE, MODEL, CONTENT, DATA"
+  - "total_cost auto-updates when contributions are recorded"
+test: "python3 -m pytest api/tests/test_assets.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [value-attribution](../ideas/value-attribution.md)
+> **Source**: [`api/app/routers/assets.py`](../api/app/routers/assets.py) | [`api/app/models/asset.py`](../api/app/models/asset.py)
 
 # Spec: Assets API
 

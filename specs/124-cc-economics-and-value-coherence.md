@@ -6,7 +6,36 @@ source:
     symbols: [CostVector, ValueVector, ExchangeRate]
   - file: api/app/services/coherence_credit_service.py
     symbols: [exchange rate loading]
+requirements:
+  - "R1: CC supply is always backed -- `total_cc_outstanding <= treasury_value_usd / exchange_rate` at all times. CC is minte"
+  - "R2: Value appreciation through proven impact -- when an idea funded by CC generates measurable usage (downstream usage e"
+  - "R3: Users can stake CC into an idea via `POST /api/cc/stake`. If the idea generates value, the staker's CC attribution g"
+  - "R4: Staked CC can be unstaked at any time via `POST /api/cc/unstake` with amount-proportional cooldown: instant for < 10"
+  - "R5: 1% spread on CC-to-crypto exchange. Transparent, posted in exchange rate response, auditable in the audit ledger. No"
+  - "R6: Demand drivers -- CC is required to: (a) publish ideas to marketplace (quality gate deposit, returned if idea achiev"
+  - "R7: CC coherence score is continuously computed and published: `treasury_value / (total_cc * exchange_rate)`. Must be >="
+  - "R8: `GET /api/cc/supply` returns total minted, total burned, outstanding, and coherence score."
+  - "R9: `GET /api/cc/exchange-rate` returns current rate with 5-minute oracle cache TTL, spread percentage, and cache freshn"
+  - "R10: `GET /api/cc/staking/{user_id}` returns all staking positions for a user with per-position idea_id, amount, current"
+done_when:
+  - "GET /api/cc/supply returns total_minted, total_burned, outstanding, coherence_score"
+  - "GET /api/cc/exchange-rate returns rate with spread and cache metadata"
+  - "POST /api/cc/stake creates a staking position linked to an idea"
+  - "POST /api/cc/unstake initiates cooldown with correct tier (instant/<100, 24h/100-1000, 72h/>1000)"
+  - "GET /api/cc/staking/{user_id} returns all positions with attribution values"
+  - "Coherence score invariant enforced -- minting pauses when score < 1.0"
+  - "1% spread applied and visible in exchange rate response"
+  - "All tests pass in test_cc_economics.py"
+test: "python3 -m pytest api/tests/test_coherence_credit.py -x -q"
+constraints:
+  - "No unbacked CC may ever exist -- treasury invariant is a hard constraint"
+  - "No guaranteed yield on staking -- returns are purely outcome-based"
+  - "Exchange spread must be visible in API response, never hidden"
+  - "Cooldown tiers are exact: <100 instant, 100-1000 24h, >1000 72h"
 ---
+
+> **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
+> **Source**: [`api/app/models/coherence_credit.py`](../api/app/models/coherence_credit.py) | [`api/app/services/coherence_credit_service.py`](../api/app/services/coherence_credit_service.py)
 
 # Spec 124: CC Economics and Value Coherence
 

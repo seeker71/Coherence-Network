@@ -6,7 +6,18 @@ source:
     symbols: [runner registry, auto-contribution]
   - file: api/app/services/contribution_ledger_service.py
     symbols: [contribution tracking]
+requirements:
+  - "`_auto_record_contribution` must embed a stable `task_id`-scoped idempotency key in"
+  - "On `POST /api/contributions/record` failure, the runner must persist the failed"
+  - "Partial contributions must be recorded for failed or timed-out tasks when the output"
+  - "`GET /api/contributions/ledger/{contributor_id}` must accept an optional"
+  - "`GET /api/contributions/ledger/{contributor_id}` must accept an optional"
+  - "`amount_cc` must incorporate the task's DIF score if present in"
+  - "`_NODE_ID` must appear verbatim in `metadata.node_id` of every auto-recorded"
 ---
+
+> **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
+> **Source**: [`api/app/services/agent_runner_registry_service.py`](../api/app/services/agent_runner_registry_service.py) | [`api/app/services/contribution_ledger_service.py`](../api/app/services/contribution_ledger_service.py)
 
 # Spec: Runner Auto-Contribution
 

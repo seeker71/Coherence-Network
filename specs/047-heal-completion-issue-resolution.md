@@ -6,7 +6,22 @@ source:
     symbols: [heal completion tracking]
   - file: api/app/services/pipeline_advance_service.py
     symbols: [completion issue detection]
+requirements:
+  - Record resolution to JSONL when a monitor condition clears
+  - Include heal_task_id in resolution record for effectiveness attribution
+  - Omit heal_task_id from resolution when absent on previous issue
+  - Persist resolved array in monitor_issues.json when MONITOR_PERSIST_RESOLVED=1
+  - Cap resolved array at 50 entries, dropping oldest on overflow
+  - Do not write resolved key when MONITOR_PERSIST_RESOLVED is unset
+  - GET /api/agent/monitor-issues returns file content as-is including resolved
+done_when:
+  - Resolution JSONL contains heal_task_id when present on prior issue
+  - Resolved array capped at 50 with correct FIFO eviction
+  - pytest api/tests/test_monitor_resolution.py passes
 ---
+
+> **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
+> **Source**: [`api/app/services/auto_heal_service.py`](../api/app/services/auto_heal_service.py) | [`api/app/services/pipeline_advance_service.py`](../api/app/services/pipeline_advance_service.py)
 
 # Spec 047: Heal Completion → Issue Resolution
 

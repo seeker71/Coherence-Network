@@ -1,44 +1,44 @@
+---
+idea_id: {parent-idea-slug}
+status: active
+source:
+  - file: api/app/services/example_service.py
+    symbols: [function_name(), ClassName]
+  - file: api/app/routers/example.py
+    symbols: [endpoint handlers]
+requirements:
+  - "Requirement 1 — concise, testable, one line"
+  - "Requirement 2 — what, not how"
+  - "Requirement 3 — include API paths where relevant"
+done_when:
+  - "Measurable check 1"
+  - "Measurable check 2"
+  - "all tests pass"
+test: "cd api && python -m pytest tests/test_example.py -q"
+constraints:
+  - "Hard constraint 1"
+  - "Hard constraint 2"
+---
+
 # Spec: [Feature Name]
 
 ## Purpose
 
-[At least 1 sentence, ideally 2-4. Explain why this exists, who benefits, and what failure/cost it prevents.]
+[2-4 sentences. Why this exists, who benefits, what failure/cost it prevents.]
 
 ## Requirements
 
-- [ ] Requirement 1 (specific and testable)
-- [ ] Requirement 2 (specific and testable)
-- [ ] Requirement 3 (specific and testable)
+- [ ] **R1**: [Full requirement text with details — the frontmatter has the summary, this has the detail]
+- [ ] **R2**: [Full requirement text]
+- [ ] **R3**: [Full requirement text]
 
-## Research Inputs (Required)
+## Research Inputs
 
-List the primary sources that informed this spec (docs/changelog/paper/security advisory).
-Include publication date and URL for each source.
-
-- `YYYY-MM-DD` - [Source name](https://example.com) - [why it matters for this change]
-
-## Task Card (Required)
-
-```yaml
-goal: one sentence goal
-files_allowed:
-  - exact/path/file.py
-done_when:
-  - measurable check 1
-commands:
-  - exact command 1
-constraints:
-  - hard constraint 1
-```
-
-If task card scope is intentionally open-ended, explicitly justify why and list review owner.
+- `YYYY-MM-DD` - [Source name] — [why it matters]
 
 ## API Contract (if applicable)
 
 ### `GET /api/resource/{id}`
-
-**Request**
-- `id`: string (path)
 
 **Response 200**
 ```json
@@ -48,53 +48,30 @@ If task card scope is intentionally open-ended, explicitly justify why and list 
 }
 ```
 
-**Response 404**
-```json
-{ "detail": "Not found" }
-```
-
-If not applicable, write: `N/A - no API contract changes in this spec.`
-
 ## Data Model (if applicable)
 
 ```yaml
 Resource:
-  properties:
-    id: { type: string }
-    field: { type: string }
+  id: string
+  field: string
 ```
-
-If not applicable, write: `N/A - no model changes in this spec.`
 
 ## Files to Create/Modify
 
-- `api/app/routers/resource.py` - route handler
-- `api/app/services/resource_service.py` - business logic
-- `api/app/models/resource.py` - Pydantic model
+- `api/app/routers/resource.py` — route handler
+- `api/app/services/resource_service.py` — business logic
+- `api/app/models/resource.py` — Pydantic model
 
 ## Acceptance Tests
-
-List the exact tests (or manual flow) that prove the requirements:
 
 - `api/tests/test_resource.py::test_get_resource_200`
 - `api/tests/test_resource.py::test_get_resource_404`
 
-## Concurrency Behavior
-
-- **Read operations**: Safe for concurrent access; no locking required.
-- **Write operations**: Last-write-wins semantics; no optimistic locking for MVP.
-- **Recommendation**: Clients should not assume atomic read-modify-write without explicit ETag support.
-
 ## Verification
-
-Provide executable commands used to validate this spec before phase advancement:
 
 ```bash
 cd api && pytest -q tests/test_resource.py
-cd web && npm run build
 ```
-
-If manual validation is required, include explicit steps and expected results.
 
 ## Out of Scope
 
@@ -102,22 +79,5 @@ If manual validation is required, include explicit steps and expected results.
 
 ## Risks and Assumptions
 
-- [Key implementation risk and mitigation]
-- [Assumption that, if false, would invalidate this spec]
-
-## Known Gaps and Follow-up Tasks
-
-- None at spec time.
-- If a gap exists, add explicit task/issue references (example: `Follow-up task: task_spec_gap_123`).
-
-## Failure/Retry Reflection
-
-For expected failure modes, document the likely blind spot and next-action guidance.
-
-- Failure mode: [example timeout]
-- Blind spot: [what was underestimated]
-- Next action: [smallest corrective step]
-
-## Decision Gates (if any)
-
-- [Decisions that need human approval before implementation]
+- [Key risk and mitigation]
+- [Assumption that would invalidate this spec if false]

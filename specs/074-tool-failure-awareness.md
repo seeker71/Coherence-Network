@@ -6,7 +6,18 @@ source:
     symbols: [failure pattern recognition]
   - file: api/app/services/agent_execution_retry.py
     symbols: [failure analysis]
+done_when:
+  - "For every agent task command execution, record a runtime event:"
+  - "When a command fails (non-zero exit OR timeout OR suspicious zero-output success), write a friction event via API:"
+  - "Monitor should raise a `expensive_failed_task` issue when recent failed tasks exceed a cost threshold:"
+test: "python3 -m pytest api/tests/test_agent_runner_tool_failure_telemetry.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
+> **Source**: [`api/app/services/failure_taxonomy_service.py`](../api/app/services/failure_taxonomy_service.py) | [`api/app/services/agent_execution_retry.py`](../api/app/services/agent_execution_retry.py)
 
 # Spec 074: Tool Failure Awareness (Cost Without Gain)
 

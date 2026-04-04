@@ -8,7 +8,33 @@ source:
     symbols: [advance_idea_stage(), set_idea_stage(), auto_advance_for_task(), compute_progress_dashboard()]
   - file: api/app/models/idea.py
     symbols: [IdeaStage, IDEA_STAGE_ORDER, ProgressDashboard, StageBucket]
+requirements:
+  - "R1: Add an `IdeaStage` enum with ordered values: `none`, `specced`, `implementing`, `testing`, `reviewing`, `complete`."
+  - "R2: Add a `stage` field (default `none`) to the `Idea` model and a `stage` field to `IdeaCreate` / `IdeaUpdate`."
+  - "R3: New `POST /api/ideas/{idea_id}/advance` endpoint transitions an idea to the next stage. Returns 200 with updated ide"
+  - "R4: Stage transitions must be sequential — an idea can only advance to the immediately next stage (none→specced→implemen"
+  - "R5: New `POST /api/ideas/{idea_id}/stage` endpoint allows setting an explicit stage (for corrections/admin override). Ac"
+  - "R6: Auto-advance logic: when a pipeline task of type `spec` completes for an idea, advance from `none` to `specced`; whe"
+  - "R7: New `GET /api/ideas/progress` endpoint returns a `ProgressDashboard` response with per-stage counts, a list of ideas"
+  - "R8: The `IdeaWithScore` response includes the new `stage` field so existing consumers see it without extra calls."
+  - "R9: Stage transitions update the `manifestation_status` field for backward compatibility: `specced`/`implementing` → `pa"
+done_when:
+  - "IdeaStage enum exists with six ordered values"
+  - "POST /api/ideas/{idea_id}/advance transitions to next stage and returns updated idea"
+  - "POST /api/ideas/{idea_id}/stage sets an explicit stage"
+  - "GET /api/ideas/progress returns per-stage counts and completion percentage"
+  - "Auto-advance function exists and is callable from task-completion hooks"
+  - "All tests in api/tests/test_idea_lifecycle.py pass"
+test: "cd api && python -m pytest tests/test_idea_lifecycle.py -x -v"
+constraints:
+  - "Do not modify existing endpoint response schemas (additive stage field only)"
+  - "Do not break backward compatibility with manifestation_status consumers"
+  - "Coherence scores remain 0.0–1.0"
+  - "Stage ordering is immutable at the enum level"
 ---
+
+> **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
+> **Source**: [`api/app/routers/ideas.py`](../api/app/routers/ideas.py) | [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
 # Spec 138: Idea Lifecycle Management
 

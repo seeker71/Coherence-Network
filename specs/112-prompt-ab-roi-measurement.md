@@ -8,7 +8,28 @@ source:
     symbols: [SlotSelector]
   - file: api/app/routers/agent_prompt_ab_routes.py
     symbols: [A/B testing endpoints]
+requirements:
+  - "Outcome recording — persist measurement record per task completion"
+  - "ROI computation — sum(value_score)/sum(resource_cost) per variant with stats"
+  - "Variant selection — Thompson Sampling with exploration priority for < 5 samples, block after 3 zeros"
+  - "Stats endpoint — GET /api/agent/prompt-ab/stats returns per-variant ROI and selection probability"
+  - "Integration hook — record_prompt_outcome() callable from task execution flow"
+done_when:
+  - "record_prompt_outcome writes valid measurement to JSON store"
+  - "select_variant returns variant respecting exploration/exploitation rules"
+  - "blocked variants (3 consecutive zeros) are never selected"
+  - "new variants get exploration priority until 5 samples"
+  - "GET /api/agent/prompt-ab/stats returns valid JSON with per-variant ROI"
+  - "all tests pass"
+test: "cd api && python -m pytest tests/test_prompt_ab_roi.py -q"
+constraints:
+  - "no database changes (JSON file store only)"
+  - "no modifications to existing prompt_templates.json format"
+  - "must be callable from existing task execution flow without breaking it"
 ---
+
+> **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
+> **Source**: [`api/app/services/prompt_ab_roi_service.py`](../api/app/services/prompt_ab_roi_service.py) | [`api/app/services/slot_selection_service.py`](../api/app/services/slot_selection_service.py) | [`api/app/routers/agent_prompt_ab_routes.py`](../api/app/routers/agent_prompt_ab_routes.py)
 
 # Spec 112: Prompt A/B ROI Measurement
 

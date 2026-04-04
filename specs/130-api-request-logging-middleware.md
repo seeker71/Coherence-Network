@@ -6,7 +6,30 @@ source:
     symbols: [RequestDurationMiddleware]
   - file: api/app/main.py
     symbols: [middleware registration]
+requirements:
+  - "Every HTTP request produces exactly one structured log line after the response is sent."
+  - "Each log line includes: HTTP method, request path, response status code, and request duration in milliseconds."
+  - "Log level is `INFO` for 2xx/3xx responses and `WARNING` for 4xx/5xx responses."
+  - "Health-check endpoints (`/api/health`, `/healthz`) are excluded from logging to avoid noise."
+  - "The middleware is configurable via an environment variable `API_ACCESS_LOG_ENABLED` (default `\"1\"`; set to `\"0\"` to disa"
+  - "Log output uses key=value structured format for machine parseability (e.g., `method=GET path=/api/ideas status=200 durat"
+  - "The middleware does not interfere with existing `RequestDurationMiddleware` or `capture_runtime_metrics`."
+done_when:
+  - "Every non-excluded request produces one structured log line with method, path, status, and duration_ms."
+  - "Health-check paths are excluded from logging."
+  - "Log level is INFO for success responses and WARNING for error responses."
+  - "Setting API_ACCESS_LOG_ENABLED=0 disables the middleware."
+  - "Existing middleware (RequestDurationMiddleware, capture_runtime_metrics) continues to function."
+  - "All tests in api/tests/test_request_logging.py pass."
+test: "cd api && python -m pytest tests/test_request_logging.py -q"
+constraints:
+  - "Changes scoped to listed files only."
+  - "Must use BaseHTTPMiddleware pattern consistent with existing middleware."
+  - "No external dependencies added."
 ---
+
+> **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
+> **Source**: [`api/app/middleware/request_duration.py`](../api/app/middleware/request_duration.py) | [`api/app/main.py`](../api/app/main.py)
 
 # Spec: API Request Logging Middleware
 

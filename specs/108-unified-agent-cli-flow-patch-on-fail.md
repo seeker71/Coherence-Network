@@ -6,7 +6,26 @@ source:
     symbols: [unified CLI flow, PASS_FAIL contract]
   - file: api/scripts/local_runner.py
     symbols: [local CLI execution]
+requirements:
+  - "Every executor (`claude`, `cursor`, `codex`, `gemini`) supports `spec`, `impl`, `test`, `review`, and `heal` task types "
+  - "The flow executes end-to-end (`idea -> spec -> impl -> test -> review`) for local and remote runner modes with no task-t"
+  - "`review` failure output includes structured `VERIFICATION_RESULT`, `FILES_TO_CHANGE`, and `PATCH_GUIDANCE` blocks that c"
+  - "On failed review, pipeline context carries patch guidance forward to the next `impl`/`heal` task without destructive tru"
+  - "Review may emit `SPEC_VERIFICATION_IMPROVEMENT` when verification steps are ambiguous, so spec verification can be tight"
+done_when:
+  - "Every executor (`claude`, `cursor`, `codex`, `gemini`) supports `spec`, `impl`, `test`, `review`, and `heal` task typ..."
+  - "The flow executes end-to-end (`idea -> spec -> impl -> test -> review`) for local and remote runner modes with no tas..."
+  - "`review` failure output includes structured `VERIFICATION_RESULT`, `FILES_TO_CHANGE`, and `PATCH_GUIDANCE` blocks tha..."
+  - "On failed review, pipeline context carries patch guidance forward to the next `impl`/`heal` task without destructive ..."
+  - "Review may emit `SPEC_VERIFICATION_IMPROVEMENT` when verification steps are ambiguous, so spec verification can be ti..."
+test: "cd api && pytest -q tests/test_agent.py tests/test_agent_executor_policy.py tests/test_openclaw_executor_integration.py -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [agent-cli](../ideas/agent-cli.md)
+> **Source**: [`api/scripts/run_cli_task_flow_matrix.py`](../api/scripts/run_cli_task_flow_matrix.py) | [`api/scripts/local_runner.py`](../api/scripts/local_runner.py)
 
 # 108 — Unified Agent CLI Flow: All Task Types, Patch on Verification Fail
 

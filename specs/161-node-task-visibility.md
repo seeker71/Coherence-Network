@@ -8,7 +8,23 @@ source:
     symbols: [task list]
   - file: web/app/tasks/[task_id]/page.tsx
     symbols: [task detail]
+done_when:
+  - "cc tasks shows idea names (not IDs) and clean provider labels"
+  - "cc tasks shows a \"recently completed\" section"
+  - "cc task <id> shows full (untruncated) output and activity timeline"
+  - "cc task <id> shows error_summary when present"
+  - "coherencycoin.com/pipeline loads and shows live task flow"
+  - "/pipeline shows per-provider success rates"
+  - "/pipeline shows active node names and task counts"
+constraints:
+  - "No new database tables required for R4 (compute on-the-fly or cache in memory)"
+  - "CLI must remain zero-dependency (no new npm packages)"
+  - "Web page must use existing shadcn/ui components"
+  - "Must not break existing /tasks page"
 ---
+
+> **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
+> **Source**: [`web/app/nodes/page.tsx`](../web/app/nodes/page.tsx) | [`web/app/tasks/page.tsx`](../web/app/tasks/page.tsx) | [`web/app/tasks/[task_id]/page.tsx`](../web/app/tasks/[task_id]/page.tsx)
 
 # Spec 161: Node and Task Visibility — `cc tasks`, `cc task <id>`, Web Pipeline Dashboard
 

@@ -8,7 +8,31 @@ source:
     symbols: [list_ideas(), _score(), _with_score(), _build_cost_vector(), _build_value_vector()]
   - file: api/app/models/idea.py
     symbols: [Idea, IdeaWithScore, IdeaPortfolioResponse, IdeaSummary, CostVector, ValueVector]
+requirements:
+  - "GET /api/ideas — List ideas ranked by free energy score with portfolio summary"
+  - "GET /api/ideas/{id} — Retrieve individual idea with score (404 if not found)"
+  - "PATCH /api/ideas/{id} — Update idea validation fields (404 if not found)"
+  - "GET /api/ideas/storage — Report structured storage backend and row counts"
+  - "Filter support for unvalidated ideas only"
+  - "Free energy scoring: (potential_value × confidence) / (estimated_cost + resistance_risk)"
+  - "Value gap tracking: potential_value - actual_value"
+  - "Manifestation status: none, partial, validated"
+  - "Ideas stored in structured DB registry with machine-readable metadata"
+  - "Portfolio summary with aggregated metrics"
+done_when:
+  - "GET /api/ideas — List ideas ranked by free energy score with portfolio summary"
+  - "GET /api/ideas/{id} — Retrieve individual idea with score (404 if not found)"
+  - "PATCH /api/ideas/{id} — Update idea validation fields (404 if not found)"
+  - "GET /api/ideas/storage — Report structured storage backend and row counts"
+  - "Filter support for unvalidated ideas only"
+test: "| Ideas test suite | `cd api && pytest -q tests/test_ideas.py` | Exit code 0; \"passed\" in output | Non-zero exit; failures or errors listed |"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
+> **Source**: [`api/app/routers/ideas.py`](../api/app/routers/ideas.py) | [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
 # Spec: Ideas Prioritization API
 
