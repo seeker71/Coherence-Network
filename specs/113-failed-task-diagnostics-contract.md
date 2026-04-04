@@ -8,7 +8,28 @@ source:
     symbols: [error_summary, error_category fields]
   - file: api/app/services/agent_task_store_service.py
     symbols: [AgentTaskRecord.error_summary column]
+requirements:
+  - "Error fields on model: Add `error_summary: Optional[str]` and `error_category: Optional[str]` to `AgentTask`, `AgentTaskListItem`, `AgentTaskUp"
+  - "Require diagnostics on failure: When a task transitions to `status=failed` via PATCH, require at least one of `error_summary` or `output` to be non-empt"
+  - "Diagnostics service: `classify_error(output: str | None) -> tuple[str, str]` returns `(error_summary, error_category)` by pattern-matching th"
+  - "Auto-classify on PATCH: When PATCH sets `status=failed` and `error_summary` is not provided, call `classify_error(output)` to auto-populate both"
+  - "Diagnostics completeness endpoint: `GET /api/agent/diagnostics-completeness` returns `{\"total_failed\": N, \"with_diagnostics\": M, \"missing_pct\": float, \"by_"
+done_when:
+  - "AgentTask model has error_summary and error_category fields"
+  - "AgentTaskRecord DB model has error_summary and error_category columns"
+  - "PATCH to status=failed auto-populates error_summary when not provided"
+  - "classify_error correctly categorizes timeout, crash, provider, validation patterns"
+  - "GET /api/agent/diagnostics-completeness returns correct shape"
+  - "all tests pass"
+test: "cd api && python -m pytest tests/test_failed_task_diagnostics.py -q"
+constraints:
+  - "no changes to existing test files"
+  - "backward compatible: existing tasks with null error fields remain valid"
+  - "error_category must be one of the 5 defined categories"
 ---
+
+> **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
+> **Source**: [`api/app/services/failed_task_diagnostics_service.py`](../api/app/services/failed_task_diagnostics_service.py) | [`api/app/models/agent.py`](../api/app/models/agent.py) | [`api/app/services/agent_task_store_service.py`](../api/app/services/agent_task_store_service.py)
 
 # Spec 113: Failed-Task Diagnostics Completeness Contract
 

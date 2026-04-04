@@ -4,7 +4,31 @@ status: partial
 source:
   - file: api/app/services/task_activity_service.py
     symbols: [task outcome correlation]
+requirements:
+  - "Task chain linkage: When a task's `context` contains a `source_task_id` (set by heal tasks, review tasks, test tasks), record a `TaskChainLi"
+  - "Chain resolution: `resolve_chain(task_id: str) -> list[TaskChainLink]` returns the full ordered chain of tasks linked from a root task, fo"
+  - "Chain effectiveness score: `compute_chain_effectiveness(chain: list[TaskChainLink]) -> ChainEffectiveness` examines the terminal tasks in a chain a"
+  - "Effectiveness scoring rules"
+  - "Measurement enrichment: When a downstream task completes, call `enrich_upstream_measurement(source_task_id)` to update the upstream task's groun"
+  - "Chain stats endpoint: `GET /api/agent/task-chains/stats` returns aggregate chain metrics: `{total_chains, avg_chain_length, avg_effectiveness,"
+done_when:
+  - "TaskChainLink recorded when downstream task has source_task_id in context"
+  - "resolve_chain returns ordered chain with cycle protection (max depth 10)"
+  - "compute_chain_effectiveness returns correct scores per R4 rules"
+  - "enrich_upstream_measurement updates raw_signals with chain_effectiveness"
+  - "GET /api/agent/task-chains/stats returns valid JSON with aggregate metrics"
+  - "all tests pass"
+test: "cd api && python -m pytest tests/test_task_chain_correlation.py -q"
+constraints:
+  - "do not modify grounded_measurement_service.py internals (only call its public API)"
+  - "do not modify agent_execution_completion.py (integration is a follow-up)"
+  - "do not modify existing test files"
+  - "JSON file store only (no database changes)"
+  - "max chain depth capped at 10 to prevent runaway traversal"
 ---
+
+> **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
+> **Source**: [`api/app/services/task_activity_service.py`](../api/app/services/task_activity_service.py)
 
 # Spec 127: Cross-Task Outcome Correlation
 

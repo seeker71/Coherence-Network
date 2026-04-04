@@ -6,7 +6,20 @@ source:
     symbols: [set_parent_idea()]
   - file: api/app/models/idea.py
     symbols: [IdeaType, parent_idea_id, child_idea_ids]
+requirements:
+  - Idea model includes idea_type, parent_idea_id, child_idea_ids fields
+  - IdeaType enum has super, child, standalone values
+  - Super-ideas excluded from task pickup in ROI and unblock queries
+  - Child-ideas inherit parent context for display
+  - Existing ideas default to standalone for backward compatibility
+  - GET /api/ideas returns idea_type; super-ideas show child_idea_ids
+done_when:
+  - Super-ideas excluded from pickup, child-ideas ranked normally
+  - pytest api/tests/test_idea_hierarchy_super_child.py passes
 ---
+
+> **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
+> **Source**: [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
 # Spec 117: Idea Hierarchy — Super-Ideas and Child-Ideas
 

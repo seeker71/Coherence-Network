@@ -6,7 +6,22 @@ source:
     symbols: [slugify(), update_idea_slug()]
   - file: api/app/models/idea.py
     symbols: [Idea.slug, Idea.slug_history]
+requirements:
+  - Idea has UUID4 id (immutable) and slug (mutable, unique, URL-safe)
+  - Slug auto-derived from name at creation when omitted
+  - Slug max 80 chars, lowercase, diacritics stripped, deduped with -2 suffix
+  - GET /api/ideas/{slug} resolves same idea as GET /api/ideas/{uuid}
+  - PATCH /api/ideas/{id}/slug renames slug and keeps old slug in history
+  - Old slugs resolve via slug_history lookup
+  - Rename does not break parent/child foreign key relationships
+done_when:
+  - POST /api/ideas with no slug returns derived slug from name
+  - Old slug resolves after rename via history
+  - All existing test_ideas.py tests pass without modification
 ---
+
+> **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
+> **Source**: [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
 # Spec 181: Idea Dual Identity — UUID Primary Key + Structured Human Slug
 

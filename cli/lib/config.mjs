@@ -159,6 +159,40 @@ export function getCliProvider() {
   return loadConfig().cli?.provider || "cli";
 }
 
+/**
+ * Workspace resolution — persistent default lives in config.json under the
+ * top-level `workspace` key (falls back to "coherence-network"). A session
+ * override can be set by the `--workspace` flag via setActiveWorkspaceOverride.
+ *
+ * No environment variables are read or written. All state flows through
+ * config.json or an in-process override.
+ */
+export const DEFAULT_WORKSPACE_ID = "coherence-network";
+let _activeWorkspaceOverride = null;
+
+export function setActiveWorkspaceOverride(workspaceId) {
+  const id = String(workspaceId || "").trim();
+  _activeWorkspaceOverride = id || null;
+}
+
+export function getActiveWorkspaceOverride() {
+  return _activeWorkspaceOverride;
+}
+
+export function getActiveWorkspace() {
+  if (_activeWorkspaceOverride) return _activeWorkspaceOverride;
+  const fromFile = loadConfig().workspace;
+  if (fromFile && String(fromFile).trim()) return String(fromFile).trim();
+  return DEFAULT_WORKSPACE_ID;
+}
+
+export function getActiveWorkspaceSource() {
+  if (_activeWorkspaceOverride) return "--workspace flag";
+  const fromFile = loadConfig().workspace;
+  if (fromFile && String(fromFile).trim()) return "config.json";
+  return "default";
+}
+
 export function getCliActiveTaskId() {
   return loadConfig().cli?.active_task_id || null;
 }

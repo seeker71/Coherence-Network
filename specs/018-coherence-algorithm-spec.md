@@ -8,7 +8,24 @@ source:
     symbols: [coherence score endpoint]
   - file: api/app/services/coherence_signal_depth_service.py
     symbols: [signal depth]
+requirements:
+  - "Document inputs: contributor_diversity, dependency_health, activity_cadence, documentation_quality, community_responsive"
+  - "Document output: score 0.0–1.0 per project"
+  - "Document pitfalls: gaming prevention, contribution-type balance"
+  - "Add weights stub (all equal or placeholder) — actual weights are decision gate"
+done_when:
+  - "Document inputs: contributor_diversity, dependency_health, activity_cadence, documentation_quality, community_respons..."
+  - "Document output: score 0.0–1.0 per project"
+  - "Document pitfalls: gaming prevention, contribution-type balance"
+  - "Add weights stub (all equal or placeholder) — actual weights are decision gate"
+test: "python3 -m pytest api/tests/test_cc_scoring.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
+> **Source**: [`api/app/services/coherence_service.py`](../api/app/services/coherence_service.py) | [`api/app/routers/coherence.py`](../api/app/routers/coherence.py) | [`api/app/services/coherence_signal_depth_service.py`](../api/app/services/coherence_signal_depth_service.py)
 
 # Spec: Coherence Algorithm — Formal Spec
 

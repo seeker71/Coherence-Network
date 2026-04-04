@@ -4,7 +4,19 @@ status: partial
 source:
   - file: api/app/services/agent_service_active_task.py
     symbols: [find_active_task_by_fingerprint(), find_active_task_by_session_key()]
+requirements:
+  - "R1 — Create `check_idea_phase_history(idea_id, phase)` in new `api/app/services/task_dedup_service.py`."
+  - "R2 — In `local_runner.py:_seed_task_from_open_idea()`, after fetching `idea_tasks_payload`:"
+  - "R3 — In `pipeline_advance_service.py:maybe_advance()`, before creating next-phase task:"
+  - "R4 — In `pipeline_advance_service.py:_maybe_auto_retry()`, before creating retry task:"
+  - "R5 — In `idea_to_task_bridge.py`, replace `determine_task_type()` to use live task history"
+  - "R6 — Extend `GET /api/ideas/{id}/tasks` response to include `phase_summary` dict keyed"
+  - "R7 — When skip-ahead occurs (R3), propagate context from the completed task of the"
+  - "R8 — For auto-advance and auto-retry tasks, set `context.task_fingerprint` to"
 ---
+
+> **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
+> **Source**: [`api/app/services/agent_service_active_task.py`](../api/app/services/agent_service_active_task.py)
 
 # Spec: Task Deduplication — Never Create Duplicate Tasks for the Same Idea+Phase
 

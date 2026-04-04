@@ -8,7 +8,30 @@ source:
     symbols: [heal task endpoints]
   - file: api/app/services/agent_service_task_derive.py
     symbols: [heal task derivation]
+requirements:
+  - "Heal strategy map: Define a mapping from each error category to a heal strategy: `{category: {direction_template, executor_hint, max_retrie"
+  - "Auto-heal trigger: `maybe_create_heal_task(failed_task: dict) -> dict | None` inspects a failed task, classifies its error, checks cooldown"
+  - "Cooldown & retry guard: Do not create a heal task if: (a) the failed task already has a heal task (check `context.heal_task_id`), (b) the origin"
+  - "Heal task context: Created heal tasks include in `context`: `{source_task_id, error_category, error_summary, retry_count, strategy_name}` f"
+  - "Auto-heal stats endpoint: `GET /api/agent/auto-heal/stats` returns `{total_failed, heals_created, heal_rate, by_category: {category: {failed, heal"
+done_when:
+  - "HEAL_STRATEGIES maps all 5 error categories to strategies"
+  - "maybe_create_heal_task returns heal task dict for eligible failures"
+  - "cooldown guard prevents duplicate heals within window"
+  - "retry guard prevents infinite heal loops"
+  - "heal task context includes source_task_id, error_category, retry_count"
+  - "GET /api/agent/auto-heal/stats returns correct shape"
+  - "all tests pass"
+test: "cd api && python -m pytest tests/test_auto_heal_service.py -q"
+constraints:
+  - "do not modify agent_service_crud.py or existing task creation logic"
+  - "do not modify existing test files"
+  - "heal tasks must use TaskType.HEAL"
+  - "max_retries per category capped at 3"
 ---
+
+> **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
+> **Source**: [`api/app/services/auto_heal_service.py`](../api/app/services/auto_heal_service.py) | [`api/app/routers/agent_auto_heal_routes.py`](../api/app/routers/agent_auto_heal_routes.py) | [`api/app/services/agent_service_task_derive.py`](../api/app/services/agent_service_task_derive.py)
 
 # Spec 114: Auto-Heal from Diagnostics
 

@@ -8,7 +8,29 @@ source:
     symbols: [hook configuration]
   - file: api/app/services/agent_execution_task_flow.py
     symbols: [_emit_lifecycle_event()]
+requirements:
+  - "Add an execution lifecycle hook surface that can dispatch named lifecycle events for a task."
+  - "Ensure hook listener failures never break task execution or change task terminal status."
+  - "Emit lifecycle telemetry events during task execution (`claimed`, `execution_started`, `finalized`, plus block/validatio"
+  - "Add configurable lifecycle subscribers (`runtime` and `jsonl`) that can be enabled/disabled via environment setting."
+  - "Add a compact lifecycle summary query endpoint for recent lifecycle events."
+  - "Support lifecycle summary source selection (`auto`, `runtime`, `jsonl`) so operators can force a backend when both subsc"
+  - "Add JSONL retention control to cap lifecycle audit growth."
+  - "Include actionable lifecycle guidance in summary output (for example: no subscribers enabled, paid guard blocks, high fa"
+done_when:
+  - "Add an execution lifecycle hook surface that can dispatch named lifecycle events for a task."
+  - "Ensure hook listener failures never break task execution or change task terminal status."
+  - "Emit lifecycle telemetry events during task execution (`claimed`, `execution_started`, `finalized`, plus block/valida..."
+  - "Add configurable lifecycle subscribers (`runtime` and `jsonl`) that can be enabled/disabled via environment setting."
+  - "Add a compact lifecycle summary query endpoint for recent lifecycle events."
+test: "cd api && pytest -q tests/test_agent_execute_endpoint.py -k \"lifecycle or hook_error or lifecycle_summary\""
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [agent-cli](../ideas/agent-cli.md)
+> **Source**: [`api/app/services/agent_execution_hooks.py`](../api/app/services/agent_execution_hooks.py) | [`api/app/services/agent_execution_hooks_config.py`](../api/app/services/agent_execution_hooks_config.py) | [`api/app/services/agent_execution_task_flow.py`](../api/app/services/agent_execution_task_flow.py)
 
 # Spec: Agent Execution Lifecycle Hooks
 

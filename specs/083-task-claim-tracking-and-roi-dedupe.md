@@ -4,7 +4,26 @@ status: partial
 source:
   - file: api/app/services/contribution_cost_service.py
     symbols: [estimate_commit_cost_with_provenance()]
+requirements:
+  - "Task updates to `running` record claim ownership (`claimed_by`, `claimed_at`)."
+  - "Starting a task already claimed by another worker returns `409` conflict."
+  - "Agent runner sends a stable worker identifier when claiming tasks."
+  - "ROI auto-pick flow detects active fingerprint-matched tasks and returns `task_already_active` instead of creating duplic"
+  - "Implementation-request question sync uses active-task deduplication and task fingerprints."
+done_when:
+  - "Task updates to `running` record claim ownership (`claimed_by`, `claimed_at`)."
+  - "Starting a task already claimed by another worker returns `409` conflict."
+  - "Agent runner sends a stable worker identifier when claiming tasks."
+  - "ROI auto-pick flow detects active fingerprint-matched tasks and returns `task_already_active` instead of creating dup..."
+  - "Implementation-request question sync uses active-task deduplication and task fingerprints."
+test: "python3 -m pytest api/tests/test_agent_task_claims.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [value-attribution](../ideas/value-attribution.md)
+> **Source**: [`api/app/services/contribution_cost_service.py`](../api/app/services/contribution_cost_service.py)
 
 # Spec 083: Task Claim Tracking and ROI Auto-Pick De-duplication
 

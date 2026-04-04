@@ -8,7 +8,32 @@ source:
     symbols: [PostgreSQL adapter]
   - file: api/scripts/migrate_tracking_domains_to_postgres.py
     symbols: [migration script]
+requirements:
+  - "PostgreSQL schemas defined for all in-memory stores"
+  - "Projects table with (ecosystem, name) unique constraint"
+  - "Project dependencies table (graph edges) with foreign keys"
+  - "Contributors table with UUID primary keys"
+  - "Assets table with UUID primary keys"
+  - "Contributions table with foreign keys to contributors and assets"
+  - "Agent tasks table with ENUM types for task_type and status"
+  - "Indexes for performance"
+  - "Composite index on (ecosystem, name) for projects"
+  - "Full-text search indexes (trigram) for project search"
+  # ... 98 more in Requirements section below
+done_when:
+  - "PostgreSQL schemas defined for all in-memory stores"
+  - "Projects table with (ecosystem, name) unique constraint"
+  - "Project dependencies table (graph edges) with foreign keys"
+  - "Contributors table with UUID primary keys"
+  - "Assets table with UUID primary keys"
+test: "python3 -m pytest api/tests/test_metrics_db_migration.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
+> **Source**: [`api/app/services/unified_db.py`](../api/app/services/unified_db.py) | [`api/app/adapters/postgres_store.py`](../api/app/adapters/postgres_store.py) | [`api/scripts/migrate_tracking_domains_to_postgres.py`](../api/scripts/migrate_tracking_domains_to_postgres.py)
 
 # Spec: PostgreSQL Migration for In-Memory Stores
 

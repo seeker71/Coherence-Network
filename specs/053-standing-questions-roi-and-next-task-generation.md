@@ -10,7 +10,22 @@ source:
     symbols: [next_highest_roi_task_from_answered_questions()]
   - file: api/app/models/idea.py
     symbols: [IdeaQuestion, IdeaQuestionCreate]
+requirements:
+  - "Every idea includes the standing improvement/measurement question."
+  - "Inventory exposes `question_roi` and `answer_roi` for question rows."
+  - "API can suggest and optionally create the next highest-ROI task from answered questions."
+done_when:
+  - "Every idea includes the standing improvement/measurement question."
+  - "Inventory exposes `question_roi` and `answer_roi` for question rows."
+  - "API can suggest and optionally create the next highest-ROI task from answered questions."
+test: "python3 -m pytest api/tests/test_ideas.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
+> **Source**: [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/routers/inventory.py`](../api/app/routers/inventory.py) | [`api/app/services/inventory_service.py`](../api/app/services/inventory_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
 # Spec: Standing Questions, ROI Fields, and Next-Task Generation
 

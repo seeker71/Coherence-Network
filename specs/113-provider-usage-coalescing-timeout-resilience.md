@@ -6,7 +6,20 @@ source:
     symbols: [ProviderUsageSnapshot, usage coalescing]
   - file: api/app/models/automation_usage.py
     symbols: [UsageAlert, ProviderUsageOverview]
+requirements:
+  - "`GET /api/automation/usage` returns one row per provider family (`openai`, `claude`) instead of duplicate family variant"
+  - "Provider snapshots set `usage_remaining` from the best quota-bearing summary metric when available, even if the primary "
+  - "`GET /api/automation/usage` avoids long hangs by returning a valid fallback payload when live collection exceeds a confi"
+done_when:
+  - test_finalize_snapshot_uses_summary_metric_for_usage_remaining passes
+  - test_automation_usage_endpoint_coalesces_provider_families passes
+  - test_automation_usage_endpoint_times_out_to_snapshot_fallback passes
+test:
+  - "pytest -q api/tests/test_automation_usage_api.py -k 'finalize_snapshot or coalesces or times_out'"
 ---
+
+> **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
+> **Source**: [`api/app/services/automation_usage_service.py`](../api/app/services/automation_usage_service.py) | [`api/app/models/automation_usage.py`](../api/app/models/automation_usage.py)
 
 # Spec: Provider Usage Coalescing + Timeout Resilience
 

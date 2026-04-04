@@ -6,7 +6,23 @@ source:
     symbols: [register(), claim_handle()]
   - file: api/app/routers/onboarding.py
     symbols: [onboarding endpoints]
+requirements:
+  - POST /api/onboarding/register accepts handle and returns session_token with trust_level tofu
+  - Handle must match [a-z0-9_-]{3,40} or return 422
+  - Duplicate handle returns 409 with handle_taken detail
+  - GET /api/onboarding/session validates Bearer token or returns 401
+  - POST /api/onboarding/upgrade returns 501 stub until OAuth spec
+  - GET /api/onboarding/roi returns registration and verification metrics
+done_when:
+  - All 9 integration tests in api/tests/test_onboarding.py pass
+  - Fresh token session returns trust_level tofu
+  - ROI endpoint returns valid shape with spec_ref spec-168
+test:
+  - "pytest api/tests/test_onboarding.py -v"
 ---
+
+> **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
+> **Source**: [`api/app/services/onboarding_service.py`](../api/app/services/onboarding_service.py) | [`api/app/routers/onboarding.py`](../api/app/routers/onboarding.py)
 
 # Spec 168 -- Identity-Driven Onboarding: Trust-on-First-Use (TOFU) MVP
 

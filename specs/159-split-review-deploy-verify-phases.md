@@ -8,7 +8,22 @@ source:
     symbols: [phase sequencing]
   - file: api/scripts/run_cli_task_flow_matrix.py
     symbols: [PASS_FAIL contract, review flow]
+requirements:
+  - code-review pass auto-triggers deploy task creation
+  - deploy pass auto-triggers verify-production task creation
+  - verify-production pass sets manifestation_status to validated
+  - verify-production failure creates hotfix task with context.hotfix=true
+  - Deploy failure creates fix task, not verify-production task
+  - Add regression to ManifestationStatus enum
+  - phase_stats in GET /api/pipeline/status shows per-phase pass rates
+done_when:
+  - Full chain code-review to deploy to verify to validated works end-to-end
+  - No orphaned reviewing ideas with no active task
+  - pytest api/tests/test_pipeline_phase_split.py passes
 ---
+
+> **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
+> **Source**: [`api/app/models/agent.py`](../api/app/models/agent.py) | [`api/app/services/pipeline_advance_service.py`](../api/app/services/pipeline_advance_service.py) | [`api/scripts/run_cli_task_flow_matrix.py`](../api/scripts/run_cli_task_flow_matrix.py)
 
 # Spec 159: Split Review Into code-review → deploy → verify-production
 

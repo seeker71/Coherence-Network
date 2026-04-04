@@ -1,6 +1,6 @@
 """Coherence Network MCP server — Python implementation.
 
-Exposes the Coherence Network API as 22 typed MCP tools.
+Exposes the Coherence Network API as 60 typed MCP tools.
 """
 
 from __future__ import annotations
@@ -90,6 +90,9 @@ TOOLS: list[Tool] = [
             "properties": {
                 "limit": {"type": "number", "description": "Max ideas to return (default 20)", "default": 20},
                 "search": {"type": "string", "description": "Search keyword to filter ideas"},
+                "workspace_id": {"type": "string", "description": "Optional workspace filter. Defaults to all workspaces."},
+                "pillar": {"type": "string", "description": "Optional pillar filter."},
+                "curated_only": {"type": "boolean", "description": "If true, only return curated super-ideas."},
             },
         },
     ),
@@ -252,12 +255,6 @@ TOOLS: list[Tool] = [
             "properties": {"window_days": {"type": "number", "default": 30}},
         },
     ),
-    # Governance
-    Tool(
-        name="coherence_list_change_requests",
-        description="List governance change requests.",
-        inputSchema={"type": "object", "properties": {}},
-    ),
     # Federation
     Tool(
         name="coherence_list_federation_nodes",
@@ -351,7 +348,7 @@ TOOLS: list[Tool] = [
     # Ideas (Lifecycle)
     Tool(
         name="coherence_create_idea",
-        description="Create a new idea in the portfolio.",
+        description="Create a new idea in the portfolio. Scoped to a workspace (default: coherence-network).",
         inputSchema={
             "type": "object",
             "required": ["id", "name", "description"],
@@ -361,8 +358,54 @@ TOOLS: list[Tool] = [
                 "description": {"type": "string", "description": "Detailed vision and value proposition"},
                 "potential_value": {"type": "number", "description": "Estimated CC value (0-1000)", "default": 100},
                 "estimated_cost": {"type": "number", "description": "Estimated CC cost (0-1000)", "default": 50},
-                "parent_idea_id": {"type": "string", "description": "Optional parent idea for hierarchy"},
+                "parent_idea_id": {"type": "string", "description": "Optional parent idea for hierarchy. Must belong to the same workspace."},
                 "tags": {"type": "array", "items": {"type": "string"}, "description": "List of tags"},
+                "workspace_id": {"type": "string", "description": "Owning workspace slug. Defaults to 'coherence-network'."},
+                "pillar": {"type": "string", "description": "Top-level pillar (must be one of the workspace's declared pillars)."},
+            },
+        },
+    ),
+    # Workspaces (Tenant primitive)
+    Tool(
+        name="coherence_list_workspaces",
+        description="List all workspaces (tenants). Each workspace owns its own ideas, specs, pillars, and agent personas.",
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_get_workspace",
+        description="Get a workspace's full manifest (name, description, pillars, visibility).",
+        inputSchema={
+            "type": "object",
+            "required": ["workspace_id"],
+            "properties": {
+                "workspace_id": {"type": "string", "description": "Workspace slug (e.g. 'coherence-network')"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_create_workspace",
+        description="Create a new workspace (tenant) with its own pillar taxonomy. Use this to onboard a contributor team with isolated ideas/specs/agents.",
+        inputSchema={
+            "type": "object",
+            "required": ["id", "name"],
+            "properties": {
+                "id": {"type": "string", "description": "Slug: lowercase + hyphens (e.g. 'my-startup')"},
+                "name": {"type": "string", "description": "Human name"},
+                "description": {"type": "string", "description": "Workspace purpose"},
+                "pillars": {"type": "array", "items": {"type": "string"}, "description": "Top-level taxonomy for grouping ideas"},
+                "visibility": {"type": "string", "description": "public | federation | private", "default": "public"},
+                "owner_contributor_id": {"type": "string", "description": "Contributor who owns this workspace"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_get_workspace_pillars",
+        description="Get the pillar taxonomy declared by a workspace. Use this before setting `pillar` on a new idea.",
+        inputSchema={
+            "type": "object",
+            "required": ["workspace_id"],
+            "properties": {
+                "workspace_id": {"type": "string"},
             },
         },
     ),
@@ -713,6 +756,71 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # Spec CRUD
+    Tool(
+        name="coherence_create_spec",
+        description="Create a new spec in the registry. Requires spec_id (slug), title, summary, and idea_id.",
+        inputSchema={
+            "type": "object",
+            "required": ["spec_id", "title", "summary"],
+            "properties": {
+                "spec_id": {"type": "string", "description": "Unique spec slug (e.g. '170-my-feature')"},
+                "title": {"type": "string", "description": "Spec title"},
+                "summary": {"type": "string", "description": "Spec summary"},
+                "idea_id": {"type": "string", "description": "Parent idea ID"},
+                "potential_value": {"type": "number", "description": "Estimated CC value", "default": 0},
+                "estimated_cost": {"type": "number", "description": "Estimated CC cost", "default": 0},
+                "content_path": {"type": "string", "description": "Path to spec content file"},
+                "implementation_summary": {"type": "string", "description": "Implementation summary text"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_update_spec",
+        description="Update an existing spec's properties (title, summary, value, cost, implementation summary).",
+        inputSchema={
+            "type": "object",
+            "required": ["spec_id"],
+            "properties": {
+                "spec_id": {"type": "string", "description": "The spec ID"},
+                "title": {"type": "string"},
+                "summary": {"type": "string"},
+                "potential_value": {"type": "number"},
+                "estimated_cost": {"type": "number"},
+                "actual_value": {"type": "number"},
+                "actual_cost": {"type": "number"},
+                "idea_id": {"type": "string"},
+                "implementation_summary": {"type": "string"},
+                "process_summary": {"type": "string"},
+                "content_path": {"type": "string"},
+            },
+        },
+    ),
+    # Workflow
+    Tool(
+        name="coherence_advance_idea",
+        description="Check prerequisites and advance an idea to its next lifecycle stage. Returns current state, prerequisite check results, and whether advancement succeeded.",
+        inputSchema={
+            "type": "object",
+            "required": ["idea_id"],
+            "properties": {
+                "idea_id": {"type": "string", "description": "The idea ID to advance"},
+                "force": {"type": "boolean", "description": "Skip prerequisite checks", "default": False},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_trace",
+        description="Trace the full lineage of any entity — from idea to specs to tasks to source files. Provides navigation breadcrumbs across the entire system.",
+        inputSchema={
+            "type": "object",
+            "required": ["entity_id"],
+            "properties": {
+                "entity_id": {"type": "string", "description": "An idea slug, spec slug, or task ID"},
+                "entity_type": {"type": "string", "description": "idea, spec, or task", "default": "idea"},
+            },
+        },
+    ),
 ]
 
 TOOL_MAP: dict[str, Tool] = {t.name: t for t in TOOLS}
@@ -727,7 +835,14 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
         case "coherence_list_ideas":
             if args.get("search"):
                 return api_get("/api/ideas/cards", {"search": args["search"], "limit": args.get("limit", 20)})
-            return api_get("/api/ideas", {"limit": args.get("limit", 20)})
+            params = {"limit": args.get("limit", 20)}
+            if args.get("workspace_id"):
+                params["workspace_id"] = args["workspace_id"]
+            if args.get("pillar"):
+                params["pillar"] = args["pillar"]
+            if args.get("curated_only"):
+                params["curated_only"] = "true"
+            return api_get("/api/ideas", params)
         case "coherence_get_idea":
             return api_get(f"/api/ideas/{args['idea_id']}")
         case "coherence_idea_progress":
@@ -793,9 +908,6 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             }
         case "coherence_friction_report":
             return api_get("/api/friction/report", {"window_days": args.get("window_days", 30)})
-        # Governance
-        case "coherence_list_change_requests":
-            return api_get("/api/governance/change-requests")
         # Federation
         case "coherence_list_federation_nodes":
             nodes = api_get("/api/federation/nodes")
@@ -860,7 +972,25 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 "estimated_cost": args.get("estimated_cost", 50),
                 "parent_idea_id": args.get("parent_idea_id"),
                 "tags": args.get("tags"),
+                "workspace_id": args.get("workspace_id"),
+                "pillar": args.get("pillar"),
             })
+        # Workspaces
+        case "coherence_list_workspaces":
+            return api_get("/api/workspaces")
+        case "coherence_get_workspace":
+            return api_get(f"/api/workspaces/{args['workspace_id']}")
+        case "coherence_create_workspace":
+            return api_post("/api/workspaces", {
+                "id": args["id"],
+                "name": args["name"],
+                "description": args.get("description", ""),
+                "pillars": args.get("pillars", []),
+                "visibility": args.get("visibility", "public"),
+                "owner_contributor_id": args.get("owner_contributor_id"),
+            })
+        case "coherence_get_workspace_pillars":
+            return api_get(f"/api/workspaces/{args['workspace_id']}/pillars")
         case "coherence_update_idea":
             return api_patch(f"/api/ideas/{args['idea_id']}", {
                 "name": args.get("name"),
@@ -1000,6 +1130,123 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 "relationship_type": args["relationship_type"],
                 "created_by": args.get("created_by", "mcp"),
             })
+        # Spec CRUD
+        case "coherence_create_spec":
+            return api_post("/api/spec-registry", {
+                "spec_id": args["spec_id"],
+                "title": args["title"],
+                "summary": args["summary"],
+                "idea_id": args.get("idea_id"),
+                "potential_value": args.get("potential_value", 0),
+                "estimated_cost": args.get("estimated_cost", 0),
+                "content_path": args.get("content_path"),
+                "implementation_summary": args.get("implementation_summary"),
+            })
+        case "coherence_update_spec":
+            body = {
+                k: v for k, v in {
+                    "title": args.get("title"),
+                    "summary": args.get("summary"),
+                    "potential_value": args.get("potential_value"),
+                    "estimated_cost": args.get("estimated_cost"),
+                    "actual_value": args.get("actual_value"),
+                    "actual_cost": args.get("actual_cost"),
+                    "idea_id": args.get("idea_id"),
+                    "implementation_summary": args.get("implementation_summary"),
+                    "process_summary": args.get("process_summary"),
+                    "content_path": args.get("content_path"),
+                }.items() if v is not None
+            }
+            return api_patch(f"/api/spec-registry/{args['spec_id']}", body)
+        # Workflow
+        case "coherence_advance_idea":
+            idea_id = args["idea_id"]
+            force = args.get("force", False)
+            idea = api_get(f"/api/ideas/{idea_id}")
+            if isinstance(idea, dict) and "error" in idea:
+                return idea
+            progress = api_get(f"/api/ideas/{idea_id}/progress")
+            current_stage = idea.get("stage", "none") if isinstance(idea, dict) else "none"
+            stage_order = ["none", "specced", "implementing", "testing", "reviewing", "complete"]
+            idx = stage_order.index(current_stage) if current_stage in stage_order else 0
+            if idx >= len(stage_order) - 1:
+                return {"idea_id": idea_id, "current_stage": current_stage, "next_stage": None,
+                        "prerequisites_met": False, "prerequisite_details": {"reason": "already at final stage"},
+                        "advanced": False, "result": None}
+            next_stage = stage_order[idx + 1]
+            # Check prerequisites from progress tasks
+            tasks_by_phase = progress.get("tasks_by_phase", {}) if isinstance(progress, dict) else {}
+            prereq_checks = {
+                "specced": ("spec", "at least 1 spec task completed"),
+                "implementing": ("impl", "at least 1 impl task exists"),
+                "testing": ("impl", "at least 1 impl task completed"),
+                "reviewing": ("test", "at least 1 test task completed"),
+                "complete": ("review", "at least 1 review task completed"),
+            }
+            prereqs_met = True
+            prereq_details: dict[str, Any] = {}
+            if next_stage in prereq_checks:
+                phase_key, description = prereq_checks[next_stage]
+                phase_tasks = tasks_by_phase.get(phase_key, [])
+                if next_stage == "implementing":
+                    prereqs_met = len(phase_tasks) > 0
+                    prereq_details = {"check": description, "phase": phase_key, "task_count": len(phase_tasks)}
+                else:
+                    completed = [t for t in phase_tasks if isinstance(t, dict) and t.get("status") == "completed"]
+                    prereqs_met = len(completed) > 0
+                    prereq_details = {"check": description, "phase": phase_key,
+                                      "completed_count": len(completed), "total_count": len(phase_tasks)}
+            advanced = False
+            result = None
+            if prereqs_met or force:
+                result = api_patch(f"/api/ideas/{idea_id}", {"stage": next_stage})
+                advanced = not (isinstance(result, dict) and "error" in result)
+            return {"idea_id": idea_id, "current_stage": current_stage, "next_stage": next_stage,
+                    "prerequisites_met": prereqs_met, "prerequisite_details": prereq_details,
+                    "advanced": advanced, "result": result}
+        case "coherence_trace":
+            entity_id = args["entity_id"]
+            entity_type = args.get("entity_type", "idea")
+            if entity_type == "idea":
+                idea = api_get(f"/api/ideas/{entity_id}")
+                progress = api_get(f"/api/ideas/{entity_id}/progress")
+                specs = api_get("/api/spec-registry/cards", {"q": entity_id, "limit": 50})
+                all_tasks = api_get("/api/agent/tasks", {"status": None, "limit": 50})
+                task_list = all_tasks.get("tasks", []) if isinstance(all_tasks, dict) else []
+                idea_tasks = [t for t in task_list if isinstance(t, dict)
+                              and isinstance(t.get("context"), dict) and t["context"].get("idea_id") == entity_id]
+                spec_items = specs if isinstance(specs, list) else specs.get("items", []) if isinstance(specs, dict) else []
+                spec_ids = [s.get("spec_id", s.get("id", "")) for s in spec_items if isinstance(s, dict)]
+                return {"entity_type": "idea", "idea": idea, "progress": progress,
+                        "specs": spec_items, "tasks": idea_tasks,
+                        "navigation": {"idea_file": f"ideas/{entity_id}.md",
+                                       "spec_files": [f"specs/{s}.md" for s in spec_ids],
+                                       "api": f"/api/ideas/{entity_id}",
+                                       "cli": f"cc idea {entity_id}"}}
+            elif entity_type == "spec":
+                spec = api_get(f"/api/spec-registry/{entity_id}")
+                spec_file = api_get("/api/content/file", {"path": f"specs/{entity_id}.md"})
+                idea_id = spec.get("idea_id") if isinstance(spec, dict) else None
+                parent_idea = api_get(f"/api/ideas/{idea_id}") if idea_id else None
+                nav: dict[str, Any] = {"spec_file": f"specs/{entity_id}.md",
+                                       "api": f"/api/spec-registry/{entity_id}",
+                                       "cli": f"cc spec {entity_id}"}
+                if idea_id:
+                    nav["idea_file"] = f"ideas/{idea_id}.md"
+                return {"entity_type": "spec", "spec": spec, "spec_file_content": spec_file,
+                        "parent_idea": parent_idea, "navigation": nav}
+            elif entity_type == "task":
+                task = api_get(f"/api/agent/tasks/{entity_id}")
+                events = api_get(f"/api/agent/tasks/{entity_id}/stream")
+                context = task.get("context", {}) if isinstance(task, dict) else {}
+                idea_id = context.get("idea_id") if isinstance(context, dict) else None
+                parent_idea = api_get(f"/api/ideas/{idea_id}") if idea_id else None
+                return {"entity_type": "task", "task": task, "events": events,
+                        "parent_idea": parent_idea,
+                        "navigation": {"api": f"/api/agent/tasks/{entity_id}",
+                                       "cli": f"cc task {entity_id}"}}
+            else:
+                return {"error": f"Unknown entity_type: {entity_type}. Use 'idea', 'spec', or 'task'."}
         case _:
             return {"error": f"Unknown tool: {name}"}
 

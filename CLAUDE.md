@@ -2,18 +2,18 @@
 
 **Mission**: Idea realization platform for humanity. Every idea tracked, funded, built, measured.
 
-## Quick Lookup (use these before scanning files)
+## Quick Lookup
 
-| What | Where | API |
+| What | Where | CLI |
 |------|-------|-----|
-| Ideas (12) | `ideas/INDEX.md` → `ideas/{slug}.md` | `GET /api/ideas/{slug}` |
-| Specs (59) | `specs/INDEX.md` → `specs/{slug}.md` | `GET /api/spec-registry/{slug}` |
-| Archived specs (150+) | `docs/specs-archive/` | — |
+| Ideas (12 consolidated) | `ideas/INDEX.md` → `ideas/{slug}.md` | `cc idea {slug}` (DB has raw ideas, not consolidated) |
+| Specs (59) | `specs/INDEX.md` → `specs/{slug}.md` | `cc spec {slug}` |
+| Pipeline tasks | — | `cc tasks --status pending` |
 | Tracking | `docs/EXTERNAL_ENABLEMENT_TRACKING.md` | — |
 
-**Spec frontmatter** has `idea_id`, `status`, and `source` (files + symbols). Read the frontmatter first — it tells you exactly which source files implement the spec.
+**Files vs CLI**: The 12 idea .md files have problem statements, capabilities, spec links, and absorbed ideas. The DB has ~300 raw ideas with auto-generated descriptions. For understanding "what are we building," read the .md files. For task pipeline operations, use CLI.
 
-**Idea frontmatter** has `idea_id`, `title`, `stage`, `work_type`, and `specs` list.
+**Spec frontmatter** (~25 lines) has everything an agent needs: `source:` (files + symbols), `requirements:`, `done_when:`, `test:`, `constraints:`. Read with `limit=30` — the body is reference for humans.
 
 ## Architecture
 
@@ -42,13 +42,35 @@ Spec → Test → Implement → CI → Review → Merge
 - **Record every new idea via `POST /api/ideas` before session ends**
 - For spec authoring: run `python3 scripts/validate_spec_quality.py`
 
-## Context-Efficient Exploration
+## Navigation
 
-Before scanning many files:
-1. Read the relevant INDEX.md (specs or ideas) to find the right file
-2. Read the spec frontmatter — it has the `source:` map pointing to exact files and symbols
-3. Use `python3 scripts/context_budget.py <files>` for large reads
-4. Open only the highest-signal file subset; use targeted line ranges for large files
+All paths converge: **idea → specs → source files**
+
+| From | How |
+|------|----|
+| Keyword | `Grep` → source file → spec frontmatter `idea_id:` → `ideas/{id}.md` |
+| Idea | `ideas/{slug}.md` spec links → `specs/{slug}.md` `source:` map |
+| Code | `Grep` specs/ for filename → spec frontmatter `idea_id:` |
+| Task | `cc task {id}` → `context.idea_id` → `ideas/{id}.md` |
+
+## MCP Tools
+
+60 tools. Key operations:
+
+| Verb | MCP tool | CLI equivalent |
+|------|----------|---------------|
+| Navigate | `coherence_trace` | `cc trace idea {slug}` |
+| Advance | `coherence_advance_idea` | — |
+| Spec CRUD | `coherence_create_spec`, `coherence_update_spec` | `cc rest POST /api/spec-registry` |
+| Task flow | `coherence_task_seed` → `coherence_task_report` | `cc task seed {idea}` → `cc task report` |
+| Select work | `coherence_select_idea` | `cc idea select` |
+
+## Context Budget
+
+1. **Spec frontmatter** (25 lines avg) — `Read specs/{slug}.md limit=30` gets source, requirements, done_when, test, constraints. Body (200 lines avg) is human reference — skip unless you need API contract or data model detail.
+2. **Idea .md files** (35-52 lines) — problem, capabilities, spec links, absorbed ideas. Always worth reading in full.
+3. **CLI** for pipeline operations — `cc tasks`, `cc task {id}`, `cc status`, `cc idea {slug}`
+4. For large source files: use targeted line ranges from the `source:` symbols
 
 ## Code Isolation
 
