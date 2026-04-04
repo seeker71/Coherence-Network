@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { getApiBase } from "@/lib/api";
+import { withWorkspaceScope } from "@/lib/workspace";
+import { getActiveWorkspaceFromCookie } from "@/lib/workspace-server";
 
 export const metadata: Metadata = {
   title: "Specs",
@@ -130,12 +132,15 @@ function formatDate(value: string | null | undefined): string {
   }
 }
 
-async function loadSpecs(): Promise<{ source: string; items: SpecItem[]; registry: SpecRegistryEntry[]; flowItems: FlowItem[] }> {
+async function loadSpecs(workspaceId: string): Promise<{ source: string; items: SpecItem[]; registry: SpecRegistryEntry[]; flowItems: FlowItem[] }> {
   const API = getApiBase();
+  const inventoryUrl = withWorkspaceScope(`${API}/api/inventory/system-lineage?runtime_window_seconds=86400`, workspaceId);
+  const registryUrl = withWorkspaceScope(`${API}/api/spec-registry`, workspaceId);
+  const flowUrl = withWorkspaceScope(`${API}/api/inventory/flow?runtime_window_seconds=86400`, workspaceId);
   const [inventoryRes, registryRes, flowRes] = await Promise.all([
-    fetch(`${API}/api/inventory/system-lineage?runtime_window_seconds=86400`, { cache: "no-store" }),
-    fetch(`${API}/api/spec-registry`, { cache: "no-store" }),
-    fetch(`${API}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }),
+    fetch(inventoryUrl, { cache: "no-store" }),
+    fetch(registryUrl, { cache: "no-store" }),
+    fetch(flowUrl, { cache: "no-store" }),
   ]);
   if (!inventoryRes.ok || !registryRes.ok || !flowRes.ok) {
     throw new Error(`HTTP ${inventoryRes.status}/${registryRes.status}/${flowRes.status}`);
@@ -243,7 +248,8 @@ function LinkList({
 export default async function SpecsPage({ searchParams }: { searchParams: SpecsSearchParams }) {
   const resolvedSearchParams = await searchParams;
   const specFilter = normalizeFilter(resolvedSearchParams.spec_id);
-  const { source, items: specs, registry, flowItems } = await loadSpecs();
+  const workspaceId = await getActiveWorkspaceFromCookie();
+  const { source, items: specs, registry, flowItems } = await loadSpecs(workspaceId);
   const specCards = buildSpecCards(source, specs, registry, flowItems);
   const filteredSpecs = specFilter ? specCards.filter((s) => s.spec_id === specFilter) : specCards;
   const filteredRegistry = filteredSpecs.filter((spec) => Boolean(spec.registryItem));

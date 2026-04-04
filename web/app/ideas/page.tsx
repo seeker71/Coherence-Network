@@ -6,6 +6,8 @@ import {
   formatUsd,
 } from "@/lib/humanize";
 import IdeasListView from "@/components/ideas/IdeasListView";
+import { withWorkspaceScope } from "@/lib/workspace";
+import { getActiveWorkspaceFromCookie } from "@/lib/workspace-server";
 
 export const metadata: Metadata = {
   title: "Ideas",
@@ -120,10 +122,11 @@ const AUTO_ADVANCE_TRIGGERS: Array<{
   { taskType: "review", movesTo: "reviewing", detail: "Task completion pushes to review readiness." },
 ];
 
-async function loadIdeas(curatedOnly: boolean): Promise<IdeasResponse> {
+async function loadIdeas(curatedOnly: boolean, workspaceId: string): Promise<IdeasResponse> {
   const API = getApiBase();
   const qs = curatedOnly ? "?curated_only=true&limit=50" : "?limit=500";
-  const res = await fetch(`${API}/api/ideas${qs}`, { cache: "no-store" });
+  const url = withWorkspaceScope(`${API}/api/ideas${qs}`, workspaceId);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as IdeasResponse;
 }
@@ -171,9 +174,10 @@ function buildFallbackProgress(ideas: IdeaWithScore[]): ProgressDashboard {
   };
 }
 
-async function loadProgressDashboard(ideas: IdeaWithScore[]): Promise<ProgressDashboard> {
+async function loadProgressDashboard(ideas: IdeaWithScore[], workspaceId: string): Promise<ProgressDashboard> {
   const API = getApiBase();
-  const res = await fetch(`${API}/api/ideas/progress`, { cache: "no-store" });
+  const url = withWorkspaceScope(`${API}/api/ideas/progress`, workspaceId);
+  const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) {
     return buildFallbackProgress(ideas);
   }
@@ -209,8 +213,9 @@ export default async function IdeasPage({
 }) {
   const params = (await searchParams) ?? {};
   const showAll = params.all === "1" || params.all === "true";
-  const data = await loadIdeas(!showAll);
-  const progress = await loadProgressDashboard(data.ideas);
+  const workspaceId = await getActiveWorkspaceFromCookie();
+  const data = await loadIdeas(!showAll, workspaceId);
+  const progress = await loadProgressDashboard(data.ideas, workspaceId);
 
   const allIdeas = data.ideas;
   const roots = getRootIdeas([...allIdeas]);
