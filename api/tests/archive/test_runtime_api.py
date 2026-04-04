@@ -11,8 +11,9 @@ from httpx import ASGITransport, AsyncClient
 from nacl.signing import SigningKey
 
 from app.main import app
-from app.models.runtime import IdeaRuntimeSummary, RuntimeEvent, WebViewPerformanceReport, WebViewPerformanceRow
-from app.services import mvp_baseline_service, runtime_service
+from app.models.runtime import IdeaRuntimeSummary, RuntimeEvent, RuntimeEventCreate, WebViewPerformanceReport, WebViewPerformanceRow
+from app import config_loader
+from app.services import mvp_baseline_service, runtime_event_store, runtime_service
 
 AUTH_HEADERS = {"X-API-Key": "dev-key"}
 
@@ -1768,3 +1769,42 @@ def test_cached_web_view_performance_payload_stale_refresh_singleflight(
         time.sleep(0.02)
 
     assert calls["refresh"] == 2
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Runtime event store: DB precedence over file path
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_runtime_db_precedence_over_events_path_when_runtime_database_url_set(
+    tmp_path,
+) -> None:
+    """When a runtime DB is configured, we should still use it even if a JSON
+    file path is configured (the file path is treated as optional/legacy storage)."""
+    previous_runtime_db = config_loader.api_config("database_overrides", "runtime", None)
+    previous_events_path = config_loader.api_config("runtime", "events_path", None)
+    previous_idea_map_path = config_loader.api_config("runtime", "idea_map_path", None)
+
+    try:
+        config_loader.set_config_value("database_overrides", "runtime", f"sqlite+pysqlite:///{tmp_path / 'runtime.db'}")
+        config_loader.set_config_value("runtime", "events_path", str(tmp_path / "runtime_events.json"))
+        config_loader.set_config_value("runtime", "idea_map_path", str(tmp_path / "runtime_idea_map.json"))
+
+        event = runtime_service.record_event(
+            RuntimeEventCreate(
+                source="api",
+                endpoint="/api/health",
+                method="GET",
+                status_code=200,
+                runtime_ms=12.5,
+            )
+        )
+
+        assert runtime_event_store.enabled() is True
+
+        rows = runtime_event_store.list_events(limit=50)
+        assert any(row.id == event.id for row in rows)
+    finally:
+        config_loader.set_config_value("database_overrides", "runtime", previous_runtime_db)
+        config_loader.set_config_value("runtime", "events_path", previous_events_path)
+        config_loader.set_config_value("runtime", "idea_map_path", previous_idea_map_path)
