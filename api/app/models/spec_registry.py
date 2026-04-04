@@ -31,6 +31,7 @@ class SpecRegistryEntry(BaseModel):
     updated_at: datetime
     content_path: Optional[str] = None
     content_hash: Optional[str] = None
+    workspace_id: str = Field(default="coherence-network", description="Owning workspace. Specs live inside exactly one workspace — default workspace is 'coherence-network'.")
 
 
 class SpecRegistryCreate(BaseModel):
@@ -52,6 +53,7 @@ class SpecRegistryCreate(BaseModel):
     created_by_contributor_id: Optional[str] = None
     content_path: Optional[str] = None
     content_hash: Optional[str] = None
+    workspace_id: Optional[str] = Field(default=None, description="Owning workspace. Defaults to 'coherence-network' when omitted.")
 
     @model_validator(mode="before")
     @classmethod

@@ -22,7 +22,7 @@
 
 import { get, post, patch, put } from "../api.mjs";
 import { ensureIdentity } from "../identity.mjs";
-import { getFocus } from "../config.mjs";
+import { getFocus, getActiveWorkspace, DEFAULT_WORKSPACE_ID } from "../config.mjs";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import chalk from "chalk";
@@ -70,6 +70,13 @@ export async function listIdeas(args) {
   const query = { limit: Math.min(limit, 400) };
   if (!flags.all) query.curated_only = true;
   if (flags.pillar) query.pillar = flags.pillar;
+  // Workspace scope: --workspace flag override or config.json default.
+  // Only send workspace_id when it differs from default, to keep the wire
+  // payload quiet for single-tenant users.
+  const activeWorkspace = getActiveWorkspace();
+  if (activeWorkspace && activeWorkspace !== DEFAULT_WORKSPACE_ID) {
+    query.workspace_id = activeWorkspace;
+  }
 
   const raw = await get("/api/ideas", query);
   let data = Array.isArray(raw) ? raw : raw?.ideas;
