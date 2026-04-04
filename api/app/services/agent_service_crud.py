@@ -398,7 +398,7 @@ def update_task(
 ) -> Optional[dict]:
     """Update task. Returns updated task or None if not found."""
     _ensure_store_loaded(include_output=False)
-    task = _load_task_from_db(task_id, include_output=False) if agent_task_store_service.enabled() else None
+    task = _load_task_from_db(task_id, include_output=True) if agent_task_store_service.enabled() else None
     if task is None:
         task = _store.get(task_id)
     if task is None:

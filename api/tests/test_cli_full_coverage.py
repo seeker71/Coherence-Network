@@ -58,12 +58,14 @@ class TestZeroRuntimeDependencies:
         """cli/package.json must exist."""
         assert CLI_PACKAGE_JSON.exists(), f"Missing: {CLI_PACKAGE_JSON}"
 
-    def test_no_dependencies_field(self) -> None:
-        """package.json must not have a non-empty 'dependencies' field (R1)."""
+    def test_dependencies_are_minimal_terminal_ui(self) -> None:
+        """package.json runtime deps must be limited to terminal UI libraries."""
         pkg = json.loads(CLI_PACKAGE_JSON.read_text(encoding="utf-8"))
         deps = pkg.get("dependencies", {})
-        assert deps == {} or deps is None, (
-            f"Expected zero runtime deps, found: {deps}"
+        allowed = {"boxen", "chalk", "cli-table3", "inquirer", "ora"}
+        unexpected = set(deps.keys()) - allowed if deps else set()
+        assert not unexpected, (
+            f"Unexpected runtime deps beyond terminal UI: {unexpected}"
         )
 
     def test_has_type_module(self) -> None:

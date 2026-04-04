@@ -399,11 +399,13 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
             _handle_verify_failure(task, idea_id, output)
         return None
 
+    # R5: verify-production with VERIFY_PASSED → set manifestation_status=validated
+    # This must happen regardless of whether we advance to reflect or not.
+    if _is_verify_phase and "VERIFY_PASSED" in output and idea_id:
+        _set_idea_validated(idea_id)
+
     next_phase = _NEXT_PHASE.get(task_type)
     if not next_phase:
-        # R5: verify-production with VERIFY_PASSED → set manifestation_status=validated
-        if _is_verify_phase and "VERIFY_PASSED" in output and idea_id:
-            _set_idea_validated(idea_id)
         return None
 
     if not idea_id:

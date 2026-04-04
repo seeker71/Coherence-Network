@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -13,6 +14,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 import uvicorn
 
 from app.main import app
@@ -21,6 +23,12 @@ from app.services import graph_service
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLI_ENTRYPOINT = REPO_ROOT / "cli" / "bin" / "cc.mjs"
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+# Find node binary — may not be in PATH inside a Python venv
+_NODE_BIN = shutil.which("node") or (
+    "/opt/homebrew/bin/node" if Path("/opt/homebrew/bin/node").exists() else None
+)
+pytestmark = pytest.mark.skipif(_NODE_BIN is None, reason="node not found")
 
 
 def _free_port() -> int:
@@ -82,7 +90,7 @@ def _run_cli(
         env.pop("COHERENCE_HUB_URL", None)
         env.pop("COHERENCE_API_KEY", None)
         completed = subprocess.run(
-            ["node", str(CLI_ENTRYPOINT), *args],
+            [_NODE_BIN, str(CLI_ENTRYPOINT), *args],
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
@@ -98,7 +106,7 @@ def _run_cli(
             env.pop("COHERENCE_HUB_URL", None)
             env.pop("COHERENCE_API_KEY", None)
             completed = subprocess.run(
-                ["node", str(CLI_ENTRYPOINT), *args],
+                [_NODE_BIN, str(CLI_ENTRYPOINT), *args],
                 cwd=REPO_ROOT,
                 capture_output=True,
                 text=True,

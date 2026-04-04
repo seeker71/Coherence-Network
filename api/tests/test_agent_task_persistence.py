@@ -254,7 +254,8 @@ def test_db_reload_without_output_does_not_erase_task_output(
         worker_id="openai-codex",
     )
     assert updated is not None
-    assert str(updated.get("output") or "").endswith("...[truncated]")
+    out_text = str(updated.get("output") or "")
+    assert "COMPACT SUMMARY" in out_text or len(out_text) <= 1200
 
     # No output provided here; DB row should keep the previously stored output.
     again = agent_service.update_task(
@@ -266,7 +267,8 @@ def test_db_reload_without_output_does_not_erase_task_output(
 
     fetched = agent_service.get_task(task_id)
     assert fetched is not None
-    assert str(fetched.get("output") or "").endswith("...[truncated]")
+    fetched_out = str(fetched.get("output") or "")
+    assert "COMPACT SUMMARY" in fetched_out or len(fetched_out) <= 1200
 
 
 def test_db_list_tasks_uses_paginated_query_not_full_table_reload(

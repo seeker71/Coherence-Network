@@ -453,7 +453,7 @@ export async function startOpsMode() {
       }
 
       const raw = (await rl.question(
-        "ops> [r]efresh [l <task_id>]og [e <task_id>]vents [s <task_id>]tream [runner <target> <cmd>] [c]lear [q]uit: ",
+        "ops> [r]efresh [l]og [e]vents [s]tream [w]atch [d]ebug [m]odels [p]roviders [u]sage [q]uit: ",
       )).trim();
       if (!raw || raw === "r" || raw === "refresh") continue;
       if (raw === "q" || raw === "quit") break;
@@ -472,6 +472,48 @@ export async function startOpsMode() {
       }
       if (raw.startsWith("s ")) {
         await followTaskEvents(raw.slice(2).trim(), { verbose: false });
+        continue;
+      }
+      if (raw.startsWith("w ")) {
+        // Launch live watch panel for a task
+        const { watchTask } = await import("./tasks.mjs");
+        await watchTask([raw.slice(2).trim()]);
+        continue;
+      }
+      if (raw === "d" || raw === "debug") {
+        const { debugCommand } = await import("./debug.mjs");
+        await debugCommand([]);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue;
+      }
+      if (raw === "d on") {
+        const { debugCommand } = await import("./debug.mjs");
+        await debugCommand(["on"]);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        continue;
+      }
+      if (raw === "d off") {
+        const { debugCommand } = await import("./debug.mjs");
+        await debugCommand(["off"]);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        continue;
+      }
+      if (raw === "m" || raw === "models") {
+        const { modelsCommand } = await import("./models.mjs");
+        await modelsCommand([]);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue;
+      }
+      if (raw === "p" || raw === "providers") {
+        const { showProviderStats } = await import("./providers.mjs");
+        await showProviderStats([]);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        continue;
+      }
+      if (raw === "u" || raw === "usage") {
+        const { usageCommand } = await import("./models.mjs");
+        await usageCommand([]);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         continue;
       }
       if (raw.startsWith("runner ")) {

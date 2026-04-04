@@ -264,7 +264,7 @@ async def test_get_edge_types_registry():
     data = r.json()
     assert "edge_types" in data
     types = data["edge_types"]
-    assert len(types) == 7, f"Expected 7 edge types, got {len(types)}"
+    assert len(types) == 9, f"Expected 9 edge types, got {len(types)}"
     for entry in types:
         assert "type" in entry
         assert "description" in entry
