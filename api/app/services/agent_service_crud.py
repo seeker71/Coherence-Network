@@ -296,14 +296,52 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     apply_agent_graph_state_contract(task)
     task["context"] = annotate_task_context(task)
     
-    # Phase 2: Enforcement (Context Hygiene Soft Gates)
+    # Phase 2: Enforcement (Lean Task-Card & File-Scope Gates)
     hygiene = task["context"].get("context_hygiene", {})
-    if hygiene.get("score", 100) < 40:
+    task_card_val = task["context"].get("task_card_validation", {})
+    file_scope_count = hygiene.get("file_scope_count", 0)
+
+    # Hard limit: reject tasks with >40 files outright
+    if file_scope_count > 40:
+        task["status"] = TaskStatus.FAILED
+        task["output"] = (
+            f"FILE_SCOPE_HARD_LIMIT: Task lists {file_scope_count} files. "
+            f"Maximum allowed is 40. Split this into smaller tasks with exact file paths."
+        )
+    # Soft gate: broad file scope (>20 files)
+    elif file_scope_count > 20:
+        task["status"] = TaskStatus.NEEDS_DECISION
+        task["decision_prompt"] = (
+            f"BROAD_FILE_SCOPE: Task touches {file_scope_count} files. "
+            f"Narrow files_allowed to ≤20 exact paths before execution."
+        )
+    # Soft gate: weak task card (score <0.4 = ≤1 of 5 required fields)
+    # Only fires when caller provided structured context (task_card or files_allowed),
+    # not for bare API-created tasks with empty context.
+    elif (
+        task_card_val.get("score", 1.0) < 0.4
+        and (ctx.get("task_card") or ctx.get("files_allowed"))
+    ):
+        missing = task_card_val.get("missing", [])
+        task["status"] = TaskStatus.NEEDS_DECISION
+        task["decision_prompt"] = (
+            f"WEAK_TASK_CARD: Task card is missing {', '.join(missing)}. "
+            f"Add goal/files_allowed/done_when/commands/constraints before execution."
+        )
+    # Soft gate: oversized direction (>3000 chars)
+    elif len(task.get("direction", "")) > 3000:
+        task["status"] = TaskStatus.NEEDS_DECISION
+        task["decision_prompt"] = (
+            f"OVERSIZED_DIRECTION: Direction is {len(task['direction'])} chars. "
+            f"Summarize into a shorter task card (<3000 chars)."
+        )
+    # Catch-all: overall hygiene score <40
+    elif hygiene.get("score", 100) < 40:
         task["status"] = TaskStatus.NEEDS_DECISION
         task["decision_prompt"] = (
             f"LOW_CONTEXT_HYGIENE (Score: {hygiene.get('score')}). "
             f"This task is too bloated to execute efficiently. "
-            f"Flags: {', '.join([f['id'] for flag in hygiene.get('flags', [])])}. "
+            f"Flags: {', '.join([flag['id'] for flag in hygiene.get('flags', [])])}. "
             f"Please narrow the file scope or shorten the direction before continuing."
         )
 
