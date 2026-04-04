@@ -185,3 +185,56 @@ def summarize_recent_tasks(tasks: list[dict[str, Any]]) -> dict[str, Any]:
         ],
     }
 
+
+def generate_output_summary(output: str | None, status: str = "", error_category: str | None = None) -> str | None:
+    """Generate a compact summary of task output for list/attention views."""
+    if not output:
+        return None
+    text = str(output).strip()
+    if len(text) <= 500:
+        return text  # Already compact
+
+    lines = text.splitlines()
+    line_count = len(lines)
+    char_count = len(text)
+
+    # Find first meaningful line (non-empty, non-separator)
+    headline = ""
+    for line in lines:
+        stripped = line.strip()
+        if stripped and not all(c in "-=~#*" for c in stripped):
+            headline = stripped[:200]
+            break
+
+    # Look for key signal patterns
+    key_signal = ""
+    signal_patterns = [
+        ("passed", lambda l: "pass" in l.lower() and ("test" in l.lower() or "assert" in l.lower())),
+        ("error", lambda l: l.strip().startswith(("Error:", "ERROR:", "Traceback", "FAILED:"))),
+        ("verify", lambda l: "VERIFY_PASSED" in l or "VERIFY_FAILED" in l or "CODE_REVIEW_PASSED" in l),
+    ]
+    for _name, matcher in signal_patterns:
+        for line in reversed(lines[-30:]):
+            if matcher(line):
+                key_signal = line.strip()[:300]
+                break
+        if key_signal:
+            break
+
+    # Build summary
+    parts = [f"[{status}]" if status else "[task]", f"{char_count} chars, {line_count} lines"]
+    if error_category:
+        parts.append(f"error: {error_category}")
+    if headline:
+        parts.append(f"| {headline}")
+    if key_signal and key_signal != headline:
+        parts.append(f"| {key_signal}")
+
+    # Add tail context
+    tail = text[-200:].strip()
+    if tail:
+        parts.append(f"| ...{tail}")
+
+    summary = " ".join(parts)
+    return summary[:800]  # Cap total summary
+

@@ -184,6 +184,7 @@ def task_to_item(task: dict) -> dict:
         "decision": task.get("decision"),
         "error_summary": task.get("error_summary"),    # DG-015 fix
         "error_category": task.get("error_category"),  # DG-015 fix
+        "output_summary": task.get("output_summary"),
         "target_state": ctx.get("target_state"),
         "success_evidence": ctx.get("success_evidence"),
         "abort_evidence": ctx.get("abort_evidence"),
@@ -199,6 +200,7 @@ def task_to_attention_item(task: dict) -> dict:
     """Like task_to_item but includes output (spec 003: GET /attention)."""
     out = task_to_item(task)
     out["output"] = task.get("output")
+    out["output_summary"] = task.get("output_summary")
     return out
 
 
@@ -213,6 +215,7 @@ def task_to_full(task: dict) -> dict:
         "model": task["model"],
         "command": task["command"],
         "output": task.get("output"),
+        "output_summary": task.get("output_summary"),
         "context": task.get("context"),
         "progress_pct": task.get("progress_pct"),
         "current_step": task.get("current_step"),

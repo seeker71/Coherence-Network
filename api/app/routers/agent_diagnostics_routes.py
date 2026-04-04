@@ -110,7 +110,7 @@ def _task_log_preview(task: dict[str, Any], *, max_chars: int = 1200) -> dict[st
         value = task.get(key)
         if value:
             snapshot_parts.append(f"{key}: {value}")
-    output = str(task.get("output") or "").strip()
+    output = str(task.get("output_summary") or task.get("output") or "").strip()
     if output:
         snapshot_parts.append("")
         snapshot_parts.append(output[:max_chars])

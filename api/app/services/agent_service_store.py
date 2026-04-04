@@ -135,6 +135,7 @@ def _deserialize_task(raw: dict[str, Any]) -> dict[str, Any] | None:
         "model": model.strip(),
         "command": command.strip() or "PATCH /api/agent/tasks/{task_id}",
         "output": raw.get("output"),
+        "output_summary": raw.get("output_summary"),
         "context": raw.get("context") if isinstance(raw.get("context"), dict) else None,
         "progress_pct": raw.get("progress_pct"),
         "current_step": raw.get("current_step"),
