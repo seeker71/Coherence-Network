@@ -3,6 +3,7 @@ idea_id: contributor-experience
 title: Contributor Experience
 stage: specced
 work_type: feature
+pillar: network
 specs:
   - [094-contributor-onboarding-and-governed-change-flow](../specs/094-contributor-onboarding-and-governed-change-flow.md)
   - [168-identity-driven-onboarding-tofu](../specs/168-identity-driven-onboarding-tofu.md)

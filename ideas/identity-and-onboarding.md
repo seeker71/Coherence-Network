@@ -3,6 +3,7 @@ idea_id: identity-and-onboarding
 title: Identity and Onboarding
 stage: specced
 work_type: feature
+pillar: network
 phase: 2
 specs:
   - [168-identity-driven-onboarding-tofu](../specs/168-identity-driven-onboarding-tofu.md)

@@ -3,6 +3,7 @@ idea_id: coherence-credit
 title: Coherence Credit (CC)
 stage: implementing
 work_type: feature
+pillar: economics
 specs:
   - [119-coherence-credit-internal-currency](../specs/119-coherence-credit-internal-currency.md)
   - [124-cc-economics-and-value-coherence](../specs/124-cc-economics-and-value-coherence.md)

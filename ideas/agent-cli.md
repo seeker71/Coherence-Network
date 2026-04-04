@@ -1,8 +1,9 @@
 ---
 idea_id: agent-cli
-title: Agent CLI
+title: Agent CLI and Interfaces
 stage: implementing
 work_type: feature
+pillar: pipeline
 specs:
   - [108-unified-agent-cli-flow-patch-on-fail](../specs/108-unified-agent-cli-flow-patch-on-fail.md)
   - [111-agent-execution-lifecycle-hooks](../specs/111-agent-execution-lifecycle-hooks.md)

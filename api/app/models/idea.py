@@ -102,6 +102,8 @@ class Idea(BaseModel):
     workspace_git_url: Optional[str] = Field(default=None, description="Git remote URL of the repo this idea lives in. Enables multi-repo pipeline routing.")
     slug: str = Field(default="", description="URL-safe human identifier. Unique. Backfilled from id if absent.")
     slug_history: list[str] = Field(default_factory=list, description="Previous slugs — kept so old URLs/links resolve.")
+    is_curated: bool = Field(default=False, description="True for super-ideas defined in ideas/*.md — surfaced by default in public views.")
+    pillar: Optional[str] = Field(default=None, description="Top-level grouping for curated super-ideas: realization|pipeline|economics|surfaces|network|foundation")
 
 
 class IdeaWithScore(Idea):
