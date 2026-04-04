@@ -248,6 +248,7 @@ _NODE_GIT = _get_git_info()
 _TASK_TIMEOUT = [rc("execution", "timeout_default_s", 300)]  # 10 min default — real code takes time
 _RESUME_MODE = [False]
 _SKIP_PERMISSIONS = [True]  # --dangerously-skip-permissions for claude; operators can disable
+_REPO_FILTER: list[str] = [""]  # --repo flag: only claim tasks targeting this repo URL
 _OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 try:
     from app.services.config_service import get_hub_url as _get_hub
@@ -6002,6 +6003,21 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             for candidate in task_list:
                 ctx = candidate.get("context") if isinstance(candidate.get("context"), dict) else {}
                 idea_id = ctx.get("idea_id", "")
+                workspace_git_url = ctx.get("workspace_git_url", "")
+
+                # Repo credential gate: skip tasks this node can't push to
+                if _REPO_FILTER[0]:
+                    # Explicit --repo flag: only claim tasks for this repo
+                    norm_filter = _REPO_FILTER[0].lower().replace("https://", "").replace("http://", "").rstrip("/")
+                    norm_task = workspace_git_url.lower().replace("https://", "").replace("http://", "").rstrip("/")
+                    if norm_task and norm_task != norm_filter:
+                        continue
+                elif workspace_git_url and not _get_repo_token(workspace_git_url):
+                    # Auto-filter: skip tasks for repos we don't have credentials for
+                    log.debug("WORKER[%d] skipping task=%s — no credentials for %s",
+                              worker_id, candidate.get("id", "?")[:12], workspace_git_url)
+                    continue
+
                 with _active_lock:
                     if len(_active_idea_ids) >= _MAX_PARALLEL:
                         break  # At capacity
@@ -6431,6 +6447,7 @@ def main():
                         help="Max parallel tasks via worktrees (0=sequential)")
     parser.add_argument("--heartbeat", action="store_true", help="Enable autonomous heartbeat mode (continuous execution)")
     parser.add_argument("--autonomous", action="store_true", help="Register as autonomous node in federation")
+    parser.add_argument("--repo", help="Only claim tasks targeting this repo URL (skip tasks without matching credentials)")
     args = parser.parse_args()
 
     # Enable loop if heartbeat is on
@@ -6440,6 +6457,7 @@ def main():
     _TASK_TIMEOUT[0] = args.timeout
     _RESUME_MODE[0] = bool(args.resume)
     _SKIP_PERMISSIONS[0] = not args.no_skip_permissions
+    _REPO_FILTER[0] = args.repo or ""
 
     # Detect providers
     global PROVIDERS
