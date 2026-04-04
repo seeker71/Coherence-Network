@@ -1,3 +1,15 @@
+---
+idea_id: pipeline-reliability
+status: done
+source:
+  - file: api/app/services/smart_reap_service.py
+    symbols: [timeout extension logic]
+  - file: api/app/services/agent_execution_retry.py
+    symbols: [_resolve_retry_max()]
+  - file: api/app/services/agent_task_continuation_service.py
+    symbols: [task continuation]
+---
+
 # Spec: Data-Driven Timeout and Task Resume
 
 ## Purpose

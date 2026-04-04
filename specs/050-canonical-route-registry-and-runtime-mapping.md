@@ -1,3 +1,13 @@
+---
+idea_id: data-infrastructure
+status: done
+source:
+  - file: api/app/services/route_registry_service.py
+    symbols: [get_canonical_routes()]
+  - file: api/app/routers/registry_discovery.py
+    symbols: [route discovery endpoints]
+---
+
 # Spec: Canonical Route Registry and Runtime Mapping
 
 ## Purpose

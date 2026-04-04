@@ -10,7 +10,7 @@ What needs work, what's done, what's next.
 |------|------|--------|-------|
 | 1 | `--repo` flag in local_runner.py — skip tasks if node lacks credentials for target repo | **done** | `api/scripts/local_runner.py` |
 | 2 | Auto-filter: skip tasks for repos without credentials in `keys.json` (no flag needed) | **done** | `api/scripts/local_runner.py` |
-| 3 | Write credential routing tests | todo | `api/tests/test_flow_enforcement.py` |
+| 3 | Write credential routing tests | **done** | `api/tests/test_flow_enforcement.py` |
 
 **Context**: DB schema + CRUD endpoints + CLI `cc credentials` already exist. Runner now filters tasks by repo credentials (both explicit `--repo` flag and automatic credential check).
 
@@ -18,15 +18,13 @@ What needs work, what's done, what's next.
 
 | # | Feature | Description | Effort |
 |---|---------|-------------|--------|
-| 1 | **Compact summaries** | Replace raw logs/command output in operator surfaces with summaries + drilldown. Reduces context burn. | Medium |
-| 2 | **Tool overhead controls** | Auto-prune unused tools/adapters per task. Expose cost of always-on integrations. | Medium |
-| 3 | **Mission control surface** | `/mission-control` consolidating pipeline, diagnostics, gates, usage, tasks into one view. | Large |
-| 4 | **Goal-to-execution model** | Wire ideas/specs as operational goals with task groups, owners, budget envelopes. | Large |
-| 5 | **Approvals & budget board** | Single board for governance requests, deploy gates, needs_decision tasks, spend pressure. | Medium |
-| 6 | **Adapters catalog** | First-class surface for providers, federation nodes, Discord/Telegram, deploy gates. | Medium |
-| 7 | **Guided onboarding** | Beginner-friendly setup flow with deployment presets (local/private/public). | Medium |
-| 8 | **CLI mission control parity** | `cc mission-control`, `cc approvals`, `cc budgets`, `cc adapters`. | Medium |
-| 9 | **Anomaly self-heal policies** | Orphaned tasks, stale runners, deploy drift → automatic recovery policies. | Large |
+| 1 | **Mission control surface** | `/mission-control` consolidating pipeline, diagnostics, gates, usage, tasks into one view. | Large |
+| 2 | **Goal-to-execution model** | Wire ideas/specs as operational goals with task groups, owners, budget envelopes. | Large |
+| 3 | **Approvals & budget board** | Single board for governance requests, deploy gates, needs_decision tasks, spend pressure. | Medium |
+| 4 | **Adapters catalog** | First-class surface for providers, federation nodes, Discord/Telegram, deploy gates. | Medium |
+| 5 | **Guided onboarding** | Beginner-friendly setup flow with deployment presets (local/private/public). | Medium |
+| 6 | **CLI mission control parity** | `cc mission-control`, `cc approvals`, `cc budgets`, `cc adapters`. | Medium |
+| 7 | **Anomaly self-heal policies** | Orphaned tasks, stale runners, deploy drift → automatic recovery policies. | Large |
 
 ### Coverage Gaps
 

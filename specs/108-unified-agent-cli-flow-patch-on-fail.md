@@ -1,3 +1,13 @@
+---
+idea_id: agent-cli
+status: done
+source:
+  - file: api/scripts/run_cli_task_flow_matrix.py
+    symbols: [unified CLI flow, PASS_FAIL contract]
+  - file: api/scripts/local_runner.py
+    symbols: [local CLI execution]
+---
+
 # 108 — Unified Agent CLI Flow: All Task Types, Patch on Verification Fail
 
 ## Purpose

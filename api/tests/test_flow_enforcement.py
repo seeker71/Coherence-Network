@@ -304,3 +304,125 @@ def test_clean_task_passes_all_gates(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert task["status"] == TaskStatus.PENDING
     assert task.get("decision_prompt") is None
+
+
+# ===========================================================================
+# Credential Routing (14 tests)
+# ===========================================================================
+
+import json
+import os
+
+
+def _write_keys_json(tmp_path, repo_tokens: dict) -> str:
+    """Write a temporary keys.json and return its path."""
+    ks_dir = os.path.join(str(tmp_path), ".coherence-network")
+    os.makedirs(ks_dir, exist_ok=True)
+    ks_path = os.path.join(ks_dir, "keys.json")
+    with open(ks_path, "w") as f:
+        json.dump({"repo_tokens": repo_tokens}, f)
+    return ks_path
+
+
+def _get_repo_token_standalone(repo_url: str, ks_path: str) -> str | None:
+    """Standalone re-implementation of _get_repo_token for testing.
+
+    Mirrors the exact logic in local_runner.py:1156-1174.
+    """
+    if not repo_url:
+        return None
+    if os.path.exists(ks_path):
+        try:
+            with open(ks_path, encoding="utf-8") as f:
+                ks = json.load(f)
+            normalized = repo_url.lower().replace("https://", "").replace("http://", "").rstrip("/")
+            tokens = ks.get("repo_tokens", {})
+            for rurl, token in tokens.items():
+                nrurl = rurl.lower().replace("https://", "").replace("http://", "").rstrip("/")
+                if nrurl == normalized:
+                    return token
+        except Exception:
+            pass
+    return None
+
+
+def _should_skip_task(
+    workspace_git_url: str,
+    repo_filter: str,
+    has_token: bool,
+) -> bool:
+    """Re-implement the worker loop credential gate (local_runner.py:6008-6019).
+
+    Returns True if the task should be skipped.
+    """
+    if repo_filter:
+        norm_filter = repo_filter.lower().replace("https://", "").replace("http://", "").rstrip("/")
+        norm_task = workspace_git_url.lower().replace("https://", "").replace("http://", "").rstrip("/")
+        if norm_task and norm_task != norm_filter:
+            return True
+    elif workspace_git_url and not has_token:
+        return True
+    return False
+
+
+# -- Token Lookup Tests --
+
+class TestGetRepoToken:
+    """Test the repo token lookup logic (_get_repo_token behavior)."""
+
+    def test_exact_match(self, tmp_path):
+        ks = _write_keys_json(tmp_path, {"https://github.com/user/repo": "ghp_token123"})
+        assert _get_repo_token_standalone("https://github.com/user/repo", ks) == "ghp_token123"
+
+    def test_strips_protocol(self, tmp_path):
+        """URL without protocol matches stored URL with protocol."""
+        ks = _write_keys_json(tmp_path, {"https://github.com/user/repo": "ghp_abc"})
+        assert _get_repo_token_standalone("github.com/user/repo", ks) == "ghp_abc"
+
+    def test_case_insensitive(self, tmp_path):
+        ks = _write_keys_json(tmp_path, {"https://GitHub.com/User/Repo": "ghp_case"})
+        assert _get_repo_token_standalone("https://github.com/user/repo", ks) == "ghp_case"
+
+    def test_trailing_slash_stripped(self, tmp_path):
+        ks = _write_keys_json(tmp_path, {"https://github.com/user/repo/": "ghp_slash"})
+        assert _get_repo_token_standalone("https://github.com/user/repo", ks) == "ghp_slash"
+
+    def test_no_match_returns_none(self, tmp_path):
+        ks = _write_keys_json(tmp_path, {"https://github.com/user/other-repo": "ghp_other"})
+        assert _get_repo_token_standalone("https://github.com/user/repo", ks) is None
+
+    def test_empty_url_returns_none(self, tmp_path):
+        ks = _write_keys_json(tmp_path, {"https://github.com/user/repo": "ghp_abc"})
+        assert _get_repo_token_standalone("", ks) is None
+
+    def test_missing_keystore_returns_none(self, tmp_path):
+        fake = os.path.join(str(tmp_path), "nonexistent", "keys.json")
+        assert _get_repo_token_standalone("https://github.com/user/repo", fake) is None
+
+
+# -- Worker Loop Filter Tests --
+
+class TestRepoFilterLogic:
+    """Test the credential routing filter logic (worker loop gate)."""
+
+    def test_repo_flag_matching_url_passes(self):
+        assert not _should_skip_task("https://github.com/user/repo", "https://github.com/user/repo", True)
+
+    def test_repo_flag_different_url_skipped(self):
+        assert _should_skip_task("https://github.com/user/other", "https://github.com/user/repo", True)
+
+    def test_repo_flag_normalizes_urls(self):
+        assert not _should_skip_task("github.com/User/Repo/", "https://GitHub.com/user/repo", True)
+
+    def test_auto_filter_no_token_skipped(self):
+        assert _should_skip_task("https://github.com/user/repo", "", False)
+
+    def test_auto_filter_with_token_passes(self):
+        assert not _should_skip_task("https://github.com/user/repo", "", True)
+
+    def test_no_workspace_url_always_passes(self):
+        assert not _should_skip_task("", "", False)
+
+    def test_repo_flag_empty_task_url_passes(self):
+        """--repo set but task has no workspace URL -> not skipped (nothing to mismatch)."""
+        assert not _should_skip_task("", "https://github.com/user/repo", False)

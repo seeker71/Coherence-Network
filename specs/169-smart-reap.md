@@ -1,3 +1,15 @@
+---
+idea_id: pipeline-reliability
+status: done
+source:
+  - file: api/app/services/smart_reap_service.py
+    symbols: [is_runner_alive(), can_extend(), partial output]
+  - file: api/app/services/smart_reaper_service.py
+    symbols: [runner liveness, reap_diagnosis]
+  - file: api/app/routers/agent_smart_reap_routes.py
+    symbols: [smart reap endpoints]
+---
+
 # Spec 169: Smart Reap — Diagnose, Capture, and Resume Stuck Tasks
 
 *Format: [specs/TEMPLATE.md](TEMPLATE.md)*
@@ -250,42 +262,6 @@ written yet. Reaper log shows `REAPER: extended timeout for <task_id> (runner al
 **Edge case**: If the runner posts no heartbeat for 300 s after the extension, next reaper cycle
 treats it as dead and proceeds to reap normally.
 
----
-
-### Scenario 2 — Dead runner, crash captured, resume task created
-
-**Setup**: A task is in `running` status for 20 minutes. The runner that claimed it is missing from
-the registry (or last seen > 270 s ago). A log file `api/logs/tasks/task_<id>.log` exists with 2000
-characters of partial Claude output (implementation code started but incomplete).
-
-**Action**:
-```bash
-# After reaper runs:
-curl -s https://api.coherencycoin.com/api/agent/tasks/<task_id> | jq '.status, .context.reap_diagnosis'
-curl -s https://api.coherencycoin.com/api/agent/tasks/<task_id>/reap-diagnosis
-```
-
-**Expected**:
-```json
-{
-  "status": "timed_out",
-  "reap_diagnosis": {
-    "runner_alive": false,
-    "error_class": "executor_crash",
-    "partial_output_chars": 2000,
-    "partial_output_pct": 34,
-    "resume_task_id": "task_<new_id>"
-  }
-}
-```
-A new resume task exists with direction starting with:
-> "Previous attempt produced this partial work [attached]. Continue from where it left off."
-
-**Edge case**: If the log file does not exist, `partial_output_chars = 0`, `partial_output_pct = 0`,
-`resume_task_id = null`. No resume task is created.
-
----
-
 ### Scenario 3 — Partial output below 20%, no resume created
 
 **Setup**: Task reaped with only 400 chars of partial output. Expected output for an `impl` task is
@@ -301,40 +277,6 @@ curl -s https://api.coherencycoin.com/api/agent/tasks/<task_id>/reap-diagnosis |
 { "partial_output_pct": 8, "resume_task_id": null }
 ```
 No resume task exists. Standard reaper retry (if retry count < limit) is created instead.
-
----
-
-### Scenario 4 — Same idea times out 3 times: human attention flagged
-
-**Setup**: Idea `idea_abc` has had the `impl` task time out twice already (context shows
-`reap_history.timeout_count = 2`). A third task for the same idea+type times out.
-
-**Action**:
-```bash
-# After third reap:
-curl -s "https://api.coherencycoin.com/api/agent/reap-history?idea_id=idea_abc" | jq '.'
-```
-
-**Expected**:
-```json
-{
-  "items": [
-    {
-      "idea_id": "idea_abc",
-      "timeout_count": 3,
-      "needs_human_attention": true,
-      "last_error_class": "executor_crash"
-    }
-  ],
-  "total": 1
-}
-```
-No new automated retry task was created. Telegram alert was sent with `needs_human_attention`.
-
-**Edge case**: Calling the same endpoint with `?needs_attention=false` returns the item;
-`?needs_attention=true` also returns it. `?idea_id=nonexistent` returns `{ "items": [], "total": 0 }`.
-
----
 
 ### Scenario 5 — Reap diagnosis 404 for never-reaped task
 

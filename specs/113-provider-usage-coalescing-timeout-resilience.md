@@ -1,3 +1,13 @@
+---
+idea_id: pipeline-optimization
+status: done
+source:
+  - file: api/app/services/automation_usage_service.py
+    symbols: [ProviderUsageSnapshot, usage coalescing]
+  - file: api/app/models/automation_usage.py
+    symbols: [UsageAlert, ProviderUsageOverview]
+---
+
 # Spec: Provider Usage Coalescing + Timeout Resilience
 
 ## Purpose

@@ -1,3 +1,13 @@
+---
+idea_id: user-surfaces
+status: done
+source:
+  - file: web/app/page.tsx
+    symbols: [homepage]
+  - file: web/app/globals.css
+    symbols: [accessibility styling]
+---
+
 # Spec 165: UX Homepage Readability — Dark Mode Contrast Fixes & Light Mode Toggle
 
 **ID**: ux-homepage-readability

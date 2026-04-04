@@ -1,3 +1,15 @@
+---
+idea_id: pipeline-reliability
+status: done
+source:
+  - file: api/app/services/failed_task_diagnostics_service.py
+    symbols: [classify_error(), ensure_diagnostics()]
+  - file: api/app/models/agent.py
+    symbols: [error_summary, error_category fields]
+  - file: api/app/services/agent_task_store_service.py
+    symbols: [AgentTaskRecord.error_summary column]
+---
+
 # Spec 113: Failed-Task Diagnostics Completeness Contract
 
 **Idea**: `agent-failed-task-diagnostics` (sub-idea of `coherence-network-agent-pipeline`)

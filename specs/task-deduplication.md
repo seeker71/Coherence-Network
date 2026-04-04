@@ -1,3 +1,11 @@
+---
+idea_id: pipeline-reliability
+status: partial
+source:
+  - file: api/app/services/agent_service_active_task.py
+    symbols: [find_active_task_by_fingerprint(), find_active_task_by_session_key()]
+---
+
 # Spec: Task Deduplication — Never Create Duplicate Tasks for the Same Idea+Phase
 
 ## Purpose

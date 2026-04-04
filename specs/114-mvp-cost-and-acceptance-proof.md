@@ -1,3 +1,11 @@
+---
+idea_id: coherence-credit
+status: partial
+source:
+  - file: api/app/models/idea.py
+    symbols: [Idea.work_type, Idea.actual_cost, Idea.stage]
+---
+
 # Spec: MVP Cost Tracking and Acceptance Proof
 
 ## Purpose

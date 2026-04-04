@@ -1,3 +1,15 @@
+---
+idea_id: data-infrastructure
+status: done
+source:
+  - file: api/app/services/graph_service.py
+    symbols: [create_node(), get_node(), create_edge(), get_edges()]
+  - file: api/app/models/graph.py
+    symbols: [Node, Edge]
+  - file: api/app/routers/graph.py
+    symbols: [graph CRUD endpoints]
+---
+
 # Spec: Universal Node + Edge Data Layer
 
 ## Purpose

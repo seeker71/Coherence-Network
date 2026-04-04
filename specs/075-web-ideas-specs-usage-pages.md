@@ -1,3 +1,15 @@
+---
+idea_id: user-surfaces
+status: done
+source:
+  - file: web/app/ideas/page.tsx
+    symbols: [ideas overview page]
+  - file: web/app/specs/page.tsx
+    symbols: [specs browse page]
+  - file: web/app/usage/page.tsx
+    symbols: [usage analytics page]
+---
+
 # Spec 075: Web Pages For Ideas, Specs, Usage (Human Parity)
 
 ## Purpose

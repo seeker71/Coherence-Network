@@ -1,3 +1,11 @@
+---
+idea_id: data-infrastructure
+status: done
+source:
+  - file: api/app/services/telemetry_persistence_service/__init__.py
+    symbols: [backend_info(), checkpoint()]
+---
+
 # Spec: Runtime Telemetry DB Precedence
 
 ## Purpose

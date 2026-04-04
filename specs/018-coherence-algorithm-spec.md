@@ -1,3 +1,15 @@
+---
+idea_id: data-infrastructure
+status: done
+source:
+  - file: api/app/services/coherence_service.py
+    symbols: [compute_coherence()]
+  - file: api/app/routers/coherence.py
+    symbols: [coherence score endpoint]
+  - file: api/app/services/coherence_signal_depth_service.py
+    symbols: [signal depth]
+---
+
 # Spec: Coherence Algorithm — Formal Spec
 
 ## Purpose
