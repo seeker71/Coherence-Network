@@ -21,9 +21,10 @@ async def list_specs(
     response: Response,
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
+    workspace_id: str | None = Query(None, description="Filter by owning workspace. Defaults to all workspaces."),
 ) -> list[SpecRegistryEntry]:
-    response.headers["x-total-count"] = str(spec_registry_service.count_specs())
-    return spec_registry_service.list_specs(limit=limit, offset=offset)
+    response.headers["x-total-count"] = str(spec_registry_service.count_specs(workspace_id=workspace_id))
+    return spec_registry_service.list_specs(limit=limit, offset=offset, workspace_id=workspace_id)
 
 
 @router.get("/spec-registry/cards")

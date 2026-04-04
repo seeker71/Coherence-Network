@@ -202,17 +202,45 @@ def _to_model(row: SpecRegistryRecord) -> SpecRegistryEntry:
     )
 
 
-def count_specs() -> int:
+def count_specs(workspace_id: str | None = None) -> int:
     from app.services import graph_service
-    return graph_service.count_nodes(type="spec").get("total", 0)
+    if not workspace_id:
+        return graph_service.count_nodes(type="spec").get("total", 0)
+    # Post-fetch filter — workspace_id lives in properties JSON.
+    result = graph_service.list_nodes(type="spec", limit=1000, offset=0)
+    return sum(
+        1
+        for n in result.get("items", [])
+        if (n.get("workspace_id") or "coherence-network") == workspace_id
+    )
 
 
-def list_specs(limit: int = 200, offset: int = 0) -> list[SpecRegistryEntry]:
+def list_specs(
+    limit: int = 200,
+    offset: int = 0,
+    workspace_id: str | None = None,
+) -> list[SpecRegistryEntry]:
+    """List specs, optionally filtered by owning workspace.
+
+    workspace_id: when provided, only return specs that belong to that workspace.
+    Specs without an explicit workspace_id are treated as belonging to
+    'coherence-network' (default workspace).
+    """
     from app.services import graph_service
     requested_limit = max(1, min(int(limit), 1000))
     requested_offset = max(0, int(offset))
-    result = graph_service.list_nodes(type="spec", limit=requested_limit, offset=requested_offset)
-    return [_graph_node_to_spec(n) for n in result.get("items", [])]
+    if not workspace_id:
+        result = graph_service.list_nodes(type="spec", limit=requested_limit, offset=requested_offset)
+        return [_graph_node_to_spec(n) for n in result.get("items", [])]
+    # Post-fetch filter — fetch a wide window, then filter + paginate.
+    result = graph_service.list_nodes(type="spec", limit=1000, offset=0)
+    matches = [
+        n
+        for n in result.get("items", [])
+        if (n.get("workspace_id") or "coherence-network") == workspace_id
+    ]
+    page = matches[requested_offset : requested_offset + requested_limit]
+    return [_graph_node_to_spec(n) for n in page]
 
 
 def list_specs_for_idea(idea_id: str) -> list[SpecRegistryEntry]:

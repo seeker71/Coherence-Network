@@ -3,6 +3,7 @@
  */
 
 import { get } from "../api.mjs";
+import { getActiveWorkspace, DEFAULT_WORKSPACE_ID } from "../config.mjs";
 
 /** Truncate at word boundary, append "..." if needed */
 function truncate(str, len) {
@@ -15,7 +16,12 @@ function truncate(str, len) {
 
 export async function listSpecs(args) {
   const limit = parseInt(args[0]) || 20;
-  const data = await get("/api/spec-registry", { limit });
+  const query = { limit };
+  const activeWorkspace = getActiveWorkspace();
+  if (activeWorkspace && activeWorkspace !== DEFAULT_WORKSPACE_ID) {
+    query.workspace_id = activeWorkspace;
+  }
+  const data = await get("/api/spec-registry", query);
   if (!data || !Array.isArray(data)) {
     console.log("Could not fetch specs.");
     return;
