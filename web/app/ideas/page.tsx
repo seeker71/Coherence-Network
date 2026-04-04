@@ -40,6 +40,9 @@ type IdeaWithScore = {
   idea_type?: string;
   parent_idea_id?: string | null;
   child_idea_ids?: string[];
+  /** Fractal landscape fields */
+  is_curated?: boolean;
+  pillar?: string | null;
 };
 
 type IdeasResponse = {
@@ -64,6 +67,26 @@ type ProgressDashboard = {
   completion_pct: number;
   by_stage: Record<string, StageBucket>;
   snapshot_at: string;
+};
+
+const PILLAR_ORDER = [
+  "realization",
+  "pipeline",
+  "economics",
+  "surfaces",
+  "network",
+  "foundation",
+] as const;
+
+type PillarName = (typeof PILLAR_ORDER)[number];
+
+const PILLAR_LABEL: Record<PillarName, string> = {
+  realization: "Realization — Track every idea from inception to impact",
+  pipeline: "Pipeline — Turn ideas into working software",
+  economics: "Economics — CC as unit of account, value flows fairly",
+  surfaces: "Surfaces — Where users meet the system",
+  network: "Network — How the platform federates and welcomes people",
+  foundation: "Foundation — Substrate everything rests on",
 };
 
 const STAGE_ORDER = [
@@ -97,11 +120,28 @@ const AUTO_ADVANCE_TRIGGERS: Array<{
   { taskType: "review", movesTo: "reviewing", detail: "Task completion pushes to review readiness." },
 ];
 
-async function loadIdeas(): Promise<IdeasResponse> {
+async function loadIdeas(curatedOnly: boolean): Promise<IdeasResponse> {
   const API = getApiBase();
-  const res = await fetch(`${API}/api/ideas`, { cache: "no-store" });
+  const qs = curatedOnly ? "?curated_only=true&limit=50" : "?limit=500";
+  const res = await fetch(`${API}/api/ideas${qs}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as IdeasResponse;
+}
+
+function groupByPillar(ideas: IdeaWithScore[]): Record<string, IdeaWithScore[]> {
+  const groups: Record<string, IdeaWithScore[]> = {};
+  for (const p of PILLAR_ORDER) groups[p] = [];
+  const unknown: IdeaWithScore[] = [];
+  for (const i of ideas) {
+    const p = (i.pillar ?? "").toLowerCase();
+    if (p && p in groups) groups[p].push(i);
+    else unknown.push(i);
+  }
+  if (unknown.length) groups["_unknown"] = unknown;
+  for (const k of Object.keys(groups)) {
+    groups[k].sort((a, b) => b.free_energy_score - a.free_energy_score);
+  }
+  return groups;
 }
 
 function emptyStageBucket(): StageBucket {
@@ -160,12 +200,21 @@ function getRootIdeas(allIdeas: IdeaWithScore[]): IdeaWithScore[] {
     .sort((a, b) => b.free_energy_score - a.free_energy_score);
 }
 
-export default async function IdeasPage() {
-  const data = await loadIdeas();
+type SearchParams = { all?: string };
+
+export default async function IdeasPage({
+  searchParams,
+}: {
+  searchParams?: Promise<SearchParams>;
+}) {
+  const params = (await searchParams) ?? {};
+  const showAll = params.all === "1" || params.all === "true";
+  const data = await loadIdeas(!showAll);
   const progress = await loadProgressDashboard(data.ideas);
 
   const allIdeas = data.ideas;
   const roots = getRootIdeas([...allIdeas]);
+  const grouped = !showAll ? groupByPillar(allIdeas) : null;
   const completionPct = Math.round(Math.max(0, Math.min(progress.completion_pct, 1)) * 100);
 
   return (
@@ -198,10 +247,12 @@ export default async function IdeasPage() {
       <section className="space-y-4" aria-labelledby="ideas-list-heading">
         <div className="space-y-2">
           <h2 id="ideas-list-heading" className="text-xl font-semibold tracking-tight">
-            Portfolio
+            {showAll ? "All ideas" : "Portfolio"}
           </h2>
           <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-            Switch between Cards and Table views. Toggle Expert mode in the header for IDs and raw data.
+            {showAll
+              ? "The complete landscape — every idea tracked across the fractal."
+              : "Sixteen super-ideas grouped by pillar. Drill into any one to see the absorbed ideas and linked specs."}
           </p>
         </div>
         {allIdeas.length === 0 ? (
@@ -214,9 +265,40 @@ export default async function IdeasPage() {
               Share an idea &rarr;
             </Link>
           </div>
-        ) : (
+        ) : showAll ? (
           <IdeasListView ideas={roots} />
-        )}
+        ) : grouped ? (
+          <div className="space-y-8">
+            {PILLAR_ORDER.map((pillar) => {
+              const bucket = grouped[pillar] ?? [];
+              if (bucket.length === 0) return null;
+              return (
+                <div key={pillar} className="space-y-3">
+                  <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/90 border-b border-border/30 pb-2">
+                    {PILLAR_LABEL[pillar]}
+                  </h3>
+                  <IdeasListView ideas={bucket} />
+                </div>
+              );
+            })}
+            {grouped["_unknown"] && grouped["_unknown"].length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/90 border-b border-border/30 pb-2">
+                  Other
+                </h3>
+                <IdeasListView ideas={grouped["_unknown"]} />
+              </div>
+            )}
+          </div>
+        ) : null}
+        <div className="pt-2">
+          <Link
+            href={showAll ? "/ideas" : "/ideas?all=1"}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+          >
+            {showAll ? "Show curated super-ideas only" : "Show every idea (the full landscape)"}
+          </Link>
+        </div>
       </section>
 
       {/* Lifecycle dashboard — collapsible, default closed */}

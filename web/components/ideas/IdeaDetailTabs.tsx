@@ -70,6 +70,21 @@ type IdeaWithScore = {
   value_gap: number;
 };
 
+type RegistrySpec = {
+  spec_id: string;
+  title: string;
+  summary?: string;
+  idea_id?: string | null;
+};
+
+type ChildIdea = {
+  id: string;
+  name: string;
+  description: string;
+  manifestation_status: string;
+  free_energy_score: number;
+};
+
 interface IdeaDetailTabsProps {
   idea: IdeaWithScore;
   flow: FlowItem | null;
@@ -90,6 +105,10 @@ interface IdeaDetailTabsProps {
   linkedTaskIds: string[];
   linkedRefs: string[];
   flowSearchParams: string;
+  /** Specs registered directly against this idea via frontmatter idea_id. */
+  registrySpecs?: RegistrySpec[];
+  /** Child ideas whose parent_idea_id equals this idea (absorbed under the super-idea). */
+  childIdeas?: ChildIdea[];
   /** Child slot: interactive forms (IdeaLensPanel, IdeaProgressEditor, etc.) */
   children?: React.ReactNode;
 }
@@ -145,6 +164,8 @@ export default function IdeaDetailTabs({
   linkedTaskIds,
   linkedRefs,
   flowSearchParams,
+  registrySpecs,
+  childIdeas,
   children,
 }: IdeaDetailTabsProps) {
   const { isExpert } = useExpertMode();
@@ -153,9 +174,13 @@ export default function IdeaDetailTabs({
   const contributorCount = flow?.contributors.all.length ?? 0;
   const usageEventsCount = flow?.contributions.usage_events_count ?? 0;
 
+  const specCount = (registrySpecs && registrySpecs.length) || linkedPlanIds.length;
+  const childCount = childIdeas?.length ?? 0;
+
   const tabs = [
     { id: "overview", label: "Overview" },
-    { id: "specs", label: "Specs", count: linkedPlanIds.length },
+    { id: "specs", label: "Specs", count: specCount },
+    ...(childCount > 0 ? [{ id: "absorbed", label: "Absorbed", count: childCount }] : []),
     { id: "tasks", label: "Tasks", count: linkedTaskIds.length },
     { id: "contributors", label: "Contributors", count: contributorCount },
     { id: "edges", label: "Edges", count: linkedRefs.length },
@@ -316,25 +341,83 @@ export default function IdeaDetailTabs({
           {activeTab === "specs" && (
             <div className="space-y-4 text-sm">
               <h2 className="text-lg font-semibold">
-                {isExpert ? "Linked spec IDs" : "Plans linked to this idea"}
+                {isExpert ? "Linked specs (registry)" : "Specs for this idea"}
               </h2>
-              {flowDetails && (
-                <p className="text-muted-foreground text-xs">Flow data unavailable: <code>{flowDetails}</code></p>
-              )}
-              {linkedPlanIds.length === 0 ? (
-                <p className="text-muted-foreground">No plans linked yet.</p>
-              ) : (
+              {registrySpecs && registrySpecs.length > 0 ? (
                 <ul className="space-y-2">
-                  {linkedPlanIds.map((specId, idx) => (
-                    <li key={specId} className="rounded-xl border border-border/20 bg-background/40 p-4">
+                  {registrySpecs.map((s) => (
+                    <li key={s.spec_id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
                       <Link
-                        href={`/specs/${encodeURIComponent(specId)}`}
+                        href={`/specs/${encodeURIComponent(s.spec_id)}`}
                         className="underline hover:text-foreground font-medium"
                       >
-                        {isExpert ? specId : `Plan ${idx + 1}`}
+                        {s.title || s.spec_id}
                       </Link>
+                      {s.summary && (
+                        <p className="text-xs text-muted-foreground leading-relaxed">{s.summary}</p>
+                      )}
                       {isExpert && (
-                        <p className="text-xs font-mono text-muted-foreground mt-1">{specId}</p>
+                        <p className="text-xs font-mono text-muted-foreground">{s.spec_id}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : linkedPlanIds.length > 0 ? (
+                <>
+                  {flowDetails && (
+                    <p className="text-muted-foreground text-xs">Flow data unavailable: <code>{flowDetails}</code></p>
+                  )}
+                  <ul className="space-y-2">
+                    {linkedPlanIds.map((specId, idx) => (
+                      <li key={specId} className="rounded-xl border border-border/20 bg-background/40 p-4">
+                        <Link
+                          href={`/specs/${encodeURIComponent(specId)}`}
+                          className="underline hover:text-foreground font-medium"
+                        >
+                          {isExpert ? specId : `Plan ${idx + 1}`}
+                        </Link>
+                        {isExpert && (
+                          <p className="text-xs font-mono text-muted-foreground mt-1">{specId}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p className="text-muted-foreground">No specs linked yet.</p>
+              )}
+            </div>
+          )}
+
+          {activeTab === "absorbed" && childIdeas && (
+            <div className="space-y-4 text-sm">
+              <h2 className="text-lg font-semibold">
+                {isExpert ? "Child ideas (parent_idea_id match)" : "Ideas absorbed into this one"}
+              </h2>
+              <p className="text-muted-foreground text-xs">
+                These ideas were wired under this super-idea during the fractal restructure.
+              </p>
+              {childIdeas.length === 0 ? (
+                <p className="text-muted-foreground">No absorbed ideas yet.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {childIdeas.map((c) => (
+                    <li key={c.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
+                      <Link
+                        href={`/ideas/${encodeURIComponent(c.id)}`}
+                        className="underline hover:text-foreground font-medium"
+                      >
+                        {c.name}
+                      </Link>
+                      {c.description && (
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                          {c.description}
+                        </p>
+                      )}
+                      {isExpert && (
+                        <p className="text-xs font-mono text-muted-foreground">
+                          {c.id} · fes={c.free_energy_score.toFixed(3)}
+                        </p>
                       )}
                     </li>
                   ))}

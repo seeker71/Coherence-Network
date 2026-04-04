@@ -3,6 +3,7 @@ idea_id: pipeline-reliability
 title: Pipeline Reliability
 stage: implementing
 work_type: feature
+pillar: pipeline
 specs:
   - [113-failed-task-diagnostics-contract](../specs/113-failed-task-diagnostics-contract.md)
   - [114-auto-heal-from-diagnostics](../specs/114-auto-heal-from-diagnostics.md)

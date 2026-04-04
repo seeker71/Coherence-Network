@@ -54,6 +54,8 @@ async def list_ideas(
     read_only_guard: bool = Query(False, description="When true, do not persist ensure logic (for invariant/guard runs)."),
     sort: str = Query("free_energy", description="Sort method: 'free_energy' (default, Method A) or 'marginal_cc' (Method B)."),
     tags: str = Query("", description="Comma-separated tag filter. When present, return only ideas matching all normalized tags."),
+    curated_only: bool = Query(False, description="When true, only return the 16 curated super-ideas from ideas/*.md."),
+    pillar: str | None = Query(None, description="Filter by pillar: realization|pipeline|economics|surfaces|network|foundation."),
 ) -> IdeaPortfolioResponse:
     raw_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
     parsed_tags = idea_service.normalize_tags(raw_tags) if raw_tags else None
@@ -65,6 +67,8 @@ async def list_ideas(
         read_only_guard=read_only_guard,
         sort_method=sort,
         tags_filter=parsed_tags,
+        curated_only=curated_only,
+        pillar=pillar,
     )
 
 
@@ -485,6 +489,28 @@ async def translate_idea_view(
         idea_tags=tags,
         view=view.value,
     )
+
+
+@router.get("/ideas/{idea_id}/children", response_model=list[IdeaWithScore])
+async def list_idea_children(idea_id: str) -> list[IdeaWithScore]:
+    """Return all child ideas whose parent_idea_id equals {idea_id}.
+
+    Used by the idea detail page to render absorbed ideas under a super-idea.
+    """
+    # Validate that the parent exists (gives 404 rather than empty list for typos)
+    if idea_service.get_idea(idea_id) is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return idea_service.list_children_of(idea_id)
+
+
+@router.get("/ideas/{idea_id}/specs")
+async def list_idea_specs(idea_id: str) -> list[dict]:
+    """Return all specs linked to {idea_id} via their frontmatter idea_id."""
+    from app.services import spec_registry_service
+    if idea_service.get_idea(idea_id) is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    specs = spec_registry_service.list_specs_for_idea(idea_id)
+    return [s.model_dump(mode="json") for s in specs]
 
 
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
