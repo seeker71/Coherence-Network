@@ -2,7 +2,23 @@
 idea_id: idea-realization-engine
 status: active
 source: []  # not yet implemented
+requirements:
+  - "R1: Each super-idea has a `rollup_condition` field in the DB"
+  - "R2: `validate_super_idea(idea_id)` checks all children validated + rollup condition"
+  - "R3: Super-idea manifestation_status auto-updates when rollup criteria met"
+  - "R4: Dashboard shows rollup progress (children validated / total children)"
+done_when:
+  - "R1: Each super-idea has a `rollup_condition` field in the DB"
+  - "R2: `validate_super_idea(idea_id)` checks all children validated + rollup condition"
+  - "R3: Super-idea manifestation_status auto-updates when rollup criteria met"
+  - "R4: Dashboard shows rollup progress (children validated / total children)"
+test: "python3 -m pytest api/tests/test_idea_hierarchy.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
 
 # Spec 120: Super-Idea Rollup Criteria
 

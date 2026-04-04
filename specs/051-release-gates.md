@@ -6,7 +6,27 @@ source:
     symbols: [evaluate_pr_to_public_report()]
   - file: api/app/routers/gates.py
     symbols: [gate endpoints]
+requirements:
+  - "GET /api/gates/pr-to-public — Check if PR is ready for merge to production"
+  - "GET /api/gates/merged-contract — Verify merged change meets contract (CI, approvals, deploy)"
+  - "GET /api/gates/main-head — Get current main branch status"
+  - "Integrates with GitHub API for PR status, checks, approvals"
+  - "Supports polling with timeout for async CI completion"
+  - "Returns detailed reports with pass/fail reasons"
+done_when:
+  - "GET /api/gates/pr-to-public — Check if PR is ready for merge to production"
+  - "GET /api/gates/merged-contract — Verify merged change meets contract (CI, approvals, deploy)"
+  - "GET /api/gates/main-head — Get current main branch status"
+  - "Integrates with GitHub API for PR status, checks, approvals"
+  - "Supports polling with timeout for async CI completion"
+test: "python3 -m pytest api/tests/test_gates_api.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
+> **Source**: [`api/app/services/release_gate_service.py`](../api/app/services/release_gate_service.py) | [`api/app/routers/gates.py`](../api/app/routers/gates.py)
 
 # Spec: Release Gates API
 

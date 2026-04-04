@@ -8,7 +8,33 @@ source:
     symbols: [Node, Edge]
   - file: api/app/routers/graph.py
     symbols: [graph CRUD endpoints]
+requirements:
+  - "`graph_nodes` table: `id UUID PK`, `node_type VARCHAR(64) NOT NULL`, `external_id VARCHAR(256)`, `payload JSONB NOT NULL"
+  - "`graph_edges` table: `id UUID PK`, `edge_type VARCHAR(64) NOT NULL`, `from_node_id UUID NOT NULL REFERENCES graph_nodes("
+  - "Unique index on `(node_type, external_id)` in `graph_nodes` to allow idempotent upserts"
+  - "Index on `(edge_type, from_node_id)` and `(edge_type, to_node_id)` in `graph_edges` for traversal queries"
+  - "FastAPI router `GET /api/graph/nodes/{node_id}` returns node + outgoing edges"
+  - "FastAPI router `POST /api/graph/nodes` upserts a node; `POST /api/graph/edges` upserts an edge"
+  - "FastAPI router `GET /api/graph/nodes/{node_id}/neighbors` returns first-degree neighbors with edge metadata"
+  - "All routers return Pydantic models with stable field names (no dynamic key leakage)"
+  - "Alembic migration for both tables and all indexes"
+  - "90%+ test coverage on the new router and service layer"
+done_when:
+  - "alembic upgrade head applies cleanly (no errors)"
+  - "pytest api/tests/test_graph_layer.py passes with N passed, 0 failed"
+  - "ruff check api/app/routers/graph.py api/app/services/graph_service.py exits 0"
+  - "GET /api/graph/nodes/{id} returns 200 with node + edges JSON"
+  - "POST /api/graph/nodes with duplicate (node_type, external_id) returns 200 (upsert, not 409)"
+test: "cd api && .venv/bin/pytest api/tests/test_graph_layer.py -v --tb=short"
+constraints:
+  - "Do NOT modify existing idea/task/node tables — additive only"
+  - "Do NOT bypass Pydantic response models with raw dict returns"
+  - "All foreign keys must use ON DELETE CASCADE to prevent orphan edges"
+  - "Migration must be reversible (downgrade removes tables and indexes)"
 ---
+
+> **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
+> **Source**: [`api/app/services/graph_service.py`](../api/app/services/graph_service.py) | [`api/app/models/graph.py`](../api/app/models/graph.py) | [`api/app/routers/graph.py`](../api/app/routers/graph.py)
 
 # Spec: Universal Node + Edge Data Layer
 

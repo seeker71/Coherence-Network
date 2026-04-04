@@ -6,7 +6,30 @@ source:
     symbols: [create_contribution(), list_contributions(), get_contribution()]
   - file: api/app/models/contribution.py
     symbols: [Contribution, ContributionCreate]
+requirements:
+  - "POST /api/contributions — Create contribution with contributor_id, asset_id, cost_amount"
+  - "GET /api/contributions/{id} — Retrieve contribution by ID (404 if not found)"
+  - "GET /api/assets/{asset_id}/contributions — List all contributions to an asset"
+  - "GET /api/contributors/{contributor_id}/contributions — List all contributions by a contributor"
+  - "POST /api/contributions/github — Track contribution from GitHub webhook (auto-create contributor/asset)"
+  - "Coherence score auto-calculated from metadata (has_tests, has_docs, complexity)"
+  - "Contributions update asset.total_cost automatically"
+  - "All endpoints return 404 when contributor or asset not found"
+  - "All responses are Pydantic models (JSON-serialized)"
+done_when:
+  - "POST /api/contributions — Create contribution with contributor_id, asset_id, cost_amount"
+  - "GET /api/contributions/{id} — Retrieve contribution by ID (404 if not found)"
+  - "GET /api/assets/{asset_id}/contributions — List all contributions to an asset"
+  - "GET /api/contributors/{contributor_id}/contributions — List all contributions by a contributor"
+  - "POST /api/contributions/github — Track contribution from GitHub webhook (auto-create contributor/asset)"
+test: "python3 -m pytest api/tests/test_contributions.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [value-attribution](../ideas/value-attribution.md)
+> **Source**: [`api/app/routers/contributions.py`](../api/app/routers/contributions.py) | [`api/app/models/contribution.py`](../api/app/models/contribution.py)
 
 # Spec: Contributions API
 

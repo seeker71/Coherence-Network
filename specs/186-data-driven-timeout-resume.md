@@ -8,7 +8,26 @@ source:
     symbols: [_resolve_retry_max()]
   - file: api/app/services/agent_task_continuation_service.py
     symbols: [task continuation]
+requirements:
+  - Record timeout samples to JSONL on every task completion
+  - Adaptive timeout uses p90 * 1.5 with min 5 samples to activate
+  - Fall back to flat defaults when fewer than 5 samples exist
+  - Upper-clamp adaptive timeout at 3x baseline per task type
+  - Capture partial_output and partial_output_pct on timeout
+  - Resume task prepends partial output with RESUME FROM TIMEOUT marker
+  - GET /api/agent/timeout-metrics returns efficiency_ratio and per-provider stats
+  - GET /api/agent/timeout-recommendation returns adaptive timeout with derivation
+  - POST /api/agent/timeout-samples accepts and stores a sample (201)
+done_when:
+  - Agent runner logs timeout=adaptive or timeout=fixed on every task pickup
+  - Resume tasks have is_resume=true and prepend partial output to direction
+  - pytest api/tests/test_timeout_adaptive_service.py passes
+test:
+  - "pytest -q api/tests/test_timeout_adaptive_service.py"
 ---
+
+> **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
+> **Source**: [`api/app/services/smart_reap_service.py`](../api/app/services/smart_reap_service.py) | [`api/app/services/agent_execution_retry.py`](../api/app/services/agent_execution_retry.py) | [`api/app/services/agent_task_continuation_service.py`](../api/app/services/agent_task_continuation_service.py)
 
 # Spec: Data-Driven Timeout and Task Resume
 

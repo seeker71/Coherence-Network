@@ -10,7 +10,27 @@ source:
     symbols: [task commands]
   - file: cli/lib/commands/nodes.mjs
     symbols: [node commands]
+requirements:
+  - "— Zero Runtime Dependencies: The package must not have any `dependencies` in `package.json`. It must use native Node.js modules (e.g., `fs`, `path`, "
+  - "— Identity-First Onboarding: Users can participate without a central account. Onboarding (`identity setup`) guides the user through linking existing "
+  - "— Core Command Set (15 Commands): The CLI must support exactly 15 core functional commands (including aliases) that cover the full lifecycle of an idea."
+  - "— Public API Integration: By default, the CLI interacts with `https://api.coherencycoin.com` but allows override via `COHERENCE_API_URL`."
+  - "— Idea & Spec Traceability: Commands to browse ideas (`ideas`), view details (`idea`), list specs (`specs`), and view spec details (`spec`) with ROI"
+  - "— Contribution Lifecycle: Support for `share` (new idea), `stake` (investing CC), `fork` (branching ideas), and `contribute` (recording work)."
+  - "— Network Observability: Commands for `status` (health), `resonance` (live activity), and `nodes` (federation status)."
+  - "— Messaging & Inbox: Secure communication between nodes/contributors via `msg` and `inbox`."
+done_when:
+  - "CLI supports the 15 core commands listed in this spec."
+  - "`npm ls --production` in `cli/` returns empty (zero dependencies)."
+  - "`identity setup` successfully guides a new user to a valid local identity."
+test: "cd cli && npm pack --dry-run"
+constraints:
+  - "No external runtime dependencies allowed."
+  - "Must support Node.js >= 18.0.0."
 ---
+
+> **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
+> **Source**: [`cli/bin/cc.mjs`](../cli/bin/cc.mjs) | [`cli/lib/commands/ideas.mjs`](../cli/lib/commands/ideas.mjs) | [`cli/lib/commands/tasks.mjs`](../cli/lib/commands/tasks.mjs) | [`cli/lib/commands/nodes.mjs`](../cli/lib/commands/nodes.mjs)
 
 # Spec 148: Coherence Network CLI (coherence-cli) Comprehensive Feature Spec
 
@@ -197,4 +217,3 @@ node cli/bin/cc.mjs help
 | **Identity ubiquity** | That users can bring *any* identity without friction. | Incrementally add support for more providers (from 37 to 50+) and show usage statistics in `cc status`. |
 | **Proof of Resonance** | That the network is "alive" and not just a static database. | `cc resonance` will evolve from a simple log to a real-time stream of high-value contributions and staking events. |
 | **ROI-Driven Browsing** | That the ranking algorithm identifies value. | Over time, ideas with higher ROI in `cc ideas` should correlate with higher actual payouts and implementation success. |
-

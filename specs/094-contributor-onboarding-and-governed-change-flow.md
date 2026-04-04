@@ -10,7 +10,20 @@ source:
     symbols: [create_change_request(), vote_on_change_request()]
   - file: api/app/models/governance.py
     symbols: [ChangeRequest, ChangeRequestVote, VoteDecision]
+done_when:
+  - "New contributor can register from web and appear in contributor list."
+  - "Human can submit change requests for:"
+  - "Change request stores proposer attribution and vote attribution."
+  - "Human or machine reviewer can cast yes/no vote via API and web."
+  - "Approved request auto-applies by default and records apply result."
+test: "- `pytest -q tests/test_ideas.py tests/test_spec_registry_api.py tests/test_governance_api.py tests/test_inventory_api.py`"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [value-attribution](../ideas/value-attribution.md)
+> **Source**: [`api/app/routers/onboarding.py`](../api/app/routers/onboarding.py) | [`api/app/services/onboarding_service.py`](../api/app/services/onboarding_service.py) | [`api/app/services/governance_service.py`](../api/app/services/governance_service.py) | [`api/app/models/governance.py`](../api/app/models/governance.py)
 
 # Spec 094 — Contributor Onboarding and Governed Change Flow
 

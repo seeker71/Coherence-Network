@@ -6,7 +6,17 @@ source:
     symbols: [homepage]
   - file: web/app/globals.css
     symbols: [accessibility styling]
+done_when:
+  - "Light mode activates on toggle click; persists across page reloads."
+  - "System `prefers-color-scheme: light` is respected on first visit."
+  - "Hero headline and body text pass WCAG AA (≥4.5:1) in both modes."
+  - "`ThemeToggle` is keyboard-accessible and has a descriptive `aria-label`."
+  - "No hydration mismatch (SSR-safe: initial HTML class set via inline script)."
+  - "Light mode background is warm, not stark white — consistent with brand tone."
 ---
+
+> **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
+> **Source**: [`web/app/page.tsx`](../web/app/page.tsx) | [`web/app/globals.css`](../web/app/globals.css)
 
 # Spec 165: UX Homepage Readability — Dark Mode Contrast Fixes & Light Mode Toggle
 

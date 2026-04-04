@@ -8,7 +8,38 @@ source:
     symbols: [compute_pulse()]
   - file: api/app/services/pipeline_advance_service.py
     symbols: [auto-advance, auto-retry, escalation]
+requirements:
+  - "R1: A new `api/scripts/agent_pipeline.py` script implements a persistent background loop that polls the idea portfolio a"
+  - "R2: Each poll cycle builds a pending-task candidate set from idea stages and ranks candidates by ROI score (coherence_sc"
+  - "R3: For each selected idea, the pipeline determines the next required task type based on the idea's current stage: `none"
+  - "R4: The pipeline creates an `AgentTask` via the agent API (`POST /api/agent/tasks`) with the idea's context, then delega"
+  - "R5: On successful task completion, the pipeline calls the idea auto-advance endpoint (`POST /api/ideas/{idea_id}/advance"
+  - "R6: On task failure, the pipeline logs the failure, records the error classification (timeout, auth, rate_limit, etc.), "
+  - "R6a: Slot allocation for each selected task uses the existing `SlotSelector` integration path so pipeline execution shar"
+  - "R7: The pipeline exposes a `GET /api/pipeline/status` endpoint returning runtime state and counters including `current_t"
+  - "R8: The pipeline supports graceful shutdown via SIGINT/SIGTERM — it finishes the current task before exiting and persist"
+  - "R9: The pipeline skips ideas that already have a RUNNING or PENDING task (prevents duplicate work)."
+  # ... 4 more in Requirements section below
+done_when:
+  - "agent_pipeline.py runs as persistent loop polling and ranking pending-task candidates by ROI"
+  - "Tasks are created and delegated to local_runner.py per idea stage without provider-logic duplication"
+  - "SlotSelector is used for slot/capacity assignment before execution"
+  - "Ideas auto-advance on task completion via spec 138 endpoints"
+  - "Retry policy handles failures with exponential backoff"
+  - "Outcome journal persists status/error/retry/slot metadata for each executed task"
+  - "GET /api/pipeline/status returns live pipeline metrics"
+  - "--once, --dry-run, and --interval flags work correctly"
+  - "All tests pass"
+test: "cd api && python -m pytest tests/test_agent_pipeline.py tests/test_pipeline_router.py -q"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
+  - "must not duplicate provider selection/execution logic already in local_runner.py"
+  - "must reuse existing SlotSelector integration path for task slot assignment"
 ---
+
+> **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
+> **Source**: [`api/app/services/pipeline_service.py`](../api/app/services/pipeline_service.py) | [`api/app/services/pipeline_pulse_service.py`](../api/app/services/pipeline_pulse_service.py) | [`api/app/services/pipeline_advance_service.py`](../api/app/services/pipeline_advance_service.py)
 
 # Spec 139: Coherence Network Agent Pipeline
 

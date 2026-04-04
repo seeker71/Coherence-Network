@@ -2,7 +2,21 @@
 idea_id: idea-realization-engine
 status: active
 source: []  # not yet implemented
+requirements:
+  - Detect too_large, too_small, overlap granularity signals per idea
+  - Generate split/merge suggestions with confidence and rationale
+  - GET /api/ideas/right-sizing returns portfolio health counts and suggestions
+  - POST /api/ideas/right-sizing/apply executes split or merge with dry_run support
+  - GET /api/ideas/right-sizing/history returns time-series health snapshots
+  - TF-IDF overlap detection with configurable score threshold (default 0.80)
+  - Snapshot health counts on 6-hour sweep, retain 90 days
+done_when:
+  - Right-sizing report returns valid health counts for 10+ ideas
+  - Dry-run apply previews changes without writing
+  - pytest api/tests/test_right_sizing.py passes
 ---
+
+> **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
 
 # Spec 158: Idea Right-Sizing — Automatic Granularity Management
 

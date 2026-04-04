@@ -8,7 +8,23 @@ source:
     symbols: [tool handler registry]
   - file: api/app/routers/registry_discovery.py
     symbols: [registry endpoints]
+requirements:
+  - Registry submissions endpoint returns all six target registries
+  - summary.core_requirement_met is true when 5+ registries have assets present
+  - GET /api/discovery/registry-stats returns per-registry install/download counts
+  - Stats endpoint supports ?refresh=true to bypass 24h cache
+  - Unreachable stats API returns 200 with source unavailable, not 500
+  - GET /api/discovery/registry-dashboard merges submissions and stats
+  - mcp-server/glama.json exists with valid Glama submission metadata
+  - All six registries have validators in registry_discovery_service
+done_when:
+  - registry-submissions returns exactly six items
+  - registry-dashboard returns 200 even when stats are fully unavailable
+  - pytest api/tests/test_registry_discovery.py passes
 ---
+
+> **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
+> **Source**: [`mcp-server/coherence_mcp_server/server.py`](../mcp-server/coherence_mcp_server/server.py) | [`api/app/services/mcp_tool_registry.py`](../api/app/services/mcp_tool_registry.py) | [`api/app/routers/registry_discovery.py`](../api/app/routers/registry_discovery.py)
 
 # Spec 180 — Submit to 5+ MCP and Skill Registries for Discovery
 

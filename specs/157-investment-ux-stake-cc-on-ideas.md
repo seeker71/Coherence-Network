@@ -8,7 +8,23 @@ source:
     symbols: [CC ledger]
   - file: web/app/invest/page.tsx
     symbols: [investment UI]
+requirements:
+  - GET /api/ideas/{idea_id}/invest-preview returns ROI projection
+  - GET /api/contributors/{id}/investments returns all positions with summary
+  - GET /api/contributors/{id}/investment-history returns CC flow timeline
+  - POST /api/contributors/{id}/pledges creates time pledge with cc_equivalent
+  - POST stake endpoint supports dry_run returning projection without recording
+  - Web invest modal shows ROI data before confirmation
+  - Portfolio page renders positions with gain/loss and ROI percent
+done_when:
+  - cc invest --dry-run returns ROI projection against live API
+  - Web /ideas shows Invest button opening modal with ROI data
+  - /portfolio/investments page renders without errors
+  - pytest api/tests/test_investments.py passes
 ---
+
+> **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
+> **Source**: [`api/app/services/stake_compute_service.py`](../api/app/services/stake_compute_service.py) | [`api/app/services/contribution_ledger_service.py`](../api/app/services/contribution_ledger_service.py) | [`web/app/invest/page.tsx`](../web/app/invest/page.tsx)
 
 # Spec 157: Investment UX — Stake CC on Ideas from Web and CLI with Clear Returns
 

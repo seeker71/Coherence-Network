@@ -4,7 +4,38 @@ status: partial
 source:
   - file: api/app/models/idea.py
     symbols: [Idea.work_type, Idea.actual_cost, Idea.stage]
+requirements:
+  - "Runtime task tool-call telemetry records `infrastructure_cost_usd`, `external_provider_cost_usd`, and `total_cost_usd` f"
+  - "Review completion telemetry records acceptance evidence fields (`review_pass_fail`, verified assertion counts when prese"
+  - "API exposes a single MVP acceptance summary endpoint returning acceptance counts and cost rollups (external, infrastruct"
+  - "API exposes an external judge endpoint with explicit assertion checks and a single pass/fail decision for acceptance cla"
+  - "External judge supports publicly trusted validator attestations (Ed25519 signature quorum from configured public keys) a"
+  - "External judge supports public transparency-log anchoring of the acceptance claim hash (trusted domain allowlist + hash "
+  - "MVP acceptance economics and trust gates are loaded from configuration data (`api/config/mvp_acceptance_policy.json`) ra"
+  - "Summary and judge responses include base budget inputs (`railway_base_budget_usd`, `provider_base_budget_usd`) and reven"
+  - "Judge responses include a trust-adjusted revenue proof (`estimated_revenue_usd`, `trust_adjusted_revenue_usd`, uplift, a"
+  - "Tasks evidence UI shows a task-level proof panel with acceptance verdict and cost breakdown sourced from runtime telemet"
+  # ... 1 more in Requirements section below
+done_when:
+  - "runtime tool-call events include infrastructure/external/total cost fields per task"
+  - "review completion events include acceptance pass/fail evidence metadata"
+  - "/api/runtime/mvp/acceptance-summary returns acceptance + cost rollups"
+  - "/api/runtime/mvp/acceptance-judge returns contract assertions + pass/fail"
+  - "acceptance policy values are sourced from api/config/mvp_acceptance_policy.json"
+  - "when public-validator requirement is enabled, judge fails without quorum and passes with valid quorum signatures"
+  - "when transparency-anchor requirement is enabled, judge fails without valid anchor and passes with valid trusted-log anch"
+  - "when trust-adjusted revenue coverage is required, judge fails without trust evidence and passes once trust evidence acti"
+  - "tasks evidence UI renders acceptance proof and cost breakdown for selected task"
+  - "targeted tests pass for runtime endpoint and acceptance proof behavior"
+test: "cd web && npm run -s lint"
+constraints:
+  - "keep implementation as tiny deltas on existing runtime telemetry model"
+  - "do not remove or rename existing telemetry fields used by current tests"
+  - "do not modify files outside files_allowed"
 ---
+
+> **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
+> **Source**: [`api/app/models/idea.py`](../api/app/models/idea.py)
 
 # Spec: MVP Cost Tracking and Acceptance Proof
 

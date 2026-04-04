@@ -4,7 +4,22 @@ status: done
 source:
   - file: api/app/services/telemetry_persistence_service/__init__.py
     symbols: [backend_info(), checkpoint()]
+requirements:
+  - "When a runtime database URL is configured, runtime telemetry events must be persisted to the database even if `RUNTIME_E"
+  - "`GET /api/health/persistence` must not fail the global persistence contract due to runtime telemetry being file-routed w"
+  - "Add a regression test proving DB precedence when both `RUNTIME_DATABASE_URL` and `RUNTIME_EVENTS_PATH` are set."
+done_when:
+  - "When a runtime database URL is configured, runtime telemetry events must be persisted to the database even if `RUNTIM..."
+  - "`GET /api/health/persistence` must not fail the global persistence contract due to runtime telemetry being file-route..."
+  - "Add a regression test proving DB precedence when both `RUNTIME_DATABASE_URL` and `RUNTIME_EVENTS_PATH` are set."
+test: "cd api && pytest -q --ignore=tests/holdout tests/test_runtime_event_store_precedence.py"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
+> **Source**: [`api/app/services/telemetry_persistence_service/__init__.py`](../api/app/services/telemetry_persistence_service/__init__.py)
 
 # Spec: Runtime Telemetry DB Precedence
 
