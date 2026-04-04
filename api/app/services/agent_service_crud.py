@@ -456,6 +456,12 @@ def update_task(
 
     if output is not None:
         task["output"] = _sanitize_task_output(output)
+        from app.services.context_hygiene_service import generate_output_summary
+        task["output_summary"] = generate_output_summary(
+            task.get("output"),
+            str(task.get("status", "")),
+            task.get("error_category"),
+        )
     if progress_pct is not None:
         task["progress_pct"] = progress_pct
     if current_step is not None:

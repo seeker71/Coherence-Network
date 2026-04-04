@@ -29,6 +29,7 @@ class AgentTaskRecord(Base):
     model: Mapped[str] = mapped_column(String, nullable=False)
     command: Mapped[str] = mapped_column(Text, nullable=False)
     output: Mapped[str | None] = mapped_column(Text, nullable=True)
+    output_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     context_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     progress_pct: Mapped[int | None] = mapped_column(Integer, nullable=True)
     current_step: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -187,6 +188,7 @@ def _row_to_payload(
         "model": row.model,
         "command": row.command if include_command else "",
         "output": row.output if include_output else None,
+        "output_summary": row.output_summary,
         "context": context,
         "progress_pct": row.progress_pct,
         "current_step": row.current_step,
@@ -210,6 +212,7 @@ def _minimal_columns(*, include_output: bool, include_command: bool) -> tuple[An
         AgentTaskRecord.task_type,
         AgentTaskRecord.status,
         AgentTaskRecord.model,
+        AgentTaskRecord.output_summary,
         AgentTaskRecord.context_json,
         AgentTaskRecord.progress_pct,
         AgentTaskRecord.current_step,
@@ -390,6 +393,7 @@ def upsert_task(payload: dict[str, Any]) -> None:
                 model=str(payload.get("model") or ""),
                 command=str(payload.get("command") or ""),
                 output=payload.get("output"),
+                output_summary=payload.get("output_summary"),
                 context_json=json.dumps(payload.get("context") if isinstance(payload.get("context"), dict) else {}),
                 progress_pct=payload.get("progress_pct"),
                 current_step=payload.get("current_step"),
@@ -414,6 +418,9 @@ def upsert_task(payload: dict[str, Any]) -> None:
         incoming_output = payload.get("output")
         if incoming_output is not None:
             row.output = incoming_output
+        record_output_summary = payload.get("output_summary")
+        if record_output_summary is not None:
+            row.output_summary = record_output_summary
         row.context_json = json.dumps(payload.get("context") if isinstance(payload.get("context"), dict) else {})
         row.progress_pct = payload.get("progress_pct")
         row.current_step = payload.get("current_step")
