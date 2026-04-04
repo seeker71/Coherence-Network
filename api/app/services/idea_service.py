@@ -1300,6 +1300,7 @@ def update_idea(
     lifecycle: IdeaLifecycle | None = None,
     duplicate_of: str | None = None,
     workspace_git_url: str | None = None,
+    interfaces: list[str] | None = None,
 ) -> IdeaWithScore | None:
     """Update an idea.
 
@@ -1356,6 +1357,9 @@ def update_idea(
             idea.duplicate_of = duplicate_of
         if workspace_git_url is not None:
             idea.workspace_git_url = workspace_git_url
+        if interfaces is not None and interfaces != idea.interfaces:
+            changes.append(("interfaces", idea.interfaces, interfaces))
+            idea.interfaces = interfaces
 
         for field, old_val, new_val in changes:
             if os.getenv("DEBUG_AUDIT"):
