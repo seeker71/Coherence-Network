@@ -101,3 +101,8 @@ None.
 ```bash
 python3 -m pytest api/tests/test_setup_docs.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

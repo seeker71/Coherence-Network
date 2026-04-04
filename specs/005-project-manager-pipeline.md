@@ -156,3 +156,8 @@ See `api/tests/test_project_manager.py` and `api/tests/test_project_manager_pipe
 
 - Backlog format and content: human maintains specs/005-backlog.md
 - needs_decision: human must /reply before pipeline resumes
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

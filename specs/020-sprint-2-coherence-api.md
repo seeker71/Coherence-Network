@@ -139,3 +139,8 @@ Only 2 of 8 components currently use real data: `downstream_impact`, `dependency
 ```bash
 python3 -m pytest api/tests/test_cc_scoring.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

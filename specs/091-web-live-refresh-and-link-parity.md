@@ -65,3 +65,7 @@ constraints:
 
 See `api/tests/test_web_live_refresh_and_link_parity.py` for test cases covering this spec's requirements.
 
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

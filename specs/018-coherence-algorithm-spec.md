@@ -102,3 +102,8 @@ GET /api/projects/{ecosystem}/{name}/coherence returns `{"score": 0.0–1.0, "co
 ```bash
 python3 -m pytest api/tests/test_cc_scoring.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

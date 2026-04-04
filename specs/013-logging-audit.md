@@ -145,3 +145,7 @@ Example line:
 
 See `api/tests/test_logging_audit.py` for test cases covering this spec's requirements.
 
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

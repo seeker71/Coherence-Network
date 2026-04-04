@@ -105,3 +105,8 @@ See `api/tests/test_question_answering_and_minimum_e2e_flow.py` for test cases c
 ```bash
 python3 -m pytest api/tests/test_cursor_e2e.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

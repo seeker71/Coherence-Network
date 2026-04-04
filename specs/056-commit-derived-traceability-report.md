@@ -70,3 +70,8 @@ See `api/tests/test_commit_derived_traceability_report.py` for test cases coveri
 ```bash
 python3 -m pytest api/tests/test_commit_evidence_registry_service.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

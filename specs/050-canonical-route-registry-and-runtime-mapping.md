@@ -92,3 +92,8 @@ See `api/tests/test_canonical_route_registry_and_runtime_mapping.py` for test ca
 ```bash
 python3 -m pytest api/tests/test_runtime_api.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

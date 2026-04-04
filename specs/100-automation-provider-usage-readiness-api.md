@@ -81,3 +81,8 @@ See `api/tests/test_automation_provider_usage_readiness_api.py` for test cases c
 ## Idea Traceability
 - `idea_id`: `coherence-network-overall`
 - Rationale: umbrella roadmap linkage for Coherence Network work.
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

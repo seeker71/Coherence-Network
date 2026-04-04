@@ -101,3 +101,8 @@ cd web && npm run build
 
 - Editing contributor/contribution/asset/task records from the public web surface.
 - Adding authenticated admin-only controls to the public walkable flow.
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

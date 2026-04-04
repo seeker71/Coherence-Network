@@ -86,3 +86,8 @@ See `api/tests/test_web_refresh_reliability_and_route_completeness.py` for test 
   - Open `/`, `/usage`, `/friction`, `/gates`.
   - Confirm live-update bar refreshes quickly after tab focus.
   - Confirm context/nav links expose all key pages including `/friction`, `/import`, `/api-health`.
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

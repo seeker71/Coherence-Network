@@ -90,3 +90,8 @@ Accept: package-lock.json (npm) or requirements.txt (PyPI).
 
 - Pipfile, poetry.lock (future)
 - Resolving version specs (use pinned version when ==, else "unknown" version)
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

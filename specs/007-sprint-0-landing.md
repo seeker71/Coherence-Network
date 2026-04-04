@@ -133,3 +133,8 @@ All tests above must pass for landing to be considered complete.
 ## Decision Gates
 
 - Deploy target and credentials require human approval
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

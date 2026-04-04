@@ -116,3 +116,8 @@ curl -fsS https://coherencycoin.com/ideas
 curl -fsS https://coherencycoin.com/specs
 curl -fsS https://coherencycoin.com/usage
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

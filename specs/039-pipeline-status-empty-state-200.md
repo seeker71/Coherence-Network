@@ -116,3 +116,8 @@ None.
 ```bash
 python3 -m pytest api/tests/test_agent_pipeline_status_diagnostics_api.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

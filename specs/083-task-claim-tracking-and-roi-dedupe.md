@@ -76,3 +76,8 @@ See `api/tests/test_task_claim_tracking_and_roi_dedupe.py` for test cases coveri
 ```bash
 python3 -m pytest api/tests/test_agent_task_claims.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

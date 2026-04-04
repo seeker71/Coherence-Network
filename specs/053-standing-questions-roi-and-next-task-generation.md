@@ -99,3 +99,8 @@ See `api/tests/test_standing_questions_roi_and_next_task_generation.py` for test
 ```bash
 python3 -m pytest api/tests/test_ideas.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

@@ -81,3 +81,8 @@ See `api/tests/test_web_theme_auto_detection.py` for test cases covering this sp
 - Manual:
   - Open web app with system light mode, verify light palette.
   - Switch system to dark mode, verify dark palette without reload logic changes.
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

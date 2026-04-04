@@ -95,3 +95,8 @@ Consumes existing API:
 - Auth, user management
 - Graph visualization
 - PyPI (npm only for MVP)
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

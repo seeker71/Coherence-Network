@@ -301,3 +301,8 @@ Verifies the full inbound path (webhook → record_webhook → [optional: parse_
 ```bash
 python3 -m pytest api/tests/test_telegram_adapter.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

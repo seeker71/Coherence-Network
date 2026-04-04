@@ -172,3 +172,8 @@ TaskMetric:
 ```bash
 python3 -m pytest api/tests/test_monitor_pipeline_stale_running.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.
