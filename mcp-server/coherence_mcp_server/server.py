@@ -145,6 +145,7 @@ TOOLS: list[Tool] = [
             "properties": {
                 "limit": {"type": "number", "default": 20},
                 "search": {"type": "string", "description": "Search keyword"},
+                "workspace_id": {"type": "string", "description": "Optional workspace filter. Defaults to all workspaces."},
             },
         },
     ),
@@ -857,7 +858,10 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
         case "coherence_list_specs":
             if args.get("search"):
                 return api_get("/api/spec-registry/cards", {"search": args["search"], "limit": args.get("limit", 20)})
-            return api_get("/api/spec-registry", {"limit": args.get("limit", 20)})
+            params = {"limit": args.get("limit", 20)}
+            if args.get("workspace_id"):
+                params["workspace_id"] = args["workspace_id"]
+            return api_get("/api/spec-registry", params)
         case "coherence_get_spec":
             return api_get(f"/api/spec-registry/{args['spec_id']}")
         # Lineage

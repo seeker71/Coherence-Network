@@ -291,6 +291,56 @@ async def test_list_ideas_filtered_by_workspace():
 
 
 # ---------------------------------------------------------------------------
+# list_specs workspace_id filter
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_specs_filtered_by_workspace():
+    ws_id = _uid("ws")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        await c.post("/api/workspaces", json={"id": ws_id, "name": "Specs"})
+
+        # Create one spec in the custom workspace.
+        scoped_spec = _uid("spec-scoped")
+        r = await c.post("/api/spec-registry", headers=AUTH, json={
+            "spec_id": scoped_spec,
+            "title": "Scoped spec",
+            "summary": "Lives in the custom workspace.",
+            "workspace_id": ws_id,
+        })
+        assert r.status_code == 201, r.text
+
+        # Create one spec in the default workspace.
+        default_spec = _uid("spec-default")
+        r2 = await c.post("/api/spec-registry", headers=AUTH, json={
+            "spec_id": default_spec,
+            "title": "Default spec",
+            "summary": "Lives in the default workspace.",
+        })
+        assert r2.status_code == 201, r2.text
+
+        # Filter to the custom workspace — only the scoped spec is present.
+        r3 = await c.get(f"/api/spec-registry?workspace_id={ws_id}&limit=200")
+        assert r3.status_code == 200, r3.text
+        ids = {s["spec_id"] for s in r3.json()}
+        assert scoped_spec in ids
+        assert default_spec not in ids
+
+        # Filter to the default workspace — only the default spec is present.
+        r4 = await c.get(f"/api/spec-registry?workspace_id={DEFAULT_WS}&limit=200")
+        assert r4.status_code == 200, r4.text
+        ids_default = {s["spec_id"] for s in r4.json()}
+        assert default_spec in ids_default
+        assert scoped_spec not in ids_default
+
+        # x-total-count header matches the filtered set.
+        assert int(r3.headers["x-total-count"]) == 1
+        # Default may have other specs from fixtures; at minimum it contains ours.
+        assert int(r4.headers["x-total-count"]) >= 1
+
+
+# ---------------------------------------------------------------------------
 # WorkspaceResolver
 # ---------------------------------------------------------------------------
 
