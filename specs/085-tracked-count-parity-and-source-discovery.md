@@ -79,3 +79,8 @@ See `api/tests/test_tracked_count_parity_and_source_discovery.py` for test cases
 ```bash
 python3 -m pytest api/tests/test_inventory_discovery_sources.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

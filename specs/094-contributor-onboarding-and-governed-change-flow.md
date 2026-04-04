@@ -98,3 +98,8 @@ See `api/tests/test_contributor_onboarding_and_governed_change_flow.py` for test
   - `cd web && npm run build`
 - Manual:
   - Open `/contribute`, register contributor, submit request, vote yes/no, verify state transitions.
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

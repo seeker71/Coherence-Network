@@ -111,3 +111,8 @@ N/A.
 ## Decision Gates
 
 None.
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

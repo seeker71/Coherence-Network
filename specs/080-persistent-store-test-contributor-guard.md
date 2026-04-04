@@ -74,3 +74,8 @@ See `api/tests/test_persistent_store_test_contributor_guard.py` for test cases c
 ```bash
 python3 -m pytest api/tests/test_contributor_hygiene.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.
