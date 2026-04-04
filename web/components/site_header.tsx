@@ -4,6 +4,7 @@ import { getApiBase } from "@/lib/api";
 import { ActiveNavLink } from "./active_nav_link";
 import { ThemeToggle } from "./theme-toggle";
 import { ModeSwitcher } from "./mode-switcher";
+import { WorkspacePicker } from "./workspace-picker";
 
 /** Navigation item with optional heartbeat flag. */
 interface NavItem {
@@ -79,6 +80,9 @@ export default function SiteHeader() {
           </nav>
 
           <div className="flex-1" />
+
+          {/* Workspace picker — Wave 2 multi-tenancy */}
+          <WorkspacePicker />
 
           {/* Mode switcher — expert / simple */}
           <ModeSwitcher />
