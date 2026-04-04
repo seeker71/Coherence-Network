@@ -3,6 +3,7 @@ idea_id: data-infrastructure
 title: Data Infrastructure
 stage: implementing
 work_type: feature
+pillar: foundation
 specs:
   - [018-coherence-algorithm-spec](../specs/018-coherence-algorithm-spec.md)
   - [054-postgresql-migration](../specs/054-postgresql-migration.md)

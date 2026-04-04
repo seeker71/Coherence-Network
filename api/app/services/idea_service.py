@@ -1061,11 +1061,15 @@ def list_ideas(
     read_only_guard: bool = False,
     sort_method: str = "free_energy",
     tags_filter: list[str] | None = None,
+    curated_only: bool = False,
+    pillar: str | None = None,
 ) -> IdeaPortfolioResponse:
     """When read_only_guard=True, ensure logic is applied in memory but not persisted (for invariant/guard runs).
 
     sort_method: "free_energy" (default, Method A) or "marginal_cc" (Method B).
     tags_filter: when provided, only return ideas that carry ALL of the given normalized tags.
+    curated_only: when True, only return ideas where is_curated=True (the 16 super-ideas from ideas/*.md).
+    pillar: when provided, only return ideas with this pillar value.
     """
     ideas = _read_ideas(persist_ensures=not read_only_guard)
     if not include_internal:
@@ -1075,6 +1079,10 @@ def list_ideas(
     if tags_filter:
         required = set(tags_filter)
         ideas = [i for i in ideas if required.issubset(set(i.tags))]
+    if curated_only:
+        ideas = [i for i in ideas if getattr(i, "is_curated", False)]
+    if pillar:
+        ideas = [i for i in ideas if getattr(i, "pillar", None) == pillar]
 
     scored = [_with_score(i) for i in ideas]
     if sort_method == "marginal_cc":
@@ -1462,6 +1470,15 @@ def set_parent_idea(idea_id: str, parent_idea_id: str) -> bool:
 
     _write_single_idea(target, position=target_idx)
     return True
+
+
+def list_children_of(parent_idea_id: str) -> list[IdeaWithScore]:
+    """Return all ideas whose parent_idea_id matches the given id, sorted by free-energy score desc."""
+    ideas = _read_ideas(persist_ensures=False)
+    children = [i for i in ideas if i.parent_idea_id == parent_idea_id]
+    scored = [_with_score(i) for i in children]
+    scored.sort(key=lambda i: i.free_energy_score, reverse=True)
+    return scored
 
 
 def stake_on_idea(idea_id: str, contributor_id: str, amount_cc: float, rationale: str | None = None) -> dict:

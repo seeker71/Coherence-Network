@@ -3,6 +3,7 @@ idea_id: value-attribution
 title: Value Attribution
 stage: implementing
 work_type: feature
+pillar: economics
 specs:
   - [048-contributions-api](../specs/048-contributions-api.md)
   - [048-value-lineage-and-payout-attribution](../specs/048-value-lineage-and-payout-attribution.md)

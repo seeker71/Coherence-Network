@@ -214,6 +214,18 @@ def list_specs(limit: int = 200, offset: int = 0) -> list[SpecRegistryEntry]:
     return [_graph_node_to_spec(n) for n in result.get("items", [])]
 
 
+def list_specs_for_idea(idea_id: str) -> list[SpecRegistryEntry]:
+    """Return all spec nodes whose idea_id property matches the given idea.
+
+    This is the direct spec->idea link: spec frontmatter `idea_id:` is stored
+    on the spec node as a property and we query for matches.
+    """
+    from app.services import graph_service
+    result = graph_service.list_nodes(type="spec", limit=1000, offset=0)
+    matches = [n for n in result.get("items", []) if n.get("idea_id") == idea_id]
+    return [_graph_node_to_spec(n) for n in matches]
+
+
 def get_spec(spec_id: str) -> SpecRegistryEntry | None:
     from app.services import graph_service
     # Try with and without spec- prefix

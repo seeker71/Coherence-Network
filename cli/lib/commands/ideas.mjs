@@ -52,7 +52,7 @@ export async function listIdeas(args) {
     return runInteractivePicker();
   }
 
-  // Parse flags: --type <work_type>, --status <none|partial|validated>, --parent <id>, --limit N
+  // Parse flags: --type <work_type>, --status <none|partial|validated>, --parent <id>, --limit N, --all, --pillar X
   const flags = {};
   const positional = [];
   for (let i = 0; i < args.length; i++) {
@@ -60,11 +60,18 @@ export async function listIdeas(args) {
     else if ((args[i] === "--status" || args[i] === "-s") && args[i+1]) flags.status = args[++i];
     else if ((args[i] === "--parent" || args[i] === "-p") && args[i+1]) flags.parent = args[++i];
     else if ((args[i] === "--limit" || args[i] === "-n") && args[i+1]) flags.limit = parseInt(args[++i]);
+    else if (args[i] === "--all" || args[i] === "-a") flags.all = true;
+    else if (args[i] === "--pillar" && args[i+1]) flags.pillar = args[++i];
     else positional.push(args[i]);
   }
   const limit = flags.limit || parseInt(positional[0]) || 40;
 
-  const raw = await get("/api/ideas", { limit: Math.min(limit, 400) });
+  // Default to curated super-ideas; pass --all to see the full fractal.
+  const query = { limit: Math.min(limit, 400) };
+  if (!flags.all) query.curated_only = true;
+  if (flags.pillar) query.pillar = flags.pillar;
+
+  const raw = await get("/api/ideas", query);
   let data = Array.isArray(raw) ? raw : raw?.ideas;
   if (!data || !Array.isArray(data)) { console.log("Could not fetch ideas."); return; }
 
@@ -75,8 +82,10 @@ export async function listIdeas(args) {
 
   if (data.length === 0) { console.log("No ideas match the filter."); return; }
 
-  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m";
+  const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", C = "\x1b[36m", M = "\x1b[35m";
   const filterNote = [
+    flags.all ? "all" : "curated",
+    flags.pillar ? `pillar=${flags.pillar}` : null,
     flags.type   ? `type=${flags.type}` : null,
     flags.status ? `status=${flags.status}` : null,
     flags.parent ? `parent=${flags.parent}` : null,
@@ -84,9 +93,13 @@ export async function listIdeas(args) {
 
   console.log();
   console.log(`${B}  IDEAS${R} (${data.length})${filterNote ? `  ${D}[${filterNote}]${R}` : ""}`);
-  console.log(`  ${"─".repeat(82)}`);
-  console.log(`  ${D}${"".padEnd(2)}  ${"Name".padEnd(42)} ${"Type".padEnd(12)} ${"FE".padStart(6)}  ${"Status".padEnd(10)}${R}`);
-  for (const idea of data) {
+  console.log(`  ${"─".repeat(92)}`);
+
+  // When showing curated, group by pillar; otherwise flat list.
+  const pillars = ["realization", "pipeline", "economics", "surfaces", "network", "foundation"];
+  const groupsActive = !flags.all && !flags.pillar;
+
+  const renderRow = (idea) => {
     const status = (idea.manifestation_status || "none");
     const dot = status === "validated" ? "\x1b[32m●\x1b[0m"
       : status === "partial" ? "\x1b[33m●\x1b[0m"
@@ -96,8 +109,33 @@ export async function listIdeas(args) {
     const fe = idea.free_energy_score != null ? idea.free_energy_score.toFixed(2) : "    —";
     const st = D + status.padEnd(10) + R;
     console.log(`  ${dot}  ${name} ${C}${wt}${R} ${String(fe).padStart(6)}  ${st}`);
+  };
+
+  if (groupsActive) {
+    const byPillar = {};
+    for (const p of pillars) byPillar[p] = [];
+    const unknown = [];
+    for (const i of data) {
+      const p = (i.pillar || "").toLowerCase();
+      if (p && byPillar[p]) byPillar[p].push(i);
+      else unknown.push(i);
+    }
+    for (const p of pillars) {
+      const rows = byPillar[p].sort((a, b) => (b.free_energy_score || 0) - (a.free_energy_score || 0));
+      if (rows.length === 0) continue;
+      console.log(`\n  ${M}${p.toUpperCase()}${R}`);
+      for (const idea of rows) renderRow(idea);
+    }
+    if (unknown.length > 0) {
+      console.log(`\n  ${D}OTHER${R}`);
+      for (const idea of unknown) renderRow(idea);
+    }
+  } else {
+    console.log(`  ${D}${"".padEnd(2)}  ${"Name".padEnd(42)} ${"Type".padEnd(12)} ${"FE".padStart(6)}  ${"Status".padEnd(10)}${R}`);
+    for (const idea of data) renderRow(idea);
   }
-  console.log(`  ${"─".repeat(82)}`);
+  console.log(`  ${"─".repeat(92)}`);
+  if (!flags.all) console.log(`  ${D}Use 'cc idea list --all' to see the full fractal.${R}`);
   console.log();
 }
 
@@ -206,6 +244,29 @@ export async function showIdea(args) {
       console.log(`    ${D}?${R}${answered} ${truncate(qText, 66)}`);
     }
   }
+
+  // Specs linked by frontmatter idea_id
+  const specs = await get(`/api/ideas/${encodeURIComponent(id)}/specs`).catch(() => []);
+  if (Array.isArray(specs) && specs.length > 0) {
+    console.log(`\n  ${B}Specs${R} (${specs.length}):`);
+    for (const s of specs.slice(0, 10)) {
+      console.log(`    ${C}${s.spec_id}${R}  ${truncate(s.title || "", 60)}`);
+    }
+    if (specs.length > 10) console.log(`    ${D}… and ${specs.length - 10} more${R}`);
+  }
+
+  // Absorbed child ideas
+  const children = await get(`/api/ideas/${encodeURIComponent(id)}/children`).catch(() => []);
+  if (Array.isArray(children) && children.length > 0) {
+    console.log(`\n  ${B}Absorbed${R} (${children.length}):`);
+    for (const c of children.slice(0, 12)) {
+      const st = c.manifestation_status || "none";
+      const dot = st === "validated" ? `${G}●${R}` : st === "partial" ? `${Y}●${R}` : `${D}○${R}`;
+      console.log(`    ${dot}  ${truncate(c.name || c.id, 48).padEnd(50)} ${D}${c.id}${R}`);
+    }
+    if (children.length > 12) console.log(`    ${D}… and ${children.length - 12} more${R}`);
+  }
+
   console.log();
 }
 

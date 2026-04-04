@@ -3,6 +3,7 @@ idea_id: user-surfaces
 title: User Surfaces
 stage: implementing
 work_type: feature
+pillar: surfaces
 specs:
   - [148-coherence-cli-comprehensive](../specs/148-coherence-cli-comprehensive.md)
   - [075-web-ideas-specs-usage-pages](../specs/075-web-ideas-specs-usage-pages.md)

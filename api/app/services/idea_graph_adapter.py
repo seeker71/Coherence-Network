@@ -120,6 +120,8 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         slug=slug,
         slug_history=slug_history,
         workspace_git_url=workspace_git_url,
+        is_curated=bool(node.get("is_curated", False)),
+        pillar=node.get("pillar") or None,
     )
 
 
@@ -131,7 +133,7 @@ def _idea_to_properties(idea: Idea) -> dict[str, Any]:
         "resistance_risk", "confidence", "manifestation_status", "stage",
         "interfaces", "idea_type", "parent_idea_id", "child_idea_ids",
         "value_basis", "work_type", "lifecycle", "duplicate_of", "last_activity_at",
-        "slug", "workspace_git_url",
+        "slug", "workspace_git_url", "is_curated", "pillar",
     ]:
         val = getattr(idea, field, None)
         if val is not None:

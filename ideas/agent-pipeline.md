@@ -3,6 +3,7 @@ idea_id: agent-pipeline
 title: Agent Pipeline
 stage: implementing
 work_type: feature
+pillar: pipeline
 specs:
   - [002-agent-orchestration-api](../specs/002-agent-orchestration-api.md)
   - [005-project-manager-pipeline](../specs/005-project-manager-pipeline.md)

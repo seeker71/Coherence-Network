@@ -1,0 +1,338 @@
+# Idea Migration Map — Fractal Structure
+#
+# Single source of truth for the 16 super-ideas and every absorbed child.
+# Every non-super idea maps to exactly one parent. Spec-leaks and UUID stubs
+# are listed separately — they stay in the DB but are never surfaced publicly.
+#
+# Used by:
+#   scripts/migrate_ideas_to_fractal.py — writes parent_idea_id on each row
+#   scripts/validate_migration_map.py — asserts coverage
+
+super_ideas:
+  - id: idea-realization-engine
+    pillar: realization
+  - id: portfolio-governance
+    pillar: realization
+  - id: agent-pipeline
+    pillar: pipeline
+  - id: pipeline-reliability
+    pillar: pipeline
+  - id: pipeline-optimization
+    pillar: pipeline
+  - id: agent-cli
+    pillar: pipeline
+  - id: coherence-credit
+    pillar: economics
+  - id: value-attribution
+    pillar: economics
+  - id: user-surfaces
+    pillar: surfaces
+  - id: developer-experience
+    pillar: surfaces
+  - id: federation-and-nodes
+    pillar: network
+  - id: identity-and-onboarding
+    pillar: network
+  - id: contributor-experience
+    pillar: network
+  - id: data-infrastructure
+    pillar: foundation
+  - id: knowledge-and-resonance
+    pillar: foundation
+  - id: external-presence
+    pillar: foundation
+
+# Every non-super idea -> its parent super-idea
+children:
+  # ── Realization: idea-realization-engine ─────────────────────────
+  idea-lifecycle-closure: idea-realization-engine
+  fractal-idea-right-sizing: idea-realization-engine
+  fractal-nature-of-ideas: idea-realization-engine
+  fractal-self-awareness: idea-realization-engine
+  fractal-self-balance: idea-realization-engine
+  self-balancing-graph: idea-realization-engine
+  serendipity-engine: idea-realization-engine
+  idea-feedback-loop: idea-realization-engine
+  source-to-idea-lineage: idea-realization-engine
+  contributor-discovery: idea-realization-engine
+  contribution-recognition-loop: idea-realization-engine
+
+  # ── Realization: portfolio-governance ─────────────────────────
+  portfolio-governance: portfolio-governance
+  coherence-signal-depth: portfolio-governance
+  grant-triadic-scoring: portfolio-governance
+  grant-coherence-triadic: portfolio-governance
+  grant-resonance-triadic: portfolio-governance
+  grant-tensegrity-score: portfolio-governance
+  grant-distance-penalty: portfolio-governance
+  grant-five-scale-scoring: portfolio-governance
+  grant-explanation-traces: portfolio-governance
+  grant-growth-edge: portfolio-governance
+  grant-human-calibration: portfolio-governance
+  grant-idea-triadic: portfolio-governance
+  grant-news-triadic: portfolio-governance
+  grant-coherence-upgrade: portfolio-governance
+  grant-concept-store: portfolio-governance
+  grant-belief-graph: portfolio-governance
+  grant-source-ingestion: portfolio-governance
+  validation-quality-gates: portfolio-governance
+
+  # ── Pipeline: agent-pipeline ─────────────────────────
+  split-review-into-phases: agent-pipeline
+  pipeline-data-flow-fixes: agent-pipeline
+  pipeline-deploy-phase: agent-pipeline
+  validation-requires-production: agent-pipeline
+  validation-means-deployed: agent-pipeline
+  validation-categories: agent-pipeline
+  fully-automated-pipeline: agent-pipeline
+  pipeline-full-automation: agent-pipeline
+  project-manager-orchestrator: agent-pipeline
+  agent-orchestration-api: agent-pipeline
+  agent-sse-control-channel: agent-pipeline
+  project-agnostic-pipeline: agent-pipeline
+  auto-publish-pipeline: agent-pipeline
+  runner-pipeline-health: agent-pipeline
+  coherence-network-agent-pipeline: agent-pipeline
+
+  # ── Pipeline: pipeline-reliability ─────────────────────────
+  stale-task-reaper: pipeline-reliability
+  smart-reap-diagnose-resume: pipeline-reliability
+  smart-task-reaper: pipeline-reliability
+  silent-failure-detection: pipeline-reliability
+  task-deduplication: pipeline-reliability
+  data-driven-timeout-resume: pipeline-reliability
+  runner-self-update: pipeline-reliability
+  incident-response-and-self-healing: pipeline-reliability
+  tool-streak-recovery-test: pipeline-reliability
+  opencode-canary-validation: pipeline-reliability
+  auth-freshness-monitor: pipeline-reliability
+  post-tasks-empty-direction-422: pipeline-reliability
+
+  # ── Pipeline: pipeline-optimization ─────────────────────────
+  runner-auto-contribution: pipeline-optimization
+  ci-noise-reduction: pipeline-optimization
+  cross-task-outcome-correlation: pipeline-optimization
+  provider-model-registry: pipeline-optimization
+  openrouter-free-tier-provider: pipeline-optimization
+  dif-instrumentation-feedback: pipeline-optimization
+  merge-runners-single-file: pipeline-optimization
+
+  # ── Pipeline: agent-cli ─────────────────────────
+  coherence-mcp-server: agent-cli
+  coherence-cli-npm: agent-cli
+  cli-binary-name-conflict: agent-cli
+  cli-noninteractive-identity: agent-cli
+  cli-agent-mode: agent-cli
+  cli-full-coverage: agent-cli
+  cli-mcp-surface: agent-cli
+  node-message-bus: agent-cli
+  node-remote-control: agent-cli
+  node-display-names: agent-cli
+  api-bulk-operations: agent-cli
+  pypi-indexing: agent-cli
+  skill-auto-contribution: agent-cli
+  daily-brief-skill: agent-cli
+  ucore-daily-engagement-skill: agent-cli
+  api-key-mgmt: agent-cli
+
+  # ── Economics: coherence-credit ─────────────────────────
+  market-driven-exchange-rates: coherence-credit
+  cc-economics-and-value-coherence: coherence-credit
+  investment-ux: coherence-credit
+
+  # ── Economics: value-attribution ─────────────────────────
+  cross-linked-presences: value-attribution
+  agent-session-summary: value-attribution
+  contribution-auto-recording: value-attribution
+  traceability-backfill: value-attribution
+  full-traceability-chain: value-attribution
+  node-capability-discovery: value-attribution
+  shared-asset-tracking: value-attribution
+  contributor-profiles-achievements: value-attribution
+  codex-dynamic-attribution: value-attribution
+
+  # ── Surfaces: user-surfaces ─────────────────────────
+  web-news-resonance-page: user-surfaces
+  ux-homepage-readability: user-surfaces
+  ux-live-pipeline-dashboard: user-surfaces
+  node-task-visibility: user-surfaces
+  ux-resonance-empty-state: user-surfaces
+  web-federation-nodes-messages: user-surfaces
+  consolidate-overlapping-pages: user-surfaces
+  nodes-ux-overhaul: user-surfaces
+  ux-tabs-mobile-friendly: user-surfaces
+  ux-tasks-page-broken: user-surfaces
+  ux-navigation-simplification: user-surfaces
+  ux-value-lineage-visualization: user-surfaces
+  ux-ideas-hierarchy-view: user-surfaces
+  ux-drilldown-hierarchy: user-surfaces
+  ux-my-portfolio: user-surfaces
+  ux-idea-detail-call-to-action: user-surfaces
+  portfolio-page-slow-loading: user-surfaces
+  friction-page-slow-loading: user-surfaces
+  automation-page-clarity: user-surfaces
+  metadata-self-discovery: user-surfaces
+  system-self-discovery: user-surfaces
+  concept-graph-visualization: user-surfaces
+  ux-web-ecosystem-links: user-surfaces
+  ux-vision-roadmap-page: user-surfaces
+  web-audit-findings-2026-03-24: user-surfaces
+  web-ci: user-surfaces
+  web-skeleton: user-surfaces
+  web-import-stack-ui: user-surfaces
+  ux-contributor-experience: user-surfaces
+  ux-contribute-page-redesign: user-surfaces
+  codex-ui-orchestration: user-surfaces
+
+  # ── Surfaces: developer-experience ─────────────────────────
+  external-repo-milestone: developer-experience
+  external-proof: developer-experience
+  db-error-tracking: developer-experience
+  documentation-developer-experience: developer-experience
+  observability-audit-trail: developer-experience
+  codex-spec-reflection: developer-experience
+  codex-spec-driven-regen: developer-experience
+  spec-verification-upgrade: developer-experience
+
+  # ── Network: federation-and-nodes ─────────────────────────
+  federation-aggregated-visibility: federation-and-nodes
+  federation-measurement-push: federation-and-nodes
+  federation-strategy-propagation: federation-and-nodes
+  federated-instance-aggregation: federation-and-nodes
+  federation-network: federation-and-nodes
+  federation-node-identity: federation-and-nodes
+  shared-ideas-cross-network: federation-and-nodes
+  openclaw-node-bridge: federation-and-nodes
+  openclaw-bidirectional-messaging: federation-and-nodes
+  codex-distributed-cluster: federation-and-nodes
+  codex-service-discovery: federation-and-nodes
+  codex-multi-oauth: federation-and-nodes
+  codex-load-balancing: federation-and-nodes
+  codex-fractal-exchange: federation-and-nodes
+
+  # ── Network: identity-and-onboarding ─────────────────────────
+  identity-37-providers: identity-and-onboarding
+  identity-driven-onboarding: identity-and-onboarding
+  ux-new-contributor-orientation: identity-and-onboarding
+  contributor-preferences-beliefs: identity-and-onboarding
+
+  # ── Network: contributor-experience ─────────────────────────
+  real-time-collaboration-threads: contributor-experience
+  contributor-messaging: contributor-experience
+
+  # ── Foundation: data-infrastructure ─────────────────────────
+  universal-node-edge-layer: data-infrastructure
+  fractal-node-edge-primitives: data-infrastructure
+  ucore-node-edge-registry: data-infrastructure
+  service-contract-registry: data-infrastructure
+  data-hygiene-monitoring: data-infrastructure
+  data-retention-summarization: data-infrastructure
+  graph-store-abstraction: data-infrastructure
+  sprint-1-graph-foundation: data-infrastructure
+  health-check: data-infrastructure
+  api-request-logging-middleware: data-infrastructure
+  api-error-handling: data-infrastructure
+  request-validation: data-infrastructure
+  pagination: data-infrastructure
+  logging-audit: data-infrastructure
+  release-gates: data-infrastructure
+  ops-runbook: data-infrastructure
+  deploy-latest-to-vps: data-infrastructure
+  deploy-readiness: data-infrastructure
+  codex-delta-versioning: data-infrastructure
+  codex-oneshot-breath: data-infrastructure
+  codex-content-addressing: data-infrastructure
+  codex-adapter-hydration: data-infrastructure
+  friction-analysis: data-infrastructure
+  requirements-txt-import: data-infrastructure
+  coverage-update: data-infrastructure
+  node-capability-discovery: data-infrastructure
+  ci-pipeline: data-infrastructure
+  meta-pipeline-backlog: data-infrastructure
+  overnight-backlog: data-infrastructure
+  backlog: data-infrastructure
+  placeholder: data-infrastructure
+
+  # ── Foundation: knowledge-and-resonance ─────────────────────────
+  fractal-ontology-core: knowledge-and-resonance
+  concept-layer-foundation: knowledge-and-resonance
+  ucore-concept-resonance-kernel: knowledge-and-resonance
+  ucore-meta-nodes-self-describing: knowledge-and-resonance
+  ucore-integration: knowledge-and-resonance
+  ucore-temporal-consciousness: knowledge-and-resonance
+  ucore-future-knowledge-patterns: knowledge-and-resonance
+  ucore-event-streaming: knowledge-and-resonance
+  universal-ontology-browser: knowledge-and-resonance
+  concept-translation-views: knowledge-and-resonance
+  point-of-view-translation: knowledge-and-resonance
+  ucore-belief-translation: knowledge-and-resonance
+  belief-system-interface: knowledge-and-resonance
+  water-states-for-knowledge: knowledge-and-resonance
+  breath-cycle-phases: knowledge-and-resonance
+  breath-lifecycle-for-ideas: knowledge-and-resonance
+  resonance-semantic: knowledge-and-resonance
+  resonance-navigation: knowledge-and-resonance
+  fractal-concept-resonance: knowledge-and-resonance
+  fractal-concept-taxonomy: knowledge-and-resonance
+  fractal-accessible-ontology: knowledge-and-resonance
+  fractal-zoom-navigation: knowledge-and-resonance
+  edge-navigation: knowledge-and-resonance
+  coherence-algorithm-engine: knowledge-and-resonance
+  codex-concept-registry: knowledge-and-resonance
+  codex-phase-transitions: knowledge-and-resonance
+  codex-graph-query: knowledge-and-resonance
+  codex-plan-topology: knowledge-and-resonance
+  codex-relations-constraints: knowledge-and-resonance
+  codex-user-concept-edges: knowledge-and-resonance
+  codex-realtime-websocket: knowledge-and-resonance
+  codex-event-streaming: knowledge-and-resonance
+  codex-push-notifications: knowledge-and-resonance
+  codex-self-update-hotreload: knowledge-and-resonance
+  codex-intelligent-caching: knowledge-and-resonance
+  codex-digital-signatures: knowledge-and-resonance
+  codex-llm-pipeline: knowledge-and-resonance
+  codex-image-analysis: knowledge-and-resonance
+
+  # ── Foundation: external-presence ─────────────────────────
+  bot-discord: external-presence
+  bot-telegram: external-presence
+  bot-x-twitter: external-presence
+  bot-medium-substack: external-presence
+  social-platform-bots: external-presence
+  social-platform-coverage: external-presence
+  news-ingestion-with-resonance-lens: external-presence
+  configurable-news-sources: external-presence
+  ucore-news-ingestion-daily-brief: external-presence
+  source-rich-metadata: external-presence
+  geolocation-interface: external-presence
+  ucore-geolocation-nearby: external-presence
+  content-parsing-pipeline: external-presence
+  i18n-auto-translation: external-presence
+  auto-i18n-translation: external-presence
+  presence-modularization: external-presence
+  community-project-funder-match: external-presence
+  oss-interface-alignment: external-presence
+
+# Spec-leaks: numeric-prefix IDs that are actually spec IDs masquerading as ideas.
+# These get is_curated=false and never appear in curated views, but remain in DB.
+# Also includes UUID-style ids like "idea-xxxxx" from commit-evidence auto-discovery.
+# Pattern-matched at migration time; no need to enumerate every one.
+spec_leak_patterns:
+  - "^[0-9]{3}-"                    # 001-xxx through 999-xxx
+  - "^idea-[a-f0-9]{12}$"           # idea-XXXXXXXXXXXX
+  - "^[a-f0-9]{8}-[a-f0-9]{4}-"     # full UUIDs
+
+# Misc stubs that don't have a natural home — park under data-infrastructure
+# Can be reviewed later for promotion or retirement.
+stubs_park_under: data-infrastructure
+stubs:
+  - test-idea
+  - test-idea-001
+  - test-no-key
+  - string?
+  - test-cleanup
+
+# Unknown/new ideas that aren't in children or stubs and don't match leak patterns
+# get parked here. This guarantees every existing idea has a fractal home.
+# When an idea's proper home becomes clear, move it to `children:` above.
+default_park_under: data-infrastructure

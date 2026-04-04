@@ -3,6 +3,7 @@ idea_id: pipeline-optimization
 title: Pipeline Optimization
 stage: implementing
 work_type: feature
+pillar: pipeline
 specs:
   - [074-tool-failure-awareness](../specs/074-tool-failure-awareness.md)
   - [112-prompt-ab-roi-measurement](../specs/112-prompt-ab-roi-measurement.md)

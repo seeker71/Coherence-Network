@@ -260,6 +260,45 @@ async function loadIdeaActivity(ideaId: string): Promise<ActivityEvent[]> {
   }
 }
 
+type RegistrySpec = {
+  spec_id: string;
+  title: string;
+  summary?: string;
+  idea_id?: string | null;
+};
+
+type ChildIdea = {
+  id: string;
+  name: string;
+  description: string;
+  manifestation_status: string;
+  free_energy_score: number;
+};
+
+async function loadRegistrySpecs(ideaId: string): Promise<RegistrySpec[]> {
+  try {
+    const API = getApiBase();
+    const res = await fetch(`${API}/api/ideas/${encodeURIComponent(ideaId)}/specs`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+async function loadChildIdeas(ideaId: string): Promise<ChildIdea[]> {
+  try {
+    const API = getApiBase();
+    const res = await fetch(`${API}/api/ideas/${encodeURIComponent(ideaId)}/children`, { cache: "no-store" });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function IdeaDetailPage({ params }: { params: Promise<{ idea_id: string }> }) {
   const resolved = await params;
   const ideaId = decodeURIComponent(resolved.idea_id);
@@ -295,10 +334,12 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
   }
 
   const idea = ideaResult.idea;
-  const [flowResult, stakes, activity] = await Promise.all([
+  const [flowResult, stakes, activity, registrySpecs, childIdeas] = await Promise.all([
     loadFlowForIdea(ideaId),
     loadIdeaStakes(ideaId),
     loadIdeaActivity(ideaId),
+    loadRegistrySpecs(ideaId),
+    loadChildIdeas(ideaId),
   ]);
   const flow = flowResult.flow;
   const apiBase = getApiBase();
@@ -357,6 +398,8 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
         linkedTaskIds={linkedTaskIds}
         linkedRefs={linkedRefs}
         flowSearchParams={buildFlowSearchParams({ ideaId: idea.id }).toString()}
+        registrySpecs={registrySpecs}
+        childIdeas={childIdeas}
       >
         {/* Interactive server-rendered client components placed as Overview tab children */}
         <IdeaLensPanel ideaId={idea.id} defaultLens="libertarian" />

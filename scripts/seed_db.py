@@ -897,8 +897,51 @@ def sha256_of(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def _parse_yaml_frontmatter(content: str) -> dict:
+    """Extract simple YAML frontmatter (--- ... ---) from a markdown file.
+
+    Returns a dict with scalar values and flat list values (no nested YAML).
+    Robust enough for spec and idea frontmatter without a yaml dep.
+    """
+    if not content.startswith("---"):
+        return {}
+    try:
+        end = content.index("\n---", 3)
+    except ValueError:
+        return {}
+    block = content[3:end].strip()
+
+    result: dict = {}
+    current_key: str | None = None
+    for raw in block.splitlines():
+        line = raw.rstrip()
+        if not line.strip():
+            continue
+        # Top-level scalar: "key: value"
+        m = re.match(r"^([A-Za-z0-9_\-]+):\s*(.*)$", line)
+        if m and not line.startswith(" "):
+            key, val = m.group(1), m.group(2).strip()
+            current_key = key
+            if val == "" or val == "[]":
+                result[key] = [] if val == "[]" else ""
+            else:
+                # Strip matching quotes
+                if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                    val = val[1:-1]
+                result[key] = val
+            continue
+        # List item under current key
+        m = re.match(r"^\s+-\s*(.*)$", line)
+        if m and current_key:
+            item = m.group(1).strip()
+            if not isinstance(result.get(current_key), list):
+                result[current_key] = []
+            result[current_key].append(item)
+    return result
+
+
 def _parse_spec_file(path: Path) -> dict | None:
-    """Extract spec_id, title, and summary from a spec markdown file."""
+    """Extract spec_id, title, summary, and frontmatter from a spec markdown file."""
     name = path.stem  # e.g. "001-health-check"
     # Skip TEMPLATE.md
     if name.upper() == "TEMPLATE":
@@ -907,6 +950,8 @@ def _parse_spec_file(path: Path) -> dict | None:
     spec_id = name
     content = path.read_text(encoding="utf-8")
     content_bytes = path.read_bytes()
+
+    frontmatter = _parse_yaml_frontmatter(content)
 
     # Title: first # heading
     title = name.replace("-", " ").title()
@@ -931,6 +976,9 @@ def _parse_spec_file(path: Path) -> dict | None:
             if in_paragraph and para_lines:
                 break
             continue
+        if stripped.startswith(">"):
+            # Skip blockquote navigation added by add_crosslinks.py
+            continue
         in_paragraph = True
         para_lines.append(stripped)
     if para_lines:
@@ -942,6 +990,7 @@ def _parse_spec_file(path: Path) -> dict | None:
         "summary": summary,
         "content_path": f"specs/{path.name}",
         "content_hash": sha256_of(content_bytes),
+        "idea_id": frontmatter.get("idea_id") or None,
     }
 
 
@@ -968,12 +1017,15 @@ def seed_specs() -> int:
                 summary=parsed["summary"],
                 content_path=parsed["content_path"],
                 content_hash=parsed["content_hash"],
+                idea_id=parsed.get("idea_id"),
             ))
         else:
-            spec_registry_service.update_spec(parsed["spec_id"], SpecRegistryUpdate(
+            update_payload = SpecRegistryUpdate(
                 content_path=parsed["content_path"],
                 content_hash=parsed["content_hash"],
-            ))
+                idea_id=parsed.get("idea_id"),
+            )
+            spec_registry_service.update_spec(parsed["spec_id"], update_payload)
         count += 1
 
     return count
@@ -1075,6 +1127,85 @@ def seed_ideas() -> int:
 
     idea_registry_service.save_ideas(ideas, bootstrap_source="seed_db.py:SEED_IDEAS")
     return len(ideas)
+
+
+def seed_curated_ideas() -> int:
+    """Upsert 16 super-ideas from ideas/*.md as is_curated=True graph nodes.
+
+    Reads frontmatter (idea_id, title, stage, work_type, pillar) and the first
+    paragraph of body as description. Idempotent — updates existing nodes.
+    """
+    from app.models.idea import Idea, IdeaStage, IdeaType, IdeaWorkType, ManifestationStatus
+    from app.services import idea_graph_adapter
+
+    ideas_dir = ROOT / "ideas"
+    if not ideas_dir.exists():
+        print("  No ideas/ directory found")
+        return 0
+
+    count = 0
+    for path in sorted(ideas_dir.glob("*.md")):
+        if path.name in ("INDEX.md", "TEMPLATE.md"):
+            continue
+
+        content = path.read_text(encoding="utf-8")
+        fm = _parse_yaml_frontmatter(content)
+        idea_id = fm.get("idea_id")
+        if not idea_id:
+            continue
+
+        title = fm.get("title") or idea_id.replace("-", " ").title()
+        pillar = fm.get("pillar") or None
+
+        # Extract first body paragraph after frontmatter as description
+        body = content.split("---", 2)[-1] if content.startswith("---") else content
+        description = ""
+        for para_block in body.split("\n\n"):
+            stripped = para_block.strip()
+            if not stripped or stripped.startswith("#") or stripped.startswith(">"):
+                continue
+            description = stripped.replace("\n", " ")[:500]
+            break
+        if not description:
+            description = title
+
+        # Parse stage + work_type safely
+        try:
+            stage = IdeaStage(fm.get("stage", "none") or "none")
+        except ValueError:
+            stage = IdeaStage.NONE
+        work_type = None
+        wt = fm.get("work_type")
+        if wt:
+            try:
+                work_type = IdeaWorkType(wt)
+            except ValueError:
+                work_type = None
+
+        idea = Idea(
+            id=idea_id,
+            name=title,
+            description=description,
+            potential_value=100.0,
+            actual_value=0.0,
+            estimated_cost=50.0,
+            actual_cost=0.0,
+            resistance_risk=1.0,
+            confidence=0.7,
+            manifestation_status=ManifestationStatus.PARTIAL,
+            idea_type=IdeaType.SUPER,
+            parent_idea_id=None,
+            child_idea_ids=[],
+            stage=stage,
+            work_type=work_type,
+            slug=idea_id,
+            is_curated=True,
+            pillar=pillar,
+        )
+        idea_graph_adapter.save_single_idea(idea)
+        count += 1
+
+    return count
 
 
 
@@ -1450,6 +1581,10 @@ def main() -> None:
     idea_count = seed_ideas()
     print(f"  {idea_count} ideas loaded")
 
+    print("Seeding curated super-ideas from ideas/*.md...")
+    curated_count = seed_curated_ideas()
+    print(f"  {curated_count} curated super-ideas upserted")
+
     print("Seeding specs...")
     spec_count = seed_specs()
     print(f"  {spec_count} specs seeded")
@@ -1470,11 +1605,12 @@ def main() -> None:
     checkpoint_wal()
 
     print("\n=== Summary ===")
-    print(f"  Ideas:     {idea_count}")
-    print(f"  Specs:     {spec_count}")
-    print(f"  Evidence:  {evidence_count}")
-    print(f"  Spec->Idea links:     {link_count}")
-    print(f"  Evidence->Idea links: {evidence_link_count}")
+    print(f"  Ideas:            {idea_count}")
+    print(f"  Curated super:    {curated_count}")
+    print(f"  Specs:            {spec_count}")
+    print(f"  Evidence:         {evidence_count}")
+    print(f"  Spec->Idea links: {link_count}")
+    print(f"  Evidence->Idea:   {evidence_link_count}")
     print("Done.")
 
 

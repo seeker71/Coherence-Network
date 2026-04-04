@@ -3,6 +3,7 @@ idea_id: idea-realization-engine
 title: Idea Realization Engine
 stage: implementing
 work_type: feature
+pillar: realization
 specs:
   - [053-ideas-prioritization](../specs/053-ideas-prioritization.md)
   - [138-idea-lifecycle-management](../specs/138-idea-lifecycle-management.md)

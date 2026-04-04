@@ -3,6 +3,7 @@ idea_id: developer-experience
 title: Developer Experience
 stage: implementing
 work_type: enhancement
+pillar: surfaces
 specs: []
 ---
 
