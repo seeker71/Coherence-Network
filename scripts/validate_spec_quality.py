@@ -187,13 +187,33 @@ def validate_spec(path: Path) -> list[str]:
     return errors
 
 
-def _changed_spec_files(repo_root: Path, base: str, head: str) -> list[Path]:
+def _specs_dir_for_workspace(repo_root: Path, workspace_id: str) -> Path:
+    """Resolve the specs directory for a workspace.
+
+    Default workspace ('coherence-network') uses the legacy repo-root
+    ``specs/`` directory. All other workspaces live at
+    ``workspaces/{slug}/specs/``.
+    """
+    if workspace_id == "coherence-network":
+        return repo_root / "specs"
+    return repo_root / "workspaces" / workspace_id / "specs"
+
+
+def _rel_prefix_for_workspace(workspace_id: str) -> str:
+    """Return the repo-relative path prefix for this workspace's specs."""
+    if workspace_id == "coherence-network":
+        return "specs/"
+    return f"workspaces/{workspace_id}/specs/"
+
+
+def _changed_spec_files(repo_root: Path, base: str, head: str, workspace_id: str = "coherence-network") -> list[Path]:
     cmd = ["git", "diff", "--name-only", "--diff-filter=ACMR", base, head]
     output = subprocess.check_output(cmd, cwd=str(repo_root), text=True)
     rows = [line.strip() for line in output.splitlines() if line.strip()]
+    prefix = _rel_prefix_for_workspace(workspace_id)
     spec_paths = []
     for rel in rows:
-        if not rel.startswith("specs/") or not rel.endswith(".md"):
+        if not rel.startswith(prefix) or not rel.endswith(".md"):
             continue
         name = Path(rel).name.lower()
         if name == "template.md":
@@ -232,16 +252,28 @@ def main() -> int:
         action="store_true",
         help="Fail when no changed specs are detected in the git range.",
     )
+    parser.add_argument(
+        "--workspace",
+        default="coherence-network",
+        help=(
+            "Workspace to validate specs for. Default 'coherence-network' uses "
+            "the legacy repo-root specs/ directory. Any other workspace looks at "
+            "workspaces/{slug}/specs/."
+        ),
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
+    workspace_id = args.workspace or "coherence-network"
     targets: list[Path] = []
 
     if args.file:
         targets = [Path(p).resolve() for p in args.file]
     elif args.base:
         try:
-            targets = _changed_spec_files(repo_root=repo_root, base=args.base, head=args.head)
+            targets = _changed_spec_files(
+                repo_root=repo_root, base=args.base, head=args.head, workspace_id=workspace_id,
+            )
         except subprocess.CalledProcessError as exc:
             print(f"ERROR: failed to compute changed specs for range {args.base}..{args.head}: {exc}")
             return 1
@@ -249,10 +281,14 @@ def main() -> int:
             if args.require_changed_spec:
                 print("ERROR: no changed spec files found in git range")
                 return 1
-            print("OK: no changed feature spec files detected in git range")
+            print(f"OK: no changed feature spec files detected in git range (workspace={workspace_id})")
             return 0
     else:
-        default_specs = (repo_root / "specs").glob("*.md")
+        specs_dir = _specs_dir_for_workspace(repo_root, workspace_id)
+        if not specs_dir.is_dir():
+            print(f"ERROR: specs dir does not exist for workspace '{workspace_id}': {specs_dir}")
+            return 1
+        default_specs = specs_dir.glob("*.md")
         targets = [
             path
             for path in sorted(default_specs)

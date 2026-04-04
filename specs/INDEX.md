@@ -19,36 +19,36 @@ The system that tracks ideas from inception to measurable impact.
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 053 | Ideas Prioritization (free energy scoring) | done |
-| 138 | Idea Lifecycle Management (stages: none→specced→implementing→testing→reviewing→complete) | active |
-| 176 | Idea Lifecycle Closure (exit task-generation pool on complete) | active |
-| 117 | Idea Hierarchy — Super/Child Ideas | in progress |
-| 120 | Super-Idea Rollup Criteria | active |
-| 158 | Idea Right-Sizing (split bloated / merge nano ideas) | active |
-| 181 | Idea Dual Identity (UUID + human slug) | active |
+| 053 | [Ideas Prioritization (free energy scoring)](053-ideas-prioritization.md) | done |
+| 138 | [Idea Lifecycle Management (stages: none→specced→implementing→testing→reviewing→complete)](138-idea-lifecycle-management.md) | active |
+| 176 | [Idea Lifecycle Closure (exit task-generation pool on complete)](176-idea-lifecycle-closure.md) | active |
+| 117 | [Idea Hierarchy — Super/Child Ideas](117-idea-hierarchy-super-child.md) | in progress |
+| 120 | [Super-Idea Rollup Criteria](120-super-idea-rollup-criteria.md) | active |
+| 158 | [Idea Right-Sizing (split bloated / merge nano ideas)](158-idea-right-sizing.md) | active |
+| 181 | [Idea Dual Identity (UUID + human slug)](181-idea-dual-identity.md) | active |
 
 ### Contributions and Value
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 048 | Contributions API (time, effort, code tracking) | done |
-| 048 | Value Lineage and Payout Attribution (idea→spec→impl→usage→payout chain) | active |
-| 049 | Distribution Engine (fair value distribution by coherence scores) | done |
-| 052 | Assets API (code, models, content, data) | done |
-| 083 | Task Claim Tracking and ROI De-duplication | done |
-| 086 | Normalize GitHub Commit Cost Estimation | done |
-| 094 | Contributor Onboarding and Governed Change Flow | active |
+| 048 | [Contributions API (time, effort, code tracking)](048-contributions-api.md) | done |
+| 048 | [Value Lineage and Payout Attribution (idea→spec→impl→usage→payout chain)](048-value-lineage-and-payout-attribution.md) | active |
+| 049 | [Distribution Engine (fair value distribution by coherence scores)](049-distribution-engine.md) | done |
+| 052 | [Assets API (code, models, content, data)](052-assets-api.md) | done |
+| 083 | [Task Claim Tracking and ROI De-duplication](083-task-claim-tracking-and-roi-dedupe.md) | done |
+| 086 | [Normalize GitHub Commit Cost Estimation](086-normalize-github-commit-cost-estimation.md) | done |
+| 094 | [Contributor Onboarding and Governed Change Flow](094-contributor-onboarding-and-governed-change-flow.md) | active |
 
 ### Economics and Measurement
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 119 | Coherence Credit (CC) — Internal Currency | done |
-| 124 | CC Economics and Value Coherence | in progress |
-| 114 | MVP Cost Tracking and Acceptance Proof | active |
-| 115 | Grounded Cost and Value Measurement (real signals → A/B ROI) | done |
-| 116 | Grounded Idea Portfolio Metrics | done |
-| 126 | Portfolio Governance Effectiveness | active |
+| 119 | [Coherence Credit (CC) — Internal Currency](119-coherence-credit-internal-currency.md) | done |
+| 124 | [CC Economics and Value Coherence](124-cc-economics-and-value-coherence.md) | in progress |
+| 114 | [MVP Cost Tracking and Acceptance Proof](114-mvp-cost-and-acceptance-proof.md) | active |
+| 115 | [Grounded Cost and Value Measurement (real signals → A/B ROI)](115-grounded-cost-value-measurement.md) | done |
+| 116 | [Grounded Idea Portfolio Metrics](116-grounded-idea-portfolio-metrics.md) | done |
+| 126 | [Portfolio Governance Effectiveness](126-portfolio-governance-effectiveness.md) | active |
 
 ---
 
@@ -60,43 +60,43 @@ The engine that turns ideas into working software.
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 002 | Agent Orchestration API (task submission, routing, status) | done |
-| 005 | Project Manager Pipeline (spec→impl→test→review cycle) | done |
-| 139 | Agent Pipeline — umbrella spec | active |
-| 026 | Pipeline Observability and Auto-Review | partial |
-| 032 | Attention Heuristics in Pipeline Status | done |
-| 159 | Split Review/Deploy/Verify Phases | active |
+| 002 | [Agent Orchestration API (task submission, routing, status)](002-agent-orchestration-api.md) | done |
+| 005 | [Project Manager Pipeline (spec→impl→test→review cycle)](005-project-manager-pipeline.md) | done |
+| 139 | [Agent Pipeline — umbrella spec](139-coherence-network-agent-pipeline.md) | active |
+| 026 | [Pipeline Observability and Auto-Review](026-pipeline-observability-and-auto-review.md) | partial |
+| 032 | [Attention Heuristics in Pipeline Status](032-attention-heuristics-pipeline-status.md) | done |
+| 159 | [Split Review/Deploy/Verify Phases](159-split-review-deploy-verify-phases.md) | active |
 
 ### Reliability and Self-Healing
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 113 | Failed Task Diagnostics Contract (error_summary + error_category) | done |
-| 114 | Auto-Heal from Diagnostics | done |
-| 125 | Incident Response and Self-Healing | active |
-| 169 | Smart Reap (diagnose/resume stuck tasks) | active |
-| 186 | Data-Driven Timeout and Resume | active |
-| 047 | Heal Completion and Issue Resolution | partial |
-| stale-task-reaper | Stale Task Reaper | active |
-| task-deduplication | Task Deduplication | active |
+| 113 | [Failed Task Diagnostics Contract (error_summary + error_category)](113-failed-task-diagnostics-contract.md) | done |
+| 114 | [Auto-Heal from Diagnostics](114-auto-heal-from-diagnostics.md) | done |
+| 125 | [Incident Response and Self-Healing](125-incident-response-and-self-healing.md) | active |
+| 169 | [Smart Reap (diagnose/resume stuck tasks)](169-smart-reap.md) | active |
+| 186 | [Data-Driven Timeout and Resume](186-data-driven-timeout-resume.md) | active |
+| 047 | [Heal Completion and Issue Resolution](047-heal-completion-issue-resolution.md) | partial |
+| stale-task-reaper | [Stale Task Reaper](stale-task-reaper.md) | active |
+| task-deduplication | [Task Deduplication](task-deduplication.md) | active |
 
 ### Optimization
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 074 | Tool Failure Awareness (cost without gain) | active |
-| 112 | Prompt A/B ROI Measurement | done |
-| 113 | Provider Usage Coalescing + Timeout Resilience | active |
-| 127 | Cross-Task Outcome Correlation | active |
-| 135 | Provider Health Alerting | active |
-| runner-auto-contribution | Runner Auto-Contribution | active |
+| 074 | [Tool Failure Awareness (cost without gain)](074-tool-failure-awareness.md) | active |
+| 112 | [Prompt A/B ROI Measurement](112-prompt-ab-roi-measurement.md) | done |
+| 113 | [Provider Usage Coalescing + Timeout Resilience](113-provider-usage-coalescing-timeout-resilience.md) | active |
+| 127 | [Cross-Task Outcome Correlation](127-cross-task-outcome-correlation.md) | active |
+| 135 | [Provider Health Alerting](135-provider-health-alerting.md) | active |
+| runner-auto-contribution | [Runner Auto-Contribution](runner-auto-contribution.md) | active |
 
 ### Agent CLI
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 108 | Unified Agent CLI Flow (patch on fail) | active |
-| 111 | Agent Execution Lifecycle Hooks | active |
+| 108 | [Unified Agent CLI Flow (patch on fail)](108-unified-agent-cli-flow-patch-on-fail.md) | active |
+| 111 | [Agent Execution Lifecycle Hooks](111-agent-execution-lifecycle-hooks.md) | active |
 
 ---
 
@@ -106,25 +106,25 @@ The engine that turns ideas into working software.
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 018 | Coherence Algorithm Formal Spec (0.0–1.0 scores) | done |
-| 054 | PostgreSQL Migration | active |
-| 118 | Unified SQLite Store | in progress |
-| 166 | Universal Node + Edge Layer | active |
-| 050 | Canonical Route Registry and Runtime Mapping | active |
-| 107 | Runtime Telemetry DB Precedence | active |
-| 130 | API Request Logging Middleware | active |
-| 051 | Release Gates API | done |
+| 018 | [Coherence Algorithm Formal Spec (0.0–1.0 scores)](018-coherence-algorithm-spec.md) | done |
+| 054 | [PostgreSQL Migration](054-postgresql-migration.md) | active |
+| 118 | [Unified SQLite Store](118-unified-sqlite-store.md) | in progress |
+| 166 | [Universal Node + Edge Layer](166-universal-node-edge-layer.md) | active |
+| 050 | [Canonical Route Registry and Runtime Mapping](050-canonical-route-registry-and-runtime-mapping.md) | active |
+| 107 | [Runtime Telemetry DB Precedence](107-runtime-telemetry-db-precedence.md) | active |
+| 130 | [API Request Logging Middleware](130-api-request-logging-middleware.md) | active |
+| 051 | [Release Gates API](051-release-gates.md) | done |
 
 ### Surfaces
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 148 | Coherence CLI (comprehensive, 35+ commands) | partial |
-| 075 | Web Ideas/Specs/Usage Pages | active |
-| 161 | Node and Task Visibility | active |
-| 162 | Metadata and Self-Discovery | active |
-| 165 | UX Homepage Readability (WCAG AA) | active |
-| 180 | MCP Skill Registry Submission | active |
+| 148 | [Coherence CLI (comprehensive, 35+ commands)](148-coherence-cli-comprehensive.md) | partial |
+| 075 | [Web Ideas/Specs/Usage Pages](075-web-ideas-specs-usage-pages.md) | active |
+| 161 | [Node and Task Visibility](161-node-task-visibility.md) | active |
+| 162 | [Metadata and Self-Discovery](162-meta-self-discovery.md) | active |
+| 165 | [UX Homepage Readability (WCAG AA)](165-ux-homepage-readability.md) | active |
+| 180 | [MCP Skill Registry Submission](180-mcp-skill-registry-submission.md) | active |
 
 ---
 
@@ -134,8 +134,8 @@ Not active until core idea lifecycle is proven reliable.
 
 | Spec | Title | Status |
 |------|-------|--------|
-| 168 | Identity-Driven Onboarding (TOFU) | active |
-| 157 | Investment UX — Stake CC on Ideas | active |
+| 168 | [Identity-Driven Onboarding (TOFU)](168-identity-driven-onboarding-tofu.md) | active |
+| 157 | [Investment UX — Stake CC on Ideas](157-investment-ux-stake-cc-on-ideas.md) | active |
 
 ---
 

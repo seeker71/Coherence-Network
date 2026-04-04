@@ -10,7 +10,32 @@ source:
     symbols: [list_tasks()]
   - file: api/app/models/agent.py
     symbols: [AgentTaskCreate, AgentTaskUpdate, TaskStatus, TaskType]
+requirements:
+  - "POST /api/agent/tasks — Submit task, returns task_id + routed model + suggested command"
+  - "GET /api/agent/tasks — List tasks with optional status/task_type filters and pagination (limit, offset)"
+  - "GET /api/agent/tasks/attention — List tasks with status needs_decision or failed only"
+  - "GET /api/agent/tasks/count — Lightweight counts (total, by_status) for dashboards"
+  - "GET /api/agent/tasks/{id} — Get task by id (full shape: command, output, progress_pct, current_step, decision_prompt, de"
+  - "GET /api/agent/tasks/{id}/log — Full task log (prompt, command, output); file streamed during execution"
+  - "PATCH /api/agent/tasks/{id} — Update task (status, output, progress_pct, current_step, decision_prompt, decision); Teleg"
+  - "GET /api/agent/route — Route-only: given task_type (and optional executor), return model + command template (no persiste"
+  - "GET /api/agent/usage — Per-model usage and routing summary"
+  - "GET /api/agent/monitor-issues — Monitor issues from automated pipeline check (spec 027)"
+  # ... 9 more in Requirements section below
+done_when:
+  - "POST /api/agent/tasks — Submit task, returns task_id + routed model + suggested command"
+  - "GET /api/agent/tasks — List tasks with optional status/task_type filters and pagination (limit, offset)"
+  - "GET /api/agent/tasks/attention — List tasks with status needs_decision or failed only"
+  - "GET /api/agent/tasks/count — Lightweight counts (total, by_status) for dashboards"
+  - "GET /api/agent/tasks/{id} — Get task by id (full shape: command, output, progress_pct, current_step, decision_prompt,..."
+test: "python3 -m pytest api/tests/test_agent_integration_api.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
+> **Source**: [`api/app/routers/agent_tasks_routes.py`](../api/app/routers/agent_tasks_routes.py) | [`api/app/services/agent_service_crud.py`](../api/app/services/agent_service_crud.py) | [`api/app/services/agent_service_list.py`](../api/app/services/agent_service_list.py) | [`api/app/models/agent.py`](../api/app/models/agent.py)
 
 # Spec: Agent Orchestration API
 

@@ -8,7 +8,32 @@ source:
     symbols: [register_lifecycle_hook(), dispatch_lifecycle_event()]
   - file: api/app/routers/agent_status_routes.py
     symbols: [pipeline status endpoints]
+requirements:
+  - "Execution time: Per-task duration in agent_runner logs and task log footer (done: `duration_seconds` in task log)"
+  - "Task success rate: Aggregate completed vs failed by task_type, model, executor; store in metrics (JSON/SQLite)"
+  - "Usage per task: Token/cost proxy or API call count per task (when providers expose it)"
+  - "Pipeline metrics endpoint: `GET /api/agent/metrics` returning execution time P50/P95, success rate, usage summary"
+  - "Prompt variants: Support `context.prompt_variant` or prompt ID in task; log which variant was used"
+  - "Skill variants: Test different .cursor/skills or agent configs; tag tasks with skill_version"
+  - "Model variants: Compare `cursor/auto` vs `cursor/composer-1` vs `claude`; attribute outcome to model"
+  - "A/B result aggregation: Success rate and avg duration by variant; simple statistical comparison"
+  - "Overall goal tracking: Define goals (e.g. “10 specs done”, “web app live”); track progress from backlog completion"
+  - "Goal→backlog linkage: Map backlog items to goals; compute progress %"
+  # ... 13 more in Requirements section below
+done_when:
+  - "Execution time — Per-task duration in agent_runner logs and task log footer (done: `duration_seconds` in task log)"
+  - "Task success rate — Aggregate completed vs failed by task_type, model, executor; store in metrics (JSON/SQLite)"
+  - "Usage per task — Token/cost proxy or API call count per task (when providers expose it)"
+  - "Pipeline metrics endpoint — `GET /api/agent/metrics` returning execution time P50/P95, success rate, usage summary"
+  - "Prompt variants — Support `context.prompt_variant` or prompt ID in task; log which variant was used"
+test: "python3 -m pytest api/tests/test_monitor_pipeline_stale_running.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
+> **Source**: [`api/app/services/agent_execution_metrics.py`](../api/app/services/agent_execution_metrics.py) | [`api/app/services/agent_execution_hooks.py`](../api/app/services/agent_execution_hooks.py) | [`api/app/routers/agent_status_routes.py`](../api/app/routers/agent_status_routes.py)
 
 # Spec: Pipeline Observability and Auto-Review
 

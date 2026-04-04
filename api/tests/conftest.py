@@ -265,6 +265,15 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     unified_db.reset_engine()
     unified_db.ensure_schema()
 
+    # Ensure the default workspace exists — Layer 1 validators require it on
+    # every POST /api/ideas and POST /api/spec-registry. In production this
+    # runs via the app startup hook; tests bypass lifespan, so we mirror it.
+    try:
+        from app.services import workspace_service as _ws
+        _ws.ensure_default_workspace()
+    except Exception:
+        pass
+
     agent_service._store.clear()
     agent_service._store_loaded = False
     agent_service._store_loaded_path = None

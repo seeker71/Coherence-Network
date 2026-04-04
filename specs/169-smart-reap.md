@@ -8,7 +8,37 @@ source:
     symbols: [runner liveness, reap_diagnosis]
   - file: api/app/routers/agent_smart_reap_routes.py
     symbols: [smart reap endpoints]
+requirements:
+  - "Runner liveness check before reaping — query runner registry, skip if alive"
+  - "Timeout extension for live runners — extend deadline by max_age_minutes, max 2 extensions"
+  - "Provider-crash capture — read last 4kB of task log, classify crash type"
+  - "Structured diagnosis in task context — write reap_diagnosis sub-object"
+  - "Resume task when partial output >= 20% — create continuation task with partial work"
+  - "Reap history tracking per idea — timeout_count, needs_human_attention at >= 3"
+  - "GET /api/agent/reap-history — per-idea reap summary endpoint"
+  - "Observable via existing Telegram alerts — structured diagnosis in reap events"
+  - "GET /api/agent/tasks/{id}/reap-diagnosis — convenience endpoint"
+  - "Idempotent on double-run — no duplicate reaps in same window"
+done_when:
+  - "_reap_stale_tasks() queries runner registry before marking timed_out"
+  - "Runner alive → timeout extended (up to 2 times), task stays running"
+  - "Runner dead → reap_diagnosis written to task context with error_class"
+  - "Partial output ≥ 20% of expected → resume task created automatically"
+  - "timeout_count ≥ 3 for same idea+type → needs_human_attention set, retries stop"
+  - "GET /api/agent/reap-history returns per-idea timeout summary"
+  - "GET /api/agent/tasks/{id}/reap-diagnosis returns 200 with diagnosis or 404"
+  - "All 8 new tests pass in pytest"
+test: "cd api && python -m pytest tests/test_agent.py tests/test_agent_runner_registry_api.py -x"
+constraints:
+  - "Do not break existing timed_out / failed pipeline advance logic"
+  - "Do not add DB migrations; use task context JSON for all new state"
+  - "Extensions never exceed 2 per task — hard cap"
+  - "Resume task must never have retry_count > max allowed"
+  - "Reap history computed from task context records, not a new table"
 ---
+
+> **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
+> **Source**: [`api/app/services/smart_reap_service.py`](../api/app/services/smart_reap_service.py) | [`api/app/services/smart_reaper_service.py`](../api/app/services/smart_reaper_service.py) | [`api/app/routers/agent_smart_reap_routes.py`](../api/app/routers/agent_smart_reap_routes.py)
 
 # Spec 169: Smart Reap — Diagnose, Capture, and Resume Stuck Tasks
 

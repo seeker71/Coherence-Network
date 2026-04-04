@@ -166,6 +166,7 @@ def _graph_node_to_spec(node: dict) -> SpecRegistryEntry:
         updated_at=node.get("updated_at"),
         content_path=node.get("content_path"),
         content_hash=node.get("content_hash"),
+        workspace_id=node.get("workspace_id") or "coherence-network",
     )
 
 
@@ -257,6 +258,7 @@ def create_spec(data: SpecRegistryCreate) -> SpecRegistryEntry | None:
             "created_by_contributor_id": data.created_by_contributor_id,
             "content_path": getattr(data, "content_path", None),
             "content_hash": getattr(data, "content_hash", None),
+            "workspace_id": data.workspace_id or "coherence-network",
         },
     )
     _invalidate_spec_cache()

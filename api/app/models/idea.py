@@ -102,8 +102,9 @@ class Idea(BaseModel):
     workspace_git_url: Optional[str] = Field(default=None, description="Git remote URL of the repo this idea lives in. Enables multi-repo pipeline routing.")
     slug: str = Field(default="", description="URL-safe human identifier. Unique. Backfilled from id if absent.")
     slug_history: list[str] = Field(default_factory=list, description="Previous slugs — kept so old URLs/links resolve.")
-    is_curated: bool = Field(default=False, description="True for super-ideas defined in ideas/*.md — surfaced by default in public views.")
-    pillar: Optional[str] = Field(default=None, description="Top-level grouping for curated super-ideas: realization|pipeline|economics|surfaces|network|foundation")
+    is_curated: bool = Field(default=False, description="True for super-ideas defined in workspace bundle ideas/ — surfaced by default in public views.")
+    pillar: Optional[str] = Field(default=None, description="Top-level grouping declared by the owning workspace's pillars taxonomy.")
+    workspace_id: str = Field(default="coherence-network", description="Owning workspace. Ideas live inside exactly one workspace — default workspace is 'coherence-network'.")
 
 
 class IdeaWithScore(Idea):
@@ -250,6 +251,8 @@ class IdeaCreate(BaseModel):
     duplicate_of: Optional[str] = None
     workspace_git_url: Optional[str] = Field(default=None, description="Git remote URL of the workspace repo for this idea.")
     slug: Optional[str] = Field(default=None, description="Human slug; auto-derived from name if omitted.")
+    pillar: Optional[str] = Field(default=None, description="Top-level pillar (must match workspace's declared taxonomy). Inherited from parent_idea_id when omitted.")
+    workspace_id: Optional[str] = Field(default=None, description="Owning workspace. Defaults to 'coherence-network' when omitted.")
 
     @model_validator(mode="before")
     @classmethod

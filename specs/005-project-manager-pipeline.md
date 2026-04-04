@@ -8,7 +8,31 @@ source:
     symbols: [_extract_partial_work(), _find_spec_file()]
   - file: api/app/services/agent_service_pipeline_status.py
     symbols: [get_pipeline_status()]
+requirements:
+  - "Orchestrator finds the next task from a backlog (specs/, docs/PLAN.md, or config)"
+  - "For each task, runs phases in order: spec → impl → test → review"
+  - "After review, validates: pytest passes and review output indicates pass"
+  - "If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations"
+  - "If validation passes: advances to next task, starts with spec phase"
+  - "On needs_decision: orchestrator pauses, does not create new tasks until human /reply"
+  - "State persists across restarts (backlog index, current phase, iteration)"
+  - "Uses local models for spec/test/impl/review; HEAL only for CI fixes when needed"
+  - "PM complete: : Running the project manager with `--dry-run` exits 0 and logs deterministic preview (backlog index, phase, next item)."
+  - "E2E smoke test: : A test runs the project manager in a mode that verifies end-to-end behavior (e.g. subprocess `--dry-run` exit 0, or `-"
+done_when:
+  - "Orchestrator finds the next task from a backlog (specs/, docs/PLAN.md, or config)"
+  - "For each task, runs phases in order: spec → impl → test → review"
+  - "After review, validates: pytest passes and review output indicates pass"
+  - "If validation fails: loops back to impl (fix), then test, then review until all pass or max iterations"
+  - "If validation passes: advances to next task, starts with spec phase"
+test: "cd api && python -m pytest api/tests/test_project_manager_pipeline.py -q"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
+> **Source**: [`api/scripts/project_manager.py`](../api/scripts/project_manager.py) | [`api/app/services/pipeline_advance_service.py`](../api/app/services/pipeline_advance_service.py) | [`api/app/services/agent_service_pipeline_status.py`](../api/app/services/agent_service_pipeline_status.py)
 
 # Spec: Project Manager Pipeline
 

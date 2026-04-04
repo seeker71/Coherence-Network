@@ -6,7 +6,21 @@ source:
     symbols: [_sync_manifestation_status()]
   - file: api/app/models/idea.py
     symbols: [IdeaStage.COMPLETE, IdeaLifecycle]
+requirements:
+  - Fix stage string comparisons in idea_to_task_bridge to match IdeaStage enum
+  - Task history guard prevents duplicate tasks for same idea and phase
+  - Review completion advances idea from reviewing to complete
+  - Closed ideas (complete + validated) exit task-generation pool
+  - GET /api/ideas/{idea_id}/lifecycle returns closure state and blockers
+  - Emit friction event when bridge skips a closed idea
+done_when:
+  - determine_task_type uses correct IdeaStage enum values
+  - Bridge skips ideas with existing task in pending/running/completed/done
+  - pytest api/tests/test_idea_lifecycle_closure.py passes
 ---
+
+> **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
+> **Source**: [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
 # Spec 176: Idea Lifecycle Closure — System Must Recognize When an Idea Is Done
 

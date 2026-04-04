@@ -6,7 +6,21 @@ source:
     symbols: [compute_idea_metrics()]
   - file: api/app/routers/agent_grounded_metrics_routes.py
     symbols: [grounded metrics endpoints]
+requirements:
+  - computed_actual_cost aggregated from spec registry + runtime + commit evidence
+  - computed_actual_value uses strongest signal from lineage, usage, or spec value
+  - computed_confidence reflects data coverage across five signal sources
+  - grounding_sources dict contains all raw inputs for audit
+  - Works with zero data returning 0.0 and low confidence
+  - GET /api/ideas/{idea_id}/grounded-metrics returns computed metrics
+  - Bulk GET /api/ideas/grounded-metrics returns metrics for all ideas
+done_when:
+  - Unit tests verify exact metric computations from known inputs
+  - pytest api/tests/test_grounded_idea_portfolio_metrics.py passes
 ---
+
+> **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
+> **Source**: [`api/app/services/grounded_idea_metrics_service.py`](../api/app/services/grounded_idea_metrics_service.py) | [`api/app/routers/agent_grounded_metrics_routes.py`](../api/app/routers/agent_grounded_metrics_routes.py)
 
 # Spec 116: Grounded Idea Portfolio Metrics
 

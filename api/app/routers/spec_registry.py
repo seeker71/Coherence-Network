@@ -7,6 +7,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from app.middleware.auth import require_api_key
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryEntry, SpecRegistryUpdate
 from app.services import spec_registry_service
+from app.services.workspace_scoped_validation import (
+    SpecCreateValidationContext,
+    ValidationError as WorkspaceValidationError,
+    validate_spec_create,
+)
 
 router = APIRouter()
 
@@ -65,6 +70,15 @@ async def get_spec(spec_id: str) -> SpecRegistryEntry:
 
 @router.post("/spec-registry", response_model=SpecRegistryEntry, status_code=201)
 async def create_spec(data: SpecRegistryCreate, _key: str = Depends(require_api_key)) -> SpecRegistryEntry:
+    # Layer 1 guardrails — universal across all agent provider CLIs.
+    try:
+        validate_spec_create(SpecCreateValidationContext(
+            workspace_id=data.workspace_id or "coherence-network",
+            idea_id=data.idea_id,
+        ))
+    except WorkspaceValidationError as e:
+        raise HTTPException(status_code=e.status, detail={"code": e.code, "message": e.message})
+
     created = spec_registry_service.create_spec(data)
     if created is None:
         raise HTTPException(status_code=409, detail="Spec already exists")

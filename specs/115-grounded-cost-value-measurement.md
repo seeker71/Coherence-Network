@@ -6,7 +6,21 @@ source:
     symbols: [compute_grounded_cost(), compute_grounded_value()]
   - file: api/app/services/grounded_idea_metrics_service.py
     symbols: [compute_idea_metrics()]
+requirements:
+  - compute_grounded_cost returns actual_cost_usd when present, else runtime_cost_estimate
+  - compute_grounded_value returns 0.0 for failed tasks
+  - Quality multiplier degrades with retries (1.0/0.7/0.4/0.2)
+  - Raw signals stored alongside computed scores in every measurement
+  - record_grounded_measurement requires no new API calls or DB queries
+  - Economic value layer uses max of adoption, revenue, and lineage signals
+  - Tasks without prompt_variant in context are not recorded
+done_when:
+  - Exact computed values verified against known inputs in tests
+  - pytest api/tests/test_grounded_cost_value_measurement.py passes
 ---
+
+> **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
+> **Source**: [`api/app/services/grounded_measurement_service.py`](../api/app/services/grounded_measurement_service.py) | [`api/app/services/grounded_idea_metrics_service.py`](../api/app/services/grounded_idea_metrics_service.py)
 
 # Spec 115: Grounded Cost & Value Measurement for Prompt A/B ROI
 

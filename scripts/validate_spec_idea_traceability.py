@@ -40,6 +40,15 @@ def main() -> int:
         default="docs/SPEC-IDEA-TRACEABILITY.json",
         help="Traceability mapping file path.",
     )
+    parser.add_argument(
+        "--workspace",
+        default="coherence-network",
+        help=(
+            "Workspace to validate. Default 'coherence-network' uses the "
+            "legacy repo-root specs/ directory. Any other workspace looks at "
+            "workspaces/{slug}/specs/."
+        ),
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -51,9 +60,16 @@ def main() -> int:
         print("ERROR: mappings must be a list")
         return 1
 
+    if args.workspace == "coherence-network":
+        specs_dir = repo_root / "specs"
+    else:
+        specs_dir = repo_root / "workspaces" / args.workspace / "specs"
+    if not specs_dir.is_dir():
+        print(f"ERROR: specs dir does not exist for workspace '{args.workspace}': {specs_dir}")
+        return 1
     spec_paths = sorted(
         str(p.relative_to(repo_root)).replace("\\", "/")
-        for p in (repo_root / "specs").glob("*.md")
+        for p in specs_dir.glob("*.md")
     )
     mapped_paths: list[str] = []
     mapped_ideas: dict[str, str] = {}

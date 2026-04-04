@@ -82,6 +82,8 @@ import { runSkillsCommand } from "../lib/commands/skills.mjs";
 import { runGuidesCommand } from "../lib/commands/guides.mjs";
 import { debugCommand } from "../lib/commands/debug.mjs";
 import { modelsCommand, usageCommand } from "../lib/commands/models.mjs";
+import { handleWorkspace } from "../lib/commands/workspaces.mjs";
+import { setActiveWorkspaceOverride } from "../lib/config.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -93,7 +95,29 @@ if (_invokedAs === 'cc') {
   );
 }
 
-const [command, ...args] = process.argv.slice(2);
+// Extract global --workspace flag before dispatching; any command can
+// read the active workspace via getActiveWorkspace() from config.mjs.
+// The flag sets an in-process override; the persistent default lives in
+// config.json under the `workspace` key (set via `cc workspace use <id>`).
+function _extractGlobalFlags(argv) {
+  const out = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--workspace" && i + 1 < argv.length) {
+      setActiveWorkspaceOverride(argv[++i]);
+      continue;
+    }
+    if (a.startsWith("--workspace=")) {
+      setActiveWorkspaceOverride(a.slice("--workspace=".length));
+      continue;
+    }
+    out.push(a);
+  }
+  return out;
+}
+const _rawArgv = process.argv.slice(2);
+const _filtered = _extractGlobalFlags(_rawArgv);
+const [command, ...args] = _filtered;
 
 function debugPytest(message) {
   if (!process.env.PYTEST_CURRENT_TEST) return;
@@ -176,6 +200,8 @@ const COMMANDS = {
   nearby:        () => showNearby(args),
   location:      () => handleLocation(args),
   portfolio:     () => showPortfolio(),
+  workspace:     () => handleWorkspace(args),
+  workspaces:    () => handleWorkspace(["list", ...args]),
   help:          () => showHelp(),
 };
 

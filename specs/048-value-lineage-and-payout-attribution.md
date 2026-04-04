@@ -8,7 +8,28 @@ source:
     symbols: [create_link(), list_links(), valuation(), payout_preview()]
   - file: api/app/models/value_lineage.py
     symbols: [LineageLink, UsageEvent, LineageValuation, PayoutPreview]
+requirements:
+  - "API supports creating and fetching a lineage link that binds idea/spec/implementation references, contributor roles, and"
+  - "API supports appending usage/value events to a lineage link."
+  - "API exposes valuation summary for a lineage link (measured value, estimated cost, ROI ratio, event count)."
+  - "API supports payout preview from valuation using explicit stage weights and returns per-contributor attribution."
+  - "Payout preview applies optimization objectives for coherence, energy flow, awareness, friction relief, and stage-balance"
+  - "All artifacts are persisted in a durable local store for auditability."
+  - "Missing lineage id returns 404 with `{ \"detail\": \"Lineage link not found\" }`."
+done_when:
+  - "API supports creating and fetching a lineage link that binds idea/spec/implementation references, contributor roles, ..."
+  - "API supports appending usage/value events to a lineage link."
+  - "API exposes valuation summary for a lineage link (measured value, estimated cost, ROI ratio, event count)."
+  - "API supports payout preview from valuation using explicit stage weights and returns per-contributor attribution."
+  - "Payout preview applies optimization objectives for coherence, energy flow, awareness, friction relief, and stage-bala..."
+test: "cd api && pytest -q tests/test_value_lineage.py"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [value-attribution](../ideas/value-attribution.md)
+> **Source**: [`api/app/routers/value_lineage.py`](../api/app/routers/value_lineage.py) | [`api/app/services/value_lineage_service.py`](../api/app/services/value_lineage_service.py) | [`api/app/models/value_lineage.py`](../api/app/models/value_lineage.py)
 
 # Spec: Value Lineage and Payout Attribution
 

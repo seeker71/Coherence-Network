@@ -8,7 +8,37 @@ source:
     symbols: [failure patterns and classification]
   - file: api/app/services/smart_reaper_service.py
     symbols: [incident detection]
+requirements:
+  - "R1: Coherence monitor -- background service that continuously checks: (a) treasury coherence (reserve ratio >= 1.0), (b)"
+  - "R2: Graduated response based on coherence score:"
+  - "R3: Key compromise protocol -- any signer can trigger emergency freeze via `POST /api/incidents/freeze` (single-signer a"
+  - "R4: Oracle circuit breaker -- if exchange rate oracle returns a price differing > 20% from the 1-hour moving average: (a"
+  - "R5: Self-healing audit -- if hash chain gap detected: (a) identify break point (last verified entry to first divergent e"
+  - "R6: No silent failures -- every incident, degradation, and recovery is logged in the audit ledger and visible at the pub"
+  - "R7: `GET /api/health/coherence` returns full coherence dashboard with all four subsystem scores and overall status."
+  - "R8: `GET /api/incidents` returns list of all incidents (open and resolved) with timestamps, severity, actions taken, and"
+  - "R9: `POST /api/incidents/freeze` triggers emergency treasury freeze (single-signer authorization)."
+  - "R10: `POST /api/incidents/unfreeze` lifts treasury freeze (requires full quorum authorization)."
+done_when:
+  - "GET /api/health/coherence returns four subsystem scores and overall status"
+  - "Graduated response triggers correct action at each threshold (0.95, 0.90, hash break)"
+  - "POST /api/incidents/freeze halts treasury with single-signer auth"
+  - "POST /api/incidents/unfreeze requires full quorum and coherence score == 1.0"
+  - "Oracle circuit breaker freezes rate on >20% deviation and requires 3 clean reads to resume"
+  - "Self-healing appends \"healed\" or \"unresolved\" entries on hash chain gaps"
+  - "GET /api/incidents returns complete incident history"
+  - "All incidents are logged to audit ledger"
+  - "All tests pass in test_incident_response.py"
+test: "python3 -m pytest api/tests/test_cc_economics.py -x -q"
+constraints:
+  - "No incident may be suppressed or delayed in public disclosure"
+  - "Emergency freeze is single-signer; unfreeze requires full quorum"
+  - "Oracle circuit breaker requires exactly 3 consecutive clean reads to resume"
+  - "Hash chain gaps with failed reconstruction must remain visible permanently"
 ---
+
+> **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
+> **Source**: [`api/app/services/auto_heal_service.py`](../api/app/services/auto_heal_service.py) | [`api/app/services/failure_taxonomy_service.py`](../api/app/services/failure_taxonomy_service.py) | [`api/app/services/smart_reaper_service.py`](../api/app/services/smart_reaper_service.py)
 
 # Spec 125: Incident Response and Self-Healing
 

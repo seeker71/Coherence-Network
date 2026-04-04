@@ -6,7 +6,26 @@ source:
     symbols: [exchange rates, CC conversion]
   - file: api/app/models/coherence_credit.py
     symbols: [CostVector, ValueVector, ExchangeRate, ProviderRate]
+requirements:
+  - "R1: CostVector and ValueVector Pydantic models that decompose any CC amount into resource categories"
+  - "R2: ExchangeRate config loaded from `data/exchange_rates.json` with epoch-locked rates"
+  - "R3: `cc_from_usd()` and `usd_from_cc()` conversion functions (verified inverses)"
+  - "R4: `value_basis` field on the Idea model — dict mapping field names to human-readable rationale strings"
+  - "R5: ProviderRate model for comparing providers in CC terms"
+  - "R6: All existing hardcoded USD rates remain as defaults but are now mediated through the exchange rate config"
+done_when:
+  - "26 tests pass in test_coherence_credit.py"
+  - "cc_from_usd and usd_from_cc are verified inverses"
+  - "Every idea in SEED_IDEAS (scripts/seed_db.py) has value_basis with 6 required keys"
+  - "Existing tests (test_ideas.py, test_idea_hierarchy.py) pass without regression"
+test: "python3 -m pytest api/tests/test_idea_hierarchy.py api/tests/test_ideas.py -x -q"
+constraints:
+  - "Purely additive — no existing formulas or service logic modified"
+  - "New Idea fields must be Optional with None defaults for backward compatibility"
 ---
+
+> **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
+> **Source**: [`api/app/services/coherence_credit_service.py`](../api/app/services/coherence_credit_service.py) | [`api/app/models/coherence_credit.py`](../api/app/models/coherence_credit.py)
 
 # Spec 119: Coherence Credit (CC) — Internal Currency (Phase 1: Unit of Account)
 

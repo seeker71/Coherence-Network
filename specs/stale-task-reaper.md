@@ -4,7 +4,32 @@ status: partial
 source:
   - file: api/app/services/smart_reaper_service.py
     symbols: [timeout detection and reaping]
+requirements:
+  - "Tasks running beyond `max_age_minutes=15` (fixed threshold, not provider-derived) are"
+  - "Smart path (`smart_reap_service.smart_reap_task`) is attempted first; legacy path is"
+  - "Reaped tasks receive `status=timed_out`, `error_category=\"stale_task_reaped\"`, and a"
+  - "A retry task is created for any reaped task that has `idea_id` and"
+  - "The retry task carries `seed_source=\"reaper_retry\"`, incremented `retry_count`, and"
+  - "Smart path saves a `.patch` file to `api/task_patches/task_{id}.patch` when a worktree"
+  - "Startup reap marks own stale tasks (`claimed_by` matches current node) as `timed_out`"
+  - "Already-timed-out tasks are never re-reaped (reaper queries `status=running` only)."
+  - "After `_MAX_RETRIES_PER_IDEA_PHASE` exhausted, a friction event with"
+  - "The smart path checks runner liveness before reaping; live runners receive up to 2"
+done_when:
+  - "smart_reap import failure is recorded in runner health metric, visible at /api/health"
+  - "tasks_reaped_total is included in push_measurements() payload"
+  - "startup reap covers tasks from any runner with last_seen_at > 30 min old"
+  - "a friction event (or dedicated reap event) is posted each time the reap cycle fires"
+  - "all five verification scenarios below pass against production API"
+test: "pytest -q api/tests/ -k reaper"
+constraints:
+  - "do not change the 15-minute age threshold without a separate spec approval"
+  - "do not change _MAX_RETRIES_PER_IDEA_PHASE without a separate spec approval"
+  - "legacy fallback path must remain; do not remove it"
 ---
+
+> **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
+> **Source**: [`api/app/services/smart_reaper_service.py`](../api/app/services/smart_reaper_service.py)
 
 # Spec: Stale-Task Reaper
 

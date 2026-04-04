@@ -4,7 +4,20 @@ status: done
 source:
   - file: api/app/services/unified_db.py
     symbols: [Base, engine_cache, schema init]
+requirements:
+  - All services use unified_db.session() for database access
+  - Single COHERENCE_DATABASE_URL env var controls all persistence
+  - JSON file stores migrated to SQLAlchemy tables
+  - Old per-service DB env vars still work as fallbacks during migration
+  - Tests configurable with one env var for isolated test DB
+  - No data loss during migration
+done_when:
+  - pytest api/tests/test_unified_sqlite_store.py passes
+  - pytest api/tests/test_schema_init_fastpath.py passes
 ---
+
+> **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
+> **Source**: [`api/app/services/unified_db.py`](../api/app/services/unified_db.py)
 
 # Spec 118: Unified SQLite Store — Single Source of Truth
 

@@ -8,7 +8,27 @@ source:
     symbols: [compute_governance_health()]
   - file: api/app/models/idea.py
     symbols: [GovernanceHealth]
+requirements:
+  - "R1: New `GET /api/ideas/health` endpoint returns a `GovernanceHealth` response with the metrics defined in the Data Mode"
+  - "R2: `throughput_rate` is calculated as the count of ideas whose `manifestation_status` changed to `validated` in the las"
+  - "R3: `value_gap_trend` compares the sum of all `value_gap` values now vs. 30 days ago (negative means gaps are closing)."
+  - "R4: `question_answer_rate` is the ratio of answered open questions (non-null `answer`) to total open questions across al"
+  - "R5: `stale_ideas` lists idea IDs that have `manifestation_status != validated` and no field update in the last 14 days."
+  - "R6: `governance_score` is a composite 0.0–1.0 score: `(throughput_rate * 0.3) + (question_answer_rate * 0.3) + (1 - len("
+  - "R7: Response includes `snapshot_at` (ISO 8601 UTC timestamp) and `window_days` (default 30)."
+done_when:
+  - "GET /api/ideas/health returns GovernanceHealth JSON with all seven metrics"
+  - "All tests in api/tests/test_governance_health.py pass"
+  - "governance_score is between 0.0 and 1.0 inclusive"
+test: "cd api && python -m pytest tests/test_governance_health.py -x -v"
+constraints:
+  - "Do not modify existing idea endpoints or their response schemas"
+  - "Do not add new database tables; compute from existing idea state"
+  - "Coherence scores remain 0.0–1.0"
 ---
+
+> **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
+> **Source**: [`api/app/routers/ideas.py`](../api/app/routers/ideas.py) | [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
 # Spec 126: Portfolio Governance Effectiveness Metrics
 

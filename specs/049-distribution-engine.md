@@ -8,7 +8,29 @@ source:
     symbols: [DistributionEngine.distribute()]
   - file: api/app/models/distribution.py
     symbols: [Distribution, Payout]
+requirements:
+  - "POST /api/distributions — Trigger distribution for an asset"
+  - "Distribution algorithm: proportional to (cost_amount × (0.5 + coherence_score))"
+  - "Coherence weighting: higher coherence = higher payout multiplier"
+  - "Handles zero contributions (empty payout list)"
+  - "Handles zero weighted cost (empty payout list)"
+  - "Payout amounts rounded to 2 decimal places (ROUND_HALF_UP)"
+  - "Returns 404 when asset not found"
+  - "Async execution for future scaling"
+done_when:
+  - "POST /api/distributions — Trigger distribution for an asset"
+  - "Distribution algorithm: proportional to (cost_amount × (0.5 + coherence_score))"
+  - "Coherence weighting: higher coherence = higher payout multiplier"
+  - "Handles zero contributions (empty payout list)"
+  - "Handles zero weighted cost (empty payout list)"
+test: "python3 -m pytest api/tests/test_distributions.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [value-attribution](../ideas/value-attribution.md)
+> **Source**: [`api/app/routers/distributions.py`](../api/app/routers/distributions.py) | [`api/app/services/distribution_engine.py`](../api/app/services/distribution_engine.py) | [`api/app/models/distribution.py`](../api/app/models/distribution.py)
 
 # Spec: Distribution Engine
 

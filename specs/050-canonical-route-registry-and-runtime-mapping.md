@@ -6,7 +6,22 @@ source:
     symbols: [get_canonical_routes()]
   - file: api/app/routers/registry_discovery.py
     symbols: [route discovery endpoints]
+requirements:
+  - "API exposes canonical route registry for machine/human tooling."
+  - "Runtime mapping defaults avoid `unmapped` for standard API (`/api`, `/v1`) and web (`/`) surfaces."
+  - "Tests validate canonical route endpoint and default mapping behavior."
+done_when:
+  - "API exposes canonical route registry for machine/human tooling."
+  - "Runtime mapping defaults avoid `unmapped` for standard API (`/api`, `/v1`) and web (`/`) surfaces."
+  - "Tests validate canonical route endpoint and default mapping behavior."
+test: "python3 -m pytest api/tests/test_runtime_api.py -x -v"
+constraints:
+  - "changes scoped to listed files only"
+  - "no schema migrations without explicit approval"
 ---
+
+> **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
+> **Source**: [`api/app/services/route_registry_service.py`](../api/app/services/route_registry_service.py) | [`api/app/routers/registry_discovery.py`](../api/app/routers/registry_discovery.py)
 
 # Spec: Canonical Route Registry and Runtime Mapping
 

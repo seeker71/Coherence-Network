@@ -8,7 +8,21 @@ source:
     symbols: [/api/meta endpoints]
   - file: api/app/models/meta.py
     symbols: [EndpointNode, ModuleNode]
+done_when:
+  - "`GET /api/meta/endpoints` returns HTTP 200 with `total`, `traced`, `coverage_pct`, and `endpoints` list."
+  - "Each endpoint entry includes `path`, `method`, `path_hash`, `tags`, `has_trace`, and nullable `spec_id`/`idea_id`."
+  - "`GET /api/meta/endpoints/{path_hash}` returns 200 for valid hash and 404 for invalid hash."
+  - "`GET /api/meta/modules` returns HTTP 200 with list of module nodes including `trace_coverage_pct`."
+  - "`GET /api/meta/modules/{module_name}` returns 200 for `ideas` (short name) and 404 for unknown."
+  - "`GET /api/meta/coverage` returns `total_endpoints`, `traced_endpoints`, `coverage_pct`, and `untraced_paths`."
+  - "All 5 verification scenarios pass in production."
+  - "`coverage_pct` is consistent across `/endpoints?has_trace=false` count and `/coverage` report."
+  - "No 500 errors on any meta endpoint under valid input."
+  - "Meta router is registered in `main.py` with tag `meta`."
 ---
+
+> **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
+> **Source**: [`api/app/services/meta_service.py`](../api/app/services/meta_service.py) | [`api/app/routers/meta.py`](../api/app/routers/meta.py) | [`api/app/models/meta.py`](../api/app/models/meta.py)
 
 # Spec 162: Metadata & Self-Discovery — Every Endpoint, Module, and Config is a Navigable Entity
 
