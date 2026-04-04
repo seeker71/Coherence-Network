@@ -4,37 +4,45 @@
 
 ## How to find what you need
 
-1. Find the idea slug below
-2. Read `ideas/{slug}.md` for frontmatter (specs list, stage)
+1. Click the idea link below to see full description, capabilities, and absorbed ideas
+2. Each idea file has clickable spec links (`../specs/{slug}.md`)
 3. Query `GET /api/ideas/{slug}` for scores, questions, value data
-4. Each linked spec file has a `source:` map pointing to implementing code
 
-## Active Ideas
+## Core — What we're building for users
 
-| Slug | Title | Stage | Specs | Domain |
-|------|-------|-------|-------|--------|
-| `idea-realization-engine` | Idea Realization Engine | implementing | 7 | Core |
-| `value-attribution` | Value Attribution | implementing | 6 | Core |
-| `coherence-credit` | Coherence Credit | implementing | 6 | Core |
-| `contributor-experience` | Contributor Experience | specced | 3 | Core |
-| `agent-pipeline` | Agent Pipeline | implementing | 6 | Pipeline |
-| `pipeline-reliability` | Pipeline Reliability | implementing | 8 | Pipeline |
-| `pipeline-optimization` | Pipeline Optimization | implementing | 6 | Pipeline |
-| `agent-cli` | Agent CLI | implementing | 2 | Pipeline |
-| `data-infrastructure` | Data Infrastructure | implementing | 8 | Infra |
-| `user-surfaces` | User Surfaces | implementing | 6 | Infra |
-| `identity-and-onboarding` | Identity and Onboarding | specced | 2 | Phase 2 |
-| `developer-experience` | Developer Experience | implementing | 0 | DevEx |
+| Idea | Stage | Specs | Description |
+|------|-------|-------|-------------|
+| [Idea Realization Engine](idea-realization-engine.md) | implementing | 7 | Track every idea from inception to impact. Free-energy scoring, lifecycle stages, right-sizing. |
+| [Value Attribution](value-attribution.md) | implementing | 7 | Track who contributed what, calculate fair payouts via value lineage chain. |
+| [Coherence Credit](coherence-credit.md) | implementing | 6 | CC as unit of account. Every action has a cost, every outcome has a value. |
+| [Contributor Experience](contributor-experience.md) | specced | 3 | Onboarding, identity (37 providers), governed change flow, investment UX. |
+
+## Pipeline — How ideas become working software
+
+| Idea | Stage | Specs | Description |
+|------|-------|-------|-------------|
+| [Agent Pipeline](agent-pipeline.md) | implementing | 6 | Task orchestration, project manager cycles, split review/deploy/verify phases. |
+| [Pipeline Reliability](pipeline-reliability.md) | implementing | 8 | Self-healing: diagnostics, auto-heal, smart reap, data-driven timeouts, dedup. |
+| [Pipeline Optimization](pipeline-optimization.md) | implementing | 6 | Prompt A/B testing, provider health, cross-task correlation, cost tracking. |
+| [Agent CLI](agent-cli.md) | implementing | 2 | MCP server (20 tools), coherence-cli (35+ commands), lifecycle hooks. |
+
+## Infrastructure — What everything runs on
+
+| Idea | Stage | Specs | Description |
+|------|-------|-------|-------------|
+| [Data Infrastructure](data-infrastructure.md) | implementing | 8 | Universal node+edge layer, PostgreSQL, coherence algorithm, route registry. |
+| [User Surfaces](user-surfaces.md) | implementing | 6 | Web pages, CLI, homepage readability, MCP skill registry, self-discovery. |
+
+## Phase 2 — After core is proven
+
+| Idea | Stage | Specs | Description |
+|------|-------|-------|-------------|
+| [Identity and Onboarding](identity-and-onboarding.md) | specced | 2 | TOFU identity, 37 providers, investment UX (stake CC on ideas). |
+| [Developer Experience](developer-experience.md) | implementing | 0 | External repo proof, DB error tracking, context budget tooling. |
 
 ## Querying
 
 ```bash
 curl https://api.coherencycoin.com/api/ideas/{slug}       # single idea
 curl https://api.coherencycoin.com/api/ideas               # all ideas ranked by score
-cc ideas                                                   # CLI list
-cc idea {slug}                                             # CLI detail
 ```
-
-## Retired
-
-~70 ideas retired (lifecycle=retired): test data, micro-tactical details, off-mission features, duplicates.
