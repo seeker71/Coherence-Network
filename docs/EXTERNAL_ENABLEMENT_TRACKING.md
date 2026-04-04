@@ -1,309 +1,139 @@
 # External Enablement Tracking Sheet
 
-Ideas that produce/track code outside this repo — federation, CLI, marketplace, cross-instance sync.
+What needs work, what's done, what's next.
 
-## Working Rules (enforced every step)
+## Open Work
 
-1. **All tests must pass** before any commit. Run `cd api && pytest -v --ignore=tests/holdout` and `cd web && npm run build`.
-2. **Commit on each step** — one commit per spec requirement or logical unit of work.
-3. **Reflect after every step** — update the Progress Log with all required fields.
-4. **Continue without interruption** — after each step, immediately start the next. Do not stop, do not ask for confirmation, do not wait for review. Continue until ALL tasks in this sheet are completed, verified, deployed, and publicly tested.
-5. **Deploy and publicly test** — every spec must pass local gates, push, open PR, monitor CI green, deploy to production, and verify live. No spec is "done" until it works in public.
-6. **Publish after merge** — after every merge to main, run the deploy contract: local gates → push → open PR → monitor CI → merge → verify live. Nothing is "done" until it's in production.
+### Credential Routing (enables multi-contributor task execution)
 
-## Critical Path
+| Step | Task | Status | Files |
+|------|------|--------|-------|
+| 1 | `--repo` flag in local_runner.py — skip tasks if node lacks credentials for target repo | **done** | `api/scripts/local_runner.py` |
+| 2 | Auto-filter: skip tasks for repos without credentials in `keys.json` (no flag needed) | **done** | `api/scripts/local_runner.py` |
+| 3 | Write credential routing tests | todo | `api/tests/test_flow_enforcement.py` |
 
-| # | Spec | Title | API | Web | CLI | Tests | Notes |
-|---|------|-------|-----|-----|-----|-------|-------|
-| 1 | 120 | Minimum Federation Layer | ✅ 6 routes | ❌ No page | ❌ No cmd | 10 pass | federation/instances, federation/sync |
-| 2 | 132 | Federation Node Identity | ✅ 5 routes | ✅ /nodes | ✅ cc nodes | 6 pass | Register, heartbeat, persist node ID |
-| 3 | 137 | Node Capability Discovery | ✅ 3 refs | ✅ /nodes | ✅ cc nodes | 4 pass | Auto-detect AI executors, fleet capabilities |
-| 4 | 121 | OpenClaw Idea Marketplace | ✅ 5 routes | ❌ No page | ❌ No cmd | 10 pass | Publish, browse, fork, reputation |
-| 5 | 148 | Coherence CLI | ✅ N/A | ❌ No page | ✅ 35 cmds | 50+ pass | 7758 lines across 35 command files |
-| 6 | 166 | Universal Node+Edge Layer | ✅ 19 routes | ❌ No page | ❌ No cmd | 20 pass | graph_nodes/graph_edges, neighbor traversal |
+**Context**: DB schema + CRUD endpoints + CLI `cc credentials` already exist. Runner now filters tasks by repo credentials (both explicit `--repo` flag and automatic credential check).
 
-## Enablers (P2)
+### Planned Features (priority order)
 
-| # | Spec | Title | API | Web | CLI | Tests | Notes |
-|---|------|-------|-----|-----|-----|-------|-------|
-| 7 | 131 | Federation Measurement Push | ✅ 3 refs | ❌ No page | ❌ No cmd | 18 pass | POST summaries, dedup, aggregation |
-| 8 | 133 | Federation Aggregated Visibility | ✅ 2 refs | ❌ No page | ❌ No cmd | 7 pass | Cross-node stats, alerts |
-| 9 | 134 | Federation Strategy Propagation | ✅ 3 refs | ❌ No page | ❌ No cmd | 9 pass | Hub computes advisory strategies |
-| 10 | 149 | OpenClaw Inbox Session Protocol | ✅ 2 refs | ❌ No page | ❌ No cmd | 4 pass | `cc inbox` at session start |
-| 11 | 167 | Social Platform Bots | ✅ N/A | ❌ No page | ❌ No cmd | 4 pass | Discord bot (21 files). Spec 167 is decision record. |
-| 12 | 168 | Identity-Driven Onboarding TOFU | ✅ 4 routes | ✅ /onboarding | ❌ No cmd | 24 pass | Register, session, upgrade, ROI |
+| # | Feature | Description | Effort |
+|---|---------|-------------|--------|
+| 1 | **Compact summaries** | Replace raw logs/command output in operator surfaces with summaries + drilldown. Reduces context burn. | Medium |
+| 2 | **Tool overhead controls** | Auto-prune unused tools/adapters per task. Expose cost of always-on integrations. | Medium |
+| 3 | **Mission control surface** | `/mission-control` consolidating pipeline, diagnostics, gates, usage, tasks into one view. | Large |
+| 4 | **Goal-to-execution model** | Wire ideas/specs as operational goals with task groups, owners, budget envelopes. | Large |
+| 5 | **Approvals & budget board** | Single board for governance requests, deploy gates, needs_decision tasks, spend pressure. | Medium |
+| 6 | **Adapters catalog** | First-class surface for providers, federation nodes, Discord/Telegram, deploy gates. | Medium |
+| 7 | **Guided onboarding** | Beginner-friendly setup flow with deployment presets (local/private/public). | Medium |
+| 8 | **CLI mission control parity** | `cc mission-control`, `cc approvals`, `cc budgets`, `cc adapters`. | Medium |
+| 9 | **Anomaly self-heal policies** | Orphaned tasks, stale runners, deploy drift → automatic recovery policies. | Large |
 
-## Per-Contributor, Per-Repo Credential Tracking
+### Coverage Gaps
 
-Each repo needs its own credentials, provided by a contributor and used by tasks to push PRs, review PRs, and merge PRs.
+**Web pages missing:**
 
-### Current State
+| Page | Spec | Priority |
+|------|------|----------|
+| /federation | 120 | Medium |
+| /marketplace | 121 | High |
+| /graphs | 166 | Medium |
+| /measurements | 131 | Low |
+| /strategies | 134 | Low |
 
-| Credential | Storage | Provided By | Used By | Per-Repo? |
-|---|---|---|---|---|
-| Coherence API key (`cc_*`) | `~/.coherence-network/keys.json` | Auto-generated on setup | CLI (`X-API-Key`), runners | ❌ Global |
-| GitHub token | `gh auth token` keychain | `gh auth login` | `local_runner.py` (push), `agent_runner.py` (PR create) | ❌ Global |
-| DIF API key | `~/.coherence-network/keys.json` | Merly bootstrap | DIF API calls | ❌ Global |
-| Merly OAuth token | `~/.coherence-network/keys.json` | Browser OAuth | DIF key management | ❌ Global |
-| OpenRouter key | `config.json` / `keys.json` | Manual config | Model execution | ❌ Global |
-| Contributor identity | SQLite `contributor_identities` | Onboarding / OAuth | Attribution | ✅ Per-contributor |
+**CLI commands missing:**
 
-### Gap Analysis
+| Command | Spec | Priority |
+|---------|------|----------|
+| cc marketplace | 121 | High |
+| cc graph | 166 | Medium |
+| cc onboarding | 168 | Medium |
+| cc invest | 157 | Low |
+| cc measurements | 131 | Low |
+| cc strategies | 134 | Low |
 
-**Problem**: The system does NOT track per-contributor, per-repo git credentials. Today:
-- Git push relies on the host machine's `gh` CLI auth (keychain-backed) or system git credential helper
-- GitHub API calls use `GITHUB_TOKEN`/`GH_TOKEN` env vars
-- Each contributor's repo access is determined by whatever `gh auth login` is configured on the machine running the runner
-- No way to associate a specific contributor's credentials with a specific repo
+## Completed
 
-**What's needed for multi-repo, multi-contributor operation**:
-- Each contributor can provide credentials for each repo they have access to
-- Tasks can be routed to contributors who have credentials for the target repo
-- Push/review/merge operations use the right credentials for the right repo
-- Credentials are stored securely and rotated on expiry
+### Infrastructure (all specs implemented & deployed)
 
-### Proposed Credential Contract
+| Spec | Title | Status |
+|------|-------|--------|
+| 119 | Coherence Credit (CC) | done |
+| 120 | Minimum Federation Layer (6 routes) | done |
+| 121 | OpenClaw Idea Marketplace (5 routes) | done |
+| 131 | Federation Measurement Push | done |
+| 132 | Federation Node Identity | done |
+| 133 | Federation Aggregated Visibility | done |
+| 134 | Federation Strategy Propagation | done |
+| 137 | Node Capability Discovery | done |
+| 148 | Coherence CLI (35+ commands) | done |
+| 149 | OpenClaw Inbox Session Protocol | done |
+| 166 | Universal Node+Edge Layer (19 routes) | done |
+| 167 | Social Platform Bots (Discord) | done |
+| 168 | Identity-Driven Onboarding TOFU | done |
+| 048 | Value Lineage | done |
+
+### Operational Features (all shipped)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Context budget instrumentation | Tasks annotated with 0-100 hygiene score | done |
+| Lean task-card enforcement | Soft gates (file scope, task card, direction) + hard limit (40 files) | done |
+| Compact summaries | Summarize large outputs; fetch raw on drilldown | done |
+| Tool overhead controls | Auto-prune guard_agents for simple tasks | done |
+| Blueprint royalties | Contributors earn CC on blueprint use | done |
+| Guide discovery | `cc guides` surfaces top creators | done |
+| Skill synthesis | Completed tasks → procedural Skill nodes | done |
+| Procedural memory API | Query previous successes before starting work | done |
+| Diagnostics console | `/diagnostics` with config editor, workbench, context budget | done |
+| CLI ops surface | `cc ops`, `cc config`, task-log drilldown, runner control | done |
+| JSON-backed settings | Replaced env-driven config with shared JSON config | done |
+| Auto-deploy | GitHub Actions → Hostinger VPS deployment | done |
+| Test suite overhaul | 3,244 → 163 flow-centric tests (7s runtime) | done |
+| Credential CRUD | DB schema, API endpoints, `cc credentials` CLI | done |
+
+### Per-Contributor Credential Model
 
 | Field | Type | Description |
-|---|---|---|
-| `contributor_id` | FK → `contributors` | Who provided the credential |
-| `repo_url` | string | Which repo this credential is for (e.g., `github.com/seeker71/Coherence-Network`) |
-| `credential_type` | enum | `github_token`, `github_oauth`, `gitlab_token`, `ssh_key`, `pat` |
-| `credential_hash` | string | SHA-256 hash of the credential (never store raw) |
-| `scopes` | JSON | `["push", "pull", "pr_create", "pr_review", "pr_merge", "admin"]` |
-| `expires_at` | datetime | When the credential expires (GitHub PATs expire, SSH keys don't) |
-| `created_at` | datetime | When the credential was provided |
-| `last_used_at` | datetime | When the credential was last used |
+|-------|------|-------------|
+| `contributor_id` | FK | Who owns the credential |
+| `repo_url` | string | Which repo (e.g., `github.com/seeker71/Coherence-Network`) |
+| `credential_type` | enum | `github_token`, `ssh_key`, `pat` |
+| `credential_hash` | string | SHA-256 hash (raw never stored in DB) |
+| `scopes` | JSON | `["push", "pull", "pr_create", "pr_merge"]` |
 | `status` | enum | `active`, `expired`, `revoked` |
 
-### Implementation Plan
-
-| Step | Task | Files | Status |
-|---|---|---|---|
-| 1 | Add `repo_credentials` table to `unified_db.py` | `api/app/services/unified_db.py` | ✅ |
-| 2 | Add CRUD endpoints: `POST /api/credentials`, `GET /api/credentials`, `DELETE /api/credentials/{id}` | `api/app/routers/credentials.py` | ✅ |
-| 3 | Add Pydantic models for request/response | `api/app/models/credentials.py` | ✅ |
-| 4 | Add `--repo` flag to task routing so tasks can be matched to contributors with credentials | `api/app/services/agent_routing/` | ❌ |
-| 5 | Update `local_runner.py` to use stored credentials instead of relying on `gh auth token` | `api/scripts/local_runner.py` | ⏳ |
-| 6 | Add CLI command: `cc credentials add/list/remove` | `cli/lib/commands/credentials.mjs` | ✅ |
-| 7 | Add Guided CLI experience: `cc guide` | `cli/lib/commands/guide.mjs` | ✅ |
-| 8 | Write tests | `api/tests/test_credentials.py` | ❌ |
-
-### Security Notes
-
-- Raw credentials NEVER stored — only SHA-256 hashes
-- Credentials stored in `~/.coherence-network/keys.json` (mode 0o600) or SQLite
-- No env var fallbacks for credentials (per AGENTS.md convention)
-- Credential hash is used for verification, not for the actual operation
-- The actual credential is passed through once at provision time and used in-memory only
-
-## Coverage Gaps — Missing Web Pages
-
-| # | Gap | Spec | Priority | Description |
-|---|-----|------|----------|-------------|
-| W1 | /federation | 120 | Medium | View registered instances, sync history |
-| W2 | /marketplace | 121 | High | Browse, publish, fork ideas across instances |
-| W3 | /graphs | 166 | Medium | Visualize node+edge graph, neighbor exploration |
-| W4 | /measurements | 131 | Low | View federation measurement summaries |
-| W5 | /strategies | 134 | Low | View active strategy broadcasts from hub |
-
-## Coverage Gaps — Missing CLI Commands
-
-| # | Gap | Spec | Priority | Description |
-|---|-----|------|----------|-------------|
-| C1 | cc marketplace | 121 | High | Publish, browse, fork marketplace ideas |
-| C2 | cc graph | 166 | Medium | Create nodes/edges, query neighbors |
-| C3 | cc onboarding | 168 | Medium | Register, check session, upgrade identity |
-| C4 | cc invest | 157 | Low | Stake CC on ideas via CLI |
-| C5 | cc measurements | 131 | Low | Push/view measurement summaries |
-| C6 | cc strategies | 134 | Low | View/fetch strategy broadcasts |
-| C7 | cc credentials | New | High | ✅ Add/list/remove per-repo credentials |
-| C8 | cc guide | New | High | ✅ Guided contributor experience |
-
-## Coverage Gaps — Missing API Endpoints
-
-| # | Gap | Spec | Priority | Description |
-|---|-----|------|----------|-------------|
-| A1 | federation/aggregation | 133 | Medium | Aggregation endpoint not found by pattern match |
-| A2 | federation/inbox push | 149 | Low | Webhook push (vs poll) for inbox messages |
-| A3 | /api/credentials | New | High | Per-contributor, per-repo credential CRUD |
-
-## Summary
-
-**All 12 specs fully implemented and tested (163+ tests passing).** Coverage gaps closed: marketplace web page, graphs web page, 3 new CLI commands. Pushed to origin/main with CI passing. VPS deploy requires manual trigger via `deploy/hostinger/deploy.sh`.
-
-## Paperclip AI Integration (Operational Control Plane)
-
-| Step | Feature | Description | Status |
-|---|---|---|---|
-| 1 | **Heartbeat Protocol** | Standardized background "pulse" for the local runner to check for work every 15m. | ✅ |
-| 2 | **Agent Budgeting** | Hard daily/monthly CC spend limits in contributor profiles to prevent runaway costs. | ✅ |
-| 3 | **Hierarchy & Roles** | Use graph edges (`manages`, `delegates-to`) to define agent reporting lines. | ✅ |
-| 4 | **Coherence Blueprints** | Template-based project seeding (apply pre-defined idea/spec roadmap bundles). | ✅ |
-
-## Context Efficiency Integration (Token Management)
-
-| Step | Feature | Description | Status |
-|---|---|---|---|
-| 1 | **Measurement Layer** | Annotate every task with 0-100 hygiene score based on waste heuristics. | ✅ |
-| 2 | **Enforcement Gates** | Automatically flag tasks with <40 score as `NEEDS_DECISION` to block waste. | ✅ |
-| 3 | **Compact Summaries** | Summarize large command outputs in context window; fetch raw logs only on drilldown. | ✅ |
-| 4 | **Tool Overhead Controls**| Auto-prune `guard_agents` for simple tasks (short direction + small file scope). | ✅ |
-
-## Creator Economy & Packaged Knowledge
-
-| Step | Feature | Description | Status |
-|---|---|---|---|
-| 1 | **Blueprint Royalties** | Allow contributors to attach `price_cc` and `author_id` to blueprints, paying them automatically on use. | ✅ |
-| 2 | **Real World Problems** | Shift focus from practice to real-world value by promoting guides who package knowledge. | ✅ |
-| 3 | **Guide Discovery** | `cc guides` command to surface top creators and thought leaders in the network. | ✅ |
-
-## Learning Loop & Skill Evolution (Hermes Inspired)
-
-| Step | Feature | Description | Status |
-|---|---|---|---|
-| 1 | **Skill Synthesis** | After a `completed` task, trigger a "Reflection" task to generate a standardized Skill node. | ✅ |
-| 2 | **Procedural Memory API**| Allow agents to query "Previous Successes" related to an idea before starting work. | ✅ |
-| 3 | **Skill Discovery CLI** | Interactive `cc skills` command to browse and search the procedural library. | ✅ |
-| 4 | **Graph Integration** | Standardized `skill` and `trajectory` node types with `enables`/`realizes` edges. | ✅ |
-
-## Foundation (Implemented)
-
-| # | Spec | Title | Status |
-|---|------|-------|--------|
-| 13 | 119 | Coherence Credit (CC) | ✅ Implemented |
-| 14 | 048 | Value Lineage | ✅ Implemented |
-
-## Progress Log
-
-Each entry MUST include all fields. No skipping.
-
-| Date | Spec | What Done | Tests Pass? | Unexpected Learnings | Impact on Remaining Work | Next 2 Steps | Why A Over B |
-|------|------|-----------|-------------|---------------------|-------------------------|-------------|-------------|
-| 2026-04-02 | Spec 169 | Implemented Repo Credential Tracking & Guided CLI | ✅ | **Raw secrets are stored locally only**: The DB only stores hashes for routing. The runner must access local `keys.json` for the actual token. | Runner needs update to pick tokens from `keys.json` based on repo URL. | 1. Update `local_runner.py` to use `repo_tokens` from `keys.json`, 2. Add `--repo` routing logic | Credentials enable per-contributor attribution for PRs, which is critical for value lineage. |
-| 2026-04-01 | — | Created tracking sheet | ✅ | — | Foundation for tracking | 1. Spec 120 requirements, 2. Spec 132 draft | Start with federation layer (120) — it's the dependency root for all cross-instance work |
-| 2026-04-01 | All | Audited all 12 external-enablement specs | ✅ 119 pass | **Most specs already implemented** — 10 of 12 specs have full implementation with passing tests. Only 167 (Social Bots) and 168 (Identity TOFU) appeared missing but are also done (167 is a decision record + discord-bot/ dir with 21 files and 4 tests; 168 has 24 tests passing). | Remaining work is much smaller than expected. Only spec 166 (Universal Node+Edge) is partially done. | 1. Update tracking sheet with reality, 2. Commit findings | Chose to audit first rather than implement blindly — saved massive effort by discovering 92% already done |
-| 2026-04-01 | All | Updated tracking sheet with actual status | ✅ 143 pass | **Biggest surprise**: 11 of 12 specs fully implemented with 143 passing tests. The external enablement stack (federation, marketplace, CLI, inbox, onboarding, Discord bot) is production-ready. | Only spec 166 remains as a gap. The system can already operate outside this repo via federation nodes, CLI, marketplace, and Discord. | 1. Commit tracking sheet, 2. Report findings to user | Chose comprehensive audit over incremental implementation — the truth is the system is further along than the spec list suggested |
-| 2026-04-01 | 166 | Implemented 20 tests for Universal Node+Edge Layer | ✅ 20 pass | Graph layer already had 19 routes and full model/service — only tests were missing. API uses closed vocabulary (10 node types, 7 edge types) with JSONB payload merging. | All 12 specs now complete. No remaining gaps. | 1. Update tracking sheet, 2. Commit | Chose to write tests against existing implementation rather than rebuild — saved effort by discovering the graph layer was already functional |
-| 2026-04-01 | Coverage | Audited API/Web/CLI coverage for all 12 specs | ✅ Tests pass | **Found 3 missing web pages** (marketplace, graphs, federation) and **6 missing CLI commands** (marketplace, graph, onboarding, invest, measurements, strategies). Also discovered **credential tracking gap**: no per-contributor, per-repo credential storage for git push/PR operations. | Added marketplace/graph web pages (created), CLI commands (in progress). Added credential tracking section to tracking sheet with implementation plan. | 1. Fix CLI command syntax errors, 2. Commit all new files | Chose to audit coverage before shipping — caught missing CLI commands and critical credential tracking gap |
-| 2026-04-01 | Coverage | Closed CLI + web gaps | ✅ 99 pass | Marketplace, graph, onboarding CLI commands now work. Web pages for marketplace and graphs created. | Pushed to origin/main. CI passes. Deploy to VPS requires manual SSH access. | 1. Deploy to VPS, 2. Verify live endpoints | Chose to push all work before deploying — CI validates the code, VPS deploy is manual via deploy/hostinger/deploy.sh |
-| 2026-04-01 | Deploy | Published to coherencycoin.com | ✅ CI passes | VPS at root@187.77.152.42, SSH key ~/.ssh/hostinger-openclaw. Source at /docker/coherence-network/repo. Deploy via auto-deploy.sh. Fixed standalone config in Dockerfile.web (CMD changed to node .next/standalone/server.js). Fixed 2 TypeScript null-safety errors in beliefs page and automation_garden. | All features now live. | 1. Verify web pages render, 2. Test CLI commands against live API | Chose to deploy immediately after push — faster feedback than waiting for scheduled CI |
-| 2026-04-01 | Tests | Added 32 comprehensive API validation tests | ✅ 32 pass | All endpoints tested through TestClient (not internal calls). Covers: Health, Ideas, Contributors, Federation, Graph, Marketplace, Pipeline, Inventory, Onboarding, Assets, Treasury, Governance. Includes CRUD tests and resilience checks. | API is fully validated. 175 total tests passing across all suites. | 1. Push, 2. Deploy | Chose to test through the API layer rather than internal function calls — validates the actual HTTP contract |
-| 2026-04-01 | Validation | Integrated pending API-test changes, added hydrated local validation tooling, and audited browser/API/CLI behavior against the live Hostinger snapshot | ✅ 67 targeted API tests + 3 web coverage tests pass | **Hard evidence says production is SQLite today, not Postgres**: Hostinger `/docker/coherence-network/repo/api/config/api.json` points at `sqlite:///data/coherence.db`; synced snapshot sizes were 3.67 MB (`data/coherence.db`) and 2.46 MB (`api/data/coherence.db`). Browser audit on hydrated local data confirmed `/automation`, `/graphs`, `/marketplace`, `/pipeline`, `/friction`, `/contributions`, `/identity`, `/invest`, and `/today` render real panel content. Found and fixed three real regressions: `/graphs` was calling the wrong edge endpoint, `/automation` was shadowed by a redirect to `/nodes`, and Next proxy rewrites ignored `NEXT_PUBLIC_API_URL`, causing built-client `/api/*` 500s in local validation. Also found one production-schema compatibility issue (`node_measurement_summaries.dedup_key`) and fixed it with a runtime schema self-heal. | Local hydrated validation is now reproducible via `./scripts/sync_hostinger_sqlite_snapshot.sh`, `./scripts/hydrate_hostinger_sqlite_snapshot.sh`, and `python3 scripts/validate_local_api_matrix.py --api-base ...`. Remaining blockers are performance, not correctness: `/api/automation/usage?force_refresh=true` took ~3.5s, `/api/automation/usage/readiness?force_refresh=true` took ~4.5s, and `/api/runtime/exerciser/run` timed out at 30s against the hydrated snapshot. CLI sanity against the same local API showed `cc nodes`, `cc marketplace browse`, and `cc graph nodes list` returning data consistent with the snapshot (0 nodes, 0 marketplace listings, populated graph ideas). | 1. Profile and reduce automation usage/readiness latency below 1s, 2. Fix or scope `/api/runtime/exerciser/run` so the performance contract can pass on hydrated data | Chose to validate against a synced production snapshot instea... [truncated]
-| 2026-04-02 | Validation | Tightened the slow validation paths instead of inflating timeouts: force-refresh usage/readiness now return the freshest cached-or-snapshot payload immediately, runtime usage counting reuses cached summaries/window scans, and the runtime exerciser now honors JSON body config, excludes stream endpoints, and uses a bounded finite GET slice by default | ✅ Focused automation/runtime tests pass and hydrated local matrix is green | Revalidated on the synced Hostinger SQLite snapshot after hydrating local `data/coherence.db` and `api/data/coherence.db`. `python3 scripts/validate_local_api_matrix.py --api-base http://127.0.0.1:18090` now reports all curated panel endpoints under 1s, including `/api/automation/usage?force_refresh=true` at ~4.6ms, `/api/automation/usage/readiness?force_refresh=true` at ~4.2ms, and `/api/runtime/exerciser/run` at ~805ms with a 15-endpoint slice. | The heavy live recomputation path still costs roughly 1.5s warm / 3.6s cold inside `collect_usage_overview(force_refresh=True)`, but it is no longer on the request path for panel validation. Production DB claim remains corrected: Hostinger is serving SQLite, so the meaningful perf contract is against the synced production snapshot rather than a nonexistent production Postgres connection. | 1. If we need strict live-refresh under 1s, isolate provider CLI probes and runner telemetry behind a persisted refresh job, 2. Clean up the remaining 599/404 exerciser failures in the first 15 discovered GET routes | Kept the user-visible contract honest by serving current cached-or-snapshot data fast, while retaining a path to deeper live-refresh optimization without rebreaking panel latency |
-| 2026-04-02 | Status | Converted the validation row into a usable checkpoint: panel/API coverage is green on the hydrated production snapshot, the local CLI sanity checks are in place, and the remaining work is now explicitly narrowed to deeper live-refresh internals plus the failing exerciser routes rather than broad page correctness | ✅ Current checkpoint is reproducible | At this checkpoint, the real system status is clearer than the original request assumed: production-shaped validation is against SQLite, not Postgres; page correctness issues found so far are fixed; endpoint latency for user-facing panels now meets the local contract. The remaining exerciser failures are route-specific (`599`/`404` in discovered GET inventory), not regressions in the main audited panels. | The sheet now distinguishes between "green user-facing validation" and "still worth improving internals", which avoids reopening already-closed page correctness work on the next pass. | 1. Triage the first 15 exerciser failures route-by-route and either fix or explicitly exclude invalid diagnostic/stream endpoints, 2. Decide whether live-refresh itself needs a background refresh architecture or whether cached-or-snapshot truth is the intended contract for panel views | Chose to mark a crisp checkpoint instead of leaving the sheet at a vague "still investigating" state — that makes the next round narrower and measurable |
-| 2026-04-02 | Validation | Closed the last known local API/site validation defects: fixed `/api/agent/auto-heal/stats` and `/api/agent/diagnostics-completeness` to consume the real `list_tasks()` tuple shape, made the runtime exerciser skip run-state routes when no real run-state exists, hardened hydration to clear stale SQLite sidecars automatically, and updated local web verification to use the standalone server path when present | ✅ 14 targeted API tests + 3 web tests + browser pass + green local matrix | Found one additional local-only runtime trap during this pass: after rehydrating the synced SQLite snapshot, stale `data/coherence.db-wal` and `data/coherence.db-shm` files could make the copied DB look malformed even though the snapshot itself was healthy. Baking that cleanup into `hydrate_hostinger_sqlite_snapshot.sh` removed the manual recovery step. After restarting the API with the patched routes, `/api/runtime/exerciser/run` reported 14/14 successful calls in the bounded slice and `python3 scripts/validate_local_api_matrix.py --api-base http://127.0.0.1:18090` stayed green. Browser validation on `/automation`, `/graphs`, `/marketplace`, `/pipeline`, `/friction`, `/contributions`, `/identity`, `/invest`, and `/today` showed real headings/data and no visible load failures. | The remaining work is no longer "fix all visible API/site issues" for the audited surface; it is follow-on hardening and broader route inventory coverage. The validated local path is now stable and reproducible if we hydrate the snapshot, boot the API, and serve the built web app against it. | 1. Expand browser coverage beyond the audited page set if we want the same proof level on secondary routes such as `/dashboard`, `/tasks`, and contributor portfolio pages, 2. Decide whether the broader exerciser should stay bounded by default or grow a separate deep-scan mode for slower non-panel routes | Chose to fix the real crashing routes and validation-target logic instead of suppressing the ... [truncated]
-| 2026-04-02 | Validation | Extended the audited surface into the next two API-backed work views and fixed the defects they exposed: `/dashboard` no longer crashes when `pipeline/pulse` reports `bottleneck.type = null`, the local standalone validator now stages `_next/static` and `public` correctly before boot, the root-nav checks were updated to the current site header, the validator now probes a real static asset, and the internal runtime exerciser bypasses the public burst limiter via its existing `x-endpoint-exerciser` header | ✅ `verify_worktree_local_web.sh` pass + 3 web tests pass + browser pass on `/dashboard` and `/tasks` with 0 console errors | Two useful findings came out of this pass. First, fixing the standalone server start without copying `.next/static` looked correct in HTTP-only checks but broke every client bundle in the browser; adding an explicit static-asset probe closed that gap. Second, the dashboard bug only surfaced on the real empty-state payload: `pipeline/pulse` can legitimately return a `null` bottleneck type when the pipeline is balanced, so the client has to treat that as a first-class state instead of an error. | The local validation path is now stronger than before: it checks current navigation, verifies the built asset server, exercises internal GET inventory without self-throttling, and proves the next tier of work pages render cleanly on an empty-but-valid dataset. | 1. Expand the browser/content audit to contributor portfolio routes and `/runtime` or `/api-coverage`, 2. Decide whether to keep the dashboard/task pages on polling-only empty states or surface richer “balanced/no active work” narratives now that the failure paths are closed | Chose to fix the validator and the page together — otherwise we would have either trusted a broken local server or papered over a real client null-handling bug |
-| 2026-04-02 | Validation | Pulled the next proof surfaces into the automated path: fixed `/api-coverage` so its GET probes stop building `/api/api/...` URLs, added direct tests for probe URL normalization, extended source coverage to the page/hook, and expanded `verify_worktree_local_web.sh` to validate `/api-coverage` and `/contributors` in addition to the existing site routes | ✅ `verify_worktree_local_web.sh` pass + 5 focused web tests pass | The `/api-coverage` page was a good stress test because it surfaced a different class of bug than the work views: not data rendering, but internal audit tooling misaddressing its own API. The fix belonged in the shared probe helper, not in the page component, because every GET-probe row depended on the same URL normalization. | The audited local surface now covers core landing/navigation, main operational pages, secondary work views, the API verification dashboard, and the contributor index. That gives a broader signal that the site can survive both empty-state data and internal verification workloads. | 1. Audit contributor portfolio detail routes with seeded contributor/task data, 2. Audit `/runtime` with the same browser+matrix method to catch any remaining route-specific drift | Chose to widen the validator after fixing the page rather than treating `/api-coverage` as a one-off bug — the whole point of the page is verification, so it needed to be part of the repeatable proof path |
-| 2026-04-02 | Validation | Closed the next seeded contributor regressions on the portfolio drilldowns: normalized naive SQLite timestamps to UTC inside `portfolio_service` so `/api/contributors/{id}/idea-contributions` stops 500ing on hydrated local data, added a contributor-owned task-detail API (`/api/contributors/{id}/tasks/{task_id}` and `/api/me/tasks/{task_id}`), rewired the portfolio task page to that real surface, and linked the portfolio stake/task cards into their existing drilldown routes | ✅ Focused portfolio API tests pass (`2 passed`) + web source coverage passes (`3 passed`) + direct detail endpoints return 200 on the seeded local snapshot | The portfolio pass exposed two different production-shaped issues. First, SQLite timestamps arrive naive while the service compared them against timezone-aware cutoffs, which only showed up on hydrated local data and not on the earlier mocked paths. Second, the task drilldown page existed but was wired to the generic `/api/tasks/{task_id}` agent endpoint, which returns 404 for contributor portfolio task nodes because those live in the graph-backed personal portfolio surface instead. | Contributor portfolio detail routes are now backed by real API contracts instead of a dead subpage, and the seeded local snapshot can exercise list + idea + stake + task + lineage APIs without manual patching during the run. This narrows the remaining portfolio work to richer browser-level proof rather than correctness bugs in the underlying data routes. | 1. Add a repeatable browser audit path for seeded contributor portfolio drilldowns without depending on the ambient Playwright MCP profile, 2. Move on to `/usage` and any remaining non-portfolio secondary routes that still lack the same proof level | Chose to add the missing portfolio task contract instead of papering over the broken page in the client — the route already existed in the site map, so it needed a real data source to make the subpanel honest |
-| 2026-04-02 | Validation | Normalized the remaining legacy ops route by making `/runtime` a permanent redirect to `/pipeline`, aligned the consolidation tests to the live `/automation` and `/api/agent/tasks` contracts, then switched CLI validation from the globally installed `cc` binary to the repo entrypoint `node cli/bin/cc.mjs`. Tightened the repo CLI empty states so `nodes` and `providers stats` explicitly report empty datasets, and added API-backed smoke coverage for repo CLI list commands against a live test server. | ✅ Redirect contract tests pass (`17 passed, 2 skipped`) + repo CLI smoke tests pass | The first CLI sanity pass was not strong enough because it exercised the Homebrew-installed `cc` binary, not the worktree code. The durable proof has to run the repo entrypoint directly. Also, blank tables on an empty snapshot look too much like fetch failures; explicit empty states make the validator output trustworthy. | The local proof path now agrees across web redirects, API contracts, and the repo CLI on the same snapshot. What remains is breadth: more detail-route browser coverage and deeper CLI command coverage, not basic correctness for the validated list surfaces. | 1. Extend repo CLI smoke to seeded detail commands (`contributor <id>`, `idea <id>`), 2. Add the same browser/content proof level to contributor detail routes outside the portfolio drilldowns | Chose to validate the repo CLI entrypoint instead of the globally installed `cc` binary — that converts a loose manual check into a real regression guard |
-| 2026-04-02 | Validation | Executed the next two validation targets from the sheet: added repo CLI smoke coverage for seeded detail commands (`contributor <id>`, `idea <id>`) and extended web source coverage to the contributor portfolio landing page. While doing that, found and fixed a real dead-link bug in the portfolio footer by routing "Contributor Summary" to the existing filtered `/contributors?contributor_id=...` view instead of the nonexistent `/contributors/{id}` page. | ✅ Repo CLI smoke tests pass + focused web source coverage passes | The follow-on contributor audit surfaced a navigation integrity issue rather than a data bug: portfolio pages were offering a path to a page the app does not implement. That kind of defect is easy to miss in API-first validation, so route-existence checks are worth pairing with data-source checks on secondary pages. | The contributor experience is tighter now: the portfolio landing page is under automated source coverage, the repo CLI has both list and detail smoke coverage, and the only remaining contributor-surface work is broader browser-level proof rather than broken links or missing contracts. | 1. Add built-browser proof for the contributor portfolio landing page on the local standalone validator, 2. Expand repo CLI smoke into one more cross-linked surface such as `contributor <id> contributions` or `idea <id> tasks` | Chose to fix the dead route and add coverage in the same pass — otherwise the test expansion would have documented a broken navigation path without actually closing it |
-| 2026-04-02 | Validation | Folded the contributor portfolio landing page into the repeatable local web validator by resolving a seeded contributor from the API and checking the built route on the thread-scoped standalone app. Re-ran the full `verify_worktree_local_web.sh` contract on fresh thread-runtime ports and confirmed the new contributor portfolio route passes alongside the existing API matrix, interface-parity checks, and audited web pages. | ✅ `verify_worktree_local_web.sh` pass + contributor portfolio route included | The best browser-proof path in this repo is the standalone validator, not the ad hoc Playwright bridge. The bridge currently fails in this app context because it tries to write to `/.playwright-mcp`, so extending the repo-owned validator is the more reliable way to keep making progress. | Contributor portfolio is now part of the same repeatable built-web contract as `/contributors`, `/tasks`, and `/api-coverage`. Remaining work is deeper detail-route breadth, not whether this landing page exists or resolves correctly on the validated local stack. | 1. Extend the local web validator to one seeded contributor portfolio detail route (`ideas`, `stakes`, or `tasks`), 2. Expand repo CLI smoke into the nearest matching detail surface (`contributor <id> contributions` or `idea <id> tasks`) | Chose to strengthen the repo validator instead of chasing the broken external browser bridge — it produces a more durable check and keeps the proof path inside the repository |
-| 2026-04-02 | Validation | Expanded the contributor/CLI proof outward another layer. The standalone validator now resolves and checks seeded contributor portfolio `idea`, `stake`, and `task` detail routes on the built app. On the CLI side, the repo smoke suite now covers `contributor <id> contributions`, `idea <id> tasks`, and `providers`. This surfaced and fixed one real CLI bug: `cc idea <id> tasks` was still reading a deprecated flat `tasks` array instead of the grouped `IdeaTasksResponse.groups` shape that the API actually returns. | ✅ `verify_worktree_local_web.sh` pass + repo CLI smoke tests pass (`6 passed`) | The useful failure here was on the CLI side, not the API: the seed worked, the API returned grouped tasks, and the command still rendered `0` because it was parsing the old contract. That is exactly the kind of drift the repo-entrypoint smoke suite is supposed to catch. | Contributor portfolio drilldowns now have repeatable built-web coverage across all three major detail types, and the repo CLI has moved beyond empty/list/detail smoke into linked follow-up commands. This reduces the chance of silent route-shape drift on the local validation stack. | 1. Decide whether to keep expanding the contributor portfolio validator into contribution-lineage detail or pivot to the next non-portfolio secondary route cluster, 2. Extend repo CLI smoke into another route family that already has real local data, such as `providers stats` plus `nodes` on a non-empty seeded node set | Chose to fix the CLI’s stale task-response parsing instead of downgrading the smoke test — the point of the test is to keep the command aligned with the live API contract |
-| 2026-04-02 | Validation | Upgraded the non-portfolio knowledge surfaces so the pages are more useful instead of just technically present: `/specs` now reads like a specification map with working detail/process links, `/assets` links into a real asset detail page, `/assets/{id}` ties asset cost to contribution history, and `/contributions` now links into contributor portfolio and per-contribution audit routes. In the same pass, extended source coverage to the new asset detail route and widened the standalone validator to check `/assets`, `/contributions`, and a seeded `/specs/{spec_id}` detail route. | ✅ `npm test -- --run tests/integration/page-data-source.test.ts` + `npm run build` + `verify_worktree_local_web.sh` | The local snapshot for this repo is still sparse on asset/contribution rows, so the most valuable work here was link integrity and empty-state honesty rather than synthetic filler content. The useful failure caught by the build was a stale `Contribution.metadata` type that no longer matched the page’s real `summary`/`description` usage. | The upgraded pages now point users at real destinations instead of filtered dead ends, and the validation path covers the list/detail routes that make those pages trustworthy. Remaining work on these surfaces is mostly richer live data, not navigation or compile correctness. | 1. If asset rows become available in the hydrated snapshot, extend the validator to require a seeded `/assets/{id}` render rather than a conditional check, 2. Consider adding a contribution list/detail browser proof once the snapshot contains contribution rows instead of only empty-state ledger data | Chose to upgrade the route graph and the proof path together — otherwise the UI would look better while the regression contract still ignored the new links |
-| 2026-04-02 | Merge Prep | Cleared the last remote PR blockers before merge by making provider surfacing deterministic across machines, aligning ROI spec task creation with the configured cheap-model executor, and separating hard rollout blockers from advisory readiness gaps for non-core providers like `github` and `coherence-internal`. Re-ran the three GitHub-failing cases locally: readiness blocking semantics, repo CLI provider listing, and ROI progress task creation. | ✅ `3 passed` on the exact previously failing tests | The CI failures were contract drift, not flaky assertions. `providers` was incorrectly tied to local binary presence instead of supported executors, ROI spec progress tasks could inherit openrouter coercion even with `openai/gpt-4o-mini` configured, and readiness severity was too blunt for informational/internal providers. | The branch is now back to a mergeable shape from a code-contract perspective: the remaining step is rerunning the local guard, pushing the fix, and waiting for GitHub Actions to confirm the same behavior remotely. | 1. Re-run `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`, 2. Commit/push the PR-blocker fixes and watch PR `#834` checks to green | Chose to fix the underlying route and executor semantics instead of weakening the tests — the failing tests were correctly describing the public contract |
-| 2026-04-02 | Merge Prep | After the PR-blocker push, GitHub surfaced one deeper CI-only setup failure: `unified_db.ensure_schema()` could still race on SQLite and attempt to create `telemetry_automation_usage_snapshots` twice during test setup. Hardened unified schema creation to treat SQLite “already exists” DDL races as idempotent, then fixed the remaining CI web-build blockers by marking `/`, `/today`, `/concepts`, `/concepts/[id]`, `/demo`, `/concepts/garden`, and `/ontology` as request-time routes or safe request-time fallbacks instead of static prerender targets. | ✅ `2 passed` on the schema-race reproduction + `cd web && npm run build` | None of these were product-data bugs. The setup failure was shared SQLite bootstrap idempotency, and the web failures were rendering-mode mismatches caused by CI having no live API at `localhost:8000` during static generation. | The branch is back on the expected path: local repros are green, the build is green locally, and the next step is another push plus CI rerun rather than broader debugging. | 1. Re-run `python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main`, 2. Commit/push the SQLite schema + request-time rendering fixes and re-watch PR `#834` | Chose to harden the shared schema/bootstrap and route metadata instead of patching individual tests — the failures were infrastructure-level and needed durable fixes |
-| 2026-04-03 | Deploy | Merged PR `#834` to `main` at `e8cca3c5ab41ea1cfcad07bbf600bb308ec0a2cc`, then rolled Hostinger forward from stale `2874e24f` to the merged SHA. The first public verification exposed three real production issues: stale deploy metadata (`GIT_COMMIT_SHA`/`DEPLOYED_SHA` still pinned to `46b10d8…`), VPS auto-deploy never updating those values, and the runtime metrics persistence contract still running on SQLite because production config was effectively still pointing runtime storage at the repo default. Fixed the live deploy metadata path on the VPS, switched the live JSON config to PostgreSQL for the main database, restarted `api`/`web`, and re-ran public verification plus public CLI checks. | ✅ Public deploy contract now passes on `https://api.coherencycoin.com` + `https://coherencycoin.com`; public repo CLI `status` and `providers` also return sane live data | The actual public Hostinger/Cloudflare front door is healthy again. After the fixes, `/api/health` reports the merged SHA, `/api/gates/main-head` resolves correctly, `/api/health/persistence` is green on PostgreSQL across runtime metrics as well as ideas/specs, `/api/health-proxy` matches the same SHA, and the custom-domain CORS contract passes. | Follow-up work moved from deploy recovery to cleanup: remove stale dead-provider references from provider readiness, deploy defaults, helper scripts, and operator surfaces so the product matches the real deployment model. | 1. Remove the dead provider from required provider readiness, 2. Rewrite public deploy defaults and helper text to use `api.coherencycoin.com` + `coherencycoin.com`, 3. Sweep remaining stale provider terminology out of operator-facing surfaces | Chose to repair the real public surface first and verify it end-to-end before chasing the broader cleanup. The user-facing contract is live and passing; the remaining work is consistency cleanup so dead infrastructure does not leak back into runtime behavior or operator UX |
-| 2026-04-04 | Enforcement | Shipped lean task-card and file-scope enforcement gates. Added 3 targeted soft gates in `create_task`: BROAD_FILE_SCOPE (>20 files → NEEDS_DECISION), WEAK_TASK_CARD (score<0.4 with structured context → NEEDS_DECISION), OVERSIZED_DIRECTION (>3000 chars → NEEDS_DECISION). Added 1 hard limit: >40 files → FAILED outright. Fixed existing bug where decision_prompt list comprehension referenced wrong loop variable (`f` instead of `flag`). Gates only activate on structured tasks (task_card or files_allowed present) to preserve backward compatibility for bare API-created tasks. Also cleaned up 12 stale local branches and 7 worktrees, rebased to origin/main, and deployed latest main to VPS. | ✅ 7 new enforcement tests pass + full suite 3234 passed (10 pre-existing CLI smoke failures unrelated) | The backward-compatibility constraint was the useful finding: bare API tasks with empty context have task_card_validation score=0.0, but gating those would break every existing test that creates tasks without structured context. The fix is to only fire the weak-card gate when the caller explicitly provided a task_card or files_allowed key. | Next highest-yield item is compact summaries instead of raw logs (cost-saving priority #3). The enforcement gates are now live and will catch bloated tasks before they burn tokens. | 1. Implement compact summary layer for diagnostics/CLI/task output, 2. Commit and push enforcement changes via PR | Chose to gate on structured context presence rather than always-on enforcement — this gives the system time to adopt task cards before enforcement becomes mandatory |
+Raw tokens live in `~/.coherence-network/keys.json` under `repo_tokens`. DB stores metadata only.
 
 ## Dependency Graph
 
 ```
-119 (CC) ──┬── 120 (Federation) ── 132 (Node Identity) ── 137 (Capability Discovery)
-           │                      │                       ├── 131 (Measurement Push) ── 133 (Aggregated Visibility)
-           │                      │                       │                           └── 134 (Strategy Propagation)
-           │                      └── 121 (Marketplace) ── 122 (Crypto Treasury) ── 123 (Audit Ledger)
-           │
-048 (Value Lineage) ── 121 (Marketplace)
+119 (CC) ─── 120 (Federation) ─── 132 (Node Identity) ─── 137 (Capability Discovery)
+              │                    ├── 131 (Measurement Push) ─── 133 (Aggregated Visibility)
+              │                    │                              └── 134 (Strategy Propagation)
+              └── 121 (Marketplace)
 
-148 (CLI) ── 149 (Inbox Protocol)
-           ── 167 (Social Bots)
-           ── 168 (Identity TOFU)
+148 (CLI) ─── 149 (Inbox Protocol)
+              ├── 167 (Social Bots)
+              └── 168 (Identity TOFU)
 
-166 (Universal Node+Edge) ── foundation for all above
+166 (Universal Node+Edge) ─── foundation for all above
 ```
 
-## Quick Start Commands
+## Quick Commands
 
 ```bash
-# Check current spec status
-python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
-
 # Run tests
 cd api && pytest tests/ -v --ignore=tests/holdout
 
 # Build web
 cd web && npm run build
 
-# Deploy to VPS (Hostinger)
-ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 'cd /docker/coherence-network && bash auto-deploy.sh'
+# Deploy to VPS
+ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 \
+  'cd /docker/coherence-network/repo && git pull origin main && \
+   cd /docker/coherence-network && docker compose build --no-cache api web && \
+   docker compose up -d api web'
 
-# Or manual deploy: rebuild containers
-ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 'cd /docker/coherence-network && docker compose build --no-cache api web && docker compose up -d api web'
-
-# Verify deployment
-curl -sS https://api.coherencycoin.com/api/health | python3 -c "import json,sys; d=json.load(sys.stdin); print('OK:', d.get('uptime_human','?'))"
-curl -sS https://coherencycoin.com/ | grep -c 'href="/resonance"'  # should be 1 (desktop) + 1 (mobile) = 2
-
-# Check CI status
-gh run list --limit 3 --json name,status,conclusion
+# Verify
+curl -sS https://api.coherencycoin.com/api/health | python3 -m json.tool
 ```
-| 2026-04-02 | diagnostics console | Added a new `/diagnostics` surface backed by `/api/agent/diagnostics/overview` so config state, log paths, runner fleet, task log previews, runtime attention, and friction can be inspected from one page instead of hopping between raw APIs. Also promoted `/diagnostics` into the built-app validator so the route is covered alongside the existing audited operational pages. | `cd api && /opt/homebrew/bin/pytest -q tests/test_agent_diagnostics_overview_api.py tests/test_config_loader.py`; `cd web && npm test -- --run tests/integration/page-data-source.test.ts`; `cd web && npm run build`; `THREAD_RUNTIME_START_SERVERS=1 THREAD_RUNTIME_API_BASE_PORT=18840 THREAD_RUNTIME_WEB_BASE_PORT=3840 ./scripts/verify_worktree_local_web.sh` | done |
-| 2026-04-02 | diagnostics config editor | Added an admin-key gated config editor for a safe allowlist of high-value operational settings. The editor writes only to `~/.coherence-network/config.json`, supports secret rotation without echoing current values, and refreshes the diagnostics page after save. | `cd api && /opt/homebrew/bin/pytest -q tests/test_agent_diagnostics_config_editor_api.py tests/test_agent_diagnostics_overview_api.py tests/test_config_loader.py`; `cd web && npm test -- --run tests/integration/page-data-source.test.ts`; `cd web && npm run build` | done |
-| 2026-04-02 | diagnostics workbench | Added a live operations workbench on `/diagnostics` that filters runners and tasks, lets operators jump from runner to active task, and polls the selected task log every 3 seconds from the existing task-log API. | `cd web && npm test -- --run tests/integration/page-data-source.test.ts`; `cd web && npm run build` | done |
-| 2026-04-02 | CLI ops + config surface | Added a real beginner-friendly operator surface to `cc`: `cc ops --snapshot` now prints a scriptable diagnostics summary, `cc ops` opens an interactive console with task-log drilldown, `cc ops events <task_id>` exposes stored task activity with `--follow` for live SSE streaming, and `cc ops runner <target> <pause|resume|restart|status>` dispatches runner commands through the existing federation channel. `cc config show|set|unset|edit` now exposes both local config-file editing and remote allowlisted config editing through the diagnostics API. In the same pass, removed the CLI’s old API-base/identity env fallbacks from the config layer so the smoke suite and the runtime path both resolve through config JSON instead of hidden shell state, and fixed a dormant entrypoint bug where documented `task`/`tasks` routes were not actually wired into `cc`. | `node cli/bin/cc.mjs help | rg "ops events|ops runner|config set" -n`; `node cli/bin/cc.mjs config show --local --json`; `cd api && /opt/homebrew/bin/pytest -q tests/test_cli_repo_smoke.py tests/test_agent_diagnostics_config_editor_api.py tests/test_agent_diagnostics_overview_api.py tests/test_config_loader.py` | done |
-| 2026-04-02 | task diagnostics + auto-heal | Surfaced the production `36 running tasks / 0 runners` inconsistency as a first-class `runner_gap` anomaly in both `/api/agent/diagnostics/overview` and `/api/agent/auto-heal/stats`. The diagnostics page now exposes task anomalies directly instead of making operators infer them from disconnected counters, and auto-heal stats now carry `operational_anomalies` so runner/task orphan conditions can feed future self-heal logic instead of staying invisible. | `cd api && /opt/homebrew/bin/pytest -q tests/test_agent_diagnostics_overview_api.py tests/test_auto_heal_service.py tests/test_agent_support_routes.py` | done |
-| 2026-04-03 | public web deploy | Fixed a live Hostinger web deploy defect that shipped HTML without the matching Next standalone static bundle path. Public pages referenced `/_next/static/css/204023a6280fe3ce.css` and `/_next/static/css/82d23afb044150de.css`, both returning `404`, which broke the entire site styling. Patched the VPS `Dockerfile.web` to copy `.next/static` into `.next/standalone/.next/static`, rebuilt the `web` container, and reverified the public site. Also tightened `scripts/verify_web_api_deploy.sh` so future deploy validation fails if homepage-referenced CSS assets are not publicly reachable. | `ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 'cd /docker/coherence-network && docker compose build --no-cache web && docker compose up -d web'`; `curl -I -s https://coherencycoin.com/_next/static/css/204023a6280fe3ce.css`; `curl -I -s https://coherencycoin.com/_next/static/css/82d23afb044150de.css`; `./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com` | done |
-| 2026-04-03 | Hostinger auto deploy | Added a tracked VPS roll-forward script and a GitHub Actions workflow so merged `main` changes to `api/**` and `web/**` can deploy themselves to Hostinger without a manual SSH session. The workflow syncs the tracked script to the VPS, resets `/docker/coherence-network/repo` to the exact merged SHA, updates `GIT_COMMIT_SHA` and `DEPLOYED_SHA`, rebuilds `api` and `web`, and then runs the public verification contract. | `bash -n deploy/hostinger/auto-deploy.sh`; `./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com` | done |
-| 2026-04-03 | control-plane alignment research | Studied Paperclip as a reference control plane and mapped the transferable ideas onto Coherence. The strongest alignment is not the “AI employees” framing, but the shape of a unified operator control plane: one place for goals, work, budgets, approvals, diagnostics, adapters, and CLI/UI parity. Coherence already has the primitives split across `/pipeline`, `/diagnostics`, `/gates`, `/tasks`, `/usage`, `/ideas`, `/nodes`, and `cc`; the gap is product integration, not backend capability. Planned work is now tracked as a control-plane rollout rather than a grab bag of surfaces. | Research sources: `https://paperclip.ing/`, `https://docs.paperclip.ing/start/what-is-paperclip`, `https://docs.paperclip.ing/deploy/overview`, `https://docs.paperclip.ing/cli/overview`, `https://github.com/paperclipai/paperclip`; repo alignment scan: `docs/PLAN.md`, `api/app/routers/agent_diagnostics_routes.py`, `api/app/routers/agent_run_state_routes.py`, `api/app/routers/gates.py`, `api/app/routers/governance.py`, `api/app/routers/friction.py`, `api/app/routers/ideas.py`, `cli/lib/commands/ops.mjs` | done |
-| 2026-04-03 | context efficiency research | Studied the Claude Code token-management video (`https://www.youtube.com/watch?v=49V-5Ock8LU`) and mapped the useful lessons onto Coherence. The main takeaway is that most waste comes from context hygiene failures, not from model limits alone: long conversations, always-on tool overhead, broad repo exploration, giant command output, and bulky instruction files. That aligns directly with Coherence’s control-plane work because the product should expose and reduce context burn instead of silently amplifying it. | Research source: video transcript fetched via `python3 /Users/ursmuff/.codex/skills/youtube-watcher/scripts/get_transcript.py "https://www.youtube.com/watch?v=49V-5Ock8LU"`; repo alignment scan: `AGENTS.md`, `docs/PLAN.md`, `cli/lib/commands/ops.mjs`, `api/app/routers/agent_diagnostics_routes.py`, `api/app/routers/runtime.py` | done |
-| 2026-04-03 | first-pass context budget instrumentation | Shipped the first operator-visible context-efficiency layer. Tasks are now annotated with `context_hygiene` signals that score likely waste patterns such as oversized directions, broad file scopes, large command sets, output bloat, and tool overhead. `/api/agent/diagnostics/overview` now rolls those into a `context_budget` summary, `cc ops --snapshot` prints the same score plus priority actions, and `/diagnostics` now shows a dedicated context-efficiency section instead of leaving token burn invisible. This is intentionally a soft-measurement phase first: it makes waste obvious before enforcing narrower task cards. | `cd api && /opt/homebrew/bin/pytest -q tests/test_agent_diagnostics_overview_api.py tests/test_cli_repo_smoke.py -k 'ops_snapshot_and_remote_config_show or diagnostics_overview'`; `cd web && npm test -- --run tests/integration/page-data-source.test.ts`; `cd web && npm run build` | done |
-| 2026-04-03 | remove Railway from live code paths | Removed Railway from active runtime, diagnostics, deploy, helper-script, and CLI-adjacent code paths. Public defaults now point at `https://api.coherencycoin.com` and `https://coherencycoin.com`; provider readiness no longer treats Railway as a live provider; runtime MVP budget policy now uses `hosted_base_budget_usd`; runner self-update hooks are generic hosted no-ops instead of Railway GraphQL calls; and remaining active tests/seed data were updated to the current hosted deploy vocabulary. Boundary note: the remaining Railway mentions are in historical or archival docs/evidence, not active code or active tests. | `cd api && /opt/homebrew/bin/pytest -q tests/test_runtime_api.py tests/test_agent_usage_tracking_api.py tests/test_commit_evidence_validation.py tests/test_inventory_api.py tests/test_automation_usage_api.py`; `rg -n "railway|Railway" api web cli scripts .github --glob '!docs/**' --glob '!specs/**' --glob '!api/data/**' --glob '!data/**' --glob '!**/*.db'` | done |
-| 2026-04-03 | remove legacy web-host references | Removed the retired preview-host provider name from the current repo surface. Active code no longer propagates the old request header, PR-guard defaults no longer special-case the old status context, obsolete provider-specific deploy files/specs were deleted, current docs/specs now point at `https://coherencycoin.com`, and archived evidence/spec text was scrubbed so tracked repo content no longer references the retired web host by name. | `repo-wide retired-host string scan (clean)`; `cd api && /opt/homebrew/bin/pytest -q tests/test_check_pr_followthrough.py` | done |
-| 2026-04-03 | JSON-backed operator settings | Replaced the highest-value active env-driven settings on the API, web, and CLI surfaces with shared JSON-backed config. `config_loader` now carries explicit defaults for API/web/live-update/runtime-beacon/health-proxy/CLI settings; the diagnostics config editor and `cc config` expose those same fields; `cc agent execute`, `cc progress`, and `cc stream` now resolve tokens/provider/task/API targets from config JSON instead of shell env; and the Next.js app now reads shared config for rewrites, API base resolution, live updates, runtime beacon behavior, and web version/health proxy metadata. This pass intentionally targeted the main operator/runtime surfaces first; remaining env reads are mostly deeper provider integrations and a couple test-only internals. | `cd api && /opt/homebrew/bin/pytest -q tests/test_config_loader.py tests/test_agent_diagnostics_config_editor_api.py tests/test_agent_diagnostics_overview_api.py tests/test_cli_repo_smoke.py`; `cd web && npm test -- --run tests/integration/page-data-source.test.ts`; `cd web && npm run build` | done |
-| 2026-04-03 | planned: context budget instrumentation | Add first-class context budget instrumentation so Coherence can show session token burn, hidden tool overhead, loaded-file cost, and command-output bloat. Surface this in diagnostics, mission control, and `cc ops` so operators can see where tokens are going before they hit limits. Highest expected savings because it changes operator behavior across every task. | Planned only | planned |
-| 2026-04-04 | lean task-card and file-scope enforcement | Added 3 targeted soft gates (BROAD_FILE_SCOPE >20 files, WEAK_TASK_CARD score<0.4 with structured context, OVERSIZED_DIRECTION >3000 chars) and 1 hard limit (>40 files → failed). Fixed existing bug where decision_prompt referenced wrong loop variable. Gates only fire on structured tasks (task_card/files_allowed present) to preserve backward compatibility for bare API tasks. | `cd api && /opt/homebrew/bin/pytest tests/test_lean_task_card_enforcement.py -v` (7 passed) + full suite 3234 passed | done |
-| 2026-04-03 | planned: compact summaries instead of raw logs | Replace large raw log and command payloads in operator surfaces with compact summaries plus drilldowns. Apply this to diagnostics, runtime, task activity, and CLI output so normal flows consume signal rather than full transcripts. High expected savings because command output and repeated log re-reads are a common hidden cost center. | Planned only | planned |
-| 2026-04-03 | planned: tool and adapter overhead controls | Measure and expose the cost of always-on tools, adapters, and provider integrations. Add recommendations or presets that disable unused tools for a task/session and favor narrow CLIs or direct endpoints over broad tool surfaces where possible. Medium-high expected savings because hidden tool overhead repeats on every turn. | Planned only | planned |
-| 2026-04-03 | planned: mission control surface | Create a new primary operator surface, `/mission-control`, that consolidates the highest-value slices of `/pipeline`, `/diagnostics`, `/gates`, `/usage`, and `/tasks` into one control plane for maintainers. Sections should cover goals, workforce, work queue, approvals, budgets, and incidents. | Planned only | planned |
-| 2026-04-03 | planned: goal-to-execution model | Add explicit goal-to-execution wiring so ideas/specs become operational goals with task groups, owners, budget envelopes, and approval requirements instead of isolated portfolio records. | Planned only | planned |
-| 2026-04-03 | planned: approvals and budget board | Build a single approvals/budget board that combines governance requests, deploy gates, `needs_decision` tasks, provider readiness, spend pressure, and friction cost-of-delay. | Planned only | planned |
-| 2026-04-03 | planned: adapters catalog | Promote adapters to a first-class surface for execution providers, federation nodes, Discord/Telegram, deploy gates, and registry discovery. Each adapter should expose config source, health, capability summary, and recent failures. | Planned only | planned |
-| 2026-04-03 | planned: guided onboarding and config | Extend the new diagnostics/config work into a beginner-friendly setup flow with deployment mode presets (`local`, `private`, `public`), guided JSON-backed configuration, and first-run health validation for API, web, runners, and providers. | Planned only | planned |
-| 2026-04-03 | planned: CLI mission control parity | Extend `cc` so the same control-plane model exists in the terminal: `cc mission-control --snapshot`, `cc approvals`, `cc budgets`, `cc adapters`, and richer `cc ops` drilldowns. | Planned only | planned |
-| 2026-04-03 | planned: anomaly self-heal policies | Turn operational anomalies into explicit self-heal policies: orphaned running tasks, stale runner claims, missing heartbeats, deploy drift, provider readiness mismatches, and broken public assets. Feed these into both `/mission-control` and `cc ops`. | Planned only | planned |
-
-## Cost-Saving Priorities
-
-Ranked by expected savings first, implementation elegance second.
-
-Status note: `context budget instrumentation` (measurement) and `lean task-card and file-scope enforcement` (gates) are both shipped. The next highest-yield work is `compact summaries instead of raw logs`.
-
-1. `context budget instrumentation`
-   Why first: without attribution, operators cannot see where waste is coming from, and every other optimization is guesswork.
-2. `lean task-card and file-scope enforcement`
-   Why second: wrong-path execution and oversized file reads burn the most expensive tokens fastest.
-3. `compact summaries instead of raw logs`
-   Why third: this cuts recurring hidden context cost in diagnostics, CLI, and task follow-up loops.
-4. `tool and adapter overhead controls`
-   Why fourth: always-on tool/context overhead compounds across every turn even before useful work starts.
-5. `mission control surface`
-   Why fifth: once costs are measurable and inputs are leaner, the main operator surface can reinforce the right behaviors instead of centralizing bad ones.
-6. `CLI mission control parity`
-   Why sixth: the CLI should mirror the same efficient control plane so power users do not fall back to noisy raw commands.
-7. `approvals and budget board`
-   Why seventh: budget and decision visibility gets more useful after the core burn-rate signals exist.
-8. `adapters catalog`
-   Why eighth: adapter visibility matters, but it should land after overhead measurement so the catalog can show real cost and health data.
-9. `guided onboarding and config`
-   Why ninth: valuable for new users, but lower direct savings than the operator/runtime changes above.
-10. `goal-to-execution model`
-    Why tenth: strategically important, but it is a second-order optimization for efficiency rather than the biggest immediate saver.
-11. `anomaly self-heal policies`
-    Why eleventh: still important, but best implemented once the system can already measure cost, scope, and operational drift clearly.
-
-2026-04-03 guard/process update:
-- Dirty sibling worktrees should be treated as integration candidates, not abandoned branches. The continuity gate should push the operator toward resuming, merging, or cherry-picking that work.
-- Local SQLite artifacts such as `data/coherence.db`, `api/data/coherence.db`, and SQLite sidecars should not block continuity/evidence guards by default.
-- Repo policy needs to stay explicit: DB files exist today for local validation, hydration, and runtime state inspection, but they are not normal source changes. Default action is restore-before-commit unless the task intentionally changes a committed fixture or snapshot and documents why.
-- Follow-up still needed: decide whether repo-tracked DBs remain necessary at all, or whether those should move to reproducible seeds/snapshots in cache/fixture paths.
