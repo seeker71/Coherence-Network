@@ -1,3 +1,13 @@
+---
+idea_id: agent-pipeline
+status: done
+source:
+  - file: api/app/services/agent_service_list.py
+    symbols: [get_attention_tasks(), get_review_summary()]
+  - file: api/app/services/agent_service_pipeline_status.py
+    symbols: [attention flags, status collection]
+---
+
 # Spec: Attention Heuristics in Pipeline-Status
 
 ## Purpose

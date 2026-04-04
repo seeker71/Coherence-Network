@@ -1,3 +1,15 @@
+---
+idea_id: pipeline-optimization
+status: done
+source:
+  - file: api/app/services/prompt_ab_roi_service.py
+    symbols: [record_prompt_outcome(), select_variant(), get_variant_stats()]
+  - file: api/app/services/slot_selection_service.py
+    symbols: [SlotSelector]
+  - file: api/app/routers/agent_prompt_ab_routes.py
+    symbols: [A/B testing endpoints]
+---
+
 # Spec 112: Prompt A/B ROI Measurement
 
 **Idea**: `agent-prompt-ab-roi` (sub-idea of `coherence-network-agent-pipeline`)

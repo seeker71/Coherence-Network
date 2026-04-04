@@ -1,3 +1,11 @@
+---
+idea_id: data-infrastructure
+status: done
+source:
+  - file: api/app/services/unified_db.py
+    symbols: [Base, engine_cache, schema init]
+---
+
 # Spec 118: Unified SQLite Store — Single Source of Truth
 
 **Idea**: `unified-persistence` (sub-idea of `coherence-signal-depth`)

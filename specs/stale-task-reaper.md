@@ -1,3 +1,11 @@
+---
+idea_id: pipeline-reliability
+status: partial
+source:
+  - file: api/app/services/smart_reaper_service.py
+    symbols: [timeout detection and reaping]
+---
+
 # Spec: Stale-Task Reaper
 
 ## Purpose
@@ -72,57 +80,6 @@ Implements Spec 169 diagnostics:
 
 - `POST /api/agent/smart-reap/run` — trigger a reap cycle on demand
 - `GET /api/agent/smart-reap/preview` — dry-run preview of which tasks would be reaped
-
----
-
-## Gaps Still Open
-
-These are known deficiencies in the current implementation that this spec tracks for closure.
-
-### Gap 1 — Silent fallback on import failure
-
-`_reap_stale_tasks` catches `ImportError` from `smart_reap_service` and falls back to
-`_legacy_reap_stale_tasks` with only a `log.warning`. The legacy path omits liveness checks
-and resume-patch logic entirely. There is no observable signal to operators that the smart
-path is unavailable. A failed import (e.g., missing `failed_task_diagnostics_service`
-dependency) will silently degrade reap quality for the entire session.
-
-**Gap owner**: Implementation  
-**Follow-up task**: `stale-task-reaper-gap-1` — surface import failure as a runner health
-metric and expose it through the `/api/health` endpoint.
-
-### Gap 2 — No session-level reap count exposed to API
-
-`_reap_stale_tasks` returns an `int` count but the count is only logged locally. No metric is
-pushed to `push_measurements()`, no API endpoint exposes "tasks reaped this session", and the
-federation dashboard has no visibility into reaper activity.
-
-**Follow-up task**: `stale-task-reaper-gap-2` — add `tasks_reaped_total` counter to the
-runner's measurement payload.
-
-### Gap 3 — STARTUP_REAP does not cover other nodes' orphaned tasks
-
-The startup reap block filters strictly to tasks whose `claimed_by` contains the current
-node's `WORKER_ID` prefix. Tasks left running by a different node that has been dead for more
-than 30 minutes are not touched at startup — they must wait for the next periodic reap cycle
-(up to 10 minutes). In a multi-node setup with a sudden node loss, this creates a ~10-minute
-gap where dead tasks hold capacity across the cluster.
-
-**Follow-up task**: `stale-task-reaper-gap-3` — extend STARTUP_REAP to also reap tasks from
-any runner whose `last_seen_at` is older than 30 minutes and whose status is still `running`.
-
-### Gap 4 — No observable API signal when reaper fires
-
-The reap cycle runs entirely inside the runner process. When it fires there is no API event,
-no webhook, and no polling endpoint that a monitoring dashboard can subscribe to. The only
-record is a `log.info` line in the runner's stdout. This makes it impossible to build
-automated alerting on reap spikes without log scraping.
-
-**Follow-up task**: `stale-task-reaper-gap-4` — post a `POST /api/friction/events` record
-(or a dedicated `POST /api/agent/reap-events` record) each time the reaper fires, capturing
-`reaped_count`, `extended_count`, and `skipped_live_count` for that cycle.
-
----
 
 ## Requirements
 

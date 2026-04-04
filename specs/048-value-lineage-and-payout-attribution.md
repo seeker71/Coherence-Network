@@ -1,3 +1,15 @@
+---
+idea_id: value-attribution
+status: done
+source:
+  - file: api/app/routers/value_lineage.py
+    symbols: [create_link(), add_usage_event(), get_valuation(), payout_preview()]
+  - file: api/app/services/value_lineage_service.py
+    symbols: [create_link(), list_links(), valuation(), payout_preview()]
+  - file: api/app/models/value_lineage.py
+    symbols: [LineageLink, UsageEvent, LineageValuation, PayoutPreview]
+---
+
 # Spec: Value Lineage and Payout Attribution
 
 ## Purpose

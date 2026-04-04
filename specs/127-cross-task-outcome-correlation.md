@@ -1,3 +1,11 @@
+---
+idea_id: pipeline-optimization
+status: partial
+source:
+  - file: api/app/services/task_activity_service.py
+    symbols: [task outcome correlation]
+---
+
 # Spec 127: Cross-Task Outcome Correlation
 
 **Idea**: `coherence-network-agent-pipeline`

@@ -1,3 +1,15 @@
+---
+idea_id: value-attribution
+status: done
+source:
+  - file: api/app/routers/distributions.py
+    symbols: [create_distribution()]
+  - file: api/app/services/distribution_engine.py
+    symbols: [DistributionEngine.distribute()]
+  - file: api/app/models/distribution.py
+    symbols: [Distribution, Payout]
+---
+
 # Spec: Distribution Engine
 
 ## Purpose

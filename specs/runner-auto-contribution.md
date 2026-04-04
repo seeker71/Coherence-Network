@@ -1,3 +1,13 @@
+---
+idea_id: pipeline-optimization
+status: partial
+source:
+  - file: api/app/services/agent_runner_registry_service.py
+    symbols: [runner registry, auto-contribution]
+  - file: api/app/services/contribution_ledger_service.py
+    symbols: [contribution tracking]
+---
+
 # Spec: Runner Auto-Contribution
 
 ## Purpose

@@ -1,3 +1,15 @@
+---
+idea_id: agent-pipeline
+status: done
+source:
+  - file: api/app/services/pipeline_service.py
+    symbols: [pipeline orchestration]
+  - file: api/app/services/pipeline_pulse_service.py
+    symbols: [compute_pulse()]
+  - file: api/app/services/pipeline_advance_service.py
+    symbols: [auto-advance, auto-retry, escalation]
+---
+
 # Spec 139: Coherence Network Agent Pipeline
 
 ## Purpose

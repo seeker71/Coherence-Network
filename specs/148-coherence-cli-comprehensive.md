@@ -1,3 +1,17 @@
+---
+idea_id: user-surfaces
+status: done
+source:
+  - file: cli/bin/cc.mjs
+    symbols: [CLI entry point]
+  - file: cli/lib/commands/ideas.mjs
+    symbols: [ideas commands]
+  - file: cli/lib/commands/tasks.mjs
+    symbols: [task commands]
+  - file: cli/lib/commands/nodes.mjs
+    symbols: [node commands]
+---
+
 # Spec 148: Coherence Network CLI (coherence-cli) Comprehensive Feature Spec
 
 ## Purpose

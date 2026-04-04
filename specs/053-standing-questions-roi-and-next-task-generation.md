@@ -1,3 +1,17 @@
+---
+idea_id: idea-realization-engine
+status: done
+source:
+  - file: api/app/services/idea_service.py
+    symbols: [_ensure_standing_questions(), add_question(), answer_question()]
+  - file: api/app/routers/inventory.py
+    symbols: [next_highest_roi_task()]
+  - file: api/app/services/inventory_service.py
+    symbols: [next_highest_roi_task_from_answered_questions()]
+  - file: api/app/models/idea.py
+    symbols: [IdeaQuestion, IdeaQuestionCreate]
+---
+
 # Spec: Standing Questions, ROI Fields, and Next-Task Generation
 
 ## Purpose

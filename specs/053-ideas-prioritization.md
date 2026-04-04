@@ -1,3 +1,15 @@
+---
+idea_id: idea-realization-engine
+status: done
+source:
+  - file: api/app/routers/ideas.py
+    symbols: [list_ideas(), get_idea(), get_idea_tags_catalog()]
+  - file: api/app/services/idea_service.py
+    symbols: [list_ideas(), _score(), _with_score(), _build_cost_vector(), _build_value_vector()]
+  - file: api/app/models/idea.py
+    symbols: [Idea, IdeaWithScore, IdeaPortfolioResponse, IdeaSummary, CostVector, ValueVector]
+---
+
 # Spec: Ideas Prioritization API
 
 ## Spec contract summary
@@ -109,44 +121,6 @@ constraints:
 - `free_energy_score`: Float — Calculated as (potential_value × confidence) / (estimated_cost + resistance_risk)
 - `value_gap`: Float — Calculated as max(potential_value - actual_value, 0.0)
 - `summary`: Portfolio-wide aggregated metrics
-
----
-
-### `GET /api/ideas/{idea_id}`
-
-**Purpose**: Retrieve a specific idea by ID with score
-
-**Request**:
-- `idea_id`: String (path, required) — Unique idea identifier
-
-**Response 200**:
-```json
-{
-  "id": "oss-interface-alignment",
-  "name": "Align OSS intelligence interfaces with runtime",
-  "description": "Expose and validate declared API routes used by web and scripts.",
-  "potential_value": 90.0,
-  "actual_value": 10.0,
-  "estimated_cost": 18.0,
-  "actual_cost": 0.0,
-  "resistance_risk": 4.0,
-  "confidence": 0.7,
-  "manifestation_status": "partial",
-  "interfaces": ["machine:api", "human:web", "ai:automation"],
-  "open_questions": [],
-  "free_energy_score": 2.8636,
-  "value_gap": 80.0
-}
-```
-
-**Response 404**:
-```json
-{
-  "detail": "Idea not found"
-}
-```
-
----
 
 ### `PATCH /api/ideas/{idea_id}`
 

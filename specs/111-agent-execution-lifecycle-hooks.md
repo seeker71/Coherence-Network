@@ -1,3 +1,15 @@
+---
+idea_id: agent-cli
+status: done
+source:
+  - file: api/app/services/agent_execution_hooks.py
+    symbols: [register_lifecycle_hook(), dispatch_lifecycle_event()]
+  - file: api/app/services/agent_execution_hooks_config.py
+    symbols: [hook configuration]
+  - file: api/app/services/agent_execution_task_flow.py
+    symbols: [_emit_lifecycle_event()]
+---
+
 # Spec: Agent Execution Lifecycle Hooks
 
 ## Purpose

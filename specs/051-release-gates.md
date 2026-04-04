@@ -1,3 +1,13 @@
+---
+idea_id: data-infrastructure
+status: done
+source:
+  - file: api/app/services/release_gate_service.py
+    symbols: [evaluate_pr_to_public_report()]
+  - file: api/app/routers/gates.py
+    symbols: [gate endpoints]
+---
+
 # Spec: Release Gates API
 
 ## Purpose

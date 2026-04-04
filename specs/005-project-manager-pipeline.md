@@ -1,3 +1,15 @@
+---
+idea_id: agent-pipeline
+status: done
+source:
+  - file: api/scripts/project_manager.py
+    symbols: [spec/impl/test/review cycle, split_item(), is_too_large()]
+  - file: api/app/services/pipeline_advance_service.py
+    symbols: [_extract_partial_work(), _find_spec_file()]
+  - file: api/app/services/agent_service_pipeline_status.py
+    symbols: [get_pipeline_status()]
+---
+
 # Spec: Project Manager Pipeline
 
 ## Purpose

@@ -1,3 +1,13 @@
+---
+idea_id: identity-and-onboarding
+status: done
+source:
+  - file: api/app/services/onboarding_service.py
+    symbols: [register(), claim_handle()]
+  - file: api/app/routers/onboarding.py
+    symbols: [onboarding endpoints]
+---
+
 # Spec 168 -- Identity-Driven Onboarding: Trust-on-First-Use (TOFU) MVP
 
 ## Goal

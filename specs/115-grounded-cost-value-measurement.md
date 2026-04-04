@@ -1,3 +1,13 @@
+---
+idea_id: coherence-credit
+status: done
+source:
+  - file: api/app/services/grounded_measurement_service.py
+    symbols: [compute_grounded_cost(), compute_grounded_value()]
+  - file: api/app/services/grounded_idea_metrics_service.py
+    symbols: [compute_idea_metrics()]
+---
+
 # Spec 115: Grounded Cost & Value Measurement for Prompt A/B ROI
 
 **Idea**: `agent-grounded-measurement` (sub-idea of `coherence-network-agent-pipeline`)

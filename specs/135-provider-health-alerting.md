@@ -1,3 +1,15 @@
+---
+idea_id: pipeline-optimization
+status: done
+source:
+  - file: api/app/services/automation_usage_service.py
+    symbols: [provider health evaluation]
+  - file: api/app/services/collective_health_service.py
+    symbols: [health aggregation]
+  - file: api/app/routers/agent_status_routes.py
+    symbols: [health endpoints]
+---
+
 # Spec: Provider Health Alerting from Last-5 Success Rate
 
 ## Purpose

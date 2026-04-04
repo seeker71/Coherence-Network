@@ -1,3 +1,15 @@
+---
+idea_id: pipeline-reliability
+status: done
+source:
+  - file: api/app/services/auto_heal_service.py
+    symbols: [graduated severity responses]
+  - file: api/app/services/failure_taxonomy_service.py
+    symbols: [failure patterns and classification]
+  - file: api/app/services/smart_reaper_service.py
+    symbols: [incident detection]
+---
+
 # Spec 125: Incident Response and Self-Healing
 
 **Idea**: `coherence-incident-response` (sub-idea of `coherence-credit-system`)

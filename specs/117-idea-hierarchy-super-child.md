@@ -1,3 +1,13 @@
+---
+idea_id: idea-realization-engine
+status: done
+source:
+  - file: api/app/services/idea_service.py
+    symbols: [set_parent_idea()]
+  - file: api/app/models/idea.py
+    symbols: [IdeaType, parent_idea_id, child_idea_ids]
+---
+
 # Spec 117: Idea Hierarchy — Super-Ideas and Child-Ideas
 
 **Idea**: `idea-hierarchy-model` (sub-idea of `portfolio-governance`)

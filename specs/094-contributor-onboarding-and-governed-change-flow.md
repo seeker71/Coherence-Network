@@ -1,3 +1,17 @@
+---
+idea_id: value-attribution
+status: partial
+source:
+  - file: api/app/routers/onboarding.py
+    symbols: [register(), get_session(), upgrade()]
+  - file: api/app/services/onboarding_service.py
+    symbols: [register(), resolve_session()]
+  - file: api/app/services/governance_service.py
+    symbols: [create_change_request(), vote_on_change_request()]
+  - file: api/app/models/governance.py
+    symbols: [ChangeRequest, ChangeRequestVote, VoteDecision]
+---
+
 # Spec 094 — Contributor Onboarding and Governed Change Flow
 
 ## Goal

@@ -1,20 +1,20 @@
+---
+idea_id: user-surfaces
+status: done
+source:
+  - file: web/app/nodes/page.tsx
+    symbols: [node visibility]
+  - file: web/app/tasks/page.tsx
+    symbols: [task list]
+  - file: web/app/tasks/[task_id]/page.tsx
+    symbols: [task detail]
+---
+
 # Spec 161: Node and Task Visibility — `cc tasks`, `cc task <id>`, Web Pipeline Dashboard
 
 **Idea ID**: `node-task-visibility`
 **Status**: Draft — 2026-03-28
 **Author**: product-manager agent (task_d73edbae8000792b)
-
----
-
-## Summary
-
-Operators and contributors have no ergonomic way to observe what the pipeline is doing. The only way to inspect tasks is by issuing raw `curl` commands against the API. This spec formalises three distinct observability surfaces:
-
-1. **`cc tasks`** — human-readable terminal overview of the live task queue
-2. **`cc task <id>`** — full task detail including output, errors, and activity timeline
-3. **Web `/pipeline` page** — a live dashboard showing task flow, node status, and provider performance
-
----
 
 ## Problem Statement
 
@@ -32,65 +32,6 @@ Operators and contributors have no ergonomic way to observe what the pipeline is
 - **Human contributors** running `cc` locally: need to know what's running, which ideas are advancing, if their node is processing tasks.
 - **Operators** monitoring pipeline health: need provider success rates and routing decisions visible.
 - **New visitors** to the web app: the homepage says the network is alive — the `/pipeline` page must prove it.
-
----
-
-## Requirements
-
-### R1 — `cc tasks`: Human-Readable Task List
-
-- **R1.1** Resolve `idea_id` → `idea_name` for all displayed tasks. Display as: `"Idea: <name>"` not `"idea: <id>"`.
-- **R1.2** Display provider as clean label: `claude`, `codex`, `gemini`, `cursor`, `openrouter` — not the raw model string `openrouter/free` or `claude/claude-sonnet-4-6`.
-- **R1.3** Add a "recently completed" section showing the last 5 completed tasks (with idea name, type, duration, provider, and pass/fail).
-- **R1.4** Show task `task_type` as a human label: `spec`, `impl`, `test`, `review`, `deploy`, `verify` — not raw strings like `"impl"` (already correct) but never raw JSON.
-- **R1.5** `cc tasks <status>` (e.g. `cc tasks failed`) must also resolve idea names and providers.
-- **R1.6** Output must be fully human-readable in a terminal without needing `jq` or `curl`.
-
-### R2 — `cc task <id>`: Full Task Detail
-
-- **R2.1** Show the full `result`/`output` field — not truncated. If output > 2000 chars, paginate with `--full` flag or show first 2000 chars with a notice `(output truncated, use --full to see all)`.
-- **R2.2** Show `error_summary` and `error_category` when present and non-null.
-- **R2.3** Show the activity timeline: fetch `/api/agent/tasks/{id}/activity` and render as a chronological list of events with human-readable labels (not raw `event_type` codes).
-- **R2.4** Resolve `idea_id` → `idea_name` in the header.
-- **R2.5** Show timing: `created_at`, `claimed_at`, elapsed duration, and `duration_s` from completion event.
-- **R2.6** Show provider/model as separate fields: `Provider: claude`, `Model: claude-sonnet-4-6`.
-- **R2.7** Show `claimed_by` as the worker name (strip hash suffixes when possible, e.g. `The-Seeker:133172` → `The-Seeker`).
-- **R2.8** Show routing decision summary: which executor was selected and why (from `context.route_decision.policy.reason`).
-
-### R3 — Web `/pipeline` Page
-
-- **R3.1** Create route `web/app/pipeline/page.tsx`. The page must be accessible at `coherencycoin.com/pipeline`.
-- **R3.2** **Live activity panel** — show the last 30 activity events from `GET /api/agent/tasks/activity`. Auto-refresh every 10 seconds (or SSE if available). Each event shows: timestamp (relative), task type, idea name, node name, provider, event type.
-- **R3.3** **Active tasks panel** — show all currently running tasks from `GET /api/agent/tasks/active`. Each row: idea name, task type, provider, node name, elapsed time (live counting).
-- **R3.4** **Provider success rates panel** — compute and display per-provider success/failure stats from recent completed tasks. Columns: Provider, Tasks run, Success %, Avg duration. Computed client-side from `GET /api/agent/tasks?status=completed&limit=200`.
-- **R3.5** **Queue depth panel** — show count of `pending`, `running`, `failed`, `needs_decision` tasks as stat cards.
-- **R3.6** **Node status** — derive active nodes from `GET /api/agent/tasks/active`. Show unique nodes with task count and last-seen time.
-- **R3.7** Page must work without authentication.
-- **R3.8** Page must load with meaningful data within 2 seconds on a standard connection.
-- **R3.9** Add `/pipeline` to the web navigation sidebar.
-
-### R4 — API: Pipeline Summary Endpoint (Optional but Preferred)
-
-- **R4.1** `GET /api/pipeline/summary` returns an aggregated snapshot:
-  ```json
-  {
-    "active_tasks": [...],
-    "queue_depth": {"pending": N, "running": N, "failed": N, "needs_decision": N},
-    "active_nodes": [{"name": "...", "task_count": N, "last_seen": "..."}],
-    "provider_stats": [{"provider": "claude", "total": N, "success": N, "avg_duration_s": N}],
-    "recent_activity": [...]
-  }
-  ```
-- **R4.2** This endpoint may be computed on-the-fly (no new DB tables required).
-- **R4.3** Response time < 500ms (uses cached data or efficient queries).
-
-### R5 — Task Output Human-Readability
-
-- **R5.1** When displaying task output that contains only an error message like `"Worktree creation failed..."`, the CLI and web must label it clearly as an error, not render it as generic output.
-- **R5.2** When `task.output` or `task.result` is a JSON string, attempt to parse and extract a `summary` or `message` key for display. Fall back to raw string if no structured key found.
-- **R5.3** The `direction` field (task instruction) must be truncatable with `... (truncated)` in list views. Full direction shows in detail view (`cc task <id>`) without truncation.
-
----
 
 ## Task Card
 
@@ -127,86 +68,6 @@ constraints:
   - Must not break existing /tasks page
 ```
 
----
-
-## API Contract
-
-### Existing Endpoints Used
-
-| Endpoint | Used by | Notes |
-|----------|---------|-------|
-| `GET /api/agent/tasks?status=<s>&limit=<n>` | CLI R1, Web R3.5 | Already exists |
-| `GET /api/agent/tasks/{id}` | CLI R2 | Already exists |
-| `GET /api/agent/tasks/{id}/activity` | CLI R2.3 | Already exists |
-| `GET /api/agent/tasks/active` | Web R3.3, R3.6 | Already exists |
-| `GET /api/agent/tasks/activity?limit=30` | Web R3.2 | Already exists |
-| `GET /api/ideas/{id}` | CLI R1.1, R2.4 | For name resolution |
-| `GET /api/ideas?limit=500` | Web R3 | Bulk name lookup |
-
-### New Endpoint (R4)
-
-**`GET /api/pipeline/summary`**
-
-```
-Response 200:
-{
-  "active_tasks": [
-    {
-      "id": "task_abc123",
-      "idea_id": "node-task-visibility",
-      "idea_name": "Node and task visibility",
-      "task_type": "spec",
-      "provider": "claude",
-      "model": "claude-sonnet-4-6",
-      "node_name": "The-Seeker",
-      "claimed_at": "2026-03-28T06:29:22Z",
-      "elapsed_s": 94
-    }
-  ],
-  "queue_depth": {
-    "pending": 3,
-    "running": 2,
-    "failed": 1,
-    "needs_decision": 0
-  },
-  "active_nodes": [
-    {
-      "name": "The-Seeker",
-      "task_count": 1,
-      "providers": ["claude"],
-      "last_seen": "2026-03-28T06:30:28Z"
-    }
-  ],
-  "provider_stats": [
-    {
-      "provider": "claude",
-      "total": 45,
-      "success": 42,
-      "failed": 3,
-      "success_rate": 0.933,
-      "avg_duration_s": 310
-    }
-  ],
-  "recent_activity": [
-    {
-      "task_id": "task_abc123",
-      "idea_name": "Node and task visibility",
-      "task_type": "spec",
-      "node_name": "The-Seeker",
-      "provider": "claude",
-      "event_type": "heartbeat",
-      "elapsed_s": 94,
-      "timestamp": "2026-03-28T06:30:28Z"
-    }
-  ],
-  "generated_at": "2026-03-28T06:31:00Z"
-}
-```
-
-**Implementation note**: Compute `provider_stats` from `SELECT status, model, created_at, updated_at FROM agent_tasks WHERE created_at > NOW() - INTERVAL '24 hours'`. Parse `model` field as `provider/model-name` and aggregate. No new table needed.
-
----
-
 ## Data Model
 
 No new tables. All data is derived from:
@@ -223,25 +84,6 @@ No new tables. All data is derived from:
 3. Cache resolved names in-process for the duration of the command.
 
 If the API does not support `?ids=...` filtering, the CLI falls back to parallel fetches capped at 10 concurrent requests.
-
----
-
-## Files to Create / Modify
-
-| File | Action | Scope |
-|------|--------|-------|
-| `cli/lib/commands/tasks.mjs` | Modify | R1, R2: resolve names, fix output, add activity timeline |
-| `web/app/pipeline/page.tsx` | Create | R3: new pipeline dashboard page |
-| `web/app/pipeline/components/ActiveTasksPanel.tsx` | Create | R3.3 active tasks |
-| `web/app/pipeline/components/ProviderStatsPanel.tsx` | Create | R3.4 provider stats |
-| `web/app/pipeline/components/ActivityFeed.tsx` | Create | R3.2 activity feed |
-| `web/app/pipeline/components/QueueDepthCards.tsx` | Create | R3.5 queue depth |
-| `web/app/pipeline/components/NodeStatusPanel.tsx` | Create | R3.6 node status |
-| `web/components/nav/sidebar.tsx` | Modify | R3.9: add Pipeline nav link |
-| `api/app/routers/pipeline.py` | Create | R4: `/api/pipeline/summary` |
-| `api/app/main.py` | Modify | R4: register pipeline router |
-
----
 
 ## Verification Scenarios
 
@@ -263,33 +105,6 @@ node cli/bin/cc.mjs tasks
 - Task with no `idea_id` in context: display `(no idea)` instead of crashing.
 - API returns 404 for an idea ID: display `idea_id` as fallback, not an error.
 - Empty pipeline: display `"Pipeline idle. No active tasks."` — not an empty table or crash.
-
----
-
-### Scenario 2 — `cc task <id>` shows full output and activity timeline
-
-**Setup**: A completed task exists with known ID (e.g. `task_d73edbae8000792b`).
-
-**Action**:
-```bash
-node cli/bin/cc.mjs task task_d73edbae8000792b
-```
-
-**Expected**:
-- Output includes the full `result` or `output` field — not truncated at 200 chars.
-- Shows `Idea: Node and task visibility — cc tasks, cc task <id>, web pipeline dashboard` (resolved name).
-- Shows `Provider: claude` and `Model: claude-sonnet-4-6` as separate lines.
-- Shows timing: `Created: 2026-03-28 06:29:22 UTC`, `Claimed: ...`, `Duration: ...`.
-- Shows an activity timeline section listing events in order (e.g. `06:29:24 agent_heartbeat: step=researching existing CLI and API state`).
-- Shows `Worker: The-Seeker` (not `The-Seeker:133172`).
-
-**Edge cases**:
-- Task ID does not exist: `Task not found: task_xyz` — not a crash or empty output.
-- Task has `error_summary` set: error is displayed prominently with a red `✗` prefix.
-- Task `result` is valid JSON: extract and display `summary` or `message` key if present.
-- Output > 2000 chars: show first 2000 chars and append `(+N chars, use --full to see all)`.
-
----
 
 ### Scenario 3 — Web `/pipeline` page loads with live data
 
@@ -315,38 +130,6 @@ Then open `https://coherencycoin.com/pipeline` in a browser.
 - API down: page shows `"Pipeline data unavailable"` with a retry button — not a crash or blank screen.
 - Auto-refresh: after 10 seconds, data updates without a full page reload.
 
----
-
-### Scenario 4 — `GET /api/pipeline/summary` returns structured data
-
-**Setup**: Normal pipeline operation.
-
-**Action**:
-```bash
-curl -s https://api.coherencycoin.com/api/pipeline/summary | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-print('active_tasks:', len(d['active_tasks']))
-print('queue pending:', d['queue_depth']['pending'])
-print('provider_stats count:', len(d['provider_stats']))
-print('active_nodes:', len(d['active_nodes']))
-"
-```
-
-**Expected**:
-- HTTP 200.
-- `active_tasks` is a list (length >= 0).
-- `queue_depth` contains keys `pending`, `running`, `failed`, `needs_decision` all as integers.
-- `provider_stats` contains at least 1 entry with `provider`, `total`, `success`, `success_rate`, `avg_duration_s`.
-- `active_nodes` contains at least 1 entry with `name`, `task_count`, `last_seen`.
-- `generated_at` is a valid ISO 8601 UTC timestamp.
-
-**Edge cases**:
-- Empty pipeline: all lists are `[]`, queue depths are `0` — not `null` or missing keys.
-- Invalid query parameter: `GET /api/pipeline/summary?window=bad` returns 422, not 500.
-
----
-
 ### Scenario 5 — Navigation and discoverability
 
 **Setup**: Web app is deployed at `coherencycoin.com`.
@@ -363,30 +146,6 @@ Open `https://coherencycoin.com` in a browser. Navigate to the pipeline page.
 **Edge cases**:
 - Direct navigation to `coherencycoin.com/pipeline` without clicking the nav link works (no 404).
 - The existing `/tasks` page at `coherencycoin.com/tasks` still works after nav changes.
-
----
-
-## Risks and Assumptions
-
-### Risks
-
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| Idea name resolution adds N API calls | Latency in `cc tasks` | Batch fetch with `Promise.all`; cache in-process |
-| `provider_stats` aggregation is slow on large tables | Slow `/api/pipeline/summary` | Add 60s TTL in-memory cache; limit to 24h window |
-| `result` field contains raw execution output (hundreds KB) | `cc task <id>` hangs terminal | Default to first 2000 chars; `--full` for complete output |
-| SSE/live refresh conflicts with Cloudflare CDN caching | Stale data on web page | Use 10s poll interval as fallback; set `Cache-Control: no-store` on `/api/pipeline/summary` |
-| CLI `tasks.mjs` has no test coverage | Regressions hard to detect | Add integration test in `cli/tests/tasks.test.mjs` |
-
-### Assumptions
-
-- `GET /api/ideas/{id}` returns `{ id, name, ... }` — the `name` field is the human-readable title.
-- `GET /api/agent/tasks/active` returns activity records, not task records (confirmed from API output above).
-- The `model` field on tasks follows the pattern `provider/model-name` (e.g. `claude/claude-sonnet-4-6`, `openrouter/free`). Provider is derived by splitting on `/`.
-- The web app uses shadcn/ui `Card`, `Badge`, and `Table` components (already in use on `/tasks`).
-- The sidebar component is at `web/components/nav/sidebar.tsx` or similar.
-
----
 
 ## Known Gaps and Follow-up Tasks
 

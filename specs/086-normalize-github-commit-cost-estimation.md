@@ -1,3 +1,11 @@
+---
+idea_id: value-attribution
+status: done
+source:
+  - file: api/app/services/contribution_cost_service.py
+    symbols: [estimate_commit_cost(), estimate_commit_cost_with_provenance()]
+---
+
 # Spec 086: Normalize GitHub Commit Cost Estimation
 
 ## Goal

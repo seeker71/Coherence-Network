@@ -1,3 +1,15 @@
+---
+idea_id: agent-pipeline
+status: done
+source:
+  - file: api/app/services/agent_execution_metrics.py
+    symbols: [resolve_cost_controls(), attribution_values_from_output()]
+  - file: api/app/services/agent_execution_hooks.py
+    symbols: [register_lifecycle_hook(), dispatch_lifecycle_event()]
+  - file: api/app/routers/agent_status_routes.py
+    symbols: [pipeline status endpoints]
+---
+
 # Spec: Pipeline Observability and Auto-Review
 
 ## Purpose

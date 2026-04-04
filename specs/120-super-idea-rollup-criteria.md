@@ -1,3 +1,9 @@
+---
+idea_id: idea-realization-engine
+status: active
+source: []  # not yet implemented
+---
+
 # Spec 120: Super-Idea Rollup Criteria
 
 ## Purpose

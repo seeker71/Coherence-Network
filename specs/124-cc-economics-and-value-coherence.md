@@ -1,3 +1,13 @@
+---
+idea_id: coherence-credit
+status: partial
+source:
+  - file: api/app/models/coherence_credit.py
+    symbols: [CostVector, ValueVector, ExchangeRate]
+  - file: api/app/services/coherence_credit_service.py
+    symbols: [exchange rate loading]
+---
+
 # Spec 124: CC Economics and Value Coherence
 
 **Idea**: `cc-value-physics` (sub-idea of `coherence-credit-system`)

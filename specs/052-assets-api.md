@@ -1,3 +1,13 @@
+---
+idea_id: value-attribution
+status: done
+source:
+  - file: api/app/routers/assets.py
+    symbols: [create_asset(), get_asset(), list_assets()]
+  - file: api/app/models/asset.py
+    symbols: [Asset, AssetCreate, AssetType]
+---
+
 # Spec: Assets API
 
 ## Purpose
@@ -87,35 +97,6 @@ constraints:
   ]
 }
 ```
-
----
-
-### `GET /api/assets/{asset_id}`
-
-**Purpose**: Retrieve a specific asset by ID
-
-**Request**
-- `asset_id`: UUID (path)
-
-**Response 200**
-```json
-{
-  "id": "660e8400-e29b-41d4-a716-446655440000",
-  "type": "CODE",
-  "description": "API server for Coherence Network",
-  "total_cost": 350.00,
-  "created_at": "2026-02-15T10:00:00Z"
-}
-```
-
-**Response 404**
-```json
-{
-  "detail": "Asset not found"
-}
-```
-
----
 
 ### `GET /api/assets`
 
