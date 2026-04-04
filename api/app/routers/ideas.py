@@ -545,6 +545,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
             data.lifecycle,
             data.duplicate_of,
             data.workspace_git_url,
+            data.interfaces,
         )
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
@@ -571,6 +572,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
         lifecycle=data.lifecycle,
         duplicate_of=data.duplicate_of,
         workspace_git_url=data.workspace_git_url,
+        interfaces=data.interfaces,
     )
     if updated is None:
         raise HTTPException(status_code=404, detail="Idea not found")

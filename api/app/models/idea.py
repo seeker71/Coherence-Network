@@ -216,6 +216,7 @@ class IdeaUpdate(BaseModel):
     lifecycle: Optional[IdeaLifecycle] = None
     duplicate_of: Optional[str] = Field(default=None, description="ID of the idea this duplicates")
     workspace_git_url: Optional[str] = Field(default=None, description="Update the workspace repo URL.")
+    interfaces: Optional[list[str]] = Field(default=None, description="Replace interface list (e.g. machine:api, human:web)")
 
 
 class IdeaCreate(BaseModel):
