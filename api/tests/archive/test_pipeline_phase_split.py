@@ -20,8 +20,10 @@ from typing import Any
 
 import pytest
 
+from unittest.mock import MagicMock, patch
+
 from app.services import pipeline_advance_service
-from app.models.agent import TaskType
+from app.models.agent import TaskStatus, TaskType
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────────
@@ -914,3 +916,381 @@ class TestBackwardCompatibility:
 
         deploy_tasks = [c for c in created if c["task_type"] == "deploy"]
         assert deploy_tasks == [], "Legacy review must not trigger deploy"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Helpers for migrated tests (from test_pipeline_split_review_phases.py)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _make_task(
+    task_type: str,
+    status: str = "completed",
+    idea_id: str = "test-idea",
+    output: str = "Output with enough characters to pass validation checks.",
+    extra_context: dict | None = None,
+) -> dict[str, Any]:
+    ctx: dict[str, Any] = {"idea_id": idea_id}
+    if extra_context:
+        ctx.update(extra_context)
+    return {
+        "id": "task-abc123",
+        "task_type": task_type,
+        "status": status,
+        "output": output,
+        "direction": "some direction",
+        "context": ctx,
+        "model": "claude-sonnet-4-6",
+    }
+
+
+def _no_existing_tasks(limit: int = 200, offset: int = 0) -> tuple[list, int, int]:
+    return [], 0, 0
+
+
+def _patch_stub_create_task(task_create: Any) -> dict[str, Any]:
+    return {
+        "id": "new-task-999",
+        "direction": task_create.direction,
+        "task_type": task_create.task_type,
+        "status": "pending",
+        "context": task_create.context or {},
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Migrated: Idempotency / Dedup Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestDeduplication:
+    """Already-pending tasks should not be double-created."""
+
+    def test_code_review_not_created_if_already_pending(self) -> None:
+        """If a code-review task for this idea already exists, don't create another."""
+        existing_code_review = {
+            "id": "task-existing-cr",
+            "task_type": "code-review",
+            "status": "pending",
+            "context": {"idea_id": "test-idea"},
+        }
+        task = _make_task(
+            "test",
+            output="All 12 tests passed. pytest exit code 0. Coverage 87%.",
+        )
+
+        def mock_list(limit: int = 200, offset: int = 0) -> tuple:
+            return [existing_code_review], 1, 0
+
+        with patch("app.services.agent_service.list_tasks", side_effect=mock_list):
+            result = pipeline_advance_service.maybe_advance(task)
+
+        assert result is None
+
+    def test_deploy_not_created_if_already_running(self) -> None:
+        """If a deploy task for this idea is running, don't create another."""
+        existing_deploy = {
+            "id": "task-existing-deploy",
+            "task_type": "deploy",
+            "status": "running",
+            "context": {"idea_id": "test-idea"},
+        }
+        task = _make_task(
+            "code-review",
+            output="CODE_REVIEW_PASSED: everything correct " * 3,
+        )
+
+        def mock_list(limit: int = 200, offset: int = 0) -> tuple:
+            return [existing_deploy], 1, 0
+
+        with patch("app.services.agent_service.list_tasks", side_effect=mock_list):
+            result = pipeline_advance_service.maybe_advance(task)
+
+        assert result is None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Migrated: Retry Logic Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestRetryLogic:
+    """Each phase has its own retry logic with max 2 retries."""
+
+    def test_code_review_retries_on_failure(self) -> None:
+        """Failed code-review creates a retry task."""
+        task = _make_task(
+            "code-review",
+            status="failed",
+            output="Provider timed out after 300s.",
+            extra_context={"retry_count": 0},
+        )
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.create_task", side_effect=_patch_stub_create_task),
+        ):
+            result = pipeline_advance_service.maybe_retry(task)
+
+        assert result is not None
+        assert result["context"]["retry_count"] == 1
+
+    def test_deploy_retries_on_timeout(self) -> None:
+        """Timed-out deploy creates a retry task."""
+        task = _make_task(
+            "deploy",
+            status="timed_out",
+            output="SSH connection timed out.",
+            extra_context={"retry_count": 1},
+        )
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.create_task", side_effect=_patch_stub_create_task),
+        ):
+            result = pipeline_advance_service.maybe_retry(task)
+
+        assert result is not None
+        assert result["context"]["retry_count"] == 2
+
+    def test_verify_production_retries_on_failure(self) -> None:
+        """Failed verify-production (not VERIFY_FAILED -- but failed status) retries."""
+        task = _make_task(
+            "verify-production",
+            status="failed",
+            output="Agent crashed mid-verify.",
+            extra_context={"retry_count": 0},
+        )
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.create_task", side_effect=_patch_stub_create_task),
+        ):
+            result = pipeline_advance_service.maybe_retry(task)
+
+        assert result is not None
+        assert result["context"]["retry_count"] == 1
+
+    def test_code_review_max_retries_escalates(self) -> None:
+        """After 2 retries, code-review escalates to needs_decision."""
+        task = _make_task(
+            "code-review",
+            status="failed",
+            output="Provider auth failed.",
+            extra_context={"retry_count": 2},
+        )
+        escalated_to: list[str] = []
+
+        def capture_update(task_id: str, **kwargs: Any) -> None:
+            if kwargs.get("status") == TaskStatus.NEEDS_DECISION:
+                escalated_to.append(task_id)
+
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.update_task", side_effect=capture_update),
+        ):
+            result = pipeline_advance_service.maybe_retry(task)
+
+        assert result is None  # no new retry task
+        assert "task-abc123" in escalated_to
+
+    def test_deploy_retry_carries_partial_work(self) -> None:
+        """Retry of a deploy task preserves partial output in the direction."""
+        partial_output = "Merged to main successfully. Build started but SSH dropped."
+        task = _make_task(
+            "deploy",
+            status="failed",
+            output=partial_output,
+            extra_context={"retry_count": 0},
+        )
+        created_tasks: list[dict] = []
+
+        def capture_create(task_create: Any) -> dict:
+            t = _patch_stub_create_task(task_create)
+            created_tasks.append(t)
+            return t
+
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.create_task", side_effect=capture_create),
+        ):
+            pipeline_advance_service.maybe_retry(task)
+
+        assert len(created_tasks) == 1
+        assert partial_output in created_tasks[0]["direction"]
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Migrated: Output Minimum Length Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestOutputMinimumLength:
+    """Phase-specific minimum output lengths prevent hollow completions."""
+
+    def test_code_review_min_output_is_30_chars(self) -> None:
+        assert pipeline_advance_service._MIN_OUTPUT_CHARS.get("code-review", 0) >= 30
+
+    def test_deploy_min_output_is_50_chars(self) -> None:
+        assert pipeline_advance_service._MIN_OUTPUT_CHARS.get("deploy", 0) >= 50
+
+    def test_verify_production_min_output_is_50_chars(self) -> None:
+        assert pipeline_advance_service._MIN_OUTPUT_CHARS.get("verify-production", 0) >= 50
+
+    def test_hollow_code_review_does_not_advance(self) -> None:
+        """code-review with too-short output is rejected as hollow."""
+        task = _make_task("code-review", output="ok")
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.update_task", return_value=None),
+        ):
+            result = pipeline_advance_service.maybe_advance(task)
+        assert result is None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Migrated: Direction Content Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestVerifyProductionDirection:
+    """verify-production direction must instruct the agent to run real curl scenarios."""
+
+    def test_verify_direction_mentions_verify_passed_token(self) -> None:
+        """Deploy -> verify advance creates a task mentioning VERIFY_PASSED."""
+        deploy_task = _make_task(
+            "deploy",
+            output="DEPLOY_PASSED: SHA abc123. All containers healthy.",
+        )
+        created_tasks: list[dict] = []
+
+        def capture_create(task_create: Any) -> dict:
+            t = _patch_stub_create_task(task_create)
+            created_tasks.append(t)
+            return t
+
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.create_task", side_effect=capture_create),
+            patch.object(pipeline_advance_service, "_find_spec_file", return_value=""),
+        ):
+            pipeline_advance_service.maybe_advance(deploy_task)
+
+        assert len(created_tasks) == 1
+        direction = created_tasks[0]["direction"]
+        assert "VERIFY_PASSED" in direction
+        assert "VERIFY_FAILED" in direction
+
+    def test_verify_direction_mentions_curl_or_scenarios(self) -> None:
+        """verify-production direction tells agent to run verification scenarios."""
+        deploy_task = _make_task(
+            "deploy",
+            output="Deploy completed successfully. Health check returned HTTP 200 ok.",
+        )
+        created_tasks: list[dict] = []
+
+        def capture_create(task_create: Any) -> dict:
+            t = _patch_stub_create_task(task_create)
+            created_tasks.append(t)
+            return t
+
+        with (
+            patch("app.services.agent_service.list_tasks", return_value=_no_existing_tasks()),
+            patch("app.services.agent_service.create_task", side_effect=capture_create),
+            patch.object(pipeline_advance_service, "_find_spec_file", return_value=""),
+        ):
+            pipeline_advance_service.maybe_advance(deploy_task)
+
+        direction = created_tasks[0]["direction"]
+        # Must instruct agent to verify production with concrete scenarios
+        assert any(kw in direction.lower() for kw in ("curl", "scenario", "verify", "production"))
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Migrated: Public Failure Graceful Handling
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class TestPublicFailureGracefulHandling:
+    """verify-production failures are publicly visible -- must be handled gracefully."""
+
+    def test_verify_failure_does_not_propagate_exception(self) -> None:
+        """Even if idea_service update fails, the call does not raise."""
+        task = _make_task(
+            "verify-production",
+            output="VERIFY_FAILED: /api/ideas returned 500.",
+        )
+
+        def failing_update(idea_id: str, **kwargs: Any) -> None:
+            raise RuntimeError("DB connection failed")
+
+        with (
+            patch("app.services.agent_service.create_task", side_effect=_patch_stub_create_task),
+            patch("app.services.idea_service.update_idea", side_effect=failing_update),
+        ):
+            # Should not raise even when underlying services fail
+            result = pipeline_advance_service.maybe_advance(task)
+
+        assert result is None
+
+    def test_verify_failure_hotfix_creation_exception_does_not_propagate(self) -> None:
+        """If hotfix task creation fails, the verify failure handler does not raise."""
+        task = _make_task(
+            "verify-production",
+            output="VERIFY_FAILED: production endpoint returning 404.",
+        )
+
+        def failing_create(task_create: Any) -> dict:
+            raise RuntimeError("Task queue unavailable")
+
+        with (
+            patch("app.services.agent_service.create_task", side_effect=failing_create),
+            patch("app.services.idea_service.update_idea", return_value=None),
+        ):
+            # Should not raise even when hotfix creation fails
+            result = pipeline_advance_service.maybe_advance(task)
+
+        assert result is None
+
+    def test_verify_failed_includes_idea_id_in_hotfix_context(self) -> None:
+        """Hotfix task context includes the idea_id so it can be tracked."""
+        task = _make_task(
+            "verify-production",
+            idea_id="split-review-pipeline",
+            output="VERIFY_FAILED: health endpoint returned 503 Service Unavailable. Production is down.",
+        )
+        created_tasks: list[dict] = []
+
+        def capture_create(task_create: Any) -> dict:
+            t = _patch_stub_create_task(task_create)
+            created_tasks.append(t)
+            return t
+
+        with (
+            patch("app.services.agent_service.create_task", side_effect=capture_create),
+            patch("app.services.idea_service.update_idea", return_value=None),
+        ):
+            pipeline_advance_service.maybe_advance(task)
+
+        assert len(created_tasks) == 1
+        assert created_tasks[0]["context"]["idea_id"] == "split-review-pipeline"
+
+    def test_multiple_verify_failures_each_create_hotfix(self) -> None:
+        """Each VERIFY_FAILED event independently creates its own hotfix task."""
+        task1 = _make_task("verify-production", idea_id="idea-alpha",
+                           output="VERIFY_FAILED: idea-alpha is broken -- GET /api/ideas/alpha returned 500.")
+        task2 = _make_task("verify-production", idea_id="idea-beta",
+                           output="VERIFY_FAILED: idea-beta is broken -- GET /api/ideas/beta returned 404.")
+        created_tasks: list[dict] = []
+
+        def capture_create(task_create: Any) -> dict:
+            t = _patch_stub_create_task(task_create)
+            created_tasks.append(t)
+            return t
+
+        with (
+            patch("app.services.agent_service.create_task", side_effect=capture_create),
+            patch("app.services.idea_service.update_idea", return_value=None),
+        ):
+            pipeline_advance_service.maybe_advance(task1)
+            pipeline_advance_service.maybe_advance(task2)
+
+        assert len(created_tasks) == 2
+        idea_ids = {t["context"]["idea_id"] for t in created_tasks}
+        assert idea_ids == {"idea-alpha", "idea-beta"}
