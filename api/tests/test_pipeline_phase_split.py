@@ -118,9 +118,13 @@ class TestPhaseSequenceConfiguration:
         """After deploy, the next phase is verify-production."""
         assert pipeline_advance_service._NEXT_PHASE["deploy"] == "verify-production"
 
-    def test_verify_production_is_terminal(self) -> None:
-        """verify-production has no next phase — it's the terminal gate."""
-        assert pipeline_advance_service._NEXT_PHASE.get("verify-production") is None
+    def test_verify_production_advances_to_reflect(self) -> None:
+        """verify-production advances to reflect (Hermes Learning Loop)."""
+        assert pipeline_advance_service._NEXT_PHASE.get("verify-production") == "reflect"
+
+    def test_reflect_is_terminal(self) -> None:
+        """reflect has no next phase — it's the terminal gate."""
+        assert pipeline_advance_service._NEXT_PHASE.get("reflect") is None
 
     def test_old_review_type_still_maps_to_none(self) -> None:
         """Legacy 'review' task type must NOT be routed into the new chain."""
@@ -422,10 +426,10 @@ class TestDeployPhase:
 class TestVerifyProductionPhase:
     """R4: VERIFY_FAILED → urgent hotfix task + regression status; VERIFY_PASSED → validated."""
 
-    def test_verify_passed_does_not_advance(
+    def test_verify_passed_advances_to_reflect(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """verify-production is terminal — no next phase task created on pass."""
+        """verify-production with VERIFY_PASSED advances to reflect (Hermes Learning Loop)."""
         _stub_no_existing_tasks(monkeypatch)
         created = _stub_create_task(monkeypatch)
         _stub_idea_service(monkeypatch)
@@ -437,8 +441,9 @@ class TestVerifyProductionPhase:
         )
         result = pipeline_advance_service.maybe_advance(task)
 
-        assert result is None  # terminal phase — no next task
-        assert created == []
+        assert result is not None
+        assert len(created) == 1
+        assert created[0]["task_type"] == "reflect"
 
     def test_verify_passed_sets_idea_validated(
         self, monkeypatch: pytest.MonkeyPatch

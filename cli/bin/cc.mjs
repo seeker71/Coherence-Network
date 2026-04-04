@@ -80,6 +80,8 @@ import { runOrgCommand } from "../lib/commands/org.mjs";
 import { runBlueprintsCommand } from "../lib/commands/blueprints.mjs";
 import { runSkillsCommand } from "../lib/commands/skills.mjs";
 import { runGuidesCommand } from "../lib/commands/guides.mjs";
+import { debugCommand } from "../lib/commands/debug.mjs";
+import { modelsCommand, usageCommand } from "../lib/commands/models.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -163,6 +165,10 @@ const COMMANDS = {
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
+  live:          () => watchTask(args),
+  debug:         () => debugCommand(args),
+  models:        () => modelsCommand(args),
+  usage:         () => usageCommand(args),
   agent:         () => handleAgent(args),
   meta:          () => handleMeta(args),
   concepts:      () => listConcepts(args),
