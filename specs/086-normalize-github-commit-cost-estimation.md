@@ -80,3 +80,8 @@ See `api/tests/test_normalize_github_commit_cost_estimation.py` for test cases c
 ```bash
 python3 -m pytest api/tests/test_contribution_cost_service.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

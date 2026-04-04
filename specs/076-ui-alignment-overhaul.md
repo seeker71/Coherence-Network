@@ -85,3 +85,7 @@ constraints:
 
 See `api/tests/test_ui_alignment_overhaul.py` for test cases covering this spec's requirements.
 
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

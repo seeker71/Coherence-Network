@@ -49,3 +49,7 @@ constraints:
 
 See `api/tests/test_placeholder.py` for test cases covering this spec's requirements.
 
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

@@ -64,3 +64,7 @@ cd web && npm run build
 
 See `api/tests/test_landing_page_contributor_onboarding.py` for test cases covering this spec's requirements.
 
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

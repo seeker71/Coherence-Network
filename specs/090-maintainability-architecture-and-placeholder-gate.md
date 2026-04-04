@@ -68,3 +68,8 @@ See `api/tests/test_maintainability_architecture_and_placeholder_gate.py` for te
 ```bash
 python3 -m pytest api/tests/test_maintainability_audit_service.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

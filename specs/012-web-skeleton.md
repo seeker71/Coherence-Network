@@ -116,3 +116,8 @@ N/A (frontend only; no new persisted entities).
 ## Decision Gates
 
 - npm/pnpm choice: use npm by default (matches Node.js ecosystem)
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

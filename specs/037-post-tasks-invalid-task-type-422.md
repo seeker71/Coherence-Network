@@ -124,3 +124,8 @@ None. Adding or expanding this test does not require new dependencies or API con
 ```bash
 python3 -m pytest api/tests/test_agent_task_persistence.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.

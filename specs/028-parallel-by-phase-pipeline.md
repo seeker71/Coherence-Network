@@ -99,3 +99,8 @@ See `api/tests/test_parallel_by_phase_pipeline.py` for test cases covering this 
 ```bash
 python3 -m pytest api/tests/test_parallel_state_writes.py -x -v
 ```
+
+## Known Gaps and Follow-up Tasks
+
+- No known gaps at time of writing.
+- Follow-up: review after initial implementation for completeness.
