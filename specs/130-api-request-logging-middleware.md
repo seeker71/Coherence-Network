@@ -1,3 +1,13 @@
+---
+idea_id: data-infrastructure
+status: done
+source:
+  - file: api/app/middleware/request_duration.py
+    symbols: [RequestDurationMiddleware]
+  - file: api/app/main.py
+    symbols: [middleware registration]
+---
+
 # Spec: API Request Logging Middleware
 
 ## Purpose

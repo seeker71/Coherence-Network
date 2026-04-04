@@ -1,3 +1,13 @@
+---
+idea_id: coherence-credit
+status: done
+source:
+  - file: api/app/services/grounded_idea_metrics_service.py
+    symbols: [compute_idea_metrics()]
+  - file: api/app/routers/agent_grounded_metrics_routes.py
+    symbols: [grounded metrics endpoints]
+---
+
 # Spec 116: Grounded Idea Portfolio Metrics
 
 **Idea**: `agent-grounded-idea-metrics` (sub-idea of `coherence-signal-depth`)

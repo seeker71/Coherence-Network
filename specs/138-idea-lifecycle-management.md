@@ -1,3 +1,15 @@
+---
+idea_id: idea-realization-engine
+status: done
+source:
+  - file: api/app/routers/ideas.py
+    symbols: [set_idea_stage(), advance_idea_stage()]
+  - file: api/app/services/idea_service.py
+    symbols: [advance_idea_stage(), set_idea_stage(), auto_advance_for_task(), compute_progress_dashboard()]
+  - file: api/app/models/idea.py
+    symbols: [IdeaStage, IDEA_STAGE_ORDER, ProgressDashboard, StageBucket]
+---
+
 # Spec 138: Idea Lifecycle Management
 
 ## Purpose

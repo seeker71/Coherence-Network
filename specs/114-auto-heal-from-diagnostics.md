@@ -1,3 +1,15 @@
+---
+idea_id: pipeline-reliability
+status: done
+source:
+  - file: api/app/services/auto_heal_service.py
+    symbols: [HEAL_STRATEGIES, generate_heal_task()]
+  - file: api/app/routers/agent_auto_heal_routes.py
+    symbols: [heal task endpoints]
+  - file: api/app/services/agent_service_task_derive.py
+    symbols: [heal task derivation]
+---
+
 # Spec 114: Auto-Heal from Diagnostics
 
 **Idea**: `agent-auto-heal` (sub-idea of `coherence-network-agent-pipeline`)

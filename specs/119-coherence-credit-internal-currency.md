@@ -1,3 +1,13 @@
+---
+idea_id: coherence-credit
+status: done
+source:
+  - file: api/app/services/coherence_credit_service.py
+    symbols: [exchange rates, CC conversion]
+  - file: api/app/models/coherence_credit.py
+    symbols: [CostVector, ValueVector, ExchangeRate, ProviderRate]
+---
+
 # Spec 119: Coherence Credit (CC) — Internal Currency (Phase 1: Unit of Account)
 
 ## Purpose

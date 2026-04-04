@@ -1,3 +1,13 @@
+---
+idea_id: value-attribution
+status: done
+source:
+  - file: api/app/routers/contributions.py
+    symbols: [create_contribution(), list_contributions(), get_contribution()]
+  - file: api/app/models/contribution.py
+    symbols: [Contribution, ContributionCreate]
+---
+
 # Spec: Contributions API
 
 ## Purpose
@@ -120,37 +130,6 @@ or
 }
 ```
 
----
-
-### `GET /api/contributions/{contribution_id}`
-
-**Purpose**: Retrieve a specific contribution by ID
-
-**Request**
-- `contribution_id`: UUID (path)
-
-**Response 200**
-```json
-{
-  "id": "770e8400-e29b-41d4-a716-446655440000",
-  "contributor_id": "550e8400-e29b-41d4-a716-446655440000",
-  "asset_id": "660e8400-e29b-41d4-a716-446655440000",
-  "cost_amount": 150.00,
-  "coherence_score": 1.0,
-  "metadata": {},
-  "timestamp": "2026-02-15T10:30:00Z"
-}
-```
-
-**Response 404**
-```json
-{
-  "detail": "Contribution not found"
-}
-```
-
----
-
 ### `GET /api/assets/{asset_id}/contributions`
 
 **Purpose**: List all contributions to an asset (for rollup calculations)
@@ -188,39 +167,6 @@ or
   "detail": "Asset not found"
 }
 ```
-
----
-
-### `GET /api/contributors/{contributor_id}/contributions`
-
-**Purpose**: List all contributions by a contributor (for contributor analytics)
-
-**Request**
-- `contributor_id`: UUID (path)
-
-**Response 200**
-```json
-[
-  {
-    "id": "770e8400-e29b-41d4-a716-446655440000",
-    "contributor_id": "550e8400-e29b-41d4-a716-446655440000",
-    "asset_id": "660e8400-e29b-41d4-a716-446655440000",
-    "cost_amount": 150.00,
-    "coherence_score": 1.0,
-    "metadata": {},
-    "timestamp": "2026-02-15T10:30:00Z"
-  }
-]
-```
-
-**Response 404**
-```json
-{
-  "detail": "Contributor not found"
-}
-```
-
----
 
 ### `POST /api/contributions/github`
 

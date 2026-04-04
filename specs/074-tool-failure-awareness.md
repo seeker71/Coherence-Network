@@ -1,3 +1,13 @@
+---
+idea_id: pipeline-optimization
+status: partial
+source:
+  - file: api/app/services/failure_taxonomy_service.py
+    symbols: [failure pattern recognition]
+  - file: api/app/services/agent_execution_retry.py
+    symbols: [failure analysis]
+---
+
 # Spec 074: Tool Failure Awareness (Cost Without Gain)
 
 ## Goal

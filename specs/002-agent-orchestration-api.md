@@ -1,3 +1,17 @@
+---
+idea_id: agent-pipeline
+status: done
+source:
+  - file: api/app/routers/agent_tasks_routes.py
+    symbols: [create_task(), list_tasks(), get_task(), update_task()]
+  - file: api/app/services/agent_service_crud.py
+    symbols: [create_task(), get_task(), update_task()]
+  - file: api/app/services/agent_service_list.py
+    symbols: [list_tasks()]
+  - file: api/app/models/agent.py
+    symbols: [AgentTaskCreate, AgentTaskUpdate, TaskStatus, TaskType]
+---
+
 # Spec: Agent Orchestration API
 
 *Format: [specs/TEMPLATE.md](TEMPLATE.md)*

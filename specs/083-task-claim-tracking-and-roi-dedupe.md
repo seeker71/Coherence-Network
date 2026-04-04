@@ -1,3 +1,11 @@
+---
+idea_id: value-attribution
+status: partial
+source:
+  - file: api/app/services/contribution_cost_service.py
+    symbols: [estimate_commit_cost_with_provenance()]
+---
+
 # Spec 083: Task Claim Tracking and ROI Auto-Pick De-duplication
 
 ## Goal

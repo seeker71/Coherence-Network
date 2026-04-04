@@ -1,3 +1,15 @@
+---
+idea_id: data-infrastructure
+status: done
+source:
+  - file: api/app/services/unified_db.py
+    symbols: [database_url(), _create_engine()]
+  - file: api/app/adapters/postgres_store.py
+    symbols: [PostgreSQL adapter]
+  - file: api/scripts/migrate_tracking_domains_to_postgres.py
+    symbols: [migration script]
+---
+
 # Spec: PostgreSQL Migration for In-Memory Stores
 
 ## Purpose
