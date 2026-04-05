@@ -35,3 +35,14 @@ export function withWorkspaceScope(
   const sep = url.includes("?") ? "&" : "?";
   return `${url}${sep}workspace_id=${encodeURIComponent(ws)}`;
 }
+
+/** Read the active workspace from the cookie (client-side). */
+export function readActiveWorkspaceFromCookie(): string {
+  if (typeof document === "undefined") return DEFAULT_WORKSPACE_ID;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith(`${WORKSPACE_COOKIE}=`));
+  if (!match) return DEFAULT_WORKSPACE_ID;
+  const raw = decodeURIComponent(match.split("=")[1] ?? "");
+  return normalizeWorkspaceId(raw);
+}

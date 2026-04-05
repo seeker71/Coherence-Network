@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
+import { readActiveWorkspaceFromCookie, withWorkspaceScope } from "@/lib/workspace";
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type NodeStreak = {
@@ -256,13 +258,14 @@ function PipelineDashboardContent() {
 
   const load = useCallback(async () => {
     try {
+      const workspaceId = readActiveWorkspaceFromCookie();
       const [nodesData, activeData, activityData, provStats, pendingData, runningData] = await Promise.allSettled([
         fetchJson<NetworkNode[]>("/api/federation/nodes"),
         fetchJson<ActivityEvent[]>("/api/agent/tasks/active"),
         fetchJson<ActivityEvent[]>("/api/agent/tasks/activity?limit=50"),
         fetchJson<ProviderStats>("/api/providers/stats"),
-        fetchJson<{ total?: number }>("/api/agent/tasks?status=pending&limit=1"),
-        fetchJson<{ total?: number }>("/api/agent/tasks?status=running&limit=1"),
+        fetchJson<{ total?: number }>(withWorkspaceScope("/api/agent/tasks?status=pending&limit=1", workspaceId)),
+        fetchJson<{ total?: number }>(withWorkspaceScope("/api/agent/tasks?status=running&limit=1", workspaceId)),
       ]);
 
       if (nodesData.status === "fulfilled") setNodes(nodesData.value);
