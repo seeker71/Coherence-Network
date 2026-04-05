@@ -135,22 +135,21 @@ def list_tasks(
     When workspace_id is provided, results are post-filtered by the
     workspace of each task's linked idea (via context.idea_id).
     """
-    # When a workspace filter is active we fetch a larger window and
-    # post-filter, since the store has no workspace column.
-    fetch_limit = 1000 if workspace_id else limit
-    fetch_offset = 0 if workspace_id else offset
-
     use_db = get_bool("agent_tasks", "use_db", default=True)
     if use_db and agent_task_store_service.enabled():
         status_value = status.value if isinstance(status, TaskStatus) else None
         task_type_value = task_type.value if isinstance(task_type, TaskType) else None
+        # DB-backed fast path: push workspace filter down to SQL.
+        # The store treats NULL workspace_id as the default workspace,
+        # so legacy rows remain visible to the default tenant only.
         rows, total = agent_task_store_service.load_tasks_page(
             status=status_value,
             task_type=task_type_value,
-            limit=fetch_limit,
-            offset=fetch_offset,
+            limit=limit,
+            offset=offset,
             include_output=False,
             include_command=False,
+            workspace_id=workspace_id,
         )
         items: list[dict[str, Any]] = []
         for raw in rows:
@@ -171,14 +170,8 @@ def list_tasks(
                 seen.add(str(derived.get("id") or ""))
                 runtime_backfill += 1
             items.sort(key=lambda t: t["created_at"], reverse=True)
-            if not workspace_id:
-                items = items[:limit]
+            items = items[:limit]
             total = len(items)
-        if workspace_id:
-            lookup = _build_idea_workspace_lookup()
-            items = [t for t in items if _task_matches_workspace(t, workspace_id, lookup)]
-            total = len(items)
-            items = items[offset : offset + limit]
         return items, total, runtime_backfill
 
     _ensure_store_loaded(include_output=False)

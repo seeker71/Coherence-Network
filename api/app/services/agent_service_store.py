@@ -147,6 +147,7 @@ def _deserialize_task(raw: dict[str, Any]) -> dict[str, Any] | None:
         "updated_at": _parse_dt(raw.get("updated_at")),
         "started_at": _parse_dt(raw.get("started_at")),
         "tier": raw.get("tier") if isinstance(raw.get("tier"), str) else "openrouter",
+        "workspace_id": raw.get("workspace_id") if isinstance(raw.get("workspace_id"), str) and raw.get("workspace_id") else None,
     }
     return task
 
