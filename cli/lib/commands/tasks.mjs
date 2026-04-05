@@ -14,7 +14,15 @@
 import { get, post, patch } from "../api.mjs";
 import { hostname } from "node:os";
 import { createHash } from "node:crypto";
-import { getCliActiveTaskId, getCliProvider, getHubUrl } from "../config.mjs";
+import { getCliActiveTaskId, getCliProvider, getHubUrl, getActiveWorkspace, DEFAULT_WORKSPACE_ID } from "../config.mjs";
+
+function workspaceQuery() {
+  const active = getActiveWorkspace();
+  if (active && active !== DEFAULT_WORKSPACE_ID) {
+    return { workspace_id: active };
+  }
+  return {};
+}
 
 function nodeId() {
   return createHash("sha256").update(hostname()).digest("hex").slice(0, 16);
@@ -29,10 +37,11 @@ export async function listTasks(args) {
     const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
     const G = "\x1b[32m", Y = "\x1b[33m", RED = "\x1b[31m", C = "\x1b[36m";
 
+    const wsQ = workspaceQuery();
     const [runRes, pendRes, decRes] = await Promise.all([
-      get("/api/agent/tasks", { status: "running", limit: 15 }),
-      get("/api/agent/tasks", { status: "pending", limit: 10 }),
-      get("/api/agent/tasks", { status: "needs_decision", limit: 5 }),
+      get("/api/agent/tasks", { status: "running", limit: 15, ...wsQ }),
+      get("/api/agent/tasks", { status: "pending", limit: 10, ...wsQ }),
+      get("/api/agent/tasks", { status: "needs_decision", limit: 5, ...wsQ }),
     ]);
     const running = runRes?.tasks || [];
     const pending = pendRes?.tasks || [];
@@ -91,7 +100,7 @@ export async function listTasks(args) {
   }
 
   // Explicit status filter: cc tasks running, cc tasks failed, etc.
-  const data = await get("/api/agent/tasks", { status: explicit, limit });
+  const data = await get("/api/agent/tasks", { status: explicit, limit, ...workspaceQuery() });
   const tasks = data?.tasks || (Array.isArray(data) ? data : []);
 
   console.log();

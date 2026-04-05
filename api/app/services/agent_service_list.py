@@ -90,14 +90,56 @@ def _runtime_completion_event_to_task(event: Any, seen: set[str]) -> dict[str, A
     }
 
 
+def _build_idea_workspace_lookup() -> dict[str, str]:
+    """Build a mapping of idea_id -> workspace_id for task filtering.
+
+    Tasks don't carry workspace_id directly; they reference an idea via
+    context.idea_id, and the idea carries workspace_id. We build this
+    lookup once per list_tasks call when a workspace filter is requested.
+    """
+    try:
+        from app.services import idea_service
+        ideas = idea_service._read_ideas(persist_ensures=False)
+    except Exception:
+        return {}
+    lookup: dict[str, str] = {}
+    for i in ideas:
+        ws = getattr(i, "workspace_id", None) or "coherence-network"
+        lookup[str(i.id)] = str(ws)
+    return lookup
+
+
+def _task_matches_workspace(task: dict[str, Any], workspace_id: str, lookup: dict[str, str]) -> bool:
+    """Return True when a task's resolved idea belongs to the given workspace.
+
+    Tasks whose idea_id is unknown fall back to the default workspace
+    so legacy tasks remain visible to the default tenant only.
+    """
+    idea_id = _resolve_task_idea_id(task)
+    if not idea_id:
+        return workspace_id == "coherence-network"
+    task_workspace = lookup.get(str(idea_id)) or "coherence-network"
+    return task_workspace == workspace_id
+
+
 def list_tasks(
     status: Optional[TaskStatus] = None,
     task_type: Optional[TaskType] = None,
     limit: int = 20,
     offset: int = 0,
+    workspace_id: Optional[str] = None,
 ) -> tuple[list[dict[str, Any]], int, int]:
     """List tasks with optional filters. Sorted by created_at descending.
-    Returns (items, total, runtime_fallback_backfill_count)."""
+    Returns (items, total, runtime_fallback_backfill_count).
+
+    When workspace_id is provided, results are post-filtered by the
+    workspace of each task's linked idea (via context.idea_id).
+    """
+    # When a workspace filter is active we fetch a larger window and
+    # post-filter, since the store has no workspace column.
+    fetch_limit = 1000 if workspace_id else limit
+    fetch_offset = 0 if workspace_id else offset
+
     use_db = get_bool("agent_tasks", "use_db", default=True)
     if use_db and agent_task_store_service.enabled():
         status_value = status.value if isinstance(status, TaskStatus) else None
@@ -105,8 +147,8 @@ def list_tasks(
         rows, total = agent_task_store_service.load_tasks_page(
             status=status_value,
             task_type=task_type_value,
-            limit=limit,
-            offset=offset,
+            limit=fetch_limit,
+            offset=fetch_offset,
             include_output=False,
             include_command=False,
         )
@@ -129,8 +171,14 @@ def list_tasks(
                 seen.add(str(derived.get("id") or ""))
                 runtime_backfill += 1
             items.sort(key=lambda t: t["created_at"], reverse=True)
-            items = items[:limit]
+            if not workspace_id:
+                items = items[:limit]
             total = len(items)
+        if workspace_id:
+            lookup = _build_idea_workspace_lookup()
+            items = [t for t in items if _task_matches_workspace(t, workspace_id, lookup)]
+            total = len(items)
+            items = items[offset : offset + limit]
         return items, total, runtime_backfill
 
     _ensure_store_loaded(include_output=False)
@@ -149,6 +197,9 @@ def list_tasks(
         items = [t for t in items if t["status"] == status]
     if task_type is not None:
         items = [t for t in items if t["task_type"] == task_type]
+    if workspace_id:
+        lookup = _build_idea_workspace_lookup()
+        items = [t for t in items if _task_matches_workspace(t, workspace_id, lookup)]
     total = len(items)
     items.sort(key=lambda t: t["created_at"], reverse=True)
     items = items[offset : offset + limit]

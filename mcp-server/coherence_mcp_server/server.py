@@ -273,6 +273,7 @@ TOOLS: list[Tool] = [
                 "task_type": {"type": "string", "description": "Filter by type: spec, test, impl, review, code-review"},
                 "limit": {"type": "number", "description": "Max tasks to return (default 20)", "default": 20},
                 "offset": {"type": "number", "description": "Pagination offset", "default": 0},
+                "workspace_id": {"type": "string", "description": "Optional workspace to filter by (via each task's linked idea)."},
             },
         },
     ),
@@ -919,12 +920,15 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return {"nodes": nodes, "capabilities": caps}
         # Tasks
         case "coherence_list_tasks":
-            return api_get("/api/agent/tasks", {
+            params = {
                 "status": args.get("status"),
                 "task_type": args.get("task_type"),
                 "limit": args.get("limit", 20),
                 "offset": args.get("offset", 0),
-            })
+            }
+            if args.get("workspace_id"):
+                params["workspace_id"] = args["workspace_id"]
+            return api_get("/api/agent/tasks", params)
         case "coherence_get_task":
             return api_get(f"/api/agent/tasks/{args['task_id']}")
         case "coherence_task_next":

@@ -109,10 +109,11 @@ async def list_tasks(
     task_type: Optional[TaskType] = Query(None),
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
+    workspace_id: Optional[str] = Query(None, description="Filter by the workspace of each task's linked idea (via context.idea_id). Tasks with no idea_id fall back to the default workspace."),
 ) -> AgentTaskList:
     """List tasks with optional filters. Pagination: limit, offset."""
     items, total, runtime_fallback_backfill = agent_service.list_tasks(
-        status=status, task_type=task_type, limit=limit, offset=offset
+        status=status, task_type=task_type, limit=limit, offset=offset, workspace_id=workspace_id
     )
     return AgentTaskList(
         tasks=[AgentTaskListItem(**task_to_item(t)) for t in items],
