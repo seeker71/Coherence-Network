@@ -113,6 +113,11 @@ try:
 except ValueError:
     PENDING_TASK_FETCH_LIMIT = 20
 PENDING_TASK_FETCH_LIMIT = max(1, PENDING_TASK_FETCH_LIMIT)
+# Workspace scoping for the runner. When set the runner only claims tasks
+# that belong to this workspace (via denormalized agent_tasks.workspace_id
+# column). Empty/unset = poll across all workspaces (legacy / multi-tenant
+# shared runner).
+RUNNER_WORKSPACE_ID = str(os.environ.get("AGENT_WORKSPACE_ID", "") or "").strip()
 try:
     MEASURED_VALUE_TARGET_SHARE = float(os.environ.get("AGENT_MEASURED_VALUE_TARGET_SHARE", "0.5"))
 except ValueError:
@@ -7535,12 +7540,15 @@ def run_one_task(
 
 
 def _task_status_count(client: httpx.Client, log: logging.Logger, status: str) -> int | None:
+    params: dict[str, object] = {"status": status, "limit": 1}
+    if RUNNER_WORKSPACE_ID:
+        params["workspace_id"] = RUNNER_WORKSPACE_ID
     response = _http_with_retry(
         client,
         "GET",
         f"{BASE}/api/agent/tasks",
         log,
-        params={"status": status, "limit": 1},
+        params=params,
     )
     if response is None or response.status_code != 200:
         return None
@@ -7686,12 +7694,15 @@ def poll_and_run(
             metadata={"mode": "polling"},
         )
         fetch_limit = max(workers, PENDING_TASK_FETCH_LIMIT)
+        poll_params: dict[str, object] = {"status": "pending", "limit": fetch_limit}
+        if RUNNER_WORKSPACE_ID:
+            poll_params["workspace_id"] = RUNNER_WORKSPACE_ID
         r = _http_with_retry(
             client,
             "GET",
             f"{BASE}/api/agent/tasks",
             log,
-            params={"status": "pending", "limit": fetch_limit},
+            params=poll_params,
         )
         if r is None:
             if once:
@@ -7909,7 +7920,11 @@ def main():
     workers = max(1, args.workers)
     REPO_PATH = os.path.abspath(args.repo_path)
     log = _setup_logging(verbose=args.verbose)
-    log.info("Agent runner started API=%s interval=%s timeout=%ds workers=%d", BASE, args.interval, TASK_TIMEOUT, workers)
+    workspace_label = RUNNER_WORKSPACE_ID or "(all)"
+    log.info(
+        "Agent runner started API=%s interval=%s timeout=%ds workers=%d workspace=%s",
+        BASE, args.interval, TASK_TIMEOUT, workers, workspace_label,
+    )
 
     with httpx.Client(timeout=float(HTTP_TIMEOUT)) as client:
         if not _check_api(client):

@@ -43,6 +43,7 @@ class AgentTaskRecord(Base):
     error_category: Mapped[str | None] = mapped_column(String, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     tier: Mapped[str] = mapped_column(String, nullable=False, default="openrouter")
+    workspace_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
 
 _ENGINE_CACHE: dict[str, Any] = {"url": "", "engine": None, "sessionmaker": None}
@@ -95,6 +96,52 @@ def _table_exists(engine: Any, table_name: str) -> bool:
         return False
 
 
+def _column_ddl(column: Any) -> str:
+    """Render a best-effort ADD COLUMN DDL fragment for a SQLAlchemy Column.
+
+    We stay conservative: always add as NULL so we never fail on tables
+    that already have rows. Tenants can backfill later.
+    """
+    from sqlalchemy.schema import CreateColumn
+    try:
+        return str(CreateColumn(column).compile(dialect=None)).strip()
+    except Exception:
+        # Fallback: just name + TEXT, good enough for Postgres/SQLite text.
+        return f'"{column.name}" TEXT'
+
+
+def _sync_missing_columns(engine: Any, table: Any) -> list[str]:
+    """Add any columns present in the SQLAlchemy model but missing in the DB.
+
+    Returns the list of column names added. Each column is added as
+    NULL-able to avoid NOT NULL migration pain; the application is
+    expected to backfill before enforcing constraints.
+    """
+    try:
+        insp = inspect(engine)
+        if table.name not in insp.get_table_names():
+            return []
+        live_cols = {c["name"] for c in insp.get_columns(table.name)}
+    except Exception:
+        return []
+    added: list[str] = []
+    with engine.begin() as conn:
+        for col in table.columns:
+            if col.name in live_cols:
+                continue
+            try:
+                ddl = _column_ddl(col)
+                # ADD COLUMN IF NOT EXISTS is Postgres-only; we've already
+                # filtered via inspector, so use plain ADD COLUMN.
+                conn.exec_driver_sql(f'ALTER TABLE "{table.name}" ADD COLUMN {ddl}')
+                added.append(col.name)
+            except Exception:
+                # Best-effort: continue past failures (e.g. dialect mismatch).
+                # A failed auto-migration surfaces the same error as before.
+                continue
+    return added
+
+
 def _engine():
     url = _database_url()
     if not url:
@@ -123,6 +170,12 @@ def ensure_schema() -> None:
         return
     if not _table_exists(engine, "agent_tasks"):
         Base.metadata.create_all(bind=engine)
+    else:
+        # Auto-migrate: add any model columns that are missing on the live
+        # table. Guards against deploy drift (a column added to the model
+        # but the live DB never received the ALTER). Always NULL-able,
+        # so it's safe on populated tables.
+        _sync_missing_columns(engine, AgentTaskRecord.__table__)
     _SCHEMA_INITIALIZED = True
     _SCHEMA_INITIALIZED_URL = url
 
@@ -202,6 +255,7 @@ def _row_to_payload(
         "updated_at": _serialize_dt(row.updated_at),
         "started_at": _serialize_dt(row.started_at),
         "tier": row.tier,
+        "workspace_id": row.workspace_id,
     }
 
 
@@ -226,6 +280,7 @@ def _minimal_columns(*, include_output: bool, include_command: bool) -> tuple[An
         AgentTaskRecord.updated_at,
         AgentTaskRecord.started_at,
         AgentTaskRecord.tier,
+        AgentTaskRecord.workspace_id,
     ]
     if include_command:
         columns.append(AgentTaskRecord.command)
@@ -295,6 +350,7 @@ def load_tasks_page(
     offset: int = 0,
     include_output: bool = False,
     include_command: bool = False,
+    workspace_id: str | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
     if not enabled():
         return [], 0
@@ -307,6 +363,18 @@ def load_tasks_page(
             base_query = base_query.filter(AgentTaskRecord.status == str(status))
         if task_type:
             base_query = base_query.filter(AgentTaskRecord.task_type == str(task_type))
+        if workspace_id:
+            ws = str(workspace_id).strip()
+            if ws:
+                # Default workspace also matches NULL workspace_id rows
+                # (tasks created before denormalization / upstream still
+                # emits None for the default tenant).
+                if ws == "coherence-network":
+                    base_query = base_query.filter(
+                        (AgentTaskRecord.workspace_id == ws) | (AgentTaskRecord.workspace_id.is_(None))
+                    )
+                else:
+                    base_query = base_query.filter(AgentTaskRecord.workspace_id == ws)
         total = int(base_query.count() or 0)
         query = base_query.options(
             load_only(*_minimal_columns(include_output=include_output, include_command=include_command))
@@ -407,6 +475,7 @@ def upsert_task(payload: dict[str, Any]) -> None:
                 updated_at=_parse_dt(payload.get("updated_at")),
                 started_at=_parse_dt(payload.get("started_at")),
                 tier=str(payload.get("tier") or "openrouter"),
+                workspace_id=(str(payload.get("workspace_id")).strip() or None) if payload.get("workspace_id") is not None else None,
             )
             session.add(row)
             return
@@ -439,6 +508,10 @@ def upsert_task(payload: dict[str, Any]) -> None:
         row.updated_at = _parse_dt(payload.get("updated_at"))
         row.started_at = _parse_dt(payload.get("started_at"))
         row.tier = str(payload.get("tier") or row.tier or "openrouter")
+        incoming_workspace_id = payload.get("workspace_id")
+        if incoming_workspace_id is not None:
+            normalized_ws = str(incoming_workspace_id).strip()
+            row.workspace_id = normalized_ws or None
 
 
 def clear_tasks() -> None:

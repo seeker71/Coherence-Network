@@ -272,6 +272,28 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     normalized_response_call["task_id"] = task_id
     ctx["route_decision"] = route_decision
     ctx["normalized_response_call"] = normalized_response_call
+    # Resolve workspace_id from linked idea (if any) at creation time so
+    # the tenant mapping is stable and filterable at the SQL layer.
+    task_workspace_id: str | None = None
+    linked_idea_id = str(ctx.get("idea_id") or "").strip() or str((data.context or {}).get("idea_id") or "").strip()
+    if linked_idea_id:
+        try:
+            from app.services import idea_service
+            linked_idea = idea_service.get_idea(linked_idea_id)
+            if linked_idea is not None:
+                resolved_ws = getattr(linked_idea, "workspace_id", None)
+                if isinstance(resolved_ws, str) and resolved_ws.strip():
+                    task_workspace_id = resolved_ws.strip()
+        except Exception:
+            task_workspace_id = None
+    # Also honor an explicit workspace_id on the task context (caller-supplied override).
+    explicit_ws = str(ctx.get("workspace_id") or "").strip()
+    if explicit_ws:
+        task_workspace_id = explicit_ws
+    # Default tenant fallback keeps legacy tasks discoverable by the default workspace.
+    if not task_workspace_id:
+        task_workspace_id = "coherence-network"
+
     now = _now()
     task = {
         "id": task_id,
@@ -292,6 +314,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
         "created_at": now,
         "updated_at": None,
         "tier": tier,
+        "workspace_id": task_workspace_id,
     }
     apply_agent_graph_state_contract(task)
     task["context"] = annotate_task_context(task)
