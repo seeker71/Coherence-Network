@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
+import { readActiveWorkspaceFromCookie, withWorkspaceScope } from "@/lib/workspace";
 
 const API = getApiBase();
 
@@ -221,9 +222,10 @@ export default function DashboardPage() {
 
   const refresh = useCallback(async () => {
     try {
+      const workspaceId = readActiveWorkspaceFromCookie();
       const [nodesRes, tasksRes, pulseRes] = await Promise.all([
         fetch(`${API}/api/federation/nodes`, { cache: "no-store" }),
-        fetch(`${API}/api/agent/tasks?status=running&limit=20`, { cache: "no-store" }),
+        fetch(withWorkspaceScope(`${API}/api/agent/tasks?status=running&limit=20`, workspaceId), { cache: "no-store" }),
         fetch(`${API}/api/pipeline/pulse`, { cache: "no-store" }),
       ]);
       if (nodesRes.ok) setNodes(await nodesRes.json());

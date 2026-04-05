@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useSearchParams } from "next/navigation";
 
 import { useLiveRefresh } from "@/lib/live_refresh";
+import { withWorkspaceScope, readActiveWorkspaceFromCookie } from "@/lib/workspace";
 
 import { EvidenceTrail } from "./EvidenceTrail";
 import { TasksListSection } from "./TasksListSection";
@@ -90,9 +91,10 @@ function TasksPageContent() {
       });
       if (statusFilter) params.set("status", statusFilter);
       if (typeFilter) params.set("task_type", typeFilter);
+      const workspaceId = readActiveWorkspaceFromCookie();
       const [tasksResponse, ideasResponse, activeResponse, activityResponse] = await Promise.all([
-        fetchWithTimeout(`/api/agent/tasks?${params.toString()}`),
-        fetchWithTimeout("/api/ideas?limit=500"),
+        fetchWithTimeout(withWorkspaceScope(`/api/agent/tasks?${params.toString()}`, workspaceId)),
+        fetchWithTimeout(withWorkspaceScope("/api/ideas?limit=500", workspaceId)),
         fetchWithTimeout("/api/agent/tasks/active").catch(() => null),
         fetchWithTimeout("/api/agent/tasks/activity?limit=30").catch(() => null),
       ]);

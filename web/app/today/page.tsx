@@ -4,6 +4,8 @@ import Link from "next/link";
 import TodayTopIdeaQuickLaunch from "@/components/today/TodayTopIdeaQuickLaunch";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
+import { withWorkspaceScope } from "@/lib/workspace";
+import { getActiveWorkspaceFromCookie } from "@/lib/workspace-server";
 import {
   explainIdeaPriority,
   formatConfidence,
@@ -98,9 +100,10 @@ function deriveTaskIdea(task: Task, ideasById: Map<string, Idea>): { ideaId: str
 
 export default async function TodayPrioritiesPage() {
   const apiBase = getApiBase();
+  const workspaceId = await getActiveWorkspaceFromCookie();
   const [ideasPayload, tasksPayload] = await Promise.all([
-    fetchJsonOrNull<IdeasResponse>(`${apiBase}/api/ideas`, { cache: "no-store" }, 5000),
-    fetchJsonOrNull<TaskListPayload>(`${apiBase}/api/agent/tasks?limit=100`, { cache: "no-store" }, 5000),
+    fetchJsonOrNull<IdeasResponse>(withWorkspaceScope(`${apiBase}/api/ideas`, workspaceId), { cache: "no-store" }, 5000),
+    fetchJsonOrNull<TaskListPayload>(withWorkspaceScope(`${apiBase}/api/agent/tasks?limit=100`, workspaceId), { cache: "no-store" }, 5000),
   ]);
 
   const ideas = ideasPayload?.ideas || [];
