@@ -341,6 +341,75 @@ async def test_list_specs_filtered_by_workspace():
 
 
 # ---------------------------------------------------------------------------
+# list_tasks workspace_id filter (via idea_id lookup)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_list_tasks_filtered_by_workspace():
+    ws_id = _uid("ws")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        await c.post("/api/workspaces", json={"id": ws_id, "name": "Tasks", "pillars": ["growth"]})
+
+        # Create one idea in the scoped workspace.
+        scoped_idea = _uid("idea-scoped")
+        r_idea = await c.post("/api/ideas", headers=AUTH, json={
+            "id": scoped_idea,
+            "name": "Scoped idea",
+            "description": "Scoped",
+            "potential_value": 100.0,
+            "estimated_cost": 10.0,
+            "workspace_id": ws_id,
+            "pillar": "growth",
+        })
+        assert r_idea.status_code == 201, r_idea.text
+
+        # Create one idea in the default workspace.
+        default_idea = _uid("idea-default")
+        r_idea2 = await c.post("/api/ideas", headers=AUTH, json={
+            "id": default_idea,
+            "name": "Default idea",
+            "description": "Default",
+            "potential_value": 100.0,
+            "estimated_cost": 10.0,
+        })
+        assert r_idea2.status_code == 201, r_idea2.text
+
+        # Create a task referencing the scoped idea.
+        r_task = await c.post("/api/agent/tasks", headers=AUTH, json={
+            "task_type": "impl",
+            "direction": "Scoped task",
+            "context": {"idea_id": scoped_idea},
+        })
+        assert r_task.status_code == 201, r_task.text
+        scoped_task_id = r_task.json()["id"]
+
+        # Create a task referencing the default idea.
+        r_task2 = await c.post("/api/agent/tasks", headers=AUTH, json={
+            "task_type": "impl",
+            "direction": "Default task",
+            "context": {"idea_id": default_idea},
+        })
+        assert r_task2.status_code == 201, r_task2.text
+        default_task_id = r_task2.json()["id"]
+
+        # Filter tasks to the custom workspace — only the scoped task appears.
+        r_list = await c.get(f"/api/agent/tasks?workspace_id={ws_id}&limit=100")
+        assert r_list.status_code == 200, r_list.text
+        ids = {t["id"] for t in r_list.json()["tasks"]}
+        assert scoped_task_id in ids
+        assert default_task_id not in ids
+
+        # Filter tasks to the default workspace — only the default task (of ours)
+        # appears; the scoped one is excluded.
+        r_list2 = await c.get(f"/api/agent/tasks?workspace_id={DEFAULT_WS}&limit=100")
+        assert r_list2.status_code == 200, r_list2.text
+        ids_default = {t["id"] for t in r_list2.json()["tasks"]}
+        assert default_task_id in ids_default
+        assert scoped_task_id not in ids_default
+
+
+# ---------------------------------------------------------------------------
 # WorkspaceResolver
 # ---------------------------------------------------------------------------
 
