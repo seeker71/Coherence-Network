@@ -24,10 +24,18 @@ def _node_to_contributor(node: dict) -> Contributor:
     # Contributor model requires a valid email — use a placeholder if missing
     if not email or "@" not in email:
         email = f"{node.get('name', 'unknown')}@coherence.network"
+    # Coerce unknown contributor_type values to SYSTEM so a stray label in
+    # the graph never blows up the endpoint for every caller.
+    raw_type = str(node.get("contributor_type") or "HUMAN").strip().upper()
+    try:
+        from app.models.contributor import ContributorType
+        contrib_type = ContributorType(raw_type)
+    except ValueError:
+        contrib_type = ContributorType.SYSTEM
     return Contributor(
         id=cid,
         name=node.get("name", ""),
-        type=node.get("contributor_type") or "HUMAN",
+        type=contrib_type,
         email=email,
         wallet_address=node.get("wallet_address") or None,
         hourly_rate=float(node["hourly_rate"]) if node.get("hourly_rate") else None,

@@ -20,6 +20,7 @@ else:
 class ContributorType(str, Enum):
     HUMAN = "HUMAN"
     SYSTEM = "SYSTEM"
+    AGENT = "AGENT"
 
 
 class ContributorBase(BaseModel):
