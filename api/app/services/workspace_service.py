@@ -40,6 +40,9 @@ def _node_to_workspace(node: dict) -> Workspace:
     pillars = props.get("pillars") or []
     if isinstance(pillars, str):
         pillars = [p.strip() for p in pillars.split(",") if p.strip()]
+    # Provider-config may be stored as a dict or None
+    provider_config_raw = props.get("provider_config")
+    provider_config = provider_config_raw if isinstance(provider_config_raw, dict) else None
     return Workspace(
         id=node.get("id", ""),
         name=node.get("name", ""),
@@ -48,6 +51,9 @@ def _node_to_workspace(node: dict) -> Workspace:
         owner_contributor_id=props.get("owner_contributor_id"),
         visibility=visibility,
         bundle_path=props.get("bundle_path"),
+        repo_url=props.get("repo_url"),
+        default_provider=props.get("default_provider"),
+        provider_config=provider_config,
         created_at=created_at,
         updated_at=updated_at,
     )
@@ -117,6 +123,9 @@ def create_workspace(data: WorkspaceCreate) -> Workspace | None:
             "owner_contributor_id": data.owner_contributor_id,
             "visibility": data.visibility.value,
             "bundle_path": f"workspaces/{data.id}",
+            "repo_url": data.repo_url,
+            "default_provider": data.default_provider,
+            "provider_config": data.provider_config,
             "created_at": now,
             "updated_at": now,
         },
@@ -139,6 +148,12 @@ def update_workspace(workspace_id: str, data: WorkspaceUpdate) -> Workspace | No
         prop_updates["pillars"] = list(data.pillars)
     if data.visibility is not None:
         prop_updates["visibility"] = data.visibility.value
+    if data.repo_url is not None:
+        prop_updates["repo_url"] = data.repo_url
+    if data.default_provider is not None:
+        prop_updates["default_provider"] = data.default_provider
+    if data.provider_config is not None:
+        prop_updates["provider_config"] = data.provider_config
     # graph_service.update_node merges properties (not replaces), so pass only the delta.
     node_updates["properties"] = prop_updates
     updated = graph_service.update_node(workspace_id, **node_updates)

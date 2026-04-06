@@ -1,7 +1,10 @@
 """Agent task CRUD: create_task, get_task, update_task, claim, resolve_route, target state."""
 
+import logging
 import os
 from typing import Any, Optional
+
+log = logging.getLogger(__name__)
 
 from app.config_loader import get_bool
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
@@ -293,6 +296,30 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     # Default tenant fallback keeps legacy tasks discoverable by the default workspace.
     if not task_workspace_id:
         task_workspace_id = "coherence-network"
+
+    # Workspace-scoped provider preference
+    if task_workspace_id and not explicit_ws:
+        # Only look up workspace provider if we resolved from idea (not explicit)
+        pass  # Provider already inherited from workspace
+    if task_workspace_id and not ctx.get("executor"):
+        try:
+            from app.services import workspace_service
+            ws_data = workspace_service.get_workspace(task_workspace_id)
+            if ws_data and hasattr(ws_data, "default_provider") and ws_data.default_provider:
+                ctx["executor"] = ws_data.default_provider
+                log.info("TASK workspace_provider=%s from workspace=%s", ws_data.default_provider, task_workspace_id)
+        except Exception:
+            pass
+
+    # Workspace-scoped repo_url injection
+    if task_workspace_id and not ctx.get("repo_url"):
+        try:
+            from app.services import workspace_service
+            ws_data = workspace_service.get_workspace(task_workspace_id)
+            if ws_data and hasattr(ws_data, "repo_url") and ws_data.repo_url:
+                ctx["repo_url"] = ws_data.repo_url
+        except Exception:
+            pass
 
     now = _now()
     task = {

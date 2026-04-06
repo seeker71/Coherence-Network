@@ -7,11 +7,14 @@ Orchestration/crud must not branch on executor; they call these helpers.
 """
 
 import hashlib
+import logging
 import os
 import re
 import shutil
 from pathlib import Path
 from typing import Any, Optional
+
+log = logging.getLogger(__name__)
 
 from app.config_loader import get_bool as _config_bool, get_int as _config_int, get_str as _config_str
 from app.models.agent import TaskType
@@ -502,6 +505,18 @@ def select_executor(
             "explicit_executor": explicit,
             "availability": "unavailable_on_api_node",
         }
+
+    # Phase-based provider preference (from pipeline policy)
+    try:
+        from app.services import pipeline_policy_service
+        phase_providers = pipeline_policy_service.get_provider_per_phase()
+        task_type_str = task_type.value if hasattr(task_type, "value") else str(task_type)
+        phase_pref = phase_providers.get(task_type_str)
+        if phase_pref and isinstance(phase_pref, str) and phase_pref.strip():
+            log.info("EXECUTOR phase_pref=%s for task_type=%s (from policy)", phase_pref, task_type_str)
+            return phase_pref.strip(), {"source": "phase_policy", "phase": task_type_str}
+    except Exception:
+        pass  # Fall through to existing logic
 
     if not _executor_policy_enabled():
         default_executor = _normalize_executor(

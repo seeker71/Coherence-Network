@@ -76,6 +76,22 @@ def api_patch(path: str, body: dict[str, Any]) -> Any:
         return {"error": str(exc)}
 
 
+def api_put(path: str, body: dict[str, Any]) -> Any:
+    url = f"{API_BASE}{path}"
+    try:
+        r = httpx.put(url, json=body, headers=_headers(), timeout=15.0)
+        r.raise_for_status()
+        return r.json()
+    except httpx.HTTPStatusError as exc:
+        try:
+            detail = exc.response.json().get("detail", exc.response.reason_phrase)
+        except Exception:
+            detail = exc.response.reason_phrase
+        return {"error": detail}
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 # ---------------------------------------------------------------------------
 # Tool definitions
 # ---------------------------------------------------------------------------
@@ -295,6 +311,7 @@ TOOLS: list[Tool] = [
             "type": "object",
             "properties": {
                 "worker_id": {"type": "string", "description": "Identity of the agent/node claiming the task (defaults to 'mcp-agent')"},
+                "workspace_id": {"type": "string", "description": "Optional workspace to filter pending tasks by."},
             },
         },
     ),
@@ -307,6 +324,7 @@ TOOLS: list[Tool] = [
             "properties": {
                 "task_id": {"type": "string", "description": "The task ID"},
                 "worker_id": {"type": "string", "description": "Identity of the agent/node (defaults to 'mcp-agent')"},
+                "workspace_id": {"type": "string", "description": "Optional workspace context for the claim."},
             },
         },
     ),
@@ -333,6 +351,7 @@ TOOLS: list[Tool] = [
                 "idea_id": {"type": "string", "description": "Target idea ID"},
                 "task_type": {"type": "string", "description": "Type of task: spec, test, impl, review (default: spec)", "default": "spec"},
                 "direction": {"type": "string", "description": "Optional custom instruction for the task"},
+                "workspace_id": {"type": "string", "description": "Optional workspace to scope this task to."},
             },
         },
     ),
@@ -823,6 +842,35 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # Pipeline Policies
+    Tool(
+        name="coherence_pipeline_policies",
+        description="View or update pipeline policies (phase_chain, max_retries, failure_patterns, provider_per_phase, etc). Use action='list' to see all, action='get' with key, action='set' with key+value.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "enum": ["list", "get", "set"], "description": "Operation to perform"},
+                "key": {"type": "string", "description": "Policy key (for get/set)"},
+                "value": {"description": "Policy value to set (any JSON type, for set action)"},
+            },
+            "required": ["action"],
+        },
+    ),
+    # Workspace Tasks
+    Tool(
+        name="coherence_workspace_tasks",
+        description="List tasks for a specific workspace, seed a full pipeline (spec->impl->test->review->deploy->verify), or get workspace status.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "workspace_id": {"type": "string", "description": "Workspace ID to scope operations to"},
+                "action": {"type": "string", "enum": ["list", "seed_pipeline", "status"], "description": "Action to perform"},
+                "idea_id": {"type": "string", "description": "Idea ID (for seed_pipeline action)"},
+                "start_phase": {"type": "string", "description": "Starting phase (default: spec)", "default": "spec"},
+            },
+            "required": ["workspace_id", "action"],
+        },
+    ),
 ]
 
 TOOL_MAP: dict[str, Tool] = {t.name: t for t in TOOLS}
@@ -933,7 +981,10 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get(f"/api/agent/tasks/{args['task_id']}")
         case "coherence_task_next":
             # Claim next available pending task
-            data = api_get("/api/agent/tasks", {"status": "pending", "limit": 1})
+            params: dict[str, Any] = {"status": "pending", "limit": 1}
+            if args.get("workspace_id"):
+                params["workspace_id"] = args["workspace_id"]
+            data = api_get("/api/agent/tasks", params)
             tasks = data.get("tasks", []) if isinstance(data, dict) else []
             if not tasks:
                 return {"error": "No pending tasks available"}
@@ -959,14 +1010,17 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             idea_name = idea.get("name", "Unknown Idea") if isinstance(idea, dict) else "Unknown Idea"
             task_type = args.get("task_type", "spec")
             direction = args.get("direction") or f"{task_type} for '{idea_name}' ({idea_id})"
+            context: dict[str, Any] = {
+                "idea_id": idea_id,
+                "idea_name": idea_name,
+                "seeded_by": "mcp-agent",
+            }
+            if args.get("workspace_id"):
+                context["workspace_id"] = args["workspace_id"]
             return api_post("/api/agent/tasks", {
                 "task_type": task_type,
                 "direction": direction,
-                "context": {
-                    "idea_id": idea_id,
-                    "idea_name": idea_name,
-                    "seeded_by": "mcp-agent",
-                },
+                "context": context,
             })
         case "coherence_task_events":
             return api_get(f"/api/agent/tasks/{args['task_id']}/stream")
@@ -1255,6 +1309,60 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                                        "cli": f"cc task {entity_id}"}}
             else:
                 return {"error": f"Unknown entity_type: {entity_type}. Use 'idea', 'spec', or 'task'."}
+        # Pipeline Policies
+        case "coherence_pipeline_policies":
+            action = (args.get("action") or "list").strip()
+            if action == "list":
+                return api_get("/api/pipeline/policies")
+            elif action == "get":
+                key = args.get("key", "")
+                return api_get(f"/api/pipeline/policies/{key}")
+            elif action == "set":
+                key = args.get("key", "")
+                value = args.get("value")
+                return api_put(f"/api/pipeline/policies/{key}", {
+                    "value": value,
+                    "updated_by": "mcp-agent",
+                })
+            else:
+                return {"error": f"Unknown action: {action}. Use 'list', 'get', or 'set'."}
+        # Workspace Tasks
+        case "coherence_workspace_tasks":
+            ws_id = args["workspace_id"]
+            action = args["action"]
+            if action == "list":
+                return api_get(f"/api/agent/tasks", {"workspace_id": ws_id, "limit": 50})
+            elif action == "seed_pipeline":
+                idea_id = args.get("idea_id", "")
+                start_phase = args.get("start_phase", "spec")
+                return api_post("/api/agent/tasks", {
+                    "direction": f"Implement idea {idea_id} starting from {start_phase} phase",
+                    "task_type": start_phase,
+                    "context": {
+                        "idea_id": idea_id,
+                        "workspace_id": ws_id,
+                        "executor": "federation",
+                    },
+                })
+            elif action == "status":
+                tasks_data = api_get(f"/api/agent/tasks", {"workspace_id": ws_id, "limit": 200})
+                items = (
+                    tasks_data.get("items", [])
+                    if isinstance(tasks_data, dict)
+                    else tasks_data if isinstance(tasks_data, list)
+                    else []
+                )
+                status_counts: dict[str, int] = {}
+                for t in items:
+                    s = t.get("status", "unknown") if isinstance(t, dict) else "unknown"
+                    status_counts[s] = status_counts.get(s, 0) + 1
+                return {
+                    "workspace_id": ws_id,
+                    "total_tasks": len(items),
+                    "by_status": status_counts,
+                }
+            else:
+                return {"error": f"Unknown action: {action}. Use 'list', 'seed_pipeline', or 'status'."}
         case _:
             return {"error": f"Unknown tool: {name}"}
 

@@ -574,6 +574,16 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     if context.get("pr_url"):
         next_context["pr_url"] = context["pr_url"]
 
+    # Inject phase-preferred executor from policy
+    try:
+        from app.services import pipeline_policy_service
+        phase_providers = pipeline_policy_service.get_provider_per_phase()
+        phase_pref = phase_providers.get(next_phase)
+        if phase_pref:
+            next_context["executor"] = phase_pref
+    except Exception:
+        pass
+
     try:
         created = agent_service.create_task(AgentTaskCreate(
             direction=direction,
@@ -757,6 +767,16 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
         retry_context["impl_branch"] = context["impl_branch"]
     if context.get("pr_url"):
         retry_context["pr_url"] = context["pr_url"]
+
+    # Inject phase-preferred executor for retry
+    try:
+        from app.services import pipeline_policy_service
+        phase_providers = pipeline_policy_service.get_provider_per_phase()
+        phase_pref = phase_providers.get(task_type)
+        if phase_pref:
+            retry_context["executor"] = phase_pref
+    except Exception:
+        pass
 
     try:
         created = agent_service.create_task(AgentTaskCreate(
