@@ -535,6 +535,12 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     else:
         direction = f"Execute '{next_phase}' phase for '{idea_name}' ({idea_id})."
 
+    # AutoAgent-inspired: inject failure memory so the next phase inherits
+    # lessons from previous failed attempts at the same phase+idea.
+    advance_failure_memory = _build_failure_memory(idea_id, next_phase)
+    if advance_failure_memory:
+        direction = f"{direction}\n\n{advance_failure_memory}"
+
     next_task_type = _PHASE_TASK_TYPE.get(next_phase, TaskType.IMPL)
 
     # DG-012 fix: propagate impl_branch so test/code-review tasks don't fail the
@@ -584,6 +590,67 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     except Exception:
         log.warning("AUTO_ADVANCE failed %s→%s for idea=%s", task_type, next_phase, idea_id, exc_info=True)
         return None
+
+
+def _build_failure_memory(idea_id: str, task_type: str, limit: int = 5) -> str:
+    """Query recent failures for the same idea+phase and build a concise
+    memory block that can be injected into retry directions.
+
+    Inspired by AutoAgent's Form Compilation pattern: instead of blindly
+    retrying, we close the learning loop by teaching the next attempt
+    what went wrong before.
+
+    Returns a short text block (≤800 chars) or empty string if no useful
+    patterns were found.
+    """
+    try:
+        from app.services import agent_task_store_service
+        if not agent_task_store_service.enabled():
+            return ""
+        rows, _total = agent_task_store_service.load_tasks_page(
+            status="failed",
+            task_type=task_type,
+            limit=50,
+            offset=0,
+            include_output=False,
+            include_command=False,
+        )
+    except Exception:
+        return ""
+    # Filter to matching idea_id
+    import json as _json
+    matched = []
+    for row in rows:
+        ctx_raw = row.get("context") if isinstance(row.get("context"), dict) else {}
+        if not isinstance(ctx_raw, dict):
+            try:
+                ctx_raw = _json.loads(row.get("context_json", "{}") or "{}")
+            except Exception:
+                ctx_raw = {}
+        if ctx_raw.get("idea_id") == idea_id:
+            matched.append(row)
+        if len(matched) >= limit:
+            break
+    if not matched:
+        return ""
+    # Deduplicate error patterns
+    seen_patterns: set[str] = set()
+    lines: list[str] = []
+    for m in matched:
+        err = (m.get("error_summary") or m.get("output_summary") or "")[:120].strip()
+        cat = m.get("error_category") or ""
+        pattern_key = f"{cat}:{err[:60]}"
+        if pattern_key in seen_patterns:
+            continue
+        seen_patterns.add(pattern_key)
+        if err:
+            prefix = f"[{cat}] " if cat else ""
+            lines.append(f"- {prefix}{err}")
+    if not lines:
+        return ""
+    header = f"FAILURE MEMORY — {len(matched)} prior failed {task_type} attempts for this idea:"
+    body = "\n".join(lines[:5])
+    return f"{header}\n{body}\nAvoid repeating these mistakes. Adapt your approach."[:800]
 
 
 def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
@@ -656,6 +723,12 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
             f"The previous attempt produced the code/content above but did not finish.\n"
             f"Apply these changes first, then complete the remaining work."
         )
+
+    # AutoAgent-inspired: inject failure pattern memory so retries learn
+    # from past mistakes instead of blindly repeating them.
+    failure_memory = _build_failure_memory(idea_id, task_type)
+    if failure_memory:
+        direction = f"{direction}\n\n{failure_memory}"
 
     task_type_enum = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
 
