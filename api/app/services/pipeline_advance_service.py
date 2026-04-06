@@ -24,7 +24,12 @@ from app.models.agent import AgentTaskCreate, AgentTaskUpdate, TaskType, TaskSta
 
 log = logging.getLogger(__name__)
 
-_MAX_RETRIES = 2
+def _max_retries() -> int:
+    try:
+        from app.services import pipeline_policy_service
+        return pipeline_policy_service.get_max_retries()
+    except Exception:
+        return 2
 
 def _extract_partial_work(task: dict[str, Any]) -> str:
     """Extract self-contained partial work from a timed-out/failed task.
@@ -115,18 +120,17 @@ def _find_spec_file(idea_id: str, task: dict[str, Any]) -> str:
     return ""
 
 
-_NEXT_PHASE: dict[str, str | None] = {
-    "spec": "impl",
-    "impl": "test",
-    "test": "code-review",
-    "code-review": "deploy",          # R1: code-review → deploy (Spec 159)
-    "deploy": "verify-production",    # R1: deploy → verify-production (Spec 159)
-    "verify-production": "reflect",   # Hermes Learning Loop: verify → reflect
-    "reflect": None,                  # Terminal learning phase
-    "review": None,                   # backward compat: legacy dead-end
-    "verify": None,                   # backward compat
-    "heal": None,
-}
+def _next_phase_map() -> dict[str, str | None]:
+    try:
+        from app.services import pipeline_policy_service
+        return pipeline_policy_service.get_phase_chain()
+    except Exception:
+        return {
+            "spec": "impl", "impl": "test", "test": "code-review",
+            "code-review": "deploy", "deploy": "verify-production",
+            "verify-production": "reflect", "reflect": None,
+            "review": None, "verify": None, "heal": None,
+        }
 
 # All phases downstream of a given phase — used for cascade invalidation
 _DOWNSTREAM: dict[str, list[str]] = {
@@ -149,22 +153,24 @@ _PHASE_TASK_TYPE: dict[str, TaskType] = {
 
 # Minimum output length to consider a task genuinely completed.
 # Text-only providers (openrouter/free) often claim completion with 0 output.
-_MIN_OUTPUT_CHARS: dict[str, int] = {
-    "spec": 100,             # A real spec is at least a paragraph
-    "impl": 200,             # A real impl must describe files changed + verification
-    "test": 100,             # A real test run must show test results
-    "code-review": 30,       # A review at least says PASSED or FAILED
-    "deploy": 50,            # Health check output
-    "verify-production": 50, # curl scenario output
-    "verify": 50,            # alias for verify-production (TaskType.VERIFY.value)
-    "reflect": 100,          # A real reflection must summarize lessons learned
-}
+def _min_output_chars_map() -> dict[str, int]:
+    try:
+        from app.services import pipeline_policy_service
+        return pipeline_policy_service.get_min_output_chars()
+    except Exception:
+        return {
+            "spec": 100, "impl": 200, "test": 100, "code-review": 30,
+            "deploy": 50, "verify-production": 50, "verify": 50, "reflect": 100,
+        }
 
 # Pass-gate tokens: if the completed task output does NOT contain this token,
 # the advance is blocked even if status is "completed".
-_PASS_GATE_TOKEN: dict[str, str] = {
-    "code-review": "CODE_REVIEW_PASSED",   # R2: must contain explicit pass signal
-}
+def _pass_gate_token_map() -> dict[str, str]:
+    try:
+        from app.services import pipeline_policy_service
+        return pipeline_policy_service.get_pass_gate_tokens()
+    except Exception:
+        return {"code-review": "CODE_REVIEW_PASSED"}
 
 # Phases that MUST produce code (git diff). Text output alone is not enough.
 _CODE_REQUIRED_PHASES = {"impl", "test"}
@@ -229,7 +235,7 @@ def _validate_output(task: dict[str, Any]) -> tuple[bool, str]:
     if hasattr(task_type, "value"):
         task_type = task_type.value
     output = (task.get("output") or "").strip()
-    min_chars = _MIN_OUTPUT_CHARS.get(task_type, 30)
+    min_chars = _min_output_chars_map().get(task_type, 30)
 
     if len(output) < min_chars:
         return False, f"Output too short ({len(output)} chars < {min_chars} min for {task_type})"
@@ -381,7 +387,7 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     idea_id = context.get("idea_id", "")
 
     # R2: Pass-gate check — code-review must contain CODE_REVIEW_PASSED (Spec 159)
-    gate_token = _PASS_GATE_TOKEN.get(task_type)
+    gate_token = _pass_gate_token_map().get(task_type)
     if gate_token and gate_token not in output:
         log.warning(
             "PASS_GATE blocked advance: type=%s idea=%s — output missing %s",
@@ -404,7 +410,7 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     if _is_verify_phase and "VERIFY_PASSED" in output and idea_id:
         _set_idea_validated(idea_id)
 
-    next_phase = _NEXT_PHASE.get(task_type)
+    next_phase = _next_phase_map().get(task_type)
     if not next_phase:
         return None
 
@@ -654,7 +660,7 @@ def _build_failure_memory(idea_id: str, task_type: str, limit: int = 5) -> str:
 
 
 def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
-    """If a task timed out or failed, create a retry task (up to _MAX_RETRIES).
+    """If a task timed out or failed, create a retry task (up to max_retries policy).
 
     Returns the created retry task dict, or None if no retry was needed.
     """
@@ -677,8 +683,12 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
     # impl_branch_missing means the impl phase hasn't pushed a branch yet; retrying the test/
     # code-review task immediately will hit the same gate and trigger another retry indefinitely.
     error_category = task.get("error_category") or ""
-    _NO_RETRY_CATEGORIES = {"impl_branch_missing", "worktree_failed"}
-    if error_category in _NO_RETRY_CATEGORIES:
+    try:
+        from app.services import pipeline_policy_service
+        no_retry = set(pipeline_policy_service.get_no_retry_categories())
+    except Exception:
+        no_retry = {"impl_branch_missing", "worktree_failed"}
+    if error_category in no_retry:
         log.info(
             "AUTO_RETRY skip — %s for %s has non-retriable error_category=%s (structural prerequisite)",
             task_type, idea_id, error_category,
@@ -686,7 +696,7 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
         return None
 
     retry_count = int(context.get("retry_count", 0))
-    if retry_count >= _MAX_RETRIES:
+    if retry_count >= _max_retries():
         log.info("AUTO_RETRY exhausted — %s for %s retried %d times, escalating", task_type, idea_id, retry_count)
         _escalate_or_autofix(task, task_type, idea_id, retry_count)
         return None

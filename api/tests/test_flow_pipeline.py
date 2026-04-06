@@ -95,11 +95,12 @@ class TestPhaseConfiguration:
     """Verify phase sequence mapping and task type assignments."""
 
     def test_phase_sequence(self) -> None:
-        """_NEXT_PHASE maps: code-review -> deploy -> verify-production."""
-        assert pas._NEXT_PHASE["code-review"] == "deploy"
-        assert pas._NEXT_PHASE["deploy"] == "verify-production"
+        """Phase chain maps: code-review -> deploy -> verify-production."""
+        phase_chain = pas._next_phase_map()
+        assert phase_chain["code-review"] == "deploy"
+        assert phase_chain["deploy"] == "verify-production"
         # verify-production advances to reflect (terminal learning phase)
-        assert pas._NEXT_PHASE.get("verify-production") == "reflect"
+        assert phase_chain.get("verify-production") == "reflect"
 
     def test_phase_task_types(self) -> None:
         """Each phase has the correct TaskType mapping."""
@@ -530,16 +531,17 @@ class TestEdgeCases:
 
     def test_stats_structure(self) -> None:
         """Pipeline phase maps have expected structure and all phases covered."""
-        # _NEXT_PHASE has all expected phases
-        assert "code-review" in pas._NEXT_PHASE
-        assert "deploy" in pas._NEXT_PHASE
-        assert "verify-production" in pas._NEXT_PHASE
-        assert "spec" in pas._NEXT_PHASE
-        assert "impl" in pas._NEXT_PHASE
-        assert "test" in pas._NEXT_PHASE
+        phase_chain = pas._next_phase_map()
+        # Phase chain has all expected phases
+        assert "code-review" in phase_chain
+        assert "deploy" in phase_chain
+        assert "verify-production" in phase_chain
+        assert "spec" in phase_chain
+        assert "impl" in phase_chain
+        assert "test" in phase_chain
 
-        # _PHASE_TASK_TYPE maps every phase in _NEXT_PHASE that has a successor
-        for phase, next_phase in pas._NEXT_PHASE.items():
+        # _PHASE_TASK_TYPE maps every phase in phase chain that has a successor
+        for phase, next_phase in phase_chain.items():
             if next_phase is not None:
                 assert phase in pas._PHASE_TASK_TYPE, (
                     f"Phase {phase!r} has successor {next_phase!r} but no TaskType mapping"
@@ -550,8 +552,9 @@ class TestEdgeCases:
         assert "verify-production" in pas._DOWNSTREAM.get("code-review", [])
         assert "verify-production" in pas._DOWNSTREAM.get("deploy", [])
 
-        # _MIN_OUTPUT_CHARS has entries for all pipeline phases
+        # _min_output_chars_map has entries for all pipeline phases
+        min_output = pas._min_output_chars_map()
         for phase in ("code-review", "deploy", "verify-production"):
-            assert phase in pas._MIN_OUTPUT_CHARS, (
-                f"Phase {phase!r} missing from _MIN_OUTPUT_CHARS"
+            assert phase in min_output, (
+                f"Phase {phase!r} missing from min_output_chars policy"
             )
