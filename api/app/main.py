@@ -70,6 +70,7 @@ from app.routers import meta as meta_router
 from app.routers import onboarding as onboarding_router
 from app.routers import openclaw_node_bridge
 from app.routers import pipeline
+from app.routers import pipeline_policies
 from app.routers import ui_preferences as ui_preferences_router
 from app.routers import workspaces as workspaces_router
 from app.routers import provider_stats
@@ -635,6 +636,7 @@ app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["i
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
 app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
+app.include_router(pipeline_policies.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])
