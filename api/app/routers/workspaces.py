@@ -40,7 +40,10 @@ async def create_workspace(data: WorkspaceCreate) -> Workspace:
 async def update_workspace(workspace_id: str, data: WorkspaceUpdate) -> Workspace:
     if all(
         field is None
-        for field in (data.name, data.description, data.pillars, data.visibility)
+        for field in (
+            data.name, data.description, data.pillars, data.visibility,
+            data.repo_url, data.default_provider, data.provider_config,
+        )
     ):
         raise HTTPException(status_code=400, detail="At least one field required")
     updated = workspace_service.update_workspace(workspace_id, data)

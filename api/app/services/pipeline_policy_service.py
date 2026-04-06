@@ -240,6 +240,16 @@ _CODE_DEFAULTS: dict[str, Any] = {
     ],
     # Error categories that should never be retried
     "no_retry_categories": ["impl_branch_missing", "worktree_failed"],
+    # Preferred provider/executor per pipeline phase
+    "provider_per_phase": {
+        "spec": "claude",
+        "impl": "claude",
+        "test": "claude",
+        "code-review": "claude",
+        "deploy": "cursor",
+        "verify-production": "cursor",
+        "reflect": "claude",
+    },
 }
 
 
@@ -418,3 +428,8 @@ def get_failure_patterns() -> list[dict[str, str]]:
 def get_no_retry_categories() -> list[str]:
     """Get error categories that should never be retried."""
     return get_policy("no_retry_categories", _CODE_DEFAULTS["no_retry_categories"])
+
+
+def get_provider_per_phase() -> dict[str, str]:
+    """Get preferred provider/executor per pipeline phase."""
+    return get_policy("provider_per_phase", _CODE_DEFAULTS["provider_per_phase"])

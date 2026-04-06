@@ -44,6 +44,9 @@ class Workspace(BaseModel):
         default=None,
         description="Repo-relative path to workspace bundle (workspaces/{slug}/). None means repo root (legacy default workspace).",
     )
+    repo_url: Optional[str] = Field(None, description="Git repo URL for this workspace")
+    default_provider: Optional[str] = Field(None, description="Default CLI provider (claude/codex/gemini/cursor)")
+    provider_config: Optional[dict] = Field(None, description="Provider-specific config overrides")
     created_at: datetime
     updated_at: datetime
 
@@ -60,6 +63,9 @@ class WorkspaceCreate(BaseModel):
     pillars: list[str] = Field(default_factory=list)
     owner_contributor_id: Optional[str] = None
     visibility: WorkspaceVisibility = WorkspaceVisibility.PUBLIC
+    repo_url: Optional[str] = Field(None, description="Git repo URL for this workspace")
+    default_provider: Optional[str] = Field(None, description="Default CLI provider (claude/codex/gemini/cursor)")
+    provider_config: Optional[dict] = Field(None, description="Provider-specific config overrides")
 
 
 class WorkspaceUpdate(BaseModel):
@@ -67,3 +73,6 @@ class WorkspaceUpdate(BaseModel):
     description: Optional[str] = None
     pillars: Optional[list[str]] = None
     visibility: Optional[WorkspaceVisibility] = None
+    repo_url: Optional[str] = None
+    default_provider: Optional[str] = None
+    provider_config: Optional[dict] = None
