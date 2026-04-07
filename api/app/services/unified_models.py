@@ -89,5 +89,11 @@ from app.services.repo_credential_service import RepoCredentialRecord  # noqa: F
 # Pipeline Policy models
 from app.services.pipeline_policy_service import PipelinePolicyRecord  # noqa: F401
 
+# CC Economics models (treasury ledger + stake positions)
+from app.services.cc_treasury_service import (  # noqa: F401
+    TreasuryLedgerEntry,
+    StakePositionRow,
+)
+
 # Graph models (Node + Edge universal data layer)
 from app.models.graph import Node, Edge  # noqa: F401
