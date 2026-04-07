@@ -122,7 +122,10 @@ export function loadPublicWebConfig(): PublicWebConfig {
       getNested(config, ["web", "api_base_url"], "")
       || getNested(config, ["agent_providers", "api_base_url"], "https://api.coherencycoin.com"),
     ),
-    localApiBaseUrl: String(getNested(config, ["web", "local_api_base_url"], "http://localhost:8000")),
+    localApiBaseUrl: String(
+      process.env.API_URL
+      || getNested(config, ["web", "local_api_base_url"], "http://localhost:8000"),
+    ),
     liveUpdates: {
       pollMs: Math.max(30000, Number(getNested(config, ["live_updates", "poll_ms"], 120000)) || 120000),
       routerRefreshEveryTicks: Math.max(
