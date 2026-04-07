@@ -23,7 +23,7 @@ done_when:
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
 > **Source**: [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
-# Spec 181: Idea Dual Identity — UUID Primary Key + Structured Human Slug
+# Idea Dual Identity — UUID Primary Key + Structured Human Slug
 
 ## Purpose
 

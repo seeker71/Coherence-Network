@@ -26,7 +26,7 @@ constraints:
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
 > **Source**: [`web/app/nodes/page.tsx`](../web/app/nodes/page.tsx) | [`web/app/tasks/page.tsx`](../web/app/tasks/page.tsx) | [`web/app/tasks/[task_id]/page.tsx`](../web/app/tasks/[task_id]/page.tsx)
 
-# Spec 161: Node and Task Visibility — `cc tasks`, `cc task <id>`, Web Pipeline Dashboard
+# Node and Task Visibility — `cc tasks`, `cc task <id>`, Web Pipeline Dashboard
 
 **Idea ID**: `node-task-visibility`
 **Status**: Draft — 2026-03-28

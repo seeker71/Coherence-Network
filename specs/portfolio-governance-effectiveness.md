@@ -30,7 +30,7 @@ constraints:
 > **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
 > **Source**: [`api/app/routers/ideas.py`](../api/app/routers/ideas.py) | [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
-# Spec 126: Portfolio Governance Effectiveness Metrics
+# Portfolio Governance Effectiveness Metrics
 
 ## Purpose
 

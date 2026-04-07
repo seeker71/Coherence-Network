@@ -24,7 +24,7 @@ test:
 > **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
 > **Source**: [`api/app/services/onboarding_service.py`](../api/app/services/onboarding_service.py) | [`api/app/routers/onboarding.py`](../api/app/routers/onboarding.py)
 
-# Spec 168 -- Identity-Driven Onboarding: Trust-on-First-Use (TOFU) MVP
+# Identity-Driven Onboarding: Trust-on-First-Use (TOFU) MVP
 
 ## Goal
 

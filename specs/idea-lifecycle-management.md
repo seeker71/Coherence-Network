@@ -36,7 +36,7 @@ constraints:
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
 > **Source**: [`api/app/routers/ideas.py`](../api/app/routers/ideas.py) | [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
-# Spec 138: Idea Lifecycle Management
+# Idea Lifecycle Management
 
 ## Purpose
 

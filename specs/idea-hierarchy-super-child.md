@@ -21,7 +21,7 @@ done_when:
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
 > **Source**: [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
-# Spec 117: Idea Hierarchy — Super-Ideas and Child-Ideas
+# Idea Hierarchy — Super-Ideas and Child-Ideas
 
 **Idea**: `idea-hierarchy-model` (sub-idea of `portfolio-governance`)
 **Depends on**: Spec 116 (grounded idea metrics), Spec 053 (free energy scoring)
