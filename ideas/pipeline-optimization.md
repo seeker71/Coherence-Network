@@ -5,11 +5,11 @@ stage: implementing
 work_type: feature
 pillar: pipeline
 specs:
-  - [074-tool-failure-awareness](../specs/074-tool-failure-awareness.md)
-  - [112-prompt-ab-roi-measurement](../specs/112-prompt-ab-roi-measurement.md)
-  - [113-provider-usage-coalescing-timeout-resilience](../specs/113-provider-usage-coalescing-timeout-resilience.md)
-  - [127-cross-task-outcome-correlation](../specs/127-cross-task-outcome-correlation.md)
-  - [135-provider-health-alerting](../specs/135-provider-health-alerting.md)
+  - [tool-failure-awareness](../specs/tool-failure-awareness.md)
+  - [prompt-ab-roi-measurement](../specs/prompt-ab-roi-measurement.md)
+  - [provider-usage-coalescing-timeout-resilience](../specs/provider-usage-coalescing-timeout-resilience.md)
+  - [cross-task-outcome-correlation](../specs/cross-task-outcome-correlation.md)
+  - [provider-health-alerting](../specs/provider-health-alerting.md)
   - [runner-auto-contribution](../specs/runner-auto-contribution.md)
 ---
 

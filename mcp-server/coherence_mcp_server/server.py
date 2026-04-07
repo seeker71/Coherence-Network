@@ -734,7 +734,7 @@ TOOLS: list[Tool] = [
             "type": "object",
             "required": ["path"],
             "properties": {
-                "path": {"type": "string", "description": "Relative path from repo root (e.g. 'specs/169-procedural-memory.md')"},
+                "path": {"type": "string", "description": "Relative path from repo root (e.g. 'specs/smart-reap.md')"},
             },
         },
     ),

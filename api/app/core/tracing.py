@@ -1,4 +1,4 @@
-# spec: 181-full-code-traceability
+# spec: full-code-traceability
 # idea: full-code-traceability
 """Runtime traceability decorator: @spec_traced attaches spec/idea metadata to functions.
 
@@ -7,7 +7,7 @@ Phase 3.1 of full-code-traceability spec (Spec 181).
 Usage:
     from app.core.tracing import spec_traced
 
-    @spec_traced("181-full-code-traceability", idea_id="full-code-traceability")
+    @spec_traced("full-code-traceability", idea_id="full-code-traceability")
     async def my_endpoint(...):
         ...
 

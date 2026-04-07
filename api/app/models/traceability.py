@@ -1,4 +1,4 @@
-# spec: 181-full-code-traceability
+# spec: full-code-traceability
 # idea: full-code-traceability
 """Pydantic models for the traceability system (Spec 181)."""
 

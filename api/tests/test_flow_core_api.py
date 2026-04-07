@@ -654,3 +654,34 @@ async def test_providers_includes_expected():
         providers = r.json()["providers"]
         provider_ids = [p.get("id") or p for p in providers]
         assert len(provider_ids) >= 1, "Expected at least one provider"
+
+
+# ---------------------------------------------------------------------------
+# Spec Registry — Delete (2 tests)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_spec_delete_and_verify_gone():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        sid = _uid("spec")
+        r = await c.post("/api/spec-registry", json={
+            "spec_id": sid, "title": "Deletable", "summary": "Will be deleted.",
+        }, headers=AUTH)
+        assert r.status_code == 201, r.text
+
+        r2 = await c.get(f"/api/spec-registry/{sid}")
+        assert r2.status_code == 200, r2.text
+
+        r3 = await c.delete(f"/api/spec-registry/{sid}", headers=AUTH)
+        assert r3.status_code == 204, r3.text
+
+        r4 = await c.get(f"/api/spec-registry/{sid}")
+        assert r4.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_spec_delete_not_found_returns_404():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.delete("/api/spec-registry/nonexistent-spec", headers=AUTH)
+        assert r.status_code == 404

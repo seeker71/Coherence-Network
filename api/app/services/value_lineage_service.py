@@ -499,7 +499,7 @@ def run_minimum_e2e_flow() -> MinimumE2EFlowResponse:
     link = create_link(
         LineageLinkCreate(
             idea_id="oss-interface-alignment",
-            spec_id="050-canonical-route-registry-and-runtime-mapping",
+            spec_id="canonical-route-registry-and-runtime-mapping",
             implementation_refs=["runtime-minimum-e2e"],
             contributors={
                 "idea": "codex-idea",

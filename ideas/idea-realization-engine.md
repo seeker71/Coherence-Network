@@ -5,13 +5,13 @@ stage: implementing
 work_type: feature
 pillar: realization
 specs:
-  - [053-ideas-prioritization](../specs/053-ideas-prioritization.md)
-  - [138-idea-lifecycle-management](../specs/138-idea-lifecycle-management.md)
-  - [176-idea-lifecycle-closure](../specs/176-idea-lifecycle-closure.md)
-  - [117-idea-hierarchy-super-child](../specs/117-idea-hierarchy-super-child.md)
-  - [120-super-idea-rollup-criteria](../specs/120-super-idea-rollup-criteria.md)
-  - [158-idea-right-sizing](../specs/158-idea-right-sizing.md)
-  - [181-idea-dual-identity](../specs/181-idea-dual-identity.md)
+  - [ideas-prioritization](../specs/ideas-prioritization.md)
+  - [idea-lifecycle-management](../specs/idea-lifecycle-management.md)
+  - [idea-lifecycle-closure](../specs/idea-lifecycle-closure.md)
+  - [idea-hierarchy-super-child](../specs/idea-hierarchy-super-child.md)
+  - [super-idea-rollup-criteria](../specs/super-idea-rollup-criteria.md)
+  - [idea-right-sizing](../specs/idea-right-sizing.md)
+  - [idea-dual-identity](../specs/idea-dual-identity.md)
 ---
 
 # Idea Realization Engine

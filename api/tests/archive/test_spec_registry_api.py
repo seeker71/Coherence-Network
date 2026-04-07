@@ -82,6 +82,46 @@ async def test_spec_registry_create_list_update(
 
 
 @pytest.mark.asyncio
+async def test_spec_registry_delete(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", str(tmp_path / "ideas.json"))
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        created = await client.post(
+            "/api/spec-registry",
+            json={
+                "spec_id": "spec-to-delete",
+                "title": "Deletable spec",
+                "summary": "Will be deleted.",
+                "idea_id": "test-idea",
+            },
+            headers=AUTH_HEADERS,
+        )
+        assert created.status_code == 201
+
+        # Verify it exists
+        got = await client.get("/api/spec-registry/spec-to-delete")
+        assert got.status_code == 200
+
+        # Delete it
+        deleted = await client.delete("/api/spec-registry/spec-to-delete", headers=AUTH_HEADERS)
+        assert deleted.status_code == 204
+
+        # Verify it's gone
+        got_after = await client.get("/api/spec-registry/spec-to-delete")
+        assert got_after.status_code == 404
+
+        # Deleting again should 404
+        deleted_again = await client.delete("/api/spec-registry/spec-to-delete", headers=AUTH_HEADERS)
+        assert deleted_again.status_code == 404
+
+        # Auth required
+        no_auth = await client.delete("/api/spec-registry/spec-to-delete")
+        assert no_auth.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
 async def test_spec_registry_uses_database_url_fallback(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

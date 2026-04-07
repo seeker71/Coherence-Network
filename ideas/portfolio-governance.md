@@ -5,9 +5,9 @@ stage: implementing
 work_type: feature
 pillar: realization
 specs:
-  - [115-grounded-cost-value-measurement](../specs/115-grounded-cost-value-measurement.md)
-  - [116-grounded-idea-portfolio-metrics](../specs/116-grounded-idea-portfolio-metrics.md)
-  - [126-portfolio-governance-effectiveness](../specs/126-portfolio-governance-effectiveness.md)
+  - [grounded-cost-value-measurement](../specs/grounded-cost-value-measurement.md)
+  - [grounded-idea-portfolio-metrics](../specs/grounded-idea-portfolio-metrics.md)
+  - [portfolio-governance-effectiveness](../specs/portfolio-governance-effectiveness.md)
 ---
 
 # Portfolio Governance and Measurement
