@@ -1,4 +1,4 @@
-# spec: 181-full-code-traceability
+# spec: full-code-traceability
 # idea: full-code-traceability
 """Traceability API: query and backfill the idea→spec→function chain (Spec 181).
 
@@ -37,7 +37,7 @@ router = APIRouter()
 
 
 @router.get("/traceability")
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability")
+@spec_traced("full-code-traceability", idea_id="full-code-traceability")
 async def list_all_traces(
     limit: int = Query(100, ge=1, le=500),
 ):
@@ -50,7 +50,7 @@ async def list_all_traces(
 
 
 @router.get("/traceability/coverage")
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability")
+@spec_traced("full-code-traceability", idea_id="full-code-traceability")
 async def traceability_coverage():
     """Report legacy traceability coverage from @traces_to decorator."""
     traces = get_all_traces()
@@ -69,7 +69,7 @@ async def traceability_coverage():
 
 
 @router.get("/traceability/report")
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability",
+@spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="Full traceability report across all dimensions")
 async def traceability_report():
     """Return current traceability state across all dimensions.
@@ -82,7 +82,7 @@ async def traceability_report():
 
 
 @router.post("/traceability/backfill", status_code=202)
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability",
+@spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="Trigger background backfill of spec->idea and code->spec links")
 async def trigger_backfill(body: BackfillRequest = BackfillRequest()):
     """Trigger background backfill of all Phase 1 scripts.
@@ -98,7 +98,7 @@ async def trigger_backfill(body: BackfillRequest = BackfillRequest()):
 
 
 @router.get("/traceability/backfill/status")
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability")
+@spec_traced("full-code-traceability", idea_id="full-code-traceability")
 async def backfill_status():
     """Check the status of the most recent backfill job."""
     status = get_backfill_status()
@@ -111,7 +111,7 @@ async def backfill_status():
 
 
 @router.get("/traceability/functions")
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability",
+@spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="List all functions with @spec_traced decorator")
 async def function_registry(
     spec_id: str | None = Query(None, description="Filter by spec ID"),
@@ -127,7 +127,7 @@ async def function_registry(
 
 
 @router.get("/traceability/lineage/{idea_id}")
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability",
+@spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="Full lineage chain: idea to specs to files to functions")
 async def idea_lineage(idea_id: str):
     """Return the complete lineage chain from an idea to its specs, files, and functions.
@@ -142,7 +142,7 @@ async def idea_lineage(idea_id: str):
 
 
 @router.get("/traceability/spec/{spec_id}")
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability",
+@spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="Forward trace from spec to all implementing files and functions")
 async def spec_forward_trace(spec_id: str):
     """Return all files and functions that implement a given spec.
@@ -157,7 +157,7 @@ async def spec_forward_trace(spec_id: str):
 
 
 @router.get("/traceability/idea/{idea_id}")
-@spec_traced("181-full-code-traceability", idea_id="full-code-traceability")
+@spec_traced("full-code-traceability", idea_id="full-code-traceability")
 async def traces_for_idea(idea_id: str):
     """Find all @traces_to-decorated functions that trace back to a specific idea."""
     traces = get_traces_for_idea(idea_id)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# spec: 181-full-code-traceability
+# spec: full-code-traceability
 # idea: full-code-traceability
 """Phase 1.2 — Backfill idea_id on DB spec rows via fuzzy title matching.
 

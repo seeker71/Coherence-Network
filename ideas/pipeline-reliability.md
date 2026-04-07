@@ -5,12 +5,12 @@ stage: implementing
 work_type: feature
 pillar: pipeline
 specs:
-  - [113-failed-task-diagnostics-contract](../specs/113-failed-task-diagnostics-contract.md)
-  - [114-auto-heal-from-diagnostics](../specs/114-auto-heal-from-diagnostics.md)
-  - [125-incident-response-and-self-healing](../specs/125-incident-response-and-self-healing.md)
-  - [169-smart-reap](../specs/169-smart-reap.md)
-  - [186-data-driven-timeout-resume](../specs/186-data-driven-timeout-resume.md)
-  - [047-heal-completion-issue-resolution](../specs/047-heal-completion-issue-resolution.md)
+  - [failed-task-diagnostics-contract](../specs/failed-task-diagnostics-contract.md)
+  - [auto-heal-from-diagnostics](../specs/auto-heal-from-diagnostics.md)
+  - [incident-response-and-self-healing](../specs/incident-response-and-self-healing.md)
+  - [smart-reap](../specs/smart-reap.md)
+  - [data-driven-timeout-resume](../specs/data-driven-timeout-resume.md)
+  - [heal-completion-issue-resolution](../specs/heal-completion-issue-resolution.md)
   - [stale-task-reaper](../specs/stale-task-reaper.md)
   - [task-deduplication](../specs/task-deduplication.md)
 ---

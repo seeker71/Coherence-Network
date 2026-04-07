@@ -5,12 +5,12 @@ stage: implementing
 work_type: feature
 pillar: surfaces
 specs:
-  - [148-coherence-cli-comprehensive](../specs/148-coherence-cli-comprehensive.md)
-  - [075-web-ideas-specs-usage-pages](../specs/075-web-ideas-specs-usage-pages.md)
-  - [161-node-task-visibility](../specs/161-node-task-visibility.md)
-  - [162-meta-self-discovery](../specs/162-meta-self-discovery.md)
-  - [165-ux-homepage-readability](../specs/165-ux-homepage-readability.md)
-  - [180-mcp-skill-registry-submission](../specs/180-mcp-skill-registry-submission.md)
+  - [coherence-cli-comprehensive](../specs/coherence-cli-comprehensive.md)
+  - [web-ideas-specs-usage-pages](../specs/web-ideas-specs-usage-pages.md)
+  - [node-task-visibility](../specs/node-task-visibility.md)
+  - [meta-self-discovery](../specs/meta-self-discovery.md)
+  - [ux-homepage-readability](../specs/ux-homepage-readability.md)
+  - [mcp-skill-registry-submission](../specs/mcp-skill-registry-submission.md)
 ---
 
 # User Surfaces

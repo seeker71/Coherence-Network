@@ -5,13 +5,13 @@ stage: implementing
 work_type: feature
 pillar: economics
 specs:
-  - [048-contributions-api](../specs/048-contributions-api.md)
-  - [048-value-lineage-and-payout-attribution](../specs/048-value-lineage-and-payout-attribution.md)
-  - [049-distribution-engine](../specs/049-distribution-engine.md)
-  - [052-assets-api](../specs/052-assets-api.md)
-  - [083-task-claim-tracking-and-roi-dedupe](../specs/083-task-claim-tracking-and-roi-dedupe.md)
-  - [086-normalize-github-commit-cost-estimation](../specs/086-normalize-github-commit-cost-estimation.md)
-  - [094-contributor-onboarding-and-governed-change-flow](../specs/094-contributor-onboarding-and-governed-change-flow.md)
+  - [contributions-api](../specs/contributions-api.md)
+  - [value-lineage-and-payout-attribution](../specs/value-lineage-and-payout-attribution.md)
+  - [distribution-engine](../specs/distribution-engine.md)
+  - [assets-api](../specs/assets-api.md)
+  - [task-claim-tracking-and-roi-dedupe](../specs/task-claim-tracking-and-roi-dedupe.md)
+  - [normalize-github-commit-cost-estimation](../specs/normalize-github-commit-cost-estimation.md)
+  - [contributor-onboarding-and-governed-change-flow](../specs/contributor-onboarding-and-governed-change-flow.md)
 ---
 
 # Value Attribution

@@ -22,7 +22,7 @@ STATE_DIR = REPO_ROOT / ".cache"
 STATE_FILE = STATE_DIR / "pinned_idea_acceptance_state.json"
 
 NO_PLACEHOLDER_FILES = [
-    "specs/053-ideas-prioritization.md",
+    "specs/ideas-prioritization.md",
     "api/app/routers/ideas.py",
     "api/app/services/idea_service.py",
     "api/app/models/idea.py",
@@ -54,7 +54,7 @@ def _run_no_placeholder(idea_id: str) -> tuple[int, str, str | None]:
 
 
 def _run_spec_quality(idea_id: str) -> tuple[int, str, str | None]:
-    spec_file = "specs/053-ideas-prioritization.md"
+    spec_file = "specs/ideas-prioritization.md"
     cmd = [sys.executable, "scripts/validate_spec_quality.py", "--file", spec_file]
     p = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True, timeout=120)
     out = (p.stdout or "") + (p.stderr or "")

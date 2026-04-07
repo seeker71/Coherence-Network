@@ -30,7 +30,7 @@ async def test_system_lineage_inventory_includes_core_sections(
 
     link_payload = {
         "idea_id": "portfolio-governance",
-        "spec_id": "049-system-lineage-inventory-and-runtime-telemetry",
+        "spec_id": "system-lineage-inventory-and-runtime-telemetry",
         "implementation_refs": ["PR#inventory"],
         "contributors": {
             "idea": "alice",
@@ -892,8 +892,8 @@ async def test_sync_spec_implementation_gap_tasks_orders_by_roi_and_dedupes(
         inventory_service.spec_registry_service,
         "list_specs",
         lambda limit=5000: [
-            SimpleNamespace(spec_id="030-pipeline-full-automation", estimated_roi=9.2),
-            SimpleNamespace(spec_id="026-phase-1-task-metrics", estimated_roi=4.6),
+            SimpleNamespace(spec_id="pipeline-full-automation", estimated_roi=9.2),
+            SimpleNamespace(spec_id="phase-1-task-metrics", estimated_roi=4.6),
         ],
     )
 
@@ -961,8 +961,8 @@ async def test_sync_spec_implementation_gap_tasks_auto_executes_when_enabled(
         inventory_service.spec_registry_service,
         "list_specs",
         lambda limit=5000: [
-            SimpleNamespace(spec_id="029-github-api-integration", estimated_roi=7.5),
-            SimpleNamespace(spec_id="036-check-pipeline-hierarchical-view", estimated_roi=2.0),
+            SimpleNamespace(spec_id="github-api-integration", estimated_roi=7.5),
+            SimpleNamespace(spec_id="check-pipeline-hierarchical-view", estimated_roi=2.0),
         ],
     )
     config_loader.set_config_value("agent_executor", "auto_execute", True)
@@ -1318,7 +1318,7 @@ async def test_flow_canonicalizes_discovery_ids_and_keeps_named_public_e2e_idea(
             ),
             SimpleNamespace(
                 idea_id="public-e2e-flow-gate-automation",
-                spec_id="095-public-e2e-flow-gate-automation",
+                spec_id="public-e2e-flow-gate-automation",
                 process_summary="run profile flow",
                 pseudocode_summary="run -> verify -> record",
                 implementation_summary=None,
@@ -1392,7 +1392,7 @@ async def test_sync_asset_modularity_tasks_endpoint_creates_deduped_tasks(
                     "asset_kind": "source_file",
                     "asset_id": "api/app/big_module.py",
                     "idea_id": "portfolio-governance",
-                    "spec_id": "089-endpoint-traceability-coverage",
+                    "spec_id": "endpoint-traceability-coverage",
                     "metric": "line_count",
                     "current_value": 700,
                     "threshold": 450,

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-# spec: 181-full-code-traceability
+# spec: full-code-traceability
 # idea: full-code-traceability
 """Phase 2.3 CI check: new/modified source files must have a spec reference comment.
 
 Checks that files in api/app/routers/ and api/app/services/ (and web/app/) have
 a spec reference comment in the first 5 lines:
-    # spec: NNN-name
+    # spec: spec-name
     # idea: idea-slug
 
 Files in api/tests/, scripts/, __init__.py, and conftest.py are exempt.
@@ -123,7 +123,7 @@ def check_files(files: list[Path]) -> list[str]:
                 rel = f
             violations.append(
                 f"FAIL {rel}: missing spec reference comment "
-                f"(expected '# spec: NNN' in first 5 lines)"
+                f"(expected '# spec: spec-name' in first 5 lines)"
             )
     return violations
 
@@ -156,7 +156,7 @@ def main() -> int:
         for v in violations:
             print(f"  {v}", file=sys.stderr)
         print(
-            "\nFix: add '# spec: NNN-spec-name' to the first 5 lines of the file.",
+            "\nFix: add '# spec: spec-name' to the first 5 lines of the file.",
             file=sys.stderr,
         )
         print(

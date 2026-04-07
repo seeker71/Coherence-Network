@@ -47,7 +47,7 @@ async def test_collective_health_endpoint_returns_scores_and_components(
                     "commands": ["cd api && pytest -q tests/test_agent_collective_health_api.py"],
                     "constraints": ["no placeholder data"],
                 },
-                "spec_id": "114-collective-health",
+                "spec_id": "collective-health",
             },
             target_state="collective health endpoint returns coherence/resonance/flow/friction",
             success_evidence=["GET /api/agent/collective-health returns 200"],
@@ -59,7 +59,7 @@ async def test_collective_health_endpoint_returns_scores_and_components(
         AgentTaskCreate(
             direction="Investigate flow bottleneck",
             task_type=TaskType.HEAL,
-            context={"spec_id": "114-collective-health", "retry_reflections": [{"retry_number": 1}]},
+            context={"spec_id": "collective-health", "retry_reflections": [{"retry_number": 1}]},
         )
     )
     agent_service.update_task(

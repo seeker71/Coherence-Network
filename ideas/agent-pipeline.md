@@ -5,12 +5,12 @@ stage: implementing
 work_type: feature
 pillar: pipeline
 specs:
-  - [002-agent-orchestration-api](../specs/002-agent-orchestration-api.md)
-  - [005-project-manager-pipeline](../specs/005-project-manager-pipeline.md)
-  - [139-coherence-network-agent-pipeline](../specs/139-coherence-network-agent-pipeline.md)
-  - [026-pipeline-observability-and-auto-review](../specs/026-pipeline-observability-and-auto-review.md)
-  - [032-attention-heuristics-pipeline-status](../specs/032-attention-heuristics-pipeline-status.md)
-  - [159-split-review-deploy-verify-phases](../specs/159-split-review-deploy-verify-phases.md)
+  - [agent-orchestration-api](../specs/agent-orchestration-api.md)
+  - [project-manager-pipeline](../specs/project-manager-pipeline.md)
+  - [coherence-network-agent-pipeline](../specs/coherence-network-agent-pipeline.md)
+  - [pipeline-observability-and-auto-review](../specs/pipeline-observability-and-auto-review.md)
+  - [attention-heuristics-pipeline-status](../specs/attention-heuristics-pipeline-status.md)
+  - [split-review-deploy-verify-phases](../specs/split-review-deploy-verify-phases.md)
 ---
 
 # Agent Pipeline

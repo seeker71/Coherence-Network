@@ -30,7 +30,7 @@ Spec → Test → Implement → CI → Review → Merge
 
 - API paths: `/api/{resource}/{id}` — Responses: Pydantic models
 - Coherence scores: 0.0–1.0 — Dates: ISO 8601 UTC
-- Spec IDs = file stems (e.g. `002-agent-orchestration-api`) — same as registry key
+- Spec IDs = file stems (e.g. `agent-orchestration-api`) — same as registry key
 - Idea IDs = slugs (e.g. `agent-pipeline`) — same as API path and filename
 
 ## Agent Guardrails
@@ -109,6 +109,22 @@ Verify: `curl https://api.coherencycoin.com/api/health`
 | openrouter | openrouter/* | anything without prefix |
 
 Fallbacks stay within provider. Config: `api/config/model_routing.json`.
+
+## Multi-Agent Coordination
+
+Multiple agents (Claude Code, Codex, Cursor) may work in parallel on different tasks using git worktrees.
+
+**Before starting work**: Run `python3 scripts/agent_status.py --diff` to check for file-level conflicts with other active worktrees.
+
+**Worktree conventions**:
+- Each agent session gets its own worktree under `.claude/worktrees/` or `.codex/worktrees/`
+- Never edit files in the main repo path — it's read-only (the runner lives there)
+- Ship: commit → push branch → PR → merge
+
+**Conflict avoidance**:
+- If `agent_status.py --diff` reports overlapping files, coordinate before proceeding
+- Prefer non-overlapping task assignments across agents
+- When conflicts are unavoidable, the first PR merged wins — the other rebases
 
 ## API Keys
 

@@ -942,7 +942,7 @@ def _parse_yaml_frontmatter(content: str) -> dict:
 
 def _parse_spec_file(path: Path) -> dict | None:
     """Extract spec_id, title, summary, and frontmatter from a spec markdown file."""
-    name = path.stem  # e.g. "001-health-check"
+    name = path.stem  # e.g. "health-check"
     # Skip TEMPLATE.md
     if name.upper() == "TEMPLATE":
         return None
@@ -1215,167 +1215,167 @@ def seed_curated_ideas() -> int:
 # ---------------------------------------------------------------------------
 EXPLICIT_SPEC_IDEA_MAP: dict[str, str] = {
     # --- api-foundation (17 specs) ---
-    "001-health-check": "api-foundation",
-    "009-api-error-handling": "api-foundation",
-    "010-request-validation": "api-foundation",
-    "011-pagination": "api-foundation",
-    "015-placeholder": "api-foundation",
-    "018-coherence-algorithm-spec": "api-foundation",
-    "020-sprint-2-coherence-api": "api-foundation",
-    "024-pypi-indexing": "api-foundation",
-    "025-requirements-txt-import": "api-foundation",
-    "037-post-tasks-invalid-task-type-422": "api-foundation",
-    "038-post-tasks-empty-direction-422": "api-foundation",
-    "050-canonical-route-registry-and-runtime-mapping": "api-foundation",
-    "050-friction-analysis": "api-foundation",
-    "052-assets-api": "api-foundation",
-    "053-ideas-prioritization": "api-foundation",
-    "053-standing-questions-roi-and-next-task-generation": "api-foundation",
+    "health-check": "api-foundation",
+    "api-error-handling": "api-foundation",
+    "request-validation": "api-foundation",
+    "pagination": "api-foundation",
+    "placeholder": "api-foundation",
+    "coherence-algorithm-spec": "api-foundation",
+    "sprint-2-coherence-api": "api-foundation",
+    "pypi-indexing": "api-foundation",
+    "requirements-txt-import": "api-foundation",
+    "post-tasks-invalid-task-type-422": "api-foundation",
+    "post-tasks-empty-direction-422": "api-foundation",
+    "canonical-route-registry-and-runtime-mapping": "api-foundation",
+    "friction-analysis": "api-foundation",
+    "assets-api": "api-foundation",
+    "ideas-prioritization": "api-foundation",
+    "standing-questions-roi-and-next-task-generation": "api-foundation",
     "sprint0-graph-foundation-indexer-api": "api-foundation",
 
     # --- pipeline-automation (22 specs) ---
-    "005-backlog": "pipeline-automation",
-    "005-project-manager-orchestrator": "pipeline-automation",
-    "005-project-manager-pipeline": "pipeline-automation",
-    "006-overnight-backlog": "pipeline-automation",
-    "007-meta-pipeline-backlog": "pipeline-automation",
-    "026-phase-1-task-metrics": "pipeline-automation",
-    "026-pipeline-observability-and-auto-review": "pipeline-automation",
-    "027-auto-update-framework": "pipeline-automation",
-    "027-fully-automated-pipeline": "pipeline-automation",
-    "028-parallel-by-phase-pipeline": "pipeline-automation",
-    "029-github-api-integration": "pipeline-automation",
-    "030-pipeline-full-automation": "pipeline-automation",
-    "030-spec-coverage-update": "pipeline-automation",
-    "032-attention-heuristics-pipeline-status": "pipeline-automation",
-    "036-check-pipeline-hierarchical-view": "pipeline-automation",
-    "039-pipeline-status-empty-state-200": "pipeline-automation",
-    "040-project-manager-load-backlog-malformed-test": "pipeline-automation",
-    "041-project-manager-state-file-flag-test": "pipeline-automation",
-    "042-project-manager-reset-clears-state-test": "pipeline-automation",
-    "043-agent-service-spec-task-type-local-model-test": "pipeline-automation",
-    "044-agent-service-test-task-type-local-model-test": "pipeline-automation",
-    "045-effectiveness-plan-progress-phase-6-7": "pipeline-automation",
-    "046-agent-debugging-pipeline-stuck-task-hangs": "pipeline-automation",
-    "047-heal-completion-issue-resolution": "pipeline-automation",
-    "100-automation-provider-usage-readiness-api": "pipeline-automation",
-    "104-nonblocking-monitoring-workflows": "pipeline-automation",
+    "backlog": "pipeline-automation",
+    "project-manager-orchestrator": "pipeline-automation",
+    "project-manager-pipeline": "pipeline-automation",
+    "overnight-backlog": "pipeline-automation",
+    "meta-pipeline-backlog": "pipeline-automation",
+    "phase-1-task-metrics": "pipeline-automation",
+    "pipeline-observability-and-auto-review": "pipeline-automation",
+    "auto-update-framework": "pipeline-automation",
+    "fully-automated-pipeline": "pipeline-automation",
+    "parallel-by-phase-pipeline": "pipeline-automation",
+    "github-api-integration": "pipeline-automation",
+    "pipeline-full-automation": "pipeline-automation",
+    "spec-coverage-update": "pipeline-automation",
+    "attention-heuristics-pipeline-status": "pipeline-automation",
+    "check-pipeline-hierarchical-view": "pipeline-automation",
+    "pipeline-status-empty-state-200": "pipeline-automation",
+    "project-manager-load-backlog-malformed-test": "pipeline-automation",
+    "project-manager-state-file-flag-test": "pipeline-automation",
+    "project-manager-reset-clears-state-test": "pipeline-automation",
+    "agent-service-spec-task-type-local-model-test": "pipeline-automation",
+    "agent-service-test-task-type-local-model-test": "pipeline-automation",
+    "effectiveness-plan-progress-phase-6-7": "pipeline-automation",
+    "agent-debugging-pipeline-stuck-task-hangs": "pipeline-automation",
+    "heal-completion-issue-resolution": "pipeline-automation",
+    "automation-provider-usage-readiness-api": "pipeline-automation",
+    "nonblocking-monitoring-workflows": "pipeline-automation",
     "test-backlog-cursor": "pipeline-automation",
 
     # --- web-ui-ux (14 specs) ---
-    "007-sprint-0-landing": "web-ui-ux",
-    "008-sprint-1-graph-foundation": "web-ui-ux",
-    "012-web-skeleton": "web-ui-ux",
-    "017-web-ci": "web-ui-ux",
-    "021-web-project-search-ui": "web-ui-ux",
-    "023-web-import-stack-ui": "web-ui-ux",
-    "052-portfolio-cockpit-ui": "web-ui-ux",
-    "072-public-walkable-flow-parity": "interface-trust-surface",
-    "073-walkable-flow-runtime-mismatch-fixes": "interface-trust-surface",
-    "075-web-ideas-specs-usage-pages": "web-ui-ux",
-    "076-ui-alignment-overhaul": "web-ui-ux",
-    "082-landing-page-contributor-onboarding": "web-ui-ux",
-    "091-web-live-refresh-and-link-parity": "web-ui-ux",
-    "092-web-refresh-reliability-and-route-completeness": "web-ui-ux",
+    "sprint-0-landing": "web-ui-ux",
+    "sprint-1-graph-foundation": "web-ui-ux",
+    "web-skeleton": "web-ui-ux",
+    "web-ci": "web-ui-ux",
+    "web-project-search-ui": "web-ui-ux",
+    "web-import-stack-ui": "web-ui-ux",
+    "portfolio-cockpit-ui": "web-ui-ux",
+    "public-walkable-flow-parity": "interface-trust-surface",
+    "walkable-flow-runtime-mismatch-fixes": "interface-trust-surface",
+    "web-ideas-specs-usage-pages": "web-ui-ux",
+    "ui-alignment-overhaul": "web-ui-ux",
+    "landing-page-contributor-onboarding": "web-ui-ux",
+    "web-live-refresh-and-link-parity": "web-ui-ux",
+    "web-refresh-reliability-and-route-completeness": "web-ui-ux",
 
     # --- deployment-ci-ops (8 specs) ---
-    "004-ci-pipeline": "deployment-ci-ops",
-    "016-holdout-tests": "deployment-ci-ops",
-    "031-setup-troubleshooting-venv": "deployment-ci-ops",
-    "033-readme-quick-start-qualify": "deployment-ci-ops",
-    "034-ops-runbook": "deployment-ci-ops",
-    "035-glossary": "deployment-ci-ops",
-    "106-external-tools-audit-stability": "deployment-ci-ops",
+    "ci-pipeline": "deployment-ci-ops",
+    "holdout-tests": "deployment-ci-ops",
+    "setup-troubleshooting-venv": "deployment-ci-ops",
+    "readme-quick-start-qualify": "deployment-ci-ops",
+    "ops-runbook": "deployment-ci-ops",
+    "glossary": "deployment-ci-ops",
+    "external-tools-audit-stability": "deployment-ci-ops",
 
     # --- deployment-gate-reliability (5 specs) ---
-    "014-deploy-readiness": "deployment-gate-reliability",
-    "084-live-gate-tests-without-mocks": "deployment-gate-reliability",
-    "090-maintainability-architecture-and-placeholder-gate": "deployment-gate-reliability",
-    "095-public-e2e-flow-gate-automation": "deployment-gate-reliability",
-    "096-provider-readiness-contract-automation": "deployment-gate-reliability",
+    "deploy-readiness": "deployment-gate-reliability",
+    "live-gate-tests-without-mocks": "deployment-gate-reliability",
+    "maintainability-architecture-and-placeholder-gate": "deployment-gate-reliability",
+    "public-e2e-flow-gate-automation": "deployment-gate-reliability",
+    "provider-readiness-contract-automation": "deployment-gate-reliability",
 
     # --- data-storage-migration (4 specs) ---
-    "019-graph-store-abstraction": "data-storage-migration",
-    "054-postgresql-migration": "data-storage-migration",
-    "080-persistent-store-test-contributor-guard": "data-storage-migration",
-    "107-runtime-telemetry-db-precedence": "data-storage-migration",
+    "graph-store-abstraction": "data-storage-migration",
+    "postgresql-migration": "data-storage-migration",
+    "persistent-store-test-contributor-guard": "data-storage-migration",
+    "runtime-telemetry-db-precedence": "data-storage-migration",
 
     # --- agent-orchestration (8 specs) ---
-    "002-agent-orchestration-api": "agent-orchestration",
-    "003-agent-telegram-decision-loop": "agent-orchestration",
-    "108-unified-agent-cli-flow-patch-on-fail": "agent-orchestration",
-    "108-n8n-security-and-hitl-hardening": "agent-orchestration",
-    "109-open-responses-interoperability-layer": "agent-orchestration",
-    "110-langgraph-stateschema-adoption": "agent-orchestration",
-    "111-agent-execution-lifecycle-hooks": "agent-orchestration",
-    "111-greenfield-autonomous-intelligence-system": "agent-orchestration",
+    "agent-orchestration-api": "agent-orchestration",
+    "agent-telegram-decision-loop": "agent-orchestration",
+    "unified-agent-cli-flow-patch-on-fail": "agent-orchestration",
+    "n8n-security-and-hitl-hardening": "agent-orchestration",
+    "open-responses-interoperability-layer": "agent-orchestration",
+    "langgraph-stateschema-adoption": "agent-orchestration",
+    "agent-execution-lifecycle-hooks": "agent-orchestration",
+    "greenfield-autonomous-intelligence-system": "agent-orchestration",
 
     # --- traceability-provenance (11 specs) ---
-    "013-logging-audit": "traceability-provenance",
-    "049-system-lineage-inventory-and-runtime-telemetry": "traceability-provenance",
-    "054-commit-provenance-contract-gate": "traceability-provenance",
-    "055-runtime-intent-and-public-e2e-contract-gate": "interface-trust-surface",
-    "056-commit-derived-traceability-report": "traceability-provenance",
-    "074-tool-failure-awareness": "traceability-provenance",
-    "083-task-claim-tracking-and-roi-dedupe": "traceability-provenance",
-    "085-tracked-count-parity-and-source-discovery": "traceability-provenance",
-    "086-normalize-github-commit-cost-estimation": "traceability-provenance",
-    "087-legacy-commit-cost-ui-normalization": "traceability-provenance",
-    "089-endpoint-traceability-coverage": "traceability-provenance",
+    "logging-audit": "traceability-provenance",
+    "system-lineage-inventory-and-runtime-telemetry": "traceability-provenance",
+    "commit-provenance-contract-gate": "traceability-provenance",
+    "runtime-intent-and-public-e2e-contract-gate": "interface-trust-surface",
+    "commit-derived-traceability-report": "traceability-provenance",
+    "tool-failure-awareness": "traceability-provenance",
+    "task-claim-tracking-and-roi-dedupe": "traceability-provenance",
+    "tracked-count-parity-and-source-discovery": "traceability-provenance",
+    "normalize-github-commit-cost-estimation": "traceability-provenance",
+    "legacy-commit-cost-ui-normalization": "traceability-provenance",
+    "endpoint-traceability-coverage": "traceability-provenance",
 
     # --- spec-process-governance (3 specs) ---
-    "081-implementation-request-question-task-sync": "spec-process-governance",
-    "088-spec-process-implementation-validation-flow": "spec-process-governance",
-    "094-contributor-onboarding-and-governed-change-flow": "spec-process-governance",
+    "implementation-request-question-task-sync": "spec-process-governance",
+    "spec-process-implementation-validation-flow": "spec-process-governance",
+    "contributor-onboarding-and-governed-change-flow": "spec-process-governance",
 
     # --- coherence-network-value-attribution (3 specs) ---
-    "048-contributions-api": "coherence-network-value-attribution",
-    "048-value-lineage-and-payout-attribution": "coherence-network-value-attribution",
-    "049-distribution-engine": "coherence-network-value-attribution",
+    "contributions-api": "coherence-network-value-attribution",
+    "value-lineage-and-payout-attribution": "coherence-network-value-attribution",
+    "distribution-engine": "coherence-network-value-attribution",
 
     # --- minimum-e2e-path (2 specs) ---
-    "051-question-answering-and-minimum-e2e-flow": "minimum-e2e-path",
-    "051-release-gates": "minimum-e2e-path",
+    "question-answering-and-minimum-e2e-flow": "minimum-e2e-path",
+    "release-gates": "minimum-e2e-path",
 
     # --- coherence-network-web-interface (1 spec) ---
-    "093-web-theme-auto-detection": "coherence-network-web-interface",
+    "web-theme-auto-detection": "coherence-network-web-interface",
 
     # --- deployment-gate-reliability (1 spec: interface-trust-surface gets its own) ---
     # (specs assigned via deployment-ci-ops child above)
 
     # --- agent-prompt-ab-roi (2 specs) ---
-    "112-orchestration-guidance-awareness": "agent-prompt-ab-roi",
-    "112-prompt-ab-roi-measurement": "agent-prompt-ab-roi",
+    "orchestration-guidance-awareness": "agent-prompt-ab-roi",
+    "prompt-ab-roi-measurement": "agent-prompt-ab-roi",
 
     # --- agent-failed-task-diagnostics (4 specs) ---
-    "113-ai-agent-biweekly-intelligence-feedback-loop": "agent-failed-task-diagnostics",
-    "113-failed-task-diagnostics-contract": "agent-failed-task-diagnostics",
-    "113-provider-usage-coalescing-timeout-resilience": "agent-failed-task-diagnostics",
-    "113-public-validation-gates-api": "agent-failed-task-diagnostics",
+    "ai-agent-biweekly-intelligence-feedback-loop": "agent-failed-task-diagnostics",
+    "failed-task-diagnostics-contract": "agent-failed-task-diagnostics",
+    "provider-usage-coalescing-timeout-resilience": "agent-failed-task-diagnostics",
+    "public-validation-gates-api": "agent-failed-task-diagnostics",
 
     # --- agent-auto-heal (3 specs) ---
-    "114-auto-heal-from-diagnostics": "agent-auto-heal",
-    "114-collective-coherence-resonance-flow-friction-health": "agent-auto-heal",
-    "114-mvp-cost-and-acceptance-proof": "agent-auto-heal",
+    "auto-heal-from-diagnostics": "agent-auto-heal",
+    "collective-coherence-resonance-flow-friction-health": "agent-auto-heal",
+    "mvp-cost-and-acceptance-proof": "agent-auto-heal",
 
     # --- agent-grounded-measurement (2 specs) ---
-    "115-grounded-cost-value-measurement": "agent-grounded-measurement",
-    "115-start-gate-continuation-and-hosted-worker-proof": "agent-grounded-measurement",
+    "grounded-cost-value-measurement": "agent-grounded-measurement",
+    "start-gate-continuation-and-hosted-worker-proof": "agent-grounded-measurement",
 
     # --- funder-proof-page (1 spec) ---
-    "116-grounded-idea-portfolio-metrics": "funder-proof-page",
+    "grounded-idea-portfolio-metrics": "funder-proof-page",
 
     # --- idea-hierarchy-model (1 spec) ---
-    "117-idea-hierarchy-super-child": "idea-hierarchy-model",
+    "idea-hierarchy-super-child": "idea-hierarchy-model",
 
     # --- unified-sqlite-store (1 spec) ---
-    "118-unified-sqlite-store": "unified-sqlite-store",
+    "unified-sqlite-store": "unified-sqlite-store",
 
     # --- coherence-signal-depth (1 spec) ---
-    "119-coherence-credit-internal-currency": "coherence-signal-depth",
+    "coherence-credit-internal-currency": "coherence-signal-depth",
 
     # --- federated-instance-aggregation (1 spec) ---
-    "120-minimum-federation-layer": "federated-instance-aggregation",
+    "minimum-federation-layer": "federated-instance-aggregation",
 }
 
 

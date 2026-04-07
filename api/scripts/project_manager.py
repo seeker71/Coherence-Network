@@ -242,7 +242,7 @@ BACKLOG_CANDIDATES = [
     "docs/PLAN.md Month 1 — Concept specs, indexer, top 1K npm packages, basic API",
     "docs/PLAN.md Month 2 — Coherence algorithm spec, calculator agent, dashboard, PyPI indexing",
     "specs/001-health-check.md — Any remaining health check items",
-    "specs/002-agent-orchestration-api.md — Any remaining agent API items",
+    "specs/agent-orchestration-api.md — Any remaining agent API items",
     "Add or improve tests for existing API endpoints per specs",
     "Review and improve docs/AGENT-DEBUGGING.md and docs/MODEL-ROUTING.md",
 ]

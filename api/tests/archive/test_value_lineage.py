@@ -21,7 +21,7 @@ async def test_create_and_get_lineage_link(tmp_path, monkeypatch: pytest.MonkeyP
 
     payload = {
         "idea_id": "oss-interface-alignment",
-        "spec_id": "048-value-lineage-and-payout-attribution",
+        "spec_id": "value-lineage-and-payout-attribution",
         "implementation_refs": ["PR#26", "commit:e616516"],
         "contributors": {
             "idea": "alice",
@@ -51,7 +51,7 @@ async def test_usage_events_roll_up_to_valuation(tmp_path, monkeypatch: pytest.M
 
     payload = {
         "idea_id": "portfolio-governance",
-        "spec_id": "048-value-lineage-and-payout-attribution",
+        "spec_id": "value-lineage-and-payout-attribution",
         "implementation_refs": ["PR#27"],
         "contributors": {"idea": "alice", "spec": "bob", "implementation": "carol"},
         "estimated_cost": 50.0,
@@ -90,7 +90,7 @@ async def test_payout_preview_uses_role_weights(tmp_path, monkeypatch: pytest.Mo
 
     payload = {
         "idea_id": "coherence-signal-depth",
-        "spec_id": "048-value-lineage-and-payout-attribution",
+        "spec_id": "value-lineage-and-payout-attribution",
         "implementation_refs": ["PR#28"],
         "contributors": {
             "idea": "alice",
@@ -156,7 +156,7 @@ async def test_payout_preview_supports_stage_investments(tmp_path, monkeypatch: 
 
     payload = {
         "idea_id": "coherence-energy-balance",
-        "spec_id": "048-value-lineage-and-payout-attribution",
+        "spec_id": "value-lineage-and-payout-attribution",
         "implementation_refs": ["PR#29"],
         "contributors": {},
         "investments": [
@@ -272,14 +272,14 @@ async def test_list_links_endpoint_returns_links_newest_first(
 
     payload_a = {
         "idea_id": "portfolio-governance",
-        "spec_id": "048-value-lineage-and-payout-attribution",
+        "spec_id": "value-lineage-and-payout-attribution",
         "implementation_refs": ["PR#1"],
         "contributors": {"idea": "a", "spec": "b", "implementation": "c", "review": "d"},
         "estimated_cost": 1.0,
     }
     payload_b = {
         "idea_id": "oss-interface-alignment",
-        "spec_id": "049-system-lineage-inventory-and-runtime-telemetry",
+        "spec_id": "system-lineage-inventory-and-runtime-telemetry",
         "implementation_refs": ["PR#2"],
         "contributors": {"idea": "a", "spec": "b", "implementation": "c", "review": "d"},
         "estimated_cost": 2.0,

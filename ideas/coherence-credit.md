@@ -5,12 +5,12 @@ stage: implementing
 work_type: feature
 pillar: economics
 specs:
-  - [119-coherence-credit-internal-currency](../specs/119-coherence-credit-internal-currency.md)
-  - [124-cc-economics-and-value-coherence](../specs/124-cc-economics-and-value-coherence.md)
-  - [114-mvp-cost-and-acceptance-proof](../specs/114-mvp-cost-and-acceptance-proof.md)
-  - [115-grounded-cost-value-measurement](../specs/115-grounded-cost-value-measurement.md)
-  - [116-grounded-idea-portfolio-metrics](../specs/116-grounded-idea-portfolio-metrics.md)
-  - [126-portfolio-governance-effectiveness](../specs/126-portfolio-governance-effectiveness.md)
+  - [coherence-credit-internal-currency](../specs/coherence-credit-internal-currency.md)
+  - [cc-economics-and-value-coherence](../specs/cc-economics-and-value-coherence.md)
+  - [mvp-cost-and-acceptance-proof](../specs/mvp-cost-and-acceptance-proof.md)
+  - [grounded-cost-value-measurement](../specs/grounded-cost-value-measurement.md)
+  - [grounded-idea-portfolio-metrics](../specs/grounded-idea-portfolio-metrics.md)
+  - [portfolio-governance-effectiveness](../specs/portfolio-governance-effectiveness.md)
 ---
 
 # Coherence Credit (CC)

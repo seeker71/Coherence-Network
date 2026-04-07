@@ -5,14 +5,14 @@ stage: implementing
 work_type: feature
 pillar: foundation
 specs:
-  - [018-coherence-algorithm-spec](../specs/018-coherence-algorithm-spec.md)
-  - [054-postgresql-migration](../specs/054-postgresql-migration.md)
-  - [118-unified-sqlite-store](../specs/118-unified-sqlite-store.md)
-  - [166-universal-node-edge-layer](../specs/166-universal-node-edge-layer.md)
-  - [050-canonical-route-registry-and-runtime-mapping](../specs/050-canonical-route-registry-and-runtime-mapping.md)
-  - [107-runtime-telemetry-db-precedence](../specs/107-runtime-telemetry-db-precedence.md)
-  - [130-api-request-logging-middleware](../specs/130-api-request-logging-middleware.md)
-  - [051-release-gates](../specs/051-release-gates.md)
+  - [coherence-algorithm-spec](../specs/coherence-algorithm-spec.md)
+  - [postgresql-migration](../specs/postgresql-migration.md)
+  - [unified-sqlite-store](../specs/unified-sqlite-store.md)
+  - [universal-node-edge-layer](../specs/universal-node-edge-layer.md)
+  - [canonical-route-registry-and-runtime-mapping](../specs/canonical-route-registry-and-runtime-mapping.md)
+  - [runtime-telemetry-db-precedence](../specs/runtime-telemetry-db-precedence.md)
+  - [api-request-logging-middleware](../specs/api-request-logging-middleware.md)
+  - [release-gates](../specs/release-gates.md)
 ---
 
 # Data Infrastructure

@@ -5,9 +5,9 @@ stage: specced
 work_type: feature
 pillar: network
 specs:
-  - [094-contributor-onboarding-and-governed-change-flow](../specs/094-contributor-onboarding-and-governed-change-flow.md)
-  - [168-identity-driven-onboarding-tofu](../specs/168-identity-driven-onboarding-tofu.md)
-  - [157-investment-ux-stake-cc-on-ideas](../specs/157-investment-ux-stake-cc-on-ideas.md)
+  - [contributor-onboarding-and-governed-change-flow](../specs/contributor-onboarding-and-governed-change-flow.md)
+  - [identity-driven-onboarding-tofu](../specs/identity-driven-onboarding-tofu.md)
+  - [investment-ux-stake-cc-on-ideas](../specs/investment-ux-stake-cc-on-ideas.md)
 ---
 
 # Contributor Experience
