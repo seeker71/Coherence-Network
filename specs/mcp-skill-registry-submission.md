@@ -26,7 +26,7 @@ done_when:
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
 > **Source**: [`mcp-server/coherence_mcp_server/server.py`](../mcp-server/coherence_mcp_server/server.py) | [`api/app/services/mcp_tool_registry.py`](../api/app/services/mcp_tool_registry.py) | [`api/app/routers/registry_discovery.py`](../api/app/routers/registry_discovery.py)
 
-# Spec 180 — Submit to 5+ MCP and Skill Registries for Discovery
+# Submit to 5+ MCP and Skill Registries for Discovery
 
 **ID:** 180-mcp-skill-registry-submission
 **Status:** approved

@@ -25,7 +25,7 @@ constraints:
 > **Parent idea**: [value-attribution](../ideas/value-attribution.md)
 > **Source**: [`api/app/services/contribution_cost_service.py`](../api/app/services/contribution_cost_service.py)
 
-# Spec 083: Task Claim Tracking and ROI Auto-Pick De-duplication
+# Task Claim Tracking and ROI Auto-Pick De-duplication
 
 ## Goal
 Prevent parallel contributors/agents from working the same ROI-ranked task at the same time. Track who started a task and ensure automatic ROI task generation skips work already in progress.

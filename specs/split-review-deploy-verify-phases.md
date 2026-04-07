@@ -25,7 +25,7 @@ done_when:
 > **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
 > **Source**: [`api/app/models/agent.py`](../api/app/models/agent.py) | [`api/app/services/pipeline_advance_service.py`](../api/app/services/pipeline_advance_service.py) | [`api/scripts/run_cli_task_flow_matrix.py`](../api/scripts/run_cli_task_flow_matrix.py)
 
-# Spec 159: Split Review Into code-review → deploy → verify-production
+# Split Review Into code-review → deploy → verify-production
 
 **Spec ID**: 159-split-review-deploy-verify-phases
 **Idea ID**: task_c8e7c8c3f0411f69

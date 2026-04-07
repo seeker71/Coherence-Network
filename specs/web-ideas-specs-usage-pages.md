@@ -23,7 +23,7 @@ constraints:
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
 > **Source**: [`web/app/ideas/page.tsx`](../web/app/ideas/page.tsx) | [`web/app/specs/page.tsx`](../web/app/specs/page.tsx) | [`web/app/usage/page.tsx`](../web/app/usage/page.tsx)
 
-# Spec 075: Web Pages For Ideas, Specs, Usage (Human Parity)
+# Web Pages For Ideas, Specs, Usage (Human Parity)
 
 ## Purpose
 On `https://coherencycoin.com/`, provide human-browsable pages for:

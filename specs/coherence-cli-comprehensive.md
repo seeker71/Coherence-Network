@@ -32,7 +32,7 @@ constraints:
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
 > **Source**: [`cli/bin/cc.mjs`](../cli/bin/cc.mjs) | [`cli/lib/commands/ideas.mjs`](../cli/lib/commands/ideas.mjs) | [`cli/lib/commands/tasks.mjs`](../cli/lib/commands/tasks.mjs) | [`cli/lib/commands/nodes.mjs`](../cli/lib/commands/nodes.mjs)
 
-# Spec 148: Coherence Network CLI (coherence-cli) Comprehensive Feature Spec
+# Coherence Network CLI (coherence-cli) Comprehensive Feature Spec
 
 ## Purpose
 

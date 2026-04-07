@@ -24,7 +24,7 @@ done_when:
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
 > **Source**: [`api/app/services/meta_service.py`](../api/app/services/meta_service.py) | [`api/app/routers/meta.py`](../api/app/routers/meta.py) | [`api/app/models/meta.py`](../api/app/models/meta.py)
 
-# Spec 162: Metadata & Self-Discovery — Every Endpoint, Module, and Config is a Navigable Entity
+# Metadata & Self-Discovery — Every Endpoint, Module, and Config is a Navigable Entity
 
 **Spec ID**: 162-meta-self-discovery
 **Task ID**: task_e9a79c46896ff3b0

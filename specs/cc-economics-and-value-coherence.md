@@ -37,7 +37,7 @@ constraints:
 > **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
 > **Source**: [`api/app/models/coherence_credit.py`](../api/app/models/coherence_credit.py) | [`api/app/services/coherence_credit_service.py`](../api/app/services/coherence_credit_service.py)
 
-# Spec 124: CC Economics and Value Coherence
+# CC Economics and Value Coherence
 
 **Idea**: `cc-value-physics` (sub-idea of `coherence-credit-system`)
 **Depends on**: Spec 119 (CC internal currency), Spec 118 (unified SQLite store), Spec 117 (idea hierarchy)

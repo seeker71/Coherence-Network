@@ -18,7 +18,7 @@ done_when:
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
 
-# Spec 158: Idea Right-Sizing — Automatic Granularity Management
+# Idea Right-Sizing — Automatic Granularity Management
 
 **Spec ID**: 158-idea-right-sizing
 **Idea ID**: task_118e91480bc5af70

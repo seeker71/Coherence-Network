@@ -25,7 +25,7 @@ constraints:
 > **Parent idea**: [value-attribution](../ideas/value-attribution.md)
 > **Source**: [`api/app/routers/onboarding.py`](../api/app/routers/onboarding.py) | [`api/app/services/onboarding_service.py`](../api/app/services/onboarding_service.py) | [`api/app/services/governance_service.py`](../api/app/services/governance_service.py) | [`api/app/models/governance.py`](../api/app/models/governance.py)
 
-# Spec 094 — Contributor Onboarding and Governed Change Flow
+# Contributor Onboarding and Governed Change Flow
 
 ## Goal
 

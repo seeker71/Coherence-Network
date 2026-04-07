@@ -33,7 +33,7 @@ constraints:
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
 > **Source**: [`api/app/services/auto_heal_service.py`](../api/app/services/auto_heal_service.py) | [`api/app/routers/agent_auto_heal_routes.py`](../api/app/routers/agent_auto_heal_routes.py) | [`api/app/services/agent_service_task_derive.py`](../api/app/services/agent_service_task_derive.py)
 
-# Spec 114: Auto-Heal from Diagnostics
+# Auto-Heal from Diagnostics
 
 **Idea**: `agent-auto-heal` (sub-idea of `coherence-network-agent-pipeline`)
 **Depends on**: Spec 113 (classify_error)
