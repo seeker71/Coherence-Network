@@ -1,6 +1,6 @@
 ---
 idea_id: value-attribution
-status: partial
+status: done
 source:
   - file: api/app/services/contribution_cost_service.py
     symbols: [estimate_commit_cost_with_provenance()]
@@ -95,7 +95,7 @@ cd api && pytest -q tests/test_agent_task_claims.py tests/test_inventory_api.py 
 
 ## Acceptance Tests
 
-See `api/tests/test_task_claim_tracking_and_roi_dedupe.py` for test cases covering this spec's requirements.
+See `api/tests/test_agent_task_claims.py` for test cases covering this spec's requirements.
 
 
 ## Verification
