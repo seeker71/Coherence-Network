@@ -516,13 +516,18 @@ class TestEdgeCases:
 
         # Second call: now there IS an existing deploy task (pending)
         from app.services import agent_service as _as
+        from app.services import agent_service_list as _asl
         existing_deploy = [{
             "id": "existing-deploy",
             "task_type": "deploy",
             "status": "pending",
             "context": {"idea_id": "idea-dedup"},
+            "created_at": "2025-01-01T00:00:00Z",
+            "updated_at": "2025-01-01T00:00:00Z",
         }]
         monkeypatch.setattr(_as, "list_tasks", lambda **_k: (existing_deploy, 1, 0))
+        # Also patch the internal list_tasks used by list_tasks_for_idea (dedup gate)
+        monkeypatch.setattr(_asl, "list_tasks", lambda **_k: (existing_deploy, 1, 0))
 
         r2 = pas.maybe_advance(task)
         # Should skip because deploy already exists

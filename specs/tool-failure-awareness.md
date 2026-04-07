@@ -1,6 +1,6 @@
 ---
 idea_id: pipeline-optimization
-status: partial
+status: done
 source:
   - file: api/app/services/failure_taxonomy_service.py
     symbols: [failure pattern recognition]

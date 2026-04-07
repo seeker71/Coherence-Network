@@ -1,6 +1,6 @@
 ---
 idea_id: pipeline-optimization
-status: partial
+status: done
 source:
   - file: api/app/services/agent_runner_registry_service.py
     symbols: [runner registry, auto-contribution]

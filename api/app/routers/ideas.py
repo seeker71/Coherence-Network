@@ -30,6 +30,11 @@ from app.models.idea import (
     IdeaUpdate,
     IdeaWithScore,
     ProgressDashboard,
+    RightSizingApplyRequest,
+    RightSizingApplyResponse,
+    RightSizingHistoryResponse,
+    RightSizingReport,
+    RollupProgress,
     SlugUpdateRequest,
     SlugUpdateResponse,
     StageSetRequest,
@@ -165,6 +170,52 @@ async def get_governance_health(
 ) -> GovernanceHealth:
     """Portfolio governance effectiveness snapshot (spec 126)."""
     return idea_service.compute_governance_health(window_days=window_days)
+
+
+# ── Right-sizing endpoints (spec 158) ────────────────────────────────────────
+
+
+@router.get("/ideas/right-sizing", response_model=RightSizingReport)
+async def get_right_sizing_report() -> RightSizingReport:
+    """Portfolio right-sizing report with health counts and suggestions (spec 158)."""
+    from app.services import right_sizing_service
+    return right_sizing_service.build_report()
+
+
+@router.post("/ideas/right-sizing/apply", response_model=RightSizingApplyResponse)
+async def apply_right_sizing(
+    body: RightSizingApplyRequest,
+    _key: str = Depends(require_api_key),
+) -> RightSizingApplyResponse:
+    """Execute a split or merge suggestion, with dry_run support (spec 158)."""
+    from app.services import right_sizing_service
+
+    valid_actions = {"split_into_children", "merge_and_archive"}
+    if body.action not in valid_actions:
+        raise HTTPException(status_code=422, detail=f"Invalid action: {body.action}. Must be one of {sorted(valid_actions)}")
+
+    try:
+        return right_sizing_service.apply_suggestion(
+            suggestion_type=body.suggestion_type,
+            idea_id=body.idea_id,
+            action=body.action,
+            proposed_children=body.proposed_children,
+            overlap_with_id=body.overlap_with_id,
+            dry_run=body.dry_run,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@router.get("/ideas/right-sizing/history", response_model=RightSizingHistoryResponse)
+async def get_right_sizing_history(
+    days: int = Query(7, ge=1, le=365, description="Lookback window in days"),
+) -> RightSizingHistoryResponse:
+    """Time-series health snapshots for the portfolio (spec 158)."""
+    from app.services import right_sizing_service
+    return right_sizing_service.get_history(days=days)
 
 
 @router.get("/ideas/showcase", response_model=IdeaShowcaseResponse)
@@ -520,6 +571,37 @@ async def list_idea_specs(idea_id: str) -> list[dict]:
     return [s.model_dump(mode="json") for s in specs]
 
 
+@router.get("/ideas/{idea_id}/lifecycle")
+async def get_idea_lifecycle(idea_id: str) -> dict:
+    """Return lifecycle closure state and blockers for an idea."""
+    result = idea_service.get_idea_lifecycle(idea_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return result
+
+
+@router.get("/ideas/{idea_id}/rollup", response_model=RollupProgress)
+@traces_to(spec="super-idea-rollup-criteria", idea="idea-realization-engine", description="Rollup progress for a super-idea")
+async def get_idea_rollup(idea_id: str) -> RollupProgress:
+    """Return rollup progress for a super-idea: children validated / total children (R4)."""
+    progress = idea_service.get_rollup_progress(idea_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return progress
+
+
+@router.post("/ideas/{idea_id}/validate-rollup", response_model=RollupProgress)
+@traces_to(spec="super-idea-rollup-criteria", idea="idea-realization-engine", description="Validate super-idea rollup criteria and auto-update status")
+async def validate_super_idea_rollup(idea_id: str, _key: str = Depends(require_api_key)) -> RollupProgress:
+    """Check rollup criteria for a super-idea and auto-update manifestation_status (R2, R3)."""
+    progress, error = idea_service.validate_super_idea(idea_id)
+    if error == "not_found":
+        raise HTTPException(status_code=404, detail="Idea not found")
+    if error == "not_super":
+        raise HTTPException(status_code=422, detail="Idea is not a super-idea; rollup validation only applies to super-ideas")
+    return progress
+
+
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
 async def get_idea(idea_id: str) -> IdeaWithScore:
     idea = idea_service.get_idea(idea_id)
@@ -565,6 +647,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
         slug=data.slug,
         pillar=data.pillar,
         workspace_id=data.workspace_id,
+        rollup_condition=data.rollup_condition,
     )
     if created is None:
         raise HTTPException(status_code=409, detail="Idea already exists")

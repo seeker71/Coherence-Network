@@ -6787,7 +6787,8 @@ def run_one_task(
             f.write(f"\n# duration_seconds={duration_sec} exit={returncode} status={status}\n")
 
         # Record tool execution telemetry (cost even when failing).
-        sc = 200 if status == "completed" else 500
+        # 200 = success, 504 = timeout, 500 = other failure.
+        sc = 200 if status == "completed" else (504 if timed_out else 500)
         _post_runtime_event(
             client,
             tool_name=tool_name,

@@ -111,6 +111,28 @@ def resolve_session(token: str) -> Optional[dict]:
         }
 
 
+def list_contributors(limit: int = 200) -> list[dict]:
+    """Return all registered onboarding contributors (newest first)."""
+    _ensure_schema()
+    with _session() as db:
+        rows = (
+            db.query(OnboardingSession)
+            .order_by(OnboardingSession.created_at.desc())
+            .limit(max(1, min(limit, 1000)))
+            .all()
+        )
+        return [
+            {
+                "contributor_id": r.contributor_id,
+                "handle": r.handle,
+                "trust_level": r.trust_level,
+                "email": r.email,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in rows
+        ]
+
+
 def get_roi_signals() -> dict:
     """Compute live ROI signals for the onboarding funnel."""
     _ensure_schema()

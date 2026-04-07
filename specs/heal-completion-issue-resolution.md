@@ -1,6 +1,6 @@
 ---
 idea_id: pipeline-reliability
-status: partial
+status: done
 source:
   - file: api/app/services/auto_heal_service.py
     symbols: [heal completion tracking]

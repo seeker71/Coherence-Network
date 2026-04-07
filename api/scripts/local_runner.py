@@ -1351,15 +1351,57 @@ def _complete_task_with_status(
     return False
 
 
-def _auto_record_contribution(task: dict[str, Any], provider: str, duration: float) -> None:
-    """Auto-record a contribution when a task completes successfully.
+_contribution_retry_queue: list[dict[str, Any]] = []
+_contribution_retry_lock = threading.Lock()
+_CONTRIBUTION_RETRY_CAP = 100
+_PARTIAL_MIN_CHARS = 200
+
+
+def _flush_contribution_retry_queue() -> None:
+    """Attempt to re-submit failed contribution payloads.
+
+    Called at the top of each worker loop iteration before claiming a new task.
+    Thread-safe: protected by _contribution_retry_lock.
+    """
+    with _contribution_retry_lock:
+        if not _contribution_retry_queue:
+            return
+        pending = list(_contribution_retry_queue)
+        _contribution_retry_queue.clear()
+
+    still_failed: list[dict[str, Any]] = []
+    for body in pending:
+        try:
+            result = api("POST", "/api/contributions/record", body)
+            if result:
+                log.info("AUTO_CONTRIBUTION retry succeeded task=%s", body.get("metadata", {}).get("task_id", "?")[:16])
+            else:
+                still_failed.append(body)
+        except Exception:
+            still_failed.append(body)
+
+    if still_failed:
+        with _contribution_retry_lock:
+            _contribution_retry_queue.extend(still_failed)
+            # Cap at _CONTRIBUTION_RETRY_CAP — drop oldest when exceeded
+            while len(_contribution_retry_queue) > _CONTRIBUTION_RETRY_CAP:
+                dropped = _contribution_retry_queue.pop(0)
+                log.error("AUTO_CONTRIBUTION retry queue full — dropping entry for task %s",
+                          dropped.get("metadata", {}).get("task_id", "?")[:16])
+
+
+def _auto_record_contribution(task: dict[str, Any], provider: str, duration: float,
+                               partial: bool = False) -> None:
+    """Auto-record a contribution when a task completes.
 
     Maps task_type to contribution_type:
-      spec → docs, test → code, impl → code, review → review, heal → code
-    CC amount is based on task complexity and duration.
+      spec -> docs, test -> code, impl -> code, review -> review, heal -> code
+    CC amount is based on task complexity, duration, and DIF score.
+    If partial=True, amount_cc is capped at 50% and metadata.partial=True.
     """
     try:
         task_type = task.get("task_type", "unknown")
+        task_id = task.get("id", "")
         idea_id = _idea_id_from_task(task)
 
         type_map = {"spec": "docs", "test": "code", "impl": "code", "review": "review", "heal": "code"}
@@ -1368,30 +1410,64 @@ def _auto_record_contribution(task: dict[str, Any], provider: str, duration: flo
         # CC amount: base by type + duration bonus
         base_cc = {"spec": 3, "test": 5, "impl": 8, "review": 2, "heal": 3}.get(task_type, 2)
         duration_bonus = min(duration / 60, 5)  # up to 5 CC for long tasks
-        amount_cc = round(base_cc + duration_bonus, 1)
+        amount_cc = base_cc + duration_bonus
 
-        body = {
+        # DIF score multiplier: amount_cc *= (0.5 + 0.5 * dif_score)
+        ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+        dif_score = ctx.get("dif_score") if ctx.get("dif_score") is not None else task.get("dif_score")
+        if dif_score is not None:
+            try:
+                dif_score = float(dif_score)
+                dif_score = max(0.0, min(1.0, dif_score))
+                amount_cc *= (0.5 + 0.5 * dif_score)
+            except (TypeError, ValueError):
+                dif_score = None
+
+        # Partial contributions capped at 50%
+        if partial:
+            amount_cc *= 0.5
+
+        amount_cc = round(amount_cc, 1)
+
+        # Stable idempotency key: auto:<task_id>:<attempt>
+        # attempt_number comes from task context or defaults to 1
+        attempt_number = ctx.get("attempt_number", 1)
+        idempotency_key = f"auto:{task_id}:{attempt_number}"
+
+        body: dict[str, Any] = {
             "contributor_id": _NODE_ID,
             "type": contribution_type,
             "amount_cc": amount_cc,
             "metadata": {
-                "description": f"Task {task.get('id', '?')[:20]} ({task_type}) completed by {provider} on {_NODE_NAME}",
-                "task_id": task.get("id", ""),
+                "description": f"Task {task_id[:20]} ({task_type}) completed by {provider} on {_NODE_NAME}",
+                "task_id": task_id,
                 "task_type": task_type,
                 "provider": provider,
                 "duration_s": round(duration, 1),
                 "auto_recorded": True,
+                "node_id": _NODE_ID,
+                "partial": partial,
+                "idempotency_key": idempotency_key,
             },
         }
+        if dif_score is not None:
+            body["metadata"]["dif_score"] = dif_score
         if idea_id:
             body["idea_id"] = idea_id
 
         result = api("POST", "/api/contributions/record", body)
         if result:
-            log.info("AUTO_CONTRIBUTION recorded %.1f CC (%s) for task %s idea=%s",
-                     amount_cc, contribution_type, task.get("id", "?")[:16], idea_id or "none")
+            log.info("AUTO_CONTRIBUTION recorded %.1f CC (%s%s) for task %s idea=%s",
+                     amount_cc, contribution_type, " [partial]" if partial else "",
+                     task_id[:16], idea_id or "none")
         else:
-            log.warning("AUTO_CONTRIBUTION failed for task %s", task.get("id", "?")[:16])
+            log.warning("AUTO_CONTRIBUTION failed for task %s — queuing for retry", task_id[:16])
+            with _contribution_retry_lock:
+                _contribution_retry_queue.append(body)
+                while len(_contribution_retry_queue) > _CONTRIBUTION_RETRY_CAP:
+                    dropped = _contribution_retry_queue.pop(0)
+                    log.error("AUTO_CONTRIBUTION retry queue full — dropping entry for task %s",
+                              dropped.get("metadata", {}).get("task_id", "?")[:16])
     except Exception as e:
         log.warning("AUTO_CONTRIBUTION error: %s", e)
 
@@ -3913,6 +3989,9 @@ def run_one(task: dict, dry_run: bool = False, provider_override: str | None = N
             _auto_record_contribution(task, provider, duration)
         else:
             log.warning("SKIP_ADVANCE task=%s — output too short (%d < %d) for phase advancement", task_id, len(output_stripped), min_chars)
+    elif not success and len(output_stripped) >= _PARTIAL_MIN_CHARS:
+        # Partial contribution for failed/timed-out tasks with sufficient output
+        _auto_record_contribution(task, provider, duration, partial=True)
 
     # Post completion activity
     _post_activity(
@@ -3944,6 +4023,13 @@ def _count_active_tasks() -> int:
 
 _MAX_RETRIES_PER_IDEA_PHASE = 2
 
+# ── Reaper health tracking ──────────────────────────────────────────────────
+# Gap 1: Record smart_reap import failures for runner health metrics
+_smart_reap_import_error: str | None = None
+
+# Gap 2: Cumulative count of tasks reaped (included in push_measurements)
+_tasks_reaped_total: int = 0
+
 
 def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
     """Smart reap: diagnose why tasks are stuck, capture partial work, resume from checkpoint.
@@ -3956,6 +4042,7 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
     5. Create resume task when partial output >= 20%
     6. Track per-idea timeout count; flag needs_human_attention after 3 failures
     """
+    global _smart_reap_import_error, _tasks_reaped_total
     import sys as _sys
     # Import smart_reap_service from the API package
     _api_dir = str(_API_DIR)
@@ -3963,7 +4050,9 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
         _sys.path.insert(0, _api_dir)
     try:
         from app.services.smart_reap_service import smart_reap_task
+        _smart_reap_import_error = None  # Clear any previous error on success
     except ImportError as _e:
+        _smart_reap_import_error = str(_e)
         log.warning("REAPER: could not import smart_reap_service (%s) — falling back to legacy reap", _e)
         return _legacy_reap_stale_tasks(max_age_minutes)
 
@@ -4015,6 +4104,8 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
         pass
 
     reaped = 0
+    extended = 0
+    skipped_live = 0
     for t in stale_tasks:
         result = smart_reap_task(
             t,
@@ -4058,14 +4149,47 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
                         log.info("REAPER: saved %d-byte patch for %s", len(diff_result.stdout), slug)
                 except Exception:
                     pass
+        elif action == "extended":
+            extended += 1
+        elif action == "skipped":
+            skipped_live += 1
+
+    # Gap 2: Update cumulative reap counter
+    _tasks_reaped_total += reaped
+
+    # Gap 4: Emit a friction event each time the reap cycle fires
+    if reaped > 0 or extended > 0 or skipped_live > 0:
+        try:
+            _reap_ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            _reap_event_id = hashlib.sha256(f"reap-cycle-{_reap_ts}-smart".encode()).hexdigest()[:16]
+            api("POST", "/api/friction/events", {
+                "id": _reap_event_id,
+                "timestamp": _reap_ts,
+                "stage": "reaper",
+                "block_type": "reap_cycle",
+                "severity": "info",
+                "owner": "reaper",
+                "unblock_condition": "automatic",
+                "energy_loss_estimate": 0.0,
+                "cost_of_delay": 0.0,
+                "status": "resolved",
+                "notes": (
+                    f"Reaped {reaped} tasks; extended {extended}; "
+                    f"skipped {skipped_live} (live runner). smart_path=true"
+                ),
+            })
+        except Exception as _fe:
+            log.debug("REAPER: friction event post failed: %s", _fe)
 
     if reaped:
-        log.info("REAPER: smart-reaped %d stale tasks", reaped)
+        log.info("REAPER: smart-reaped %d stale tasks (extended=%d, skipped=%d)",
+                 reaped, extended, skipped_live)
     return reaped
 
 
 def _legacy_reap_stale_tasks(max_age_minutes: int = 15) -> int:
     """Fallback reaper used only if smart_reap_service fails to import."""
+    global _tasks_reaped_total
     tasks_data = api("GET", "/api/agent/tasks?status=running&limit=100")
     if not tasks_data:
         return 0
@@ -4136,6 +4260,33 @@ def _legacy_reap_stale_tasks(max_age_minutes: int = 15) -> int:
                 "notes": f"Task for '{idea_name}' timed out {retry_count + 1} times. Last provider: {failed_provider}.",
             })
 
+    # Gap 2: Update cumulative reap counter
+    _tasks_reaped_total += reaped
+
+    # Gap 4: Emit a friction event each time the reap cycle fires (legacy path)
+    if reaped > 0:
+        try:
+            _reap_ts = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+            _reap_event_id = hashlib.sha256(f"reap-cycle-{_reap_ts}-legacy".encode()).hexdigest()[:16]
+            api("POST", "/api/friction/events", {
+                "id": _reap_event_id,
+                "timestamp": _reap_ts,
+                "stage": "reaper",
+                "block_type": "reap_cycle",
+                "severity": "info",
+                "owner": "reaper",
+                "unblock_condition": "automatic",
+                "energy_loss_estimate": 0.0,
+                "cost_of_delay": 0.0,
+                "status": "resolved",
+                "notes": (
+                    f"Reaped {reaped} tasks; extended 0; "
+                    f"skipped 0 (live runner). smart_path=false"
+                ),
+            })
+        except Exception as _fe:
+            log.debug("REAPER(legacy): friction event post failed: %s", _fe)
+
     if reaped:
         log.info("REAPER(legacy): cleaned %d stale tasks", reaped)
     return reaped
@@ -4144,6 +4295,9 @@ def _legacy_reap_stale_tasks(max_age_minutes: int = 15) -> int:
 # Session-level skip cache: ideas we already marked stuck/partial this session.
 # Prevents thrashing the API every 15s on the same stuck ideas.
 _SEEDER_SKIP_CACHE: set[str] = set()
+
+# R2: maximum tasks allowed per idea+phase before capping (task dedup spec)
+MAX_TASKS_PER_PHASE: int = 3
 
 
 def _seed_task_from_open_idea() -> bool:
@@ -4235,14 +4389,46 @@ def _seed_task_from_open_idea() -> bool:
             if completed > 0:
                 completed_phases.add(phase)
 
-        # Cap: if any single phase has 10+ tasks, truly stuck — skip for THIS cycle
-        # but don't permanently orphan it. If all tasks are gone (reaper cleaned up),
-        # reset to none so we can start fresh next cycle.
+        # R2e: completed-phase guard MUST execute before cap guard.
+        # Use phase_summary from the API response if available (R6), else fall
+        # back to local completed_phases set computed above.
+        phase_summary = idea_tasks.get("phase_summary", {})
+
+        # Determine which phase the seeder would pick (spec by default, then walk forward)
+        _candidate_phase = "spec"
+        for _cp in ("spec", "impl", "test", "code-review", "deploy", "verify-production"):
+            ps = phase_summary.get(_cp, {})
+            if ps.get("should_skip") or _cp in completed_phases:
+                log.info("SEED: skipping %s for %s — already completed", _cp, idea_id)
+                _candidate_phase_next = {
+                    "spec": "impl", "impl": "test", "test": "code-review",
+                    "code-review": "deploy", "deploy": "verify-production",
+                }.get(_cp)
+                if _candidate_phase_next:
+                    _candidate_phase = _candidate_phase_next
+                else:
+                    # All phases completed
+                    log.info("SEED: all phases completed for %s — skipping", idea_id)
+                    _SEEDER_SKIP_CACHE.add(idea_id)
+                    return _seed_task_from_open_idea()
+                continue
+            _candidate_phase = _cp
+            break
+
+        # R2b: cap guard — if candidate phase has >= MAX_TASKS_PER_PHASE tasks, skip
+        candidate_count = phase_counts.get(_candidate_phase, 0)
+        if candidate_count >= MAX_TASKS_PER_PHASE:
+            log.info("SEED: capping %s for %s (%d tasks exist, limit %d)",
+                     _candidate_phase, idea_id, candidate_count, MAX_TASKS_PER_PHASE)
+            _SEEDER_SKIP_CACHE.add(idea_id)
+            return _seed_task_from_open_idea()
+
+        # R2c: replaced hardcoded >= 10 with MAX_TASKS_PER_PHASE
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
         total_tasks = sum(phase_counts.values())
-        if max_phase_tasks >= 10:
-            log.info("SEED: idea '%s' truly stuck (%d tasks in one phase) — skipping this session",
-                     idea_name[:30], max_phase_tasks)
+        if max_phase_tasks >= MAX_TASKS_PER_PHASE:
+            log.info("SEED: idea '%s' truly stuck (%d tasks in one phase, limit %d) — skipping this session",
+                     idea_name[:30], max_phase_tasks, MAX_TASKS_PER_PHASE)
             _SEEDER_SKIP_CACHE.add(idea_id)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _seed_task_from_open_idea()  # retry with next idea
@@ -4687,11 +4873,20 @@ def _send_heartbeat() -> None:
     """Update node liveness with system metrics so the UI can monitor health."""
     git_info = _get_git_info()
     system_metrics = _collect_system_metrics()
+    # Gap 1: Include reaper health in heartbeat for /api/health visibility
+    reaper_health: dict[str, Any] = {
+        "smart_reap_available": _smart_reap_import_error is None,
+        "tasks_reaped_total": _tasks_reaped_total,
+    }
+    if _smart_reap_import_error is not None:
+        reaper_health["smart_reap_import_error"] = _smart_reap_import_error
+
     result = api("POST", f"/api/federation/nodes/{_NODE_ID}/heartbeat", {
         "capabilities": {
             "executors": list(PROVIDERS.keys()) if PROVIDERS else [],
             "tools": _detect_tools(),
             "provider_streaks": get_provider_streaks(),
+            "reaper_health": reaper_health,
         },
         "git_sha": git_info.get("local_sha", "unknown"),
         "system_metrics": system_metrics,
@@ -4811,6 +5006,7 @@ def push_measurements(node_id: str) -> int:
 
     result = api("POST", f"/api/federation/nodes/{node_id}/measurements", {
         "summaries": payload_summaries,
+        "tasks_reaped_total": _tasks_reaped_total,
     })
     if result:
         # Update tracker only after successful push
@@ -6029,6 +6225,9 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
     """Independent worker thread: claim one task, execute, repeat."""
     while not _shutdown_event.is_set():
         try:
+            # Flush any pending contribution retries before claiming new work
+            _flush_contribution_retry_queue()
+
             # Don't claim new tasks if an update is pending — finish current, then update
             if _update_pending.is_set():
                 log.info("WORKER[%d] update pending — not claiming new tasks", worker_id)
@@ -6602,12 +6801,94 @@ def main():
                     api("PATCH", f"/api/agent/tasks/{t['id']}", {
                         "status": "timed_out",
                         "output": f"Reaped on startup: runner restarted while task was running.",
+                        "error_category": "stale_task_reaped",
+                        "error_summary": "Reaped on startup: runner restarted while task was running."[:500],
                         "context": {**(t.get("context") or {}), "reaped_on_startup": True},
                     })
                 if own_stale:
                     log.info("STARTUP_REAP: marked %d own stale tasks as timed_out", len(own_stale))
         except Exception as e:
             log.warning("STARTUP_REAP failed: %s", e)
+
+        # Gap 3: Cross-node orphan recovery — reap tasks from runners with
+        # last_seen_at > 30 min old (dead nodes that never restarted)
+        try:
+            _ORPHAN_THRESHOLD_SECONDS = 1800  # 30 minutes
+            all_running = api("GET", "/api/agent/tasks?status=running&limit=200")
+            if isinstance(all_running, dict):
+                all_running_tasks = all_running.get("tasks", [])
+            elif isinstance(all_running, list):
+                all_running_tasks = all_running
+            else:
+                all_running_tasks = []
+
+            # Fetch runner registry to check last_seen_at
+            runners_data = api("GET", "/api/agent/runners?limit=200")
+            runners_by_id: dict[str, dict] = {}
+            if runners_data:
+                runner_list = runners_data if isinstance(runners_data, list) else (
+                    runners_data.get("runners", []) or runners_data.get("items", [])
+                )
+                for r in runner_list:
+                    rid = str(r.get("runner_id") or r.get("node_id") or "").strip()
+                    if rid:
+                        runners_by_id[rid] = r
+
+            _now_utc = datetime.now(timezone.utc)
+            orphan_count = 0
+            for t in all_running_tasks:
+                claimed_by = str(t.get("claimed_by") or t.get("worker_id") or "").strip()
+                if not claimed_by:
+                    continue
+                # Skip tasks claimed by this node (already handled above)
+                if WORKER_ID.split(":")[0] in claimed_by:
+                    continue
+                # Find the runner in the registry
+                runner_info = runners_by_id.get(claimed_by)
+                if not runner_info:
+                    # Runner not in registry — check if claimed_by matches a node_id prefix
+                    for rid, rinfo in runners_by_id.items():
+                        if rid in claimed_by or claimed_by in rid:
+                            runner_info = rinfo
+                            break
+                if not runner_info:
+                    # Runner not found at all — assume dead, reap
+                    pass
+                else:
+                    # Check last_seen_at
+                    last_seen_raw = runner_info.get("last_seen_at")
+                    if last_seen_raw:
+                        try:
+                            last_seen = datetime.fromisoformat(
+                                str(last_seen_raw).replace("Z", "+00:00")
+                            )
+                            if last_seen.tzinfo is None:
+                                last_seen = last_seen.replace(tzinfo=timezone.utc)
+                            age_seconds = (_now_utc - last_seen).total_seconds()
+                            if age_seconds <= _ORPHAN_THRESHOLD_SECONDS:
+                                continue  # Runner is still alive, skip
+                        except Exception:
+                            pass  # Can't parse — treat as dead
+
+                # Reap this orphaned task
+                task_id = t.get("id", "")
+                api("PATCH", f"/api/agent/tasks/{task_id}", {
+                    "status": "timed_out",
+                    "output": f"Reaped on startup: orphan task from dead runner '{claimed_by}'.",
+                    "error_category": "stale_task_reaped",
+                    "error_summary": f"Orphan recovery: runner '{claimed_by}' last_seen > 30min."[:500],
+                    "context": {
+                        **(t.get("context") or {}),
+                        "reaped_on_startup": True,
+                        "orphan_recovery": True,
+                        "original_claimed_by": claimed_by,
+                    },
+                })
+                orphan_count += 1
+            if orphan_count:
+                log.info("STARTUP_REAP: recovered %d orphan tasks from dead runners", orphan_count)
+        except Exception as e:
+            log.warning("STARTUP_REAP (orphan recovery) failed: %s", e)
 
         use_parallel = args.parallel > 0
         if use_parallel:

@@ -77,6 +77,19 @@ async def get_session(authorization: str = Header(...)) -> SessionResponse:
         raise HTTPException(status_code=401, detail="invalid_or_expired_token")
     return SessionResponse(**profile)
 
+class ContributorListItem(BaseModel):
+    contributor_id: str
+    handle: str
+    trust_level: str
+    email: Optional[str]
+    created_at: Optional[str]
+
+@router.get("/contributors", response_model=list[ContributorListItem], summary="List registered contributors")
+async def list_contributors(limit: int = 200) -> list[ContributorListItem]:
+    """Return all registered contributors (newest first). Satisfies 'appear in contributor list' requirement."""
+    rows = onboarding_service.list_contributors(limit=limit)
+    return [ContributorListItem(**r) for r in rows]
+
 @router.post("/upgrade", summary="Upgrade trust level via OAuth [stub 501]")
 async def upgrade_oauth(body: UpgradeRequest) -> dict:
     """Stub: upgrade TOFU to verified via OAuth. Planned for Spec 169."""

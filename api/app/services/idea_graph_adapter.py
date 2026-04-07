@@ -95,6 +95,9 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
     # Parse workspace git url
     workspace_git_url = node.get("workspace_git_url") or None
 
+    # Parse rollup_condition (super-idea rollup criteria)
+    rollup_condition = node.get("rollup_condition") or None
+
     return Idea(
         id=node["id"],
         name=node.get("name", ""),
@@ -123,6 +126,7 @@ def _node_to_idea(node: dict[str, Any]) -> Idea:
         is_curated=bool(node.get("is_curated", False)),
         pillar=node.get("pillar") or None,
         workspace_id=node.get("workspace_id") or "coherence-network",
+        rollup_condition=rollup_condition,
     )
 
 
@@ -135,6 +139,7 @@ def _idea_to_properties(idea: Idea) -> dict[str, Any]:
         "interfaces", "idea_type", "parent_idea_id", "child_idea_ids",
         "value_basis", "work_type", "lifecycle", "duplicate_of", "last_activity_at",
         "slug", "workspace_git_url", "is_curated", "pillar", "workspace_id",
+        "rollup_condition",
     ]:
         val = getattr(idea, field, None)
         if val is not None:

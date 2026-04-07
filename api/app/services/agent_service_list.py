@@ -297,8 +297,17 @@ def list_tasks_for_idea(idea_id: str) -> dict[str, Any]:
             "tasks": tasks_in_group,
         })
 
-    return {
+    result = {
         "idea_id": idea_id,
         "total": len(matched),
         "groups": groups,
     }
+
+    # R6: compute per-phase dedup summary
+    try:
+        from app.services.task_dedup_service import compute_phase_summary
+        result["phase_summary"] = compute_phase_summary(result)
+    except Exception:
+        result["phase_summary"] = {}
+
+    return result

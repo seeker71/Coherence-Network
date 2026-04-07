@@ -116,6 +116,14 @@ class HealthResponse(_BaseHealthResponse):
         bool,
         Field(description="True if opencode integration is enabled"),
     ] = True
+    smart_reap_available: Annotated[
+        bool,
+        Field(description="True if smart_reap_service module is importable"),
+    ] = True
+    smart_reap_import_error: Annotated[
+        str | None,
+        Field(description="Import error message if smart_reap_service failed to load"),
+    ] = None
 
 
 class ReadyResponse(_BaseHealthResponse):
@@ -232,6 +240,16 @@ async def health():
 
     schema_ok = _check_schema()
 
+    # Gap 1: Check if smart_reap_service is importable
+    smart_reap_available = True
+    smart_reap_import_error = None
+    try:
+        import importlib
+        importlib.import_module("app.services.smart_reaper_service")
+    except ImportError as _e:
+        smart_reap_available = False
+        smart_reap_import_error = str(_e)
+
     return HealthResponse(
         status="ok",
         version=HEALTH_VERSION,
@@ -243,4 +261,6 @@ async def health():
         deployed_sha_source=deployed_sha_source,
         integrity_compromised=integrity_compromised,
         schema_ok=schema_ok,
+        smart_reap_available=smart_reap_available,
+        smart_reap_import_error=smart_reap_import_error,
     )

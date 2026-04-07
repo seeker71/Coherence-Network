@@ -1,6 +1,6 @@
 ---
 idea_id: idea-realization-engine
-status: partial
+status: done
 source:
   - file: api/app/services/idea_service.py
     symbols: [_sync_manifestation_status()]

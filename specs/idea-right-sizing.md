@@ -1,7 +1,12 @@
 ---
 idea_id: idea-realization-engine
-status: active
-source: []  # not yet implemented
+status: done
+source:
+  - api/app/models/idea.py: GranularitySignal, SuggestionType, RightSizingSuggestion, PortfolioHealthCounts, TrendInfo, RightSizingReport, RightSizingApplyRequest, RightSizingApplyResponse, RightSizingHistoryEntry, RightSizingHistoryResponse
+  - api/app/services/right_sizing_service.py: compute_granularity_signal, generate_suggestions, build_report, apply_suggestion, snapshot_health, get_history
+  - api/app/routers/ideas.py: get_right_sizing_report, apply_right_sizing, get_right_sizing_history
+  - api/config/right_sizing.json
+  - api/tests/test_right_sizing.py
 requirements:
   - Detect too_large, too_small, overlap granularity signals per idea
   - Generate split/merge suggestions with confidence and rationale
