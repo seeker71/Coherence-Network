@@ -1,6 +1,6 @@
 ---
 idea_id: value-attribution
-status: partial
+status: done
 source:
   - file: api/app/routers/onboarding.py
     symbols: [register(), get_session(), upgrade()]
