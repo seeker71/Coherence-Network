@@ -1404,14 +1404,24 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     ]
     if expensive:
         top = expensive[:3]
-        msg = "Recent failed tasks wasted significant time: " + ", ".join(
-            f"{r.get('task_id','?')}({round(float(r.get('duration_seconds') or 0.0),1)}s)" for r in top
+        wasted_seconds = round(sum(float(r.get("duration_seconds") or 0.0) for r in expensive), 1)
+        top_ids = [r.get("task_id", "?") for r in top]
+        msg = (
+            f"Recent failed tasks wasted {wasted_seconds}s total: "
+            + ", ".join(
+                f"{r.get('task_id','?')}({round(float(r.get('duration_seconds') or 0.0),1)}s)"
+                for r in top
+            )
         )
         action = (
             "Inspect task logs for these failures; fix root cause (auth/deps/tooling). "
             "If recurring, add a meta-pipeline item to prevent future waste."
         )
-        _add_issue(data, "expensive_failed_task", "high", msg, action)
+        issue = _add_issue(data, "expensive_failed_task", "high", msg, action)
+        # Annotate for programmatic consumption.
+        if data.get("issues"):
+            data["issues"][-1]["wasted_seconds"] = wasted_seconds
+            data["issues"][-1]["top_failing_task_ids"] = top_ids
 
     # Repeated failures
     if att.get("repeated_failures"):
