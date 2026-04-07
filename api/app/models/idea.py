@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import Optional
 from uuid import uuid4
@@ -9,6 +10,81 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.coherence_credit import CostVector, ValueVector
+
+
+# ── Right-sizing granularity enums and models (spec 158) ────────────────────
+
+class GranularitySignal(str, Enum):
+    HEALTHY = "healthy"
+    TOO_LARGE = "too_large"
+    TOO_SMALL = "too_small"
+    OVERLAP = "overlap"
+
+
+class SuggestionType(str, Enum):
+    SPLIT = "split"
+    MERGE = "merge"
+
+
+class RightSizingSuggestion(BaseModel):
+    suggestion_type: SuggestionType
+    idea_id: str
+    rationale: str
+    confidence: float = Field(ge=0.0, le=1.0)
+    overlap_with_id: Optional[str] = None
+    overlap_score: Optional[float] = None
+    proposed_children: list[dict] = Field(default_factory=list)
+    proposed_action: Optional[str] = None  # attach_as_child | merge_and_archive
+
+
+class PortfolioHealthCounts(BaseModel):
+    total: int
+    healthy: int
+    too_large: int
+    too_small: int
+    overlap: int
+
+
+class TrendInfo(BaseModel):
+    healthy_pct_now: float
+    healthy_pct_7d_ago: Optional[float] = None
+    direction: str  # improving | stable | degrading
+
+
+class RightSizingReport(BaseModel):
+    generated_at: datetime
+    portfolio_health: PortfolioHealthCounts
+    suggestions: list[RightSizingSuggestion]
+    trend: TrendInfo
+
+
+class RightSizingApplyRequest(BaseModel):
+    suggestion_type: str
+    idea_id: str
+    action: str  # split_into_children | merge_and_archive
+    proposed_children: list[dict] = Field(default_factory=list)
+    overlap_with_id: Optional[str] = None
+    dry_run: bool = True
+
+
+class RightSizingApplyResponse(BaseModel):
+    applied: bool
+    dry_run: bool
+    changes: list[dict]
+
+
+class RightSizingHistoryEntry(BaseModel):
+    date: str  # ISO 8601
+    total: int
+    healthy: int
+    too_large: int
+    too_small: int
+    overlap: int
+    healthy_pct: float
+
+
+class RightSizingHistoryResponse(BaseModel):
+    series: list[RightSizingHistoryEntry]
 
 
 class ManifestationStatus(str, Enum):
@@ -105,6 +181,7 @@ class Idea(BaseModel):
     is_curated: bool = Field(default=False, description="True for super-ideas defined in workspace bundle ideas/ — surfaced by default in public views.")
     pillar: Optional[str] = Field(default=None, description="Top-level grouping declared by the owning workspace's pillars taxonomy.")
     workspace_id: str = Field(default="coherence-network", description="Owning workspace. Ideas live inside exactly one workspace — default workspace is 'coherence-network'.")
+    rollup_condition: Optional[str] = Field(default=None, description="For super-ideas: human-readable condition that must hold (beyond all children validated) for the super-idea to be validated.")
 
 
 class IdeaWithScore(Idea):
@@ -253,6 +330,7 @@ class IdeaCreate(BaseModel):
     slug: Optional[str] = Field(default=None, description="Human slug; auto-derived from name if omitted.")
     pillar: Optional[str] = Field(default=None, description="Top-level pillar (must match workspace's declared taxonomy). Inherited from parent_idea_id when omitted.")
     workspace_id: Optional[str] = Field(default=None, description="Owning workspace. Defaults to 'coherence-network' when omitted.")
+    rollup_condition: Optional[str] = Field(default=None, description="For super-ideas: human-readable rollup condition text.")
 
     @model_validator(mode="before")
     @classmethod
@@ -307,11 +385,21 @@ class IdeaTaskGroup(BaseModel):
     tasks: list[dict]
 
 
+class PhaseSummary(BaseModel):
+    """Per-phase task summary for dedup visibility."""
+    completed: int = 0
+    failed: int = 0
+    active: int = 0
+    should_skip: bool = False
+    retry_budget_left: int = 2
+
+
 class IdeaTasksResponse(BaseModel):
     """All tasks linked to an idea, grouped by type."""
     idea_id: str
     total: int
     groups: list[IdeaTaskGroup]
+    phase_summary: dict[str, PhaseSummary] = Field(default_factory=dict)
 
 
 class StageSetRequest(BaseModel):
@@ -365,3 +453,29 @@ class SlugUpdateResponse(BaseModel):
     id: str
     slug: str
     slug_history: list[str] = Field(default_factory=list)
+
+
+# ── Super-idea rollup (spec: super-idea-rollup-criteria) ─────────────────────
+
+
+class RollupChildStatus(BaseModel):
+    """Status of a single child idea in a rollup check."""
+    idea_id: str
+    name: str
+    manifestation_status: str
+    validated: bool
+
+
+class RollupProgress(BaseModel):
+    """Rollup progress for a super-idea."""
+    idea_id: str
+    idea_name: str
+    idea_type: str
+    rollup_condition: Optional[str] = None
+    children_total: int = Field(ge=0)
+    children_validated: int = Field(ge=0)
+    progress_pct: float = Field(ge=0.0, le=100.0)
+    all_children_validated: bool = False
+    rollup_met: bool = False
+    manifestation_status: str
+    children: list[RollupChildStatus] = Field(default_factory=list)
