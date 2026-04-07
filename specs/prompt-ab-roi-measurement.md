@@ -31,7 +31,7 @@ constraints:
 > **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
 > **Source**: [`api/app/services/prompt_ab_roi_service.py`](../api/app/services/prompt_ab_roi_service.py) | [`api/app/services/slot_selection_service.py`](../api/app/services/slot_selection_service.py) | [`api/app/routers/agent_prompt_ab_routes.py`](../api/app/routers/agent_prompt_ab_routes.py)
 
-# Spec 112: Prompt A/B ROI Measurement
+# Prompt A/B ROI Measurement
 
 **Idea**: `agent-prompt-ab-roi` (sub-idea of `coherence-network-agent-pipeline`)
 **Depends on**: Spec 026 Phase 2 (orchestrator_policy.json)

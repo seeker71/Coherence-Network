@@ -19,7 +19,7 @@ done_when:
 > **Parent idea**: [data-infrastructure](../ideas/data-infrastructure.md)
 > **Source**: [`api/app/services/unified_db.py`](../api/app/services/unified_db.py)
 
-# Spec 118: Unified SQLite Store — Single Source of Truth
+# Unified SQLite Store — Single Source of Truth
 
 **Idea**: `unified-persistence` (sub-idea of `coherence-signal-depth`)
 **Depends on**: All existing persistence services

@@ -20,7 +20,7 @@ constraints:
 
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
 
-# Spec 120: Super-Idea Rollup Criteria
+# Super-Idea Rollup Criteria
 
 ## Purpose
 

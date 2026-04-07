@@ -22,7 +22,7 @@ done_when:
 > **Parent idea**: [idea-realization-engine](../ideas/idea-realization-engine.md)
 > **Source**: [`api/app/services/idea_service.py`](../api/app/services/idea_service.py) | [`api/app/models/idea.py`](../api/app/models/idea.py)
 
-# Spec 176: Idea Lifecycle Closure — System Must Recognize When an Idea Is Done
+# Idea Lifecycle Closure — System Must Recognize When an Idea Is Done
 
 ## Purpose
 

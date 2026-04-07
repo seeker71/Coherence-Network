@@ -41,7 +41,7 @@ constraints:
 > **Parent idea**: [agent-pipeline](../ideas/agent-pipeline.md)
 > **Source**: [`api/app/services/pipeline_service.py`](../api/app/services/pipeline_service.py) | [`api/app/services/pipeline_pulse_service.py`](../api/app/services/pipeline_pulse_service.py) | [`api/app/services/pipeline_advance_service.py`](../api/app/services/pipeline_advance_service.py)
 
-# Spec 139: Coherence Network Agent Pipeline
+# Coherence Network Agent Pipeline
 
 ## Purpose
 

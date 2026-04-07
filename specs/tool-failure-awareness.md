@@ -19,7 +19,7 @@ constraints:
 > **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
 > **Source**: [`api/app/services/failure_taxonomy_service.py`](../api/app/services/failure_taxonomy_service.py) | [`api/app/services/agent_execution_retry.py`](../api/app/services/agent_execution_retry.py)
 
-# Spec 074: Tool Failure Awareness (Cost Without Gain)
+# Tool Failure Awareness (Cost Without Gain)
 
 ## Goal
 Detect and surface expensive tool failures (time/cost spent without value) automatically.

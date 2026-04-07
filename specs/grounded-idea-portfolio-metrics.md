@@ -22,7 +22,7 @@ done_when:
 > **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
 > **Source**: [`api/app/services/grounded_idea_metrics_service.py`](../api/app/services/grounded_idea_metrics_service.py) | [`api/app/routers/agent_grounded_metrics_routes.py`](../api/app/routers/agent_grounded_metrics_routes.py)
 
-# Spec 116: Grounded Idea Portfolio Metrics
+# Grounded Idea Portfolio Metrics
 
 **Idea**: `agent-grounded-idea-metrics` (sub-idea of `coherence-signal-depth`)
 **Depends on**: Spec 115 (grounded measurement), Spec 049 (runtime telemetry), Spec 048 (value lineage)

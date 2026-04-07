@@ -31,7 +31,7 @@ constraints:
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
 > **Source**: [`api/app/services/failed_task_diagnostics_service.py`](../api/app/services/failed_task_diagnostics_service.py) | [`api/app/models/agent.py`](../api/app/models/agent.py) | [`api/app/services/agent_task_store_service.py`](../api/app/services/agent_task_store_service.py)
 
-# Spec 113: Failed-Task Diagnostics Completeness Contract
+# Failed-Task Diagnostics Completeness Contract
 
 **Idea**: `agent-failed-task-diagnostics` (sub-idea of `coherence-network-agent-pipeline`)
 **Depends on**: Spec 007 meta-pipeline backlog (item 14)

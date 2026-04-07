@@ -30,7 +30,7 @@ constraints:
 > **Parent idea**: [pipeline-optimization](../ideas/pipeline-optimization.md)
 > **Source**: [`api/app/services/task_activity_service.py`](../api/app/services/task_activity_service.py)
 
-# Spec 127: Cross-Task Outcome Correlation
+# Cross-Task Outcome Correlation
 
 **Idea**: `coherence-network-agent-pipeline`
 **Depends on**: Spec 115 (grounded measurement), Spec 114 (auto-heal), Spec 113 (error classification)

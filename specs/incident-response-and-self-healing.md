@@ -40,7 +40,7 @@ constraints:
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
 > **Source**: [`api/app/services/auto_heal_service.py`](../api/app/services/auto_heal_service.py) | [`api/app/services/failure_taxonomy_service.py`](../api/app/services/failure_taxonomy_service.py) | [`api/app/services/smart_reaper_service.py`](../api/app/services/smart_reaper_service.py)
 
-# Spec 125: Incident Response and Self-Healing
+# Incident Response and Self-Healing
 
 **Idea**: `coherence-incident-response` (sub-idea of `coherence-credit-system`)
 **Depends on**: Spec 124 (CC economics), Spec 119 (CC internal currency), Spec 118 (unified SQLite store)

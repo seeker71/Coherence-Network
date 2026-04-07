@@ -22,7 +22,7 @@ done_when:
 > **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
 > **Source**: [`api/app/services/grounded_measurement_service.py`](../api/app/services/grounded_measurement_service.py) | [`api/app/services/grounded_idea_metrics_service.py`](../api/app/services/grounded_idea_metrics_service.py)
 
-# Spec 115: Grounded Cost & Value Measurement for Prompt A/B ROI
+# Grounded Cost & Value Measurement for Prompt A/B ROI
 
 **Idea**: `agent-grounded-measurement` (sub-idea of `coherence-network-agent-pipeline`)
 **Depends on**: Spec 112 (prompt_ab_roi_service)

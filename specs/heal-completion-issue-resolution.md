@@ -23,7 +23,7 @@ done_when:
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
 > **Source**: [`api/app/services/auto_heal_service.py`](../api/app/services/auto_heal_service.py) | [`api/app/services/pipeline_advance_service.py`](../api/app/services/pipeline_advance_service.py)
 
-# Spec 047: Heal Completion → Issue Resolution
+# Heal Completion → Issue Resolution
 
 **Idea ID**: `047-heal-completion-issue-resolution`
 **Status**: Ready for Implementation

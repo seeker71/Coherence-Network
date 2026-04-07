@@ -27,7 +27,7 @@ constraints:
 > **Parent idea**: [agent-cli](../ideas/agent-cli.md)
 > **Source**: [`api/scripts/run_cli_task_flow_matrix.py`](../api/scripts/run_cli_task_flow_matrix.py) | [`api/scripts/local_runner.py`](../api/scripts/local_runner.py)
 
-# 108 — Unified Agent CLI Flow: All Task Types, Patch on Verification Fail
+# Unified Agent CLI Flow: All Task Types, Patch on Verification Fail
 
 ## Purpose
 

@@ -40,7 +40,7 @@ constraints:
 > **Parent idea**: [pipeline-reliability](../ideas/pipeline-reliability.md)
 > **Source**: [`api/app/services/smart_reap_service.py`](../api/app/services/smart_reap_service.py) | [`api/app/services/smart_reaper_service.py`](../api/app/services/smart_reaper_service.py) | [`api/app/routers/agent_smart_reap_routes.py`](../api/app/routers/agent_smart_reap_routes.py)
 
-# Spec 169: Smart Reap — Diagnose, Capture, and Resume Stuck Tasks
+# Smart Reap — Diagnose, Capture, and Resume Stuck Tasks
 
 *Format: [specs/TEMPLATE.md](TEMPLATE.md)*
 

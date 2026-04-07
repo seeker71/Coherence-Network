@@ -27,7 +27,7 @@ constraints:
 > **Parent idea**: [coherence-credit](../ideas/coherence-credit.md)
 > **Source**: [`api/app/services/coherence_credit_service.py`](../api/app/services/coherence_credit_service.py) | [`api/app/models/coherence_credit.py`](../api/app/models/coherence_credit.py)
 
-# Spec 119: Coherence Credit (CC) — Internal Currency (Phase 1: Unit of Account)
+# Coherence Credit (CC) — Internal Currency (Phase 1: Unit of Account)
 
 ## Purpose
 

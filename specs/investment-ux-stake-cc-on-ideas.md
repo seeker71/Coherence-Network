@@ -26,7 +26,7 @@ done_when:
 > **Parent idea**: [identity-and-onboarding](../ideas/identity-and-onboarding.md)
 > **Source**: [`api/app/services/stake_compute_service.py`](../api/app/services/stake_compute_service.py) | [`api/app/services/contribution_ledger_service.py`](../api/app/services/contribution_ledger_service.py) | [`web/app/invest/page.tsx`](../web/app/invest/page.tsx)
 
-# Spec 157: Investment UX — Stake CC on Ideas from Web and CLI with Clear Returns
+# Investment UX — Stake CC on Ideas from Web and CLI with Clear Returns
 
 **Spec ID**: 157-investment-ux-stake-cc-on-ideas
 **Idea ID**: investment-ux

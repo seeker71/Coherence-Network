@@ -25,7 +25,7 @@ constraints:
 > **Parent idea**: [value-attribution](../ideas/value-attribution.md)
 > **Source**: [`api/app/services/contribution_cost_service.py`](../api/app/services/contribution_cost_service.py)
 
-# Spec 086: Normalize GitHub Commit Cost Estimation
+# Normalize GitHub Commit Cost Estimation
 
 ## Goal
 Fix inflated per-commit contribution cost values by replacing the high-multiplier estimator with a bounded normalized model and enforcing normalization server-side.

@@ -18,7 +18,7 @@ done_when:
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
 > **Source**: [`web/app/page.tsx`](../web/app/page.tsx) | [`web/app/globals.css`](../web/app/globals.css)
 
-# Spec 165: UX Homepage Readability — Dark Mode Contrast Fixes & Light Mode Toggle
+# UX Homepage Readability — Dark Mode Contrast Fixes & Light Mode Toggle
 
 **ID**: ux-homepage-readability
 **Status**: approved
