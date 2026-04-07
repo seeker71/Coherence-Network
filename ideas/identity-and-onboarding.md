@@ -6,8 +6,8 @@ work_type: feature
 pillar: network
 phase: 2
 specs:
-  - [168-identity-driven-onboarding-tofu](../specs/168-identity-driven-onboarding-tofu.md)
-  - [157-investment-ux-stake-cc-on-ideas](../specs/157-investment-ux-stake-cc-on-ideas.md)
+  - [identity-driven-onboarding-tofu](../specs/identity-driven-onboarding-tofu.md)
+  - [investment-ux-stake-cc-on-ideas](../specs/investment-ux-stake-cc-on-ideas.md)
 ---
 
 # Identity and Onboarding

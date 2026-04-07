@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# spec: 181-full-code-traceability
+# spec: full-code-traceability
 # idea: full-code-traceability
 """Phase 1.3 — Scan code files for spec references and build spec_links report.
 

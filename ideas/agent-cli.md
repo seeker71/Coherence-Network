@@ -5,8 +5,8 @@ stage: implementing
 work_type: feature
 pillar: pipeline
 specs:
-  - [108-unified-agent-cli-flow-patch-on-fail](../specs/108-unified-agent-cli-flow-patch-on-fail.md)
-  - [111-agent-execution-lifecycle-hooks](../specs/111-agent-execution-lifecycle-hooks.md)
+  - [unified-agent-cli-flow-patch-on-fail](../specs/unified-agent-cli-flow-patch-on-fail.md)
+  - [agent-execution-lifecycle-hooks](../specs/agent-execution-lifecycle-hooks.md)
 ---
 
 # Agent CLI

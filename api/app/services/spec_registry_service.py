@@ -325,6 +325,16 @@ def update_spec(spec_id: str, data: SpecRegistryUpdate) -> SpecRegistryEntry | N
     return _graph_node_to_spec(updated) if updated else None
 
 
+def delete_spec(spec_id: str) -> bool:
+    """Delete a spec node and all its edges. Returns True if deleted."""
+    from app.services import graph_service
+    node_id = f"spec-{spec_id}"
+    deleted = graph_service.delete_node(node_id)
+    if deleted:
+        _invalidate_spec_cache()
+    return deleted
+
+
 def build_spec_cards_feed(
     *,
     q: str = "",

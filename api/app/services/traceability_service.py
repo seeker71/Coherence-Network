@@ -1,4 +1,4 @@
-# spec: 181-full-code-traceability
+# spec: full-code-traceability
 # idea: full-code-traceability
 """Traceability service: report generation and backfill orchestration (Spec 181)."""
 

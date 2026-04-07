@@ -86,6 +86,14 @@ async def create_spec(data: SpecRegistryCreate, _key: str = Depends(require_api_
     return created
 
 
+@router.delete("/spec-registry/{spec_id}", status_code=204)
+async def delete_spec(spec_id: str, _key: str = Depends(require_api_key)) -> None:
+    deleted = spec_registry_service.delete_spec(spec_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Spec not found")
+    return None
+
+
 @router.patch("/spec-registry/{spec_id}", response_model=SpecRegistryEntry)
 async def update_spec(spec_id: str, data: SpecRegistryUpdate, _key: str = Depends(require_api_key)) -> SpecRegistryEntry:
     if all(
