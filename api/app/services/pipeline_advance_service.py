@@ -417,23 +417,52 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     if not idea_id:
         return None
 
-    # Check if a task for this phase already exists for this idea
+    # R3: dedup gate — check phase history before creating next-phase task.
+    # Supports skip-ahead: if next_phase is already completed, try the one after.
     from app.services import agent_service
-    existing_tasks, _total, _backfill = agent_service.list_tasks(limit=200, offset=0)
-    for existing in existing_tasks:
-        existing_type = existing.get("task_type", "")
-        if hasattr(existing_type, "value"):
-            existing_type = existing_type.value
-        existing_status = existing.get("status", "")
-        if hasattr(existing_status, "value"):
-            existing_status = existing_status.value
-        existing_idea = (existing.get("context") or {}).get("idea_id", "")
+    from app.services.task_dedup_service import check_idea_phase_history, build_skip_context, PHASE_SEQUENCE
 
-        if (existing_type == next_phase
-                and existing_idea == idea_id
-                and existing_status in ("pending", "running")):
-            log.info("AUTO_ADVANCE skip — %s task already exists for %s", next_phase, idea_id)
+    skipped_phases: list[str] = []
+    phase_map = _next_phase_map()
+    candidate = next_phase
+    while candidate:
+        history = check_idea_phase_history(idea_id, candidate)
+        if history.should_skip:
+            log.info(
+                "AUTO_ADVANCE skip — %s already completed for %s, advancing to next",
+                candidate, idea_id,
+            )
+            skipped_phases.append(candidate)
+            candidate = phase_map.get(candidate)
+            continue
+        if history.active_count > 0:
+            log.info("AUTO_ADVANCE skip — %s task already active for %s", candidate, idea_id)
             return None
+        if history.retry_budget_left <= 0 and history.completed_count == 0:
+            log.warning(
+                "AUTO_ADVANCE escalate — %s for %s has %d failures, no completions, retry budget exhausted",
+                candidate, idea_id, history.failed_count,
+            )
+            _escalate_or_autofix(task, candidate, idea_id, history.failed_count)
+            return None
+        # This phase is eligible
+        break
+    else:
+        # All downstream phases completed
+        log.info("AUTO_ADVANCE skip — all phases completed for %s", idea_id)
+        return None
+
+    next_phase = candidate
+
+    # R7: propagate context from completed tasks of skipped phases
+    skip_context: dict[str, Any] = {}
+    if skipped_phases:
+        try:
+            from app.services.agent_service_list import list_tasks_for_idea
+            tasks_payload = list_tasks_for_idea(idea_id)
+            skip_context = build_skip_context(idea_id, skipped_phases, tasks_payload)
+        except Exception:
+            log.warning("AUTO_ADVANCE: failed to build skip context for %s", idea_id)
 
     # Find the spec file path for this idea
     spec_path = _find_spec_file(idea_id, task)
@@ -552,6 +581,7 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
     # DG-012 fix: propagate impl_branch so test/code-review tasks don't fail the
     # IMPL_BRANCH_REQUIRED gate. The runner sets impl_branch in task context after
     # push; we forward it here so server-side advance creates tasks that can run.
+    # R7: merge skip context first, then overlay with direct context
     next_context: dict[str, Any] = {
         "idea_id": idea_id,
         "auto_advanced_from": task_type,
@@ -559,14 +589,29 @@ def maybe_advance(task: dict[str, Any]) -> dict[str, Any] | None:
         "source_task_id": task.get("id", ""),
         "executor": "federation",
     }
+    # Apply skip-ahead context (R7) — fields from completed tasks of skipped phases
+    if skip_context:
+        for k, v in skip_context.items():
+            if k != "idea_id":  # already set
+                next_context.setdefault(k, v)
+        if skipped_phases:
+            next_context["auto_advance_source"] = (
+                f"{task_type} \u2192 {next_phase} (skipped {', '.join(skipped_phases)})"
+            )
+
+    # R8: deterministic fingerprint for auto-advance concurrency guard
+    next_context["task_fingerprint"] = f"{idea_id}:{next_phase}:auto"
+
     if context.get("impl_branch"):
         next_context["impl_branch"] = context["impl_branch"]
+    elif skip_context.get("impl_branch"):
+        next_context["impl_branch"] = skip_context["impl_branch"]
     elif next_phase in ("test", "code-review", "review"):
         # DG-012/017: impl_branch is required for test/code-review. If it's absent, the
         # downstream task will fail immediately with impl_branch_missing. Log now so the
         # root cause is visible at advance time, not at execution time.
         log.warning(
-            "ADVANCE_MISSING_IMPL_BRANCH %s→%s for idea=%s — "
+            "ADVANCE_MISSING_IMPL_BRANCH %s\u2192%s for idea=%s \u2014 "
             "impl_branch not in source task context; downstream task may fail. "
             "Verify DG-012 runner fix is active and impl_branch PATCH succeeded.",
             task_type, next_phase, idea_id,
@@ -705,29 +750,31 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
         )
         return None
 
+    # R4: dedup gate — check phase history before retrying
+    from app.services.task_dedup_service import check_idea_phase_history
+    history = check_idea_phase_history(idea_id, task_type)
+    if history.should_skip:
+        log.info("AUTO_RETRY skip — %s already completed for %s, no retry needed", task_type, idea_id)
+        return None
+    if history.active_count > 0:
+        log.info("AUTO_RETRY skip — %s task already active for %s", task_type, idea_id)
+        return None
+    if history.retry_budget_left <= 0:
+        log.info(
+            "AUTO_RETRY exhausted — %s for %s has %d prior failures, max retries reached",
+            task_type, idea_id, history.failed_count,
+        )
+        _escalate_or_autofix(task, task_type, idea_id, history.failed_count)
+        return None
+
     retry_count = int(context.get("retry_count", 0))
     if retry_count >= _max_retries():
         log.info("AUTO_RETRY exhausted — %s for %s retried %d times, escalating", task_type, idea_id, retry_count)
         _escalate_or_autofix(task, task_type, idea_id, retry_count)
         return None
 
-    # Don't retry if a pending/running task already exists for this phase+idea
+    # Legacy active-task check kept as fallback (dedup gate above should catch this)
     from app.services import agent_service
-    existing_tasks, _total, _backfill = agent_service.list_tasks(limit=200, offset=0)
-    for existing in existing_tasks:
-        existing_type = existing.get("task_type", "")
-        if hasattr(existing_type, "value"):
-            existing_type = existing_type.value
-        existing_status = existing.get("status", "")
-        if hasattr(existing_status, "value"):
-            existing_status = existing_status.value
-        existing_idea = (existing.get("context") or {}).get("idea_id", "")
-
-        if (existing_type == task_type
-                and existing_idea == idea_id
-                and existing_status in ("pending", "running")):
-            log.info("AUTO_RETRY skip — %s task already pending/running for %s", task_type, idea_id)
-            return None
 
     # Reuse the original direction, enriched with partial work
     direction = task.get("direction", "")
@@ -762,6 +809,7 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
         "exclude_provider": failed_provider,
         "auto_retry_source": "pipeline_advance_service",
         "executor": "federation",
+        "task_fingerprint": f"{idea_id}:{task_type}:auto",  # R8: deterministic fingerprint
     }
     if context.get("impl_branch"):
         retry_context["impl_branch"] = context["impl_branch"]

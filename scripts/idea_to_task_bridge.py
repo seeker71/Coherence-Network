@@ -94,33 +94,74 @@ def pick_next_idea(ideas: list[dict]) -> dict | None:
     return scored[0] if scored else None
 
 
+MAX_RETRIES_PER_PHASE: int = 2
+
+# Canonical pipeline phase sequence
+_PHASE_SEQUENCE: list[str] = [
+    "spec", "impl", "test", "code-review", "deploy", "verify-production",
+]
+
+
 def determine_task_type(idea: dict) -> str | None:
     """What kind of task does this idea need next?
 
-    Lifecycle: spec → test → impl → review
-    Uses IdeaStage enum values as canonical source:
-      none → spec
-      specced → test
-      testing → impl
-      implementing → review
-      reviewing / complete → None (closed, no task needed)
+    R5: Uses live task history from GET /api/ideas/{id}/tasks instead of
+    stale idea.stage. Walks the phase sequence forward, skipping completed
+    phases. Returns None if all phases are complete or the next phase has
+    exhausted its retry budget.
     """
-    stage = idea.get("stage", "none") or "none"
+    idea_id = idea.get("id", "")
+    if not idea_id:
+        return "spec"
 
-    if stage in ("none",):
+    # Fetch live task history
+    tasks_data = _get(f"/api/ideas/{idea_id}/tasks")
+    if not tasks_data or not isinstance(tasks_data, dict):
+        # Fallback: no task data available, start from spec
         return "spec"
-    elif stage in ("specced",):
-        return "test"
-    elif stage in ("testing",):
-        return "impl"
-    elif stage in ("implementing",):
-        return "review"
-    elif stage in ("reviewing", "complete"):
-        # Idea is in review or already done — no new task needed
-        return None
-    else:
-        # Unknown stage — default to spec
-        return "spec"
+
+    phase_summary = tasks_data.get("phase_summary", {})
+    if not phase_summary:
+        # No phase_summary available — fall back to groups analysis
+        groups = tasks_data.get("groups", [])
+        if not groups:
+            return "spec"
+        # Build a simple summary from groups
+        completed_phases: set[str] = set()
+        for g in groups:
+            if not isinstance(g, dict):
+                continue
+            phase = g.get("task_type", "")
+            sc = g.get("status_counts", {})
+            if int(sc.get("completed", 0) or 0) > 0:
+                completed_phases.add(phase)
+        # Walk forward
+        for phase in _PHASE_SEQUENCE:
+            if phase in completed_phases:
+                log.info("%s already completed for %s, advancing to next", phase, idea_id)
+                continue
+            return phase
+        return None  # all done
+
+    # Walk forward using phase_summary
+    for phase in _PHASE_SEQUENCE:
+        ps = phase_summary.get(phase, {})
+        if ps.get("should_skip"):
+            log.info("%s already completed for %s, advancing to next", phase, idea_id)
+            continue
+        # Check retry budget: if exhausted with no completion, skip (needs human)
+        if ps.get("retry_budget_left", MAX_RETRIES_PER_PHASE) <= 0 and not ps.get("should_skip"):
+            failed = ps.get("failed", 0)
+            log.warning(
+                "%s for %s has %d failures with no completion — needs human intervention",
+                phase, idea_id, failed,
+            )
+            return None
+        return phase
+
+    # All phases complete
+    log.info("All phases complete for %s — skipping", idea_id)
+    return None
 
 
 def _idea_has_task_in_phase(idea_id: str, task_type: str) -> str | None:
