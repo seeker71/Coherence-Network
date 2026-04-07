@@ -94,29 +94,79 @@ def pick_next_idea(ideas: list[dict]) -> dict | None:
     return scored[0] if scored else None
 
 
-def determine_task_type(idea: dict) -> str:
+def determine_task_type(idea: dict) -> str | None:
     """What kind of task does this idea need next?
 
     Lifecycle: spec → test → impl → review
-    - No spec exists → spec
-    - Spec exists, no tests → test
-    - Tests exist, no impl → impl
-    - Impl exists → review
+    Uses IdeaStage enum values as canonical source:
+      none → spec
+      specced → test
+      testing → impl
+      implementing → review
+      reviewing / complete → None (closed, no task needed)
     """
     stage = idea.get("stage", "none") or "none"
-    status = idea.get("manifestation_status", "none") or "none"
 
-    if stage in ("none", "research"):
+    if stage in ("none",):
         return "spec"
-    elif stage in ("spec", "specification"):
+    elif stage in ("specced",):
         return "test"
-    elif stage in ("test", "testing"):
+    elif stage in ("testing",):
         return "impl"
-    elif stage in ("implementation", "impl"):
+    elif stage in ("implementing",):
         return "review"
+    elif stage in ("reviewing", "complete"):
+        # Idea is in review or already done — no new task needed
+        return None
     else:
-        # Default: if it has open questions, spec them out
+        # Unknown stage — default to spec
         return "spec"
+
+
+def _idea_has_task_in_phase(idea_id: str, task_type: str) -> str | None:
+    """Check if an idea already has a task of this type in a blocking state.
+
+    Returns the task status string if a blocking task exists, or None if
+    the phase is clear for a new task. Only blocks on pending/running/
+    completed/done — failed tasks allow retry.
+    """
+    data = _get(f"/api/ideas/{idea_id}/tasks")
+    if not data:
+        return None
+    groups = data.get("groups", [])
+    blocking_statuses = {"pending", "running", "completed", "done"}
+    for group in groups:
+        if group.get("task_type") == task_type:
+            status_counts = group.get("status_counts", {})
+            for status, count in status_counts.items():
+                if status in blocking_statuses and count > 0:
+                    return status
+    return None
+
+
+def _emit_friction_skip(idea: dict, reason: str) -> None:
+    """Emit a friction event when the bridge skips a closed or duplicate idea."""
+    idea_id = idea.get("id", "unknown")
+    idea_name = idea.get("name", idea_id)
+    log.info("FRICTION: Skipping idea '%s' — %s", idea_name, reason)
+    # Best-effort POST to friction endpoint; don't fail the cycle
+    try:
+        import datetime
+        _post("/api/friction/events", {
+            "id": f"bridge-skip-{idea_id}-{int(time.time())}",
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "stage": "task_generation",
+            "block_type": "lifecycle_closure",
+            "severity": "low",
+            "owner": "idea_to_task_bridge",
+            "unblock_condition": "none — idea is closed or has existing task",
+            "energy_loss_estimate": 0.1,
+            "cost_of_delay": 0.0,
+            "status": "resolved",
+            "endpoint": "idea_to_task_bridge.run_cycle",
+        })
+    except Exception:
+        pass  # Best-effort; friction logging should never break the bridge
 
 
 def build_task_direction(idea: dict, task_type: str) -> str:
@@ -200,11 +250,25 @@ def run_cycle(max_pending: int = 5, dry_run: bool = False) -> bool:
         log.info("Could not select an idea")
         return False
 
-    # 4. Determine task type
+    # 4. Determine task type — None means idea is closed (R4)
     task_type = determine_task_type(idea)
-    log.info("Selected idea: '%s' → %s task", idea.get("name", "?"), task_type)
+    idea_name = idea.get("name", "?")
+    idea_id = idea.get("id", "unknown")
 
-    # 5. Create the task
+    if task_type is None:
+        _emit_friction_skip(idea, f"stage '{idea.get('stage')}' is reviewing or complete")
+        log.info("Skipping '%s' — idea is closed (stage=%s)", idea_name, idea.get("stage"))
+        return False
+
+    # 5. Task history guard — prevent duplicate tasks for same idea+phase (R2)
+    existing_status = _idea_has_task_in_phase(idea_id, task_type)
+    if existing_status is not None:
+        log.info("Skipping '%s' — already has %s task in state %s", idea_name, task_type, existing_status)
+        return False
+
+    log.info("Selected idea: '%s' → %s task", idea_name, task_type)
+
+    # 6. Create the task
     result = create_task(idea, task_type, dry_run=dry_run)
     return result is not None
 

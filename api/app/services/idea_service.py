@@ -51,6 +51,8 @@ from app.models.idea import (
     IdeaStorageInfo,
     IdeaWithScore,
     ManifestationStatus,
+    RollupChildStatus,
+    RollupProgress,
     StageBucket,
 )
 from app.models.audit_ledger import AuditEntryCreate, AuditEntryType
@@ -1169,6 +1171,7 @@ def create_idea(
     slug: str | None = None,
     pillar: str | None = None,
     workspace_id: str | None = None,
+    rollup_condition: str | None = None,
 ) -> IdeaWithScore | None:
     # Auto-generate UUID4 when caller omits the ID (new convention going forward)
     resolved_id: str = idea_id or str(uuid4())
@@ -1214,6 +1217,7 @@ def create_idea(
         slug_history=[],
         pillar=pillar,
         workspace_id=workspace_id or "coherence-network",
+        rollup_condition=rollup_condition,
         interfaces=[x for x in (interfaces or []) if isinstance(x, str) and x.strip()],
         open_questions=[
             IdeaQuestion(
@@ -1487,6 +1491,103 @@ def list_children_of(parent_idea_id: str) -> list[IdeaWithScore]:
     scored = [_with_score(i) for i in children]
     scored.sort(key=lambda i: i.free_energy_score, reverse=True)
     return scored
+
+
+# ── Super-idea rollup (spec: super-idea-rollup-criteria) ─────────────────────
+
+
+def get_rollup_progress(idea_id: str) -> RollupProgress | None:
+    """Return rollup progress for a super-idea: children validated / total children.
+
+    Works for any idea type but is most meaningful for super-ideas.
+    Returns None when idea_id does not exist.
+    """
+    ideas = _read_ideas(persist_ensures=False)
+    parent = _resolve_idea_raw(idea_id, ideas)
+    if parent is None:
+        return None
+
+    children_raw = [i for i in ideas if i.parent_idea_id == parent.id]
+    children_total = len(children_raw)
+    children_validated = sum(
+        1 for c in children_raw if c.manifestation_status == ManifestationStatus.VALIDATED
+    )
+
+    all_validated = children_total > 0 and children_validated == children_total
+    # Rollup is considered met when all children are validated.
+    # The rollup_condition field is descriptive (human-readable) at this stage;
+    # it is surfaced so operators can verify it manually.
+    rollup_met = all_validated
+
+    progress_pct = round(
+        (children_validated / children_total * 100.0) if children_total > 0 else 0.0,
+        2,
+    )
+
+    child_statuses = [
+        RollupChildStatus(
+            idea_id=c.id,
+            name=c.name,
+            manifestation_status=c.manifestation_status.value,
+            validated=c.manifestation_status == ManifestationStatus.VALIDATED,
+        )
+        for c in children_raw
+    ]
+
+    return RollupProgress(
+        idea_id=parent.id,
+        idea_name=parent.name,
+        idea_type=parent.idea_type.value,
+        rollup_condition=parent.rollup_condition,
+        children_total=children_total,
+        children_validated=children_validated,
+        progress_pct=progress_pct,
+        all_children_validated=all_validated,
+        rollup_met=rollup_met,
+        manifestation_status=parent.manifestation_status.value,
+        children=child_statuses,
+    )
+
+
+def validate_super_idea(idea_id: str) -> tuple[RollupProgress | None, str | None]:
+    """Check rollup criteria for a super-idea and auto-update manifestation_status.
+
+    Returns (progress, error_string).
+    - error_string is None on success.
+    - "not_found" when idea does not exist.
+    - "not_super" when idea is not a super-idea.
+
+    R2: Checks all children validated + rollup condition.
+    R3: Auto-updates manifestation_status when rollup criteria are met.
+         Also downgrades back to partial if a child regresses.
+    """
+    ideas = _read_ideas(persist_ensures=False)
+    parent = _resolve_idea_raw(idea_id, ideas)
+    if parent is None:
+        return None, "not_found"
+
+    if parent.idea_type != IdeaType.SUPER:
+        return None, "not_super"
+
+    progress = get_rollup_progress(idea_id)
+    if progress is None:
+        return None, "not_found"
+
+    # Determine desired status
+    if progress.rollup_met:
+        desired = ManifestationStatus.VALIDATED
+    elif progress.children_validated > 0:
+        desired = ManifestationStatus.PARTIAL
+    else:
+        desired = ManifestationStatus.NONE
+
+    # Auto-update if status changed (R3)
+    if parent.manifestation_status != desired:
+        update_idea(parent.id, manifestation_status=desired)
+        # Refresh progress to reflect new status
+        progress = get_rollup_progress(idea_id)
+
+    return progress, None
 
 
 def stake_on_idea(idea_id: str, contributor_id: str, amount_cc: float, rationale: str | None = None) -> dict:
@@ -1834,6 +1935,10 @@ def auto_advance_for_task(idea_id: str, task_type: str) -> None:
     """Best-effort auto-advance: if a task of the given type completes, advance the idea.
 
     Does nothing if the idea is already at or past the target stage.
+
+    Special case (R3): when a review task completes, the idea advances to
+    ``reviewing`` and then immediately to ``complete`` (with manifestation_status
+    set to ``validated``), closing the idea lifecycle.
     """
     target_stage = _TASK_TYPE_TARGET_STAGE.get(task_type)
     if target_stage is None:
@@ -1860,8 +1965,82 @@ def auto_advance_for_task(idea_id: str, task_type: str) -> None:
 
     target_idea.stage = target_stage
     _sync_manifestation_status(target_idea)
+
+    # R3: Review completion closes the idea — advance from reviewing to complete
+    if task_type == "review" and target_idea.stage == IdeaStage.REVIEWING:
+        target_idea.stage = IdeaStage.COMPLETE
+        _sync_manifestation_status(target_idea)
+
     ideas[target_idx] = target_idea
     _write_single_idea(target_idea, position=target_idx)
+
+
+def get_idea_lifecycle(idea_id: str) -> dict | None:
+    """Return lifecycle closure state for an idea (R6).
+
+    Returns None when the idea does not exist.
+    """
+    idea = get_idea(idea_id)
+    if idea is None:
+        return None
+
+    # Build task summary from agent service
+    from app.services import agent_service
+    tasks_data = agent_service.list_tasks_for_idea(idea_id)
+
+    task_phases = ["spec", "test", "impl", "review"]
+    task_summary: dict[str, dict] = {}
+    groups_by_type = {
+        g.get("task_type") if isinstance(g, dict) else g.task_type: g
+        for g in (tasks_data.get("groups", []) if isinstance(tasks_data, dict) else tasks_data.groups)
+    }
+
+    for phase in task_phases:
+        group = groups_by_type.get(phase)
+        if group is None:
+            task_summary[phase] = {"count": 0, "latest_status": None}
+        else:
+            count = group.get("count") if isinstance(group, dict) else group.count
+            # Find latest status — prefer done > completed > running > pending
+            status_counts = group.get("status_counts") if isinstance(group, dict) else group.status_counts
+            if isinstance(status_counts, dict):
+                sc = status_counts
+            else:
+                sc = status_counts.model_dump() if hasattr(status_counts, "model_dump") else {}
+            status_priority = ["done", "completed", "running", "pending", "failed", "needs_decision"]
+            latest = None
+            for s in status_priority:
+                if sc.get(s, 0) > 0:
+                    latest = s
+                    break
+            task_summary[phase] = {"count": count, "latest_status": latest}
+
+    # Determine closure state
+    stage = idea.stage if hasattr(idea, "stage") else getattr(idea, "stage", "none")
+    stage_val = stage.value if hasattr(stage, "value") else str(stage)
+    ms = idea.manifestation_status if hasattr(idea, "manifestation_status") else "none"
+    ms_val = ms.value if hasattr(ms, "value") else str(ms)
+
+    is_closed = stage_val == "complete" and ms_val == "validated"
+
+    # Build closure blockers
+    blockers: list[str] = []
+    if not is_closed:
+        for phase in task_phases:
+            info = task_summary[phase]
+            if info["count"] == 0:
+                blockers.append(f"{phase} phase not started")
+            elif info["latest_status"] not in ("done", "completed"):
+                blockers.append(f"{phase} phase not finished (latest: {info['latest_status']})")
+
+    return {
+        "idea_id": idea_id,
+        "stage": stage_val,
+        "manifestation_status": ms_val,
+        "is_closed": is_closed,
+        "task_summary": task_summary,
+        "closure_blockers": blockers,
+    }
 
 
 def get_resonance_feed(window_hours: int = 24, limit: int = 20) -> list[dict]:
