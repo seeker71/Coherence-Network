@@ -984,6 +984,31 @@ def _parse_spec_file(path: Path) -> dict | None:
     if para_lines:
         summary = " ".join(para_lines)[:500]
 
+    # Extract status and source for state progression
+    status = frontmatter.get("status") or None
+    requirements = frontmatter.get("requirements") or []
+    source_entries = frontmatter.get("source") or []
+
+    # Build process_summary from requirements (for done/partial specs)
+    process_summary = None
+    if status in ("done", "partial") and requirements:
+        if isinstance(requirements, list):
+            process_summary = "; ".join(str(r) for r in requirements[:5])
+
+    # Build implementation_summary from source entries (for done specs)
+    implementation_summary = None
+    if status == "done" and source_entries:
+        parts = []
+        for entry in source_entries:
+            if isinstance(entry, dict):
+                f = entry.get("file", "")
+                syms = entry.get("symbols", [])
+                if f:
+                    sym_str = f" ({', '.join(str(s) for s in syms[:5])})" if syms else ""
+                    parts.append(f"{f}{sym_str}")
+        if parts:
+            implementation_summary = "; ".join(parts[:8])
+
     return {
         "spec_id": spec_id,
         "title": title,
@@ -991,6 +1016,9 @@ def _parse_spec_file(path: Path) -> dict | None:
         "content_path": f"specs/{path.name}",
         "content_hash": sha256_of(content_bytes),
         "idea_id": frontmatter.get("idea_id") or None,
+        "status": status,
+        "process_summary": process_summary,
+        "implementation_summary": implementation_summary,
     }
 
 
@@ -1018,12 +1046,18 @@ def seed_specs() -> int:
                 content_path=parsed["content_path"],
                 content_hash=parsed["content_hash"],
                 idea_id=parsed.get("idea_id"),
+                process_summary=parsed.get("process_summary"),
+                implementation_summary=parsed.get("implementation_summary"),
             ))
         else:
             update_payload = SpecRegistryUpdate(
+                title=parsed["title"],
+                summary=parsed["summary"],
                 content_path=parsed["content_path"],
                 content_hash=parsed["content_hash"],
                 idea_id=parsed.get("idea_id"),
+                process_summary=parsed.get("process_summary"),
+                implementation_summary=parsed.get("implementation_summary"),
             )
             spec_registry_service.update_spec(parsed["spec_id"], update_payload)
         count += 1
@@ -1211,171 +1245,89 @@ def seed_curated_ideas() -> int:
 
 # ---------------------------------------------------------------------------
 # EXPLICIT_SPEC_IDEA_MAP: deterministic spec_id -> idea_id assignments.
-# Every spec must appear here exactly once.  No keyword guessing.
+# Every spec .md file on disk appears here exactly once.
+# Values are the 16 curated super-idea IDs from ideas/*.md.
+# Source of truth: each idea .md file's `specs:` frontmatter list.
 # ---------------------------------------------------------------------------
 EXPLICIT_SPEC_IDEA_MAP: dict[str, str] = {
-    # --- api-foundation (17 specs) ---
-    "health-check": "api-foundation",
-    "api-error-handling": "api-foundation",
-    "request-validation": "api-foundation",
-    "pagination": "api-foundation",
-    "placeholder": "api-foundation",
-    "coherence-algorithm-spec": "api-foundation",
-    "sprint-2-coherence-api": "api-foundation",
-    "pypi-indexing": "api-foundation",
-    "requirements-txt-import": "api-foundation",
-    "post-tasks-invalid-task-type-422": "api-foundation",
-    "post-tasks-empty-direction-422": "api-foundation",
-    "canonical-route-registry-and-runtime-mapping": "api-foundation",
-    "friction-analysis": "api-foundation",
-    "assets-api": "api-foundation",
-    "ideas-prioritization": "api-foundation",
-    "standing-questions-roi-and-next-task-generation": "api-foundation",
-    "sprint0-graph-foundation-indexer-api": "api-foundation",
+    # --- agent-cli (2 specs) ---
+    "unified-agent-cli-flow-patch-on-fail": "agent-cli",
+    "agent-execution-lifecycle-hooks": "agent-cli",
 
-    # --- pipeline-automation (22 specs) ---
-    "backlog": "pipeline-automation",
-    "project-manager-orchestrator": "pipeline-automation",
-    "project-manager-pipeline": "pipeline-automation",
-    "overnight-backlog": "pipeline-automation",
-    "meta-pipeline-backlog": "pipeline-automation",
-    "phase-1-task-metrics": "pipeline-automation",
-    "pipeline-observability-and-auto-review": "pipeline-automation",
-    "auto-update-framework": "pipeline-automation",
-    "fully-automated-pipeline": "pipeline-automation",
-    "parallel-by-phase-pipeline": "pipeline-automation",
-    "github-api-integration": "pipeline-automation",
-    "pipeline-full-automation": "pipeline-automation",
-    "spec-coverage-update": "pipeline-automation",
-    "attention-heuristics-pipeline-status": "pipeline-automation",
-    "check-pipeline-hierarchical-view": "pipeline-automation",
-    "pipeline-status-empty-state-200": "pipeline-automation",
-    "project-manager-load-backlog-malformed-test": "pipeline-automation",
-    "project-manager-state-file-flag-test": "pipeline-automation",
-    "project-manager-reset-clears-state-test": "pipeline-automation",
-    "agent-service-spec-task-type-local-model-test": "pipeline-automation",
-    "agent-service-test-task-type-local-model-test": "pipeline-automation",
-    "effectiveness-plan-progress-phase-6-7": "pipeline-automation",
-    "agent-debugging-pipeline-stuck-task-hangs": "pipeline-automation",
-    "heal-completion-issue-resolution": "pipeline-automation",
-    "automation-provider-usage-readiness-api": "pipeline-automation",
-    "nonblocking-monitoring-workflows": "pipeline-automation",
-    "test-backlog-cursor": "pipeline-automation",
+    # --- agent-pipeline (6 specs) ---
+    "agent-orchestration-api": "agent-pipeline",
+    "project-manager-pipeline": "agent-pipeline",
+    "coherence-network-agent-pipeline": "agent-pipeline",
+    "pipeline-observability-and-auto-review": "agent-pipeline",
+    "attention-heuristics-pipeline-status": "agent-pipeline",
+    "split-review-deploy-verify-phases": "agent-pipeline",
 
-    # --- web-ui-ux (14 specs) ---
-    "sprint-0-landing": "web-ui-ux",
-    "sprint-1-graph-foundation": "web-ui-ux",
-    "web-skeleton": "web-ui-ux",
-    "web-ci": "web-ui-ux",
-    "web-project-search-ui": "web-ui-ux",
-    "web-import-stack-ui": "web-ui-ux",
-    "portfolio-cockpit-ui": "web-ui-ux",
-    "public-walkable-flow-parity": "interface-trust-surface",
-    "walkable-flow-runtime-mismatch-fixes": "interface-trust-surface",
-    "web-ideas-specs-usage-pages": "web-ui-ux",
-    "ui-alignment-overhaul": "web-ui-ux",
-    "landing-page-contributor-onboarding": "web-ui-ux",
-    "web-live-refresh-and-link-parity": "web-ui-ux",
-    "web-refresh-reliability-and-route-completeness": "web-ui-ux",
+    # --- coherence-credit (6 specs) ---
+    "coherence-credit-internal-currency": "coherence-credit",
+    "cc-economics-and-value-coherence": "coherence-credit",
+    "mvp-cost-and-acceptance-proof": "coherence-credit",
+    "grounded-cost-value-measurement": "coherence-credit",
+    "grounded-idea-portfolio-metrics": "coherence-credit",
+    "portfolio-governance-effectiveness": "coherence-credit",
 
-    # --- deployment-ci-ops (8 specs) ---
-    "ci-pipeline": "deployment-ci-ops",
-    "holdout-tests": "deployment-ci-ops",
-    "setup-troubleshooting-venv": "deployment-ci-ops",
-    "readme-quick-start-qualify": "deployment-ci-ops",
-    "ops-runbook": "deployment-ci-ops",
-    "glossary": "deployment-ci-ops",
-    "external-tools-audit-stability": "deployment-ci-ops",
+    # --- data-infrastructure (8 specs) ---
+    "coherence-algorithm-spec": "data-infrastructure",
+    "postgresql-migration": "data-infrastructure",
+    "unified-sqlite-store": "data-infrastructure",
+    "universal-node-edge-layer": "data-infrastructure",
+    "canonical-route-registry-and-runtime-mapping": "data-infrastructure",
+    "runtime-telemetry-db-precedence": "data-infrastructure",
+    "api-request-logging-middleware": "data-infrastructure",
+    "release-gates": "data-infrastructure",
 
-    # --- deployment-gate-reliability (5 specs) ---
-    "deploy-readiness": "deployment-gate-reliability",
-    "live-gate-tests-without-mocks": "deployment-gate-reliability",
-    "maintainability-architecture-and-placeholder-gate": "deployment-gate-reliability",
-    "public-e2e-flow-gate-automation": "deployment-gate-reliability",
-    "provider-readiness-contract-automation": "deployment-gate-reliability",
+    # --- idea-realization-engine (8 specs) ---
+    "ideas-prioritization": "idea-realization-engine",
+    "standing-questions-roi-and-next-task-generation": "idea-realization-engine",
+    "idea-lifecycle-management": "idea-realization-engine",
+    "idea-lifecycle-closure": "idea-realization-engine",
+    "idea-hierarchy-super-child": "idea-realization-engine",
+    "super-idea-rollup-criteria": "idea-realization-engine",
+    "idea-right-sizing": "idea-realization-engine",
+    "idea-dual-identity": "idea-realization-engine",
 
-    # --- data-storage-migration (4 specs) ---
-    "graph-store-abstraction": "data-storage-migration",
-    "postgresql-migration": "data-storage-migration",
-    "persistent-store-test-contributor-guard": "data-storage-migration",
-    "runtime-telemetry-db-precedence": "data-storage-migration",
+    # --- identity-and-onboarding (2 specs) ---
+    "identity-driven-onboarding-tofu": "identity-and-onboarding",
+    "investment-ux-stake-cc-on-ideas": "identity-and-onboarding",
 
-    # --- agent-orchestration (8 specs) ---
-    "agent-orchestration-api": "agent-orchestration",
-    "agent-telegram-decision-loop": "agent-orchestration",
-    "unified-agent-cli-flow-patch-on-fail": "agent-orchestration",
-    "n8n-security-and-hitl-hardening": "agent-orchestration",
-    "open-responses-interoperability-layer": "agent-orchestration",
-    "langgraph-stateschema-adoption": "agent-orchestration",
-    "agent-execution-lifecycle-hooks": "agent-orchestration",
-    "greenfield-autonomous-intelligence-system": "agent-orchestration",
+    # --- pipeline-optimization (6 specs) ---
+    "tool-failure-awareness": "pipeline-optimization",
+    "prompt-ab-roi-measurement": "pipeline-optimization",
+    "provider-usage-coalescing-timeout-resilience": "pipeline-optimization",
+    "cross-task-outcome-correlation": "pipeline-optimization",
+    "provider-health-alerting": "pipeline-optimization",
+    "runner-auto-contribution": "pipeline-optimization",
 
-    # --- traceability-provenance (11 specs) ---
-    "logging-audit": "traceability-provenance",
-    "system-lineage-inventory-and-runtime-telemetry": "traceability-provenance",
-    "commit-provenance-contract-gate": "traceability-provenance",
-    "runtime-intent-and-public-e2e-contract-gate": "interface-trust-surface",
-    "commit-derived-traceability-report": "traceability-provenance",
-    "tool-failure-awareness": "traceability-provenance",
-    "task-claim-tracking-and-roi-dedupe": "traceability-provenance",
-    "tracked-count-parity-and-source-discovery": "traceability-provenance",
-    "normalize-github-commit-cost-estimation": "traceability-provenance",
-    "legacy-commit-cost-ui-normalization": "traceability-provenance",
-    "endpoint-traceability-coverage": "traceability-provenance",
+    # --- pipeline-reliability (8 specs) ---
+    "failed-task-diagnostics-contract": "pipeline-reliability",
+    "auto-heal-from-diagnostics": "pipeline-reliability",
+    "incident-response-and-self-healing": "pipeline-reliability",
+    "smart-reap": "pipeline-reliability",
+    "data-driven-timeout-resume": "pipeline-reliability",
+    "heal-completion-issue-resolution": "pipeline-reliability",
+    "stale-task-reaper": "pipeline-reliability",
+    "task-deduplication": "pipeline-reliability",
 
-    # --- spec-process-governance (3 specs) ---
-    "implementation-request-question-task-sync": "spec-process-governance",
-    "spec-process-implementation-validation-flow": "spec-process-governance",
-    "contributor-onboarding-and-governed-change-flow": "spec-process-governance",
+    # --- user-surfaces (6 specs) ---
+    "coherence-cli-comprehensive": "user-surfaces",
+    "web-ideas-specs-usage-pages": "user-surfaces",
+    "node-task-visibility": "user-surfaces",
+    "meta-self-discovery": "user-surfaces",
+    "ux-homepage-readability": "user-surfaces",
+    "mcp-skill-registry-submission": "user-surfaces",
 
-    # --- coherence-network-value-attribution (3 specs) ---
-    "contributions-api": "coherence-network-value-attribution",
-    "value-lineage-and-payout-attribution": "coherence-network-value-attribution",
-    "distribution-engine": "coherence-network-value-attribution",
-
-    # --- minimum-e2e-path (2 specs) ---
-    "question-answering-and-minimum-e2e-flow": "minimum-e2e-path",
-    "release-gates": "minimum-e2e-path",
-
-    # --- coherence-network-web-interface (1 spec) ---
-    "web-theme-auto-detection": "coherence-network-web-interface",
-
-    # --- deployment-gate-reliability (1 spec: interface-trust-surface gets its own) ---
-    # (specs assigned via deployment-ci-ops child above)
-
-    # --- agent-prompt-ab-roi (2 specs) ---
-    "orchestration-guidance-awareness": "agent-prompt-ab-roi",
-    "prompt-ab-roi-measurement": "agent-prompt-ab-roi",
-
-    # --- agent-failed-task-diagnostics (4 specs) ---
-    "ai-agent-biweekly-intelligence-feedback-loop": "agent-failed-task-diagnostics",
-    "failed-task-diagnostics-contract": "agent-failed-task-diagnostics",
-    "provider-usage-coalescing-timeout-resilience": "agent-failed-task-diagnostics",
-    "public-validation-gates-api": "agent-failed-task-diagnostics",
-
-    # --- agent-auto-heal (3 specs) ---
-    "auto-heal-from-diagnostics": "agent-auto-heal",
-    "collective-coherence-resonance-flow-friction-health": "agent-auto-heal",
-    "mvp-cost-and-acceptance-proof": "agent-auto-heal",
-
-    # --- agent-grounded-measurement (2 specs) ---
-    "grounded-cost-value-measurement": "agent-grounded-measurement",
-    "start-gate-continuation-and-hosted-worker-proof": "agent-grounded-measurement",
-
-    # --- funder-proof-page (1 spec) ---
-    "grounded-idea-portfolio-metrics": "funder-proof-page",
-
-    # --- idea-hierarchy-model (1 spec) ---
-    "idea-hierarchy-super-child": "idea-hierarchy-model",
-
-    # --- unified-sqlite-store (1 spec) ---
-    "unified-sqlite-store": "unified-sqlite-store",
-
-    # --- coherence-signal-depth (1 spec) ---
-    "coherence-credit-internal-currency": "coherence-signal-depth",
-
-    # --- federated-instance-aggregation (1 spec) ---
-    "minimum-federation-layer": "federated-instance-aggregation",
+    # --- value-attribution (7 specs) ---
+    "contributions-api": "value-attribution",
+    "value-lineage-and-payout-attribution": "value-attribution",
+    "distribution-engine": "value-attribution",
+    "assets-api": "value-attribution",
+    "task-claim-tracking-and-roi-dedupe": "value-attribution",
+    "normalize-github-commit-cost-estimation": "value-attribution",
+    "contributor-onboarding-and-governed-change-flow": "value-attribution",
 }
 
 
