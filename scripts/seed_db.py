@@ -989,25 +989,39 @@ def _parse_spec_file(path: Path) -> dict | None:
     requirements = frontmatter.get("requirements") or []
     source_entries = frontmatter.get("source") or []
 
-    # Build process_summary from requirements (for done/partial specs)
+    # Build process_summary from requirements (for done/partial/active specs)
     process_summary = None
-    if status in ("done", "partial") and requirements:
+    if status in ("done", "partial", "active") and requirements:
         if isinstance(requirements, list):
             process_summary = "; ".join(str(r) for r in requirements[:5])
 
-    # Build implementation_summary from source entries (for done specs)
+    # Build implementation_summary from source entries (done + partial with source)
     implementation_summary = None
-    if status == "done" and source_entries:
+    if source_entries and status in ("done", "partial"):
         parts = []
         for entry in source_entries:
             if isinstance(entry, dict):
-                f = entry.get("file", "")
+                ef = entry.get("file", "")
                 syms = entry.get("symbols", [])
-                if f:
-                    sym_str = f" ({', '.join(str(s) for s in syms[:5])})" if syms else ""
-                    parts.append(f"{f}{sym_str}")
+                if ef:
+                    sym_list = ", ".join(str(s) for s in syms[:5])
+                    sym_str = f" ({sym_list})" if syms else ""
+                    parts.append(f"{ef}{sym_str}")
         if parts:
             implementation_summary = "; ".join(parts[:8])
+
+    # Derive actual_value/actual_cost from status
+    # done = fully delivered, partial with source = partially delivered
+    actual_value = 0.0
+    actual_cost = 0.0
+    potential_value = float(frontmatter.get("potential_value") or 0.0)
+    estimated_cost = float(frontmatter.get("estimated_cost") or 0.0)
+    if status == "done":
+        actual_value = potential_value if potential_value > 0 else 1.0
+        actual_cost = estimated_cost if estimated_cost > 0 else 1.0
+    elif status == "partial" and implementation_summary:
+        actual_value = round(potential_value * 0.5, 2) if potential_value > 0 else 0.5
+        actual_cost = round(estimated_cost * 0.5, 2) if estimated_cost > 0 else 0.5
 
     return {
         "spec_id": spec_id,
@@ -1019,6 +1033,8 @@ def _parse_spec_file(path: Path) -> dict | None:
         "status": status,
         "process_summary": process_summary,
         "implementation_summary": implementation_summary,
+        "actual_value": actual_value,
+        "actual_cost": actual_cost,
     }
 
 
@@ -1048,6 +1064,8 @@ def seed_specs() -> int:
                 idea_id=parsed.get("idea_id"),
                 process_summary=parsed.get("process_summary"),
                 implementation_summary=parsed.get("implementation_summary"),
+                actual_value=parsed.get("actual_value", 0.0),
+                actual_cost=parsed.get("actual_cost", 0.0),
             ))
         else:
             update_payload = SpecRegistryUpdate(
@@ -1058,6 +1076,8 @@ def seed_specs() -> int:
                 idea_id=parsed.get("idea_id"),
                 process_summary=parsed.get("process_summary"),
                 implementation_summary=parsed.get("implementation_summary"),
+                actual_value=parsed.get("actual_value", 0.0),
+                actual_cost=parsed.get("actual_cost", 0.0),
             )
             spec_registry_service.update_spec(parsed["spec_id"], update_payload)
         count += 1
