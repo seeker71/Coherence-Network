@@ -156,15 +156,63 @@ def get_spend_metrics(contributor_id: str) -> dict:
     }
 
 
-def get_contributor_history(contributor_id: str, limit: int = 50) -> list[dict]:
-    """Return contribution records for a contributor, newest first."""
+def get_contributor_history(
+    contributor_id: str,
+    limit: int = 50,
+    auto_only: bool = False,
+    since: str | None = None,
+) -> list[dict]:
+    """Return contribution records for a contributor, newest first.
+
+    Args:
+        contributor_id: The contributor to look up.
+        limit: Maximum records to return (1-500).
+        auto_only: If True, only return records where metadata contains
+            ``"auto_recorded": true``.
+        since: ISO 8601 UTC timestamp; only return records created at or
+            after this time.
+    """
     _ensure_schema()
     effective_limit = max(1, min(limit, 500))
+
+    # Parse the ``since`` parameter once, outside the session.
+    # SQLite stores naive UTC datetimes, so we strip tzinfo for comparison.
+    # Note: URL query params decode '+' as ' ', so we normalize both 'Z'
+    # and accidental space-separated offsets back to '+'.
+    since_dt: datetime | None = None
+    if since:
+        try:
+            normalized = since.replace("Z", "+00:00")
+            # Handle URL-decoded '+' -> ' ' in timezone offset (e.g. "...00:00 00:00")
+            # by replacing trailing " 00:00" with "+00:00"
+            if normalized.endswith(" 00:00"):
+                normalized = normalized[:-6] + "+00:00"
+            since_dt = datetime.fromisoformat(normalized)
+            # Normalize to naive UTC for SQLite compatibility
+            if since_dt.tzinfo is not None:
+                since_dt = since_dt.astimezone(timezone.utc).replace(tzinfo=None)
+        except (ValueError, TypeError):
+            since_dt = None
+
     with _session() as s:
-        recs = (
+        q = (
             s.query(ContributionLedgerRecord)
             .filter_by(contributor_id=contributor_id)
-            .order_by(ContributionLedgerRecord.recorded_at.desc())
+        )
+
+        if since_dt is not None:
+            q = q.filter(ContributionLedgerRecord.recorded_at >= since_dt)
+
+        if auto_only:
+            # metadata_json is a TEXT column storing JSON.  Filter to rows
+            # that contain the literal key/value for auto_recorded=true.
+            q = q.filter(
+                ContributionLedgerRecord.metadata_json.contains('"auto_recorded": true')
+                | ContributionLedgerRecord.metadata_json.contains('"auto_recorded":true')
+            )
+
+        recs = (
+            q.order_by(ContributionLedgerRecord.recorded_at.desc())
             .limit(effective_limit)
             .all()
         )

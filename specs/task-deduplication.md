@@ -1,6 +1,6 @@
 ---
 idea_id: pipeline-reliability
-status: partial
+status: done
 source:
   - file: api/app/services/agent_service_active_task.py
     symbols: [find_active_task_by_fingerprint(), find_active_task_by_session_key()]

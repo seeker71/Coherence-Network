@@ -1,7 +1,12 @@
 ---
 idea_id: idea-realization-engine
-status: active
-source: []  # not yet implemented
+status: done
+source:
+  - api/app/models/idea.py: [Idea.rollup_condition, RollupChildStatus, RollupProgress, IdeaCreate.rollup_condition]
+  - api/app/services/idea_service.py: [validate_super_idea, get_rollup_progress]
+  - api/app/services/idea_graph_adapter.py: [_node_to_idea, _idea_to_properties]
+  - api/app/routers/ideas.py: [get_idea_rollup, validate_super_idea_rollup]
+  - api/tests/test_super_idea_rollup.py: [test_r1_*, test_r2_*, test_r3_*, test_r4_*]
 requirements:
   - "R1: Each super-idea has a `rollup_condition` field in the DB"
   - "R2: `validate_super_idea(idea_id)` checks all children validated + rollup condition"
@@ -12,7 +17,7 @@ done_when:
   - "R2: `validate_super_idea(idea_id)` checks all children validated + rollup condition"
   - "R3: Super-idea manifestation_status auto-updates when rollup criteria met"
   - "R4: Dashboard shows rollup progress (children validated / total children)"
-test: "python3 -m pytest api/tests/test_idea_hierarchy.py -x -v"
+test: "python3 -m pytest api/tests/test_super_idea_rollup.py -x -v"
 constraints:
   - "changes scoped to listed files only"
   - "no schema migrations without explicit approval"
@@ -37,10 +42,10 @@ Define explicit validation criteria for super-ideas so they can self-assess comp
 
 ## Requirements
 
-- [ ] R1: Each super-idea has a `rollup_condition` field in the DB
-- [ ] R2: `validate_super_idea(idea_id)` checks all children validated + rollup condition
-- [ ] R3: Super-idea manifestation_status auto-updates when rollup criteria met
-- [ ] R4: Dashboard shows rollup progress (children validated / total children)
+- [x] R1: Each super-idea has a `rollup_condition` field in the DB
+- [x] R2: `validate_super_idea(idea_id)` checks all children validated + rollup condition
+- [x] R3: Super-idea manifestation_status auto-updates when rollup criteria met
+- [x] R4: Dashboard shows rollup progress (children validated / total children)
 
 
 ## Research Inputs

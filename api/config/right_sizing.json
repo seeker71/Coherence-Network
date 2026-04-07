@@ -1,0 +1,10 @@
+{
+  "thresholds": {
+    "too_large_questions": 10,
+    "too_large_tasks": 8,
+    "too_small_age_days": 14,
+    "overlap_score_min": 0.80
+  },
+  "sweep_interval_hours": 6,
+  "snapshot_retention_days": 90
+}

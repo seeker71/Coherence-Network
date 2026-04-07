@@ -1,6 +1,6 @@
 ---
 idea_id: pipeline-reliability
-status: partial
+status: done
 source:
   - file: api/app/services/smart_reaper_service.py
     symbols: [timeout detection and reaping]

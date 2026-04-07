@@ -1,6 +1,6 @@
 ---
 idea_id: pipeline-optimization
-status: partial
+status: done
 source:
   - file: api/app/services/task_activity_service.py
     symbols: [task outcome correlation]

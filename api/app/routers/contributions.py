@@ -459,10 +459,17 @@ async def record_open_contribution(body: OpenContributionRequest) -> dict:
     "/contributions/ledger/{contributor_id}",
     summary="Get contributor CC balance and history",
 )
-async def get_contributor_ledger(contributor_id: str, limit: int = Query(50, ge=1, le=500)) -> dict:
+async def get_contributor_ledger(
+    contributor_id: str,
+    limit: int = Query(50, ge=1, le=500),
+    auto_only: bool = Query(False, description="If true, return only auto-recorded entries"),
+    since: str | None = Query(None, description="ISO 8601 UTC — return entries created at or after this time"),
+) -> dict:
     """Return contributor balance (total CC by type) and recent history."""
     balance = contribution_ledger_service.get_contributor_balance(contributor_id)
-    history = contribution_ledger_service.get_contributor_history(contributor_id, limit=limit)
+    history = contribution_ledger_service.get_contributor_history(
+        contributor_id, limit=limit, auto_only=auto_only, since=since,
+    )
     return {
         "balance": balance,
         "history": history,

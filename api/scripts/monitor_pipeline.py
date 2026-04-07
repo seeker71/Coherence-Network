@@ -1143,6 +1143,8 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             action = "Restart requested (PIPELINE_AUTO_RECOVER=1). run_autonomous.sh will restart API; watchdog restarts pipeline."
         _add_issue(data, "api_unreachable", "high", f"API unreachable: {e}", action)
         data["resolved_since_last"] = []
+        if os.environ.get("MONITOR_PERSIST_RESOLVED") != "1":
+            data.pop("resolved", None)
         _save_issues(data)
         proc = _get_pipeline_process_args()
         eff = None
@@ -1177,6 +1179,8 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     if r.status_code != 200:
         _add_issue(data, "api_error", "high", f"pipeline-status returned {r.status_code}", "Check API logs")
         data["resolved_since_last"] = []
+        if os.environ.get("MONITOR_PERSIST_RESOLVED") != "1":
+            data.pop("resolved", None)
         _save_issues(data)
         proc = _get_pipeline_process_args()
         report = _build_hierarchical_report(data, None, None, proc, now)
@@ -1404,14 +1408,24 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     ]
     if expensive:
         top = expensive[:3]
-        msg = "Recent failed tasks wasted significant time: " + ", ".join(
-            f"{r.get('task_id','?')}({round(float(r.get('duration_seconds') or 0.0),1)}s)" for r in top
+        wasted_seconds = round(sum(float(r.get("duration_seconds") or 0.0) for r in expensive), 1)
+        top_ids = [r.get("task_id", "?") for r in top]
+        msg = (
+            f"Recent failed tasks wasted {wasted_seconds}s total: "
+            + ", ".join(
+                f"{r.get('task_id','?')}({round(float(r.get('duration_seconds') or 0.0),1)}s)"
+                for r in top
+            )
         )
         action = (
             "Inspect task logs for these failures; fix root cause (auth/deps/tooling). "
             "If recurring, add a meta-pipeline item to prevent future waste."
         )
-        _add_issue(data, "expensive_failed_task", "high", msg, action)
+        issue = _add_issue(data, "expensive_failed_task", "high", msg, action)
+        # Annotate for programmatic consumption.
+        if data.get("issues"):
+            data["issues"][-1]["wasted_seconds"] = wasted_seconds
+            data["issues"][-1]["top_failing_task_ids"] = top_ids
 
     # Repeated failures
     if att.get("repeated_failures"):
@@ -2250,6 +2264,10 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
                 issue_id=prev_condition_to_issue_id.get(cond),
             )
     data["resolved_since_last"] = list(resolved_this_run)
+
+    # R6: Do not write resolved key when MONITOR_PERSIST_RESOLVED is unset
+    if not persist_resolved:
+        data.pop("resolved", None)
 
     # Sort by priority (1 = highest)
     data["issues"].sort(key=lambda i: (i.get("priority", 2), i.get("created_at", "")))

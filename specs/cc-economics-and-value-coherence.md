@@ -1,6 +1,6 @@
 ---
 idea_id: coherence-credit
-status: partial
+status: done
 source:
   - file: api/app/models/coherence_credit.py
     symbols: [CostVector, ValueVector, ExchangeRate]
@@ -48,7 +48,7 @@ constraints:
 - `commit_evidence_service` (implementation evidence for staked ideas)
 - `unified_db` (persistence for staking positions, treasury ledger)
 
-## Status: Draft
+## Status: Done
 
 ## Purpose
 
