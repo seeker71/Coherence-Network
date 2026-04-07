@@ -1143,6 +1143,8 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
             action = "Restart requested (PIPELINE_AUTO_RECOVER=1). run_autonomous.sh will restart API; watchdog restarts pipeline."
         _add_issue(data, "api_unreachable", "high", f"API unreachable: {e}", action)
         data["resolved_since_last"] = []
+        if os.environ.get("MONITOR_PERSIST_RESOLVED") != "1":
+            data.pop("resolved", None)
         _save_issues(data)
         proc = _get_pipeline_process_args()
         eff = None
@@ -1177,6 +1179,8 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
     if r.status_code != 200:
         _add_issue(data, "api_error", "high", f"pipeline-status returned {r.status_code}", "Check API logs")
         data["resolved_since_last"] = []
+        if os.environ.get("MONITOR_PERSIST_RESOLVED") != "1":
+            data.pop("resolved", None)
         _save_issues(data)
         proc = _get_pipeline_process_args()
         report = _build_hierarchical_report(data, None, None, proc, now)
@@ -2260,6 +2264,10 @@ def _run_check(client: httpx.Client, log: logging.Logger, auto_fix: bool, auto_r
                 issue_id=prev_condition_to_issue_id.get(cond),
             )
     data["resolved_since_last"] = list(resolved_this_run)
+
+    # R6: Do not write resolved key when MONITOR_PERSIST_RESOLVED is unset
+    if not persist_resolved:
+        data.pop("resolved", None)
 
     # Sort by priority (1 = highest)
     data["issues"].sort(key=lambda i: (i.get("priority", 2), i.get("created_at", "")))
