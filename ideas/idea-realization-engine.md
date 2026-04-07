@@ -12,6 +12,7 @@ specs:
   - [super-idea-rollup-criteria](../specs/super-idea-rollup-criteria.md)
   - [idea-right-sizing](../specs/idea-right-sizing.md)
   - [idea-dual-identity](../specs/idea-dual-identity.md)
+  - [standing-questions-roi-and-next-task-generation](../specs/standing-questions-roi-and-next-task-generation.md)
 ---
 
 # Idea Realization Engine
