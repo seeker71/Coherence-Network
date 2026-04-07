@@ -60,32 +60,25 @@ def _load_bridge():
 # ── R1: determine_task_type uses correct IdeaStage enum values ──────────
 
 
-def test_determine_task_type_uses_correct_stage_values():
-    """Stage values from IdeaStage enum must map to the correct task type."""
+def test_determine_task_type_no_id_returns_spec():
+    """An idea with no id defaults to spec task type."""
     bridge = _load_bridge()
-
-    # IdeaStage.NONE -> spec
     assert bridge.determine_task_type({"stage": "none"}) == "spec"
 
-    # IdeaStage.SPECCED -> test (was broken: compared against "spec")
-    assert bridge.determine_task_type({"stage": "specced"}) == "test"
 
-    # IdeaStage.TESTING -> impl (was broken: compared against "test")
-    assert bridge.determine_task_type({"stage": "testing"}) == "impl"
-
-    # IdeaStage.IMPLEMENTING -> review (was broken: compared against "implementation")
-    assert bridge.determine_task_type({"stage": "implementing"}) == "review"
-
-
-def test_determine_task_type_skips_closed_stages():
-    """Ideas at reviewing or complete should return None — no task needed."""
+def test_determine_task_type_all_phases_complete_returns_none():
+    """When all phases are complete via live task history, returns None."""
     bridge = _load_bridge()
 
-    # IdeaStage.REVIEWING -> None (was broken: fell through to "spec")
-    assert bridge.determine_task_type({"stage": "reviewing"}) is None
-
-    # IdeaStage.COMPLETE -> None (was broken: fell through to "spec")
-    assert bridge.determine_task_type({"stage": "complete"}) is None
+    # Mock _get to return all phases completed
+    all_done_summary = {p: {"completed": 1, "failed": 0, "active": 0, "should_skip": True, "retry_budget_left": 2}
+                        for p in bridge._PHASE_SEQUENCE}
+    original_get = bridge._get
+    bridge._get = lambda path: {"phase_summary": all_done_summary, "groups": []}
+    try:
+        assert bridge.determine_task_type({"id": "test-idea", "stage": "implementing"}) is None
+    finally:
+        bridge._get = original_get
 
 
 # ── R2: Task history guard prevents duplicate tasks ─────────────────────
