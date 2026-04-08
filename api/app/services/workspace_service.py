@@ -130,7 +130,15 @@ def create_workspace(data: WorkspaceCreate) -> Workspace | None:
             "updated_at": now,
         },
     )
-    return _node_to_workspace(node) if node and "error" not in node else None
+    ws = _node_to_workspace(node) if node and "error" not in node else None
+    # Auto-register the workspace creator as owner member
+    if ws and data.owner_contributor_id:
+        try:
+            from app.services import membership_service
+            membership_service.ensure_owner_membership(data.id, data.owner_contributor_id)
+        except Exception:
+            pass  # membership is best-effort; workspace creation should not fail
+    return ws
 
 
 def update_workspace(workspace_id: str, data: WorkspaceUpdate) -> Workspace | None:
