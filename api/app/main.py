@@ -75,6 +75,7 @@ from app.routers import pipeline_policies
 from app.routers import ui_preferences as ui_preferences_router
 from app.routers import memberships as memberships_router
 from app.routers import activity as activity_router
+from app.routers import messages as messages_router
 from app.routers import workspaces as workspaces_router
 from app.routers import workspace_projects as workspace_projects_router
 from app.routers import provider_stats
@@ -607,6 +608,7 @@ app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
 app.include_router(workspaces_router.router, prefix="/api", tags=["workspaces"])
+app.include_router(messages_router.router, prefix="/api", tags=["messages"])
 app.include_router(activity_router.router, prefix="/api", tags=["activity"])
 app.include_router(workspace_projects_router.router, prefix="/api", tags=["projects"])
 app.include_router(memberships_router.router, prefix="/api", tags=["memberships"])
