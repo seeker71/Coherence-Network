@@ -73,6 +73,7 @@ from app.routers import openclaw_node_bridge
 from app.routers import pipeline
 from app.routers import pipeline_policies
 from app.routers import ui_preferences as ui_preferences_router
+from app.routers import memberships as memberships_router
 from app.routers import workspaces as workspaces_router
 from app.routers import provider_stats
 from app.routers import service_registry_router
@@ -602,6 +603,7 @@ app.include_router(agent.router, prefix="/api", tags=["agent"])
 app.include_router(automation_usage.router, prefix="/api", tags=["automation-usage"])
 app.include_router(ideas.router, prefix="/api", tags=["ideas"])
 app.include_router(workspaces_router.router, prefix="/api", tags=["workspaces"])
+app.include_router(memberships_router.router, prefix="/api", tags=["memberships"])
 app.include_router(lenses.router, prefix="/api", tags=["lenses"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(coherence.router, prefix="/api", tags=["coherence"])

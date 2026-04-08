@@ -308,6 +308,23 @@ def delete_edge(edge_id: str) -> bool:
         return True
 
 
+def update_edge(edge_id: str, **updates) -> dict[str, Any] | None:
+    """Update an edge's properties and/or strength."""
+    with session() as s:
+        edge = s.get(Edge, edge_id)
+        if not edge:
+            return None
+        if "properties" in updates:
+            merged = dict(edge.properties or {})
+            merged.update(updates.pop("properties"))
+            edge.properties = merged
+        if "strength" in updates:
+            edge.strength = updates["strength"]
+        s.commit()
+        s.refresh(edge)
+        return edge.to_dict()
+
+
 # ── Graph queries ────────────────────────────────────────────────────
 
 
