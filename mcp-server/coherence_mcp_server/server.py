@@ -1,6 +1,6 @@
 """Coherence Network MCP server — Python implementation.
 
-Exposes the Coherence Network API as 60 typed MCP tools.
+Exposes the Coherence Network API as 74 typed MCP tools.
 """
 
 from __future__ import annotations
@@ -871,6 +871,109 @@ TOOLS: list[Tool] = [
             "required": ["workspace_id", "action"],
         },
     ),
+    # Team Membership
+    Tool(
+        name="coherence_list_workspace_members",
+        description="List members of a workspace with their roles and join dates.",
+        inputSchema={
+            "type": "object",
+            "required": ["workspace_id"],
+            "properties": {
+                "workspace_id": {"type": "string", "description": "Workspace slug"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_invite_member",
+        description="Invite a contributor to a workspace with an optional role.",
+        inputSchema={
+            "type": "object",
+            "required": ["workspace_id", "contributor_id"],
+            "properties": {
+                "workspace_id": {"type": "string", "description": "Workspace slug"},
+                "contributor_id": {"type": "string", "description": "Contributor to invite"},
+                "role": {"type": "string", "description": "Role: owner, admin, member (default: member)", "default": "member"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_list_my_workspaces",
+        description="List workspaces that a contributor belongs to.",
+        inputSchema={
+            "type": "object",
+            "required": ["contributor_id"],
+            "properties": {
+                "contributor_id": {"type": "string", "description": "Contributor ID"},
+            },
+        },
+    ),
+    # Messaging
+    Tool(
+        name="coherence_send_message",
+        description="Send a message to a contributor (DM) or a workspace channel.",
+        inputSchema={
+            "type": "object",
+            "required": ["from_contributor_id", "body"],
+            "properties": {
+                "from_contributor_id": {"type": "string", "description": "Sender contributor ID"},
+                "to_contributor_id": {"type": "string", "description": "Recipient contributor ID (for DM)"},
+                "to_workspace_id": {"type": "string", "description": "Target workspace ID (for workspace message)"},
+                "subject": {"type": "string", "description": "Optional message subject"},
+                "body": {"type": "string", "description": "Message body text"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_get_inbox",
+        description="Get inbox messages for a contributor with optional filters.",
+        inputSchema={
+            "type": "object",
+            "required": ["contributor_id"],
+            "properties": {
+                "contributor_id": {"type": "string", "description": "Contributor ID"},
+                "limit": {"type": "number", "description": "Max messages to return (default 20)", "default": 20},
+                "unread_only": {"type": "boolean", "description": "Only return unread messages", "default": False},
+            },
+        },
+    ),
+    # Activity
+    Tool(
+        name="coherence_get_workspace_activity",
+        description="Get the activity feed (event timeline) for a workspace.",
+        inputSchema={
+            "type": "object",
+            "required": ["workspace_id"],
+            "properties": {
+                "workspace_id": {"type": "string", "description": "Workspace slug"},
+                "limit": {"type": "number", "description": "Max events to return (default 20)", "default": 20},
+            },
+        },
+    ),
+    # Projects
+    Tool(
+        name="coherence_list_workspace_projects",
+        description="List projects in a workspace for organizing ideas into groups.",
+        inputSchema={
+            "type": "object",
+            "required": ["workspace_id"],
+            "properties": {
+                "workspace_id": {"type": "string", "description": "Workspace slug"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_create_workspace_project",
+        description="Create a new project within a workspace to group related ideas.",
+        inputSchema={
+            "type": "object",
+            "required": ["workspace_id", "name"],
+            "properties": {
+                "workspace_id": {"type": "string", "description": "Workspace slug"},
+                "name": {"type": "string", "description": "Project name"},
+                "description": {"type": "string", "description": "Project description"},
+            },
+        },
+    ),
 ]
 
 TOOL_MAP: dict[str, Tool] = {t.name: t for t in TOOLS}
@@ -1363,6 +1466,48 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 }
             else:
                 return {"error": f"Unknown action: {action}. Use 'list', 'seed_pipeline', or 'status'."}
+        # Team Membership
+        case "coherence_list_workspace_members":
+            return api_get(f"/api/workspaces/{args['workspace_id']}/members")
+        case "coherence_invite_member":
+            return api_post(f"/api/workspaces/{args['workspace_id']}/invite", {
+                "contributor_id": args["contributor_id"],
+                "role": args.get("role", "member"),
+            })
+        case "coherence_list_my_workspaces":
+            return api_get(f"/api/contributors/{args['contributor_id']}/workspaces")
+        # Messaging
+        case "coherence_send_message":
+            body: dict[str, Any] = {
+                "from_contributor_id": args["from_contributor_id"],
+                "body": args["body"],
+            }
+            if args.get("to_contributor_id"):
+                body["to_contributor_id"] = args["to_contributor_id"]
+            if args.get("to_workspace_id"):
+                body["to_workspace_id"] = args["to_workspace_id"]
+            if args.get("subject"):
+                body["subject"] = args["subject"]
+            return api_post("/api/messages", body)
+        case "coherence_get_inbox":
+            return api_get(f"/api/messages/inbox/{args['contributor_id']}", {
+                "limit": args.get("limit", 20),
+                "unread_only": args.get("unread_only", False),
+            })
+        # Activity
+        case "coherence_get_workspace_activity":
+            return api_get(f"/api/workspaces/{args['workspace_id']}/activity", {
+                "limit": args.get("limit", 20),
+            })
+        # Projects
+        case "coherence_list_workspace_projects":
+            return api_get(f"/api/workspaces/{args['workspace_id']}/projects")
+        case "coherence_create_workspace_project":
+            return api_post(f"/api/workspaces/{args['workspace_id']}/projects", {
+                "name": args["name"],
+                "description": args.get("description", ""),
+                "workspace_id": args["workspace_id"],
+            })
         case _:
             return {"error": f"Unknown tool: {name}"}
 
