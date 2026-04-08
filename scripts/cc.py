@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """cc — Coherence Network CLI.
 
 Two-way bridge between any agent (OpenClaw, Claude, Codex, Cursor) and
@@ -18,6 +19,20 @@ Usage:
   cc contribute <type> <desc> Record a contribution
   cc coherence                Show coherence score breakdown
   cc run                      Start local node runner
+
+  cc members <workspace_id>              List workspace members
+  cc invite <ws_id> <contributor> [--role member]  Invite to workspace
+  cc my-workspaces <contributor_id>      List contributor workspaces
+
+  cc send <from> <to> <body> [--subject] Send a direct message
+  cc inbox <contributor_id>              Show inbox
+  cc thread <contributor_a> <contributor_b>  Show message thread
+
+  cc activity <workspace_id> [--limit 20]  Show workspace activity feed
+
+  cc projects <workspace_id>             List workspace projects
+  cc project <project_id>                Show project details
+  cc create-project <ws_id> <name> [--description]  Create a project
 """
 
 import argparse
@@ -282,6 +297,196 @@ def cmd_run(args):
     os.execv(sys.executable, cmd)
 
 
+# ── Team Membership ──────────────────────────────────────────────────
+
+def cmd_members(args):
+    """List members of a workspace."""
+    data = _api("GET", f"/api/workspaces/{args.workspace_id}/members")
+    if not data:
+        print("No members found")
+        return
+    members = data if isinstance(data, list) else data.get("members", [])
+    if not members:
+        print("No members found")
+        return
+    for m in members:
+        cid = m.get("contributor_id", "?")
+        role = m.get("role", "?")
+        status = m.get("status", "?")
+        joined = m.get("joined_at", "")
+        print(f"  {cid:30s}  role={role:10s}  status={status:10s}  joined={joined}")
+    print(f"\n{len(members)} members")
+
+
+def cmd_invite(args):
+    """Invite contributor to workspace."""
+    body = {"contributor_id": args.contributor_id, "role": args.role}
+    result = _api("POST", f"/api/workspaces/{args.workspace_id}/invite", body)
+    if result:
+        print(f"Invited {args.contributor_id} to workspace {args.workspace_id} as {args.role}")
+    else:
+        print("Failed to send invite")
+
+
+def cmd_my_workspaces(args):
+    """List workspaces contributor belongs to."""
+    data = _api("GET", f"/api/contributors/{args.contributor_id}/workspaces")
+    if not data:
+        print("No workspaces found")
+        return
+    workspaces = data if isinstance(data, list) else data.get("workspaces", [])
+    if not workspaces:
+        print("No workspaces found")
+        return
+    for w in workspaces:
+        wid = w.get("id", w.get("workspace_id", "?"))
+        name = w.get("name", "?")
+        role = w.get("role", "")
+        print(f"  {wid:30s}  {name:30s}  role={role}")
+    print(f"\n{len(workspaces)} workspaces")
+
+
+# ── Messaging ────────────────────────────────────────────────────────
+
+def cmd_send(args):
+    """Send a direct message."""
+    body = {
+        "from_contributor_id": args.sender,
+        "to_contributor_id": args.recipient,
+        "body": args.body,
+        "subject": args.subject or "",
+    }
+    result = _api("POST", "/api/messages", body)
+    if result:
+        print(f"Message sent to {args.recipient}")
+    else:
+        print("Failed to send message")
+
+
+def cmd_inbox(args):
+    """Show inbox for a contributor."""
+    data = _api("GET", f"/api/messages/inbox/{args.contributor_id}")
+    if not data:
+        print("Inbox empty")
+        return
+    messages = data if isinstance(data, list) else data.get("messages", [])
+    if not messages:
+        print("Inbox empty")
+        return
+    for m in messages:
+        sender = m.get("from_contributor_id", m.get("from", "?"))
+        subject = m.get("subject", "(no subject)")
+        body_preview = (m.get("body", "") or "")[:60]
+        read = "read" if m.get("read") else "unread"
+        ts = m.get("created_at", m.get("timestamp", ""))
+        print(f"  [{read:6s}] {sender:20s}  {subject:30s}  {body_preview}")
+        if ts:
+            print(f"           {ts}")
+    print(f"\n{len(messages)} messages")
+
+
+def cmd_thread(args):
+    """Show message thread between two contributors."""
+    data = _api("GET", f"/api/messages/thread/{args.contributor_a}/{args.contributor_b}")
+    if not data:
+        print("No messages in thread")
+        return
+    messages = data if isinstance(data, list) else data.get("messages", [])
+    if not messages:
+        print("No messages in thread")
+        return
+    for m in messages:
+        sender = m.get("from_contributor_id", m.get("from", "?"))
+        body = m.get("body", "")
+        ts = m.get("created_at", m.get("timestamp", ""))
+        print(f"  [{ts}] {sender}:")
+        print(f"    {body}")
+    print(f"\n{len(messages)} messages in thread")
+
+
+# ── Activity ─────────────────────────────────────────────────────────
+
+def cmd_activity(args):
+    """Show workspace activity feed."""
+    data = _api("GET", f"/api/workspaces/{args.workspace_id}/activity?limit={args.limit}")
+    if not data:
+        print("No activity found")
+        return
+    events = data if isinstance(data, list) else data.get("events", data.get("activity", []))
+    if not events:
+        print("No activity found")
+        return
+    for e in events:
+        ts = e.get("timestamp", e.get("created_at", ""))
+        event_type = e.get("event_type", "?")
+        actor = e.get("actor", e.get("contributor_id", "?"))
+        summary = e.get("summary", e.get("description", ""))
+        print(f"  {ts:25s}  {event_type:20s}  {actor:20s}  {summary}")
+    print(f"\n{len(events)} events")
+
+
+# ── Projects ─────────────────────────────────────────────────────────
+
+def cmd_projects(args):
+    """List projects in a workspace."""
+    data = _api("GET", f"/api/workspaces/{args.workspace_id}/projects")
+    if not data:
+        print("No projects found")
+        return
+    projects = data if isinstance(data, list) else data.get("projects", [])
+    if not projects:
+        print("No projects found")
+        return
+    for p in projects:
+        pid = p.get("id", "?")
+        name = p.get("name", "?")
+        idea_count = p.get("idea_count", 0)
+        print(f"  {pid:30s}  {name:30s}  ideas={idea_count}")
+    print(f"\n{len(projects)} projects")
+
+
+def cmd_project(args):
+    """Show project details with ideas."""
+    data = _api("GET", f"/api/projects/{args.project_id}")
+    if not data:
+        print(f"Project {args.project_id} not found")
+        return
+    print(f"{data.get('name', '?')}")
+    desc = data.get("description", "")
+    if desc:
+        print(f"  {desc[:120]}")
+    workspace = data.get("workspace_id", "")
+    if workspace:
+        print(f"  Workspace: {workspace}")
+    ideas = data.get("ideas", [])
+    if ideas:
+        print(f"\n  Ideas ({len(ideas)}):")
+        for idea in ideas:
+            if isinstance(idea, dict):
+                iid = idea.get("id", idea.get("idea_id", "?"))
+                iname = idea.get("name", "?")
+                print(f"    {iid:30s}  {iname}")
+            else:
+                print(f"    {idea}")
+    else:
+        print("  No ideas linked")
+
+
+def cmd_create_project(args):
+    """Create a project in a workspace."""
+    body = {
+        "name": args.name,
+        "description": args.description or "",
+        "workspace_id": args.workspace_id,
+    }
+    result = _api("POST", f"/api/workspaces/{args.workspace_id}/projects", body)
+    if result:
+        pid = result.get("id", "?") if isinstance(result, dict) else "?"
+        print(f"Project created: {pid}  {args.name}")
+    else:
+        print("Failed to create project")
+
+
 # ── Main ──────────────────────────────────────────────────────────────
 
 def main():
@@ -334,6 +539,49 @@ def main():
     p_run.add_argument("--loop", action="store_true")
     p_run.add_argument("--interval", type=int, default=120)
 
+    # ── Team Membership ──
+    p_members = sub.add_parser("members", help="List members of a workspace")
+    p_members.add_argument("workspace_id")
+
+    p_invite = sub.add_parser("invite", help="Invite contributor to workspace")
+    p_invite.add_argument("workspace_id")
+    p_invite.add_argument("contributor_id")
+    p_invite.add_argument("--role", default="member")
+
+    p_myws = sub.add_parser("my-workspaces", help="List workspaces for a contributor")
+    p_myws.add_argument("contributor_id")
+
+    # ── Messaging ──
+    p_send = sub.add_parser("send", help="Send a direct message")
+    p_send.add_argument("sender", metavar="from")
+    p_send.add_argument("recipient", metavar="to")
+    p_send.add_argument("body")
+    p_send.add_argument("--subject", default="")
+
+    p_inbox = sub.add_parser("inbox", help="Show inbox")
+    p_inbox.add_argument("contributor_id")
+
+    p_thread = sub.add_parser("thread", help="Show thread between two contributors")
+    p_thread.add_argument("contributor_a")
+    p_thread.add_argument("contributor_b")
+
+    # ── Activity ──
+    p_activity = sub.add_parser("activity", help="Show workspace activity feed")
+    p_activity.add_argument("workspace_id")
+    p_activity.add_argument("--limit", type=int, default=20)
+
+    # ── Projects ──
+    p_projects = sub.add_parser("projects", help="List projects in a workspace")
+    p_projects.add_argument("workspace_id")
+
+    p_project = sub.add_parser("project", help="Show project details with ideas")
+    p_project.add_argument("project_id")
+
+    p_createproj = sub.add_parser("create-project", help="Create a project in a workspace")
+    p_createproj.add_argument("workspace_id")
+    p_createproj.add_argument("name")
+    p_createproj.add_argument("--description", default="")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -344,6 +592,14 @@ def main():
         "share": cmd_share, "ask": cmd_ask, "stake": cmd_stake,
         "tasks": cmd_tasks, "nodes": cmd_nodes, "specs": cmd_specs,
         "contribute": cmd_contribute, "coherence": cmd_coherence, "run": cmd_run,
+        # Team Membership
+        "members": cmd_members, "invite": cmd_invite, "my-workspaces": cmd_my_workspaces,
+        # Messaging
+        "send": cmd_send, "inbox": cmd_inbox, "thread": cmd_thread,
+        # Activity
+        "activity": cmd_activity,
+        # Projects
+        "projects": cmd_projects, "project": cmd_project, "create-project": cmd_create_project,
     }
     handler = cmd_map.get(args.command)
     if handler:
