@@ -4,7 +4,8 @@ title: External Presence and Ecosystem
 stage: implementing
 work_type: feature
 pillar: foundation
-specs: []
+specs:
+  - [external-presence-bots-and-news](../specs/external-presence-bots-and-news.md)
 ---
 
 # External Presence and Ecosystem

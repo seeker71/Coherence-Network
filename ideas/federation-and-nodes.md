@@ -4,7 +4,8 @@ title: Federation and Nodes
 stage: implementing
 work_type: feature
 pillar: network
-specs: []
+specs:
+  - [federation-network-layer](../specs/federation-network-layer.md)
 ---
 
 # Federation and Nodes

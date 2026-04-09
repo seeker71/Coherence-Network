@@ -1,6 +1,6 @@
 # Spec Index
 
-**59 specs** — plain slug convention (no numeric prefixes).
+**65 specs** — plain slug convention (no numeric prefixes).
 
 | Spec | File |
 |------|------|
@@ -17,11 +17,15 @@
 | coherence-credit-internal-currency | [coherence-credit-internal-currency.md](coherence-credit-internal-currency.md) |
 | coherence-network-agent-pipeline | [coherence-network-agent-pipeline.md](coherence-network-agent-pipeline.md) |
 | contributions-api | [contributions-api.md](contributions-api.md) |
+| contributor-journey | [contributor-journey.md](contributor-journey.md) |
 | contributor-onboarding-and-governed-change-flow | [contributor-onboarding-and-governed-change-flow.md](contributor-onboarding-and-governed-change-flow.md) |
 | cross-task-outcome-correlation | [cross-task-outcome-correlation.md](cross-task-outcome-correlation.md) |
 | data-driven-timeout-resume | [data-driven-timeout-resume.md](data-driven-timeout-resume.md) |
+| developer-quick-start | [developer-quick-start.md](developer-quick-start.md) |
 | distribution-engine | [distribution-engine.md](distribution-engine.md) |
+| external-presence-bots-and-news | [external-presence-bots-and-news.md](external-presence-bots-and-news.md) |
 | failed-task-diagnostics-contract | [failed-task-diagnostics-contract.md](failed-task-diagnostics-contract.md) |
+| federation-network-layer | [federation-network-layer.md](federation-network-layer.md) |
 | grounded-cost-value-measurement | [grounded-cost-value-measurement.md](grounded-cost-value-measurement.md) |
 | grounded-idea-portfolio-metrics | [grounded-idea-portfolio-metrics.md](grounded-idea-portfolio-metrics.md) |
 | heal-completion-issue-resolution | [heal-completion-issue-resolution.md](heal-completion-issue-resolution.md) |
@@ -34,6 +38,7 @@
 | identity-driven-onboarding-tofu | [identity-driven-onboarding-tofu.md](identity-driven-onboarding-tofu.md) |
 | incident-response-and-self-healing | [incident-response-and-self-healing.md](incident-response-and-self-healing.md) |
 | investment-ux-stake-cc-on-ideas | [investment-ux-stake-cc-on-ideas.md](investment-ux-stake-cc-on-ideas.md) |
+| knowledge-resonance-engine | [knowledge-resonance-engine.md](knowledge-resonance-engine.md) |
 | mcp-skill-registry-submission | [mcp-skill-registry-submission.md](mcp-skill-registry-submission.md) |
 | meta-self-discovery | [meta-self-discovery.md](meta-self-discovery.md) |
 | mvp-cost-and-acceptance-proof | [mvp-cost-and-acceptance-proof.md](mvp-cost-and-acceptance-proof.md) |
@@ -41,6 +46,7 @@
 | normalize-github-commit-cost-estimation | [normalize-github-commit-cost-estimation.md](normalize-github-commit-cost-estimation.md) |
 | pipeline-observability-and-auto-review | [pipeline-observability-and-auto-review.md](pipeline-observability-and-auto-review.md) |
 | portfolio-governance-effectiveness | [portfolio-governance-effectiveness.md](portfolio-governance-effectiveness.md) |
+| portfolio-governance-health | [portfolio-governance-health.md](portfolio-governance-health.md) |
 | postgresql-migration | [postgresql-migration.md](postgresql-migration.md) |
 | project-manager-pipeline | [project-manager-pipeline.md](project-manager-pipeline.md) |
 | prompt-ab-roi-measurement | [prompt-ab-roi-measurement.md](prompt-ab-roi-measurement.md) |
