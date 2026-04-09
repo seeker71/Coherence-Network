@@ -1019,6 +1019,58 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # ── Super-Idea Coverage: News, Federation, Beliefs, CC, Governance ──
+    Tool(
+        name="coherence_news_feed",
+        description="Get the latest news items from configured RSS sources.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "limit": {"type": "number", "description": "Max items to return (default 20)", "default": 20},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_news_resonance",
+        description="Get news items matched to ideas with resonance scores.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "top_n": {"type": "number", "description": "Top N matches (default 5)", "default": 5},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_federation_nodes",
+        description="List federation nodes with hostname, OS, providers, and last heartbeat.",
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_belief_profile",
+        description="Get the belief profile for a contributor — worldview axes and top concepts.",
+        inputSchema={
+            "type": "object",
+            "required": ["contributor_id"],
+            "properties": {
+                "contributor_id": {"type": "string", "description": "Contributor ID"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_cc_supply",
+        description="Get CC token economics — total minted, outstanding, and coherence score.",
+        inputSchema={"type": "object", "properties": {}},
+    ),
+    Tool(
+        name="coherence_governance_requests",
+        description="List governance change requests with status and proposer info.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "limit": {"type": "number", "description": "Max requests to return (default 20)", "default": 20},
+            },
+        },
+    ),
 ]
 
 TOOL_MAP: dict[str, Tool] = {t.name: t for t in TOOLS}
@@ -1570,6 +1622,19 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
             return api_get(f"/api/resonance/ideas/{args['idea_id']}", {
                 "limit": args.get("limit", 10),
             })
+        # Super-Idea Coverage
+        case "coherence_news_feed":
+            return api_get("/api/news/feed", {"limit": args.get("limit", 20)})
+        case "coherence_news_resonance":
+            return api_get("/api/news/resonance", {"top_n": args.get("top_n", 5)})
+        case "coherence_federation_nodes":
+            return api_get("/api/federation/nodes")
+        case "coherence_belief_profile":
+            return api_get(f"/api/beliefs/{args['contributor_id']}")
+        case "coherence_cc_supply":
+            return api_get("/api/cc/supply")
+        case "coherence_governance_requests":
+            return api_get("/api/governance/change-requests", {"limit": args.get("limit", 20)})
         case _:
             return {"error": f"Unknown tool: {name}"}
 

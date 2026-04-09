@@ -33,6 +33,14 @@ Usage:
   cc projects <workspace_id>             List workspace projects
   cc project <project_id>                Show project details
   cc create-project <ws_id> <name> [--description]  Create a project
+
+  cc news [--limit 20]                   Show news feed
+  cc news-resonance [--top 5]            Show news matched to ideas
+  cc federation                          Show federation nodes
+  cc beliefs [contributor_id]            Show belief profile or network stats
+  cc peers <contributor_id>              Find resonant peers
+  cc cc-supply                           Show CC economics
+  cc governance [--limit 20]             List governance change requests
 """
 
 import argparse
@@ -591,6 +599,175 @@ def cmd_resonate(args):
         print(f"    {coherence:.0%} {name}{cross}{strong}")
 
 
+# ── News ────────────────────────────────────────────────────────────────
+
+def cmd_news(args):
+    """Show news feed."""
+    data = _api("GET", f"/api/news/feed?limit={args.limit}")
+    if not data:
+        print("No news available")
+        return
+    items = data.get("items", data) if isinstance(data, dict) else data
+    if not items:
+        print("No news available")
+        return
+    for item in items:
+        title = item.get("title", "?")[:70]
+        source = item.get("source", item.get("source_id", "?"))
+        published = item.get("published", item.get("published_at", ""))
+        print(f"  {title}")
+        print(f"    source={source}  published={published}")
+    print(f"\n{len(items)} news items")
+
+
+def cmd_news_resonance(args):
+    """Show news matched to ideas with resonance scores."""
+    data = _api("GET", f"/api/news/resonance?top_n={args.top}")
+    if not data:
+        print("No news resonance data available")
+        return
+    matches = data.get("matches", data) if isinstance(data, dict) else data
+    if not matches:
+        print("No news resonance data available")
+        return
+    for m in matches:
+        idea_name = m.get("idea_name", m.get("idea_id", "?"))[:40]
+        news_title = m.get("news_title", m.get("title", "?"))[:50]
+        score = m.get("resonance_score", m.get("score", 0))
+        print(f"  {idea_name}")
+        print(f"    news: {news_title}  resonance={score:.2f}")
+    print(f"\n{len(matches)} matches")
+
+
+# ── Federation ──────────────────────────────────────────────────────────
+
+def cmd_federation(args):
+    """Show federation nodes."""
+    data = _api("GET", "/api/federation/nodes")
+    nodes = data if isinstance(data, list) else (data or {}).get("nodes", [])
+    if not nodes:
+        print("No federation nodes registered")
+        return
+    for n in nodes:
+        if not isinstance(n, dict):
+            continue
+        hostname = n.get("hostname", "?")
+        os_type = n.get("os_type", "?")
+        providers = ", ".join(n.get("providers", []))
+        last_hb = n.get("last_heartbeat", n.get("last_seen", ""))
+        print(f"  {hostname:25s}  os={os_type:8s}  providers=[{providers}]  heartbeat={last_hb}")
+    print(f"\n{len(nodes)} federation nodes")
+
+
+# ── Beliefs ─────────────────────────────────────────────────────────────
+
+def cmd_beliefs(args):
+    """Show belief profile or network belief stats."""
+    if args.contributor_id:
+        data = _api("GET", f"/api/beliefs/{args.contributor_id}")
+        if not data:
+            print(f"No belief profile for {args.contributor_id}")
+            return
+        print(f"Belief profile: {args.contributor_id}")
+        axes = data.get("worldview_axes", data.get("axes", {}))
+        if axes:
+            print("  Worldview axes:")
+            if isinstance(axes, dict):
+                for axis, val in axes.items():
+                    print(f"    {axis:30s}  {val}")
+            elif isinstance(axes, list):
+                for ax in axes:
+                    if isinstance(ax, dict):
+                        print(f"    {ax.get('name', '?'):30s}  {ax.get('value', '?')}")
+                    else:
+                        print(f"    {ax}")
+        concepts = data.get("top_concepts", data.get("concepts", []))
+        if concepts:
+            print("  Top concepts:")
+            for c in concepts[:10]:
+                if isinstance(c, dict):
+                    print(f"    {c.get('name', c.get('id', '?')):30s}  score={c.get('score', c.get('affinity', '?'))}")
+                else:
+                    print(f"    {c}")
+    else:
+        data = _api("GET", "/api/beliefs/roi")
+        if not data:
+            print("No belief network stats available")
+            return
+        print("Belief network stats:")
+        if isinstance(data, dict):
+            for key, val in data.items():
+                print(f"  {key}: {val}")
+        else:
+            print(f"  {data}")
+
+
+# ── Peers ───────────────────────────────────────────────────────────────
+
+def cmd_peers(args):
+    """Find resonant peers for a contributor."""
+    data = _api("GET", f"/api/peers/resonant?contributor_id={args.contributor_id}&limit=10")
+    if not data:
+        print("No resonant peers found")
+        return
+    peers = data.get("peers", data) if isinstance(data, dict) else data
+    if not peers:
+        print("No resonant peers found")
+        return
+    for p in peers:
+        name = p.get("name", p.get("contributor_id", "?"))[:30]
+        score = p.get("resonance_score", p.get("score", 0))
+        tags = ", ".join(p.get("shared_tags", p.get("tags", [])))
+        print(f"  {name:30s}  resonance={score:.2f}  shared=[{tags}]")
+    print(f"\n{len(peers)} resonant peers")
+
+
+# ── CC Supply ───────────────────────────────────────────────────────────
+
+def cmd_cc_supply(_args):
+    """Show CC economics / token supply."""
+    data = _api("GET", "/api/cc/supply")
+    if not data:
+        print("CC supply data not available")
+        return
+    if isinstance(data, dict):
+        total = data.get("total_minted", "?")
+        outstanding = data.get("outstanding", "?")
+        coherence = data.get("coherence_score", "?")
+        print(f"  Total minted:    {total}")
+        print(f"  Outstanding:     {outstanding}")
+        print(f"  Coherence score: {coherence}")
+        for key, val in data.items():
+            if key not in ("total_minted", "outstanding", "coherence_score"):
+                print(f"  {key}: {val}")
+    else:
+        print(f"  {data}")
+
+
+# ── Governance ──────────────────────────────────────────────────────────
+
+def cmd_governance(args):
+    """List governance change requests."""
+    data = _api("GET", f"/api/governance/change-requests?limit={args.limit}")
+    if not data:
+        print("No governance change requests")
+        return
+    requests = data.get("change_requests", data.get("items", data)) if isinstance(data, dict) else data
+    if not requests:
+        print("No governance change requests")
+        return
+    for cr in requests:
+        crid = cr.get("id", "?")[:20]
+        target = cr.get("target_type", "?")
+        status = cr.get("status", "?")
+        proposer = cr.get("proposer_id", cr.get("proposer", "?"))
+        rationale = (cr.get("rationale", cr.get("description", "")) or "")[:60]
+        print(f"  {crid:20s}  target={target:12s}  status={status:10s}  proposer={proposer}")
+        if rationale:
+            print(f"  {'':20s}  {rationale}")
+    print(f"\n{len(requests)} change requests")
+
+
 # ── Main ──────────────────────────────────────────────────────────────
 
 def main():
@@ -701,6 +878,31 @@ def main():
     p_createproj.add_argument("name")
     p_createproj.add_argument("--description", default="")
 
+    # ── News ──
+    p_news = sub.add_parser("news", help="Show news feed")
+    p_news.add_argument("--limit", type=int, default=20)
+
+    p_newsres = sub.add_parser("news-resonance", help="Show news matched to ideas")
+    p_newsres.add_argument("--top", type=int, default=5)
+
+    # ── Federation ──
+    sub.add_parser("federation", help="Show federation nodes")
+
+    # ── Beliefs ──
+    p_beliefs = sub.add_parser("beliefs", help="Show belief profile or network stats")
+    p_beliefs.add_argument("contributor_id", nargs="?", default=None)
+
+    # ── Peers ──
+    p_peers = sub.add_parser("peers", help="Find resonant peers")
+    p_peers.add_argument("contributor_id")
+
+    # ── CC Supply ──
+    sub.add_parser("cc-supply", help="Show CC economics / token supply")
+
+    # ── Governance ──
+    p_governance = sub.add_parser("governance", help="List governance change requests")
+    p_governance.add_argument("--limit", type=int, default=20)
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -722,6 +924,11 @@ def main():
         # Discovery / Living Network
         "discover": cmd_discover, "constellation": cmd_constellation,
         "vitality": cmd_vitality, "resonate": cmd_resonate,
+        # News / Federation / Beliefs / Peers / CC Supply / Governance
+        "news": cmd_news, "news-resonance": cmd_news_resonance,
+        "federation": cmd_federation, "beliefs": cmd_beliefs,
+        "peers": cmd_peers, "cc-supply": cmd_cc_supply,
+        "governance": cmd_governance,
     }
     handler = cmd_map.get(args.command)
     if handler:
