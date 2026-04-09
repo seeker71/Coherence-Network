@@ -80,6 +80,8 @@ from app.routers import workspaces as workspaces_router
 from app.routers import workspace_projects as workspace_projects_router
 from app.routers import provider_stats
 from app.routers import service_registry_router
+from app.routers import constellation as constellation_router
+from app.routers import vitality as vitality_router
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_duration import RequestDurationMiddleware
 from app.models.runtime import RuntimeEventCreate
@@ -662,6 +664,16 @@ app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
 app.include_router(debug_router.router, prefix="/api", tags=["debug"])
 app.include_router(models_router.router, prefix="/api", tags=["models"])
+
+# Constellation view — network graph visualization data
+app.include_router(constellation_router.router, prefix="/api", tags=["constellation"])
+
+# Workspace vitality — living-system health metrics
+app.include_router(vitality_router.router, prefix="/api", tags=["vitality"])
+
+# Serendipity Discovery feed
+from app.routers import discovery as discovery_router  # noqa: E402
+app.include_router(discovery_router.router, prefix="/api", tags=["discovery"])
 
 # Discord bot vote endpoint (spec-164)
 from app.routers import discord_votes  # noqa: E402

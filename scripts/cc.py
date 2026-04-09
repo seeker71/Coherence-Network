@@ -487,6 +487,110 @@ def cmd_create_project(args):
         print("Failed to create project")
 
 
+# ── Discovery / Living Network ────────────────────────────────────────
+
+def cmd_discover(args):
+    data = _api("GET", f"/api/discover/{args.contributor_id}?limit={args.limit}")
+    if not data:
+        print("No discovery feed available")
+        return
+    items = data.get("items", []) if isinstance(data, dict) else data
+    if not items:
+        print("Your feed is quiet — try creating ideas or setting your belief profile.")
+        return
+    profile = data.get("profile_summary", {}) if isinstance(data, dict) else {}
+    if profile:
+        axes = profile.get("top_axes", [])
+        if axes:
+            print(f"  Your vibe: {', '.join(axes[:3])}")
+    print()
+    for item in items:
+        kind = item.get("kind", "?")
+        icons = {"resonant_idea": "💡", "resonant_peer": "🤝", "cross_domain": "🌉", "resonant_news": "📰", "growth_edge": "🌱"}
+        icon = icons.get(kind, "✨")
+        score = item.get("score", 0)
+        title = item.get("title", "")[:60]
+        reason = item.get("reason", "")[:80]
+        print(f"  {icon} [{score:.0%}] {title}")
+        if reason:
+            print(f"      {reason}")
+        print()
+
+
+def cmd_constellation(args):
+    data = _api("GET", f"/api/constellation?max_nodes={args.max_nodes}")
+    if not data:
+        print("No constellation data available")
+        return
+    nodes = data.get("nodes", [])
+    edges = data.get("edges", [])
+    stats = data.get("stats", {})
+    print(f"  Constellation: {len(nodes)} nodes, {len(edges)} edges")
+    if stats:
+        print(f"  Clusters: {stats.get('clusters', '?')}")
+    print()
+    by_type = {}
+    for n in nodes:
+        t = n.get("type", "?")
+        by_type[t] = by_type.get(t, 0) + 1
+    for t, c in sorted(by_type.items(), key=lambda x: -x[1]):
+        icons = {"idea": "💡", "contributor": "👤", "concept": "🔮"}
+        print(f"  {icons.get(t, '•')} {t}: {c}")
+    print()
+    brightest = sorted(nodes, key=lambda n: n.get("brightness", 0), reverse=True)[:5]
+    if brightest:
+        print("  Brightest stars:")
+        for n in brightest:
+            print(f"    ✦ {n.get('name', '?')[:50]} ({n.get('type', '?')}, brightness={n.get('brightness', 0):.0%})")
+
+
+def cmd_vitality(args):
+    data = _api("GET", f"/api/workspaces/{args.workspace_id}/vitality")
+    if not data:
+        print("No vitality data available")
+        return
+    score = data.get("vitality_score", 0)
+    desc = data.get("health_description", "")
+    signals = data.get("signals", {})
+
+    bar = "█" * int(score * 20) + "░" * (20 - int(score * 20))
+    color = "🟢" if score >= 0.7 else "🟡" if score >= 0.4 else "🔴"
+    print(f"  {color} Vitality: {bar} {score:.0%}")
+    print(f"  {desc}")
+    print()
+
+    if signals:
+        for key in ["diversity_index", "resonance_density", "flow_rate", "connection_strength", "activity_pulse"]:
+            val = signals.get(key, 0)
+            label = key.replace("_", " ").title()
+            bar = "█" * int(val * 10) + "░" * (10 - int(val * 10))
+            print(f"    {label:25s} {bar} {val:.0%}")
+        breath = signals.get("breath_rhythm", {})
+        if breath:
+            print(f"\n    Breath: gas={breath.get('gas', 0):.0%}  water={breath.get('water', 0):.0%}  ice={breath.get('ice', 0):.0%}")
+
+
+def cmd_resonate(args):
+    data = _api("GET", f"/api/resonance/ideas/{args.idea_id}?limit={args.limit}")
+    if not data:
+        print("No resonance data available")
+        return
+    idea_name = data.get("idea_name", args.idea_id)
+    domain = data.get("domain", [])
+    matches = data.get("matches", [])
+    print(f"  Resonances for: {idea_name}")
+    if domain:
+        print(f"  Domain: {', '.join(domain)}")
+    print(f"  Matches: {len(matches)}")
+    print()
+    for m in matches:
+        coherence = m.get("coherence", 0)
+        name = m.get("name_b", m.get("idea_id_b", "?"))[:50]
+        cross = " 🌉" if m.get("cross_domain") else ""
+        strong = " ★" if m.get("strong") else ""
+        print(f"    {coherence:.0%} {name}{cross}{strong}")
+
+
 # ── Main ──────────────────────────────────────────────────────────────
 
 def main():
@@ -570,6 +674,21 @@ def main():
     p_activity.add_argument("workspace_id")
     p_activity.add_argument("--limit", type=int, default=20)
 
+    # ── Discovery / Living Network ──
+    p_discover = sub.add_parser("discover", help="Serendipity feed — what resonates with you")
+    p_discover.add_argument("contributor_id", nargs="?", default="default-contributor")
+    p_discover.add_argument("--limit", type=int, default=15)
+
+    p_constellation = sub.add_parser("constellation", help="Network visualization — nodes and edges")
+    p_constellation.add_argument("--max-nodes", type=int, default=50)
+
+    p_vitality = sub.add_parser("vitality", help="Workspace health as living-system signals")
+    p_vitality.add_argument("workspace_id", nargs="?", default="coherence-network")
+
+    p_resonate = sub.add_parser("resonate", help="Find ideas that resonate with an idea")
+    p_resonate.add_argument("idea_id")
+    p_resonate.add_argument("--limit", type=int, default=10)
+
     # ── Projects ──
     p_projects = sub.add_parser("projects", help="List projects in a workspace")
     p_projects.add_argument("workspace_id")
@@ -600,6 +719,9 @@ def main():
         "activity": cmd_activity,
         # Projects
         "projects": cmd_projects, "project": cmd_project, "create-project": cmd_create_project,
+        # Discovery / Living Network
+        "discover": cmd_discover, "constellation": cmd_constellation,
+        "vitality": cmd_vitality, "resonate": cmd_resonate,
     }
     handler = cmd_map.get(args.command)
     if handler:
