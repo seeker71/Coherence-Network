@@ -4,7 +4,8 @@ title: Developer Experience
 stage: implementing
 work_type: enhancement
 pillar: surfaces
-specs: []
+specs:
+  - [developer-quick-start](../specs/developer-quick-start.md)
 ---
 
 # Developer Experience

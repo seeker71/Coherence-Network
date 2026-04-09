@@ -8,6 +8,7 @@ specs:
   - [grounded-cost-value-measurement](../specs/grounded-cost-value-measurement.md)
   - [grounded-idea-portfolio-metrics](../specs/grounded-idea-portfolio-metrics.md)
   - [portfolio-governance-effectiveness](../specs/portfolio-governance-effectiveness.md)
+  - [portfolio-governance-health](../specs/portfolio-governance-health.md)
 ---
 
 # Portfolio Governance and Measurement

@@ -4,7 +4,8 @@ title: Knowledge and Resonance
 stage: implementing
 work_type: research
 pillar: foundation
-specs: []
+specs:
+  - [knowledge-resonance-engine](../specs/knowledge-resonance-engine.md)
 ---
 
 # Knowledge and Resonance

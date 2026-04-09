@@ -8,6 +8,7 @@ specs:
   - [contributor-onboarding-and-governed-change-flow](../specs/contributor-onboarding-and-governed-change-flow.md)
   - [identity-driven-onboarding-tofu](../specs/identity-driven-onboarding-tofu.md)
   - [investment-ux-stake-cc-on-ideas](../specs/investment-ux-stake-cc-on-ideas.md)
+  - [contributor-journey](../specs/contributor-journey.md)
 ---
 
 # Contributor Experience

@@ -1348,6 +1348,19 @@ EXPLICIT_SPEC_IDEA_MAP: dict[str, str] = {
     "task-claim-tracking-and-roi-dedupe": "value-attribution",
     "normalize-github-commit-cost-estimation": "value-attribution",
     "contributor-onboarding-and-governed-change-flow": "value-attribution",
+
+    # --- contributor-experience (1 spec) ---
+    "contributor-journey": "contributor-experience",
+    # --- developer-experience (1 spec) ---
+    "developer-quick-start": "developer-experience",
+    # --- external-presence (1 spec) ---
+    "external-presence-bots-and-news": "external-presence",
+    # --- federation-and-nodes (1 spec) ---
+    "federation-network-layer": "federation-and-nodes",
+    # --- knowledge-and-resonance (1 spec) ---
+    "knowledge-resonance-engine": "knowledge-and-resonance",
+    # --- portfolio-governance (1 spec) ---
+    "portfolio-governance-health": "portfolio-governance",
 }
 
 
