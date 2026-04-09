@@ -211,6 +211,22 @@ async def create_contribution(contribution: ContributionCreate) -> Contribution:
 
 
 @router.get(
+    "/contributions/flow",
+    summary="Contribution flow metrics — energy flow per idea with reciprocity",
+)
+async def get_contribution_flow(
+    workspace_id: str = Query("coherence-network", description="Workspace to compute flow for"),
+) -> dict:
+    """Return contribution flow metrics for the last 30 days.
+
+    Includes energy flow per idea, diversity of contributors,
+    and flow reciprocity (1 - Gini coefficient).
+    """
+    from app.services import contribution_ledger_service
+    return contribution_ledger_service.compute_flow_metrics(workspace_id=workspace_id)
+
+
+@router.get(
     "/contributions/{contribution_id}",
     response_model=Contribution,
     summary="Get contribution by ID",
