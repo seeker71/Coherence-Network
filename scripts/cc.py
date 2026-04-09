@@ -768,6 +768,117 @@ def cmd_governance(args):
     print(f"\n{len(requests)} change requests")
 
 
+# ── Proprioception ───────────────────────────��────────────────────────
+
+def cmd_sense(args):
+    """Auto-sense system state (proprioception)."""
+    if args.apply:
+        data = _api("POST", "/api/proprioception/apply")
+    else:
+        data = _api("GET", "/api/proprioception")
+    if not data:
+        print("Could not run proprioception scan")
+        return
+    report = data.get("report", data) if isinstance(data, dict) else data
+    if not isinstance(report, dict):
+        print(f"  {report}")
+        return
+
+    health = report.get("health", "?")
+    icons = {"strong": "OK", "growing": "~~", "needs_attention": "!!"}
+    print(f"  [{icons.get(health, '?')}] Health: {health}")
+
+    specs = report.get("specs", {})
+    print(f"  Specs: {specs.get('sensed', 0)} sensed, {specs.get('with_source', 0)} with source, {specs.get('missing_source', 0)} missing source")
+    if specs.get("updated", 0) > 0:
+        print(f"    {specs['updated']} spec value updates suggested")
+
+    ideas = report.get("ideas", {})
+    print(f"  Ideas: {ideas.get('sensed', 0)} sensed, {ideas.get('advanced', 0)} stage suggestions")
+    for sug in ideas.get("suggestions", [])[:5]:
+        print(f"    {sug.get('idea_id', '?')}: {sug.get('current_stage', '?')} -> {sug.get('suggested_stage', '?')} ({sug.get('reason', '')})")
+
+    endpoints = report.get("endpoints", {})
+    print(f"  Endpoints: {endpoints.get('alive', 0)}/{endpoints.get('checked', 0)} alive")
+
+    if args.apply and "applied_specs" in data:
+        print(f"\n  Applied: {data['applied_specs']} spec updates, {data['applied_ideas']} idea advances")
+
+
+def cmd_notify_bridges(_args):
+    """Create activity events for new resonance bridges."""
+    data = _api("POST", "/api/discover/notify-bridges")
+    if not data:
+        print("Could not notify bridges")
+        return
+    count = data.get("new_bridges_notified", 0)
+    ws = data.get("workspace_id", "?")
+    if count > 0:
+        print(f"  {count} new bridge notifications created in workspace {ws}")
+    else:
+        print(f"  No new bridges to notify in workspace {ws}")
+
+
+# ── Breath ─────────────────────────────────────────────────────────────
+
+def cmd_breath(args):
+    """Show breath rhythm (gas/water/ice) for an idea or the portfolio."""
+    if args.idea_id:
+        data = _api("GET", f"/api/ideas/{args.idea_id}/breath")
+        if not data:
+            print(f"Breath data not available for {args.idea_id}")
+            return
+        print(f"  Breath: {args.idea_id}")
+        rhythm = data.get("rhythm", {})
+        state = data.get("state", "?")
+        health = data.get("breath_health", 0)
+        total = data.get("total_specs", 0)
+        gas = data.get("gas_count", 0)
+        water = data.get("water_count", 0)
+        ice = data.get("ice_count", 0)
+        print(f"  Specs: {total}  gas={gas}  water={water}  ice={ice}")
+        print(f"  Rhythm: gas={rhythm.get('gas', 0):.0%}  water={rhythm.get('water', 0):.0%}  ice={rhythm.get('ice', 0):.0%}")
+        print(f"  Health: {health:.0%}  State: {state}")
+    else:
+        data = _api("GET", "/api/ideas/breath-overview")
+        if not data:
+            print("Breath overview not available")
+            return
+        pr = data.get("portfolio_rhythm", {})
+        ph = data.get("portfolio_breath_health", 0)
+        print(f"  Portfolio Breath: gas={pr.get('gas', 0):.0%}  water={pr.get('water', 0):.0%}  ice={pr.get('ice', 0):.0%}  health={ph:.0%}")
+        print()
+        for idea in data.get("ideas", []):
+            r = idea.get("rhythm", {})
+            name = idea.get("name", idea.get("idea_id", "?"))[:40]
+            state = idea.get("state", "?")
+            specs = idea.get("total_specs", 0)
+            print(f"  {name:40s}  gas={r.get('gas', 0):.0%}  water={r.get('water', 0):.0%}  ice={r.get('ice', 0):.0%}  [{state}] {specs} specs")
+
+
+# ── Flow ───────────────────────────────────────────────────────────────
+
+def cmd_flow(_args):
+    """Show contribution flow metrics."""
+    data = _api("GET", "/api/contributions/flow")
+    if not data:
+        print("Flow metrics not available")
+        return
+    print(f"  Contribution Flow (last {data.get('period_days', 30)} days)")
+    print(f"  Total contributions: {data.get('total_contributions', 0)}")
+    print(f"  Total CC flow:       {_fmt_cc(data.get('total_cc_flow', 0))}")
+    print(f"  Unique contributors: {data.get('unique_contributors', 0)}")
+    print(f"  Ideas receiving:     {data.get('ideas_receiving_flow', 0)}")
+    print(f"  Flow reciprocity:    {data.get('flow_reciprocity', 0):.0%}")
+    top = data.get("top_flowing_ideas", [])
+    if top:
+        print(f"\n  Top flowing ideas:")
+        for t in top[:10]:
+            name = t.get("name", t.get("idea_id", "?"))[:40]
+            cc = t.get("cc_total", 0)
+            print(f"    {name:40s}  {_fmt_cc(cc)}")
+
+
 # ── Main ──────────────────────────────────────────────────────────────
 
 def main():
@@ -903,6 +1014,20 @@ def main():
     p_governance = sub.add_parser("governance", help="List governance change requests")
     p_governance.add_argument("--limit", type=int, default=20)
 
+    # ── Breath ──
+    p_breath = sub.add_parser("breath", help="Show breath rhythm (gas/water/ice) for an idea or portfolio")
+    p_breath.add_argument("idea_id", nargs="?", default=None)
+
+    # ── Flow ──
+    sub.add_parser("flow", help="Show contribution flow metrics")
+
+    # ── Proprioception ──
+    p_sense = sub.add_parser("sense", help="Auto-sense system state (proprioception)")
+    p_sense.add_argument("--apply", action="store_true", help="Apply suggested updates")
+
+    # ── Bridge Notifications ──
+    sub.add_parser("notify-bridges", help="Create activity events for new resonance bridges")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -929,6 +1054,10 @@ def main():
         "federation": cmd_federation, "beliefs": cmd_beliefs,
         "peers": cmd_peers, "cc-supply": cmd_cc_supply,
         "governance": cmd_governance,
+        # Breath + Flow
+        "breath": cmd_breath, "flow": cmd_flow,
+        # Proprioception + Bridge Notifications
+        "sense": cmd_sense, "notify-bridges": cmd_notify_bridges,
     }
     handler = cmd_map.get(args.command)
     if handler:

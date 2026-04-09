@@ -679,6 +679,10 @@ app.include_router(resonance_router.router, prefix="/api", tags=["resonance"])
 from app.routers import discovery as discovery_router  # noqa: E402
 app.include_router(discovery_router.router, prefix="/api", tags=["discovery"])
 
+# Proprioception — auto-sensing system state
+from app.routers import proprioception as proprioception_router  # noqa: E402
+app.include_router(proprioception_router.router, prefix="/api", tags=["proprioception"])
+
 # Discord bot vote endpoint (spec-164)
 from app.routers import discord_votes  # noqa: E402
 app.include_router(discord_votes.router, prefix="/api", tags=["discord"])
