@@ -394,3 +394,87 @@ def build_discovery_feed(contributor_id: str, limit: int = 30) -> DiscoveryFeed:
 def get_profile_summary(contributor_id: str) -> dict[str, Any]:
     """Return just the belief profile summary for a contributor."""
     return _build_profile_summary(contributor_id)
+
+
+# ---------------------------------------------------------------------------
+# Cross-Domain Bridge Notifications
+# ---------------------------------------------------------------------------
+
+def notify_new_bridges(
+    workspace_id: str = "coherence-network",
+    min_coherence: float = 0.35,
+) -> int:
+    """Create activity events for new cross-domain resonance bridges.
+
+    Scans idea pairs from the resonance service, checks for existing
+    activity events to avoid duplicates, and creates new events for
+    any strong bridges not yet notified.
+
+    Returns the count of new notifications created.
+    """
+    from app.services import activity_service, idea_service
+    from app.services import idea_resonance_service as resonance_svc
+
+    new_count = 0
+
+    try:
+        # Get all ideas as dicts
+        portfolio = idea_service.list_ideas(limit=200, offset=0, read_only_guard=True)
+        all_ideas = []
+        for idea in (portfolio.ideas if hasattr(portfolio, "ideas") else []):
+            all_ideas.append({
+                "id": idea.id,
+                "name": idea.name,
+                "description": getattr(idea, "description", "") or "",
+                "tags": getattr(idea, "tags", []) or [],
+                "interfaces": getattr(idea, "interfaces", []) or [],
+            })
+
+        # Get cross-domain pairs above threshold
+        pairs = resonance_svc.get_cross_domain_pairs(
+            all_ideas=all_ideas,
+            limit=100,
+            min_coherence=min_coherence,
+        )
+
+        if not pairs:
+            return 0
+
+        # Get existing bridge events to deduplicate
+        existing_events = activity_service.list_events(
+            workspace_id=workspace_id,
+            limit=500,
+            event_type="cross_domain_bridge",
+        )
+        existing_subjects: set[str] = set()
+        for evt in existing_events:
+            sid = evt.get("subject_id", "")
+            if sid:
+                existing_subjects.add(sid)
+
+        for pair in pairs:
+            # Canonical pair ID for deduplication
+            pair_id = f"{min(pair.idea_id_a, pair.idea_id_b)}:{max(pair.idea_id_a, pair.idea_id_b)}"
+
+            if pair_id in existing_subjects:
+                continue
+
+            summary = (
+                f"New resonance bridge: '{pair.name_a}' <> '{pair.name_b}' "
+                f"(coherence {pair.coherence:.0%})"
+            )
+
+            activity_service.record_event(
+                workspace_id=workspace_id,
+                event_type="cross_domain_bridge",
+                subject_type="resonance_pair",
+                subject_id=pair_id,
+                subject_name=f"{pair.name_a} <> {pair.name_b}",
+                summary=summary,
+            )
+            new_count += 1
+
+    except Exception:
+        log.debug("discovery: notify_new_bridges failed", exc_info=True)
+
+    return new_count

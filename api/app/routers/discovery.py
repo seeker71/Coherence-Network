@@ -11,7 +11,7 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 
 from app.models.discovery import DiscoveryFeed
 from app.services import discovery_service
@@ -55,3 +55,28 @@ async def get_contributor_profile_summary(
     Returns a note field when no profile exists.
     """
     return discovery_service.get_profile_summary(contributor_id)
+
+
+@router.post(
+    "/discover/notify-bridges",
+    summary="Create activity events for new cross-domain resonance bridges",
+    tags=["discovery"],
+)
+async def notify_bridges(
+    workspace_id: str = "coherence-network",
+    min_coherence: float = Query(0.35, ge=0.0, le=1.0, description="Minimum coherence for bridge notification"),
+    x_api_key: str | None = Header(None, alias="X-API-Key"),
+) -> dict:
+    """Scan for new cross-domain resonance bridges and create activity events.
+
+    For each strong cross-domain pair not yet notified, creates an activity
+    event of type "cross_domain_bridge". Requires a valid API key.
+    """
+    if not x_api_key or not x_api_key.strip():
+        raise HTTPException(status_code=401, detail="API key required")
+
+    count = discovery_service.notify_new_bridges(
+        workspace_id=workspace_id,
+        min_coherence=min_coherence,
+    )
+    return {"new_bridges_notified": count, "workspace_id": workspace_id}

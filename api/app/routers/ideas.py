@@ -602,6 +602,77 @@ async def validate_super_idea_rollup(idea_id: str, _key: str = Depends(require_a
     return progress
 
 
+@router.get("/ideas/breath-overview")
+async def get_breath_overview() -> dict:
+    """Portfolio breath overview — gas/water/ice phase distribution for all curated super-ideas."""
+    from app.services import breath_service
+    return breath_service.compute_breath_overview()
+
+
+@router.get("/ideas/{idea_id}/resonance")
+async def get_idea_resonance(
+    idea_id: str,
+    limit: int = Query(10, ge=1, le=50),
+) -> list[dict]:
+    """Return top resonant ideas for a given idea, with coherence scores and cross-domain flags."""
+    try:
+        from app.services import idea_resonance_service
+        source_raw = idea_service.get_idea(idea_id)
+        if source_raw is None:
+            raise HTTPException(status_code=404, detail="Idea not found")
+
+        source_dict = {
+            "id": source_raw.id if hasattr(source_raw, "id") else source_raw.get("id", idea_id),
+            "name": source_raw.name if hasattr(source_raw, "name") else source_raw.get("name", ""),
+            "description": source_raw.description if hasattr(source_raw, "description") else source_raw.get("description", ""),
+            "tags": (source_raw.tags if hasattr(source_raw, "tags") else source_raw.get("tags")) or [],
+            "interfaces": (source_raw.interfaces if hasattr(source_raw, "interfaces") else source_raw.get("interfaces")) or [],
+        }
+
+        portfolio = idea_service.list_ideas(limit=500, offset=0, read_only_guard=True)
+        all_ideas_raw = portfolio.ideas if hasattr(portfolio, "ideas") else []
+        all_ideas = []
+        for item in all_ideas_raw:
+            all_ideas.append({
+                "id": item.id if hasattr(item, "id") else item.get("id", ""),
+                "name": item.name if hasattr(item, "name") else item.get("name", ""),
+                "description": item.description if hasattr(item, "description") else item.get("description", ""),
+                "tags": (item.tags if hasattr(item, "tags") else item.get("tags")) or [],
+                "interfaces": (item.interfaces if hasattr(item, "interfaces") else item.get("interfaces")) or [],
+            })
+
+        matches = idea_resonance_service.find_resonant_ideas(
+            source_idea=source_dict,
+            all_ideas=all_ideas,
+            limit=limit,
+        )
+        return [
+            {
+                "idea_id": m.idea_id_b if m.idea_id_a == idea_id else m.idea_id_a,
+                "name": m.name_b if m.idea_id_a == idea_id else m.name_a,
+                "coherence": m.coherence,
+                "cross_domain": m.cross_domain,
+                "domain": m.domain_b if m.idea_id_a == idea_id else m.domain_a,
+            }
+            for m in matches
+        ]
+    except HTTPException:
+        raise
+    except Exception:
+        # Graceful degradation: return empty list on any failure
+        return []
+
+
+@router.get("/ideas/{idea_id}/breath")
+async def get_idea_breath(idea_id: str) -> dict:
+    """Return breath analysis (gas/water/ice phase distribution) for an idea."""
+    from app.services import breath_service
+    idea = idea_service.get_idea(idea_id)
+    if idea is None:
+        raise HTTPException(status_code=404, detail="Idea not found")
+    return breath_service.compute_idea_breath(idea_id)
+
+
 @router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
 async def get_idea(idea_id: str) -> IdeaWithScore:
     idea = idea_service.get_idea(idea_id)

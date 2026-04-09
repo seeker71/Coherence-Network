@@ -255,6 +255,113 @@ def get_idea_investments(idea_id: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Flow metrics — resonance-weighted contribution scoring
+# ---------------------------------------------------------------------------
+
+
+def compute_flow_metrics(workspace_id: str = "coherence-network") -> dict:
+    """Compute contribution flow metrics for the last 30 days.
+
+    Returns energy flow per idea, diversity, and flow reciprocity (Gini-based).
+    """
+    _ensure_schema()
+
+    now = datetime.now(timezone.utc)
+    thirty_days_ago = now - timedelta(days=30)
+
+    with _session() as s:
+        recs = (
+            s.query(ContributionLedgerRecord)
+            .filter(ContributionLedgerRecord.recorded_at >= thirty_days_ago)
+            .all()
+        )
+
+    total_contributions = len(recs)
+    total_cc_flow = 0.0
+    unique_contributors: set[str] = set()
+    idea_cc: dict[str, float] = {}
+    idea_contributors: dict[str, set[str]] = {}
+
+    for rec in recs:
+        total_cc_flow += rec.amount_cc
+        unique_contributors.add(rec.contributor_id)
+        if rec.idea_id:
+            idea_cc.setdefault(rec.idea_id, 0.0)
+            idea_cc[rec.idea_id] += rec.amount_cc
+            idea_contributors.setdefault(rec.idea_id, set())
+            idea_contributors[rec.idea_id].add(rec.contributor_id)
+
+    # Flow per idea
+    flow_per_idea = [
+        {
+            "idea_id": idea_id,
+            "cc_total": round(cc, 4),
+            "contributor_count": len(idea_contributors.get(idea_id, set())),
+        }
+        for idea_id, cc in sorted(idea_cc.items(), key=lambda x: -x[1])
+    ]
+
+    # Gini coefficient for flow reciprocity
+    flow_reciprocity = _compute_flow_reciprocity(list(idea_cc.values()))
+
+    # Top flowing ideas — enrich with names
+    top_flowing = []
+    for entry in flow_per_idea[:10]:
+        top_flowing.append({
+            "idea_id": entry["idea_id"],
+            "name": entry["idea_id"],  # Will be enriched below
+            "cc_total": entry["cc_total"],
+        })
+
+    # Try to enrich names
+    try:
+        from app.services import idea_service
+        for item in top_flowing:
+            idea = idea_service.get_idea(item["idea_id"])
+            if idea and hasattr(idea, "name"):
+                item["name"] = idea.name
+    except Exception:
+        pass
+
+    return {
+        "workspace_id": workspace_id,
+        "period_days": 30,
+        "total_contributions": total_contributions,
+        "total_cc_flow": round(total_cc_flow, 4),
+        "unique_contributors": len(unique_contributors),
+        "ideas_receiving_flow": len(idea_cc),
+        "flow_per_idea": flow_per_idea,
+        "flow_reciprocity": flow_reciprocity,
+        "top_flowing_ideas": top_flowing,
+    }
+
+
+def _compute_flow_reciprocity(values: list[float]) -> float:
+    """Compute flow reciprocity as 1 - Gini coefficient.
+
+    Gini: 0 = perfectly equal, 1 = all flow to one idea.
+    flow_reciprocity: 0 = concentrated, 1 = balanced.
+    """
+    if not values or len(values) <= 1:
+        return 1.0  # trivially balanced
+
+    n = len(values)
+    sorted_vals = sorted(values)
+    total = sum(sorted_vals)
+    if total == 0:
+        return 1.0
+
+    cumulative = 0.0
+    weighted_sum = 0.0
+    for i, val in enumerate(sorted_vals):
+        cumulative += val
+        weighted_sum += (2 * (i + 1) - n - 1) * val
+
+    gini = weighted_sum / (n * total)
+    return round(max(0.0, min(1.0, 1.0 - gini)), 4)
+
+
+# ---------------------------------------------------------------------------
 # Founding contributions (idempotent one-time migration)
 # ---------------------------------------------------------------------------
 
