@@ -974,6 +974,51 @@ TOOLS: list[Tool] = [
             },
         },
     ),
+    # ── Discovery / Living Network ──
+    Tool(
+        name="coherence_discover",
+        description="Serendipity feed — personalized discovery of resonant ideas, peers, cross-domain connections, and news. Returns what resonates with who you are.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "contributor_id": {"type": "string", "description": "Contributor to discover for (default: general feed)"},
+                "limit": {"type": "integer", "description": "Max items (default 20)"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_constellation",
+        description="Network visualization data — nodes (ideas, contributors, concepts) and edges with positions for galaxy/constellation rendering.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "max_nodes": {"type": "integer", "description": "Max nodes to return (default 80)"},
+                "workspace_id": {"type": "string", "description": "Workspace to visualize (default: coherence-network)"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_vitality",
+        description="Workspace health as living-system signals — diversity index, resonance density, flow rate, breath rhythm, connection strength, activity pulse.",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "workspace_id": {"type": "string", "description": "Workspace ID (default: coherence-network)"},
+            },
+        },
+    ),
+    Tool(
+        name="coherence_resonate",
+        description="Find ideas that share deep structural patterns with a given idea — cross-domain resonance via harmonic matching.",
+        inputSchema={
+            "type": "object",
+            "required": ["idea_id"],
+            "properties": {
+                "idea_id": {"type": "string", "description": "Idea to find resonances for"},
+                "limit": {"type": "integer", "description": "Max matches (default 10)"},
+            },
+        },
+    ),
 ]
 
 TOOL_MAP: dict[str, Tool] = {t.name: t for t in TOOLS}
@@ -1507,6 +1552,23 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 "name": args["name"],
                 "description": args.get("description", ""),
                 "workspace_id": args["workspace_id"],
+            })
+        # Discovery / Living Network
+        case "coherence_discover":
+            cid = args.get("contributor_id", "default-contributor")
+            limit: int = args.get("limit", 20)
+            return api_get(f"/api/discover/{cid}", {"limit": limit})
+        case "coherence_constellation":
+            return api_get("/api/constellation", {
+                "max_nodes": args.get("max_nodes", 80),
+                "workspace_id": args.get("workspace_id", "coherence-network"),
+            })
+        case "coherence_vitality":
+            ws = args.get("workspace_id", "coherence-network")
+            return api_get(f"/api/workspaces/{ws}/vitality")
+        case "coherence_resonate":
+            return api_get(f"/api/resonance/ideas/{args['idea_id']}", {
+                "limit": args.get("limit", 10),
             })
         case _:
             return {"error": f"Unknown tool: {name}"}
