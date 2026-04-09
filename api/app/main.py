@@ -671,6 +671,10 @@ app.include_router(constellation_router.router, prefix="/api", tags=["constellat
 # Workspace vitality — living-system health metrics
 app.include_router(vitality_router.router, prefix="/api", tags=["vitality"])
 
+# Cross-domain resonance (CRK) endpoints
+from app.routers import resonance as resonance_router  # noqa: E402
+app.include_router(resonance_router.router, prefix="/api", tags=["resonance"])
+
 # Serendipity Discovery feed
 from app.routers import discovery as discovery_router  # noqa: E402
 app.include_router(discovery_router.router, prefix="/api", tags=["discovery"])
