@@ -53,7 +53,7 @@ jobs:
 
       - name: Create or update modularity drift issue
         if: ${{ steps.audit.outputs.exit_code != '0' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -121,7 +121,7 @@ jobs:
 
       - name: Resolve modularity drift issue when audit passes
         if: ${{ steps.audit.outputs.exit_code == '0' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const title = 'Asset modularity drift detected';

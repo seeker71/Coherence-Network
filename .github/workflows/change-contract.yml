@@ -91,7 +91,7 @@ jobs:
 
       - name: Acknowledge contributor on PR
         if: ${{ steps.contract.outputs.pr_number != '' && steps.contract.outputs.pr_number != 'null' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');

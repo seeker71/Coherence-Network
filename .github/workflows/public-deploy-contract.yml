@@ -77,7 +77,7 @@ jobs:
 
       - name: Create or update deploy drift issue
         if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code != '0' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -141,7 +141,7 @@ jobs:
 
       - name: Resolve deploy drift issue when contract passes
         if: ${{ env.MVP_LOCAL_ONLY_VALIDATION != '1' && steps.outcome.outputs.exit_code == '0' }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const title = 'Public deployment contract failing on main';
