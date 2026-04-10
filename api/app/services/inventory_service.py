@@ -629,7 +629,10 @@ def _discover_specs_local(limit: int = 300) -> list[dict]:
     out: list[dict] = []
     for path in files[: max(1, min(limit, 2000))]:
         stem = path.stem
-        spec_id = stem.split("-", 1)[0] if "-" in stem else stem
+        if stem.upper() in ("INDEX", "TEMPLATE"):
+            continue
+        # Full stem is the spec_id — slugs are plain, no numeric prefix to strip
+        spec_id = stem
         title = stem.replace("-", " ")
         try:
             for line in path.read_text(encoding="utf-8").splitlines()[:8]:
@@ -675,7 +678,10 @@ def _discover_specs_from_github(limit: int = 300, timeout: float = 8.0) -> list[
                 continue
             name = row.get("name") if isinstance(row.get("name"), str) else Path(path).name
             stem = Path(name).stem
-            spec_id = stem.split("-", 1)[0] if "-" in stem else stem
+            if stem.upper() in ("INDEX", "TEMPLATE"):
+                continue
+            # Full stem is the spec_id — slugs are plain, no numeric prefix to strip
+            spec_id = stem
             title = stem.replace("-", " ")
             out.append(
                 _normalize_spec_item(

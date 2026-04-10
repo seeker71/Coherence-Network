@@ -320,13 +320,16 @@ export default async function Home() {
           <Link href="/invest" className="hover:text-foreground transition-colors">Invest</Link>
           <Link href="/contribute" className="hover:text-foreground transition-colors">Contribute</Link>
         </div>
-        <div className="flex flex-wrap justify-center gap-4 text-xs text-foreground/85 mb-4">
-          <a href="https://github.com/seeker71/Coherence-Network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
-          <a href="https://www.npmjs.com/package/coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">CLI (npm)</a>
-          <a href="https://www.npmjs.com/package/coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">MCP Server</a>
-          <a href="https://api.coherencycoin.com/docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">API Docs</a>
-          <a href="https://clawhub.ai/skills/coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">OpenClaw Skill</a>
-        </div>
+        <details className="text-xs text-foreground/60 mb-4">
+          <summary className="cursor-pointer hover:text-foreground/85 transition-colors">For developers</summary>
+          <div className="flex flex-wrap justify-center gap-4 mt-2">
+            <a href="https://github.com/seeker71/Coherence-Network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
+            <a href="https://www.npmjs.com/package/coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Command line tool</a>
+            <a href="https://www.npmjs.com/package/coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">AI assistant integration</a>
+            <a href="https://api.coherencycoin.com/docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Developer documentation</a>
+            <a href="https://clawhub.ai/skills/coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">OpenClaw Skill</a>
+          </div>
+        </details>
         <p className="text-xs text-foreground/85 leading-relaxed">
           Ideas into realization — through attention, curiosity, and collaboration.
         </p>
