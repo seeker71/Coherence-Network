@@ -699,14 +699,14 @@ export default function ContributePage() {
         </ul>
       </section>
 
-      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
-        <h2 className="text-xl font-semibold">Machine API</h2>
-        <p className="text-sm text-muted-foreground">All actions above are also available via the API for automated workflows.</p>
+      <details className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
+        <summary className="text-xl font-semibold cursor-pointer">For developers and scripts</summary>
+        <p className="text-sm text-muted-foreground mt-2">All the actions above can also be done programmatically — useful for bots, scripts, or AI agents.</p>
         <p>Register contributor: <code>POST /api/contributors</code></p>
         <p>Submit change request: <code>POST /api/governance/change-requests</code></p>
         <p>Vote yes/no: <code>POST /api/governance/change-requests/&lt;id&gt;/votes</code></p>
         <p>List specs: <code>GET /api/spec-registry</code> | list queue: <code>GET /api/governance/change-requests</code></p>
-      </section>
+      </details>
 
       {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
       {status === "error" && <p className="text-destructive">Error: {error}</p>}
