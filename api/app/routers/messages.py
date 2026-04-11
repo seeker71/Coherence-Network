@@ -20,7 +20,7 @@ class MarkReadBody(BaseModel):
     contributor_id: str = Field(min_length=1)
 
 
-@router.post("/messages", response_model=Message, status_code=201)
+@router.post("/messages", response_model=Message, status_code=201, summary="Send a direct or workspace message")
 async def send_message(
     data: MessageCreate,
     _api_key: str = Depends(require_api_key),
@@ -50,7 +50,7 @@ async def send_message(
     )
 
 
-@router.get("/messages/inbox/{contributor_id}", response_model=InboxResponse)
+@router.get("/messages/inbox/{contributor_id}", response_model=InboxResponse, summary="Get a contributor's inbox")
 async def get_inbox(
     contributor_id: str,
     limit: int = Query(50, ge=1, le=200),
@@ -72,7 +72,7 @@ async def get_inbox(
     )
 
 
-@router.get("/messages/thread/{contributor_a}/{contributor_b}", response_model=list[Message])
+@router.get("/messages/thread/{contributor_a}/{contributor_b}", response_model=list[Message], summary="Get the message thread between two contributors")
 async def get_thread(
     contributor_a: str,
     contributor_b: str,
@@ -87,7 +87,7 @@ async def get_thread(
     return [Message(**m) for m in messages]
 
 
-@router.patch("/messages/{message_id}/read", response_model=Message)
+@router.patch("/messages/{message_id}/read", response_model=Message, summary="Mark a message as read")
 async def mark_read(
     message_id: str,
     body: MarkReadBody,
@@ -110,7 +110,7 @@ async def mark_read(
     )
 
 
-@router.get("/workspaces/{workspace_id}/messages", response_model=list[Message])
+@router.get("/workspaces/{workspace_id}/messages", response_model=list[Message], summary="Get messages sent to a workspace")
 async def get_workspace_messages(
     workspace_id: str,
     limit: int = Query(50, ge=1, le=200),

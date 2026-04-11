@@ -17,7 +17,7 @@ def _github_token() -> str | None:
     return get_github_token()
 
 
-@router.get("/gates/pr-to-public")
+@router.get("/gates/pr-to-public", summary="Gate Pr To Public")
 async def gate_pr_to_public(
     branch: str = Query(..., min_length=1, description="PR head branch"),
     repo: str = Query("seeker71/Coherence-Network"),
@@ -39,7 +39,7 @@ async def gate_pr_to_public(
     return report
 
 
-@router.get("/gates/merged-contract")
+@router.get("/gates/merged-contract", summary="Gate Merged Contract")
 async def gate_merged_contract(
     sha: str = Query(..., min_length=7, description="Merged commit SHA on main"),
     repo: str = Query("seeker71/Coherence-Network"),
@@ -61,7 +61,7 @@ async def gate_merged_contract(
     return report
 
 
-@router.get("/gates/main-head")
+@router.get("/gates/main-head", summary="Gates Main Head")
 async def gates_main_head(
     repo: str = Query("seeker71/Coherence-Network"),
     branch: str = Query("main"),
@@ -81,7 +81,7 @@ async def gates_main_head(
     return {"repo": repo, "branch": branch, "sha": sha}
 
 
-@router.get("/gates/main-contract")
+@router.get("/gates/main-contract", summary="Gates Main Contract")
 async def gates_main_contract(
     repo: str = Query("seeker71/Coherence-Network"),
     branch: str = Query("main"),
@@ -112,7 +112,7 @@ async def gates_main_contract(
     return report
 
 
-@router.get("/gates/public-deploy-contract")
+@router.get("/gates/public-deploy-contract", summary="Gates Public Deploy Contract")
 async def gates_public_deploy_contract(
     repo: str = Query("seeker71/Coherence-Network"),
     branch: str = Query("main"),
@@ -131,7 +131,7 @@ async def gates_public_deploy_contract(
     )
 
 
-@router.post("/gates/public-deploy-verification-jobs")
+@router.post("/gates/public-deploy-verification-jobs", summary="Create Public Deploy Verification Job")
 async def create_public_deploy_verification_job(
     repo: str = Query("seeker71/Coherence-Network"),
     branch: str = Query("main"),
@@ -156,12 +156,12 @@ async def create_public_deploy_verification_job(
     )
 
 
-@router.get("/gates/public-deploy-verification-jobs")
+@router.get("/gates/public-deploy-verification-jobs", summary="List Public Deploy Verification Jobs")
 async def list_public_deploy_verification_jobs() -> list[dict]:
     return await asyncio.to_thread(gates.list_public_deploy_verification_jobs)
 
 
-@router.post("/gates/public-deploy-verification-jobs/{job_id}/tick")
+@router.post("/gates/public-deploy-verification-jobs/{job_id}/tick", summary="Tick Public Deploy Verification Job")
 async def tick_public_deploy_verification_job(job_id: str) -> dict:
     return await asyncio.to_thread(
         gates.tick_public_deploy_verification_job,
@@ -170,7 +170,7 @@ async def tick_public_deploy_verification_job(job_id: str) -> dict:
     )
 
 
-@router.post("/gates/public-deploy-verification-jobs/tick")
+@router.post("/gates/public-deploy-verification-jobs/tick", summary="Tick Public Deploy Verification Jobs")
 async def tick_public_deploy_verification_jobs(
     due_only: bool = Query(True),
 ) -> dict:
@@ -181,7 +181,7 @@ async def tick_public_deploy_verification_jobs(
     )
 
 
-@router.get("/gates/commit-traceability")
+@router.get("/gates/commit-traceability", summary="Gates Commit Traceability")
 async def gates_commit_traceability(
     sha: str = Query(..., min_length=7, description="Commit SHA to derive traceability from"),
     repo: str = Query("seeker71/Coherence-Network"),

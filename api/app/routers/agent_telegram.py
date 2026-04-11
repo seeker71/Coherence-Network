@@ -464,7 +464,7 @@ def _format_attention_reply(
 def _extract_status_filter(arg: str) -> str | None:
     return telegram_report_formatter.extract_status_filter(arg)
 
-@router.post("/agent/telegram/webhook")
+@router.post("/agent/telegram/webhook", summary="Receive Telegram updates and run command handlers")
 async def telegram_webhook(update: dict = Body(...)) -> dict:
     """Receive Telegram updates and run command handlers.
 

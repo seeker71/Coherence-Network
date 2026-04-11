@@ -171,7 +171,7 @@ def _legacy_response(record: dict, *, index: int = 0) -> AccessibleConceptRespon
 # ---------------------------------------------------------------------------
 
 
-@router.post("/ontology/contribute", status_code=201, tags=["ontology"])
+@router.post("/ontology/contribute", status_code=201, tags=["ontology"], summary="Contribute Concept")
 async def contribute_concept(body: PlainLanguageContribution) -> AccessibleConceptResponse:
     record = svc.create_concept(
         title=_legacy_title(body.plain_text, body.title),
@@ -182,7 +182,7 @@ async def contribute_concept(body: PlainLanguageContribution) -> AccessibleConce
     return _legacy_response(record)
 
 
-@router.get("/ontology/contributions", tags=["ontology"])
+@router.get("/ontology/contributions", tags=["ontology"], summary="List Contributions")
 async def list_contributions(
     domain: str | None = Query(default=None),
     status: str | None = Query(default=None),
@@ -194,7 +194,7 @@ async def list_contributions(
     return {"items": payload, "total": len(payload)}
 
 
-@router.get("/ontology/contributions/{concept_id}", tags=["ontology"])
+@router.get("/ontology/contributions/{concept_id}", tags=["ontology"], summary="Get Contribution")
 async def get_contribution(concept_id: str) -> AccessibleConceptResponse:
     record = svc.get_concept(concept_id)
     if not record:
@@ -202,7 +202,7 @@ async def get_contribution(concept_id: str) -> AccessibleConceptResponse:
     return _legacy_response(record)
 
 
-@router.patch("/ontology/contributions/{concept_id}", tags=["ontology"])
+@router.patch("/ontology/contributions/{concept_id}", tags=["ontology"], summary="Patch Contribution")
 async def patch_contribution(concept_id: str, body: OntologyConceptPatch) -> AccessibleConceptResponse:
     record = svc.patch_concept(
         concept_id,
@@ -216,13 +216,13 @@ async def patch_contribution(concept_id: str, body: OntologyConceptPatch) -> Acc
     return _legacy_response(record)
 
 
-@router.delete("/ontology/contributions/{concept_id}", status_code=204, tags=["ontology"])
+@router.delete("/ontology/contributions/{concept_id}", status_code=204, tags=["ontology"], summary="Delete Contribution")
 async def delete_contribution(concept_id: str) -> None:
     if not svc.delete_concept(concept_id):
         raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
 
 
-@router.get("/ontology/edges", tags=["ontology"])
+@router.get("/ontology/edges", tags=["ontology"], summary="List Ontology Edges")
 async def list_ontology_edges() -> dict[str, list[dict[str, object]]]:
     edges: list[dict[str, object]] = []
     for concept in svc.list_concepts(domain=None, status=None, search=None):
@@ -233,12 +233,12 @@ async def list_ontology_edges() -> dict[str, list[dict[str, object]]]:
     return {"edges": edges}
 
 
-@router.get("/ontology/garden", tags=["ontology"])
+@router.get("/ontology/garden", tags=["ontology"], summary="Get Ontology Garden")
 async def get_ontology_garden(limit: int = Query(default=200, ge=1, le=500)) -> GardenView:
     return GardenView(**svc.get_garden_payload(limit=limit))
 
 
-@router.get("/ontology/stats", tags=["ontology"])
+@router.get("/ontology/stats", tags=["ontology"], summary="Get Ontology Stats")
 async def get_ontology_stats() -> OntologyContributionStats:
     return OntologyContributionStats(**svc.get_stats())
 
@@ -248,7 +248,7 @@ async def get_ontology_stats() -> OntologyContributionStats:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/ontology/suggest", status_code=201, tags=["ontology"])
+@router.post("/ontology/suggest", status_code=201, tags=["ontology"], summary="Suggest a new concept in plain language. No technical knowledge needed")
 async def suggest_concept(body: SuggestConceptRequest):
     """Suggest a new concept in plain language. No technical knowledge needed.
 
@@ -264,7 +264,7 @@ async def suggest_concept(body: SuggestConceptRequest):
     )
 
 
-@router.get("/ontology/suggestions", tags=["ontology"])
+@router.get("/ontology/suggestions", tags=["ontology"], summary="List concept suggestions. Filter by status to see the review queue")
 async def list_concept_suggestions(
     status: str | None = Query(default=None, description="Filter by status: pending, approved, rejected"),
     limit: int = Query(default=50, ge=1, le=200),
@@ -276,7 +276,7 @@ async def list_concept_suggestions(
     return svc.list_concept_suggestions(status=status, limit=limit, offset=offset)
 
 
-@router.get("/ontology/suggestions/{suggestion_id}", tags=["ontology"])
+@router.get("/ontology/suggestions/{suggestion_id}", tags=["ontology"], summary="Get a single concept suggestion by ID")
 async def get_concept_suggestion(suggestion_id: str):
     """Get a single concept suggestion by ID."""
     record = svc.get_concept_suggestion(suggestion_id)
@@ -285,7 +285,7 @@ async def get_concept_suggestion(suggestion_id: str):
     return record
 
 
-@router.post("/ontology/suggestions/{suggestion_id}/approve", tags=["ontology"])
+@router.post("/ontology/suggestions/{suggestion_id}/approve", tags=["ontology"], summary="Approve a concept suggestion and promote it to the live ontology")
 async def approve_concept_suggestion(suggestion_id: str, body: ApproveConceptRequest):
     """Approve a concept suggestion and promote it to the live ontology.
 
@@ -305,7 +305,7 @@ async def approve_concept_suggestion(suggestion_id: str, body: ApproveConceptReq
         raise HTTPException(status_code=409, detail=str(e))
 
 
-@router.post("/ontology/suggestions/{suggestion_id}/reject", tags=["ontology"])
+@router.post("/ontology/suggestions/{suggestion_id}/reject", tags=["ontology"], summary="Reject a concept suggestion with an optional explanatory note")
 async def reject_concept_suggestion(suggestion_id: str, body: RejectRequest):
     """Reject a concept suggestion with an optional explanatory note."""
     try:
@@ -325,7 +325,7 @@ async def reject_concept_suggestion(suggestion_id: str, body: RejectRequest):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/ontology/suggest-relationship", status_code=201, tags=["ontology"])
+@router.post("/ontology/suggest-relationship", status_code=201, tags=["ontology"], summary="Suggest a relationship between two concepts in plain language")
 async def suggest_relationship(body: SuggestRelationshipRequest):
     """Suggest a relationship between two concepts in plain language.
 
@@ -341,7 +341,7 @@ async def suggest_relationship(body: SuggestRelationshipRequest):
     )
 
 
-@router.get("/ontology/relationship-suggestions", tags=["ontology"])
+@router.get("/ontology/relationship-suggestions", tags=["ontology"], summary="List relationship suggestions pending review")
 async def list_relationship_suggestions(
     status: str | None = Query(default=None, description="Filter: pending, approved, rejected"),
     limit: int = Query(default=50, ge=1, le=200),
@@ -356,6 +356,7 @@ async def list_relationship_suggestions(
 @router.post(
     "/ontology/relationship-suggestions/{suggestion_id}/review",
     tags=["ontology"],
+    summary="Approve or reject a relationship suggestion",
 )
 async def review_relationship_suggestion(suggestion_id: str, body: ReviewRelationshipRequest):
     """Approve or reject a relationship suggestion."""
@@ -377,7 +378,7 @@ async def review_relationship_suggestion(suggestion_id: str, body: ReviewRelatio
 # ---------------------------------------------------------------------------
 
 
-@router.post("/ontology/endorse/{concept_id}", status_code=200, tags=["ontology"])
+@router.post("/ontology/endorse/{concept_id}", status_code=200, tags=["ontology"], summary="Endorse (upvote) a concept to signal its importance to the community")
 async def endorse_concept(concept_id: str, body: EndorseRequest):
     """Endorse (upvote) a concept to signal its importance to the community.
 
@@ -390,7 +391,7 @@ async def endorse_concept(concept_id: str, body: EndorseRequest):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/ontology/endorse/{concept_id}", tags=["ontology"])
+@router.get("/ontology/endorse/{concept_id}", tags=["ontology"], summary="Get the endorsement count and list of endorsers for a concept")
 async def get_endorsements(concept_id: str):
     """Get the endorsement count and list of endorsers for a concept."""
     try:
@@ -399,7 +400,7 @@ async def get_endorsements(concept_id: str):
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.get("/ontology/top-endorsed", tags=["ontology"])
+@router.get("/ontology/top-endorsed", tags=["ontology"], summary="List concepts ranked by number of endorsements")
 async def top_endorsed(limit: int = Query(default=20, ge=1, le=100)):
     """List concepts ranked by number of endorsements.
 

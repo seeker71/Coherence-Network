@@ -29,7 +29,7 @@ class EdgeCreateRequest(BaseModel):
 # ── Type Registry ─────────────────────────────────────────────────────
 
 
-@router.get("/edges/types")
+@router.get("/edges/types", summary="Return all 46 canonical edge types grouped by family")
 async def get_edge_types(family: str | None = None):
     """Return all 46 canonical edge types grouped by family.
 
@@ -50,7 +50,7 @@ async def get_edge_types(family: str | None = None):
 # ── Edge CRUD ─────────────────────────────────────────────────────────
 
 
-@router.get("/edges")
+@router.get("/edges", summary="List edges with optional filters. Responses include from_node and to_node stubs")
 async def list_edges(
     type: str | None = None,
     from_id: str | None = None,
@@ -64,7 +64,7 @@ async def list_edges(
     )
 
 
-@router.get("/edges/{edge_id}")
+@router.get("/edges/{edge_id}", summary="Get a single edge by ID with node stubs")
 async def get_edge(edge_id: str):
     """Get a single edge by ID with node stubs."""
     edge = graph_service.get_edge_by_id(edge_id)
@@ -73,7 +73,7 @@ async def get_edge(edge_id: str):
     return edge
 
 
-@router.post("/edges", status_code=201)
+@router.post("/edges", status_code=201, summary="Create a typed edge between two entities")
 async def create_edge(body: EdgeCreateRequest, strict: bool = False):
     """Create a typed edge between two entities.
 
@@ -119,7 +119,7 @@ async def create_edge(body: EdgeCreateRequest, strict: bool = False):
     return result
 
 
-@router.delete("/edges/{edge_id}")
+@router.delete("/edges/{edge_id}", summary="Delete an edge by ID")
 async def delete_edge(edge_id: str):
     """Delete an edge by ID."""
     if not graph_service.delete_edge(edge_id):
@@ -130,7 +130,7 @@ async def delete_edge(edge_id: str):
 # ── Entity-scoped edge endpoints ───────────────────────────────────────
 
 
-@router.get("/entities/{entity_id}/edges")
+@router.get("/entities/{entity_id}/edges", summary="List all edges for any entity regardless of node type")
 async def get_entity_edges(
     entity_id: str,
     type: str | None = None,
@@ -156,7 +156,7 @@ async def get_entity_edges(
     )
 
 
-@router.get("/entities/{entity_id}/neighbors")
+@router.get("/entities/{entity_id}/neighbors", summary="Return neighboring node objects reachable via 1 hop from entity_id")
 async def get_entity_neighbors(
     entity_id: str,
     type: str | None = None,

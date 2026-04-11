@@ -27,7 +27,7 @@ from app.services import cc_economics_service
 router = APIRouter(prefix="/cc", tags=["cc-economics"])
 
 
-@router.get("/supply", response_model=CCSupply)
+@router.get("/supply", response_model=CCSupply, summary="Return current CC supply metrics with coherence score")
 async def get_supply():
     """Return current CC supply metrics with coherence score."""
     result = cc_economics_service.supply()
@@ -36,7 +36,7 @@ async def get_supply():
     return result
 
 
-@router.get("/exchange-rate", response_model=CCExchangeRate)
+@router.get("/exchange-rate", response_model=CCExchangeRate, summary="Return current exchange rate with spread and cache metadata")
 async def get_exchange_rate():
     """Return current exchange rate with spread and cache metadata."""
     result = cc_economics_service.exchange_rate()
@@ -45,7 +45,7 @@ async def get_exchange_rate():
     return result
 
 
-@router.post("/stake", response_model=StakePosition, status_code=201)
+@router.post("/stake", response_model=StakePosition, status_code=201, summary="Stake CC into an idea")
 async def stake_cc(request: StakeRequest):
     """Stake CC into an idea."""
     try:
@@ -56,7 +56,7 @@ async def stake_cc(request: StakeRequest):
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.post("/unstake", response_model=UnstakeResponse)
+@router.post("/unstake", response_model=UnstakeResponse, summary="Unstake a position with cooldown")
 async def unstake_cc(request: UnstakeRequest):
     """Unstake a position with cooldown."""
     try:
@@ -67,7 +67,7 @@ async def unstake_cc(request: UnstakeRequest):
         raise HTTPException(status_code=400, detail=str(exc))
 
 
-@router.get("/staking/{user_id}", response_model=UserStakingSummary)
+@router.get("/staking/{user_id}", response_model=UserStakingSummary, summary="Return all staking positions for a user")
 async def get_staking_positions(user_id: str):
     """Return all staking positions for a user."""
     return cc_economics_service.get_staking_positions(user_id)

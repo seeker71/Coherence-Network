@@ -46,7 +46,7 @@ def verify_contributor_key(api_key: str) -> dict | None:
     return _KEY_STORE.get(h)
 
 
-@router.post("/auth/keys", status_code=201)
+@router.post("/auth/keys", status_code=201, summary="Generate a personal API key for a contributor")
 @traces_to(spec="identity-driven-onboarding", idea="identity-driven-onboarding")
 async def generate_api_key(body: KeyRequest) -> KeyResponse:
     """Generate a personal API key for a contributor.
@@ -123,7 +123,7 @@ class VerifyProof(BaseModel):
 _CHALLENGES: dict[str, dict] = {}
 
 
-@router.post("/auth/verify/challenge")
+@router.post("/auth/verify/challenge", summary="Create a verification challenge for an identity provider")
 @traces_to(spec="identity-driven-onboarding", idea="identity-driven-onboarding")
 async def create_verification_challenge(body: VerifyChallenge) -> dict:
     """Create a verification challenge for an identity provider.
@@ -166,7 +166,7 @@ async def create_verification_challenge(body: VerifyChallenge) -> dict:
     }
 
 
-@router.post("/auth/verify/proof")
+@router.post("/auth/verify/proof", summary="Submit proof of identity ownership. Marks the identity as verified")
 @traces_to(spec="identity-driven-onboarding", idea="identity-driven-onboarding")
 async def submit_verification_proof(body: VerifyProof) -> dict:
     """Submit proof of identity ownership. Marks the identity as verified."""
@@ -228,7 +228,7 @@ class OnboardRequest(BaseModel):
     display_name: str | None = None
 
 
-@router.post("/onboard", status_code=201)
+@router.post("/onboard", status_code=201, summary="One-shot onboarding: create contributor + link identity + generate API key")
 @traces_to(spec="identity-driven-onboarding", idea="identity-driven-onboarding")
 async def onboard_contributor(body: OnboardRequest) -> dict:
     """One-shot onboarding: create contributor + link identity + generate API key.
@@ -303,7 +303,7 @@ async def onboard_contributor(body: OnboardRequest) -> dict:
     }
 
 
-@router.get("/auth/whoami")
+@router.get("/auth/whoami", summary="Check who the current API key belongs to")
 async def whoami(
     x_api_key: str | None = Header(None, alias="X-API-Key"),
     api_key_query: str | None = None,

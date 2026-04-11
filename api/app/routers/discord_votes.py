@@ -20,6 +20,7 @@ router = APIRouter()
     "/ideas/{idea_id}/questions/{question_index}/vote",
     response_model=QuestionVoteResponse,
     status_code=200,
+    summary="Record a Discord reaction vote on an idea open question",
 )
 async def vote_on_question(
     idea_id: str,

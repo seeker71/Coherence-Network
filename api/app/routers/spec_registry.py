@@ -16,7 +16,7 @@ from app.services.workspace_scoped_validation import (
 router = APIRouter()
 
 
-@router.get("/spec-registry", response_model=list[SpecRegistryEntry])
+@router.get("/spec-registry", response_model=list[SpecRegistryEntry], summary="List Specs")
 async def list_specs(
     response: Response,
     limit: int = Query(200, ge=1, le=1000),
@@ -27,7 +27,7 @@ async def list_specs(
     return spec_registry_service.list_specs(limit=limit, offset=offset, workspace_id=workspace_id)
 
 
-@router.get("/spec-registry/cards")
+@router.get("/spec-registry/cards", summary="List Spec Cards")
 async def list_spec_cards(
     q: str = Query("", description="Free-text search across spec title/summary/ids/contributors."),
     state: str = Query(
@@ -61,7 +61,7 @@ async def list_spec_cards(
     )
 
 
-@router.get("/spec-registry/{spec_id}", response_model=SpecRegistryEntry)
+@router.get("/spec-registry/{spec_id}", response_model=SpecRegistryEntry, summary="Get Spec")
 async def get_spec(spec_id: str) -> SpecRegistryEntry:
     found = spec_registry_service.get_spec(spec_id)
     if found is None:
@@ -69,7 +69,7 @@ async def get_spec(spec_id: str) -> SpecRegistryEntry:
     return found
 
 
-@router.post("/spec-registry", response_model=SpecRegistryEntry, status_code=201)
+@router.post("/spec-registry", response_model=SpecRegistryEntry, status_code=201, summary="Create Spec")
 async def create_spec(data: SpecRegistryCreate, _key: str = Depends(require_api_key)) -> SpecRegistryEntry:
     # Layer 1 guardrails — universal across all agent provider CLIs.
     try:
@@ -86,7 +86,7 @@ async def create_spec(data: SpecRegistryCreate, _key: str = Depends(require_api_
     return created
 
 
-@router.delete("/spec-registry/{spec_id}", status_code=204)
+@router.delete("/spec-registry/{spec_id}", status_code=204, summary="Delete Spec")
 async def delete_spec(spec_id: str, _key: str = Depends(require_api_key)) -> None:
     deleted = spec_registry_service.delete_spec(spec_id)
     if not deleted:
@@ -94,7 +94,7 @@ async def delete_spec(spec_id: str, _key: str = Depends(require_api_key)) -> Non
     return None
 
 
-@router.patch("/spec-registry/{spec_id}", response_model=SpecRegistryEntry)
+@router.patch("/spec-registry/{spec_id}", response_model=SpecRegistryEntry, summary="Update Spec")
 async def update_spec(spec_id: str, data: SpecRegistryUpdate, _key: str = Depends(require_api_key)) -> SpecRegistryEntry:
     if all(
         value is None

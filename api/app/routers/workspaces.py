@@ -15,12 +15,12 @@ from app.services import workspace_service
 router = APIRouter()
 
 
-@router.get("/workspaces", response_model=list[Workspace])
+@router.get("/workspaces", response_model=list[Workspace], summary="List Workspaces")
 async def list_workspaces() -> list[Workspace]:
     return workspace_service.list_workspaces()
 
 
-@router.get("/workspaces/{workspace_id}", response_model=Workspace)
+@router.get("/workspaces/{workspace_id}", response_model=Workspace, summary="Get Workspace")
 async def get_workspace(workspace_id: str) -> Workspace:
     ws = workspace_service.get_workspace(workspace_id)
     if ws is None:
@@ -28,7 +28,7 @@ async def get_workspace(workspace_id: str) -> Workspace:
     return ws
 
 
-@router.post("/workspaces", response_model=Workspace, status_code=201)
+@router.post("/workspaces", response_model=Workspace, status_code=201, summary="Create Workspace")
 async def create_workspace(data: WorkspaceCreate) -> Workspace:
     created = workspace_service.create_workspace(data)
     if created is None:
@@ -36,7 +36,7 @@ async def create_workspace(data: WorkspaceCreate) -> Workspace:
     return created
 
 
-@router.patch("/workspaces/{workspace_id}", response_model=Workspace)
+@router.patch("/workspaces/{workspace_id}", response_model=Workspace, summary="Update Workspace")
 async def update_workspace(workspace_id: str, data: WorkspaceUpdate) -> Workspace:
     if all(
         field is None
@@ -52,7 +52,7 @@ async def update_workspace(workspace_id: str, data: WorkspaceUpdate) -> Workspac
     return updated
 
 
-@router.get("/workspaces/{workspace_id}/pillars", response_model=list[str])
+@router.get("/workspaces/{workspace_id}/pillars", response_model=list[str], summary="Return the pillar taxonomy declared by this workspace")
 async def get_workspace_pillars(workspace_id: str) -> list[str]:
     """Return the pillar taxonomy declared by this workspace."""
     if workspace_service.get_workspace(workspace_id) is None:

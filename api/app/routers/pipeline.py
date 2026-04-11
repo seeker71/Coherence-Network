@@ -10,7 +10,7 @@ from app.services import pipeline_service
 router = APIRouter()
 
 
-@router.get("/pipeline/status")
+@router.get("/pipeline/status", summary="Get Pipeline Status")
 async def get_pipeline_status() -> JSONResponse:
     status = pipeline_service.get_status()
     if not status.get("running"):
@@ -18,7 +18,7 @@ async def get_pipeline_status() -> JSONResponse:
     return JSONResponse(status_code=200, content=status)
 
 
-@router.get("/pipeline/summary")
+@router.get("/pipeline/summary", summary="Lightweight summary for the live dashboard — never returns 503")
 async def get_pipeline_summary() -> JSONResponse:
     """Lightweight summary for the live dashboard — never returns 503."""
     status = pipeline_service.get_status()

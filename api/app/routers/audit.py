@@ -21,7 +21,7 @@ from app.services import audit_ledger_service
 router = APIRouter(prefix="/audit", tags=["Audit"])
 
 
-@router.get("/transactions", response_model=AuditTransactionResponse)
+@router.get("/transactions", response_model=AuditTransactionResponse, summary="Query CC transaction audit entries")
 async def get_audit_transactions(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
@@ -62,7 +62,7 @@ async def get_audit_transactions(
     )
 
 
-@router.get("/governance", response_model=AuditGovernanceResponse)
+@router.get("/governance", response_model=AuditGovernanceResponse, summary="Query governance audit entries")
 async def get_audit_governance(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
@@ -93,7 +93,7 @@ async def get_audit_governance(
     )
 
 
-@router.get("/treasury", response_model=AuditTreasuryResponse)
+@router.get("/treasury", response_model=AuditTreasuryResponse, summary="Query treasury audit entries")
 async def get_audit_treasury(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=500),
@@ -130,7 +130,7 @@ async def get_audit_treasury(
     )
 
 
-@router.get("/verify", response_model=VerificationResult)
+@router.get("/verify", response_model=VerificationResult, summary="Verify hash chain integrity")
 async def verify_audit_chain(
     from_entry_id: Optional[str] = None,
     to_entry_id: Optional[str] = None,
@@ -139,7 +139,7 @@ async def verify_audit_chain(
     return audit_ledger_service.verify_chain(from_entry_id, to_entry_id)
 
 
-@router.get("/snapshots", response_model=AuditSnapshotResponse)
+@router.get("/snapshots", response_model=AuditSnapshotResponse, summary="List signed audit snapshots")
 async def get_audit_snapshots(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=50),
@@ -154,7 +154,7 @@ async def get_audit_snapshots(
     )
 
 
-@router.get("/export")
+@router.get("/export", summary="Export ledger as newline-delimited JSON")
 async def export_audit_ledger(
     from_date: Optional[datetime] = None,
     to_date: Optional[datetime] = None,

@@ -62,7 +62,7 @@ def _error_breakdown(records: list[dict]) -> dict[str, int]:
     return counts
 
 
-@router.get("/stats")
+@router.get("/stats", summary="Per-provider stats across all task types")
 async def get_provider_stats() -> dict:
     """Per-provider stats across all task types."""
     # Collect all measurements grouped by provider
@@ -197,7 +197,7 @@ async def get_provider_stats() -> dict:
     }
 
 
-@router.get("/stats/network")
+@router.get("/stats/network", summary="Network-wide provider stats from federation nodes")
 async def get_network_provider_stats(window_days: int | None = None) -> dict:
     """Network-wide provider stats from federation nodes.
 

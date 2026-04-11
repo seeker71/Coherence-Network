@@ -40,19 +40,19 @@ from app.services import openclaw_node_bridge_service
 router = APIRouter()
 
 
-@router.post("/federation/instances", response_model=FederatedInstance, status_code=201)
+@router.post("/federation/instances", response_model=FederatedInstance, status_code=201, summary="Register a remote Coherence instance")
 async def register_instance(instance: FederatedInstance) -> FederatedInstance:
     """Register a remote Coherence instance."""
     return federation_service.register_instance(instance)
 
 
-@router.get("/federation/instances", response_model=list[FederatedInstance])
+@router.get("/federation/instances", response_model=list[FederatedInstance], summary="List all registered remote instances")
 async def list_instances() -> list[FederatedInstance]:
     """List all registered remote instances."""
     return federation_service.list_instances()
 
 
-@router.get("/federation/instances/{instance_id}", response_model=FederatedInstance)
+@router.get("/federation/instances/{instance_id}", response_model=FederatedInstance, summary="Get a single registered instance by ID")
 async def get_instance(instance_id: str) -> FederatedInstance:
     """Get a single registered instance by ID."""
     found = federation_service.get_instance(instance_id)
@@ -61,13 +61,13 @@ async def get_instance(instance_id: str) -> FederatedInstance:
     return found
 
 
-@router.post("/federation/sync", response_model=FederationSyncResult)
+@router.post("/federation/sync", response_model=FederationSyncResult, summary="Receive a federated payload from a remote instance")
 async def receive_payload(payload: FederatedPayload) -> FederationSyncResult:
     """Receive a federated payload from a remote instance."""
     return federation_service.receive_payload(payload)
 
 
-@router.get("/federation/sync/history")
+@router.get("/federation/sync/history", summary="List past sync operations")
 async def sync_history(limit: int = Query(200, ge=1, le=1000)) -> list[dict]:
     """List past sync operations."""
     return federation_service.list_sync_history(limit=limit)
@@ -77,7 +77,7 @@ async def sync_history(limit: int = Query(200, ge=1, le=1000)) -> list[dict]:
 # Node registration / heartbeat (Spec 132)
 # ---------------------------------------------------------------------------
 
-@router.post("/federation/nodes", response_model=FederationNodeRegisterResponse)
+@router.post("/federation/nodes", response_model=FederationNodeRegisterResponse, summary="Register or update a federation node")
 @traces_to(spec="132", idea="federation-node-identity", description="Register a federation node")
 async def register_node(body: FederationNodeRegisterRequest):
     """Register or update a federation node."""
@@ -87,7 +87,7 @@ async def register_node(body: FederationNodeRegisterRequest):
     return JSONResponse(content=resp.model_dump(mode="json"), status_code=status_code)
 
 
-@router.post("/federation/nodes/{node_id}/heartbeat", response_model=FederationNodeHeartbeatResponse)
+@router.post("/federation/nodes/{node_id}/heartbeat", response_model=FederationNodeHeartbeatResponse, summary="Refresh liveness for a previously registered node")
 async def heartbeat_node(
     node_id: str,
     body: FederationNodeHeartbeatRequest,
@@ -114,13 +114,13 @@ async def heartbeat_node(
     return result
 
 
-@router.get("/federation/nodes")
+@router.get("/federation/nodes", summary="List all registered federation nodes")
 async def list_nodes():
     """List all registered federation nodes."""
     return federation_service.list_nodes()
 
 
-@router.delete("/federation/nodes/{node_id}", status_code=204)
+@router.delete("/federation/nodes/{node_id}", status_code=204, summary="Remove a stale or duplicate federation node")
 async def delete_node(node_id: str):
     """Remove a stale or duplicate federation node."""
     ok = federation_service.delete_node(node_id)
@@ -129,7 +129,7 @@ async def delete_node(node_id: str):
     return None
 
 
-@router.get("/federation/nodes/capabilities", response_model=FleetCapabilitySummary)
+@router.get("/federation/nodes/capabilities", response_model=FleetCapabilitySummary, summary="Return aggregated fleet capability coverage")
 async def get_fleet_capabilities():
     """Return aggregated fleet capability coverage."""
     return federation_service.get_fleet_capability_summary()
@@ -139,7 +139,7 @@ async def get_fleet_capabilities():
 # Aggregated node stats (Spec 133)
 # ---------------------------------------------------------------------------
 
-@router.get("/federation/nodes/stats")
+@router.get("/federation/nodes/stats", summary="Return aggregated provider stats across all federation nodes")
 async def get_aggregated_node_stats(window_days: int | None = Query(default=None, ge=1, le=365)):
     """Return aggregated provider stats across all federation nodes."""
     return federation_service.get_aggregated_node_stats(window_days=window_days)
@@ -153,6 +153,7 @@ async def get_aggregated_node_stats(window_days: int | None = Query(default=None
     "/federation/nodes/{node_id}/measurements",
     response_model=MeasurementPushResponse,
     status_code=201,
+    summary="Accept a batch of measurement summaries from a node",
 )
 async def post_measurement_summaries(node_id: str, body: MeasurementPushRequest):
     """Accept a batch of measurement summaries from a node."""
@@ -182,6 +183,7 @@ async def post_measurement_summaries(node_id: str, body: MeasurementPushRequest)
 
 @router.get(
     "/federation/nodes/{node_id}/measurements",
+    summary="Return stored measurement summaries for a node",
 )
 async def get_measurement_summaries(
     node_id: str,
@@ -212,6 +214,7 @@ async def get_measurement_summaries(
 @router.get(
     "/federation/strategies",
     response_model=FederationStrategyListResponse,
+    summary="Return active (non-expired) federation strategy broadcasts",
 )
 async def get_strategies(
     strategy_type: str | None = Query(None),
@@ -240,7 +243,7 @@ async def get_strategies(
     )
 
 
-@router.post("/federation/strategies/compute", status_code=200)
+@router.post("/federation/strategies/compute", status_code=200, summary="Trigger computation of new strategy broadcasts from current data")
 async def compute_strategies():
     """Trigger computation of new strategy broadcasts from current data."""
     new_strategies = federation_service.compute_and_store_strategies()
@@ -251,6 +254,7 @@ async def compute_strategies():
     "/federation/strategies/{strategy_id}/effectiveness",
     response_model=FederationStrategyEffectivenessReportResponse,
     status_code=201,
+    summary="Record whether acting on a strategy improved outcome metrics",
 )
 async def report_strategy_effectiveness(
     strategy_id: int,
@@ -272,6 +276,7 @@ async def report_strategy_effectiveness(
     "/federation/instances/{node_id}/aggregate",
     response_model=FederatedAggregationResponse,
     status_code=202,
+    summary="Submit partner instance aggregation payload for trust-gated merge",
 )
 async def post_federated_aggregation(node_id: str, body: FederatedAggregationRequest):
     """Submit partner instance aggregation payload for trust-gated merge."""
@@ -292,7 +297,7 @@ async def post_federated_aggregation(node_id: str, body: FederatedAggregationReq
     return result
 
 
-@router.get("/federation/aggregates", response_model=FederatedAggregationListResponse)
+@router.get("/federation/aggregates", response_model=FederatedAggregationListResponse, summary="Return merged federated aggregation results")
 async def get_federated_aggregates(strategy_type: str | None = Query(None)):
     """Return merged federated aggregation results."""
     aggregates = federation_service.list_federated_aggregates(strategy_type=strategy_type)
@@ -404,7 +409,7 @@ def _mark_messages_read(node_id: str, msg_ids: set[str]) -> None:
         _msg_log.warning("Failed to mark messages read for %s: %s", node_id, e)
 
 
-@router.post("/federation/nodes/{node_id}/messages", status_code=201)
+@router.post("/federation/nodes/{node_id}/messages", status_code=201, summary="Send a message from this node. Set to_node=null to broadcast")
 async def send_message(node_id: str, body: NodeMessage):
     """Send a message from this node. Set to_node=null to broadcast."""
     msg = {
@@ -425,7 +430,7 @@ async def send_message(node_id: str, body: NodeMessage):
     return msg
 
 
-@router.get("/federation/nodes/{node_id}/messages")
+@router.get("/federation/nodes/{node_id}/messages", summary="Get messages for this node (direct + broadcasts). Marks them as read")
 async def get_messages(
     node_id: str,
     since: str | None = Query(None, description="ISO timestamp — only messages after this time"),
@@ -442,7 +447,7 @@ async def get_messages(
     return {"node_id": node_id, "messages": results, "count": len(results)}
 
 
-@router.post("/federation/broadcast", status_code=201)
+@router.post("/federation/broadcast", status_code=201, summary="Broadcast a message to all nodes")
 async def broadcast_message(body: NodeMessage):
     """Broadcast a message to all nodes."""
     msg = {
@@ -492,7 +497,7 @@ def _notify_sse_subscribers(target_node_id: str | None, event: dict) -> None:
             pass  # Drop if subscriber is too slow
 
 
-@router.get("/federation/nodes/{node_id}/stream")
+@router.get("/federation/nodes/{node_id}/stream", summary="SSE stream for a node. Pushes: messages, deploys, task events, status changes")
 async def node_event_stream(node_id: str):
     """SSE stream for a node. Pushes: messages, deploys, task events, status changes.
 
@@ -578,7 +583,7 @@ _diag_subscribers: dict[str, list[asyncio.Queue]] = {}  # node_id → queues
 _diag_lock = asyncio.Lock()
 
 
-@router.post("/federation/nodes/{node_id}/diag", status_code=201)
+@router.post("/federation/nodes/{node_id}/diag", status_code=201, summary="Publish a diagnostic event from a node. High-frequency, ephemeral")
 async def publish_diagnostic(node_id: str, body: dict = {}):
     """Publish a diagnostic event from a node. High-frequency, ephemeral.
 
@@ -607,7 +612,7 @@ async def publish_diagnostic(node_id: str, body: dict = {}):
     return {"ok": True}
 
 
-@router.get("/federation/nodes/{node_id}/diag/stream")
+@router.get("/federation/nodes/{node_id}/diag/stream", summary="SSE stream for diagnostic events from a node. Use node_id='*' for all nodes")
 async def subscribe_diagnostics(node_id: str):
     """SSE stream for diagnostic events from a node. Use node_id='*' for all nodes.
 

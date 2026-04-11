@@ -12,13 +12,13 @@ from app.services import lens_translation_service
 router = APIRouter()
 
 
-@router.get("/lenses/roi")
+@router.get("/lenses/roi", summary="Aggregate lens engagement metrics")
 def lenses_roi() -> dict:
     """Aggregate lens engagement metrics."""
     return lens_translation_service.get_roi_payload()
 
 
-@router.get("/lenses")
+@router.get("/lenses", summary="List all registered worldview and discipline lenses")
 def list_lenses() -> dict:
     """List all registered worldview and discipline lenses."""
     lenses = []
@@ -30,7 +30,7 @@ def list_lenses() -> dict:
     return {"lenses": lenses, "total": len(lenses)}
 
 
-@router.get("/lenses/{lens_id}")
+@router.get("/lenses/{lens_id}", summary="Get Lens")
 def get_lens(lens_id: str) -> dict:
     meta = translate_service.get_lens_meta(lens_id)
     if not meta:
@@ -38,7 +38,7 @@ def get_lens(lens_id: str) -> dict:
     return lens_public_dict(lens_id, meta)
 
 
-@router.post("/lenses", status_code=201)
+@router.post("/lenses", status_code=201, summary="Create Lens")
 def create_lens(body: WorldviewLensCreate, _key: str = Depends(require_api_key)) -> dict:
     if translate_service.get_lens_meta(body.lens_id):
         raise HTTPException(status_code=409, detail=f"Lens '{body.lens_id}' already exists")

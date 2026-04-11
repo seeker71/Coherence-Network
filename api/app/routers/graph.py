@@ -51,7 +51,7 @@ class EdgeCreate(BaseModel):
 # ── Node endpoints ──────────────────────────────────────────────────
 
 
-@router.get("/graph/nodes")
+@router.get("/graph/nodes", summary="List nodes with optional type, phase, and search filters")
 async def list_nodes(
     type: str | None = None,
     phase: str | None = None,
@@ -65,7 +65,7 @@ async def list_nodes(
     )
 
 
-@router.post("/graph/nodes")
+@router.post("/graph/nodes", summary="Create a new node. Reject unknown graph node types while preserving canonical semantics")
 async def create_node(body: NodeCreate):
     """Create a new node. Reject unknown graph node types while preserving canonical semantics."""
     if body.type not in NODE_TYPE_SET:
@@ -93,19 +93,19 @@ async def create_node(body: NodeCreate):
         raise HTTPException(status_code=422, detail=str(exc))
 
 
-@router.get("/graph/nodes/count")
+@router.get("/graph/nodes/count", summary="Count nodes, optionally filtered by type")
 async def count_nodes(type: str | None = None):
     """Count nodes, optionally filtered by type."""
     return graph_service.count_nodes(type=type)
 
 
-@router.get("/graph/stats")
+@router.get("/graph/stats", summary="Get graph-wide statistics")
 async def graph_stats():
     """Get graph-wide statistics."""
     return graph_service.get_stats()
 
 
-@router.get("/graph/nodes/{node_id}")
+@router.get("/graph/nodes/{node_id}", summary="Get a single node")
 async def get_node(node_id: str):
     """Get a single node."""
     node = graph_service.get_node(node_id)
@@ -114,7 +114,7 @@ async def get_node(node_id: str):
     return node
 
 
-@router.patch("/graph/nodes/{node_id}")
+@router.patch("/graph/nodes/{node_id}", summary="Update a node")
 async def update_node(node_id: str, body: NodeUpdate):
     """Update a node."""
     result = graph_service.update_node(node_id, **body.model_dump(exclude_none=True))
@@ -123,7 +123,7 @@ async def update_node(node_id: str, body: NodeUpdate):
     return result
 
 
-@router.delete("/graph/nodes/{node_id}")
+@router.delete("/graph/nodes/{node_id}", summary="Delete a node and all its edges")
 async def delete_node(node_id: str):
     """Delete a node and all its edges."""
     if not graph_service.delete_node(node_id):
@@ -134,7 +134,7 @@ async def delete_node(node_id: str):
 # ── Edge endpoints ──────────────────────────────────────────────────
 
 
-@router.get("/graph/nodes/{node_id}/edges")
+@router.get("/graph/nodes/{node_id}/edges", summary="Get edges for a node")
 async def get_edges(
     node_id: str,
     direction: str = Query(default="both", pattern="^(both|outgoing|incoming)$"),
@@ -144,7 +144,7 @@ async def get_edges(
     return graph_service.get_edges(node_id, direction=direction, edge_type=type)
 
 
-@router.post("/graph/edges")
+@router.post("/graph/edges", summary="Create an edge between two nodes. Validates edge_type and prevents self-loops (Spec 169)")
 async def create_edge(body: EdgeCreate):
     """Create an edge between two nodes. Validates edge_type and prevents self-loops (Spec 169)."""
     # Canonical edge type validation
@@ -173,7 +173,7 @@ async def create_edge(body: EdgeCreate):
         raise HTTPException(status_code=422, detail=str(exc))
 
 
-@router.delete("/graph/edges/{edge_id}")
+@router.delete("/graph/edges/{edge_id}", summary="Delete an edge")
 async def delete_edge(edge_id: str):
     """Delete an edge."""
     if not graph_service.delete_edge(edge_id):
@@ -184,7 +184,7 @@ async def delete_edge(edge_id: str):
 # ── Graph query endpoints ───────────────────────────────────────────
 
 
-@router.get("/graph/nodes/{node_id}/neighbors")
+@router.get("/graph/nodes/{node_id}/neighbors", summary="Get neighboring nodes (1–2 hops)")
 async def get_neighbors(
     node_id: str,
     edge_type: str | None = None,
@@ -217,7 +217,7 @@ async def get_neighbors(
     )
 
 
-@router.get("/graph/nodes/{node_id}/subgraph")
+@router.get("/graph/nodes/{node_id}/subgraph", summary="Get a subgraph centered on a node")
 async def get_subgraph(
     node_id: str,
     depth: int = Query(default=1, ge=1, le=5),
@@ -228,7 +228,7 @@ async def get_subgraph(
     return graph_service.get_subgraph(node_id, depth=depth, edge_types=types)
 
 
-@router.get("/graph/path")
+@router.get("/graph/path", summary="Find shortest path between two nodes")
 async def find_path(
     from_id: str = Query(...),
     to_id: str = Query(...),
@@ -244,7 +244,7 @@ async def find_path(
 # ── Spec 169: Registry + Proof endpoints ────────────────────────────
 
 
-@router.get("/graph/node-types")
+@router.get("/graph/node-types", summary="Return the canonical 10-type node registry (Spec 169)")
 async def get_node_types():
     """Return the canonical 10-type node registry (Spec 169).
 
@@ -254,7 +254,7 @@ async def get_node_types():
     return graph_service.get_node_type_registry()
 
 
-@router.get("/graph/edge-types")
+@router.get("/graph/edge-types", summary="Return the canonical 7-type edge registry (Spec 169)")
 async def get_edge_types():
     """Return the canonical 7-type edge registry (Spec 169).
 
@@ -263,7 +263,7 @@ async def get_edge_types():
     return graph_service.get_edge_type_registry()
 
 
-@router.get("/graph/proof")
+@router.get("/graph/proof", summary="Return aggregate proof that the graph is the fractal data layer (Spec 169)")
 async def get_graph_proof():
     """Return aggregate proof that the graph is the fractal data layer (Spec 169).
 
@@ -275,21 +275,21 @@ async def get_graph_proof():
 
 # ── DIF Feedback endpoints ───────────────────────────────────────────
 
-@router.get("/dif/feedback/stats")
+@router.get("/dif/feedback/stats", summary="Get DIF feedback statistics — true/false positive rates, accuracy")
 async def dif_feedback_stats():
     """Get DIF feedback statistics — true/false positive rates, accuracy."""
     from app.services import dif_feedback_service
     return dif_feedback_service.get_stats()
 
 
-@router.get("/dif/feedback/recent")
+@router.get("/dif/feedback/recent", summary="Get recent DIF feedback entries")
 async def dif_feedback_recent(limit: int = Query(default=20, ge=1, le=100)):
     """Get recent DIF feedback entries."""
     from app.services import dif_feedback_service
     return dif_feedback_service.get_recent(limit=limit)
 
 
-@router.post("/dif/feedback")
+@router.post("/dif/feedback", summary="Record a DIF verification result for accuracy tracking")
 async def record_dif_feedback(body: dict):
     """Record a DIF verification result for accuracy tracking."""
     from app.services import dif_feedback_service

@@ -14,7 +14,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.get("/fatal-issues")
+@router.get("/fatal-issues", summary="Unrecoverable failures. Check when autonomous; no user interaction needed until fatal")
 async def get_fatal_issues() -> dict:
     """Unrecoverable failures. Check when autonomous; no user interaction needed until fatal."""
     logs_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs")
@@ -30,7 +30,7 @@ async def get_fatal_issues() -> dict:
         return {"fatal": False}
 
 
-@router.get("/monitor-issues")
+@router.get("/monitor-issues", summary="Monitor issues from automated pipeline check. Checkable; use to react and improve. Spec 0…")
 async def get_monitor_issues() -> dict:
     """Monitor issues from automated pipeline check. Checkable; use to react and improve. Spec 027."""
     logs_dir = agent_monitor_helpers.agent_logs_dir()
@@ -77,7 +77,7 @@ async def get_metrics(
     return data
 
 
-@router.get("/effectiveness")
+@router.get("/effectiveness", summary="Pipeline effectiveness: throughput, success rate, issue tracking, progress, goal proximity")
 async def get_effectiveness() -> dict:
     """Pipeline effectiveness: throughput, success rate, issue tracking, progress, goal proximity."""
     try:
@@ -97,7 +97,7 @@ async def get_effectiveness() -> dict:
         }
 
 
-@router.get("/collective-health")
+@router.get("/collective-health", summary="Collective health scorecard focused on coherence, resonance, flow, and friction")
 async def get_collective_health(
     window_days: int = Query(7, ge=1, le=30),
 ) -> dict:

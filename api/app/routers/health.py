@@ -139,20 +139,20 @@ class PingResponse(BaseModel):
     timestamp: Annotated[str, Field(description="ISO8601 UTC")]
 
 
-@router.get("/version")
+@router.get("/version", summary="Return API version (lightweight, for dashboards)")
 async def version():
     """Return API version (lightweight, for dashboards)."""
     return {"version": HEALTH_VERSION}
 
 
-@router.get("/ping", response_model=PingResponse)
+@router.get("/ping", response_model=PingResponse, summary="Lightweight liveness ping with current UTC timestamp")
 async def ping():
     """Lightweight liveness ping with current UTC timestamp."""
     now = datetime.now(timezone.utc)
     return PingResponse(pong=True, timestamp=_iso_utc(now))
 
 
-@router.get("/ready", response_model=ReadyResponse)
+@router.get("/ready", response_model=ReadyResponse, summary="Readiness probe for k8s/deploy. Returns 200 when API can serve traffic")
 async def ready(request: Request):
     """Readiness probe for k8s/deploy. Returns 200 when API can serve traffic."""
     is_ready = getattr(request.app.state, "graph_store", None) is not None
@@ -204,7 +204,7 @@ async def ready(request: Request):
     )
 
 
-@router.get("/health/persistence")
+@router.get("/health/persistence", summary="Return global persistence contract status for core domain data")
 async def persistence_contract(request: Request):
     """Return global persistence contract status for core domain data."""
     return persistence_contract_service.evaluate(request.app)
@@ -223,7 +223,7 @@ def _check_schema() -> bool:
         return False
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get("/health", response_model=HealthResponse, summary="Return API health status")
 async def health():
     """Return API health status."""
     now = datetime.now(timezone.utc)

@@ -16,21 +16,21 @@ def _get_registry(request: Request):
     return registry
 
 
-@router.get("/services/health")
+@router.get("/services/health", summary="Full health report for all registered services")
 async def services_health(request: Request) -> dict:
     """Full health report for all registered services."""
     registry = _get_registry(request)
     return registry.health_report()
 
 
-@router.get("/services/dependencies")
+@router.get("/services/dependencies", summary="Dependency graph across all registered services")
 async def services_dependencies(request: Request) -> dict:
     """Dependency graph across all registered services."""
     registry = _get_registry(request)
     return registry.dependency_graph()
 
 
-@router.get("/services/{service_id}/health")
+@router.get("/services/{service_id}/health", summary="Health check for a single service")
 async def service_health(service_id: str, request: Request) -> dict:
     """Health check for a single service."""
     registry = _get_registry(request)
@@ -44,7 +44,7 @@ async def service_health(service_id: str, request: Request) -> dict:
         return {"error": False, "detail": str(exc)}
 
 
-@router.get("/services/{service_id}")
+@router.get("/services/{service_id}", summary="Get spec for a single service")
 async def get_service(service_id: str, request: Request) -> dict:
     """Get spec for a single service."""
     registry = _get_registry(request)
@@ -55,7 +55,7 @@ async def get_service(service_id: str, request: Request) -> dict:
     return asdict(spec)
 
 
-@router.get("/services")
+@router.get("/services", summary="List all registered service specs")
 async def list_services(request: Request) -> list[dict]:
     """List all registered service specs."""
     registry = _get_registry(request)

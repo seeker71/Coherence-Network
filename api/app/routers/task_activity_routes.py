@@ -28,7 +28,7 @@ class ActivityEvent(BaseModel):
     data: dict = {}
 
 
-@router.get("/tasks/activity")
+@router.get("/tasks/activity", summary="Recent activity across all tasks")
 async def recent_activity(
     limit: int = Query(50, ge=1, le=200),
     task_id: str | None = Query(None),
@@ -38,19 +38,19 @@ async def recent_activity(
     return get_activity(limit=limit, task_id=task_id, node_id=node_id)
 
 
-@router.get("/tasks/active")
+@router.get("/tasks/active", summary="Currently executing tasks across all nodes")
 async def active_tasks() -> list[dict]:
     """Currently executing tasks across all nodes."""
     return get_active_tasks()
 
 
-@router.get("/tasks/{task_id}/stream")
+@router.get("/tasks/{task_id}/stream", summary="All events for one task")
 async def task_stream(task_id: str) -> list[dict]:
     """All events for one task."""
     return get_task_stream(task_id)
 
 
-@router.post("/tasks/{task_id}/activity", status_code=201)
+@router.post("/tasks/{task_id}/activity", status_code=201, summary="Log an activity event (from runners)")
 async def post_activity(task_id: str, body: ActivityEvent) -> dict:
     """Log an activity event (from runners)."""
     event = log_activity(
@@ -66,7 +66,7 @@ async def post_activity(task_id: str, body: ActivityEvent) -> dict:
     return event
 
 
-@router.get("/tasks/{task_id}/events")
+@router.get("/tasks/{task_id}/events", summary="Server-Sent Events stream for live task updates")
 async def task_events_sse(task_id: str):
     """Server-Sent Events stream for live task updates."""
 

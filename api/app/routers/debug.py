@@ -44,13 +44,13 @@ class DebugStatusUpdate(BaseModel):
 # ── Endpoints ───────────────────────────────────────────────────────
 
 
-@router.get("/status")
+@router.get("/status", summary="Return current debug configuration")
 async def get_debug_status() -> DebugStatusResponse:
     """Return current debug configuration."""
     return DebugStatusResponse(**_debug_state)
 
 
-@router.patch("/status")
+@router.patch("/status", summary="Update debug configuration at runtime")
 async def update_debug_status(body: DebugStatusUpdate) -> DebugStatusResponse:
     """Update debug configuration at runtime.
 

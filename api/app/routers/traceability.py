@@ -36,7 +36,7 @@ router = APIRouter()
 # ---- Legacy endpoints (keep backward compat) ---------------------------------
 
 
-@router.get("/traceability")
+@router.get("/traceability", summary="List all runtime-traced functions with their spec and idea links")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability")
 async def list_all_traces(
     limit: int = Query(100, ge=1, le=500),
@@ -49,7 +49,7 @@ async def list_all_traces(
     }
 
 
-@router.get("/traceability/coverage")
+@router.get("/traceability/coverage", summary="Report legacy traceability coverage from @traces_to decorator")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability")
 async def traceability_coverage():
     """Report legacy traceability coverage from @traces_to decorator."""
@@ -68,7 +68,7 @@ async def traceability_coverage():
 # ---- Phase 1 endpoints -------------------------------------------------------
 
 
-@router.get("/traceability/report")
+@router.get("/traceability/report", summary="Return current traceability state across all dimensions")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="Full traceability report across all dimensions")
 async def traceability_report():
@@ -81,7 +81,7 @@ async def traceability_report():
     return report.model_dump()
 
 
-@router.post("/traceability/backfill", status_code=202)
+@router.post("/traceability/backfill", status_code=202, summary="Trigger background backfill of all Phase 1 scripts")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="Trigger background backfill of spec->idea and code->spec links")
 async def trigger_backfill(body: BackfillRequest = BackfillRequest()):
@@ -97,7 +97,7 @@ async def trigger_backfill(body: BackfillRequest = BackfillRequest()):
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.get("/traceability/backfill/status")
+@router.get("/traceability/backfill/status", summary="Check the status of the most recent backfill job")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability")
 async def backfill_status():
     """Check the status of the most recent backfill job."""
@@ -110,7 +110,7 @@ async def backfill_status():
 # ---- Phase 3 endpoints -------------------------------------------------------
 
 
-@router.get("/traceability/functions")
+@router.get("/traceability/functions", summary="Return all functions annotated with @spec_traced, with coverage stats")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="List all functions with @spec_traced decorator")
 async def function_registry(
@@ -126,7 +126,7 @@ async def function_registry(
     return result.model_dump()
 
 
-@router.get("/traceability/lineage/{idea_id}")
+@router.get("/traceability/lineage/{idea_id}", summary="Return the complete lineage chain from an idea to its specs, files, and functions")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="Full lineage chain: idea to specs to files to functions")
 async def idea_lineage(idea_id: str):
@@ -141,7 +141,7 @@ async def idea_lineage(idea_id: str):
     return lineage.model_dump()
 
 
-@router.get("/traceability/spec/{spec_id}")
+@router.get("/traceability/spec/{spec_id}", summary="Return all files and functions that implement a given spec")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability",
              description="Forward trace from spec to all implementing files and functions")
 async def spec_forward_trace(spec_id: str):
@@ -156,7 +156,7 @@ async def spec_forward_trace(spec_id: str):
     return trace.model_dump()
 
 
-@router.get("/traceability/idea/{idea_id}")
+@router.get("/traceability/idea/{idea_id}", summary="Find all @traces_to-decorated functions that trace back to a specific idea")
 @spec_traced("full-code-traceability", idea_id="full-code-traceability")
 async def traces_for_idea(idea_id: str):
     """Find all @traces_to-decorated functions that trace back to a specific idea."""

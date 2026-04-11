@@ -13,6 +13,7 @@ router = APIRouter()
 @router.get(
     "/tasks/{task_id}/log",
     responses={404: {"description": "Task not found or task log not found", "model": ErrorDetail}},
+    summary="Full task log (prompt, command, output). File is streamed during execution, complete on f…",
 )
 async def get_task_log(task_id: str) -> dict:
     """Full task log (prompt, command, output). File is streamed during execution, complete on finish."""
