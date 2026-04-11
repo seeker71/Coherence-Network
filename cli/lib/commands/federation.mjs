@@ -20,12 +20,8 @@
  */
 
 import { get, post, del as apiDel } from "../api.mjs";
+import { truncate } from "../ui/ansi.mjs";
 
-function truncate(str, len) {
-  if (!str) return "";
-  if (str.length <= len) return str;
-  return str.slice(0, len - 3) + "...";
-}
 
 export async function listFederationNodes() {
   const data = await get("/api/federation/nodes");

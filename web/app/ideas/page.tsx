@@ -8,43 +8,11 @@ import {
 import IdeasListView from "@/components/ideas/IdeasListView";
 import { withWorkspaceScope } from "@/lib/workspace";
 import { getActiveWorkspaceFromCookie } from "@/lib/workspace-server";
+import type { IdeaQuestion, IdeaWithScore } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Ideas",
   description: "Browse ideas in plain language and choose what looks most worth moving next.",
-};
-
-type IdeaQuestion = {
-  question: string;
-  value_to_whole: number;
-  estimated_cost: number;
-  answer?: string | null;
-  measured_delta?: number | null;
-};
-
-type IdeaWithScore = {
-  id: string;
-  name: string;
-  description: string;
-  potential_value: number;
-  actual_value: number;
-  estimated_cost: number;
-  actual_cost: number;
-  confidence: number;
-  resistance_risk: number;
-  manifestation_status: string;
-  stage?: string;
-  interfaces: string[];
-  open_questions: IdeaQuestion[];
-  free_energy_score: number;
-  value_gap: number;
-  /** Spec 117 — hierarchy (optional for backward compat) */
-  idea_type?: string;
-  parent_idea_id?: string | null;
-  child_idea_ids?: string[];
-  /** Fractal landscape fields */
-  is_curated?: boolean;
-  pillar?: string | null;
 };
 
 type IdeasResponse = {

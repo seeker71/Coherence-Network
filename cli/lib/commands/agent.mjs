@@ -23,12 +23,8 @@
 
 import { get, post, patch, request } from "../api.mjs";
 import { getExecuteToken } from "../config.mjs";
+import { truncate } from "../ui/ansi.mjs";
 
-function truncate(str, len) {
-  if (!str) return "";
-  if (str.length <= len) return str;
-  return str.slice(0, len - 3) + "...";
-}
 
 function timeSince(isoStr) {
   if (!isoStr) return "";
