@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
+import { readPublicWebConfig } from "@/lib/public-config";
 
 const HEALTH_POLL_INTERVAL_MS = 60000;
-const HEALTH_REQUEST_TIMEOUT_MS = 10000;
+const HEALTH_REQUEST_TIMEOUT_MS = readPublicWebConfig().fetchDefaults.healthTimeoutMs;
 
 export default function ApiHealthPage() {
   const apiUrl = getApiBase();

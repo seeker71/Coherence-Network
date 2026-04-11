@@ -83,7 +83,12 @@ import { runGuidesCommand } from "../lib/commands/guides.mjs";
 import { debugCommand } from "../lib/commands/debug.mjs";
 import { modelsCommand, usageCommand } from "../lib/commands/models.mjs";
 import { handleWorkspace } from "../lib/commands/workspaces.mjs";
-import { setActiveWorkspaceOverride } from "../lib/config.mjs";
+import {
+  setActiveWorkspaceOverride,
+  setApiUrlOverride,
+  setApiKeyOverride,
+  setTimeoutOverride,
+} from "../lib/config.mjs";
 import { basename } from 'path';
 
 // Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
@@ -95,22 +100,42 @@ if (_invokedAs === 'cc') {
   );
 }
 
-// Extract global --workspace flag before dispatching; any command can
-// read the active workspace via getActiveWorkspace() from config.mjs.
-// The flag sets an in-process override; the persistent default lives in
-// config.json under the `workspace` key (set via `cc workspace use <id>`).
+// Extract global flags before dispatching. Each flag sets an in-process
+// override; per-invocation env vars (COHERENCE_API_URL, COHERENCE_API_KEY,
+// COHERENCE_TIMEOUT_MS) are honored by the resolvers in config.mjs when no
+// override is set. The persistent workspace default lives in config.json
+// under the `workspace` key (set via `cc workspace use <id>`).
+//
+//   --workspace <id>    Scope commands to a specific workspace for this run.
+//   --api-url <url>     Override the API origin (alternative: COHERENCE_API_URL).
+//   --api-key <key>     Override the API key (alternative: COHERENCE_API_KEY).
+//   --timeout <ms>      Override the request timeout (alternative: COHERENCE_TIMEOUT_MS).
 function _extractGlobalFlags(argv) {
   const out = [];
+  const TAKES_VALUE = new Set(["--workspace", "--api-url", "--api-key", "--timeout"]);
+  const APPLY = {
+    "--workspace": setActiveWorkspaceOverride,
+    "--api-url": setApiUrlOverride,
+    "--api-key": setApiKeyOverride,
+    "--timeout": setTimeoutOverride,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a === "--workspace" && i + 1 < argv.length) {
-      setActiveWorkspaceOverride(argv[++i]);
+    if (TAKES_VALUE.has(a) && i + 1 < argv.length) {
+      APPLY[a](argv[++i]);
       continue;
     }
-    if (a.startsWith("--workspace=")) {
-      setActiveWorkspaceOverride(a.slice("--workspace=".length));
-      continue;
+    // --flag=value form
+    let matched = false;
+    for (const flag of TAKES_VALUE) {
+      const prefix = `${flag}=`;
+      if (a.startsWith(prefix)) {
+        APPLY[flag](a.slice(prefix.length));
+        matched = true;
+        break;
+      }
     }
+    if (matched) continue;
     out.push(a);
   }
   return out;
@@ -184,8 +209,6 @@ const COMMANDS = {
   auth:          () => handleAuth(args),
   ops:           () => handleOps(args),
   config:        () => handleConfig(args),
-  tasks:         () => listTasks(args),
-  task:          () => handleTask(args),
   progress:      () => postProgress(args),
   stream:        () => streamStart(args),
   watch:         () => watchTask(args),
