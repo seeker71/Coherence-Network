@@ -8,7 +8,7 @@ from app.services import agent_service
 router = APIRouter()
 
 
-@router.get("/providers", response_model=TaskExecutionProviderList)
+@router.get("/providers", response_model=TaskExecutionProviderList, summary="Get Providers")
 async def get_providers() -> TaskExecutionProviderList:
     providers = agent_service.list_available_task_execution_providers()
     return TaskExecutionProviderList(

@@ -119,7 +119,7 @@ def _all_ideas_as_dicts() -> list[dict]:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
-@router.get("/resonance/cross-domain", response_model=CrossDomainResponse)
+@router.get("/resonance/cross-domain", response_model=CrossDomainResponse, summary="Return top cross-domain idea pairs ranked by CRK coherence")
 async def get_cross_domain_resonances(
     limit: int = Query(20, ge=1, le=100, description="Max pairs to return"),
     min_coherence: float = Query(0.0, ge=0.0, le=1.0, description="Minimum CRK coherence filter"),
@@ -146,7 +146,7 @@ async def get_cross_domain_resonances(
     )
 
 
-@router.get("/resonance/ideas/{idea_id}", response_model=ResonanceForIdeaResponse)
+@router.get("/resonance/ideas/{idea_id}", response_model=ResonanceForIdeaResponse, summary="Return ideas that resonate structurally with the given idea")
 async def get_resonance_for_idea(
     idea_id: str,
     limit: int = Query(10, ge=1, le=50),
@@ -188,7 +188,7 @@ async def get_resonance_for_idea(
     )
 
 
-@router.get("/resonance/proof", response_model=ResonanceProofOut)
+@router.get("/resonance/proof", response_model=ResonanceProofOut, summary="Return evidence that structural cross-domain resonance is working")
 async def get_resonance_proof() -> ResonanceProofOut:
     """Return evidence that structural cross-domain resonance is working.
 
@@ -222,7 +222,7 @@ async def get_resonance_proof() -> ResonanceProofOut:
     )
 
 
-@router.get("/resonance/events")
+@router.get("/resonance/events", summary="Return the resonance discovery event log (most recent first)")
 async def get_resonance_events(
     limit: int = Query(50, ge=1, le=200),
 ) -> list[dict]:
@@ -234,7 +234,7 @@ async def get_resonance_events(
     return resonance_svc.get_event_log(limit=limit)
 
 
-@router.post("/resonance/scan", response_model=ScanResult)
+@router.post("/resonance/scan", response_model=ScanResult, summary="Trigger a full cross-domain resonance scan of the idea portfolio")
 async def trigger_resonance_scan(
     min_coherence: float = Query(0.0, ge=0.0, le=1.0),
     max_ideas: int = Query(100, ge=1, le=500, description="Cap ideas to scan (prevents timeout)"),

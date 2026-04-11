@@ -70,7 +70,7 @@ def _save_routing(config: dict) -> None:
 # ── Endpoints ───────────────────────────────────────────────────────
 
 
-@router.get("")
+@router.get("", summary="List all configured models grouped by executor with tier info")
 async def list_models() -> ModelsListResponse:
     """List all configured models grouped by executor with tier info."""
     config = _load_routing()
@@ -112,7 +112,7 @@ async def list_models() -> ModelsListResponse:
     return ModelsListResponse(executors=result, total=total)
 
 
-@router.get("/routing")
+@router.get("/routing", summary="Return current task-type → model routing configuration")
 async def get_routing_config() -> RoutingConfigResponse:
     """Return current task-type → model routing configuration."""
     config = _load_routing()
@@ -124,7 +124,7 @@ async def get_routing_config() -> RoutingConfigResponse:
     )
 
 
-@router.patch("/routing")
+@router.patch("/routing", summary="Update model routing configuration at runtime")
 async def update_routing_config(body: RoutingUpdateRequest) -> RoutingConfigResponse:
     """Update model routing configuration at runtime.
 

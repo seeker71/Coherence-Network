@@ -12,7 +12,7 @@ from app.services import constellation_service
 router = APIRouter()
 
 
-@router.get("/constellation")
+@router.get("/constellation", summary="Return network graph data optimized for constellation/force-directed visualization")
 async def get_constellation(
     workspace_id: str = Query("coherence-network", description="Workspace to visualize"),
     max_nodes: int = Query(100, ge=10, le=500, description="Maximum number of nodes to return"),

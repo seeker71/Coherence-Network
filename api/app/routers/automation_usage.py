@@ -12,7 +12,7 @@ from app.services import automation_usage_service
 router = APIRouter()
 
 
-@router.get("/automation/usage")
+@router.get("/automation/usage", summary="Get Automation Usage")
 async def get_automation_usage(
     force_refresh: bool = Query(False),
     compact: bool = Query(False, description="Return a trimmed payload for lower-bandwidth clients"),
@@ -60,7 +60,7 @@ async def get_automation_usage(
         return payload
 
 
-@router.get("/automation/usage/snapshots")
+@router.get("/automation/usage/snapshots", summary="Get Automation Usage Snapshots")
 async def get_automation_usage_snapshots(limit: int = Query(200, ge=1, le=2000)) -> dict:
     rows = automation_usage_service.list_usage_snapshots(limit=limit)
     return {
@@ -69,7 +69,7 @@ async def get_automation_usage_snapshots(limit: int = Query(200, ge=1, le=2000))
     }
 
 
-@router.get("/automation/usage/external-tools")
+@router.get("/automation/usage/external-tools", summary="Get External Tool Usage Events")
 async def get_external_tool_usage_events(
     limit: int = Query(200, ge=1, le=5000),
     provider: str = Query("", description="Optional provider filter (e.g. github-actions)"),
@@ -83,7 +83,7 @@ async def get_external_tool_usage_events(
     return {"count": len(rows), "events": rows}
 
 
-@router.get("/automation/usage/alerts")
+@router.get("/automation/usage/alerts", summary="Get Automation Usage Alerts")
 async def get_automation_usage_alerts(
     threshold_ratio: float = Query(0.2, ge=0.0, le=1.0),
     force_refresh: bool = Query(False),
@@ -111,13 +111,13 @@ async def get_automation_usage_alerts(
         return payload
 
 
-@router.get("/automation/usage/subscription-estimator")
+@router.get("/automation/usage/subscription-estimator", summary="Get Subscription Upgrade Estimator")
 async def get_subscription_upgrade_estimator() -> dict:
     report = automation_usage_service.estimate_subscription_upgrades()
     return report.model_dump(mode="json")
 
 
-@router.get("/automation/usage/readiness")
+@router.get("/automation/usage/readiness", summary="Get Provider Readiness")
 async def get_provider_readiness(
     required_providers: str = Query("", description="Comma-separated provider ids to require"),
     force_refresh: bool = Query(False),
@@ -161,7 +161,7 @@ async def get_provider_readiness(
         return payload
 
 
-@router.get("/automation/usage/daily-summary")
+@router.get("/automation/usage/daily-summary", summary="Get Automation Usage Daily Summary")
 async def get_automation_usage_daily_summary(
     window_hours: int = Query(24, ge=1, le=24 * 30),
     top_n: int = Query(3, ge=1, le=20),
@@ -268,7 +268,7 @@ async def get_automation_usage_daily_summary(
         }
 
 
-@router.post("/automation/usage/provider-validation/run")
+@router.post("/automation/usage/provider-validation/run", summary="Run Provider Validation Probes")
 async def run_provider_validation_probes(
     required_providers: str = Query("", description="Comma-separated provider ids to probe"),
 ) -> dict:
@@ -279,7 +279,7 @@ async def run_provider_validation_probes(
     return report
 
 
-@router.post("/automation/usage/provider-heal/run")
+@router.post("/automation/usage/provider-heal/run", summary="Run Provider Auto Heal")
 async def run_provider_auto_heal(
     required_providers: str = Query("", description="Comma-separated provider ids to heal"),
     max_rounds: int = Query(2, ge=1, le=6),
@@ -298,7 +298,7 @@ async def run_provider_auto_heal(
     return report
 
 
-@router.get("/automation/usage/provider-validation")
+@router.get("/automation/usage/provider-validation", summary="Get Provider Validation Report")
 async def get_provider_validation_report(
     required_providers: str = Query("", description="Comma-separated provider ids to validate"),
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),

@@ -9,7 +9,7 @@ from app.services.agent_service import list_tasks
 router = APIRouter()
 
 
-@router.get("/auto-heal/stats")
+@router.get("/auto-heal/stats", summary="Auto-heal statistics: heals created, rates, by-category breakdown")
 async def get_auto_heal_stats() -> dict:
     """Auto-heal statistics: heals created, rates, by-category breakdown."""
     items, _total, _runtime_backfill = list_tasks()

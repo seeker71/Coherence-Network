@@ -19,12 +19,12 @@ from app.services import registry_discovery_service, registry_stats_service
 router = APIRouter()
 
 
-@router.get("/discovery/registry-submissions", tags=["discovery"], response_model=RegistrySubmissionInventory)
+@router.get("/discovery/registry-submissions", tags=["discovery"], response_model=RegistrySubmissionInventory, summary="List Registry Submissions")
 async def list_registry_submissions() -> RegistrySubmissionInventory:
     return registry_discovery_service.build_registry_submission_inventory()
 
 
-@router.get("/discovery/registry-stats", tags=["discovery"], response_model=RegistryStatsList)
+@router.get("/discovery/registry-stats", tags=["discovery"], response_model=RegistryStatsList, summary="List Registry Stats")
 async def list_registry_stats(
     refresh: bool = Query(default=False, description="Bypass cache and fetch live data"),
     registry_id: Optional[str] = Query(default=None, description="Filter to one registry"),
@@ -35,7 +35,7 @@ async def list_registry_stats(
     )
 
 
-@router.get("/discovery/registry-dashboard", tags=["discovery"], response_model=RegistryDashboard)
+@router.get("/discovery/registry-dashboard", tags=["discovery"], response_model=RegistryDashboard, summary="Get Registry Dashboard")
 async def get_registry_dashboard() -> RegistryDashboard:
     inventory = registry_discovery_service.build_registry_submission_inventory()
     try:

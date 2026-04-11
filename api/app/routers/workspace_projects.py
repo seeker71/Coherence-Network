@@ -25,6 +25,7 @@ router = APIRouter()
     "/workspaces/{workspace_id}/projects",
     response_model=WorkspaceProject,
     status_code=201,
+    summary="Create Project",
 )
 async def create_project(
     workspace_id: str,
@@ -47,6 +48,7 @@ async def create_project(
 @router.get(
     "/workspaces/{workspace_id}/projects",
     response_model=ProjectListResponse,
+    summary="List Projects",
 )
 async def list_projects(workspace_id: str) -> ProjectListResponse:
     projects = workspace_project_service.list_projects(workspace_id)
@@ -59,6 +61,7 @@ async def list_projects(workspace_id: str) -> ProjectListResponse:
 @router.get(
     "/projects/{project_id}",
     response_model=WorkspaceProjectDetail,
+    summary="Get Project",
 )
 async def get_project(project_id: str) -> WorkspaceProjectDetail:
     proj = workspace_project_service.get_project(project_id)
@@ -67,7 +70,7 @@ async def get_project(project_id: str) -> WorkspaceProjectDetail:
     return WorkspaceProjectDetail(**proj)
 
 
-@router.delete("/projects/{project_id}", status_code=204)
+@router.delete("/projects/{project_id}", status_code=204, summary="Delete Project")
 async def delete_project(
     project_id: str,
     _key: str = Depends(require_api_key),
@@ -80,6 +83,7 @@ async def delete_project(
 @router.post(
     "/projects/{project_id}/ideas",
     status_code=201,
+    summary="Add Idea To Project",
 )
 async def add_idea_to_project(
     project_id: str,
@@ -97,7 +101,7 @@ async def add_idea_to_project(
     return edge
 
 
-@router.delete("/projects/{project_id}/ideas/{idea_id}", status_code=204)
+@router.delete("/projects/{project_id}/ideas/{idea_id}", status_code=204, summary="Remove Idea From Project")
 async def remove_idea_from_project(
     project_id: str,
     idea_id: str,
@@ -108,7 +112,7 @@ async def remove_idea_from_project(
         raise HTTPException(status_code=404, detail="Edge not found")
 
 
-@router.get("/ideas/{idea_id}/projects", response_model=ProjectListResponse)
+@router.get("/ideas/{idea_id}/projects", response_model=ProjectListResponse, summary="List Projects For Idea")
 async def list_projects_for_idea(idea_id: str) -> ProjectListResponse:
     projects = workspace_project_service.list_projects_for_idea(idea_id)
     return ProjectListResponse(

@@ -14,7 +14,7 @@ from app.services import repo_credential_service as service
 router = APIRouter(tags=["credentials"])
 
 
-@router.post("", response_model=RepoCredentialResponse)
+@router.post("", response_model=RepoCredentialResponse, summary="Add or update a repo-specific credential (hashed)")
 async def add_credential(req: RepoCredentialCreate):
     """Add or update a repo-specific credential (hashed)."""
     # Hash the raw credential before passing it to the service
@@ -42,7 +42,7 @@ async def add_credential(req: RepoCredentialCreate):
     return full_recs[0]
 
 
-@router.get("", response_model=RepoCredentialList)
+@router.get("", response_model=RepoCredentialList, summary="List registered credentials, filtered by contributor or repo")
 async def list_credentials(
     contributor_id: Optional[str] = Query(None),
     repo_url: Optional[str] = Query(None)
@@ -52,7 +52,7 @@ async def list_credentials(
     return {"credentials": recs}
 
 
-@router.delete("/{credential_id}")
+@router.delete("/{credential_id}", summary="Remove a credential record")
 async def delete_credential(credential_id: str):
 
     """Remove a credential record."""

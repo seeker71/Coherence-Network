@@ -12,13 +12,13 @@ from app.services import zoom_service
 router = APIRouter()
 
 
-@router.get("/graph/pillars", response_model=PillarListResponse, tags=["graph"])
+@router.get("/graph/pillars", response_model=PillarListResponse, tags=["graph"], summary="Return all root-level pillar nodes: traceability, trust, freedom, uniqueness, collaborati…")
 async def get_pillars():
     """Return all root-level pillar nodes: traceability, trust, freedom, uniqueness, collaboration."""
     return zoom_service.get_pillars()
 
 
-@router.get("/graph/zoom/{node_id}", response_model=ZoomResponse, tags=["graph"])
+@router.get("/graph/zoom/{node_id}", response_model=ZoomResponse, tags=["graph"], summary="Return a fractal subtree rooted at node_id")
 async def zoom_node(
     node_id: str,
     depth: int = Query(default=1, ge=0),

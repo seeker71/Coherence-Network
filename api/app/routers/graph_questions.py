@@ -18,6 +18,7 @@ router = APIRouter()
     response_model=QuestionResponse,
     status_code=201,
     tags=["graph"],
+    summary="Add an open question to a node",
 )
 async def add_question(node_id: str, body: AddQuestionRequest):
     """Add an open question to a node."""
@@ -35,6 +36,7 @@ async def add_question(node_id: str, body: AddQuestionRequest):
     "/graph/nodes/{node_id}/questions/{question_id}",
     response_model=QuestionResponse,
     tags=["graph"],
+    summary="Resolve or re-open an open question on a node",
 )
 async def patch_question(node_id: str, question_id: str, body: PatchQuestionRequest):
     """Resolve or re-open an open question on a node."""

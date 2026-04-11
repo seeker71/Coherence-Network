@@ -24,7 +24,7 @@ from app.services import (
 router = APIRouter()
 
 
-@router.post("/run-state/claim", response_model=AgentRunStateSnapshot)
+@router.post("/run-state/claim", response_model=AgentRunStateSnapshot, summary="Claim or refresh an execution lease for task-level run ownership")
 async def claim_run_state(data: AgentRunStateClaim) -> dict:
     """Claim or refresh an execution lease for task-level run ownership."""
     return agent_run_state_service.claim_run_state(
@@ -39,7 +39,7 @@ async def claim_run_state(data: AgentRunStateClaim) -> dict:
     )
 
 
-@router.post("/run-state/heartbeat", response_model=AgentRunStateSnapshot)
+@router.post("/run-state/heartbeat", response_model=AgentRunStateSnapshot, summary="Heartbeat Run State")
 async def heartbeat_run_state(data: AgentRunStateHeartbeat) -> dict:
     return agent_run_state_service.heartbeat_run_state(
         task_id=data.task_id,
@@ -49,7 +49,7 @@ async def heartbeat_run_state(data: AgentRunStateHeartbeat) -> dict:
     )
 
 
-@router.post("/run-state/update", response_model=AgentRunStateSnapshot)
+@router.post("/run-state/update", response_model=AgentRunStateSnapshot, summary="Update Run State")
 async def update_run_state(data: AgentRunStateUpdate) -> dict:
     return agent_run_state_service.update_run_state(
         task_id=data.task_id,
@@ -61,7 +61,7 @@ async def update_run_state(data: AgentRunStateUpdate) -> dict:
     )
 
 
-@router.get("/run-state/{task_id}", response_model=AgentRunStateSnapshot)
+@router.get("/run-state/{task_id}", response_model=AgentRunStateSnapshot, summary="Get Run State")
 async def get_run_state(task_id: str) -> dict:
     state = agent_run_state_service.get_run_state(task_id)
     if state is None:
@@ -69,7 +69,7 @@ async def get_run_state(task_id: str) -> dict:
     return state
 
 
-@router.post("/runners/heartbeat", response_model=AgentRunnerSnapshot)
+@router.post("/runners/heartbeat", response_model=AgentRunnerSnapshot, summary="Heartbeat Runner")
 async def heartbeat_runner(data: AgentRunnerHeartbeat, background_tasks: BackgroundTasks) -> dict:
     snapshot = agent_runner_registry_service.heartbeat_runner(
         runner_id=data.runner_id,
@@ -92,7 +92,7 @@ async def heartbeat_runner(data: AgentRunnerHeartbeat, background_tasks: Backgro
     return snapshot
 
 
-@router.get("/runners", response_model=AgentRunnerList)
+@router.get("/runners", response_model=AgentRunnerList, summary="List Runners")
 async def list_runners(
     include_stale: bool = Query(False),
     limit: int = Query(100, ge=1, le=500),
@@ -104,7 +104,7 @@ async def list_runners(
     )
 
 
-@router.get("/lifecycle/summary")
+@router.get("/lifecycle/summary", summary="Agent Lifecycle Summary")
 async def agent_lifecycle_summary(
     seconds: int = Query(3600, ge=60, le=2592000),
     limit: int = Query(500, ge=1, le=5000),

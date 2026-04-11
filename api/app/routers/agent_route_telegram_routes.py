@@ -38,7 +38,7 @@ def _get_telegram_config() -> dict:
     }
 
 
-@router.get("/route", response_model=RouteResponse)
+@router.get("/route", response_model=RouteResponse, summary="Get routing for a task type (no persistence). Canonical executors only")
 async def route(
     task_type: TaskType = Query(...),
     executor: Optional[str] = Query(
@@ -50,7 +50,7 @@ async def route(
     return RouteResponse(**agent_service.get_route(task_type, executor=executor or "auto"))
 
 
-@router.get("/telegram/diagnostics")
+@router.get("/telegram/diagnostics", summary="Diagnostics: last webhook events, send results, config (masked). For debugging")
 async def telegram_diagnostics() -> dict:
     """Diagnostics: last webhook events, send results, config (masked). For debugging."""
     from app.services import telegram_adapter
@@ -125,7 +125,7 @@ async def telegram_diagnostics() -> dict:
     }
 
 
-@router.post("/telegram/test-send")
+@router.post("/telegram/test-send", summary="Send a test message to configured chat IDs. Returns raw Telegram API response for debuggi…")
 async def telegram_test_send(
     text: Optional[str] = Query(None, description="Optional message text"),
 ) -> dict:

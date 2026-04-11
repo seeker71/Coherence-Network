@@ -49,7 +49,7 @@ class BriefFeedbackRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.get("/daily")
+@router.get("/daily", summary="Generate and return a daily brief")
 async def get_daily_brief(
     response: Response,
     contributor_id: Optional[str] = Query(default=None),
@@ -70,7 +70,7 @@ async def get_daily_brief(
     return brief
 
 
-@router.post("/feedback", status_code=201)
+@router.post("/feedback", status_code=201, summary="Record that a brief card led to an action")
 async def post_feedback(body: BriefFeedbackRequest) -> dict:
     """Record that a brief card led to an action."""
     try:
@@ -85,7 +85,7 @@ async def post_feedback(body: BriefFeedbackRequest) -> dict:
     return feedback
 
 
-@router.get("/engagement-metrics")
+@router.get("/engagement-metrics", summary="Return aggregate engagement metrics")
 async def get_engagement_metrics(
     window_days: int = Query(default=30, ge=1, le=365),
 ) -> dict:

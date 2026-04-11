@@ -57,7 +57,7 @@ def _queue_inventory_auto_execute(payload: dict, background_tasks: BackgroundTas
         background_tasks.add_task(agent_execution_service.execute_task, task_id)
 
 
-@router.get("/inventory/system-lineage")
+@router.get("/inventory/system-lineage", summary="System Lineage Inventory")
 async def system_lineage_inventory(
     runtime_window_seconds: int = Query(3600, ge=60, le=2592000),
     lineage_link_limit: int = Query(300, ge=1, le=1000),
@@ -72,17 +72,17 @@ async def system_lineage_inventory(
     )
 
 
-@router.get("/inventory/routes/canonical")
+@router.get("/inventory/routes/canonical", summary="Canonical Routes")
 async def canonical_routes() -> dict:
     return route_registry_service.get_canonical_routes()
 
 
-@router.get("/inventory/page-lineage")
+@router.get("/inventory/page-lineage", summary="Page Lineage")
 async def page_lineage() -> dict:
     return page_lineage_service.get_page_lineage()
 
 
-@router.post("/inventory/questions/next-highest-roi-task")
+@router.post("/inventory/questions/next-highest-roi-task", summary="Next Highest Roi Task")
 async def next_highest_roi_task(
     background_tasks: BackgroundTasks,
     create_task: bool = Query(False),
@@ -93,14 +93,14 @@ async def next_highest_roi_task(
     return payload
 
 
-@router.post("/inventory/questions/sync-implementation-tasks")
+@router.post("/inventory/questions/sync-implementation-tasks", summary="Sync Implementation Request Tasks")
 async def sync_implementation_request_tasks(background_tasks: BackgroundTasks) -> dict:
     payload = inventory_service.sync_implementation_request_question_tasks()
     _queue_inventory_auto_execute(payload, background_tasks)
     return payload
 
 
-@router.post("/inventory/specs/sync-implementation-tasks")
+@router.post("/inventory/specs/sync-implementation-tasks", summary="Sync Spec Implementation Gap Tasks")
 async def sync_spec_implementation_gap_tasks(
     background_tasks: BackgroundTasks,
     create_task: bool = Query(False),
@@ -115,7 +115,7 @@ async def sync_spec_implementation_gap_tasks(
     return payload
 
 
-@router.post("/inventory/roi/sync-progress")
+@router.post("/inventory/roi/sync-progress", summary="Sync Roi Progress Tasks")
 async def sync_roi_progress_tasks(
     background_tasks: BackgroundTasks,
     create_task: bool = Query(False),
@@ -136,7 +136,7 @@ async def sync_roi_progress_tasks(
     return payload
 
 
-@router.get("/inventory/questions/proactive")
+@router.get("/inventory/questions/proactive", summary="Proactive Questions")
 async def proactive_questions(
     limit: int = Query(20, ge=1, le=200),
     top: int = Query(20, ge=1, le=200),
@@ -149,7 +149,7 @@ async def proactive_questions(
     )
 
 
-@router.post("/inventory/questions/sync-proactive")
+@router.post("/inventory/questions/sync-proactive", summary="Sync Proactive Questions")
 async def sync_proactive_questions(
     limit: int = Query(20, ge=1, le=200),
     max_add: int = Query(20, ge=1, le=200),
@@ -162,7 +162,7 @@ async def sync_proactive_questions(
     )
 
 
-@router.post("/inventory/gaps/sync-traceability")
+@router.post("/inventory/gaps/sync-traceability", summary="Sync Traceability Gap Artifacts")
 async def sync_traceability_gap_artifacts(
     background_tasks: BackgroundTasks,
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
@@ -182,7 +182,7 @@ async def sync_traceability_gap_artifacts(
     return payload
 
 
-@router.get("/pipeline/pulse")
+@router.get("/pipeline/pulse", summary="Pipeline self-awareness digest: what's working, what's stuck, what to do next")
 async def pipeline_pulse(
     window_days: int = Query(7, ge=1, le=90),
     task_limit: int = Query(500, ge=10, le=5000),
@@ -195,7 +195,7 @@ async def pipeline_pulse(
     )
 
 
-@router.post("/pipeline/fix-hollow-completions")
+@router.post("/pipeline/fix-hollow-completions", summary="Reclassify hollow completions as broken_provider. Fixes Thompson Sampling data")
 async def fix_hollow_completions(
     min_output_chars: int = Query(30, ge=1),
     batch_size: int = Query(200, ge=1, le=1000),
@@ -272,7 +272,7 @@ async def fix_hollow_completions(
     }
 
 
-@router.post("/inventory/gaps/bootstrap-specs")
+@router.post("/inventory/gaps/bootstrap-specs", summary="Create spec tasks for the highest-ROI ideas that don't have a spec yet")
 async def bootstrap_spec_tasks(
     max_tasks: int = Query(20, ge=1, le=100),
     min_value_gap: float = Query(10.0, ge=0),
@@ -284,7 +284,7 @@ async def bootstrap_spec_tasks(
     )
 
 
-@router.get("/inventory/process-completeness")
+@router.get("/inventory/process-completeness", summary="Process Completeness")
 async def process_completeness(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     auto_sync: bool = Query(False),
@@ -303,7 +303,7 @@ async def process_completeness(
     )
 
 
-@router.post("/inventory/gaps/sync-process-tasks")
+@router.post("/inventory/gaps/sync-process-tasks", summary="Sync Process Gap Tasks")
 async def sync_process_gap_tasks(
     background_tasks: BackgroundTasks,
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
@@ -327,7 +327,7 @@ async def sync_process_gap_tasks(
     return payload
 
 
-@router.get("/inventory/asset-modularity")
+@router.get("/inventory/asset-modularity", summary="Asset Modularity")
 async def asset_modularity(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
     max_implementation_files: int = Query(5000, ge=100, le=20000),
@@ -338,7 +338,7 @@ async def asset_modularity(
     )
 
 
-@router.post("/inventory/gaps/sync-asset-modularity-tasks")
+@router.post("/inventory/gaps/sync-asset-modularity-tasks", summary="Sync Asset Modularity Tasks")
 async def sync_asset_modularity_tasks(
     background_tasks: BackgroundTasks,
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
@@ -352,7 +352,7 @@ async def sync_asset_modularity_tasks(
     return payload
 
 
-@router.get("/inventory/flow")
+@router.get("/inventory/flow", summary="Spec Process Implementation Validation Flow")
 def spec_process_implementation_validation_flow(
     request: Request,
     idea_id: str | None = Query(default=None),
@@ -413,7 +413,7 @@ def spec_process_implementation_validation_flow(
     )
 
 
-@router.post("/inventory/flow/next-unblock-task")
+@router.post("/inventory/flow/next-unblock-task", summary="Next Unblock Task")
 async def next_unblock_task(
     background_tasks: BackgroundTasks,
     create_task: bool = Query(False),
@@ -432,7 +432,7 @@ async def next_unblock_task(
     return payload
 
 
-@router.get("/inventory/endpoint-traceability")
+@router.get("/inventory/endpoint-traceability", summary="Endpoint Traceability Inventory")
 async def endpoint_traceability_inventory(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
 ) -> dict:
@@ -441,21 +441,21 @@ async def endpoint_traceability_inventory(
     )
 
 
-@router.get("/inventory/route-evidence")
+@router.get("/inventory/route-evidence", summary="Route Evidence Inventory")
 async def route_evidence_inventory(
     runtime_window_seconds: int = Query(86400, ge=60, le=2592000),
 ) -> dict:
     return inventory_service.build_route_evidence_inventory(runtime_window_seconds=runtime_window_seconds)
 
 
-@router.get("/inventory/commit-evidence")
+@router.get("/inventory/commit-evidence", summary="Commit Evidence Inventory")
 async def commit_evidence_inventory(
     limit: int = Query(50, ge=1, le=500),
 ) -> dict:
     return inventory_service.build_commit_evidence_inventory(limit=limit)
 
 
-@router.post("/inventory/commit-evidence")
+@router.post("/inventory/commit-evidence", summary="Accept a batch of commit records from external tools")
 async def post_commit_evidence(
     body: dict = Body(...),
 ) -> dict:

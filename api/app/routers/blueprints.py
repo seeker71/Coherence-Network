@@ -38,7 +38,7 @@ class Blueprint(BaseModel):
     ideas: List[dict]
     edges: List[dict]
 
-@router.get("/blueprints")
+@router.get("/blueprints", summary="List available project roadmap blueprints")
 def list_blueprints() -> List[dict]:
     """List available project roadmap blueprints."""
     if not os.path.exists(BLUEPRINTS_DIR):
@@ -58,7 +58,7 @@ def list_blueprints() -> List[dict]:
                 })
     return blueprints
 
-@router.post("/blueprints/{blueprint_id}/apply")
+@router.post("/blueprints/{blueprint_id}/apply", summary="Apply a blueprint by creating its ideas and edges in the network")
 def apply_blueprint(blueprint_id: str, prefix: str = "", applicant_id: str | None = None) -> dict:
     """Apply a blueprint by creating its ideas and edges in the network."""
     path = os.path.join(BLUEPRINTS_DIR, f"{blueprint_id}.json")

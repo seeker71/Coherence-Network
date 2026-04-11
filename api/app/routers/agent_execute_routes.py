@@ -27,6 +27,7 @@ router = APIRouter()
         404: {"description": "No pending task found", "model": ErrorDetail},
         409: {"description": "Task already claimed/running by another worker", "model": ErrorDetail},
     },
+    summary="Pick a pending task (oldest-first fallback) and execute it via Codex/API worker flow",
 )
 async def pickup_and_execute_task(
     request: Request,
@@ -111,6 +112,7 @@ async def pickup_and_execute_task(
         403: {"description": "Forbidden (missing or invalid execute token)", "model": ErrorDetail},
         404: {"description": "Task not found", "model": ErrorDetail},
     },
+    summary="Execute a task server-side (background)",
 )
 async def execute_task(
     task_id: str,
