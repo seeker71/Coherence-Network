@@ -25,10 +25,17 @@ logger = logging.getLogger(__name__)
 # Source configuration — loaded from config file, editable via API
 # ---------------------------------------------------------------------------
 
-_CONFIG_PATH = Path(os.environ.get(
-    "NEWS_SOURCES_CONFIG",
-    str(Path(__file__).resolve().parent.parent.parent.parent / "config" / "news-sources.json"),
-))
+# Default location of the on-disk source list. Resolved lazily so that tests
+# (and any other consumer that wants isolation) can point NEWS_SOURCES_CONFIG
+# at a temp file at runtime — the previous module-level constant captured the
+# value at import time, so per-test env-var overrides were silently ignored
+# and the in-tree config/news-sources.json got polluted on every test run.
+_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent.parent / "config" / "news-sources.json"
+
+
+def _config_path() -> Path:
+    return Path(os.environ.get("NEWS_SOURCES_CONFIG", str(_DEFAULT_CONFIG_PATH)))
+
 
 _DEFAULT_SOURCES: list[dict] = [
     {"id": "hackernews", "name": "Hacker News", "type": "rss", "url": "https://news.ycombinator.com/rss", "categories": ["technology", "programming"], "is_active": True, "update_interval_minutes": 60, "priority": 1},
@@ -39,22 +46,24 @@ _DEFAULT_SOURCES: list[dict] = [
 
 def _load_sources() -> list[dict]:
     """Load news sources from config file, falling back to defaults."""
-    if _CONFIG_PATH.exists():
+    cfg = _config_path()
+    if cfg.exists():
         try:
-            sources = json.loads(_CONFIG_PATH.read_text())
+            sources = json.loads(cfg.read_text())
             active = [s for s in sources if s.get("is_active", True)]
-            logger.info("Loaded %d news sources (%d active) from %s", len(sources), len(active), _CONFIG_PATH)
+            logger.info("Loaded %d news sources (%d active) from %s", len(sources), len(active), cfg)
             return sources
         except Exception as e:
-            logger.warning("Failed to load %s: %s — using defaults", _CONFIG_PATH, e)
+            logger.warning("Failed to load %s: %s — using defaults", cfg, e)
     return list(_DEFAULT_SOURCES)
 
 
 def _save_sources(sources: list[dict]) -> None:
     """Persist news sources to config file."""
-    _CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _CONFIG_PATH.write_text(json.dumps(sources, indent=2))
-    logger.info("Saved %d news sources to %s", len(sources), _CONFIG_PATH)
+    cfg = _config_path()
+    cfg.parent.mkdir(parents=True, exist_ok=True)
+    cfg.write_text(json.dumps(sources, indent=2))
+    logger.info("Saved %d news sources to %s", len(sources), cfg)
 
 
 # Module-level source list — reloaded on mutation
