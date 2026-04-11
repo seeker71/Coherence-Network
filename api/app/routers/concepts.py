@@ -70,7 +70,7 @@ class PlainConceptSubmit(BaseModel):
 # Core CRUD endpoints
 # ---------------------------------------------------------------------------
 
-@router.get("/concepts")
+@router.get("/concepts", summary="List concepts from the ontology (paged)")
 async def list_concepts(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -79,7 +79,7 @@ async def list_concepts(
     return concept_service.list_concepts(limit=limit, offset=offset)
 
 
-@router.post("/concepts", status_code=201)
+@router.post("/concepts", status_code=201, summary="Create a new user-defined concept (extends the ontology)")
 async def create_concept(body: ConceptCreate):
     """Create a new user-defined concept (extends the ontology)."""
     if concept_service.get_concept(body.id):
@@ -87,7 +87,7 @@ async def create_concept(body: ConceptCreate):
     return concept_service.create_concept(body.model_dump())
 
 
-@router.get("/concepts/search")
+@router.get("/concepts/search", summary="Full-text search concepts by name or description")
 async def search_concepts(
     q: str = Query(..., min_length=1),
     limit: int = Query(default=20, ge=1, le=100),
@@ -96,13 +96,13 @@ async def search_concepts(
     return concept_service.search_concepts(query=q, limit=limit)
 
 
-@router.get("/concepts/stats")
+@router.get("/concepts/stats", summary="Get ontology statistics: concept count, relationship types, axes, user edges")
 async def concept_stats():
     """Get ontology statistics: concept count, relationship types, axes, user edges."""
     return concept_service.get_stats()
 
 
-@router.post("/concepts/auto-tag-all")
+@router.post("/concepts/auto-tag-all", summary="Run concept auto-tagging on every non-internal idea in the portfolio")
 async def auto_tag_all_ideas() -> dict[str, Any]:
     """Run concept auto-tagging on every non-internal idea in the portfolio.
 
@@ -112,19 +112,19 @@ async def auto_tag_all_ideas() -> dict[str, Any]:
     return concept_auto_tagger.tag_all_ideas()
 
 
-@router.get("/concepts/relationships")
+@router.get("/concepts/relationships", summary="List all 46 relationship types from the Living Codex ontology")
 async def list_relationships():
     """List all 46 relationship types from the Living Codex ontology."""
     return concept_service.list_relationship_types()
 
 
-@router.get("/concepts/axes")
+@router.get("/concepts/axes", summary="List all 53 ontology axes")
 async def list_axes():
     """List all 53 ontology axes."""
     return concept_service.list_axes()
 
 
-@router.get("/concepts/{concept_id}/translate")
+@router.get("/concepts/{concept_id}/translate", summary="Translate a concept from one worldview lens framing to another")
 async def translate_concept_view(
     concept_id: str,
     from_lens: TranslateLens = Query(..., alias="from", description="Source worldview lens"),
@@ -150,7 +150,7 @@ async def translate_concept_view(
     )
 
 
-@router.get("/concepts/{concept_id}")
+@router.get("/concepts/{concept_id}", summary="Get a single concept by ID with full metadata")
 async def get_concept(concept_id: str):
     """Get a single concept by ID with full metadata."""
     concept = concept_service.get_concept(concept_id)
@@ -159,7 +159,7 @@ async def get_concept(concept_id: str):
     return concept
 
 
-@router.patch("/concepts/{concept_id}")
+@router.patch("/concepts/{concept_id}", summary="Patch mutable fields of a concept (name, description, keywords, axes)")
 async def patch_concept(concept_id: str, body: ConceptPatch):
     """Patch mutable fields of a concept (name, description, keywords, axes)."""
     if not concept_service.get_concept(concept_id):
@@ -167,7 +167,7 @@ async def patch_concept(concept_id: str, body: ConceptPatch):
     return concept_service.patch_concept(concept_id, body.model_dump(exclude_none=True))
 
 
-@router.delete("/concepts/{concept_id}", status_code=204)
+@router.delete("/concepts/{concept_id}", status_code=204, summary="Delete a user-created concept. Core ontology concepts cannot be deleted")
 async def delete_concept(concept_id: str):
     """Delete a user-created concept. Core ontology concepts cannot be deleted."""
     concept = concept_service.get_concept(concept_id)
@@ -182,7 +182,7 @@ async def delete_concept(concept_id: str):
 # Edge endpoints
 # ---------------------------------------------------------------------------
 
-@router.get("/concepts/{concept_id}/edges")
+@router.get("/concepts/{concept_id}/edges", summary="Get all user-defined edges for a concept (incoming and outgoing)")
 async def get_concept_edges(concept_id: str):
     """Get all user-defined edges for a concept (incoming and outgoing)."""
     if not concept_service.get_concept(concept_id):
@@ -190,7 +190,7 @@ async def get_concept_edges(concept_id: str):
     return concept_service.get_concept_edges(concept_id)
 
 
-@router.post("/concepts/{concept_id}/edges", status_code=200)
+@router.post("/concepts/{concept_id}/edges", status_code=200, summary="Create a typed relationship edge from this concept to another")
 async def create_edge(concept_id: str, body: EdgeCreate, response: Response):
     """Create a typed relationship edge from this concept to another."""
     source = concept_service.get_concept(concept_id)
@@ -213,7 +213,7 @@ async def create_edge(concept_id: str, body: EdgeCreate, response: Response):
 # Tagging: attach concepts to ideas / specs
 # ---------------------------------------------------------------------------
 
-@router.get("/concepts/{concept_id}/related")
+@router.get("/concepts/{concept_id}/related", summary="Get ideas and specs tagged with this concept")
 async def get_related_items(concept_id: str):
     """Get ideas and specs tagged with this concept."""
     if not concept_service.get_concept(concept_id):
@@ -221,7 +221,7 @@ async def get_related_items(concept_id: str):
     return concept_service.get_related_items(concept_id)
 
 
-@router.post("/ideas/{idea_id}/concepts")
+@router.post("/ideas/{idea_id}/concepts", summary="Tag an idea with one or more concepts")
 async def tag_idea_with_concepts(idea_id: str, body: ConceptTagBody):
     """Tag an idea with one or more concepts."""
     missing = [cid for cid in body.concept_ids if not concept_service.get_concept(cid)]
@@ -230,13 +230,13 @@ async def tag_idea_with_concepts(idea_id: str, body: ConceptTagBody):
     return concept_service.tag_entity(entity_type="idea", entity_id=idea_id, concept_ids=body.concept_ids)
 
 
-@router.get("/ideas/{idea_id}/concepts")
+@router.get("/ideas/{idea_id}/concepts", summary="Get concepts tagged on an idea")
 async def get_idea_concepts(idea_id: str):
     """Get concepts tagged on an idea."""
     return concept_service.get_entity_concepts(entity_type="idea", entity_id=idea_id)
 
 
-@router.post("/specs/{spec_id}/concepts")
+@router.post("/specs/{spec_id}/concepts", summary="Tag a spec with one or more concepts")
 async def tag_spec_with_concepts(spec_id: str, body: ConceptTagBody):
     """Tag a spec with one or more concepts."""
     missing = [cid for cid in body.concept_ids if not concept_service.get_concept(cid)]
@@ -245,7 +245,7 @@ async def tag_spec_with_concepts(spec_id: str, body: ConceptTagBody):
     return concept_service.tag_entity(entity_type="spec", entity_id=spec_id, concept_ids=body.concept_ids)
 
 
-@router.get("/specs/{spec_id}/concepts")
+@router.get("/specs/{spec_id}/concepts", summary="Get concepts tagged on a spec")
 async def get_spec_concepts(spec_id: str):
     """Get concepts tagged on a spec."""
     return concept_service.get_entity_concepts(entity_type="spec", entity_id=spec_id)
@@ -255,7 +255,7 @@ async def get_spec_concepts(spec_id: str):
 # Accessible ontology: plain-language contribution endpoints (POST only — GETs above)
 # ---------------------------------------------------------------------------
 
-@router.post("/concepts/suggest")
+@router.post("/concepts/suggest", summary="Accessible ontology entry point for non-technical contributors")
 async def suggest_concept(body: PlainConceptSuggest):
     """
     Accessible ontology entry point for non-technical contributors.
@@ -274,7 +274,7 @@ async def suggest_concept(body: PlainConceptSuggest):
     )
 
 
-@router.post("/concepts/submit", status_code=201)
+@router.post("/concepts/submit", status_code=201, summary="Commit a plain-language concept to the ontology")
 async def submit_plain_concept(body: PlainConceptSubmit):
     """
     Commit a plain-language concept to the ontology.

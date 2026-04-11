@@ -46,7 +46,7 @@ class NewsSourceUpdate(BaseModel):
     priority: int | None = None
 
 
-@router.get("/news/sources")
+@router.get("/news/sources", summary="List all configured news sources")
 @traces_to(spec="151", idea="configurable-news-sources", description="List all configured news sources")
 async def list_news_sources(active_only: bool = Query(False)):
     """List all configured news sources."""
@@ -54,7 +54,7 @@ async def list_news_sources(active_only: bool = Query(False)):
     return {"count": len(sources), "sources": sources}
 
 
-@router.get("/news/sources/{source_id}")
+@router.get("/news/sources/{source_id}", summary="Get a single news source by ID")
 async def get_news_source(source_id: str):
     """Get a single news source by ID."""
     source = news_ingestion_service.get_source(source_id)
@@ -63,7 +63,7 @@ async def get_news_source(source_id: str):
     return source
 
 
-@router.post("/news/sources", status_code=201)
+@router.post("/news/sources", status_code=201, summary="Add a new news source")
 async def add_news_source(body: NewsSourceCreate, _key: str = Depends(require_api_key)):
     """Add a new news source."""
     try:
@@ -72,7 +72,7 @@ async def add_news_source(body: NewsSourceCreate, _key: str = Depends(require_ap
         raise HTTPException(400, str(e))
 
 
-@router.patch("/news/sources/{source_id}")
+@router.patch("/news/sources/{source_id}", summary="Update a news source")
 async def update_news_source(source_id: str, body: NewsSourceUpdate, _key: str = Depends(require_api_key)):
     """Update a news source."""
     updates = {k: v for k, v in body.model_dump().items() if v is not None}
@@ -82,7 +82,7 @@ async def update_news_source(source_id: str, body: NewsSourceUpdate, _key: str =
     return result
 
 
-@router.delete("/news/sources/{source_id}")
+@router.delete("/news/sources/{source_id}", summary="Remove a news source")
 async def remove_news_source(source_id: str, _key: str = Depends(require_api_key)):
     """Remove a news source."""
     if not news_ingestion_service.remove_source(source_id):
@@ -103,7 +103,7 @@ def _ideas_as_dicts(ideas) -> list[dict]:
     ]
 
 
-@router.get("/news/feed")
+@router.get("/news/feed", summary="Latest news items from RSS feeds")
 @traces_to(spec="151", idea="configurable-news-sources", description="Fetch news from configured RSS sources")
 async def get_news_feed(
     limit: int = Query(50, ge=1, le=200),
@@ -143,7 +143,7 @@ async def get_news_feed(
     return payload
 
 
-@router.get("/news/resonance")
+@router.get("/news/resonance", summary="News items matched to ideas with resonance scores and explanations")
 async def get_news_resonance(
     top_n: int = Query(5, ge=1, le=20, description="Top N matches per idea"),
     limit: int = Query(100, ge=1, le=500, description="Max news items to consider"),
@@ -165,7 +165,7 @@ async def get_news_resonance(
     }
 
 
-@router.get("/news/resonance/{contributor_id}")
+@router.get("/news/resonance/{contributor_id}", summary="News resonance filtered to a contributor's staked ideas")
 async def get_personalized_resonance(
     contributor_id: str,
     top_n: int = Query(5, ge=1, le=20),
@@ -207,7 +207,7 @@ async def get_personalized_resonance(
     }
 
 
-@router.get("/news/trending")
+@router.get("/news/trending", summary="Trending keywords extracted from recent news items")
 async def get_trending_keywords(
     top_n: int = Query(20, ge=1, le=100),
     refresh: bool = Query(False),

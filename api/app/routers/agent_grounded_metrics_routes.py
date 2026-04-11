@@ -11,7 +11,7 @@ from app.services import idea_service
 router = APIRouter(tags=["ideas"])
 
 
-@router.get("/ideas/grounded-metrics")
+@router.get("/ideas/grounded-metrics", summary="Return grounded metrics for all tracked ideas")
 async def get_all_grounded_metrics() -> dict:
     """Return grounded metrics for all tracked ideas."""
     data = grounded_idea_metrics_service.collect_all_data()
@@ -22,14 +22,14 @@ async def get_all_grounded_metrics() -> dict:
     return {"ideas": results, "count": len(results)}
 
 
-@router.get("/ideas/{idea_id}/grounded-metrics")
+@router.get("/ideas/{idea_id}/grounded-metrics", summary="Return grounded metrics for a single idea")
 async def get_idea_grounded_metrics(idea_id: str) -> dict:
     """Return grounded metrics for a single idea."""
     data = grounded_idea_metrics_service.collect_all_data()
     return grounded_idea_metrics_service.compute_idea_metrics(idea_id, **data)
 
 
-@router.post("/ideas/{idea_id}/grounded-metrics/sync")
+@router.post("/ideas/{idea_id}/grounded-metrics/sync", summary="Compute grounded metrics and write them back to the idea")
 async def sync_grounded_metrics(idea_id: str, _key: str = Depends(require_api_key)) -> dict:
     """Compute grounded metrics and write them back to the idea."""
     data = grounded_idea_metrics_service.collect_all_data()
@@ -66,7 +66,7 @@ async def sync_grounded_metrics(idea_id: str, _key: str = Depends(require_api_ke
     }
 
 
-@router.post("/ideas/grounded-metrics/sync")
+@router.post("/ideas/grounded-metrics/sync", summary="Compute and write back grounded metrics for all ideas")
 async def sync_all_grounded_metrics(_key: str = Depends(require_api_key)) -> dict:
     """Compute and write back grounded metrics for all ideas."""
     data = grounded_idea_metrics_service.collect_all_data()

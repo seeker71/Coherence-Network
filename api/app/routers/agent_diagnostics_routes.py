@@ -328,7 +328,7 @@ def _diagnostics_runner_payload(runner_rows: list[dict[str, Any]]) -> dict[str, 
     }
 
 
-@router.get("/diagnostics/overview")
+@router.get("/diagnostics/overview", summary="Get Diagnostics Overview")
 async def get_diagnostics_overview(
     request: Request,
     _admin_key: str = Depends(require_admin_key),
@@ -379,7 +379,7 @@ async def get_diagnostics_overview(
     }
 
 
-@router.get("/diagnostics/config-editor", response_model=DiagnosticsConfigEditorResponse)
+@router.get("/diagnostics/config-editor", response_model=DiagnosticsConfigEditorResponse, summary="Get Diagnostics Config Editor")
 async def get_diagnostics_config_editor(_admin_key: str = Depends(require_admin_key)) -> DiagnosticsConfigEditorResponse:
     return DiagnosticsConfigEditorResponse(
         generated_at=_iso_utc_now(),
@@ -388,7 +388,7 @@ async def get_diagnostics_config_editor(_admin_key: str = Depends(require_admin_
     )
 
 
-@router.patch("/diagnostics/config-editor", response_model=DiagnosticsConfigEditorResponse)
+@router.patch("/diagnostics/config-editor", response_model=DiagnosticsConfigEditorResponse, summary="Update Diagnostics Config Editor")
 async def update_diagnostics_config_editor(
     payload: DiagnosticsConfigEditorUpdate,
     _admin_key: str = Depends(require_admin_key),
@@ -493,7 +493,7 @@ async def update_diagnostics_config_editor(
     )
 
 
-@router.get("/diagnostics-completeness")
+@router.get("/diagnostics-completeness", summary="Diagnostics completeness across all failed tasks")
 async def get_diagnostics_completeness() -> dict:
     """Diagnostics completeness across all failed tasks."""
     items, _total, _runtime_backfill = list_tasks()

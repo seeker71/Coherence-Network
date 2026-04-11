@@ -49,6 +49,7 @@ def _route_side_effects_enabled_in_tests() -> bool:
     "/tasks",
     status_code=201,
     responses={422: {"description": "Invalid task_type, empty direction, or validation error (detail: list of {loc, msg, type})"}},
+    summary="Submit a task. Execution is handled by federation node runners, not server-side",
 )
 async def create_task(data: AgentTaskCreate, background_tasks: BackgroundTasks) -> AgentTask:
     """Submit a task. Execution is handled by federation node runners, not server-side.
@@ -66,6 +67,7 @@ async def create_task(data: AgentTaskCreate, background_tasks: BackgroundTasks) 
     responses={
         409: {"description": "Task already claimed/running by another worker", "model": ErrorDetail},
     },
+    summary="Ensure an external work session is represented as a running task",
 )
 async def upsert_active_task(data: AgentTaskUpsertActive) -> dict:
     """Ensure an external work session is represented as a running task."""
@@ -91,6 +93,7 @@ async def upsert_active_task(data: AgentTaskUpsertActive) -> dict:
     "/tasks",
     status_code=204,
     responses={400: {"description": "Missing confirm=clear query parameter"}},
+    summary="Clear the entire task queue (in-memory and persistence). Use before a fresh pipeline run",
 )
 async def clear_all_tasks(confirm: Optional[str] = Query(None)) -> None:
     """Clear the entire task queue (in-memory and persistence). Use before a fresh pipeline run.
@@ -103,7 +106,7 @@ async def clear_all_tasks(confirm: Optional[str] = Query(None)) -> None:
     agent_service.clear_store()
 
 
-@router.get("/tasks")
+@router.get("/tasks", summary="List tasks with optional filters. Pagination: limit, offset")
 async def list_tasks(
     status: Optional[TaskStatus] = Query(None),
     task_type: Optional[TaskType] = Query(None),
@@ -124,7 +127,7 @@ async def list_tasks(
     )
 
 
-@router.get("/reap-history")
+@router.get("/reap-history", summary="Return per-idea reap summary for the last 30 days (Spec 169 R7)")
 async def get_reap_history(
     idea_id: Optional[str] = Query(None),
     needs_attention: Optional[bool] = Query(None),
@@ -166,6 +169,7 @@ async def get_reap_history(
 @router.get(
     "/tasks/{task_id}/reap-diagnosis",
     responses={404: {"description": "Task not reaped or not found", "model": ErrorDetail}},
+    summary="Return the reap_diagnosis sub-object for a reaped task (Spec 169 R9)",
 )
 async def get_reap_diagnosis(task_id: str) -> dict:
     """Return the reap_diagnosis sub-object for a reaped task (Spec 169 R9).
@@ -188,7 +192,7 @@ async def get_reap_diagnosis(task_id: str) -> dict:
     return {"task_id": task_id, **diagnosis}
 
 
-@router.get("/tasks/attention")
+@router.get("/tasks/attention", summary="List tasks with status needs_decision or failed only (spec 003: includes output, decision…")
 async def get_attention_tasks(limit: int = Query(20, ge=1, le=100)) -> dict:
     """List tasks with status needs_decision or failed only (spec 003: includes output, decision_prompt)."""
     items, total = agent_service.get_attention_tasks(limit=limit)
@@ -198,13 +202,13 @@ async def get_attention_tasks(limit: int = Query(20, ge=1, le=100)) -> dict:
     }
 
 
-@router.get("/tasks/count")
+@router.get("/tasks/count", summary="Lightweight task counts for dashboards (total, by_status)")
 async def get_task_count() -> dict:
     """Lightweight task counts for dashboards (total, by_status)."""
     return agent_service.get_task_count()
 
 
-@router.get("/skills")
+@router.get("/skills", summary="Return all procedural skills ingested via the Hermes Learning Loop")
 async def list_skills(limit: int = Query(50, ge=1, le=200)) -> dict:
     """Return all procedural skills ingested via the Hermes Learning Loop."""
     from app.services import graph_service
@@ -218,6 +222,7 @@ async def list_skills(limit: int = Query(50, ge=1, le=200)) -> dict:
 @router.get(
     "/tasks/{task_id}",
     responses={404: {"description": "Task not found", "model": ErrorDetail}},
+    summary="Get task by id",
 )
 async def get_task(task_id: str) -> AgentTask:
     """Get task by id."""
@@ -234,6 +239,7 @@ async def get_task(task_id: str) -> AgentTask:
         404: {"description": "Task not found", "model": ErrorDetail},
         409: {"description": "Task already claimed/running by another worker", "model": ErrorDetail},
     },
+    summary="Update task. Supports status, output, progress_pct, current_step, decision_prompt, decisi…",
 )
 async def update_task(
     task_id: str,

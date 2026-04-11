@@ -24,6 +24,7 @@ router = APIRouter()
 @router.get(
     "/workspaces/{workspace_id}/members",
     response_model=WorkspaceMembersResponse,
+    summary="List all members of a workspace",
 )
 async def list_members(workspace_id: str) -> WorkspaceMembersResponse:
     """List all members of a workspace."""
@@ -42,6 +43,7 @@ async def list_members(workspace_id: str) -> WorkspaceMembersResponse:
     "/workspaces/{workspace_id}/members",
     response_model=WorkspaceMember,
     status_code=201,
+    summary="Add a contributor directly as a member of a workspace",
 )
 async def add_member(
     workspace_id: str,
@@ -64,6 +66,7 @@ async def add_member(
     "/workspaces/{workspace_id}/invite",
     response_model=InviteResponse,
     status_code=201,
+    summary="Invite a contributor to a workspace (status=pending)",
 )
 async def invite_member(
     workspace_id: str,
@@ -85,6 +88,7 @@ async def invite_member(
 @router.post(
     "/workspaces/{workspace_id}/invite/{contributor_id}/accept",
     response_model=WorkspaceMember,
+    summary="Accept a pending invite to a workspace",
 )
 async def accept_invite(
     workspace_id: str,
@@ -108,6 +112,7 @@ async def accept_invite(
 @router.delete(
     "/workspaces/{workspace_id}/members/{contributor_id}",
     status_code=204,
+    summary="Remove a contributor from a workspace",
 )
 async def remove_member(
     workspace_id: str,
@@ -124,6 +129,7 @@ async def remove_member(
 @router.get(
     "/contributors/{contributor_id}/workspaces",
     response_model=MyWorkspacesResponse,
+    summary="List all workspaces a contributor belongs to",
 )
 async def list_workspaces_for_contributor(
     contributor_id: str,
@@ -138,6 +144,7 @@ async def list_workspaces_for_contributor(
 
 @router.get(
     "/workspaces/{workspace_id}/members/{contributor_id}",
+    summary="Get a contributor's role in a workspace",
 )
 async def get_member_role(workspace_id: str, contributor_id: str):
     """Get a contributor's role in a workspace."""

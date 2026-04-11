@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.get("/status-report")
+@router.get("/status-report", summary="Hierarchical pipeline status (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention)")
 async def get_status_report() -> dict:
     """Hierarchical pipeline status (Layer 0 Goal → 1 Orchestration → 2 Execution → 3 Attention).
     Machine and human readable. Written by monitor each check. Includes meta_questions (unanswered/failed) when present."""
@@ -71,7 +71,7 @@ async def get_status_report() -> dict:
     return merge_meta_questions_into_report(fallback_report, logs_dir)
 
 
-@router.get("/pipeline-status")
+@router.get("/pipeline-status", summary="Pipeline visibility: running task, pending with wait times, recent completed with duration")
 async def get_pipeline_status() -> dict:
     """Pipeline visibility: running task, pending with wait times, recent completed with duration.
     Includes project manager state when available. For running tasks, includes live_tail (last 20 lines of streamed log).

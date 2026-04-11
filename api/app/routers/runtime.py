@@ -24,12 +24,12 @@ class RuntimeExerciserRunRequest(BaseModel):
     runtime_window_seconds: int | None = None
 
 
-@router.post("/runtime/events", response_model=RuntimeEvent, status_code=201)
+@router.post("/runtime/events", response_model=RuntimeEvent, status_code=201, summary="Create Runtime Event")
 async def create_runtime_event(payload: RuntimeEventCreate) -> RuntimeEvent:
     return runtime_service.record_event(payload)
 
 
-@router.get("/runtime/events", response_model=list[RuntimeEvent])
+@router.get("/runtime/events", response_model=list[RuntimeEvent], summary="List Runtime Events")
 async def list_runtime_events(
     limit: int = Query(100, ge=1, le=2000),
     source: str | None = Query(default=None, max_length=64),
@@ -38,12 +38,12 @@ async def list_runtime_events(
     return runtime_service.cached_runtime_events(limit=limit, source=source, force_refresh=force_refresh)
 
 
-@router.get("/runtime/change-token")
+@router.get("/runtime/change-token", summary="Runtime Change Token")
 async def runtime_change_token(force_refresh: bool = Query(False)) -> dict:
     return runtime_service.live_change_token(force_refresh=force_refresh)
 
 
-@router.get("/runtime/ideas/summary")
+@router.get("/runtime/ideas/summary", summary="Runtime Summary By Idea")
 async def runtime_summary_by_idea(
     seconds: int = Query(3600, ge=60, le=2592000),
     limit: int = Query(200, ge=1, le=2000),
@@ -62,7 +62,7 @@ async def runtime_summary_by_idea(
     )
 
 
-@router.get("/runtime/endpoints/summary")
+@router.get("/runtime/endpoints/summary", summary="Runtime Summary By Endpoint")
 async def runtime_summary_by_endpoint(
     seconds: int = Query(3600, ge=60, le=2592000),
     limit: int = Query(200, ge=1, le=2000),
@@ -74,7 +74,7 @@ async def runtime_summary_by_endpoint(
     }
 
 
-@router.get("/runtime/web/views/summary", response_model=WebViewPerformanceReport)
+@router.get("/runtime/web/views/summary", response_model=WebViewPerformanceReport, summary="Runtime Web View Summary")
 async def runtime_web_view_summary(
     seconds: int = Query(21600, ge=60, le=2592000),
     limit: int = Query(100, ge=1, le=500),
@@ -92,7 +92,7 @@ async def runtime_web_view_summary(
     return WebViewPerformanceReport.model_validate(payload)
 
 
-@router.get("/runtime/endpoints/attention", response_model=EndpointAttentionReport)
+@router.get("/runtime/endpoints/attention", response_model=EndpointAttentionReport, summary="Runtime Endpoint Attention")
 async def runtime_endpoint_attention(
     seconds: int = Query(3600, ge=60, le=2592000),
     min_event_count: int = Query(1, ge=1, le=5000),
@@ -107,7 +107,7 @@ async def runtime_endpoint_attention(
     )
 
 
-@router.post("/runtime/exerciser/run")
+@router.post("/runtime/exerciser/run", summary="Run Runtime Get Endpoint Exerciser")
 async def run_runtime_get_endpoint_exerciser(
     request: Request,
     payload: RuntimeExerciserRunRequest | None = Body(default=None),
@@ -129,7 +129,7 @@ async def run_runtime_get_endpoint_exerciser(
     )
 
 
-@router.get("/runtime/usage/verification")
+@router.get("/runtime/usage/verification", summary="Verify Runtime Usage Internal Vs Public")
 async def verify_runtime_usage_internal_vs_public(
     public_api_base: str = Query(
         "https://api.coherencycoin.com",
@@ -145,7 +145,7 @@ async def verify_runtime_usage_internal_vs_public(
     )
 
 
-@router.get("/runtime/mvp/acceptance-summary")
+@router.get("/runtime/mvp/acceptance-summary", summary="Runtime Mvp Acceptance Summary")
 async def runtime_mvp_acceptance_summary(
     seconds: int = Query(86400, ge=60, le=2592000),
     limit: int = Query(2000, ge=100, le=5000),
@@ -153,7 +153,7 @@ async def runtime_mvp_acceptance_summary(
     return runtime_service.summarize_mvp_acceptance(seconds=seconds, event_limit=limit)
 
 
-@router.get("/runtime/mvp/acceptance-judge")
+@router.get("/runtime/mvp/acceptance-judge", summary="Runtime Mvp Acceptance Judge")
 async def runtime_mvp_acceptance_judge(
     seconds: int = Query(86400, ge=60, le=2592000),
     limit: int = Query(2000, ge=100, le=5000),
@@ -161,7 +161,7 @@ async def runtime_mvp_acceptance_judge(
     return runtime_service.evaluate_mvp_acceptance_judge(seconds=seconds, event_limit=limit)
 
 
-@router.get("/runtime/mvp/local-baselines")
+@router.get("/runtime/mvp/local-baselines", summary="Runtime Mvp Local Baselines")
 async def runtime_mvp_local_baselines(
     limit: int = Query(20, ge=1, le=100),
 ) -> dict:

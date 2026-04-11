@@ -17,7 +17,7 @@ from app.services import friction_service
 router = APIRouter()
 
 
-@router.get("/friction/events", response_model=list[FrictionEvent])
+@router.get("/friction/events", response_model=list[FrictionEvent], summary="List Events")
 async def list_events(
     limit: int = Query(100, ge=1, le=1000),
     status: Optional[str] = Query(None),
@@ -28,13 +28,13 @@ async def list_events(
     return events[:limit]
 
 
-@router.post("/friction/events", response_model=FrictionEvent, status_code=201)
+@router.post("/friction/events", response_model=FrictionEvent, status_code=201, summary="Create Event")
 async def create_event(event: FrictionEvent) -> FrictionEvent:
     friction_service.append_event(event)
     return event
 
 
-@router.get("/friction/report", response_model=FrictionReport)
+@router.get("/friction/report", response_model=FrictionReport, summary="Report")
 async def report(
     window_days: int = Query(7, ge=1),
     limit: int = Query(500, ge=1, le=5000, description="Max events to scan"),
@@ -54,7 +54,7 @@ async def report(
     return FrictionReport(**data)
 
 
-@router.get("/friction/entry-points", response_model=FrictionEntryPointReport)
+@router.get("/friction/entry-points", response_model=FrictionEntryPointReport, summary="Entry Points")
 async def entry_points(
     window_days: int = Query(7, ge=1, le=365),
     limit: int = Query(20, ge=1, le=200),
@@ -63,7 +63,7 @@ async def entry_points(
     return FrictionEntryPointReport(**data)
 
 
-@router.get("/friction/categories", response_model=FrictionCategoryReport)
+@router.get("/friction/categories", response_model=FrictionCategoryReport, summary="Categories")
 async def categories(
     window_days: int = Query(7, ge=1, le=365),
     limit: int = Query(20, ge=1, le=200),

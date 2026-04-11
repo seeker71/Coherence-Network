@@ -19,6 +19,7 @@ router = APIRouter()
 @router.get(
     "/workspaces/{workspace_id}/activity",
     response_model=ActivityFeedResponse,
+    summary="List activity events for a workspace",
 )
 async def list_activity(
     workspace_id: str,
@@ -53,6 +54,7 @@ async def list_activity(
 @router.get(
     "/workspaces/{workspace_id}/activity/summary",
     response_model=ActivitySummaryResponse,
+    summary="Get activity event counts by type for a workspace",
 )
 async def activity_summary(
     workspace_id: str,

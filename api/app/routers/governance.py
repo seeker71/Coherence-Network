@@ -12,12 +12,12 @@ from app.services import governance_service
 router = APIRouter()
 
 
-@router.get("/governance/change-requests", response_model=list[ChangeRequest])
+@router.get("/governance/change-requests", response_model=list[ChangeRequest], summary="List Change Requests")
 async def list_change_requests(limit: int = Query(200, ge=1, le=1000)) -> list[ChangeRequest]:
     return governance_service.list_change_requests(limit=limit)
 
 
-@router.get("/governance/change-requests/{change_request_id}", response_model=ChangeRequest)
+@router.get("/governance/change-requests/{change_request_id}", response_model=ChangeRequest, summary="Get Change Request")
 async def get_change_request(change_request_id: str) -> ChangeRequest:
     found = governance_service.get_change_request(change_request_id)
     if found is None:
@@ -25,12 +25,12 @@ async def get_change_request(change_request_id: str) -> ChangeRequest:
     return found
 
 
-@router.post("/governance/change-requests", response_model=ChangeRequest, status_code=201)
+@router.post("/governance/change-requests", response_model=ChangeRequest, status_code=201, summary="Create Change Request")
 async def create_change_request(data: ChangeRequestCreate, _key: str = Depends(require_api_key)) -> ChangeRequest:
     return governance_service.create_change_request(data)
 
 
-@router.post("/governance/change-requests/{change_request_id}/votes", response_model=ChangeRequest)
+@router.post("/governance/change-requests/{change_request_id}/votes", response_model=ChangeRequest, summary="Cast Vote")
 async def cast_vote(change_request_id: str, data: ChangeRequestVoteCreate, _key: str = Depends(require_api_key)) -> ChangeRequest:
     try:
         updated = governance_service.cast_vote(change_request_id, data)

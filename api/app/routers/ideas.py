@@ -54,7 +54,7 @@ from app.models.lens_translation import TranslationRegenerateBody
 router = APIRouter()
 
 
-@router.get("/ideas", response_model=IdeaPortfolioResponse)
+@router.get("/ideas", response_model=IdeaPortfolioResponse, summary="List Ideas")
 @traces_to(spec="053", idea="portfolio-governance", description="Browse the idea portfolio ranked by ROI")
 async def list_ideas(
     only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
@@ -84,18 +84,18 @@ async def list_ideas(
     )
 
 
-@router.get("/ideas/tags", response_model=IdeaTagCatalogResponse)
+@router.get("/ideas/tags", response_model=IdeaTagCatalogResponse, summary="Return the normalized idea tag catalog with idea counts (spec 129)")
 async def get_idea_tags_catalog() -> IdeaTagCatalogResponse:
     """Return the normalized idea tag catalog with idea counts (spec 129)."""
     return idea_service.get_tag_catalog()
 
 
-@router.get("/ideas/storage", response_model=IdeaStorageInfo)
+@router.get("/ideas/storage", response_model=IdeaStorageInfo, summary="Get Idea Storage Info")
 async def get_idea_storage_info() -> IdeaStorageInfo:
     return idea_service.storage_info()
 
 
-@router.get("/ideas/cards")
+@router.get("/ideas/cards", summary="List Idea Cards")
 async def list_idea_cards(
     q: str = Query("", description="Free-text search across idea title/description/spec IDs."),
     state: str = Query(
@@ -151,7 +151,7 @@ async def list_idea_cards(
         return {"items": items, "total": result.get("total", len(items)), "cursor": None}
 
 
-@router.get("/ideas/cards/changes")
+@router.get("/ideas/cards/changes", summary="List Idea Card Changes")
 async def list_idea_card_changes(
     since_token: str | None = Query(default=None),
     include_internal_ideas: bool = Query(True),
@@ -164,7 +164,7 @@ async def list_idea_card_changes(
     )
 
 
-@router.get("/ideas/health", response_model=GovernanceHealth)
+@router.get("/ideas/health", response_model=GovernanceHealth, summary="Portfolio governance effectiveness snapshot (spec 126)")
 async def get_governance_health(
     window_days: int = Query(30, ge=1, le=365, description="Lookback window in days"),
 ) -> GovernanceHealth:
@@ -175,14 +175,14 @@ async def get_governance_health(
 # ── Right-sizing endpoints (spec 158) ────────────────────────────────────────
 
 
-@router.get("/ideas/right-sizing", response_model=RightSizingReport)
+@router.get("/ideas/right-sizing", response_model=RightSizingReport, summary="Portfolio right-sizing report with health counts and suggestions (spec 158)")
 async def get_right_sizing_report() -> RightSizingReport:
     """Portfolio right-sizing report with health counts and suggestions (spec 158)."""
     from app.services import right_sizing_service
     return right_sizing_service.build_report()
 
 
-@router.post("/ideas/right-sizing/apply", response_model=RightSizingApplyResponse)
+@router.post("/ideas/right-sizing/apply", response_model=RightSizingApplyResponse, summary="Execute a split or merge suggestion, with dry_run support (spec 158)")
 async def apply_right_sizing(
     body: RightSizingApplyRequest,
     _key: str = Depends(require_api_key),
@@ -209,7 +209,7 @@ async def apply_right_sizing(
         raise HTTPException(status_code=422, detail=str(exc))
 
 
-@router.get("/ideas/right-sizing/history", response_model=RightSizingHistoryResponse)
+@router.get("/ideas/right-sizing/history", response_model=RightSizingHistoryResponse, summary="Time-series health snapshots for the portfolio (spec 158)")
 async def get_right_sizing_history(
     days: int = Query(7, ge=1, le=365, description="Lookback window in days"),
 ) -> RightSizingHistoryResponse:
@@ -218,13 +218,13 @@ async def get_right_sizing_history(
     return right_sizing_service.get_history(days=days)
 
 
-@router.get("/ideas/showcase", response_model=IdeaShowcaseResponse)
+@router.get("/ideas/showcase", response_model=IdeaShowcaseResponse, summary="Funder-facing idea summaries with ask, budget, proof, and status")
 async def list_ideas_showcase() -> IdeaShowcaseResponse:
     """Funder-facing idea summaries with ask, budget, proof, and status."""
     return idea_service.list_showcase_ideas()
 
 
-@router.get("/ideas/resonance")
+@router.get("/ideas/resonance", summary="Return ideas with recent activity, sorted by most-recent-activity-first")
 async def get_resonance(
     window_hours: int = Query(24, ge=1, le=720),
     limit: int = Query(20, ge=1, le=100),
@@ -233,7 +233,7 @@ async def get_resonance(
     return idea_service.get_resonance_feed(window_hours=window_hours, limit=limit)
 
 
-@router.get("/ideas/{idea_id}/concept-resonance", response_model=IdeaConceptResonanceResponse)
+@router.get("/ideas/{idea_id}/concept-resonance", response_model=IdeaConceptResonanceResponse, summary="Return conceptually related ideas, preferring matches from different domains")
 async def get_idea_concept_resonance(
     idea_id: str,
     limit: int = Query(5, ge=1, le=25),
@@ -250,7 +250,7 @@ async def get_idea_concept_resonance(
     return result
 
 
-@router.get("/ideas/{idea_id}/translate", response_model=IdeaTranslationResponse)
+@router.get("/ideas/{idea_id}/translate", response_model=IdeaTranslationResponse, summary="Reframe an idea through a worldview using the ontology graph and resonance edges")
 async def translate_idea_view(
     idea_id: str,
     view: TranslationLens = Query(..., description="Worldview lens (conceptual framing, not MT)."),
@@ -287,12 +287,12 @@ async def translate_idea_view(
     )
 
 
-@router.get("/ideas/selection-ab/stats")
+@router.get("/ideas/selection-ab/stats", summary="Get Selection Ab Stats")
 async def get_selection_ab_stats() -> dict:
     return idea_selection_ab_service.get_comparison()
 
 
-@router.post("/ideas/select", response_model=IdeaSelectionResult)
+@router.post("/ideas/select", response_model=IdeaSelectionResult, summary="Weighted stochastic idea selection")
 async def select_idea(
     method: str = Query("marginal_cc", description="Score method: free_energy | marginal_cc"),
     temperature: float = Query(1.0, ge=0.0, le=5.0, description="0=deterministic, 1=proportional, 2+=explore"),
@@ -319,24 +319,24 @@ async def select_idea(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@router.get("/ideas/count", response_model=IdeaCountResponse)
+@router.get("/ideas/count", response_model=IdeaCountResponse, summary="Count Ideas")
 async def count_ideas() -> IdeaCountResponse:
     return idea_service.count_ideas()
 
 
-@router.get("/ideas/progress", response_model=ProgressDashboard)
+@router.get("/ideas/progress", response_model=ProgressDashboard, summary="Per-stage idea counts and completion percentage (spec 138)")
 async def get_progress_dashboard() -> ProgressDashboard:
     """Per-stage idea counts and completion percentage (spec 138)."""
     return idea_service.compute_progress_dashboard()
 
 
-@router.get("/ideas/portfolio-summary")
+@router.get("/ideas/portfolio-summary", summary="Summary of curated super-ideas with spec counts, pillar grouping, and red/yellow/green he…")
 async def get_portfolio_summary() -> dict:
     """Summary of curated super-ideas with spec counts, pillar grouping, and red/yellow/green health."""
     return idea_service.get_portfolio_summary()
 
 
-@router.post("/ideas/{idea_id}/advance", response_model=IdeaWithScore)
+@router.post("/ideas/{idea_id}/advance", response_model=IdeaWithScore, summary="Advance an idea to the next sequential stage (spec 138)")
 async def advance_idea_stage(idea_id: str, _key: str = Depends(require_api_key)) -> IdeaWithScore:
     """Advance an idea to the next sequential stage (spec 138)."""
     result, error = idea_service.advance_idea_stage(idea_id)
@@ -347,7 +347,7 @@ async def advance_idea_stage(idea_id: str, _key: str = Depends(require_api_key))
     return result
 
 
-@router.post("/ideas/{idea_id}/stage", response_model=IdeaWithScore)
+@router.post("/ideas/{idea_id}/stage", response_model=IdeaWithScore, summary="Set an explicit stage for an idea (admin override, spec 138)")
 async def set_idea_stage(idea_id: str, body: StageSetRequest, _key: str = Depends(require_api_key)) -> IdeaWithScore:
     """Set an explicit stage for an idea (admin override, spec 138)."""
     try:
@@ -360,7 +360,7 @@ async def set_idea_stage(idea_id: str, body: StageSetRequest, _key: str = Depend
     return result
 
 
-@router.post("/ideas/{idea_id}/fork", status_code=201)
+@router.post("/ideas/{idea_id}/fork", status_code=201, summary="Fork an existing idea. Identify by forker_id or provider+provider_id")
 async def fork_idea_endpoint(
     idea_id: str,
     forker_id: str | None = Query(default=None, min_length=1),
@@ -407,7 +407,7 @@ def _resolve_contributor(contributor_id: str | None, provider: str | None, provi
     raise HTTPException(status_code=422, detail="Provide contributor_id OR provider+provider_id")
 
 
-@router.post("/ideas/{idea_id}/stake")
+@router.post("/ideas/{idea_id}/stake", summary="Stake CC on an idea. Identify by contributor_id or provider+provider_id")
 async def stake_on_idea(idea_id: str, body: StakeRequest) -> dict:
     """Stake CC on an idea. Identify by contributor_id or provider+provider_id."""
     staker_id = _resolve_contributor(body.contributor_id, body.provider, body.provider_id)
@@ -422,7 +422,7 @@ async def stake_on_idea(idea_id: str, body: StakeRequest) -> dict:
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@router.get("/ideas/{idea_id}/progress")
+@router.get("/ideas/{idea_id}/progress", summary="Show idea progress: stage, tasks by phase, CC staked/spent, contributors")
 async def get_idea_progress(idea_id: str) -> dict:
     """Show idea progress: stage, tasks by phase, CC staked/spent, contributors."""
     result = stake_compute_service.get_idea_progress(idea_id)
@@ -431,7 +431,7 @@ async def get_idea_progress(idea_id: str) -> dict:
     return result
 
 
-@router.get("/ideas/{idea_id}/activity")
+@router.get("/ideas/{idea_id}/activity", summary="Return activity events for an idea")
 async def get_idea_activity_endpoint(
     idea_id: str,
     limit: int = Query(20, ge=1, le=100),
@@ -443,7 +443,7 @@ async def get_idea_activity_endpoint(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@router.get("/ideas/{idea_id}/tasks", response_model=IdeaTasksResponse)
+@router.get("/ideas/{idea_id}/tasks", response_model=IdeaTasksResponse, summary="Return all tasks linked to an idea, grouped by type with status counts")
 async def list_idea_tasks(idea_id: str) -> IdeaTasksResponse:
     """Return all tasks linked to an idea, grouped by type with status counts."""
     idea = idea_service.get_idea(idea_id)
@@ -452,7 +452,7 @@ async def list_idea_tasks(idea_id: str) -> IdeaTasksResponse:
     return agent_service.list_tasks_for_idea(idea_id)
 
 
-@router.put("/ideas/{idea_id}/tags", response_model=IdeaTagUpdateResponse)
+@router.put("/ideas/{idea_id}/tags", response_model=IdeaTagUpdateResponse, summary="Replace the full tag set for an idea after normalization (spec 129)")
 async def put_idea_tags(idea_id: str, body: IdeaTagUpdateRequest) -> IdeaTagUpdateResponse:
     """Replace the full tag set for an idea after normalization (spec 129)."""
     normalized, valid = idea_service.validate_raw_tags(body.tags)
@@ -464,7 +464,7 @@ async def put_idea_tags(idea_id: str, body: IdeaTagUpdateRequest) -> IdeaTagUpda
     return result
 
 
-@router.get("/ideas/{idea_id}/translations")
+@router.get("/ideas/{idea_id}/translations", summary="All worldview translations for an idea (spec-181 batch)")
 async def list_idea_translations_all(idea_id: str) -> dict:
     """All worldview translations for an idea (spec-181 batch)."""
     out = lens_translation_service.list_translations_for_idea(idea_id)
@@ -473,7 +473,7 @@ async def list_idea_translations_all(idea_id: str) -> dict:
     return out
 
 
-@router.get("/ideas/{idea_id}/translations/{lens_id}")
+@router.get("/ideas/{idea_id}/translations/{lens_id}", summary="Single lens translation with optional belief resonance (spec-181)")
 async def get_idea_translation_spec181(
     idea_id: str,
     lens_id: str,
@@ -493,7 +493,7 @@ async def get_idea_translation_spec181(
     return result
 
 
-@router.post("/ideas/{idea_id}/translations/{lens_id}")
+@router.post("/ideas/{idea_id}/translations/{lens_id}", summary="Force-regenerate cached translation (spec-181)")
 async def post_idea_translation_regenerate(
     idea_id: str,
     lens_id: str,
@@ -514,7 +514,7 @@ async def post_idea_translation_regenerate(
     return result
 
 
-@router.get("/ideas/{idea_id}/translate")
+@router.get("/ideas/{idea_id}/translate", summary="Translate an idea's conceptual framing through a worldview lens")
 async def translate_idea_view(
     idea_id: str,
     view: TranslateLens = Query(..., description="Target worldview lens"),
@@ -555,7 +555,7 @@ async def translate_idea_view(
     )
 
 
-@router.get("/ideas/{idea_id}/children", response_model=list[IdeaWithScore])
+@router.get("/ideas/{idea_id}/children", response_model=list[IdeaWithScore], summary="Return all child ideas whose parent_idea_id equals {idea_id}")
 async def list_idea_children(idea_id: str) -> list[IdeaWithScore]:
     """Return all child ideas whose parent_idea_id equals {idea_id}.
 
@@ -567,7 +567,7 @@ async def list_idea_children(idea_id: str) -> list[IdeaWithScore]:
     return idea_service.list_children_of(idea_id)
 
 
-@router.get("/ideas/{idea_id}/specs")
+@router.get("/ideas/{idea_id}/specs", summary="Return all specs linked to {idea_id} via their frontmatter idea_id")
 async def list_idea_specs(idea_id: str) -> list[dict]:
     """Return all specs linked to {idea_id} via their frontmatter idea_id."""
     from app.services import spec_registry_service
@@ -577,7 +577,7 @@ async def list_idea_specs(idea_id: str) -> list[dict]:
     return [s.model_dump(mode="json") for s in specs]
 
 
-@router.get("/ideas/{idea_id}/lifecycle")
+@router.get("/ideas/{idea_id}/lifecycle", summary="Return lifecycle closure state and blockers for an idea")
 async def get_idea_lifecycle(idea_id: str) -> dict:
     """Return lifecycle closure state and blockers for an idea."""
     result = idea_service.get_idea_lifecycle(idea_id)
@@ -586,7 +586,7 @@ async def get_idea_lifecycle(idea_id: str) -> dict:
     return result
 
 
-@router.get("/ideas/{idea_id}/rollup", response_model=RollupProgress)
+@router.get("/ideas/{idea_id}/rollup", response_model=RollupProgress, summary="Return rollup progress for a super-idea: children validated / total children (R4)")
 @traces_to(spec="super-idea-rollup-criteria", idea="idea-realization-engine", description="Rollup progress for a super-idea")
 async def get_idea_rollup(idea_id: str) -> RollupProgress:
     """Return rollup progress for a super-idea: children validated / total children (R4)."""
@@ -596,7 +596,7 @@ async def get_idea_rollup(idea_id: str) -> RollupProgress:
     return progress
 
 
-@router.post("/ideas/{idea_id}/validate-rollup", response_model=RollupProgress)
+@router.post("/ideas/{idea_id}/validate-rollup", response_model=RollupProgress, summary="Check rollup criteria for a super-idea and auto-update manifestation_status (R2, R3)")
 @traces_to(spec="super-idea-rollup-criteria", idea="idea-realization-engine", description="Validate super-idea rollup criteria and auto-update status")
 async def validate_super_idea_rollup(idea_id: str, _key: str = Depends(require_api_key)) -> RollupProgress:
     """Check rollup criteria for a super-idea and auto-update manifestation_status (R2, R3)."""
@@ -608,14 +608,14 @@ async def validate_super_idea_rollup(idea_id: str, _key: str = Depends(require_a
     return progress
 
 
-@router.get("/ideas/breath-overview")
+@router.get("/ideas/breath-overview", summary="Portfolio breath overview — gas/water/ice phase distribution for all curated super-ideas")
 async def get_breath_overview() -> dict:
     """Portfolio breath overview — gas/water/ice phase distribution for all curated super-ideas."""
     from app.services import breath_service
     return breath_service.compute_breath_overview()
 
 
-@router.get("/ideas/{idea_id}/resonance")
+@router.get("/ideas/{idea_id}/resonance", summary="Return top resonant ideas for a given idea, with coherence scores and cross-domain flags")
 async def get_idea_resonance(
     idea_id: str,
     limit: int = Query(10, ge=1, le=50),
@@ -669,7 +669,7 @@ async def get_idea_resonance(
         return []
 
 
-@router.get("/ideas/{idea_id}/breath")
+@router.get("/ideas/{idea_id}/breath", summary="Return breath analysis (gas/water/ice phase distribution) for an idea")
 async def get_idea_breath(idea_id: str) -> dict:
     """Return breath analysis (gas/water/ice phase distribution) for an idea."""
     from app.services import breath_service
@@ -679,7 +679,7 @@ async def get_idea_breath(idea_id: str) -> dict:
     return breath_service.compute_idea_breath(idea_id)
 
 
-@router.get("/ideas/{idea_id}", response_model=IdeaWithScore)
+@router.get("/ideas/{idea_id}", response_model=IdeaWithScore, summary="Get Idea")
 async def get_idea(idea_id: str) -> IdeaWithScore:
     idea = idea_service.get_idea(idea_id)
     if idea is None:
@@ -687,7 +687,7 @@ async def get_idea(idea_id: str) -> IdeaWithScore:
     return idea
 
 
-@router.post("/ideas", response_model=IdeaWithScore, status_code=201)
+@router.post("/ideas", response_model=IdeaWithScore, status_code=201, summary="Create Idea")
 async def create_idea(data: IdeaCreate) -> IdeaWithScore:
     # Layer 1 guardrails — universal across all agent provider CLIs.
     try:
@@ -731,7 +731,7 @@ async def create_idea(data: IdeaCreate) -> IdeaWithScore:
     return created
 
 
-@router.patch("/ideas/{idea_id}", response_model=IdeaWithScore)
+@router.patch("/ideas/{idea_id}", response_model=IdeaWithScore, summary="Update Idea")
 async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(require_api_key)) -> IdeaWithScore:
     if all(
         field is None
@@ -784,7 +784,7 @@ async def update_idea(idea_id: str, data: IdeaUpdate, _key: str = Depends(requir
     return updated
 
 
-@router.patch("/ideas/{idea_id}/slug", response_model=SlugUpdateResponse)
+@router.patch("/ideas/{idea_id}/slug", response_model=SlugUpdateResponse, summary="Rename an idea's slug. Old slug is kept in slug_history for permanent redirect")
 async def update_idea_slug(
     idea_id: str,
     body: SlugUpdateRequest,
@@ -804,7 +804,7 @@ async def update_idea_slug(
     )
 
 
-@router.post("/ideas/{idea_id}/questions", response_model=IdeaWithScore)
+@router.post("/ideas/{idea_id}/questions", response_model=IdeaWithScore, summary="Add Idea Question")
 async def add_idea_question(idea_id: str, data: IdeaQuestionCreate) -> IdeaWithScore:
     updated, added = idea_service.add_question(
         idea_id=idea_id,
@@ -819,7 +819,7 @@ async def add_idea_question(idea_id: str, data: IdeaQuestionCreate) -> IdeaWithS
     return updated
 
 
-@router.post("/ideas/{idea_id}/questions/answer", response_model=IdeaWithScore)
+@router.post("/ideas/{idea_id}/questions/answer", response_model=IdeaWithScore, summary="Answer Idea Question")
 async def answer_idea_question(idea_id: str, data: IdeaQuestionAnswerUpdate) -> IdeaWithScore:
     updated, question_found = idea_service.answer_question(
         idea_id=idea_id,

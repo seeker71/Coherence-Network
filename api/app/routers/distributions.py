@@ -16,6 +16,7 @@ router = APIRouter()
     response_model=Distribution,
     status_code=201,
     responses={404: {"model": ErrorDetail}},
+    summary="Trigger value distribution for an asset",
 )
 async def create_distribution(distribution: DistributionCreate) -> Distribution:
     """Trigger value distribution for an asset."""

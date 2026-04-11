@@ -11,19 +11,19 @@ from app.services import graph_health_service as svc
 router = APIRouter()
 
 
-@router.get("/graph/health")
+@router.get("/graph/health", summary="Get Graph Health")
 async def get_graph_health():
     snap = svc.get_latest_or_baseline()
     return snap.model_dump(mode="json")
 
 
-@router.post("/graph/health/compute")
+@router.post("/graph/health/compute", summary="Compute Graph Health")
 async def compute_graph_health():
     snap = svc.compute_snapshot()
     return snap.model_dump(mode="json")
 
 
-@router.post("/graph/concepts/{concept_id}/convergence-guard")
+@router.post("/graph/concepts/{concept_id}/convergence-guard", summary="Set Convergence Guard")
 async def set_convergence_guard(concept_id: str, body: ConvergenceGuardBody):
     graph_health_repo.set_guard(concept_id, body.reason, body.set_by)
     return ConvergenceGuardResponse(
@@ -34,7 +34,7 @@ async def set_convergence_guard(concept_id: str, body: ConvergenceGuardBody):
     ).model_dump(mode="json")
 
 
-@router.delete("/graph/concepts/{concept_id}/convergence-guard")
+@router.delete("/graph/concepts/{concept_id}/convergence-guard", summary="Delete Convergence Guard")
 async def delete_convergence_guard(concept_id: str):
     graph_health_repo.remove_guard(concept_id)
     return ConvergenceGuardResponse(
@@ -43,6 +43,6 @@ async def delete_convergence_guard(concept_id: str):
     ).model_dump(mode="json")
 
 
-@router.get("/graph/health/roi")
+@router.get("/graph/health/roi", summary="Graph Health Roi")
 async def graph_health_roi():
     return svc.roi_snapshot()
