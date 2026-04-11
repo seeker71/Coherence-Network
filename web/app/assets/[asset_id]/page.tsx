@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
 
@@ -87,18 +88,11 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
   const assetId = decodeURIComponent(resolved.asset_id);
   const { asset, contributions, contributorsById } = await loadAssetPage(assetId);
 
+  // Return a proper 404 status instead of rendering a 200 with "not found"
+  // copy. Next.js will fall through to app/not-found.tsx (or the root
+  // loading boundary) and set `Cache-Control: private, no-cache, no-store`.
   if (!asset) {
-    return (
-      <main className="min-h-screen p-8 max-w-5xl mx-auto space-y-4">
-        <Link href="/assets" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Assets
-        </Link>
-        <h1 className="text-2xl font-bold">Asset not found</h1>
-        <p className="text-muted-foreground">
-          There is no asset record for <span className="font-mono">{assetId}</span>.
-        </p>
-      </main>
-    );
+    notFound();
   }
 
   const totalContributionCost = contributions.reduce((sum, item) => sum + (Number(item.cost_amount) || 0), 0);
