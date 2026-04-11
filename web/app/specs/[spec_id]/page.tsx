@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
 import {
@@ -122,6 +123,14 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
   const resolved = await params;
   const specId = decodeURIComponent(resolved.spec_id);
   const { source, inventoryItem, registryItem, relatedFlow } = await loadSpecContext(specId);
+
+  // If neither the inventory nor the registry knows about this spec, return a
+  // proper 404 instead of rendering an empty shell. Previously the page would
+  // render headings referencing the missing spec with "(title not yet registered)",
+  // which looked broken and returned a 200 status to crawlers.
+  if (!inventoryItem && !registryItem && relatedFlow.length === 0) {
+    notFound();
+  }
 
   const ideaIds = new Set<string>();
   const contributorByRole = new Map<string, Set<string>>();
