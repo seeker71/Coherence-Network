@@ -231,6 +231,15 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     # Ideas now live in graph_nodes (unified DB) — don't set file-based portfolio path
     os.environ.pop("IDEA_PORTFOLIO_PATH", None)
     os.environ["AGENT_TASKS_USE_DB"] = "0"
+    # Point news ingestion at a per-test config file. The service used to
+    # cache the path at import time, so this env var was silently ignored
+    # and tests dirtied the in-tree config/news-sources.json.
+    os.environ["NEWS_SOURCES_CONFIG"] = str(tmp_path / "news_sources.json")
+    try:
+        from app.services import news_ingestion_service
+        news_ingestion_service._sources = news_ingestion_service._load_sources()
+    except Exception:
+        pass
 
     # Reset config to its baseline first, then apply per-test overrides to the
     # loaded config so later cache invalidations preserve those defaults.
