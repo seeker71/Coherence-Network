@@ -1,5 +1,18 @@
-export const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
-export const REPO_TREE = "https://github.com/seeker71/Coherence-Network/tree";
+import { loadPublicWebConfig } from "@/lib/app-config";
+
+// Resolved once at module load. The web config merges env vars
+// (NEXT_PUBLIC_REPO_URL), api/config/api.json, and ~/.coherence-network/config.json,
+// so deploys and dev environments can each point at their own fork.
+const _repoBlob = loadPublicWebConfig().repoUrl;
+
+// The tree URL is derived from the blob URL by swapping the final segment.
+// /blob/main → /tree (branch is appended by callers that need it).
+function _deriveTreeBase(blobUrl: string): string {
+  return blobUrl.replace(/\/blob\/[^/]+$/, "/tree");
+}
+
+export const REPO_BLOB_MAIN = _repoBlob;
+export const REPO_TREE = _deriveTreeBase(_repoBlob);
 
 export type ValidationCounts = {
   pass: number;

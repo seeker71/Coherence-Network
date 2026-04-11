@@ -6,9 +6,10 @@ import {
   buildSystemLineageSearchParams,
   UI_RUNTIME_WINDOW,
 } from "@/lib/egress";
+// Reuse the shared REPO_BLOB_MAIN/REPO_TREE derivation from flow/types so the
+// spec page and the flow visualizer stay in sync when the repo URL changes.
+import { REPO_BLOB_MAIN, REPO_TREE } from "@/app/flow/types";
 
-const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
-const REPO_TREE = "https://github.com/seeker71/Coherence-Network/tree";
 export const revalidate = 90;
 
 type SpecItem = {

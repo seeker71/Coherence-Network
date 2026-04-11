@@ -11,6 +11,33 @@ export const CONFIG_DIR = join(homedir(), ".coherence-network");
 export const CONFIG_FILE = join(CONFIG_DIR, "config.json");
 
 const DEFAULT_HUB_URL = "https://api.coherencycoin.com";
+const DEFAULT_TIMEOUT_MS = 12_000;
+
+// ── Environment variables honored by the CLI ──────────────────────────────
+// Precedence for every resolver below is:
+//   1. in-process override set by a global flag (--api-url, --api-key, --timeout)
+//   2. environment variable  (COHERENCE_API_URL, COHERENCE_API_KEY, COHERENCE_TIMEOUT_MS)
+//   3. ~/.coherence-network/keys.json   (for secrets only)
+//   4. ~/.coherence-network/config.json (for non-secret values)
+//   5. hardcoded default
+//
+// Rationale: CI/CD often cannot persist a config file but always has env vars.
+// Interactive users still get a config file. Both coexist; env vars win when set.
+
+const ENV_API_URL = "COHERENCE_API_URL";
+const ENV_API_KEY = "COHERENCE_API_KEY";
+const ENV_TIMEOUT_MS = "COHERENCE_TIMEOUT_MS";
+
+let _apiUrlOverride = null;
+let _apiKeyOverride = null;
+let _timeoutOverride = null;
+
+function readEnv(name) {
+  const raw = process.env[name];
+  if (raw === undefined || raw === null) return null;
+  const trimmed = String(raw).trim();
+  return trimmed.length ? trimmed : null;
+}
 
 function ensureConfigDir() {
   if (!existsSync(CONFIG_DIR)) {
@@ -92,7 +119,25 @@ export function parseContributorId(value) {
   return contributorId;
 }
 
+export function setApiUrlOverride(url) {
+  const trimmed = String(url || "").trim();
+  _apiUrlOverride = trimmed || null;
+}
+
+export function setApiKeyOverride(key) {
+  const trimmed = String(key || "").trim();
+  _apiKeyOverride = trimmed || null;
+}
+
+export function setTimeoutOverride(ms) {
+  const n = Number(ms);
+  _timeoutOverride = Number.isFinite(n) && n > 0 ? n : null;
+}
+
 export function getHubUrl() {
+  if (_apiUrlOverride) return _apiUrlOverride;
+  const fromEnv = readEnv(ENV_API_URL);
+  if (fromEnv) return fromEnv;
   const config = loadConfig();
   return (
     config.hub_url ||
@@ -100,6 +145,31 @@ export function getHubUrl() {
     config.agent_providers?.api_base_url ||
     DEFAULT_HUB_URL
   );
+}
+
+export function getHubUrlSource() {
+  if (_apiUrlOverride) return "--api-url flag";
+  if (readEnv(ENV_API_URL)) return `${ENV_API_URL} env var`;
+  const config = loadConfig();
+  if (config.hub_url) return "config.json hub_url";
+  if (config.web?.api_base_url) return "config.json web.api_base_url";
+  if (config.agent_providers?.api_base_url) return "config.json agent_providers.api_base_url";
+  return "default";
+}
+
+export function getTimeoutMs() {
+  if (_timeoutOverride != null) return _timeoutOverride;
+  const fromEnv = readEnv(ENV_TIMEOUT_MS);
+  if (fromEnv) {
+    const n = Number(fromEnv);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const fromConfig = loadConfig().timeout_ms;
+  if (fromConfig != null) {
+    const n = Number(fromConfig);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return DEFAULT_TIMEOUT_MS;
 }
 
 const KEYS_FILE = join(CONFIG_DIR, "keys.json");
@@ -144,7 +214,18 @@ export function getFocus() {
 }
 
 export function getApiKey() {
+  if (_apiKeyOverride) return _apiKeyOverride;
+  const fromEnv = readEnv(ENV_API_KEY);
+  if (fromEnv) return fromEnv;
   return loadKeys().api_key || loadConfig().auth?.api_key || null;
+}
+
+export function getApiKeySource() {
+  if (_apiKeyOverride) return "--api-key flag";
+  if (readEnv(ENV_API_KEY)) return `${ENV_API_KEY} env var`;
+  if (loadKeys().api_key) return "keys.json";
+  if (loadConfig().auth?.api_key) return "config.json auth.api_key";
+  return "none";
 }
 
 export function getAdminKey() {
