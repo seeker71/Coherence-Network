@@ -212,7 +212,7 @@ def _run_smart_reap(
 
 @router.get("/smart-reap/preview")
 async def smart_reap_preview(
-    max_age_minutes: int | None = Query(None, ge=1, le=1440),
+    max_age_minutes: int | None = Query(None, ge=0, le=1440),
 ) -> dict:
     """Preview which stuck tasks would be reaped or extended — no state changes."""
     return _run_smart_reap(max_age_minutes=max_age_minutes, dry_run=True)
@@ -220,7 +220,7 @@ async def smart_reap_preview(
 
 @router.post("/smart-reap/run")
 async def smart_reap_run(
-    max_age_minutes: int | None = Query(None, ge=1, le=1440),
+    max_age_minutes: int | None = Query(None, ge=0, le=1440),
 ) -> dict:
     """Diagnose stuck running tasks and reap or extend them.
 
