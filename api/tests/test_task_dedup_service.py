@@ -604,10 +604,10 @@ class TestBridgeDetermineTaskType:
     def test_bridge_uses_task_history(self):
         """Bridge determine_task_type uses live task history, not stale stage."""
         import sys
-        import importlib
+        from pathlib import Path
 
-        # We import the bridge as a module
-        bridge_path = "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/festive-tu/scripts"
+        # Resolve scripts/ relative to this test file (api/tests/test_*.py -> repo/scripts)
+        bridge_path = str(Path(__file__).resolve().parents[2] / "scripts")
         if bridge_path not in sys.path:
             sys.path.insert(0, bridge_path)
 
@@ -651,8 +651,9 @@ class TestBridgeDetermineTaskType:
     def test_bridge_all_phases_complete(self):
         """Bridge returns None when all phases complete."""
         import sys
+        from pathlib import Path
 
-        bridge_path = "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/festive-tu/scripts"
+        bridge_path = str(Path(__file__).resolve().parents[2] / "scripts")
         if bridge_path not in sys.path:
             sys.path.insert(0, bridge_path)
 
