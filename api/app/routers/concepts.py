@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from typing import Any
 
-from app.services import concept_service, translate_service
+from app.services import concept_auto_tagger, concept_service, translate_service
 from app.services.translate_service import TranslateLens
 
 router = APIRouter()
@@ -100,6 +100,16 @@ async def search_concepts(
 async def concept_stats():
     """Get ontology statistics: concept count, relationship types, axes, user edges."""
     return concept_service.get_stats()
+
+
+@router.post("/concepts/auto-tag-all")
+async def auto_tag_all_ideas() -> dict[str, Any]:
+    """Run concept auto-tagging on every non-internal idea in the portfolio.
+
+    Matches each idea's name + description against the Living Codex concepts
+    via keyword overlap scoring and tags each idea with its top matches.
+    """
+    return concept_auto_tagger.tag_all_ideas()
 
 
 @router.get("/concepts/relationships")

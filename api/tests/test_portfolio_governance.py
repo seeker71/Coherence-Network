@@ -173,3 +173,152 @@ async def test_stake_creates_position():
         assert data["idea_id"] == idea_id
         assert data["amount_cc"] == 500.0
         assert data["status"] == "active"
+
+
+# ---------------------------------------------------------------------------
+# 6. GET /api/ideas/portfolio-summary returns curated super-idea rollup
+# ---------------------------------------------------------------------------
+
+
+def _seed_curated_idea(
+    *,
+    idea_id: str,
+    pillar: str,
+    actual_value: float = 0.0,
+    last_activity_at: str | None = None,
+) -> None:
+    """Seed a curated super-idea node directly via graph_service.
+
+    The public POST /api/ideas does not expose is_curated, so curated fixtures
+    must be created at the graph layer.
+    """
+    from app.services import graph_service, unified_db
+    unified_db.ensure_schema()
+    graph_service.create_node(
+        id=idea_id,
+        type="idea",
+        name=f"Curated {idea_id}",
+        description=f"Curated super-idea {idea_id} for portfolio summary tests",
+        phase="gas",
+        properties={
+            "potential_value": 100.0,
+            "estimated_cost": 10.0,
+            "actual_value": actual_value,
+            "actual_cost": 0.5,
+            "confidence": 0.8,
+            "manifestation_status": "none",
+            "stage": "active",
+            "idea_type": "standalone",
+            "interfaces": [],
+            "open_questions": [],
+            "is_curated": True,
+            "pillar": pillar,
+            "last_activity_at": last_activity_at,
+        },
+    )
+
+
+def _seed_spec_for_idea(spec_id: str, idea_id: str, *, actual_value: float = 0.0) -> None:
+    """Seed a spec node linked to the given idea via idea_id property."""
+    from app.services import graph_service
+    graph_service.create_node(
+        id=spec_id,
+        type="spec",
+        name=spec_id,
+        description=f"Spec {spec_id} for idea {idea_id}",
+        phase="gas",
+        properties={
+            "idea_id": idea_id,
+            "actual_value": actual_value,
+            "potential_value": 50.0,
+            "estimated_cost": 5.0,
+            "status": "done" if actual_value > 0 else "active",
+        },
+    )
+
+
+@pytest.mark.asyncio
+async def test_portfolio_summary_returns_envelope():
+    """Endpoint returns the canonical envelope shape even when no curated ideas exist."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/ideas/portfolio-summary")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        for key in ("total_ideas", "total_specs", "total_done_specs", "pillars", "ideas", "snapshot_at"):
+            assert key in body, f"missing key: {key}"
+        assert isinstance(body["pillars"], list)
+        assert isinstance(body["ideas"], list)
+
+
+@pytest.mark.asyncio
+async def test_portfolio_summary_red_when_no_specs_linked():
+    """A curated idea with no linked specs reports health=red."""
+    iid = _uid("curated-red")
+    _seed_curated_idea(idea_id=iid, pillar="realization")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/ideas/portfolio-summary")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        match = next((i for i in body["ideas"] if i["idea_id"] == iid), None)
+        assert match is not None, f"seeded idea {iid} not in summary"
+        assert match["pillar"] == "realization"
+        assert match["spec_count"] == 0
+        assert match["health_status"] == "red"
+
+
+@pytest.mark.asyncio
+async def test_portfolio_summary_green_when_active_specs_present():
+    """A curated idea with at least one undelivered spec reports health=green."""
+    iid = _uid("curated-green")
+    _seed_curated_idea(idea_id=iid, pillar="pipeline")
+    _seed_spec_for_idea(_uid("spec-active"), iid, actual_value=0.0)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/ideas/portfolio-summary")
+        body = r.json()
+        match = next((i for i in body["ideas"] if i["idea_id"] == iid), None)
+        assert match is not None
+        assert match["spec_count"] == 1
+        assert match["active_spec_count"] == 1
+        assert match["done_spec_count"] == 0
+        assert match["health_status"] == "green"
+
+
+@pytest.mark.asyncio
+async def test_portfolio_summary_yellow_when_all_specs_done_no_value():
+    """A curated idea whose specs are all delivered but with no recorded value or recent activity is yellow."""
+    iid = _uid("curated-yellow")
+    _seed_curated_idea(idea_id=iid, pillar="economics", actual_value=0.0, last_activity_at=None)
+    _seed_spec_for_idea(_uid("spec-done"), iid, actual_value=42.0)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/ideas/portfolio-summary")
+        body = r.json()
+        match = next((i for i in body["ideas"] if i["idea_id"] == iid), None)
+        assert match is not None
+        assert match["done_spec_count"] == 1
+        assert match["active_spec_count"] == 0
+        assert match["health_status"] == "yellow"
+
+
+@pytest.mark.asyncio
+async def test_portfolio_summary_pillar_grouping_aggregates():
+    """Per-pillar stats correctly aggregate spec counts across multiple curated ideas."""
+    iid_a = _uid("curated-pillar-a")
+    iid_b = _uid("curated-pillar-b")
+    _seed_curated_idea(idea_id=iid_a, pillar="surfaces")
+    _seed_curated_idea(idea_id=iid_b, pillar="surfaces")
+    _seed_spec_for_idea(_uid("spec-a1"), iid_a, actual_value=0.0)
+    _seed_spec_for_idea(_uid("spec-b1"), iid_b, actual_value=10.0)
+    _seed_spec_for_idea(_uid("spec-b2"), iid_b, actual_value=0.0)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/ideas/portfolio-summary")
+        body = r.json()
+        surfaces = next((p for p in body["pillars"] if p["pillar"] == "surfaces"), None)
+        assert surfaces is not None, "surfaces pillar missing from rollup"
+        assert surfaces["idea_count"] >= 2
+        assert surfaces["total_specs"] >= 3
+        assert surfaces["done_specs"] >= 1
+        assert surfaces["active_specs"] >= 2
