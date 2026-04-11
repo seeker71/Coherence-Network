@@ -68,40 +68,61 @@ async def sync_grounded_metrics(idea_id: str, _key: str = Depends(require_api_ke
 
 @router.post("/ideas/grounded-metrics/sync", summary="Compute and write back grounded metrics for all ideas")
 async def sync_all_grounded_metrics(_key: str = Depends(require_api_key)) -> dict:
-    """Compute and write back grounded metrics for all ideas."""
+    """Compute and write back grounded metrics for all ideas.
+
+    Previous implementation was O(n²) — for each idea it called
+    `idea_service.get_idea()` (full cache-miss re-read after the prior
+    write's invalidation) followed by `idea_service.update_idea()`
+    (another full re-read). For 100 ideas that's ~200 portfolio reads.
+
+    Current implementation is O(n) — one pre-fetched idea map is used
+    for the regression guard (O(1) lookups), and one `update_ideas_batch`
+    call writes every change in a single read+write cycle.
+    """
     data = grounded_idea_metrics_service.collect_all_data()
     idea_ids = idea_service.list_tracked_idea_ids()
-    results = []
-    synced_count = 0
+
+    # Pre-fetch all ideas into a map once — used only for the regression
+    # guard below ("never overwrite positive curated values with zero").
+    portfolio = idea_service.list_ideas(limit=9999, include_internal=True)
+    current_by_id: dict[str, object] = {idea.id: idea for idea in portfolio.ideas}
+
+    pending_updates: list[dict] = []
+    results: list[dict] = []
 
     for idea_id in idea_ids:
         metrics = grounded_idea_metrics_service.compute_idea_metrics(idea_id, **data)
         if not metrics:
             continue
-        # Regression guard: never overwrite positive curated values with zero
-        current = idea_service.get_idea(idea_id)
+        current = current_by_id.get(idea_id)
         computed_av = metrics["computed_actual_value"]
         computed_ac = metrics["computed_actual_cost"]
         computed_conf = metrics["computed_confidence"]
-        if current:
+        if current is not None:
             sync_av = max(computed_av, current.actual_value)
             sync_ac = max(computed_ac, current.actual_cost)
             sync_conf = max(computed_conf, current.confidence)
         else:
             sync_av, sync_ac, sync_conf = computed_av, computed_ac, computed_conf
 
-        updated = idea_service.update_idea(
-            idea_id,
-            actual_value=sync_av,
-            actual_cost=sync_ac,
-            confidence=sync_conf,
-        )
+        pending_updates.append({
+            "idea_id": idea_id,
+            "actual_value": sync_av,
+            "actual_cost": sync_ac,
+            "confidence": sync_conf,
+        })
         results.append({
             "idea_id": idea_id,
-            "synced": True,
             "metrics": metrics,
-            "idea_updated": updated is not None,
         })
+
+    # Single batched write (one read + one write, regardless of idea count).
+    applied = idea_service.update_ideas_batch(pending_updates)
+
+    synced_count = 0
+    for result, updated in zip(results, applied):
+        result["synced"] = True
+        result["idea_updated"] = updated is not None
         if updated is not None:
             synced_count += 1
 

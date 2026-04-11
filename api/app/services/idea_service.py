@@ -1412,6 +1412,107 @@ def update_idea(
     return _with_score(updated)
 
 
+def update_ideas_batch(
+    updates: list[dict],
+) -> list[IdeaWithScore | None]:
+    """Apply many updates in a single read+write cycle (no N+1).
+
+    Each update dict must have `idea_id` plus any of the mutable fields
+    accepted by `update_idea`:
+      - actual_value, actual_cost, confidence (float | None)
+      - manifestation_status (ManifestationStatus | None)
+      - potential_value, estimated_cost, description, name (float/str | None)
+
+    Returns an IdeaWithScore for each update in input order, or None for
+    ideas that could not be resolved. The batch performs a single
+    `_read_ideas()` call and a single `_write_ideas()` call, which is
+    dramatically faster than looping `update_idea()` (each iteration of
+    which re-reads the full portfolio because `_write_single_idea()`
+    invalidates the cache).
+
+    Audit ledger entries are still written per change, matching the
+    individual-update path. Callers that want to skip audit entirely
+    should write directly via `idea_registry_service`.
+    """
+    import datetime as _dt
+    if not updates:
+        return []
+
+    ideas = _read_ideas(persist_ensures=True)
+    by_id: dict[str, int] = {idea.id: idx for idx, idea in enumerate(ideas)}
+    results: list[IdeaWithScore | None] = []
+    now_iso = _dt.datetime.now(_dt.timezone.utc).isoformat()
+    dirty = False
+
+    for update in updates:
+        idea_id = update.get("idea_id")
+        if not idea_id:
+            results.append(None)
+            continue
+        resolved = _resolve_idea_raw(idea_id, ideas)
+        if resolved is None:
+            results.append(None)
+            logger.info("Idea not found in batch update: %s", idea_id)
+            continue
+        idx = by_id.get(resolved.id)
+        if idx is None:
+            results.append(None)
+            continue
+
+        idea = ideas[idx]
+        changes: list[tuple[str, object, object]] = []
+        idea.last_activity_at = now_iso
+
+        def _set(field_name: str, value: object) -> None:
+            if value is None:
+                return
+            current = getattr(idea, field_name)
+            if current != value:
+                changes.append((field_name, current, value))
+                setattr(idea, field_name, value)
+
+        _set("actual_value", update.get("actual_value"))
+        _set("actual_cost", update.get("actual_cost"))
+        _set("confidence", update.get("confidence"))
+        _set("potential_value", update.get("potential_value"))
+        _set("estimated_cost", update.get("estimated_cost"))
+        ms = update.get("manifestation_status")
+        if ms is not None and ms != idea.manifestation_status:
+            changes.append(("manifestation_status", idea.manifestation_status.value, ms.value if hasattr(ms, "value") else str(ms)))
+            idea.manifestation_status = ms
+
+        # Audit entries — per change, same shape as update_idea.
+        for field, old_val, new_val in changes:
+            try:
+                audit_ledger_service.append_entry(
+                    AuditEntryCreate(
+                        entry_type=AuditEntryType.VALUATION_CHANGE,
+                        sender_id="SYSTEM",
+                        receiver_id="SYSTEM",
+                        reason=f"Updated {field} for idea {idea_id} (batch)",
+                        reference_id=idea_id,
+                        metadata={
+                            "field": field,
+                            "old_value": old_val,
+                            "new_value": new_val,
+                        },
+                    )
+                )
+            except Exception:
+                # Audit failures must never abort the data write
+                logger.warning("audit_ledger append failed for %s in batch", idea_id, exc_info=True)
+
+        if changes:
+            dirty = True
+            ideas[idx] = idea
+        results.append(_with_score(idea))
+
+    if dirty:
+        _write_ideas(ideas)
+
+    return results
+
+
 def update_idea_slug(
     id_or_slug: str,
     new_slug: str,
