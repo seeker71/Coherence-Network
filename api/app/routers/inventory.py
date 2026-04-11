@@ -8,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Body, Query, Request
 
 from app.adapters.graph_store import GraphStore
 from app.config_loader import get_bool
+from app.core.ttl_cache import ttl_cached
 from app.services import agent_execution_service
 from app.services import agent_service
 from app.services import commit_evidence_registry_service
@@ -352,6 +353,94 @@ async def sync_asset_modularity_tasks(
     return payload
 
 
+def _build_flow_compat_rows(
+    contributor_limit: int,
+    asset_limit: int,
+    contribution_limit: int,
+) -> tuple[list[dict], list[dict], list[dict]]:
+    """Fetch + shape the contributor/asset/contribution rows for flow aggregation.
+
+    Extracted so `spec_process_implementation_validation_flow` can memoize
+    the expensive aggregation separately from the request handling.
+    """
+    from app.services import graph_service as _gs
+    from app.models.graph import Edge
+    from app.services.unified_db import session as _sess
+
+    def _compat_row(node: dict) -> dict:
+        row = dict(node)
+        if row.get("legacy_id"):
+            row["id"] = row["legacy_id"]
+        return row
+
+    def _compat_edge(edge_dict: dict) -> dict:
+        row = dict(edge_dict)
+        props = row.pop("properties", {}) or {}
+        row.update(props)
+        if props.get("contribution_id"):
+            row["id"] = props["contribution_id"]
+        return row
+
+    contributor_rows = [
+        _compat_row(n)
+        for n in _gs.list_nodes(type="contributor", limit=contributor_limit).get("items", [])
+    ]
+    asset_rows = [
+        _compat_row(n)
+        for n in _gs.list_nodes(type="asset", limit=asset_limit).get("items", [])
+    ]
+    with _sess() as s:
+        contribution_rows = [
+            _compat_edge(e.to_dict())
+            for e in s.query(Edge).filter(Edge.type == "contribution").limit(contribution_limit).all()
+        ]
+    return contributor_rows, asset_rows, contribution_rows
+
+
+@ttl_cached(ttl_seconds=30.0, max_entries=64)
+def _cached_flow(
+    idea_id: str | None,
+    include_internal_ideas: bool,
+    runtime_window_seconds: int,
+    contributor_limit: int,
+    contribution_limit: int,
+    asset_limit: int,
+    spec_limit: int,
+    lineage_link_limit: int,
+    usage_event_limit: int,
+    commit_evidence_limit: int,
+    runtime_event_limit: int,
+    list_item_limit: int,
+) -> dict:
+    """Memoized flow aggregation.
+
+    Cached at 30 s TTL per unique argument tuple. The 11 query parameters
+    mean the key space is technically huge, but in practice clients call
+    this endpoint with the defaults 99% of the time, so the hot path is
+    a single cache entry.
+
+    Bypass the cache by exporting `COHERENCE_TTL_CACHE_DISABLED=1`
+    (tests do this via the autouse conftest fixture reset).
+    """
+    contributor_rows, asset_rows, contribution_rows = _build_flow_compat_rows(
+        contributor_limit, asset_limit, contribution_limit
+    )
+    return inventory_service.build_spec_process_implementation_validation_flow(
+        idea_id=idea_id,
+        include_internal_ideas=include_internal_ideas,
+        runtime_window_seconds=runtime_window_seconds,
+        contributor_rows=contributor_rows,
+        contribution_rows=contribution_rows,
+        asset_rows=asset_rows,
+        spec_registry_limit=spec_limit,
+        lineage_link_limit=lineage_link_limit,
+        usage_event_limit=usage_event_limit,
+        commit_evidence_limit=commit_evidence_limit,
+        runtime_event_limit=runtime_event_limit,
+        list_item_limit=list_item_limit,
+    )
+
+
 @router.get("/inventory/flow", summary="Spec Process Implementation Validation Flow")
 def spec_process_implementation_validation_flow(
     request: Request,
@@ -368,43 +457,14 @@ def spec_process_implementation_validation_flow(
     runtime_event_limit: int = Query(600, ge=1, le=5000),
     list_item_limit: int = Query(12, ge=1, le=200),
 ) -> dict:
-    from app.services import graph_service as _gs
-    from app.models.graph import Edge
-    from app.services.unified_db import session as _sess
-
-    def _compat_row(node: dict) -> dict:
-        """Map graph node to legacy-compatible dict for inventory_service."""
-        row = dict(node)
-        # Use legacy_id as the primary id if available
-        if row.get("legacy_id"):
-            row["id"] = row["legacy_id"]
-        return row
-
-    contributor_rows = [_compat_row(n) for n in _gs.list_nodes(type="contributor", limit=contributor_limit).get("items", [])]
-    asset_rows = [_compat_row(n) for n in _gs.list_nodes(type="asset", limit=asset_limit).get("items", [])]
-    def _compat_edge(edge_dict: dict) -> dict:
-        """Flatten edge properties for inventory_service compatibility."""
-        row = dict(edge_dict)
-        props = row.pop("properties", {}) or {}
-        row.update(props)
-        # Ensure contribution_id maps to id
-        if props.get("contribution_id"):
-            row["id"] = props["contribution_id"]
-        return row
-
-    with _sess() as s:
-        contribution_rows = [
-            _compat_edge(e.to_dict()) for e in
-            s.query(Edge).filter(Edge.type == "contribution").limit(contribution_limit).all()
-        ]
-    return inventory_service.build_spec_process_implementation_validation_flow(
+    return _cached_flow(
         idea_id=idea_id,
         include_internal_ideas=include_internal_ideas,
         runtime_window_seconds=runtime_window_seconds,
-        contributor_rows=contributor_rows,
-        contribution_rows=contribution_rows,
-        asset_rows=asset_rows,
-        spec_registry_limit=spec_limit,
+        contributor_limit=contributor_limit,
+        contribution_limit=contribution_limit,
+        asset_limit=asset_limit,
+        spec_limit=spec_limit,
         lineage_link_limit=lineage_link_limit,
         usage_event_limit=usage_event_limit,
         commit_evidence_limit=commit_evidence_limit,

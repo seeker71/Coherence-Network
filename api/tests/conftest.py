@@ -241,6 +241,11 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     except Exception:
         pass
 
+    # Disable the in-process TTL cache (app.core.ttl_cache.ttl_cached)
+    # so tests always see fresh computation. Without this, a stale flow
+    # aggregation from test A can leak into test B.
+    os.environ["COHERENCE_TTL_CACHE_DISABLED"] = "1"
+
     # Reset config to its baseline first, then apply per-test overrides to the
     # loaded config so later cache invalidations preserve those defaults.
     cs_module.reset_config_cache()
