@@ -4,6 +4,7 @@
 
 import { get } from "../api.mjs";
 import { getContributorId, getHubUrl, getFocus } from "../config.mjs";
+import { hasJsonFlag, printJson, printJsonError } from "../ui/json.mjs";
 import { hostname } from "node:os";
 import { execSync } from "node:child_process";
 import { stdin, stdout } from "node:process";
@@ -34,9 +35,10 @@ async function checkForUpdate(localVersion) {
   return null;
 }
 
-export async function showStatus() {
+export async function showStatus(args = []) {
   const isTTY = process.stdout.isTTY;
   const focus = getFocus();
+  const jsonMode = hasJsonFlag(args);
 
   // Fetch everything in parallel
   const [health, ideas, nodes, pendingData, runningData, completedData, coherence, ledger, messages] =
@@ -51,6 +53,36 @@ export async function showStatus() {
       getContributorId() ? get(`/api/contributions/ledger/${encodeURIComponent(getContributorId())}`) : null,
       getContributorId() ? get(`/api/federation/nodes/${encodeURIComponent(getContributorId())}/messages`, { unread_only: true, limit: 10 }) : null,
     ]);
+
+  // JSON mode — single structured payload covering every fetched source.
+  // The shape is intentionally flat so jq filters can pull any field
+  // without walking a deep tree.
+  if (jsonMode) {
+    const envelope = {
+      hub: getHubUrl(),
+      contributor_id: getContributorId(),
+      focus: { idea_id: focus.idea_id, task_id: focus.task_id },
+      health: health ?? null,
+      ideas_count: ideas ?? null,
+      nodes: Array.isArray(nodes) ? nodes : nodes?.items ?? null,
+      coherence: coherence ?? null,
+      tasks: {
+        pending: pendingData ?? null,
+        running: runningData ?? null,
+        completed: completedData ?? null,
+      },
+      ledger: ledger ?? null,
+      messages: messages ?? null,
+    };
+    // If every field is null, the API is likely unreachable.
+    const allNull = [health, ideas, nodes, pendingData, runningData, completedData, coherence].every((v) => v == null);
+    if (allNull) {
+      printJsonError("api_unreachable", { status: 0 });
+      return;
+    }
+    printJson(envelope);
+    return;
+  }
 
   const taskList = (d) => {
     if (!d) return [];

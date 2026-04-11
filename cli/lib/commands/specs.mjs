@@ -5,11 +5,16 @@
 import { get } from "../api.mjs";
 import { getActiveWorkspace, DEFAULT_WORKSPACE_ID } from "../config.mjs";
 import { truncateWords as truncate } from "../ui/ansi.mjs";
+import { hasJsonFlag, printJson, printJsonError, stripJsonFlag } from "../ui/json.mjs";
 
 /** Truncate at word boundary, append "..." if needed */
 
 export async function listSpecs(args) {
-  const limit = parseInt(args[0]) || 20;
+  const jsonMode = hasJsonFlag(args);
+  // Strip --json before parsing positional so `cc specs --json` still
+  // defaults to the right limit instead of trying to parseInt("--json").
+  const clean = stripJsonFlag(args);
+  const limit = parseInt(clean[0]) || 20;
   const query = { limit };
   const activeWorkspace = getActiveWorkspace();
   if (activeWorkspace && activeWorkspace !== DEFAULT_WORKSPACE_ID) {
@@ -17,9 +22,16 @@ export async function listSpecs(args) {
   }
   const data = await get("/api/spec-registry", query);
   if (!data || !Array.isArray(data)) {
-    console.log("Could not fetch specs.");
+    if (jsonMode) printJsonError("fetch_failed");
+    else console.log("Could not fetch specs.");
     return;
   }
+
+  if (jsonMode) {
+    printJson(data);
+    return;
+  }
+
   if (data.length === 0) {
     console.log("No specs registered.");
     return;
@@ -41,14 +53,22 @@ export async function listSpecs(args) {
 }
 
 export async function showSpec(args) {
-  const id = args[0];
+  const jsonMode = hasJsonFlag(args);
+  const clean = stripJsonFlag(args);
+  const id = clean[0];
   if (!id) {
-    console.log("Usage: cc spec <spec-id>");
+    if (jsonMode) printJsonError("missing_spec_id");
+    else console.log("Usage: cc spec <spec-id>");
     return;
   }
   const data = await get(`/api/spec-registry/${encodeURIComponent(id)}`);
   if (!data) {
-    console.log(`Spec '${id}' not found.`);
+    if (jsonMode) printJsonError("spec_not_found", { status: 404 });
+    else console.log(`Spec '${id}' not found.`);
+    return;
+  }
+  if (jsonMode) {
+    printJson(data);
     return;
   }
   console.log();
