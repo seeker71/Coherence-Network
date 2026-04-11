@@ -8,14 +8,7 @@ import { ClientTabs } from "@/components/ui/client-tabs";
 // the resolved PublicWebConfig into window.__COHERENCE_PUBLIC_CONFIG__ from
 // layout.tsx, so we read it back via readPublicWebConfig().
 import { readPublicWebConfig } from "@/lib/public-config";
-
-type IdeaQuestion = {
-  question: string;
-  value_to_whole: number;
-  estimated_cost: number;
-  answer?: string | null;
-  measured_delta?: number | null;
-};
+import type { IdeaQuestion, IdeaWithScore } from "@/lib/types";
 
 type FlowItem = {
   idea_id: string;
@@ -55,23 +48,6 @@ type ActivityEvent = {
   timestamp: string;
   summary: string;
   contributor_id?: string | null;
-};
-
-type IdeaWithScore = {
-  id: string;
-  name: string;
-  description: string;
-  potential_value: number;
-  actual_value: number;
-  estimated_cost: number;
-  actual_cost: number;
-  confidence: number;
-  resistance_risk: number;
-  manifestation_status: string;
-  interfaces: string[];
-  open_questions: IdeaQuestion[];
-  free_energy_score: number;
-  value_gap: number;
 };
 
 type RegistrySpec = {

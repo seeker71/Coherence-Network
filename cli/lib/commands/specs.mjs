@@ -4,15 +4,9 @@
 
 import { get } from "../api.mjs";
 import { getActiveWorkspace, DEFAULT_WORKSPACE_ID } from "../config.mjs";
+import { truncateWords as truncate } from "../ui/ansi.mjs";
 
 /** Truncate at word boundary, append "..." if needed */
-function truncate(str, len) {
-  if (!str) return "";
-  if (str.length <= len) return str;
-  const trimmed = str.slice(0, len - 3);
-  const lastSpace = trimmed.lastIndexOf(" ");
-  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
-}
 
 export async function listSpecs(args) {
   const limit = parseInt(args[0]) || 20;

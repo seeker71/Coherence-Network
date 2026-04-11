@@ -22,6 +22,7 @@ import { IdeaStakeForm } from "@/components/idea_stake_form";
 import IdeaLensPanel from "@/components/ideas/IdeaLensPanel";
 import IdeaDetailTabs from "@/components/ideas/IdeaDetailTabs";
 import { loadPublicWebConfig } from "@/lib/app-config";
+import type { IdeaQuestion, IdeaWithScore } from "@/lib/types";
 
 const { fetchDefaults: FETCH_DEFAULTS, webUiBaseUrl: BASE_URL } = loadPublicWebConfig();
 const FETCH_TIMEOUT_MS = FETCH_DEFAULTS.timeoutMs;
@@ -58,31 +59,6 @@ export async function generateMetadata({
     },
   };
 }
-
-type IdeaQuestion = {
-  question: string;
-  value_to_whole: number;
-  estimated_cost: number;
-  answer?: string | null;
-  measured_delta?: number | null;
-};
-
-type IdeaWithScore = {
-  id: string;
-  name: string;
-  description: string;
-  potential_value: number;
-  actual_value: number;
-  estimated_cost: number;
-  actual_cost: number;
-  confidence: number;
-  resistance_risk: number;
-  manifestation_status: string;
-  interfaces: string[];
-  open_questions: IdeaQuestion[];
-  free_energy_score: number;
-  value_gap: number;
-};
 
 type FlowItem = {
   idea_id: string;
