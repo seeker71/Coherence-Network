@@ -29,6 +29,7 @@ import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
 import { truncateWords as truncate } from "../ui/ansi.mjs";
+import { hasJsonFlag, printJson, printJsonError } from "../ui/json.mjs";
 
 /** Truncate at word boundary, append "..." if needed */
 
@@ -39,10 +40,13 @@ function miniBar(value, max, width = 5) {
 }
 
 export async function listIdeas(args) {
+  const jsonMode = hasJsonFlag(args);
   const isTTY = process.stdout.isTTY;
 
-  // Interactive picker if no args and TTY
-  if (isTTY && args.length === 0) {
+  // Interactive picker only when TTY AND not JSON mode AND no other args.
+  // When piping (`cc ideas | jq`) or passing `--json`, we always return
+  // structured data instead of opening a picker.
+  if (isTTY && !jsonMode && args.length === 0) {
     return runInteractivePicker();
   }
 
@@ -74,12 +78,25 @@ export async function listIdeas(args) {
 
   const raw = await get("/api/ideas", query);
   let data = Array.isArray(raw) ? raw : raw?.ideas;
-  if (!data || !Array.isArray(data)) { console.log("Could not fetch ideas."); return; }
+  if (!data || !Array.isArray(data)) {
+    if (jsonMode) {
+      printJsonError("fetch_failed");
+    } else {
+      console.log("Could not fetch ideas.");
+    }
+    return;
+  }
 
-  // Apply local filters
+  // Apply local filters (same in both modes)
   if (flags.type)   data = data.filter(i => i.work_type === flags.type);
   if (flags.status) data = data.filter(i => (i.manifestation_status || "none") === flags.status);
   if (flags.parent) data = data.filter(i => i.parent_idea_id === flags.parent);
+
+  // JSON mode: emit the (possibly empty) array and exit. Pipeline-friendly.
+  if (jsonMode) {
+    printJson(data);
+    return;
+  }
 
   if (data.length === 0) { console.log("No ideas match the filter."); return; }
 
