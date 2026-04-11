@@ -4,6 +4,7 @@
 
 import { get } from "../api.mjs";
 import { truncateWords as truncate } from "../ui/ansi.mjs";
+import { hasJsonFlag, printJson, printJsonError, stripJsonFlag } from "../ui/json.mjs";
 
 /** Truncate at word boundary, append "..." if needed */
 
@@ -17,11 +18,18 @@ function typeBadge(type) {
 }
 
 export async function listContributors(args) {
-  const limit = parseInt(args[0]) || 20;
+  const jsonMode = hasJsonFlag(args);
+  const clean = stripJsonFlag(args);
+  const limit = parseInt(clean[0]) || 20;
   const raw = await get("/api/contributors", { limit });
   const data = Array.isArray(raw) ? raw : (raw?.items || raw?.contributors);
   if (!data || !Array.isArray(data)) {
-    console.log("Could not fetch contributors.");
+    if (jsonMode) printJsonError("fetch_failed");
+    else console.log("Could not fetch contributors.");
+    return;
+  }
+  if (jsonMode) {
+    printJson(data);
     return;
   }
   if (data.length === 0) {
@@ -42,14 +50,22 @@ export async function listContributors(args) {
 }
 
 export async function showContributor(args) {
-  const id = args[0];
+  const jsonMode = hasJsonFlag(args);
+  const clean = stripJsonFlag(args);
+  const id = clean[0];
   if (!id) {
-    console.log("Usage: cc contributor <id>");
+    if (jsonMode) printJsonError("missing_contributor_id");
+    else console.log("Usage: cc contributor <id>");
     return;
   }
   const data = await get(`/api/contributors/${encodeURIComponent(id)}`);
   if (!data) {
-    console.log(`Contributor '${id}' not found.`);
+    if (jsonMode) printJsonError("contributor_not_found", { status: 404 });
+    else console.log(`Contributor '${id}' not found.`);
+    return;
+  }
+  if (jsonMode) {
+    printJson(data);
     return;
   }
   console.log();

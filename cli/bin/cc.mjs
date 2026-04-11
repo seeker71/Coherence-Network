@@ -163,7 +163,7 @@ const COMMANDS = {
   spec:          () => showSpec(args),
   contribute:    () => contribute(args),
   ontology:      () => ontology(args),
-  status:        () => showStatus(),
+  status:        () => showStatus(args),
   resonance:     () => showResonance(),
   identity:      () => handleIdentity(args),
   nodes:         () => listNodes(),
@@ -773,6 +773,19 @@ function showHelp() {
    onboarding register     Register a new contributor (Trust-on-First-Use)
    onboarding session      Get contributor profile from session token
    onboarding upgrade      Upgrade trust level to verified (stub)
+
+\x1b[1mGlobal flags:\x1b[0m
+  --workspace <id>        Scope commands to a specific workspace (overrides config)
+  --api-url <url>         Override the API origin (or set COHERENCE_API_URL env var)
+  --api-key <key>         Override the API key (or set COHERENCE_API_KEY env var)
+  --timeout <ms>          Override the request timeout (or set COHERENCE_TIMEOUT_MS)
+  --json                  Machine-readable JSON output (auto-enabled when piped)
+  --no-json               Force human-readable output even when piped
+
+\x1b[1mEnvironment variables:\x1b[0m
+  COHERENCE_API_URL       API origin (default: ${hubUrl})
+  COHERENCE_API_KEY       API key for write operations
+  COHERENCE_TIMEOUT_MS    Request timeout in milliseconds (default: 12000)
 
 \x1b[2mHub: ${hubUrl}\x1b[0m
 \x1b[2mDocs: https://coherencycoin.com\x1b[0m
