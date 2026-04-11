@@ -211,8 +211,12 @@ export type RuntimeSlice = {
   warnings: string[];
 };
 
+import { loadPublicWebConfig } from "@/lib/app-config";
+
 export const API_REVALIDATE_SECONDS = 60;
-export const FETCH_TIMEOUT_MS = 7000;
+// Falls back to the shared web config so deploys can tune this via
+// NEXT_PUBLIC_FETCH_TIMEOUT_MS or api/config/api.json → web.fetch_defaults.
+export const FETCH_TIMEOUT_MS = loadPublicWebConfig().fetchDefaults.timeoutMs;
 export const RUNTIME_SUMMARY_TIMEOUT_MS = 2500;
 export const RUNTIME_EVENTS_FALLBACK_TIMEOUT_MS = 2500;
 export const DAILY_SUMMARY_TIMEOUT_MS = 3500;

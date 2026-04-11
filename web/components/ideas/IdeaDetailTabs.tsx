@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { useExpertMode } from "@/components/expert-mode-context";
 import { ClientTabs } from "@/components/ui/client-tabs";
+// Client components cannot import app-config (fs/os), but the server injects
+// the resolved PublicWebConfig into window.__COHERENCE_PUBLIC_CONFIG__ from
+// layout.tsx, so we read it back via readPublicWebConfig().
+import { readPublicWebConfig } from "@/lib/public-config";
 
 type IdeaQuestion = {
   question: string;
@@ -113,11 +117,10 @@ interface IdeaDetailTabsProps {
   children?: React.ReactNode;
 }
 
-const REPO_BLOB_MAIN = "https://github.com/seeker71/Coherence-Network/blob/main";
-
 function toRepoHref(pathOrUrl: string): string {
   if (/^https?:\/\//.test(pathOrUrl)) return pathOrUrl;
-  return `${REPO_BLOB_MAIN}/${pathOrUrl.replace(/^\/+/, "")}`;
+  const repoBlob = readPublicWebConfig().repoUrl;
+  return `${repoBlob}/${pathOrUrl.replace(/^\/+/, "")}`;
 }
 
 function fileLabel(pathOrUrl: string): string {

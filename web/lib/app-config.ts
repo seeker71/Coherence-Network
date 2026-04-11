@@ -5,6 +5,24 @@ import { join, resolve } from "node:path";
 export type PublicWebConfig = {
   apiBaseUrl: string;
   localApiBaseUrl: string;
+  // Canonical user-facing origin (for OG/Twitter tags, share links,
+  // canonical URLs). Env override: NEXT_PUBLIC_BASE_URL.
+  webUiBaseUrl: string;
+  // Public repo browse base (for spec/source file permalinks). Env
+  // override: NEXT_PUBLIC_REPO_URL. Defaults to the `main` branch blob.
+  repoUrl: string;
+  // Shared fetch defaults for pages that don't have a specific need.
+  // Individual pages may still override by passing options directly.
+  fetchDefaults: {
+    timeoutMs: number;
+    retryAttempts: number;
+    healthTimeoutMs: number;
+  };
+  // Default pagination shape for list pages that don't have a specific need.
+  pagination: {
+    defaultLimit: number;
+    maxLimit: number;
+  };
   liveUpdates: {
     pollMs: number;
     routerRefreshEveryTicks: number;
@@ -75,6 +93,17 @@ function defaultConfig(): Record<string, unknown> {
     web: {
       api_base_url: "https://api.coherencycoin.com",
       local_api_base_url: "http://localhost:8000",
+      web_ui_base_url: "https://coherencycoin.com",
+      repo_url: "https://github.com/seeker71/Coherence-Network/blob/main",
+      fetch_defaults: {
+        timeout_ms: 7000,
+        retry_attempts: 3,
+        health_timeout_ms: 10000,
+      },
+      pagination: {
+        default_limit: 50,
+        max_limit: 500,
+      },
       deployed_sha: "unknown",
       updated_at: "unknown",
     },
@@ -117,15 +146,60 @@ export function loadMergedAppConfig(): Record<string, unknown> {
 
 export function loadPublicWebConfig(): PublicWebConfig {
   const config = loadMergedAppConfig();
+  // Env var overrides take precedence over merged config. This lets
+  // deploys (Docker, Vercel, etc.) tune values without editing files.
+  const fromEnv = <T>(name: string, fallback: T, parse: (s: string) => T = ((s) => s as unknown as T)): T => {
+    const v = process.env[name];
+    if (v === undefined || v === null || v === "") return fallback;
+    try {
+      return parse(String(v));
+    } catch {
+      return fallback;
+    }
+  };
   return {
     apiBaseUrl: String(
-      getNested(config, ["web", "api_base_url"], "")
+      process.env.NEXT_PUBLIC_API_URL
+      || getNested(config, ["web", "api_base_url"], "")
       || getNested(config, ["agent_providers", "api_base_url"], "https://api.coherencycoin.com"),
     ),
     localApiBaseUrl: String(
       process.env.API_URL
       || getNested(config, ["web", "local_api_base_url"], "http://localhost:8000"),
     ),
+    webUiBaseUrl: String(
+      process.env.NEXT_PUBLIC_BASE_URL
+      || getNested(config, ["web", "web_ui_base_url"], "")
+      || getNested(config, ["agent_providers", "web_ui_base_url"], "https://coherencycoin.com"),
+    ),
+    repoUrl: String(
+      process.env.NEXT_PUBLIC_REPO_URL
+      || getNested(config, ["web", "repo_url"], "https://github.com/seeker71/Coherence-Network/blob/main"),
+    ),
+    fetchDefaults: {
+      timeoutMs: Math.max(
+        1000,
+        fromEnv("NEXT_PUBLIC_FETCH_TIMEOUT_MS", Number(getNested(config, ["web", "fetch_defaults", "timeout_ms"], 7000)) || 7000, Number),
+      ),
+      retryAttempts: Math.max(
+        0,
+        fromEnv("NEXT_PUBLIC_FETCH_RETRY_ATTEMPTS", Number(getNested(config, ["web", "fetch_defaults", "retry_attempts"], 3)) || 3, Number),
+      ),
+      healthTimeoutMs: Math.max(
+        1000,
+        fromEnv("NEXT_PUBLIC_HEALTH_TIMEOUT_MS", Number(getNested(config, ["web", "fetch_defaults", "health_timeout_ms"], 10000)) || 10000, Number),
+      ),
+    },
+    pagination: {
+      defaultLimit: Math.max(
+        1,
+        Number(getNested(config, ["web", "pagination", "default_limit"], 50)) || 50,
+      ),
+      maxLimit: Math.max(
+        1,
+        Number(getNested(config, ["web", "pagination", "max_limit"], 500)) || 500,
+      ),
+    },
     liveUpdates: {
       pollMs: Math.max(30000, Number(getNested(config, ["live_updates", "poll_ms"], 120000)) || 120000),
       routerRefreshEveryTicks: Math.max(

@@ -1,4 +1,7 @@
 import type { Metadata } from "next";
+import { loadPublicWebConfig } from "@/lib/app-config";
+
+const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
 
 export const metadata: Metadata = {
   title: "Blog | Coherence Network",
@@ -6,7 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "We ran 842 tasks across 6 AI providers. Here's what the data says.",
     description: "Claude, Codex, Gemini, Cursor, Ollama — benchmarked head-to-head with Thompson Sampling. Real data, real tasks, no synthetic benchmarks.",
-    url: "https://coherencycoin.com/blog",
+    url: `${_WEB_UI}/blog`,
   },
 };
 
@@ -151,11 +154,11 @@ python scripts/local_runner.py --timeout 300`}</code></pre>
 
         <p>
           The data is at{" "}
-          <a href="https://coherencycoin.com/automation" className="text-amber-600 dark:text-amber-400 hover:underline">
+          <a href={`${_WEB_UI}/automation`} className="text-amber-600 dark:text-amber-400 hover:underline">
             coherencycoin.com/automation
           </a>
           . The ideas are at{" "}
-          <a href="https://coherencycoin.com/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">
+          <a href={`${_WEB_UI}/ideas`} className="text-amber-600 dark:text-amber-400 hover:underline">
             coherencycoin.com/ideas
           </a>
           . The code is at{" "}

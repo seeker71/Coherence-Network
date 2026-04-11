@@ -3,9 +3,14 @@
  * Zero deps — uses native fetch (Node 18+).
  */
 
-import { getHubUrl, getApiKey } from "./config.mjs";
+import { getHubUrl, getApiKey, getTimeoutMs } from "./config.mjs";
 
-const TIMEOUT_MS = 12_000;
+// Resolved lazily so --timeout flag and COHERENCE_TIMEOUT_MS env var
+// both take effect without a module reload. Callers that want a
+// one-off override can pass `signal: AbortSignal.timeout(n)` themselves.
+function timeoutSignal() {
+  return AbortSignal.timeout(getTimeoutMs());
+}
 
 /** Normalized API origin (no trailing slash). Used by SSE watchers and `cc rest`. */
 export function getApiBase() {
@@ -34,7 +39,7 @@ export async function get(path, params) {
   try {
     const res = await fetch(buildUrl(path, params), {
       headers: authHeaders(),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: timeoutSignal(),
     });
     if (!res.ok) return null;
     return await res.json();
@@ -50,7 +55,7 @@ export async function post(path, body) {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: timeoutSignal(),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -70,7 +75,7 @@ export async function patch(path, body) {
       method: "PATCH",
       headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: timeoutSignal(),
     });
     if (!res.ok) return null;
     return await res.json();
@@ -85,7 +90,7 @@ export async function put(path, body) {
       method: "PUT",
       headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: timeoutSignal(),
     });
     if (!res.ok) return null;
     return await res.json();
@@ -99,7 +104,7 @@ export async function del(path) {
     const res = await fetch(buildUrl(path), {
       method: "DELETE",
       headers: authHeaders(),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: timeoutSignal(),
     });
     return res.ok;
   } catch {
@@ -122,7 +127,7 @@ export async function request(method, path, options = {}) {
   const init = {
     method: m,
     headers,
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: timeoutSignal(),
   };
   if (body !== undefined && body !== null && m !== "GET" && m !== "HEAD") {
     init.body = typeof body === "string" ? body : JSON.stringify(body);

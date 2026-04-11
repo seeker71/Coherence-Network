@@ -77,7 +77,7 @@ export async function showRestCoverage() {
   const base = getApiBase();
   const data = await get("/api/inventory/routes/canonical");
   if (!data || typeof data !== "object") {
-    console.error("Could not fetch /api/inventory/routes/canonical — check COHERENCE_HUB_URL and API key.");
+    console.error("Could not fetch /api/inventory/routes/canonical — check COHERENCE_API_URL and API key.");
     process.exitCode = 1;
     return;
   }
@@ -132,7 +132,9 @@ export async function handleRest(argv) {
   cc rest PATCH /api/resource/x --body '{"a":1}' -H "X-Custom: yes"
   cc rest GET /api/ideas -q limit=5
 
-\x1b[1mEnv:\x1b[0m COHERENCE_HUB_URL, X-API-Key via ~/.coherence-network or COHERENCE_API_KEY
+\x1b[1mEnv vars:\x1b[0m COHERENCE_API_URL, COHERENCE_API_KEY, COHERENCE_TIMEOUT_MS
+\x1b[1mFlags:\x1b[0m --api-url <url>, --api-key <key>, --timeout <ms>, --workspace <id>
+\x1b[1mConfig:\x1b[0m ~/.coherence-network/config.json, ~/.coherence-network/keys.json
 `);
     return;
   }

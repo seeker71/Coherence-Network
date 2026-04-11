@@ -21,13 +21,13 @@ import IdeaShare from "@/components/idea_share";
 import { IdeaStakeForm } from "@/components/idea_stake_form";
 import IdeaLensPanel from "@/components/ideas/IdeaLensPanel";
 import IdeaDetailTabs from "@/components/ideas/IdeaDetailTabs";
+import { loadPublicWebConfig } from "@/lib/app-config";
 
-const FETCH_TIMEOUT_MS = 6000;
+const { fetchDefaults: FETCH_DEFAULTS, webUiBaseUrl: BASE_URL } = loadPublicWebConfig();
+const FETCH_TIMEOUT_MS = FETCH_DEFAULTS.timeoutMs;
 const FETCH_RETRY_DELAY_MS = 250;
-const FETCH_RETRY_ATTEMPTS = 3;
+const FETCH_RETRY_ATTEMPTS = FETCH_DEFAULTS.retryAttempts;
 export const revalidate = 90;
-
-const BASE_URL = "https://coherencycoin.com";
 
 export async function generateMetadata({
   params,
