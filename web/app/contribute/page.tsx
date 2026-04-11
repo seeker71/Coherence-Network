@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
+import type { IdeaQuestion } from "@/lib/types";
 
 const API = getApiBase();
 
@@ -12,10 +13,6 @@ type Contributor = {
   name: string;
   type: string;
   email: string;
-};
-
-type IdeaQuestion = {
-  question: string;
 };
 
 type Idea = {

@@ -3,11 +3,7 @@
  */
 
 import { get, getApiBase } from "../api.mjs";
-
-function truncate(str, len) {
-  if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
-}
+import { truncate } from "../ui/ansi.mjs";
 
 export async function showDiag() {
   const [effectiveness, pipeline] = await Promise.all([

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { buildFlowSearchParams } from "@/lib/egress";
 import { fetchJsonOrNull } from "@/lib/fetch";
+import type { IdeaQuestion } from "@/lib/types";
 import {
   formatConfidence,
   formatCount,
@@ -36,10 +37,6 @@ const STEPS = [
     label: "Open progress",
   },
 ] as const;
-
-type IdeaQuestion = {
-  question: string;
-};
 
 type Idea = {
   id: string;

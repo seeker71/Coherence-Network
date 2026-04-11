@@ -132,11 +132,27 @@ export function fmtCost(usd) {
   return `$${val.toFixed(2)}`;
 }
 
-/** Truncate string with ellipsis. */
+/** Truncate string with ellipsis (simple character-boundary cut). */
 export function truncate(str, max = 60) {
   if (!str) return "";
   if (str.length <= max) return str;
   return str.slice(0, max - 1) + "\u2026";
+}
+
+/**
+ * Word-boundary-aware truncate. Trims to `max` chars then walks back to
+ * the last space, avoiding mid-word cuts. Falls through to a hard cut if
+ * the last space is < 40% of `max` (i.e. the first word alone is too long).
+ * Uses "..." (three dots) rather than \u2026 because the word-aware variant
+ * was historically used by tables with fixed-width terminals where `...`
+ * takes a predictable 3 columns.
+ */
+export function truncateWords(str, max) {
+  if (!str) return "";
+  if (str.length <= max) return str;
+  const trimmed = str.slice(0, max - 3);
+  const lastSpace = trimmed.lastIndexOf(" ");
+  return (lastSpace > max * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
 }
 
 /** Strip ANSI escape sequences for length calculations. */

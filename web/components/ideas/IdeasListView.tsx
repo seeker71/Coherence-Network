@@ -4,34 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useExpertMode } from "@/components/expert-mode-context";
 import { IdeaCopyLink } from "@/components/idea_share";
-
-type IdeaQuestion = {
-  question: string;
-  value_to_whole: number;
-  estimated_cost: number;
-  answer?: string | null;
-};
-
-type IdeaWithScore = {
-  id: string;
-  name: string;
-  description: string;
-  potential_value: number;
-  actual_value: number;
-  estimated_cost: number;
-  actual_cost: number;
-  confidence: number;
-  resistance_risk: number;
-  manifestation_status: string;
-  stage?: string;
-  interfaces: string[];
-  open_questions: IdeaQuestion[];
-  free_energy_score: number;
-  value_gap: number;
-  idea_type?: string;
-  parent_idea_id?: string | null;
-  child_idea_ids?: string[];
-};
+import type { IdeaQuestion, IdeaWithScore } from "@/lib/types";
 
 type ViewMode = "cards" | "table";
 

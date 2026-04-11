@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { formatUsd, humanizeManifestationStatus } from "@/lib/humanize";
 import { InvestBalanceSection } from "./InvestBalanceSection";
+import type { IdeaWithScore } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Invest",
@@ -11,20 +12,6 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 90;
-
-type IdeaWithScore = {
-  id: string;
-  name: string;
-  description: string;
-  potential_value: number;
-  actual_value: number;
-  estimated_cost: number;
-  actual_cost: number;
-  confidence: number;
-  manifestation_status: string;
-  free_energy_score: number;
-  value_gap: number;
-};
 
 type IdeaPortfolioResponse = {
   ideas: IdeaWithScore[];

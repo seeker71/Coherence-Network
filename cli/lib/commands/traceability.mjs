@@ -3,11 +3,8 @@
  */
 
 import { get } from "../api.mjs";
+import { truncate } from "../ui/ansi.mjs";
 
-function truncate(str, len) {
-  if (!str) return "";
-  return str.length > len ? str.slice(0, len - 1) + "\u2026" : str;
-}
 
 export async function showTraceability() {
   const data = await get("/api/traceability");

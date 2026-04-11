@@ -28,15 +28,9 @@ import { stdin, stdout } from "node:process";
 import chalk from "chalk";
 import inquirer from "inquirer";
 import ora from "ora";
+import { truncateWords as truncate } from "../ui/ansi.mjs";
 
 /** Truncate at word boundary, append "..." if needed */
-function truncate(str, len) {
-  if (!str) return "";
-  if (str.length <= len) return str;
-  const trimmed = str.slice(0, len - 3);
-  const lastSpace = trimmed.lastIndexOf(" ");
-  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
-}
 
 /** Mini bar: filled vs empty blocks for a score out of max */
 function miniBar(value, max, width = 5) {

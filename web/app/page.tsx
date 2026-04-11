@@ -4,26 +4,7 @@ import { Button } from "@/components/ui/button";
 import { IdeaSubmitForm } from "@/components/idea_submit_form";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
-
-type IdeaWithScore = {
-  id: string;
-  name: string;
-  description: string;
-  potential_value: number;
-  actual_value: number;
-  estimated_cost: number;
-  confidence: number;
-  manifestation_status: string;
-  open_questions: Array<{
-    question: string;
-    value_to_whole: number;
-    estimated_cost: number;
-    answer?: string | null;
-    measured_delta?: number | null;
-  }>;
-  free_energy_score: number;
-  value_gap: number;
-};
+import type { IdeaWithScore } from "@/lib/types";
 
 type IdeasResponse = {
   ideas: IdeaWithScore[];

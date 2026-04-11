@@ -4,19 +4,13 @@
 
 import { get } from "../api.mjs";
 import { writeSync } from "node:fs";
+import { truncateWords as truncate } from "../ui/ansi.mjs";
 
 function out(line = "") {
   writeSync(1, `${line}\n`);
 }
 
 /** Truncate at word boundary, append "..." if needed */
-function truncate(str, len) {
-  if (!str) return "";
-  if (str.length <= len) return str;
-  const trimmed = str.slice(0, len - 3);
-  const lastSpace = trimmed.lastIndexOf(" ");
-  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
-}
 
 /** Mini bar for success rate */
 function rateBar(rate, width = 10) {

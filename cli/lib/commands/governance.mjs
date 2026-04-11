@@ -3,15 +3,9 @@
  */
 
 import { get, post } from "../api.mjs";
+import { truncateWords as truncate } from "../ui/ansi.mjs";
 
 /** Truncate at word boundary, append "..." if needed */
-function truncate(str, len) {
-  if (!str) return "";
-  if (str.length <= len) return str;
-  const trimmed = str.slice(0, len - 3);
-  const lastSpace = trimmed.lastIndexOf(" ");
-  return (lastSpace > len * 0.4 ? trimmed.slice(0, lastSpace) : trimmed) + "...";
-}
 
 /** Colored status label */
 function statusLabel(status) {
