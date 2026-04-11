@@ -196,3 +196,90 @@ async def test_discovery_feed_item_structure():
             assert "entity_id" in item
             assert isinstance(item["score"], (int, float))
             assert 0.0 <= item["score"] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# 6. POST /api/concepts/auto-tag-all maps ideas to ontology concepts
+# ---------------------------------------------------------------------------
+
+
+async def _create_concept(c: AsyncClient, concept_id: str, name: str, keywords: list[str]) -> None:
+    """Create a concept via the public API."""
+    r = await c.post("/api/concepts", json={
+        "id": concept_id,
+        "name": name,
+        "description": f"Concept {name} about {' '.join(keywords)}",
+        "type_id": "codex.ucore.user",
+        "level": 0,
+        "keywords": keywords,
+    })
+    assert r.status_code == 201, r.text
+
+
+@pytest.mark.asyncio
+async def test_match_concepts_returns_top_matches():
+    """match_concepts ranks concepts by keyword overlap."""
+    from app.services import concept_auto_tagger
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        await _create_concept(c, _uid("c-resonance"), "Resonance Engine", ["resonance", "coherence", "ontology"])
+        await _create_concept(c, _uid("c-payments"), "Payment Gateway", ["payment", "billing", "stripe"])
+
+    matches = concept_auto_tagger.match_concepts(
+        idea_name="Resonance discovery",
+        idea_description="Build a resonance-driven coherence engine for the ontology layer.",
+        max_results=5,
+    )
+    assert isinstance(matches, list)
+    assert len(matches) >= 1
+    # The resonance concept should rank above the payments concept (and the payments concept may not appear at all).
+    names = [m["concept_name"].lower() for m in matches]
+    assert any("resonance" in n for n in names), f"resonance concept missing from matches: {names}"
+    for m in matches:
+        assert "concept_id" in m
+        assert "score" in m
+        assert 0.0 <= m["score"] <= 1.0
+
+
+@pytest.mark.asyncio
+async def test_auto_tag_all_endpoint_returns_aggregate_stats():
+    """POST /api/concepts/auto-tag-all returns processed/tagged counts and per-idea results."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        await _create_concept(c, _uid("c-software"), "Software Engineering", ["software", "engineering", "code"])
+        await _create_idea(c)
+        await _create_idea(c)
+
+        r = await c.post("/api/concepts/auto-tag-all")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        for key in ("ideas_processed", "ideas_tagged", "total_concept_links", "results"):
+            assert key in body, f"missing key: {key}"
+        assert isinstance(body["ideas_processed"], int)
+        assert isinstance(body["ideas_tagged"], int)
+        assert body["ideas_processed"] >= 2
+        assert body["ideas_tagged"] >= 0
+        assert body["total_concept_links"] >= 0
+        assert isinstance(body["results"], list)
+
+
+@pytest.mark.asyncio
+async def test_auto_tag_all_results_have_per_idea_breakdown():
+    """Each entry in `results` exposes the idea_id and the concepts attached to it."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        await _create_concept(c, _uid("c-onto"), "Ontology Layer", ["ontology", "resonance", "software"])
+        await _create_idea(c)
+
+        r = await c.post("/api/concepts/auto-tag-all")
+        assert r.status_code == 200, r.text
+        body = r.json()
+        for entry in body["results"]:
+            assert "idea_id" in entry
+            assert "concepts_tagged" in entry
+            assert "count" in entry
+            assert isinstance(entry["concepts_tagged"], list)
+            assert entry["count"] == len(entry["concepts_tagged"])
+            for tag in entry["concepts_tagged"]:
+                assert "concept_id" in tag
+                assert "concept_name" in tag
+                assert "score" in tag
+                assert 0.0 <= tag["score"] <= 1.0

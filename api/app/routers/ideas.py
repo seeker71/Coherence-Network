@@ -330,6 +330,12 @@ async def get_progress_dashboard() -> ProgressDashboard:
     return idea_service.compute_progress_dashboard()
 
 
+@router.get("/ideas/portfolio-summary")
+async def get_portfolio_summary() -> dict:
+    """Summary of curated super-ideas with spec counts, pillar grouping, and red/yellow/green health."""
+    return idea_service.get_portfolio_summary()
+
+
 @router.post("/ideas/{idea_id}/advance", response_model=IdeaWithScore)
 async def advance_idea_stage(idea_id: str, _key: str = Depends(require_api_key)) -> IdeaWithScore:
     """Advance an idea to the next sequential stage (spec 138)."""

@@ -6,6 +6,17 @@ An open intelligence platform that traces every idea from inception to payout â€
 
 <!-- include: docs/shared/lifecycle-diagram.md -->
 
+## Quickstart (< 15 minutes)
+
+```bash
+git clone https://github.com/seeker71/Coherence-Network.git
+cd Coherence-Network
+make dev-setup        # api venv + web npm install
+make test             # ~8s flow-centric suite
+make api-dev          # http://localhost:8000
+make web-dev          # http://localhost:3000
+```
+
 ## Your first 5 minutes
 
 **Option A â€” no install, just browse:**
