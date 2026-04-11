@@ -2310,6 +2310,92 @@ def get_idea_activity(idea_id: str, limit: int = 20) -> list[dict]:
     return events[:max(1, limit)]
 
 
+def get_portfolio_summary() -> dict:
+    """Return a summary of curated super-ideas grouped by pillar with health status.
+
+    Health logic:
+      - "red":    no specs linked at all
+      - "green":  has specs AND (actual_value > 0 OR activity within 30 days OR any active spec)
+      - "yellow": has specs but all done, no recorded value, no recent activity
+    """
+    from datetime import datetime, timedelta, timezone
+
+    ideas = _read_ideas(persist_ensures=False)
+    curated = [i for i in ideas if i.is_curated]
+
+    # Pre-fetch all specs once to avoid N+1
+    all_specs = spec_registry_service.list_specs(limit=1000, offset=0)
+    specs_by_idea: dict[str, list] = {}
+    for spec in all_specs:
+        if spec.idea_id:
+            specs_by_idea.setdefault(spec.idea_id, []).append(spec)
+
+    children_by_parent: dict[str, int] = {}
+    for idea in ideas:
+        if idea.parent_idea_id:
+            children_by_parent[idea.parent_idea_id] = children_by_parent.get(idea.parent_idea_id, 0) + 1
+
+    recent_threshold = datetime.now(timezone.utc) - timedelta(days=30)
+    items: list[dict] = []
+    pillar_stats: dict[str, dict] = {}
+
+    for idea in curated:
+        idea_specs = specs_by_idea.get(idea.id, [])
+        spec_count = len(idea_specs)
+        done_spec_count = sum(1 for s in idea_specs if s.actual_value > 0)
+        active_spec_count = spec_count - done_spec_count
+        child_count = children_by_parent.get(idea.id, 0)
+
+        if spec_count == 0:
+            health = "red"
+        else:
+            has_value = idea.actual_value > 0
+            has_recent_activity = False
+            if idea.last_activity_at:
+                try:
+                    activity_dt = datetime.fromisoformat(idea.last_activity_at.replace("Z", "+00:00"))
+                    has_recent_activity = activity_dt > recent_threshold
+                except (ValueError, TypeError):
+                    pass
+            health = "green" if (has_value or has_recent_activity or active_spec_count > 0) else "yellow"
+
+        pillar = idea.pillar or "unknown"
+        items.append({
+            "idea_id": idea.id,
+            "name": idea.name,
+            "stage": idea.stage.value if idea.stage else "none",
+            "pillar": pillar,
+            "spec_count": spec_count,
+            "done_spec_count": done_spec_count,
+            "active_spec_count": active_spec_count,
+            "child_idea_count": child_count,
+            "health_status": health,
+        })
+
+        stats = pillar_stats.setdefault(pillar, {
+            "pillar": pillar,
+            "idea_count": 0,
+            "total_specs": 0,
+            "done_specs": 0,
+            "active_specs": 0,
+        })
+        stats["idea_count"] += 1
+        stats["total_specs"] += spec_count
+        stats["done_specs"] += done_spec_count
+        stats["active_specs"] += active_spec_count
+
+    items.sort(key=lambda x: (x["pillar"], x["name"]))
+
+    return {
+        "total_ideas": len(items),
+        "total_specs": sum(e["spec_count"] for e in items),
+        "total_done_specs": sum(e["done_spec_count"] for e in items),
+        "pillars": sorted(pillar_stats.values(), key=lambda p: p["pillar"]),
+        "ideas": items,
+        "snapshot_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def compute_progress_dashboard() -> ProgressDashboard:
     """Compute per-stage idea counts and completion percentage."""
     ideas = _read_ideas(persist_ensures=False)
