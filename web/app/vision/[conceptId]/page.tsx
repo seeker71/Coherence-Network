@@ -100,6 +100,23 @@ async function fetchEdges(id: string): Promise<Edge[]> {
   }
 }
 
+async function fetchLCNames(): Promise<Record<string, string>> {
+  const base = getApiBase();
+  try {
+    const res = await fetch(`${base}/api/concepts/domain/living-collective?limit=200`, { next: { revalidate: 60 } });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const items = data?.items || [];
+    const map: Record<string, string> = {};
+    for (const c of items) {
+      if (c.id && c.name) map[c.id] = c.name;
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 async function fetchRelated(id: string): Promise<RelatedItems> {
   const base = getApiBase();
   try {
@@ -144,10 +161,11 @@ const EDGE_LABELS: Record<string, string> = {
 
 export default async function VisionConceptPage({ params }: { params: Promise<{ conceptId: string }> }) {
   const { conceptId } = await params;
-  const [concept, edges, related] = await Promise.all([
+  const [concept, edges, related, nameMap] = await Promise.all([
     fetchConcept(conceptId),
     fetchEdges(conceptId),
     fetchRelated(conceptId),
+    fetchLCNames(),
   ]);
 
   if (!concept) notFound();
@@ -223,7 +241,7 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
                         {EDGE_LABELS[e.type] || e.type}
                       </span>
                       <span className="text-stone-300 group-hover:text-amber-300/80 transition-colors">
-                        {e.to.replace("lc-", "").replace("lc-v-", "").replace(/-/g, " ")}
+                        {nameMap[e.to] || e.to.replace("lc-", "").replace(/-/g, " ")}
                       </span>
                       <span className="text-stone-700 ml-auto">→</span>
                     </Link>
@@ -238,7 +256,7 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
                         {EDGE_LABELS[e.type] || e.type}
                       </span>
                       <span className="text-stone-300 group-hover:text-teal-300/80 transition-colors">
-                        {e.from.replace("lc-", "").replace("lc-v-", "").replace(/-/g, " ")}
+                        {nameMap[e.from] || e.from.replace("lc-", "").replace(/-/g, " ")}
                       </span>
                       <span className="text-stone-700 ml-auto">←</span>
                     </Link>
