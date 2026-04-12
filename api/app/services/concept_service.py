@@ -52,6 +52,21 @@ def _load_ontology() -> None:
         else:
             log.warning("Ontology file not found: %s", path)
 
+    # Load domain-specific ontology extensions (e.g. living-collective.json).
+    # Each extension file has the same structure as core-concepts.json and
+    # its concepts are merged into the main index alongside the core 184.
+    for ext_path in sorted(_ONTOLOGY_DIR.glob("living-collective*.json")):
+        try:
+            ext_data = json.loads(ext_path.read_text(encoding="utf-8"))
+            ext_concepts = ext_data.get("concepts", [])
+            if ext_concepts:
+                _concepts.extend(ext_concepts)
+                for c in ext_concepts:
+                    _concept_index[c["id"]] = c
+                log.info("Loaded %d domain concepts from %s", len(ext_concepts), ext_path.name)
+        except Exception as exc:
+            log.warning("Failed to load domain ontology %s: %s", ext_path.name, exc)
+
 
 _load_ontology()
 
