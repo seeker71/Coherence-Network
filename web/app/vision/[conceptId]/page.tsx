@@ -19,6 +19,13 @@ type Concept = {
   domains?: string[];
   parentConcepts?: string[];
   childConcepts?: string[];
+  // Rich content fields (stored in graph node properties)
+  details?: string;
+  examples?: string[];
+  aligned_places?: Array<{ name: string; location: string; note: string }>;
+  how_it_fits?: string;
+  blueprint_notes?: string;
+  visualization_notes?: string;
 };
 
 type Edge = {
@@ -223,9 +230,66 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
           </p>
         </div>
 
+        {/* Rich content — details, examples, aligned places, blueprint */}
+        {concept.details && (
+          <div className="mb-10 max-w-3xl">
+            <p className="text-base text-stone-400 leading-relaxed">{concept.details}</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Main content */}
           <div className="md:col-span-2 space-y-8">
+
+            {/* How it fits */}
+            {concept.how_it_fits && (
+              <section className="rounded-2xl border border-amber-800/20 bg-amber-900/10 p-6 space-y-3">
+                <h2 className="text-sm font-medium text-amber-400/70 uppercase tracking-wider">How it fits into the whole</h2>
+                <p className="text-stone-300 leading-relaxed">{concept.how_it_fits}</p>
+              </section>
+            )}
+
+            {/* Examples from nature, culture, practice */}
+            {concept.examples && concept.examples.length > 0 && (
+              <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
+                <h2 className="text-lg font-light text-stone-300">Living examples</h2>
+                <div className="space-y-3">
+                  {(concept.examples as string[]).map((ex: string, i: number) => (
+                    <div key={i} className="flex gap-3 text-sm text-stone-400 leading-relaxed">
+                      <span className="text-amber-500/50 mt-0.5 shrink-0">✦</span>
+                      <span>{ex}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Aligned places */}
+            {concept.aligned_places && (concept.aligned_places as Array<{name: string; location: string; note: string}>).length > 0 && (
+              <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
+                <h2 className="text-lg font-light text-stone-300">Places already expressing this</h2>
+                <div className="space-y-4">
+                  {(concept.aligned_places as Array<{name: string; location: string; note: string}>).map((place, i: number) => (
+                    <div key={i} className="space-y-1">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-stone-200 font-medium">{place.name}</span>
+                        <span className="text-xs text-stone-600">{place.location}</span>
+                      </div>
+                      <p className="text-sm text-stone-500 leading-relaxed">{place.note}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Blueprint notes */}
+            {concept.blueprint_notes && (
+              <section className="rounded-2xl border border-teal-800/20 bg-teal-900/10 p-6 space-y-3">
+                <h2 className="text-sm font-medium text-teal-400/70 uppercase tracking-wider">Blueprint notes</h2>
+                <p className="text-stone-300 leading-relaxed text-sm">{concept.blueprint_notes}</p>
+              </section>
+            )}
+
             {/* Connected concepts */}
             {(outgoing.length > 0 || incoming.length > 0) && (
               <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
