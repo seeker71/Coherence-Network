@@ -59,11 +59,23 @@ def _load_ontology() -> None:
         try:
             ext_data = json.loads(ext_path.read_text(encoding="utf-8"))
             ext_concepts = ext_data.get("concepts", [])
+            ext_edges = ext_data.get("edges", [])
             if ext_concepts:
                 _concepts.extend(ext_concepts)
                 for c in ext_concepts:
                     _concept_index[c["id"]] = c
                 log.info("Loaded %d domain concepts from %s", len(ext_concepts), ext_path.name)
+            if ext_edges:
+                for edge_data in ext_edges:
+                    _edges.append({
+                        "id": f"{edge_data['from']}-{edge_data['type']}-{edge_data['to']}",
+                        "from": edge_data["from"],
+                        "to": edge_data["to"],
+                        "type": edge_data["type"],
+                        "strength": edge_data.get("strength", 0.8),
+                        "created_by": "ontology-seed",
+                    })
+                log.info("Loaded %d domain edges from %s", len(ext_edges), ext_path.name)
         except Exception as exc:
             log.warning("Failed to load domain ontology %s: %s", ext_path.name, exc)
 
