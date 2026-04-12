@@ -301,6 +301,16 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     automation_usage_service.invalidate_cache()
     model_routing_loader.reset_model_routing_cache()
 
+    # Reset concept service seed flag so concepts re-seed into the fresh
+    # per-test DB. Without this, the first test seeds but subsequent tests
+    # get an empty concept store because _seeded is still True from the
+    # previous test's process-level flag.
+    try:
+        from app.services import concept_service
+        concept_service.reset_ensure_flag()
+    except Exception:
+        pass
+
 
 @pytest.fixture(autouse=True)
 def _mirror_env_style_overrides_into_config(monkeypatch: pytest.MonkeyPatch) -> None:
