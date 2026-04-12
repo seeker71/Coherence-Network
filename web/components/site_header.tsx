@@ -15,6 +15,7 @@ interface NavItem {
 
 /** Single source of truth for primary navigation. */
 const PRIMARY_NAV: NavItem[] = [
+  { href: "/vision", label: "Vision" },
   { href: "/ideas", label: "Ideas" },
   { href: "/contribute", label: "Contribute" },
   { href: "/resonance", label: "Resonance", isHeartbeat: true },
