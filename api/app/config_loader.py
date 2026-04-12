@@ -159,6 +159,118 @@ def _default_runtime_config() -> dict[str, Any]:
     }
 
 
+def _default_agent_runner_config() -> dict[str, Any]:
+    """Defaults for api/scripts/agent_runner.py.
+
+    Previously these 60+ settings were read from AGENT_* environment variables.
+    They now live here so they're runtime-modifiable via the config API/CLI/web
+    without restarting the runner process — ``reload_config()`` picks up file
+    changes between task cycles.
+
+    The key names are 1:1 with the old env var names, lowercased and with the
+    ``AGENT_`` prefix stripped.  E.g. ``AGENT_TASK_TIMEOUT`` → ``task_timeout``.
+    """
+    return {
+        "agent_runner": {
+            # ── API connection ─────────────────────────────────────────
+            "api_base": "http://localhost:8000",
+            "http_timeout": 30,
+            "http_retries": 3,
+            # ── Task execution ─────────────────────────────────────────
+            "task_timeout": 3600,
+            "pending_task_fetch_limit": 20,
+            "max_resume_attempts": 2,
+            # ── Heartbeat / lease ──────────────────────────────────────
+            "run_heartbeat_seconds": 15,
+            "run_lease_seconds": 120,
+            "periodic_checkpoint_seconds": 300,
+            "control_poll_seconds": 5,
+            "diagnostic_timeout_seconds": 120,
+            "task_log_tail_chars": 2000,
+            "run_records_max": 5000,
+            # ── Repository / PR ────────────────────────────────────────
+            "worktree_path": None,
+            "github_repo": "seeker71/Coherence-Network",
+            "pr_base_branch": "main",
+            "repo_git_url": None,
+            "repo_fallback_path": None,
+            "pr_local_check_cmd": None,
+            "pr_gate_attempts": 8,
+            "pr_gate_poll_seconds": 30,
+            "pr_flow_timeout_seconds": 3600,
+            # ── Workspace ──────────────────────────────────────────────
+            "workspace_id": "",
+            # ── Self-update ────────────────────────────────────────────
+            "self_update_enabled": True,
+            "self_update_repo": None,
+            "self_update_branch": None,
+            "self_update_min_interval_seconds": 60,
+            # ── Rollback ───────────────────────────────────────────────
+            "rollback_on_task_failure": True,
+            "rollback_on_start_failure": True,
+            "rollback_min_interval_seconds": 180,
+            # ── Manifests ──────────────────────────────────────────────
+            "manifest_enabled": True,
+            "manifest_max_blocks": 80,
+            "manifest_context_blocks": 20,
+            "manifests_dir": None,
+            "web_base_url": "",
+            # ── Hold-pattern / observation ─────────────────────────────
+            "observation_window_sec": 900,
+            "hold_pattern_score_threshold": 0.8,
+            "hold_pattern_reduced_action_delay_seconds": 120,
+            # ── Idea metrics ───────────────────────────────────────────
+            "measured_value_target_share": 0.5,
+            "idea_measured_cache_ttl_seconds": 300,
+            # ── Misc ──────────────────────────────────────────────────
+            "min_retry_delay_seconds": 30,
+            "diagnostic_cooldown_seconds": 300,
+            "max_interventions_per_window": 3,
+            "intervention_window_seconds": 900,
+            "auto_generate_idle_tasks": True,
+            "auto_generate_idle_task_limit": 5,
+            "auto_generate_idle_task_cooldown_seconds": 300,
+            "provider_telemetry_ttl_seconds": 86400,
+            "worker_id": None,
+            "run_as_user": None,
+            "auto_install_cli": True,
+        },
+        # ── Auth / provider discovery paths ────────────────────────────
+        "agent_auth": {
+            "codex_home": None,
+            "codex_oauth_session_file": None,
+            "claude_config_dir": None,
+            "cursor_command": None,
+            "gemini_auth_json": None,
+        },
+        # ── Per-provider command templates ─────────────────────────────
+        "command_templates": {
+            "claude": None,
+            "codex": None,
+            "cursor": None,
+            "gemini": None,
+            "ollama": None,
+        },
+        # ── TTL cache (app.core.ttl_cache) ────────────────────────────
+        "cache": {
+            "disabled": False,
+        },
+        # ── Discord bot ───────────────────────────────────────────────
+        "discord": {
+            "guild_id": None,
+            "commands_channel": "bot-commands",
+            "submissions_channel": "idea-submissions",
+            "pipeline_channel": "pipeline-feed",
+            "active_category": "Active Ideas",
+            "archive_category": "Archived Ideas",
+            "sync_interval_min": 5,
+            "poll_interval_sec": 60,
+            "log_level": "info",
+            "data_dir": "./data",
+        },
+    }
+
+
 def _default_release_config() -> dict[str, Any]:
     return {
         "route_registry": {"canonical_routes_path": None},
@@ -262,6 +374,7 @@ def _default_config() -> dict[str, Any]:
     }
     for section_defaults in (
         _default_agent_config(),
+        _default_agent_runner_config(),
         _default_runtime_config(),
         _default_release_config(),
         _default_ui_config(),
