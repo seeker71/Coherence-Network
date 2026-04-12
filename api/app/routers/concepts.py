@@ -112,6 +112,21 @@ async def auto_tag_all_ideas() -> dict[str, Any]:
     return concept_auto_tagger.tag_all_ideas()
 
 
+@router.get("/concepts/domain/{domain}", summary="List concepts belonging to a specific domain")
+async def list_concepts_by_domain(
+    domain: str,
+    limit: int = Query(200, ge=1, le=1000),
+) -> dict:
+    """Return concepts filtered by domain (e.g. 'living-collective').
+
+    Each concept carries a `domains` array; this endpoint returns those
+    whose domains include the requested value. Results include the
+    concept hierarchy (level 0-3) and all metadata.
+    """
+    result = concept_service.list_concepts_by_domain(domain, limit=limit)
+    return result
+
+
 @router.get("/concepts/relationships", summary="List all 46 relationship types from the Living Codex ontology")
 async def list_relationships():
     """List all 46 relationship types from the Living Codex ontology."""

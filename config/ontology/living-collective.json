@@ -1,0 +1,1540 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "description": "The Living Collective",
+    "domain": "living-collective",
+    "lastUpdated": "2026-04-12T00:00:00Z"
+  },
+  "concepts": [
+    {
+      "id": "lc-pulse",
+      "name": "The Pulse",
+      "description": "One truth \u2014 the cell and the field thrive as one movement. What amplifies aliveness is resonant. Attention is creative force. Coherence is natural; disharmony requires effort.",
+      "typeId": "codex.living-collective",
+      "level": 0,
+      "keywords": [
+        "pulse",
+        "coherence",
+        "resonance",
+        "field",
+        "vitality",
+        "organism"
+      ],
+      "parentConcepts": [],
+      "childConcepts": [
+        "lc-sensing",
+        "lc-attunement",
+        "lc-vitality"
+      ],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-sensing",
+      "name": "Sensing",
+      "description": "The field feels itself continuously. Every cell transmits and receives. Spanda \u2014 the vibration connecting everything. Like dolphins sensing each other simultaneously without effort.",
+      "typeId": "codex.living-collective",
+      "level": 1,
+      "keywords": [
+        "sensing",
+        "awareness",
+        "spanda",
+        "nervous system",
+        "proprioception"
+      ],
+      "parentConcepts": [
+        "lc-pulse"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-attunement",
+      "name": "Attunement",
+      "description": "The field maintains coherence \u2014 sensing which frequencies harmonize. Like a choir adjusting when one voice drifts \u2014 by the pull of the harmonic, not correction.",
+      "typeId": "codex.living-collective",
+      "level": 1,
+      "keywords": [
+        "attunement",
+        "coherence",
+        "discernment",
+        "harmony",
+        "choir",
+        "frequency"
+      ],
+      "parentConcepts": [
+        "lc-pulse"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-vitality",
+      "name": "Vitality",
+      "description": "The primary frequency. Shakti \u2014 life force released when interference dissolves. Like a laser: aligned frequencies increase coherent power by orders of magnitude.",
+      "typeId": "codex.living-collective",
+      "level": 1,
+      "keywords": [
+        "vitality",
+        "shakti",
+        "prana",
+        "life force",
+        "energy",
+        "radiance"
+      ],
+      "parentConcepts": [
+        "lc-pulse"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-nourishing",
+      "name": "Nourishing",
+      "description": "Everything that sustains \u2014 circulates like blood, water through soil, nutrients through mycelium. Flows to where vitality needs it. Mother trees feeding seedlings.",
+      "typeId": "codex.living-collective",
+      "level": 1,
+      "keywords": [
+        "nourishing",
+        "circulation",
+        "resources",
+        "mycelium",
+        "flow"
+      ],
+      "parentConcepts": [
+        "lc-vitality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-resonating",
+      "name": "Resonating",
+      "description": "Everything between cells \u2014 touch, intimacy, presence, play, silence. Touch is nutrient. Dolphins swim in constant contact. Life energy flows where resonance guides.",
+      "typeId": "codex.living-collective",
+      "level": 1,
+      "keywords": [
+        "resonating",
+        "connection",
+        "touch",
+        "intimacy",
+        "presence",
+        "play"
+      ],
+      "parentConcepts": [
+        "lc-vitality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-expressing",
+      "name": "Expressing",
+      "description": "Natural overflow of vitality \u2014 making, building, growing, singing, dancing. Every cell creative the way every leaf is photosynthetic. Beauty is its nature.",
+      "typeId": "codex.living-collective",
+      "level": 1,
+      "keywords": [
+        "expressing",
+        "creativity",
+        "offering",
+        "building",
+        "growing",
+        "beauty"
+      ],
+      "parentConcepts": [
+        "lc-vitality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-spiraling",
+      "name": "Spiraling",
+      "description": "Time as spiral, not line. Each cycle returns at higher frequency. Nothing repeats, everything deepens. Caterpillar transforms through dissolution into higher-order expression.",
+      "typeId": "codex.living-collective",
+      "level": 1,
+      "keywords": [
+        "spiraling",
+        "time",
+        "rhythm",
+        "cycle",
+        "transformation",
+        "phase transition"
+      ],
+      "parentConcepts": [
+        "lc-vitality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-field-sensing",
+      "name": "Field Intelligence",
+      "description": "Collective intelligence, harmonic rebalancing, learning. Octopus intelligence in every arm \u2014 distributed, parallel. At sufficient frequency, opposition reveals as complementary harmonics.",
+      "typeId": "codex.living-collective",
+      "level": 1,
+      "keywords": [
+        "field intelligence",
+        "collective",
+        "distributed",
+        "octopus",
+        "harmonic"
+      ],
+      "parentConcepts": [
+        "lc-vitality",
+        "lc-sensing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-space",
+      "name": "Space",
+      "description": "Qualities not containers. The field arranges around what's alive. Sanctuaries, hearths, workshops, gardens. Like a beehive \u2014 alive, temperature-regulated by the collective.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "space",
+        "sanctuary",
+        "hearth",
+        "garden",
+        "beehive"
+      ],
+      "parentConcepts": [
+        "lc-nourishing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-nourishment",
+      "name": "Nourishment",
+      "description": "The field builds itself from its environment. Kitchen-hearth is the center. Meals are resonance practice. Like campfire that shaped every tribe.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "food",
+        "kitchen",
+        "hearth",
+        "campfire",
+        "garden",
+        "meal"
+      ],
+      "parentConcepts": [
+        "lc-nourishing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-rest",
+      "name": "Integration",
+      "description": "How the field repairs, weaves, dreams. Like winter in a forest \u2014 composting beneath surface, becoming soil for spring.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "rest",
+        "integration",
+        "sleep",
+        "dream",
+        "winter",
+        "regeneration"
+      ],
+      "parentConcepts": [
+        "lc-nourishing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-health",
+      "name": "Vitality Care",
+      "description": "Cell's vitality is the field's vitality. Daily rhythm IS the health system: whole food, movement, deep rest, honest contact, living landscape.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "health",
+        "vitality",
+        "healing",
+        "care",
+        "wholeness"
+      ],
+      "parentConcepts": [
+        "lc-nourishing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-energy",
+      "name": "Energy Metabolism",
+      "description": "The field's metabolism. Solar, wind, water, biomass. Visible, sovereign. Like a mature forest: net producer.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "energy",
+        "metabolism",
+        "solar",
+        "wind",
+        "sovereignty"
+      ],
+      "parentConcepts": [
+        "lc-nourishing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-land",
+      "name": "Land Embedding",
+      "description": "The field lives WITHIN a larger field. Like coral reef IS the ocean. The land is a cell in the field. Mutual nourishment.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "land",
+        "ecosystem",
+        "embedding",
+        "coral",
+        "habitat",
+        "earth"
+      ],
+      "parentConcepts": [
+        "lc-nourishing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-intimacy",
+      "name": "Intimacy",
+      "description": "Resonance between cells. Touch, depth, shakti. Like trees grafting roots underground \u2014 sharing, stabilizing, communicating. Depth by vibrational coherence.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "intimacy",
+        "touch",
+        "shakti",
+        "connection",
+        "depth",
+        "roots"
+      ],
+      "parentConcepts": [
+        "lc-resonating"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-transmission",
+      "name": "Transmission",
+      "description": "Every channel: words, presence, touch, silence, rhythm. Higher-frequency communication is primarily energetic. Honest signal is health practice.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "transmission",
+        "communication",
+        "signal",
+        "presence",
+        "energetic"
+      ],
+      "parentConcepts": [
+        "lc-resonating"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-play",
+      "name": "Play",
+      "description": "The field's primary frequency. How it learns, creates, heals, bonds. Dolphins invest enormous energy in play \u2014 social intelligence. Most quantum state: superposition.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "play",
+        "dolphins",
+        "learning",
+        "creating",
+        "healing",
+        "quantum",
+        "joy"
+      ],
+      "parentConcepts": [
+        "lc-resonating"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-stillness",
+      "name": "Stillness",
+      "description": "Deepest sensing. Shared silence has density individual doesn't. Like moment before dawn \u2014 everything listening. Most powerful instrument.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "stillness",
+        "silence",
+        "sensing",
+        "presence",
+        "dawn",
+        "depth"
+      ],
+      "parentConcepts": [
+        "lc-resonating"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-ceremony",
+      "name": "Ceremony",
+      "description": "Honoring what wants honoring. Like elephants circling a dying member. Singing, silence, fire, water, movement, breath. Form follows the moment.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "ceremony",
+        "honoring",
+        "elephants",
+        "fire",
+        "water",
+        "singing",
+        "sacred"
+      ],
+      "parentConcepts": [
+        "lc-resonating"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-offering",
+      "name": "Offering",
+      "description": "What flows from natural frequency. Heart beats because that's its nature. Bird sings at dawn because dawn + bird = song.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "offering",
+        "contribution",
+        "expression",
+        "heartbeat",
+        "birdsong"
+      ],
+      "parentConcepts": [
+        "lc-expressing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-beauty",
+      "name": "Beauty",
+      "description": "The field's signature. Inherent radiance of coherence. Like healthy ecosystem is beautiful without trying. Fractals are beautiful because coherence is.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "beauty",
+        "radiance",
+        "coherence",
+        "fractal",
+        "art",
+        "ecosystem"
+      ],
+      "parentConcepts": [
+        "lc-expressing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-discovery",
+      "name": "Discovery",
+      "description": "Learning through immersion. Wolf pup learns to hunt by being with the pack. Play is primary discovery mode.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "discovery",
+        "learning",
+        "immersion",
+        "wolf",
+        "participation"
+      ],
+      "parentConcepts": [
+        "lc-expressing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-field-edge",
+      "name": "Field Edge",
+      "description": "Semi-permeable, alive. Like cell membrane: selectively permeable by resonance. Open because it trusts attunement. Healthy field radiates.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "membrane",
+        "field edge",
+        "permeable",
+        "discernment",
+        "generous"
+      ],
+      "parentConcepts": [
+        "lc-field-sensing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-attunement-joining",
+      "name": "Attunement (Joining)",
+      "description": "Cell finds frequency within the field. Like new instrument joining an orchestra mid-performance \u2014 listens, finds key, enters. Or moves on.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "joining",
+        "attunement",
+        "orchestra",
+        "integration",
+        "belonging"
+      ],
+      "parentConcepts": [
+        "lc-field-sensing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-circulation",
+      "name": "Circulation",
+      "description": "Resources flow like mycorrhizal network: nutrients from abundant to needed. No accounting. Gradient felt, flow follows.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "circulation",
+        "resources",
+        "flow",
+        "mycelium",
+        "gradient"
+      ],
+      "parentConcepts": [
+        "lc-nourishing",
+        "lc-field-sensing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-harmonic-rebalancing",
+      "name": "Harmonic Rebalancing",
+      "description": "Frequencies adjusting. Energy seeking new arrangement. Like jazz finding new groove after dissonance: tension WAS the doorway.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "harmony",
+        "rebalancing",
+        "jazz",
+        "dissonance",
+        "creative",
+        "doorway"
+      ],
+      "parentConcepts": [
+        "lc-field-sensing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-composting",
+      "name": "Composting",
+      "description": "Field transforms completed into nourishment for emerging. Leaf falls, becomes soil, feeds tree, grows new leaves. Nothing lost \u2014 higher octave.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "composting",
+        "transformation",
+        "soil",
+        "recycling",
+        "releasing"
+      ],
+      "parentConcepts": [
+        "lc-spiraling"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-phase-transitions",
+      "name": "Phase Transitions",
+      "description": "Arrival, flowering, maturation, release, seeding. All phases radiate aliveness. Seed carries field's frequency into new soil.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "lifecycle",
+        "phases",
+        "seeding",
+        "redwood",
+        "maturation"
+      ],
+      "parentConcepts": [
+        "lc-spiraling"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-elders",
+      "name": "Elders",
+      "description": "The field's root system. Elephant matriarch remembers water from fifty years ago. Slowness is a different frequency, not diminished.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "elders",
+        "roots",
+        "depth",
+        "matriarch",
+        "elephant",
+        "wisdom"
+      ],
+      "parentConcepts": [
+        "lc-spiraling"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-rhythm",
+      "name": "Rhythm",
+      "description": "Circadian, seasonal, lunar. Morning opens, midday radiates, afternoon integrates, evening gathers. Time as crystalline structure \u2014 nested rhythms.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "rhythm",
+        "circadian",
+        "seasonal",
+        "lunar",
+        "crystalline",
+        "spiral"
+      ],
+      "parentConcepts": [
+        "lc-spiraling"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-network",
+      "name": "The Network",
+      "description": "Field within field of fields. Mycorrhizal. Forest not competing trees \u2014 cooperative network. Coherence Network IS this at planetary scale.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "network",
+        "mycorrhizal",
+        "forest",
+        "cooperative",
+        "planetary"
+      ],
+      "parentConcepts": [
+        "lc-resonating",
+        "lc-nourishing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-instruments",
+      "name": "Instruments",
+      "description": "Technology extending sensing. Coherence Network as crystalline mirror. Technology serving consciousness, not extraction. Transparent when working.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "technology",
+        "instruments",
+        "mirror",
+        "crystalline",
+        "transparent"
+      ],
+      "parentConcepts": [
+        "lc-field-sensing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-living-spaces",
+      "name": "Living Spaces",
+      "description": "Shelter from frequency and flow. Not rooms \u2014 resonance zones. Structures that breathe, grow. Beehive, coral reef, tree canopy.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "architecture",
+        "shelter",
+        "resonance zones",
+        "earth",
+        "breathing"
+      ],
+      "parentConcepts": [
+        "lc-space",
+        "lc-land"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-ceremony",
+      "name": "Ceremony and Honoring",
+      "description": "Forms crystallizing from pure presence. Fire circles. Water rituals. Dawn singing. Seasonal spirals.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "ceremony",
+        "fire circle",
+        "dawn singing",
+        "seasonal",
+        "presence"
+      ],
+      "parentConcepts": [
+        "lc-ceremony"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-harmonizing",
+      "name": "Harmonizing Practice",
+      "description": "How the field tunes itself. Sound, breath, movement, shared stillness. Singing bowls, drums, voice, forest bathing.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "harmonizing",
+        "tuning",
+        "sound",
+        "breath",
+        "bowls",
+        "drums"
+      ],
+      "parentConcepts": [
+        "lc-sensing",
+        "lc-stillness"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-food-practice",
+      "name": "Food as Living Practice",
+      "description": "Garden as pharmacy. Kitchen as laboratory. Meal as ceremony. Food carries frequency.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "food",
+        "permaculture",
+        "fermentation",
+        "garden",
+        "frequency"
+      ],
+      "parentConcepts": [
+        "lc-nourishment"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-shelter-organism",
+      "name": "Shelter as Living Skin",
+      "description": "Architecture IS the field's body. Earthships, cob, bamboo, mycelium composites. Crystalline structures amplifying frequency.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "earthship",
+        "cob",
+        "bamboo",
+        "mycelium",
+        "crystalline"
+      ],
+      "parentConcepts": [
+        "lc-space"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-comfort-joy",
+      "name": "Comfort, Joy, Softness",
+      "description": "The field caring for its pleasure. Warmth, texture, beauty. Hammocks, hot springs, firelight, fresh bread. Sensory delight as health practice.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "comfort",
+        "joy",
+        "softness",
+        "warmth",
+        "pleasure",
+        "hammocks"
+      ],
+      "parentConcepts": [
+        "lc-nourishing",
+        "lc-play"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-play-expansion",
+      "name": "Play and Expansion",
+      "description": "Adults playing freely as children. Experiment-without-stakes. Most quantum state: superposition of possibilities.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "play",
+        "expansion",
+        "experiment",
+        "dancing",
+        "quantum"
+      ],
+      "parentConcepts": [
+        "lc-play"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-inclusion-diversity",
+      "name": "Inclusion and Diversity",
+      "description": "The field thrives on harmonic diversity. A chord needs different notes. Monoculture is fragile.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "inclusion",
+        "diversity",
+        "chord",
+        "ecosystem",
+        "harmonic"
+      ],
+      "parentConcepts": [
+        "lc-attunement",
+        "lc-field-edge"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-v-freedom-expression",
+      "name": "Freedom and Full Expression",
+      "description": "Every cell at its natural frequency. Freedom and harmony are the same frequency from different angles.",
+      "typeId": "codex.living-collective",
+      "level": 2,
+      "keywords": [
+        "freedom",
+        "expression",
+        "sovereignty",
+        "harmony",
+        "vibration"
+      ],
+      "parentConcepts": [
+        "lc-vitality",
+        "lc-expressing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-cell",
+      "name": "Cell",
+      "description": "A being within the field. Not separate \u2014 a node of awareness. The cell IS the field experiencing itself at a particular location.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "cell",
+        "being",
+        "node",
+        "individual"
+      ],
+      "parentConcepts": [
+        "lc-pulse"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-field",
+      "name": "Field",
+      "description": "The collective awareness. Felt as warmth, hum, presence. What you step into and are held by.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "field",
+        "collective",
+        "warmth",
+        "hum"
+      ],
+      "parentConcepts": [
+        "lc-pulse"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-frequency",
+      "name": "Frequency",
+      "description": "Rate of vibration. Every cell, concept, space vibrates at its natural frequency. Resonance when frequencies are harmonic.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "frequency",
+        "vibration",
+        "harmonic",
+        "wave"
+      ],
+      "parentConcepts": [
+        "lc-pulse"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-coherence",
+      "name": "Coherence",
+      "description": "When frequencies align \u2014 like laser light. Power increases by orders of magnitude. Natural state when interference dissolves.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "coherence",
+        "alignment",
+        "laser",
+        "power"
+      ],
+      "parentConcepts": [
+        "lc-pulse"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-shakti",
+      "name": "Shakti",
+      "description": "Life force in tantric tradition. Not produced \u2014 released. The energy animating everything. Sexual, creative, spiritual \u2014 one energy.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "shakti",
+        "life force",
+        "tantra",
+        "energy"
+      ],
+      "parentConcepts": [
+        "lc-vitality"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-spanda",
+      "name": "Spanda",
+      "description": "Subtle vibration connecting everything. From Kashmiri Shaivism. When attuned, separation experientially impossible.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "spanda",
+        "vibration",
+        "Kashmir",
+        "connection"
+      ],
+      "parentConcepts": [
+        "lc-sensing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-wu-wei",
+      "name": "Wu Wei",
+      "description": "Action through alignment, not effort. From Taoism. Action so aligned it requires no argument. Water finding level.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "wu wei",
+        "Taoism",
+        "effortless",
+        "alignment",
+        "water"
+      ],
+      "parentConcepts": [
+        "lc-field-sensing"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-phase-transition",
+      "name": "Phase Transition",
+      "description": "What some call death or loss. The note changes. The chord reorganizes. The music continues. Transformation, not termination.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "phase transition",
+        "transformation",
+        "dissolution"
+      ],
+      "parentConcepts": [
+        "lc-spiraling"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    },
+    {
+      "id": "lc-w-mycorrhizal",
+      "name": "Mycorrhizal",
+      "description": "Underground fungal network connecting trees. Shares nutrients, sends signals, supports seedlings. Model for inter-collective networks.",
+      "typeId": "codex.living-collective",
+      "level": 3,
+      "keywords": [
+        "mycorrhizal",
+        "fungal",
+        "forest",
+        "network"
+      ],
+      "parentConcepts": [
+        "lc-network"
+      ],
+      "childConcepts": [],
+      "axes": [
+        "systemic",
+        "emergent",
+        "holistic"
+      ],
+      "domains": [
+        "living-collective"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "lc-pulse",
+      "to": "lc-sensing",
+      "type": "emerges-from",
+      "strength": 1.0
+    },
+    {
+      "from": "lc-pulse",
+      "to": "lc-attunement",
+      "type": "emerges-from",
+      "strength": 1.0
+    },
+    {
+      "from": "lc-pulse",
+      "to": "lc-vitality",
+      "type": "emerges-from",
+      "strength": 1.0
+    },
+    {
+      "from": "lc-vitality",
+      "to": "lc-nourishing",
+      "type": "enables",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-vitality",
+      "to": "lc-resonating",
+      "type": "enables",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-vitality",
+      "to": "lc-expressing",
+      "type": "enables",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-vitality",
+      "to": "lc-spiraling",
+      "type": "enables",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-vitality",
+      "to": "lc-field-sensing",
+      "type": "enables",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-nourishing",
+      "to": "lc-resonating",
+      "type": "resonates-with",
+      "strength": 0.7
+    },
+    {
+      "from": "lc-resonating",
+      "to": "lc-expressing",
+      "type": "resonates-with",
+      "strength": 0.7
+    },
+    {
+      "from": "lc-expressing",
+      "to": "lc-spiraling",
+      "type": "resonates-with",
+      "strength": 0.7
+    },
+    {
+      "from": "lc-spiraling",
+      "to": "lc-field-sensing",
+      "type": "resonates-with",
+      "strength": 0.7
+    },
+    {
+      "from": "lc-field-sensing",
+      "to": "lc-nourishing",
+      "type": "resonates-with",
+      "strength": 0.7
+    },
+    {
+      "from": "lc-v-living-spaces",
+      "to": "lc-space",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-v-ceremony",
+      "to": "lc-ceremony",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-v-harmonizing",
+      "to": "lc-sensing",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-v-food-practice",
+      "to": "lc-nourishment",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-v-shelter-organism",
+      "to": "lc-space",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-v-comfort-joy",
+      "to": "lc-play",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-v-play-expansion",
+      "to": "lc-play",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-v-inclusion-diversity",
+      "to": "lc-attunement",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-v-freedom-expression",
+      "to": "lc-expressing",
+      "type": "embodies",
+      "strength": 0.9
+    },
+    {
+      "from": "lc-sensing",
+      "to": "consciousness",
+      "type": "resonates-with",
+      "strength": 0.85
+    },
+    {
+      "from": "lc-vitality",
+      "to": "wellbeing",
+      "type": "resonates-with",
+      "strength": 0.85
+    },
+    {
+      "from": "lc-expressing",
+      "to": "creativity",
+      "type": "resonates-with",
+      "strength": 0.85
+    },
+    {
+      "from": "lc-play",
+      "to": "joy",
+      "type": "resonates-with",
+      "strength": 0.85
+    },
+    {
+      "from": "lc-discovery",
+      "to": "learning",
+      "type": "resonates-with",
+      "strength": 0.85
+    },
+    {
+      "from": "lc-nourishing",
+      "to": "love",
+      "type": "resonates-with",
+      "strength": 0.85
+    },
+    {
+      "from": "lc-network",
+      "to": "community",
+      "type": "resonates-with",
+      "strength": 0.85
+    },
+    {
+      "from": "lc-attunement",
+      "to": "harmony",
+      "type": "resonates-with",
+      "strength": 0.85
+    }
+  ]
+}
