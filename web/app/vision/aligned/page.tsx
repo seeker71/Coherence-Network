@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 const COMMUNITIES = [
   {
-    name: "Tamera",
+    name: "Tamera", slug: "tamera",
     location: "Alentejo, Portugal",
     size: "~250 people",
     url: "https://www.tamera.org/",
@@ -18,7 +18,7 @@ const COMMUNITIES = [
     conceptLabels: ["Sensing", "Harmonizing", "Energy", "Land"],
   },
   {
-    name: "Auroville",
+    name: "Auroville", slug: "auroville",
     location: "Tamil Nadu, India",
     size: "~3,000 people, 60+ nations",
     url: "https://auroville.org/",
@@ -28,7 +28,7 @@ const COMMUNITIES = [
     conceptLabels: ["The Pulse", "Circulation", "Freedom", "Land"],
   },
   {
-    name: "Findhorn Ecovillage",
+    name: "Findhorn Ecovillage", slug: "findhorn",
     location: "Moray, Scotland",
     size: "~350 people, 40+ nationalities",
     url: "https://www.ecovillagefindhorn.com/",
@@ -38,7 +38,7 @@ const COMMUNITIES = [
     conceptLabels: ["Land", "Living Spaces", "Harmonizing", "Joining"],
   },
   {
-    name: "Damanhur",
+    name: "Damanhur", slug: "damanhur",
     location: "Piedmont, Italy",
     size: "~600 people in 30 communities",
     url: "https://damanhur.org/",
@@ -48,7 +48,7 @@ const COMMUNITIES = [
     conceptLabels: ["The Network", "Ceremony", "Beauty", "Circulation"],
   },
   {
-    name: "Gaviotas",
+    name: "Gaviotas", slug: "gaviotas",
     location: "Los Llanos, Colombia",
     size: "~200 people",
     url: "https://en.wikipedia.org/wiki/Gaviotas",
@@ -58,7 +58,7 @@ const COMMUNITIES = [
     conceptLabels: ["Land", "Vitality", "Instruments", "Shelter"],
   },
   {
-    name: "Earthship Biotecture",
+    name: "Earthship Biotecture", slug: "earthship",
     location: "Taos, New Mexico, USA",
     size: "~130 residents",
     url: "https://earthship.com/",
@@ -113,10 +113,10 @@ export default function AlignedPage() {
           <div key={c.name} className="rounded-2xl border border-stone-800/30 bg-stone-900/20 overflow-hidden">
             <div className="p-8 space-y-4">
               <div className="flex flex-wrap items-baseline gap-3">
-                <a href={c.url} target="_blank" rel="noopener noreferrer"
+                <Link href={`/vision/aligned/${c.slug}`}
                   className="text-2xl font-light text-amber-300/80 hover:text-amber-300 transition-colors">
-                  {c.name} ↗
-                </a>
+                  {c.name} →
+                </Link>
                 <span className="text-sm text-stone-600">{c.location} · {c.size}</span>
               </div>
               <p className="text-stone-300 leading-relaxed">{c.resonates}</p>
