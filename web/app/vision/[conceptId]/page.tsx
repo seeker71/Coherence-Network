@@ -45,6 +45,7 @@ type RelatedItems = {
 /* ── Visual mapping ────────────────────────────────────────────────── */
 
 const VISUAL_MAP: Record<string, string> = {
+  // Root concepts (11 originals)
   "lc-pulse": "/visuals/01-the-pulse.png",
   "lc-sensing": "/visuals/02-sensing.png",
   "lc-attunement": "/visuals/03-attunement.png",
@@ -55,8 +56,16 @@ const VISUAL_MAP: Record<string, string> = {
   "lc-spiraling": "/visuals/08-spiraling.png",
   "lc-field-sensing": "/visuals/09-field-intelligence.png",
   "lc-v-living-spaces": "/visuals/10-living-space.png",
-  "lc-v-shelter-organism": "/visuals/10-living-space.png",
   "lc-network": "/visuals/11-the-network.png",
+  // Emerging visions (8 new)
+  "lc-v-ceremony": "/visuals/v-ceremony.png",
+  "lc-v-harmonizing": "/visuals/v-harmonizing.png",
+  "lc-v-food-practice": "/visuals/v-food-practice.png",
+  "lc-v-shelter-organism": "/visuals/v-shelter-organism.png",
+  "lc-v-comfort-joy": "/visuals/v-comfort-joy.png",
+  "lc-v-play-expansion": "/visuals/v-play-expansion.png",
+  "lc-v-inclusion-diversity": "/visuals/v-inclusion.png",
+  "lc-v-freedom-expression": "/visuals/v-freedom.png",
 };
 
 /* ── Level labels in vitality language ─────────────────────────────── */
@@ -425,6 +434,12 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               <div className="space-y-2 text-sm">
                 <Link href="/vision" className="block text-stone-400 hover:text-amber-300/80 transition-colors">
                   ← The Living Collective
+                </Link>
+                <Link href="/vision/realize" className="block text-stone-400 hover:text-amber-300/80 transition-colors">
+                  How it becomes real
+                </Link>
+                <Link href="/vision/join" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
+                  Join the vision
                 </Link>
                 <Link href="/concepts/garden?domain=living-collective" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
                   Concept Garden
