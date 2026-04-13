@@ -213,6 +213,121 @@ export default function VisionPage() {
         </section>
       ))}
 
+      {/* Life in the field — visual galleries */}
+      <section className="max-w-5xl mx-auto px-6 py-24 space-y-20">
+        {/* Sacred Spaces */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-extralight text-stone-300">Sacred Spaces</h2>
+            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">See all →</Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { img: "/visuals/space-hearth-interior.png", label: "The Hearth", href: "/vision/lc-nourishment" },
+              { img: "/visuals/space-nest-ground.png", label: "Ground Nest", href: "/vision/lc-rest" },
+              { img: "/visuals/space-water-temple-interior.png", label: "Water Temple", href: "/vision/lc-v-comfort-joy" },
+              { img: "/visuals/space-stillness-sanctuary.png", label: "Stillness Sanctuary", href: "/vision/lc-stillness" },
+              { img: "/visuals/space-gathering-bowl.png", label: "Gathering Bowl", href: "/vision/lc-v-living-spaces" },
+              { img: "/visuals/space-creation-arc-overview.png", label: "Creation Arc", href: "/vision/lc-offering" },
+              { img: "/visuals/space-nest-tree.png", label: "Tree Nest", href: "/vision/lc-rest" },
+              { img: "/visuals/space-movement-ground.png", label: "Movement Ground", href: "/vision/lc-play" },
+            ].map((s) => (
+              <Link key={s.label} href={s.href} className="group relative aspect-[4/3] rounded-xl overflow-hidden">
+                <Image src={s.img} alt={s.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="25vw" />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-3 text-xs text-stone-200 font-medium">{s.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Practices & Ceremonies */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-extralight text-stone-300">Practices & Ceremonies</h2>
+            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">See all →</Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { img: "/visuals/life-morning-circle.png", label: "Dawn Attunement", href: "/vision/lc-sensing" },
+              { img: "/visuals/practice-yoga-dawn.png", label: "Movement Practice", href: "/vision/lc-v-harmonizing" },
+              { img: "/visuals/practice-tantra-circle.png", label: "Presence Circle", href: "/vision/lc-intimacy" },
+              { img: "/visuals/practice-sound-healing.png", label: "Sound Journey", href: "/vision/lc-transmission" },
+              { img: "/visuals/practice-drum-circle.png", label: "Drum Circle", href: "/vision/lc-v-ceremony" },
+              { img: "/visuals/life-breathwork.png", label: "Breathwork", href: "/vision/lc-health" },
+              { img: "/visuals/life-ceremony-fire.png", label: "Fire Ceremony", href: "/vision/lc-ceremony" },
+              { img: "/visuals/practice-fermentation.png", label: "Fermentation Alchemy", href: "/vision/lc-v-food-practice" },
+            ].map((s) => (
+              <Link key={s.label} href={s.href} className="group relative aspect-[4/3] rounded-xl overflow-hidden">
+                <Image src={s.img} alt={s.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="25vw" />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-3 text-xs text-stone-200 font-medium">{s.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* People, Nature, Animals */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-extralight text-stone-300">People, Nature, Animals</h2>
+            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">See all →</Link>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { img: "/visuals/life-shared-meal.png", label: "Shared Meal", href: "/vision/lc-nourishment" },
+              { img: "/visuals/nature-food-forest-walk.png", label: "Food Forest Walk", href: "/vision/lc-land" },
+              { img: "/visuals/nature-animals-integrated.png", label: "Animals in the Field", href: "/vision/lc-land" },
+              { img: "/visuals/life-children-play.png", label: "Play Without End", href: "/vision/lc-play" },
+              { img: "/visuals/nature-herb-spiral.png", label: "Herb Spiral", href: "/vision/lc-v-food-practice" },
+              { img: "/visuals/life-garden-planting.png", label: "Hands in Soil", href: "/vision/lc-land" },
+              { img: "/visuals/life-contact-improv.png", label: "Contact & Movement", href: "/vision/lc-play" },
+              { img: "/visuals/nature-living-roof-close.png", label: "Living Roof", href: "/vision/lc-v-shelter-organism" },
+            ].map((s) => (
+              <Link key={s.label} href={s.href} className="group relative aspect-[4/3] rounded-xl overflow-hidden">
+                <Image src={s.img} alt={s.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="25vw" />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-3 text-xs text-stone-200 font-medium">{s.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* The Network */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-extralight text-stone-300">The Network</h2>
+            <Link href="/vision/lc-network" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">Explore →</Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[
+              { img: "/visuals/network-traveling-musicians.png", label: "Traveling Musicians", href: "/vision/lc-network" },
+              { img: "/visuals/network-midsummer-gathering.png", label: "Midsummer Gathering", href: "/vision/lc-network" },
+              { img: "/visuals/life-nomad-arrival.png", label: "A Traveler Arrives", href: "/vision/lc-attunement-joining" },
+            ].map((s) => (
+              <Link key={s.label} href={s.href} className="group relative aspect-[16/9] rounded-xl overflow-hidden">
+                <Image src={s.img} alt={s.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="33vw" />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
+                <span className="absolute bottom-3 left-4 text-sm text-stone-200 font-medium">{s.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Stories CTA */}
+        <div className="text-center">
+          <Link
+            href="/vision/lived"
+            className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-300/90 hover:bg-violet-500/20 hover:border-violet-500/30 transition-all font-medium"
+          >
+            Walk through the lived experience — stories, scenes, daily rhythm
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M5 12h14m0 0l-6-6m6 6l-6 6" />
+            </svg>
+          </Link>
+        </div>
+      </section>
+
       {/* Emerging visions */}
       <section className="max-w-4xl mx-auto px-6 py-32 space-y-16">
         <div className="text-center space-y-4">
