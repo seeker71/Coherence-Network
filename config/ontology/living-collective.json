@@ -54,7 +54,12 @@
         }
       ],
       "how_it_fits": "Everything derives from this. The three systems, five flows, and all expressions are this pulse at different scales. If you understand the pulse, you can derive everything below.",
-      "visualization_notes": "Golden-white radiance rippling outward through organic field, concentric bioluminescent waves, sacred geometry meets living biology"
+      "visualization_notes": "Golden-white radiance rippling outward through organic field, concentric bioluminescent waves, sacred geometry meets living biology",
+      "visual_path": "/visuals/01-the-pulse.png",
+      "sacred_frequency": {
+        "hz": 432,
+        "quality": "Healing"
+      }
     },
     {
       "id": "lc-sensing",
@@ -99,7 +104,12 @@
           "note": "Community of trust, transparent communication practices"
         }
       ],
-      "how_it_fits": "Sensing is the nervous system \u2014 without it, no other system can function. It enables the field intelligence that replaces governance, the circulation that replaces economics, and the attunement that replaces law."
+      "how_it_fits": "Sensing is the nervous system \u2014 without it, no other system can function. It enables the field intelligence that replaces governance, the circulation that replaces economics, and the attunement that replaces law.",
+      "visual_path": "/visuals/02-sensing.png",
+      "sacred_frequency": {
+        "hz": 741,
+        "quality": "Consciousness"
+      }
     },
     {
       "id": "lc-attunement",
@@ -141,7 +151,12 @@
           "note": "Thich Nhat Hanh's community \u2014 mindful listening, deep presence, gentle holding of difficulty"
         }
       ],
-      "how_it_fits": "Attunement is the immune system. Without it, the field can't distinguish between frequencies that serve and those that don't. It enables the membrane (Field Edge), joining (Attunement-Joining), and harmonic rebalancing."
+      "how_it_fits": "Attunement is the immune system. Without it, the field can't distinguish between frequencies that serve and those that don't. It enables the membrane (Field Edge), joining (Attunement-Joining), and harmonic rebalancing.",
+      "visual_path": "/visuals/03-attunement.png",
+      "sacred_frequency": {
+        "hz": 432,
+        "quality": "Healing"
+      }
     },
     {
       "id": "lc-vitality",
@@ -187,7 +202,12 @@
           "note": "Regenerated 8 million trees on degraded savanna, created self-sustaining community"
         }
       ],
-      "how_it_fits": "Vitality is the primary metric. Everything in the vision serves it. If a practice, structure, or relationship increases vitality, it's resonant. If it diminishes vitality, it's ready to shift."
+      "how_it_fits": "Vitality is the primary metric. Everything in the vision serves it. If a practice, structure, or relationship increases vitality, it's resonant. If it diminishes vitality, it's ready to shift.",
+      "visual_path": "/visuals/04-vitality.png",
+      "sacred_frequency": {
+        "hz": 528,
+        "quality": "Transformation"
+      }
     },
     {
       "id": "lc-nourishing",
@@ -232,7 +252,12 @@
           "note": "Worker-owned cooperative network, 80,000 workers, resources flowing to where needed"
         }
       ],
-      "how_it_fits": "Nourishing is one of the five flows. It intersects with every Through Body expression (Space, Nourishment, Rest, Health, Energy, Land) and with Circulation in the Through Field group."
+      "how_it_fits": "Nourishing is one of the five flows. It intersects with every Through Body expression (Space, Nourishment, Rest, Health, Energy, Land) and with Circulation in the Through Field group.",
+      "visual_path": "/visuals/05-nourishing.png",
+      "sacred_frequency": {
+        "hz": 174,
+        "quality": "Foundation"
+      }
     },
     {
       "id": "lc-resonating",
@@ -279,7 +304,12 @@
           "note": "Community exploring authentic relating, transparent communication, embodied connection"
         }
       ],
-      "how_it_fits": "Resonating is one of the five flows \u2014 it governs all Through Connection expressions: Intimacy, Transmission, Play, Stillness, Ceremony."
+      "how_it_fits": "Resonating is one of the five flows \u2014 it governs all Through Connection expressions: Intimacy, Transmission, Play, Stillness, Ceremony.",
+      "visual_path": "/visuals/06-resonating.png",
+      "sacred_frequency": {
+        "hz": 528,
+        "quality": "Transformation"
+      }
     },
     {
       "id": "lc-expressing",
@@ -326,7 +356,12 @@
           "note": "Free town \u2014 self-governed, art everywhere, creativity as daily expression"
         }
       ],
-      "how_it_fits": "Expressing governs all Through Expression concepts: Offering, Beauty, Discovery. It's the creative counterpart to Nourishing's sustaining flow."
+      "how_it_fits": "Expressing governs all Through Expression concepts: Offering, Beauty, Discovery. It's the creative counterpart to Nourishing's sustaining flow.",
+      "visual_path": "/visuals/07-expressing.png",
+      "sacred_frequency": {
+        "hz": 741,
+        "quality": "Consciousness"
+      }
     },
     {
       "id": "lc-spiraling",
@@ -361,7 +396,12 @@
         "Spiral galaxies \u2014 the same orbital dynamics at cosmic scale",
         "Human development \u2014 the same themes (trust, autonomy, connection) return at each life stage with more depth"
       ],
-      "how_it_fits": "Spiraling governs all Through Cycle expressions: Phase Transitions, Elders, Rhythm. It replaces linear time and the concepts of ending/loss with transformation and deepening."
+      "how_it_fits": "Spiraling governs all Through Cycle expressions: Phase Transitions, Elders, Rhythm. It replaces linear time and the concepts of ending/loss with transformation and deepening.",
+      "visual_path": "/visuals/08-spiraling.png",
+      "sacred_frequency": {
+        "hz": 432,
+        "quality": "Healing"
+      }
     },
     {
       "id": "lc-field-sensing",
@@ -396,7 +436,12 @@
         "Internet \u2014 distributed intelligence, no central node, resilient through redundancy",
         "Jazz ensemble \u2014 each musician sensing the others, the groove emerging from collective listening"
       ],
-      "how_it_fits": "Field Intelligence governs all Through Field expressions: Field Edge, Joining, Circulation, Harmonic Rebalancing. It's where Sensing and Vitality meet \u2014 the distributed awareness that replaces governance."
+      "how_it_fits": "Field Intelligence governs all Through Field expressions: Field Edge, Joining, Circulation, Harmonic Rebalancing. It's where Sensing and Vitality meet \u2014 the distributed awareness that replaces governance.",
+      "visual_path": "/visuals/09-field-intelligence.png",
+      "sacred_frequency": {
+        "hz": 741,
+        "quality": "Consciousness"
+      }
     },
     {
       "id": "lc-space",
@@ -464,7 +509,8 @@
           "url": "https://arcosanti.org/",
           "what": "Paolo Soleri's arcology \u2014 compact, mixed-use, architecture + ecology. 50 years of building a bridge city."
         }
-      ]
+      ],
+      "visual_path": "/visuals/space-hearth-interior.png"
     },
     {
       "id": "lc-nourishment",
@@ -516,7 +562,8 @@
           "url": "https://www.polyfacefarms.com/",
           "what": "Joel Salatin's regenerative multi-species rotation. Soil building through animal integration."
         }
-      ]
+      ],
+      "visual_path": "/visuals/space-hearth-interior.png"
     },
     {
       "id": "lc-rest",
@@ -551,7 +598,8 @@
         "Sabbath tradition \u2014 one day in seven where the whole system pauses",
         "Fallow fields \u2014 agricultural land left unplanted so the soil can regenerate"
       ],
-      "how_it_fits": "Rest/Integration is the Nourishing flow in its receptive phase. Without it, the field burns out. It connects to Rhythm (daily and seasonal cycles) and Stillness (the conscious practice of pause)."
+      "how_it_fits": "Rest/Integration is the Nourishing flow in its receptive phase. Without it, the field burns out. It connects to Rhythm (daily and seasonal cycles) and Stillness (the conscious practice of pause).",
+      "visual_path": "/visuals/space-nest-ground.png"
     },
     {
       "id": "lc-health",
@@ -585,7 +633,8 @@
         "The placebo effect \u2014 the body heals when it believes the conditions for healing are present",
         "Purring cats \u2014 their purr frequency (25-50Hz) promotes bone density and healing in themselves and nearby humans"
       ],
-      "how_it_fits": "Vitality Care is where Nourishing meets Sensing. The field senses its own health state and responds \u2014 increasing circulation to where vitality is dim, adjusting rhythm when the pace is off."
+      "how_it_fits": "Vitality Care is where Nourishing meets Sensing. The field senses its own health state and responds \u2014 increasing circulation to where vitality is dim, adjusting rhythm when the pace is off.",
+      "visual_path": "/visuals/life-breathwork.png"
     },
     {
       "id": "lc-energy",
@@ -619,7 +668,8 @@
         "Biogas from kitchen waste \u2014 closed loop, waste becomes fuel becomes warmth",
         "Human body heat \u2014 a group of 20 people generates enough warmth to heat a small space"
       ],
-      "how_it_fits": "Energy Metabolism is the Nourishing flow expressed as power. It connects to Living Spaces (passive solar, thermal mass) and Land (renewable sources embedded in ecosystem)."
+      "how_it_fits": "Energy Metabolism is the Nourishing flow expressed as power. It connects to Living Spaces (passive solar, thermal mass) and Land (renewable sources embedded in ecosystem).",
+      "visual_path": "/visuals/nature-living-roof-close.png"
     },
     {
       "id": "lc-land",
@@ -683,7 +733,8 @@
           "url": "https://www.permaculturenews.org/",
           "what": "Geoff Lawton transformed dead salt flat in Jordan into a food forest in 3 years. Proof of what's possible."
         }
-      ]
+      ],
+      "visual_path": "/visuals/nature-food-forest-walk.png"
     },
     {
       "id": "lc-intimacy",
@@ -737,7 +788,8 @@
           "url": "https://www.tamera.org/",
           "what": "Research into free love \u2014 liberating love from fear and possession. Community as foundation for deeper relating."
         }
-      ]
+      ],
+      "visual_path": "/visuals/practice-tantra-circle.png"
     },
     {
       "id": "lc-transmission",
@@ -771,7 +823,8 @@
         "Silence between close friends \u2014 more is communicated in the quiet than in words",
         "Forest chemical signaling \u2014 trees warn neighbors of pest attacks through volatile organic compounds"
       ],
-      "how_it_fits": "Transmission is the Resonating flow as information. It's the field's nervous system in action \u2014 carrying sensation from every cell to every other cell. Without honest transmission, the Sensing system degrades."
+      "how_it_fits": "Transmission is the Resonating flow as information. It's the field's nervous system in action \u2014 carrying sensation from every cell to every other cell. Without honest transmission, the Sensing system degrades.",
+      "visual_path": "/visuals/practice-sound-healing.png"
     },
     {
       "id": "lc-play",
@@ -836,7 +889,8 @@
           "url": "https://www.flowgenomeproject.com/",
           "what": "Research into flow states \u2014 the zone where play, peak performance, and deep fulfillment converge."
         }
-      ]
+      ],
+      "visual_path": "/visuals/life-children-play.png"
     },
     {
       "id": "lc-stillness",
@@ -878,7 +932,8 @@
           "location": "France",
           "note": "Thich Nhat Hanh's community. Mindful walking, mindful eating, bells of mindfulness. Stillness woven into every activity."
         }
-      ]
+      ],
+      "visual_path": "/visuals/space-stillness-sanctuary.png"
     },
     {
       "id": "lc-ceremony",
@@ -931,7 +986,8 @@
           "url": "https://www.taize.fr/",
           "what": "Ecumenical community in France. Simple repetitive chanting that attunes 100,000+ visitors per year."
         }
-      ]
+      ],
+      "visual_path": "/visuals/practice-drum-circle.png"
     },
     {
       "id": "lc-offering",
@@ -972,7 +1028,8 @@
           "location": "Basque Country, Spain",
           "note": "80,000 worker-owners. Each person's offering valued not by market but by contribution to the whole."
         }
-      ]
+      ],
+      "visual_path": "/visuals/space-creation-arc-overview.png"
     },
     {
       "id": "lc-beauty",
@@ -1007,7 +1064,8 @@
         "Wabi-sabi (Japanese) \u2014 beauty in imperfection, impermanence, incompleteness",
         "A well-loved tool \u2014 polished by use, shaped by hands, beautiful because it's been fully alive"
       ],
-      "how_it_fits": "Beauty is the Expressing flow as quality. When any expression in the field is fully resonant, it IS beautiful. Beauty is not added \u2014 it's what's there when interference dissolves."
+      "how_it_fits": "Beauty is the Expressing flow as quality. When any expression in the field is fully resonant, it IS beautiful. Beauty is not added \u2014 it's what's there when interference dissolves.",
+      "visual_path": "/visuals/space-creation-arc-overview.png"
     },
     {
       "id": "lc-discovery",
@@ -1041,7 +1099,8 @@
         "Children in hunter-gatherer societies \u2014 learn everything through free play and observation, no formal schooling",
         "Mycelial network \u2014 the entire forest's knowledge of soil chemistry, water flow, pest threats is distributed through the network"
       ],
-      "how_it_fits": "Discovery is the Expressing flow as learning. It connects to Play (play IS discovery), Offering (mastery shared IS teaching), and Field Intelligence (collective knowing)."
+      "how_it_fits": "Discovery is the Expressing flow as learning. It connects to Play (play IS discovery), Offering (mastery shared IS teaching), and Field Intelligence (collective knowing).",
+      "visual_path": "/visuals/nature-food-forest-walk.png"
     },
     {
       "id": "lc-field-edge",
@@ -1075,7 +1134,8 @@
         "Village commons in traditional societies \u2014 shared space open to all, managed by community sensing",
         "A garden hedge \u2014 defines space without walling, invites looking, hosts wildlife"
       ],
-      "how_it_fits": "Field Edge is the field's membrane \u2014 where it meets the world. It enables The Network (connecting with other fields), Joining (new cells entering), and the relationship with Land."
+      "how_it_fits": "Field Edge is the field's membrane \u2014 where it meets the world. It enables The Network (connecting with other fields), Joining (new cells entering), and the relationship with Land.",
+      "visual_path": "/visuals/life-nomad-arrival.png"
     },
     {
       "id": "lc-attunement-joining",
@@ -1109,7 +1169,8 @@
         "A transplanted tree \u2014 takes root slowly, adjusts to new soil, eventually thrives or doesn't",
         "Starting a new language \u2014 immersion works; instruction barely does"
       ],
-      "how_it_fits": "Joining is where Sensing meets Resonating \u2014 the mutual discovery of whether a cell and a field amplify each other. It connects to Field Edge (how new cells enter) and Ceremony (honoring arrival)."
+      "how_it_fits": "Joining is where Sensing meets Resonating \u2014 the mutual discovery of whether a cell and a field amplify each other. It connects to Field Edge (how new cells enter) and Ceremony (honoring arrival).",
+      "visual_path": "/visuals/life-nomad-arrival.png"
     },
     {
       "id": "lc-circulation",
@@ -1151,7 +1212,8 @@
           "location": "Black Rock Desert, Nevada",
           "note": "70,000 people in a gifting economy for a week. Resources circulate without money. Radical generosity."
         }
-      ]
+      ],
+      "visual_path": "/visuals/05-nourishing.png"
     },
     {
       "id": "lc-harmonic-rebalancing",
@@ -1186,7 +1248,8 @@
         "Tectonic plates \u2014 pressure builds, then releases as earthquake, then new stability at a different configuration",
         "Thunderstorm \u2014 electrical tension builds, releases as lightning, the air is cleaner afterward"
       ],
-      "how_it_fits": "Harmonic Rebalancing is how the field evolves. It replaces 'conflict resolution' with a frequency-based understanding: the system is finding its new harmonic, and the intensity IS the creative energy."
+      "how_it_fits": "Harmonic Rebalancing is how the field evolves. It replaces 'conflict resolution' with a frequency-based understanding: the system is finding its new harmonic, and the intensity IS the creative energy.",
+      "visual_path": "/visuals/practice-drum-circle.png"
     },
     {
       "id": "lc-composting",
@@ -1227,7 +1290,8 @@
           "location": "Various (growing movement)",
           "note": "Bodies returned to earth without embalming. The body becomes soil. Phase transition made tangible."
         }
-      ]
+      ],
+      "visual_path": "/visuals/nature-herb-spiral.png"
     },
     {
       "id": "lc-phase-transitions",
@@ -1261,7 +1325,8 @@
         "Human lifecycle stages \u2014 each with unique gifts the others cannot provide",
         "Deciduous trees \u2014 leaf-out, full canopy, color change, bare branches \u2014 each phase has its beauty"
       ],
-      "how_it_fits": "Phase Transitions replace the concept of death/birth as separate events. Everything is one continuous spiral of transformation. It connects to Composting (what happens during transition) and Elders (the maturation phase)."
+      "how_it_fits": "Phase Transitions replace the concept of death/birth as separate events. Everything is one continuous spiral of transformation. It connects to Composting (what happens during transition) and Elders (the maturation phase).",
+      "visual_path": "/visuals/08-spiraling.png"
     },
     {
       "id": "lc-elders",
@@ -1296,7 +1361,8 @@
         "Aboriginal elders \u2014 keepers of songlines, holders of tens of thousands of years of land knowledge",
         "Grandmother hypothesis \u2014 human longevity exists because grandmothers dramatically increase grandchild survival"
       ],
-      "how_it_fits": "Elders are the Spiraling flow as accumulated wisdom. They ground the field when it's turbulent and remind it of what it's been through. They connect to Discovery (transmission of knowing) and Ceremony (holding the deepest rituals)."
+      "how_it_fits": "Elders are the Spiraling flow as accumulated wisdom. They ground the field when it's turbulent and remind it of what it's been through. They connect to Discovery (transmission of knowing) and Ceremony (holding the deepest rituals).",
+      "visual_path": "/visuals/practice-storytelling-elder.png"
     },
     {
       "id": "lc-rhythm",
@@ -1338,7 +1404,8 @@
           "location": "Global",
           "note": "Planting by lunar cycles, seasonal rhythms, treating the farm as a living organism with its own temporal intelligence."
         }
-      ]
+      ],
+      "visual_path": "/visuals/08-spiraling.png"
     },
     {
       "id": "lc-network",
@@ -1390,7 +1457,8 @@
           "note": "Connecting intentional communities worldwide. Shared learning, resource exchange, mutual support."
         }
       ],
-      "how_it_fits": "The Network is how the Living Collective connects to the larger ecosystem of collectives. It replaces international relations with mycorrhizal exchange \u2014 each node unique, the network greater than any node."
+      "how_it_fits": "The Network is how the Living Collective connects to the larger ecosystem of collectives. It replaces international relations with mycorrhizal exchange \u2014 each node unique, the network greater than any node.",
+      "visual_path": "/visuals/11-the-network.png"
     },
     {
       "id": "lc-instruments",
@@ -1424,7 +1492,8 @@
         "Arduino sensors in a garden \u2014 measuring soil moisture, temperature, light, making the land's signals visible",
         "Open-source software \u2014 tools built by communities for communities, no extraction"
       ],
-      "how_it_fits": "Instruments extend the Sensing system technologically. The Coherence Network is the primary instrument \u2014 tracking vitality, coherence, resonance across the field. Technology in service of the organism."
+      "how_it_fits": "Instruments extend the Sensing system technologically. The Coherence Network is the primary instrument \u2014 tracking vitality, coherence, resonance across the field. Technology in service of the organism.",
+      "visual_path": "/visuals/09-field-intelligence.png"
     },
     {
       "id": "lc-v-living-spaces",
@@ -1479,7 +1548,8 @@
         }
       ],
       "how_it_fits": "Living Spaces is where the Nourishing flow becomes tangible structure. It embodies Space (resonance zones) and Land (embedding in ecosystem). Every other expression depends on the spaces that hold them \u2014 the hearth for Nourishment, the sanctuary for Stillness, the workshop for Offering.",
-      "blueprint_notes": "Key principles: inside-outside gradient (not binary), thermal mass for passive temperature, water visible as it flows, living roofs, no straight lines where possible, spaces named by quality (sanctuary, hearth, nest, workshop, garden, clearing) not by function (bedroom, kitchen, office), materials that age beautifully and eventually compost."
+      "blueprint_notes": "Key principles: inside-outside gradient (not binary), thermal mass for passive temperature, water visible as it flows, living roofs, no straight lines where possible, spaces named by quality (sanctuary, hearth, nest, workshop, garden, clearing) not by function (bedroom, kitchen, office), materials that age beautifully and eventually compost.",
+      "visual_path": "/visuals/10-living-space.png"
     },
     {
       "id": "lc-v-ceremony",
@@ -1527,7 +1597,8 @@
         }
       ],
       "how_it_fits": "Ceremony is where Resonating meets Spiraling \u2014 cells connecting through honoring what's alive in the moment, marking the spiral of seasons, arrivals, departures, phase transitions.",
-      "blueprint_notes": "No prescribed forms. Fire circle as default gathering. Mark: new cell arrival, departure, seasonal turns (solstice, equinox), completion of a significant creation, phase transitions. The field senses when ceremony is called \u2014 it feels like a pause in the rhythm, a held breath."
+      "blueprint_notes": "No prescribed forms. Fire circle as default gathering. Mark: new cell arrival, departure, seasonal turns (solstice, equinox), completion of a significant creation, phase transitions. The field senses when ceremony is called \u2014 it feels like a pause in the rhythm, a held breath.",
+      "visual_path": "/visuals/v-ceremony.png"
     },
     {
       "id": "lc-v-harmonizing",
@@ -1575,7 +1646,8 @@
           "location": "Scotland",
           "note": "Community-built performance and meditation space. Group meditations, sound healing, collective attunement."
         }
-      ]
+      ],
+      "visual_path": "/visuals/v-harmonizing.png"
     },
     {
       "id": "lc-v-food-practice",
@@ -1623,7 +1695,8 @@
         }
       ],
       "how_it_fits": "Food as Practice is where Nourishing meets Ceremony. The kitchen-hearth is the field's literal heart. Meals are the most natural resonance practice \u2014 cells aligning through shared substance. The garden is where the field meets the land.",
-      "blueprint_notes": "Key elements: 7-layer food forest (permaculture), fermentation station, communal cooking (minimum 2 people, ideally 4+), seasonal menu that follows the land, foraging integration, compost cycle visible, herb spiral near kitchen, no processed foods, children involved in all stages."
+      "blueprint_notes": "Key elements: 7-layer food forest (permaculture), fermentation station, communal cooking (minimum 2 people, ideally 4+), seasonal menu that follows the land, foraging integration, compost cycle visible, herb spiral near kitchen, no processed foods, children involved in all stages.",
+      "visual_path": "/visuals/v-food-practice.png"
     },
     {
       "id": "lc-v-shelter-organism",
@@ -1691,7 +1764,8 @@
           "url": "https://www.ecovative.com/",
           "what": "Mycelium building materials \u2014 grown from fungus, stronger than concrete, fully compostable."
         }
-      ]
+      ],
+      "visual_path": "/visuals/v-shelter-organism.png"
     },
     {
       "id": "lc-v-comfort-joy",
@@ -1739,7 +1813,8 @@
           "location": "Japan",
           "note": "Community bathing as daily social ritual. Warmth, cleanliness, connection. Accessible to all."
         }
-      ]
+      ],
+      "visual_path": "/visuals/v-comfort-joy.png"
     },
     {
       "id": "lc-v-play-expansion",
@@ -1785,7 +1860,8 @@
           "location": "Italy",
           "note": "Child-led learning through play, exploration, and 100 languages of expression. The child IS the curriculum."
         }
-      ]
+      ],
+      "visual_path": "/visuals/v-play-expansion.png"
     },
     {
       "id": "lc-v-inclusion-diversity",
@@ -1833,7 +1909,8 @@
           "note": "40+ nationalities, wide age range, diverse spiritual backgrounds \u2014 coherence through shared practice, not shared belief."
         }
       ],
-      "blueprint_notes": "Diversity is not managed \u2014 it's invited. The field actively seeks cells with different frequencies. Inclusion practices: welcome circles designed to honor what each new cell brings. Spaces designed for different sensory needs. Rhythms flexible enough for different energy levels. The field's vitality IS its diversity."
+      "blueprint_notes": "Diversity is not managed \u2014 it's invited. The field actively seeks cells with different frequencies. Inclusion practices: welcome circles designed to honor what each new cell brings. Spaces designed for different sensory needs. Rhythms flexible enough for different energy levels. The field's vitality IS its diversity.",
+      "visual_path": "/visuals/v-inclusion.png"
     },
     {
       "id": "lc-v-freedom-expression",
@@ -1881,7 +1958,8 @@
           "note": "No private property, no government, no religion. 3000 people finding their expression freely within a collective field."
         }
       ],
-      "blueprint_notes": "Freedom is not designed \u2014 it's what remains when constraints are removed. The field creates conditions (nourishment, safety, belonging) that make freedom natural. No schedules imposed. No roles assigned. No evaluations performed. The field trusts that vital cells orient toward meaningful expression."
+      "blueprint_notes": "Freedom is not designed \u2014 it's what remains when constraints are removed. The field creates conditions (nourishment, safety, belonging) that make freedom natural. No schedules imposed. No roles assigned. No evaluations performed. The field trusts that vital cells orient toward meaningful expression.",
+      "visual_path": "/visuals/v-freedom.png"
     },
     {
       "id": "lc-w-cell",
