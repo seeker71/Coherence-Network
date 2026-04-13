@@ -2422,5 +2422,325 @@
       "type": "resonates-with",
       "strength": 0.85
     }
+  ],
+  "communities": [
+    {
+      "id": "community-tamera",
+      "name": "Tamera",
+      "slug": "tamera",
+      "location": "Alentejo, Portugal",
+      "size": "~250 people",
+      "founded": "1995",
+      "url": "https://www.tamera.org/",
+      "visual_path": "/visuals/community-tamera.png",
+      "tagline": "Peace Research Village",
+      "resonates": [
+        "Water retention landscapes",
+        "Forum process for transparent communication",
+        "Solar technology at community scale",
+        "Peace research as practical discipline",
+        "Community of trust"
+      ],
+      "concepts": [
+        "lc-sensing",
+        "lc-land",
+        "lc-energy",
+        "lc-intimacy",
+        "lc-v-harmonizing"
+      ]
+    },
+    {
+      "id": "community-auroville",
+      "name": "Auroville",
+      "slug": "auroville",
+      "location": "Tamil Nadu, India",
+      "size": "~3,000 people, 60+ nations",
+      "founded": "1968",
+      "url": "https://auroville.org/",
+      "visual_path": "/visuals/community-auroville.png",
+      "tagline": "The City the Earth Needs",
+      "resonates": [
+        "No private property",
+        "Self-governance at scale",
+        "2 million trees regenerated",
+        "Surplus renewable energy",
+        "60+ nationalities"
+      ],
+      "concepts": [
+        "lc-pulse",
+        "lc-circulation",
+        "lc-v-freedom-expression",
+        "lc-land",
+        "lc-v-inclusion-diversity"
+      ]
+    },
+    {
+      "id": "community-findhorn",
+      "name": "Findhorn Ecovillage",
+      "slug": "findhorn",
+      "location": "Moray, Scotland",
+      "size": "~350 people",
+      "founded": "1962",
+      "url": "https://www.ecovillagefindhorn.com/",
+      "visual_path": "/visuals/community-findhorn.png",
+      "tagline": "Co-Creating with Nature",
+      "resonates": [
+        "Started from listening to the land",
+        "Lowest ecological footprint measured",
+        "Ecovillage Design Education in 55 countries",
+        "Universal Hall community-built",
+        "Spirituality without doctrine"
+      ],
+      "concepts": [
+        "lc-land",
+        "lc-v-living-spaces",
+        "lc-v-harmonizing",
+        "lc-attunement-joining"
+      ]
+    },
+    {
+      "id": "community-damanhur",
+      "name": "Damanhur",
+      "slug": "damanhur",
+      "location": "Piedmont, Italy",
+      "size": "~600 people in 30 communities",
+      "founded": "1975",
+      "url": "https://damanhur.org/",
+      "visual_path": "/visuals/community-damanhur.png",
+      "tagline": "A Federation with Underground Temples",
+      "resonates": [
+        "Art as community foundation",
+        "Federation of 30 nucleos",
+        "Community currency (Credito)",
+        "Underground Temples of Humankind",
+        "Democratic elected governance"
+      ],
+      "concepts": [
+        "lc-network",
+        "lc-beauty",
+        "lc-v-ceremony",
+        "lc-circulation"
+      ]
+    },
+    {
+      "id": "community-gaviotas",
+      "name": "Gaviotas",
+      "slug": "gaviotas",
+      "location": "Los Llanos, Colombia",
+      "size": "~200 people",
+      "founded": "1971",
+      "url": "https://en.wikipedia.org/wiki/Gaviotas",
+      "visual_path": "/visuals/community-gaviotas.png",
+      "tagline": "A Village to Reinvent the World",
+      "resonates": [
+        "8 million trees on barren savanna",
+        "Open-source technology",
+        "Appropriate technology for actual conditions",
+        "Proof that care regenerates anything"
+      ],
+      "concepts": [
+        "lc-land",
+        "lc-vitality",
+        "lc-instruments",
+        "lc-v-shelter-organism"
+      ]
+    },
+    {
+      "id": "community-earthship",
+      "name": "Earthship Biotecture",
+      "slug": "earthship",
+      "location": "Taos, New Mexico, USA",
+      "size": "~130 residents",
+      "founded": "1970s",
+      "url": "https://earthship.com/",
+      "visual_path": "/visuals/community-earthship.png",
+      "tagline": "The Building IS the Infrastructure",
+      "resonates": [
+        "Six integrated building systems",
+        "Built from recycled materials",
+        "Completely off-grid",
+        "50 years of iteration",
+        "Earthship Academy for learning"
+      ],
+      "concepts": [
+        "lc-v-shelter-organism",
+        "lc-v-living-spaces",
+        "lc-energy",
+        "lc-nourishment"
+      ]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene-dawn-attunement",
+      "name": "Dawn Attunement",
+      "description": "Thirty cells at dawn. Singing bowl. Mist. Bare feet on wet grass. Each sharing one breath of what's alive in them.",
+      "visual_path": "/visuals/life-morning-circle.png"
+    },
+    {
+      "id": "scene-midday-gathering",
+      "name": "The Midday Gathering",
+      "description": "The whole field at one table. Children running between laps. Food that traveled thirty feet from soil to plate. The noise of 120 people who love being together.",
+      "visual_path": "/visuals/life-shared-meal.png"
+    },
+    {
+      "id": "scene-hands-in-soil",
+      "name": "Hands in Soil",
+      "description": "Planting season. Every cell participates. Seeds carried by children. Rich dark earth. The growing field waking up.",
+      "visual_path": "/visuals/life-garden-planting.png"
+    },
+    {
+      "id": "scene-creation-arc",
+      "name": "The Creation Arc",
+      "description": "Side by side: woodworker, potter, weaver, smith. Tools beautiful from use. Children watching and helping. The sound of making.",
+      "visual_path": "/visuals/life-creation-workshop.png"
+    },
+    {
+      "id": "scene-contact-movement",
+      "name": "Contact & Movement",
+      "description": "Bodies in flow on soft grass. Golden hour. Lifting, rolling, sensing. Play that is also art that is also prayer.",
+      "visual_path": "/visuals/life-contact-improv.png"
+    },
+    {
+      "id": "scene-water-temple",
+      "name": "The Water Temple",
+      "description": "Hot springs at dusk. Steam rising. Candles on stone. Eight people soaking in warmth and conversation. Bodies cared for.",
+      "visual_path": "/visuals/life-water-gathering.png"
+    },
+    {
+      "id": "scene-breathwork",
+      "name": "Breathwork at Dawn",
+      "description": "Twenty-five cells on a wooden platform. Eyes closed. Morning mist. Sound bowls humming. Something opening that words can't reach.",
+      "visual_path": "/visuals/life-breathwork.png"
+    },
+    {
+      "id": "scene-song-circle",
+      "name": "The Song Circle",
+      "description": "Sixty voices around the fire. Guitars, drums, stars above. By the third song, everyone is singing. By the fifth, everyone is dancing.",
+      "visual_path": "/visuals/life-song-circle.png"
+    },
+    {
+      "id": "scene-play",
+      "name": "Play Without End",
+      "description": "The adventure playground. Rope swings, treehouses, mud, water. Adults playing too. Ages 3 to 73. Joy as the field's primary frequency.",
+      "visual_path": "/visuals/life-children-play.png"
+    },
+    {
+      "id": "scene-nomad-arrival",
+      "name": "A Traveler Arrives",
+      "description": "Guitar on back. Walking through the food forest. Smoke visible through the trees. The hum getting louder. Tea offered before the pack hits the ground.",
+      "visual_path": "/visuals/life-nomad-arrival.png"
+    },
+    {
+      "id": "scene-ceremony-fire",
+      "name": "Ceremony Night",
+      "description": "A hundred cells around the fire. Drumming. Fire poi spinning light. Stars. The field honoring what wants honoring.",
+      "visual_path": "/visuals/life-ceremony-fire.png"
+    },
+    {
+      "id": "scene-storytelling",
+      "name": "Evening Stories",
+      "description": "An elder by the fire. Forty faces lit in gold. Children in the front. A cat by the hearth. The community's history carried in one voice.",
+      "visual_path": "/visuals/life-storytelling.png"
+    }
+  ],
+  "stories": [
+    {
+      "id": "story-fern-arrives",
+      "name": "Fern Arrives",
+      "body": "Day 1: terrified, eating at the edge of the meal circle. Day 5: sketching in the creation arc \u2014 extraordinary drawings no one expected. Day 12: translating an elder's spatial sense into building plans. Day 30: moved from the flowing edge to a ground nest. Day 90: tattooed the community's spiral symbol on their forearm. Their sketches now hang on the walls of three communities in the network.",
+      "note": "Fern didn't know they were an artist. The field knew before they did."
+    },
+    {
+      "id": "story-sound-journey",
+      "name": "The Sound Journey",
+      "body": "Every Thursday evening. Crystal singing bowls in seven sizes. A didgeridoo you feel in your bones. Forty cells lying on mats in the stillness sanctuary. An hour of vibration that dissolves the boundary between bodies. When the sound stops, the silence is the loudest thing you've ever heard. This is how the field tunes itself.",
+      "note": "Not therapy. Not entertainment. Tuning."
+    },
+    {
+      "id": "story-storm",
+      "name": "The Night the Storm Came",
+      "body": "Lightning. Thunder. 120 people sheltering in the gathering bowl. Someone starts drumming \u2014 matching the thunder's rhythm. Within a minute, everyone is drumming. On tables, benches, their own bodies. Drumming WITH the storm. When it passes: rainbow. Dancing in puddles. Mud everywhere. Screaming with joy.",
+      "note": "This is what the field feels like. Not the philosophy. THIS."
+    },
+    {
+      "id": "story-luna-river",
+      "name": "Luna and River",
+      "body": "Six years of deep resonance. Not a couple \u2014 a sustained harmonic. Some seasons in the same nest, some apart. Luna builds with cob and timber. River plays five instruments. When they're together, a quality of brightness that other cells can feel. Children gravitate toward them because the field is strongest there.",
+      "note": "They don't negotiate needs. They sense."
+    },
+    {
+      "id": "story-sol",
+      "name": "Sol at Three",
+      "body": "Born into the field. Has never known separation. Eight adults hold them regularly. Words in three languages plus words that only exist here \u2014 a word for the feeling of the fire circle, a word for honey from the comb, a word for the sound everyone laughing at once. Sol flows: hearth to garden to pond to tree nest to dog to chicken to mud to someone's lap to sleep.",
+      "note": "What a child looks like who has never been afraid of the world."
+    },
+    {
+      "id": "story-skeptic",
+      "name": "What the Skeptic Found",
+      "body": "A journalist expected unwashed hippies. Found: sophisticated infrastructure, children who identify thirty edible plants, food that changed her understanding of flavor, a song circle that made her cry, a flowing-edge yurt she didn't mean to sleep in. Her article brought forty visitors. Three of them never left.",
+      "note": "The field grows not through recruitment but through radiance."
+    }
+  ],
+  "practices": [
+    {
+      "id": "practice-vipassana",
+      "name": "Vipassana Meditation",
+      "url": "https://www.dhamma.org/",
+      "description": "10-day silent retreats. Volunteer-run, free. 350+ centers. The model for sustained-by-generosity service.",
+      "concepts": [
+        "lc-stillness",
+        "lc-v-harmonizing"
+      ]
+    },
+    {
+      "id": "practice-permaculture",
+      "name": "Permaculture Design",
+      "url": "https://www.permaculturenews.org/",
+      "description": "The design science for food forests, water systems, and regenerative land. Three ethics: earth care, people care, fair share.",
+      "concepts": [
+        "lc-land",
+        "lc-v-food-practice",
+        "lc-nourishment"
+      ]
+    },
+    {
+      "id": "practice-natural-building",
+      "name": "Natural Building",
+      "url": "https://www.cobcottage.com/",
+      "description": "Cob, rammed earth, straw bale, bamboo, SuperAdobe. Beautiful, adapted, local. The building methods for living structures.",
+      "concepts": [
+        "lc-v-shelter-organism",
+        "lc-v-living-spaces",
+        "lc-space"
+      ]
+    },
+    {
+      "id": "practice-sound-healing",
+      "name": "Sound Healing",
+      "url": "https://www.taize.fr/",
+      "description": "Singing bowls, kirtan, overtone singing, Taiz\u00e9 chanting. Sound as the primary attunement technology.",
+      "concepts": [
+        "lc-transmission",
+        "lc-v-harmonizing",
+        "lc-ceremony"
+      ]
+    }
+  ],
+  "networks": [
+    {
+      "id": "network-gen",
+      "name": "Global Ecovillage Network (GEN)",
+      "url": "https://ecovillage.org/",
+      "scope": "6,000+ communities in 114 countries",
+      "description": "The existing mycorrhizal network connecting ecovillages worldwide. Ecovillage Design Education in 55 countries."
+    },
+    {
+      "id": "network-transition",
+      "name": "Transition Towns",
+      "url": "https://transitionnetwork.org/",
+      "scope": "1,000+ initiatives in 50+ countries",
+      "description": "Community-led responses to climate and economy. Local food, energy, resilience. The civic-scale complement."
+    }
   ]
 }
