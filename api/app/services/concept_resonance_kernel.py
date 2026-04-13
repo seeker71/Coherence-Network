@@ -532,6 +532,34 @@ CORE_CONCEPTS = {
     "pain":          {"frequency": 174.0, "resonance": 0.70, "type": "transformation"},
     "consciousness": {"frequency": 741.0, "resonance": 0.98, "type": "core"},
     "love":          {"frequency": 528.0, "resonance": 0.99, "type": "core"},
+    # ── Living Collective concepts ────────────────────────────────────
+    # Root
+    "lc-pulse":          {"frequency": 432.0, "resonance": 1.00, "type": "core"},
+    # Systems
+    "lc-sensing":        {"frequency": 741.0, "resonance": 0.95, "type": "system"},
+    "lc-attunement":     {"frequency": 432.0, "resonance": 0.92, "type": "system"},
+    "lc-vitality":       {"frequency": 528.0, "resonance": 0.98, "type": "system"},
+    # Flows
+    "lc-nourishing":     {"frequency": 174.0, "resonance": 0.88, "type": "flow"},
+    "lc-resonating":     {"frequency": 528.0, "resonance": 0.90, "type": "flow"},
+    "lc-expressing":     {"frequency": 741.0, "resonance": 0.88, "type": "flow"},
+    "lc-spiraling":      {"frequency": 432.0, "resonance": 0.85, "type": "flow"},
+    "lc-field-sensing":  {"frequency": 741.0, "resonance": 0.90, "type": "flow"},
+    # Visions
+    "lc-v-living-spaces":    {"frequency": 174.0, "resonance": 0.82, "type": "vision"},
+    "lc-v-food-practice":    {"frequency": 174.0, "resonance": 0.82, "type": "vision"},
+    "lc-v-ceremony":         {"frequency": 432.0, "resonance": 0.85, "type": "vision"},
+    "lc-v-harmonizing":      {"frequency": 432.0, "resonance": 0.85, "type": "vision"},
+    "lc-v-shelter-organism": {"frequency": 174.0, "resonance": 0.80, "type": "vision"},
+    "lc-v-comfort-joy":      {"frequency": 528.0, "resonance": 0.88, "type": "vision"},
+    "lc-v-play-expansion":   {"frequency": 528.0, "resonance": 0.90, "type": "vision"},
+    "lc-v-inclusion-diversity": {"frequency": 432.0, "resonance": 0.85, "type": "vision"},
+    "lc-v-freedom-expression":  {"frequency": 741.0, "resonance": 0.92, "type": "vision"},
+    # Vocabulary
+    "lc-w-shakti":       {"frequency": 528.0, "resonance": 0.95, "type": "vocabulary"},
+    "lc-w-spanda":       {"frequency": 432.0, "resonance": 0.90, "type": "vocabulary"},
+    "lc-w-wu-wei":       {"frequency": 432.0, "resonance": 0.88, "type": "vocabulary"},
+    "lc-w-coherence":    {"frequency": 528.0, "resonance": 0.92, "type": "vocabulary"},
 }
 
 # Ontology relationships with semantic edge types
@@ -539,6 +567,12 @@ CORE_RELATIONSHIPS = {
     "joy-amplifies-consciousness":  {"source": "joy", "target": "consciousness", "type": "amplifies", "strength": 0.9},
     "pain-transforms-to-wisdom":    {"source": "pain", "target": "consciousness", "type": "transforms", "strength": 0.8},
     "love-unifies-all":             {"source": "love", "target": "ucore", "type": "unifies", "strength": 1.0},
+    # Living Collective resonance
+    "pulse-emerges-vitality":       {"source": "lc-pulse", "target": "lc-vitality", "type": "emerges-from", "strength": 1.0},
+    "vitality-enables-expressing":  {"source": "lc-vitality", "target": "lc-expressing", "type": "enables", "strength": 0.9},
+    "sensing-resonates-consciousness": {"source": "lc-sensing", "target": "consciousness", "type": "resonates-with", "strength": 0.85},
+    "vitality-resonates-love":      {"source": "lc-vitality", "target": "love", "type": "resonates-with", "strength": 0.90},
+    "play-resonates-joy":           {"source": "lc-v-play-expansion", "target": "joy", "type": "resonates-with", "strength": 0.92},
 }
 
 
