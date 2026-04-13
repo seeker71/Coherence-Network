@@ -423,7 +423,7 @@
       "domains": [
         "living-collective"
       ],
-      "details": "Qualities rather than containers. The field arranges itself around what's alive. Sanctuaries, hearths, workshops, gardens, soft nesting, open sky. Like a beehive \u2014 hexagonal efficiency but alive: temperature-regulated by the collective body, continuously rebuilt by the swarm's intelligence. Spaces have names that describe their quality (sanctuary, hearth, nest, clearing) not their function (bedroom, kitchen, office).",
+      "details": "Qualities rather than containers. The field arranges itself around what's alive. Like a beehive \u2014 hexagonal efficiency but alive, temperature-regulated by the collective body. Spaces have names by quality: sanctuary (deep quiet), hearth (warmth and nourishment), nest (rest and intimacy), clearing (open gathering), creation nook (focused making), movement ground (body expression), water temple (cleansing and rejuvenation). No space is assigned to a person. You flow to what serves you.\n\nThe Hakka tulou roundhouses of Fujian province show what this looks like at scale: circular communal structures housing 300-800 people for 800+ years, with shared courtyards and individual rooms. Findhorn's ecovillage demonstrates it in a modern context: turf-roofed buildings, whisky-barrel homes, the Universal Hall for community gathering \u2014 each structure designed from within for its purpose, not from above for control.\n\nKey design principles: inside-outside as gradient not boundary. Thermal mass (earth, stone, water) for passive temperature. Water visible as it flows. Living roofs for habitat, insulation, beauty. Curved walls (no right angles) for acoustic warmth and structural strength. Materials that age beautifully: cob darkens, timber silvers, stone gathers moss. Every structure should be able to compost back into the land within 100 years.",
       "examples": [
         "Beehive \u2014 hexagonal, thermally regulated, continuously rebuilt, alive",
         "Japanese tea room \u2014 minimal, intentional, every element serves presence",
@@ -441,6 +441,28 @@
           "name": "Solarpunk co-housing",
           "location": "Various (emerging)",
           "note": "Modern co-housing designed with shared spaces, gardens, kitchens. Private nests + communal life."
+        }
+      ],
+      "aligned_communities": [
+        {
+          "name": "Findhorn",
+          "url": "https://www.ecovillagefindhorn.com/",
+          "what": "Turf-roofed buildings, whisky-barrel homes, Universal Hall. Lowest ecological footprint measured."
+        },
+        {
+          "name": "Hakka Tulou",
+          "url": "https://en.wikipedia.org/wiki/Fujian_tulou",
+          "what": "800-year-old circular communal houses. 300-800 people per structure. Shared courtyard, individual rooms."
+        },
+        {
+          "name": "Earthship Biotecture",
+          "url": "https://earthship.com/",
+          "what": "Buildings that ARE infrastructure: passive solar, water harvesting, food growing, waste treatment integrated."
+        },
+        {
+          "name": "Arcosanti",
+          "url": "https://arcosanti.org/",
+          "what": "Paolo Soleri's arcology \u2014 compact, mixed-use, architecture + ecology. 50 years of building a bridge city."
         }
       ]
     },
@@ -470,14 +492,31 @@
       "domains": [
         "living-collective"
       ],
-      "details": "The field builds itself from its environment. Growing, preparing, sharing food is the heartbeat. The kitchen-hearth is the center \u2014 like the campfire that shaped every human tribe for 400,000 years. Meals are resonance practice: cells aligning through shared substance. What the field grows and eats expresses its relationship with its land.",
+      "details": "The field builds itself from its environment. The kitchen-hearth is the center \u2014 like the campfire that shaped every human tribe for 400,000 years. Meals are resonance practice: cells aligning through shared substance. What the field grows and eats expresses its relationship with its land.\n\nThe 7-layer food forest is the foundation: canopy (nut trees \u2014 walnut, chestnut, hazelnut), understory (fruit \u2014 apple, pear, plum, cherry, fig), shrub layer (berries \u2014 blackberry, currant, gooseberry), herbaceous (herbs, greens, medicinal plants), ground cover (strawberries, clover, nasturtium), root layer (Jerusalem artichoke, sweet potato, garlic), vine layer (grape, kiwi, passion fruit on every vertical surface). Within 3-7 years, the food forest produces with minimal input.\n\nThe fermentation corner transforms raw food into living culture: sauerkraut, kimchi, miso, kombucha, kefir, sourdough, vinegar. Each jar is a collaboration with microorganisms \u2014 fermentation IS community at the microbial scale. Sandor Katz's work shows how every traditional culture developed its own ferments: the Korean kimchi pot, the Japanese miso barrel, the German sauerkraut crock.\n\nMeals follow the land's rhythm: in spring, the first tender greens and asparagus. Summer's explosion of tomatoes, peppers, squash, stone fruit. Autumn's root vegetables, apples, preservation season. Winter's stored abundance \u2014 dried, smoked, fermented, canned. The kitchen never serves out of season. You eat what the land offers THIS week.",
       "examples": [
         "The campfire \u2014 400,000 years of human gathering, cooking, storytelling around shared flame",
         "Korean communal dining (banchan) \u2014 many small shared dishes, everyone eating from the same table",
         "Garden-to-table flow \u2014 picking food and eating it within the hour, maximum frequency",
         "Bread making \u2014 transforming grain through fermentation, water, heat, time, presence"
       ],
-      "how_it_fits": "Nourishment is where the Nourishing flow becomes tangible. The kitchen-hearth is the field's literal heart \u2014 where raw environment becomes shared vitality."
+      "how_it_fits": "Nourishment is where the Nourishing flow becomes tangible. The kitchen-hearth is the field's literal heart \u2014 where raw environment becomes shared vitality.",
+      "aligned_communities": [
+        {
+          "name": "Zaytuna Farm",
+          "url": "https://www.zaytunafarm.com/",
+          "what": "Geoff Lawton's 66-acre permaculture food forest demonstration. The gold standard for food forest design."
+        },
+        {
+          "name": "Auroville Farm Group",
+          "url": "https://auroville.org/",
+          "what": "Organic farming, seed saving, and food forests in tropical India. 50+ years of collective food growing."
+        },
+        {
+          "name": "Polyface Farm",
+          "url": "https://www.polyfacefarms.com/",
+          "what": "Joel Salatin's regenerative multi-species rotation. Soil building through animal integration."
+        }
+      ]
     },
     {
       "id": "lc-rest",
@@ -608,7 +647,7 @@
       "domains": [
         "living-collective"
       ],
-      "details": "The field lives WITHIN a larger field. Like a coral reef IS the ocean, not something placed in it. The land is a cell in the field, not a resource the field owns. Mutual nourishment: healthy land feeds healthy collective feeds healthy land. The feedback loop is real and measurable \u2014 regenerative land management can restore degraded ecosystems within years.",
+      "details": "The field lives WITHIN a larger field. Like a coral reef IS the ocean, not something placed in it. The land is a cell in the field. Mutual nourishment: healthy land feeds healthy collective feeds healthy land.\n\nGaviotas in Colombia proved this is not theoretical: they regenerated 8 million trees on barren savanna that experts said was beyond recovery. Within 20 years, springs that had been dry for decades began flowing again. The forest they planted attracted species that hadn't been seen in the region for centuries. The land WANTED to recover \u2014 it just needed someone to stop degrading it and start cooperating.\n\nKeyline design (P.A. Yeomans) reads the land's water patterns and works with them \u2014 cutting channels along contour lines to slow water, spread it, and sink it into the soil. The result: springs recharge, erosion stops, fertility builds. Ernst Gotsch's syntropic agroforestry in Brazil demonstrates successional planting \u2014 mimicking how a forest builds itself, layer by layer, from pioneer species to climax forest, but with food at every stage.\n\nAboriginal Australian songlines show the deepest relationship with land: the land is alive, sung into existence, mapped through relationship. Every feature of the landscape has a story, a song, a connection. The land is not a resource \u2014 it is a relative. This is the frequency we aspire to: knowing the land the way you know a body, feeling its health in your own bones.",
       "examples": [
         "Coral reef \u2014 a community of organisms that IS the ecosystem, not separate from it",
         "Aboriginal Australian songlines \u2014 the land is alive, sung into existence, mapped through relationship",
@@ -627,7 +666,24 @@
           "note": "Transformed dead salt flat into food forest in 3 years"
         }
       ],
-      "how_it_fits": "Land Embedding is where Nourishing meets Spiraling \u2014 the long relationship with place that deepens over generations. It's the ground everything else stands on."
+      "how_it_fits": "Land Embedding is where Nourishing meets Spiraling \u2014 the long relationship with place that deepens over generations. It's the ground everything else stands on.",
+      "aligned_communities": [
+        {
+          "name": "Gaviotas",
+          "url": "https://en.wikipedia.org/wiki/Gaviotas",
+          "what": "8 million trees regenerated on barren savanna. Springs returned. Open-source technology for the tropics."
+        },
+        {
+          "name": "Tamera Water Landscapes",
+          "url": "https://www.tamera.org/",
+          "what": "Sepp Holzer-style water retention landscapes that restored dried springs in Portuguese Alentejo."
+        },
+        {
+          "name": "Greening the Desert",
+          "url": "https://www.permaculturenews.org/",
+          "what": "Geoff Lawton transformed dead salt flat in Jordan into a food forest in 3 years. Proof of what's possible."
+        }
+      ]
     },
     {
       "id": "lc-intimacy",
@@ -655,7 +711,7 @@
       "domains": [
         "living-collective"
       ],
-      "details": "Resonance between cells. Touch, depth, shakti. No form prescribed. Like trees grafting roots underground \u2014 sharing nutrients, stabilizing each other, communicating through chemistry. The depth of connection is measured by vibrational coherence, not by duration or label. The field IS the safety \u2014 not any template or agreement.",
+      "details": "Resonance between cells. Touch, depth, shakti. No form prescribed. Like trees grafting roots underground \u2014 sharing nutrients, stabilizing each other, communicating through chemistry. The depth of connection is measured by vibrational coherence, not by duration or label. The field IS the safety \u2014 not any template or agreement.\n\nZEGG community in Germany has pioneered transparent relating \u2014 where the whole community is the container for intimacy, not just the two (or three or more) people involved. Their Forum process makes the invisible visible: desires, fears, longings, contractions are expressed in the presence of the whole field. Not to judge \u2014 to hold. The result: relationships of extraordinary depth because nothing is hidden.\n\nTamera's approach goes further: they research what they call 'free love' \u2014 not promiscuity but the liberation of love from fear and possession. Their Love School explores how community can be the foundation that makes individual relationships both freer and deeper.\n\nThe tantric tradition holds that sexual energy (shakti) is the same energy that creates art, heals bodies, and sparks insight. When it flows freely through the field \u2014 not suppressed, not acted out compulsively, but felt with full presence \u2014 it nourishes everything. A field where touch is natural, where affection flows, where bodies are honored, where desire is met with curiosity rather than rules \u2014 this field has a quality of aliveness that visitors feel immediately.",
       "examples": [
         "Trees sharing root systems \u2014 grafted together underground, sharing water and nutrients",
         "Whale pair bonds \u2014 singing to each other across ocean basins",
@@ -668,6 +724,18 @@
           "name": "ZEGG",
           "location": "Germany",
           "note": "Exploring authentic relating, transparency in love, community as container for deep intimacy."
+        }
+      ],
+      "aligned_communities": [
+        {
+          "name": "ZEGG",
+          "url": "https://www.zegg.de/en/",
+          "what": "Transparent relating, Forum process, community as container for authentic intimacy."
+        },
+        {
+          "name": "Tamera Love School",
+          "url": "https://www.tamera.org/",
+          "what": "Research into free love \u2014 liberating love from fear and possession. Community as foundation for deeper relating."
         }
       ]
     },
@@ -732,7 +800,7 @@
       "domains": [
         "living-collective"
       ],
-      "details": "The field's primary frequency. How it learns, creates, heals, bonds. Dolphin pods invest enormous energy in play \u2014 not wasted but invested in the social intelligence and adaptive capacity that keeps the pod alive. Play is the field at its most quantum: superposition of possibilities before collapsing into form. The most serious work of the field happens in its most playful state.",
+      "details": "The field's primary frequency. How it learns, creates, heals, bonds. Dolphin pods invest enormous energy in play \u2014 up to 80% of waking time. This isn't wasted \u2014 it's invested in the social intelligence and adaptive capacity that makes dolphins among the most successful species on Earth. Play builds bodies, relationships, creativity, and resilience simultaneously.\n\nAdventure playgrounds (originating in Denmark in the 1940s) show what happens when children are given loose materials, tools, and trust: they build extraordinary structures, negotiate complex social dynamics, take calibrated risks, and develop confidence that no structured curriculum can replicate. The adults present aren't supervisors \u2014 they're play workers, supporting without directing.\n\nThe Reggio Emilia approach in Italy treats children as competent researchers with 'a hundred languages' of expression. No curriculum \u2014 the child's interests ARE the curriculum. The environment is the 'third teacher.' Documentation makes learning visible without evaluating it.\n\nIn the field, adults play as freely as children. Improv theater principles (yes-and, no wrong answers) become daily practice. Parkour reimagines every structure as a playground. Contact improvisation makes dance accessible to every body. Capoeira blends martial art, dance, music, and play into one practice.",
       "examples": [
         "Dolphins \u2014 up to 80% of waking time in play. The most intelligent, socially complex marine mammals.",
         "Rough-and-tumble play in mammals \u2014 develops body awareness, emotional regulation, social skills",
@@ -751,7 +819,24 @@
           "note": "Adults dancing through bonfires at night. Play as ceremony, risk as aliveness, fire as element of joy."
         }
       ],
-      "how_it_fits": "Play is the Resonating flow at its most creative. It connects to Discovery (learning through play), Expressing (creation through play), and Comfort/Joy (pleasure as practice)."
+      "how_it_fits": "Play is the Resonating flow at its most creative. It connects to Discovery (learning through play), Expressing (creation through play), and Comfort/Joy (pleasure as practice).",
+      "aligned_communities": [
+        {
+          "name": "Adventure Playgrounds",
+          "url": "https://en.wikipedia.org/wiki/Adventure_playground",
+          "what": "Unstructured play with loose materials. Children (and adults) build, destroy, create freely. Origin: Denmark 1940s."
+        },
+        {
+          "name": "Reggio Emilia",
+          "url": "https://www.reggiochildren.it/en/",
+          "what": "Child-led learning through 100 languages of expression. The environment as third teacher."
+        },
+        {
+          "name": "Flow Genome Project",
+          "url": "https://www.flowgenomeproject.com/",
+          "what": "Research into flow states \u2014 the zone where play, peak performance, and deep fulfillment converge."
+        }
+      ]
     },
     {
       "id": "lc-stillness",
@@ -822,14 +907,31 @@
       "domains": [
         "living-collective"
       ],
-      "details": "Honoring what wants honoring. Like elephants circling a dying member \u2014 touching, breathing together \u2014 not ritualized, just the field's natural response. Fire circles, water rituals, dawn singing, seasonal spirals. The form follows the moment. When ceremony loses its aliveness, the field lets it go and new forms emerge.",
+      "details": "Honoring what wants honoring. Like elephants circling a dying member \u2014 touching, breathing together \u2014 not ritualized, just the field's natural response. Fire circles, water rituals, dawn singing, seasonal spirals. The form follows the moment.\n\nDamanhur in Italy has carved underground Temples of Humankind over 40 years \u2014 rooms of extraordinary beauty hidden beneath a hillside, covered in floor-to-ceiling sacred art, stained glass, mosaics. The temples aren't religious \u2014 they're an expression of what human creativity can achieve when art IS the foundation of community life. Every Damanhurian contributes to the temples' ongoing creation.\n\nThe Burning Man temple shows another frequency: a temporary structure of breathtaking beauty, built by hundreds of volunteers, filled with the hopes and sorrows of 70,000 people, then burned in collective silence. The impermanence IS the ceremony.\n\nIn indigenous traditions worldwide, ceremony is woven into daily life: the Aboriginal corroboree, the Lakota sweat lodge, the Andean despacho, the West African libation. None of these are performances \u2014 they're the community in direct conversation with the living world.\n\nOur ceremonies emerge from presence, not prescription. But they carry echoes of all these traditions: fire as gathering point, water as purification, earth as grounding, sky as expansion, breath as shared rhythm, voice as shared vibration.",
       "examples": [
         "Elephants mourning \u2014 the herd circles, touches, stands in silence. Returns to bones years later.",
         "Japanese tea ceremony \u2014 every movement intentional, beauty in simplicity, presence distilled",
         "Cacao ceremony (Mesoamerican) \u2014 heart-opening plant shared in circle, setting intention",
         "Solstice bonfire \u2014 the oldest human ceremony, marking the turning point of light and dark"
       ],
-      "how_it_fits": "Ceremony (already enriched \u2014 this adds to the existing content if not present)"
+      "how_it_fits": "Ceremony (already enriched \u2014 this adds to the existing content if not present)",
+      "aligned_communities": [
+        {
+          "name": "Damanhur Temples",
+          "url": "https://thetemples.org/",
+          "what": "Underground Temples of Humankind \u2014 40 years of sacred art carved beneath a hillside. Art as community foundation."
+        },
+        {
+          "name": "Burning Man Temple",
+          "url": "https://burningman.org/",
+          "what": "Temporary sacred structure, community-built, filled with intention, burned in collective silence."
+        },
+        {
+          "name": "Taiz\u00e9 Community",
+          "url": "https://www.taize.fr/",
+          "what": "Ecumenical community in France. Simple repetitive chanting that attunes 100,000+ visitors per year."
+        }
+      ]
     },
     {
       "id": "lc-offering",
@@ -1548,7 +1650,7 @@
       "domains": [
         "living-collective"
       ],
-      "details": "Architecture that IS the field's body. Not containing space but amplifying frequency. Earthships: off-grid, thermal mass, water harvesting. Cob: sculptural, thermal, made from earth underfoot. Bamboo: grown structures, cathedral-scale from grass. Mycelium composites: grown not manufactured. The Arcturian concept: crystalline architecture that amplifies the field's frequency rather than just sheltering from weather.",
+      "details": "Architecture that IS the field's body. Not containing space but amplifying frequency. Every material carries vibration: earth walls hold warmth like a body, timber beams flex like bones, living roofs breathe like skin, water features circulate like blood.\n\nEarthship Biotecture (Michael Reynolds, 50 years in Taos NM) has perfected the building-as-organism: each Earthship generates its own electricity (solar/wind), harvests its own water (rain catchment + greywater recycling), grows its own food (interior greenhouse), treats its own waste (botanical treatment cells), and maintains comfortable temperature year-round (passive solar + thermal mass). The building IS its own infrastructure. No external connections needed.\n\nNader Khalili's SuperAdobe (CalEarth, Hesperia CA) proved that anyone can build an earthquake-resistant, beautiful dome from bags of earth and barbed wire. His technique has been used in disaster relief, refugee camps, and permanent communities. The materials cost almost nothing. The technique can be learned in days.\n\nSimon V\u00e9lez and the IBUKU studio in Bali build cathedral-scale structures from bamboo \u2014 the world's fastest-growing grass, stronger than steel per weight, beautiful, and renewable in 3-5 years. The Green School campus in Bali demonstrates that bamboo can create spaces of breathtaking beauty at any scale.\n\nMycelium building materials (Ecovative Design and others) are grown, not manufactured \u2014 agricultural waste inoculated with fungus, pressed into forms, and dried. Stronger than concrete per weight, fireproof, insulating, and fully compostable. The building material of the future is alive.",
       "examples": [
         "Nader Khalili's SuperAdobe (CalEarth) \u2014 sandbag/barbed wire arches, anyone can build, earthquake-resistant, beautiful",
         "Simon V\u00e9lez engineered bamboo \u2014 bridges, pavilions, cathedrals from the world's fastest-growing grass",
@@ -1567,7 +1669,29 @@
           "note": "Advancing bamboo as primary structural material"
         }
       ],
-      "blueprint_notes": "Materials priority: 1) earth from site, 2) stone from site, 3) timber from managed local forest, 4) bamboo (fast-growing), 5) mycelium composites, 6) recycled materials. Avoid: concrete, steel, plastic where possible. Every structure should be able to compost back into the land within 100 years."
+      "blueprint_notes": "Materials priority: 1) earth from site, 2) stone from site, 3) timber from managed local forest, 4) bamboo (fast-growing), 5) mycelium composites, 6) recycled materials. Avoid: concrete, steel, plastic where possible. Every structure should be able to compost back into the land within 100 years.",
+      "aligned_communities": [
+        {
+          "name": "Earthship Biotecture",
+          "url": "https://earthship.com/",
+          "what": "50 years of perfecting buildings that ARE their own infrastructure. Academy for hands-on learning."
+        },
+        {
+          "name": "CalEarth (SuperAdobe)",
+          "url": "https://www.calearth.org/",
+          "what": "Nader Khalili's earth-bag domes. Anyone can build. Earthquake-resistant. Beautiful. Almost free materials."
+        },
+        {
+          "name": "IBUKU / Green School Bali",
+          "url": "https://ibuku.com/",
+          "what": "Cathedral-scale bamboo architecture. Grown, not built. Beautiful at every scale."
+        },
+        {
+          "name": "Ecovative Design",
+          "url": "https://www.ecovative.com/",
+          "what": "Mycelium building materials \u2014 grown from fungus, stronger than concrete, fully compostable."
+        }
+      ]
     },
     {
       "id": "lc-v-comfort-joy",
