@@ -430,7 +430,19 @@
         "The forest itself \u2014 clearings for sun, canopy for shade, edges for diversity",
         "Moroccan riad \u2014 inward-facing courtyard, water, garden, sky visible from every room"
       ],
-      "how_it_fits": "Space is the Through Body expression of Nourishing. Every other expression needs space to happen in \u2014 the hearth for Nourishment, the sanctuary for Stillness, the clearing for Ceremony."
+      "how_it_fits": "Space is the Through Body expression of Nourishing. Every other expression needs space to happen in \u2014 the hearth for Nourishment, the sanctuary for Stillness, the clearing for Ceremony.",
+      "aligned_places": [
+        {
+          "name": "Hakka tulou (roundhouses)",
+          "location": "Fujian, China",
+          "note": "Circular communal houses up to 5 stories, 800+ years old. 300-800 people living in one structure. Shared courtyard, individual rooms, collective life."
+        },
+        {
+          "name": "Solarpunk co-housing",
+          "location": "Various (emerging)",
+          "note": "Modern co-housing designed with shared spaces, gardens, kitchens. Private nests + communal life."
+        }
+      ]
     },
     {
       "id": "lc-nourishment",
@@ -650,7 +662,14 @@
         "Human oxytocin response \u2014 the body's chemistry of trust and bonding, released through touch and presence",
         "Eye contact between mother and infant \u2014 the original attunement, the template for all connection"
       ],
-      "how_it_fits": "Intimacy is the Resonating flow at its deepest. It connects to Play (joyful connection), Stillness (presence together), and Ceremony (honoring significant moments of connection)."
+      "how_it_fits": "Intimacy is the Resonating flow at its deepest. It connects to Play (joyful connection), Stillness (presence together), and Ceremony (honoring significant moments of connection).",
+      "aligned_places": [
+        {
+          "name": "ZEGG",
+          "location": "Germany",
+          "note": "Exploring authentic relating, transparency in love, community as container for deep intimacy."
+        }
+      ]
     },
     {
       "id": "lc-transmission",
@@ -725,6 +744,11 @@
           "name": "Adventure playgrounds (Europe)",
           "location": "Denmark, UK, Germany",
           "note": "Unstructured play spaces with loose materials \u2014 children build, destroy, create freely"
+        },
+        {
+          "name": "Baining fire dance",
+          "location": "Papua New Guinea",
+          "note": "Adults dancing through bonfires at night. Play as ceremony, risk as aliveness, fire as element of joy."
         }
       ],
       "how_it_fits": "Play is the Resonating flow at its most creative. It connects to Discovery (learning through play), Expressing (creation through play), and Comfort/Joy (pleasure as practice)."
@@ -762,7 +786,14 @@
         "Meditation retreat \u2014 100 people sitting in silence, the field of presence is palpable, thick, warm",
         "The ocean at dawn \u2014 vast stillness that is simultaneously the most alive thing you can feel"
       ],
-      "how_it_fits": "Stillness is the Resonating flow in its receptive mode \u2014 the complement to Play's active mode. It connects to Sensing (silence sharpens awareness), Ceremony (presence is the heart of honoring), and Rest (deep stillness regenerates)."
+      "how_it_fits": "Stillness is the Resonating flow in its receptive mode \u2014 the complement to Play's active mode. It connects to Sensing (silence sharpens awareness), Ceremony (presence is the heart of honoring), and Rest (deep stillness regenerates).",
+      "aligned_places": [
+        {
+          "name": "Plum Village",
+          "location": "France",
+          "note": "Thich Nhat Hanh's community. Mindful walking, mindful eating, bells of mindfulness. Stillness woven into every activity."
+        }
+      ]
     },
     {
       "id": "lc-ceremony",
@@ -832,7 +863,14 @@
         "A grandmother telling stories \u2014 the transmission IS the gift, effortless because it's her nature",
         "Bees pollinating \u2014 they feed themselves AND propagate the ecosystem, one movement"
       ],
-      "how_it_fits": "Offering is the Expressing flow as service. It replaces the concept of 'work' \u2014 there is no work, only expression that happens to nourish the field."
+      "how_it_fits": "Offering is the Expressing flow as service. It replaces the concept of 'work' \u2014 there is no work, only expression that happens to nourish the field.",
+      "aligned_places": [
+        {
+          "name": "Mondragon cooperatives",
+          "location": "Basque Country, Spain",
+          "note": "80,000 worker-owners. Each person's offering valued not by market but by contribution to the whole."
+        }
+      ]
     },
     {
       "id": "lc-beauty",
@@ -1004,7 +1042,14 @@
         "Potlatch (Pacific Northwest Indigenous) \u2014 giving IS status, the most generous are most respected",
         "Gift economy at Burning Man \u2014 70,000 people exchanging without money for a week"
       ],
-      "how_it_fits": "Circulation is where Nourishing meets Field Intelligence \u2014 resources flow because the field senses where they're needed. It replaces economics with biology."
+      "how_it_fits": "Circulation is where Nourishing meets Field Intelligence \u2014 resources flow because the field senses where they're needed. It replaces economics with biology.",
+      "aligned_places": [
+        {
+          "name": "Burning Man",
+          "location": "Black Rock Desert, Nevada",
+          "note": "70,000 people in a gifting economy for a week. Resources circulate without money. Radical generosity."
+        }
+      ]
     },
     {
       "id": "lc-harmonic-rebalancing",
@@ -1073,7 +1118,14 @@
         "Composting toilet \u2014 human waste becomes soil that feeds gardens that feed humans",
         "Phoenix myth across cultures \u2014 the fire IS the rebirth, destruction IS creation"
       ],
-      "how_it_fits": "Composting replaces the concept of grief, loss, death. Nothing ends \u2014 everything transforms. It connects to Phase Transitions (the larger lifecycle) and Rest (composting IS integration)."
+      "how_it_fits": "Composting replaces the concept of grief, loss, death. Nothing ends \u2014 everything transforms. It connects to Phase Transitions (the larger lifecycle) and Rest (composting IS integration).",
+      "aligned_places": [
+        {
+          "name": "Natural burial grounds",
+          "location": "Various (growing movement)",
+          "note": "Bodies returned to earth without embalming. The body becomes soil. Phase transition made tangible."
+        }
+      ]
     },
     {
       "id": "lc-phase-transitions",
@@ -1177,7 +1229,14 @@
         "Menstrual cycle \u2014 the moon's rhythm expressed in the human body",
         "Agricultural calendar (biodynamic) \u2014 planting by lunar phases, seasons, stellar positions"
       ],
-      "how_it_fits": "Rhythm is the Spiraling flow as temporal structure. Everything in the field follows rhythm \u2014 meals, rest, creation, ceremony, seasonal activity. It replaces clock time with felt time."
+      "how_it_fits": "Rhythm is the Spiraling flow as temporal structure. Everything in the field follows rhythm \u2014 meals, rest, creation, ceremony, seasonal activity. It replaces clock time with felt time.",
+      "aligned_places": [
+        {
+          "name": "Biodynamic farms",
+          "location": "Global",
+          "note": "Planting by lunar cycles, seasonal rhythms, treating the farm as a living organism with its own temporal intelligence."
+        }
+      ]
     },
     {
       "id": "lc-network",
@@ -1222,6 +1281,11 @@
           "name": "Transition Towns",
           "location": "Global (started Totnes, UK)",
           "note": "Network of communities building resilience \u2014 shared learning, local adaptation"
+        },
+        {
+          "name": "Global Ecovillage Network",
+          "location": "Global",
+          "note": "Connecting intentional communities worldwide. Shared learning, resource exchange, mutual support."
         }
       ],
       "how_it_fits": "The Network is how the Living Collective connects to the larger ecosystem of collectives. It replaces international relations with mycorrhizal exchange \u2014 each node unique, the network greater than any node."
@@ -1397,7 +1461,19 @@
         "Forest bathing (shinrin-yoku) \u2014 attuning to the forest's frequency through slow, sensory immersion",
         "Group breathwork (holotropic, Wim Hof) \u2014 shared breathing rhythm alters collective state"
       ],
-      "blueprint_notes": "Daily: morning circle (5-15 min, sensing round, optional sound). Weekly: longer harmonizing session (singing, movement, silence). Seasonal: full-day attunement at each solstice/equinox. Instruments: singing bowls, drums, voice, didgeridoo, silence."
+      "blueprint_notes": "Daily: morning circle (5-15 min, sensing round, optional sound). Weekly: longer harmonizing session (singing, movement, silence). Seasonal: full-day attunement at each solstice/equinox. Instruments: singing bowls, drums, voice, didgeridoo, silence.",
+      "aligned_places": [
+        {
+          "name": "Taiz\u00e9 Community",
+          "location": "Burgundy, France",
+          "note": "Ecumenical community. Simple repetitive chanting that 100,000 visitors per year find profoundly attuning."
+        },
+        {
+          "name": "Findhorn's Universal Hall",
+          "location": "Scotland",
+          "note": "Community-built performance and meditation space. Group meditations, sound healing, collective attunement."
+        }
+      ]
     },
     {
       "id": "lc-v-food-practice",
@@ -1527,7 +1603,19 @@
         "Hygge (Danish) \u2014 the art of creating cozy intimacy, candles, warm drinks, soft textures",
         "Mediterranean piazza life \u2014 evening gathering, gelato, conversation, warmth, nothing productive happening"
       ],
-      "blueprint_notes": "Every space has sensory consideration: texture (natural materials), warmth (thermal mass, fireplaces, hot water), sound (water features, wind, music), scent (herbs, cooking, flowers), light (natural, firelight, candles over electric). Hot water access: hot tub, sauna, or hot spring is essential infrastructure."
+      "blueprint_notes": "Every space has sensory consideration: texture (natural materials), warmth (thermal mass, fireplaces, hot water), sound (water features, wind, music), scent (herbs, cooking, flowers), light (natural, firelight, candles over electric). Hot water access: hot tub, sauna, or hot spring is essential infrastructure.",
+      "aligned_places": [
+        {
+          "name": "Finnish sauna culture",
+          "location": "Finland",
+          "note": "3.3 million saunas for 5.5 million people. Communal bathing, cold plunge, birch branches. Vitality through sensory practice."
+        },
+        {
+          "name": "Japanese bathhouse (sento/onsen)",
+          "location": "Japan",
+          "note": "Community bathing as daily social ritual. Warmth, cleanliness, connection. Accessible to all."
+        }
+      ]
     },
     {
       "id": "lc-v-play-expansion",
@@ -1561,7 +1649,19 @@
         "Hackathons \u2014 adults playing with technology, no real stakes, innovations emerge",
         "Parkour \u2014 reimagining urban environment as playground, movement as creative expression"
       ],
-      "blueprint_notes": "Physical: climbing structures, water features, open ground, loose materials (wood, rope, fabric). Social: improv nights, game circles, spontaneous dance. Creative: maker spaces with no agenda, art supplies always available. Rule: if it's not fun, it's not play. If it has a required outcome, it's not play."
+      "blueprint_notes": "Physical: climbing structures, water features, open ground, loose materials (wood, rope, fabric). Social: improv nights, game circles, spontaneous dance. Creative: maker spaces with no agenda, art supplies always available. Rule: if it's not fun, it's not play. If it has a required outcome, it's not play.",
+      "aligned_places": [
+        {
+          "name": "Adventure playgrounds (Europe)",
+          "location": "Denmark, UK, Germany",
+          "note": "Unstructured play with loose materials. Children build, destroy, create. The model for adult play too."
+        },
+        {
+          "name": "Reggio Emilia approach",
+          "location": "Italy",
+          "note": "Child-led learning through play, exploration, and 100 languages of expression. The child IS the curriculum."
+        }
+      ]
     },
     {
       "id": "lc-v-inclusion-diversity",
@@ -1596,7 +1696,20 @@
         "Diverse gut microbiome \u2014 health directly correlates with microbial diversity",
         "Permaculture polyculture \u2014 mixed plantings outperform monoculture in every measure"
       ],
-      "how_it_fits": "Inclusion is where Attunement meets Field Edge \u2014 the field's ability to welcome diverse frequencies while maintaining coherence. Diversity IS resilience. Monoculture IS fragility."
+      "how_it_fits": "Inclusion is where Attunement meets Field Edge \u2014 the field's ability to welcome diverse frequencies while maintaining coherence. Diversity IS resilience. Monoculture IS fragility.",
+      "aligned_places": [
+        {
+          "name": "L'Arche communities",
+          "location": "Global (150+ communities)",
+          "note": "People with and without intellectual disabilities living together. Difference as gift, not burden."
+        },
+        {
+          "name": "Findhorn",
+          "location": "Scotland",
+          "note": "40+ nationalities, wide age range, diverse spiritual backgrounds \u2014 coherence through shared practice, not shared belief."
+        }
+      ],
+      "blueprint_notes": "Diversity is not managed \u2014 it's invited. The field actively seeks cells with different frequencies. Inclusion practices: welcome circles designed to honor what each new cell brings. Spaces designed for different sensory needs. Rhythms flexible enough for different energy levels. The field's vitality IS its diversity."
     },
     {
       "id": "lc-v-freedom-expression",
@@ -1631,7 +1744,20 @@
         "Open-source movement \u2014 freedom to use, modify, share creates more value than any proprietary system",
         "Improvised music \u2014 maximum freedom within shared attunement produces the most alive music"
       ],
-      "how_it_fits": "Freedom is the Expressing flow fully unleashed. It replaces the false choice between individual freedom and collective harmony \u2014 in the field, they're the same frequency. Every other expression depends on cells being free to find and express their natural frequency."
+      "how_it_fits": "Freedom is the Expressing flow fully unleashed. It replaces the false choice between individual freedom and collective harmony \u2014 in the field, they're the same frequency. Every other expression depends on cells being free to find and express their natural frequency.",
+      "aligned_places": [
+        {
+          "name": "Summerhill School",
+          "location": "Suffolk, England",
+          "note": "Founded 1921. Children choose whether to attend lessons. Self-governed. Graduates show exceptional confidence and self-direction."
+        },
+        {
+          "name": "Auroville",
+          "location": "Tamil Nadu, India",
+          "note": "No private property, no government, no religion. 3000 people finding their expression freely within a collective field."
+        }
+      ],
+      "blueprint_notes": "Freedom is not designed \u2014 it's what remains when constraints are removed. The field creates conditions (nourishment, safety, belonging) that make freedom natural. No schedules imposed. No roles assigned. No evaluations performed. The field trusts that vital cells orient toward meaningful expression."
     },
     {
       "id": "lc-w-cell",
