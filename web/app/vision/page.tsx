@@ -417,6 +417,9 @@ export default function VisionPage() {
               Join the vision
             </Link>
           </div>
+          <Link href="/vision/aligned" className="text-sm text-stone-500 hover:text-violet-300/80 transition-colors">
+            See communities already living this →
+          </Link>
           <p className="text-stone-600 text-sm pt-6">
             The Coherence Network is the crystalline nervous system for the emerging network of living fields.
           </p>

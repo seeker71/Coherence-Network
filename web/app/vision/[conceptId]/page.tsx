@@ -468,6 +468,9 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
                 <Link href="/vision/join" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
                   Join the vision
                 </Link>
+                <Link href="/vision/aligned" className="block text-stone-400 hover:text-violet-300/80 transition-colors">
+                  Aligned communities
+                </Link>
                 <Link href="/concepts/garden?domain=living-collective" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
                   Concept Garden
                 </Link>
