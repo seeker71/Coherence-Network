@@ -137,7 +137,50 @@ def _ensure_initial_concepts() -> None:
             except Exception:
                 pass
 
-    log.info("Ensured %d concepts and %d edges in graph DB", total_concepts, total_edges)
+    # Seed non-concept entity types (communities, scenes, stories, practices, networks)
+    # Same pattern as concepts: pass through all properties, update if exists, create if not.
+    entity_types = [
+        ("communities", "community"),
+        ("scenes", "scene"),
+        ("stories", "story"),
+        ("practices", "practice"),
+        ("networks", "network-org"),
+    ]
+    total_entities = 0
+    for concept_file in concept_files:
+        if not concept_file.exists():
+            continue
+        try:
+            data = json.loads(concept_file.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        for json_key, node_type in entity_types:
+            for item in data.get(json_key, []):
+                first_class = {"id", "name", "description"}
+                props = {k: v for k, v in item.items() if k not in first_class}
+                existing = graph_service.get_node(item["id"])
+                if existing:
+                    graph_service.update_node(
+                        item["id"],
+                        name=item.get("name", item["id"]),
+                        description=item.get("description", ""),
+                        properties=props,
+                    )
+                else:
+                    try:
+                        graph_service.create_node(
+                            id=item["id"],
+                            type=node_type,
+                            name=item.get("name", item["id"]),
+                            description=item.get("description", ""),
+                            phase="water",
+                            properties=props,
+                        )
+                    except Exception:
+                        pass
+                total_entities += 1
+
+    log.info("Ensured %d concepts, %d edges, %d entities in graph DB", total_concepts, total_edges, total_entities)
 
 
 def _load_reference_metadata() -> None:
