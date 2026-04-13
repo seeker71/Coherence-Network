@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { PrintButton } from "@/components/vision/PrintButton";
 
 export const metadata: Metadata = {
   title: "Community Posters — The Living Collective",
@@ -186,13 +187,7 @@ export default function PostersPage() {
             across different landscapes, scales, and climates. Print these to surround
             your workspace with the vision.
           </p>
-          <button
-            id="print-posters-btn"
-            className="px-6 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-500 transition-colors text-sm font-medium"
-          >
-            Print all posters
-          </button>
-          <script dangerouslySetInnerHTML={{ __html: `document.getElementById('print-posters-btn')?.addEventListener('click', () => window.print())` }} />
+          <PrintButton label="Print all posters" />
         </div>
 
         {/* Colorado Section */}
