@@ -15,6 +15,11 @@ import base64
 import logging
 import math
 import os
+
+try:
+    from app import config_loader as _cfg
+except ImportError:
+    _cfg = None
 import sys
 if sys.platform != "win32":
     import pwd
@@ -67,49 +72,95 @@ except ImportError:
 
 import httpx
 
-BASE = os.environ.get("AGENT_API_BASE", "http://localhost:8000")
+
+def _cfg_str(section, key, env_var, default=""):
+    """Read from config_loader, falling back to env var during transition."""
+    if _cfg:
+        val = _cfg.get_str(section, key, None)
+        if val is not None:
+            return val
+    return os.environ.get(env_var, default)
+
+def _cfg_int(section, key, env_var, default=0):
+    if _cfg:
+        val = _cfg.get_int(section, key, None)
+        if val is not None:
+            return val
+    raw = os.environ.get(env_var)
+    if raw is not None:
+        try:
+            return int(raw)
+        except ValueError:
+            pass
+    return default
+
+def _cfg_float(section, key, env_var, default=0.0):
+    if _cfg:
+        val = _cfg.get_float(section, key, None)
+        if val is not None:
+            return val
+    raw = os.environ.get(env_var)
+    if raw is not None:
+        try:
+            return float(raw)
+        except ValueError:
+            pass
+    return default
+
+def _cfg_bool(section, key, env_var, default=False):
+    if _cfg:
+        val = _cfg.api_config(section, key, None)
+        if val is not None:
+            if isinstance(val, bool):
+                return val
+            return str(val).lower().strip() in ("true", "1", "yes", "on")
+    raw = os.environ.get(env_var, "")
+    if raw:
+        return raw.strip().lower() in ("1", "true", "yes", "on")
+    return default
+
+BASE = _cfg_str("agent_runner", "api_base", "AGENT_API_BASE", "http://localhost:8000")
 LOG_DIR = os.path.join(_api_dir, "logs")
 LOG_FILE = os.path.join(LOG_DIR, "agent_runner.log")
 # Local models need longer; cloud/Claude typically faster. Default 1h. Set to 0 to disable timeout (avoid burning budget on aborted long runs; use progress/resume instead).
-TASK_TIMEOUT_RAW = int(os.environ.get("AGENT_TASK_TIMEOUT", "3600"))
+TASK_TIMEOUT_RAW = _cfg_int("agent_runner", "task_timeout", "AGENT_TASK_TIMEOUT", 3600)
 TASK_TIMEOUT = TASK_TIMEOUT_RAW if TASK_TIMEOUT_RAW > 0 else 0
 # When TASK_TIMEOUT is 0 we never kill the process; runner relies on progress snapshots and manual abort/resume.
 NO_TIMEOUT_SENTINEL_SECONDS = 86400 * 365  # 1 year (effectively no deadline)
-HTTP_TIMEOUT = int(os.environ.get("AGENT_HTTP_TIMEOUT", "30"))
-MAX_RETRIES = int(os.environ.get("AGENT_HTTP_RETRIES", "3"))
+HTTP_TIMEOUT = _cfg_int("agent_runner", "http_timeout", "AGENT_HTTP_TIMEOUT", 30)
+MAX_RETRIES = _cfg_int("agent_runner", "http_retries", "AGENT_HTTP_RETRIES", 3)
 RETRY_BACKOFF = 2  # seconds between retries
-REPO_PATH = os.path.abspath(os.environ.get("AGENT_WORKTREE_PATH", os.path.dirname(_api_dir)))
-DEFAULT_GITHUB_REPO = os.environ.get("AGENT_GITHUB_REPO", "seeker71/Coherence-Network")
-DEFAULT_PR_BASE_BRANCH = os.environ.get("AGENT_PR_BASE_BRANCH", "main")
+REPO_PATH = os.path.abspath(_cfg_str("agent_runner", "worktree_path", "AGENT_WORKTREE_PATH", os.path.dirname(_api_dir)))
+DEFAULT_GITHUB_REPO = _cfg_str("agent_runner", "github_repo", "AGENT_GITHUB_REPO", "seeker71/Coherence-Network")
+DEFAULT_PR_BASE_BRANCH = _cfg_str("agent_runner", "pr_base_branch", "AGENT_PR_BASE_BRANCH", "main")
 DEFAULT_REPO_GIT_URL = f"https://github.com/{DEFAULT_GITHUB_REPO}.git"
-REPO_GIT_URL = str(os.environ.get("AGENT_REPO_GIT_URL", DEFAULT_REPO_GIT_URL)).strip() or DEFAULT_REPO_GIT_URL
+REPO_GIT_URL = _cfg_str("agent_runner", "repo_git_url", "AGENT_REPO_GIT_URL", DEFAULT_REPO_GIT_URL)
 DEFAULT_REPO_FALLBACK_PATH = os.path.join("/tmp", DEFAULT_GITHUB_REPO.split("/")[-1] or "Coherence-Network")
 REPO_FALLBACK_PATH = os.path.abspath(
-    str(os.environ.get("AGENT_REPO_FALLBACK_PATH", DEFAULT_REPO_FALLBACK_PATH)).strip()
-    or DEFAULT_REPO_FALLBACK_PATH
+    _cfg_str("agent_runner", "repo_fallback_path", "AGENT_REPO_FALLBACK_PATH", DEFAULT_REPO_FALLBACK_PATH)
 )
 DEFAULT_PR_LOCAL_CHECK_CMD = os.environ.get(
     "AGENT_PR_LOCAL_VALIDATION_CMD",
     "bash ./scripts/verify_worktree_local_web.sh",
 )
-MAX_PR_GATE_ATTEMPTS = max(1, int(os.environ.get("AGENT_PR_GATE_ATTEMPTS", "8")))
-PR_GATE_POLL_SECONDS = max(5, int(os.environ.get("AGENT_PR_GATE_POLL_SECONDS", "30")))
+MAX_PR_GATE_ATTEMPTS = max(1, _cfg_int("agent_runner", "pr_gate_attempts", "AGENT_PR_GATE_ATTEMPTS", 8))
+PR_GATE_POLL_SECONDS = max(5, _cfg_int("agent_runner", "pr_gate_poll_seconds", "AGENT_PR_GATE_POLL_SECONDS", 30))
 PR_FLOW_TIMEOUT_SECONDS = max(
     5,
-    int(os.environ.get("AGENT_PR_FLOW_TIMEOUT_SECONDS", str(60 * 60))),
+    _cfg_int("agent_runner", "pr_flow_timeout_seconds", "AGENT_PR_FLOW_TIMEOUT_SECONDS", 60 * 60),
 )
-MAX_RESUME_ATTEMPTS = max(0, int(os.environ.get("AGENT_MAX_RESUME_ATTEMPTS", "2")))
-RUN_HEARTBEAT_SECONDS = max(5, int(os.environ.get("AGENT_RUN_HEARTBEAT_SECONDS", "15")))
-RUN_LEASE_SECONDS = max(15, int(os.environ.get("AGENT_RUN_LEASE_SECONDS", "120")))
-PERIODIC_CHECKPOINT_SECONDS = max(0, int(os.environ.get("AGENT_PERIODIC_CHECKPOINT_SECONDS", "300")))
-CONTROL_POLL_SECONDS = max(2, int(os.environ.get("AGENT_CONTROL_POLL_SECONDS", "5")))
-DIAGNOSTIC_TIMEOUT_SECONDS = max(10, int(os.environ.get("AGENT_DIAGNOSTIC_TIMEOUT_SECONDS", "120")))
-TASK_LOG_TAIL_CHARS = max(200, int(os.environ.get("AGENT_TASK_LOG_TAIL_CHARS", "2000")))
-MAX_RUN_RECORDS = max(50, int(os.environ.get("AGENT_RUN_RECORDS_MAX", "5000")))
+MAX_RESUME_ATTEMPTS = max(0, _cfg_int("agent_runner", "max_resume_attempts", "AGENT_MAX_RESUME_ATTEMPTS", 2))
+RUN_HEARTBEAT_SECONDS = max(5, _cfg_int("agent_runner", "run_heartbeat_seconds", "AGENT_RUN_HEARTBEAT_SECONDS", 15))
+RUN_LEASE_SECONDS = max(15, _cfg_int("agent_runner", "run_lease_seconds", "AGENT_RUN_LEASE_SECONDS", 120))
+PERIODIC_CHECKPOINT_SECONDS = max(0, _cfg_int("agent_runner", "periodic_checkpoint_seconds", "AGENT_PERIODIC_CHECKPOINT_SECONDS", 300))
+CONTROL_POLL_SECONDS = max(2, _cfg_int("agent_runner", "control_poll_seconds", "AGENT_CONTROL_POLL_SECONDS", 5))
+DIAGNOSTIC_TIMEOUT_SECONDS = max(10, _cfg_int("agent_runner", "diagnostic_timeout_seconds", "AGENT_DIAGNOSTIC_TIMEOUT_SECONDS", 120))
+TASK_LOG_TAIL_CHARS = max(200, _cfg_int("agent_runner", "task_log_tail_chars", "AGENT_TASK_LOG_TAIL_CHARS", 2000))
+MAX_RUN_RECORDS = max(50, _cfg_int("agent_runner", "run_records_max", "AGENT_RUN_RECORDS_MAX", 5000))
 RUN_RECORDS_FILE = os.path.join(LOG_DIR, "agent_runner_runs.json")
 RUN_RECORDS_LOCK = threading.Lock()
 try:
-    PENDING_TASK_FETCH_LIMIT = int(os.environ.get("AGENT_PENDING_TASK_FETCH_LIMIT", "20"))
+    PENDING_TASK_FETCH_LIMIT = _cfg_int("agent_runner", "pending_task_fetch_limit", "AGENT_PENDING_TASK_FETCH_LIMIT", 20)
 except ValueError:
     PENDING_TASK_FETCH_LIMIT = 20
 PENDING_TASK_FETCH_LIMIT = max(1, PENDING_TASK_FETCH_LIMIT)
@@ -117,15 +168,15 @@ PENDING_TASK_FETCH_LIMIT = max(1, PENDING_TASK_FETCH_LIMIT)
 # that belong to this workspace (via denormalized agent_tasks.workspace_id
 # column). Empty/unset = poll across all workspaces (legacy / multi-tenant
 # shared runner).
-RUNNER_WORKSPACE_ID = str(os.environ.get("AGENT_WORKSPACE_ID", "") or "").strip()
+RUNNER_WORKSPACE_ID = str(_cfg_str("agent_runner", "workspace_id", "AGENT_WORKSPACE_ID", "") or "").strip()
 try:
-    MEASURED_VALUE_TARGET_SHARE = float(os.environ.get("AGENT_MEASURED_VALUE_TARGET_SHARE", "0.5"))
+    MEASURED_VALUE_TARGET_SHARE = _cfg_float("agent_runner", "measured_value_target_share", "AGENT_MEASURED_VALUE_TARGET_SHARE", 0.5)
 except ValueError:
     MEASURED_VALUE_TARGET_SHARE = 0.5
 MEASURED_VALUE_TARGET_SHARE = max(0.0, min(1.0, MEASURED_VALUE_TARGET_SHARE))
 try:
     IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS = int(
-        os.environ.get("AGENT_IDEA_MEASURED_CACHE_TTL_SECONDS", "300")
+        _cfg_str("agent_runner", "idea_measured_cache_ttl_seconds", "AGENT_IDEA_MEASURED_CACHE_TTL_SECONDS", "300")
     )
 except ValueError:
     IDEA_MEASURED_VALUE_CACHE_TTL_SECONDS = 300
@@ -135,24 +186,16 @@ SCHEDULER_EXECUTED_TOTAL = 0
 SCHEDULER_EXECUTED_MEASURED = 0
 IDEA_MEASURED_VALUE_CACHE_LOCK = threading.Lock()
 IDEA_MEASURED_VALUE_CACHE: dict[str, tuple[float, bool]] = {}
-SELF_UPDATE_ENABLED = str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_ENABLED", "1")).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-    "enabled",
-    "y",
-}
+SELF_UPDATE_ENABLED = _cfg_bool("agent_runner", "self_update_enabled", "AGENT_RUNNER_SELF_UPDATE_ENABLED", True)
 SELF_UPDATE_REPO = (
-    str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO
+    _cfg_str("agent_runner", "self_update_repo", "AGENT_RUNNER_SELF_UPDATE_REPO", DEFAULT_GITHUB_REPO)
 )
 SELF_UPDATE_BRANCH = (
-    str(os.environ.get("AGENT_RUNNER_SELF_UPDATE_BRANCH", DEFAULT_PR_BASE_BRANCH)).strip()
-    or DEFAULT_PR_BASE_BRANCH
+    _cfg_str("agent_runner", "self_update_branch", "AGENT_RUNNER_SELF_UPDATE_BRANCH", DEFAULT_PR_BASE_BRANCH)
 )
 try:
     SELF_UPDATE_MIN_INTERVAL_SECONDS = int(
-        os.environ.get("AGENT_RUNNER_SELF_UPDATE_MIN_INTERVAL_SECONDS", "60")
+        _cfg_str("agent_runner", "self_update_min_interval_seconds", "AGENT_RUNNER_SELF_UPDATE_MIN_INTERVAL_SECONDS", "60")
     )
 except ValueError:
     SELF_UPDATE_MIN_INTERVAL_SECONDS = 60
@@ -160,68 +203,47 @@ SELF_UPDATE_MIN_INTERVAL_SECONDS = max(5, SELF_UPDATE_MIN_INTERVAL_SECONDS)
 SELF_UPDATE_LOCK = threading.Lock()
 SELF_UPDATE_LAST_CHECK_AT = 0.0
 SELF_UPDATE_LAST_TRIGGER_SHA = ""
-ROLLBACK_ON_TASK_FAILURE = str(os.environ.get("AGENT_RUNNER_ROLLBACK_ON_TASK_FAILURE", "1")).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-    "enabled",
-    "y",
-}
-ROLLBACK_ON_START_FAILURE = str(os.environ.get("AGENT_RUNNER_ROLLBACK_ON_START_FAILURE", "1")).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-    "enabled",
-    "y",
-}
+ROLLBACK_ON_TASK_FAILURE = _cfg_bool("agent_runner", "rollback_on_task_failure", "AGENT_RUNNER_ROLLBACK_ON_TASK_FAILURE", True)
+ROLLBACK_ON_START_FAILURE = _cfg_bool("agent_runner", "rollback_on_start_failure", "AGENT_RUNNER_ROLLBACK_ON_START_FAILURE", True)
 try:
-    ROLLBACK_MIN_INTERVAL_SECONDS = int(os.environ.get("AGENT_RUNNER_ROLLBACK_MIN_INTERVAL_SECONDS", "180"))
+    ROLLBACK_MIN_INTERVAL_SECONDS = _cfg_int("agent_runner", "rollback_min_interval_seconds", "AGENT_RUNNER_ROLLBACK_MIN_INTERVAL_SECONDS", 180)
 except ValueError:
     ROLLBACK_MIN_INTERVAL_SECONDS = 180
 ROLLBACK_MIN_INTERVAL_SECONDS = max(10, ROLLBACK_MIN_INTERVAL_SECONDS)
 ROLLBACK_LOCK = threading.Lock()
 ROLLBACK_LAST_AT = 0.0
 AGENT_MANIFESTS_DIR = os.path.abspath(
-    os.environ.get("AGENT_MANIFESTS_DIR", os.path.join(LOG_DIR, "agent_manifests"))
+    _cfg_str("agent_runner", "manifests_dir", "AGENT_MANIFESTS_DIR", os.path.join(LOG_DIR, "agent_manifests"))
 )
-AGENT_WEB_BASE_URL = str(os.environ.get("AGENT_WEB_BASE_URL", "")).strip().rstrip("/")
+AGENT_WEB_BASE_URL = str(_cfg_str("agent_runner", "web_base_url", "AGENT_WEB_BASE_URL", "")).strip().rstrip("/")
 try:
-    AGENT_MANIFEST_MAX_BLOCKS = int(os.environ.get("AGENT_MANIFEST_MAX_BLOCKS", "80"))
+    AGENT_MANIFEST_MAX_BLOCKS = _cfg_int("agent_runner", "manifest_max_blocks", "AGENT_MANIFEST_MAX_BLOCKS", 80)
 except ValueError:
     AGENT_MANIFEST_MAX_BLOCKS = 80
 AGENT_MANIFEST_MAX_BLOCKS = max(1, AGENT_MANIFEST_MAX_BLOCKS)
 try:
-    AGENT_MANIFEST_CONTEXT_BLOCKS = int(os.environ.get("AGENT_MANIFEST_CONTEXT_BLOCKS", "20"))
+    AGENT_MANIFEST_CONTEXT_BLOCKS = _cfg_int("agent_runner", "manifest_context_blocks", "AGENT_MANIFEST_CONTEXT_BLOCKS", 20)
 except ValueError:
     AGENT_MANIFEST_CONTEXT_BLOCKS = 20
 AGENT_MANIFEST_CONTEXT_BLOCKS = max(1, AGENT_MANIFEST_CONTEXT_BLOCKS)
-AGENT_MANIFEST_ENABLED = str(os.environ.get("AGENT_MANIFEST_ENABLED", "1")).strip().lower() in {
-    "1",
-    "true",
-    "yes",
-    "on",
-    "enabled",
-    "y",
-}
+AGENT_MANIFEST_ENABLED = _cfg_bool("agent_runner", "manifest_enabled", "AGENT_MANIFEST_ENABLED", True)
 AGENT_MANIFEST_WRITE_LOCK = threading.Lock()
 DIFF_HUNK_RE = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 try:
-    DEFAULT_OBSERVATION_WINDOW_SEC = int(os.environ.get("AGENT_OBSERVATION_WINDOW_SEC", "900"))
+    DEFAULT_OBSERVATION_WINDOW_SEC = _cfg_int("agent_runner", "observation_window_sec", "AGENT_OBSERVATION_WINDOW_SEC", 900)
 except ValueError:
     DEFAULT_OBSERVATION_WINDOW_SEC = 900
 DEFAULT_OBSERVATION_WINDOW_SEC = max(30, min(DEFAULT_OBSERVATION_WINDOW_SEC, 7 * 24 * 60 * 60))
 try:
     HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = float(
-        os.environ.get("AGENT_HOLD_PATTERN_SCORE_THRESHOLD", "0.8")
+        _cfg_str("agent_runner", "hold_pattern_score_threshold", "AGENT_HOLD_PATTERN_SCORE_THRESHOLD", "0.8")
     )
 except ValueError:
     HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = 0.8
 HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT = max(0.0, HOLD_PATTERN_SCORE_THRESHOLD_DEFAULT)
 try:
     HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS = int(
-        os.environ.get("AGENT_HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS", "120")
+        _cfg_str("agent_runner", "hold_pattern_reduced_action_delay_seconds", "AGENT_HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS", "120")
     )
 except ValueError:
     HOLD_PATTERN_REDUCED_ACTION_DELAY_SECONDS = 120
@@ -233,41 +255,41 @@ HOLD_PATTERN_DIAGNOSTIC_COMMAND = str(
     )
 ).strip()
 try:
-    MIN_RETRY_DELAY_SECONDS = int(os.environ.get("AGENT_MIN_RETRY_DELAY_SECONDS", "15"))
+    MIN_RETRY_DELAY_SECONDS = _cfg_int("agent_runner", "min_retry_delay_seconds", "AGENT_MIN_RETRY_DELAY_SECONDS", 15)
 except ValueError:
     MIN_RETRY_DELAY_SECONDS = 15
 MIN_RETRY_DELAY_SECONDS = max(1, min(MIN_RETRY_DELAY_SECONDS, 3600))
 try:
-    DIAGNOSTIC_COOLDOWN_SECONDS = int(os.environ.get("AGENT_DIAGNOSTIC_COOLDOWN_SECONDS", "30"))
+    DIAGNOSTIC_COOLDOWN_SECONDS = _cfg_int("agent_runner", "diagnostic_cooldown_seconds", "AGENT_DIAGNOSTIC_COOLDOWN_SECONDS", 30)
 except ValueError:
     DIAGNOSTIC_COOLDOWN_SECONDS = 30
 DIAGNOSTIC_COOLDOWN_SECONDS = max(0, min(DIAGNOSTIC_COOLDOWN_SECONDS, 3600))
 try:
-    MAX_INTERVENTIONS_PER_WINDOW = int(os.environ.get("AGENT_MAX_INTERVENTIONS_PER_WINDOW", "5"))
+    MAX_INTERVENTIONS_PER_WINDOW = _cfg_int("agent_runner", "max_interventions_per_window", "AGENT_MAX_INTERVENTIONS_PER_WINDOW", 5)
 except ValueError:
     MAX_INTERVENTIONS_PER_WINDOW = 5
 MAX_INTERVENTIONS_PER_WINDOW = max(1, min(MAX_INTERVENTIONS_PER_WINDOW, 100))
 try:
-    INTERVENTION_WINDOW_SECONDS = int(os.environ.get("AGENT_INTERVENTION_WINDOW_SECONDS", "900"))
+    INTERVENTION_WINDOW_SECONDS = _cfg_int("agent_runner", "intervention_window_seconds", "AGENT_INTERVENTION_WINDOW_SECONDS", 900)
 except ValueError:
     INTERVENTION_WINDOW_SECONDS = 900
 INTERVENTION_WINDOW_SECONDS = max(30, min(INTERVENTION_WINDOW_SECONDS, 24 * 60 * 60))
 try:
-    PAID_CALL_COST_UNITS = float(os.environ.get("AGENT_PAID_CALL_COST_UNITS", "1.0"))
+    PAID_CALL_COST_UNITS = _cfg_float("agent_runner", "paid_call_cost_units", "AGENT_PAID_CALL_COST_UNITS", 1.0)
 except ValueError:
     PAID_CALL_COST_UNITS = 1.0
 PAID_CALL_COST_UNITS = max(0.0, PAID_CALL_COST_UNITS)
 AUTO_GENERATE_IDLE_TASKS = str(
-    os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASKS", "1")
+    _cfg_str("agent_runner", "auto_generate_idle_tasks", "AGENT_AUTO_GENERATE_IDLE_TASKS", "1")
 ).strip().lower() in {"1", "true", "yes", "on", "enabled", "y"}
 try:
-    AUTO_GENERATE_IDLE_TASK_LIMIT = int(os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASK_LIMIT", "50"))
+    AUTO_GENERATE_IDLE_TASK_LIMIT = _cfg_int("agent_runner", "auto_generate_idle_task_limit", "AGENT_AUTO_GENERATE_IDLE_TASK_LIMIT", 50)
 except ValueError:
     AUTO_GENERATE_IDLE_TASK_LIMIT = 50
 AUTO_GENERATE_IDLE_TASK_LIMIT = max(1, min(AUTO_GENERATE_IDLE_TASK_LIMIT, 500))
 try:
     AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = int(
-        os.environ.get("AGENT_AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS", "30")
+        _cfg_str("agent_runner", "auto_generate_idle_task_cooldown_seconds", "AGENT_AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS", "30")
     )
 except ValueError:
     AUTO_GENERATE_IDLE_TASK_COOLDOWN_SECONDS = 30
@@ -277,7 +299,7 @@ _last_idle_task_generation_ts = 0.0
 RUNNER_PROVIDER_TELEMETRY_CACHE: dict[str, Any] = {"expires_at": 0.0, "payload": {}}
 try:
     RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = int(
-        os.environ.get("AGENT_RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS", "120")
+        _cfg_str("agent_runner", "provider_telemetry_ttl_seconds", "AGENT_RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS", "120")
     )
 except ValueError:
     RUNNER_PROVIDER_TELEMETRY_TTL_SECONDS = 120
@@ -371,7 +393,7 @@ def _scrub_command(command: str) -> str:
 def _time_cost_per_second() -> float:
     """Convert wall time into an energy loss estimate. Units are relative (not dollars)."""
     try:
-        v = float(os.environ.get("PIPELINE_TIME_COST_PER_SECOND", "0.01"))
+        v = float(_cfg_str("pipeline", "time_cost_per_second", "PIPELINE_TIME_COST_PER_SECOND", "0.01"))
     except ValueError:
         v = 0.01
     return max(0.0, v)
@@ -509,7 +531,7 @@ def _runner_cursor_about_context() -> dict[str, Any]:
 def _runner_gemini_auth_context() -> dict[str, Any]:
     env = dict(os.environ)
     oauth_ok, oauth_source = _gemini_oauth_session_status(env)
-    tier_raw = str(os.environ.get("GEMINI_SUBSCRIPTION_TIER", "pro")).strip()
+    tier_raw = _cfg_str("agent_runner", "gemini_subscription_tier", "GEMINI_SUBSCRIPTION_TIER", "pro")
     tier = _normalize_subscription_tier(tier_raw)
     if tier not in GEMINI_SUBSCRIPTION_LIMITS_BY_TIER:
         tier = "pro"
@@ -2660,7 +2682,7 @@ def _runner_heartbeat(
         "lease_seconds": lease_seconds,
         "host": socket.gethostname(),
         "pid": os.getpid(),
-        "version": os.environ.get("AGENT_RUNNER_VERSION", "agent_runner.py"),
+        "version": _cfg_str("agent_runner", "version", "AGENT_RUNNER_VERSION", "agent_runner.py"),
         "active_task_id": active_task_id[:200],
         "active_run_id": active_run_id[:200],
         "last_error": last_error[:2000],
@@ -2712,7 +2734,7 @@ def _github_head_sha(client: httpx.Client, repo: str, branch: str, log: logging.
         return ""
     if not ref:
         ref = "main"
-    token = str(os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or "").strip()
+    token = _cfg_str("github", "token", "GITHUB_TOKEN", "")
     headers = {
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
@@ -2744,11 +2766,11 @@ def _github_head_sha(client: httpx.Client, repo: str, branch: str, log: logging.
 def _hosted_runner_commit_sha(client: httpx.Client, log: logging.Logger) -> tuple[str, str]:
     _ = client, log
     env_commit = _normalize_sha(
-        os.environ.get("DEPLOYED_SHA")
-        or os.environ.get("AGENT_RUNNER_BUILD_SHA")
-        or os.environ.get("GIT_COMMIT_SHA")
+        _cfg_str("release_gates", "deployed_sha", "DEPLOYED_SHA", "")
+        or _cfg_str("agent_runner", "build_sha", "AGENT_RUNNER_BUILD_SHA", "")
+        or _cfg_str("release_gates", "git_commit_sha", "GIT_COMMIT_SHA", "")
     )
-    deployment_id = str(os.environ.get("DEPLOYMENT_ID") or "").strip()
+    deployment_id = str(_cfg_str("release_gates", "deployment_id", "DEPLOYMENT_ID", "") or "").strip()
     return env_commit, deployment_id
 
 
@@ -2778,7 +2800,7 @@ def _maybe_trigger_runner_rollback(
         ROLLBACK_LAST_AT = now
 
     ok, detail = _trigger_hosted_runner_rollback(client, log)
-    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    worker_id = _cfg_str("agent_runner", "worker_id", "AGENT_WORKER_ID", "") or f"{socket.gethostname()}:{os.getpid()}"
     if not ok:
         log.warning(
             "runner rollback: failed reason=%s task=%s failure_class=%s detail=%s",
@@ -2859,7 +2881,7 @@ def _maybe_trigger_runner_self_update(
     with SELF_UPDATE_LOCK:
         SELF_UPDATE_LAST_TRIGGER_SHA = latest_main_sha
 
-    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    worker_id = _cfg_str("agent_runner", "worker_id", "AGENT_WORKER_ID", "") or f"{socket.gethostname()}:{os.getpid()}"
     _runner_heartbeat(
         client,
         runner_id=worker_id,
@@ -3020,7 +3042,7 @@ def _post_runtime_event(
     executor: str,
     is_openai_codex: bool,
 ) -> None:
-    if os.environ.get("PIPELINE_TOOL_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
+    if _cfg_str("pipeline", "tool_telemetry_enabled", "PIPELINE_TOOL_TELEMETRY_ENABLED", "1").strip() in {"0", "false", "False"}:
         return
     payload = {
         "source": "worker",
@@ -3060,7 +3082,7 @@ def _post_tool_failure_friction(
     returncode: int,
     command: str,
 ) -> None:
-    if os.environ.get("PIPELINE_TOOL_FAILURE_FRICTION_ENABLED", "1").strip() in {"0", "false", "False"}:
+    if _cfg_str("pipeline", "tool_failure_friction_enabled", "PIPELINE_TOOL_FAILURE_FRICTION_ENABLED", "1").strip() in {"0", "false", "False"}:
         return
     now = datetime.now(timezone.utc)
     energy_loss = round(max(0.0, float(duration_seconds)) * _time_cost_per_second(), 6)
@@ -3139,7 +3161,7 @@ def _try_commit(task_id: str, task_type: str, log: logging.Logger) -> None:
 
     project_root = os.path.dirname(_api_dir)
     script = os.path.join(_api_dir, "scripts", "commit_progress.py")
-    push = os.environ.get("PIPELINE_AUTO_PUSH") == "1"
+    push = _cfg_str("pipeline", "auto_push", "PIPELINE_AUTO_PUSH", "") == "1"
     cmd = [sys.executable, script, "--task-id", task_id, "--task-type", task_type]
     if push:
         cmd.append("--push")
@@ -3886,7 +3908,7 @@ def _normalize_codex_auth_mode(raw: Any, *, default: str = "oauth") -> str:
 
 
 def _codex_auth_mode(override: str | None = None) -> str:
-    raw = override if str(override or "").strip() else os.environ.get("AGENT_CODEX_AUTH_MODE", "oauth")
+    raw = override if str(override or "").strip() else _cfg_str("agent_runner", "codex_auth_mode", "AGENT_CODEX_AUTH_MODE", "oauth")
     if raw in CODEX_AUTH_MODE_VALUES:
         return str(raw).strip().lower()
     return _normalize_codex_auth_mode(raw, default="oauth")
@@ -3910,11 +3932,11 @@ def _set_env_if_blank(env: dict[str, str], key: str, value: str) -> None:
 def _codex_oauth_session_target_path(env: dict[str, str]) -> str:
     explicit_session_file = str(env.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
     if not explicit_session_file:
-        explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+        explicit_session_file = str(_cfg_str("agent_runner", "codex_oauth_session_file", "AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
     if explicit_session_file:
         return _abs_expanded_path(explicit_session_file)
 
-    codex_home = str(env.get("AGENT_CODEX_HOME", "")).strip() or str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    codex_home = str(env.get("AGENT_CODEX_HOME", "")).strip() or str(_cfg_str("agent_runner", "codex_home", "AGENT_CODEX_HOME", "")).strip()
     if not codex_home:
         codex_home = str(env.get("CODEX_HOME", "")).strip() or str(os.environ.get("CODEX_HOME", "")).strip()
     if codex_home:
@@ -4117,11 +4139,11 @@ def _codex_oauth_session_candidates(env: dict[str, str]) -> list[str]:
 
     explicit_session_file = str(env.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
     if not explicit_session_file:
-        explicit_session_file = str(os.environ.get("AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
+        explicit_session_file = str(_cfg_str("agent_runner", "codex_oauth_session_file", "AGENT_CODEX_OAUTH_SESSION_FILE", "")).strip()
     if explicit_session_file:
         _append(explicit_session_file)
 
-    codex_home = str(env.get("AGENT_CODEX_HOME", "")).strip() or str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    codex_home = str(env.get("AGENT_CODEX_HOME", "")).strip() or str(_cfg_str("agent_runner", "codex_home", "AGENT_CODEX_HOME", "")).strip()
     if not codex_home:
         codex_home = str(env.get("CODEX_HOME", "")).strip() or str(os.environ.get("CODEX_HOME", "")).strip()
     if codex_home:
@@ -4187,7 +4209,7 @@ def _configure_codex_cli_environment(
 ) -> dict[str, Any]:
     requested_mode_raw = str((task_ctx or {}).get("runner_codex_auth_mode") or "").strip().lower()
     requested_mode = _codex_auth_mode(requested_mode_raw or None)
-    codex_home_override = str(os.environ.get("AGENT_CODEX_HOME", "")).strip()
+    codex_home_override = str(_cfg_str("agent_runner", "codex_home", "AGENT_CODEX_HOME", "")).strip()
     if codex_home_override:
         env["CODEX_HOME"] = _abs_expanded_path(codex_home_override)
 
@@ -4299,7 +4321,7 @@ def _decode_oauth_session_b64_payload(
 def _cursor_oauth_session_target_path(env: dict[str, str]) -> str:
     explicit_session_file = str(env.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
     if not explicit_session_file:
-        explicit_session_file = str(os.environ.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+        explicit_session_file = str(_cfg_str("agent_runner", "cursor_oauth_session_file", "AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
     if explicit_session_file:
         return _abs_expanded_path(explicit_session_file)
 
@@ -4314,7 +4336,7 @@ def _cursor_oauth_session_target_path(env: dict[str, str]) -> str:
 
     names_raw = (
         str(env.get("AGENT_CURSOR_OAUTH_NAMES", "")).strip()
-        or str(os.environ.get("AGENT_CURSOR_OAUTH_NAMES", "")).strip()
+        or str(_cfg_str("agent_runner", "cursor_oauth_names", "AGENT_CURSOR_OAUTH_NAMES", "")).strip()
         or "cagent,cursor"
     )
     names = [item.strip() for item in names_raw.split(",") if item.strip()]
@@ -4358,7 +4380,7 @@ def _cursor_oauth_session_candidates(env: dict[str, str]) -> list[str]:
 
     explicit_session_file = str(env.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
     if not explicit_session_file:
-        explicit_session_file = str(os.environ.get("AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
+        explicit_session_file = str(_cfg_str("agent_runner", "cursor_oauth_session_file", "AGENT_CURSOR_OAUTH_SESSION_FILE", "")).strip()
     if explicit_session_file:
         _append(explicit_session_file)
 
@@ -4485,7 +4507,7 @@ def _configure_cursor_cli_environment(
 ) -> dict[str, Any]:
     requested_mode_raw = str((task_ctx or {}).get("runner_cursor_auth_mode") or "").strip().lower()
     requested_mode = _normalize_oauth_only_auth_mode(
-        requested_mode_raw or str(os.environ.get("AGENT_CURSOR_AUTH_MODE", "oauth")),
+        requested_mode_raw or str(_cfg_str("agent_runner", "cursor_auth_mode", "AGENT_CURSOR_AUTH_MODE", "oauth")),
         default="oauth",
         allowed=CURSOR_AUTH_MODE_VALUES,
     )
@@ -4552,7 +4574,7 @@ def _configure_gemini_cli_environment(
 ) -> dict[str, Any]:
     requested_mode_raw = str((task_ctx or {}).get("runner_gemini_auth_mode") or "").strip().lower()
     requested_mode = _normalize_oauth_only_auth_mode(
-        requested_mode_raw or str(os.environ.get("AGENT_GEMINI_AUTH_MODE", "oauth")),
+        requested_mode_raw or str(_cfg_str("agent_runner", "gemini_auth_mode", "AGENT_GEMINI_AUTH_MODE", "oauth")),
         default="oauth",
         allowed=GEMINI_AUTH_MODE_VALUES,
     )
@@ -4563,7 +4585,7 @@ def _configure_gemini_cli_environment(
             task_id,
             requested_mode_raw,
         )
-    gemini_config_override = str(os.environ.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
+    gemini_config_override = str(_cfg_str("agent_runner", "gemini_config_dir", "AGENT_GEMINI_CONFIG_DIR", "")).strip()
     if gemini_config_override:
         env["AGENT_GEMINI_CONFIG_DIR"] = _abs_expanded_path(gemini_config_override)
 
@@ -4625,7 +4647,7 @@ def _configure_gemini_cli_environment(
 def _gemini_config_dir(env: dict[str, str]) -> str:
     config_dir = (
         str(env.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
-        or str(os.environ.get("AGENT_GEMINI_CONFIG_DIR", "")).strip()
+        or str(_cfg_str("agent_runner", "gemini_config_dir", "AGENT_GEMINI_CONFIG_DIR", "")).strip()
         or str(env.get("GEMINI_CONFIG_DIR", "")).strip()
         or str(os.environ.get("GEMINI_CONFIG_DIR", "")).strip()
     )
@@ -4640,7 +4662,7 @@ def _gemini_config_dir(env: dict[str, str]) -> str:
 def _gemini_oauth_creds_target_path(env: dict[str, str]) -> str:
     explicit = str(env.get("AGENT_GEMINI_OAUTH_CREDS_FILE", "")).strip()
     if not explicit:
-        explicit = str(os.environ.get("AGENT_GEMINI_OAUTH_CREDS_FILE", "")).strip()
+        explicit = str(_cfg_str("agent_runner", "gemini_oauth_creds_file", "AGENT_GEMINI_OAUTH_CREDS_FILE", "")).strip()
     if explicit:
         return _abs_expanded_path(explicit)
     config_dir = _gemini_config_dir(env)
@@ -4652,7 +4674,7 @@ def _gemini_oauth_creds_target_path(env: dict[str, str]) -> str:
 def _gemini_settings_target_path(env: dict[str, str]) -> str:
     explicit = str(env.get("AGENT_GEMINI_SETTINGS_FILE", "")).strip()
     if not explicit:
-        explicit = str(os.environ.get("AGENT_GEMINI_SETTINGS_FILE", "")).strip()
+        explicit = str(_cfg_str("agent_runner", "gemini_settings_file", "AGENT_GEMINI_SETTINGS_FILE", "")).strip()
     if explicit:
         return _abs_expanded_path(explicit)
     config_dir = _gemini_config_dir(env)
@@ -4817,13 +4839,13 @@ def _ensure_gemini_oauth_settings(
 def _claude_oauth_session_target_path(env: dict[str, str]) -> str:
     explicit_session_file = str(env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
     if not explicit_session_file:
-        explicit_session_file = str(os.environ.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+        explicit_session_file = str(_cfg_str("agent_runner", "claude_oauth_session_file", "AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
     if explicit_session_file:
         return _abs_expanded_path(explicit_session_file)
 
     config_dir = (
         str(env.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
-        or str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(_cfg_str("agent_runner", "claude_config_dir", "AGENT_CLAUDE_CONFIG_DIR", "")).strip()
         or str(env.get("CLAUDE_CONFIG_DIR", "")).strip()
         or str(os.environ.get("CLAUDE_CONFIG_DIR", "")).strip()
     )
@@ -4857,13 +4879,13 @@ def _claude_oauth_session_candidates(env: dict[str, str]) -> list[str]:
 
     explicit_session_file = str(env.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
     if not explicit_session_file:
-        explicit_session_file = str(os.environ.get("AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
+        explicit_session_file = str(_cfg_str("agent_runner", "claude_oauth_session_file", "AGENT_CLAUDE_OAUTH_SESSION_FILE", "")).strip()
     if explicit_session_file:
         _append(explicit_session_file)
 
     config_dir = (
         str(env.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
-        or str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+        or str(_cfg_str("agent_runner", "claude_config_dir", "AGENT_CLAUDE_CONFIG_DIR", "")).strip()
         or str(env.get("CLAUDE_CONFIG_DIR", "")).strip()
         or str(os.environ.get("CLAUDE_CONFIG_DIR", "")).strip()
     )
@@ -5008,7 +5030,7 @@ def _configure_claude_cli_environment(
 ) -> dict[str, Any]:
     requested_mode_raw = str((task_ctx or {}).get("runner_claude_auth_mode") or "").strip().lower()
     requested_mode = _normalize_oauth_only_auth_mode(
-        requested_mode_raw or str(os.environ.get("AGENT_CLAUDE_AUTH_MODE", "oauth")),
+        requested_mode_raw or str(_cfg_str("agent_runner", "claude_auth_mode", "AGENT_CLAUDE_AUTH_MODE", "oauth")),
         default="oauth",
         allowed=CLAUDE_AUTH_MODE_VALUES,
     )
@@ -5020,7 +5042,7 @@ def _configure_claude_cli_environment(
             requested_mode_raw,
         )
 
-    claude_config_override = str(os.environ.get("AGENT_CLAUDE_CONFIG_DIR", "")).strip()
+    claude_config_override = str(_cfg_str("agent_runner", "claude_config_dir", "AGENT_CLAUDE_CONFIG_DIR", "")).strip()
     if claude_config_override:
         env["CLAUDE_CONFIG_DIR"] = _abs_expanded_path(claude_config_override)
 
@@ -5140,7 +5162,7 @@ def _parse_codex_model_alias_map(raw: str) -> dict[str, str]:
 
 def _codex_model_alias_map() -> dict[str, str]:
     aliases = _parse_codex_model_alias_map(DEFAULT_CODEX_MODEL_ALIAS_MAP)
-    raw = os.environ.get("AGENT_CODEX_MODEL_ALIAS_MAP", "")
+    raw = _cfg_str("agent_runner", "codex_model_alias_map", "AGENT_CODEX_MODEL_ALIAS_MAP", "")
     if raw:
         aliases.update(_parse_codex_model_alias_map(str(raw)))
     return aliases
@@ -5148,7 +5170,7 @@ def _codex_model_alias_map() -> dict[str, str]:
 
 def _codex_model_not_found_fallback_map() -> dict[str, str]:
     aliases = _parse_codex_model_alias_map(DEFAULT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP)
-    raw = os.environ.get("AGENT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP", "")
+    raw = _cfg_str("agent_runner", "codex_model_not_found_fallback_map", "AGENT_CODEX_MODEL_NOT_FOUND_FALLBACK_MAP", "")
     if raw:
         aliases.update(_parse_codex_model_alias_map(str(raw)))
     return aliases
@@ -5313,7 +5335,7 @@ def _repo_path_for_task(task_ctx: dict[str, Any]) -> str:
     repo_path = str(
         task_ctx.get("repo_path")
         or task_ctx.get("working_copy_path")
-        or os.environ.get("AGENT_WORKTREE_PATH", REPO_PATH)
+        or _cfg_str("agent_runner", "worktree_path", "AGENT_WORKTREE_PATH", REPO_PATH)
     ).strip()
     if not repo_path:
         return REPO_PATH
@@ -5383,7 +5405,7 @@ def _resolve_repo_path_for_execution(repo_path: str, *, log: logging.Logger) -> 
 
 
 def _prepare_pr_branch(task_id: str, repo_path: str, branch: str, *, log: logging.Logger) -> bool:
-    base_branch = str(os.environ.get("AGENT_PR_BASE_BRANCH", DEFAULT_PR_BASE_BRANCH)).strip() or DEFAULT_PR_BASE_BRANCH
+    base_branch = _cfg_str("agent_runner", "pr_base_branch", "AGENT_PR_BASE_BRANCH", DEFAULT_PR_BASE_BRANCH)
     try:
         if not _ensure_repo_checkout(repo_path, log=log):
             return False
@@ -5421,7 +5443,7 @@ def _run_local_pr_checks(
     *,
     repo_path: str,
 ) -> dict[str, object]:
-    repo = str(os.environ.get("AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO
+    repo = _cfg_str("agent_runner", "github_repo", "AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO)
     args: list[str] = [
         sys.executable,
         os.path.join(_api_dir, "scripts", "validate_pr_to_public.py"),
@@ -5513,7 +5535,7 @@ def _get_or_create_pr(
         "--repo",
         repo,
         "--base",
-        str(os.environ.get("AGENT_PR_BASE_BRANCH", DEFAULT_PR_BASE_BRANCH)).strip() or DEFAULT_PR_BASE_BRANCH,
+        _cfg_str("agent_runner", "pr_base_branch", "AGENT_PR_BASE_BRANCH", DEFAULT_PR_BASE_BRANCH),
         "--head",
         branch,
         "--title",
@@ -5558,14 +5580,14 @@ def _attempt_pr_merge(
     repo_path: str,
     log: logging.Logger,
 ) -> tuple[bool, str]:
-    method = str(os.environ.get("AGENT_PR_MERGE_METHOD", "squash")).strip().lower() or "squash"
+    method = str(_cfg_str("agent_runner", "pr_merge_method", "AGENT_PR_MERGE_METHOD", "squash")).strip().lower() or "squash"
     method_flag = f"--{method}" if method in {"squash", "merge", "rebase"} else "--squash"
     merge_cmd = [
         "gh",
         "pr",
         "merge",
         "--repo",
-        str(os.environ.get("AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO,
+        _cfg_str("agent_runner", "github_repo", "AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO),
         pr_url,
         "--auto",
         method_flag,
@@ -5600,7 +5622,7 @@ def _run_pr_delivery_flow(
         return "failed", "[pr-flow] Unable to initialize codex task branch."
 
     if not _as_bool(ctx.get("skip_local_validation")):
-        validation_cmd = str(os.environ.get("AGENT_PR_LOCAL_VALIDATION_CMD", DEFAULT_PR_LOCAL_CHECK_CMD)).strip()
+        validation_cmd = _cfg_str("agent_runner", "pr_local_validation_cmd", "AGENT_PR_LOCAL_VALIDATION_CMD", DEFAULT_PR_LOCAL_CHECK_CMD)
         if validation_cmd:
             validation = _run_cmd(
                 validation_cmd,
@@ -5641,7 +5663,7 @@ def _run_pr_delivery_flow(
     if push.returncode != 0:
         return "failed", f"[pr-flow] git push failed: {push.stderr.strip()[:1200]}"
 
-    repo = str(os.environ.get("AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO)).strip() or DEFAULT_GITHUB_REPO
+    repo = _cfg_str("agent_runner", "github_repo", "AGENT_GITHUB_REPO", DEFAULT_GITHUB_REPO)
     pr_ok, pr_url_or_error = _get_or_create_pr(
         task_id=task_id,
         task_ctx=ctx,
@@ -5821,7 +5843,7 @@ def _dispatch_openrouter_server_executor(
     log: logging.Logger,
 ) -> bool:
     headers: dict[str, str] = {}
-    execute_token = str(os.environ.get("AGENT_EXECUTE_TOKEN", "")).strip()
+    execute_token = str(_cfg_str("agent_runner", "execute_token", "AGENT_EXECUTE_TOKEN", "")).strip()
     if execute_token:
         headers["X-Agent-Execute-Token"] = execute_token
 
@@ -5914,10 +5936,10 @@ def run_one_task(
 ) -> bool:
     """Execute task command, PATCH status. Returns True if completed/failed, False if needs_decision."""
     task_ctx = task_context or {}
-    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    worker_id = _cfg_str("agent_runner", "worker_id", "AGENT_WORKER_ID", "") or f"{socket.gethostname()}:{os.getpid()}"
     requested_executor = str(task_ctx.get("executor") or "").strip().lower()
     inferred_executor = _infer_executor(command, model)
-    codex_disabled = _as_bool(os.environ.get("AGENT_DISABLE_CODEX_EXECUTOR", "0"))
+    codex_disabled = _as_bool(_cfg_str("agent_runner", "disable_codex_executor", "AGENT_DISABLE_CODEX_EXECUTOR", "0"))
     if codex_disabled and (requested_executor in {"codex", "openclaw", "clawwork"} or inferred_executor == "codex"):
         patched_ctx = dict(task_ctx)
         patched_ctx["executor"] = "openrouter"
@@ -7458,7 +7480,7 @@ def run_one_task(
         )
 
         # Auto-commit progress (spec 030) when PIPELINE_AUTO_COMMIT=1
-        if status == "completed" and task_type != "heal" and os.environ.get("PIPELINE_AUTO_COMMIT") == "1":
+        if status == "completed" and task_type != "heal" and _cfg_str("pipeline", "auto_commit", "PIPELINE_AUTO_COMMIT", "") == "1":
             _try_commit(task_id, task_type, log)
 
         if status == "failed" and ROLLBACK_ON_TASK_FAILURE:
@@ -7684,7 +7706,7 @@ def poll_and_run(
 ) -> None:
     """Poll for pending tasks and run up to workers in parallel (Cursor supports multiple concurrent agent invocations)."""
     log = log or logging.getLogger("agent_runner")
-    worker_id = os.environ.get("AGENT_WORKER_ID") or f"{socket.gethostname()}:{os.getpid()}"
+    worker_id = _cfg_str("agent_runner", "worker_id", "AGENT_WORKER_ID", "") or f"{socket.gethostname()}:{os.getpid()}"
     while True:
         _runner_heartbeat(
             client,
@@ -7719,7 +7741,7 @@ def poll_and_run(
 
         data = r.json()
         tasks = data.get("tasks") or []
-        pin_id = os.environ.get("AGENT_TASK_ID", "").strip()
+        pin_id = _cfg_str("agent_runner", "task_id", "AGENT_TASK_ID", "").strip()
         if pin_id:
             tasks = [t for t in tasks if str(t.get("id") or "") == pin_id]
             if not tasks:
@@ -7913,7 +7935,7 @@ def main():
     )
     ap.add_argument(
         "--repo-path",
-        default=os.environ.get("AGENT_WORKTREE_PATH", REPO_PATH),
+        default=_cfg_str("agent_runner", "worktree_path", "AGENT_WORKTREE_PATH", REPO_PATH),
         help="Path to the local git checkout used by PR workflow and command execution.",
     )
     args = ap.parse_args()
