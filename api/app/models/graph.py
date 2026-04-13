@@ -79,6 +79,7 @@ class NodeType(str, Enum):
     STORY = "story"
     PRACTICE = "practice"
     NETWORK_ORG = "network-org"
+    INTERESTED_PERSON = "interested-person"
 
 
 # Spec 169: canonical closed vocabulary for the semantic layer
