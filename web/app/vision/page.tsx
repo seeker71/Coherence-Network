@@ -282,12 +282,20 @@ export default function VisionPage() {
               ),
             )}
           </div>
-          <Link
-            href="/vision/join"
-            className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 hover:border-amber-500/30 transition-all font-medium"
-          >
-            Join the vision
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/vision/realize"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-300/90 hover:bg-teal-500/20 hover:border-teal-500/30 transition-all font-medium"
+            >
+              How it becomes real
+            </Link>
+            <Link
+              href="/vision/join"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 hover:border-amber-500/30 transition-all font-medium"
+            >
+              Join the vision
+            </Link>
+          </div>
           <p className="text-stone-600 text-sm pt-6">
             The Coherence Network is the crystalline nervous system for the emerging network of living fields.
           </p>
