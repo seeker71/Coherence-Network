@@ -67,14 +67,13 @@ def _ensure_initial_concepts() -> None:
     from app.services.unified_db import ensure_schema
     ensure_schema()
 
-    # Check if concepts already exist in the graph DB
-    existing = graph_service.list_nodes(type="concept", limit=1)
-    if existing.get("items"):
-        log.info("Graph DB already has concept nodes — initial concepts present")
-        _load_reference_metadata()
-        return
+    # Always load reference metadata (relationship types + axes)
+    _load_reference_metadata()
 
-    # Load all JSON concept files and seed into graph DB
+    # Ensure ALL concepts from JSON definitions exist in the graph DB
+    # with their FULL properties. If a concept already exists, update
+    # its properties to include any new fields added to the JSON since
+    # it was first created. If it doesn't exist, create it.
     concept_files = [
         _ONTOLOGY_DIR / "core-concepts.json",
         *sorted(_ONTOLOGY_DIR.glob("living-collective*.json")),
@@ -92,8 +91,24 @@ def _ensure_initial_concepts() -> None:
             log.warning("Failed to read %s: %s", concept_file.name, exc)
             continue
 
-        # Seed concepts as graph nodes
         for c in data.get("concepts", []):
+            first_class = {"id", "name", "description"}
+            props = {k: v for k, v in c.items() if k not in first_class}
+            props.setdefault("userDefined", False)
+
+            existing = graph_service.get_node(c["id"])
+            if existing:
+                # Update existing node with any new/changed properties.
+                # This ensures rich content fields added to the JSON after
+                # the node was first created still flow into the graph DB.
+                graph_service.update_node(
+                    c["id"],
+                    name=c.get("name", c["id"]),
+                    description=c.get("description", ""),
+                    properties=props,
+                )
+                total_concepts += 1
+                continue
             try:
                 graph_service.create_node(
                     id=c["id"],
@@ -101,20 +116,11 @@ def _ensure_initial_concepts() -> None:
                     name=c.get("name", c["id"]),
                     description=c.get("description", ""),
                     phase="gas",
-                    properties={
-                        "typeId": c.get("typeId", "codex.ucore.base"),
-                        "level": c.get("level", 0),
-                        "keywords": c.get("keywords", []),
-                        "parentConcepts": c.get("parentConcepts", []),
-                        "childConcepts": c.get("childConcepts", []),
-                        "axes": c.get("axes", []),
-                        "domains": c.get("domains", []),
-                        "userDefined": c.get("userDefined", False),
-                    },
+                    properties=props,
                 )
                 total_concepts += 1
             except Exception:
-                pass  # Node may already exist from a partial previous seed
+                pass  # Concurrent creation — safe to ignore
 
         # Seed edges
         for e in data.get("edges", []):
@@ -131,8 +137,7 @@ def _ensure_initial_concepts() -> None:
             except Exception:
                 pass
 
-    log.info("Created %d initial concepts and %d edges in graph DB", total_concepts, total_edges)
-    _load_reference_metadata()
+    log.info("Ensured %d concepts and %d edges in graph DB", total_concepts, total_edges)
 
 
 def _load_reference_metadata() -> None:
@@ -263,33 +268,30 @@ def get_garden_view(limit: int = 500) -> dict[str, Any]:
 
 def create_concept(data: dict[str, Any]) -> dict[str, Any]:
     concept_id = data["id"]
+    # Pass through ALL provided fields as properties — no whitelist.
+    # The caller decides what fields the concept has.
+    first_class = {"id", "name", "description"}
+    props = {k: v for k, v in data.items() if k not in first_class}
+    props.setdefault("userDefined", True)
+    props.setdefault("createdAt", datetime.now(timezone.utc).isoformat())
+
     node = _gs().create_node(
         id=concept_id,
         type="concept",
         name=data.get("name", concept_id),
         description=data.get("description", ""),
         phase="gas",
-        properties={
-            "typeId": data.get("type_id", "codex.ucore.user"),
-            "level": data.get("level", 0),
-            "keywords": data.get("keywords", []),
-            "parentConcepts": data.get("parent_concepts", []),
-            "childConcepts": data.get("child_concepts", []),
-            "axes": data.get("axes", []),
-            "domains": data.get("domains", []),
-            "userDefined": True,
-            "createdAt": datetime.now(timezone.utc).isoformat(),
-        },
+        properties=props,
     )
     return node
 
 
 def patch_concept(concept_id: str, updates: dict[str, Any]) -> dict[str, Any]:
-    field_map = {"name": "name", "description": "description"}
-    props_map = {"keywords": "keywords", "axes": "axes"}
-
-    direct = {field_map[k]: v for k, v in updates.items() if k in field_map}
-    props = {props_map[k]: v for k, v in updates.items() if k in props_map}
+    # First-class node columns that update_node handles directly
+    first_class = {"name", "description"}
+    direct = {k: v for k, v in updates.items() if k in first_class}
+    # Everything else goes into the JSONB properties column
+    props = {k: v for k, v in updates.items() if k not in first_class}
     if props:
         direct["properties"] = props
 
