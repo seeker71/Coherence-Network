@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import QRCode from "qrcode";
+import { PrintButton } from "@/components/vision/PrintButton";
 
 export const metadata: Metadata = {
   title: "Flyer — The Living Collective",
@@ -31,23 +33,16 @@ export default async function FlyerPage() {
         }
       `}</style>
 
-      {/* Screen: print button */}
+      {/* Screen: navigation + print */}
       <div className="no-print fixed top-4 right-4 z-50 flex gap-3">
-        <a
+        <Link
           href="/vision/flyer/posters"
           className="px-4 py-2 rounded-lg bg-stone-800 text-stone-300 hover:bg-stone-700 transition-colors text-sm"
         >
           View workspace posters
-        </a>
-        <button
-          onClick={() => {}}
-          className="px-4 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-500 transition-colors text-sm font-medium"
-          id="print-btn"
-        >
-          Print flyer
-        </button>
+        </Link>
+        <PrintButton label="Print flyer" />
       </div>
-      <script dangerouslySetInnerHTML={{ __html: `document.getElementById('print-btn')?.addEventListener('click', () => window.print())` }} />
 
       {/* ═══ FLYER 1: Main invitation flyer (letter/A4) ═══ */}
       <div className="print-page min-h-screen flex flex-col items-center justify-center p-8 bg-stone-50 text-stone-900 print:bg-white">
