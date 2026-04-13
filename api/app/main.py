@@ -697,6 +697,10 @@ app.include_router(onboarding_router.router, tags=["onboarding"])
 # UX tabs mobile-friendly — per-contributor UI preferences (spec ux-tabs-mobile-friendly)
 app.include_router(ui_preferences_router.router)
 
+# Living Collective interest registration — privacy-first community gathering
+from app.routers import interest as interest_router  # noqa: E402
+app.include_router(interest_router.router, tags=["interest"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
