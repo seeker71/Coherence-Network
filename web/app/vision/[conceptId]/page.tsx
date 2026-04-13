@@ -138,6 +138,34 @@ export async function generateMetadata({ params }: { params: Promise<{ conceptId
   };
 }
 
+/* ── Known community mapping: place name → internal community page ID ── */
+
+const PLACE_TO_COMMUNITY: Record<string, string> = {
+  "auroville": "community-auroville",
+  "findhorn": "community-findhorn",
+  "findhorn foundation": "community-findhorn",
+  "findhorn ecovillage": "community-findhorn",
+  "tamera": "community-tamera",
+  "damanhur": "community-damanhur",
+  "gaviotas": "community-gaviotas",
+  "earthship": "community-earthship",
+  "earthship biotecture": "community-earthship",
+};
+
+function placeToLink(name: string): string | null {
+  const key = name.toLowerCase().trim();
+  const id = PLACE_TO_COMMUNITY[key];
+  return id ? `/vision/aligned/${id}` : null;
+}
+
+function communityToInternalLink(name: string): string | null {
+  const key = name.toLowerCase().trim();
+  for (const [place, id] of Object.entries(PLACE_TO_COMMUNITY)) {
+    if (key.includes(place)) return `/vision/aligned/${id}`;
+  }
+  return null;
+}
+
 /* ── Edge type descriptions in vitality language ───────────────────── */
 
 const EDGE_LABELS: Record<string, string> = {
@@ -242,12 +270,34 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
                 <h2 className="text-lg font-light text-stone-300">Living examples</h2>
                 <div className="space-y-3">
-                  {(concept.examples as string[]).map((ex: string, i: number) => (
-                    <div key={i} className="flex gap-3 text-sm text-stone-400 leading-relaxed">
-                      <span className="text-amber-500/50 mt-0.5 shrink-0">✦</span>
-                      <span>{ex}</span>
-                    </div>
-                  ))}
+                  {(concept.examples as string[]).map((ex: string, i: number) => {
+                    // Extract the title part before the em dash for search linkability
+                    const dashIdx = ex.indexOf(" — ");
+                    const title = dashIdx > 0 ? ex.slice(0, dashIdx) : null;
+                    const body = dashIdx > 0 ? ex.slice(dashIdx) : ex;
+                    return (
+                      <div key={i} className="flex gap-3 text-sm text-stone-400 leading-relaxed">
+                        <span className="text-amber-500/50 mt-0.5 shrink-0">✦</span>
+                        <span>
+                          {title ? (
+                            <>
+                              <a
+                                href={`https://en.wikipedia.org/wiki/Special:Search/${encodeURIComponent(title)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-stone-300 hover:text-amber-300/80 transition-colors border-b border-stone-700/40 hover:border-amber-500/30"
+                              >
+                                {title}
+                              </a>
+                              {body}
+                            </>
+                          ) : (
+                            ex
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -257,16 +307,28 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
                 <h2 className="text-lg font-light text-stone-300">Places already expressing this</h2>
                 <div className="space-y-4">
-                  {(concept.aligned_places as Array<{name: string; location: string; note: string}>).map((place, i: number) => (
-                    <div key={i} className="space-y-1">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-stone-200 font-medium">{place.name}</span>
-                        <span className="text-xs text-stone-600">{place.location}</span>
+                  {(concept.aligned_places as Array<{name: string; location: string; note: string}>).map((place, i: number) => {
+                    const internalLink = placeToLink(place.name);
+                    return (
+                      <div key={i} className="space-y-1">
+                        <div className="flex items-baseline gap-2">
+                          {internalLink ? (
+                            <Link href={internalLink} className="text-amber-300/80 hover:text-amber-300 transition-colors font-medium">
+                              {place.name} →
+                            </Link>
+                          ) : (
+                            <span className="text-stone-200 font-medium">{place.name}</span>
+                          )}
+                          <span className="text-xs text-stone-600">{place.location}</span>
+                        </div>
+                        <p className="text-sm text-stone-500 leading-relaxed">{place.note}</p>
                       </div>
-                      <p className="text-sm text-stone-500 leading-relaxed">{place.note}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
+                <Link href="/vision/aligned" className="text-xs text-stone-600 hover:text-amber-300/60 transition-colors">
+                  See all aligned communities →
+                </Link>
               </section>
             )}
 
@@ -275,18 +337,30 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               <section className="rounded-2xl border border-violet-800/20 bg-violet-900/10 p-6 space-y-4">
                 <h2 className="text-lg font-light text-stone-300">Communities embodying this</h2>
                 <div className="space-y-3">
-                  {(concept.aligned_communities as Array<{name: string; url: string; what: string}>).map((comm, i: number) => (
-                    <div key={i} className="flex gap-3">
-                      <span className="text-violet-400/50 mt-0.5 shrink-0">◈</span>
-                      <div className="space-y-0.5">
-                        <a href={comm.url} target="_blank" rel="noopener noreferrer"
-                          className="text-violet-300/80 hover:text-violet-300 transition-colors font-medium text-sm">
-                          {comm.name} ↗
-                        </a>
-                        <p className="text-sm text-stone-500 leading-relaxed">{comm.what}</p>
+                  {(concept.aligned_communities as Array<{name: string; url: string; what: string}>).map((comm, i: number) => {
+                    const internalLink = communityToInternalLink(comm.name);
+                    return (
+                      <div key={i} className="flex gap-3">
+                        <span className="text-violet-400/50 mt-0.5 shrink-0">◈</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {internalLink ? (
+                              <Link href={internalLink} className="text-violet-300/80 hover:text-violet-300 transition-colors font-medium text-sm">
+                                {comm.name} →
+                              </Link>
+                            ) : (
+                              <span className="text-violet-300/80 font-medium text-sm">{comm.name}</span>
+                            )}
+                            <a href={comm.url} target="_blank" rel="noopener noreferrer"
+                              className="text-stone-600 hover:text-violet-300/60 transition-colors text-xs">
+                              website ↗
+                            </a>
+                          </div>
+                          <p className="text-sm text-stone-500 leading-relaxed">{comm.what}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <Link href="/vision/aligned" className="text-xs text-stone-600 hover:text-violet-300/60 transition-colors">
                   See all aligned communities →
@@ -433,8 +507,8 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
 
             {/* Sacred frequency badge — from graph DB */}
             {concept.sacred_frequency && (
-              <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-2">
-                <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">Sacred Frequency</h2>
+              <Link href="/resonance" className="block rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-2 hover:border-amber-800/30 transition-all group">
+                <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider group-hover:text-stone-400 transition-colors">Sacred Frequency</h2>
                 <div className={`text-2xl font-extralight ${
                   concept.sacred_frequency.hz === 432 ? "text-amber-300/80" :
                   concept.sacred_frequency.hz === 528 ? "text-teal-300/80" :
@@ -443,7 +517,10 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
                   "text-stone-300"
                 }`}>{concept.sacred_frequency.hz} Hz</div>
                 <div className="text-xs text-stone-600">{concept.sacred_frequency.quality}</div>
-              </section>
+                <div className="text-xs text-stone-700 group-hover:text-amber-400/50 transition-colors">
+                  Explore resonance →
+                </div>
+              </Link>
             )}
 
             {/* Explore — full navigation */}
