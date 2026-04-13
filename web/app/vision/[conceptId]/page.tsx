@@ -95,20 +95,17 @@ async function fetchEdges(id: string): Promise<Edge[]> {
   }
 }
 
-async function fetchLCNames(): Promise<Record<string, string>> {
+type LCConcept = { id: string; name: string; sacred_frequency?: { hz: number; quality: string }; visual_path?: string };
+
+async function fetchAllLC(): Promise<LCConcept[]> {
   const base = getApiBase();
   try {
     const res = await fetch(`${base}/api/concepts/domain/living-collective?limit=200`, { next: { revalidate: 60 } });
-    if (!res.ok) return {};
+    if (!res.ok) return [];
     const data = await res.json();
-    const items = data?.items || [];
-    const map: Record<string, string> = {};
-    for (const c of items) {
-      if (c.id && c.name) map[c.id] = c.name;
-    }
-    return map;
+    return data?.items || [];
   } catch {
-    return {};
+    return [];
   }
 }
 
@@ -184,22 +181,33 @@ const EDGE_LABELS: Record<string, string> = {
 
 export default async function VisionConceptPage({ params }: { params: Promise<{ conceptId: string }> }) {
   const { conceptId } = await params;
-  const [concept, edges, related, nameMap] = await Promise.all([
+  const [concept, edges, related, allLC] = await Promise.all([
     fetchConcept(conceptId),
     fetchEdges(conceptId),
     fetchRelated(conceptId),
-    fetchLCNames(),
+    fetchAllLC(),
   ]);
 
   if (!concept) notFound();
 
   const isLC = concept.domains?.includes("living-collective");
   if (!isLC) {
-    // Non-LC concept — redirect to standard concept page
     return (
       <meta httpEquiv="refresh" content={`0; url=/concepts/${conceptId}`} />
     );
   }
+
+  // Derive name map from full concept list
+  const nameMap: Record<string, string> = {};
+  for (const c of allLC) {
+    if (c.id && c.name) nameMap[c.id] = c.name;
+  }
+
+  // Build frequency family — other concepts at the same Hz
+  const myHz = concept.sacred_frequency?.hz;
+  const frequencySiblings = myHz
+    ? allLC.filter((c) => c.id !== conceptId && c.sacred_frequency?.hz === myHz)
+    : [];
 
   const visual = concept.visual_path;
   const lcEdges = edges.filter(
@@ -505,22 +513,45 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               </section>
             )}
 
-            {/* Sacred frequency badge — from graph DB */}
+            {/* Sacred frequency — with resonance family */}
             {concept.sacred_frequency && (
-              <Link href="/resonance" className="block rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-2 hover:border-amber-800/30 transition-all group">
-                <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider group-hover:text-stone-400 transition-colors">Sacred Frequency</h2>
-                <div className={`text-2xl font-extralight ${
+              <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-4">
+                <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">Sacred Frequency</h2>
+                <div className={`text-3xl font-extralight ${
                   concept.sacred_frequency.hz === 432 ? "text-amber-300/80" :
                   concept.sacred_frequency.hz === 528 ? "text-teal-300/80" :
                   concept.sacred_frequency.hz === 741 ? "text-violet-300/80" :
                   concept.sacred_frequency.hz === 174 ? "text-rose-300/80" :
+                  concept.sacred_frequency.hz === 285 ? "text-rose-200/70" :
+                  concept.sacred_frequency.hz === 396 ? "text-orange-300/80" :
+                  concept.sacred_frequency.hz === 417 ? "text-yellow-300/70" :
+                  concept.sacred_frequency.hz === 639 ? "text-emerald-300/70" :
+                  concept.sacred_frequency.hz === 852 ? "text-indigo-300/70" :
+                  concept.sacred_frequency.hz === 963 ? "text-fuchsia-300/70" :
                   "text-stone-300"
                 }`}>{concept.sacred_frequency.hz} Hz</div>
-                <div className="text-xs text-stone-600">{concept.sacred_frequency.quality}</div>
-                <div className="text-xs text-stone-700 group-hover:text-amber-400/50 transition-colors">
-                  Explore resonance →
-                </div>
-              </Link>
+                <p className="text-xs text-stone-500 leading-relaxed">{concept.sacred_frequency.quality}</p>
+
+                {/* Frequency family — other concepts vibrating at the same Hz */}
+                {frequencySiblings.length > 0 && (
+                  <div className="pt-2 border-t border-stone-800/30 space-y-2">
+                    <p className="text-xs text-stone-600">
+                      Resonates with {frequencySiblings.length} other{frequencySiblings.length === 1 ? "" : ""} concept{frequencySiblings.length === 1 ? "" : "s"} at this frequency:
+                    </p>
+                    <div className="space-y-1">
+                      {frequencySiblings.map((sib) => (
+                        <Link
+                          key={sib.id}
+                          href={`/vision/${sib.id}`}
+                          className="block text-xs text-stone-500 hover:text-amber-300/70 transition-colors truncate"
+                        >
+                          {sib.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </section>
             )}
 
             {/* Explore — full navigation */}

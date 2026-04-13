@@ -59,7 +59,8 @@
       "sacred_frequency": {
         "hz": 432,
         "quality": "Natural harmony — the cosmic tuning of all life"
-      }
+      },
+      "blueprint_notes": "Start every community gathering by sensing the pulse: a 2-minute silence where everyone feels into the collective field. Use a singing bowl or heartbeat drum to anchor the practice. Display a visible 'pulse board' showing the community's vitality metrics — not productivity, but aliveness."
     },
     {
       "id": "lc-sensing",
@@ -109,7 +110,8 @@
       "sacred_frequency": {
         "hz": 741,
         "quality": "Awakening — the frequency of consciousness and perception"
-      }
+      },
+      "blueprint_notes": "Install a daily sensing round (5 minutes, morning circle): each person shares one sentence of what's actually alive in them — not plans, not performance, just signal. Rotate a 'field reader' role weekly — someone who pays extra attention to what the collective is feeling but not saying."
     },
     {
       "id": "lc-attunement",
@@ -156,7 +158,8 @@
       "sacred_frequency": {
         "hz": 432,
         "quality": "Natural harmony — finding the shared tone"
-      }
+      },
+      "blueprint_notes": "Weekly 'tuning session' (45 min): the community sits together and someone facilitates a check-in on what's harmonizing and what's creating friction. No fixing — just noticing. Use a talking piece. End with a sound (humming together) that lets the group feel its current chord."
     },
     {
       "id": "lc-vitality",
@@ -207,7 +210,8 @@
       "sacred_frequency": {
         "hz": 528,
         "quality": "Transformation — the love frequency that repairs and renews"
-      }
+      },
+      "blueprint_notes": "Track vitality, not productivity. A simple daily question on a shared board: 'How alive do you feel today? (1-10)'. When the average drops below 6 for three days, the community pauses scheduled activity and asks what's dimming. Protect unstructured time — at least 30% of each day has no agenda."
     },
     {
       "id": "lc-nourishing",
@@ -257,7 +261,8 @@
       "sacred_frequency": {
         "hz": 174,
         "quality": "Foundation — the ground frequency that holds all life"
-      }
+      },
+      "blueprint_notes": "Shared meals minimum twice daily, prepared by rotating teams of 3-4 people. Kitchen always open. Food comes from on-site gardens first, local farms second, nothing shipped by air. Fermentation station visible in the kitchen — living cultures as daily companions."
     },
     {
       "id": "lc-resonating",
@@ -309,7 +314,8 @@
       "sacred_frequency": {
         "hz": 528,
         "quality": "Transformation — where separate tones become one chord"
-      }
+      },
+      "blueprint_notes": "Create multiple 'contact zones' — spaces designed for spontaneous connection: a hammock cluster, a fire pit, a hot tub, a shared tea station. Schedule nothing in them. Touch culture established through consent-based contact improv sessions twice weekly — building the field's comfort with physical closeness."
     },
     {
       "id": "lc-expressing",
@@ -361,7 +367,8 @@
       "sacred_frequency": {
         "hz": 741,
         "quality": "Consciousness — giving form to inner knowing"
-      }
+      },
+      "blueprint_notes": "Dedicate at least three spaces to creation: a workshop (wood, metal, fabric), an art studio (paint, clay, mixed media), and a music room. Stock them and leave them open 24/7. No sign-up sheets. No classes unless someone spontaneously offers. Display community-made art everywhere — walls, paths, gardens."
     },
     {
       "id": "lc-spiraling",
@@ -401,7 +408,25 @@
       "sacred_frequency": {
         "hz": 432,
         "quality": "Natural harmony — the golden spiral in all growth"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Newgrange",
+          "location": "County Meath, Ireland",
+          "note": "5000-year-old passage tomb aligned to winter solstice sunrise — the spiral carved into its stones is the oldest known symbol of cyclical time."
+        },
+        {
+          "name": "Angkor Wat",
+          "location": "Siem Reap, Cambodia",
+          "note": "Temple complex encoding astronomical cycles in stone — sunrise alignments shift through the year, marking the spiral of seasons."
+        },
+        {
+          "name": "Hopi mesas",
+          "location": "Arizona, USA",
+          "note": "Hopi ceremonial calendar follows a spiral of seasonal kachina dances, each cycle returning with deeper understanding across generations."
+        }
+      ],
+      "blueprint_notes": "Mark every spiral: solstice, equinox, new moon, full moon. Keep a community journal that returns to the same prompts each season — 'What's composting? What's emerging? What's at full bloom?' Compare year to year. Celebrate anniversaries of the community's founding with a story of how the spiral has deepened."
     },
     {
       "id": "lc-field-sensing",
@@ -441,7 +466,25 @@
       "sacred_frequency": {
         "hz": 741,
         "quality": "Consciousness — the field reading itself"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Santa Fe Institute",
+          "location": "New Mexico, USA",
+          "note": "Research center for complex adaptive systems — studying emergent intelligence in ant colonies, economies, and ecosystems."
+        },
+        {
+          "name": "Mbuti pygmy camps",
+          "location": "Ituri Forest, Congo",
+          "note": "Small bands making decisions through collective sensing — no chiefs, the group reads the forest and each other simultaneously."
+        },
+        {
+          "name": "Holacracy at Zappos",
+          "location": "Las Vegas, Nevada, USA",
+          "note": "Self-organizing governance, distributed authority — each role senses and responds without central command."
+        }
+      ],
+      "blueprint_notes": "Establish a 'field council' of 5-7 rotating members who meet weekly to sense what the collective intelligence is saying. No agendas — they sit together, share what they're noticing, and let decisions emerge. Distribute decision-making to the edges: anyone can initiate, the field responds."
     },
     {
       "id": "lc-space",
@@ -514,7 +557,8 @@
       "sacred_frequency": {
         "hz": 432,
         "quality": "Natural harmony — shelter that breathes with its inhabitants"
-      }
+      },
+      "blueprint_notes": "Name every space by quality, not function: 'The Hearth' (kitchen-gathering), 'The Nest' (rest), 'The Clearing' (open gathering), 'The Den' (focused creation), 'The Spring' (water and cleansing). Use movable partitions so spaces can reconfigure. Ensure every space has natural light, a plant, and something beautiful."
     },
     {
       "id": "lc-nourishment",
@@ -571,7 +615,25 @@
       "sacred_frequency": {
         "hz": 174,
         "quality": "Foundation — where earth becomes body becomes vitality"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Satoyama landscapes",
+          "location": "Japan",
+          "note": "Centuries-old forest-garden-rice paddy mosaics where human cultivation increased biodiversity — food as relationship with land."
+        },
+        {
+          "name": "Oaxacan milpa farming",
+          "location": "Oaxaca, Mexico",
+          "note": "Three Sisters polyculture (corn, beans, squash) practiced for 7000+ years — the original food forest at human scale."
+        },
+        {
+          "name": "Kerala toddy shops and rice boats",
+          "location": "Kerala, India",
+          "note": "Communal eating culture where meals are served on banana leaves, everyone eats together, and food is medicine."
+        }
+      ],
+      "blueprint_notes": "Build a 7-layer food forest within the first year. Start a fermentation corner (sauerkraut, kimchi, kombucha, sourdough). Communal meals follow the land's seasons — menus change weekly based on what's ripe. Children participate in every stage: planting, harvesting, cooking, composting."
     },
     {
       "id": "lc-rest",
@@ -611,7 +673,25 @@
       "sacred_frequency": {
         "hz": 174,
         "quality": "Foundation — the frequency of deep integration and renewal"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Tibetan Buddhist retreat centers",
+          "location": "Dharamsala, India",
+          "note": "Multi-year solitary retreats in mountain hermitages — rest as the deepest form of practice."
+        },
+        {
+          "name": "Siesta cultures of Mediterranean",
+          "location": "Spain, Greece, Italy",
+          "note": "Midday pause woven into social fabric for millennia — the whole town rests, shops close, life breathes."
+        },
+        {
+          "name": "Danish hygge culture",
+          "location": "Denmark",
+          "note": "National practice of creating cozy, restful togetherness — candles, warmth, soft textures, presence without productivity."
+        }
+      ],
+      "blueprint_notes": "Designate a 'sanctuary' space that is always silent, always available. Enforce a collective rest period (2-4pm) where no loud activity happens. Honor seasonal rest: winter has fewer projects, longer evenings, more fire circles. When someone needs deep rest, the community reorganizes around them without discussion."
     },
     {
       "id": "lc-health",
@@ -650,7 +730,25 @@
       "sacred_frequency": {
         "hz": 285,
         "quality": "Restoration — the body's own intelligence returning to wholeness"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Ikaria",
+          "location": "Greece",
+          "note": "Blue Zone island where people 'forget to die' — daily walking, garden food, afternoon naps, social connection as medicine."
+        },
+        {
+          "name": "Ayurvedic villages",
+          "location": "Kerala, India",
+          "note": "Traditional wellness system integrated into daily village life — diet, rhythm, herbal medicine, massage as community practice."
+        },
+        {
+          "name": "Hunza Valley",
+          "location": "Northern Pakistan",
+          "note": "High-altitude community historically known for exceptional longevity — glacial water, apricots, physical terrain, strong social bonds."
+        }
+      ],
+      "blueprint_notes": "The daily rhythm IS the health system: wake with light, move before eating, eat whole food, work with purpose, rest midday, connect in evening, sleep in darkness. Maintain a community herb garden and apothecary. Train 3-4 community members in first aid, herbalism, and bodywork. Track collective vitality, not individual symptoms."
     },
     {
       "id": "lc-energy",
@@ -689,7 +787,25 @@
       "sacred_frequency": {
         "hz": 417,
         "quality": "Transmutation — how the field metabolizes and transforms"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Samso Island",
+          "location": "Denmark",
+          "note": "Island of 4000 people that became 100% renewable energy self-sufficient through community-owned wind turbines and biomass."
+        },
+        {
+          "name": "Barefoot College",
+          "location": "Tilonia, Rajasthan, India",
+          "note": "Trains grandmothers from rural villages worldwide to install and maintain solar systems — energy sovereignty through local knowledge."
+        },
+        {
+          "name": "El Hierro Island",
+          "location": "Canary Islands, Spain",
+          "note": "First island to run entirely on wind and hydroelectric power — community-driven energy independence."
+        }
+      ],
+      "blueprint_notes": "Solar panels on every south-facing roof. Community-scale battery storage. Biogas digester for kitchen and animal waste. Passive solar design for all new structures (thermal mass, orientation, overhangs). Visible energy dashboard showing generation and consumption. Target: net energy producer within 5 years."
     },
     {
       "id": "lc-land",
@@ -758,7 +874,8 @@
       "sacred_frequency": {
         "hz": 174,
         "quality": "Foundation — the frequency of earth, root, ground"
-      }
+      },
+      "blueprint_notes": "Begin with observation: one full year of watching water flow, sun patterns, wind, wildlife corridors, soil types before any major earthworks. Implement keyline water harvesting. Plant 500+ trees in the first three years. Establish wildlife corridors connecting to surrounding habitat. The land council walks the whole property monthly."
     },
     {
       "id": "lc-intimacy",
@@ -817,7 +934,8 @@
       "sacred_frequency": {
         "hz": 639,
         "quality": "Connection — the frequency of deep seeing and being seen"
-      }
+      },
+      "blueprint_notes": "Create a culture where physical affection is normal — hugs, hand-holding, leaning together. Weekly 'relating space' (optional, facilitated) where people can explore connection honestly. No rules about relationship form — the field holds the container. Touch is nutrient, not luxury."
     },
     {
       "id": "lc-transmission",
@@ -856,7 +974,25 @@
       "sacred_frequency": {
         "hz": 852,
         "quality": "Intuition — knowledge flowing directly from presence"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Quaker meeting houses",
+          "location": "Global (originated England)",
+          "note": "Silence until moved to speak — communication stripped to essence, no clergy, no ritual, only honest signal."
+        },
+        {
+          "name": "Aboriginal message sticks",
+          "location": "Australia",
+          "note": "Carved wooden objects carrying encoded messages between nations — transmission as sacred responsibility across vast distances."
+        },
+        {
+          "name": "Toastmasters International",
+          "location": "Global",
+          "note": "Practice-based approach to honest, clear communication — learning to transmit with integrity in community."
+        }
+      ],
+      "blueprint_notes": "Practice 'clean signal' in all community communication: say what you mean, mean what you say, notice when you're performing. Weekly 'Forum' process (ZEGG-style) where individuals express authentically and the community witnesses. No gossip protocol — if you have something to say about someone, say it to them first."
     },
     {
       "id": "lc-play",
@@ -926,7 +1062,8 @@
       "sacred_frequency": {
         "hz": 396,
         "quality": "Liberation — the pure expression of unbound vitality"
-      }
+      },
+      "blueprint_notes": "Designate an adventure playground with loose materials (wood, rope, tires, fabric, water). Weekly improv night. Monthly 'ridiculous games' tournament. No productive purpose required. Adults play alongside children. Budget for play equipment as essential infrastructure, not luxury."
     },
     {
       "id": "lc-stillness",
@@ -973,7 +1110,8 @@
       "sacred_frequency": {
         "hz": 174,
         "quality": "Foundation — the silence from which all sound arises"
-      }
+      },
+      "blueprint_notes": "Morning silence (6-7am): the whole community holds quiet. A dedicated stillness sanctuary with cushions, blankets, dim light — always available. Weekly group sit (30-60 min). The community learns to let silence hold conversations — pauses are not awkward, they're deep."
     },
     {
       "id": "lc-ceremony",
@@ -1031,7 +1169,25 @@
       "sacred_frequency": {
         "hz": 963,
         "quality": "Unity — the moment when the field recognizes itself"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Lakota Sun Dance grounds",
+          "location": "Pine Ridge, South Dakota, USA",
+          "note": "Annual ceremony of sacrifice, prayer, and renewal — the community gathers around the sacred tree for days of fasting and dancing."
+        },
+        {
+          "name": "Balinese temple ceremonies",
+          "location": "Bali, Indonesia",
+          "note": "Daily offerings (canang sari) woven into every aspect of life — ceremony is not separate from living, it IS living."
+        },
+        {
+          "name": "Dia de los Muertos celebrations",
+          "location": "Oaxaca, Mexico",
+          "note": "Community-wide honoring of the dead with altars, marigolds, food, music — death held as part of the living field."
+        }
+      ],
+      "blueprint_notes": "Fire circle every new moon. Seasonal ceremonies at solstice and equinox. Arrival ceremony for new members (simple: the community sings them in). Departure ceremony (the community sings them out). No prescribed forms — let the moment teach the ceremony."
     },
     {
       "id": "lc-offering",
@@ -1077,7 +1233,8 @@
       "sacred_frequency": {
         "hz": 528,
         "quality": "Transformation — giving as a natural overflow of vitality"
-      }
+      },
+      "blueprint_notes": "No assigned roles. A 'resonance board' where the community posts what it needs; people step forward from resonance, not obligation. Weekly 'offering circle' where anyone can share what they want to contribute. Track offerings, not hours — what did you give that was alive?"
     },
     {
       "id": "lc-beauty",
@@ -1117,7 +1274,25 @@
       "sacred_frequency": {
         "hz": 963,
         "quality": "Unity — where form and spirit become indistinguishable"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Alhambra Palace",
+          "location": "Granada, Spain",
+          "note": "Islamic architecture where geometric beauty, water, light, and garden create a coherent field — beauty as spiritual practice."
+        },
+        {
+          "name": "Naoshima Art Island",
+          "location": "Kagawa, Japan",
+          "note": "Entire island transformed into living art — museums in earth, installations in abandoned houses, art as community metabolism."
+        },
+        {
+          "name": "Watts Towers",
+          "location": "Los Angeles, California, USA",
+          "note": "One man (Simon Rodia) building towering sculptures from found materials over 33 years — beauty as irrepressible expression."
+        }
+      ],
+      "blueprint_notes": "Every surface, path, and object is a canvas. Community art budget treated as essential. Rotating 'beauty keeper' role — someone who notices where beauty is missing and responds. No ugly infrastructure: if it can't be beautiful, redesign it. Compost bins, tool sheds, and pathways should all be crafted with care."
     },
     {
       "id": "lc-discovery",
@@ -1156,7 +1331,25 @@
       "sacred_frequency": {
         "hz": 852,
         "quality": "Intuition — following the thread of curiosity"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Reggio Emilia preschools",
+          "location": "Emilia-Romagna, Italy",
+          "note": "Child-led learning where the environment is the third teacher — discovery through immersion, not instruction."
+        },
+        {
+          "name": "Schumacher College",
+          "location": "Devon, England",
+          "note": "Learning through living together — ecology, economics, and arts taught through hands-on practice and community life."
+        },
+        {
+          "name": "Swaraj University",
+          "location": "Udaipur, Rajasthan, India",
+          "note": "Self-designed learning journeys — no curriculum, no exams, discovery through apprenticeship and community engagement."
+        }
+      ],
+      "blueprint_notes": "No curriculum. Apprenticeship model: learn by doing alongside someone experienced. Community 'skill shares' monthly — anyone can teach anything. Children learn by participating in real adult activities, not simulated ones. Library of tools, seeds, books, and instruments open to all."
     },
     {
       "id": "lc-field-edge",
@@ -1195,7 +1388,25 @@
       "sacred_frequency": {
         "hz": 417,
         "quality": "Transmutation — where the known meets the unknown"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Marinaleda",
+          "location": "Andalusia, Spain",
+          "note": "Village that rebuilt itself as a cooperative with open-door policy — anyone can come, contribute, and become part of the field."
+        },
+        {
+          "name": "Riace",
+          "location": "Calabria, Italy",
+          "note": "Dying village revived by welcoming refugees — the membrane opened and the field came alive with new energy and diversity."
+        },
+        {
+          "name": "Arakmbut communities",
+          "location": "Madre de Dios, Peru",
+          "note": "Indigenous communities with clear protocols for welcoming outsiders — the membrane is alive, permeable but discerning."
+        }
+      ],
+      "blueprint_notes": "Designate a 'flowing edge' zone with guest accommodations — yurts, tents, simple rooms. Visitors stay 1-3 weeks before any joining conversation. The membrane is alive: some seasons the community opens wide, others it contracts to integrate. A 'welcome team' of 2-3 people greets and orients every visitor."
     },
     {
       "id": "lc-attunement-joining",
@@ -1234,7 +1445,25 @@
       "sacred_frequency": {
         "hz": 639,
         "quality": "Connection — the first resonance between souls"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Kibbutz ulpan programs",
+          "location": "Israel",
+          "note": "Structured immersion for newcomers — learn the language and culture by living and working alongside the community."
+        },
+        {
+          "name": "Wwoof farms",
+          "location": "Global",
+          "note": "Worldwide network where travelers join farms through work exchange — gradual attunement to a place through shared labor and meals."
+        },
+        {
+          "name": "Zen monastery guest practice",
+          "location": "Japan (Eiheiji, Tassajara)",
+          "note": "New arrivals sit with the community for days before receiving instruction — joining through presence, not orientation."
+        }
+      ],
+      "blueprint_notes": "New arrivals spend 2-4 weeks in the flowing edge. No expectations, no interviews. They participate in daily life, eat together, work alongside. After the attunement period, a mutual sensing conversation: does this cell want to join? Does the field want to receive? Both answers must be yes."
     },
     {
       "id": "lc-circulation",
@@ -1281,7 +1510,8 @@
       "sacred_frequency": {
         "hz": 528,
         "quality": "Transformation — energy flowing where it's needed"
-      }
+      },
+      "blueprint_notes": "Common fund covers all basic needs: food, shelter, energy, health, education. Individual cells don't handle money for daily life. External income from community enterprises flows into the common fund. Surplus circulates to the network — other communities, land regeneration, seeding new fields."
     },
     {
       "id": "lc-harmonic-rebalancing",
@@ -1321,7 +1551,25 @@
       "sacred_frequency": {
         "hz": 396,
         "quality": "Liberation — releasing what no longer serves the field"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Truth and Reconciliation process",
+          "location": "South Africa",
+          "note": "National-scale harmonic rebalancing — telling truth as the path from dissonance to new harmony, without punishment."
+        },
+        {
+          "name": "Ho'oponopono practice",
+          "location": "Hawaii, USA",
+          "note": "Hawaiian conflict resolution through collective acknowledgment — the whole family participates in restoring harmony."
+        },
+        {
+          "name": "Sarvodaya Shramadana",
+          "location": "Sri Lanka",
+          "note": "Village awakening movement using shared labor to resolve inter-community tensions — working together as rebalancing."
+        }
+      ],
+      "blueprint_notes": "When tension arises, the community holds a 'rebalancing circle' within 48 hours. Not mediation — the whole field participates. Each person speaks their frequency, the group listens for the new harmonic. No blame, no fix — just truth-telling until the field reorganizes. Follow up in one week."
     },
     {
       "id": "lc-composting",
@@ -1367,7 +1615,8 @@
       "sacred_frequency": {
         "hz": 285,
         "quality": "Restoration — transforming grief into fertile ground"
-      }
+      },
+      "blueprint_notes": "Physical composting stations visible throughout the community — food scraps, humanure, garden waste. When a project, practice, or relationship completes, hold a 'composting ceremony': acknowledge what was, harvest the learnings, release the form. Annual review: what structures have completed their lifecycle?"
     },
     {
       "id": "lc-phase-transitions",
@@ -1406,7 +1655,25 @@
       "sacred_frequency": {
         "hz": 417,
         "quality": "Transmutation — the frequency of change itself"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Varanasi ghats",
+          "location": "Uttar Pradesh, India",
+          "note": "City where cremation is public, sacred, and continuous — phase transition honored openly on the banks of the Ganges."
+        },
+        {
+          "name": "Green burial movement",
+          "location": "Global (originated UK)",
+          "note": "Bodies returned to earth in woodland burial grounds — phase transition as ecological participation."
+        },
+        {
+          "name": "Pueblo kiva ceremonies",
+          "location": "New Mexico, USA",
+          "note": "Underground ceremonial chambers marking seasonal transitions — the community descends together to honor each phase change."
+        }
+      ],
+      "blueprint_notes": "Honor every transition: arrival, first offering, partnership, pregnancy, birth, elderhood, dying, death. Each has its ceremony — simple, present, held by the community. Keep a 'living memory' — stories of those who have transitioned, told at seasonal fire circles. Death is not hidden — it is woven into the field's awareness."
     },
     {
       "id": "lc-elders",
@@ -1446,7 +1713,25 @@
       "sacred_frequency": {
         "hz": 852,
         "quality": "Intuition — wisdom that returns us to spiritual order"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Okinawan moai groups",
+          "location": "Okinawa, Japan",
+          "note": "Lifelong friend groups that meet regularly into old age — elders held in the center of social life, not the margins."
+        },
+        {
+          "name": "Maasai elder councils",
+          "location": "Kenya/Tanzania",
+          "note": "Age-grade system where elders hold decision-making authority — wisdom accumulated through decades of community life."
+        },
+        {
+          "name": "Grandmother circles",
+          "location": "Various Indigenous nations, North America",
+          "note": "Grandmother councils that advise community decisions — seven-generation thinking embodied in living memory."
+        }
+      ],
+      "blueprint_notes": "Elders sit at the center of decision-making, not the periphery. 'Elder walks' weekly — an elder walks with anyone who wants to talk, no agenda. Elder housing is in the heart of the community, not separate. Skills and stories are transmitted through daily proximity, not scheduled workshops."
     },
     {
       "id": "lc-rhythm",
@@ -1493,7 +1778,8 @@
       "sacred_frequency": {
         "hz": 432,
         "quality": "Natural harmony — the heartbeat of shared time"
-      }
+      },
+      "blueprint_notes": "Daily rhythm visible on a shared board: dawn (stillness), morning (creation), midday (gathering, meal), afternoon (integration, rest), evening (connection, fire). Seasonal rhythm adjusts everything: winter days are shorter, gentler; summer days are longer, more outward. Moon phases noted and felt."
     },
     {
       "id": "lc-network",
@@ -1550,7 +1836,8 @@
       "sacred_frequency": {
         "hz": 639,
         "quality": "Connection — the web that links all living fields"
-      }
+      },
+      "blueprint_notes": "Connect with 3-5 other communities within the first year. Exchange visits quarterly — 2-3 members travel to sister communities and return with learnings. Shared digital infrastructure for inter-community sensing. Annual gathering of the network at rotating locations."
     },
     {
       "id": "lc-instruments",
@@ -1589,7 +1876,25 @@
       "sacred_frequency": {
         "hz": 639,
         "quality": "Connection — tools that bridge inner and outer worlds"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Open Source Ecology",
+          "location": "Missouri, USA",
+          "note": "Building the Global Village Construction Set — 50 open-source industrial machines for a self-sustaining community."
+        },
+        {
+          "name": "Fab Labs (MIT)",
+          "location": "Global (originated Cambridge, MA)",
+          "note": "Community fabrication laboratories — democratizing access to digital manufacturing tools."
+        },
+        {
+          "name": "Arduino community",
+          "location": "Global (originated Ivrea, Italy)",
+          "note": "Open-source microcontroller platform enabling communities to build their own sensing instruments."
+        }
+      ],
+      "blueprint_notes": "Open-source everything. Community tech team maintains shared devices: sensors for garden and water systems, communication tools, energy monitoring. Technology budget prioritizes tools that extend sensing (soil sensors, weather stations) over tools that replace human connection. All data is community-owned."
     },
     {
       "id": "lc-v-living-spaces",
@@ -1755,7 +2060,8 @@
       "sacred_frequency": {
         "hz": 396,
         "quality": "Liberation — releasing tension into renewed alignment"
-      }
+      },
+      "how_it_fits": "Harmonizing Practice is the field's daily tuning instrument — without it, cells drift out of resonance and the collective sensing degrades. It connects Sensing (awareness of state) with Stillness (shared presence) into an active, repeatable practice."
     },
     {
       "id": "lc-v-food-practice",
@@ -1881,7 +2187,8 @@
       "sacred_frequency": {
         "hz": 174,
         "quality": "Foundation — the living skin that protects the field"
-      }
+      },
+      "how_it_fits": "Shelter as Living Skin is where the abstract vision of space-as-quality becomes physical material and technique. Without it, the field has ideas about space but no practical knowledge of how to build structures that breathe, adapt, and eventually return to the earth."
     },
     {
       "id": "lc-v-comfort-joy",
@@ -1934,7 +2241,8 @@
       "sacred_frequency": {
         "hz": 528,
         "quality": "Transformation — comfort as a natural state of being"
-      }
+      },
+      "how_it_fits": "Comfort and Joy is the field's immune system against austerity and martyrdom. Without it, communities become grim and brittle. It ensures that pleasure, warmth, and sensory delight are treated as essential infrastructure, not indulgence."
     },
     {
       "id": "lc-v-play-expansion",
@@ -1985,7 +2293,8 @@
       "sacred_frequency": {
         "hz": 396,
         "quality": "Liberation — expansion through joy and play"
-      }
+      },
+      "how_it_fits": "Play and Expansion is the field's adaptive capacity — the laboratory where new behaviors, relationships, and ideas are tested without consequence. Without it, the field becomes rigid, predictable, and unable to evolve."
     },
     {
       "id": "lc-v-inclusion-diversity",
@@ -2126,7 +2435,22 @@
       "sacred_frequency": {
         "hz": 285,
         "quality": "Restoration — the smallest whole that contains the pattern of all"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Monastic cells (Mount Athos)",
+          "location": "Greece",
+          "note": "Individual hermit dwellings within a larger monastic community — each cell autonomous yet integral to the whole."
+        },
+        {
+          "name": "Hutong courtyard homes",
+          "location": "Beijing, China",
+          "note": "Individual family courtyards opening onto shared lanes — each cell has its own center while being embedded in the neighborhood field."
+        }
+      ],
+      "blueprint_notes": "Each person has a private nest space (minimum 8 sqm) that is entirely theirs — decorated, arranged, and held as sovereign. Personal boundaries are honored as the cell membrane. Daily check-in practice: 'What does this cell need today?' — asked to oneself before the morning circle.",
+      "how_it_fits": "Cell is the foundational unit of the vocabulary — the word for a person that dissolves the illusion of separateness while honoring individuality. Without it, the Living Collective has no language for the individual that isn't trapped in separation thinking.",
+      "visual_path": "https://image.pollinations.ai/prompt/A%20single%20luminous%20cell%20within%20a%20vast%20living%20organism%2C%20glowing%20with%20inner%20light%2C%20connected%20by%20delicate%20filaments%20to%20surrounding%20cells%2C%20translucent%20membranes%2C%20bioluminescent%20ocean%20creature%20close-up%2C%20the%20individual%20as%20a%20node%20of%20the%20whole%2C%20photorealistic%20macro%20photography%2C%20deep%20blue%20and%20gold%20light?width=1024&height=576&model=flux&nologo=true&seed=42"
     },
     {
       "id": "lc-w-field",
@@ -2161,7 +2485,22 @@
       "sacred_frequency": {
         "hz": 963,
         "quality": "Unity — the space in which everything arises together"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Glastonbury Tor",
+          "location": "Somerset, England",
+          "note": "Ancient hilltop where visitors report feeling a palpable energetic field — ley lines, pilgrimages, the land itself holds presence."
+        },
+        {
+          "name": "Sedona vortex sites",
+          "location": "Arizona, USA",
+          "note": "Locations where visitors consistently report feeling heightened awareness — the field made geographically tangible."
+        }
+      ],
+      "blueprint_notes": "The field is maintained through daily practice: morning circle, shared meals, evening gathering. When the field feels thin (people report it as 'disconnection' or 'flatness'), the community responds by gathering more closely — more shared meals, more fire circles, more singing.",
+      "how_it_fits": "Field names the collective reality that emerges when cells gather with shared intention. Without this word, the Living Collective can only describe a group of individuals rather than the living organism they form together.",
+      "visual_path": "https://image.pollinations.ai/prompt/An%20invisible%20energetic%20field%20made%20visible%20as%20golden%20light%20rippling%20across%20a%20meadow%20at%20dawn%2C%20a%20group%20of%20people%20standing%20in%20a%20circle%20with%20luminous%20threads%20connecting%20them%2C%20aurora%20borealis%20descending%20to%20earth%20level%2C%20collective%20awareness%20as%20tangible%20warmth%2C%20atmospheric%20photorealistic%20landscape?width=1024&height=576&model=flux&nologo=true&seed=42"
     },
     {
       "id": "lc-w-frequency",
@@ -2196,7 +2535,22 @@
       "sacred_frequency": {
         "hz": 741,
         "quality": "Consciousness — the rate at which reality vibrates"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Pythagoras school at Crotone",
+          "location": "Calabria, Italy (historical)",
+          "note": "Ancient school where music, mathematics, and cosmology were understood as one — frequency as the language of reality."
+        },
+        {
+          "name": "Raga practice halls of Varanasi",
+          "location": "Varanasi, India",
+          "note": "Generations of musicians attuning to specific time-of-day ragas — frequency as lived relationship with the turning of hours."
+        }
+      ],
+      "blueprint_notes": "Each community space is tuned to a particular frequency: the sanctuary is slow and deep, the workshop is focused and energetic, the playground is fast and light. Notice when your personal frequency doesn't match the space — move to where you resonate. Track the community's dominant frequency weekly.",
+      "how_it_fits": "Frequency provides the vocabulary for qualitative differences without hierarchy — every concept, space, and person vibrates at a unique rate, and resonance or dissonance replaces good or bad as the measure of fit.",
+      "visual_path": "https://image.pollinations.ai/prompt/Sound%20waves%20made%20visible%20as%20concentric%20rings%20of%20colored%20light%20emanating%20from%20a%20singing%20bowl%2C%20cymatics%20patterns%20forming%20in%20water%2C%20the%20air%20itself%20vibrating%20with%20color%2C%20each%20frequency%20a%20different%20hue%20from%20deep%20red%20to%20violet%2C%20photorealistic%20close-up%20with%20bokeh%20light?width=1024&height=576&model=flux&nologo=true&seed=42"
     },
     {
       "id": "lc-w-coherence",
@@ -2231,7 +2585,22 @@
       "sacred_frequency": {
         "hz": 432,
         "quality": "Natural harmony — when all frequencies align as one"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Laser laboratories (LIGO)",
+          "location": "Livingston, LA & Hanford, WA, USA",
+          "note": "Gravitational wave detector using coherent laser light — coherence so precise it detects ripples in spacetime."
+        },
+        {
+          "name": "Amish barn raising",
+          "location": "Pennsylvania, USA",
+          "note": "Entire community aligning to build a barn in a single day — coherence made visible through collective synchronized action."
+        }
+      ],
+      "blueprint_notes": "Measure coherence, not consensus. After group decisions, ask: 'Does this feel coherent?' rather than 'Does everyone agree?' Coherence practice: weekly 10-minute group hum — find the shared tone, feel when it locks in. Coherence is not uniformity — it's different frequencies aligned.",
+      "how_it_fits": "Coherence names the state the whole vision aims toward — when frequencies align, power multiplies exponentially. Without this word, alignment sounds like conformity rather than the natural state of a healthy system.",
+      "visual_path": "https://image.pollinations.ai/prompt/A%20thousand%20starlings%20in%20perfect%20murmuration%20at%20sunset%2C%20forming%20a%20single%20flowing%20shape%20against%20orange%20sky%2C%20coherent%20light%20like%20a%20laser%20beam%20cutting%20through%20mist%2C%20individual%20birds%20becoming%20one%20intelligence%2C%20breathtaking%20aerial%20photography?width=1024&height=576&model=flux&nologo=true&seed=42"
     },
     {
       "id": "lc-w-shakti",
@@ -2266,7 +2635,22 @@
       "sacred_frequency": {
         "hz": 528,
         "quality": "Transformation — the creative force that moves through all life"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Kamakhya Temple",
+          "location": "Assam, India",
+          "note": "One of the oldest Shakti Peethas — temple dedicated to the divine feminine creative force for over 1500 years."
+        },
+        {
+          "name": "Kecak fire dance ceremonies",
+          "location": "Bali, Indonesia",
+          "note": "Hundreds of men chanting in concentric circles around fire — collective shakti rising through synchronized voice and movement."
+        }
+      ],
+      "blueprint_notes": "Create conditions for life force to flow: remove obligations that drain without nourishing, make space for spontaneous expression, honor the body's energy (rest when tired, move when restless, create when inspired). Community dance night weekly. No suppression of healthy desire.",
+      "how_it_fits": "Shakti names the raw life force that every other concept channels, shapes, or releases. Without it, vitality sounds abstract — shakti grounds it in the body, in creative fire, in the energy you can actually feel.",
+      "visual_path": "https://image.pollinations.ai/prompt/Raw%20creative%20life%20force%20visualized%20as%20liquid%20fire%20flowing%20upward%20through%20a%20human%20silhouette%2C%20kundalini%20energy%20as%20spiraling%20golden%20serpent%20of%20light%2C%20volcanic%20spring%20meeting%20ocean%20water%20creating%20steam%20and%20prismatic%20light%2C%20mythic%20photorealistic%20scene%2C%20warm%20reds%20and%20golds?width=1024&height=576&model=flux&nologo=true&seed=42"
     },
     {
       "id": "lc-w-spanda",
@@ -2301,7 +2685,22 @@
       "sacred_frequency": {
         "hz": 528,
         "quality": "Transformation — the sacred tremor of creation"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Shankaracharya Hill temples",
+          "location": "Kashmir, India",
+          "note": "Origin region of Kashmiri Shaivism where spanda philosophy emerged — temples perched where vibration between earth and sky is felt."
+        },
+        {
+          "name": "Rishikesh ashrams along the Ganges",
+          "location": "Uttarakhand, India",
+          "note": "Meditation centers where practitioners attune to the subtle vibration of river, mountain, and gathered awareness."
+        }
+      ],
+      "blueprint_notes": "Practice sensing the subtle vibration together: after a shared meal, sit for 2 minutes in silence and feel the collective hum. Morning attunement begins with eyes closed, feeling the group's presence before any words. Walk in the forest together in silence monthly — feel the spanda of the living world.",
+      "how_it_fits": "Spanda names the subtle vibration connecting everything — the sensing layer beneath sensing. Without it, the Living Collective's communication model stays at the level of words and gestures rather than reaching the pre-verbal field awareness that makes true community possible.",
+      "visual_path": "https://image.pollinations.ai/prompt/The%20subtle%20vibration%20of%20aliveness%3A%20a%20perfectly%20still%20forest%20pool%20with%20a%20single%20ripple%20expanding%20outward%2C%20morning%20mist%20trembling%20between%20ancient%20trees%2C%20dew%20drops%20vibrating%20on%20a%20spider%20web%20at%20dawn%2C%20the%20hum%20before%20sound%20begins%2C%20ultra-fine%20photorealistic%20detail%2C%20soft%20golden%20light?width=1024&height=576&model=flux&nologo=true&seed=42"
     },
     {
       "id": "lc-w-wu-wei",
@@ -2337,7 +2736,22 @@
       "sacred_frequency": {
         "hz": 432,
         "quality": "Natural harmony — effortless alignment with what is"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Wudang Mountains Taoist monasteries",
+          "location": "Hubei, China",
+          "note": "Birthplace of tai chi — monks practicing effortless action through slow movement in cloud-wrapped mountains for centuries."
+        },
+        {
+          "name": "Japanese Zen gardens (Ryoan-ji)",
+          "location": "Kyoto, Japan",
+          "note": "Raked gravel and placed stones embodying wu wei — beauty through restraint, meaning through emptiness."
+        }
+      ],
+      "blueprint_notes": "Practice non-forcing: when a project feels stuck, pause it rather than pushing. Community decisions ripen rather than get made — if it's not obvious, wait. Tai chi or qigong as daily movement practice. Garden with the seasons, not against them. Trust that what needs to happen will emerge when conditions are right.",
+      "how_it_fits": "Wu Wei names the quality of action the field aspires to — effortless because aligned, powerful because uncontrived. Without it, the vision risks becoming another system of effort and obligation rather than a description of what happens naturally when interference dissolves.",
+      "visual_path": "https://image.pollinations.ai/prompt/Water%20flowing%20effortlessly%20around%20smooth%20river%20stones%2C%20morning%20mist%20moving%20through%20bamboo%20forest%2C%20a%20single%20leaf%20falling%20in%20perfect%20spiral%20through%20still%20air%2C%20Taoist%20mountain%20landscape%20with%20clouds%20parting%20naturally%20around%20peaks%2C%20serene%20photorealistic%20Chinese%20landscape%20painting%20style?width=1024&height=576&model=flux&nologo=true&seed=42"
     },
     {
       "id": "lc-w-phase-transition",
@@ -2371,7 +2785,22 @@
       "sacred_frequency": {
         "hz": 417,
         "quality": "Transmutation — the moment one state becomes another"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Varanasi cremation ghats",
+          "location": "Uttar Pradesh, India",
+          "note": "Open-air cremations continuous for 3000+ years — the city itself is a threshold between states of being."
+        },
+        {
+          "name": "Sedlec Ossuary (Bone Church)",
+          "location": "Kutna Hora, Czech Republic",
+          "note": "Chapel decorated with 40,000 human skeletons — phase transition made visible, bones as art, death as material."
+        }
+      ],
+      "blueprint_notes": "Honor every ending as a beginning. When someone leaves, a departure ceremony. When a building is decommissioned, a composting ceremony. When a relationship shifts form, acknowledgment without grief. Keep a community 'transitions journal' recording every phase change — reading it reveals the spiral.",
+      "how_it_fits": "Phase Transition replaces 'death' and 'ending' in the vocabulary — reframing every completion as a state change rather than a loss. Without it, the Living Collective has no language for holding grief, departure, and transformation as natural movements of the spiral.",
+      "visual_path": "https://image.pollinations.ai/prompt/The%20exact%20moment%20ice%20becomes%20water%3A%20crystalline%20structure%20dissolving%20into%20liquid%20flow%2C%20a%20chrysalis%20splitting%20open%20with%20butterfly%20wings%20unfolding%2C%20sunset%20becoming%20starfield%20in%20a%20single%20seamless%20gradient%2C%20the%20threshold%20between%20states%20of%20being%2C%20photorealistic%20macro?width=1024&height=576&model=flux&nologo=true&seed=42"
     },
     {
       "id": "lc-w-mycorrhizal",
@@ -2406,7 +2835,22 @@
       "sacred_frequency": {
         "hz": 639,
         "quality": "Connection — the hidden network that shares everything"
-      }
+      },
+      "aligned_places": [
+        {
+          "name": "Suzanne Simard's research forests",
+          "location": "British Columbia, Canada",
+          "note": "The forests where the Wood Wide Web was scientifically proven — mother trees feeding seedlings through fungal networks."
+        },
+        {
+          "name": "Amazon rainforest mycorrhizal networks",
+          "location": "Amazon Basin, South America",
+          "note": "The most extensive fungal networks on Earth, connecting millions of trees across thousands of kilometers of forest floor."
+        }
+      ],
+      "blueprint_notes": "Build the underground network: regular communication with 5+ other communities, shared resource channels, traveling members who carry learnings between nodes. Digital 'mycelium' (shared platforms) for inter-community sensing. Send surplus (food, skills, people) to communities in need without being asked.",
+      "how_it_fits": "Mycorrhizal names the invisible network that makes the whole greater than the sum of parts. Without it, 'network' sounds like a human invention — mycorrhizal grounds it in the biological reality of how forests actually share intelligence and resources.",
+      "visual_path": "https://image.pollinations.ai/prompt/Underground%20fungal%20network%20glowing%20beneath%20a%20forest%20floor%2C%20translucent%20roots%20and%20mycelium%20threads%20connecting%20trees%20in%20a%20vast%20web%20of%20bioluminescent%20filaments%2C%20cross-section%20of%20soil%20revealing%20the%20hidden%20Wood%20Wide%20Web%2C%20nutrients%20flowing%20as%20points%20of%20light%2C%20photorealistic%20scientific%20illustration?width=1024&height=576&model=flux&nologo=true&seed=42"
     }
   ],
   "edges": [
