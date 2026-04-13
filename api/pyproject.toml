@@ -8,7 +8,7 @@ dependencies = [
     "uvicorn[standard]>=0.32.0",
     "pydantic>=2.0",
     "httpx>=0.28.0",
-    "python-dotenv>=1.0",
+    "python-dotenv>=1.2.1",
     "python-multipart>=0.0.6",
     "python-dateutil>=2.8.0",
     "email-validator>=2.0",
@@ -23,7 +23,7 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.24",
-    "python-dotenv>=1.0",
+    "python-dotenv>=1.2.1",
     "respx>=0.21.0",
 ]
 
