@@ -127,6 +127,71 @@ async def list_concepts_by_domain(
     return result
 
 
+@router.get("/concepts/communities", summary="List all aligned communities")
+async def list_communities(limit: int = Query(50, ge=1, le=200)) -> dict:
+    """Return community nodes from the graph DB."""
+    from app.services import graph_service
+    return graph_service.list_nodes(type="community", limit=limit)
+
+
+@router.get("/concepts/communities/{community_id}", summary="Get a single community by ID")
+async def get_community(community_id: str) -> dict:
+    """Return a single community node with all properties."""
+    from app.services import graph_service
+    node = graph_service.get_node(community_id)
+    if not node:
+        raise HTTPException(status_code=404, detail="Community not found")
+    return node
+
+
+@router.get("/concepts/scenes", summary="List all life scenes")
+async def list_scenes(limit: int = Query(50, ge=1, le=200)) -> dict:
+    """Return scene nodes — the visual moments of daily community life."""
+    from app.services import graph_service
+    return graph_service.list_nodes(type="scene", limit=limit)
+
+
+@router.get("/concepts/stories", summary="List all living stories")
+async def list_stories(limit: int = Query(50, ge=1, le=200)) -> dict:
+    """Return story nodes — immersive narratives of specific people and moments."""
+    from app.services import graph_service
+    return graph_service.list_nodes(type="story", limit=limit)
+
+
+@router.get("/concepts/practices", summary="List aligned practices and traditions")
+async def list_practices(limit: int = Query(50, ge=1, le=200)) -> dict:
+    """Return practice nodes — traditions that carry pieces of the vision."""
+    from app.services import graph_service
+    return graph_service.list_nodes(type="practice", limit=limit)
+
+
+@router.get("/concepts/networks", summary="List aligned networks")
+async def list_networks(limit: int = Query(50, ge=1, le=200)) -> dict:
+    """Return network-org nodes — organizations connecting communities."""
+    from app.services import graph_service
+    return graph_service.list_nodes(type="network-org", limit=limit)
+
+
+@router.get("/concepts/domain/{domain}/vision-data", summary="Assembled data for the vision hub page")
+async def get_vision_data(domain: str) -> dict:
+    """Return a pre-assembled payload for the vision hub page.
+
+    Includes root concepts (level 0-1 with visual_path), emerging visions
+    (level 2 with lc-v- prefix), and gallery configuration.
+    """
+    all_lc = concept_service.list_concepts_by_domain(domain, limit=200)
+    items = all_lc.get("items", [])
+
+    sections = [c for c in items if c.get("level") in (0, 1) and c.get("visual_path")]
+    visions = [c for c in items if c.get("id", "").startswith("lc-v-")]
+
+    return {
+        "sections": sections,
+        "visions": visions,
+        "total_concepts": all_lc.get("total", 0),
+    }
+
+
 @router.get("/concepts/relationships", summary="List all 46 relationship types from the Living Codex ontology")
 async def list_relationships():
     """List all 46 relationship types from the Living Codex ontology."""
