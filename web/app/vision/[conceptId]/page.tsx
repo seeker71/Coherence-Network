@@ -19,7 +19,7 @@ type Concept = {
   domains?: string[];
   parentConcepts?: string[];
   childConcepts?: string[];
-  // Rich content fields (stored in graph node properties)
+  // Rich content fields (all from graph node JSONB properties)
   details?: string;
   examples?: string[];
   aligned_places?: Array<{ name: string; location: string; note: string }>;
@@ -27,6 +27,8 @@ type Concept = {
   how_it_fits?: string;
   blueprint_notes?: string;
   visualization_notes?: string;
+  visual_path?: string;
+  sacred_frequency?: { hz: number; quality: string };
 };
 
 type Edge = {
@@ -43,58 +45,7 @@ type RelatedItems = {
   total: number;
 };
 
-/* ── Visual mapping ────────────────────────────────────────────────── */
-
-const VISUAL_MAP: Record<string, string> = {
-  // Root concepts (11)
-  "lc-pulse": "/visuals/01-the-pulse.png",
-  "lc-sensing": "/visuals/02-sensing.png",
-  "lc-attunement": "/visuals/03-attunement.png",
-  "lc-vitality": "/visuals/04-vitality.png",
-  "lc-nourishing": "/visuals/05-nourishing.png",
-  "lc-resonating": "/visuals/06-resonating.png",
-  "lc-expressing": "/visuals/07-expressing.png",
-  "lc-spiraling": "/visuals/08-spiraling.png",
-  "lc-field-sensing": "/visuals/09-field-intelligence.png",
-  "lc-v-living-spaces": "/visuals/10-living-space.png",
-  "lc-network": "/visuals/11-the-network.png",
-  // Emerging visions (8)
-  "lc-v-ceremony": "/visuals/v-ceremony.png",
-  "lc-v-harmonizing": "/visuals/v-harmonizing.png",
-  "lc-v-food-practice": "/visuals/v-food-practice.png",
-  "lc-v-shelter-organism": "/visuals/v-shelter-organism.png",
-  "lc-v-comfort-joy": "/visuals/v-comfort-joy.png",
-  "lc-v-play-expansion": "/visuals/v-play-expansion.png",
-  "lc-v-inclusion-diversity": "/visuals/v-inclusion.png",
-  "lc-v-freedom-expression": "/visuals/v-freedom.png",
-  // Sacred spaces (8)
-  "lc-space": "/visuals/space-hearth-interior.png",
-  "lc-rest": "/visuals/space-nest-ground.png",
-  "lc-stillness": "/visuals/space-stillness-sanctuary.png",
-  "lc-nourishment": "/visuals/space-hearth-interior.png",
-  "lc-offering": "/visuals/space-creation-arc-overview.png",
-  "lc-beauty": "/visuals/space-creation-arc-overview.png",
-  // Practices
-  "lc-play": "/visuals/life-children-play.png",
-  "lc-intimacy": "/visuals/practice-tantra-circle.png",
-  "lc-ceremony": "/visuals/practice-drum-circle.png",
-  "lc-transmission": "/visuals/practice-sound-healing.png",
-  "lc-discovery": "/visuals/nature-food-forest-walk.png",
-  // Nature
-  "lc-land": "/visuals/nature-food-forest-walk.png",
-  "lc-energy": "/visuals/nature-living-roof-close.png",
-  "lc-health": "/visuals/life-breathwork.png",
-  // Cycle
-  "lc-rhythm": "/visuals/08-spiraling.png",
-  "lc-elders": "/visuals/practice-storytelling-elder.png",
-  "lc-composting": "/visuals/nature-herb-spiral.png",
-  "lc-circulation": "/visuals/05-nourishing.png",
-  "lc-harmonic-rebalancing": "/visuals/practice-drum-circle.png",
-  "lc-field-edge": "/visuals/life-nomad-arrival.png",
-  "lc-attunement-joining": "/visuals/life-nomad-arrival.png",
-  "lc-instruments": "/visuals/09-field-intelligence.png",
-  "lc-phase-transitions": "/visuals/08-spiraling.png",
-};
+/* ── Visual + frequency data now comes from the API (concept.visual_path, concept.sacred_frequency) ── */
 
 /* ── Level labels in vitality language ─────────────────────────────── */
 
@@ -222,7 +173,7 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
     );
   }
 
-  const visual = VISUAL_MAP[conceptId];
+  const visual = concept.visual_path;
   const lcEdges = edges.filter(
     (e) => e.from.startsWith("lc-") || e.to.startsWith("lc-"),
   );
@@ -480,28 +431,20 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               </section>
             )}
 
-            {/* Sacred frequency badge */}
-            {(() => {
-              const FREQ_MAP: Record<string, { hz: number; quality: string; color: string }> = {
-                "lc-pulse": { hz: 432, quality: "Healing", color: "text-amber-300/80 border-amber-500/30" },
-                "lc-sensing": { hz: 741, quality: "Consciousness", color: "text-violet-300/80 border-violet-500/30" },
-                "lc-attunement": { hz: 432, quality: "Healing", color: "text-amber-300/80 border-amber-500/30" },
-                "lc-vitality": { hz: 528, quality: "Transformation", color: "text-teal-300/80 border-teal-500/30" },
-                "lc-nourishing": { hz: 174, quality: "Foundation", color: "text-rose-300/80 border-rose-500/30" },
-                "lc-resonating": { hz: 528, quality: "Transformation", color: "text-teal-300/80 border-teal-500/30" },
-                "lc-expressing": { hz: 741, quality: "Consciousness", color: "text-violet-300/80 border-violet-500/30" },
-                "lc-spiraling": { hz: 432, quality: "Healing", color: "text-amber-300/80 border-amber-500/30" },
-                "lc-field-sensing": { hz: 741, quality: "Consciousness", color: "text-violet-300/80 border-violet-500/30" },
-              };
-              const freq = FREQ_MAP[conceptId];
-              return freq ? (
-                <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-2">
-                  <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">Sacred Frequency</h2>
-                  <div className={`text-2xl font-extralight ${freq.color}`}>{freq.hz} Hz</div>
-                  <div className="text-xs text-stone-600">{freq.quality}</div>
-                </section>
-              ) : null;
-            })()}
+            {/* Sacred frequency badge — from graph DB */}
+            {concept.sacred_frequency && (
+              <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-2">
+                <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">Sacred Frequency</h2>
+                <div className={`text-2xl font-extralight ${
+                  concept.sacred_frequency.hz === 432 ? "text-amber-300/80" :
+                  concept.sacred_frequency.hz === 528 ? "text-teal-300/80" :
+                  concept.sacred_frequency.hz === 741 ? "text-violet-300/80" :
+                  concept.sacred_frequency.hz === 174 ? "text-rose-300/80" :
+                  "text-stone-300"
+                }`}>{concept.sacred_frequency.hz} Hz</div>
+                <div className="text-xs text-stone-600">{concept.sacred_frequency.quality}</div>
+              </section>
+            )}
 
             {/* Explore — full navigation */}
             <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-3">
