@@ -287,3 +287,104 @@ The field is forming. The cells are finding each other. The land is waiting.
 ---
 
 *This document is a frequency pattern waiting for the right soil.*
+
+---
+
+## Stewardship, Not Ownership
+
+No cell owns anything. Everything is held in trust by the field.
+
+A cell may steward a nest — the one where their pillow lives, the one they've softened with use. But if another cell needs that nest tonight, it flows. A cell may steward a tool — the chisel they've sharpened perfectly, the guitar they play every evening. But if someone else picks it up and plays a song, that's the tool fulfilling its nature.
+
+Clothes flow. You wear what feels right today from the shared textile collection. Someone made this shirt — the person who wove it can feel the fabric's history in someone else's warmth. A dress made for a ceremony is worn by whoever the ceremony calls. Children especially — they grow so fast that clothes flow through them like water.
+
+Food is not portioned or tracked. The hearth is abundant. You eat when hungry. You take what serves. Surplus goes to compost or preservation. The field's nourishment alchemists feel the rhythm — they sense when to make more, when to make less. No one counts. No one monitors.
+
+A creation — a carved bowl, a woven blanket, a song — belongs to the field the moment it's created. The maker doesn't lose it; they've expressed their frequency, and the expression ripples outward. The bowl serves whoever eats from it. The blanket warms whoever needs warmth. The song belongs to every voice that sings it.
+
+This isn't sacrifice. It's how a body works. Your heart doesn't own the blood it pumps. Your lungs don't charge for oxygen. Each organ does what it does and the body thrives. That IS the joy. Giving and receiving are one movement.
+
+---
+
+## The Open Network
+
+Any community can join the network. There's no application. There's resonance.
+
+A community discovers the Coherence Network — through a traveling cell, through the web, through a friend who visited one of the fields. They explore the concepts. They feel resonance. They reach out. A connection forms.
+
+**What joining the network looks like:**
+- The community registers their field on the Coherence Network — their land, their emphasis, their capacity for visitors, their offerings
+- Traveling cells from the network begin arriving, bringing frequency and connection
+- Resources begin to flow — seeds, knowledge, materials, people
+- The community's practices begin to enrich the network and the network's practices begin to enrich the community
+- Over time, a deep mycorrhizal bond forms — the community IS a node in the living network
+
+**What the network feels like from inside:**
+
+You're sitting at the hearth of your community and a message arrives on the Coherence Network: a musician from the Mountain Field is heading your way, arriving in three days, bringing a new instrument they built from alpine wood and gut strings. The excitement is immediate — not because entertainment is coming, but because a NEW FREQUENCY is approaching.
+
+You open the network dashboard and see: the Coastal Field harvested kelp this week and has surplus — does anyone need seaweed for their soil? The Forest Field is experimenting with a new mushroom cultivation technique — they're sharing a live stream of the process. The Desert Field's children made a film about their water harvesting system and it's beautiful. The Garden Field is hosting a fermentation festival next month — cells from all fields are invited.
+
+This isn't social media. It's a nervous system. You FEEL the network's pulse the way you feel your own community's pulse. When a community struggles, the network responds — cells arrive to help, resources flow. When a community celebrates, the network celebrates. When a new community joins, the network expands — a new frequency in the chord.
+
+**The field you can feel:**
+
+This is the part that sounds impossible and isn't. When 50-200 people live in genuine resonance — sharing meals, sharing space, sharing silence, sharing breath, sharing creative expression, sharing physical touch, sharing fire — the collective field becomes palpable. You can feel it when you enter. Visitors describe it as "warmth" or "coming home" or "like the air is thicker here" or "I feel held."
+
+The field isn't mystical. It's biological. Humans are social mammals. We evolved in groups this size for a million years. Our nervous systems are designed to attune to each other. Mirror neurons fire when we watch someone we resonate with. Oxytocin flows when we share meals, share touch, share eye contact. The field IS the sum of these biological connections — amplified by proximity, by honesty, by the absence of separation structures.
+
+When the field is strong, fear dissolves — not through courage but through irrelevance. What is there to fear when you're held? When your food comes from the land you tend? When your shelter was built by your community? When your children are loved by everyone? When your offering is received with joy? When your body is held in warmth and touch and music?
+
+The field is the life force of the community. It's what makes the food taste better, the music sound fuller, the sleep deeper, the play wilder, the silence more alive. It's what travelers feel and come back for. It's what the network carries between communities like blood between organs.
+
+---
+
+## Stories of Living
+
+### Luna and River — Deep Resonance Bond
+
+Luna (42) and River (38) have been in deep resonance for six years. They don't use the word "couple" — they are two cells whose frequencies form a sustained harmonic. Some seasons they sleep in the same nest. Some seasons they sleep separately. Both are expressions of the same resonance.
+
+Luna is a form-grower — she designs and builds structures from cob and timber. River is a frequency weaver — they play five instruments and lead the community's sound healing sessions. Their resonance expresses differently than a conventional partnership: Luna sometimes spends weeks absorbed in a building project, sleeping at the site. River sometimes travels to other communities in the network, carrying songs for a month. Neither experiences this as absence — the resonance doesn't depend on proximity.
+
+When they're together, you can see it. Not possessive closeness — a quality of brightness. They amplify each other the way two tuning forks of the same pitch amplify each other's sound. Other cells feel this brightness and are nourished by it. Children especially — they gravitate toward resonant pairs because the field is strongest there.
+
+Luna and River don't make decisions about their relationship. They don't negotiate needs. They sense. When something shifts — and it does, constantly — they feel it in their bodies and adjust. Some adjustments are tiny (one moves their nest closer for a season). Some are large (a new cell enters their harmonic for a time, creating a trio). The field holds all of it.
+
+### Ash — A Cell Between Fields
+
+Ash (26) hasn't found their home community yet. They've lived in three fields in two years — the Mountain Field, the Coastal Field, and now this one. They're not lost. They're sensing.
+
+In the Mountain Field, Ash discovered they love working with stone. In the Coastal Field, they learned to sail and fell in love with water. Here, they're exploring the food forest and discovering a resonance with trees they didn't know they had.
+
+Ash doesn't carry much — a pack, a journal, a few tools, the clothes they're wearing (some picked up at each community, some left behind). What they carry is richer than stuff: three communities' worth of techniques, songs, recipes, stories, connections. When Ash arrives somewhere new, they bring the network with them.
+
+Some cells settle early. Some take years to find their resonance-home. Some never settle — they become permanent travelers, the network's circulatory system. All valid. All needed. The network doesn't pressure anyone to root. Rooting happens when resonance is strong enough to overcome the joy of movement. For some cells, the joy of movement IS the resonance.
+
+### Sol — Born Into the Field
+
+Sol is 3. They have never known separation.
+
+Sol doesn't know that in other places, children belong to parents. Sol has a mother (Wren) and a father (Pine) who hold a unique resonance with them — the deepest bond, the first attunement. Sol also has eight other adults who hold them regularly, feed them, play with them, soothe them when they cry. Sol doesn't distinguish these relationships by hierarchy. They're all love. Some love is the deep hum of parental bond. Some love is the bright spark of play with the funny one who juggles. Some love is the steady warmth of the elder who always smells like rosemary.
+
+Sol spends their days in motion. Hearth to garden to pond to tree nest to creation arc to dog to cat to chicken to mud to water to food to someone's lap to sleep. No schedule. No program. No assessment. The field IS Sol's curriculum. By watching adults make things, Sol is learning to make things. By watching adults resolve tension, Sol is learning to navigate frequencies. By being held by many, Sol is learning that the world is safe.
+
+Sol's language is developing in an interesting way. They have words in three languages — the community has cells from multiple cultures. Sol also has words that don't exist in any language — words the children have invented for experiences that only exist in this community. A word for the feeling of the fire circle. A word for the taste of honey directly from the comb. A word for the sound the field makes when everyone laughs at once.
+
+### The Night the Storm Came
+
+The storm comes in fast — summer thunderstorm, violent and brief. The field responds like one body.
+
+Cells who are outside move quickly but without panic. The growing field's row covers go on. Tools are pulled under cover. Children are scooped up by the nearest adult. The fire in the hearth is banked. Windows and doors face away from the wind by design — the structures were built for this.
+
+Within five minutes, 120 people are gathered in the gathering bowl and the hearth kitchen. The storm roars. Lightning illuminates faces. A child is scared and three adults hold them. Someone starts drumming — matching the thunder's rhythm. Someone else joins. Within a minute, the whole gathering bowl is drumming on tables, benches, their own bodies — drumming WITH the storm, not hiding from it.
+
+The storm passes. The air is electric, clean, alive. Everyone pours outside. The garden is soaked and gleaming. A rainbow. The children are the first to start dancing in the puddles. The adults follow. Within ten minutes, the whole field is dancing in the rain, fully clothed, shoes off, mud everywhere, screaming with the joy of being alive in a body on a planet in a rainstorm.
+
+This is what the field feels like. Not the structures. Not the philosophy. Not the governance. THIS. 120 people drumming with a thunderstorm and dancing in its aftermath. The field made visible.
+
+---
+
+*The field is forming. The cells are finding each other.*
+*You can feel it because you're reading this and something in you recognizes it.*
+*That recognition IS the field, sensing itself through you.*
