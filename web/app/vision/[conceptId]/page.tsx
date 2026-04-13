@@ -45,7 +45,7 @@ type RelatedItems = {
 /* ── Visual mapping ────────────────────────────────────────────────── */
 
 const VISUAL_MAP: Record<string, string> = {
-  // Root concepts (11 originals)
+  // Root concepts (11)
   "lc-pulse": "/visuals/01-the-pulse.png",
   "lc-sensing": "/visuals/02-sensing.png",
   "lc-attunement": "/visuals/03-attunement.png",
@@ -57,7 +57,7 @@ const VISUAL_MAP: Record<string, string> = {
   "lc-field-sensing": "/visuals/09-field-intelligence.png",
   "lc-v-living-spaces": "/visuals/10-living-space.png",
   "lc-network": "/visuals/11-the-network.png",
-  // Emerging visions (8 new)
+  // Emerging visions (8)
   "lc-v-ceremony": "/visuals/v-ceremony.png",
   "lc-v-harmonizing": "/visuals/v-harmonizing.png",
   "lc-v-food-practice": "/visuals/v-food-practice.png",
@@ -66,6 +66,33 @@ const VISUAL_MAP: Record<string, string> = {
   "lc-v-play-expansion": "/visuals/v-play-expansion.png",
   "lc-v-inclusion-diversity": "/visuals/v-inclusion.png",
   "lc-v-freedom-expression": "/visuals/v-freedom.png",
+  // Sacred spaces (8)
+  "lc-space": "/visuals/space-hearth-interior.png",
+  "lc-rest": "/visuals/space-nest-ground.png",
+  "lc-stillness": "/visuals/space-stillness-sanctuary.png",
+  "lc-nourishment": "/visuals/space-hearth-interior.png",
+  "lc-offering": "/visuals/space-creation-arc-overview.png",
+  "lc-beauty": "/visuals/space-creation-arc-overview.png",
+  // Practices
+  "lc-play": "/visuals/life-children-play.png",
+  "lc-intimacy": "/visuals/practice-tantra-circle.png",
+  "lc-ceremony": "/visuals/practice-drum-circle.png",
+  "lc-transmission": "/visuals/practice-sound-healing.png",
+  "lc-discovery": "/visuals/nature-food-forest-walk.png",
+  // Nature
+  "lc-land": "/visuals/nature-food-forest-walk.png",
+  "lc-energy": "/visuals/nature-living-roof-close.png",
+  "lc-health": "/visuals/life-breathwork.png",
+  // Cycle
+  "lc-rhythm": "/visuals/08-spiraling.png",
+  "lc-elders": "/visuals/practice-storytelling-elder.png",
+  "lc-composting": "/visuals/nature-herb-spiral.png",
+  "lc-circulation": "/visuals/05-nourishing.png",
+  "lc-harmonic-rebalancing": "/visuals/practice-drum-circle.png",
+  "lc-field-edge": "/visuals/life-nomad-arrival.png",
+  "lc-attunement-joining": "/visuals/life-nomad-arrival.png",
+  "lc-instruments": "/visuals/09-field-intelligence.png",
+  "lc-phase-transitions": "/visuals/08-spiraling.png",
 };
 
 /* ── Level labels in vitality language ─────────────────────────────── */
