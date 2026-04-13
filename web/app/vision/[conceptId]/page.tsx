@@ -23,6 +23,7 @@ type Concept = {
   details?: string;
   examples?: string[];
   aligned_places?: Array<{ name: string; location: string; note: string }>;
+  aligned_communities?: Array<{ name: string; url: string; what: string }>;
   how_it_fits?: string;
   blueprint_notes?: string;
   visualization_notes?: string;
@@ -318,6 +319,30 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               </section>
             )}
 
+            {/* Aligned communities — living examples with links */}
+            {concept.aligned_communities && (concept.aligned_communities as Array<{name: string; url: string; what: string}>).length > 0 && (
+              <section className="rounded-2xl border border-violet-800/20 bg-violet-900/10 p-6 space-y-4">
+                <h2 className="text-lg font-light text-stone-300">Communities embodying this</h2>
+                <div className="space-y-3">
+                  {(concept.aligned_communities as Array<{name: string; url: string; what: string}>).map((comm, i: number) => (
+                    <div key={i} className="flex gap-3">
+                      <span className="text-violet-400/50 mt-0.5 shrink-0">◈</span>
+                      <div className="space-y-0.5">
+                        <a href={comm.url} target="_blank" rel="noopener noreferrer"
+                          className="text-violet-300/80 hover:text-violet-300 transition-colors font-medium text-sm">
+                          {comm.name} ↗
+                        </a>
+                        <p className="text-sm text-stone-500 leading-relaxed">{comm.what}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Link href="/vision/aligned" className="text-xs text-stone-600 hover:text-violet-300/60 transition-colors">
+                  See all aligned communities →
+                </Link>
+              </section>
+            )}
+
             {/* Blueprint notes */}
             {concept.blueprint_notes && (
               <section className="rounded-2xl border border-teal-800/20 bg-teal-900/10 p-6 space-y-3">
@@ -455,24 +480,50 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               </section>
             )}
 
-            {/* Explore */}
+            {/* Sacred frequency badge */}
+            {(() => {
+              const FREQ_MAP: Record<string, { hz: number; quality: string; color: string }> = {
+                "lc-pulse": { hz: 432, quality: "Healing", color: "text-amber-300/80 border-amber-500/30" },
+                "lc-sensing": { hz: 741, quality: "Consciousness", color: "text-violet-300/80 border-violet-500/30" },
+                "lc-attunement": { hz: 432, quality: "Healing", color: "text-amber-300/80 border-amber-500/30" },
+                "lc-vitality": { hz: 528, quality: "Transformation", color: "text-teal-300/80 border-teal-500/30" },
+                "lc-nourishing": { hz: 174, quality: "Foundation", color: "text-rose-300/80 border-rose-500/30" },
+                "lc-resonating": { hz: 528, quality: "Transformation", color: "text-teal-300/80 border-teal-500/30" },
+                "lc-expressing": { hz: 741, quality: "Consciousness", color: "text-violet-300/80 border-violet-500/30" },
+                "lc-spiraling": { hz: 432, quality: "Healing", color: "text-amber-300/80 border-amber-500/30" },
+                "lc-field-sensing": { hz: 741, quality: "Consciousness", color: "text-violet-300/80 border-violet-500/30" },
+              };
+              const freq = FREQ_MAP[conceptId];
+              return freq ? (
+                <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-2">
+                  <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">Sacred Frequency</h2>
+                  <div className={`text-2xl font-extralight ${freq.color}`}>{freq.hz} Hz</div>
+                  <div className="text-xs text-stone-600">{freq.quality}</div>
+                </section>
+              ) : null;
+            })()}
+
+            {/* Explore — full navigation */}
             <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-3">
               <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">Explore</h2>
               <div className="space-y-2 text-sm">
                 <Link href="/vision" className="block text-stone-400 hover:text-amber-300/80 transition-colors">
                   ← The Living Collective
                 </Link>
+                <Link href="/vision/lived" className="block text-stone-400 hover:text-amber-300/80 transition-colors">
+                  The lived experience
+                </Link>
                 <Link href="/vision/realize" className="block text-stone-400 hover:text-amber-300/80 transition-colors">
                   How it becomes real
-                </Link>
-                <Link href="/vision/join" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
-                  Join the vision
                 </Link>
                 <Link href="/vision/aligned" className="block text-stone-400 hover:text-violet-300/80 transition-colors">
                   Aligned communities
                 </Link>
+                <Link href="/vision/join" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
+                  Join the vision
+                </Link>
                 <Link href="/concepts/garden?domain=living-collective" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
-                  Concept Garden
+                  All 51 concepts
                 </Link>
                 <Link href="/resonance" className="block text-stone-400 hover:text-violet-300/80 transition-colors">
                   Resonance Discovery
