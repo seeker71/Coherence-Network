@@ -73,6 +73,12 @@ class NodeType(str, Enum):
     # Learning Loop additions
     SKILL = "skill"
     TRAJECTORY = "trajectory"
+    # Living Collective entity types
+    COMMUNITY = "community"
+    SCENE = "scene"
+    STORY = "story"
+    PRACTICE = "practice"
+    NETWORK_ORG = "network-org"
 
 
 # Spec 169: canonical closed vocabulary for the semantic layer
