@@ -13,20 +13,16 @@ updated: 2026-04-14
 
 ## The Feeling
 
-I am walking the path that leads from the village road
-to the community's first buildings. There is no gate.
-No sign that says "Private Property."
-Instead, a hedge of hawthorn and elderberry —
-dense enough to define a boundary,
+I am walking the path from the village road to the community's first buildings.
+There is no gate. No sign that says "Private Property."
+Instead, a hedge of hawthorn and elderberry — dense enough to define a boundary,
 open enough to see through, alive with birds.
 A gap in the hedge, wide as two people side by side, marks the entrance.
-Someone has placed a bench just inside it,
-and a small board with today's schedule and the words:
-"You are welcome here. Find us in the kitchen or the garden."
+Someone has placed a bench just inside it and a small board with today's schedule
+and the words: "You are welcome here. Find us in the kitchen or the garden."
 
 I can feel the shift. The air is different past the hedge —
-not metaphorically, actually different. More birdsong.
-The smell of woodsmoke and bread.
+not metaphorically, actually different. More birdsong. The smell of woodsmoke and bread.
 A woman I don't know sees me from the herb garden, raises a hand, walks over.
 She doesn't ask who I am or why I'm here. She asks if I've eaten.
 Within ten minutes I am sitting at a long table with a bowl of soup
@@ -44,21 +40,20 @@ And it trusts itself enough to stay open.
 
 The flowing edge is a physical zone — six yurts and a shared washhouse
 set between the hedge and the main community spaces.
-Visitors stay here for one to three weeks.
-They eat with the community, work alongside, attend whatever they like.
-No interviews. No applications. The membrane does its own sensing.
-Some visitors arrive buzzing with plans and slowly quiet into the rhythm.
-Some arrive quiet and slowly unfold. Both are the membrane working.
+Visitors stay here for one to three weeks. They eat with the community,
+work alongside, attend whatever they like. No interviews. No applications.
+The membrane does its own sensing. Some visitors arrive buzzing with plans
+and slowly quiet into the rhythm. Some arrive quiet and slowly unfold.
+Both are the membrane working.
 
 A welcome team of two or three people rotates monthly.
-Their job is not gatekeeping.
-Their job is hospitality — making sure every visitor knows
-where the kitchen is, when the circles happen,
-and that they are genuinely free to leave at any time.
+Their job is not gatekeeping — it is hospitality.
+Making sure every visitor knows where the kitchen is,
+when the circles happen, and that they are genuinely free to leave at any time.
 The freedom to leave is what makes the staying real.
 Some seasons the community opens wide, inviting groups, hosting gatherings.
-Other seasons it contracts, needing to digest what has entered,
-to integrate before opening again. The membrane breathes.
+Other seasons it contracts, needing to digest what has entered.
+The membrane breathes.
 
 The edge zone is also where the community meets its neighbors.
 The local farmer brings eggs on Thursday mornings and stays for coffee.
@@ -92,15 +87,11 @@ not despite its permeability but because of it.
 ## Where You Can See It
 
 In Marinaleda, Spain, a village rebuilt itself as a cooperative
-with an open-door policy. Anyone can come, contribute,
-become part of the field. The membrane is cultural, not physical —
+with an open-door policy — the membrane is cultural, not physical,
 and the village thrives because of what flows through it.
-
-In Riace, a dying village in Calabria,
-the mayor opened the membrane to refugees,
-and the village came back to life — empty houses filled,
+In Riace, a dying village in Calabria, the mayor opened the membrane
+to refugees and the village came back to life — empty houses filled,
 closed schools reopened, the field revived by new frequencies.
-
 Among the Arakmbut communities in Peru's Madre de Dios,
 protocols for welcoming outsiders have been refined over centuries —
 the membrane is permeable, discerning, and deeply alive.
@@ -109,14 +100,11 @@ the membrane is permeable, discerning, and deeply alive.
 
 ## What We're Building
 
-A physical flowing edge — guest accommodations
-that are beautiful, not afterthoughts.
+A physical flowing edge — guest accommodations that are beautiful, not afterthoughts.
 A welcome practice that trusts the field's intelligence over any checklist.
-A rhythm of opening and contracting that follows
-the community's actual capacity,
+A rhythm of opening and contracting that follows the community's actual capacity,
 not a policy written in a calmer season.
-An edge zone that is the community's most vibrant space,
-not its most guarded.
+An edge zone that is the community's most vibrant space, not its most guarded.
 
 ## Resources
 - [Permaculture Research Institute](https://permaculturenews.org/) — edge effect in ecological design (type: guide)
