@@ -89,14 +89,11 @@ At ZEGG in Germany, walk into the Forum space on any evening.
 Watch someone stand in the center and say the unsayable —
 the longing they carry, the fear that wakes them at three in the morning.
 Watch thirty people hold it without flinching.
-
-At Tamera in Portugal, sit in on a Love School session
-where the question is not "how do we make relationships work"
-but "how do we liberate love from fear."
-
+At Tamera in Portugal, sit in on a Love School session where the question
+is not "how do we make relationships work" but "how do we liberate love from fear."
 At any Authentic Relating Games night in any city,
-feel the room shift when strangers decide to be real
-with each other for ninety minutes.
+feel the room shift when strangers decide to be real with each other
+for ninety minutes.
 
 ![A community Forum circle at dusk, one person standing vulnerably in the center, others sitting in a wide circle listening with full attention, lantern light, open air amphitheater](visuals:photorealistic community forum circle at dusk in outdoor amphitheater, one person standing vulnerably in center speaking with emotional openness, thirty people sitting in wide circle on stone steps listening with full compassionate attention, warm lantern light, stars appearing overhead)
 
