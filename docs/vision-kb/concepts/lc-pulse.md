@@ -1,8 +1,8 @@
 ---
 id: lc-pulse
 hz: 432
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # The Pulse
@@ -18,6 +18,14 @@ The cell and the field thrive as one movement. This is not a principle to follow
 ## Blueprint
 Start every community gathering by sensing the pulse: a 2-minute silence where everyone feels into the collective field. Use a singing bowl or heartbeat drum to anchor the practice. Display a visible 'pulse board' showing the community's vitality metrics — not productivity, but aliveness.
 
+## Resources
+- [Foundation for Intentional Community](https://www.ic.org/) — 1000+ communities modeling collective living (type: community)
+- [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based governance for living systems (type: guide)
+
+## Visuals
+1. **The pulse at dawn** — `photorealistic aerial view of circular intentional community at dawn, buildings arranged in organic spiral pattern, central fire pit with smoke rising, gardens radiating outward, mist in valleys, golden first light`
+2. **Heartbeat circle** — `photorealistic group of people standing in tight circle with hands on each others hearts, eyes closed, dawn light, outdoor setting, deep presence, community buildings in background`
+
 ## Living Examples
 - **Murmuration of starlings** — each bird attends to 7 neighbors, the whole flock moves as one intelligence without a leader
 - **Mycelial network beneath a forest** — nutrients flow by gradient without negotiation, mother trees feed seedlings in shade
@@ -32,8 +40,9 @@ Start every community gathering by sensing the pulse: a 2-minute silence where e
 Everything derives from this. The three systems, five flows, and all expressions are this pulse at different scales. If you understand the pulse, you can derive everything below.
 
 ## Open Questions
-- What aspects of The Pulse need deeper research?
-- What real-world examples are we missing?
+- What is the minimum group size where a collective pulse becomes palpable?
+- How do you distinguish the pulse from groupthink?
+- What daily practices keep the pulse alive?
 
 ## Cross-References
 → lc-sensing, lc-attunement, lc-vitality

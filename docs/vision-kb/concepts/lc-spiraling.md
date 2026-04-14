@@ -1,8 +1,8 @@
 ---
 id: lc-spiraling
 hz: 432
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Spiraling
@@ -17,6 +17,13 @@ Time as spiral, not line. Each cycle returns to familiar territory at a higher f
 
 ## Blueprint
 Mark every spiral: solstice, equinox, new moon, full moon. Keep a community journal that returns to the same prompts each season — 'What's composting? What's emerging? What's at full bloom?' Compare year to year. Celebrate anniversaries of the community's founding with a story of how the spiral has deepened.
+
+## Resources
+- [Permaculture Research Institute](https://permaculturenews.org/) — spiral patterns in permaculture design (type: guide)
+- [The Work That Reconnects](https://workthatreconnects.org/) — spiral methodology for group transformation (type: guide)
+
+## Visuals
+1. **Spiral garden** — `photorealistic herb spiral garden in community setting, stones spiraling upward with diverse plants at each level, person tending herbs, golden hour light, community buildings behind`
 
 ## Living Examples
 - **Seasons** — spring returns but the tree has another ring, another year of depth
@@ -33,8 +40,9 @@ Mark every spiral: solstice, equinox, new moon, full moon. Keep a community jour
 Spiraling governs all Through Cycle expressions: Phase Transitions, Elders, Rhythm. It replaces linear time and the concepts of ending/loss with transformation and deepening.
 
 ## Open Questions
-- What aspects of Spiraling need deeper research?
-- What real-world examples are we missing?
+- How to recognize when the community is in a contracting vs expanding spiral phase?
+- What practices support the downward spiral (composting, release) as much as the upward?
+- How to spiral without spinning?
 
 ## Cross-References
 → lc-resonating, lc-rhythm, lc-phase-transitions, lc-composting

@@ -1,8 +1,8 @@
 ---
 id: lc-w-frequency
 hz: 741
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Frequency
@@ -18,6 +18,12 @@ The rate of vibration. Every cell, concept, space, relationship vibrates at its 
 ## Blueprint
 Each community space is tuned to a particular frequency: the sanctuary is slow and deep, the workshop is focused and energetic, the playground is fast and light. Notice when your personal frequency doesn't match the space — move to where you resonate. Track the community's dominant frequency weekly.
 
+## Resources
+- [Insight Timer](https://insighttimer.com/) -- sound frequency meditation practices (type: guide)
+
+## Visuals
+1. **Frequency** -- `photorealistic singing bowl being struck with mallet, visible sound waves radiating outward, person's hands, meditation cushion, morning light through window, vibration`
+
 ## Living Examples
 - **Guitar strings vibrating sympathetically** — pluck one, the harmonic sounds on another
 - **Radio tuning** — you receive the station your dial matches
@@ -31,8 +37,9 @@ Each community space is tuned to a particular frequency: the sanctuary is slow a
 Frequency provides the vocabulary for qualitative differences without hierarchy — every concept, space, and person vibrates at a unique rate, and resonance or dissonance replaces good or bad as the measure of fit.
 
 ## Open Questions
-- What aspects of Frequency need deeper research?
-- What real-world examples are we missing?
+- How do individual frequencies combine into a collective tone?
+- Can frequency be intentionally raised or is it always emergent?
+- What practices help people find their natural frequency?
 
 ## Cross-References
 → lc-pulse, lc-w-coherence, lc-v-harmonizing, lc-sensing

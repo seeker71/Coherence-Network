@@ -1,8 +1,8 @@
 ---
 id: lc-field-sensing
 hz: 741
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Field Intelligence
@@ -17,6 +17,13 @@ Collective intelligence — distributed, parallel, each node both autonomous and
 
 ## Blueprint
 Establish a 'field council' of 5-7 rotating members who meet weekly to sense what the collective intelligence is saying. No agendas — they sit together, share what they're noticing, and let decisions emerge. Distribute decision-making to the edges: anyone can initiate, the field responds.
+
+## Resources
+- [Sociocracy For All](https://www.sociocracyforall.org/) — collective sensing and consent rounds (type: guide)
+- [The Work That Reconnects](https://workthatreconnects.org/) — practices for sensing the larger field (type: guide)
+
+## Visuals
+1. **Council circle** — `photorealistic group of 20 people in outdoor council circle, talking stick in center, deep listening posture, some with eyes closed, dappled forest light, natural amphitheater`
 
 ## Living Examples
 - **Octopus** — intelligence distributed in every arm, each arm can taste, sense, and decide
@@ -33,8 +40,9 @@ Establish a 'field council' of 5-7 rotating members who meet weekly to sense wha
 Field Intelligence governs all Through Field expressions: Field Edge, Joining, Circulation, Harmonic Rebalancing. It's where Sensing and Vitality meet — the distributed awareness that replaces governance.
 
 ## Open Questions
-- What aspects of Field Intelligence need deeper research?
-- What real-world examples are we missing?
+- How to train collective field sensing vs individual intuition?
+- What's the role of silence in field sensing?
+- How does field sensing scale from 20 to 200 people?
 
 ## Cross-References
 → lc-vitality, lc-sensing

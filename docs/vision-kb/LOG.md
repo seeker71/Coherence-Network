@@ -2,6 +2,17 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-14] enrichment | ALL 51 concepts expanded (seed → expanding)
+
+- Enriched remaining 28 concepts (L0-1 systems/flows + L2 activities/visions + L3 vocabulary)
+- All concepts now have: Resources (real URLs), Visuals (with prompts for static generation)
+- Specific open questions replacing generic placeholders across all 51
+- Cross-references expanded: all concepts have 3-4 meaningful connections
+- 166 graph edges created via sync_crossrefs_to_db.py
+- Pre-generated 55 static images from Pollinations (no runtime dependency)
+- Wired aligned page with DB fallback for communities/networks/practices
+- **Source**: web research, community databases, appropriate technology resources
+
 ## [2026-04-14] enrichment | Tier 1 concepts expanded (seed → expanding)
 
 - Enriched 8 physical/spatial concepts: lc-space, lc-nourishment, lc-land, lc-energy, lc-health, lc-instruments, lc-v-shelter-organism, lc-v-living-spaces

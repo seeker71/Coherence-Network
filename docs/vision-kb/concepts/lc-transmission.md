@@ -1,8 +1,8 @@
 ---
 id: lc-transmission
 hz: 852
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Transmission
@@ -17,6 +17,12 @@ Every channel: words, presence, touch, silence, rhythm, movement. At higher freq
 
 ## Blueprint
 Practice 'clean signal' in all community communication: say what you mean, mean what you say, notice when you're performing. Weekly 'Forum' process (ZEGG-style) where individuals express authentically and the community witnesses. No gossip protocol — if you have something to say about someone, say it to them first.
+
+## Resources
+- [Plum Village](https://plumvillage.org/) -- lineage transmission through daily practice (type: community)
+
+## Visuals
+1. **Elder teaching** -- `photorealistic elder woman teaching young apprentice to identify medicinal herbs in garden, hands pointing at plant, knowledge passing between generations, warm afternoon light`
 
 ## Living Examples
 - **Dog communication** — body posture, ear position, tail movement, scent carry 90% of the message
@@ -33,8 +39,9 @@ Practice 'clean signal' in all community communication: say what you mean, mean 
 Transmission is the Resonating flow as information. It's the field's nervous system in action — carrying sensation from every cell to every other cell. Without honest transmission, the Sensing system degrades.
 
 ## Open Questions
-- What aspects of Transmission need deeper research?
-- What real-world examples are we missing?
+- What knowledge is best transmitted through doing vs telling?
+- How to preserve oral traditions in a literate community?
+- What role does the Coherence Network play in transmission?
 
 ## Cross-References
 → lc-expressing, lc-elders, lc-instruments, lc-discovery

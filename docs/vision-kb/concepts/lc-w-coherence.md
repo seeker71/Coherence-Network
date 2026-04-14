@@ -1,8 +1,8 @@
 ---
 id: lc-w-coherence
 hz: 432
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Coherence
@@ -18,6 +18,12 @@ When frequencies align, the system becomes coherent — like laser light. Power 
 ## Blueprint
 Measure coherence, not consensus. After group decisions, ask: 'Does this feel coherent?' rather than 'Does everyone agree?' Coherence practice: weekly 10-minute group hum — find the shared tone, feel when it locks in. Coherence is not uniformity — it's different frequencies aligned.
 
+## Resources
+- [HeartMath Institute](https://www.heartmath.org/) -- scientific research on coherence and heart-brain connection (type: guide)
+
+## Visuals
+1. **Coherence** -- `photorealistic close-up of water droplet creating perfect concentric ripples in still pond at dawn, reflection of community buildings in water surface, perfect symmetry, golden light`
+
 ## Living Examples
 - **Laser** — ordinary light made coherent becomes powerful enough to cut steel
 - **Murmuration** — thousands of birds in perfect coherent motion
@@ -31,8 +37,9 @@ Measure coherence, not consensus. After group decisions, ask: 'Does this feel co
 Coherence names the state the whole vision aims toward — when frequencies align, power multiplies exponentially. Without this word, alignment sounds like conformity rather than the natural state of a healthy system.
 
 ## Open Questions
-- What aspects of Coherence need deeper research?
-- What real-world examples are we missing?
+- How to measure coherence in a community?
+- What's the relationship between individual coherence and collective coherence?
+- Can coherence be felt across distance?
 
 ## Cross-References
 → lc-pulse, lc-attunement, lc-w-frequency, lc-resonating
