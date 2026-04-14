@@ -136,22 +136,35 @@ def list_concepts_by_domain(domain: str, limit: int = 50) -> dict[str, Any]:
 
 
 def get_garden_view(limit: int = 500) -> dict[str, Any]:
-    """Group concepts by domain for the concept garden visualization."""
+    """Group concepts by domain for the concept garden visualization.
+
+    Returns the shape the web client expects:
+      cards: list of concept objects
+      domain_groups: {domain: [concept_id, ...]}
+      total, shown, hint
+    """
     all_concepts = _gs().list_nodes(type="concept", limit=limit).get("items", [])
-    domain_groups: dict[str, list[dict[str, Any]]] = {}
+    cards = []
+    domain_groups: dict[str, list[str]] = {}
     for c in all_concepts:
+        cards.append({
+            "id": c["id"],
+            "name": c.get("name", c["id"]),
+            "description": (c.get("description") or "")[:200],
+            "level": c.get("level", 0),
+            "domains": c.get("domains", ["core"]),
+            "keywords": c.get("keywords", [])[:8],
+            "userDefined": c.get("userDefined", False),
+            "contributor": c.get("contributor"),
+        })
         for domain in c.get("domains", ["core"]):
-            domain_groups.setdefault(domain, []).append({
-                "id": c["id"],
-                "name": c.get("name", c["id"]),
-                "description": c.get("description", "")[:100],
-                "level": c.get("level", 0),
-                "keywords": c.get("keywords", [])[:5],
-            })
+            domain_groups.setdefault(domain, []).append(c["id"])
     return {
+        "cards": cards,
         "total": len(all_concepts),
-        "domain_count": len(domain_groups),
+        "shown": len(cards),
         "domain_groups": domain_groups,
+        "hint": f"{len(all_concepts)} concepts across {len(domain_groups)} domains",
     }
 
 
