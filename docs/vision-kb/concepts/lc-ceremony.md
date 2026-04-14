@@ -74,7 +74,7 @@ The only liturgy: pay attention to what wants honoring, and honor it. The only f
 
 ## Connected Frequencies
 
-→ [lc-stillness](lc-stillness.md) — ceremony's deepest instrument is silence
-→ [lc-elders](lc-elders.md) — the ones who remember which ceremonies the community needs
-→ [lc-offering](lc-offering.md) — ceremony as the moment when offering becomes visible
-→ [lc-play](lc-play.md) — play becomes ceremony when the joy is shared long enough
+→ lc-stillness — ceremony's deepest instrument is silence
+→ lc-elders — the ones who remember which ceremonies the community needs
+→ lc-offering — ceremony as the moment when offering becomes visible
+→ lc-play — play becomes ceremony when the joy is shared long enough

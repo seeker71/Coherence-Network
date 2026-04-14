@@ -78,4 +78,4 @@ We track collective vitality, not individual symptoms. Not "how many people are 
 - Where is the line between the field brightening around a dimming cell and the field pressuring someone to perform wellness?
 
 ## Connected Frequencies
-→ [lc-nourishing](lc-nourishing.md) · [lc-nourishment](lc-nourishment.md) · [lc-space](lc-space.md) · [lc-land](lc-land.md)
+→ lc-nourishing, lc-nourishment, lc-space, lc-land
