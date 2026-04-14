@@ -101,7 +101,7 @@ not through orientation. The body arrives first. The understanding follows.
 
 ## What We're Building
 
-An attunement period of two to four weeks where the only requirement is presence.
+An attunement period of two to four weeks where the only invitation is presence.
 A mutual sensing conversation where both the newcomer and the field have equal voice.
 A culture where leaving after attunement carries no failure — only the gift of brief contact.
 A welcoming ceremony that marks the moment a new frequency joins the chord.
