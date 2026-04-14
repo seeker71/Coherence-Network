@@ -23,6 +23,7 @@ No assigned roles. A 'resonance board' where the community posts what it needs; 
 - 📖 [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based governance where contribution flows from resonance (type: guide)
 - 🌐 [Foundation for Intentional Community](https://www.ic.org/) — 1000+ communities modeling offering-based economies (type: community)
 - 📖 [Gift Economy resources](https://www.gifteconomy.org.au/) — guides on building gift economy practices (type: guide)
+- 📖 [Living in the Gift — Eisenstein](https://charleseisenstein.org/essays/living-in-the-gift/) — you cannot install gift economy as a system, you cultivate it as a field through unrequited giving (type: book)
 
 ## Visuals
 1. **Resonance board** — `photorealistic community bulletin board on wooden wall showing needs and offerings pinned with colorful cards, people reading and adding cards, earthen wall, warm light, plants nearby`

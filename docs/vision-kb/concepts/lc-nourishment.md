@@ -33,6 +33,7 @@ Build a 7-layer food forest within the first year. Start a fermentation corner (
 - 📖 [ATTRA Sustainable Agriculture](https://attra.ncat.org/) — 300+ free publications on organic farming and food systems (type: guide)
 - 🌐 [Permaculture Research Institute](https://permaculturenews.org/) — largest collection of free permaculture articles and case studies (type: community)
 - 🌐 [Permaculture Global Network](https://permacultureglobal.org/) — worldwide map of permaculture projects (type: community)
+- 📖 [Food Sovereignty Movement](https://viacampesina.org/) — food grown together, eaten together is a different social technology than individual consumption, seed saving as reclamation (type: guide)
 
 ## Materials & Methods
 - **7-layer food forest** — canopy (nut), understory (fruit), shrub (berry), herbaceous, ground cover, root, vine. $2,000-8,000 per acre to establish. Produces within 3-7 years.

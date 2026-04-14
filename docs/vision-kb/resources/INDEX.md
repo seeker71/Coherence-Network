@@ -1,6 +1,6 @@
 # Resources — Open Source Plans, Communities, Books
 
-> **START HERE**: Read [reality-check.md](reality-check.md) first — honest assessment of what works, what fails, and what Living Collective needs next.
+> **START HERE**: Read [composted-wisdom.md](composted-wisdom.md) — 10 seeds that survived the fire. Then [reality-check.md](reality-check.md) for what works and what fails.
 
 > Real things you can download, visit, read, and build from today.
 

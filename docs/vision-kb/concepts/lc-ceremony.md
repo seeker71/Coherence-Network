@@ -31,6 +31,7 @@ Fire circle every new moon. Seasonal ceremonies at solstice and equinox. Arrival
 - [Damanhur](https://www.damanhur.org/) — Italian ecovillage with underground Temples of Humankind, ceremony-centered community (type: community)
 - [Sociocracy For All](https://www.sociocracyforall.org/) — meeting-as-ceremony, consent rounds as ritual (type: guide)
 - [Rainbow Gatherings](https://www.welcomehome.org/) — temporary communities built around ceremony and sharing (type: community)
+- 🌐 [Agnihotra — Daily Fire Ceremony](https://newearth.media/agnihotra-on-bali/) — Vedic fire practice at sunrise/sunset, humanity's oldest bonding technology, requires no ideology (type: community)
 
 ## Visuals
 1. **Fire circle at new moon** — `photorealistic group of people gathered around fire pit at night under stars, faces lit by firelight, drums nearby, singing, wilderness setting, new moon sky full of stars`
