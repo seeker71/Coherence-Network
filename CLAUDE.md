@@ -10,6 +10,7 @@
 | Specs (59) | `specs/INDEX.md` → `specs/{slug}.md` | `cc spec {slug}` |
 | Pipeline tasks | — | `cc tasks --status pending` |
 | Tracking | `docs/EXTERNAL_ENABLEMENT_TRACKING.md` | — |
+| **Living Collective KB** | `docs/vision-kb/INDEX.md` → `concepts/{id}.md` | — |
 
 **Files vs CLI**: The 12 idea .md files have problem statements, capabilities, spec links, and absorbed ideas. The DB has ~300 raw ideas with auto-generated descriptions. For understanding "what are we building," read the .md files. For task pipeline operations, use CLI.
 
@@ -41,6 +42,12 @@ Spec → Test → Implement → CI → Review → Merge
 - Escalate via `needs-decision` for security or architecture changes
 - **Record every new idea via `POST /api/ideas` before session ends**
 - For spec authoring: run `python3 scripts/validate_spec_quality.py`
+
+## Living Collective Knowledge Base
+
+**Read `docs/vision-kb/INDEX.md` first** (~300 tokens). It's an AI-maintained markdown wiki (Karpathy LLM Wiki pattern) for the community vision. Drill into `docs/vision-kb/concepts/{id}.md` for concept details. Cross-cutting files: `spaces/`, `materials/`, `locations/`, `scales/`, `realization/`, `resources/`. After any enrichment, update the concept file + INDEX.md + LOG.md. See `docs/vision-kb/SCHEMA.md` for format rules.
+
+The ontology JSON (`config/ontology/living-collective.json`) is the deployed source of truth. The KB is the working draft where content expands before deployment. To sync KB → JSON: run `scripts/kb_to_ontology.py`.
 
 ## Navigation
 
