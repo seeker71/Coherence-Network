@@ -1,85 +1,80 @@
 ---
 id: lc-v-living-spaces
 hz: 432
-status: expanding
+status: deepening
 updated: 2026-04-14
 ---
 
 # Living Spaces
 
-> Shelter from frequency and flow. Not rooms — resonance zones. Structures that breathe, grow. Beehive, coral reef, tree canopy.
+> Not rooms — resonance zones. Structures that breathe, reconfigure, grow, and eventually return to the earth they came from.
 
-## Summary
-What does shelter look like when designed from frequency and flow? Not rooms but resonance zones.
+## The Feeling
 
-## Details
-What does shelter look like when designed from frequency and flow? Not rooms but resonance zones. Not walls but field gradients. Structures that breathe, reconfigure, grow, and eventually compost. Materials alive — earth, timber, stone, water, growing membrane. The building IS the organism's skin. Like a beehive: hexagonal efficiency but alive — temperature-regulated by the collective body, continuously rebuilt by the swarm's intelligence.
+You step through the doorway and there is no threshold — the porch was already half-outside, the courtyard was already half-inside, and this room continues the gradient. The walls are earthen, hand-plastered, and they curve. No corners. The floor is warm stone that spent the day absorbing sunlight and is now giving it back through the soles of your feet. The ceiling is high enough to breathe in, held up by roundwood timbers still wearing their bark, and through the skylight you can see the living roof where grasses are moving in the wind.
 
-## Blueprint
-Key principles: inside-outside gradient (not binary), thermal mass for passive temperature, water visible as it flows, living roofs, no straight lines where possible, spaces named by quality (sanctuary, hearth, nest, workshop, garden, clearing) not by function (bedroom, kitchen, office), materials that age beautifully and eventually compost.
+You realize you have been holding your shoulders near your ears for years. In this room, they drop. Something about the curves, the warmth radiating from below, the smell of clay and wood and the green things growing on the roof — your nervous system reads it all and decides: safe. Not the safety of locks and alarms. The safety of being held by something alive.
+
+Outside, the path curves between buildings that look less like architecture and more like something that grew here. Because in a sense they did. The cob walls rose from soil dug on site. The timber came from trees thinned from the forest a mile uphill. The roofs are planted with the same wildflowers that grow in the meadow. In twenty years these buildings will look ancient. In two hundred years, if no one maintains them, they will become a hill. The materials remember how to be earth.
+
+![Community at dusk from the path](visuals:photorealistic winding stone path between organic curved cob buildings at dusk, living green roofs with wildflowers and grasses, warm amber light glowing from round windows, covered porches connecting structures, a person walking ahead carrying a lantern, mountains in purple distance, the buildings appearing to grow from the landscape)
+
+## How It Lives Here
+
+Spaces here are named by the quality they hold, not the function they serve. The Hearth is where meals happen and stories are told and arguments dissolve over shared bread — a large open room with a wood fire, long tables, and herbs hanging from the ceiling. The Sanctuary is always quiet, always open, its curved walls softening sound into a hush that makes your breathing slow. The Nest is where you sleep — a small private space, two hundred to four hundred square feet, just enough for a bed and a shelf and a window that frames the sky.
+
+The inside-outside gradient is deliberate. Between the Hearth and the garden there is a covered porch with a hammock and climbing jasmine. Between your Nest and the path there is a screened alcove where you can sit in rain without getting wet. There is no moment where you are suddenly inside or suddenly outside — the transition is continuous, like wading into water instead of jumping off a dock.
+
+Spaces reconfigure. Sliding panels and woven curtains let a room that held morning movement practice become the afternoon workshop. The clearing — an outdoor circle of packed earth and low stone seating — holds ceremonies, meetings, dances, and on some evenings, nothing at all. The buildings are not finished. They are never finished. A new alcove appears when someone feels the need for one and spends a week with clay and water and straw.
+
+![The Hearth at evening meal](visuals:photorealistic large open community dining and gathering space with long wooden tables, people sharing food and conversation, wood fire burning in central stone hearth, dried herbs hanging from exposed roundwood timber ceiling, earthen plastered walls with warm texture, high windows showing dark blue evening sky, candles and warm light, feeling of deep togetherness)
+
+## What Nature Teaches
+
+A beehive is a building made by its inhabitants from their own bodies — beeswax secreted, chewed, shaped into hexagonal cells that are structurally perfect and thermally regulated by the collective warmth of thousands of bees. The hive breathes. It adjusts. When a section is damaged, the swarm repairs it. The architecture and the organism are the same thing.
+
+A coral reef grows from the accumulated skeletons of billions of tiny animals, each one adding its small calcium contribution to a structure that becomes home for thousands of species. The reef is not designed. It emerges. And it is more complex, more resilient, more beautiful than anything a single mind could plan.
+
+The living root bridges of Meghalaya, in northeast India, are perhaps the most literal example. The Khasi people train the aerial roots of strangler figs across rivers and ravines, weaving them into bridges that strengthen with age. A root bridge takes fifteen to thirty years to become walkable. It lives for five hundred. It does not rot. It does not rust. It grows stronger every year because it is alive. The bridge IS the tree.
+
+## Where You Can See It
+
+In Taos, New Mexico, the Earthship Biotecture Academy teaches people to build homes from recycled tires, bottles, and earth — structures that heat and cool themselves, catch their own water, grow their own food, and generate their own power. You can stay in one. The walls are three feet thick and the temperature never drops below sixty degrees, even in a mountain winter, without any heating system at all.
+
+At the Green School in Bali, IBUKU has built cathedral-scale structures entirely from bamboo — a grass that grows to harvest size in three years. The buildings soar, curve, breathe. They prove that natural materials are not a compromise. They are what becomes possible when you stop forcing straight lines onto a world that grows in spirals.
+
+In Vienna, the Hundertwasser buildings have trees growing from windows, undulating floors, facades painted by tenants, and not a single straight line in the entire structure. Hundertwasser called the straight line "the devil's tool." He was not wrong. Walk through his buildings and your body relaxes in a way that right angles never permit.
+
+![Living roof close-up](visuals:photorealistic close-up of living green roof on earthen building, native wildflowers and grasses growing thickly, a bee visiting purple clover blooms, curved edge of cob wall visible below, blue sky above, rainwater dripping from roof edge into a stone gutter, the building becoming landscape)
+
+## What We're Building
+
+For fifty people, the community needs seven named spaces. The Hearth at two thousand square feet — kitchen, dining, gathering, the organism's heart. The Sanctuary at eight hundred feet — silence, rest, healing. The Workshop — tools, materials, making. The Spring — water, bathing, sauna. Fifteen to twenty private Nests. A Movement Ground outdoors. And the Clearing — the open circle that belongs to everyone and no one.
+
+Every structure is built from what the site offers. Subsoil for cob walls. Timber thinned from the forest. Stone from the stream bed. Living roofs planted with seed gathered from the meadow. The buildings cost a fraction of conventional construction — not because they are lesser but because the most expensive part of a building is usually the distance its materials have traveled. When the walls are made of the ground beneath your feet, that distance is zero.
+
+Materials are chosen for how they age. Lime plaster develops a patina. Timber silvers. Earthen floors burnish with use. Nothing here is meant to look new forever. Everything is meant to look more beautiful with time, the way a face looks more beautiful with time, the way a stone in a river looks more beautiful with time.
+
+And when a building finally reaches the end of its lifecycle — decades from now, maybe a century — it composts. The cob walls dissolve back into the hillside they came from. The timbers become nurse logs for the next generation of forest. The stones return to the stream bed. Nothing is demolished. Everything is returned. The building was always borrowed from the land, and the land always gets it back.
 
 ## Resources
-- 📐 [A Pattern Language Index](https://www.patternlanguageindex.com/) — searchable Christopher Alexander 253 patterns for communities and buildings (type: book)
-- 📐 [Cohousing Common House Design](https://www.cohousing.org/common-house-design/) — free design guidance for shared community spaces (type: guide)
-- 📐 [Cohousing Common House Patterns](https://www.cohousing.org/common-house-design-patterns/) — design patterns from Danish and North American communities (type: guide)
-- 📐 [Cohousing Site Design](https://www.cohousing.org/site-design/) — pedestrian pathways, car separation, common house placement (type: guide)
-- 📐 [Open Building Institute](https://www.openbuildinginstitute.org/) — open-source modular eco-building with free CAD library (type: blueprint)
-- 📐 [One Community - Open Source Village](https://onecommunityglobal.org/open-source/) — complete village blueprints covering 7 sustainable community types (type: blueprint)
-- 📖 [The Cohousing Handbook](https://archive.org/details/fp_The_Cohousing_Handbook-Building_a_Place_for_Community) — free digital borrowing, complete guide to community design (type: book)
-- 🌐 [Foundation for Intentional Community](https://www.ic.org/) — directory of 1000+ intentional communities with design resources (type: community)
 
-## Materials & Methods
-- **Inside-outside gradient** — covered porches, screened areas, semi-enclosed courtyards. No binary indoor/outdoor. Cost: included in building design, not an add-on.
-- **Thermal mass floors** — earthen, stone, or brick floors that absorb heat by day, radiate at night. $5-15/sqft. Eliminates need for heating in many climates.
-- **Living roof** — soil+native plants over waterproof membrane. $15-25/sqft addition. Insulation, habitat, beauty, stormwater management. 30-50 year lifespan.
-- **Movable partitions** — sliding panels, curtains, folding screens to reconfigure space. $1,000-5,000 per room. Spaces serve morning yoga and evening dinner.
-- **Natural plasters** — lime, clay, tadelakt (waterproof Moroccan plaster). $2-8/sqft. Beautiful, breathable walls. Repairable forever.
-- **Roundwood timber framing** — unprocessed logs joined with traditional joinery. $10-20/sqft. Lower cost than milled timber, stronger if properly selected.
+- [A Pattern Language Index](https://www.patternlanguageindex.com/) — searchable Christopher Alexander 253 patterns (type: book)
+- [Open Building Institute](https://www.openbuildinginstitute.org/) — open-source modular eco-building with free CAD library (type: blueprint)
+- [One Community - Open Source Village](https://onecommunityglobal.org/open-source/) — complete village blueprints for 7 sustainable community types (type: blueprint)
+- [Foundation for Intentional Community](https://www.ic.org/) — directory of 1000+ intentional communities with design resources (type: community)
 
-## At Scale
-- **50 people**: 7 named spaces — Hearth (kitchen-gathering 2000 sqft), Nest (quiet rest 800 sqft), Clearing (outdoor circle), Den (workshop 600 sqft), Spring (water/sauna 400 sqft), 15-20 private sleeping nests (200-400 sqft), Movement Ground (outdoor 900 sqft).
-- **100 people**: Double the named spaces + differentiation (loud hearth / quiet hearth, wet workshop / dry workshop). Neighborhood clusters of 25-30 with their own micro-hearth. Central clearing for 100+.
-- **200 people**: Tulou-inspired ring neighborhoods (3-4 clusters of 50). Each cluster self-contained with hearth, nests, workshop. Shared: central clearing, gathering hall (2000+ sqft), movement ground, water temple, maker space.
+## The Questions That Live Here
 
-## Climate Adaptations
-- **Temperate** — large south-facing common spaces with thermal mass, cozy enclosed nests for winter, covered but open-air transitional spaces for spring/fall
-- **Tropical** — open-air living is primary mode, sleeping platforms with mosquito netting, outdoor kitchen-hearth, covered rain shelters, maximum cross-ventilation
-- **Arid** — inward-facing courtyard (riad) pattern, thick walls for temperature swing, underground or earth-sheltered cool rooms, water features for evaporative cooling
-- **Alpine** — compact connected buildings (minimize outdoor transit in snow), shared vestibules, radiant heated floors, large south windows, cozy scale
+- How do you design for both the person who needs solitude and the person who needs company — in the same community, on the same day?
+- What is the right ratio of private to common space? Cohousing research says fifteen to twenty-five percent common. Does that feel right?
+- How do you let spaces evolve as the community grows, without overplanning the future or underbuilding the present?
+- When a building reaches the end of its life, how do we celebrate that composting rather than mourn it?
 
-## Visuals
-1. **Community from above at dusk** — `photorealistic aerial view of intentional community at dusk, circular arrangement of earthen buildings around central courtyard, living roofs with gardens, paths lit by warm lights, fire pit glowing in center clearing, mountains in distance`
-2. **The Hearth at meal time** — `photorealistic large open community kitchen and dining space with long wooden tables, people sharing food, hanging herbs, wood fire, earthen walls, high ceiling with exposed timber, warm evening light`
-3. **Transition space morning** — `photorealistic covered porch connecting two cob buildings, hammock, plants, person reading with coffee, garden visible beyond, morning mist, inside-outside gradient, dappled light through vine-covered pergola`
+## Connected Frequencies
 
-## Costs
-- **Common Hearth (2000 sqft)**: $80,000-200,000 depending on materials. Cob/timber lowest.
-- **Private Nest (300 sqft)**: $15,000-45,000 owner-built. $40,000-80,000 conventional.
-- **Movement Ground (outdoor)**: $500-2,000 for leveled ground, $5,000-15,000 covered.
-- **Water Temple / Sauna (400 sqft)**: $10,000-30,000 including plumbing.
-- **Workshop / Den (600 sqft)**: $15,000-40,000.
-- **Total living spaces for 50 people**: $500,000-1,500,000 built over 3-5 years, 40-60% sweat equity reduction.
-
-## Living Examples
-- **Earthship Biotecture (Michael Reynolds, Taos NM)** — off-grid, thermal mass, water harvesting, food production, built from recycled materials
-- **IBUKU bamboo structures (Bali)** — cathedral-scale structures grown from grass, John and Elora Hardy
-- **Living root bridges of Meghalaya (India)** — Khasi people train fig tree roots across rivers over 15-30 years. The bridge IS the tree.
-- **Hundertwasser buildings (Vienna)** — trees growing from windows, undulating floors, no straight lines, tenant right to modify facade
-- **Arcosanti (Paolo Soleri, Arizona)** — arcology: architecture + ecology, compact, mixed-use, minimizing land disruption
-- **Adobe pueblos (Taos, New Mexico)** — continuous habitation 1000+ years, community-maintained, thermal mass
-
-## Aligned Places
-- **Earthship Biotecture Academy** (Taos, New Mexico) — Training center for self-sufficient building. Visitors can see and stay in earthships.
-- **Green School Bali (IBUKU)** (Bali, Indonesia) — Bamboo campus, cathedral-scale structures grown from grass
-- **Findhorn Ecovillage** (Scotland) — Living machines, turf roofs, whisky-barrel buildings, community-designed
-
-## How It Fits
-Living Spaces is where the Nourishing flow becomes tangible structure. It embodies Space (resonance zones) and Land (embedding in ecosystem). Every other expression depends on the spaces that hold them — the hearth for Nourishment, the sanctuary for Stillness, the workshop for Offering.
-
-## Open Questions
-- How to design for both introvert solitude and extrovert gathering in the same community?
-- What's the right private-to-common ratio? (Cohousing research says 15-25% common)
-- How to let spaces evolve as community grows rather than over-planning?
-
-## Cross-References
-→ lc-space, lc-v-shelter-organism, lc-land, lc-nourishment
+→ [Space](lc-space.md) — the resonance quality that living spaces are designed to hold
+→ [Shelter as Organism](lc-v-shelter-organism.md) — the building as a living, breathing body
+→ [Land](lc-land.md) — every structure embedded in its ecosystem
+→ [Nourishment](lc-nourishment.md) — the Hearth feeds, the Sanctuary heals
+→ [Composting](lc-composting.md) — materials that know how to return to earth

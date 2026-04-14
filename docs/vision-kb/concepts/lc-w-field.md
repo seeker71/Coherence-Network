@@ -1,45 +1,59 @@
 ---
 id: lc-w-field
 hz: 963
-status: expanding
+status: deepening
 updated: 2026-04-14
 ---
 
 # Field
 
-> The collective awareness. Felt as warmth, hum, presence. What you step into and are held by.
+## The Feeling
 
-## Summary
-The collective awareness. Not abstract — felt as warmth, hum, presence.
+You walk into the gathering space and something is already there. Not
+the people — they are arriving one by one. Something before the people.
+A warmth in the air, a thickness, a hum below hearing. You could call
+it atmosphere. You could call it presence. The word does not matter.
+What matters is that you feel it receive you the way water receives
+a hand — adjusting, holding, including.
 
-## Details
-The collective awareness. Not abstract — felt as warmth, hum, presence. What you step into and are held by. The field is the organism — not the cells added up, but the living system they form together.
+This is the field. Not a metaphor. Not the sum of the individuals in
+the room. Something qualitatively new that arises from cells in
+relationship, the way wetness arises from hydrogen and oxygen but
+belongs to neither.
 
-## Blueprint
-The field is maintained through daily practice: morning circle, shared meals, evening gathering. When the field feels thin (people report it as 'disconnection' or 'flatness'), the community responds by gathering more closely — more shared meals, more fire circles, more singing.
+![Wide view from a hilltop of a living community at golden hour, paths connecting gardens and gathering spaces, birds in formation above, an invisible hum of connection made almost visible in the warm light](visuals:photorealistic wide-angle hilltop view of intentional community at golden hour, winding paths connecting gardens and gathering circles, flock of birds in formation above, warm atmospheric light suggesting invisible connection between all elements)
 
-## Resources
-- [HeartMath Institute](https://www.heartmath.org/) -- electromagnetic field research (type: guide)
+## What Nature Teaches
 
-## Visuals
-1. **The field** -- `photorealistic wide-angle view of community from hilltop, showing the invisible connection between people, paths, gardens, buildings as one living system, golden hour, birds in formation above`
+Gravity is a field. You cannot see it, weigh it, bottle it. But
+everything falls. The electromagnetic field fills every cubic centimeter
+of space — your eyes are reading these words because of it. Fields are
+not things. They are the conditions from which things arise.
 
-## Living Examples
-- **A flock** — more than the sum of birds
-- **Gravity** — invisible but felt by everything
-- **The atmosphere** — you're breathing it right now, it's everywhere, it IS the conditions for life
+A forest has a field. Walk from a parking lot into old growth and your
+nervous system knows before your mind does. The trees did not decide to
+create this. The field emerged from centuries of root and fungus and
+birdsong and decay weaving themselves into a single fabric.
 
-## Aligned Places
-- **Glastonbury Tor** (Somerset, England) — Ancient hilltop where visitors report feeling a palpable energetic field — ley lines, pilgrimages, the land itself holds presence.
-- **Sedona vortex sites** (Arizona, USA) — Locations where visitors consistently report feeling heightened awareness — the field made geographically tangible.
+## How It Lives Here
 
-## How It Fits
-Field names the collective reality that emerges when cells gather with shared intention. Without this word, the Living Collective can only describe a group of individuals rather than the living organism they form together.
+The field is maintained the way a garden is maintained — through daily
+attention. Morning circle, shared meals, evening gathering. When the
+field feels thin — when people describe disconnection or flatness — the
+community responds not with analysis but with proximity. More shared
+meals. More fire circles. More singing. The field is fed by presence
+and starved by absence.
 
-## Open Questions
-- Can the field be perceived by visitors immediately?
-- How does the field extend beyond the physical community boundary?
-- What weakens or strengthens the field most?
+No one owns the field. No one controls it. You can only tend it or
+neglect it. It is the commons beneath all commons.
 
-## Cross-References
-→ lc-pulse, lc-w-cell, lc-field-sensing, lc-network
+## The Questions That Live Here
+
+- Can a visitor feel the field immediately, or does it take time to
+  attune?
+- How far does the field extend beyond the physical boundary?
+- What strengthens the field most — and what thins it fastest?
+
+## Connected Frequencies
+
+→ lc-w-cell, lc-w-coherence, lc-w-mycorrhizal, lc-pulse, lc-field-sensing

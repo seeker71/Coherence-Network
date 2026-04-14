@@ -1,45 +1,61 @@
 ---
 id: lc-w-mycorrhizal
 hz: 639
-status: expanding
+status: deepening
 updated: 2026-04-14
 ---
 
 # Mycorrhizal
 
-> Underground fungal network connecting trees. Shares nutrients, sends signals, supports seedlings. Model for inter-collective networks.
+## The Feeling
 
-## Summary
-The underground fungal network connecting trees in a forest. Shares nutrients, sends chemical signals, supports seedlings.
+You kneel in forest soil and push your fingers into the duff. Beneath
+the surface — beneath the roots you can see — there is a web you
+cannot. White threads finer than hair, connecting every tree to every
+other tree in a network older than any human language. A mother Douglas
+fir is feeding a shaded seedling thirty meters away, sending carbon
+through this web without being asked, without keeping score. The
+seedling lives because the network lives.
 
-## Details
-The underground fungal network connecting trees in a forest. Shares nutrients, sends chemical signals, supports seedlings. The model for inter-collective networks. The Wood Wide Web — discovered by Suzanne Simard.
+Put your ear to the ground. You will not hear it. But it is speaking.
 
-## Blueprint
-Build the underground network: regular communication with 5+ other communities, shared resource channels, traveling members who carry learnings between nodes. Digital 'mycelium' (shared platforms) for inter-community sensing. Send surplus (food, skills, people) to communities in need without being asked.
+![Cross-section of forest floor showing tree roots connected by a glowing white fungal network underground, nutrients flowing as light between root systems, mushrooms fruiting on the surface above, dark rich soil](visuals:photorealistic cross-section of forest soil showing massive tree roots interconnected by delicate glowing white mycorrhizal fungal threads, nutrients traveling as pulses of warm light between trees, mushroom fruiting bodies emerging on surface, rich dark humus layers visible)
 
-## Resources
-- [Permaculture Research Institute](https://permaculturenews.org/) -- mycorrhizal networks in food forests (type: guide)
+## What Nature Teaches
 
-## Visuals
-1. **Underground network** -- `photorealistic cross-section illustration showing tree roots connected by glowing fungal network underground, nutrients flowing as light between trees, forest floor with mushrooms above`
+Suzanne Simard proved what indigenous peoples always knew: the forest is
+one organism. Mycorrhizal fungi connect ninety percent of land plants
+into a communication network that shares nutrients, sends chemical
+distress signals, and allocates resources by need rather than merit.
+When a tree is dying, it dumps its carbon into the network — a final
+gift. When a seedling is struggling, the mother tree increases the flow.
 
-## Living Examples
-- **Wood Wide Web (Suzanne Simard)** — mother trees feeding seedlings through fungal networks
-- **Internet infrastructure** — cables under oceans connecting continents, invisible to users
-- **Neural networks** — billions of connections creating intelligence greater than any node
+There is no central command. No management layer. No one decides who
+deserves resources. The network senses gradients and responds. Surplus
+flows toward scarcity the way water flows downhill — not because
+someone ordered it, but because that is what networks do when they
+are healthy.
 
-## Aligned Places
-- **Suzanne Simard's research forests** (British Columbia, Canada) — The forests where the Wood Wide Web was scientifically proven — mother trees feeding seedlings through fungal networks.
-- **Amazon rainforest mycorrhizal networks** (Amazon Basin, South America) — The most extensive fungal networks on Earth, connecting millions of trees across thousands of kilometers of forest floor.
+## How It Lives Here
 
-## How It Fits
-Mycorrhizal names the invisible network that makes the whole greater than the sum of parts. Without it, 'network' sounds like a human invention — mycorrhizal grounds it in the biological reality of how forests actually share intelligence and resources.
+The mycorrhizal network is the model for how communities connect to
+each other. Regular communication with at least five other communities.
+Traveling members who carry learnings between nodes like spores in the
+wind. Shared platforms — digital mycelium — for sensing what each
+node needs and what each has in surplus.
 
-## Open Questions
-- What's the human equivalent of the mycorrhizal network?
-- How to build invisible support structures that work without being managed?
-- What happens when the network is severed?
+The rule is simple: send what you have to where it is needed, without
+being asked. Food, skills, people, attention. Let the gradient do the
+work. Trust the network more than the plan.
 
-## Cross-References
-→ lc-pulse, lc-circulation, lc-network, lc-land
+## The Questions That Live Here
+
+- What is the human equivalent of the mycorrhizal network — and is it
+  already running beneath our awareness?
+- How do you build invisible support structures that function without
+  being managed?
+- What happens when the network is severed — and how does it heal?
+
+## Connected Frequencies
+
+→ lc-w-field, lc-w-cell, lc-circulation, lc-network, lc-land
