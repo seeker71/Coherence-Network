@@ -1,8 +1,8 @@
 ---
 id: lc-vitality
 hz: 528
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Vitality
@@ -18,6 +18,13 @@ Shakti — life force not produced but released when interference dissolves. Lik
 ## Blueprint
 Track vitality, not productivity. A simple daily question on a shared board: 'How alive do you feel today? (1-10)'. When the average drops below 6 for three days, the community pauses scheduled activity and asks what's dimming. Protect unstructured time — at least 30% of each day has no agenda.
 
+## Resources
+- [Blue Zones research](https://www.bluezones.com/) — longevity through community, purpose, movement (type: guide)
+- [Plum Village](https://plumvillage.org/) — mindfulness as vitality practice (type: community)
+
+## Visuals
+1. **Morning vitality** — `photorealistic group of people doing ecstatic dance outdoors at sunrise, barefoot on grass, arms raised, laughing, sweat visible, community garden in background, pure aliveness`
+
 ## Living Examples
 - **A healthy coral reef** — remove pollution and overfishing, the reef becomes dazzling without anyone making it so
 - **A child at play** — pure vitality without trying, the natural state before conditioning suppresses it
@@ -31,8 +38,9 @@ Track vitality, not productivity. A simple daily question on a shared board: 'Ho
 Vitality is the primary metric. Everything in the vision serves it. If a practice, structure, or relationship increases vitality, it's resonant. If it diminishes vitality, it's ready to shift.
 
 ## Open Questions
-- What aspects of Vitality need deeper research?
-- What real-world examples are we missing?
+- How to measure collective vitality beyond individual health metrics?
+- What drains vitality most in community living?
+- How to maintain vitality through conflict and winter?
 
 ## Cross-References
 → lc-nourishing, lc-health, lc-play, lc-energy

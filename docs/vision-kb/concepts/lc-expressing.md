@@ -1,8 +1,8 @@
 ---
 id: lc-expressing
 hz: 741
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Expressing
@@ -18,6 +18,13 @@ The natural overflow of vitality. Every cell is creative the way every leaf is p
 ## Blueprint
 Dedicate at least three spaces to creation: a workshop (wood, metal, fabric), an art studio (paint, clay, mixed media), and a music room. Stock them and leave them open 24/7. No sign-up sheets. No classes unless someone spontaneously offers. Display community-made art everywhere — walls, paths, gardens.
 
+## Resources
+- [Summerhill School](https://www.summerhillschool.co.uk/) — freedom of expression in education (type: community)
+- [Sociocracy For All](https://www.sociocracyforall.org/) — structured expression within consent process (type: guide)
+
+## Visuals
+1. **Free expression** — `photorealistic person painting large mural on exterior wall of earthen community building, bright colors, other community members watching and cheering, afternoon sun`
+
 ## Living Examples
 - **Bower bird** — builds extraordinary structures of beauty, not for survival but because beauty IS its expression
 - **Whale song** — travels thousands of miles, evolves year to year, serves no known survival function except connection
@@ -32,8 +39,9 @@ Dedicate at least three spaces to creation: a workshop (wood, metal, fabric), an
 Expressing governs all Through Expression concepts: Offering, Beauty, Discovery. It's the creative counterpart to Nourishing's sustaining flow.
 
 ## Open Questions
-- What aspects of Expressing need deeper research?
-- What real-world examples are we missing?
+- How to support expression that disturbs others without suppressing it?
+- What spaces best support spontaneous creative expression?
+- How to cultivate expression in people trained to stay silent?
 
 ## Cross-References
 → lc-resonating, lc-offering, lc-v-freedom-expression, lc-beauty

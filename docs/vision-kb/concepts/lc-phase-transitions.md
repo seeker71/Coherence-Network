@@ -1,8 +1,8 @@
 ---
 id: lc-phase-transitions
 hz: 417
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Phase Transitions
@@ -17,6 +17,12 @@ Arrival, flowering, maturation, release, seeding. All phases radiate their own q
 
 ## Blueprint
 Honor every transition: arrival, first offering, partnership, pregnancy, birth, elderhood, dying, death. Each has its ceremony — simple, present, held by the community. Keep a 'living memory' — stories of those who have transitioned, told at seasonal fire circles. Death is not hidden — it is woven into the field's awareness.
+
+## Resources
+- [The Work That Reconnects](https://workthatreconnects.org/) -- navigating collective transitions (type: guide)
+
+## Visuals
+1. **Seasonal transition** -- `photorealistic community gathering at autumn equinox, leaves changing color, harvest table, candles being lit as day shifts to night, liminal moment between seasons`
 
 ## Living Examples
 - **Redwood grove** — one organism, the oldest feeding the youngest through connected roots
@@ -33,8 +39,9 @@ Honor every transition: arrival, first offering, partnership, pregnancy, birth, 
 Phase Transitions replace the concept of death/birth as separate events. Everything is one continuous spiral of transformation. It connects to Composting (what happens during transition) and Elders (the maturation phase).
 
 ## Open Questions
-- What aspects of Phase Transitions need deeper research?
-- What real-world examples are we missing?
+- How to recognize a phase transition while you're in it?
+- What support structures help communities through the chaos of transition?
+- How to honor what's dying while welcoming what's emerging?
 
 ## Cross-References
 → lc-spiraling, lc-composting, lc-w-phase-transition, lc-ceremony

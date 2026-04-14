@@ -1,8 +1,8 @@
 ---
 id: lc-discovery
 hz: 852
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Discovery
@@ -17,6 +17,12 @@ Always learning through immersion. The way a wolf pup learns to hunt by being wi
 
 ## Blueprint
 No curriculum. Apprenticeship model: learn by doing alongside someone experienced. Community 'skill shares' monthly — anyone can teach anything. Children learn by participating in real adult activities, not simulated ones. Library of tools, seeds, books, and instruments open to all.
+
+## Resources
+- [Permaculture Research Institute](https://permaculturenews.org/) -- discovery through observation (type: guide)
+
+## Visuals
+1. **Discovery walk** -- `photorealistic small group exploring forest edge with magnifying glasses and notebooks, pointing at mushrooms and insects, curiosity and wonder, dappled light, field guides in hand`
 
 ## Living Examples
 - **Wolf pup learning to hunt** — by being with the pack, watching, playing, gradually participating
@@ -33,8 +39,9 @@ No curriculum. Apprenticeship model: learn by doing alongside someone experience
 Discovery is the Expressing flow as learning. It connects to Play (play IS discovery), Offering (mastery shared IS teaching), and Field Intelligence (collective knowing).
 
 ## Open Questions
-- What aspects of Discovery need deeper research?
-- What real-world examples are we missing?
+- How to maintain beginner's mind in a community that's been together for years?
+- What structures support discovery without becoming academic?
+- How to share discoveries across the network?
 
 ## Cross-References
 → lc-field-sensing, lc-elders, lc-instruments, lc-play

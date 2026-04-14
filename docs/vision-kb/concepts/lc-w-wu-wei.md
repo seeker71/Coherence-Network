@@ -1,8 +1,8 @@
 ---
 id: lc-w-wu-wei
 hz: 432
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Wu Wei
@@ -18,6 +18,12 @@ Action through alignment rather than effort. From Taoism. Not passivity — acti
 ## Blueprint
 Practice non-forcing: when a project feels stuck, pause it rather than pushing. Community decisions ripen rather than get made — if it's not obvious, wait. Tai chi or qigong as daily movement practice. Garden with the seasons, not against them. Trust that what needs to happen will emerge when conditions are right.
 
+## Resources
+- [Plum Village](https://plumvillage.org/) -- effortless action through mindfulness (type: community)
+
+## Visuals
+1. **Effortless action** -- `photorealistic person in garden doing nothing visibly productive but clearly fully present, sitting among growing plants, watching insects, complete ease, afternoon light, wu wei`
+
 ## Living Examples
 - **Water flowing downhill** — perfect efficiency, zero effort, reshapes landscapes
 - **A seed** — doesn't strain to grow, conditions allow and growth happens
@@ -31,8 +37,9 @@ Practice non-forcing: when a project feels stuck, pause it rather than pushing. 
 Wu Wei names the quality of action the field aspires to — effortless because aligned, powerful because uncontrived. Without it, the vision risks becoming another system of effort and obligation rather than a description of what happens naturally when interference dissolves.
 
 ## Open Questions
-- What aspects of Wu Wei need deeper research?
-- What real-world examples are we missing?
+- How to distinguish wu wei from laziness in community context?
+- What community structures support effortless action?
+- How to practice wu wei in crisis?
 
 ## Cross-References
 → lc-stillness, lc-rest, lc-w-spanda, lc-offering
