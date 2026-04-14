@@ -37,4 +37,4 @@ Field Edge is the field's membrane — where it meets the world. It enables The 
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-field-sensing
+→ lc-field-sensing, lc-attunement-joining, lc-v-inclusion-diversity, lc-network

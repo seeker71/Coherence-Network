@@ -35,4 +35,4 @@ Shakti names the raw life force that every other concept channels, shapes, or re
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-vitality
+→ lc-vitality, lc-energy, lc-w-spanda, lc-play

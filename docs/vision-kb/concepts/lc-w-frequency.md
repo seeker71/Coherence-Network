@@ -35,4 +35,4 @@ Frequency provides the vocabulary for qualitative differences without hierarchy 
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-pulse
+→ lc-pulse, lc-w-coherence, lc-v-harmonizing, lc-sensing

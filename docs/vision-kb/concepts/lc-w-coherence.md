@@ -35,4 +35,4 @@ Coherence names the state the whole vision aims toward — when frequencies alig
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-pulse
+→ lc-pulse, lc-attunement, lc-w-frequency, lc-resonating

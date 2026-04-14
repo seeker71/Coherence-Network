@@ -45,4 +45,4 @@ Intimacy is the Resonating flow at its deepest. It connects to Play (joyful conn
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-resonating
+→ lc-resonating, lc-stillness, lc-v-comfort-joy, lc-rest

@@ -35,4 +35,4 @@ Rhythm is the Spiraling flow as temporal structure. Everything in the field foll
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-spiraling
+→ lc-spiraling, lc-rest, lc-ceremony, lc-nourishment

@@ -36,4 +36,4 @@ Expressing governs all Through Expression concepts: Offering, Beauty, Discovery.
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-vitality
+→ lc-resonating, lc-offering, lc-v-freedom-expression, lc-beauty
