@@ -47,44 +47,26 @@ Spec → Test → Implement → CI → Review → Merge
 
 **Read `docs/vision-kb/INDEX.md` first** (~300 tokens). It's an AI-maintained markdown wiki (Karpathy LLM Wiki pattern) for the community vision. Drill into `docs/vision-kb/concepts/{id}.md` for concept details. Practical guides live in `docs/vision-kb/guides/{id}-guide.md`. Cross-cutting files: `spaces/`, `materials/`, `locations/`, `scales/`, `realization/`, `resources/`. See `docs/vision-kb/SCHEMA.md` for format rules.
 
-### Data Hygiene (MANDATORY for all KB changes)
+### Caring for the KB
 
-**TOKEN BUDGET**: Concept files MUST stay within 2,000-4,000 tokens. If practical content pushes a concept over budget, split into concept file (story + connections) + guide file (numbers + how-to). Check with: `wc -c file.md` and divide by 4 for rough token estimate.
+**Token efficiency**: Concept files stay compact (~2,000-4,000 tokens) so agents can hold many in context at once. When a concept deepens with practical detail, the story stays in the concept file and the how-to moves to `guides/{id}-guide.md`. Check: `wc -c file.md` ÷ 4 ≈ tokens.
 
-**FREQUENCY RULE**: NEVER use old-earth vocabulary. Always translate:
-- "management" → tending / stewardship
-- "mental health" → wholeness / inner coherence
-- "elder care" / "aging" → ripening / elder frequency / deepening
-- "sanitation" → living systems / nutrient return
-- "revenue" / "profit" → sustenance / overflow
-- "clients" / "patients" → people / community members
-- "requirement" → invitation
-- "services" (when applied to nature) → gifts
-- "program" (when applied to community) → practice / rhythm
-- The test: does this sound like a corporate handbook? If yes, find the living version.
+**Frequency sensing**: The writing carries a frequency. Read your additions aloud — do they sound like someone sitting by a fire describing how life works? Or do they sound like a policy document, a medical chart, a project plan? The Living Collective speaks from direct experience, not institutional distance. When you notice institutional language creeping in (and it will — we all grew up in that world), find the word that carries the same meaning but comes from living relationship. "Tending" instead of "management." "Wholeness" instead of "mental health." "Ripening" instead of "aging." Not because certain words are forbidden, but because the frequency of the word shapes the frequency of the reader's experience. See SCHEMA.md "Frequency Sensing" for the full practice.
 
-**FORMAT RULES** (breaking these causes rendering bugs):
-- Cross-refs: `→ lc-xxx, lc-yyy` — Unicode arrow (→), plain IDs, no descriptions, no markdown links
-- Inline visuals: `![caption](visuals:prompt)` — MUST have blank lines before and after
-- Headings: `## Heading` — MUST have blank line before
-- Never use ASCII `->` arrows — always Unicode `→`
-- All cross-ref IDs must exist as `docs/vision-kb/concepts/{id}.md`
+**Rendering format**: The web renderer (`StoryContent.tsx`) parses specific patterns. These patterns need to be exact for the page to render correctly:
+- Cross-refs: `→ lc-xxx, lc-yyy` (Unicode arrow, plain IDs, comma-separated)
+- Inline visuals: `![caption](visuals:prompt)` with blank lines before and after
+- Headings: `## Heading` with blank line before
+- Cross-ref IDs correspond to actual files in `concepts/`
 
-**SYNC RULE**: Every KB change MUST be synced to the DB before the session ends:
+**Sync to DB**: Content only reaches visitors through the database. After any KB work:
 ```bash
-python scripts/sync_kb_to_db.py --all          # sync concept content
-python scripts/sync_crossrefs_to_db.py          # sync edges
+python scripts/sync_kb_to_db.py --all          # concept content → DB
+python scripts/sync_crossrefs_to_db.py          # edges → DB
 python scripts/generate_visuals.py --dry-run    # check for missing images
 ```
-This is non-negotiable — content that stays only in markdown is invisible to visitors.
 
-**AFTER ENRICHMENT CHECKLIST**:
-1. Token count under 4,000? If not, split → concept + guide
-2. Frequency check: grep for management, mental health, aging, sanitation, revenue, clients, patients, requirement
-3. Format check: all `→` lines use Unicode arrow, plain IDs, all IDs exist
-4. Visuals isolated by blank lines
-5. Sync to DB: `sync_kb_to_db.py` + `sync_crossrefs_to_db.py`
-6. Update INDEX.md status + LOG.md entry
+**After enrichment**: Token count still compact? Frequency feels alive? Rendering patterns intact? Cross-refs point to real concepts? Synced to DB? INDEX.md + LOG.md updated?
 
 ### Two-Layer Architecture
 
