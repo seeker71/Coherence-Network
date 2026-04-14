@@ -439,7 +439,8 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
                           <img
                             src={pollinationsUrl(v.prompt, seed)}
                             alt={v.caption}
-                            className="absolute inset-0 w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-cover text-[0px]"
+                            style={{ color: "transparent" }}
                             loading="eager"
                           />
                           {v.location && (
