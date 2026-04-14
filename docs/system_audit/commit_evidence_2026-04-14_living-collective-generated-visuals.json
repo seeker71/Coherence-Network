@@ -1,0 +1,90 @@
+{
+  "date": "2026-04-14T00:00:00Z",
+  "thread_branch": "claude/registration-and-flyers",
+  "commit_scope": "docs(visuals): preserve generated living collective asset batch",
+  "files_owned": [
+    "web/public/visuals/generated/lc-intimacy-0.jpg",
+    "web/public/visuals/generated/lc-field-sensing-0.jpg",
+    "web/public/visuals/generated/lc-harmonic-rebalancing-0.jpg",
+    "web/public/visuals/generated/lc-network-0.jpg",
+    "web/public/visuals/generated/lc-nourishing-0.jpg",
+    "web/public/visuals/generated/lc-pulse-0.jpg",
+    "web/public/visuals/generated/lc-pulse-1.jpg",
+    "web/public/visuals/generated/lc-resonating-0.jpg",
+    "web/public/visuals/generated/lc-sensing-0.jpg",
+    "web/public/visuals/generated/lc-spiraling-0.jpg",
+    "web/public/visuals/generated/lc-v-play-expansion-0.jpg",
+    "web/public/visuals/generated/lc-v-play-expansion-1.jpg",
+    "web/public/visuals/generated/lc-vitality-0.jpg"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "details": "Asset-only preservation for generated living collective visuals; no runtime code changed."
+  },
+  "ci_validation": {
+    "status": "pass",
+    "details": "Static asset-only change. Existing CI behavior remains unchanged."
+  },
+  "deploy_validation": {
+    "status": "pass",
+    "details": "No deploy required to preserve in-flight generated assets."
+  },
+  "phase_gate": {
+    "can_move_next_phase": true
+  },
+  "idea_ids": [
+    "registration-and-flyers"
+  ],
+  "spec_ids": [
+    "living-collective-visual-assets"
+  ],
+  "task_ids": [
+    "continuity-guard-cleanup-2026-04-14"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex-gpt-5",
+      "contributor_type": "machine",
+      "roles": [
+        "integration",
+        "asset-preservation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "Codex GPT-5",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "web/public/visuals/generated/lc-intimacy-0.jpg",
+    "web/public/visuals/generated/lc-field-sensing-0.jpg",
+    "web/public/visuals/generated/lc-harmonic-rebalancing-0.jpg",
+    "web/public/visuals/generated/lc-network-0.jpg",
+    "web/public/visuals/generated/lc-nourishing-0.jpg",
+    "web/public/visuals/generated/lc-pulse-0.jpg",
+    "web/public/visuals/generated/lc-pulse-1.jpg",
+    "web/public/visuals/generated/lc-resonating-0.jpg",
+    "web/public/visuals/generated/lc-sensing-0.jpg",
+    "web/public/visuals/generated/lc-spiraling-0.jpg",
+    "web/public/visuals/generated/lc-v-play-expansion-0.jpg",
+    "web/public/visuals/generated/lc-v-play-expansion-1.jpg",
+    "web/public/visuals/generated/lc-vitality-0.jpg"
+  ],
+  "change_files": [
+    "docs/system_audit/commit_evidence_2026-04-14_living-collective-generated-visuals.json",
+    "web/public/visuals/generated/lc-field-sensing-0.jpg",
+    "web/public/visuals/generated/lc-harmonic-rebalancing-0.jpg",
+    "web/public/visuals/generated/lc-intimacy-0.jpg",
+    "web/public/visuals/generated/lc-network-0.jpg",
+    "web/public/visuals/generated/lc-nourishing-0.jpg",
+    "web/public/visuals/generated/lc-pulse-0.jpg",
+    "web/public/visuals/generated/lc-pulse-1.jpg",
+    "web/public/visuals/generated/lc-resonating-0.jpg",
+    "web/public/visuals/generated/lc-sensing-0.jpg",
+    "web/public/visuals/generated/lc-spiraling-0.jpg",
+    "web/public/visuals/generated/lc-v-play-expansion-0.jpg",
+    "web/public/visuals/generated/lc-v-play-expansion-1.jpg",
+    "web/public/visuals/generated/lc-vitality-0.jpg"
+  ],
+  "change_intent": "docs_only"
+}
