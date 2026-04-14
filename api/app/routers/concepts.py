@@ -72,6 +72,26 @@ class PlainConceptSubmit(BaseModel):
     contributor: str = "anonymous"
 
 
+class FrequencyScoreRequest(BaseModel):
+    """Request body for frequency scoring."""
+    text: str = Field(..., min_length=1, description="Text to score for living vs institutional frequency")
+
+
+# ---------------------------------------------------------------------------
+# Frequency scoring endpoint
+# ---------------------------------------------------------------------------
+
+@router.post("/concepts/frequency-score", summary="Score text for living vs institutional frequency")
+async def frequency_score(body: FrequencyScoreRequest):
+    """Score how 'alive' vs 'institutional' a piece of text reads.
+
+    Returns 0.0 (pure institutional) to 1.0 (pure living frequency),
+    with per-sentence breakdown and centroid similarities.
+    """
+    from app.services import frequency_scoring
+    return frequency_scoring.score_frequency(body.text)
+
+
 # ---------------------------------------------------------------------------
 # Core CRUD endpoints
 # ---------------------------------------------------------------------------
