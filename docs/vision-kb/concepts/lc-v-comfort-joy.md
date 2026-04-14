@@ -1,8 +1,8 @@
 ---
 id: lc-v-comfort-joy
 hz: 528
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Comfort, Joy, Softness
@@ -18,6 +18,14 @@ The field caring for its own pleasure. Warmth, texture, beauty in every surface.
 ## Blueprint
 Every space has sensory consideration: texture (natural materials), warmth (thermal mass, fireplaces, hot water), sound (water features, wind, music), scent (herbs, cooking, flowers), light (natural, firelight, candles over electric). Hot water access: hot tub, sauna, or hot spring is essential infrastructure.
 
+## Resources
+- [Hygge Guide](https://www.ic.org/) — Danish hygge practices for intentional community (type: guide)
+- [Cohousing Association](https://www.cohousing.org/) — comfort and communal living design (type: community)
+
+## Visuals
+1. **Hot springs at dusk** — `photorealistic natural hot spring pool surrounded by rocks and plants, steam rising, people relaxing, string lights, mountain dusk sky, warm amber and blue tones`
+2. **Cozy common room** — `photorealistic cozy common room with fireplace, deep cushions, warm blankets, mugs of tea, soft lighting, earthen walls, rain visible through window`
+
 ## Living Examples
 - **Finnish sauna culture** — communal heat, cold plunge, birch branches, centuries of practice
 - **Japanese onsen (hot spring)** — bathing together as social bonding and vitality practice
@@ -32,8 +40,9 @@ Every space has sensory consideration: texture (natural materials), warmth (ther
 Comfort and Joy is the field's immune system against austerity and martyrdom. Without it, communities become grim and brittle. It ensures that pleasure, warmth, and sensory delight are treated as essential infrastructure, not indulgence.
 
 ## Open Questions
-- What aspects of Comfort, Joy, Softness need deeper research?
-- What real-world examples are we missing?
+- How to balance communal comfort with individual taste?
+- What makes a space feel safe enough for vulnerability?
+- How to maintain comfort amenities sustainably?
 
 ## Cross-References
-→ lc-nourishing, lc-play
+→ lc-space, lc-rest, lc-stillness, lc-health
