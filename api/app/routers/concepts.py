@@ -127,6 +127,12 @@ async def list_concepts_by_domain(
     return result
 
 
+@router.get("/concepts/garden", summary="Concept garden — all concepts grouped by domain")
+async def concept_garden(limit: int = Query(500, ge=1, le=1000)) -> dict:
+    """Group concepts by domain for the concept garden visualization."""
+    return concept_service.get_garden_view(limit=limit)
+
+
 @router.get("/concepts/communities", summary="List all aligned communities")
 async def list_communities(limit: int = Query(50, ge=1, le=200)) -> dict:
     """Return community nodes from the graph DB."""
