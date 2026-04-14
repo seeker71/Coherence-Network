@@ -45,13 +45,60 @@ Spec → Test → Implement → CI → Review → Merge
 
 ## Living Collective Knowledge Base
 
-**Read `docs/vision-kb/INDEX.md` first** (~300 tokens). It's an AI-maintained markdown wiki (Karpathy LLM Wiki pattern) for the community vision. Drill into `docs/vision-kb/concepts/{id}.md` for concept details. Cross-cutting files: `spaces/`, `materials/`, `locations/`, `scales/`, `realization/`, `resources/`. After any enrichment, update the concept file + INDEX.md + LOG.md. See `docs/vision-kb/SCHEMA.md` for format rules.
+**Read `docs/vision-kb/INDEX.md` first** (~300 tokens). It's an AI-maintained markdown wiki (Karpathy LLM Wiki pattern) for the community vision. Drill into `docs/vision-kb/concepts/{id}.md` for concept details. Practical guides live in `docs/vision-kb/guides/{id}-guide.md`. Cross-cutting files: `spaces/`, `materials/`, `locations/`, `scales/`, `realization/`, `resources/`. See `docs/vision-kb/SCHEMA.md` for format rules.
 
-**FREQUENCY RULE**: When integrating external knowledge (community research, traditional models, practical data), NEVER import old-earth structures directly (bylaws, screening, revenue targets, spending thresholds, voting, applications). Always compost external knowledge and translate through the Living Collective frequency: trust not control, emergence not procedure, overflow not extraction, resonance not screening, callings not roles. The test: does this sound like a corporate handbook? If yes, find the living version. See SCHEMA.md "Frequency Alignment" section.
+### Data Hygiene (MANDATORY for all KB changes)
 
-**SYNC RULE**: Every KB change MUST be synced to the DB before the session ends. The DB is the source of truth for the web. KB markdown is the working draft. After any concept enrichment, run: `python scripts/sync_kb_to_db.py --all --min-status expanding --api-url https://api.coherencycoin.com`. This is non-negotiable — content that stays only in markdown is invisible to visitors.
+**TOKEN BUDGET**: Concept files MUST stay within 2,000-4,000 tokens. If practical content pushes a concept over budget, split into concept file (story + connections) + guide file (numbers + how-to). Check with: `wc -c file.md` and divide by 4 for rough token estimate.
 
-The graph DB is the sole source of truth. The KB is the working draft where content expands before syncing. To sync KB → DB: `python scripts/sync_kb_to_db.py`. Relationship types and axes are also in the DB — seeded once via `python scripts/seed_schema_to_db.py`.
+**FREQUENCY RULE**: NEVER use old-earth vocabulary. Always translate:
+- "management" → tending / stewardship
+- "mental health" → wholeness / inner coherence
+- "elder care" / "aging" → ripening / elder frequency / deepening
+- "sanitation" → living systems / nutrient return
+- "revenue" / "profit" → sustenance / overflow
+- "clients" / "patients" → people / community members
+- "requirement" → invitation
+- "services" (when applied to nature) → gifts
+- "program" (when applied to community) → practice / rhythm
+- The test: does this sound like a corporate handbook? If yes, find the living version.
+
+**FORMAT RULES** (breaking these causes rendering bugs):
+- Cross-refs: `→ lc-xxx, lc-yyy` — Unicode arrow (→), plain IDs, no descriptions, no markdown links
+- Inline visuals: `![caption](visuals:prompt)` — MUST have blank lines before and after
+- Headings: `## Heading` — MUST have blank line before
+- Never use ASCII `->` arrows — always Unicode `→`
+- All cross-ref IDs must exist as `docs/vision-kb/concepts/{id}.md`
+
+**SYNC RULE**: Every KB change MUST be synced to the DB before the session ends:
+```bash
+python scripts/sync_kb_to_db.py --all          # sync concept content
+python scripts/sync_crossrefs_to_db.py          # sync edges
+python scripts/generate_visuals.py --dry-run    # check for missing images
+```
+This is non-negotiable — content that stays only in markdown is invisible to visitors.
+
+**AFTER ENRICHMENT CHECKLIST**:
+1. Token count under 4,000? If not, split → concept + guide
+2. Frequency check: grep for management, mental health, aging, sanitation, revenue, clients, patients, requirement
+3. Format check: all `→` lines use Unicode arrow, plain IDs, all IDs exist
+4. Visuals isolated by blank lines
+5. Sync to DB: `sync_kb_to_db.py` + `sync_crossrefs_to_db.py`
+6. Update INDEX.md status + LOG.md entry
+
+### Two-Layer Architecture
+
+The graph DB is the sole source of truth. The KB is the working draft where content expands before syncing. Concept files hold the living story. Guide files (in `guides/`) hold practical numbers. Both sync to DB via `sync_kb_to_db.py`. Relationship types and axes seeded once via `seed_schema_to_db.py`.
+
+### Story CRUD (API + CLI + Web)
+
+| Action | API | CLI | Web |
+|--------|-----|-----|-----|
+| View story | `GET /api/concepts/{id}` | `cc story {id}` | `/vision/{id}` |
+| List stories | `GET /api/concepts/domain/living-collective` | `cc stories` | `/vision` |
+| Update story | `PATCH /api/concepts/{id}/story` | `cc story-update {id} -f file.md` | `/vision/{id}/edit` |
+| Regenerate images | `POST /api/concepts/{id}/visuals/regenerate` | `cc visuals-generate {id}` | Edit page button |
+| View/edit config | `GET/PATCH /api/config` | `cc config` / `cc config-set key val` | `/settings` |
 
 ## Navigation
 
