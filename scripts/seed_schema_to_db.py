@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 try:
@@ -37,30 +38,40 @@ def expand_items(items: list[dict], defaults: dict) -> list[dict]:
     return [{**defaults, **item} for item in items]
 
 
-def post_node(api_url: str, node: dict) -> bool:
+def post_node(api_url: str, node: dict, retries: int = 5) -> bool:
     """POST /api/graph/nodes — create a node. Returns True on success or 409 (already exists)."""
     url = f"{api_url}/api/graph/nodes"
-    if httpx:
-        resp = httpx.post(url, json=node, timeout=30)
-        if resp.status_code in (200, 201):
-            return True
-        if resp.status_code == 409:
-            print(f"    (exists) {node['id']}")
-            return True
-        print(f"  ERROR {resp.status_code}: {resp.text[:200]}", file=sys.stderr)
-        return False
-    else:
-        body = json.dumps(node).encode()
-        req = urllib.request.Request(url, data=body, method="POST")
-        req.add_header("Content-Type", "application/json")
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                return resp.status in (200, 201)
-        except Exception as e:
-            if "409" in str(e):
+    for attempt in range(retries):
+        if httpx:
+            resp = httpx.post(url, json=node, timeout=30)
+            if resp.status_code in (200, 201):
                 return True
-            print(f"  ERROR: {e}", file=sys.stderr)
+            if resp.status_code == 409:
+                return True  # already exists
+            if resp.status_code == 429:
+                wait = 2 ** attempt
+                print(f"    rate limited, waiting {wait}s...", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            print(f"  ERROR {resp.status_code}: {resp.text[:200]}", file=sys.stderr)
             return False
+        else:
+            body = json.dumps(node).encode()
+            req = urllib.request.Request(url, data=body, method="POST")
+            req.add_header("Content-Type", "application/json")
+            try:
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    return resp.status in (200, 201)
+            except Exception as e:
+                if "409" in str(e):
+                    return True
+                if "429" in str(e):
+                    time.sleep(2 ** attempt)
+                    continue
+                print(f"  ERROR: {e}", file=sys.stderr)
+                return False
+    print(f"  FAILED after {retries} retries: {node['id']}", file=sys.stderr)
+    return False
 
 
 def main():
@@ -95,6 +106,7 @@ def main():
         else:
             if post_node(args.api_url, node):
                 rel_ok += 1
+            time.sleep(0.5)  # avoid rate limiting
 
     # --- Axes ---
     axis_defaults = schema.get("axis_defaults", {})
@@ -119,6 +131,7 @@ def main():
         else:
             if post_node(args.api_url, node):
                 ax_ok += 1
+            time.sleep(0.5)
 
     print(f"\nDone: {rel_ok}/{len(relationships)} rel types, {ax_ok}/{len(axes)} axes")
 
