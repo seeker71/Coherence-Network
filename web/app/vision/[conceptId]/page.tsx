@@ -29,6 +29,13 @@ type Concept = {
   visualization_notes?: string;
   visual_path?: string;
   sacred_frequency?: { hz: number; quality: string };
+  // Deep enrichment fields
+  resources?: Array<{ name: string; url: string; type: string; description: string }>;
+  materials_and_methods?: Array<{ name: string; description: string }>;
+  scale_notes?: { small?: string; medium?: string; large?: string };
+  location_adaptations?: Array<{ climate: string; notes: string }>;
+  visuals?: Array<{ prompt: string; caption: string; location?: string }>;
+  cost_notes?: string;
 };
 
 type Edge = {
@@ -135,6 +142,32 @@ export async function generateMetadata({ params }: { params: Promise<{ conceptId
   };
 }
 
+/* ── Pollinations image URL generator ──────────────────────────────── */
+
+function pollinationsUrl(prompt: string, seed = 42, width = 1024, height = 576): string {
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&model=flux&nologo=true&seed=${seed}`;
+}
+
+const RESOURCE_ICONS: Record<string, string> = {
+  blueprint: "📐",
+  guide: "📖",
+  video: "▶️",
+  course: "🎓",
+  community: "🏘️",
+  book: "📕",
+  wiki: "🌐",
+  tool: "🔧",
+  dataset: "📊",
+};
+
+const CLIMATE_LABELS: Record<string, { label: string; color: string }> = {
+  temperate: { label: "Temperate", color: "bg-emerald-500/10 text-emerald-400/80 border-emerald-500/20" },
+  tropical: { label: "Tropical", color: "bg-amber-500/10 text-amber-400/80 border-amber-500/20" },
+  arid: { label: "Arid", color: "bg-orange-500/10 text-orange-400/80 border-orange-500/20" },
+  coastal: { label: "Coastal", color: "bg-sky-500/10 text-sky-400/80 border-sky-500/20" },
+  alpine: { label: "Alpine", color: "bg-indigo-500/10 text-indigo-400/80 border-indigo-500/20" },
+};
+
 /* ── Known community mapping: place name → internal community page ID ── */
 
 const PLACE_TO_COMMUNITY: Record<string, string> = {
@@ -223,7 +256,7 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
       {/* Hero — visual or gradient */}
       {visual ? (
         <section className="relative w-full aspect-[16/6] overflow-hidden">
-          <Image src={visual} alt={concept.name} fill className="object-cover" sizes="100vw" priority />
+          <Image src={visual} alt={concept.name} fill className="object-cover" sizes="100vw" priority unoptimized={visual.startsWith("http")} />
           <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/40 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-b from-stone-950/60 via-transparent to-transparent" />
         </section>
@@ -381,6 +414,141 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               <section className="rounded-2xl border border-teal-800/20 bg-teal-900/10 p-6 space-y-3">
                 <h2 className="text-sm font-medium text-teal-400/70 uppercase tracking-wider">Blueprint notes</h2>
                 <p className="text-stone-300 leading-relaxed text-sm">{concept.blueprint_notes}</p>
+              </section>
+            )}
+
+            {/* ═══ Visual Gallery — multiple images per concept ═══ */}
+            {concept.visuals && concept.visuals.length > 0 && (
+              <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
+                <h2 className="text-lg font-light text-stone-300">How it looks and feels</h2>
+                <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-2 px-2">
+                  {concept.visuals.map((v, i) => {
+                    const seed = conceptId.split("").reduce((a, c) => a + c.charCodeAt(0), 0) + i * 17;
+                    return (
+                      <div key={i} className="flex-shrink-0 w-80 snap-start space-y-2">
+                        <div className="relative aspect-[16/9] rounded-xl overflow-hidden">
+                          <Image
+                            src={pollinationsUrl(v.prompt, seed)}
+                            alt={v.caption}
+                            fill
+                            className="object-cover"
+                            sizes="320px"
+                            unoptimized
+                            loading="lazy"
+                          />
+                          {v.location && (
+                            <span className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full bg-stone-950/60 text-stone-300 border border-stone-700/30">
+                              {v.location}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-stone-500 leading-relaxed">{v.caption}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* ═══ Resources & References — real blueprints, guides, videos ═══ */}
+            {concept.resources && concept.resources.length > 0 && (
+              <section className="rounded-2xl border border-emerald-800/20 bg-emerald-900/10 p-6 space-y-4">
+                <h2 className="text-sm font-medium text-emerald-400/70 uppercase tracking-wider">Resources &amp; References</h2>
+                <div className="space-y-3">
+                  {concept.resources.map((r, i) => (
+                    <a
+                      key={i}
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex gap-3 p-3 rounded-xl hover:bg-emerald-900/20 transition-colors group"
+                    >
+                      <span className="text-lg flex-shrink-0 mt-0.5">{RESOURCE_ICONS[r.type] || "📄"}</span>
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <div className="text-sm text-emerald-300/80 group-hover:text-emerald-300 transition-colors font-medium">
+                          {r.name} <span className="text-stone-600">↗</span>
+                        </div>
+                        <p className="text-xs text-stone-500 leading-relaxed">{r.description}</p>
+                      </div>
+                      <span className="text-xs text-stone-700 flex-shrink-0 px-2 py-0.5 rounded-full border border-stone-800/30">
+                        {r.type}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* ═══ Materials & Methods ═══ */}
+            {concept.materials_and_methods && concept.materials_and_methods.length > 0 && (
+              <section className="rounded-2xl border border-teal-800/20 bg-teal-900/10 p-6 space-y-4">
+                <h2 className="text-sm font-medium text-teal-400/70 uppercase tracking-wider">Materials &amp; Methods</h2>
+                <div className="space-y-4">
+                  {concept.materials_and_methods.map((m, i) => (
+                    <div key={i} className="space-y-1">
+                      <h3 className="text-sm font-medium text-stone-300">{m.name}</h3>
+                      <p className="text-sm text-stone-500 leading-relaxed">{m.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* ═══ At Different Scales — 50 / 100 / 200 people ═══ */}
+            {concept.scale_notes && (concept.scale_notes.small || concept.scale_notes.medium || concept.scale_notes.large) && (
+              <section className="rounded-2xl border border-amber-800/20 bg-amber-900/5 p-6 space-y-4">
+                <h2 className="text-sm font-medium text-amber-400/70 uppercase tracking-wider">At different scales</h2>
+                <div className="grid md:grid-cols-3 gap-4">
+                  {concept.scale_notes.small && (
+                    <div className="space-y-2 p-4 rounded-xl border border-stone-800/20 bg-stone-900/20">
+                      <div className="text-xl font-light text-emerald-300/70">50</div>
+                      <div className="text-xs text-stone-600 uppercase tracking-wider mb-2">people</div>
+                      <p className="text-sm text-stone-400 leading-relaxed">{concept.scale_notes.small}</p>
+                    </div>
+                  )}
+                  {concept.scale_notes.medium && (
+                    <div className="space-y-2 p-4 rounded-xl border border-amber-800/10 bg-amber-900/5">
+                      <div className="text-xl font-light text-amber-300/70">100</div>
+                      <div className="text-xs text-stone-600 uppercase tracking-wider mb-2">people</div>
+                      <p className="text-sm text-stone-400 leading-relaxed">{concept.scale_notes.medium}</p>
+                    </div>
+                  )}
+                  {concept.scale_notes.large && (
+                    <div className="space-y-2 p-4 rounded-xl border border-stone-800/20 bg-stone-900/20">
+                      <div className="text-xl font-light text-violet-300/70">200</div>
+                      <div className="text-xs text-stone-600 uppercase tracking-wider mb-2">people</div>
+                      <p className="text-sm text-stone-400 leading-relaxed">{concept.scale_notes.large}</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* ═══ Location Adaptations ═══ */}
+            {concept.location_adaptations && concept.location_adaptations.length > 0 && (
+              <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
+                <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">Climate adaptations</h2>
+                <div className="space-y-3">
+                  {concept.location_adaptations.map((la, i) => {
+                    const cl = CLIMATE_LABELS[la.climate] || { label: la.climate, color: "bg-stone-800/30 text-stone-400 border-stone-700/30" };
+                    return (
+                      <div key={i} className="flex gap-3 items-start">
+                        <span className={`text-xs px-2 py-0.5 rounded-full border flex-shrink-0 mt-0.5 ${cl.color}`}>
+                          {cl.label}
+                        </span>
+                        <p className="text-sm text-stone-400 leading-relaxed">{la.notes}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* ═══ Practical Costs ═══ */}
+            {concept.cost_notes && (
+              <section className="rounded-2xl border border-emerald-800/20 bg-emerald-900/5 p-6 space-y-3">
+                <h2 className="text-sm font-medium text-emerald-400/70 uppercase tracking-wider">Practical costs</h2>
+                <p className="text-sm text-stone-400 leading-relaxed">{concept.cost_notes}</p>
               </section>
             )}
 
