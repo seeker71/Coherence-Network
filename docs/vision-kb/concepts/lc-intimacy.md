@@ -1,8 +1,8 @@
 ---
 id: lc-intimacy
 hz: 639
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Intimacy
@@ -24,6 +24,13 @@ The tantric tradition holds that sexual energy (shakti) is the same energy that 
 ## Blueprint
 Create a culture where physical affection is normal — hugs, hand-holding, leaning together. Weekly 'relating space' (optional, facilitated) where people can explore connection honestly. No rules about relationship form — the field holds the container. Touch is nutrient, not luxury.
 
+## Resources
+- [ZEGG Community](https://www.zegg.de/en/) — German community pioneering transparent relating (type: community)
+- [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based relating and decision-making (type: guide)
+
+## Visuals
+1. **Intimate sharing** — `photorealistic two people sitting face to face outdoors on cushions, deep eye contact, garden setting, warm afternoon light, vulnerability and trust visible in posture`
+
 ## Living Examples
 - **Trees sharing root systems** — grafted together underground, sharing water and nutrients
 - **Whale pair bonds** — singing to each other across ocean basins
@@ -41,8 +48,9 @@ Create a culture where physical affection is normal — hugs, hand-holding, lean
 Intimacy is the Resonating flow at its deepest. It connects to Play (joyful connection), Stillness (presence together), and Ceremony (honoring significant moments of connection).
 
 ## Open Questions
-- What aspects of Intimacy need deeper research?
-- What real-world examples are we missing?
+- How to create safety for intimacy without rigidity?
+- What's the community's role when intimate relationships break down?
+- How to honor both solitude and connection needs?
 
 ## Cross-References
 → lc-resonating, lc-stillness, lc-v-comfort-joy, lc-rest

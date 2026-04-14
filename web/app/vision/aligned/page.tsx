@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { getApiBase } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Aligned Communities — The Living Collective",
   description: "Communities and practices already living pieces of this vision. We celebrate them, learn from them, and invite connection.",
 };
+
+export const dynamic = "force-dynamic";
+
+type DBItem = { id: string; name: string; description?: string; [key: string]: unknown };
+
+async function fetchItems(type: string): Promise<DBItem[]> {
+  const base = getApiBase();
+  try {
+    const res = await fetch(`${base}/api/concepts/${type}?limit=50`, { next: { revalidate: 60 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data?.items || [];
+  } catch { return []; }
+}
 
 const COMMUNITIES = [
   {
@@ -91,7 +106,18 @@ const PRACTICES = [
   { name: "Sound Healing", url: "https://www.taize.fr/", what: "Singing bowls, kirtan, overtone singing, Taizé chanting. Sound as the primary attunement technology.", concepts: ["lc-transmission", "lc-v-harmonizing", "lc-ceremony"] },
 ];
 
-export default function AlignedPage() {
+export default async function AlignedPage() {
+  // Fetch from DB — fall back to hardcoded data if empty
+  const [dbCommunities, dbNetworks, dbPractices] = await Promise.all([
+    fetchItems("communities"),
+    fetchItems("networks"),
+    fetchItems("practices"),
+  ]);
+
+  // Use DB data if available, otherwise hardcoded
+  const useCommunities = dbCommunities.length > 0 ? dbCommunities : null;
+  const useNetworks = dbNetworks.length > 0 ? dbNetworks : null;
+  const usePractices = dbPractices.length > 0 ? dbPractices : null;
   return (
     <main className="max-w-5xl mx-auto px-6 py-16 space-y-24">
       {/* Hero */}

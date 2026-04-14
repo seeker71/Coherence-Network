@@ -1,8 +1,8 @@
 ---
 id: lc-harmonic-rebalancing
 hz: 396
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Harmonic Rebalancing
@@ -17,6 +17,13 @@ When frequencies need adjustment. Energy seeking new arrangement. The field's mo
 
 ## Blueprint
 When tension arises, the community holds a 'rebalancing circle' within 48 hours. Not mediation — the whole field participates. Each person speaks their frequency, the group listens for the new harmonic. No blame, no fix — just truth-telling until the field reorganizes. Follow up in one week.
+
+## Resources
+- [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based conflict resolution (type: guide)
+- [The Work That Reconnects](https://workthatreconnects.org/) — truth mandala and group rebalancing (type: guide)
+
+## Visuals
+1. **Rebalancing circle** — `photorealistic group of people in talking circle outdoors, one person speaking emotionally while others listen with compassion, stones arranged in center, late afternoon light`
 
 ## Living Examples
 - **Jazz ensemble** — a wrong note becomes the right note when the ensemble follows it somewhere new
@@ -33,8 +40,9 @@ When tension arises, the community holds a 'rebalancing circle' within 48 hours.
 Harmonic Rebalancing is how the field evolves. It replaces 'conflict resolution' with a frequency-based understanding: the system is finding its new harmonic, and the intensity IS the creative energy.
 
 ## Open Questions
-- What aspects of Harmonic Rebalancing need deeper research?
-- What real-world examples are we missing?
+- How to distinguish healthy tension from dysfunction?
+- What practices prevent rebalancing from becoming conflict avoidance?
+- When should the community seek outside facilitation?
 
 ## Cross-References
 → lc-attunement, lc-v-harmonizing, lc-health, lc-composting

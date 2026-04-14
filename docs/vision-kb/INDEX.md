@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-14 | **Concepts**: 51 | **Status**: expanding (8 Tier 1 concepts enriched)
+> **Last maintained**: 2026-04-14 | **Concepts**: 51 | **Status**: all 51 expanding
 
 ## How to use this KB
 
