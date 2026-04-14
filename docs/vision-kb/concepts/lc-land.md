@@ -1,8 +1,8 @@
 ---
 id: lc-land
 hz: 174
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Land Embedding
@@ -24,6 +24,48 @@ Aboriginal Australian songlines show the deepest relationship with land: the lan
 ## Blueprint
 Begin with observation: one full year of watching water flow, sun patterns, wind, wildlife corridors, soil types before any major earthworks. Implement keyline water harvesting. Plant 500+ trees in the first three years. Establish wildlife corridors connecting to surrounding habitat. The land council walks the whole property monthly.
 
+## Resources
+- 📐 [One Community - Open Source Village](https://onecommunityglobal.org/open-source/) — complete open-source blueprints for 7 village types including land use planning (type: blueprint)
+- 📖 [Andrew Millison - Permaculture Design](https://open.oregonstate.education/permaculturedesign/) — free textbook on permaculture land design for climate resilience (type: book)
+- 📖 [ATTRA Sustainable Agriculture](https://attra.ncat.org/) — 300+ free publications including land management and soil health (type: guide)
+- 🌐 [Foundation for Intentional Community](https://www.ic.org/) — directory of 1000+ communities, land search resources, forums (type: community)
+- 📖 [Grounded Solutions - CLT Startup Hub](https://groundedsolutions.org/resources/start-upclthub/) — free toolkit for starting a community land trust (type: guide)
+- 📖 [Grounded Solutions - CLT Technical Manual](https://groundedsolutions.org/resources/community-land-trust-technical-manual/) — comprehensive guide to operating a CLT (type: guide)
+- 🌐 [Grounded Solutions - CLT Map](https://groundedsolutions.org/sehmap/) — interactive map of US community land trusts (type: community)
+- 🌐 [Permaculture Global Network](https://permacultureglobal.org/) — worldwide map of permaculture land projects (type: community)
+
+## Materials & Methods
+- **Keyline design** — P.A. Yeomans water harvesting along contour lines. $5,000-20,000 per 10 acres for initial earthworks. Springs recharge within 2-5 years.
+- **Syntropic agroforestry** — Ernst Gotsch method, successional planting mimicking forest development. $3,000-8,000 per acre establishment.
+- **Swales and berms** — earthen water retention ditches on contour. $2,000-8,000 per 100 linear meters. Gravity-fed, no pumps.
+- **Community land trust (CLT)** — 99-year ground leases, land held in perpetuity. Legal setup $10,000-30,000. Reduces per-person cost 50-80%.
+- **Conservation easement** — permanent land protection, potential tax benefits. Legal cost $5,000-15,000.
+- **Soil remediation** — compost, cover crops, biochar. $1,000-5,000 per acre. Rebuilds degraded land in 3-5 years.
+
+## At Scale
+- **50 people**: 20-40 acres minimum. 5 acres built environment, 5 acres food production, 10-30 acres forest/wildlife/buffer. Water: 1-2 ponds, rainwater cisterns.
+- **100 people**: 50-100 acres. 10 acres built, 15 acres food, 25-75 acres forest/riparian. Multiple water bodies. Keyline system across property.
+- **200 people**: 100-200 acres. 20 acres built, 30 acres food, 50-150 acres managed forest, wildlife corridors connecting to surrounding habitat. Watershed-scale water management.
+
+## Climate Adaptations
+- **Temperate** — deciduous food forest, keyline water harvesting, 4-season management, frost pockets for cold-air drainage planning
+- **Tropical** — rapid growth enables 3-5 year forest establishment, contour terracing for heavy rainfall, shade management critical
+- **Arid** — water harvesting paramount (swales, check dams, cisterns), drought-tolerant pioneer species, shade structures, mulch 6-12 inches
+- **Alpine** — short growing season, protect south-facing slopes, windbreaks essential, snow-melt water management, cold-hardy species
+
+## Visuals
+1. **Aerial view of community land** — `photorealistic aerial view of intentional community on rolling hills, food forest zones, meandering swales filled with water, clusters of earthen buildings, wildlife corridors of native trees, patchwork of gardens and orchards`
+2. **Keyline water harvesting** — `photorealistic landscape showing contour swales capturing rainfall on gentle hillside, water spreading across land, green grass growing along swale lines, young fruit trees planted along berms, blue sky`
+3. **Regenerated landscape** — `photorealistic before and after split image, barren degraded land on left, lush diverse food forest with ponds and buildings on right, same hillside after 10 years of regeneration`
+
+## Costs
+- **Land purchase (US averages)**: Rural: $2,000-15,000/acre. Peri-urban: $10,000-50,000/acre. Colorado mountain: $5,000-20,000/acre.
+- **CLT legal setup**: $10,000-30,000 one-time.
+- **Keyline earthworks**: $5,000-20,000 for initial 10-acre system.
+- **Tree planting (500 trees)**: $5,000-15,000 including nursery stock and labor.
+- **Water infrastructure** (ponds, cisterns, swales): $20,000-60,000 for 50-person site.
+- **Total land cost for 50 people (30 acres, Colorado)**: $150,000-600,000 land + $50,000-100,000 earthworks/water/trees.
+
 ## Living Examples
 - **Coral reef** — a community of organisms that IS the ecosystem, not separate from it
 - **Aboriginal Australian songlines** — the land is alive, sung into existence, mapped through relationship
@@ -43,8 +85,9 @@ Begin with observation: one full year of watching water flow, sun patterns, wind
 Land Embedding is where Nourishing meets Spiraling — the long relationship with place that deepens over generations. It's the ground everything else stands on.
 
 ## Open Questions
-- What aspects of Land Embedding need deeper research?
-- What real-world examples are we missing?
+- How to evaluate land before purchase? (Water, soil, access, zoning, neighbors)
+- What's the ideal land-to-person ratio? (Estimates: 0.5-1 acre per person including food/forest/common)
+- How to navigate rural zoning for intentional community?
 
 ## Cross-References
-→ lc-nourishing
+→ lc-nourishing, lc-nourishment, lc-energy, lc-space
