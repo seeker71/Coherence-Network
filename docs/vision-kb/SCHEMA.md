@@ -88,33 +88,32 @@ To expand a concept by 3x:
 
 ## Two-Layer Architecture
 
-**Graph DB** is the runtime source of truth. **KB markdown** is the working draft.
+**Graph DB** is the sole source of truth. **KB markdown** is the working draft.
 
-The ontology JSON (`config/ontology/living-collective.json`) is a one-time seed file. It's version-gated: the API checks a `_schema-version` node in the DB. If versions match, the JSON is never read (instant startup). The JSON only re-seeds when its version number changes.
-
-### Enrichment Flow
-
-1. Expand content in KB markdown files (fast, focused, per-concept)
-2. Sync to DB: `python scripts/sync_kb_to_db.py lc-space` — PATCHes the graph node via API
-3. Verify: the web page immediately reflects the change (no rebuild needed)
-4. For bulk sync: `python scripts/sync_kb_to_db.py --all --min-status expanding`
+There are no JSON seed files. No auto-seeding on startup. Everything lives in the DB — concepts, relationship types, axes. The API reads from DB, never from files.
 
 ### What Goes Where
 
 | Layer | Purpose | Who writes | How it's read |
 |-------|---------|-----------|---------------|
 | KB markdown | Working draft, AI memory, 3x-per-iteration expansion | AI + human | `Read` tool, per-file |
-| Graph DB | Runtime source of truth | API PATCH, sync script | API endpoints → web pages |
-| Ontology JSON | One-time seed (legacy) | Never edited again | Only on version mismatch |
+| Graph DB | Runtime source of truth | API PATCH, sync scripts | API endpoints → web pages |
+| `config/ontology/schema.json` | Migration artifact (rel types + axes) | One-time seed script | `seed_schema_to_db.py` reads it once |
 
-### Sync Script
+### Sync Scripts
 
 ```bash
+# Concept content: KB markdown → DB
 python scripts/sync_kb_to_db.py lc-space                    # sync one concept
 python scripts/sync_kb_to_db.py --all                       # sync all
 python scripts/sync_kb_to_db.py --all --min-status expanding # only expanded concepts
 python scripts/sync_kb_to_db.py lc-space --dry-run          # preview changes
-python scripts/sync_kb_to_db.py lc-space --api-url http://localhost:8000  # local
+
+# Schema vocabulary: relationship types + axes → DB (one-time)
+python scripts/seed_schema_to_db.py                          # production
+python scripts/seed_schema_to_db.py --dry-run                # preview
 ```
 
-The script parses: Resources, Materials & Methods, At Scale, Climate Adaptations, Visuals, Costs sections from the markdown and PATCHes them as JSONB properties on the graph node.
+`sync_kb_to_db.py` parses: Resources, Materials & Methods, At Scale, Climate Adaptations, Visuals, Costs sections from markdown and PATCHes them as JSONB properties.
+
+`seed_schema_to_db.py` reads the compact `schema.json` (with defaults + overrides), expands entries, and POSTs each as a graph node. Idempotent — skips existing entries.
