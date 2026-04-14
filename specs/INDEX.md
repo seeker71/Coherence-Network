@@ -1,71 +1,115 @@
 # Spec Index
 
-**65 specs** — plain slug convention (no numeric prefixes).
+> 65 specs, all done. Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-| Spec | File |
-|------|------|
-| agent-execution-lifecycle-hooks | [agent-execution-lifecycle-hooks.md](agent-execution-lifecycle-hooks.md) |
-| agent-orchestration-api | [agent-orchestration-api.md](agent-orchestration-api.md) |
-| api-request-logging-middleware | [api-request-logging-middleware.md](api-request-logging-middleware.md) |
-| assets-api | [assets-api.md](assets-api.md) |
-| attention-heuristics-pipeline-status | [attention-heuristics-pipeline-status.md](attention-heuristics-pipeline-status.md) |
-| auto-heal-from-diagnostics | [auto-heal-from-diagnostics.md](auto-heal-from-diagnostics.md) |
-| canonical-route-registry-and-runtime-mapping | [canonical-route-registry-and-runtime-mapping.md](canonical-route-registry-and-runtime-mapping.md) |
-| cc-economics-and-value-coherence | [cc-economics-and-value-coherence.md](cc-economics-and-value-coherence.md) |
-| coherence-algorithm-spec | [coherence-algorithm-spec.md](coherence-algorithm-spec.md) |
-| coherence-cli-comprehensive | [coherence-cli-comprehensive.md](coherence-cli-comprehensive.md) |
-| coherence-credit-internal-currency | [coherence-credit-internal-currency.md](coherence-credit-internal-currency.md) |
-| coherence-network-agent-pipeline | [coherence-network-agent-pipeline.md](coherence-network-agent-pipeline.md) |
-| contributions-api | [contributions-api.md](contributions-api.md) |
-| contributor-journey | [contributor-journey.md](contributor-journey.md) |
-| contributor-onboarding-and-governed-change-flow | [contributor-onboarding-and-governed-change-flow.md](contributor-onboarding-and-governed-change-flow.md) |
-| cross-task-outcome-correlation | [cross-task-outcome-correlation.md](cross-task-outcome-correlation.md) |
-| data-driven-timeout-resume | [data-driven-timeout-resume.md](data-driven-timeout-resume.md) |
-| developer-quick-start | [developer-quick-start.md](developer-quick-start.md) |
-| distribution-engine | [distribution-engine.md](distribution-engine.md) |
-| external-presence-bots-and-news | [external-presence-bots-and-news.md](external-presence-bots-and-news.md) |
-| failed-task-diagnostics-contract | [failed-task-diagnostics-contract.md](failed-task-diagnostics-contract.md) |
-| federation-network-layer | [federation-network-layer.md](federation-network-layer.md) |
-| grounded-cost-value-measurement | [grounded-cost-value-measurement.md](grounded-cost-value-measurement.md) |
-| grounded-idea-portfolio-metrics | [grounded-idea-portfolio-metrics.md](grounded-idea-portfolio-metrics.md) |
-| heal-completion-issue-resolution | [heal-completion-issue-resolution.md](heal-completion-issue-resolution.md) |
-| idea-dual-identity | [idea-dual-identity.md](idea-dual-identity.md) |
-| idea-hierarchy-super-child | [idea-hierarchy-super-child.md](idea-hierarchy-super-child.md) |
-| idea-lifecycle-closure | [idea-lifecycle-closure.md](idea-lifecycle-closure.md) |
-| idea-lifecycle-management | [idea-lifecycle-management.md](idea-lifecycle-management.md) |
-| idea-right-sizing | [idea-right-sizing.md](idea-right-sizing.md) |
-| ideas-prioritization | [ideas-prioritization.md](ideas-prioritization.md) |
-| identity-driven-onboarding-tofu | [identity-driven-onboarding-tofu.md](identity-driven-onboarding-tofu.md) |
-| incident-response-and-self-healing | [incident-response-and-self-healing.md](incident-response-and-self-healing.md) |
-| investment-ux-stake-cc-on-ideas | [investment-ux-stake-cc-on-ideas.md](investment-ux-stake-cc-on-ideas.md) |
-| knowledge-resonance-engine | [knowledge-resonance-engine.md](knowledge-resonance-engine.md) |
-| mcp-skill-registry-submission | [mcp-skill-registry-submission.md](mcp-skill-registry-submission.md) |
-| meta-self-discovery | [meta-self-discovery.md](meta-self-discovery.md) |
-| mvp-cost-and-acceptance-proof | [mvp-cost-and-acceptance-proof.md](mvp-cost-and-acceptance-proof.md) |
-| node-task-visibility | [node-task-visibility.md](node-task-visibility.md) |
-| normalize-github-commit-cost-estimation | [normalize-github-commit-cost-estimation.md](normalize-github-commit-cost-estimation.md) |
-| pipeline-observability-and-auto-review | [pipeline-observability-and-auto-review.md](pipeline-observability-and-auto-review.md) |
-| portfolio-governance-effectiveness | [portfolio-governance-effectiveness.md](portfolio-governance-effectiveness.md) |
-| portfolio-governance-health | [portfolio-governance-health.md](portfolio-governance-health.md) |
-| postgresql-migration | [postgresql-migration.md](postgresql-migration.md) |
-| project-manager-pipeline | [project-manager-pipeline.md](project-manager-pipeline.md) |
-| prompt-ab-roi-measurement | [prompt-ab-roi-measurement.md](prompt-ab-roi-measurement.md) |
-| provider-health-alerting | [provider-health-alerting.md](provider-health-alerting.md) |
-| provider-usage-coalescing-timeout-resilience | [provider-usage-coalescing-timeout-resilience.md](provider-usage-coalescing-timeout-resilience.md) |
-| release-gates | [release-gates.md](release-gates.md) |
-| runner-auto-contribution | [runner-auto-contribution.md](runner-auto-contribution.md) |
-| runtime-telemetry-db-precedence | [runtime-telemetry-db-precedence.md](runtime-telemetry-db-precedence.md) |
-| smart-reap | [smart-reap.md](smart-reap.md) |
-| split-review-deploy-verify-phases | [split-review-deploy-verify-phases.md](split-review-deploy-verify-phases.md) |
-| stale-task-reaper | [stale-task-reaper.md](stale-task-reaper.md) |
-| standing-questions-roi-and-next-task-generation | [standing-questions-roi-and-next-task-generation.md](standing-questions-roi-and-next-task-generation.md) |
-| super-idea-rollup-criteria | [super-idea-rollup-criteria.md](super-idea-rollup-criteria.md) |
-| task-claim-tracking-and-roi-dedupe | [task-claim-tracking-and-roi-dedupe.md](task-claim-tracking-and-roi-dedupe.md) |
-| task-deduplication | [task-deduplication.md](task-deduplication.md) |
-| tool-failure-awareness | [tool-failure-awareness.md](tool-failure-awareness.md) |
-| unified-agent-cli-flow-patch-on-fail | [unified-agent-cli-flow-patch-on-fail.md](unified-agent-cli-flow-patch-on-fail.md) |
-| unified-sqlite-store | [unified-sqlite-store.md](unified-sqlite-store.md) |
-| universal-node-edge-layer | [universal-node-edge-layer.md](universal-node-edge-layer.md) |
-| ux-homepage-readability | [ux-homepage-readability.md](ux-homepage-readability.md) |
-| value-lineage-and-payout-attribution | [value-lineage-and-payout-attribution.md](value-lineage-and-payout-attribution.md) |
-| web-ideas-specs-usage-pages | [web-ideas-specs-usage-pages.md](web-ideas-specs-usage-pages.md) |
+## By Idea (16 ideas → 65 specs)
+
+### idea-realization-engine (8 specs)
+- [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
+- [idea-hierarchy-super-child](idea-hierarchy-super-child.md) — parent/child absorption
+- [idea-lifecycle-closure](idea-lifecycle-closure.md) — close/archive/absorb lifecycle
+- [idea-lifecycle-management](idea-lifecycle-management.md) — stage transitions + history
+- [idea-right-sizing](idea-right-sizing.md) — complexity scoring + split/merge
+- [ideas-prioritization](ideas-prioritization.md) — free-energy scoring + ranking
+- [standing-questions-roi-and-next-task-generation](standing-questions-roi-and-next-task-generation.md) — ROI questions → task generation
+- [super-idea-rollup-criteria](super-idea-rollup-criteria.md) — rollup rules for super-ideas
+
+### agent-pipeline (6 specs)
+- [agent-orchestration-api](agent-orchestration-api.md) — task dispatch + agent coordination
+- [attention-heuristics-pipeline-status](attention-heuristics-pipeline-status.md) — pipeline attention scoring
+- [coherence-network-agent-pipeline](coherence-network-agent-pipeline.md) — end-to-end pipeline flow
+- [pipeline-observability-and-auto-review](pipeline-observability-and-auto-review.md) — observability + auto-review
+- [project-manager-pipeline](project-manager-pipeline.md) — PM cycle orchestration
+- [split-review-deploy-verify-phases](split-review-deploy-verify-phases.md) — review/deploy/verify phases
+
+### pipeline-reliability (8 specs)
+- [auto-heal-from-diagnostics](auto-heal-from-diagnostics.md) — auto-heal from failure diagnostics
+- [data-driven-timeout-resume](data-driven-timeout-resume.md) — adaptive timeouts + resume
+- [failed-task-diagnostics-contract](failed-task-diagnostics-contract.md) — structured failure diagnostics
+- [heal-completion-issue-resolution](heal-completion-issue-resolution.md) — heal + issue resolution
+- [incident-response-and-self-healing](incident-response-and-self-healing.md) — incident response automation
+- [smart-reap](smart-reap.md) — intelligent task reaping
+- [stale-task-reaper](stale-task-reaper.md) — stale task cleanup
+- [task-deduplication](task-deduplication.md) — duplicate task detection
+
+### pipeline-optimization (6 specs)
+- [cross-task-outcome-correlation](cross-task-outcome-correlation.md) — outcome correlation across tasks
+- [prompt-ab-roi-measurement](prompt-ab-roi-measurement.md) — prompt A/B testing + ROI
+- [provider-health-alerting](provider-health-alerting.md) — LLM provider health monitoring
+- [provider-usage-coalescing-timeout-resilience](provider-usage-coalescing-timeout-resilience.md) — usage coalescing + resilience
+- [runner-auto-contribution](runner-auto-contribution.md) — runner auto-contribution tracking
+- [tool-failure-awareness](tool-failure-awareness.md) — tool failure detection + routing
+
+### data-infrastructure (8 specs)
+- [api-request-logging-middleware](api-request-logging-middleware.md) — request logging middleware
+- [canonical-route-registry-and-runtime-mapping](canonical-route-registry-and-runtime-mapping.md) — route registry + runtime mapping
+- [coherence-algorithm-spec](coherence-algorithm-spec.md) — CRK coherence scoring algorithm
+- [postgresql-migration](postgresql-migration.md) — SQLite → PostgreSQL migration
+- [release-gates](release-gates.md) — release gate checks
+- [runtime-telemetry-db-precedence](runtime-telemetry-db-precedence.md) — telemetry DB precedence rules
+- [unified-sqlite-store](unified-sqlite-store.md) — unified SQLite store (legacy)
+- [universal-node-edge-layer](universal-node-edge-layer.md) — graph DB node + edge CRUD
+
+### coherence-credit (6 specs)
+- [cc-economics-and-value-coherence](cc-economics-and-value-coherence.md) — CC economic model
+- [coherence-credit-internal-currency](coherence-credit-internal-currency.md) — CC as internal currency
+- [grounded-cost-value-measurement](grounded-cost-value-measurement.md) — grounded cost/value measurement
+- [grounded-idea-portfolio-metrics](grounded-idea-portfolio-metrics.md) — portfolio-level metrics
+- [mvp-cost-and-acceptance-proof](mvp-cost-and-acceptance-proof.md) — MVP cost + acceptance proof
+- [portfolio-governance-effectiveness](portfolio-governance-effectiveness.md) — governance effectiveness scoring
+
+### value-attribution (7 specs)
+- [assets-api](assets-api.md) — asset CRUD + lineage
+- [contributions-api](contributions-api.md) — contribution tracking API
+- [contributor-onboarding-and-governed-change-flow](contributor-onboarding-and-governed-change-flow.md) — governed change flow
+- [distribution-engine](distribution-engine.md) — value distribution engine
+- [normalize-github-commit-cost-estimation](normalize-github-commit-cost-estimation.md) — GitHub commit cost estimation
+- [task-claim-tracking-and-roi-dedupe](task-claim-tracking-and-roi-dedupe.md) — task claim tracking + ROI dedup
+- [value-lineage-and-payout-attribution](value-lineage-and-payout-attribution.md) — value lineage chain
+
+### user-surfaces (6 specs)
+- [coherence-cli-comprehensive](coherence-cli-comprehensive.md) — CLI 35+ commands
+- [mcp-skill-registry-submission](mcp-skill-registry-submission.md) — MCP skill registry
+- [meta-self-discovery](meta-self-discovery.md) — system self-discovery endpoints
+- [node-task-visibility](node-task-visibility.md) — node task visibility dashboard
+- [ux-homepage-readability](ux-homepage-readability.md) — homepage readability UX
+- [web-ideas-specs-usage-pages](web-ideas-specs-usage-pages.md) — web ideas/specs/usage pages
+
+### portfolio-governance (1 spec)
+- [portfolio-governance-health](portfolio-governance-health.md) — governance health scoring
+
+### agent-cli (2 specs)
+- [agent-execution-lifecycle-hooks](agent-execution-lifecycle-hooks.md) — execution lifecycle hooks
+- [unified-agent-cli-flow-patch-on-fail](unified-agent-cli-flow-patch-on-fail.md) — CLI flow + patch-on-fail
+
+### knowledge-and-resonance (1 spec)
+- [knowledge-resonance-engine](knowledge-resonance-engine.md) — concept layer, belief resonance, discovery feed
+
+### identity-and-onboarding (2 specs)
+- [identity-driven-onboarding-tofu](identity-driven-onboarding-tofu.md) — TOFU identity + 37 providers
+- [investment-ux-stake-cc-on-ideas](investment-ux-stake-cc-on-ideas.md) — stake CC on ideas UX
+
+### contributor-experience (1 spec)
+- [contributor-journey](contributor-journey.md) — contributor orientation + journey
+
+### developer-experience (1 spec)
+- [developer-quick-start](developer-quick-start.md) — developer quick start guide
+
+### federation-and-nodes (1 spec)
+- [federation-network-layer](federation-network-layer.md) — multi-node federation protocol
+
+### external-presence (1 spec)
+- [external-presence-bots-and-news](external-presence-bots-and-news.md) — social bots + news ingestion
+
+## Lookup
+
+```bash
+# Find spec by keyword
+grep -l "resonance" specs/*.md
+
+# Read spec frontmatter only (source, requirements, done_when)
+head -30 specs/{slug}.md
+
+# API: all specs for an idea
+curl https://api.coherencycoin.com/api/ideas/{idea_id}/specs
+```
