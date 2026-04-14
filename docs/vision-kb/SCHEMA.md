@@ -76,6 +76,72 @@ Each entry is a Pollinations prompt + caption:
 4. **Every session end**: append a summary to LOG.md
 5. **Every 5th session**: run a lint pass — check for orphans, contradictions, stale links
 
+## Data Hygiene (MANDATORY)
+
+Every agent touching KB files MUST follow these rules. Violations cause rendering bugs, broken links, and old-earth frequency contamination.
+
+### Token Budget
+
+| Status | Max tokens (concept file) | Guide file? |
+|--------|---------------------------|-------------|
+| seed | 500 | No |
+| expanding | 1,500 | No |
+| deepening | 3,000 | Yes — `guides/{id}-guide.md` holds practical details |
+| mature | 3,000 | Optional |
+| complete | 4,000 | Optional |
+
+**Check**: `wc -c file.md` ÷ 4 ≈ tokens. If a concept exceeds its budget after enrichment, split: story + connections stay in concept file, practical numbers + costs + timelines go to `guides/{id}-guide.md`. Add link: `**Practical guide**: [How to actually do this](../guides/{id}-guide.md)`
+
+### Format Rules (Rendering-Critical)
+
+These rules prevent rendering bugs in the StoryContent component (`web/app/vision/[conceptId]/_components/StoryContent.tsx`):
+
+| Rule | Correct | Wrong (causes bugs) |
+|------|---------|---------------------|
+| Cross-refs | `→ lc-xxx, lc-yyy` | `-> lc-xxx` (ASCII arrow), `→ [Name](file.md)` (links), `→ lc-xxx — description` (descriptions) |
+| Inline visuals | Blank line before AND after `![caption](visuals:prompt)` | Visual on same line as paragraph text |
+| Headings | Blank line before `## Heading` | Heading jammed against previous paragraph |
+| Cross-ref IDs | Must match an existing `concepts/{id}.md` file | Made-up IDs, missing `lc-` prefix |
+
+### Frequency Vocabulary (Living Collective frequency)
+
+NEVER use these old-earth terms. Always translate:
+
+| Never write | Always write instead |
+|-------------|---------------------|
+| management | tending, stewardship |
+| mental health | wholeness, inner coherence |
+| elder care, aging (as decline) | ripening, elder frequency, deepening |
+| sanitation | living systems, nutrient return |
+| revenue, profit | sustenance, overflow |
+| clients, patients, users | people, community members |
+| requirement | invitation |
+| services (of nature) | gifts |
+| program (of community) | practice, rhythm |
+| fitness program | movement landscape |
+| treatment (of people) | tending |
+| broken, damaged (of people) | in dissonance, seeking coherence |
+| intervention | tending, holding space |
+| stakeholders | those who resonate, participants |
+| compliance | alignment, attunement |
+
+**The test**: Does this sentence sound like it could appear in a corporate handbook, medical chart, or government form? If yes, compost it and find the living version.
+
+**Exception**: When describing external legal/medical reality (land law, dental care, battery management systems), use the technical term but frame it as interfacing with the old world, not embodying it.
+
+### After-Enrichment Checklist
+
+Run this after every KB change. Every item is mandatory.
+
+1. **Token count** — `wc -c concepts/{id}.md` ÷ 4 < 4,000? If not, split into concept + guide
+2. **Frequency scan** — `grep -in 'management\|mental health\|aging\|sanitation\|revenue\|clients\|patients\|requirement' concepts/{id}.md`
+3. **Format scan** — no `-> ` (ASCII arrows), no `→ [Name](` (annotated links), no `→ ... —` (descriptions)
+4. **Cross-ref validity** — every ID in `→` lines exists as `concepts/{id}.md`
+5. **Visual isolation** — every `![caption](visuals:prompt)` has blank lines before and after
+6. **Sync to DB** — `python scripts/sync_kb_to_db.py {id}` + `python scripts/sync_crossrefs_to_db.py`
+7. **Update INDEX.md** — status, one-line summary if changed
+8. **Update LOG.md** — append session entry
+
 ## Expansion Protocol
 
 To expand a concept by 3x:
@@ -84,8 +150,12 @@ To expand a concept by 3x:
 3. Add: open questions that emerged
 4. Update: cross-references to newly connected concepts
 5. Update: status level
-6. Update: INDEX.md one-line summary if it changed
-7. Append: LOG.md entry
+6. **Check token budget** — split if over limit
+7. **Run frequency scan** — fix any old-earth vocabulary
+8. **Run format scan** — fix any rendering-breaking patterns
+9. Update: INDEX.md one-line summary if it changed
+10. Append: LOG.md entry
+11. **Sync to DB** — mandatory before session ends
 
 ## Frequency Alignment — How to Write for This Vision
 
