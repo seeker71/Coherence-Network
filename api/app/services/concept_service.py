@@ -1,41 +1,31 @@
 """Concept ontology service — graph DB is the single source of truth.
 
-All concepts, edges, and tags live in the graph database. There is no
-separate store. The DB is populated and enriched via:
+All concepts, edges, tags, relationship types, and axes live in the
+graph database. There is no separate store. The DB is populated and
+enriched via:
 - API endpoints (PATCH /api/graph/nodes/{id})
 - sync_kb_to_db.py (reads KB markdown → PATCHes via API)
-
-Relationship types and axes are schema-level reference metadata loaded
-from small JSON files on first access. These define what kinds of
-connections and dimensions exist — they're vocabulary, not content.
+- seed_schema_to_db.py (one-time: loads relationship types + axes)
 """
 
 from __future__ import annotations
 
-import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 log = logging.getLogger(__name__)
 
-_ONTOLOGY_DIR = Path(__file__).resolve().parents[3] / "config" / "ontology"
-
-# Reference metadata (schema-level, not data-level) — loaded from JSON.
-_relationships: list[dict[str, Any]] = []
-_axes: list[dict[str, Any]] = []
-
 # Entity-concept tags (in-memory for now — could move to graph edges later).
 _entity_tags: dict[str, list[str]] = {}
 
-# Whether the DB schema and reference metadata have been ensured.
+# Whether the DB schema has been ensured.
 _ready = False
 
 
 def reset_ensure_flag() -> None:
-    """Reset so schema + reference metadata are re-loaded on next access.
+    """Reset so schema is re-checked on next access.
 
     Called by test fixtures that create a fresh DB per test.
     """
@@ -44,10 +34,10 @@ def reset_ensure_flag() -> None:
 
 
 def _ensure_ready() -> None:
-    """Ensure DB schema exists and reference metadata is loaded.
+    """Ensure DB schema exists.
 
-    No concept seeding — the DB is the source of truth. Concepts are
-    created/updated via API endpoints or sync_kb_to_db.py.
+    No seeding — the DB is the source of truth. All data is
+    created/updated via API endpoints or sync scripts.
     """
     global _ready
     if _ready:
@@ -56,28 +46,6 @@ def _ensure_ready() -> None:
 
     from app.services.unified_db import ensure_schema
     ensure_schema()
-    _load_reference_metadata()
-
-
-def _load_reference_metadata() -> None:
-    """Load relationship types and axes (schema-level reference data)."""
-    global _relationships, _axes
-    for filename, key, target in [
-        ("core-relationships.json", "relationships", "_relationships"),
-        ("core-axes.json", "axes", "_axes"),
-    ]:
-        path = _ONTOLOGY_DIR / filename
-        if path.exists():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                globals()[target] = data.get(key, [])
-                log.info("Loaded %d %s from reference metadata", len(globals()[target]), key)
-            except Exception as exc:
-                log.warning("Failed to load %s: %s", filename, exc)
-
-
-# Seed lazily on first access, not at module load — tests create fresh
-# DBs after module import, so module-level seeding would seed the wrong DB.
 
 
 # ---------------------------------------------------------------------------
@@ -128,20 +96,28 @@ def search_concepts(query: str, limit: int = 20) -> list[dict[str, Any]]:
 
 
 def list_relationship_types() -> list[dict[str, Any]]:
-    return _relationships
+    """List all relationship types from DB."""
+    result = _gs().list_nodes(type="relationship_type", limit=200)
+    return result.get("items", [])
 
 
 def list_axes() -> list[dict[str, Any]]:
-    return _axes
+    """List all ontology axes from DB."""
+    result = _gs().list_nodes(type="axis", limit=200)
+    return result.get("items", [])
 
 
 def get_stats() -> dict[str, Any]:
     count_result = _gs().count_nodes("concept")
     concept_count = count_result.get("total", 0) if isinstance(count_result, dict) else 0
+    rel_result = _gs().count_nodes("relationship_type")
+    rel_count = rel_result.get("total", 0) if isinstance(rel_result, dict) else 0
+    axis_result = _gs().count_nodes("axis")
+    axis_count = axis_result.get("total", 0) if isinstance(axis_result, dict) else 0
     return {
         "concepts": concept_count,
-        "relationship_types": len(_relationships),
-        "axes": len(_axes),
+        "relationship_types": rel_count,
+        "axes": axis_count,
         "tagged_entities": len(_entity_tags),
     }
 
