@@ -314,18 +314,18 @@ def api_post(url: str, body: dict, timeout: int = 30, retries: int = 3) -> int:
     return 0
 
 
-def download_image(url: str, dest: Path, retries: int = 3, min_bytes: int = 1000) -> bool:
-    """Download an image with retries. Returns True on success."""
+def download_image(url: str, dest: Path, retries: int = 5, min_bytes: int = 1000) -> bool:
+    """Download an image with retries. Handles 503 (busy) and 429 (rate limit)."""
     for attempt in range(retries):
         try:
             if httpx:
-                resp = httpx.get(url, timeout=60, follow_redirects=True)
+                resp = httpx.get(url, timeout=120, follow_redirects=True)
                 if resp.status_code == 200 and len(resp.content) > min_bytes:
                     dest.write_bytes(resp.content)
                     return True
-                if resp.status_code == 503:
-                    wait = 5 * (attempt + 1)
-                    print(f"    503, waiting {wait}s...", file=sys.stderr)
+                if resp.status_code in (503, 429):
+                    wait = 10 * (attempt + 1)  # 10s, 20s, 30s, 40s, 50s
+                    print(f"    {resp.status_code}, waiting {wait}s...", file=sys.stderr)
                     time.sleep(wait)
                     continue
                 print(f"    HTTP {resp.status_code}, {len(resp.content)} bytes", file=sys.stderr)

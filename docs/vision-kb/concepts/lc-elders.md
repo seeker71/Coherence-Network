@@ -73,8 +73,8 @@ Skills and stories transmitted through daily presence, not programs. An apprenti
 
 ## Connected Frequencies
 
-→ [lc-ceremony](lc-ceremony.md) — elders hold the memory of which ceremonies the community needs
-→ [lc-stillness](lc-stillness.md) — the elder frequency is a form of stillness that moves
-→ [lc-offering](lc-offering.md) — the elder's offering is presence, memory, and ground
-→ [lc-health](lc-health.md) — elder care as the measure of a community's wholeness
-→ [lc-play](lc-play.md) — the elder who still plays teaches that aliveness has no expiration
+→ lc-ceremony — elders hold the memory of which ceremonies the community needs
+→ lc-stillness — the elder frequency is a form of stillness that moves
+→ lc-offering — the elder's offering is presence, memory, and ground
+→ lc-health — elder care as the measure of a community's wholeness
+→ lc-play — the elder who still plays teaches that aliveness has no expiration

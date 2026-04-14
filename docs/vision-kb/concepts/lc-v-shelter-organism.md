@@ -77,4 +77,4 @@ A community of fifty needs five to eight common buildings and fifteen to twenty 
 - When does a building cross the line from shelter into something more like a body you inhabit together?
 
 ## Connected Frequencies
-→ [lc-space](lc-space.md) · [lc-v-living-spaces](lc-v-living-spaces.md) · [lc-land](lc-land.md) · [lc-energy](lc-energy.md)
+→ lc-space, lc-v-living-spaces, lc-land, lc-energy

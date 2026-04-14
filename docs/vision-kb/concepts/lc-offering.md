@@ -74,8 +74,8 @@ No performance reviews. No annual assessments. Instead, a question asked gently 
 
 ## Connected Frequencies
 
-→ [lc-circulation](lc-circulation.md) — offering is what enters the flow; circulation is how it moves
-→ [lc-ceremony](lc-ceremony.md) — the moment when offering becomes visible and honored
-→ [lc-stillness](lc-stillness.md) — in stillness, you hear what you actually have to give
-→ [lc-play](lc-play.md) — play reveals the offerings people did not know they carried
-→ [lc-elders](lc-elders.md) — the elder's offering is presence itself
+→ lc-circulation — offering is what enters the flow; circulation is how it moves
+→ lc-ceremony — the moment when offering becomes visible and honored
+→ lc-stillness — in stillness, you hear what you actually have to give
+→ lc-play — play reveals the offerings people did not know they carried
+→ lc-elders — the elder's offering is presence itself

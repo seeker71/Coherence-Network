@@ -78,4 +78,4 @@ The technology budget prioritizes tools that extend sensing over tools that repl
 - How do you keep the maker space welcoming to people who have never held a soldering iron?
 
 ## Connected Frequencies
-→ [lc-field-sensing](lc-field-sensing.md) · [lc-energy](lc-energy.md) · [lc-space](lc-space.md)
+→ lc-field-sensing, lc-energy, lc-space
