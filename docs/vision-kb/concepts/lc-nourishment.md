@@ -1,8 +1,8 @@
 ---
 id: lc-nourishment
 hz: 174
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Nourishment
@@ -24,6 +24,48 @@ Meals follow the land's rhythm: in spring, the first tender greens and asparagus
 ## Blueprint
 Build a 7-layer food forest within the first year. Start a fermentation corner (sauerkraut, kimchi, kombucha, sourdough). Communal meals follow the land's seasons — menus change weekly based on what's ripe. Children participate in every stage: planting, harvesting, cooking, composting.
 
+## Resources
+- 📐 [One Community - Transition Kitchen](https://onecommunityglobal.org/transition-kitchen/) — open-source community kitchen feeding 50+ people (type: blueprint)
+- 📐 [One Community - Permaculture Design](https://onecommunityglobal.org/open-source-diy-permaculture-design/) — DIY permaculture design for community-scale food systems (type: guide)
+- 📖 [Andrew Millison - Introduction to Permaculture](https://open.oregonstate.education/permaculture/) — free 28-chapter open textbook from Oregon State, CC-BY-NC (type: book)
+- 📖 [Permaculture Design: Tools for Climate Resilience](https://open.oregonstate.education/permaculturedesign/) — free open textbook on climate-adaptive design (type: book)
+- 🎓 [Free Permaculture 52-Week Course](https://www.freepermaculture.com/onlinecourse/) — free yearlong course by Heather Jo Flores (type: course)
+- 📖 [ATTRA Sustainable Agriculture](https://attra.ncat.org/) — 300+ free publications on organic farming and food systems (type: guide)
+- 🌐 [Permaculture Research Institute](https://permaculturenews.org/) — largest collection of free permaculture articles and case studies (type: community)
+- 🌐 [Permaculture Global Network](https://permacultureglobal.org/) — worldwide map of permaculture projects (type: community)
+
+## Materials & Methods
+- **7-layer food forest** — canopy (nut), understory (fruit), shrub (berry), herbaceous, ground cover, root, vine. $2,000-8,000 per acre to establish. Produces within 3-7 years.
+- **Community kitchen (transition kitchen)** — 500-800 sqft, commercial-grade equipment, feeds 50+ people 3x/day. $30,000-80,000 to build.
+- **Fermentation corner** — dedicated 100-200 sqft space. Crocks, jars, temperature control. $2,000-5,000 setup.
+- **Root cellar** — underground storage, passive cooling 50-55°F year-round. $3,000-10,000 to excavate and line.
+- **Aquaponics system** — fish + vegetables closed loop. 200-400 sqft greenhouse. $5,000-15,000 for 50-person supplemental production.
+- **Seed library** — heirloom and adapted varieties. $500-2,000 to start, self-sustaining after year 2.
+
+## At Scale
+- **50 people**: 1 community kitchen, 2-acre food forest, 0.5-acre annual garden, fermentation corner, root cellar. 60-80% food self-sufficiency by year 5.
+- **100 people**: 2 kitchens (one for daily meals, one for preservation), 5-acre food forest, 1.5-acre annual gardens, aquaponics greenhouse, grain storage. 70-85% self-sufficiency.
+- **200 people**: Neighborhood kitchens (3-4) plus central preservation facility, 12-acre food forest, 4-acre annual gardens, small orchard, grain mill, creamery/cheese cave. 80-90% self-sufficiency.
+
+## Climate Adaptations
+- **Temperate** — four-season food forest (apple, pear, walnut, chestnut canopy), cold-hardy berries, root cellar essential, 6-month preservation season
+- **Tropical** — year-round production, banana/mango/breadfruit canopy, rapid growth, fermentation critical for preservation without refrigeration
+- **Arid** — drip irrigation, date palms, drought-hardy herbs, underground food storage, shade structures over annual beds
+- **Alpine** — greenhouse essential, cold frames extend season 3 months, focus on root vegetables and preserving, hay-box cooking saves fuel
+
+## Visuals
+1. **Community kitchen at meal time** — `photorealistic large community kitchen with wooden counters, hanging copper pots, people cooking together, bowls of colorful fresh vegetables, herbs drying from ceiling, wood fired oven, warm light, steam rising`
+2. **Food forest in full production** — `photorealistic seven layer food forest with nut trees above, fruit trees middle, berry bushes, ground cover herbs, person harvesting, dappled light, abundance, diverse plantings`
+3. **Fermentation corner** — `photorealistic corner of a kitchen with rows of glass jars of sauerkraut, kimchi, kombucha, sourdough starters, wooden shelves, earthen walls, warm amber light, bubbling ferments`
+
+## Costs
+- **Community kitchen (full build)**: $30,000-80,000. Sweat equity can reduce 40%.
+- **Food forest establishment (per acre)**: $2,000-8,000 first year, $500-1,000/year maintenance, self-sustaining by year 5-7.
+- **Annual garden infrastructure**: $3,000-8,000 per acre (raised beds, irrigation, fencing).
+- **Root cellar**: $3,000-10,000 depending on excavation.
+- **Total food system for 50 people**: $80,000-200,000 over 3 years.
+- **Ongoing annual cost** (seeds, amendments, equipment): $5,000-15,000/year, offset by food production value of $50,000-150,000/year.
+
 ## Living Examples
 - **The campfire** — 400,000 years of human gathering, cooking, storytelling around shared flame
 - **Korean communal dining (banchan)** — many small shared dishes, everyone eating from the same table
@@ -44,8 +86,9 @@ Build a 7-layer food forest within the first year. Start a fermentation corner (
 Nourishment is where the Nourishing flow becomes tangible. The kitchen-hearth is the field's literal heart — where raw environment becomes shared vitality.
 
 ## Open Questions
-- What aspects of Nourishment need deeper research?
-- What real-world examples are we missing?
+- How to handle protein sources (animal vs plant) as a community decision?
+- What's the minimum acreage for food self-sufficiency per person? (Estimates: 0.1-0.5 acre)
+- How to preserve food knowledge as elders age?
 
 ## Cross-References
-→ lc-nourishing
+→ lc-nourishing, lc-land, lc-space, lc-health
