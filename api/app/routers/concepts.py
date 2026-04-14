@@ -1,4 +1,4 @@
-"""Concepts router — CRUD for the Living Codex ontology (184 concepts, 46 rel types, 53 axes)."""
+"""Concepts router — CRUD for the ontology. All data lives in graph DB."""
 
 from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
@@ -192,15 +192,15 @@ async def get_vision_data(domain: str) -> dict:
     }
 
 
-@router.get("/concepts/relationships", summary="List all 46 relationship types from the Living Codex ontology")
+@router.get("/concepts/relationships", summary="List ontology relationship types")
 async def list_relationships():
-    """List all 46 relationship types from the Living Codex ontology."""
+    """List all relationship types from the graph DB."""
     return concept_service.list_relationship_types()
 
 
-@router.get("/concepts/axes", summary="List all 53 ontology axes")
+@router.get("/concepts/axes", summary="List ontology axes")
 async def list_axes():
-    """List all 53 ontology axes."""
+    """List all ontology axes from the graph DB."""
     return concept_service.list_axes()
 
 
