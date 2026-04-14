@@ -50,13 +50,33 @@ def reset_ensure_flag() -> None:
     _ensured = False
 
 
-def _ensure_initial_concepts() -> None:
-    """If the graph DB has no concept nodes, create them from the JSON
-    definition files. This is functionally identical to calling
-    create_concept() for each one — the JSON files are just a convenient
-    way to express the initial set.
+def _get_json_schema_version() -> str:
+    """Read the combined schema version from all ontology JSON files."""
+    concept_files = [
+        _ONTOLOGY_DIR / "core-concepts.json",
+        *sorted(_ONTOLOGY_DIR.glob("living-collective*.json")),
+    ]
+    versions = []
+    for f in concept_files:
+        if not f.exists():
+            continue
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            v = data.get("metadata", {}).get("version", "0.0.0")
+            versions.append(f"{f.name}:{v}")
+        except Exception:
+            versions.append(f"{f.name}:error")
+    return "|".join(sorted(versions))
 
-    Idempotent: if concepts already exist, this is a no-op.
+
+def _ensure_initial_concepts() -> None:
+    """Seed the graph DB from JSON definition files.
+
+    Version-gated: if the DB already has the current schema version,
+    skip all JSON reading entirely (instant startup). Only re-reads
+    JSON when the version changes (new ontology release).
+
+    Tests bypass the version gate via reset_ensure_flag().
     """
     global _ensured
     if _ensured:
@@ -70,10 +90,18 @@ def _ensure_initial_concepts() -> None:
     # Always load reference metadata (relationship types + axes)
     _load_reference_metadata()
 
-    # Ensure ALL concepts from JSON definitions exist in the graph DB
-    # with their FULL properties. If a concept already exists, update
-    # its properties to include any new fields added to the JSON since
-    # it was first created. If it doesn't exist, create it.
+    # ── Version gate: skip JSON if DB already has this version ──
+    target_version = _get_json_schema_version()
+    version_node = graph_service.get_node("_schema-version")
+    current_version = version_node.get("version") if version_node else None
+
+    if current_version == target_version:
+        log.info("Schema version matches (%s) — skipping JSON seed", target_version[:60])
+        return
+
+    log.info("Schema version changed (%s → %s) — seeding from JSON", current_version, target_version[:60])
+
+    # ── Full seed from JSON definitions ──
     concept_files = [
         _ONTOLOGY_DIR / "core-concepts.json",
         *sorted(_ONTOLOGY_DIR.glob("living-collective*.json")),
@@ -180,7 +208,23 @@ def _ensure_initial_concepts() -> None:
                         pass
                 total_entities += 1
 
-    log.info("Ensured %d concepts, %d edges, %d entities in graph DB", total_concepts, total_edges, total_entities)
+    # ── Update schema version in DB so next startup skips JSON ──
+    if version_node:
+        graph_service.update_node("_schema-version", properties={"version": target_version})
+    else:
+        try:
+            graph_service.create_node(
+                id="_schema-version",
+                type="system",
+                name="Schema Version",
+                description="Tracks ontology JSON version to skip re-seeding",
+                properties={"version": target_version},
+            )
+        except Exception:
+            pass  # Concurrent creation — safe
+
+    log.info("Seeded %d concepts, %d edges, %d entities. Schema version: %s",
+             total_concepts, total_edges, total_entities, target_version[:60])
 
 
 def _load_reference_metadata() -> None:
