@@ -554,7 +554,22 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
             {concept.cost_notes && (
               <section className="rounded-2xl border border-emerald-800/20 bg-emerald-900/5 p-6 space-y-3">
                 <h2 className="text-sm font-medium text-emerald-400/70 uppercase tracking-wider">Practical costs</h2>
-                <p className="text-sm text-stone-400 leading-relaxed">{concept.cost_notes}</p>
+                <div className="space-y-2">
+                  {concept.cost_notes.split("\n").filter((line: string) => line.trim()).map((line: string, i: number) => {
+                    // Parse: - **Label**: description
+                    const cleaned = line.replace(/^[-*]\s*/, "").trim();
+                    const boldMatch = cleaned.match(/^\*\*([^*]+)\*\*[:\s]*(.*)/);
+                    if (boldMatch) {
+                      return (
+                        <div key={i} className="text-sm leading-relaxed">
+                          <span className="text-stone-300 font-medium">{boldMatch[1]}</span>
+                          <span className="text-stone-500">: {boldMatch[2]}</span>
+                        </div>
+                      );
+                    }
+                    return <p key={i} className="text-sm text-stone-400 leading-relaxed">{cleaned}</p>;
+                  })}
+                </div>
               </section>
             )}
 
