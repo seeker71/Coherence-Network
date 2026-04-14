@@ -32,7 +32,7 @@ at the same frequency is struck nearby.
 
 Today, on the eleventh day, a woman I respect sat with me after dinner
 and asked a simple question: "How does it feel to be here?"
-Not "Do you want to stay?" Not "Here are the membership requirements."
+Not "Do you want to stay?" Not "Here are the membership invitation."
 Just: how does it feel? And I realized my body had already answered.
 My shoulders had dropped. My sleep had deepened. My laugh had changed.
 The question was not whether I wanted to join.
@@ -89,7 +89,7 @@ It just needed time to discover that this ground could hold it.
 
 ## Where You Can See It
 
-At kibbutz ulpan programs in Israel, newcomers learn the language and culture
+At kibbutz ulpan practice in Israel, newcomers learn the language and culture
 by living and working alongside the community — not by studying it from outside.
 On WWOOF farms worldwide, travelers join households through work exchange,
 attuning to a place through shared labor and shared meals.

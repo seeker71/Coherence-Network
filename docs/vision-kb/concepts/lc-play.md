@@ -39,7 +39,7 @@ In human children, pretend play — the kind where a stick becomes a horse and a
 
 At an adventure playground in London, a seven-year-old is sawing a plank in half. An adult stands nearby — not supervising, not helping, just present. The child's face holds total concentration. She has been working on this structure for three days. It leans. It will probably fall. She does not care. She is learning something no curriculum can teach.
 
-In the Basque hills at Mondragon, workers on their lunch break play pelota against the factory wall — the same wall their grandparents played against. The game carries forward a kind of knowing about cooperation that no management training ever will.
+In the Basque hills at Mondragon, workers on their lunch break play pelota against the factory wall — the same wall their grandparents played against. The game carries forward a kind of knowing about cooperation that no tending training ever will.
 
 At a Baining fire dance in Papua New Guinea, adults leap through bonfires at night while the village watches and cheers. The flames are real. The risk is real. The aliveness is so thick you can taste it. Play and ceremony merge when the stakes are high enough and the trust is deep enough. Nobody is performing. Everybody is alive.
 
