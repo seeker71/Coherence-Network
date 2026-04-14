@@ -76,9 +76,4 @@ is also the path of deepest nourishment.
 
 ## Connected Frequencies
 
-Rhythm is the temporal architecture — without it, the field has no heartbeat:
-- Through **Spiraling** — rhythm is the spiral experienced through time, each cycle deeper
-- Through **Rest** — the downbeat, the pause that makes the music possible
-- Through **Ceremony** — marking the turns of rhythm, honoring solstice and equinox
-
 → lc-spiraling, lc-rest, lc-ceremony, lc-nourishment

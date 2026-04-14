@@ -77,9 +77,4 @@ These are not questions to answer but questions to live inside:
 
 ## Connected Frequencies
 
-Nourishment is where the abstract becomes edible. Every other frequency passes through the kitchen:
-- Through **Land** — the soil that grows the food is the community's first relationship
-- Through **Space** — the Hearth is the center, the room that makes every other room possible
-- Through **Health** — you are literally building your body from what this place produces
-
 → lc-nourishing, lc-land, lc-space, lc-health

@@ -76,9 +76,4 @@ These are not questions to answer but questions to live inside:
 
 ## Connected Frequencies
 
-Space holds every other frequency the way a vessel holds water — giving it shape without constraining its nature:
-- Through **Nourishing** — the Hearth is where raw land becomes shared meal
-- Through **Stillness** — the Sanctuary exists because silence needs a home with thick walls
-- Through **Ceremony** — the Clearing is where the community becomes visible to itself
-
 → lc-nourishing, lc-v-shelter-organism, lc-v-living-spaces, lc-land

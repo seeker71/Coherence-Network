@@ -33,6 +33,12 @@ class ConceptPatch(BaseModel):
     axes: list[str] | None = None
 
 
+class StoryPatch(BaseModel):
+    """Update a concept's living story content."""
+    story_content: str | None = None
+    visuals: list[dict[str, str]] | None = None  # [{prompt, caption}]
+
+
 class EdgeCreate(BaseModel):
     from_id: str
     to_id: str
@@ -234,6 +240,36 @@ async def translate_concept_view(
         from_lens=from_lens.value,
         to_lens=to_lens.value,
     )
+
+
+@router.patch("/concepts/{concept_id}/story", summary="Update a concept's living story content and visuals")
+async def update_story(concept_id: str, body: StoryPatch):
+    """Update a concept's living story content.
+
+    If visuals are not explicitly provided, they are auto-extracted from
+    inline ``![caption](visuals:prompt)`` entries in story_content.
+    """
+    concept = concept_service.get_concept(concept_id)
+    if not concept:
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    return concept_service.update_story(
+        concept_id,
+        story_content=body.story_content,
+        visuals=body.visuals,
+    )
+
+
+@router.post("/concepts/{concept_id}/visuals/regenerate", summary="Regenerate story and gallery images for a concept")
+async def regenerate_visuals(concept_id: str, force: bool = Query(False, description="Re-download even if file exists")):
+    """Trigger image generation for a single concept.
+
+    Downloads images from Pollinations using deterministic seeds.
+    Returns the list of generated/skipped files.
+    """
+    concept = concept_service.get_concept(concept_id)
+    if not concept:
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    return concept_service.regenerate_visuals(concept_id, concept, force=force)
 
 
 @router.get("/concepts/{concept_id}", summary="Get a single concept by ID with full metadata")

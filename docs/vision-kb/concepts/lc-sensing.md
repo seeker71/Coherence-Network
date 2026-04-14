@@ -73,10 +73,4 @@ These are not questions to answer but questions to carry in the body:
 
 ## Connected Frequencies
 
-Sensing is the nervous system — without it, the field is blind to itself:
-- Through **The Pulse** — sensing is how the pulse knows itself
-- Through **Attunement** — what sensing detects, attunement harmonizes
-- Through **Stillness** — the quieter the field, the more it can sense
-- Through **Vitality** — honest sensing is what keeps the life force flowing
-
 → lc-pulse, lc-attunement, lc-stillness, lc-vitality, lc-field-sensing, lc-instruments

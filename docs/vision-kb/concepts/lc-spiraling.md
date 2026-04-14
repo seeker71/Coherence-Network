@@ -72,9 +72,4 @@ These are not questions to answer but questions to live inside:
 
 ## Connected Frequencies
 
-The spiral is the shape of time as the community experiences it. Every other frequency moves through it:
-- Through **Rhythm** — the heartbeat within the spiral, the smaller cycles nested inside larger ones
-- Through **Phase Transitions** — the moments between one revolution and the next, when the caterpillar dissolves
-- Through **Composting** — the downward turn of the spiral, where what was becomes what feeds what's next
-
 → lc-resonating, lc-rhythm, lc-phase-transitions, lc-composting

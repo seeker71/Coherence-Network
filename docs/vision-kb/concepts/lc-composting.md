@@ -73,9 +73,4 @@ The composting mindset shapes how the community relates to everything that ends.
 
 ## Connected Frequencies
 
-→ [Phase Transitions](lc-v-phase-transition.md) — the larger lifecycle that composting serves
-→ [Rest & Integration](lc-rest.md) — composting IS the rest phase, the underground work
-→ [Nourishment](lc-nourishment.md) — what composting produces: soil for the next season
-→ [Food as Living Practice](lc-v-food-practice.md) — the garden that compost feeds
-→ [Land](lc-land.md) — the ground that holds it all
-→ [New Earth Integration](new-earth-integration.md) — civilizational composting of old systems
+→ lc-w-phase-transition, lc-rest, lc-nourishment, lc-v-food-practice, lc-land

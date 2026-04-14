@@ -881,6 +881,205 @@ def cmd_flow(_args):
 
 # ── Main ──────────────────────────────────────────────────────────────
 
+# ── Visuals ────────────────────────────────────────────────────────────
+
+def cmd_visuals_generate(args):
+    """Generate/regenerate images for a concept via API."""
+    force_param = "&force=true" if args.force else ""
+    data = _api("POST", f"/api/concepts/{args.concept_id}/visuals/regenerate?force={'true' if args.force else 'false'}")
+    if not data:
+        print(f"Could not generate visuals for {args.concept_id}", file=sys.stderr)
+        return
+    if data.get("error"):
+        print(f"  Error: {data['error']}", file=sys.stderr)
+        return
+    print(f"  Concept: {args.concept_id}")
+    print(f"  Total: {data.get('total', 0)} visuals")
+    print(f"  Downloaded: {data.get('downloaded', 0)}, Existing: {data.get('existing', 0)}, Failed: {data.get('failed', 0)}")
+    for r in data.get("results", []):
+        icon = {"downloaded": "\u2713", "exists": "\u00b7", "failed": "\u2717"}.get(r["status"], "?")
+        print(f"    {icon} {r['file']} ({r['status']})")
+
+
+# ── Config ─────────────────────────────────────────────────────────────
+
+def cmd_config(_args):
+    """Show the editable config."""
+    data = _api("GET", "/api/config")
+    if data is None:
+        # Fall back to local config file
+        try:
+            if CONFIG_PATH.exists():
+                data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            else:
+                data = {}
+        except (json.JSONDecodeError, OSError):
+            data = {}
+    if not data:
+        print("  (empty config — defaults in use)")
+        print(f"  Config file: {CONFIG_PATH}")
+        return
+    print(f"Config ({CONFIG_PATH}):\n")
+    print(json.dumps(data, indent=2))
+
+
+def cmd_config_set(args):
+    """Set a config value."""
+    key = args.key
+    value = args.value
+    # Try to parse as JSON (for booleans, numbers, arrays)
+    try:
+        parsed = json.loads(value)
+    except (json.JSONDecodeError, ValueError):
+        parsed = value
+
+    # Support dotted keys: "web.api_base_url" → {"web": {"api_base_url": ...}}
+    parts = key.split(".")
+    if len(parts) > 1:
+        updates: dict = {}
+        current = updates
+        for p in parts[:-1]:
+            current[p] = {}
+            current = current[p]
+        current[parts[-1]] = parsed
+    else:
+        updates = {key: parsed}
+
+    # Try API first
+    data = _api("PATCH", "/api/config", {"updates": updates})
+    if data is not None:
+        print(f"  Set {key} = {json.dumps(parsed)}")
+        return
+
+    # Fall back to local file edit
+    try:
+        config = {}
+        if CONFIG_PATH.exists():
+            config = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        config.update(updates)
+        CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        CONFIG_PATH.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+        print(f"  Set {key} = {json.dumps(parsed)} (local file)")
+    except Exception as e:
+        print(f"  Error: {e}", file=sys.stderr)
+
+
+# ── Stories (Living Collective) ────────────────────────────────────────
+
+def cmd_stories(args):
+    """List concepts that have a living story."""
+    data = _api("GET", f"/api/concepts/domain/living-collective?limit={args.limit}")
+    if not data:
+        print("Could not fetch concepts")
+        return
+    items = data.get("items", [])
+    with_story = [c for c in items if c.get("story_content")]
+    without_story = [c for c in items if not c.get("story_content")]
+    print(f"Living stories: {len(with_story)} of {len(items)} concepts\n")
+    for c in with_story:
+        hz = c.get("sacred_frequency", {}).get("hz", "")
+        hz_str = f" ({hz} Hz)" if hz else ""
+        story_len = len(c.get("story_content", ""))
+        print(f"  \u2713 {c['name'][:45]:<45s} {story_len:>5d} chars{hz_str}")
+    if without_story:
+        print(f"\n  Awaiting stories ({len(without_story)}):")
+        for c in without_story:
+            print(f"    \u00b7 {c.get('name', c['id'])}")
+
+
+def cmd_story(args):
+    """Display a concept's living story."""
+    data = _api("GET", f"/api/concepts/{args.concept_id}")
+    if not data:
+        print(f"Concept {args.concept_id} not found")
+        return
+    story = data.get("story_content", "")
+    if not story:
+        print(f"{data.get('name', args.concept_id)} has no living story yet.")
+        print(f"  Create one: cc story-update {args.concept_id} --file story.md")
+        return
+    hz = data.get("sacred_frequency", {}).get("hz", "")
+    print(f"# {data.get('name', args.concept_id)}", end="")
+    if hz:
+        print(f"  ({hz} Hz)")
+    else:
+        print()
+    print()
+    # Render story with basic terminal formatting
+    for line in story.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            print(f"\n\033[1m{stripped[3:]}\033[0m")
+        elif stripped.startswith("### "):
+            print(f"\n\033[4m{stripped[4:]}\033[0m")
+        elif stripped.startswith("> "):
+            print(f"  \033[3m{stripped[2:]}\033[0m")
+        elif stripped.startswith("!["):
+            # Inline visual: ![caption](visuals:prompt)
+            import re
+            m = re.match(r"!\[([^\]]*)\]", stripped)
+            caption = m.group(1) if m else "visual"
+            print(f"  [\033[36mImage: {caption}\033[0m]")
+        elif stripped.startswith("\u2192 "):
+            refs = stripped[2:].split(",")
+            print(f"  Connected: {', '.join(r.strip() for r in refs)}")
+        elif stripped.startswith("- "):
+            print(f"  \u2022 {stripped[2:]}")
+        else:
+            print(f"  {stripped}" if stripped else "")
+
+
+def cmd_story_update(args):
+    """Update a concept's living story from a markdown file."""
+    import re as _re
+    filepath = Path(args.file)
+    if not filepath.exists():
+        print(f"File not found: {filepath}", file=sys.stderr)
+        return
+    content = filepath.read_text(encoding="utf-8")
+    # Strip frontmatter if present
+    if content.startswith("---"):
+        end = content.find("---", 3)
+        if end != -1:
+            content = content[end + 3:].strip()
+    # Strip title line (# Name)
+    lines = content.split("\n")
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    story_content = "\n".join(lines).strip()
+
+    # Pre-flight format validation
+    warnings = []
+    for i, line in enumerate(story_content.split("\n"), 1):
+        s = line.strip()
+        if s.startswith("-> "):
+            warnings.append(f"  L{i}: Use \u2192 (Unicode arrow) instead of ->")
+        if s.startswith("\u2192 ") and "[" in s and "](" in s:
+            warnings.append(f"  L{i}: Cross-refs should be plain IDs, not markdown links")
+        if s.startswith("\u2192 ") and " \u2014 " in s:
+            warnings.append(f"  L{i}: Cross-refs should not have descriptions after \u2014")
+    if warnings:
+        print("Format warnings:")
+        for w in warnings:
+            print(w)
+        print()
+
+    data = _api("PATCH", f"/api/concepts/{args.concept_id}/story", {"story_content": story_content})
+    if data:
+        name = data.get("name", args.concept_id)
+        sc = data.get("story_content", "")
+        visuals_count = len(data.get("visuals", []))
+        server_warnings = data.get("warnings", [])
+        print(f"  Updated: {name}")
+        print(f"  Story: {len(sc)} chars, {visuals_count} visuals")
+        if server_warnings:
+            print(f"  Server warnings ({len(server_warnings)}):")
+            for w in server_warnings:
+                print(f"    L{w.get('line', '?')}: {w.get('message', '?')}")
+    else:
+        print(f"Failed to update story for {args.concept_id}", file=sys.stderr)
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="cc",
@@ -1028,6 +1227,28 @@ def main():
     # ── Bridge Notifications ──
     sub.add_parser("notify-bridges", help="Create activity events for new resonance bridges")
 
+    # ── Config ──
+    sub.add_parser("config", help="Show editable config (~/.coherence-network/config.json)")
+
+    p_config_set = sub.add_parser("config-set", help="Set a config value")
+    p_config_set.add_argument("key", help="Config key (e.g. web.api_base_url)")
+    p_config_set.add_argument("value", help="Value to set")
+
+    # ── Stories (Living Collective) ──
+    p_stories = sub.add_parser("stories", help="List concepts with living stories")
+    p_stories.add_argument("--limit", type=int, default=50)
+
+    p_story = sub.add_parser("story", help="View a concept's living story")
+    p_story.add_argument("concept_id")
+
+    p_story_update = sub.add_parser("story-update", help="Update a concept's story from a markdown file")
+    p_story_update.add_argument("concept_id")
+    p_story_update.add_argument("--file", "-f", required=True, help="Path to markdown file with story content")
+
+    p_visuals = sub.add_parser("visuals-generate", help="Generate/regenerate images for a concept")
+    p_visuals.add_argument("concept_id")
+    p_visuals.add_argument("--force", action="store_true", help="Re-download even if files exist")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1058,6 +1279,11 @@ def main():
         "breath": cmd_breath, "flow": cmd_flow,
         # Proprioception + Bridge Notifications
         "sense": cmd_sense, "notify-bridges": cmd_notify_bridges,
+        # Stories (Living Collective)
+        "stories": cmd_stories, "story": cmd_story, "story-update": cmd_story_update,
+        "visuals-generate": cmd_visuals_generate,
+        # Config
+        "config": cmd_config, "config-set": cmd_config_set,
     }
     handler = cmd_map.get(args.command)
     if handler:

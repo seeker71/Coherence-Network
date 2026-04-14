@@ -72,10 +72,4 @@ These are not puzzles but live wires to hold:
 
 ## Connected Frequencies
 
-Vitality is the primary frequency — everything else serves it:
-- Through **Nourishing** — the body fed so the life force has fuel
-- Through **The Pulse** — vitality is what the pulse carries
-- Through **Sensing** — the field must sense its own vitality to protect it
-- Through **Resonating** — vitality multiplies where resonance is real
-
 → lc-nourishing, lc-pulse, lc-sensing, lc-resonating, lc-health, lc-play, lc-energy

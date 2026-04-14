@@ -72,10 +72,4 @@ These are not problems to solve but tensions to inhabit:
 
 ## Connected Frequencies
 
-Attunement is the immune system — without it, the field cannot hold its shape:
-- Through **Sensing** — attunement begins with what sensing reveals
-- Through **The Pulse** — the pulse is what attunement protects
-- Through **Resonating** — attunement creates the conditions for resonance
-- Through **Stillness** — the field attunes most deeply in silence
-
 → lc-sensing, lc-pulse, lc-resonating, lc-stillness, lc-v-harmonizing

@@ -72,9 +72,4 @@ There is a sabbatical rhythm too. Every seventh year, a community member can ste
 
 ## Connected Frequencies
 
-→ [Stillness](lc-stillness.md) — the conscious practice of pause within the larger rest
-→ [Composting](lc-composting.md) — rest is where transformation does its underground work
-→ [Health & Healing](lc-health.md) — the body heals in rest, not in effort
-→ [Space](lc-space.md) — the sanctuary that holds the stillness
-→ [Living Spaces](lc-v-living-spaces.md) — the Nest and Sanctuary designed for deep rest
-→ [Ceremony](lc-ceremony.md) — seasonal rituals that mark the shift between activity and rest
+→ lc-stillness, lc-composting, lc-health, lc-space, lc-v-living-spaces, lc-ceremony

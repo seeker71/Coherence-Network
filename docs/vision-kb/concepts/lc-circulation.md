@@ -72,9 +72,4 @@ The New Earth Exchange model points beyond community scale toward something civi
 
 ## Connected Frequencies
 
-→ [Offering](lc-offering.md) — what individuals bring to the flow
-→ [Mycorrhizal Networks](lc-v-mycorrhizal.md) — the biological template for all of this
-→ [Nourishment](lc-nourishment.md) — circulation ensures every cell is fed
-→ [Land](lc-land.md) — custodianship, not ownership
-→ [Network](lc-network.md) — surplus flowing between communities
-→ [New Earth Integration](new-earth-integration.md) — civilizational-scale circulation
+→ lc-offering, lc-w-mycorrhizal, lc-nourishment, lc-land, lc-network
