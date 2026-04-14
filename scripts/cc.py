@@ -41,6 +41,9 @@ Usage:
   cc peers <contributor_id>              Find resonant peers
   cc cc-supply                           Show CC economics
   cc governance [--limit 20]             List governance change requests
+
+  cc frequency <concept_id>              Score concept for living vs institutional frequency
+  cc frequency --file path.md            Score any file for frequency
 """
 
 import argparse
@@ -1080,6 +1083,81 @@ def cmd_story_update(args):
         print(f"Failed to update story for {args.concept_id}", file=sys.stderr)
 
 
+def cmd_frequency(args):
+    """Score text for living vs institutional frequency."""
+    text = None
+
+    if args.file:
+        filepath = Path(args.file)
+        if not filepath.exists():
+            print(f"File not found: {filepath}", file=sys.stderr)
+            return
+        text = filepath.read_text(encoding="utf-8")
+        source = str(filepath)
+    elif args.concept_id:
+        data = _api("GET", f"/api/concepts/{args.concept_id}")
+        if not data:
+            print(f"Concept {args.concept_id} not found", file=sys.stderr)
+            return
+        text = data.get("story_content", "")
+        if not text:
+            print(f"{data.get('name', args.concept_id)} has no living story to score.")
+            return
+        source = f"concept:{args.concept_id}"
+    else:
+        print("Provide a concept_id or --file path", file=sys.stderr)
+        return
+
+    result = _api("POST", "/api/concepts/frequency-score", {"text": text})
+    if not result:
+        print("Frequency scoring failed", file=sys.stderr)
+        return
+
+    overall = result.get("score", 0)
+    backend = result.get("backend", "unknown")
+    lc_sim = result.get("living_centroid_sim", 0)
+    ic_sim = result.get("institutional_centroid_sim", 0)
+
+    # Color the overall score
+    if overall > 0.7:
+        color = "\033[32m"  # green
+    elif overall >= 0.4:
+        color = "\033[33m"  # yellow
+    else:
+        color = "\033[31m"  # red
+    reset = "\033[0m"
+
+    print(f"Frequency Score: {color}{overall:.2f}{reset}  ({source})")
+    print(f"  Backend: {backend}")
+    print(f"  Living centroid sim:        {lc_sim:.4f}")
+    print(f"  Institutional centroid sim: {ic_sim:.4f}")
+    print()
+    print("Per-sentence breakdown:")
+    print("-" * 72)
+
+    for item in result.get("sentences", []):
+        s = item.get("score", 0)
+        if s > 0.7:
+            sc = f"\033[32m{s:.2f}\033[0m"
+        elif s >= 0.4:
+            sc = f"\033[33m{s:.2f}\033[0m"
+        else:
+            sc = f"\033[31m{s:.2f}\033[0m"
+
+        snippet = item.get("text", "")
+        if len(snippet) > 80:
+            snippet = snippet[:77] + "..."
+        print(f"  [{sc}] {snippet}")
+
+    print("-" * 72)
+    n_sentences = len(result.get("sentences", []))
+    living_count = sum(1 for s in result.get("sentences", []) if s.get("score", 0) > 0.7)
+    mixed_count = sum(1 for s in result.get("sentences", []) if 0.4 <= s.get("score", 0) <= 0.7)
+    inst_count = sum(1 for s in result.get("sentences", []) if s.get("score", 0) < 0.4)
+    print(f"  {n_sentences} sentences: \033[32m{living_count} living\033[0m, "
+          f"\033[33m{mixed_count} mixed\033[0m, \033[31m{inst_count} institutional\033[0m")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="cc",
@@ -1249,6 +1327,10 @@ def main():
     p_visuals.add_argument("concept_id")
     p_visuals.add_argument("--force", action="store_true", help="Re-download even if files exist")
 
+    p_frequency = sub.add_parser("frequency", help="Score text for living vs institutional frequency")
+    p_frequency.add_argument("concept_id", nargs="?", default=None, help="Concept ID to score")
+    p_frequency.add_argument("--file", default=None, help="Score a markdown file instead")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1282,6 +1364,8 @@ def main():
         # Stories (Living Collective)
         "stories": cmd_stories, "story": cmd_story, "story-update": cmd_story_update,
         "visuals-generate": cmd_visuals_generate,
+        # Frequency scoring
+        "frequency": cmd_frequency,
         # Config
         "config": cmd_config, "config-set": cmd_config_set,
     }
