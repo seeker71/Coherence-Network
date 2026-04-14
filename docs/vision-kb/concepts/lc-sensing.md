@@ -21,6 +21,7 @@ Install a daily sensing round (5 minutes, morning circle): each person shares on
 ## Resources
 - [Sociocracy For All](https://www.sociocracyforall.org/) — sensing rounds and consent process (type: guide)
 - [The Work That Reconnects](https://workthatreconnects.org/) — Joanna Macy's group sensing practices (type: guide)
+- 📖 [Transparency as Immune System](https://charleseisenstein.org/essays/living-in-the-gift/) — a body that hides signals from itself is sick, everything visible so dysfunction surfaces early (type: book)
 
 ## Visuals
 1. **Morning sensing circle** — `photorealistic small group sitting in circle at dawn outdoors, some with eyes closed, deep listening posture, garden visible, mist, warm light, intentional community setting`

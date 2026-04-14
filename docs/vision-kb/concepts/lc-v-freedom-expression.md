@@ -23,6 +23,7 @@ Freedom is not designed — it's what remains when constraints are removed. The 
 - [Sociocracy For All](https://www.sociocracyforall.org/) — governance that preserves individual freedom within collective consent (type: guide)
 - 🌐 [New Earth MicroNation](https://newearthhorizon.com/) — sovereign territory in Africa operating under natural law (type: community)
 - 📖 [Sovereignty & Natural Law](https://sachastone.com/) — replacing statutory systems with natural law governance (type: guide)
+- 📖 [Sovereignty as Inner State](https://charleseisenstein.org/essays/living-in-the-gift/) — not political posture but inner wholeness that doesn't seek permission to create, heal, or love (type: book)
 
 ## Visuals
 1. **Free expression space** — `photorealistic outdoor amphitheater in intentional community, person performing spoken word, colorful murals on earthen walls, audience sitting on grass, creative banners, sunset`

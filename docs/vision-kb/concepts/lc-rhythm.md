@@ -20,6 +20,7 @@ Daily rhythm visible on a shared board: dawn (stillness), morning (creation), mi
 
 ## Resources
 - [Blue Zones](https://www.bluezones.com/) -- natural rhythms in longevity communities (type: guide)
+- 🌐 [Daily Rhythmic Practice](https://newearth.media/agnihotra-on-bali/) — fire at dawn, shared meals, evening song — the form matters less than the consistency (type: community)
 
 ## Visuals
 1. **Daily rhythm** -- `photorealistic split image showing community rhythm: dawn meditation, morning garden work, midday meal, afternoon rest in hammock, evening fire circle, night stars, all in one flowing composition`
