@@ -1,8 +1,8 @@
 ---
 id: lc-composting
 hz: 285
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Composting
@@ -18,6 +18,15 @@ How the field transforms what has completed into nourishment for what's emerging
 ## Blueprint
 Physical composting stations visible throughout the community — food scraps, humanure, garden waste. When a project, practice, or relationship completes, hold a 'composting ceremony': acknowledge what was, harvest the learnings, release the form. Annual review: what structures have completed their lifecycle?
 
+## Resources
+- 📖 [Humanure Handbook](https://humanurehandbook.com/) — Joseph Jenkins' free guide to composting human waste safely (type: book)
+- 📖 [ATTRA Composting Guide](https://attra.ncat.org/) — free publications on farm-scale composting systems (type: guide)
+- 🌐 [Appropedia Composting](https://www.appropedia.org/) — open wiki articles on composting toilets, vermicomposting, and more (type: community)
+
+## Visuals
+1. **Community compost station** — `photorealistic three-bin composting system in community garden, person turning compost with pitchfork, steam rising from hot pile, vegetable scraps, earthworms visible, fruit trees nearby`
+2. **Composting ceremony** — `photorealistic group of people in circle outdoors at sunset, placing objects into a fire, releasing and letting go, expressions of peace, autumn leaves, golden light`
+
 ## Living Examples
 - **Forest floor** — fallen leaves become soil become new trees in continuous cycle
 - **Fermentation** — 'spoiled' food becomes kimchi, wine, cheese, miso — more complex, more nourishing
@@ -31,8 +40,9 @@ Physical composting stations visible throughout the community — food scraps, h
 Composting replaces the concept of grief, loss, death. Nothing ends — everything transforms. It connects to Phase Transitions (the larger lifecycle) and Rest (composting IS integration).
 
 ## Open Questions
-- What aspects of Composting need deeper research?
-- What real-world examples are we missing?
+- How to make composting toilets acceptable to newcomers?
+- What's the right metaphor for "composting" relationships or projects that have ended?
+- How to build a composting system that handles waste for 200 people?
 
 ## Cross-References
-→ lc-spiraling
+→ lc-v-phase-transition, lc-rest, lc-nourishment, lc-land

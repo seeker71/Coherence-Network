@@ -328,6 +328,64 @@ export default function VisionPage() {
         </div>
       </section>
 
+      {/* Blueprints & Resources — enriched concepts with real building data */}
+      <section className="border-t border-stone-800/30">
+        <div className="max-w-5xl mx-auto px-6 py-24 space-y-10">
+          <div className="text-center space-y-4">
+            <h2 className="text-3xl md:text-4xl font-extralight text-stone-300">
+              Blueprints & Resources
+            </h2>
+            <p className="text-stone-500 text-lg max-w-2xl mx-auto">
+              Real open-source plans, materials, costs, and methods for each aspect of the community.
+              Each concept page has resources you can use today.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { title: "Space", id: "lc-space", desc: "Common houses, private nests, workshops. Cob, timber, rammed earth.", tag: "7 resources" },
+              { title: "Nourishment", id: "lc-nourishment", desc: "Food forests, community kitchens, fermentation. Permaculture plans.", tag: "8 resources" },
+              { title: "Land", id: "lc-land", desc: "Keyline design, CLT setup, regeneration. Water harvesting systems.", tag: "8 resources" },
+              { title: "Energy", id: "lc-energy", desc: "Solar arrays, biogas, micro-hydro. Open-source charge controllers.", tag: "8 resources" },
+              { title: "Health", id: "lc-health", desc: "Herb gardens, apothecary, sauna. Community health worker training.", tag: "6 resources" },
+              { title: "Instruments", id: "lc-instruments", desc: "Sensor networks, maker spaces, fab labs. IoT for gardens & energy.", tag: "7 resources" },
+              { title: "Shelter", id: "lc-v-shelter-organism", desc: "Cob, CEB, SuperAdobe, bamboo, mycelium. Open-source building plans.", tag: "11 resources" },
+              { title: "Living Spaces", id: "lc-v-living-spaces", desc: "Pattern language, cohousing design. Inside-outside gradients.", tag: "8 resources" },
+            ].map((bp) => (
+              <Link
+                key={bp.id}
+                href={`/vision/${bp.id}`}
+                className="group p-5 rounded-2xl border border-teal-800/30 bg-teal-900/10 hover:bg-teal-900/20 hover:border-teal-700/40 transition-all duration-300 space-y-2"
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-medium text-teal-300/90 group-hover:text-teal-200 transition-colors">
+                    {bp.title}
+                  </h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400/70 border border-teal-500/20">
+                    {bp.tag}
+                  </span>
+                </div>
+                <p className="text-xs text-stone-500 leading-relaxed">
+                  {bp.desc}
+                </p>
+              </Link>
+            ))}
+          </div>
+
+          <div className="text-center pt-4">
+            <Link
+              href="/concepts/garden?domain=living-collective"
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-300/80 hover:bg-teal-500/20 transition-all text-sm font-medium"
+            >
+              Browse all 51 concepts
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M5 12h14m0 0l-6-6m6 6l-6 6" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Emerging visions */}
       <section className="max-w-4xl mx-auto px-6 py-32 space-y-16">
         <div className="text-center space-y-4">
@@ -369,17 +427,6 @@ export default function VisionPage() {
         </div>
 
         {/* Explore all concepts */}
-        <div className="text-center pt-8">
-          <Link
-            href="/concepts/garden?domain=living-collective"
-            className="inline-flex items-center gap-2 text-stone-500 hover:text-teal-300/80 transition-colors text-sm"
-          >
-            Explore all 51 concepts in the Living Collective ontology
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M5 12h14m0 0l-6-6m6 6l-6 6" />
-            </svg>
-          </Link>
-        </div>
       </section>
 
       {/* Orientation */}

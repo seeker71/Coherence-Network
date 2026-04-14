@@ -1,8 +1,8 @@
 ---
 id: lc-stillness
 hz: 174
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Stillness
@@ -18,6 +18,15 @@ The deepest sensing. Shared silence has a density that individual silence doesn'
 ## Blueprint
 Morning silence (6-7am): the whole community holds quiet. A dedicated stillness sanctuary with cushions, blankets, dim light — always available. Weekly group sit (30-60 min). The community learns to let silence hold conversations — pauses are not awkward, they're deep.
 
+## Resources
+- 📖 [Plum Village Practice Resources](https://plumvillage.org/) — Thich Nhat Hanh's community practice guides, free online (type: guide)
+- 📖 [Insight Timer](https://insighttimer.com/) — free meditation app with 150,000+ guided practices (type: guide)
+- 🌐 [Taize Community](https://www.taize.fr/) — ecumenical community known for shared contemplative silence (type: community)
+
+## Visuals
+1. **Morning silence sanctuary** — `photorealistic small round meditation room with cushions on earthen floor, single candle, dawn light through round window, plants, person sitting in stillness, peaceful`
+2. **Group sit at dawn** — `photorealistic group of people sitting in silent meditation outdoors at dawn, mist rising from grass, trees silhouetted, sky turning pink, bare feet on earth, absolute stillness`
+
 ## Living Examples
 - **Dawn in a forest** — the moment before birdsong begins, everything listening together
 - **Quaker meeting** — sitting in silence until someone is moved to speak by genuine inner knowing
@@ -31,8 +40,9 @@ Morning silence (6-7am): the whole community holds quiet. A dedicated stillness 
 Stillness is the Resonating flow in its receptive mode — the complement to Play's active mode. It connects to Sensing (silence sharpens awareness), Ceremony (presence is the heart of honoring), and Rest (deep stillness regenerates).
 
 ## Open Questions
-- What aspects of Stillness need deeper research?
-- What real-world examples are we missing?
+- How to maintain group silence when some members are uncomfortable with it?
+- What's the minimum daily stillness practice for community coherence?
+- How to design acoustic spaces that truly hold silence?
 
 ## Cross-References
-→ lc-resonating
+→ lc-rest, lc-ceremony, lc-space, lc-health
