@@ -21,6 +21,8 @@ Freedom is not designed — it's what remains when constraints are removed. The 
 ## Resources
 - [Summerhill School](https://www.summerhillschool.co.uk/) — free school where children govern themselves (type: community)
 - [Sociocracy For All](https://www.sociocracyforall.org/) — governance that preserves individual freedom within collective consent (type: guide)
+- 🌐 [New Earth MicroNation](https://newearthhorizon.com/) — sovereign territory in Africa operating under natural law (type: community)
+- 📖 [Sovereignty & Natural Law](https://sachastone.com/) — replacing statutory systems with natural law governance (type: guide)
 
 ## Visuals
 1. **Free expression space** — `photorealistic outdoor amphitheater in intentional community, person performing spoken word, colorful murals on earthen walls, audience sitting on grass, creative banners, sunset`
@@ -45,4 +47,4 @@ Freedom is the Expressing flow fully unleashed. It replaces the false choice bet
 - How to support people who have never experienced true freedom of expression?
 
 ## Cross-References
-→ lc-play, lc-offering, lc-v-play-expansion
+→ lc-play, lc-offering, lc-v-play-expansion, new-earth-integration

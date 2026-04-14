@@ -82,9 +82,25 @@ const COMMUNITIES = [
     concepts: ["lc-v-shelter-organism", "lc-v-living-spaces", "lc-energy", "lc-nourishment"],
     conceptLabels: ["Shelter as Skin", "Living Spaces", "Energy", "Nourishment"],
   },
+  {
+    name: "New Earth MicroNation", slug: "new-earth",
+    location: "Africa",
+    size: "Founding phase",
+    url: "https://newearthhorizon.com/",
+    resonates: "The first physical sovereign territory operating under natural law, free energy, and zero-point economics. Three pillars: Jurisdiction (sovereign self-governance), Technology (free energy eliminating scarcity), Fellowship (community built on beauty, art, and recognition of human divinity). Proof that an entirely new civilizational operating system is being built.",
+    learn: "Natural law governance, New Earth Exchange (alternative economics), art as architectural blueprint, sovereignty as foundation for community",
+    concepts: ["lc-v-freedom-expression", "lc-energy", "lc-circulation", "lc-beauty"],
+    conceptLabels: ["Freedom", "Energy", "Circulation", "Beauty"],
+  },
 ];
 
 const NETWORKS = [
+  {
+    name: "New Earth Horizon",
+    url: "https://newearthhorizon.com/",
+    scope: "Global — MicroNation (Africa), Exchange, initiatives",
+    resonates: "Sacha Stone's network building sovereign territories, alternative economics, and free energy infrastructure. The 3 Pillars (Jurisdiction, Technology, Fellowship) align with Living Collective's core flows.",
+  },
   {
     name: "Global Ecovillage Network (GEN)",
     url: "https://ecovillage.org/",

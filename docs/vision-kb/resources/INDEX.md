@@ -38,6 +38,19 @@
 | Lincoln Institute | [lincolninst.edu](https://lincolninst.edu/publications/articles/community-land-trusts/) | CLT research, 300+ CLTs documented |
 | FIC | [ic.org](https://ic.org/) | 1,200+ community directory, governance resources |
 
+## New Earth / Sovereignty Movements
+
+| Resource | URL | What |
+|----------|-----|------|
+| New Earth Horizon | [newearthhorizon.com](https://newearthhorizon.com/) | Sacha Stone's New Earth initiatives — MicroNation, Exchange, sovereignty |
+| New Earth MicroNation | [newearthhorizon.com](https://newearthhorizon.com/) | Physical sovereign territory (Africa) — natural law, free energy, zero-point economics |
+| New Earth Exchange | [newearthhorizon.com](https://newearthhorizon.com/) | Alternative economic system outside debt-based fiat currency |
+| Sacha Stone | [sachastone.com](https://sachastone.com/) | New Earth activist, sovereignty pioneer, art-as-blueprint vision |
+| Just Tap In Podcast | [youtube.com/@EmilioOrtiz](https://youtube.com/@EmilioOrtiz) | Host Emilio Ortiz, 243K subscribers — consciousness and sovereignty |
+| New Living Expo | [newlivingexpo.com](https://newlivingexpo.com/) | Annual gathering, San Rafael CA — New Earth community convergence |
+
+> See [new-earth-integration.md](new-earth-integration.md) for full concept mapping (3 Pillars → Living Collective)
+
 ## Reference Communities
 
 | Community | Location | Size | Key learning |

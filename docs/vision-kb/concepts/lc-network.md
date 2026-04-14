@@ -21,6 +21,7 @@ Connect with 3-5 other communities within the first year. Exchange visits quarte
 ## Resources
 - [Global Ecovillage Network](https://ecovillage.org/) — connecting 10,000+ communities worldwide (type: community)
 - [Foundation for Intentional Community](https://www.ic.org/) — inter-community networking and resources (type: community)
+- 🌐 [New Earth MicroNation (Africa)](https://newearthhorizon.com/) — physical sovereign territory with natural law, free energy, zero-point economics (type: community)
 
 ## Visuals
 1. **Inter-community gathering** — `photorealistic large outdoor festival with people from different communities, tents and banners, shared meals, music stage, children running, diverse crowd, mountain setting`
@@ -45,4 +46,4 @@ The Network is how the Living Collective connects to the larger ecosystem of col
 - How to maintain network coherence across distance?
 
 ## Cross-References
-→ lc-resonating, lc-nourishing
+→ lc-resonating, lc-nourishing, new-earth-integration
