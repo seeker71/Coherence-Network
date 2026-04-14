@@ -47,7 +47,7 @@ Spec → Test → Implement → CI → Review → Merge
 
 **Read `docs/vision-kb/INDEX.md` first** (~300 tokens). It's an AI-maintained markdown wiki (Karpathy LLM Wiki pattern) for the community vision. Drill into `docs/vision-kb/concepts/{id}.md` for concept details. Cross-cutting files: `spaces/`, `materials/`, `locations/`, `scales/`, `realization/`, `resources/`. After any enrichment, update the concept file + INDEX.md + LOG.md. See `docs/vision-kb/SCHEMA.md` for format rules.
 
-The ontology JSON (`config/ontology/living-collective.json`) is the deployed source of truth. The KB is the working draft where content expands before deployment. To sync KB → JSON: run `scripts/kb_to_ontology.py`.
+The graph DB is the sole source of truth. The KB is the working draft where content expands before syncing. To sync KB → DB: `python scripts/sync_kb_to_db.py`. Relationship types and axes are also in the DB — seeded once via `python scripts/seed_schema_to_db.py`.
 
 ## Navigation
 

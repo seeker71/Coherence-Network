@@ -80,6 +80,8 @@ class NodeType(str, Enum):
     PRACTICE = "practice"
     NETWORK_ORG = "network-org"
     INTERESTED_PERSON = "interested-person"
+    # Schema-level reference types (relationship types, ontology axes)
+    RELATIONSHIP_TYPE = "relationship_type"
 
 
 # Spec 169: canonical closed vocabulary for the semantic layer
