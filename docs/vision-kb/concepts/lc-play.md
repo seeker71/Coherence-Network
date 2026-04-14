@@ -73,8 +73,8 @@ Capoeira in the evenings for anyone who wants to feel what it is like when marti
 
 ## Connected Frequencies
 
-→ [lc-ceremony](lc-ceremony.md) — play becomes ritual when the joy is shared long enough
-→ [lc-offering](lc-offering.md) — play reveals what each person naturally gives
-→ [lc-stillness](lc-stillness.md) — the pause between games, the rest that makes the next leap possible
-→ [lc-elders](lc-elders.md) — elders who still play teach everyone that aliveness has no age limit
-→ [lc-space](lc-space.md) — the field that holds the play
+→ lc-ceremony — play becomes ritual when the joy is shared long enough
+→ lc-offering — play reveals what each person naturally gives
+→ lc-stillness — the pause between games, the rest that makes the next leap possible
+→ lc-elders — elders who still play teach everyone that aliveness has no age limit
+→ lc-space — the field that holds the play

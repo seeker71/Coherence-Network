@@ -81,4 +81,4 @@ Before any earthworks, one full year of observation. Watching water flow, sun pa
 - When does observation end and action begin — or is observation itself the deepest form of action?
 
 ## Connected Frequencies
-→ [lc-nourishing](lc-nourishing.md) · [lc-nourishment](lc-nourishment.md) · [lc-energy](lc-energy.md) · [lc-space](lc-space.md)
+→ lc-nourishing, lc-nourishment, lc-energy, lc-space

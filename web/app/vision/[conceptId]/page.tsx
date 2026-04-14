@@ -153,13 +153,43 @@ function StoryContent({
         const trimmed = block.trim();
         if (!trimmed) return null;
 
-        // ## Heading
-        if (trimmed.startsWith("## ")) {
-          return <h2 key={i} className="text-2xl font-light text-stone-300 pt-8 pb-2">{trimmed.slice(3)}</h2>;
-        }
-        // ### Subheading
-        if (trimmed.startsWith("### ")) {
-          return <h3 key={i} className="text-lg font-light text-stone-400 pt-4 pb-1">{trimmed.slice(4)}</h3>;
+        // ## Heading (may include list items if no blank line follows)
+        if (trimmed.startsWith("## ") || trimmed.startsWith("### ")) {
+          const isH3 = trimmed.startsWith("### ");
+          const lines = trimmed.split("\n");
+          const headingText = lines[0].slice(isH3 ? 4 : 3);
+          const rest = lines.slice(1).filter((l: string) => l.trim()).join("\n");
+
+          if (!rest) {
+            return isH3
+              ? <h3 key={i} className="text-lg font-light text-stone-400 pt-4 pb-1">{headingText}</h3>
+              : <h2 key={i} className="text-2xl font-light text-stone-300 pt-8 pb-2">{headingText}</h2>;
+          }
+
+          // Heading with attached list items (e.g. ## Resources\n- item1\n- item2)
+          const listItems = rest.split("\n").filter((l: string) => l.trim().startsWith("- "));
+          return (
+            <div key={i}>
+              {isH3
+                ? <h3 className="text-lg font-light text-stone-400 pt-4 pb-2">{headingText}</h3>
+                : <h2 className="text-2xl font-light text-stone-300 pt-8 pb-2">{headingText}</h2>
+              }
+              {listItems.length > 0 && (
+                <ul className="space-y-2 pl-4">
+                  {listItems.map((item: string, j: number) => (
+                    <li key={j} className="text-sm text-stone-400 leading-relaxed list-disc"
+                      dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(item.slice(2).trim()) }}
+                    />
+                  ))}
+                </ul>
+              )}
+              {listItems.length === 0 && (
+                <p className="text-base text-stone-400 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: inlineMarkdownToHtml(rest) }}
+                />
+              )}
+            </div>
+          );
         }
         // > Blockquote
         if (trimmed.startsWith("> ")) {
@@ -204,7 +234,7 @@ function StoryContent({
             </ul>
           );
         }
-        // -> Cross-references (linked pills)
+        // → Cross-references (linked pills): → lc-xxx, lc-yyy
         if (trimmed.startsWith("\u2192 ")) {
           const refs = trimmed.slice(2).split(",").map((r: string) => r.trim()).filter(Boolean);
           return (
