@@ -38,11 +38,21 @@
 ## What We Learn From New Earth
 
 1. **Sovereignty is the foundation** — no real community without sovereign individuals. Statutory law must be replaced by natural law. The Living Collective's "no rules, resonance" aligns perfectly.
-2. **Economics must be zero-point** — Sacha's New Earth Exchange mirrors our Circulation concept: resources flowing like mycorrhizal networks, not extracted through debt.
-3. **Art is not decoration — it's architecture** — beauty as the primary building material of the new civilization. This deepens our Beauty and Expressing concepts.
-4. **The body is ascending** — not metaphorical but photonic. This adds depth to Vitality and Shakti: the community field amplifies individual cellular transformation.
-5. **Communication evolves beyond language** — telepathic/field-sensing as the next communication paradigm. Our Field Sensing and Transmission concepts already point here.
-6. **MicroNation as prototype** — building a physical sovereign territory (Africa) proves the vision is not theoretical. We add this to our Network as a fellow node.
+2. **Economics must be zero-point** — the New Earth Exchange replaces debt-based fiat entirely. Not barter (still tracks debits) but genuine flow: contribution recognized, needs met, surplus circulated. Maps directly to our Circulation concept.
+3. **Custodianship replaces ownership** — you don't own land, you are its custodian. You don't own tools, you steward them. This is the Aboriginal principle, the indigenous principle, the New Earth principle. The word "mine" dissolves. This deepens our Land and Circulation concepts fundamentally.
+4. **Art is not decoration — it's architecture** — beauty as the primary building material of the new civilization. The New Renaissance requires conscious aesthetics at every scale.
+5. **The body is ascending** — not metaphorical but photonic. The community field amplifies individual cellular transformation. This deepens Vitality and Shakti.
+6. **Communication evolves beyond language** — telepathic/field-sensing as the next communication paradigm. Our Field Sensing and Transmission concepts already point here.
+7. **MicroNation as prototype** — building a physical sovereign territory (Africa) proves the vision is not theoretical. First node in the network. Others follow.
+8. **Community as living node** — each community is a sovereign node in a planetary network. Not isolated utopias but interconnected organisms. The Living Collective is one node; New Earth MicroNation is another. The network IS the field at planetary scale.
+
+## DB Entities Created
+
+| Node ID | Type | What |
+|---------|------|------|
+| `community-new-earth-micronation` | community | Physical sovereign territory in Africa |
+| `community-new-earth-exchange` | community | Alternative economic system |
+| `community-new-earth-horizon` | network-org | Global network of New Earth initiatives |
 
 ## Epistemic Note
 

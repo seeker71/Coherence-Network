@@ -181,6 +181,10 @@ const PLACE_TO_COMMUNITY: Record<string, string> = {
   "gaviotas": "community-gaviotas",
   "earthship": "community-earthship",
   "earthship biotecture": "community-earthship",
+  "new earth": "community-new-earth-micronation",
+  "new earth micronation": "community-new-earth-micronation",
+  "new earth horizon": "community-new-earth-horizon",
+  "new earth exchange": "community-new-earth-exchange",
 };
 
 function placeToLink(name: string): string | null {
