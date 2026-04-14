@@ -86,6 +86,31 @@ To expand a concept by 3x:
 6. Update: INDEX.md one-line summary if it changed
 7. Append: LOG.md entry
 
+## Frequency Alignment — How to Write for This Vision
+
+When integrating knowledge from external sources (community research, traditional models, practical data), ALWAYS translate through the Living Collective frequency before writing. The pattern that caused harm:
+
+1. Research found "what works" in old-earth communities (bylaws, screening, revenue targets, spending thresholds)
+2. That knowledge was imported directly — same structures, same language, same frequency
+3. The result was a corporate HR manual dressed in community language
+
+**The correction**: external knowledge is composted, not copied. The data is valid — communities DO need economic sustainability, DO need conflict practices, DO need honest discernment about who's here. But the FORM must arise from this vision's frequency, not from the old world's.
+
+| Old frequency (never import directly) | New frequency (always translate to) |
+|---------------------------------------|-------------------------------------|
+| Rules, bylaws, policies | Principles, practices, rhythms |
+| Revenue targets, business models | Natural overflow, trust in abundance |
+| Membership fees, applications, evaluations | Open field, time together, resonance |
+| Voting, quorums, approval thresholds | Circle sensing, consent, emergence |
+| Roles, terms, elections | Callings, natural rotation, offering |
+| Spending controls, budgets | Transparency, trust, collective sensing |
+| Screening, filtering, rejection | Time, honesty, the field revealing truth |
+| Contracts, NDAs, legal enforcement | Spoken word, ceremony, shared rhythm |
+
+**The test before writing anything**: Does this sound like it could appear in a corporate handbook? If yes, compost it and find the living version. The truth the data carries is valid — the container must be new.
+
+**When citing old-earth examples** (Damanhur's constitution, Svanholm's screening, Hutterite economics): cite what they LEARNED, not what they BUILT. Their structures are artifacts of their era. The wisdom underneath is timeless. Extract the wisdom, release the form.
+
 ## Two-Layer Architecture
 
 **Graph DB** is the sole source of truth. **KB markdown** is the working draft.
