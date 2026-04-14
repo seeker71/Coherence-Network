@@ -421,20 +421,26 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
             {concept.visuals && concept.visuals.length > 0 && (
               <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
                 <h2 className="text-lg font-light text-stone-300">How it looks and feels</h2>
+                <p className="text-xs text-stone-600 italic">Images are AI-generated and may take a moment to appear.</p>
                 <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-2 px-2">
                   {concept.visuals.map((v, i) => {
                     const seed = conceptId.split("").reduce((a, c) => a + c.charCodeAt(0), 0) + i * 17;
                     return (
                       <div key={i} className="flex-shrink-0 w-80 snap-start space-y-2">
-                        <div className="relative aspect-[16/9] rounded-xl overflow-hidden">
-                          <Image
+                        <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-stone-800/50">
+                          {/* Skeleton placeholder visible until image loads */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="text-center space-y-2 px-4">
+                              <div className="w-8 h-8 mx-auto rounded-full border-2 border-stone-600 border-t-amber-400/60 animate-spin" />
+                              <p className="text-xs text-stone-500">{v.caption}</p>
+                            </div>
+                          </div>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
                             src={pollinationsUrl(v.prompt, seed)}
                             alt={v.caption}
-                            fill
-                            className="object-cover"
-                            sizes="320px"
-                            unoptimized
-                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover"
+                            loading="eager"
                           />
                           {v.location && (
                             <span className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full bg-stone-950/60 text-stone-300 border border-stone-700/30">
