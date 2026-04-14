@@ -1158,6 +1158,65 @@ def cmd_frequency(args):
           f"\033[33m{mixed_count} mixed\033[0m, \033[31m{inst_count} institutional\033[0m")
 
 
+def cmd_field(args):
+    """Analyze token-level frequency field for a concept."""
+    data = _api("GET", f"/api/concepts/{args.concept_id}/frequency-field")
+    if not data:
+        print(f"Could not analyze {args.concept_id}", file=sys.stderr)
+        return
+    if data.get("error"):
+        print(f"  Error: {data['error']}", file=sys.stderr)
+        return
+
+    green = "\033[32m"
+    red = "\033[31m"
+    yellow = "\033[33m"
+    dim = "\033[2m"
+    reset = "\033[0m"
+
+    print(f"Frequency Field: {args.concept_id}")
+    print(f"  Marked tokens: {data.get('total_marked_tokens', 0)}  "
+          f"({green}{data.get('living_tokens', 0)} living{reset}, "
+          f"{red}{data.get('institutional_tokens', 0)} institutional{reset})")
+    print(f"  Field mean: {data.get('field_mean', 0):.3f}")
+
+    # Top living
+    top_living = data.get("top_living", [])
+    if top_living:
+        print(f"\n  {green}Living tokens:{reset}")
+        for t in top_living[:8]:
+            bar = "█" * int(t["signal"] * 10)
+            print(f"    {green}{t['signal']:+.2f}{reset}  {bar}  {t['word']} ({t['count']}x)")
+
+    # Top institutional
+    top_inst = data.get("top_institutional", [])
+    if top_inst:
+        print(f"\n  {red}Institutional tokens:{reset}")
+        for t in top_inst[:8]:
+            bar = "█" * int(abs(t["signal"]) * 10)
+            print(f"    {red}{t['signal']:+.2f}{reset}  {bar}  {t['word']} ({t['count']}x)")
+
+    # Dissonances
+    dissonances = data.get("dissonances", [])
+    if dissonances:
+        print(f"\n  {yellow}Dissonances ({len(dissonances)}):{reset} tokens out of tune with their context")
+        for d in dissonances[:10]:
+            neg = " (negated)" if d.get("negated") else ""
+            print(f"    L{d['line']:>3d}  {red}{d['word']}{reset} = {d['signal']:+.2f}  "
+                  f"context = {d['context_avg']:+.2f}  "
+                  f"deviation = {d['deviation']:+.2f}{neg}")
+            print(f"         {dim}{d['sentence'][:80]}{reset}")
+    else:
+        print(f"\n  {green}No dissonances found — the field is coherent.{reset}")
+
+    # Suggestions
+    suggestions = data.get("suggestions", [])
+    if suggestions:
+        print(f"\n  Suggestions ({len(suggestions)}):")
+        for s in suggestions[:10]:
+            print(f"    L{s['line']:>3d}  {red}{s['original']}{reset} → {green}{s['suggested']}{reset}")
+
+
 def cmd_frequency_edit(args):
     """Find and fix institutional-frequency phrases in a concept or file."""
     from pathlib import Path as _P
@@ -1399,6 +1458,9 @@ def main():
     p_frequency.add_argument("concept_id", nargs="?", default=None, help="Concept ID to score")
     p_frequency.add_argument("--file", default=None, help="Score a markdown file instead")
 
+    p_field = sub.add_parser("field", help="Token-level frequency field analysis for a concept")
+    p_field.add_argument("concept_id")
+
     p_freq_edit = sub.add_parser("frequency-edit", help="Find and fix institutional-frequency phrases")
     p_freq_edit.add_argument("concept_id", nargs="?", default=None, help="Concept ID to edit")
     p_freq_edit.add_argument("--file", default=None, help="Edit a markdown file instead")
@@ -1438,7 +1500,7 @@ def main():
         "stories": cmd_stories, "story": cmd_story, "story-update": cmd_story_update,
         "visuals-generate": cmd_visuals_generate,
         # Frequency scoring
-        "frequency": cmd_frequency, "frequency-edit": cmd_frequency_edit,
+        "frequency": cmd_frequency, "field": cmd_field, "frequency-edit": cmd_frequency_edit,
         # Config
         "config": cmd_config, "config-set": cmd_config_set,
     }
