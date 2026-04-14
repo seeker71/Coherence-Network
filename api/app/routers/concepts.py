@@ -92,6 +92,32 @@ async def frequency_score(body: FrequencyScoreRequest):
     return frequency_scoring.score_frequency(body.text)
 
 
+@router.post("/concepts/frequency-field", summary="Token-level frequency field analysis")
+async def frequency_field(body: FrequencyScoreRequest):
+    """Analyze every token's frequency relative to its context.
+
+    Returns dissonances — specific words that don't match the frequency
+    of their surrounding sentence. Each dissonance includes the word,
+    its signal, the context average, and the deviation.
+    """
+    from app.services import frequency_field
+    return frequency_field.analyze_token_field(body.text)
+
+
+@router.get("/concepts/{concept_id}/frequency-field", summary="Full frequency field analysis for a concept")
+async def concept_frequency_field(concept_id: str):
+    """Analyze a concept's complete frequency field.
+
+    Returns token map, dissonances, top living/institutional tokens,
+    and edit suggestions.
+    """
+    from app.services import frequency_field
+    result = frequency_field.analyze_concept(concept_id)
+    if result.get("error"):
+        raise HTTPException(status_code=404, detail=result["error"])
+    return result
+
+
 @router.post("/concepts/frequency-edit", summary="Find and fix institutional-frequency phrases")
 async def frequency_edit(body: FrequencyScoreRequest):
     """Find institutional-frequency phrases and suggest living replacements.
