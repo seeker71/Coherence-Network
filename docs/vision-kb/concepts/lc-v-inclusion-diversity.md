@@ -1,8 +1,8 @@
 ---
 id: lc-v-inclusion-diversity
 hz: 639
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Inclusion and Diversity
@@ -18,6 +18,15 @@ The field thrives on harmonic diversity. A chord needs different notes. An ecosy
 ## Blueprint
 Diversity is not managed — it's invited. The field actively seeks cells with different frequencies. Inclusion practices: welcome circles designed to honor what each new cell brings. Spaces designed for different sensory needs. Rhythms flexible enough for different energy levels. The field's vitality IS its diversity.
 
+## Resources
+- [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based governance ensuring every voice heard (type: guide)
+- [L'Arche International](https://www.larche.org/) — communities integrating people of all abilities (type: community)
+- [Foundation for Intentional Community](https://www.ic.org/) — diversity practices from 1000+ communities (type: community)
+
+## Visuals
+1. **Diverse circle** — `photorealistic diverse group of people of different ages abilities and backgrounds sitting in a circle outdoors, sharing food, animated conversation, garden setting, warm light`
+2. **Accessible garden** — `photorealistic raised garden beds at wheelchair height, person in wheelchair planting alongside standing gardeners, wide paths, community buildings, inclusive design`
+
 ## Living Examples
 - **Coral reef** — the most biodiverse ecosystems on Earth, thousands of species in symbiosis
 - **A symphony orchestra** — 60+ instruments, each different, the music impossible without every one
@@ -32,8 +41,9 @@ Diversity is not managed — it's invited. The field actively seeks cells with d
 Inclusion is where Attunement meets Field Edge — the field's ability to welcome diverse frequencies while maintaining coherence. Diversity IS resilience. Monoculture IS fragility.
 
 ## Open Questions
-- What aspects of Inclusion and Diversity need deeper research?
-- What real-world examples are we missing?
+- How to attract diversity when founding members tend to be homogeneous?
+- How to make community affordable across income levels?
+- What's the right balance between shared values and diverse worldviews?
 
 ## Cross-References
-→ lc-attunement, lc-field-edge
+→ lc-attunement, lc-circulation, lc-ceremony

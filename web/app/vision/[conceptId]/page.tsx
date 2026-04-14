@@ -102,7 +102,7 @@ async function fetchEdges(id: string): Promise<Edge[]> {
   }
 }
 
-type LCConcept = { id: string; name: string; sacred_frequency?: { hz: number; quality: string }; visual_path?: string };
+type LCConcept = { id: string; name: string; level?: number; sacred_frequency?: { hz: number; quality: string }; visual_path?: string };
 
 async function fetchAllLC(): Promise<LCConcept[]> {
   const base = getApiBase();
@@ -722,30 +722,50 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               </section>
             )}
 
-            {/* Explore — full navigation */}
-            <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-3">
-              <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">Explore</h2>
-              <div className="space-y-2 text-sm">
-                <Link href="/vision" className="block text-stone-400 hover:text-amber-300/80 transition-colors">
+            {/* All 51 concepts — grouped by level */}
+            <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-5 space-y-4">
+              <h2 className="text-sm font-medium text-stone-500 uppercase tracking-wider">All Concepts</h2>
+              {(() => {
+                const levels: Record<number, typeof allLC> = {};
+                for (const c of allLC) {
+                  const lv = c.level ?? 2;
+                  (levels[lv] = levels[lv] || []).push(c);
+                }
+                const levelMeta: Record<number, { label: string; color: string }> = {
+                  0: { label: "Root", color: "text-amber-400/60" },
+                  1: { label: "Systems & Flows", color: "text-teal-400/60" },
+                  2: { label: "Expressions & Visions", color: "text-violet-400/60" },
+                  3: { label: "Vocabulary", color: "text-stone-500" },
+                };
+                return [0, 1, 2, 3].filter(lv => levels[lv]?.length).map(lv => (
+                  <div key={lv} className="space-y-1">
+                    <p className={`text-[10px] font-medium uppercase tracking-wider ${levelMeta[lv]?.color || "text-stone-600"}`}>
+                      {levelMeta[lv]?.label || `Level ${lv}`}
+                    </p>
+                    <div className="space-y-0.5">
+                      {(levels[lv] || []).sort((a, b) => (a.name || "").localeCompare(b.name || "")).map(c => (
+                        <Link
+                          key={c.id}
+                          href={`/vision/${c.id}`}
+                          className={`block text-xs py-0.5 transition-colors truncate ${
+                            c.id === conceptId
+                              ? "text-amber-300 font-medium"
+                              : "text-stone-500 hover:text-stone-300"
+                          }`}
+                        >
+                          {c.id === conceptId ? "→ " : ""}{c.name || c.id.replace("lc-", "").replace(/-/g, " ")}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+              <div className="pt-2 border-t border-stone-800/30 space-y-1.5 text-xs">
+                <Link href="/vision" className="block text-stone-500 hover:text-amber-300/80 transition-colors">
                   ← The Living Collective
                 </Link>
-                <Link href="/vision/lived" className="block text-stone-400 hover:text-amber-300/80 transition-colors">
-                  The lived experience
-                </Link>
-                <Link href="/vision/realize" className="block text-stone-400 hover:text-amber-300/80 transition-colors">
-                  How it becomes real
-                </Link>
-                <Link href="/vision/aligned" className="block text-stone-400 hover:text-violet-300/80 transition-colors">
-                  Aligned communities
-                </Link>
-                <Link href="/vision/join" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
+                <Link href="/vision/join" className="block text-stone-500 hover:text-teal-300/80 transition-colors">
                   Join the vision
-                </Link>
-                <Link href="/concepts/garden?domain=living-collective" className="block text-stone-400 hover:text-teal-300/80 transition-colors">
-                  All 51 concepts
-                </Link>
-                <Link href="/resonance" className="block text-stone-400 hover:text-violet-300/80 transition-colors">
-                  Resonance Discovery
                 </Link>
               </div>
             </section>
