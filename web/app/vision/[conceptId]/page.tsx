@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getApiBase } from "@/lib/api";
+import PollinationsImage from "@/components/vision/PollinationsImage";
 
 export const dynamic = "force-dynamic";
 
@@ -427,28 +428,11 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
                     const seed = conceptId.split("").reduce((a, c) => a + c.charCodeAt(0), 0) + i * 17;
                     return (
                       <div key={i} className="flex-shrink-0 w-80 snap-start space-y-2">
-                        <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-stone-800/50">
-                          {/* Skeleton placeholder visible until image loads */}
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-center space-y-2 px-4">
-                              <div className="w-8 h-8 mx-auto rounded-full border-2 border-stone-600 border-t-amber-400/60 animate-spin" />
-                              <p className="text-xs text-stone-500">{v.caption}</p>
-                            </div>
-                          </div>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={pollinationsUrl(v.prompt, seed)}
-                            alt={v.caption}
-                            className="absolute inset-0 w-full h-full object-cover text-[0px]"
-                            style={{ color: "transparent" }}
-                            loading="eager"
-                          />
-                          {v.location && (
-                            <span className="absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full bg-stone-950/60 text-stone-300 border border-stone-700/30">
-                              {v.location}
-                            </span>
-                          )}
-                        </div>
+                        <PollinationsImage
+                          src={pollinationsUrl(v.prompt, seed)}
+                          alt={v.caption}
+                          className="aspect-[16/9] rounded-xl overflow-hidden bg-stone-800/50"
+                        />
                         <p className="text-xs text-stone-500 leading-relaxed">{v.caption}</p>
                       </div>
                     );
