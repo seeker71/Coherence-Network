@@ -35,4 +35,4 @@ Wu Wei names the quality of action the field aspires to — effortless because a
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-field-sensing
+→ lc-stillness, lc-rest, lc-w-spanda, lc-offering

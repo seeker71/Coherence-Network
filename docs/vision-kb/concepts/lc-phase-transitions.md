@@ -37,4 +37,4 @@ Phase Transitions replace the concept of death/birth as separate events. Everyth
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-spiraling
+→ lc-spiraling, lc-composting, lc-w-phase-transition, lc-ceremony

@@ -35,4 +35,4 @@ Spanda names the subtle vibration connecting everything — the sensing layer be
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-sensing
+→ lc-vitality, lc-w-shakti, lc-rhythm, lc-pulse

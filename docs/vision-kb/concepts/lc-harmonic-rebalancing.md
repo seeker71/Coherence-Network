@@ -37,4 +37,4 @@ Harmonic Rebalancing is how the field evolves. It replaces 'conflict resolution'
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-field-sensing
+→ lc-attunement, lc-v-harmonizing, lc-health, lc-composting

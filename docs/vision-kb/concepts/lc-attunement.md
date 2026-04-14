@@ -35,4 +35,4 @@ Attunement is the immune system. Without it, the field can't distinguish between
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-pulse
+→ lc-sensing, lc-stillness, lc-v-harmonizing, lc-pulse

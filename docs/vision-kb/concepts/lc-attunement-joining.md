@@ -37,4 +37,4 @@ Joining is where Sensing meets Resonating — the mutual discovery of whether a 
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-field-sensing
+→ lc-attunement, lc-ceremony, lc-v-inclusion-diversity

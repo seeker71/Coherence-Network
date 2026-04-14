@@ -35,4 +35,4 @@ Phase Transition replaces 'death' and 'ending' in the vocabulary — reframing e
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-spiraling
+→ lc-phase-transitions, lc-composting, lc-spiraling
