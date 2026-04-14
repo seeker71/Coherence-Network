@@ -35,4 +35,4 @@ Field names the collective reality that emerges when cells gather with shared in
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-pulse
+→ lc-pulse, lc-w-cell, lc-field-sensing, lc-network

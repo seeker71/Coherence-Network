@@ -35,4 +35,4 @@ Nourishing is one of the five flows. It intersects with every Through Body expre
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-vitality
+→ lc-vitality, lc-nourishment, lc-land, lc-v-food-practice

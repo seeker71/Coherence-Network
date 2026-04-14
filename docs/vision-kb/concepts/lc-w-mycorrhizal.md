@@ -35,4 +35,4 @@ Mycorrhizal names the invisible network that makes the whole greater than the su
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-network
+→ lc-pulse, lc-circulation, lc-network, lc-land

@@ -35,4 +35,4 @@ Sensing is the nervous system — without it, no other system can function. It e
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-pulse
+→ lc-field-sensing, lc-attunement, lc-instruments, lc-stillness

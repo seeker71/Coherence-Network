@@ -35,4 +35,4 @@ Vitality is the primary metric. Everything in the vision serves it. If a practic
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-pulse
+→ lc-nourishing, lc-health, lc-play, lc-energy

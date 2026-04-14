@@ -37,4 +37,4 @@ Beauty is the Expressing flow as quality. When any expression in the field is fu
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-expressing
+→ lc-expressing, lc-space, lc-v-comfort-joy, lc-ceremony

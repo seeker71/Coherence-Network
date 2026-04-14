@@ -37,4 +37,4 @@ Discovery is the Expressing flow as learning. It connects to Play (play IS disco
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-expressing
+→ lc-field-sensing, lc-elders, lc-instruments, lc-play
