@@ -23,6 +23,8 @@ Common fund covers all basic needs: food, shelter, energy, health, education. In
 - 📖 [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based resource allocation and governance (type: guide)
 - 🌐 [Foundation for Intentional Community](https://www.ic.org/) — community economics models from 1000+ communities (type: community)
 - 📖 [Grounded Solutions - CLT Resources](https://groundedsolutions.org/) — community land trust models for shared economics (type: guide)
+- 📖 [New Earth Exchange](https://newearthhorizon.com/) — alternative economic system outside debt-based fiat, zero-point economics (type: guide)
+- 📖 [Sacred Economics](https://sacred-economics.com/) — Charles Eisenstein, free online book on gift economy (type: book)
 
 ## Visuals
 1. **Common fund visualization** — `photorealistic community meeting room with transparent glass jar of coins and bills on table, people discussing around circular table, whiteboard showing flow diagram of resources, warm light`
@@ -46,4 +48,4 @@ Circulation is where Nourishing meets Field Intelligence — resources flow beca
 - How to interface with external economy (taxes, health insurance, pensions)?
 
 ## Cross-References
-→ lc-offering, lc-v-mycorrhizal, lc-nourishment
+→ lc-offering, lc-v-mycorrhizal, lc-nourishment, new-earth-integration

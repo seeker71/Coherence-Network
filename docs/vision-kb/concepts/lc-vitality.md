@@ -21,6 +21,7 @@ Track vitality, not productivity. A simple daily question on a shared board: 'Ho
 ## Resources
 - [Blue Zones research](https://www.bluezones.com/) — longevity through community, purpose, movement (type: guide)
 - [Plum Village](https://plumvillage.org/) — mindfulness as vitality practice (type: community)
+- 🌐 [Biological Ascension — New Earth](https://newearthhorizon.com/) — photonic light actively reprogramming human DNA toward full expression (type: community)
 
 ## Visuals
 1. **Morning vitality** — `photorealistic group of people doing ecstatic dance outdoors at sunrise, barefoot on grass, arms raised, laughing, sweat visible, community garden in background, pure aliveness`
@@ -43,4 +44,4 @@ Vitality is the primary metric. Everything in the vision serves it. If a practic
 - How to maintain vitality through conflict and winter?
 
 ## Cross-References
-→ lc-nourishing, lc-health, lc-play, lc-energy
+→ lc-nourishing, lc-health, lc-play, lc-energy, new-earth-integration

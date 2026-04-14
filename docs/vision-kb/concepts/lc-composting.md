@@ -22,6 +22,7 @@ Physical composting stations visible throughout the community — food scraps, h
 - 📖 [Humanure Handbook](https://humanurehandbook.com/) — Joseph Jenkins' free guide to composting human waste safely (type: book)
 - 📖 [ATTRA Composting Guide](https://attra.ncat.org/) — free publications on farm-scale composting systems (type: guide)
 - 🌐 [Appropedia Composting](https://www.appropedia.org/) — open wiki articles on composting toilets, vermicomposting, and more (type: community)
+- 📖 [The Lazarus Principle](https://sachastone.com/) — ego death, rebirth, innocence — individual transformation mirroring civilizational rebirth (type: guide)
 
 ## Visuals
 1. **Community compost station** — `photorealistic three-bin composting system in community garden, person turning compost with pitchfork, steam rising from hot pile, vegetable scraps, earthworms visible, fruit trees nearby`
@@ -45,4 +46,4 @@ Composting replaces the concept of grief, loss, death. Nothing ends — everythi
 - How to build a composting system that handles waste for 200 people?
 
 ## Cross-References
-→ lc-v-phase-transition, lc-rest, lc-nourishment, lc-land
+→ lc-v-phase-transition, lc-rest, lc-nourishment, lc-land, new-earth-integration

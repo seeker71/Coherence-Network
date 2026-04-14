@@ -20,6 +20,7 @@ Every surface, path, and object is a canvas. Community art budget treated as ess
 
 ## Resources
 - [A Pattern Language](https://www.patternlanguageindex.com/) -- Christopher Alexander's patterns for beauty in built environment (type: book)
+- 📖 [Art as Blueprint — Sacha Stone](https://sachastone.com/) — beauty and art as architectural tools for New Earth (type: guide)
 
 ## Visuals
 1. **Beauty in the everyday** -- `photorealistic close-up of hand-thrown ceramic bowl on wooden table with morning light, wildflowers in jar, crumbs from fresh bread, steam from tea, earthen wall background, wabi-sabi aesthetic`
@@ -44,4 +45,4 @@ Beauty is the Expressing flow as quality. When any expression in the field is fu
 - How to make beauty a daily practice rather than an occasional event?
 
 ## Cross-References
-→ lc-expressing, lc-space, lc-v-comfort-joy, lc-ceremony
+→ lc-expressing, lc-space, lc-v-comfort-joy, lc-ceremony, new-earth-integration
