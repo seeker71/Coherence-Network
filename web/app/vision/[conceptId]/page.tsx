@@ -357,11 +357,13 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
           </div>
         ) : null}
 
+        {/* Old structured content — only shown when NO story_content */}
+        {!concept.story_content && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Main content */}
           <div className="md:col-span-2 space-y-8">
 
-            {/* How it fits (hidden when story_content exists — it's in the story) */}
+            {/* How it fits */}
             {concept.how_it_fits && (
               <section className="rounded-2xl border border-amber-800/20 bg-amber-900/10 p-6 space-y-3">
                 <h2 className="text-sm font-medium text-amber-400/70 uppercase tracking-wider">How it fits into the whole</h2>
@@ -826,6 +828,62 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
             </section>
           </div>
         </div>
+        )}
+
+        {/* Sidebar for story mode — frequency + navigate */}
+        {concept.story_content && (
+          <div className="max-w-3xl space-y-4 pt-8">
+            {/* Sacred frequency */}
+            {concept.sacred_frequency && (
+              <div className="flex items-center gap-4 p-4 rounded-xl border border-stone-800/30 bg-stone-900/20">
+                <div className={`text-2xl font-extralight ${
+                  concept.sacred_frequency.hz === 432 ? "text-amber-300/80" :
+                  concept.sacred_frequency.hz === 528 ? "text-teal-300/80" :
+                  concept.sacred_frequency.hz === 741 ? "text-violet-300/80" :
+                  concept.sacred_frequency.hz === 174 ? "text-rose-300/80" :
+                  "text-stone-300"
+                }`}>{concept.sacred_frequency.hz} Hz</div>
+                <p className="text-xs text-stone-500">{concept.sacred_frequency.quality}</p>
+                {frequencySiblings.length > 0 && (
+                  <div className="flex flex-wrap gap-2 ml-auto">
+                    {frequencySiblings.slice(0, 5).map((sib) => (
+                      <Link key={sib.id} href={`/vision/${sib.id}`}
+                        className="text-xs text-stone-600 hover:text-amber-300/60 transition-colors">
+                        {sib.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Connected concepts from edges */}
+            {(outgoing.length > 0 || incoming.length > 0) && (
+              <div className="flex flex-wrap gap-2 p-4 rounded-xl border border-stone-800/30 bg-stone-900/20">
+                <span className="text-xs text-stone-600 mr-2">Connected:</span>
+                {outgoing.map((e) => (
+                  <Link key={e.id} href={`/vision/${e.to}`}
+                    className="text-xs px-2 py-1 rounded-full border border-stone-700/30 text-stone-500 hover:text-amber-300/70 hover:border-amber-500/20 transition-colors">
+                    {nameMap[e.to] || e.to.replace("lc-", "").replace(/-/g, " ")}
+                  </Link>
+                ))}
+                {incoming.map((e) => (
+                  <Link key={e.id} href={`/vision/${e.from}`}
+                    className="text-xs px-2 py-1 rounded-full border border-stone-700/30 text-stone-500 hover:text-teal-300/70 hover:border-teal-500/20 transition-colors">
+                    {nameMap[e.from] || e.from.replace("lc-", "").replace(/-/g, " ")}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {/* Navigate */}
+            <div className="flex gap-4 text-sm pt-4">
+              <Link href="/vision" className="text-stone-500 hover:text-amber-300/80 transition-colors">← The Living Collective</Link>
+              <Link href="/vision/realize" className="text-stone-500 hover:text-amber-300/80 transition-colors">Living it</Link>
+              <Link href="/vision/join" className="text-stone-500 hover:text-teal-300/80 transition-colors">Join</Link>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );
