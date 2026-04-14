@@ -53,7 +53,7 @@ In the Blue Zones — Sardinia, Okinawa, Nicoya, Ikaria — elders do not retire
 
 Elder housing at the heart of the community — on the main path, near the kitchen, visible and visited. Elder walks as weekly rhythm, open to anyone. A culture where slowness is honored as a frequency, not tolerated as a limitation. Elders at the center of decision-making — not overriding, but grounding. The last to speak, the most carefully listened to.
 
-Skills and stories transmitted through daily presence, not programs. An apprenticeship culture where the young learn by working alongside the old — not in scheduled workshops but in the ordinary rhythm of days. The deep project: a community where growing old means growing toward the center, not away from it. Where the question is not "how do we care for our elders?" but "how do we stay close enough to receive what they carry?"
+Skills and stories transmitted through daily presence, not practice. An apprenticeship culture where the young learn by working alongside the old — not in scheduled workshops but in the ordinary rhythm of days. The deep project: a community where growing old means growing toward the center, not away from it. Where the question is not "how do we care for our elders?" but "how do we stay close enough to receive what they carry?"
 
 ## Resources
 

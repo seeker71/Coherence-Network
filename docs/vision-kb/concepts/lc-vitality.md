@@ -31,7 +31,7 @@ At least a third of every day belongs to no agenda. This is not laziness — it 
 
 ## What Nature Teaches
 
-A coral reef devastated by bleaching. Remove the pollution. Stop the overfishing. Wait. Within a few years, the reef doesn't just recover — it becomes dazzling. Colors that weren't there before. Species that haven't been seen in decades. Abundance that exceeds what existed before the damage. The reef didn't need a program. It needed the interference to stop. Vitality was waiting in the water the whole time.
+A coral reef devastated by bleaching. Remove the pollution. Stop the overfishing. Wait. Within a few years, the reef doesn't just recover — it becomes dazzling. Colors that weren't there before. Species that haven't been seen in decades. Abundance that exceeds what existed before the damage. The reef didn't need a practice. It needed the interference to stop. Vitality was waiting in the water the whole time.
 
 This is the laser principle: ordinary light scatters in every direction, each photon doing its own thing, the total energy modest. But align those photons — get them vibrating at the same frequency, moving in the same direction — and the power increases not by addition but by orders of magnitude. A laser can cut steel. Not because it has more energy than a lightbulb, but because its energy is coherent. A community where fifty people have removed their inner interference — obligation without resonance, performance without presence, accumulation without circulation — becomes a laser of vitality. Not fifty times as vital as one person. Thousands of times.
 

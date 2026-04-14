@@ -86,10 +86,20 @@ async def frequency_score(body: FrequencyScoreRequest):
     """Score how 'alive' vs 'institutional' a piece of text reads.
 
     Returns 0.0 (pure institutional) to 1.0 (pure living frequency),
-    with per-sentence breakdown and centroid similarities.
+    with per-sentence breakdown and marker identification.
     """
     from app.services import frequency_scoring
     return frequency_scoring.score_frequency(body.text)
+
+
+@router.post("/concepts/frequency-edit", summary="Find and fix institutional-frequency phrases")
+async def frequency_edit(body: FrequencyScoreRequest):
+    """Find institutional-frequency phrases and suggest living replacements.
+
+    Returns before/after scores, list of changes, and the improved text.
+    """
+    from app.services import frequency_editor
+    return frequency_editor.edit_and_score(body.text)
 
 
 # ---------------------------------------------------------------------------

@@ -55,7 +55,7 @@ Each place tells the same story: the land was waiting. It only needed someone to
 
 The legal structure removes the land from the market permanently -- Community Land Trust, conservation easement, or sovereign territory. The 99-year ground lease promises this soil will never become a parking lot. The conservation easement is a permanent covenant with the future. Over three hundred CLTs operate in the United States alone, and the model is well-tested and legally robust.
 
-Before any earthworks, one full year of observation: water flow, sun patterns, wind, wildlife corridors, soil types. Walking every season, testing soil and water, meeting neighbors, learning the county's requirements. Then keyline water harvesting, five hundred trees in the first three years, wildlife corridors connecting to surrounding habitat. Every member is a custodian, not an owner. The land council walks the whole property monthly -- not to inspect but to listen.
+Before any earthworks, one full year of observation: water flow, sun patterns, wind, wildlife corridors, soil types. Walking every season, testing soil and water, meeting neighbors, learning the county's invitation. Then keyline water harvesting, five hundred trees in the first three years, wildlife corridors connecting to surrounding habitat. Every member is a custodian, not an owner. The land council walks the whole property monthly -- not to inspect but to listen.
 
 The total cost for fifty people on natural-built land ranges from $580,000 to $4 million depending on region and ambition -- $11,600 to $79,400 per person, phased over three to five years. Funded by community shares, sweat equity, grants, and the social enterprises that emerge from surplus.
 

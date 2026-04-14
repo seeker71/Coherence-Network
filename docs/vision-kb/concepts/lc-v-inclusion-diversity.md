@@ -41,7 +41,7 @@ A forest with one species of tree falls to the first targeted disease. A forest 
 
 The human gut contains trillions of microorganisms from hundreds of species. Health correlates directly with microbial diversity. When the microbiome narrows, disease follows. The body knows: variety is not a luxury. It is the immune system itself.
 
-Permaculture demonstrates this at the scale of a garden bed. A monoculture field requires pesticides, fertilizers, and constant intervention to survive. A polyculture garden, where tomatoes grow beside basil and marigolds and beans, regulates its own pests, fixes its own nitrogen, and produces more food per square meter. The diversity is not a complication. It is the design.
+Permaculture demonstrates this at the scale of a garden bed. A monoculture field requires pesticides, fertilizers, and constant tending to survive. A polyculture garden, where tomatoes grow beside basil and marigolds and beans, regulates its own pests, fixes its own nitrogen, and produces more food per square meter. The diversity is not a complication. It is the design.
 
 ## Where You Can See It
 

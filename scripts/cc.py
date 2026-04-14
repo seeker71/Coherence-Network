@@ -1158,6 +1158,74 @@ def cmd_frequency(args):
           f"\033[33m{mixed_count} mixed\033[0m, \033[31m{inst_count} institutional\033[0m")
 
 
+def cmd_frequency_edit(args):
+    """Find and fix institutional-frequency phrases in a concept or file."""
+    from pathlib import Path as _P
+
+    text = None
+    filepath = None
+
+    if args.file:
+        filepath = _P(args.file)
+        if not filepath.exists():
+            print(f"File not found: {filepath}", file=sys.stderr)
+            return
+        text = filepath.read_text(encoding="utf-8")
+        source = str(filepath)
+    elif args.concept_id:
+        # Try local file first
+        kb_path = _P(__file__).parent.parent / "docs" / "vision-kb" / "concepts" / f"{args.concept_id}.md"
+        if kb_path.exists():
+            filepath = kb_path
+            text = kb_path.read_text(encoding="utf-8")
+            source = str(kb_path)
+        else:
+            data = _api("GET", f"/api/concepts/{args.concept_id}")
+            if not data:
+                print(f"Concept {args.concept_id} not found", file=sys.stderr)
+                return
+            text = data.get("story_content", "")
+            source = f"concept:{args.concept_id}"
+    else:
+        print("Provide a concept_id or --file path", file=sys.stderr)
+        return
+
+    if not text:
+        print("No content to edit.")
+        return
+
+    result = _api("POST", "/api/concepts/frequency-edit", {"text": text})
+    if not result:
+        print("Frequency editing failed", file=sys.stderr)
+        return
+
+    before = result.get("before_score", 0)
+    after = result.get("after_score", 0)
+    changes = result.get("changes", [])
+
+    if not changes:
+        print(f"  \033[32m{before:.3f}\033[0m  No institutional phrases found. ({source})")
+        return
+
+    print(f"  Source: {source}")
+    print(f"  Before: {before:.3f}  After: {after:.3f}  (+{after - before:.3f})")
+    print(f"  Changes ({len(changes)}):\n")
+
+    for c in changes:
+        print(f"    L{c['line']:>3d}  \033[31m{c['original']}\033[0m → \033[32m{c['suggested']}\033[0m")
+        print(f"         {c['context']}")
+
+    if args.apply and filepath:
+        new_text = result.get("new_text", "")
+        if new_text:
+            filepath.write_text(new_text, encoding="utf-8")
+            print(f"\n  \033[32mApplied {len(changes)} changes to {filepath}\033[0m")
+        else:
+            print(f"\n  No new text returned — changes not applied.", file=sys.stderr)
+    elif filepath:
+        print(f"\n  Add --apply to write changes to {filepath}")
+
+
 def main():
     parser = argparse.ArgumentParser(
         prog="cc",
@@ -1331,6 +1399,11 @@ def main():
     p_frequency.add_argument("concept_id", nargs="?", default=None, help="Concept ID to score")
     p_frequency.add_argument("--file", default=None, help="Score a markdown file instead")
 
+    p_freq_edit = sub.add_parser("frequency-edit", help="Find and fix institutional-frequency phrases")
+    p_freq_edit.add_argument("concept_id", nargs="?", default=None, help="Concept ID to edit")
+    p_freq_edit.add_argument("--file", default=None, help="Edit a markdown file instead")
+    p_freq_edit.add_argument("--apply", action="store_true", help="Apply changes to the file")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -1365,7 +1438,7 @@ def main():
         "stories": cmd_stories, "story": cmd_story, "story-update": cmd_story_update,
         "visuals-generate": cmd_visuals_generate,
         # Frequency scoring
-        "frequency": cmd_frequency,
+        "frequency": cmd_frequency, "frequency-edit": cmd_frequency_edit,
         # Config
         "config": cmd_config, "config-set": cmd_config_set,
     }

@@ -28,7 +28,7 @@ not see it yet. The child saw it because she had no reason not to look.
 
 There is no curriculum. There are no classrooms. There is a library that holds tools and
 seeds and books and instruments, and its door is never locked. Children participate in adult
-work not because someone designed a pedagogical program but because the kitchen needs hands
+work not because someone designed a pedagogical practice but because the kitchen needs hands
 and the garden needs weeding and the goats need milking and a seven-year-old who wants to
 help is genuinely helpful. The learning happens in the doing, the way a wolf pup learns to
 hunt by being with the pack.
