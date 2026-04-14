@@ -110,3 +110,11 @@ Concepts marked with ★ are being deeply enriched with: resources, materials & 
 | 741 | Consciousness | sensing, expressing, frequency, freedom-expression, field-sensing |
 | 852 | Intuition | elders, discovery, transmission |
 | 963 | Unity | field, beauty, ceremony, ceremony-vision |
+
+## Cross-references
+
+- Parent idea: [Knowledge and Resonance](../../ideas/knowledge-and-resonance.md) — concept ontology, belief systems, resonance
+- Spec: [knowledge-resonance-engine](../../specs/knowledge-resonance-engine.md) — API endpoints, done_when criteria
+- All ideas: [ideas/INDEX.md](../../ideas/INDEX.md) — 16 super-ideas across 6 pillars
+- All specs: [specs/INDEX.md](../../specs/INDEX.md) — 65 specs grouped by idea
+- Sync to DB: `python scripts/sync_kb_to_db.py {concept-id}` — see [SCHEMA.md](SCHEMA.md)
