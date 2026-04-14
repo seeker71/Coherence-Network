@@ -164,13 +164,45 @@ def parse_visuals(text: str) -> list[dict]:
     return visuals
 
 
+def extract_story_content(text: str) -> str:
+    """Extract the full markdown body after frontmatter, stripping the title line."""
+    # Remove frontmatter
+    if text.startswith("---"):
+        end = text.find("---", 3)
+        if end != -1:
+            text = text[end + 3:].strip()
+    # Remove the first # Title line
+    lines = text.split("\n")
+    if lines and lines[0].startswith("# "):
+        lines = lines[1:]
+    return "\n".join(lines).strip()
+
+
+def extract_inline_visuals(text: str) -> list[dict]:
+    """Extract inline visuals from ![caption](visuals:prompt) format."""
+    visuals = []
+    for m in re.finditer(r"!\[([^\]]*)\]\(visuals:([^)]+)\)", text):
+        visuals.append({"caption": m.group(1).strip(), "prompt": m.group(2).strip()})
+    return visuals
+
+
 def parse_concept_file(filepath: Path) -> dict:
     """Parse a concept KB markdown file into properties dict for API PATCH."""
     text = filepath.read_text(encoding="utf-8")
     fm = parse_frontmatter(text)
     props = {}
 
-    # Parse each enrichment section
+    # Always sync the full story content (the living narrative)
+    story = extract_story_content(text)
+    if story:
+        props["story_content"] = story
+
+    # Extract inline visuals from ![caption](visuals:prompt)
+    inline_visuals = extract_inline_visuals(text)
+    if inline_visuals:
+        props["visuals"] = inline_visuals
+
+    # Also parse structured sections (for backward compatibility)
     resources_text = parse_section(text, "Resources")
     if resources_text:
         r = parse_resource_items(resources_text)
@@ -198,7 +230,7 @@ def parse_concept_file(filepath: Path) -> dict:
     visuals_text = parse_section(text, "Visuals")
     if visuals_text:
         v = parse_visuals(visuals_text)
-        if v:
+        if v and not inline_visuals:  # inline visuals take precedence
             props["visuals"] = v
 
     costs_text = parse_section(text, "Costs")
