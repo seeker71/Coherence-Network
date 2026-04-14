@@ -21,8 +21,10 @@ Keyline design (P.A. Yeomans) reads the land's water patterns and works with the
 
 Aboriginal Australian songlines show the deepest relationship with land: the land is alive, sung into existence, mapped through relationship. Every feature of the landscape has a story, a song, a connection. The land is not a resource — it is a relative. This is the frequency we aspire to: knowing the land the way you know a body, feeling its health in your own bones.
 
+**Custodianship, not ownership.** The land is never "bought" — it is entered into relationship with. The legal structure (Community Land Trust, conservation easement, or sovereign territory) removes land from the market permanently. No individual can sell what belongs to the field. This is the Aboriginal principle, the indigenous principle, the New Earth principle: you do not own the earth. You are its custodian. The land holds you as much as you hold it. When the community dissolves (if ever), the land returns to wildness, not to developers. The CLT ground lease lasts 99 years minimum. The conservation easement is permanent. The New Earth MicroNation model goes further: sovereignty over the land itself, under natural law rather than statutory law.
+
 ## Blueprint
-Begin with observation: one full year of watching water flow, sun patterns, wind, wildlife corridors, soil types before any major earthworks. Implement keyline water harvesting. Plant 500+ trees in the first three years. Establish wildlife corridors connecting to surrounding habitat. The land council walks the whole property monthly.
+Begin with observation: one full year of watching water flow, sun patterns, wind, wildlife corridors, soil types before any major earthworks. Implement keyline water harvesting. Plant 500+ trees in the first three years. Establish wildlife corridors connecting to surrounding habitat. The land council walks the whole property monthly. Legal structure: Community Land Trust or equivalent — land held permanently out of the market. Every member is a custodian, not an owner.
 
 ## Resources
 - 📐 [One Community - Open Source Village](https://onecommunityglobal.org/open-source/) — complete open-source blueprints for 7 village types including land use planning (type: blueprint)
