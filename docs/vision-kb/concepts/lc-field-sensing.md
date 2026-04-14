@@ -21,6 +21,7 @@ Establish a 'field council' of 5-7 rotating members who meet weekly to sense wha
 ## Resources
 - [Sociocracy For All](https://www.sociocracyforall.org/) — collective sensing and consent rounds (type: guide)
 - [The Work That Reconnects](https://workthatreconnects.org/) — practices for sensing the larger field (type: guide)
+- 📖 [Telepathic Communication — New Earth Vision](https://newearthhorizon.com/) — direct field sensing replacing language-mediated interaction (type: guide)
 
 ## Visuals
 1. **Council circle** — `photorealistic group of 20 people in outdoor council circle, talking stick in center, deep listening posture, some with eyes closed, dappled forest light, natural amphitheater`
@@ -45,4 +46,4 @@ Field Intelligence governs all Through Field expressions: Field Edge, Joining, C
 - How does field sensing scale from 20 to 200 people?
 
 ## Cross-References
-→ lc-vitality, lc-sensing
+→ lc-vitality, lc-sensing, new-earth-integration

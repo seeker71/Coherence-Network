@@ -27,6 +27,7 @@ Solar panels on every south-facing roof. Community-scale battery storage. Biogas
 - 📖 [DOE Microhydropower Guide](https://www.energy.gov/energysaver/planning-microhydropower-system) — US DOE guide to micro-hydro planning and installation (type: guide)
 - 📖 [ATTRA Micro-Hydro Guide](https://attra.ncat.org/publication/micro-hydro-power-a-beginners-guide-to-design-and-installation/) — beginner's guide to micro-hydro design (type: guide)
 - 🌐 [Appropedia Energy Portal](https://www.appropedia.org/) — open wiki with 3000+ articles on appropriate energy technology (type: community)
+- 🌐 [New Earth Horizon](https://newearthhorizon.com/) — zero-point energy and free energy technology initiatives (type: community)
 
 ## Materials & Methods
 - **Community solar array** — 20-50 kW system for 50 people. $40,000-100,000 installed. Payback: 5-8 years. 25-year lifespan.
@@ -80,4 +81,4 @@ Energy Metabolism is the Nourishing flow expressed as power. It connects to Livi
 - How to train community members in electrical maintenance and safety?
 
 ## Cross-References
-→ lc-nourishing, lc-land, lc-v-shelter-organism, lc-v-living-spaces
+→ lc-nourishing, lc-land, lc-v-shelter-organism, lc-v-living-spaces, new-earth-integration

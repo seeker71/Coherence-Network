@@ -20,6 +20,7 @@ Each community space is tuned to a particular frequency: the sanctuary is slow a
 
 ## Resources
 - [Insight Timer](https://insighttimer.com/) -- sound frequency meditation practices (type: guide)
+- 🌐 [Age of Aquarius — New Geometry of Light](https://newearthhorizon.com/) — planetary frequency shift and new cosmic conditions (type: community)
 
 ## Visuals
 1. **Frequency** -- `photorealistic singing bowl being struck with mallet, visible sound waves radiating outward, person's hands, meditation cushion, morning light through window, vibration`
@@ -42,4 +43,4 @@ Frequency provides the vocabulary for qualitative differences without hierarchy 
 - What practices help people find their natural frequency?
 
 ## Cross-References
-→ lc-pulse, lc-w-coherence, lc-v-harmonizing, lc-sensing
+→ lc-pulse, lc-w-coherence, lc-v-harmonizing, lc-sensing, new-earth-integration

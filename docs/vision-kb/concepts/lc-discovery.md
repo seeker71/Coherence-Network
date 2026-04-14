@@ -20,6 +20,7 @@ No curriculum. Apprenticeship model: learn by doing alongside someone experience
 
 ## Resources
 - [Permaculture Research Institute](https://permaculturenews.org/) -- discovery through observation (type: guide)
+- 📖 [Apocalypse as Unveiling](https://sachastone.com/) — from Greek apokalypsis: revelation and liberation, not destruction (type: guide)
 
 ## Visuals
 1. **Discovery walk** -- `photorealistic small group exploring forest edge with magnifying glasses and notebooks, pointing at mushrooms and insects, curiosity and wonder, dappled light, field guides in hand`
@@ -44,4 +45,4 @@ Discovery is the Expressing flow as learning. It connects to Play (play IS disco
 - How to share discoveries across the network?
 
 ## Cross-References
-→ lc-field-sensing, lc-elders, lc-instruments, lc-play
+→ lc-field-sensing, lc-elders, lc-instruments, lc-play, new-earth-integration
