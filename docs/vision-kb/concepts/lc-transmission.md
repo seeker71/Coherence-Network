@@ -37,4 +37,4 @@ Transmission is the Resonating flow as information. It's the field's nervous sys
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-resonating
+→ lc-expressing, lc-elders, lc-instruments, lc-discovery

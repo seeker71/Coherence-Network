@@ -35,4 +35,4 @@ Cell is the foundational unit of the vocabulary — the word for a person that d
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-pulse
+→ lc-pulse, lc-w-field, lc-health, lc-vitality

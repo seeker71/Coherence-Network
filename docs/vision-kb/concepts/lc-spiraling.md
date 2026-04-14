@@ -37,4 +37,4 @@ Spiraling governs all Through Cycle expressions: Phase Transitions, Elders, Rhyt
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-vitality
+→ lc-resonating, lc-rhythm, lc-phase-transitions, lc-composting

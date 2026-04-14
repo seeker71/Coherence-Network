@@ -36,4 +36,4 @@ Resonating is one of the five flows — it governs all Through Connection expres
 - What real-world examples are we missing?
 
 ## Cross-References
-→ lc-vitality
+→ lc-attunement, lc-intimacy, lc-expressing, lc-v-harmonizing
