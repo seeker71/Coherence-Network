@@ -1,69 +1,80 @@
 ---
 id: lc-circulation
 hz: 528
-status: expanding
+status: deepening
 updated: 2026-04-14
 ---
 
 # Circulation
 
-> Resources flow like mycorrhizal network: nutrients from abundant to needed. No accounting. Gradient felt, flow follows. The field handles money so cells don't have to.
+> Resources flow like a mycorrhizal network — from where abundant to where needed. No ledger. No debt. The gradient is felt and the flow follows.
 
-## Summary
-Resources flow like the mycorrhizal network beneath a forest: nutrients from where abundant to where needed. No accounting. The field interfaces with the external economy as one organism — individual cells don't navigate money. Custodianship replaces ownership.
+## The Feeling
 
-## Details
-Resources flow like the mycorrhizal network beneath a forest: nutrients from where abundant to where needed. No accounting. No negotiation. The gradient is felt and the flow follows. The field handles its interface with external economies as a single organism — individual cells don't navigate money.
+You wake up in a place where you do not think about money. Not because you are wealthy — because the question has dissolved. Breakfast is on the table because the garden grew it and the morning crew prepared it. The roof over your head exists because hands built it from materials the land offered. Your shoes were made by someone who loves making shoes, and when yours wear out, you will leave them at the repair bench and find them fixed by Tuesday.
 
-**Custodianship, not ownership.** Nothing in the field is "owned" — it is held in trust. Land is custodied, not purchased. Tools are shared, not hoarded. Knowledge flows freely. The word "mine" dissolves into "ours" which dissolves into "the field's." This is not communism — it's biology. No cell in your body "owns" the oxygen it breathes. It receives what it needs and gives what it can.
+It is not that no one works. Everyone works. But the wire between effort and survival has been cut. You contribute what you are drawn to contribute — hours in the garden, a skill with numbers, the willingness to sit with someone who is struggling — and in return, you receive everything you need. Not because anyone is keeping score. Because the flow is strong enough that every part of the organism is fed.
 
-**The New Earth Exchange model** offers a bridge: value exchange outside the debt-based fiat system. Not barter (which still tracks debits) but genuine flow — contribution recognized, needs met, surplus circulated. Sacha Stone's vision: zero-point economics where scarcity is eliminated because energy and resources are abundant when freed from artificial restriction. The community's internal economy runs on trust and transparency. A visible dashboard shows: what came in, what went out, what's held, what's needed. No individual tracking — collective flow.
+The relief of this takes weeks to settle into your body. You keep waiting for the bill. It does not come. Slowly, the part of your brain that was always calculating — can I afford this, do I deserve this, what do I owe — goes quiet. In its place, a different question rises: what can I give today?
 
-**Three layers of circulation:**
-1. **Internal** — common fund covers all basic needs (food, shelter, energy, health, education). No cell handles money for daily life.
-2. **Membrane** — the community interfaces with the external economy as one entity. Income from community enterprises, individual earning brought in voluntarily, grants, donations.
-3. **Network** — surplus circulates to other communities, land regeneration, seeding new fields. The mycorrhizal principle: mother trees feed seedlings.
+![Morning in the commons](visuals:photorealistic community common room early morning, long wooden table with simple breakfast spread of bread and fruit and tea, three people eating together quietly, large windows showing garden outside, soft warm light, no cash register no menu no transaction, feeling of ease and abundance)
 
-## Blueprint
-Common fund covers all basic needs. External income flows in voluntarily — no extraction, no obligation. Surplus circulates to the network. Transparent dashboard visible to all. No individual tracking. Transition period: new members contribute what they can, receive what they need, for 6-12 months before full integration. The field's economy is its health: when circulation is strong, every cell thrives.
+## How It Lives Here
+
+The community runs on three layers of circulation. Inside, a common fund covers every basic need — food, shelter, energy, health, learning. No individual handles money for daily life, the way no cell in your body negotiates for oxygen. The fund is visible: a simple dashboard in the common room shows what came in, what went out, what is held, what is needed. No individual tracking. Collective flow.
+
+At the membrane — where community meets the outside world — the organism interfaces as one. Income arrives from community enterprises, from members who earn externally and contribute voluntarily, from people who believe in what is being grown here. Nothing is extracted. Nothing is obligated. The membrane breathes in both directions.
+
+And at the network layer, surplus moves outward. To other communities just starting. To land that needs regeneration. To the seedlings. This is the mycorrhizal principle made economic: mother trees do not hoard their sugar. They feed the forest through the underground web, and the forest feeds them back.
+
+![Mycorrhizal resource flow](visuals:photorealistic cross-section of forest floor showing glowing fungal mycelium network connecting roots of large mother tree to small seedlings, nutrients visualized as soft amber light particles flowing through white fungal threads, dark rich soil, tiny mushrooms emerging at surface, scientific illustration style but warm and alive)
+
+## What Nature Teaches
+
+A forest has no accounting department. Phosphorus moves from where it is abundant to where it is scarce through fungal highways that stretch for miles. A mother tree facing death dumps her carbon reserves into the network — not to her own offspring specifically, but to whoever needs it most. The network decides. The network knows.
+
+Your own blood carries this same intelligence. Oxygen moves to the cell that needs it. Waste is carried away. No organ sends an invoice. The heart does not charge the lungs for pumping. When circulation is healthy, every part thrives. When it is blocked — when one organ hoards, when a vessel narrows — the whole body suffers.
+
+The potlatch ceremonies of Pacific Northwest peoples understood this: the most respected person was not the one who accumulated the most, but the one who gave the most away. Generosity was status. Flow was wealth. The gifts kept moving, and the movement itself was the prosperity.
+
+## Where You Can See It
+
+At Auroville in Tamil Nadu, three thousand people have lived without private property for over fifty years. A central fund receives and distributes. It is imperfect and still evolving, but it exists — proof that the question "but who pays?" has more than one answer.
+
+At Damanhur in the hills of Piedmont, six hundred people across thirty communities have run their own complementary currency — the Credito — alongside the euro for four decades. It works not because the system is perfect but because the trust is deep.
+
+At Burning Man each August, seventy thousand people build a city in the desert where nothing is for sale except ice and coffee. Everything else flows as gifts. For one week, circulation replaces commerce, and people describe the experience as one of the most profound of their lives. The question is: what if it lasted longer than a week?
+
+![Community transparency dashboard](visuals:photorealistic large wooden-framed screen mounted on earthen wall in community common room showing simple flowing river visualization of resources, income flowing in from left as blue streams, needs flowing out right as amber streams, small group of people standing nearby in casual conversation, warm afternoon light, plants and art on walls around the screen)
+
+## What We're Building
+
+New members arrive and keep their external income for six to twelve months while they settle in. No pressure. No extraction. Gradually, as trust builds and needs are met, the membrane becomes more permeable. Some contribute everything. Some contribute what they can. The field does not judge the amount — it responds to the willingness.
+
+The New Earth Exchange model points beyond community scale toward something civilizational: value exchange outside the debt-based system entirely. Not barter, which still tracks debits and credits. Genuine flow — contribution recognized, needs met, surplus circulated. The community is a living laboratory for this, small enough to feel the flow, large enough to prove it works.
 
 ## Resources
-- 📖 [Sacred Economics](https://sacred-economics.com/) — Charles Eisenstein, free online book on gift economy and resource circulation (type: book)
-- 📖 [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based resource allocation and governance (type: guide)
-- 🌐 [Foundation for Intentional Community](https://www.ic.org/) — community economics models from 1000+ communities (type: community)
-- 📖 [Grounded Solutions - CLT Resources](https://groundedsolutions.org/) — community land trust models for shared economics (type: guide)
-- 🌐 [New Earth Exchange](https://newearthhorizon.com/) — alternative economic system outside debt-based fiat, zero-point economics (type: community)
-- 🌐 [Damanhur Credito](https://damanhur.org/) — community with its own complementary currency for 40+ years (type: community)
-- 📖 [Timebanking](https://timebanking.org/) — time-based exchange where everyone's hour is equal (type: guide)
 
-## Visuals
-1. **Common fund visualization** — `photorealistic community meeting room with transparent glass jar of coins and bills on table, people discussing around circular table, whiteboard showing flow diagram of resources, warm light`
-2. **Mycorrhizal network diagram** — `photorealistic illustration of underground fungal network connecting tree roots, nutrients flowing as glowing particles between trees, forest floor with mushrooms, cross-section view`
-3. **Transparent economy dashboard** — `photorealistic large screen in community common room showing real-time resource flow diagram, income and outflow visualized as river, people gathered around, teal and amber data visualization`
+- [Sacred Economics](https://sacred-economics.com/) — Charles Eisenstein, free online book on gift economy and resource circulation (type: book)
+- [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based resource allocation and governance (type: guide)
+- [Foundation for Intentional Community](https://www.ic.org/) — community economics models from 1000+ communities (type: community)
+- [Grounded Solutions - CLT Resources](https://groundedsolutions.org/) — community land trust models for shared economics (type: guide)
+- [New Earth Exchange](https://newearthhorizon.com/) — alternative economic system outside debt-based fiat (type: community)
+- [Damanhur Credito](https://damanhur.org/) — community with its own complementary currency for 40+ years (type: community)
+- [Timebanking](https://timebanking.org/) — time-based exchange where everyone's hour is equal (type: guide)
 
-## Living Examples
-- **Mycorrhizal network** — mother trees feed seedlings through underground fungal highways
-- **Blood circulation** — oxygen to every cell, waste removed, no cell pays
-- **Potlatch (Pacific Northwest Indigenous)** — giving IS status, the most generous are most respected
-- **Gift economy at Burning Man** — 70,000 people exchanging without money for a week
-- **Damanhur's Credito** — internal complementary currency running for 40+ years alongside euros
-- **New Earth Exchange** — Sacha Stone's model: value exchange outside debt-based fiat entirely
+## The Questions That Live Here
 
-## Aligned Places
-- **Burning Man** (Black Rock Desert, Nevada) — 70,000 people in a gifting economy for a week. Resources circulate without money. Radical generosity.
-- **Auroville** (Tamil Nadu, India) — 3,000 people, no private property, central fund for 50+ years. Individual units contribute earnings, receive what they need.
-- **Damanhur** (Piedmont, Italy) — 600 people across 30 communities with their own complementary currency (Credito) running for 40+ years.
-- **New Earth MicroNation** (Africa) — Sacha Stone's sovereign territory building zero-point economics from the ground up.
+- How does someone transition from a lifetime of scarcity conditioning into trust-based flow?
+- What transparency is enough — full visibility of collective flow, or does that create its own pressure?
+- How does the membrane handle external obligations — taxes, insurance, pensions — while building the new?
+- When surplus circulates to other communities, who feels the call and how is it honored?
 
-## How It Fits
-Circulation is where Nourishing meets Field Intelligence — resources flow because the field senses where they're needed. It replaces economics with biology. Custodianship replaces ownership. The New Earth Exchange shows what this looks like at the civilizational scale.
+## Connected Frequencies
 
-## Open Questions
-- How to handle the transition from individual income to common fund without creating resentment?
-- What's the right balance between shared resources and personal autonomy?
-- How to interface with external economy (taxes, health insurance, pensions) while building the new system?
-- How does the New Earth Exchange model scale from community to network to civilization?
-- What role does transparency play — full visibility vs privacy of contributions?
-
-## Cross-References
-→ lc-offering, lc-v-mycorrhizal, lc-nourishment, lc-land, lc-network, new-earth-integration
+→ [Offering](lc-offering.md) — what individuals bring to the flow
+→ [Mycorrhizal Networks](lc-v-mycorrhizal.md) — the biological template for all of this
+→ [Nourishment](lc-nourishment.md) — circulation ensures every cell is fed
+→ [Land](lc-land.md) — custodianship, not ownership
+→ [Network](lc-network.md) — surplus flowing between communities
+→ [New Earth Integration](new-earth-integration.md) — civilizational-scale circulation
