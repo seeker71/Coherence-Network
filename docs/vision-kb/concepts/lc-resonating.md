@@ -1,8 +1,8 @@
 ---
 id: lc-resonating
 hz: 528
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Resonating
@@ -18,6 +18,13 @@ Everything between cells — the connective tissue of the field. Touch, intimacy
 ## Blueprint
 Create multiple 'contact zones' — spaces designed for spontaneous connection: a hammock cluster, a fire pit, a hot tub, a shared tea station. Schedule nothing in them. Touch culture established through consent-based contact improv sessions twice weekly — building the field's comfort with physical closeness.
 
+## Resources
+- [Taize Community](https://www.taize.fr/) — group resonance through repetitive chant (type: community)
+- [Insight Timer](https://insighttimer.com/) — guided group resonance practices (type: guide)
+
+## Visuals
+1. **Group resonance** — `photorealistic group of people singing in harmony around bonfire at night, faces lit by firelight, stars above, guitars and drums, voices merging, forest clearing`
+
 ## Living Examples
 - **Dolphins** — constant physical contact, echolocation as shared sensing
 - **Bonobos** — social bonding through touch, play, and shared food as primary social currency
@@ -32,8 +39,9 @@ Create multiple 'contact zones' — spaces designed for spontaneous connection: 
 Resonating is one of the five flows — it governs all Through Connection expressions: Intimacy, Transmission, Play, Stillness, Ceremony.
 
 ## Open Questions
-- What aspects of Resonating need deeper research?
-- What real-world examples are we missing?
+- How to create resonance between people who don't naturally harmonize?
+- What's the difference between resonance and conformity?
+- Can resonance be felt across physical distance?
 
 ## Cross-References
 → lc-attunement, lc-intimacy, lc-expressing, lc-v-harmonizing

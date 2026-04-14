@@ -1,8 +1,8 @@
 ---
 id: lc-attunement
 hz: 432
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Attunement
@@ -18,6 +18,13 @@ The field maintains its coherence the way a choir adjusts when one voice drifts 
 ## Blueprint
 Weekly 'tuning session' (45 min): the community sits together and someone facilitates a check-in on what's harmonizing and what's creating friction. No fixing — just noticing. Use a talking piece. End with a sound (humming together) that lets the group feel its current chord.
 
+## Resources
+- [Sociocracy For All](https://www.sociocracyforall.org/) — consent rounds as attunement practice (type: guide)
+- [Taize Community](https://www.taize.fr/) — ecumenical attunement through simple chants (type: community)
+
+## Visuals
+1. **Tuning circle** — `photorealistic group humming together in circular room with wooden walls, singing bowls on floor, afternoon light through round windows, vibration visible as warmth`
+
 ## Living Examples
 - **A choir finding harmony** — no one conducts, each voice adjusts to the whole
 - **An elephant herd holding a young elephant's boundaries** — patient, steady, no punishment
@@ -31,8 +38,9 @@ Weekly 'tuning session' (45 min): the community sits together and someone facili
 Attunement is the immune system. Without it, the field can't distinguish between frequencies that serve and those that don't. It enables the membrane (Field Edge), joining (Attunement-Joining), and harmonic rebalancing.
 
 ## Open Questions
-- What aspects of Attunement need deeper research?
-- What real-world examples are we missing?
+- How long does attunement take when new members arrive?
+- What happens when attunement fails — how does the field self-correct?
+- Can attunement be practiced across distance?
 
 ## Cross-References
 → lc-sensing, lc-stillness, lc-v-harmonizing, lc-pulse

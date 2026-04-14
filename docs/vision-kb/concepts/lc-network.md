@@ -1,8 +1,8 @@
 ---
 id: lc-network
 hz: 639
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # The Network
@@ -17,6 +17,13 @@ One field within a field of fields. Mycorrhizal. Each collective a node — shar
 
 ## Blueprint
 Connect with 3-5 other communities within the first year. Exchange visits quarterly — 2-3 members travel to sister communities and return with learnings. Shared digital infrastructure for inter-community sensing. Annual gathering of the network at rotating locations.
+
+## Resources
+- [Global Ecovillage Network](https://ecovillage.org/) — connecting 10,000+ communities worldwide (type: community)
+- [Foundation for Intentional Community](https://www.ic.org/) — inter-community networking and resources (type: community)
+
+## Visuals
+1. **Inter-community gathering** — `photorealistic large outdoor festival with people from different communities, tents and banners, shared meals, music stage, children running, diverse crowd, mountain setting`
 
 ## Living Examples
 - **Mycorrhizal network** — the Wood Wide Web connecting trees across entire forests
@@ -33,8 +40,9 @@ Connect with 3-5 other communities within the first year. Exchange visits quarte
 The Network is how the Living Collective connects to the larger ecosystem of collectives. It replaces international relations with mycorrhizal exchange — each node unique, the network greater than any node.
 
 ## Open Questions
-- What aspects of The Network need deeper research?
-- What real-world examples are we missing?
+- What's the minimum viable network size for mutual support?
+- How do communities share resources without creating dependency?
+- How to maintain network coherence across distance?
 
 ## Cross-References
 → lc-resonating, lc-nourishing

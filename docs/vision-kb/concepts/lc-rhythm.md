@@ -1,8 +1,8 @@
 ---
 id: lc-rhythm
 hz: 432
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Rhythm
@@ -18,6 +18,12 @@ Circadian, seasonal, lunar, developmental. Morning opens. Midday radiates. After
 ## Blueprint
 Daily rhythm visible on a shared board: dawn (stillness), morning (creation), midday (gathering, meal), afternoon (integration, rest), evening (connection, fire). Seasonal rhythm adjusts everything: winter days are shorter, gentler; summer days are longer, more outward. Moon phases noted and felt.
 
+## Resources
+- [Blue Zones](https://www.bluezones.com/) -- natural rhythms in longevity communities (type: guide)
+
+## Visuals
+1. **Daily rhythm** -- `photorealistic split image showing community rhythm: dawn meditation, morning garden work, midday meal, afternoon rest in hammock, evening fire circle, night stars, all in one flowing composition`
+
 ## Living Examples
 - **Circadian rhythm** — every cell in the body follows the light/dark cycle, not just the brain
 - **Tidal rhythm** — ocean breathing in and out, the whole planet's pulse
@@ -31,8 +37,9 @@ Daily rhythm visible on a shared board: dawn (stillness), morning (creation), mi
 Rhythm is the Spiraling flow as temporal structure. Everything in the field follows rhythm — meals, rest, creation, ceremony, seasonal activity. It replaces clock time with felt time.
 
 ## Open Questions
-- What aspects of Rhythm need deeper research?
-- What real-world examples are we missing?
+- How to maintain community rhythm when individual rhythms conflict?
+- What's the right balance between structure and flow?
+- How does rhythm change with the seasons?
 
 ## Cross-References
 → lc-spiraling, lc-rest, lc-ceremony, lc-nourishment

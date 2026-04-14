@@ -1,8 +1,8 @@
 ---
 id: lc-attunement-joining
 hz: 639
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Attunement (Joining)
@@ -17,6 +17,13 @@ A cell finds its frequency within the field. Like a new instrument joining an or
 
 ## Blueprint
 New arrivals spend 2-4 weeks in the flowing edge. No expectations, no interviews. They participate in daily life, eat together, work alongside. After the attunement period, a mutual sensing conversation: does this cell want to join? Does the field want to receive? Both answers must be yes.
+
+## Resources
+- [Foundation for Intentional Community](https://www.ic.org/) — membership processes from 1000+ communities (type: community)
+- [Cohousing Association](https://www.cohousing.org/) — new member integration practices (type: guide)
+
+## Visuals
+1. **Arrival welcome** — `photorealistic community welcoming new member at garden gate, flowers in hands, circle of people singing, warmth and inclusion, earthen buildings, late afternoon golden light`
 
 ## Living Examples
 - **New instrument joining an orchestra mid-piece** — listens first, then enters on the right note
@@ -33,8 +40,9 @@ New arrivals spend 2-4 weeks in the flowing edge. No expectations, no interviews
 Joining is where Sensing meets Resonating — the mutual discovery of whether a cell and a field amplify each other. It connects to Field Edge (how new cells enter) and Ceremony (honoring arrival).
 
 ## Open Questions
-- What aspects of Attunement (Joining) need deeper research?
-- What real-world examples are we missing?
+- How long should the joining process take? (Most communities say 6-12 months.)
+- What's the right balance between welcoming and protecting community coherence?
+- How to say no with love?
 
 ## Cross-References
 → lc-attunement, lc-ceremony, lc-v-inclusion-diversity

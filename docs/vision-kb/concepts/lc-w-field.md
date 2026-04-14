@@ -1,8 +1,8 @@
 ---
 id: lc-w-field
 hz: 963
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Field
@@ -18,6 +18,12 @@ The collective awareness. Not abstract — felt as warmth, hum, presence. What y
 ## Blueprint
 The field is maintained through daily practice: morning circle, shared meals, evening gathering. When the field feels thin (people report it as 'disconnection' or 'flatness'), the community responds by gathering more closely — more shared meals, more fire circles, more singing.
 
+## Resources
+- [HeartMath Institute](https://www.heartmath.org/) -- electromagnetic field research (type: guide)
+
+## Visuals
+1. **The field** -- `photorealistic wide-angle view of community from hilltop, showing the invisible connection between people, paths, gardens, buildings as one living system, golden hour, birds in formation above`
+
 ## Living Examples
 - **A flock** — more than the sum of birds
 - **Gravity** — invisible but felt by everything
@@ -31,8 +37,9 @@ The field is maintained through daily practice: morning circle, shared meals, ev
 Field names the collective reality that emerges when cells gather with shared intention. Without this word, the Living Collective can only describe a group of individuals rather than the living organism they form together.
 
 ## Open Questions
-- What aspects of Field need deeper research?
-- What real-world examples are we missing?
+- Can the field be perceived by visitors immediately?
+- How does the field extend beyond the physical community boundary?
+- What weakens or strengthens the field most?
 
 ## Cross-References
 → lc-pulse, lc-w-cell, lc-field-sensing, lc-network
