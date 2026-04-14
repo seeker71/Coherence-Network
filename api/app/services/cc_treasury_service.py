@@ -26,7 +26,7 @@ class TreasuryLedgerEntry(Base):
     __tablename__ = "cc_treasury_ledger"
 
     id = Column(String, primary_key=True, default=lambda: uuid.uuid4().hex[:16])
-    action = Column(String, nullable=False)  # mint, burn, stake, unstake, fee
+    action = Column(String, nullable=False)  # mint, burn, stake, unstake, fee, swap_in, swap_out
     amount_cc = Column(Float, nullable=False)
     user_id = Column(String, nullable=False)
     idea_id = Column(String, nullable=True)
@@ -130,6 +130,25 @@ def record_stake(user_id: str, amount_cc: float, idea_id: str, exchange_rate: fl
 def record_unstake(user_id: str, amount_cc: float, idea_id: str, exchange_rate: float) -> TreasuryLedgerEntry:
     """Record an unstaking action in the treasury ledger."""
     return _write_ledger("unstake", amount_cc, user_id, idea_id, exchange_rate)
+
+
+def record_swap_out(user_id: str, amount_cc: float, adapter: str, tx_id: str, exchange_rate: float) -> TreasuryLedgerEntry:
+    """Record CC being swapped out to an external exchange.
+
+    Burns CC from the user's balance. The external side is settled
+    via the adapter (manual or API).
+    """
+    _treasury["total_burned"] += amount_cc
+    return _write_ledger("swap_out", amount_cc, user_id, f"{adapter}:{tx_id}", exchange_rate)
+
+
+def record_swap_in(user_id: str, amount_cc: float, adapter: str, tx_id: str, exchange_rate: float) -> TreasuryLedgerEntry:
+    """Record CC being swapped in from an external exchange.
+
+    Mints CC to the user's balance. Called on swap confirmation.
+    """
+    _treasury["total_minted"] += amount_cc
+    return _write_ledger("swap_in", amount_cc, user_id, f"{adapter}:{tx_id}", exchange_rate)
 
 
 def get_user_balance(user_id: str) -> float:

@@ -53,6 +53,7 @@ from app.routers import (
     me_portfolio,
 )
 from app.routers import cc_economics as cc_economics_router
+from app.routers import cc_exchange as cc_exchange_router
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
@@ -650,6 +651,7 @@ app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(pipeline_policies.router, prefix="/api", tags=["pipeline"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(cc_economics_router.router, prefix="/api", tags=["cc-economics"])
+app.include_router(cc_exchange_router.router, prefix="/api", tags=["cc-exchange"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])
 app.include_router(data_retention_router.router, prefix="/api", tags=["data-retention"])
