@@ -1,8 +1,8 @@
 ---
 id: lc-v-play-expansion
 hz: 396
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Play and Expansion
@@ -18,6 +18,14 @@ Adults playing as freely as children. Experiment-without-stakes as default appro
 ## Blueprint
 Physical: climbing structures, water features, open ground, loose materials (wood, rope, fabric). Social: improv nights, game circles, spontaneous dance. Creative: maker spaces with no agenda, art supplies always available. Rule: if it's not fun, it's not play. If it has a required outcome, it's not play.
 
+## Resources
+- [Pop-Up Adventure Play](https://www.popupadventureplay.org/) — free resources for adventure play in communities (type: guide)
+- [Playground Ideas](https://www.playgroundideas.org/) — open-source playground designs for communities (type: blueprint)
+
+## Visuals
+1. **Adult playground** — `photorealistic adults and children playing together on creative wooden climbing structures, rope bridges, water features, laughing, natural forest setting, afternoon sun`
+2. **Maker space jam** — `photorealistic group of people in maker workshop building whimsical inventions, wood shavings, paint, fabric, laughter, creative chaos, warm light`
+
 ## Living Examples
 - **Adventure playgrounds (Denmark origin)** — unstructured spaces with loose materials, children build freely
 - **Improv theater** — yes-and, no wrong answers, creation through play
@@ -32,8 +40,9 @@ Physical: climbing structures, water features, open ground, loose materials (woo
 Play and Expansion is the field's adaptive capacity — the laboratory where new behaviors, relationships, and ideas are tested without consequence. Without it, the field becomes rigid, predictable, and unable to evolve.
 
 ## Open Questions
-- What aspects of Play and Expansion need deeper research?
-- What real-world examples are we missing?
+- How to design spaces that invite adult play without feeling childish?
+- What's the role of risk in community play?
+- How to fund play infrastructure?
 
 ## Cross-References
-→ lc-play
+→ lc-play, lc-space, lc-v-freedom-expression
