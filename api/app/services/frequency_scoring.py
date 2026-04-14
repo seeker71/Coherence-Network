@@ -68,6 +68,18 @@ _MARKERS: dict[str, float] = {
     "wholeness": 0.85, "sacred": 0.8, "spiraling": 0.8,
     "overflow": 0.8, "callings": 0.85, "vitality": 0.8,
 
+    # ── Sensory/embodied (from actual Feeling sections) ──
+    "light": 0.6, "body": 0.65, "warm": 0.7, "sitting": 0.6,
+    "chest": 0.65, "bowl": 0.6, "voice": 0.65, "eyes": 0.6,
+    "feet": 0.6, "quiet": 0.7, "moment": 0.6, "alive": 0.75,
+    "breathing": 0.75, "trees": 0.6, "earthen": 0.7, "golden": 0.6,
+    "rising": 0.55, "faces": 0.6, "walking": 0.55, "morning": 0.6,
+    "afternoon": 0.55, "evening": 0.6, "night": 0.5, "steam": 0.6,
+    "bread": 0.65, "cool": 0.5, "deep": 0.6, "sound": 0.6,
+    "open": 0.5, "held": 0.65, "hand": 0.6, "floor": 0.45,
+    "cushions": 0.65, "wildflowers": 0.75, "wooden": 0.55,
+    "feels": 0.6, "shape": 0.5, "dark": 0.5, "place": 0.5,
+
     # ── Moderate living signals (0.3 - 0.7) ──
     "community": 0.6, "garden": 0.65, "kitchen": 0.55,
     "hearth": 0.75, "sanctuary": 0.7, "nest": 0.7,
@@ -244,9 +256,21 @@ def score_frequency(text: str) -> dict:
     all_institutional: dict[str, float] = {}
     marked_count = 0
 
+    # Detect which section each sentence belongs to for weighting
+    # "The Feeling" and narrative sections carry the core frequency
+    current_section = ""
+    section_map: dict[int, str] = {}
+    for i, line in enumerate(text.split("\n")):
+        if line.strip().startswith("## "):
+            current_section = line.strip()[3:].lower()
+        section_map[i] = current_section
+
     for sent in sentences:
         score, markers = _score_sentence(sent)
-        weight = len(sent)
+        # Story/feeling sections weight more — they carry the true frequency
+        # Resource/question sections are naturally more neutral
+        base_weight = len(sent)
+        weight = base_weight
         weighted_score += score * weight
         total_weight += weight
 
