@@ -11,11 +11,15 @@ updated: 2026-04-14
 
 ## The Feeling
 
-You walk out before dawn and the ground is cold under bare feet. Dew soaks through. You can feel the slope of the hill in your ankles, the way the land tips toward the creek. There is a smell — not one smell but a conversation between wet clay, decomposing oak leaves, the iron tang of the spring, and something else you cannot name but that your body reads as *home*. Your lungs open wider than they do indoors. Something in the soil knows you have been walking this path for three years now. The mycelial network under your feet is older than any human language and it is doing what it does — connecting, feeding, signaling — regardless of whether you notice.
+You walk out before dawn and the ground is cold under bare feet. Dew soaks through. You can feel the slope of the hill in your ankles, the way the land tips toward the creek. There is a smell — not one smell but a conversation between wet clay, decomposing oak leaves, the iron tang of the spring, and something else you cannot name but that your body reads as *home*. Your lungs open wider than they do indoors.
 
-By the third year you stop thinking of the land as a place you live *on*. It becomes a body you live *within*. You notice the swale you dug two summers ago is finally full — the water table is rising. The willows you planted along the creek have woven a canopy so dense the kingfisher nests there now. You did not build this. You listened, and the land built itself around your listening.
+Something in the soil knows you have been walking this path for three years now. The mycelial network under your feet is older than any human language and it is doing what it does — connecting, feeding, signaling — regardless of whether you notice. A teaspoon of healthy soil holds more microorganisms than there are people on earth. You are walking on a civilization.
 
-The Aboriginal Australians have a word-concept for this depth of relationship: songlines, where the land is sung into existence, mapped through kinship rather than coordinates. Every ridge and waterhole has a story, a song, a connection stretching back sixty thousand years. The land is not a resource. It is a relative. This is the frequency we reach toward — knowing the land the way you know a body, feeling its health in your own bones.
+By the third year you stop thinking of the land as a place you live *on*. It becomes a body you live *within*. You notice the swale you dug two summers ago is finally full — the water table is rising. The willows you planted along the creek have woven a canopy so dense the kingfisher nests there now. You did not build this. You listened, and the land built itself around your listening. The erosion scar on the north slope is closing. The soil smells different there now — sweeter, richer, alive.
+
+The Aboriginal Australians have a word-concept for this depth of relationship: songlines, where the land is sung into existence, mapped through kinship rather than coordinates. Every ridge and waterhole has a story, a song, a connection stretching back sixty thousand years. The land is not a resource. It is a relative.
+
+This is the frequency we reach toward — knowing the land the way you know a body, feeling its health in your own bones.
 
 ![Morning dew on a hillside food forest with young fruit trees, swales full of water catching first light, mist rising from a creek](visuals:photorealistic morning landscape of rolling hills with permaculture food forest, young fruit trees in rows along contour swales filled with water reflecting golden dawn light, mist rising from a creek at the valley bottom, wild grasses and wildflowers between planted rows, dew glistening on leaves, no people visible, raw natural beauty, soft focus background mountains)
 
@@ -31,15 +35,25 @@ Gaviotas, Colombia, proved this is not poetry. They regenerated eight million tr
 
 ## What Nature Teaches
 
-A coral reef does not sit *in* the ocean. It *is* the ocean — the living edge where mineral becomes biology, where current becomes feeding, where a thousand species negotiate without a manager. The reef builds itself from the skeletons of its ancestors. It grows toward the light. It creates the conditions for more life than could exist without it. This is the pattern we follow.
+A coral reef does not sit *in* the ocean. It *is* the ocean — the living edge where mineral becomes biology, where current becomes feeding, where a thousand species negotiate without a manager. The reef builds itself from the skeletons of its ancestors. It grows toward the light. It creates the conditions for more life than could exist without it.
+
+This is the pattern we follow. Not placing a community *on* land but becoming part of the land's own process. The soil feeds the plants, the plants feed the people, the people feed the soil. The water cycle runs through the community the way blood runs through a body — rain to roof to cistern to kitchen to greywater to garden to evaporation to cloud to rain.
 
 The deepest teaching is about time. A forest thinks in centuries. A watershed thinks in millennia. When you plant five hundred trees in your first three years, you are beginning a conversation you will not live to finish. Your grandchildren will walk under canopy you will never see. This is custodianship — the understanding that the land holds you as much as you hold it, and that when the community dissolves (if ever), the land returns to wildness, not to developers. The CLT ground lease says this in legal language. The songlines said it first.
 
-Every living system wants to become more complex, more diverse, more resilient. The role of the human is not architect but midwife — creating conditions, removing obstacles, then stepping back. The land knows what it wants to become. It has been becoming it for longer than our species has existed. Our job is to rejoin the process.
+Every living system wants to become more complex, more diverse, more resilient. The role of the human is not architect but midwife — creating conditions, removing obstacles, then stepping back. The land knows what it wants to become. It has been becoming it for longer than our species has existed.
+
+Our job is to rejoin the process already underway.
 
 ## Where You Can See It
 
-Stand on the hilltop at Tamera in Portugal's Alentejo — once a dusty, dying landscape where springs had gone silent. Sepp Holzer's water retention landscapes brought them back. You can hear them now, trickling between stones, feeding pools where dragonflies hover. At Greening the Desert in Jordan's Dead Sea Valley, Geoff Lawton transformed dead salt flat into food forest in three years. Walk through it and the temperature drops ten degrees under canopy. In Gaviotas, the children swim in streams their grandparents never knew existed. Each place tells the same story: the land was waiting. It only needed someone to listen.
+Stand on the hilltop at Tamera in Portugal's Alentejo — once a dusty, dying landscape where springs had gone silent. Sepp Holzer's water retention landscapes brought them back. You can hear them now, trickling between stones, feeding pools where dragonflies hover and frogs sing at dusk.
+
+At Greening the Desert in Jordan's Dead Sea Valley, Geoff Lawton transformed dead salt flat into food forest in three years. Walk through it and the temperature drops ten degrees under canopy. The ground that was white with salt is dark with humus. Fig trees fruit where nothing grew.
+
+In Gaviotas, the children swim in streams their grandparents never knew existed. The springs returned because the forest returned because someone planted the first tree on land everyone else had given up on.
+
+Each place tells the same story: the land was waiting. It only needed someone to listen.
 
 ![A lush regenerated food forest with water features, diverse plantings at many heights, and a path winding through](visuals:photorealistic lush food forest with multiple canopy layers from ground cover herbs to tall fruit and nut trees, a winding earthen path through diverse plantings, small natural pond reflecting sky, butterflies and birds visible in dappled light, rich green abundance at every level, sense of mature productive ecosystem)
 

@@ -73,6 +73,7 @@ Governance by consent so that the quietest voice carries the same weight as the 
 - How do you make community affordable across income levels without creating tiers of belonging?
 - What is the right balance between shared values and diverse worldviews?
 - When does inclusion require saying no to someone whose presence diminishes others' safety?
+- How do you build bridges between people who process the world through entirely different sensory channels?
 
 ## Connected Frequencies
 
