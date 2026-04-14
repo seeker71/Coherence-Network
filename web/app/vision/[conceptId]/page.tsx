@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getApiBase } from "@/lib/api";
-import PollinationsImage from "@/components/vision/PollinationsImage";
+// PollinationsImage import removed — using pre-generated static images instead
 
 export const dynamic = "force-dynamic";
 
@@ -418,21 +418,28 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
               </section>
             )}
 
-            {/* ═══ Visual Gallery — multiple images per concept ═══ */}
+            {/* ═══ Visual Gallery — pre-generated static images ═══ */}
             {concept.visuals && concept.visuals.length > 0 && (
               <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-4">
                 <h2 className="text-lg font-light text-stone-300">How it looks and feels</h2>
-                <p className="text-xs text-stone-600 italic">Images are AI-generated and may take a moment to appear.</p>
                 <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-4 -mx-2 px-2">
                   {concept.visuals.map((v, i) => {
+                    // Pre-generated images stored at /visuals/generated/{conceptId}-{i}.jpg
+                    // Falls back to Pollinations URL if static file doesn't exist
+                    const staticPath = `/visuals/generated/${conceptId}-${i}.jpg`;
                     const seed = conceptId.split("").reduce((a, c) => a + c.charCodeAt(0), 0) + i * 17;
                     return (
                       <div key={i} className="flex-shrink-0 w-80 snap-start space-y-2">
-                        <PollinationsImage
-                          src={pollinationsUrl(v.prompt, seed)}
-                          alt={v.caption}
-                          className="aspect-[16/9] rounded-xl overflow-hidden bg-stone-800/50"
-                        />
+                        <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-stone-800/50">
+                          <Image
+                            src={staticPath}
+                            alt={v.caption}
+                            fill
+                            className="object-cover"
+                            sizes="320px"
+                            unoptimized
+                          />
+                        </div>
                         <p className="text-xs text-stone-500 leading-relaxed">{v.caption}</p>
                       </div>
                     );
