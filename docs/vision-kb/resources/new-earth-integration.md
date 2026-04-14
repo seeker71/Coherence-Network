@@ -54,6 +54,18 @@
 | `community-new-earth-exchange` | community | Alternative economic system |
 | `community-new-earth-horizon` | network-org | Global network of New Earth initiatives |
 
+## Reality Check (April 2026)
+
+The VALUES of New Earth align deeply with Living Collective. The EXECUTION has gaps:
+- Tennessee "MicroNation": 60 acres bare land, zero construction, explicit admission of no plan, $10K-$100K fees buy access not equity, NDAs
+- Bali: event venue, not residential community
+- Mexico/Africa: announcement-level only
+
+**What to keep**: Zero-point economics philosophy, custodianship, sovereignty as foundation, art as architecture.
+**What to learn from**: Build before selling memberships. Don't concentrate ownership. Transparency over mystique.
+
+See [reality-check.md](reality-check.md) for full analysis of what works in community building.
+
 ## Epistemic Note
 
-This content is classified as **tradition/visionary** — rooted in alternative worldview, sovereignty movement, and consciousness-based cosmology. Treat claims as belief-system content, not empirical science. The convergence with Living Collective principles is in values and direction, not in specific factual claims. Cross-reference with the `epistemicLabel` field in the ontology axes.
+This content is classified as **tradition/visionary** — rooted in alternative worldview, sovereignty movement, and consciousness-based cosmology. Treat claims as belief-system content, not empirical science. The convergence with Living Collective principles is in values and direction, not in specific factual claims.
