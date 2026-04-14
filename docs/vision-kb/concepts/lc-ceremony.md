@@ -1,8 +1,8 @@
 ---
 id: lc-ceremony
 hz: 963
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Ceremony
@@ -26,6 +26,17 @@ Our ceremonies emerge from presence, not prescription. But they carry echoes of 
 ## Blueprint
 Fire circle every new moon. Seasonal ceremonies at solstice and equinox. Arrival ceremony for new members (simple: the community sings them in). Departure ceremony (the community sings them out). No prescribed forms — let the moment teach the ceremony.
 
+## Resources
+- [The Work That Reconnects by Joanna Macy](https://workthatreconnects.org/) — free facilitation guides for group ceremonies of gratitude and grief (type: guide)
+- [Damanhur](https://www.damanhur.org/) — Italian ecovillage with underground Temples of Humankind, ceremony-centered community (type: community)
+- [Sociocracy For All](https://www.sociocracyforall.org/) — meeting-as-ceremony, consent rounds as ritual (type: guide)
+- [Rainbow Gatherings](https://www.welcomehome.org/) — temporary communities built around ceremony and sharing (type: community)
+
+## Visuals
+1. **Fire circle at new moon** — `photorealistic group of people gathered around fire pit at night under stars, faces lit by firelight, drums nearby, singing, wilderness setting, new moon sky full of stars`
+2. **Solstice ceremony at dawn** — `photorealistic community gathered on hilltop at winter solstice dawn, facing east, hands joined, first light breaking over mountains, breath visible in cold air, candles`
+3. **Arrival ceremony** — `photorealistic community welcoming a new member at entrance gate, flowers, singing, hands reaching out, joyful faces, earthen buildings behind, warm golden light`
+
 ## Living Examples
 - **Elephants mourning** — the herd circles, touches, stands in silence. Returns to bones years later.
 - **Japanese tea ceremony** — every movement intentional, beauty in simplicity, presence distilled
@@ -46,8 +57,9 @@ Fire circle every new moon. Seasonal ceremonies at solstice and equinox. Arrival
 Ceremony (already enriched — this adds to the existing content if not present)
 
 ## Open Questions
-- What aspects of Ceremony need deeper research?
-- What real-world examples are we missing?
+- How to create ceremonies that resonate across diverse spiritual backgrounds?
+- What ceremonies does a community need at minimum? (Arrival, departure, solstice, new moon?)
+- How to allow ceremony to emerge spontaneously vs planning it?
 
 ## Cross-References
-→ lc-resonating
+→ lc-v-ceremony-vision, lc-stillness, lc-elders, lc-offering

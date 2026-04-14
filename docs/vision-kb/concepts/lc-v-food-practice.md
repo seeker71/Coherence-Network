@@ -1,8 +1,8 @@
 ---
 id: lc-v-food-practice
 hz: 174
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Food as Living Practice
@@ -17,6 +17,18 @@ Garden as pharmacy. Kitchen as laboratory. Meal as ceremony. What happens when g
 
 ## Blueprint
 Key elements: 7-layer food forest (permaculture), fermentation station, communal cooking (minimum 2 people, ideally 4+), seasonal menu that follows the land, foraging integration, compost cycle visible, herb spiral near kitchen, no processed foods, children involved in all stages.
+
+## Resources
+- 📐 [One Community - Transition Kitchen](https://onecommunityglobal.org/transition-kitchen/) — open-source community kitchen design (type: blueprint)
+- 📖 [Wild Fermentation by Sandor Katz](https://www.wildfermentation.com/) — comprehensive fermentation guide and community (type: book)
+- 📖 [Andrew Millison - Permaculture](https://open.oregonstate.education/permaculture/) — free open textbook on food forest design (type: book)
+- 🌐 [Permaculture Research Institute](https://permaculturenews.org/) — food forest case studies and guides (type: community)
+- 📖 [ATTRA Sustainable Agriculture](https://attra.ncat.org/) — 300+ free publications on organic food production (type: guide)
+
+## Visuals
+1. **Harvest morning** — `photorealistic group of people harvesting vegetables in community garden at morning, baskets full of tomatoes peppers greens, food forest in background, dappled light, bare feet in soil`
+2. **Communal cooking** — `photorealistic four people cooking together in large community kitchen, chopping vegetables, stirring large pot, herbs hanging, laughter, steam, wooden counters, earthen walls`
+3. **Herb spiral** — `photorealistic stone herb spiral garden with diverse medicinal and culinary herbs, labels, person picking herbs, morning dew, community buildings in background`
 
 ## Living Examples
 - **Zaytuna Farm (Geoff Lawton, Australia)** — 66-acre permaculture demonstration, food forest, regenerative water
@@ -33,8 +45,9 @@ Key elements: 7-layer food forest (permaculture), fermentation station, communal
 Food as Practice is where Nourishing meets Ceremony. The kitchen-hearth is the field's literal heart. Meals are the most natural resonance practice — cells aligning through shared substance. The garden is where the field meets the land.
 
 ## Open Questions
-- What aspects of Food as Living Practice need deeper research?
-- What real-world examples are we missing?
+- How to maintain food practice when community members have different dietary needs?
+- What's the minimum garden size to meaningfully supplement a community's food?
+- How to make food preservation (fermentation, drying, canning) a joyful communal activity?
 
 ## Cross-References
-→ lc-nourishment
+→ lc-nourishment, lc-land, lc-health, lc-ceremony

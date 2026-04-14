@@ -1,8 +1,8 @@
 ---
 id: lc-play
 hz: 396
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Play
@@ -24,6 +24,17 @@ In the field, adults play as freely as children. Improv theater principles (yes-
 ## Blueprint
 Designate an adventure playground with loose materials (wood, rope, tires, fabric, water). Weekly improv night. Monthly 'ridiculous games' tournament. No productive purpose required. Adults play alongside children. Budget for play equipment as essential infrastructure, not luxury.
 
+## Resources
+- 📖 [The Art of Play](https://www.playgroundideas.org/) — Playground Ideas, open-source playground designs for communities worldwide (type: guide)
+- 📖 [Adventure Playground Guide](https://www.popupadventureplay.org/) — Pop-Up Adventure Play, free resources for adventure play (type: guide)
+- 📖 [Sociocracy For All](https://www.sociocracyforall.org/) — governance through play and consent (type: guide)
+- 🌐 [Permies.com](https://permies.com/) — homesteading community with natural play and outdoor education forums (type: community)
+
+## Visuals
+1. **Adventure playground** — `photorealistic adventure playground in intentional community, children and adults climbing wooden structures, loose materials, mud kitchen, tire swings, trees, laughter, afternoon light`
+2. **Improv night in common house** — `photorealistic group of adults doing improv theater in round earthen common room, expressive gestures, audience laughing, warm firelight, cushions on floor`
+3. **Water play in summer** — `photorealistic natural swimming pond with people splashing, rope swing, wooden dock, wildflowers, children and adults playing together, mountains in background`
+
 ## Living Examples
 - **Dolphins** — up to 80% of waking time in play. The most intelligent, socially complex marine mammals.
 - **Rough-and-tumble play in mammals** — develops body awareness, emotional regulation, social skills
@@ -43,8 +54,9 @@ Designate an adventure playground with loose materials (wood, rope, tires, fabri
 Play is the Resonating flow at its most creative. It connects to Discovery (learning through play), Expressing (creation through play), and Comfort/Joy (pleasure as practice).
 
 ## Open Questions
-- What aspects of Play need deeper research?
-- What real-world examples are we missing?
+- How to keep adult play alive when work pressure builds?
+- What play structures serve both children and adults?
+- How to integrate play into decision-making (sociocratic games)?
 
 ## Cross-References
-→ lc-resonating
+→ lc-v-play-expansion, lc-space, lc-ceremony
