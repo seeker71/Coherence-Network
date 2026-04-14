@@ -100,4 +100,4 @@ not a building. It is the community's collective memory of what it has noticed.
 - Is there a discovery practice that keeps a community perpetually at its own edge?
 
 ## Connected Frequencies
-→ lc-field-sensing, lc-elders, lc-instruments, lc-play, new-earth-integration
+→ lc-field-sensing, lc-elders, lc-instruments, lc-play

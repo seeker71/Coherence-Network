@@ -6,15 +6,15 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
       "port": 8000,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/stupefied-dhawan/api"
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/elastic-williams/api"
     },
     {
       "name": "web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev"],
       "port": 3000,
       "autoPort": true,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/stupefied-dhawan/web"
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/elastic-williams/web"
     }
   ]
 }

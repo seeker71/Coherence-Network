@@ -121,12 +121,4 @@ Can the pulse of one community reach another across distance? The network is our
 
 ## Connected Frequencies
 
-The pulse expresses through every concept in this vision. Understanding it, you can derive everything else:
-- Through **Sensing** — the field reading its own state, the nervous system of the organism
-- Through **Attunement** — finding the shared tone, the choir adjusting by harmonic pull
-- Through **Vitality** — the life force released when interference dissolves, the laser principle
-- Through **Ceremony** — the pulse made sacred, the moments that matter most deeply
-- Through **Stillness** — the pulse heard in silence, the listening beneath all speaking
-- Through **Rhythm** — the pulse in time, the heartbeat of days and seasons
-
 → lc-sensing, lc-attunement, lc-vitality, lc-ceremony, lc-stillness, lc-rhythm, lc-w-coherence, lc-w-field, lc-w-spanda

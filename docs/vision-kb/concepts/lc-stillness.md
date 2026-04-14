@@ -72,9 +72,4 @@ A bell, like Plum Village uses — rung at unpredictable moments throughout the 
 
 ## Connected Frequencies
 
-→ lc-ceremony — the deepest ceremonies are mostly silence
-→ lc-rest — stillness is rest at its most awake
-→ lc-elders — elders carry a slower frequency that teaches the value of pause
-→ lc-space — the rooms that hold silence shape what the silence can become
-→ lc-offering — in stillness you hear what you actually have to give
-→ lc-play — stillness is the exhale that makes the next breath of play possible
+→ lc-ceremony, lc-rest, lc-elders, lc-space, lc-offering, lc-play

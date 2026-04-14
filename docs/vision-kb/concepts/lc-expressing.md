@@ -72,9 +72,4 @@ These are not questions to answer but questions to live inside:
 
 ## Connected Frequencies
 
-Expression is the outward breath of what Sensing takes in. What the field feels, expression gives form to:
-- Through **Resonating** — expression finds its audience not by seeking but by vibrating at its true frequency
-- Through **Offering** — the bower bird's palace: expression and gift are the same gesture
-- Through **Beauty** — not decoration but the inevitable shape of honest expression
-
 → lc-resonating, lc-offering, lc-v-freedom-expression, lc-beauty

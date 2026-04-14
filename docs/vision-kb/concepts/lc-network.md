@@ -118,4 +118,4 @@ Not an organization with chapters. A forest with roots.
 - What happens when a node in the network falls into dysfunction — does the network heal it, hold it, or let it go?
 
 ## Connected Frequencies
-→ lc-resonating, lc-nourishing, lc-field-edge, new-earth-integration
+→ lc-resonating, lc-nourishing, lc-field-edge

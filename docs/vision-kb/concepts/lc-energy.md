@@ -78,4 +78,4 @@ Micro-hydro if a stream is present — the most reliable renewable, running twen
 - When does energy surplus become generosity — and what does a community do with more than it needs?
 
 ## Connected Frequencies
-→ lc-nourishing, lc-land, lc-v-shelter-organism, lc-v-living-spaces, new-earth-integration
+→ lc-nourishing, lc-land, lc-v-shelter-organism, lc-v-living-spaces

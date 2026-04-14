@@ -77,4 +77,4 @@ Governance by consent so that the quietest voice carries the same weight as the 
 
 ## Connected Frequencies
 
--> lc-attunement, lc-circulation, lc-v-ceremony, lc-v-freedom-expression
+→ lc-attunement, lc-circulation, lc-v-ceremony, lc-v-freedom-expression

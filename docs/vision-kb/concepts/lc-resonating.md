@@ -72,10 +72,4 @@ These are questions the field hums with, not problems to resolve:
 
 ## Connected Frequencies
 
-Resonating is the connective tissue — it holds the field together:
-- Through **Attunement** — attunement tunes the instruments, resonance is the music they make
-- Through **The Pulse** — resonance is the pulse felt between cells, not just within them
-- Through **Vitality** — real resonance generates vitality the way friction generates heat
-- Through **Sensing** — the field must sense each voice to know what chord is possible
-
 → lc-attunement, lc-pulse, lc-vitality, lc-sensing, lc-intimacy, lc-expressing, lc-v-harmonizing
