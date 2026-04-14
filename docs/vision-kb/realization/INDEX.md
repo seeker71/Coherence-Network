@@ -2,6 +2,13 @@
 
 > The field doesn't wait for perfection. It starts with what's here.
 
+## Operational Documents (Read These)
+
+- **[Governance Framework](governance.md)** — Bylaws, decision process, conflict resolution steps 1-2-3-4, stewardship roles, constitutional principles, financial thresholds
+- **[Economic Engine](economics.md)** — What the community produces and sells. 4 revenue engines, 3-layer internal economics, CC integration, what to start NOW
+- **[Membership Pipeline](membership.md)** — Visitor → Explorer → Provisional → Full. Screening, onboarding, departure, saying no with love
+- **[Reality Check](../resources/reality-check.md)** — What works, what kills communities, 500 years of data
+
 ## Timeline
 
 | Phase | Time | What happens |
