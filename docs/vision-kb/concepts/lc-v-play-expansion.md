@@ -65,6 +65,7 @@ The single most important design decision: protect unstructured time. Every hour
 
 - [Pop-Up Adventure Play](https://www.popupadventureplay.org/) -- free resources for adventure play in communities (type: guide)
 - [Playground Ideas](https://www.playgroundideas.org/) -- open-source playground designs for communities (type: blueprint)
+- [National Institute for Play](http://www.nifplay.org/) -- Stuart Brown's research on play across the lifespan (type: guide)
 
 ## The Questions That Live Here
 
@@ -72,6 +73,7 @@ The single most important design decision: protect unstructured time. Every hour
 - What role does physical risk play in real play, and how much safety is too much safety?
 - When does structured play become just another obligation?
 - How do you protect unstructured time from the gravitational pull of productivity?
+- What happens when play reveals something painful, and how does the field hold that?
 
 ## Connected Frequencies
 

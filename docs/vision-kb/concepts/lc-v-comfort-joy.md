@@ -65,6 +65,7 @@ Sound matters: water features near gathering spots, wind moving through designed
 
 - [Hygge Guide](https://www.ic.org/) -- Danish hygge practices for intentional community (type: guide)
 - [Cohousing Association](https://www.cohousing.org/) -- comfort and communal living design (type: community)
+- [Thermae Bath Spa](https://www.thermaebathspa.com/) -- modern public bathing rooted in ancient Roman practice (type: community)
 
 ## The Questions That Live Here
 
@@ -72,6 +73,7 @@ Sound matters: water features near gathering spots, wind moving through designed
 - What makes a space feel safe enough for the body to fully soften?
 - How do you maintain comfort infrastructure sustainably, without importing luxury that depends on extraction?
 - When does comfort become avoidance, and how does the field know the difference?
+- How do you design comfort for different climates, from tropical heat to subarctic cold?
 
 ## Connected Frequencies
 
