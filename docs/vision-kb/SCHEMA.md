@@ -86,13 +86,35 @@ To expand a concept by 3x:
 6. Update: INDEX.md one-line summary if it changed
 7. Append: LOG.md entry
 
-## Sync with Ontology JSON
+## Two-Layer Architecture
 
-The knowledge base is the *working draft*. The ontology JSON (`config/ontology/living-collective.json`) is the *deployed source of truth*. To sync:
+**Graph DB** is the runtime source of truth. **KB markdown** is the working draft.
 
-1. Expand content in KB markdown files (fast, focused)
-2. When ready to deploy: run `scripts/kb_to_ontology.py` to merge KB → JSON
-3. Commit JSON, push, deploy
-4. The API serves from JSON → graph DB → web pages
+The ontology JSON (`config/ontology/living-collective.json`) is a one-time seed file. It's version-gated: the API checks a `_schema-version` node in the DB. If versions match, the JSON is never read (instant startup). The JSON only re-seeds when its version number changes.
 
-This two-layer approach means: the KB can grow 50x without slowing down the API. Only curated, production-ready content goes to the JSON.
+### Enrichment Flow
+
+1. Expand content in KB markdown files (fast, focused, per-concept)
+2. Sync to DB: `python scripts/sync_kb_to_db.py lc-space` — PATCHes the graph node via API
+3. Verify: the web page immediately reflects the change (no rebuild needed)
+4. For bulk sync: `python scripts/sync_kb_to_db.py --all --min-status expanding`
+
+### What Goes Where
+
+| Layer | Purpose | Who writes | How it's read |
+|-------|---------|-----------|---------------|
+| KB markdown | Working draft, AI memory, 3x-per-iteration expansion | AI + human | `Read` tool, per-file |
+| Graph DB | Runtime source of truth | API PATCH, sync script | API endpoints → web pages |
+| Ontology JSON | One-time seed (legacy) | Never edited again | Only on version mismatch |
+
+### Sync Script
+
+```bash
+python scripts/sync_kb_to_db.py lc-space                    # sync one concept
+python scripts/sync_kb_to_db.py --all                       # sync all
+python scripts/sync_kb_to_db.py --all --min-status expanding # only expanded concepts
+python scripts/sync_kb_to_db.py lc-space --dry-run          # preview changes
+python scripts/sync_kb_to_db.py lc-space --api-url http://localhost:8000  # local
+```
+
+The script parses: Resources, Materials & Methods, At Scale, Climate Adaptations, Visuals, Costs sections from the markdown and PATCHes them as JSONB properties on the graph node.
