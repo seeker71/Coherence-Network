@@ -1,5 +1,7 @@
 # Resources — Open Source Plans, Communities, Books
 
+> **START HERE**: Read [reality-check.md](reality-check.md) first — honest assessment of what works, what fails, and what Living Collective needs next.
+
 > Real things you can download, visit, read, and build from today.
 
 ## Open Source Building Plans (CC / Free)
