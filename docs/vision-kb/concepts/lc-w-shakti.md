@@ -1,45 +1,80 @@
 ---
 id: lc-w-shakti
 hz: 528
-status: expanding
+status: deepening
 updated: 2026-04-14
 ---
 
 # Shakti
 
-> Life force in tantric tradition. Not produced — released. The energy animating everything. Sexual, creative, spiritual — one energy.
+> Life force. Not produced but released when interference dissolves. The energy you feel when you stop trying. Sexual, creative, spiritual — same force at different octaves.
 
-## Summary
-Life force in tantric tradition. Not produced — released when blockages dissolve.
+## The Feeling
 
-## Details
-Life force in tantric tradition. Not produced — released when blockages dissolve. The energy that animates everything. Sexual, creative, spiritual — one energy, many expressions. When it flows freely, everything it touches comes alive.
+You've been pushing for hours — forcing words onto a page, wrestling a
+problem into submission, grinding through obligation — and then you stop.
+You walk outside. The air hits your skin. Something in your chest unlocks.
+And suddenly the idea arrives whole, the energy floods back, the body wants
+to move. Not because you produced something. Because you stopped blocking
+what was already flowing.
 
-## Blueprint
-Create conditions for life force to flow: remove obligations that drain without nourishing, make space for spontaneous expression, honor the body's energy (rest when tired, move when restless, create when inspired). Community dance night weekly. No suppression of healthy desire.
+That force has a name ten thousand years old. Shakti. The Tantric traditions
+understood it as the fundamental energy animating everything — not something
+you generate but something you allow. A spring doesn't manufacture water. It
+finds the crack in the rock where the underground river can surface. Your
+body is that crack. When the interference dissolves — the tension, the
+trying, the should — shakti rises like sap in spring, like heat from embers,
+like laughter from a child who has forgotten anyone is watching.
 
-## Resources
-- [Plum Village](https://plumvillage.org/) -- mindful life force practices (type: community)
+![Shakti rising](visuals:photorealistic woman dancing alone in a wildflower meadow at golden hour, barefoot, hair loose and flowing with movement, arms extended, spinning, mountains in far background, pure joy and aliveness radiating from her body, no performance just expression, wildflowers bending in the breeze she creates)
 
-## Visuals
-1. **Life force** -- `photorealistic woman dancing barefoot on earth at dawn, hair flowing, arms extended, pure life energy, wildflower meadow, mountains in background, ecstatic movement`
+## What Nature Teaches
 
-## Living Examples
-- **A spring** — the water was always there underground, it just needed a path to the surface
-- **Lightning** — energy that was always in the atmosphere, released when conditions allow
-- **A child's laughter** — pure shakti, uninhibited life force expressing
+Watch a river dammed by a beaver. The water doesn't disappear — it pools,
+rises, finds pressure. Remove the dam and the release is thunderous, joyful,
+inevitable. The water was always moving. The dam only redirected the force.
 
-## Aligned Places
-- **Kamakhya Temple** (Assam, India) — One of the oldest Shakti Peethas — temple dedicated to the divine feminine creative force for over 1500 years.
-- **Kecak fire dance ceremonies** (Bali, Indonesia) — Hundreds of men chanting in concentric circles around fire — collective shakti rising through synchronized voice and movement.
+Lightning is shakti at atmospheric scale. Charge builds between cloud and
+earth — not created, just separated, waiting. When the potential difference
+becomes too great, the sky cracks open and billions of volts pour through in
+a fraction of a second. A seed holds its shakti coiled tight all winter.
+When warmth and moisture arrive, the force uncoils and a root drives through
+packed earth with quiet, unstoppable power. No effort. Just readiness
+meeting invitation.
 
-## How It Fits
-Shakti names the raw life force that every other concept channels, shapes, or releases. Without it, vitality sounds abstract — shakti grounds it in the body, in creative fire, in the energy you can actually feel.
+## How It Lives Here
 
-## Open Questions
-- How to cultivate shakti without burning out?
-- What's the relationship between shakti and rest?
-- How does collective shakti differ from individual vitality?
+The community does not produce energy. It removes what blocks it. Obligations
+that drain without nourishing are questioned, then released. The schedule
+has breath in it — gaps, unstructured hours, time with no name. When someone
+is tired, they rest without apology. When someone is restless, they move
+without permission. When creation wants to happen at midnight, the workshop
+is open.
 
-## Cross-References
+Weekly community dance — no choreography, no performance, no audience. Bodies
+moving to drums and voices because the force wants expression and the body is
+its instrument. Shakti doesn't distinguish between the energy that builds a
+wall, writes a song, makes love, or sits in meditation. Same river, different
+landscape. The community learns to honor all its expressions without ranking
+them — the creative burst and the deep rest, the wild laughter and the quiet
+tears, the passion between lovers and the passion between a potter and clay.
+
+![The dance](visuals:photorealistic community dance by firelight outdoors at night, diverse group of people moving freely with abandon, some with drums, firelight casting long shadows, bare feet on earth, faces showing ecstasy and release, no stage no audience just collective movement, stars visible above, primal and alive)
+
+## The Questions That Live Here
+
+- How do you cultivate shakti without burning out — where is the line
+  between flow and fever?
+- What is the relationship between deep rest and wild creative force — are
+  they the same shakti at different speeds?
+- When the collective shakti rises, how does the field hold it without
+  suppressing or scattering?
+
+## Connected Frequencies
+
+Shakti is the raw force — without it, every other concept is a dry riverbed:
+- Through **Spanda** — shakti is the force, spanda is its vibration
+- Through **Vitality** — what the field calls health is shakti flowing freely
+- Through **Play** — play is shakti in its most joyful expression
+
 → lc-vitality, lc-energy, lc-w-spanda, lc-play

@@ -1,45 +1,61 @@
 ---
 id: lc-w-coherence
 hz: 432
-status: expanding
+status: deepening
 updated: 2026-04-14
 ---
 
 # Coherence
 
-> When frequencies align — like laser light. Power increases by orders of magnitude. Natural state when interference dissolves.
+## The Feeling
 
-## Summary
-When frequencies align, the system becomes coherent — like laser light. Power increases by orders of magnitude.
+You have been in a room where it happened. Maybe a choir that found the
+overtone nobody was singing. Maybe a team that stopped negotiating and
+started moving as one thought. The air thickened. Time bent. What had
+been difficult became obvious, and what had been obvious became luminous.
 
-## Details
-When frequencies align, the system becomes coherent — like laser light. Power increases by orders of magnitude. The natural state when interference dissolves. You feel it as clarity, flow, rightness, ease.
+That is coherence. Not agreement — alignment. Not everyone playing the
+same note — everyone playing notes that belong together. The difference
+between a lightbulb scattering photons in every direction and a laser
+sending them all in phase, in step, in power. Same light. Orders of
+magnitude more intensity.
 
-## Blueprint
-Measure coherence, not consensus. After group decisions, ask: 'Does this feel coherent?' rather than 'Does everyone agree?' Coherence practice: weekly 10-minute group hum — find the shared tone, feel when it locks in. Coherence is not uniformity — it's different frequencies aligned.
+![Concentric ripples expanding perfectly from a single point on still water at dawn, golden light, reflection of distant community structures, absolute symmetry](visuals:photorealistic concentric ripples from single droplet on perfectly still pond at golden dawn, community buildings reflected in water, perfect radial symmetry, sense of immense quiet power)
 
-## Resources
-- [HeartMath Institute](https://www.heartmath.org/) -- scientific research on coherence and heart-brain connection (type: guide)
+## What Nature Teaches
 
-## Visuals
-1. **Coherence** -- `photorealistic close-up of water droplet creating perfect concentric ripples in still pond at dawn, reflection of community buildings in water surface, perfect symmetry, golden light`
+Your heart already knows. Heart rate variability research shows that when
+your breathing, heart rhythm, and emotional state synchronize, your body
+enters a measurable state of coherence — blood pressure drops, cognition
+sharpens, immunity rises. You do not achieve this by trying harder. You
+achieve it by releasing what interferes.
 
-## Living Examples
-- **Laser** — ordinary light made coherent becomes powerful enough to cut steel
-- **Murmuration** — thousands of birds in perfect coherent motion
-- **Flow state** — when your whole being aligns on one activity, ordinary performance becomes extraordinary
+A murmuration of starlings — thousands of birds turning as one body
+without a conductor, without a plan — is coherence made visible against
+an evening sky. No bird leads. Every bird listens. The flock becomes
+something no single bird could be. Not by trying. By trusting the space
+between them.
 
-## Aligned Places
-- **Laser laboratories (LIGO)** (Livingston, LA & Hanford, WA, USA) — Gravitational wave detector using coherent laser light — coherence so precise it detects ripples in spacetime.
-- **Amish barn raising** (Pennsylvania, USA) — Entire community aligning to build a barn in a single day — coherence made visible through collective synchronized action.
+## How It Lives Here
 
-## How It Fits
-Coherence names the state the whole vision aims toward — when frequencies align, power multiplies exponentially. Without this word, alignment sounds like conformity rather than the natural state of a healthy system.
+We measure coherence, not consensus. After a circle, the question is not
+*does everyone agree?* but *does this feel coherent?* — because a group
+can agree on something dead and cohere around something alive. The
+weekly practice: ten minutes of shared humming, finding the tone that
+locks in, feeling the room shift when it does.
 
-## Open Questions
-- How to measure coherence in a community?
-- What's the relationship between individual coherence and collective coherence?
-- Can coherence be felt across distance?
+Coherence is not uniformity. It is different frequencies discovering they
+belong together. You cannot manufacture it by force. You can only create
+the conditions — shared presence, honest listening, a willingness to let
+your note adjust — and then feel when the room locks in.
 
-## Cross-References
-→ lc-pulse, lc-attunement, lc-w-frequency, lc-resonating
+## The Questions That Live Here
+
+- What is the relationship between one person's coherence and the
+  coherence of the whole?
+- Can coherence be felt across distance — and if so, what carries it?
+- What dissolves coherence fastest, and what restores it?
+
+## Connected Frequencies
+
+→ lc-w-frequency, lc-w-field, lc-w-cell, lc-pulse, lc-attunement

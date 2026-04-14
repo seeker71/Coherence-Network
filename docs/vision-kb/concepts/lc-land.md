@@ -1,95 +1,70 @@
 ---
 id: lc-land
 hz: 174
-status: expanding
+status: deepening
 updated: 2026-04-14
 ---
 
 # Land Embedding
 
-> The field lives WITHIN a larger field. Like coral reef IS the ocean. The land is a cell in the field. Mutual nourishment.
+> The field lives WITHIN a larger field. Like coral reef IS the ocean. Custodianship, not ownership.
 
-## Summary
-The field lives WITHIN a larger field. Like a coral reef IS the ocean, not something placed in it.
+## The Feeling
 
-## Details
-The field lives WITHIN a larger field. Like a coral reef IS the ocean, not something placed in it. The land is a cell in the field. Mutual nourishment: healthy land feeds healthy collective feeds healthy land.
+You walk out before dawn and the ground is cold under bare feet. Dew soaks through. You can feel the slope of the hill in your ankles, the way the land tips toward the creek. There is a smell — not one smell but a conversation between wet clay, decomposing oak leaves, the iron tang of the spring, and something else you cannot name but that your body reads as *home*. Your lungs open wider than they do indoors. Something in the soil knows you have been walking this path for three years now. The mycelial network under your feet is older than any human language and it is doing what it does — connecting, feeding, signaling — regardless of whether you notice.
 
-Gaviotas in Colombia proved this is not theoretical: they regenerated 8 million trees on barren savanna that experts said was beyond recovery. Within 20 years, springs that had been dry for decades began flowing again. The forest they planted attracted species that hadn't been seen in the region for centuries. The land WANTED to recover — it just needed someone to stop degrading it and start cooperating.
+By the third year you stop thinking of the land as a place you live *on*. It becomes a body you live *within*. You notice the swale you dug two summers ago is finally full — the water table is rising. The willows you planted along the creek have woven a canopy so dense the kingfisher nests there now. You did not build this. You listened, and the land built itself around your listening.
 
-Keyline design (P.A. Yeomans) reads the land's water patterns and works with them — cutting channels along contour lines to slow water, spread it, and sink it into the soil. The result: springs recharge, erosion stops, fertility builds. Ernst Gotsch's syntropic agroforestry in Brazil demonstrates successional planting — mimicking how a forest builds itself, layer by layer, from pioneer species to climax forest, but with food at every stage.
+The Aboriginal Australians have a word-concept for this depth of relationship: songlines, where the land is sung into existence, mapped through kinship rather than coordinates. Every ridge and waterhole has a story, a song, a connection stretching back sixty thousand years. The land is not a resource. It is a relative. This is the frequency we reach toward — knowing the land the way you know a body, feeling its health in your own bones.
 
-Aboriginal Australian songlines show the deepest relationship with land: the land is alive, sung into existence, mapped through relationship. Every feature of the landscape has a story, a song, a connection. The land is not a resource — it is a relative. This is the frequency we aspire to: knowing the land the way you know a body, feeling its health in your own bones.
+![Morning dew on a hillside food forest with young fruit trees, swales full of water catching first light, mist rising from a creek](visuals:photorealistic morning landscape of rolling hills with permaculture food forest, young fruit trees in rows along contour swales filled with water reflecting golden dawn light, mist rising from a creek at the valley bottom, wild grasses and wildflowers between planted rows, dew glistening on leaves, no people visible, raw natural beauty, soft focus background mountains)
 
-**Custodianship, not ownership.** The land is never "bought" — it is entered into relationship with. The legal structure (Community Land Trust, conservation easement, or sovereign territory) removes land from the market permanently. No individual can sell what belongs to the field. This is the Aboriginal principle, the indigenous principle, the New Earth principle: you do not own the earth. You are its custodian. The land holds you as much as you hold it. When the community dissolves (if ever), the land returns to wildness, not to developers. The CLT ground lease lasts 99 years minimum. The conservation easement is permanent. The New Earth MicroNation model goes further: sovereignty over the land itself, under natural law rather than statutory law.
+## How It Lives Here
 
-## Blueprint
-Begin with observation: one full year of watching water flow, sun patterns, wind, wildlife corridors, soil types before any major earthworks. Implement keyline water harvesting. Plant 500+ trees in the first three years. Establish wildlife corridors connecting to surrounding habitat. The land council walks the whole property monthly. Legal structure: Community Land Trust or equivalent — land held permanently out of the market. Every member is a custodian, not an owner.
+A Tuesday in September. The land council — five people this month, rotating — walks the whole property. They carry no clipboard. They walk slowly, pausing where the soil changes color, where a new spring seeps through limestone, where the deer have made a fresh trail through the hazelnut grove. One person kneels and pushes fingers into earth near the old erosion scar. The soil is dark now, alive with mycorrhizal threads. Three years ago this was bare red clay. Cover crops, compost, patience. The land healed itself once someone stopped hurting it.
+
+At the monthly meeting, the council reports not in metrics but in stories. The spring near the eastern boundary is flowing stronger. The elderberry along the south fence is fruiting for the first time. Coyote tracks appeared near the chicken run — time to reinforce the fence, but also a sign that the wildlife corridor is working. Predators follow prey and prey follows habitat and habitat follows water and water follows the contour swales that were dug by hand three winters ago. Everything connects. The land council's job is to pay attention to the connections.
+
+Gaviotas, Colombia, proved this is not poetry. They regenerated eight million trees on barren savanna that experts called beyond recovery. Within twenty years, springs dry for decades began flowing. Species unseen for centuries returned. P.A. Yeomans discovered the same principle in Australia — his keyline design reads the water patterns already written into the landscape and works with them, cutting channels along contours to slow water, spread it, sink it deep. Ernst Gotsch's syntropic agroforestry in Brazil follows the forest's own logic: successional planting that mimics how an ecosystem builds itself, layer by layer, with food at every stage.
+
+![Aerial view of regenerated land showing contour swales, food forest patches, and wildlife corridors](visuals:photorealistic aerial view of intentional community land showing keyline contour swales filled with water on gentle rolling hills, patches of diverse food forest at different heights, wildlife corridors of native trees connecting to surrounding forest, small cluster of earthen buildings with living roofs, patchwork of gardens and orchards, late afternoon golden light casting long shadows)
+
+## What Nature Teaches
+
+A coral reef does not sit *in* the ocean. It *is* the ocean — the living edge where mineral becomes biology, where current becomes feeding, where a thousand species negotiate without a manager. The reef builds itself from the skeletons of its ancestors. It grows toward the light. It creates the conditions for more life than could exist without it. This is the pattern we follow.
+
+The deepest teaching is about time. A forest thinks in centuries. A watershed thinks in millennia. When you plant five hundred trees in your first three years, you are beginning a conversation you will not live to finish. Your grandchildren will walk under canopy you will never see. This is custodianship — the understanding that the land holds you as much as you hold it, and that when the community dissolves (if ever), the land returns to wildness, not to developers. The CLT ground lease says this in legal language. The songlines said it first.
+
+Every living system wants to become more complex, more diverse, more resilient. The role of the human is not architect but midwife — creating conditions, removing obstacles, then stepping back. The land knows what it wants to become. It has been becoming it for longer than our species has existed. Our job is to rejoin the process.
+
+## Where You Can See It
+
+Stand on the hilltop at Tamera in Portugal's Alentejo — once a dusty, dying landscape where springs had gone silent. Sepp Holzer's water retention landscapes brought them back. You can hear them now, trickling between stones, feeding pools where dragonflies hover. At Greening the Desert in Jordan's Dead Sea Valley, Geoff Lawton transformed dead salt flat into food forest in three years. Walk through it and the temperature drops ten degrees under canopy. In Gaviotas, the children swim in streams their grandparents never knew existed. Each place tells the same story: the land was waiting. It only needed someone to listen.
+
+![A lush regenerated food forest with water features, diverse plantings at many heights, and a path winding through](visuals:photorealistic lush food forest with multiple canopy layers from ground cover herbs to tall fruit and nut trees, a winding earthen path through diverse plantings, small natural pond reflecting sky, butterflies and birds visible in dappled light, rich green abundance at every level, sense of mature productive ecosystem)
+
+## What We're Building
+
+The legal structure removes the land from the market permanently. Community Land Trust, conservation easement, or sovereign territory — the form matters less than the principle: no individual can sell what belongs to the field. The 99-year ground lease is a promise written in law that this soil will never become a parking lot. The conservation easement is a permanent covenant with the future.
+
+Before any earthworks, one full year of observation. Watching water flow, sun patterns, wind, wildlife corridors, soil types. Then keyline water harvesting. Five hundred trees in the first three years. Wildlife corridors connecting to surrounding habitat. Every member is a custodian, not an owner. The land council walks the whole property monthly — not to inspect but to listen. The land has been speaking for a long time. We are only now learning its language again.
 
 ## Resources
-- 📐 [One Community - Open Source Village](https://onecommunityglobal.org/open-source/) — complete open-source blueprints for 7 village types including land use planning (type: blueprint)
-- 📖 [Andrew Millison - Permaculture Design](https://open.oregonstate.education/permaculturedesign/) — free textbook on permaculture land design for climate resilience (type: book)
-- 📖 [ATTRA Sustainable Agriculture](https://attra.ncat.org/) — 300+ free publications including land management and soil health (type: guide)
-- 🌐 [Foundation for Intentional Community](https://www.ic.org/) — directory of 1000+ communities, land search resources, forums (type: community)
-- 📖 [Grounded Solutions - CLT Startup Hub](https://groundedsolutions.org/resources/start-upclthub/) — free toolkit for starting a community land trust (type: guide)
-- 📖 [Grounded Solutions - CLT Technical Manual](https://groundedsolutions.org/resources/community-land-trust-technical-manual/) — comprehensive guide to operating a CLT (type: guide)
-- 🌐 [Grounded Solutions - CLT Map](https://groundedsolutions.org/sehmap/) — interactive map of US community land trusts (type: community)
-- 🌐 [Permaculture Global Network](https://permacultureglobal.org/) — worldwide map of permaculture land projects (type: community)
+- [One Community - Open Source Village](https://onecommunityglobal.org/open-source/) — complete open-source blueprints for 7 village types including land use planning
+- [Andrew Millison - Permaculture Design](https://open.oregonstate.education/permaculturedesign/) — free textbook on permaculture land design for climate resilience
+- [ATTRA Sustainable Agriculture](https://attra.ncat.org/) — 300+ free publications including land management and soil health
+- [Foundation for Intentional Community](https://www.ic.org/) — directory of 1000+ communities, land search resources, forums
+- [Grounded Solutions - CLT Startup Hub](https://groundedsolutions.org/resources/start-upclthub/) — free toolkit for starting a community land trust
+- [Grounded Solutions - CLT Technical Manual](https://groundedsolutions.org/resources/community-land-trust-technical-manual/) — comprehensive guide to operating a CLT
+- [Permaculture Global Network](https://permacultureglobal.org/) — worldwide map of permaculture land projects
 
-## Materials & Methods
-- **Keyline design** — P.A. Yeomans water harvesting along contour lines. $5,000-20,000 per 10 acres for initial earthworks. Springs recharge within 2-5 years.
-- **Syntropic agroforestry** — Ernst Gotsch method, successional planting mimicking forest development. $3,000-8,000 per acre establishment.
-- **Swales and berms** — earthen water retention ditches on contour. $2,000-8,000 per 100 linear meters. Gravity-fed, no pumps.
-- **Community land trust (CLT)** — 99-year ground leases, land held in perpetuity. Legal setup $10,000-30,000. Reduces per-person cost 50-80%.
-- **Conservation easement** — permanent land protection, potential tax benefits. Legal cost $5,000-15,000.
-- **Soil remediation** — compost, cover crops, biochar. $1,000-5,000 per acre. Rebuilds degraded land in 3-5 years.
+## The Questions That Live Here
 
-## At Scale
-- **50 people**: 20-40 acres minimum. 5 acres built environment, 5 acres food production, 10-30 acres forest/wildlife/buffer. Water: 1-2 ponds, rainwater cisterns.
-- **100 people**: 50-100 acres. 10 acres built, 15 acres food, 25-75 acres forest/riparian. Multiple water bodies. Keyline system across property.
-- **200 people**: 100-200 acres. 20 acres built, 30 acres food, 50-150 acres managed forest, wildlife corridors connecting to surrounding habitat. Watershed-scale water management.
+- How do you evaluate land before entering relationship with it — water, soil, access, zoning, neighbors, history?
+- What is the right ratio of land to people? (Current estimates: 0.5-1 acre per person including food, forest, common ground)
+- How do you navigate rural zoning when the legal system has no category for "living within a larger living system"?
+- What does it mean to inherit custodianship from people who practiced it for sixty thousand years?
+- When does observation end and action begin — or is observation itself the deepest form of action?
 
-## Climate Adaptations
-- **Temperate** — deciduous food forest, keyline water harvesting, 4-season management, frost pockets for cold-air drainage planning
-- **Tropical** — rapid growth enables 3-5 year forest establishment, contour terracing for heavy rainfall, shade management critical
-- **Arid** — water harvesting paramount (swales, check dams, cisterns), drought-tolerant pioneer species, shade structures, mulch 6-12 inches
-- **Alpine** — short growing season, protect south-facing slopes, windbreaks essential, snow-melt water management, cold-hardy species
-
-## Visuals
-1. **Aerial view of community land** — `photorealistic aerial view of intentional community on rolling hills, food forest zones, meandering swales filled with water, clusters of earthen buildings, wildlife corridors of native trees, patchwork of gardens and orchards`
-2. **Keyline water harvesting** — `photorealistic landscape showing contour swales capturing rainfall on gentle hillside, water spreading across land, green grass growing along swale lines, young fruit trees planted along berms, blue sky`
-3. **Regenerated landscape** — `photorealistic before and after split image, barren degraded land on left, lush diverse food forest with ponds and buildings on right, same hillside after 10 years of regeneration`
-
-## Costs
-- **Land purchase (US averages)**: Rural: $2,000-15,000/acre. Peri-urban: $10,000-50,000/acre. Colorado mountain: $5,000-20,000/acre.
-- **CLT legal setup**: $10,000-30,000 one-time.
-- **Keyline earthworks**: $5,000-20,000 for initial 10-acre system.
-- **Tree planting (500 trees)**: $5,000-15,000 including nursery stock and labor.
-- **Water infrastructure** (ponds, cisterns, swales): $20,000-60,000 for 50-person site.
-- **Total land cost for 50 people (30 acres, Colorado)**: $150,000-600,000 land + $50,000-100,000 earthworks/water/trees.
-
-## Living Examples
-- **Coral reef** — a community of organisms that IS the ecosystem, not separate from it
-- **Aboriginal Australian songlines** — the land is alive, sung into existence, mapped through relationship
-- **Keyline design (P.A. Yeomans)** — reading the land's water patterns and working with them
-- **Gaviotas** — regenerated 8 million trees on degraded Colombian savanna through attentive land relationship
-
-## Aligned Places
-- **Gaviotas** (Colombia) — Regenerated 8 million trees on savanna — proof that land responds to care
-- **Greening the Desert (Geoff Lawton)** (Jordan) — Transformed dead salt flat into food forest in 3 years
-
-## Aligned Communities
-- [Gaviotas](https://en.wikipedia.org/wiki/Gaviotas) — 8 million trees regenerated on barren savanna. Springs returned. Open-source technology for the tropics.
-- [Tamera Water Landscapes](https://www.tamera.org/) — Sepp Holzer-style water retention landscapes that restored dried springs in Portuguese Alentejo.
-- [Greening the Desert](https://www.permaculturenews.org/) — Geoff Lawton transformed dead salt flat in Jordan into a food forest in 3 years. Proof of what's possible.
-
-## How It Fits
-Land Embedding is where Nourishing meets Spiraling — the long relationship with place that deepens over generations. It's the ground everything else stands on.
-
-## Open Questions
-- How to evaluate land before purchase? (Water, soil, access, zoning, neighbors)
-- What's the ideal land-to-person ratio? (Estimates: 0.5-1 acre per person including food/forest/common)
-- How to navigate rural zoning for intentional community?
-
-## Cross-References
-→ lc-nourishing, lc-nourishment, lc-energy, lc-space
+## Connected Frequencies
+→ [lc-nourishing](lc-nourishing.md) · [lc-nourishment](lc-nourishment.md) · [lc-energy](lc-energy.md) · [lc-space](lc-space.md)
