@@ -57,7 +57,7 @@ In a symphony orchestra, sixty instruments play simultaneously. Each one produce
 
 A community that actively seeks difference the way a gardener seeks diverse seeds. Welcome practices designed not to screen but to listen. Economic structures flexible enough that income level does not determine who can belong. Governance by consent so that the quietest voice carries the same weight as the loudest. The understanding, built into every system, that the field's health is measured by its diversity.
 
-Not tolerance. Not accommodation. Not even celebration. Something deeper: the recognition that without the note you carry, the chord is incomplete. Your presence is not a courtesy extended. It is a structural requirement.
+Not tolerance. Not accommodation. Not even celebration. Something deeper: the recognition that without the note you carry, the chord is incomplete. Your presence is not a courtesy extended. It is a structural truth.
 
 Governance by consent so that the quietest voice carries the same weight as the loudest. Sociocratic circles where decisions advance only when no one has a paramount objection. The introvert and the extrovert both shape the outcome, just through different channels. The field learns to listen at every volume.
 
