@@ -47,6 +47,8 @@ Spec → Test → Implement → CI → Review → Merge
 
 **Read `docs/vision-kb/INDEX.md` first** (~300 tokens). It's an AI-maintained markdown wiki (Karpathy LLM Wiki pattern) for the community vision. Drill into `docs/vision-kb/concepts/{id}.md` for concept details. Cross-cutting files: `spaces/`, `materials/`, `locations/`, `scales/`, `realization/`, `resources/`. After any enrichment, update the concept file + INDEX.md + LOG.md. See `docs/vision-kb/SCHEMA.md` for format rules.
 
+**FREQUENCY RULE**: When integrating external knowledge (community research, traditional models, practical data), NEVER import old-earth structures directly (bylaws, screening, revenue targets, spending thresholds, voting, applications). Always compost external knowledge and translate through the Living Collective frequency: trust not control, emergence not procedure, overflow not extraction, resonance not screening, callings not roles. The test: does this sound like a corporate handbook? If yes, find the living version. See SCHEMA.md "Frequency Alignment" section.
+
 The graph DB is the sole source of truth. The KB is the working draft where content expands before syncing. To sync KB → DB: `python scripts/sync_kb_to_db.py`. Relationship types and axes are also in the DB — seeded once via `python scripts/seed_schema_to_db.py`.
 
 ## Navigation
