@@ -64,6 +64,7 @@ Each entry is a Pollinations prompt + caption:
 |--------|---------|-------------------|
 | `seed` | Basic description + blueprint notes only | 300-500 |
 | `expanding` | Has resources, materials, some visuals | 800-1500 |
+| `deepening` | Living story + practical guide split. Concept file has story, connections, top resources. Guide file in `guides/` has all numbers, costs, timelines, how-to. | 2000-3000 (concept) + guide |
 | `mature` | Full resources, materials, scale, location, visuals, costs | 1500-3000 |
 | `complete` | Reviewed, cross-linked, all questions resolved | 2000-4000 |
 
