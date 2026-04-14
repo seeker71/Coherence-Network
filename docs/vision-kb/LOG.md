@@ -2,6 +2,16 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-14] operational | Governance, economics, membership frameworks
+
+- Created governance.md: bylaws, consent process, conflict resolution 1-2-3-4, stewardship roles, 15 constitutional principles, financial thresholds
+- Created economics.md: 4 revenue engines (education, agriculture, maker, digital), 3-layer internal economics, what to start NOW before land
+- Created membership.md: 4-stage pipeline (visitor → explorer → provisional → full), departure process, saying no, diversity commitment
+- Created reality-check.md: 500 years of community data, 5 failure modes, governance by scale, economic models that work
+- Updated realization/INDEX.md with links to all operational documents
+- **Source**: deep research on Hutterites, Damanhur, Svanholm, East Wind, Twin Oaks, Findhorn, Tamera, Auroville + current projects (Polestar Village, Rachel Carson EcoVillage)
+- **Impact**: the 5 gaps identified by research (economic engine, governance, membership, conflict resolution, legal entity) are now addressed
+
 ## [2026-04-14] enrichment | ALL 51 concepts expanded (seed → expanding)
 
 - Enriched remaining 28 concepts (L0-1 systems/flows + L2 activities/visions + L3 vocabulary)
