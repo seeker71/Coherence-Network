@@ -20,6 +20,7 @@ Practice 'clean signal' in all community communication: say what you mean, mean 
 
 ## Resources
 - [Plum Village](https://plumvillage.org/) -- lineage transmission through daily practice (type: community)
+- 📖 [Education as Participation — Unschooling Wisdom](https://www.self-directed.org/) — children learn most deeply through participation in real community life, not abstracted instruction (type: guide)
 
 ## Visuals
 1. **Elder teaching** -- `photorealistic elder woman teaching young apprentice to identify medicinal herbs in garden, hands pointing at plant, knowledge passing between generations, warm afternoon light`

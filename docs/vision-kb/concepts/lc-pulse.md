@@ -21,6 +21,7 @@ Start every community gathering by sensing the pulse: a 2-minute silence where e
 ## Resources
 - [Foundation for Intentional Community](https://www.ic.org/) — 1000+ communities modeling collective living (type: community)
 - [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based governance for living systems (type: guide)
+- 📖 [The Story of Interbeing — Charles Eisenstein](https://charleseisenstein.org/essays/living-in-the-gift/) — the field IS interbeing: more for you is more for me, generosity as transmission vector (type: book)
 
 ## Visuals
 1. **The pulse at dawn** — `photorealistic aerial view of circular intentional community at dawn, buildings arranged in organic spiral pattern, central fire pit with smoke rising, gardens radiating outward, mist in valleys, golden first light`
