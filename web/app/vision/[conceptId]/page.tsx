@@ -339,12 +339,45 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
                   </figure>
                 );
               }
-              // Regular paragraph (handle bold and links)
+              // List items (- text or - **bold** text)
+              if (trimmed.startsWith("- ")) {
+                const items = trimmed.split("\n").filter((l: string) => l.trim().startsWith("- "));
+                return (
+                  <ul key={i} className="space-y-2 pl-4">
+                    {items.map((item: string, j: number) => (
+                      <li key={j} className="text-sm text-stone-400 leading-relaxed list-disc"
+                        dangerouslySetInnerHTML={{
+                          __html: item.slice(2)
+                            .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-stone-300">$1</strong>')
+                            .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-amber-400/70 hover:text-amber-300 transition-colors">$1</a>')
+                        }}
+                      />
+                    ))}
+                  </ul>
+                );
+              }
+              // Cross-references (→ lc-xxx, lc-yyy) — render as linked pills
+              if (trimmed.startsWith("→ ")) {
+                const refs = trimmed.slice(2).split(",").map((r: string) => r.trim()).filter(Boolean);
+                return (
+                  <div key={i} className="flex flex-wrap gap-2 pt-4">
+                    <span className="text-xs text-stone-600">Connected:</span>
+                    {refs.map((ref: string) => (
+                      <Link key={ref} href={`/vision/${ref}`}
+                        className="text-xs px-2 py-1 rounded-full border border-stone-700/30 text-stone-500 hover:text-amber-300/70 hover:border-amber-500/20 transition-colors">
+                        {nameMap[ref] || ref.replace("lc-", "").replace("lc-v-", "").replace("lc-w-", "").replace(/-/g, " ")}
+                      </Link>
+                    ))}
+                  </div>
+                );
+              }
+              // Regular paragraph (handle bold, links, italic)
               return (
                 <p key={i} className="text-base text-stone-400 leading-relaxed"
                   dangerouslySetInnerHTML={{
                     __html: trimmed
                       .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-stone-300">$1</strong>')
+                      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
                       .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-amber-400/70 hover:text-amber-300 border-b border-amber-500/20 hover:border-amber-500/40 transition-colors">$1</a>')
                   }}
                 />
