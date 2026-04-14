@@ -69,9 +69,9 @@ def parse_hierarchy_from_index() -> list[tuple[str, str]]:
     return edges
 
 
-def create_edge(api_url: str, from_id: str, to_id: str, edge_type: str = "resonates-with", retries: int = 3) -> bool:
-    """POST /api/concepts/edges — create an edge. Returns True on success or conflict."""
-    url = f"{api_url}/api/concepts/edges"
+def create_edge(api_url: str, from_id: str, to_id: str, edge_type: str = "analogous-to", retries: int = 3) -> bool:
+    """POST /api/graph/edges — create an edge. Returns True on success or conflict."""
+    url = f"{api_url}/api/graph/edges"
     body = {
         "from_id": from_id,
         "to_id": to_id,
@@ -126,12 +126,12 @@ def main():
         refs = parse_crossrefs(filepath)
         for ref in refs:
             if ref != concept_id:  # no self-loops
-                all_edges.append((concept_id, ref, "resonates-with"))
+                all_edges.append((concept_id, ref, "analogous-to"))
 
     # Add hierarchy edges
     hierarchy = parse_hierarchy_from_index()
     for parent, child in hierarchy:
-        all_edges.append((parent, child, "emerges-from"))
+        all_edges.append((parent, child, "parent-of"))
 
     # Deduplicate (both directions count as same edge for symmetric types)
     seen = set()
