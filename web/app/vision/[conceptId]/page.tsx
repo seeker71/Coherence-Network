@@ -15,6 +15,8 @@ type Concept = {
   description: string;
   typeId?: string;
   level?: number;
+  // Full living story (markdown) — the primary content
+  story_content?: string;
   keywords?: string[];
   axes?: string[];
   domains?: string[];
@@ -292,18 +294,74 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
           </p>
         </div>
 
-        {/* Rich content — details, examples, aligned places, blueprint */}
-        {concept.details && (
+        {/* Story content — the living narrative (primary display when available) */}
+        {concept.story_content ? (
+          <div className="mb-12 max-w-3xl space-y-6">
+            {concept.story_content.split("\n\n").map((block, i) => {
+              const trimmed = block.trim();
+              if (!trimmed) return null;
+
+              // Heading: ## Title
+              if (trimmed.startsWith("## ")) {
+                return <h2 key={i} className="text-2xl font-light text-stone-300 pt-8 pb-2">{trimmed.slice(3)}</h2>;
+              }
+              // Heading: ### Title
+              if (trimmed.startsWith("### ")) {
+                return <h3 key={i} className="text-lg font-light text-stone-400 pt-4 pb-1">{trimmed.slice(4)}</h3>;
+              }
+              // Blockquote
+              if (trimmed.startsWith("> ")) {
+                return (
+                  <blockquote key={i} className="border-l-2 border-amber-500/30 pl-4 text-stone-400 italic leading-relaxed">
+                    {trimmed.slice(2)}
+                  </blockquote>
+                );
+              }
+              // Inline visual: ![caption](visuals:prompt)
+              const visualMatch = trimmed.match(/^!\[([^\]]*)\]\(visuals:([^)]+)\)$/);
+              if (visualMatch) {
+                const caption = visualMatch[1];
+                const prompt = visualMatch[2];
+                const seed = (concept.id || "").split("").reduce((a: number, c: string) => a + c.charCodeAt(0), 0) + i * 13;
+                return (
+                  <figure key={i} className="py-4">
+                    <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-stone-800/50">
+                      <Image
+                        src={pollinationsUrl(prompt, seed)}
+                        alt={caption}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, 768px"
+                        unoptimized
+                      />
+                    </div>
+                    <figcaption className="text-xs text-stone-600 mt-2 italic">{caption}</figcaption>
+                  </figure>
+                );
+              }
+              // Regular paragraph (handle bold and links)
+              return (
+                <p key={i} className="text-base text-stone-400 leading-relaxed"
+                  dangerouslySetInnerHTML={{
+                    __html: trimmed
+                      .replace(/\*\*([^*]+)\*\*/g, '<strong class="text-stone-300">$1</strong>')
+                      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-amber-400/70 hover:text-amber-300 border-b border-amber-500/20 hover:border-amber-500/40 transition-colors">$1</a>')
+                  }}
+                />
+              );
+            })}
+          </div>
+        ) : concept.details ? (
           <div className="mb-10 max-w-3xl">
             <p className="text-base text-stone-400 leading-relaxed">{concept.details}</p>
           </div>
-        )}
+        ) : null}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Main content */}
           <div className="md:col-span-2 space-y-8">
 
-            {/* How it fits */}
+            {/* How it fits (hidden when story_content exists — it's in the story) */}
             {concept.how_it_fits && (
               <section className="rounded-2xl border border-amber-800/20 bg-amber-900/10 p-6 space-y-3">
                 <h2 className="text-sm font-medium text-amber-400/70 uppercase tracking-wider">How it fits into the whole</h2>
