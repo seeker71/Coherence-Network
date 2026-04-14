@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { PrintButton } from "@/components/vision/PrintButton";
+import { pollinationsUrl } from "@/lib/vision-utils";
 
 export const metadata: Metadata = {
   title: "Community Posters — The Living Collective",
@@ -153,9 +154,7 @@ const POSTERS: Poster[] = [
   },
 ];
 
-function pollinationsUrl(prompt: string, width = 1024, height = 768): string {
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${width}&height=${height}&model=flux&nologo=true&seed=42`;
-}
+// pollinationsUrl imported from @/lib/vision-utils
 
 export default function PostersPage() {
   return (
@@ -465,7 +464,7 @@ export default function PostersPage() {
 }
 
 function PosterCard({ poster }: { poster: Poster }) {
-  const imageUrl = pollinationsUrl(poster.prompt, 1024, 768);
+  const imageUrl = pollinationsUrl(poster.prompt, 42, 1024, 768);
 
   return (
     <div className="poster-card rounded-2xl overflow-hidden border border-stone-800/30 bg-stone-900/20 group">
