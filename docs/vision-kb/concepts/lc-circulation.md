@@ -1,8 +1,8 @@
 ---
 id: lc-circulation
 hz: 528
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Circulation
@@ -18,6 +18,16 @@ Resources flow like the mycorrhizal network beneath a forest: nutrients from whe
 ## Blueprint
 Common fund covers all basic needs: food, shelter, energy, health, education. Individual cells don't handle money for daily life. External income from community enterprises flows into the common fund. Surplus circulates to the network — other communities, land regeneration, seeding new fields.
 
+## Resources
+- 📖 [Sacred Economics](https://sacred-economics.com/) — Charles Eisenstein, free online book on gift economy and resource circulation (type: book)
+- 📖 [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based resource allocation and governance (type: guide)
+- 🌐 [Foundation for Intentional Community](https://www.ic.org/) — community economics models from 1000+ communities (type: community)
+- 📖 [Grounded Solutions - CLT Resources](https://groundedsolutions.org/) — community land trust models for shared economics (type: guide)
+
+## Visuals
+1. **Common fund visualization** — `photorealistic community meeting room with transparent glass jar of coins and bills on table, people discussing around circular table, whiteboard showing flow diagram of resources, warm light`
+2. **Mycorrhizal network diagram** — `photorealistic illustration of underground fungal network connecting tree roots, nutrients flowing as glowing particles between trees, forest floor with mushrooms, cross-section view`
+
 ## Living Examples
 - **Mycorrhizal network** — mother trees feed seedlings through underground fungal highways
 - **Blood circulation** — oxygen to every cell, waste removed, no cell pays
@@ -31,8 +41,9 @@ Common fund covers all basic needs: food, shelter, energy, health, education. In
 Circulation is where Nourishing meets Field Intelligence — resources flow because the field senses where they're needed. It replaces economics with biology.
 
 ## Open Questions
-- What aspects of Circulation need deeper research?
-- What real-world examples are we missing?
+- How to handle the transition from individual income to common fund?
+- What's the right balance between shared resources and personal autonomy?
+- How to interface with external economy (taxes, health insurance, pensions)?
 
 ## Cross-References
-→ lc-nourishing, lc-field-sensing
+→ lc-offering, lc-v-mycorrhizal, lc-nourishment

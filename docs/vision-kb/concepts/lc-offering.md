@@ -1,8 +1,8 @@
 ---
 id: lc-offering
 hz: 528
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Offering
@@ -18,6 +18,16 @@ What flows from a cell's natural frequency. Heart beats because that's its natur
 ## Blueprint
 No assigned roles. A 'resonance board' where the community posts what it needs; people step forward from resonance, not obligation. Weekly 'offering circle' where anyone can share what they want to contribute. Track offerings, not hours — what did you give that was alive?
 
+## Resources
+- 📖 [Sacred Economics by Charles Eisenstein](https://sacred-economics.com/) — free online book on gift economy and offering-based economics (type: book)
+- 📖 [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based governance where contribution flows from resonance (type: guide)
+- 🌐 [Foundation for Intentional Community](https://www.ic.org/) — 1000+ communities modeling offering-based economies (type: community)
+- 📖 [Gift Economy resources](https://www.gifteconomy.org.au/) — guides on building gift economy practices (type: guide)
+
+## Visuals
+1. **Resonance board** — `photorealistic community bulletin board on wooden wall showing needs and offerings pinned with colorful cards, people reading and adding cards, earthen wall, warm light, plants nearby`
+2. **Offering circle** — `photorealistic group of people sitting in circle outdoors on cushions, sharing skills and gifts, someone demonstrating woodworking, another playing music, warm afternoon light, garden setting`
+
 ## Living Examples
 - **Dawn bird chorus** — each species singing its frequency, the forest symphony emerges
 - **A master carpenter finishing a joint** — the precision IS the offering, the beauty IS the function
@@ -31,8 +41,9 @@ No assigned roles. A 'resonance board' where the community posts what it needs; 
 Offering is the Expressing flow as service. It replaces the concept of 'work' — there is no work, only expression that happens to nourish the field.
 
 ## Open Questions
-- What aspects of Offering need deeper research?
-- What real-world examples are we missing?
+- How to handle free-riding without creating surveillance?
+- When does offering-based economics need to interface with money (medical, legal, taxes)?
+- How to support members whose natural offering isn't yet visible to them?
 
 ## Cross-References
-→ lc-expressing
+→ lc-circulation, lc-ceremony, lc-stillness
