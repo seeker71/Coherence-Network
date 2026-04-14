@@ -1,20 +1,13 @@
 """Concept ontology service — graph DB is the single source of truth.
 
-All concepts, edges, and tags live in the graph database (graph_service).
-There is no separate store. Concepts are created through the API the same
-way any data is created — whether by a human, an agent, or a migration
-script that reads from a JSON file.
+All concepts, edges, and tags live in the graph database. There is no
+separate store. The DB is populated and enriched via:
+- API endpoints (PATCH /api/graph/nodes/{id})
+- sync_kb_to_db.py (reads KB markdown → PATCHes via API)
 
-On first access, if the graph DB has no concept nodes, the service
-creates the initial concepts from the JSON definition files. This is
-functionally identical to POSTing them through the API — the JSON files
-are just a convenient way to version-control the initial concept
-definitions. Once in the DB, they're living data like everything else.
-
-Relationship types and axes define the vocabulary of edge types and
-dimensional axes — reference metadata that describes what kinds of
-connections and dimensions exist. These are loaded from JSON because
-they're schema-level, not data-level.
+Relationship types and axes are schema-level reference metadata loaded
+from small JSON files on first access. These define what kinds of
+connections and dimensions exist — they're vocabulary, not content.
 """
 
 from __future__ import annotations
@@ -37,194 +30,33 @@ _axes: list[dict[str, Any]] = []
 # Entity-concept tags (in-memory for now — could move to graph edges later).
 _entity_tags: dict[str, list[str]] = {}
 
-# Whether the initial concepts have been ensured in this process.
-_ensured = False
+# Whether the DB schema and reference metadata have been ensured.
+_ready = False
 
 
 def reset_ensure_flag() -> None:
-    """Reset so initial concepts are re-checked on next access.
+    """Reset so schema + reference metadata are re-loaded on next access.
 
     Called by test fixtures that create a fresh DB per test.
     """
-    global _ensured
-    _ensured = False
+    global _ready
+    _ready = False
 
 
-def _get_json_schema_version() -> str:
-    """Read the combined schema version from all ontology JSON files."""
-    concept_files = [
-        _ONTOLOGY_DIR / "core-concepts.json",
-        *sorted(_ONTOLOGY_DIR.glob("living-collective*.json")),
-    ]
-    versions = []
-    for f in concept_files:
-        if not f.exists():
-            continue
-        try:
-            data = json.loads(f.read_text(encoding="utf-8"))
-            v = data.get("metadata", {}).get("version", "0.0.0")
-            versions.append(f"{f.name}:{v}")
-        except Exception:
-            versions.append(f"{f.name}:error")
-    return "|".join(sorted(versions))
+def _ensure_ready() -> None:
+    """Ensure DB schema exists and reference metadata is loaded.
 
-
-def _ensure_initial_concepts() -> None:
-    """Seed the graph DB from JSON definition files.
-
-    Version-gated: if the DB already has the current schema version,
-    skip all JSON reading entirely (instant startup). Only re-reads
-    JSON when the version changes (new ontology release).
-
-    Tests bypass the version gate via reset_ensure_flag().
+    No concept seeding — the DB is the source of truth. Concepts are
+    created/updated via API endpoints or sync_kb_to_db.py.
     """
-    global _ensured
-    if _ensured:
+    global _ready
+    if _ready:
         return
-    _ensured = True
+    _ready = True
 
-    from app.services import graph_service
     from app.services.unified_db import ensure_schema
     ensure_schema()
-
-    # Always load reference metadata (relationship types + axes)
     _load_reference_metadata()
-
-    # ── Version gate: skip JSON if DB already has this version ──
-    target_version = _get_json_schema_version()
-    version_node = graph_service.get_node("_schema-version")
-    current_version = version_node.get("version") if version_node else None
-
-    if current_version == target_version:
-        log.info("Schema version matches (%s) — skipping JSON seed", target_version[:60])
-        return
-
-    log.info("Schema version changed (%s → %s) — seeding from JSON", current_version, target_version[:60])
-
-    # ── Full seed from JSON definitions ──
-    concept_files = [
-        _ONTOLOGY_DIR / "core-concepts.json",
-        *sorted(_ONTOLOGY_DIR.glob("living-collective*.json")),
-    ]
-
-    total_concepts = 0
-    total_edges = 0
-
-    for concept_file in concept_files:
-        if not concept_file.exists():
-            continue
-        try:
-            data = json.loads(concept_file.read_text(encoding="utf-8"))
-        except Exception as exc:
-            log.warning("Failed to read %s: %s", concept_file.name, exc)
-            continue
-
-        for c in data.get("concepts", []):
-            first_class = {"id", "name", "description"}
-            props = {k: v for k, v in c.items() if k not in first_class}
-            props.setdefault("userDefined", False)
-
-            existing = graph_service.get_node(c["id"])
-            if existing:
-                # Update existing node with any new/changed properties.
-                # This ensures rich content fields added to the JSON after
-                # the node was first created still flow into the graph DB.
-                graph_service.update_node(
-                    c["id"],
-                    name=c.get("name", c["id"]),
-                    description=c.get("description", ""),
-                    properties=props,
-                )
-                total_concepts += 1
-                continue
-            try:
-                graph_service.create_node(
-                    id=c["id"],
-                    type="concept",
-                    name=c.get("name", c["id"]),
-                    description=c.get("description", ""),
-                    phase="gas",
-                    properties=props,
-                )
-                total_concepts += 1
-            except Exception:
-                pass  # Concurrent creation — safe to ignore
-
-        # Seed edges
-        for e in data.get("edges", []):
-            try:
-                edge_id = f"{e['from']}-{e['type']}-{e['to']}"
-                graph_service.create_edge(
-                    from_id=e["from"],
-                    to_id=e["to"],
-                    type=e["type"],
-                    strength=e.get("strength", 0.8),
-                    created_by="initial-definitions",
-                )
-                total_edges += 1
-            except Exception:
-                pass
-
-    # Seed non-concept entity types (communities, scenes, stories, practices, networks)
-    # Same pattern as concepts: pass through all properties, update if exists, create if not.
-    entity_types = [
-        ("communities", "community"),
-        ("scenes", "scene"),
-        ("stories", "story"),
-        ("practices", "practice"),
-        ("networks", "network-org"),
-    ]
-    total_entities = 0
-    for concept_file in concept_files:
-        if not concept_file.exists():
-            continue
-        try:
-            data = json.loads(concept_file.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        for json_key, node_type in entity_types:
-            for item in data.get(json_key, []):
-                first_class = {"id", "name", "description"}
-                props = {k: v for k, v in item.items() if k not in first_class}
-                existing = graph_service.get_node(item["id"])
-                if existing:
-                    graph_service.update_node(
-                        item["id"],
-                        name=item.get("name", item["id"]),
-                        description=item.get("description", ""),
-                        properties=props,
-                    )
-                else:
-                    try:
-                        graph_service.create_node(
-                            id=item["id"],
-                            type=node_type,
-                            name=item.get("name", item["id"]),
-                            description=item.get("description", ""),
-                            phase="water",
-                            properties=props,
-                        )
-                    except Exception:
-                        pass
-                total_entities += 1
-
-    # ── Update schema version in DB so next startup skips JSON ──
-    if version_node:
-        graph_service.update_node("_schema-version", properties={"version": target_version})
-    else:
-        try:
-            graph_service.create_node(
-                id="_schema-version",
-                type="system",
-                name="Schema Version",
-                description="Tracks ontology JSON version to skip re-seeding",
-                properties={"version": target_version},
-            )
-        except Exception:
-            pass  # Concurrent creation — safe
-
-    log.info("Seeded %d concepts, %d edges, %d entities. Schema version: %s",
-             total_concepts, total_edges, total_entities, target_version[:60])
 
 
 def _load_reference_metadata() -> None:
@@ -253,10 +85,8 @@ def _load_reference_metadata() -> None:
 # ---------------------------------------------------------------------------
 
 def _gs():
-    """Lazy import + lazy seed. Every read/write goes through here, so
-    seeding happens on first access — not at module load (which would
-    seed the wrong DB when tests create fresh per-test databases)."""
-    _ensure_initial_concepts()
+    """Lazy import + ensure ready. Every read/write goes through here."""
+    _ensure_ready()
     from app.services import graph_service
     return graph_service
 
