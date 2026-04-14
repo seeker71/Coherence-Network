@@ -1,8 +1,8 @@
 ---
 id: lc-rest
 hz: 174
-status: seed
-updated: 2026-04-13
+status: expanding
+updated: 2026-04-14
 ---
 
 # Integration
@@ -17,6 +17,15 @@ How the field repairs, weaves new connections, dreams. Not the absence of activi
 
 ## Blueprint
 Designate a 'sanctuary' space that is always silent, always available. Enforce a collective rest period (2-4pm) where no loud activity happens. Honor seasonal rest: winter has fewer projects, longer evenings, more fire circles. When someone needs deep rest, the community reorganizes around them without discussion.
+
+## Resources
+- [Plum Village](https://plumvillage.org/) — Thich Nhat Hanh's community rest and mindfulness practices (type: guide)
+- [Sabbath/Sabbatical traditions](https://www.ic.org/) — intentional community approaches to cyclical rest (type: community)
+- [Taize Community](https://www.taize.fr/) — ecumenical community modeling rhythms of activity and rest (type: community)
+
+## Visuals
+1. **Sanctuary space** — `photorealistic quiet sanctuary room with soft natural light, cushions and blankets, plants, curved earthen walls, person sleeping peacefully, candle, warm afternoon light filtering through curtain`
+2. **Winter evening fire circle** — `photorealistic small group around indoor fireplace in earthen common room during winter evening, blankets, tea, storytelling, snow visible through window, warm flickering light`
 
 ## Living Examples
 - **Forest in winter** — still above, composting below, preparing the next explosion of growth
@@ -33,8 +42,9 @@ Designate a 'sanctuary' space that is always silent, always available. Enforce a
 Rest/Integration is the Nourishing flow in its receptive phase. Without it, the field burns out. It connects to Rhythm (daily and seasonal cycles) and Stillness (the conscious practice of pause).
 
 ## Open Questions
-- What aspects of Integration need deeper research?
-- What real-world examples are we missing?
+- How to honor individual rest needs without disrupting community rhythm?
+- What's the right seasonal work/rest ratio? (Winter: 60% rest / Summer: 30% rest?)
+- How to create a culture where rest is valued as much as productivity?
 
 ## Cross-References
-→ lc-nourishing
+→ lc-stillness, lc-composting, lc-health, lc-space
