@@ -1,28 +1,17 @@
 """API configuration loader — single source of truth.
 
-Configuration precedence:
-  1. api/config/api.json
-  2. ~/.coherence-network/config.json
-  3. hard-coded defaults
+Configuration precedence (deep-merged at load time):
+  1. hard-coded defaults from `_default_config()`
+  2. api/config/api.json              (checked-in dev defaults)
+  3. ~/.coherence-network/config.json (deployment overlay)
 
-No environment variables are read for application config — with a
-deliberately small set of infrastructure-shaped exceptions. Each helper
-below has its own precedence docstring; the common shape is
-
-    env var (if set) → config file → hard-coded default
-
-Exceptions:
-  - `database_url()`        honors DATABASE_URL (and <SERVICE>_DATABASE_URL)
-  - `server_environment()`  honors ENVIRONMENT (dev/staging/production/test)
-  - `auth_api_key()`        honors AUTH_API_KEY
-  - `auth_admin_key()`      honors AUTH_ADMIN_KEY
-
-Rationale: these are 12-factor infrastructure values that routinely
-differ between dev (sqlite, dev-key, development) and production (real
-postgres, strong random keys, production environment). Letting the env
-var override the config file's default keeps the config file honest as
-a dev-friendly starting point while still honoring production intent
-without needing to edit the checked-in config.
+No environment variables are read for application config. Production
+containers mount `/root/.coherence-network/config.json` as a read-only
+volume and put their real database URL, API keys, and environment
+string there. Env vars are static at container start, fragmented across
+compose + .env + shell, and opaque to the running body; config files
+are versioned, deep-merged, discoverable on disk, and can be reloaded
+with `reload_config()` without a rebuild. Prefer the config file.
 
 Usage:
     from app.config_loader import api_config, database_url
@@ -35,7 +24,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from pathlib import Path
 from typing import Any
 
@@ -527,39 +515,31 @@ def full_config() -> dict[str, Any]:
 def database_url(service: str | None = None) -> str:
     """Resolve the database URL for a domain, or the global default.
 
-    Precedence (highest wins):
+    Precedence:
       1. Per-service config override  (config.database_overrides.<service>)
-      2. Per-service env var          (<SERVICE>_DATABASE_URL, uppercased)
-      3. Global DATABASE_URL env var  (standard 12-factor override)
-      4. Global config default        (config.database.url)
-      5. Fallback                     (sqlite:///data/coherence.db)
+      2. Global config                (config.database.url)
+      3. Fallback                     (sqlite:///data/coherence.db)
+
+    Production containers set `database.url` in the mounted overlay
+    `/root/.coherence-network/config.json`. Dev uses the sqlite fallback
+    (or overrides in their own user config).
     """
     config = _load()
     if service:
         override = config.get("database_overrides", {}).get(service)
         if override:
             return str(override)
-        env_service = os.environ.get(f"{service.upper()}_DATABASE_URL", "").strip()
-        if env_service:
-            return env_service
-    env_global = os.environ.get("DATABASE_URL", "").strip()
-    if env_global:
-        return env_global
     return str(config.get("database", {}).get("url", "sqlite:///data/coherence.db"))
 
 
 def server_environment() -> str:
     """Resolve the server environment name.
 
-    Precedence: ENVIRONMENT env var → config.server.environment → "development".
-
-    Valid values conventionally: "development", "test", "testing",
-    "staging", "production". Callers that need a boolean use
-    `app.services.config_service.is_production()` which delegates here.
+    Reads `config.server.environment`, falling back to `"development"`.
+    Production containers set this in the mounted config overlay.
+    Callers that need a boolean use
+    `app.services.config_service.is_production()`, which delegates here.
     """
-    env = os.environ.get("ENVIRONMENT", "").strip().lower()
-    if env:
-        return env
     config = _load()
     return str(config.get("server", {}).get("environment", "development"))
 
@@ -567,16 +547,9 @@ def server_environment() -> str:
 def auth_api_key() -> str:
     """Resolve the shared API key used by `require_api_key`.
 
-    Precedence: AUTH_API_KEY env var → config.auth.api_key → "dev-key".
-
-    The keystore (`~/.coherence-network/keys.json`) is read by
-    `config_service.get_config()` which takes precedence over this
-    helper for CLI/user contexts. This helper is for server-side
-    middleware that must enforce a single canonical key.
+    Reads `config.auth.api_key`, falling back to `"dev-key"`. Production
+    containers set the real key in the mounted config overlay.
     """
-    env_key = os.environ.get("AUTH_API_KEY", "").strip()
-    if env_key:
-        return env_key
     config = _load()
     return str(config.get("auth", {}).get("api_key", "dev-key"))
 
@@ -584,11 +557,8 @@ def auth_api_key() -> str:
 def auth_admin_key() -> str:
     """Resolve the admin key used for destructive operations.
 
-    Precedence: AUTH_ADMIN_KEY env var → config.auth.admin_key → "dev-admin".
+    Reads `config.auth.admin_key`, falling back to `"dev-admin"`.
     """
-    env_key = os.environ.get("AUTH_ADMIN_KEY", "").strip()
-    if env_key:
-        return env_key
     config = _load()
     return str(config.get("auth", {}).get("admin_key", "dev-admin"))
 
