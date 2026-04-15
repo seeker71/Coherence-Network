@@ -1,8 +1,8 @@
 # Spec Index
 
-> 66 specs (65 done, 1 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 68 specs (65 done, 3 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (16 ideas → 66 specs)
+## By Idea (18 ideas → 68 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -101,6 +101,12 @@
 
 ### external-presence (1 spec)
 - [external-presence-bots-and-news](external-presence-bots-and-news.md) — social bots + news ingestion
+
+### public-verification-framework (1 spec)
+- [public-verification-framework](public-verification-framework.md) — Merkle hash chains, Arweave snapshots, public audit API
+
+### financial-integration-fiat-bridge (1 spec)
+- [financial-integration](financial-integration.md) — CC fiat bridge, USDC exchange, KYC, tax reporting
 
 ## Lookup
 
