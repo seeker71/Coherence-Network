@@ -5,7 +5,15 @@ Configuration precedence:
   2. ~/.coherence-network/config.json
   3. hard-coded defaults
 
-No environment variables are read for application config.
+No environment variables are read for application config — with ONE
+infrastructure-shaped exception: `database_url()` honors the standard
+`DATABASE_URL` environment variable with higher precedence than the
+config file's default, and per-service overrides honor
+`<SERVICE>_DATABASE_URL` (uppercased) when set. Rationale: the database
+URL is the canonical 12-factor override. Dev environments keep the
+config-file sqlite default; production compose files set
+`DATABASE_URL=postgresql://...` and have it flow through without
+needing to edit the checked-in config file.
 
 Usage:
     from app.config_loader import api_config, database_url
@@ -18,6 +26,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -507,11 +516,33 @@ def full_config() -> dict[str, Any]:
 
 
 def database_url(service: str | None = None) -> str:
+    """Resolve the database URL for a domain, or the global default.
+
+    Precedence (highest wins):
+      1. Per-service config override  (config.database_overrides.<service>)
+      2. Per-service env var          (<SERVICE>_DATABASE_URL, uppercased)
+      3. Global DATABASE_URL env var  (standard 12-factor override)
+      4. Global config default        (config.database.url)
+      5. Fallback                     (sqlite:///data/coherence.db)
+
+    The rest of this module refuses to read env vars for application
+    config, but the database URL is an infrastructure-shaped value that
+    routinely differs between dev (sqlite), staging, and production
+    (postgres). Letting the env var override the config file's default
+    keeps the config file honest as a dev-friendly starting point while
+    still honoring production's explicit intent.
+    """
     config = _load()
     if service:
         override = config.get("database_overrides", {}).get(service)
         if override:
             return str(override)
+        env_service = os.environ.get(f"{service.upper()}_DATABASE_URL", "").strip()
+        if env_service:
+            return env_service
+    env_global = os.environ.get("DATABASE_URL", "").strip()
+    if env_global:
+        return env_global
     return str(config.get("database", {}).get("url", "sqlite:///data/coherence.db"))
 
 
