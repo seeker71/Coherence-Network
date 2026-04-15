@@ -145,3 +145,43 @@ The CC per read is tiny (micro-attribution). But over thousands of reads, a popu
 - Upload endpoint for 3D models (GLTF/USD), build instructions, research articles
 - Content hashing for immutability proof
 - Implementation evidence: "I used this blueprint to build X" triggers larger CC flow
+
+## Corrected Flow: Views Are Free, CC Flows From Contribution
+
+The reader never pays to view anything. Reading is free — always. The economy flows the other direction.
+
+### How It Actually Works
+
+1. **You read freely.** Every view is tracked (read count, concept tags, duration) but costs you nothing.
+2. **You contribute.** At some point you write an article, build a renderer, host a node, implement a blueprint, upload a 3D model — any creative act.
+3. **Your contribution generates CC.** The value lineage system attributes CC to your work based on how much it serves the network.
+4. **A portion of YOUR CC flows back** to the creators of everything you've been reading, weighted by your concept resonance profile (which concepts you read most about).
+
+### The Math
+
+```
+reader_generated_cc = CC earned from reader's own contributions
+read_redistribution_rate = 0.15  (15% of generated CC flows back through reads)
+
+For each asset the reader has viewed:
+  read_weight = view_count × duration × concept_overlap
+  
+  total_read_weight = sum of all read_weights
+  
+  cc_to_asset_creator = reader_generated_cc × redistribution_rate × (read_weight / total_read_weight)
+```
+
+### What This Creates
+
+| Reader type | Views | CC generated | CC redistributed |
+|-------------|-------|-------------|-----------------|
+| Pure reader (no contributions) | Tracked | 0 | 0 — free rider, that's fine |
+| Occasional contributor | Tracked | Some | Small flow back to what they read |
+| Active contributor who reads widely | Tracked | Significant | They become circulation — connecting creators across concepts |
+| Infrastructure host | All reads served | Continuous | Host contribution CC flows back through their own reading |
+
+The beautiful part: a pure reader costs the network nothing and may become a contributor later. Their reading history is already there — the moment they contribute, their past attention starts flowing CC backward to the creators who shaped their understanding. The blueprint they read six months ago that inspired their first build? Its creator finally receives CC from that inspiration chain.
+
+### No Paywalls, No Subscriptions, No Ads
+
+The platform has no revenue model in the old-earth sense. It has a **circulation model**: value is created by contribution, tracked by attention, and distributed by resonance. The system needs no external funding once the contribution base generates enough CC to sustain infrastructure (hosting nodes earn CC too).
