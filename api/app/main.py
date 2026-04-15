@@ -69,6 +69,7 @@ from app.routers import graph_zoom
 from app.routers import graph_health
 from app.routers import agent_grounded_metrics_routes
 from app.routers import meta as meta_router
+from app.routers import verification as verification_router
 from app.routers import onboarding as onboarding_router
 from app.routers import openclaw_node_bridge
 from app.routers import pipeline
@@ -84,6 +85,7 @@ from app.routers import service_registry_router
 from app.routers import constellation as constellation_router
 from app.routers import vitality as vitality_router
 from app.middleware.rate_limit import RateLimitMiddleware
+from app.middleware.read_tracking import ReadTrackingMiddleware
 from app.middleware.request_duration import RequestDurationMiddleware
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
@@ -524,6 +526,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(ReadTrackingMiddleware)
 app.add_middleware(RequestDurationMiddleware, threshold_seconds=1.0)
 app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
 
@@ -664,6 +667,7 @@ app.include_router(graph_health.router, prefix="/api", tags=["graph-health"])
 app.include_router(edges_router.router, prefix="/api", tags=["edges"])
 app.include_router(geolocation.router, prefix="/api", tags=["geolocation"])
 app.include_router(meta_router.router, prefix="/api", tags=["meta"])
+app.include_router(verification_router.router, prefix="/api", tags=["verification"])
 app.include_router(debug_router.router, prefix="/api", tags=["debug"])
 app.include_router(models_router.router, prefix="/api", tags=["models"])
 
