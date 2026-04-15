@@ -264,24 +264,35 @@ def api_get(url: str, timeout: int = 30) -> Any:
             return json.loads(resp.read())
 
 
-def api_patch(url: str, body: dict, timeout: int = 30) -> bool:
-    """PATCH JSON to URL. Returns True on 200."""
-    if httpx:
-        resp = httpx.patch(url, json=body, timeout=timeout)
-        if resp.status_code == 200:
-            return True
-        print(f"  ERROR: {resp.status_code} {resp.text[:200]}", file=sys.stderr)
-        return False
-    else:
-        data = json.dumps(body).encode()
-        req = urllib.request.Request(url, data=data, method="PATCH")
-        req.add_header("Content-Type", "application/json")
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return resp.status == 200
-        except Exception as e:
-            print(f"  ERROR: {e}", file=sys.stderr)
+def api_patch(url: str, body: dict, timeout: int = 30, retries: int = 4) -> bool:
+    """PATCH JSON to URL. Returns True on 200. Backs off on 429 rate limits."""
+    for attempt in range(retries):
+        if httpx:
+            resp = httpx.patch(url, json=body, timeout=timeout)
+            if resp.status_code == 200:
+                return True
+            if resp.status_code == 429 and attempt < retries - 1:
+                time.sleep(1.0 * (attempt + 1))
+                continue
+            print(f"  ERROR: {resp.status_code} {resp.text[:200]}", file=sys.stderr)
             return False
+        else:
+            data = json.dumps(body).encode()
+            req = urllib.request.Request(url, data=data, method="PATCH")
+            req.add_header("Content-Type", "application/json")
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    return resp.status == 200
+            except urllib.error.HTTPError as e:
+                if e.code == 429 and attempt < retries - 1:
+                    time.sleep(1.0 * (attempt + 1))
+                    continue
+                print(f"  ERROR: {e}", file=sys.stderr)
+                return False
+            except Exception as e:
+                print(f"  ERROR: {e}", file=sys.stderr)
+                return False
+    return False
 
 
 def api_post(url: str, body: dict, timeout: int = 30, retries: int = 3) -> int:

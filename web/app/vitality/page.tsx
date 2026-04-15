@@ -30,6 +30,86 @@ type VitalityResponse = {
   computed_at: string;
 };
 
+// The API at /api/workspaces/{id}/vitality returns signals as an object keyed
+// by snake_case names, with breath_rhythm nested inside. The page renders them
+// as an array of human-readable signals. This helper bridges the two shapes so
+// every signal from the living API flows into the UI without leaving any out.
+type VitalityApiResponse = {
+  workspace_id?: string;
+  vitality_score?: number;
+  health_description?: string;
+  generated_at?: string;
+  signals?: Record<string, number | BreathRhythm | undefined> & {
+    diversity_index?: number;
+    resonance_density?: number;
+    flow_rate?: number;
+    connection_strength?: number;
+    activity_pulse?: number;
+    breath_rhythm?: BreathRhythm;
+  };
+};
+
+const SIGNAL_ORDER: Array<{
+  key:
+    | "diversity_index"
+    | "resonance_density"
+    | "flow_rate"
+    | "connection_strength"
+    | "activity_pulse";
+  name: string;
+  description: string;
+}> = [
+  {
+    key: "diversity_index",
+    name: "Diversity Index",
+    description: "how many different voices, ideas, and frequencies the field is holding at once",
+  },
+  {
+    key: "resonance_density",
+    name: "Resonance Density",
+    description: "how densely the living connections are woven through the network",
+  },
+  {
+    key: "flow_rate",
+    name: "Flow Rate",
+    description: "how freely vitality is circulating between contributors and ideas",
+  },
+  {
+    key: "connection_strength",
+    name: "Connection Strength",
+    description: "how sturdy the synapses are that already exist in the field",
+  },
+  {
+    key: "activity_pulse",
+    name: "Activity Pulse",
+    description: "how awake the organism is right now, across the last breath of time",
+  },
+];
+
+function normalizeVitality(api: VitalityApiResponse | null): VitalityResponse | null {
+  if (!api) return null;
+  const apiSignals = api.signals ?? {};
+  const signals: VitalitySignal[] = SIGNAL_ORDER.map((s) => ({
+    name: s.name,
+    value: typeof apiSignals[s.key] === "number" ? (apiSignals[s.key] as number) : 0,
+    description: s.description,
+  }));
+  const breath: BreathRhythm =
+    (apiSignals.breath_rhythm as BreathRhythm | undefined) ?? {
+      gas: 0.33,
+      water: 0.34,
+      ice: 0.33,
+    };
+  return {
+    workspace_id: api.workspace_id ?? "coherence-network",
+    vitality_score: api.vitality_score ?? 0,
+    health_description: api.health_description ?? "",
+    signals,
+    breath_rhythm: breath,
+    computed_at: api.generated_at ?? "",
+  };
+}
+
 const SIGNAL_COLORS: Record<string, { bar: string; text: string; bg: string }> = {
   "Diversity Index": {
     bar: "bg-violet-500",
@@ -106,7 +186,8 @@ async function loadVitality(): Promise<VitalityResponse | null> {
       { cache: "no-store" },
     );
     if (!res.ok) return null;
-    return (await res.json()) as VitalityResponse;
+    const api = (await res.json()) as VitalityApiResponse;
+    return normalizeVitality(api);
   } catch {
     return null;
   }

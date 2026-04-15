@@ -525,7 +525,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(RequestDurationMiddleware, threshold_seconds=1.0)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
+app.add_middleware(RateLimitMiddleware)
 
 # Initialize graph store based on config
 if get_bool("api", "testing", False) or get_str("server", "environment", "development") == "test":
@@ -616,6 +616,10 @@ app.include_router(memberships_router.router, prefix="/api", tags=["memberships"
 app.include_router(lenses.router, prefix="/api", tags=["lenses"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(coherence.router, prefix="/api", tags=["coherence"])
+from app.routers import practice as practice_router
+from app.routers import sensings as sensings_router
+app.include_router(practice_router.router, prefix="/api", tags=["practice"])
+app.include_router(sensings_router.router, prefix="/api", tags=["sensings"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])
 app.include_router(federation.router, prefix="/api", tags=["federation"])
 app.include_router(openclaw_node_bridge.router, prefix="/api", tags=["federation"])

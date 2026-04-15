@@ -74,6 +74,24 @@ async def test_supply_returns_required_fields():
 
 
 @pytest.mark.asyncio
+async def test_empty_treasury_is_healthy():
+    """An empty treasury (nothing minted) is part of the healthy flow, not a warning.
+
+    Regression guard: coherence_status used to land on "warning" for the
+    pre-launch / idle state because score=1.0 fell into the 1.0..1.05 band,
+    which produced a contradictory UI (score 1.0000 + WARNING badge).
+    """
+    _reset_services()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/cc/supply")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["outstanding"] == 0.0
+        assert data["coherence_score"] == 1.0
+        assert data["coherence_status"] == "healthy"
+
+
+@pytest.mark.asyncio
 async def test_supply_coherence_score_above_one():
     """Coherence score >= 1.0 when treasury properly backs outstanding CC."""
     _reset_services()

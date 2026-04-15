@@ -37,14 +37,41 @@ fi
 
 git cat-file -e "${TARGET_SHA}^{commit}"
 
-if [[ "$OLD_SHA" == "$TARGET_SHA" ]]; then
-  log "No changes (still at ${OLD_SHA:0:12})"
+# Sense whether the RUNNING API is already at the target SHA. The previous
+# guard only compared the repo's git HEAD to the target and skipped deploy
+# when they matched — but that answered the wrong question. What the field
+# needs to know is whether the CONTAINERS are serving the target code, not
+# whether the filesystem mirrors it. When a manual `git pull` on the VPS
+# advances the repo without rebuilding, subsequent deploys saw "no changes"
+# and never rebuilt, so the running API stayed on the old SHA while the
+# verification step kept failing. This query asks the living container.
+RUNNING_SHA=""
+HEALTH_JSON="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
+    sh -lc 'curl -fsS --max-time 5 http://127.0.0.1:8000/api/health 2>/dev/null' \
+    2>/dev/null || true)"
+if [[ -n "$HEALTH_JSON" ]]; then
+  RUNNING_SHA="$(printf '%s' "$HEALTH_JSON" \
+    | python3 -c 'import sys, json
+try:
+    print((json.loads(sys.stdin.read()).get("deployed_sha") or "").strip())
+except Exception:
+    pass' 2>/dev/null || true)"
+fi
+RUNNING_SHORT="${RUNNING_SHA:0:12}"
+[[ -z "$RUNNING_SHORT" ]] && RUNNING_SHORT="unknown"
+
+if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
+  log "Already flowing at ${TARGET_SHA:0:12} (repo and running API aligned)"
   exit 0
 fi
 
-log "Deploying ${OLD_SHA:0:12} -> ${TARGET_SHA:0:12}"
-git reset --hard "$TARGET_SHA" >/dev/null
-git clean -fd >/dev/null
+if [[ "$OLD_SHA" == "$TARGET_SHA" ]]; then
+  log "Repo aligned at ${TARGET_SHA:0:12} but running API is at ${RUNNING_SHORT} — rebuilding containers"
+else
+  log "Deploying ${OLD_SHA:0:12} -> ${TARGET_SHA:0:12} (running API at ${RUNNING_SHORT})"
+  git reset --hard "$TARGET_SHA" >/dev/null
+  git clean -fd >/dev/null
+fi
 
 python3 - <<PY
 from pathlib import Path
