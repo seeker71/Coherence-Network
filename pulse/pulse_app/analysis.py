@@ -6,7 +6,7 @@ so it is trivially unit-testable with hand-crafted sample sequences.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
@@ -88,6 +88,10 @@ class DayBucket:
     date: str            # YYYY-MM-DD
     samples: int
     failures: int
+    # Latency percentiles across successful samples for the day. None when
+    # there were no successful samples (so None and 0 stay visually distinct).
+    latency_p50_ms: int | None = None
+    latency_p95_ms: int | None = None
 
     @property
     def status(self) -> str:
@@ -101,36 +105,67 @@ class DayBucket:
         return "strained"
 
 
+def _percentile(sorted_values: list[int], pct: float) -> int | None:
+    """Nearest-rank percentile on an already-sorted list. None for empty input."""
+    if not sorted_values:
+        return None
+    if len(sorted_values) == 1:
+        return sorted_values[0]
+    # Nearest-rank: rank = ceil(pct/100 * N), 1-indexed
+    import math
+    rank = max(1, math.ceil((pct / 100.0) * len(sorted_values)))
+    return sorted_values[min(rank - 1, len(sorted_values) - 1)]
+
+
 def rollup_daily(samples: list[Sample], days: int, now: datetime | None = None) -> list[DayBucket]:
     """Group samples into the last `days` day-buckets ending today UTC.
 
     Days with no samples become DayBuckets with samples=0 and status=unknown.
+    Latency percentiles (p50/p95) are computed across the successful samples
+    of each day and return None for days with no successful samples.
     """
     if now is None:
         now = datetime.now(timezone.utc)
     today = now.astimezone(timezone.utc).date()
 
     # Pre-create every bucket so the output is always length `days`.
-    buckets: dict[date, list[int]] = {}
+    @dataclass
+    class _Accum:
+        samples: int = 0
+        failures: int = 0
+        ok_latencies: list[int] = field(default_factory=list)
+
+    buckets: dict[date, _Accum] = {}
     for i in range(days):
         d = today - timedelta(days=(days - 1 - i))
-        buckets[d] = [0, 0]  # [samples, failures]
+        buckets[d] = _Accum()
 
     for s in samples:
         d = _parse_iso(s.ts).date()
-        if d in buckets:
-            buckets[d][0] += 1
-            if not s.ok:
-                buckets[d][1] += 1
+        acc = buckets.get(d)
+        if acc is None:
+            continue
+        acc.samples += 1
+        if s.ok:
+            if s.latency_ms is not None:
+                acc.ok_latencies.append(int(s.latency_ms))
+        else:
+            acc.failures += 1
 
-    return [
-        DayBucket(
-            date=d.isoformat(),
-            samples=buckets[d][0],
-            failures=buckets[d][1],
+    out: list[DayBucket] = []
+    for d in sorted(buckets.keys()):
+        acc = buckets[d]
+        acc.ok_latencies.sort()
+        out.append(
+            DayBucket(
+                date=d.isoformat(),
+                samples=acc.samples,
+                failures=acc.failures,
+                latency_p50_ms=_percentile(acc.ok_latencies, 50),
+                latency_p95_ms=_percentile(acc.ok_latencies, 95),
+            )
         )
-        for d in sorted(buckets.keys())
-    ]
+    return out
 
 
 def uptime_percent(samples: list[Sample]) -> float:
@@ -139,6 +174,14 @@ def uptime_percent(samples: list[Sample]) -> float:
         return 0.0
     ok = sum(1 for s in samples if s.ok)
     return round(100.0 * ok / len(samples), 2)
+
+
+def latency_percentiles(samples: list[Sample]) -> tuple[int | None, int | None]:
+    """Return (p50_ms, p95_ms) across the successful samples, or (None, None)."""
+    ok_latencies = sorted(
+        int(s.latency_ms) for s in samples if s.ok and s.latency_ms is not None
+    )
+    return _percentile(ok_latencies, 50), _percentile(ok_latencies, 95)
 
 
 # --- current status -------------------------------------------------------

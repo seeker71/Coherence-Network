@@ -55,6 +55,11 @@ export function SilenceList({ silences }: { silences: Silence[] }) {
                   {start.toLocaleString()}
                   {end && ` → ${end.toLocaleString()}`}
                 </p>
+                {s.note && (
+                  <p className="text-xs italic text-muted-foreground/80 mt-1 line-clamp-2">
+                    {s.note}
+                  </p>
+                )}
               </div>
               <p className="text-xs text-muted-foreground font-mono text-right">
                 {formatDuration(s.duration_seconds)}
