@@ -39,11 +39,10 @@ export function TrackingSuggestion({ conceptId }: { conceptId: string }) {
       <div className="rounded-2xl border border-amber-500/20 bg-stone-950/95 backdrop-blur-sm p-5 shadow-2xl space-y-3">
         <div className="flex items-start justify-between">
           <p className="text-sm text-stone-300 leading-relaxed pr-4">
-            This content was created by a contributor who earns CC when tracked
-            reads flow back through resonance. Identifying yourself lets the network
-            remember what resonated with you — so when you contribute your own work later,
-            CC flows fairly to every creator who shaped your path. Without tracking,
-            the creator of this work receives nothing from your attention.
+            Identify yourself and the network starts building your frequency profile —
+            a living map of what resonates with you. You will see which creators align
+            with your path, discover concepts you have not found yet, and when you
+            contribute your own work, CC flows back to everyone who shaped your understanding.
           </p>
           <button
             onClick={() => { setDismissed(true); sessionStorage.setItem("tracking_suggestion_dismissed", "1"); }}
@@ -55,15 +54,15 @@ export function TrackingSuggestion({ conceptId }: { conceptId: string }) {
         <div className="flex gap-2">
           <Link href="/join"
             className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-xs font-medium">
-            Join (1 min)
+            Start your profile
           </Link>
           <button
             onClick={() => { setDismissed(true); sessionStorage.setItem("tracking_suggestion_dismissed", "1"); }}
             className="px-4 py-2 rounded-xl border border-stone-800/40 text-stone-500 text-xs">
-            Continue anonymously
+            Not now
           </button>
         </div>
-        <p className="text-xs text-stone-600">Reading is always free. Tracking is voluntary.</p>
+        <p className="text-xs text-stone-600">Reading is always free. Your profile is yours to build.</p>
       </div>
     </div>
   );
