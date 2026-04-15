@@ -431,3 +431,7 @@ python3 -m pytest api/tests/test_asset_renderer.py -x -v
 - **Risk**: CC split disputes between asset creators and renderer creators. Mitigation: splits are transparent, recorded on every render event, and overridable by asset creators who own the content.
 - **Assumption**: The graph service can store renderer nodes with MIME type indexing for efficient lookup by type. If not, a secondary index or lookup table may be needed.
 - **Assumption**: Arweave/IPFS content retrieval is handled by a separate storage layer. This spec only records the `arweave_tx` and `ipfs_cid` references; it does not implement the retrieval proxy beyond the `GET /api/assets/{id}/content` endpoint contract.
+
+## Known Gaps and Follow-up Tasks
+
+- None yet — follow-up gaps will be recorded here as implementation reveals them.
