@@ -102,16 +102,42 @@ cd "$COMPOSE_ROOT"
 docker compose build api web >> "$LOG_FILE" 2>&1
 docker compose up -d api web >> "$LOG_FILE" 2>&1
 
-sleep 10
+# Give each container patient time to come up. A cold rebuild can take
+# more than a minute from `up -d` through the first successful health
+# response (python imports, router registration, DB connection warm-up).
+# Fixed sleeps either wait too long on the fast path or give up too
+# early on the slow path; a retry loop waits only as long as the
+# container needs and no longer.
+wait_for_api_health() {
+  local deadline=$(( $(date +%s) + 180 ))
+  while (( $(date +%s) < deadline )); do
+    if docker compose exec -T api curl -fsS --max-time 5 http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 3
+  done
+  return 1
+}
 
-if docker compose exec -T api curl -fsS --max-time 10 http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+if wait_for_api_health; then
   log "API health OK"
 else
-  log "FAIL: API health check failed after deploy"
+  log "FAIL: API health check did not reach ok within 180s after deploy"
   exit 1
 fi
 
-if docker compose exec -T web sh -lc 'wget -q -O - http://127.0.0.1:3000/ >/dev/null 2>&1' >/dev/null 2>&1; then
+wait_for_web_root() {
+  local deadline=$(( $(date +%s) + 120 ))
+  while (( $(date +%s) < deadline )); do
+    if docker compose exec -T web sh -lc 'wget -q -O - http://127.0.0.1:3000/ >/dev/null 2>&1' >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 3
+  done
+  return 1
+}
+
+if wait_for_web_root; then
   log "Web health OK"
 else
   log "FAIL: web root check failed after deploy"
