@@ -189,7 +189,14 @@ def latency_percentiles(samples: list[Sample]) -> tuple[int | None, int | None]:
 def status_from_last_sample(sample: Sample | None) -> str:
     if sample is None:
         return "unknown"
-    return "breathing" if sample.ok else "silent"
+    if not sample.ok:
+        return "silent"
+    # A successful probe with a "slow:" detail was flagged by probe._apply
+    # because its latency crossed the organ's threshold. It breathes, but
+    # it's straining.
+    if sample.detail and sample.detail.startswith("slow: "):
+        return "strained"
+    return "breathing"
 
 
 def overall_status(organ_statuses: list[str]) -> str:

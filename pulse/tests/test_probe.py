@@ -160,6 +160,51 @@ async def test_all_healthy():
 
 
 @pytest.mark.asyncio
+async def test_api_flags_strained_on_recent_5xx():
+    """Real-user 5xx count surfaces as strain on the api organ."""
+    body = {**HEALTHY_HEALTH, "recent_outcomes": {
+        "last_1m": {"2xx": 100, "3xx": 0, "4xx": 2, "5xx": 3, "total": 105},
+        "last_5m": {"2xx": 500, "3xx": 0, "4xx": 5, "5xx": 3, "total": 508},
+        "as_of_minute": 29000000,
+    }}
+    by = await _run(_handler(api_health_body=body))
+    api_sample = by["api"]
+    assert api_sample.ok is True  # the probe itself succeeded
+    assert api_sample.detail is not None
+    assert api_sample.detail.startswith("slow: ")
+    assert "5xx" in api_sample.detail
+    assert "last 1m" in api_sample.detail
+
+
+@pytest.mark.asyncio
+async def test_api_flags_strained_on_heavy_4xx_rate():
+    """When most recent traffic is 4xx, flag the api as straining."""
+    body = {**HEALTHY_HEALTH, "recent_outcomes": {
+        "last_1m": {"2xx": 5, "3xx": 0, "4xx": 25, "5xx": 0, "total": 30},
+        "last_5m": {"2xx": 20, "3xx": 0, "4xx": 80, "5xx": 0, "total": 100},
+        "as_of_minute": 29000000,
+    }}
+    by = await _run(_handler(api_health_body=body))
+    api_sample = by["api"]
+    assert api_sample.ok is True
+    assert api_sample.detail is not None
+    assert "4xx" in api_sample.detail
+
+
+@pytest.mark.asyncio
+async def test_api_does_not_strain_on_small_4xx_count():
+    """A handful of 4xx is normal user error — don't flag."""
+    body = {**HEALTHY_HEALTH, "recent_outcomes": {
+        "last_1m": {"2xx": 100, "3xx": 0, "4xx": 3, "5xx": 0, "total": 103},
+        "last_5m": {"2xx": 500, "3xx": 0, "4xx": 10, "5xx": 0, "total": 510},
+        "as_of_minute": 29000000,
+    }}
+    by = await _run(_handler(api_health_body=body))
+    assert by["api"].ok is True
+    assert by["api"].detail is None
+
+
+@pytest.mark.asyncio
 async def test_api_status_not_ok():
     bad = {**HEALTHY_HEALTH, "status": "degraded"}
     by = await _run(_handler(api_health_body=bad))
@@ -321,6 +366,36 @@ async def test_endpoint_vitality_missing_diversity_index():
 
 
 # ----- network errors ------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_slow_probe_flags_strained_not_silent(monkeypatch):
+    """A successful probe that crossed the threshold is ok=True with a slow detail."""
+    from pulse_app import organs, probe
+
+    # Rewrite the test to inject a slow latency by monkey-patching the probe helper.
+    original = probe._probe_upstream
+
+    async def slow_probe(client, url, kind):
+        r = await original(client, url, kind)
+        # Replace with a 3-second latency on the api_health upstream
+        if url.endswith("/api/health"):
+            return probe.UpstreamResult(
+                status=r.status, body=r.body, text=r.text,
+                latency_ms=3500, error=None,
+            )
+        return r
+
+    monkeypatch.setattr(probe, "_probe_upstream", slow_probe)
+
+    by = await _run(_handler())
+    # api organ's default threshold is 2000ms, so 3500ms is flagged
+    api_sample = by["api"]
+    assert api_sample.ok is True  # the body was fine
+    assert api_sample.detail is not None
+    assert api_sample.detail.startswith("slow: ")
+    assert "3500ms" in api_sample.detail
+    assert "2000ms" in api_sample.detail
+
 
 @pytest.mark.asyncio
 async def test_network_error_marks_everything_down():

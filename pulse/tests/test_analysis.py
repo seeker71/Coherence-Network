@@ -61,6 +61,28 @@ def test_status_last_sample_bad():
     assert status_from_last_sample(_s("api", False, 0)) == "silent"
 
 
+def test_status_last_sample_slow_is_strained():
+    slow_sample = Sample(
+        ts=iso_utc(),
+        organ="api",
+        ok=True,
+        latency_ms=3500,
+        detail="slow: 3500ms > 2000ms threshold",
+    )
+    assert status_from_last_sample(slow_sample) == "strained"
+
+
+def test_status_last_sample_detail_other_than_slow_is_still_breathing():
+    weird_sample = Sample(
+        ts=iso_utc(),
+        organ="api",
+        ok=True,
+        latency_ms=100,
+        detail="some other detail",
+    )
+    assert status_from_last_sample(weird_sample) == "breathing"
+
+
 # --- overall_status -------------------------------------------------------
 
 def test_overall_all_breathing():
