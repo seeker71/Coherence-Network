@@ -77,4 +77,4 @@ The single most important design decision: protect unstructured time. Every hour
 
 ## Connected Frequencies
 
--> lc-play, lc-space, lc-v-freedom-expression, lc-v-comfort-joy
+→ lc-play, lc-space, lc-v-freedom-expression, lc-v-comfort-joy

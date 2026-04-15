@@ -32,11 +32,11 @@ A community of 50-200 people living as a single organism. What amplifies alivene
 ### Level 2 — Living Expressions (24)
 
 **Physical spaces & practices:**
-- **[Space](concepts/lc-space.md)** ★ — 432 Hz — shelter that breathes | `status: expanding`
-- **[Nourishment](concepts/lc-nourishment.md)** ★ — 174 Hz — earth→body→vitality | `status: expanding`
-- **[Land](concepts/lc-land.md)** ★ — 174 Hz — earth, root, ground | `status: expanding`
-- **[Energy](concepts/lc-energy.md)** ★ — 417 Hz — field metabolism | `status: expanding`
-- **[Health](concepts/lc-health.md)** ★ — 285 Hz — vitality care | `status: expanding`
+- **[Space](concepts/lc-space.md)** ★ — 432 Hz — shelter that breathes | `status: deepening`
+- **[Nourishment](concepts/lc-nourishment.md)** ★ — 174 Hz — earth→body→vitality | `status: deepening`
+- **[Land](concepts/lc-land.md)** ★ — 174 Hz — earth, root, ground | `status: deepening`
+- **[Energy](concepts/lc-energy.md)** ★ — 417 Hz — field metabolism | `status: deepening`
+- **[Health](concepts/lc-health.md)** ★ — 285 Hz — vitality care | `status: deepening`
 - **[Instruments](concepts/lc-instruments.md)** ★ — 639 Hz — tools that bridge | `status: expanding`
 
 **Activities & practices:**

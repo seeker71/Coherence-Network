@@ -59,7 +59,7 @@ when the clenched quality in the room softens,
 when someone laughs for the first time,
 when a truth that has been circling finally lands.
 The follow-up happens one week later.
-Not to check compliance. To feel whether the new harmonic held.
+Not to check alignment. To feel whether the new harmonic held.
 
 This is not conflict avoidance dressed in spiritual language. It is the opposite.
 Moving toward tension rather than away from it,

@@ -100,4 +100,4 @@ are together.
 - What happens to a person who lives for years in a place where everything is attended to?
 
 ## Connected Frequencies
-→ lc-expressing, lc-space, lc-v-comfort-joy, lc-ceremony, new-earth-integration
+→ lc-expressing, lc-space, lc-v-comfort-joy, lc-ceremony

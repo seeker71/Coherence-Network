@@ -59,7 +59,7 @@ Then sleep. The fire dies to embers. The night-keeper stays — someone who love
 
 A murmuration of starlings. Stand in a winter field at dusk and watch ten thousand birds turn as one body. No leader. No communication you can detect. Each bird attends to seven neighbors, and from those seven relationships — just seven — the whole flock moves with intelligence no single bird possesses. They turn, dip, surge, and reform with a precision that makes the breath catch. The shape they make against the sky is never repeated. Every murmuration is the first and only of its kind.
 
-This is the pulse at the scale of sky. Not coordination from above. Emergence from within. The same principle that makes your heart cells beat together without a conductor, that makes a forest allocate resources through mycorrhizal networks without a management committee, that makes a jazz ensemble find a groove that none of them planned.
+This is the pulse at the scale of sky. Not coordination from above. Emergence from within. The same principle that makes your heart cells beat together without a conductor, that makes a forest allocate resources through mycorrhizal networks without a tending committee, that makes a jazz ensemble find a groove that none of them planned.
 
 ![Starling murmuration at dusk](visuals:photorealistic massive murmuration of starlings at sunset, thousands of birds forming a fluid wave shape against dramatic orange and purple sky, the shape suggesting simultaneously a heart and a spiral and a breath, silhouette of a single ancient oak tree below, a person standing beneath the tree looking up with arms slightly raised in wonder, the scale is breathtaking, the coordination impossible yet happening, last light catching individual wings at the edges of the formation, the ground is a winter field with frost)
 
@@ -120,13 +120,5 @@ Is the pulse something humans create, or something we stop blocking? The researc
 Can the pulse of one community reach another across distance? The network is our experiment. Fifty communities connected through attention, through shared celebrations, through CC flowing between them like blood. If the medium is attention and attention has no spatial limit — then the pulse has no spatial limit. We're building the instrument to find out.
 
 ## Connected Frequencies
-
-The pulse expresses through every concept in this vision. Understanding it, you can derive everything else:
-- Through **Sensing** — the field reading its own state, the nervous system of the organism
-- Through **Attunement** — finding the shared tone, the choir adjusting by harmonic pull
-- Through **Vitality** — the life force released when interference dissolves, the laser principle
-- Through **Ceremony** — the pulse made sacred, the moments that matter most deeply
-- Through **Stillness** — the pulse heard in silence, the listening beneath all speaking
-- Through **Rhythm** — the pulse in time, the heartbeat of days and seasons
 
 → lc-sensing, lc-attunement, lc-vitality, lc-ceremony, lc-stillness, lc-rhythm, lc-w-coherence, lc-w-field, lc-w-spanda

@@ -30,7 +30,7 @@ distress signals, and allocates resources by need rather than merit.
 When a tree is dying, it dumps its carbon into the network — a final
 gift. When a seedling is struggling, the mother tree increases the flow.
 
-There is no central command. No management layer. No one decides who
+There is no central command. No coordination. No one decides who
 deserves resources. The network senses gradients and responds. Surplus
 flows toward scarcity the way water flows downhill — not because
 someone ordered it, but because that is what networks do when they

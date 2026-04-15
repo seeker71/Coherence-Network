@@ -73,8 +73,4 @@ And when a building finally reaches the end of its lifecycle — decades from no
 
 ## Connected Frequencies
 
-→ [Space](lc-space.md) — the resonance quality that living spaces are designed to hold
-→ [Shelter as Organism](lc-v-shelter-organism.md) — the building as a living, breathing body
-→ [Land](lc-land.md) — every structure embedded in its ecosystem
-→ [Nourishment](lc-nourishment.md) — the Hearth feeds, the Sanctuary heals
-→ [Composting](lc-composting.md) — materials that know how to return to earth
+→ lc-space, lc-v-shelter-organism, lc-land, lc-nourishment, lc-composting

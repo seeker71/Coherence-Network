@@ -2,7 +2,7 @@
 id: lc-circulation
 hz: 528
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Circulation
@@ -21,7 +21,7 @@ The relief of this takes weeks to settle into your body. You keep waiting for th
 
 ## How It Lives Here
 
-The community runs on three layers of circulation. Inside, a common fund covers every basic need — food, shelter, energy, health, learning. No individual handles money for daily life, the way no cell in your body negotiates for oxygen. The fund is visible: a simple dashboard in the common room shows what came in, what went out, what is held, what is needed. No individual tracking. Collective flow.
+The community runs on three layers of circulation. Inside, a common fund covers every basic need — food, shelter, energy, health, learning. No individual handles money for daily life, the way no cell in your body negotiates for oxygen. The fund is visible: a simple dashboard in the common room shows what came in, what went out, what is held, what is needed. No individual sensing. Collective flow.
 
 At the membrane — where community meets the outside world — the organism interfaces as one. Income arrives from community enterprises, from members who earn externally and contribute voluntarily, from people who believe in what is being grown here. Nothing is extracted. Nothing is obligated. The membrane breathes in both directions.
 
@@ -53,6 +53,32 @@ New members arrive and keep their external income for six to twelve months while
 
 The New Earth Exchange model points beyond community scale toward something civilizational: value exchange outside the debt-based system entirely. Not barter, which still tracks debits and credits. Genuine flow — contribution recognized, needs met, surplus circulated. The community is a living laboratory for this, small enough to feel the flow, large enough to prove it works.
 
+## Resource Flow in Practice
+
+The three layers of circulation -- inner, membrane, and network -- each need practical tending.
+
+**The common fund.** Every basic need flows from a shared pool: food, shelter, energy, tending of wholeness, learning. No individual handles money for daily life, the way no cell negotiates for oxygen. The fund is visible -- a simple dashboard in the common room shows what came in, what went out, what is held, what is needed. Transparency without individual sensing. The question is never "who contributed what?" but "is the flow strong enough to feed every part?"
+
+**Community enterprises.** The community generates income through what it naturally produces: surplus food from the gardens, furniture from the workshop, fermented goods, teaching, design, land-based retreats. The enterprises grow from offerings that already exist -- the cheesemaker whose cheese visitors want to buy, the woodworker whose tables are sought. Income flows to the common fund. The enterprise serves the community, not the other way around.
+
+**The membrane.** New members keep their external income for six to twelve months while trust builds. No pressure, no extraction. Gradually, as needs are met and the flow becomes real, the membrane becomes more permeable. Some contribute everything. Some contribute what they can. The field does not measure the amount. It reads the willingness.
+
+## Sharing Systems
+
+**The tool library.** Every tool belongs to the community. Hammers, saws, sewing machines, bicycles, vehicles -- all shared, all maintained by whoever notices the need. A simple board tracks what is borrowed, not for accounting but for finding: "Where is the drill?" "Lina took it to the orchard." Ownership dissolves naturally when everything you need is available and cared for.
+
+**The clothing exchange.** A room in the common house where outgrown, worn-out, or no-longer-needed clothes arrive and find new bodies. Not a charity shop -- a circulation. The shirt you loved for three years becomes someone else's favorite. Children's clothes cycle through the community the way nutrients cycle through soil: nothing wasted, everything transformed.
+
+**The surplus flow.** When the community has more than it needs -- a bumper harvest, excess firewood, a financial gift -- the surplus moves outward. To other communities just starting. To land that needs regenerating. To the seedlings trying to grow nearby. This is the mycorrhizal principle: mother trees do not hoard their sugar. They feed the forest through the underground web, and the forest feeds them back.
+
+## Community Exchange Patterns
+
+**The gift table.** A table near the common room door where people place what they want to give away: a jar of honey, a knitted hat, a book they finished, seeds from this year's garden. Anyone takes what calls to them. No labels, no names, no sensing. The table is never empty and never full -- it breathes with the rhythm of the community's generosity.
+
+**Skill exchange without ledgers.** The plumber fixes the herbalist's pipes. The herbalist makes tinctures for the woodworker's sore joints. The woodworker builds shelves for the plumber's cottage. Nobody tracks this. Nobody plans it. The exchanges emerge from proximity, from knowing each other's gifts and needs, from the simple fact that a community small enough to see each other is a community where flow happens naturally.
+
+**Interface with the wider world.** Taxes, insurance, pensions, medical needs that exceed what the community can tend -- these require the old currency. A portion of the common fund handles these obligations. The practice is to hold both worlds honestly: building the new circulation while honoring the commitments of the old. Not pretending money does not exist, but refusing to let it be the primary language of relationship.
+
 ## Resources
 
 - [Sacred Economics](https://sacred-economics.com/) — Charles Eisenstein, free online book on gift economy and resource circulation (type: book)
@@ -72,9 +98,4 @@ The New Earth Exchange model points beyond community scale toward something civi
 
 ## Connected Frequencies
 
-→ [Offering](lc-offering.md) — what individuals bring to the flow
-→ [Mycorrhizal Networks](lc-v-mycorrhizal.md) — the biological template for all of this
-→ [Nourishment](lc-nourishment.md) — circulation ensures every cell is fed
-→ [Land](lc-land.md) — custodianship, not ownership
-→ [Network](lc-network.md) — surplus flowing between communities
-→ [New Earth Integration](new-earth-integration.md) — civilizational-scale circulation
+→ lc-offering, lc-w-mycorrhizal, lc-nourishment, lc-land, lc-network

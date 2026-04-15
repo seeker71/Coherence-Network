@@ -218,6 +218,11 @@ def _changed_spec_files(repo_root: Path, base: str, head: str, workspace_id: str
         name = Path(rel).name.lower()
         if name == "template.md":
             continue
+        if name == "index.md":
+            # INDEX.md is a catalog, not a feature spec. It lists the
+            # other specs but does not itself need purpose/requirements/
+            # files/acceptance/verification sections.
+            continue
         if "backlog" in name:
             continue
         spec_paths.append(repo_root / rel)
@@ -292,7 +297,7 @@ def main() -> int:
         targets = [
             path
             for path in sorted(default_specs)
-            if path.name.lower() != "template.md" and "backlog" not in path.name.lower()
+            if path.name.lower() not in ("template.md", "index.md") and "backlog" not in path.name.lower()
         ]
 
     return _validate_many(targets)

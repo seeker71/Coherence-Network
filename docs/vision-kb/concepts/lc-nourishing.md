@@ -72,10 +72,4 @@ These are questions the kitchen holds while it cooks:
 
 ## Connected Frequencies
 
-Nourishing is the circulatory system — it carries everything else:
-- Through **Vitality** — nourishment is vitality's fuel
-- Through **The Pulse** — the shared meal is the pulse made tangible
-- Through **Sensing** — the kitchen senses what the field needs today
-- Through **Attunement** — food attunes bodies to the same soil, the same water, the same place
-
 → lc-vitality, lc-pulse, lc-sensing, lc-attunement, lc-land, lc-nourishment, lc-v-food-practice

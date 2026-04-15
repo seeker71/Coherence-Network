@@ -41,7 +41,7 @@ A forest with one species of tree falls to the first targeted disease. A forest 
 
 The human gut contains trillions of microorganisms from hundreds of species. Health correlates directly with microbial diversity. When the microbiome narrows, disease follows. The body knows: variety is not a luxury. It is the immune system itself.
 
-Permaculture demonstrates this at the scale of a garden bed. A monoculture field requires pesticides, fertilizers, and constant intervention to survive. A polyculture garden, where tomatoes grow beside basil and marigolds and beans, regulates its own pests, fixes its own nitrogen, and produces more food per square meter. The diversity is not a complication. It is the design.
+Permaculture demonstrates this at the scale of a garden bed. A monoculture field requires pesticides, fertilizers, and constant tending to survive. A polyculture garden, where tomatoes grow beside basil and marigolds and beans, regulates its own pests, fixes its own nitrogen, and produces more food per square meter. The diversity is not a complication. It is the design.
 
 ## Where You Can See It
 
@@ -57,7 +57,7 @@ In a symphony orchestra, sixty instruments play simultaneously. Each one produce
 
 A community that actively seeks difference the way a gardener seeks diverse seeds. Welcome practices designed not to screen but to listen. Economic structures flexible enough that income level does not determine who can belong. Governance by consent so that the quietest voice carries the same weight as the loudest. The understanding, built into every system, that the field's health is measured by its diversity.
 
-Not tolerance. Not accommodation. Not even celebration. Something deeper: the recognition that without the note you carry, the chord is incomplete. Your presence is not a courtesy extended. It is a structural requirement.
+Not tolerance. Not accommodation. Not even celebration. Something deeper: the recognition that without the note you carry, the chord is incomplete. Your presence is not a courtesy extended. It is a structural truth.
 
 Governance by consent so that the quietest voice carries the same weight as the loudest. Sociocratic circles where decisions advance only when no one has a paramount objection. The introvert and the extrovert both shape the outcome, just through different channels. The field learns to listen at every volume.
 
@@ -77,4 +77,4 @@ Governance by consent so that the quietest voice carries the same weight as the 
 
 ## Connected Frequencies
 
--> lc-attunement, lc-circulation, lc-v-ceremony, lc-v-freedom-expression
+→ lc-attunement, lc-circulation, lc-v-ceremony, lc-v-freedom-expression

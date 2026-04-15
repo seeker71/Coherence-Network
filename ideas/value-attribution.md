@@ -12,6 +12,7 @@ specs:
   - [task-claim-tracking-and-roi-dedupe](../specs/task-claim-tracking-and-roi-dedupe.md)
   - [normalize-github-commit-cost-estimation](../specs/normalize-github-commit-cost-estimation.md)
   - [contributor-onboarding-and-governed-change-flow](../specs/contributor-onboarding-and-governed-change-flow.md)
+  - [story-protocol-integration](../specs/story-protocol-integration.md)
 ---
 
 # Value Attribution

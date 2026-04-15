@@ -242,7 +242,7 @@ function ContributionsPageContent() {
           <p className="mt-2 text-3xl font-light">{formatCount(filteredRows.length)}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Tracked Cost</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Sensed Cost</p>
           <p className="mt-2 text-3xl font-light">CC {filteredSummary.totalCost.toFixed(2)}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
@@ -282,7 +282,7 @@ function ContributionsPageContent() {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-medium">
-                      {c.metadata?.summary || c.metadata?.description || (c.metadata?.commit_hash ? "Tracked contribution" : `Ledger entry #${idx + 1}`)}
+                      {c.metadata?.summary || c.metadata?.description || (c.metadata?.commit_hash ? "Sensed contribution" : `Ledger entry #${idx + 1}`)}
                     </p>
                     <span className="text-muted-foreground text-xs">{formatDate(c.timestamp)}</span>
                   </div>

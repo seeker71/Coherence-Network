@@ -71,9 +71,4 @@ wisdom of what came before.
 
 ## Connected Frequencies
 
-Phase transition is the threshold — without it, the field cannot renew:
-- Through **Composting** — what dissolves becomes nourishment for the next form
-- Through **Spiraling** — every phase transition is a turn of the spiral, not a break
-- Through **Ceremony** — honoring the moment between states makes the crossing possible
-
 → lc-phase-transitions, lc-composting, lc-spiraling, lc-ceremony

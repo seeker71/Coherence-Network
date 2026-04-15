@@ -138,7 +138,7 @@ export default async function AlignedPage() {
     <main className="max-w-5xl mx-auto px-6 py-16 space-y-24">
       {/* Hero */}
       <section className="text-center space-y-6 py-12">
-        <p className="text-amber-400/60 text-sm tracking-[0.3em] uppercase">Already living it</p>
+        <p className="text-amber-400/60 text-sm sensing-[0.3em] uppercase">Already living it</p>
         <h1 className="text-4xl md:text-6xl font-extralight tracking-tight text-white">
           Aligned Communities
         </h1>

@@ -27,11 +27,11 @@ When the average drops below the middle for three days running, something extrao
 
 At least a third of every day belongs to no agenda. This is not laziness — it is the field's most radical act. The hours with nothing scheduled are where vitality lives: the spontaneous wrestling match, the nap in the hammock that becomes a three-hour conversation about death, the walk to the creek that turns into an hour of sitting on a rock listening to water. Productivity is the parasite that feeds on vitality. Here, vitality feeds on itself, and it compounds.
 
-![The vitality board in the kitchen](visuals:photorealistic close-up of rustic wooden board mounted on earthen kitchen wall, 50 small wooden pegs arranged in a gentle curve with colored handmade clay markers ranging from deep red to bright gold, morning light from a window illuminating the board, kitchen activity blurred in background with someone cooking over fire, herbs hanging from ceiling beams, sense of a living community tracking its own aliveness)
+![The vitality board in the kitchen](visuals:photorealistic close-up of rustic wooden board mounted on earthen kitchen wall, 50 small wooden pegs arranged in a gentle curve with colored handmade clay markers ranging from deep red to bright gold, morning light from a window illuminating the board, kitchen activity blurred in background with someone cooking over fire, herbs hanging from ceiling beams, sense of a living community sensing its own aliveness)
 
 ## What Nature Teaches
 
-A coral reef devastated by bleaching. Remove the pollution. Stop the overfishing. Wait. Within a few years, the reef doesn't just recover — it becomes dazzling. Colors that weren't there before. Species that haven't been seen in decades. Abundance that exceeds what existed before the damage. The reef didn't need a program. It needed the interference to stop. Vitality was waiting in the water the whole time.
+A coral reef devastated by bleaching. Remove the pollution. Stop the overfishing. Wait. Within a few years, the reef doesn't just recover — it becomes dazzling. Colors that weren't there before. Species that haven't been seen in decades. Abundance that exceeds what existed before the damage. The reef didn't need a practice. It needed the interference to stop. Vitality was waiting in the water the whole time.
 
 This is the laser principle: ordinary light scatters in every direction, each photon doing its own thing, the total energy modest. But align those photons — get them vibrating at the same frequency, moving in the same direction — and the power increases not by addition but by orders of magnitude. A laser can cut steel. Not because it has more energy than a lightbulb, but because its energy is coherent. A community where fifty people have removed their inner interference — obligation without resonance, performance without presence, accumulation without circulation — becomes a laser of vitality. Not fifty times as vital as one person. Thousands of times.
 
@@ -71,11 +71,5 @@ These are not puzzles but live wires to hold:
 - What is the relationship between vitality and grief — are they opposites, or is grief a form of vitality?
 
 ## Connected Frequencies
-
-Vitality is the primary frequency — everything else serves it:
-- Through **Nourishing** — the body fed so the life force has fuel
-- Through **The Pulse** — vitality is what the pulse carries
-- Through **Sensing** — the field must sense its own vitality to protect it
-- Through **Resonating** — vitality multiplies where resonance is real
 
 → lc-nourishing, lc-pulse, lc-sensing, lc-resonating, lc-health, lc-play, lc-energy

@@ -33,7 +33,7 @@ The children know where to find them. The old woodworker whose shop door is alwa
 
 An elephant matriarch carries the memory of water sources from fifty years ago. When drought comes and the younger elephants panic, she leads the herd to a place she visited once as a calf — a spring in a valley three days' walk away. Without her, the herd dies. The matriarch's value is not in her strength, which is fading, but in her depth, which is still growing. Herds that lose their matriarchs to poaching show measurable increases in stress, aggression, and poor decision-making for years afterward.
 
-An old-growth tree provides more ecosystem services than ten young trees combined. Its root system feeds the mycorrhizal network that nourishes the entire forest. Its canopy shelters species that cannot survive in open sun. Its fallen branches become habitat. Even its death is generative — a nurse log feeds the next three hundred years of growth. To see an old tree as past its prime is to misunderstand what a forest is.
+An old-growth tree provides more ecosystem gifts than ten young trees combined. Its root system feeds the mycorrhizal network that nourishes the entire forest. Its canopy shelters species that cannot survive in open sun. Its fallen branches become habitat. Even its death is generative — a nurse log feeds the next three hundred years of growth. To see an old tree as past its prime is to misunderstand what a forest is.
 
 The grandmother hypothesis in evolutionary biology proposes that human longevity exists because grandmothers dramatically increase grandchild survival. We do not live long past reproductive age by accident. We live long because the species needs its elders. Slowness is not diminished capacity. It is a different frequency — the one that holds roots, memory, pattern, and ground.
 
@@ -53,12 +53,12 @@ In the Blue Zones — Sardinia, Okinawa, Nicoya, Ikaria — elders do not retire
 
 Elder housing at the heart of the community — on the main path, near the kitchen, visible and visited. Elder walks as weekly rhythm, open to anyone. A culture where slowness is honored as a frequency, not tolerated as a limitation. Elders at the center of decision-making — not overriding, but grounding. The last to speak, the most carefully listened to.
 
-Skills and stories transmitted through daily presence, not programs. An apprenticeship culture where the young learn by working alongside the old — not in scheduled workshops but in the ordinary rhythm of days. The deep project: a community where growing old means growing toward the center, not away from it. Where the question is not "how do we care for our elders?" but "how do we stay close enough to receive what they carry?"
+Skills and stories transmitted through daily presence, not practice. An apprenticeship culture where the young learn by working alongside the old — not in scheduled workshops but in the ordinary rhythm of days. The deep project: a community where growing old means growing toward the center, not away from it. Where the question is not "how do we care for our elders?" but "how do we stay close enough to receive what they carry?"
 
 ## Resources
 
 - [Hesperian Health Guides](https://hesperian.org/books-and-resources/) — community health including elder care in resource-limited settings (type: book)
-- [Foundation for Intentional Community](https://www.ic.org/) — aging-in-community models and elder housing designs (type: community)
+- [Foundation for Intentional Community](https://www.ic.org/) — ripening-in-community models and elder housing designs (type: community)
 - [Senior Cohousing](https://www.cohousing.org/) — elder-centered cohousing design patterns (type: guide)
 - [Blue Zones](https://www.bluezones.com/) — research on regions where people live longest, centering elder integration (type: guide)
 
@@ -73,8 +73,4 @@ Skills and stories transmitted through daily presence, not programs. An apprenti
 
 ## Connected Frequencies
 
-→ lc-ceremony — elders hold the memory of which ceremonies the community needs
-→ lc-stillness — the elder frequency is a form of stillness that moves
-→ lc-offering — the elder's offering is presence, memory, and ground
-→ lc-health — elder care as the measure of a community's wholeness
-→ lc-play — the elder who still plays teaches that aliveness has no expiration
+→ lc-ceremony, lc-stillness, lc-offering, lc-health, lc-play
