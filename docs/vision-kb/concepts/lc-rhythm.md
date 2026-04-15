@@ -13,7 +13,7 @@ updated: 2026-04-14
 
 You wake before the alarm. Not because you're anxious — because your body
 knows. Dawn is coming. Something in your cells, older than language, older
-than thought, has been tracking the light through your closed eyelids and
+than thought, has been sensing the light through your closed eyelids and
 the temperature through your skin, and now it says: rise. This is rhythm.
 Not the clock on the wall but the clock in the blood.
 
@@ -75,10 +75,5 @@ is also the path of deepest nourishment.
   generational turns — and how would that change its decisions?
 
 ## Connected Frequencies
-
-Rhythm is the temporal architecture — without it, the field has no heartbeat:
-- Through **Spiraling** — rhythm is the spiral experienced through time, each cycle deeper
-- Through **Rest** — the downbeat, the pause that makes the music possible
-- Through **Ceremony** — marking the turns of rhythm, honoring solstice and equinox
 
 → lc-spiraling, lc-rest, lc-ceremony, lc-nourishment

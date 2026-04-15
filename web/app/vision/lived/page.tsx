@@ -30,7 +30,7 @@ export default async function LivedPage() {
       <section className="relative flex flex-col items-center justify-center min-h-[70vh] px-6 text-center">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(234,179,8,0.06)_0%,_transparent_60%)]" />
         <div className="relative z-10 max-w-3xl space-y-6">
-          <p className="text-amber-400/60 text-sm tracking-[0.3em] uppercase">Walk through it</p>
+          <p className="text-amber-400/60 text-sm sensing-[0.3em] uppercase">Walk through it</p>
           <h1 className="text-5xl md:text-7xl font-extralight tracking-tight leading-[1.1]">
             The Lived{" "}
             <span className="bg-gradient-to-r from-amber-300 via-teal-300 to-violet-300 bg-clip-text text-transparent">

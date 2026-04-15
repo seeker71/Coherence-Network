@@ -2,7 +2,7 @@
 id: lc-composting
 hz: 285
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Composting
@@ -55,6 +55,26 @@ But the physical infrastructure is only half of it. The composting ceremonies �
 
 The composting mindset shapes how the community relates to everything that ends. A building that has served its decades returns its materials to the earth. A practice that no longer serves is thanked and released. Nothing is wasted because nothing is treated as waste — only as material in transition, waiting for its next form.
 
+## Living Composting Systems
+
+The physical systems are simple. What matters is that every person in the community can see, smell, and touch the transformation happening.
+
+**Three-bin thermophilic stations.** Three bays built from pallets or timber: one filling, one cooking, one finishing. Kitchen scraps and garden waste go into the active bay, layered with carbon -- dry leaves, straw, wood chips. When the bay is full, it moves to the cooking position. Internal temperatures reach 55-65 degrees Celsius within days, hot enough to transform pathogens and weed seeds into clean fertility. A long-stemmed thermometer lets anyone check the pile's heartbeat. Children love this -- pressing their hands against the warm side of the pile on a cold morning, feeling the life inside.
+
+**Humanure system.** Sawdust toilets in every dwelling, collected weekly into dedicated bins that cook separately from food compost. Eighteen months of thermophilic processing, temperatures monitored, before the finished material goes to orchard trees -- never to vegetable beds. The system returns what the body releases to the fruit it will eat next year. The cycle is complete, visible, and honored rather than hidden.
+
+**Vermicomposting near the children's area.** Shallow wooden bins with red wigglers. Kitchen scraps go in, dark castings come out. The worms have names. The youngest community members feed them and watch the transformation happen in real time -- melon rind becoming black gold in weeks. This is where composting stops being a concept and becomes a relationship.
+
+## Emotional Composting
+
+The same process that turns kitchen scraps into soil also turns grief, disappointment, and ended things into the ground from which new life grows. The community practices this deliberately.
+
+**The composting ceremony.** Held whenever something completes its cycle -- a project, a working group, a season, a relationship. The circle gathers. People name what was: what they received, what they gave, what they learned. Nothing is skipped. The hard parts are named alongside the beautiful parts, because both carry nutrients. Then something symbolic -- a written word, a dried flower, a drawing -- goes into the fire or the earth. The ceremony does not rush toward hope. It stays with what is ending until the ending feels complete.
+
+**Seasonal release.** Each autumn, the community asks together: what has served its purpose? What can be returned to the soil of possibility? Sometimes it is a governance structure that no longer fits. Sometimes it is a weekly gathering that ran its course. The composting ceremony gives it dignity -- acknowledging that what transforms well feeds what comes next.
+
+**Sitting with what is mid-process.** Not everything is ready to be released. Some grief needs more time. Some endings have not finished ending. The community practice is to hold this too -- to resist the urge to name transformation before it has actually happened. The pile is not done until it is done. Rushing it makes poison, not soil.
+
 ## Resources
 
 - [Humanure Handbook](https://humanurehandbook.com/) — Joseph Jenkins' free guide to composting human waste safely (type: book)
@@ -73,9 +93,4 @@ The composting mindset shapes how the community relates to everything that ends.
 
 ## Connected Frequencies
 
-→ [Phase Transitions](lc-v-phase-transition.md) — the larger lifecycle that composting serves
-→ [Rest & Integration](lc-rest.md) — composting IS the rest phase, the underground work
-→ [Nourishment](lc-nourishment.md) — what composting produces: soil for the next season
-→ [Food as Living Practice](lc-v-food-practice.md) — the garden that compost feeds
-→ [Land](lc-land.md) — the ground that holds it all
-→ [New Earth Integration](new-earth-integration.md) — civilizational composting of old systems
+→ lc-w-phase-transition, lc-rest, lc-nourishment, lc-v-food-practice, lc-land

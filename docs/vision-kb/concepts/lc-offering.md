@@ -2,7 +2,7 @@
 id: lc-offering
 hz: 528
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Offering
@@ -21,7 +21,7 @@ This is what offering feels like from the inside: not sacrifice, not duty, not e
 
 There is a board on the wall of the common house. One side says what the community needs — a fence mended, a child watched on Thursday afternoon, someone who understands plumbing. The other side says what people want to give — a woman who makes cheese wants to teach others, a teenager who builds furniture is looking for a project, an elder wants someone to walk with and talk about trees. People read the board the way you read a river — you see where the current wants to flow and you step in where your shape fits.
 
-There are no assigned roles. No job titles. No hours tracked. Once a week, an offering circle: people sit together and say what they want to give next. Not what they think they should give. Not what the community most needs. What is alive in them, pressing to come out. A man who spent thirty years as an accountant discovers he wants to build dry stone walls. A woman who thought she had nothing to offer realizes the community has been orbiting her kitchen for months — her cooking is the gravitational center no one named.
+There are no assigned roles. No job titles. No hours sensed. Once a week, an offering circle: people sit together and say what they want to give next. Not what they think they should give. Not what the community most needs. What is alive in them, pressing to come out. A man who spent thirty years as an accountant discovers he wants to build dry stone walls. A woman who thought she had nothing to offer realizes the community has been orbiting her kitchen for months — her cooking is the gravitational center no one named.
 
 The hard part is not getting people to contribute. It is getting people to trust that what they naturally give is enough. That the bird does not justify its song.
 
@@ -51,11 +51,31 @@ In Kerala, the kudumbashree system organizes two hundred thousand neighborhood g
 
 ## What We're Building
 
-A resonance board, not a job board — a living surface where needs and gifts find each other without managers, without algorithms, without performance reviews. Weekly offering circles where the question is not "what should you do?" but "what is alive in you?" Tracking offerings, not hours — what did you give this week that was genuinely yours to give?
+A resonance board, not a job board — a living surface where needs and gifts find each other without managers, without algorithms, without performance reviews. Weekly offering circles where the question is not "what should you do?" but "what is alive in you?" Sensing offerings, not hours — what did you give this week that was genuinely yours to give?
 
 The deeper build: a culture where the distinction between self-expression and service dissolves. Where nobody has to justify their contribution in someone else's terms. Where the person who cooks and the person who builds and the person who sits with the dying are all understood to be doing the same thing — letting what is inside them become what the community needs.
 
 No performance reviews. No annual assessments. Instead, a question asked gently in the offering circle once a season: is what you are giving still alive in you, or has it become obligation? The moment an offering becomes a job, something essential has been lost. The community's task is to notice before the giver does, and to create space for what wants to emerge next.
+
+## Gift Economy in Practice
+
+The shift from transaction to offering does not happen by declaring it. It happens through daily practices that rewire the habit of keeping score.
+
+**The resonance board.** Two columns on the common house wall: "What I can give" and "What I need." Handwritten cards, pinned with wooden pegs. Someone offers violin lessons. Someone needs help splitting firewood. Someone wants to share their sourdough starter. The board is not a marketplace -- there is no matching, no obligation. People read it the way you read a garden: noticing what is ripe, what needs tending, what is ready to be picked.
+
+**The offering circle.** Weekly, after a shared meal. Each person says what wants to come through them this week -- not what they think they should do, but what is alive in them. A retired teacher feels pulled toward the woodshop. A teenager wants to cook for the elders. A newcomer does not know yet, and that is held as gently as any clear offering. The circle is not assignment. It is listening for what wants to happen.
+
+**Invisible offerings.** Some gifts have no name and no card on the board. The person who always notices when the soap needs refilling. The one who sits with people in their hard nights. The one whose laughter changes the weather in a room. The offering circle names these too -- gently, publicly -- so the givers know they are seen.
+
+## Skill Sharing and Time Exchange
+
+Every person who lives here carries knowledge that someone else is hungry for. The skill share is how that hunger gets fed.
+
+**Monthly skill shares.** One evening a month, three people teach what they know. The blacksmith shows forge welding. A grandmother teaches fermentation. A child demonstrates the constellations she memorized. No expertise required -- only the willingness to share what you love. Teaching something you love in front of people who are curious is one of the purest forms of offering.
+
+**Apprenticeship by proximity.** Formal skill transfers happen not in classrooms but in kitchens, workshops, and gardens. If you want to learn woodworking, you spend mornings with the woodworker. If you want to learn herbalism, you walk with the herbalist. The learning happens through shared hours, through watching hands, through the thousand small corrections that come from working side by side.
+
+**Time as a river, not a ledger.** Some communities use time banks where an hour of plumbing equals an hour of poetry. Here the approach is simpler: you give what you can, when you can. The person who gave four hours in the garden this morning might receive a repaired bicycle this afternoon, or might not. The trust is in the flow, not in the accounting. Over weeks and months, the river evens itself -- not because anyone calculates, but because generosity is contagious and the field remembers.
 
 ## Resources
 
@@ -74,8 +94,4 @@ No performance reviews. No annual assessments. Instead, a question asked gently 
 
 ## Connected Frequencies
 
-→ lc-circulation — offering is what enters the flow; circulation is how it moves
-→ lc-ceremony — the moment when offering becomes visible and honored
-→ lc-stillness — in stillness, you hear what you actually have to give
-→ lc-play — play reveals the offerings people did not know they carried
-→ lc-elders — the elder's offering is presence itself
+→ lc-circulation, lc-ceremony, lc-stillness, lc-play, lc-elders

@@ -205,6 +205,226 @@ def patch_concept(concept_id: str, updates: dict[str, Any]) -> dict[str, Any]:
     return result or {"error": "not found"}
 
 
+def validate_story_format(story_content: str) -> list[dict[str, str]]:
+    """Validate story content format and return warnings.
+
+    Checks for common formatting issues that break the renderer:
+    - ASCII arrows (-> instead of →)
+    - Cross-refs with descriptions (→ lc-xxx — description)
+    - Cross-refs with markdown links (→ [Name](file.md))
+    - Non-existent cross-ref IDs
+    - Inline visuals not isolated by blank lines
+    """
+    import re
+
+    warnings: list[dict[str, str]] = []
+    lines = story_content.split("\n")
+
+    # Collect known concept IDs
+    known_ids: set[str] = set()
+    try:
+        all_concepts = _gs().list_nodes(type="concept", limit=1000).get("items", [])
+        known_ids = {c["id"] for c in all_concepts}
+    except Exception:
+        pass
+
+    for i, line in enumerate(lines, 1):
+        stripped = line.strip()
+
+        # ASCII arrow
+        if stripped.startswith("-> "):
+            warnings.append({
+                "line": str(i),
+                "issue": "ascii_arrow",
+                "message": "Use → (Unicode arrow) instead of ->",
+            })
+
+        # Cross-ref with markdown link
+        if stripped.startswith("\u2192 ") and "[" in stripped and "](" in stripped:
+            warnings.append({
+                "line": str(i),
+                "issue": "annotated_crossref",
+                "message": "Cross-refs should be plain IDs: → lc-xxx, lc-yyy (no markdown links)",
+            })
+
+        # Cross-ref with description after em-dash
+        if stripped.startswith("\u2192 ") and " \u2014 " in stripped:
+            refs = stripped[2:].split(",")
+            for ref in refs:
+                if " \u2014 " in ref:
+                    warnings.append({
+                        "line": str(i),
+                        "issue": "crossref_description",
+                        "message": "Cross-refs should not have descriptions: remove text after —",
+                    })
+                    break
+
+        # Cross-ref with non-existent ID
+        if stripped.startswith("\u2192 ") and known_ids:
+            refs = stripped[2:].split(",")
+            for ref in refs:
+                cid = ref.strip().split(" ")[0].strip()
+                if cid and cid not in known_ids:
+                    warnings.append({
+                        "line": str(i),
+                        "issue": "unknown_crossref",
+                        "message": f"Cross-ref '{cid}' does not match any known concept",
+                    })
+
+        # Inline visual not isolated
+        if re.match(r"^!\[.*\]\(visuals:", stripped):
+            if i > 1 and lines[i - 2].strip() and not lines[i - 2].strip().startswith("#"):
+                warnings.append({
+                    "line": str(i),
+                    "issue": "visual_not_isolated",
+                    "message": "Inline visuals should have a blank line before them",
+                })
+
+    return warnings
+
+
+def update_story(
+    concept_id: str,
+    story_content: str | None = None,
+    visuals: list[dict[str, str]] | None = None,
+) -> dict[str, Any]:
+    """Update a concept's living story and optionally its visuals.
+
+    If visuals are not provided but story_content contains inline
+    ``![caption](visuals:prompt)`` entries, they are auto-extracted.
+
+    Returns the updated concept dict plus a ``warnings`` list of
+    any format issues found in the story content.
+    """
+    import re
+
+    props: dict[str, Any] = {}
+    warnings: list[dict[str, str]] = []
+
+    if story_content is not None:
+        warnings = validate_story_format(story_content)
+        props["story_content"] = story_content
+        # Auto-extract visuals from inline markdown if not explicitly given
+        if visuals is None:
+            extracted = []
+            for m in re.finditer(r"!\[([^\]]*)\]\(visuals:([^)]+)\)", story_content):
+                extracted.append({"caption": m.group(1).strip(), "prompt": m.group(2).strip()})
+            if extracted:
+                props["visuals"] = extracted
+        else:
+            props["visuals"] = visuals
+    elif visuals is not None:
+        props["visuals"] = visuals
+
+    if not props:
+        return get_concept(concept_id) or {"error": "no updates"}
+
+    result = patch_concept(concept_id, props)
+    if warnings:
+        result["warnings"] = warnings
+    return result
+
+
+def regenerate_visuals(concept_id: str, concept: dict[str, Any], force: bool = False) -> dict[str, Any]:
+    """Regenerate Pollinations images for a concept.
+
+    Downloads gallery visuals (from ``visuals`` property) and story visuals
+    (from inline ``![caption](visuals:prompt)`` in ``story_content``).
+    Uses deterministic seeds so images are reproducible.
+    """
+    import re
+    import urllib.parse
+    from pathlib import Path
+
+    # Constants — must match scripts/kb_common.py and web/lib/vision-utils.ts
+    SEED_STRIDE = 17
+    STORY_SEED_STRIDE = 13
+
+    def _concept_seed(cid: str) -> int:
+        return sum(ord(c) for c in cid)
+
+    def _pollinations_url(prompt: str, seed: int, width: int = 1024, height: int = 576) -> str:
+        encoded = urllib.parse.quote(prompt)
+        return f"https://image.pollinations.ai/prompt/{encoded}?width={width}&height={height}&model=flux&nologo=true&seed={seed}"
+
+    # Find output directory — works from API root or repo root
+    candidates = [
+        Path(__file__).resolve().parents[3] / "web" / "public" / "visuals" / "generated",
+        Path.cwd() / "web" / "public" / "visuals" / "generated",
+        Path.cwd().parent / "web" / "public" / "visuals" / "generated",
+    ]
+    output_dir = next((d for d in candidates if d.exists()), candidates[0])
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    base_seed = _concept_seed(concept_id)
+    results: list[dict[str, str]] = []
+
+    try:
+        import httpx as _httpx
+    except ImportError:
+        return {"error": "httpx not installed — cannot download images", "results": []}
+
+    def _download(url: str, dest: Path) -> bool:
+        try:
+            resp = _httpx.get(url, timeout=120, follow_redirects=True)
+            if resp.status_code == 200 and len(resp.content) > 1000:
+                dest.write_bytes(resp.content)
+                return True
+        except Exception:
+            pass
+        return False
+
+    # Gallery visuals
+    gallery_visuals = concept.get("visuals", [])
+    for i, v in enumerate(gallery_visuals):
+        prompt = v.get("prompt", "")
+        if not prompt:
+            continue
+        seed = base_seed + i * SEED_STRIDE
+        filename = f"{concept_id}-{i}.jpg"
+        dest = output_dir / filename
+        if dest.exists() and not force:
+            results.append({"file": filename, "status": "exists"})
+            continue
+        url = _pollinations_url(prompt, seed)
+        if _download(url, dest):
+            results.append({"file": filename, "status": "downloaded"})
+        else:
+            results.append({"file": filename, "status": "failed"})
+
+    # Story visuals
+    story_content = concept.get("story_content", "")
+    if story_content:
+        for i, m in enumerate(re.finditer(r"!\[([^\]]*)\]\(visuals:([^)]+)\)", story_content)):
+            prompt = m.group(2).strip()
+            if not prompt:
+                continue
+            seed = base_seed + i * STORY_SEED_STRIDE
+            filename = f"{concept_id}-story-{i}.jpg"
+            dest = output_dir / filename
+            if dest.exists() and not force:
+                results.append({"file": filename, "status": "exists"})
+                continue
+            url = _pollinations_url(prompt, seed)
+            if _download(url, dest):
+                results.append({"file": filename, "status": "downloaded"})
+            else:
+                results.append({"file": filename, "status": "failed"})
+
+    downloaded = sum(1 for r in results if r["status"] == "downloaded")
+    existing = sum(1 for r in results if r["status"] == "exists")
+    failed = sum(1 for r in results if r["status"] == "failed")
+
+    return {
+        "concept_id": concept_id,
+        "total": len(results),
+        "downloaded": downloaded,
+        "existing": existing,
+        "failed": failed,
+        "results": results,
+    }
+
+
 def delete_concept(concept_id: str) -> dict[str, Any]:
     # Only allow deleting user-defined concepts
     node = _gs().get_node(concept_id)
@@ -246,11 +466,15 @@ def get_concept_edges(concept_id: str) -> list[dict[str, Any]]:
     neighbors = _gs().get_neighbors(concept_id, direction="both")
     edges = []
     for neighbor in neighbors:
+        # graph_service.get_neighbors uses "via_edge_type" and "via_direction"
+        edge_type = neighbor.get("via_edge_type") or neighbor.get("edge_type", "related")
+        direction = neighbor.get("via_direction") or neighbor.get("direction")
+        is_outgoing = direction == "outgoing"
         edges.append({
-            "id": neighbor.get("edge_id", f"{concept_id}-{neighbor.get('edge_type', '?')}-{neighbor.get('id', '?')}"),
-            "from": neighbor.get("from_id", concept_id) if neighbor.get("direction") == "outgoing" else neighbor.get("id", "?"),
-            "to": neighbor.get("id", "?") if neighbor.get("direction") == "outgoing" else concept_id,
-            "type": neighbor.get("edge_type", "related"),
+            "id": neighbor.get("edge_id", f"{concept_id}-{edge_type}-{neighbor.get('id', '?')}"),
+            "from": concept_id if is_outgoing else neighbor.get("id", "?"),
+            "to": neighbor.get("id", "?") if is_outgoing else concept_id,
+            "type": edge_type,
             "strength": neighbor.get("strength", 1.0),
             "created_by": neighbor.get("created_by", ""),
         })

@@ -226,7 +226,7 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
       </section>
 
       <section className="rounded border p-4 space-y-2 text-sm">
-        <h2 className="font-semibold">Spec Value/Cost/Gap Tracking</h2>
+        <h2 className="font-semibold">Spec Value/Cost/Gap Sensing</h2>
         <p className="text-muted-foreground">
           potential_value {registryItem?.potential_value?.toFixed(2) ?? "-"} | actual_value {registryItem?.actual_value?.toFixed(2) ?? "-"} |
           value_gap {registryItem?.value_gap?.toFixed(2) ?? "-"}

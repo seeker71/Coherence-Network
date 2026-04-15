@@ -2,7 +2,7 @@
 id: lc-resonating
 hz: 528
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Resonating
@@ -49,11 +49,19 @@ Trees in an old-growth forest graft their roots together underground. Different 
 
 ## What We're Building
 
-Contact zones: spaces designed for nothing except being together. A hammock cluster under ancient trees, close enough that bodies sway into each other. A fire pit that seats twenty, with no chairs — only earth and blankets, so bodies arrange themselves naturally, leaning on each other, children in laps, feet touching. A tea station where making tea for someone is a complete act of love in a porcelain cup.
+Contact zones: spaces designed for nothing except being together. A hammock cluster under ancient trees. A fire pit that seats twenty on earth and blankets, bodies arranging themselves naturally. A tea station where making tea for someone is a complete gesture of care.
 
-The contact improvisation sessions are the most direct resonance practice. Twice a week, bodies learn what minds resist: that you can trust another person with your weight. That surrender and strength are the same gesture. That when two nervous systems synchronize through skin, the intelligence that emerges is greater than either alone. Over months, the whole community develops a physical ease with each other that changes everything — the way people pass in doorways, the way a hand rests on a shoulder during conversation, the way a hug lasts three breaths instead of one.
+The community does not manage resonance -- it removes the obstacles to it: schedules too rigid for spontaneity, spaces too private for encounter, norms too polite for honesty. What remains is what was always trying to happen: separate tones becoming one chord, and a harmonic appearing that no individual is producing.
 
-Resonance compounds the way vitality does. One real moment of connection between two people raises the field for everyone. A couple's genuine intimacy nourishes the single person who witnesses it. A child's laughter in the courtyard lifts the elder sitting alone by the window. The community doesn't manage resonance — it removes the obstacles to it: schedules too rigid for spontaneity, spaces too private for encounter, norms too polite for honesty. What remains when those obstacles dissolve is what was always trying to happen: separate tones becoming one chord, and a harmonic appearing that no individual is producing.
+## Practical Resonance Work
+
+Resonance cannot be scheduled, but the conditions for it can be tended deliberately. See the [practical guide](../guides/lc-resonating-guide.md) for detailed sound practices and contact zone design.
+
+**The fire circle sing.** The simplest entry point. A fire, a few voices, no plan. Someone hums. Someone matches the note. Someone finds a harmony. The sing is not a performance and has no audience. It ends when it ends. The practice teaches the body that its voice belongs in the mix -- that the thin note and the uncertain note are part of the chord.
+
+**Contact improvisation.** Twice a week, bodies learn what minds resist: that you can trust another person with your weight. One person leans into another's shoulder. The other receives and redirects. No choreography. The nervous systems have a conversation below thought. Over months, the whole community develops a physical ease that changes everything -- the way people pass in doorways, the way a hug lasts three breaths instead of one.
+
+**Sound and vibration.** Singing bowls in the stillness sanctuary. A gong bath on full moon evenings. Humming together for three minutes at the start of a meeting -- not for any reason except to feel the room synchronize. The vibration is literal: sound waves move through bodies, entrain heartbeats, calm nervous systems. Resonance is not metaphor. It is physics happening between people.
 
 ## Resources
 
@@ -71,11 +79,5 @@ These are questions the field hums with, not problems to resolve:
 - What happens when someone cannot resonate — when their wound is too fresh, their walls too thick? Does the field wait, or does it reach?
 
 ## Connected Frequencies
-
-Resonating is the connective tissue — it holds the field together:
-- Through **Attunement** — attunement tunes the instruments, resonance is the music they make
-- Through **The Pulse** — resonance is the pulse felt between cells, not just within them
-- Through **Vitality** — real resonance generates vitality the way friction generates heat
-- Through **Sensing** — the field must sense each voice to know what chord is possible
 
 → lc-attunement, lc-pulse, lc-vitality, lc-sensing, lc-intimacy, lc-expressing, lc-v-harmonizing
