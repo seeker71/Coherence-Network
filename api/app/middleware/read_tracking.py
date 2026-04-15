@@ -68,15 +68,11 @@ def _get_tier(asset_id: str) -> int:
     return _asset_tiers.get(asset_id, 3)
 
 
-def _frequency_profile(asset_id: str) -> dict[str, float]:
-    """Get the frequency profile vector for an asset.
+def _vitality_multiplier(asset_id: str) -> float:
+    """How strongly does this asset resonate across frequency space?
 
-    Not a single score — a vector across all frequency dimensions
-    (each concept is a dimension). Like an embedding: the asset's
-    position in frequency space.
-
-    Returns: {concept_id: signal_strength, ...}
-    Cached in memory after first computation.
+    Uses the universal frequency profile service to get the profile
+    vector, then derives a tracking multiplier from its magnitude.
     """
     if asset_id in _asset_vitality:
         return _asset_vitality[asset_id]
