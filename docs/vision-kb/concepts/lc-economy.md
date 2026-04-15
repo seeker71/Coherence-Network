@@ -17,7 +17,7 @@ And yet she earned from it. Not because you paid — because you built. When you
 
 ![A web of light connections between small communities on a dark globe, each node glowing amber where contributions flow](visuals:photorealistic aerial night view of Earth showing five small intentional communities connected by thin golden light streams flowing between them, each community a warm cluster of buildings with fire light, the connections pulsing gently like a heartbeat, stars visible above, the light streams representing CC flowing through the network)
 
-None of them set a price. None of them built a paywall. They simply created from overflow — because the knowledge wanted to be shared — and the network tracked where that knowledge went and what it became.
+None of them set a price. None of them built a paywall. They simply created from overflow — because the knowledge wanted to be shared — and the network sensed where that knowledge went and what it became.
 
 ## How It Lives Here
 
@@ -33,7 +33,7 @@ The bridge between creation and attention is **resonance**. Your frequency profi
 
 You never pay to read. Views are free — always. The economy flows the other direction:
 
-- You read freely. Every view is tracked but costs you nothing.
+- You read freely. Every view is sensed but costs you nothing.
 - You contribute. A blueprint, a renderer, a hosted node, a research article.
 - Your contribution generates CC through the value it creates.
 - A portion of your CC flows back through your reading history.
@@ -59,7 +59,7 @@ A forest does not invoice. When a maple drops its leaves, it does not charge the
 
 But the forest does *track*. Every nutrient exchange leaves a chemical trace. Every mycorrhizal connection strengthens or weakens based on what flows through it. The forest's economy is not unaccounted — it is accounted by the living systems themselves, transparently, without a central ledger.
 
-CC works the same way. The tracking is not a toll booth. It is the forest remembering where its nutrients went and what grew from them.
+CC works the same way. The sensing is not a toll booth. It is the forest remembering where its nutrients went and what grew from them.
 
 ## Where You Can See It
 
@@ -80,7 +80,7 @@ Anyone can run a node. A Raspberry Pi in your home, a server in a co-working spa
 
 To start: clone the repo, run `docker compose up`, point your domain at it. Your node joins the federation. When a reader in your region requests a concept page, your node serves it faster than a node on the other side of the planet. You earn CC proportional to what you serve.
 
-The more communities your node serves, the more CC it generates. The CC flows without you doing anything — the tracking middleware counts every request and attributes it to your node's contributor ID.
+The more communities your node serves, the more CC it generates. The CC flows without you doing anything — the sensing middleware counts every request and attributes it to your node's contributor ID.
 
 ## How to Earn by Promoting
 
@@ -94,7 +94,7 @@ The chain: **you promote → someone reads → they contribute → CC flows → 
 
 ## What We're Building
 
-A creative economy where every link in the chain earns — the writer, the renderer builder, the host operator, the promoter, the reader who becomes a contributor. Where tracking costs less than the value it enables. Where the algorithm is chosen by each community, not imposed by a corporation. Where the proof is public and the math is open.
+A creative economy where every link in the chain earns — the writer, the renderer builder, the host operator, the promoter, the reader who becomes a contributor. Where sensing costs less than the value it enables. Where the algorithm is chosen by each community, not imposed by a corporation. Where the proof is public and the math is open.
 
 **Practical guide**: [How the CC economy works](../guides/cc-economy-explainer-guide.md)
 

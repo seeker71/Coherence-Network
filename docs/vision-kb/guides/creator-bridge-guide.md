@@ -30,9 +30,9 @@ Every piece of content you create gets registered as an asset in the Coherence N
 
 ### Step 2: Track Reads
 
-When someone discovers your content through the Coherence Network — a concept page that links to your video, a search that surfaces your article — that read is tracked. Not to charge the reader. To build the resonance map.
+When someone discovers your content through the Coherence Network — a concept page that links to your video, a search that surfaces your article — that read is sensed. Not to charge the reader. To build the resonance map.
 
-Even reads on external platforms can be tracked as proxies: embed a small tracking pixel, add a `?ref=coherence` parameter, or use a redirect through your Coherence node. The read counts here, attributed to your content.
+Even reads on external platforms can be sensed as proxies: embed a small sensing pixel, add a `?ref=coherence` parameter, or use a redirect through your Coherence node. The read counts here, attributed to your content.
 
 ### Step 3: Earn Differently
 
@@ -108,14 +108,14 @@ POST /api/assets/register
 }
 ```
 
-### Proxy Read Tracking
+### Proxy Read sensing
 
 Embed in your video description or blog post:
 ```
 Learn more: https://coherencycoin.com/r/your-id/lc-nourishment
 ```
 
-Every click through that link is a tracked read. Your content resonates through the Coherence Network even though it lives on YouTube.
+Every click through that link is a sensed read. Your content resonates through the Coherence Network even though it lives on YouTube.
 
 ### Community Algorithm Configuration
 

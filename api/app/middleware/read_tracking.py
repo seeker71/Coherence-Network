@@ -1,13 +1,13 @@
-"""Read tracking middleware — adaptive tracking tiers.
+"""Read sensing middleware — adaptive sensing tiers.
 
-Three tiers based on whether tracking cost exceeds potential CC reward:
+Three tiers based on whether sensing cost exceeds potential CC reward:
 
   Tier 1 (full):      Every read recorded. For high-value assets.
   Tier 2 (sampled):   1-in-N reads recorded. For medium-value assets.
   Tier 3 (untracked): Aggregate in-memory counter only. For low-value reads.
 
 Assets auto-promote: untracked → sampled → full as read volume grows.
-The system senses its own overhead and backs off when tracking costs
+The system senses its own overhead and backs off when sensing costs
 more than it returns.
 """
 
@@ -24,14 +24,14 @@ from starlette.responses import Response
 
 log = logging.getLogger(__name__)
 
-# Patterns that constitute a "read" worth tracking
+# Patterns that constitute a "read" worth sensing
 _READ_PATTERNS = [
     re.compile(r"^/api/concepts/(lc-[\w-]+)$"),
     re.compile(r"^/api/assets/([\w-]+)$"),
     re.compile(r"^/api/assets/([\w-]+)/content$"),
 ]
 
-# Paths that are never tracked (health checks, static, verification itself)
+# Paths that are never sensed (health checks, static, verification itself)
 _SKIP_PATTERNS = [
     re.compile(r"^/api/health"),
     re.compile(r"^/api/verification/"),
@@ -58,13 +58,13 @@ SAMPLE_RATE = 10                # 1-in-N for sampled tier
 _asset_tiers: dict[str, int] = {}  # asset_id → tier (1=full, 2=sampled, 3=untracked)
 _asset_vitality: dict[str, float] = {}  # cached frequency score per asset
 
-# Performance budget: max microseconds per request for tracking overhead
+# Performance budget: max microseconds per request for sensing overhead
 MAX_TRACKING_US = 500  # 0.5ms
 _tracking_times: list[float] = []
 
 
 def _get_tier(asset_id: str) -> int:
-    """Get tracking tier for an asset. Default: untracked (3)."""
+    """Get sensing tier for an asset. Default: untracked (3)."""
     return _asset_tiers.get(asset_id, 3)
 
 
@@ -72,7 +72,7 @@ def _vitality_multiplier(asset_id: str) -> float:
     """How strongly does this asset resonate across frequency space?
 
     Uses the universal frequency profile service to get the profile
-    vector, then derives a tracking multiplier from its magnitude.
+    vector, then derives a sensing multiplier from its magnitude.
     """
     if asset_id in _asset_vitality:
         return _asset_vitality[asset_id]
@@ -96,7 +96,7 @@ def _maybe_promote(asset_id: str) -> None:
     """Auto-promote asset tier based on read volume × vitality.
 
     High-vitality assets (ceremony, play, stillness) promote faster
-    because they bring more life to the community — tracking them
+    because they bring more life to the community — sensing them
     is more worthwhile.
     """
     count = _mem_counters[asset_id]
@@ -120,7 +120,7 @@ def _maybe_promote(asset_id: str) -> None:
 
 
 class ReadTrackingMiddleware(BaseHTTPMiddleware):
-    """Adaptive read tracking — tracks only when the value exceeds the cost."""
+    """Adaptive read sensing — tracks only when the value exceeds the cost."""
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
@@ -131,7 +131,7 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
 
         path = request.url.path
 
-        # Skip paths that should never be tracked
+        # Skip paths that should never be sensed
         for skip in _SKIP_PATTERNS:
             if skip.match(path):
                 return response
@@ -149,7 +149,7 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
                 reader_id = request.headers.get("x-contributor-id", "")
 
                 # Check if this is an NFT/registered asset (has a graph node)
-                # NFT assets: identified reads encouraged for CC tracking
+                # NFT assets: identified reads encouraged for CC sensing
                 is_nft = asset_id.startswith("visual-") or concept_id is not None
 
                 # Always increment in-memory counter (cheap)
@@ -196,7 +196,7 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
 
 
 def get_tracking_stats() -> dict:
-    """Get tracking overhead stats for monitoring."""
+    """Get sensing overhead stats for monitoring."""
     avg_us = sum(_tracking_times) / len(_tracking_times) if _tracking_times else 0
     tier_counts = defaultdict(int)
     for t in _asset_tiers.values():

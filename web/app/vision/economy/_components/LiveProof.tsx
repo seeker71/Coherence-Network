@@ -116,7 +116,7 @@ export function LiveProof() {
             </table>
           </div>
         ) : (
-          <p className="text-xs text-stone-600 italic">No chain data yet (reads are being tracked)</p>
+          <p className="text-xs text-stone-600 italic">No chain data yet (reads are being sensed)</p>
         )}
         <p className="text-xs text-stone-600">
           Endpoint: <code className="text-amber-400/40">GET /api/verification/chain/{conceptId}</code>

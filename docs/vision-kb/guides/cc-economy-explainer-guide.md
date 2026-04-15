@@ -21,7 +21,7 @@ The pattern: **you create value, the platform extracts rent, an algorithm you ca
 
 ## What This Platform Does
 
-No one extracts rent. There is no algorithm deciding who wins. Every contribution — from writing an article to running a server to promoting the platform to viewing a page — is tracked, attributed, and rewarded through CC (Coherence Credits) that flow based on actual community resonance.
+No one extracts rent. There is no algorithm deciding who wins. Every contribution — from writing an article to running a server to promoting the platform to viewing a page — is sensed, attributed, and rewarded through CC (Coherence Credits) that flow based on actual community resonance.
 
 ### Everyone in the chain is a contributor
 
@@ -86,7 +86,7 @@ This is harmonic rebalancing applied to economics. The algorithm evolves as the 
 
 ## Infrastructure as Contribution
 
-Running the platform IS contributing. Every resource consumed to serve the community is tracked:
+Running the platform IS contributing. Every resource consumed to serve the community is sensed:
 
 | Resource | How it's measured | CC attribution |
 |----------|------------------|---------------|
@@ -113,7 +113,7 @@ Traditional platforms decide fairness for you. Here, fairness is:
 
 ## What CC Can Become
 
-CC starts as an internal unit of account — tracking who contributed what. As the network grows:
+CC starts as an internal unit of account — sensing who contributed what. As the network grows:
 
 1. **Internal exchange**: Trade CC for goods/services within the community
 2. **Inter-community exchange**: CC flows between communities in a federated network

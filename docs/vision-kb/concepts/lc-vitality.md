@@ -27,7 +27,7 @@ When the average drops below the middle for three days running, something extrao
 
 At least a third of every day belongs to no agenda. This is not laziness — it is the field's most radical act. The hours with nothing scheduled are where vitality lives: the spontaneous wrestling match, the nap in the hammock that becomes a three-hour conversation about death, the walk to the creek that turns into an hour of sitting on a rock listening to water. Productivity is the parasite that feeds on vitality. Here, vitality feeds on itself, and it compounds.
 
-![The vitality board in the kitchen](visuals:photorealistic close-up of rustic wooden board mounted on earthen kitchen wall, 50 small wooden pegs arranged in a gentle curve with colored handmade clay markers ranging from deep red to bright gold, morning light from a window illuminating the board, kitchen activity blurred in background with someone cooking over fire, herbs hanging from ceiling beams, sense of a living community tracking its own aliveness)
+![The vitality board in the kitchen](visuals:photorealistic close-up of rustic wooden board mounted on earthen kitchen wall, 50 small wooden pegs arranged in a gentle curve with colored handmade clay markers ranging from deep red to bright gold, morning light from a window illuminating the board, kitchen activity blurred in background with someone cooking over fire, herbs hanging from ceiling beams, sense of a living community sensing its own aliveness)
 
 ## What Nature Teaches
 

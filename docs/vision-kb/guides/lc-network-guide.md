@@ -111,7 +111,7 @@ Constitutions between communities. Binding agreements with penalties. Weighted v
 | Server | Raspberry Pi 4 or mini-PC | $100-300 | Hosts wiki, messaging, dashboard. Physical object in a room you can enter |
 | Knowledge | Wiki.js or markdown + Git | Free | Shared intelligence, community-owned |
 | Messaging | Matrix (Synapse or Conduit) | Free | Encrypted, federated, self-hosted |
-| Video calls | Jitsi Meet (self-hosted) | Free | No account, no tracking |
+| Video calls | Jitsi Meet (self-hosted) | Free | No account, no sensing |
 | Surplus board | Custom or shared spreadsheet | Free | What each community has and needs |
 
 For communities without reliable internet: **Sneakernet** -- data syncs to USB/phone when a traveler visits, syncs back at a connected node. Delay-tolerant networking.

@@ -63,7 +63,7 @@ ResonanceProfile {
   source: "manual" | "auto" | "hybrid"
   updated_at: datetime
   
-  # Auto-tracking
+  # Auto-sensing
   read_history: [{concept_id, read_count, total_duration}]
   auto_weights: [{concept_id, weight}]     # computed from reading patterns
 }
@@ -116,7 +116,7 @@ The CC per read is tiny (micro-attribution). But over thousands of reads, a popu
 | Component | Gap | Connects to |
 |-----------|-----|-------------|
 | Asset type expansion | Add "article", "model-3d", "blueprint", "instruction" types | Asset model |
-| Read event tracking | Log every API/web read as UsageEvent | Value lineage |
+| Read event sensing | Log every API/web read as UsageEvent | Value lineage |
 | Resonance profile | Per-reader concept weight map (manual + auto) | Beliefs system |
 | CC micro-attribution | Compute CC per read × concept weights | CC economics |
 | Auto-weight refinement | Reading patterns update resonance profile | Resonance profile |
@@ -130,10 +130,10 @@ The CC per read is tiny (micro-attribution). But over thousands of reads, a popu
 - Register all 269 generated images as asset nodes with contributor attribution
 - Tag each asset with its parent concept
 
-### Phase 2: Read Event Tracking
+### Phase 2: Read Event Sensing
 - Middleware that logs every `GET /api/concepts/{id}` and web page render
 - Store as UsageEvent in value lineage: `{source: "web", metric: "read", asset_id, reader_id}`
-- Anonymous reads tracked with session fingerprint
+- Anonymous reads sensed with session fingerprint
 
 ### Phase 3: Resonance Profile + CC Flow
 - Endpoint: `GET/PATCH /api/contributors/{id}/resonance-profile`
@@ -152,7 +152,7 @@ The reader never pays to view anything. Reading is free — always. The economy 
 
 ### How It Actually Works
 
-1. **You read freely.** Every view is tracked (read count, concept tags, duration) but costs you nothing.
+1. **You read freely.** Every view is sensed (read count, concept tags, duration) but costs you nothing.
 2. **You contribute.** At some point you write an article, build a renderer, host a node, implement a blueprint, upload a 3D model — any creative act.
 3. **Your contribution generates CC.** The value lineage system attributes CC to your work based on how much it serves the network.
 4. **A portion of YOUR CC flows back** to the creators of everything you've been reading, weighted by your concept resonance profile (which concepts you read most about).
@@ -175,13 +175,13 @@ For each asset the reader has viewed:
 
 | Reader type | Views | CC generated | CC redistributed |
 |-------------|-------|-------------|-----------------|
-| Pure reader (no contributions) | Tracked | 0 | 0 — free rider, that's fine |
-| Occasional contributor | Tracked | Some | Small flow back to what they read |
-| Active contributor who reads widely | Tracked | Significant | They become circulation — connecting creators across concepts |
+| Pure reader (no contributions) | Sensed | 0 | 0 — free rider, that's fine |
+| Occasional contributor | Sensed | Some | Small flow back to what they read |
+| Active contributor who reads widely | Sensed | Significant | They become circulation — connecting creators across concepts |
 | Infrastructure host | All reads served | Continuous | Host contribution CC flows back through their own reading |
 
 The beautiful part: a pure reader costs the network nothing and may become a contributor later. Their reading history is already there — the moment they contribute, their past attention starts flowing CC backward to the creators who shaped their understanding. The blueprint they read six months ago that inspired their first build? Its creator finally receives CC from that inspiration chain.
 
 ### No Paywalls, No Subscriptions, No Ads
 
-The platform has no revenue model in the old-earth sense. It has a **circulation model**: value is created by contribution, tracked by attention, and distributed by resonance. The system needs no external funding once the contribution base generates enough CC to sustain infrastructure (hosting nodes earn CC too).
+The platform has no revenue model in the old-earth sense. It has a **circulation model**: value is created by contribution, sensed by attention, and distributed by resonance. The system needs no external funding once the contribution base generates enough CC to sustain infrastructure (hosting nodes earn CC too).
