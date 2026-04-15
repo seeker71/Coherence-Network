@@ -148,11 +148,23 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
                 concept_id = asset_id if asset_id.startswith("lc-") else None
                 t0 = time.monotonic()
 
+                # Check if reader voluntarily identified themselves
+                # X-Contributor-Id header: voluntary on reads, required on writes
+                reader_id = request.headers.get("x-contributor-id", "")
+
+                # Check if this is an NFT/registered asset (has a graph node)
+                # NFT assets: identified reads encouraged for CC tracking
+                is_nft = asset_id.startswith("visual-") or concept_id is not None
+
                 # Always increment in-memory counter (cheap)
                 _mem_counters[asset_id] += 1
                 _maybe_promote(asset_id)
 
                 tier = _get_tier(asset_id)
+
+                # Identified readers on NFT assets: always track (they want CC)
+                if reader_id and is_nft:
+                    tier = min(tier, 1)  # promote to full for identified NFT reads
 
                 if tier == 3:
                     # Untracked — in-memory counter only, no DB write

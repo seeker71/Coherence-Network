@@ -361,6 +361,56 @@ async def find_resonant(entity_id: str, top: int = Query(10, ge=1, le=50)):
     return frequency_profile_service.find_resonant(entity_id, top_n=top)
 
 
+# ── Contributor identity endpoints ────────────────────────────────────
+
+
+@router.post("/contributors/generate-keypair", summary="Generate a new Ed25519 keypair for a contributor")
+async def generate_contributor_keypair():
+    """Generate a new Ed25519 keypair.
+
+    Returns both public and private keys. The private key is shown ONCE —
+    the contributor must save it. The public key can be registered.
+    """
+    from app.services import contributor_keys_service
+    return contributor_keys_service.generate_keypair()
+
+
+@router.post("/contributors/{contributor_id}/register-key", summary="Register a public key for a contributor")
+async def register_contributor_key(contributor_id: str, body: dict):
+    """Store a contributor's public key on their graph node.
+
+    Required before the contributor can sign contributions or earn CC.
+    """
+    from app.services import contributor_keys_service
+    pub_key = body.get("public_key_hex", "")
+    if not pub_key:
+        raise HTTPException(status_code=400, detail="public_key_hex required")
+    return contributor_keys_service.register_public_key(contributor_id, pub_key)
+
+
+@router.get("/contributors/{contributor_id}/public-key", summary="Get a contributor's public key")
+async def get_contributor_public_key(contributor_id: str):
+    """Fetch the public key for verification of a contributor's signatures."""
+    from app.services import contributor_keys_service
+    pub_key = contributor_keys_service.get_public_key(contributor_id)
+    if not pub_key:
+        raise HTTPException(status_code=404, detail=f"No public key for '{contributor_id}'")
+    return {"contributor_id": contributor_id, "public_key_hex": pub_key}
+
+
+@router.post("/contributors/{contributor_id}/verify-signature", summary="Verify a contributor's signature")
+async def verify_contributor_signature(contributor_id: str, body: dict):
+    """Verify that a message was signed by the claimed contributor.
+
+    Pass {message, signature_hex}. No auth required — anyone can verify.
+    """
+    from app.services import contributor_keys_service
+    message = body.get("message", "")
+    sig = body.get("signature_hex", "")
+    valid = contributor_keys_service.verify_signature(contributor_id, message, sig)
+    return {"contributor_id": contributor_id, "valid": valid}
+
+
 # ── DIF Feedback endpoints ───────────────────────────────────────────
 
 @router.get("/dif/feedback/stats", summary="Get DIF feedback statistics — true/false positive rates, accuracy")

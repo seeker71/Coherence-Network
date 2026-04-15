@@ -1158,6 +1158,34 @@ def cmd_frequency(args):
           f"\033[33m{mixed_count} mixed\033[0m, \033[31m{inst_count} institutional\033[0m")
 
 
+def cmd_keygen(_args):
+    """Generate a new Ed25519 keypair."""
+    data = _api("POST", "/api/contributors/generate-keypair")
+    if not data:
+        print("Failed to generate keypair", file=sys.stderr)
+        return
+    print(f"  Algorithm: {data.get('algorithm')}")
+    print(f"  Public key:  {data.get('public_key_hex')}")
+    print(f"  Private key: {data.get('private_key_hex')}")
+    print(f"  Fingerprint: {data.get('fingerprint')}")
+    print(f"\n  \033[33mSave your private key — it will not be shown again.\033[0m")
+    print(f"  Register: cc register-key <your-id> {data.get('public_key_hex')}")
+
+
+def cmd_register_key(args):
+    """Register a public key for a contributor."""
+    data = _api("POST", f"/api/contributors/{args.contributor_id}/register-key",
+                {"public_key_hex": args.public_key_hex})
+    if not data:
+        print("Failed to register key", file=sys.stderr)
+        return
+    if data.get("registered"):
+        print(f"  Registered: {args.contributor_id}")
+        print(f"  Fingerprint: {data.get('fingerprint')}")
+    else:
+        print(f"  Error: {data.get('error')}", file=sys.stderr)
+
+
 def cmd_verify(args):
     """Verify hash chain integrity for an asset."""
     data = _api("GET", f"/api/verification/recompute/{args.asset_id}")
@@ -1533,6 +1561,13 @@ def main():
     p_frequency.add_argument("concept_id", nargs="?", default=None, help="Concept ID to score")
     p_frequency.add_argument("--file", default=None, help="Score a markdown file instead")
 
+    # ── Identity ──
+    sub.add_parser("keygen", help="Generate a new Ed25519 keypair for signing contributions")
+
+    p_register_key = sub.add_parser("register-key", help="Register your public key")
+    p_register_key.add_argument("contributor_id")
+    p_register_key.add_argument("public_key_hex")
+
     # ── Verification ──
     p_verify = sub.add_parser("verify", help="Verify hash chain integrity for an asset")
     p_verify.add_argument("asset_id")
@@ -1590,6 +1625,8 @@ def main():
         "visuals-generate": cmd_visuals_generate,
         # Frequency scoring
         "frequency": cmd_frequency, "field": cmd_field, "frequency-edit": cmd_frequency_edit,
+        # Identity
+        "keygen": cmd_keygen, "register-key": cmd_register_key,
         # Verification
         "verify": cmd_verify, "chain": cmd_chain, "snapshot": cmd_snapshot, "public-key": cmd_public_key,
         # Config
