@@ -10,6 +10,7 @@ export const PUBLIC_WEB_DEFAULTS: PublicWebConfig = {
   apiBaseUrl: "https://api.coherencycoin.com",
   localApiBaseUrl: "http://localhost:8000",
   webUiBaseUrl: "https://coherencycoin.com",
+  pulseBaseUrl: "https://pulse.coherencycoin.com",
   repoUrl: "https://github.com/seeker71/Coherence-Network/blob/main",
   fetchDefaults: {
     timeoutMs: 7000,
