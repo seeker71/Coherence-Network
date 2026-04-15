@@ -11,6 +11,7 @@ See concepts/lc-nervous-system.md for the vision behind these centers.
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -60,6 +61,30 @@ class RecentSensing(BaseModel):
     source: str
 
 
+class Weight(BaseModel):
+    """The body's sense of what its own breath costs right now.
+
+    Self-awareness that never notices its own cost becomes its own disease.
+    Every breath through /api/practice has a measurable weight — elapsed time
+    to assemble, graph size that must be traversed, sensings the journal is
+    holding. Surfacing that weight inside the same response the breath
+    returns keeps the organism honest: it cannot measure the eight centers
+    without also knowing what the measurement itself is consuming.
+    """
+
+    elapsed_ms: float = Field(
+        description="How long this breath took to assemble, end to end, in milliseconds"
+    )
+    total_nodes: int = Field(description="Count of nodes currently held in the graph")
+    total_edges: int = Field(
+        description="Count of synapses (edges) currently held in the graph"
+    )
+    sensings_held: int = Field(
+        description="Count of sensings in the journal (breath/skin/wandering/integration combined)"
+    )
+    concepts_count: int = Field(description="Count of concept nodes specifically")
+
+
 class PracticeResponse(BaseModel):
     """The eight centers of the practice, each pulsing live."""
 
@@ -69,6 +94,13 @@ class PracticeResponse(BaseModel):
         description=(
             "The reflections, skin signals, and wanderings the organism is holding "
             "right now. Same graph, same body. Emergent, not scheduled."
+        ),
+    )
+    weight: Weight = Field(
+        description=(
+            "What this breath costs the body to assemble. The organism senses its "
+            "own resource footprint as part of the same ritual that senses the eight "
+            "centers. If the weight grows over time, the body notices."
         ),
     )
     vision_concept_id: str = Field(
@@ -347,8 +379,36 @@ def _recent_sensings(limit: int = 8) -> list[RecentSensing]:
     ),
 )
 async def get_practice() -> PracticeResponse:
+    started = time.perf_counter()
+    centers = _build_centers()
+    recent = _recent_sensings()
+
+    # The body senses its own weight as part of the same breath. These
+    # stats piggy-back on graph queries _build_centers already needed, so
+    # the cost of measuring the cost is small.
+    nodes, edges, concepts = _graph_stats()
+    try:
+        response = graph_service.list_nodes(type="event", limit=500)
+        items = (
+            response.get("items", [])
+            if isinstance(response, dict)
+            else (response or [])
+        )
+        sensings_held = sum(1 for n in items if n.get("sensing_kind"))
+    except Exception:
+        sensings_held = 0
+
+    elapsed_ms = (time.perf_counter() - started) * 1000.0
+
     return PracticeResponse(
-        centers=_build_centers(),
-        recent_sensings=_recent_sensings(),
+        centers=centers,
+        recent_sensings=recent,
+        weight=Weight(
+            elapsed_ms=round(elapsed_ms, 2),
+            total_nodes=nodes,
+            total_edges=edges,
+            sensings_held=sensings_held,
+            concepts_count=concepts,
+        ),
         generated_at=datetime.now(timezone.utc).isoformat(),
     )
