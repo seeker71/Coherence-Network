@@ -1158,6 +1158,81 @@ def cmd_frequency(args):
           f"\033[33m{mixed_count} mixed\033[0m, \033[31m{inst_count} institutional\033[0m")
 
 
+def cmd_verify(args):
+    """Verify hash chain integrity for an asset."""
+    data = _api("GET", f"/api/verification/recompute/{args.asset_id}")
+    if not data:
+        print(f"Could not verify {args.asset_id}", file=sys.stderr)
+        return
+    valid = data.get("valid", False)
+    entries = data.get("entries", 0)
+    color = "\033[32m" if valid else "\033[31m"
+    reset = "\033[0m"
+    print(f"  {color}{'VALID' if valid else 'INVALID'}{reset}  {args.asset_id}  ({entries} entries)")
+    if not valid and data.get("first_failure"):
+        f = data["first_failure"]
+        print(f"  First failure: day={f.get('day')} index={f.get('entry_index')}")
+        if "stored_hash" in f:
+            print(f"    stored:   {f['stored_hash']}")
+            print(f"    computed: {f['computed_hash']}")
+
+
+def cmd_chain(args):
+    """Show hash chain for an asset."""
+    data = _api("GET", f"/api/verification/chain/{args.asset_id}")
+    if not data:
+        print(f"No chain for {args.asset_id}")
+        return
+    print(f"Hash chain: {args.asset_id} ({len(data)} entries)\n")
+    for entry in data[-args.limit:]:
+        print(f"  {entry['day']}  reads={entry['read_count']:>6d}  "
+              f"cc={entry['cc_total']:>12s}  hash={entry['merkle_hash'][:16]}...")
+
+
+def cmd_snapshot(args):
+    """Show or verify a weekly snapshot."""
+    if args.week:
+        week = args.week
+    else:
+        from datetime import date as _date, timedelta as _td
+        prev = _date.today() - _td(days=7)
+        week = prev.strftime("%G-W%V")
+
+    if args.verify:
+        data = _api("GET", f"/api/verification/snapshot/{week}/verify")
+        if not data:
+            print(f"Could not verify snapshot {week}", file=sys.stderr)
+            return
+        valid = data.get("signature_valid", False)
+        color = "\033[32m" if valid else "\033[31m"
+        reset = "\033[0m"
+        print(f"  Snapshot {week}: signature {color}{'VALID' if valid else 'INVALID'}{reset}")
+        print(f"  Merkle root: {data.get('merkle_root', '?')[:32]}...")
+        print(f"  Signed by:   {data.get('signed_by', '?')[:32]}...")
+    else:
+        data = _api("GET", f"/api/verification/snapshot/{week}")
+        if not data:
+            print(f"No snapshot for {week}")
+            return
+        print(f"  Week: {data.get('week')}")
+        print(f"  Merkle root: {data.get('merkle_root', '')[:32]}...")
+        print(f"  Total reads: {data.get('total_reads', 0)}")
+        print(f"  Total CC:    {data.get('total_cc', '0')}")
+        print(f"  Assets:      {data.get('assets_count', 0)}")
+        print(f"  Published:   {data.get('published_at', 'not yet')}")
+
+
+def cmd_public_key(_args):
+    """Show the verification Ed25519 public key."""
+    data = _api("GET", "/api/verification/public-key")
+    if not data:
+        print("Could not fetch public key", file=sys.stderr)
+        return
+    print(f"  Algorithm: {data.get('algorithm')}")
+    print(f"  Public key: {data.get('public_key_hex')}")
+    print(f"  Usage: {data.get('usage')}")
+
+
 def cmd_field(args):
     """Analyze token-level frequency field for a concept."""
     data = _api("GET", f"/api/concepts/{args.concept_id}/frequency-field")
@@ -1458,6 +1533,20 @@ def main():
     p_frequency.add_argument("concept_id", nargs="?", default=None, help="Concept ID to score")
     p_frequency.add_argument("--file", default=None, help="Score a markdown file instead")
 
+    # ── Verification ──
+    p_verify = sub.add_parser("verify", help="Verify hash chain integrity for an asset")
+    p_verify.add_argument("asset_id")
+
+    p_chain = sub.add_parser("chain", help="Show hash chain for an asset")
+    p_chain.add_argument("asset_id")
+    p_chain.add_argument("--limit", type=int, default=30)
+
+    p_snapshot = sub.add_parser("snapshot", help="Show or verify a weekly snapshot")
+    p_snapshot.add_argument("week", nargs="?", default=None, help="Week (e.g. 2026-W16)")
+    p_snapshot.add_argument("--verify", action="store_true", help="Verify signature")
+
+    p_pubkey = sub.add_parser("public-key", help="Show verification Ed25519 public key")
+
     p_field = sub.add_parser("field", help="Token-level frequency field analysis for a concept")
     p_field.add_argument("concept_id")
 
@@ -1501,6 +1590,8 @@ def main():
         "visuals-generate": cmd_visuals_generate,
         # Frequency scoring
         "frequency": cmd_frequency, "field": cmd_field, "frequency-edit": cmd_frequency_edit,
+        # Verification
+        "verify": cmd_verify, "chain": cmd_chain, "snapshot": cmd_snapshot, "public-key": cmd_public_key,
         # Config
         "config": cmd_config, "config-set": cmd_config_set,
     }
