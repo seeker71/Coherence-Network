@@ -8,6 +8,12 @@ export type PublicWebConfig = {
   // Canonical user-facing origin (for OG/Twitter tags, share links,
   // canonical URLs). Env override: NEXT_PUBLIC_BASE_URL.
   webUiBaseUrl: string;
+  // Pulse Monitor — the external witness that records the breath of the
+  // network. Served from a different origin than the API (see pulse/ in the
+  // repo). Env override: NEXT_PUBLIC_PULSE_URL. Empty string is allowed and
+  // means "the witness is unavailable" — the /pulse page renders a muted
+  // "witness is quiet" state in that case.
+  pulseBaseUrl: string;
   // Public repo browse base (for spec/source file permalinks). Env
   // override: NEXT_PUBLIC_REPO_URL. Defaults to the `main` branch blob.
   repoUrl: string;
@@ -94,6 +100,7 @@ function defaultConfig(): Record<string, unknown> {
       api_base_url: "https://api.coherencycoin.com",
       local_api_base_url: "http://localhost:8000",
       web_ui_base_url: "https://coherencycoin.com",
+      pulse_base_url: "https://pulse.coherencycoin.com",
       repo_url: "https://github.com/seeker71/Coherence-Network/blob/main",
       fetch_defaults: {
         timeout_ms: 7000,
@@ -171,6 +178,11 @@ export function loadPublicWebConfig(): PublicWebConfig {
       process.env.NEXT_PUBLIC_BASE_URL
       || getNested(config, ["web", "web_ui_base_url"], "")
       || getNested(config, ["agent_providers", "web_ui_base_url"], "https://coherencycoin.com"),
+    ),
+    pulseBaseUrl: String(
+      process.env.NEXT_PUBLIC_PULSE_URL
+      || getNested(config, ["web", "pulse_base_url"], "")
+      || "https://pulse.coherencycoin.com",
     ),
     repoUrl: String(
       process.env.NEXT_PUBLIC_REPO_URL
