@@ -33,12 +33,6 @@ class ConceptPatch(BaseModel):
     axes: list[str] | None = None
 
 
-class StoryPatch(BaseModel):
-    """Update a concept's living story content."""
-    story_content: str | None = None
-    visuals: list[dict[str, str]] | None = None  # [{prompt, caption}]
-
-
 class EdgeCreate(BaseModel):
     from_id: str
     to_id: str
@@ -70,90 +64,6 @@ class PlainConceptSubmit(BaseModel):
     child_concepts: list[str] = []
     axes: list[str] = []
     contributor: str = "anonymous"
-
-
-def _format_profile(entity_id: str, profile: dict) -> dict:
-    from app.services import frequency_profile_service
-    return {
-        "entity_id": entity_id,
-        "dimensions": len(profile),
-        "magnitude": round(frequency_profile_service.magnitude(profile), 4),
-        "hash": frequency_profile_service.profile_hash(entity_id),
-        "top": [{"dimension": d, "strength": round(s, 4)}
-                for d, s in frequency_profile_service.top_dimensions(profile, n=15)],
-        "profile": {k: round(v, 4) for k, v in sorted(profile.items(), key=lambda x: -x[1])},
-    }
-
-
-class FrequencyScoreRequest(BaseModel):
-    """Request body for frequency scoring."""
-    text: str = Field(..., min_length=1, description="Text to score for living vs institutional frequency")
-
-
-# ---------------------------------------------------------------------------
-# Frequency scoring endpoint
-# ---------------------------------------------------------------------------
-
-@router.post("/concepts/frequency-score", summary="Score text for living vs institutional frequency")
-async def frequency_score(body: FrequencyScoreRequest):
-    """Score how 'alive' vs 'institutional' a piece of text reads.
-
-    Returns 0.0 (pure institutional) to 1.0 (pure living frequency),
-    with per-sentence breakdown and marker identification.
-    """
-    from app.services import frequency_scoring
-    return frequency_scoring.score_frequency(body.text)
-
-
-@router.get("/concepts/{concept_id}/frequency-profile", summary="Get the frequency profile vector for a concept")
-async def get_concept_frequency_profile(concept_id: str):
-    """Returns the multi-dimensional frequency profile for a concept.
-
-    Not a single score — a vector across all concept dimensions.
-    Used for resonance matching. See also GET /api/profile/{entity_id}
-    for the universal version that works with any entity type.
-    """
-    from app.services import frequency_profile_service
-    profile = frequency_profile_service.get_profile(concept_id)
-    if not profile:
-        raise HTTPException(status_code=404, detail=f"No profile for '{concept_id}'")
-    return _format_profile(concept_id, profile)
-
-
-@router.post("/concepts/frequency-field", summary="Token-level frequency field analysis")
-async def frequency_field(body: FrequencyScoreRequest):
-    """Analyze every token's frequency relative to its context.
-
-    Returns dissonances — specific words that don't match the frequency
-    of their surrounding sentence. Each dissonance includes the word,
-    its signal, the context average, and the deviation.
-    """
-    from app.services import frequency_field
-    return frequency_field.analyze_token_field(body.text)
-
-
-@router.get("/concepts/{concept_id}/frequency-field", summary="Full frequency field analysis for a concept")
-async def concept_frequency_field(concept_id: str):
-    """Analyze a concept's complete frequency field.
-
-    Returns token map, dissonances, top living/institutional tokens,
-    and edit suggestions.
-    """
-    from app.services import frequency_field
-    result = frequency_field.analyze_concept(concept_id)
-    if result.get("error"):
-        raise HTTPException(status_code=404, detail=result["error"])
-    return result
-
-
-@router.post("/concepts/frequency-edit", summary="Find and fix institutional-frequency phrases")
-async def frequency_edit(body: FrequencyScoreRequest):
-    """Find institutional-frequency phrases and suggest living replacements.
-
-    Returns before/after scores, list of changes, and the improved text.
-    """
-    from app.services import frequency_editor
-    return frequency_editor.edit_and_score(body.text)
 
 
 # ---------------------------------------------------------------------------
@@ -324,36 +234,6 @@ async def translate_concept_view(
         from_lens=from_lens.value,
         to_lens=to_lens.value,
     )
-
-
-@router.patch("/concepts/{concept_id}/story", summary="Update a concept's living story content and visuals")
-async def update_story(concept_id: str, body: StoryPatch):
-    """Update a concept's living story content.
-
-    If visuals are not explicitly provided, they are auto-extracted from
-    inline ``![caption](visuals:prompt)`` entries in story_content.
-    """
-    concept = concept_service.get_concept(concept_id)
-    if not concept:
-        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
-    return concept_service.update_story(
-        concept_id,
-        story_content=body.story_content,
-        visuals=body.visuals,
-    )
-
-
-@router.post("/concepts/{concept_id}/visuals/regenerate", summary="Regenerate story and gallery images for a concept")
-async def regenerate_visuals(concept_id: str, force: bool = Query(False, description="Re-download even if file exists")):
-    """Trigger image generation for a single concept.
-
-    Downloads images from Pollinations using deterministic seeds.
-    Returns the list of generated/skipped files.
-    """
-    concept = concept_service.get_concept(concept_id)
-    if not concept:
-        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
-    return concept_service.regenerate_visuals(concept_id, concept, force=force)
 
 
 @router.get("/concepts/{concept_id}", summary="Get a single concept by ID with full metadata")

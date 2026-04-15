@@ -77,4 +77,4 @@ Sound matters: water features near gathering spots, wind moving through designed
 
 ## Connected Frequencies
 
-→ lc-space, lc-rest, lc-stillness, lc-health, lc-v-ceremony
+-> lc-space, lc-rest, lc-stillness, lc-health, lc-v-ceremony

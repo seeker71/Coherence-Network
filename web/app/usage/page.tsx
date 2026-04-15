@@ -126,7 +126,7 @@ export default async function UsagePage({ searchParams }: { searchParams: UsageS
             A transparent view of how resources flow through the network. Runtime telemetry, friction signals, and provider health in one place.
           </p>
           {warnings.length > 0 ? (
-            <p className="text-xs uppercase sensing-[0.12em] text-muted-foreground">
+            <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
               Partial data mode: unavailable {warnings.join(", ")}.
             </p>
           ) : null}

@@ -9,11 +9,8 @@ Implements: meta-node system (Living Codex MetaNodeSystem)
 
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
 
 from app.models.meta import (
     MetaEndpointsResponse,
@@ -22,12 +19,7 @@ from app.models.meta import (
     MetaSummaryResponse,
     MetaTypesResponse,
 )
-from app.services import config_service, meta_service
-
-
-class ConfigPatch(BaseModel):
-    """Partial config update. Keys are merged into ~/.coherence-network/config.json."""
-    updates: dict[str, Any]
+from app.services import meta_service
 
 router = APIRouter()
 
@@ -121,35 +113,3 @@ async def get_meta_docs(request: Request) -> str:
 )
 async def get_meta_summary(request: Request) -> MetaSummaryResponse:
     return meta_service.get_summary(request.app)
-
-
-# ---------------------------------------------------------------------------
-# Editable config (user config at ~/.coherence-network/config.json)
-# ---------------------------------------------------------------------------
-
-
-@router.get(
-    "/config",
-    summary="Read the user-editable config",
-    tags=["config"],
-)
-async def get_config() -> dict[str, Any]:
-    """Return the user-editable config from ~/.coherence-network/config.json.
-
-    This is the file that overrides defaults. Secrets are excluded.
-    """
-    return config_service.get_editable_config()
-
-
-@router.patch(
-    "/config",
-    summary="Update user-editable config",
-    tags=["config"],
-)
-async def patch_config(body: ConfigPatch) -> dict[str, Any]:
-    """Merge updates into ~/.coherence-network/config.json.
-
-    Sensitive keys (api_key, github_token, database_url) are filtered out.
-    Returns the updated config.
-    """
-    return config_service.update_editable_config(body.updates)

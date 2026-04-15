@@ -149,49 +149,6 @@ def get_config() -> dict[str, Any]:
     return config
 
 
-def reset_config_cache() -> None:
-    """Clear cached config so next get_config() re-reads from disk."""
-    global _CACHE
-    _CACHE = None
-
-
-def get_editable_config() -> dict[str, Any]:
-    """Return the user-editable config (from ~/.coherence-network/config.json).
-
-    This is the subset that's safe to expose and modify — no secrets.
-    """
-    try:
-        if _CONFIG_PATH.exists():
-            data = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                return data
-    except (json.JSONDecodeError, OSError):
-        pass
-    return {}
-
-
-def update_editable_config(updates: dict[str, Any]) -> dict[str, Any]:
-    """Merge updates into ~/.coherence-network/config.json.
-
-    Does a shallow merge at the top level — nested dicts are replaced,
-    not deep-merged. Returns the new config.
-    """
-    current = get_editable_config()
-    # Filter out sensitive keys that should never be set via API
-    forbidden = {"keys", "api_key", "github_token", "openrouter_api_key", "database_url"}
-    safe_updates = {k: v for k, v in updates.items() if k not in forbidden}
-    current.update(safe_updates)
-
-    _CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    # Write atomically: write to temp, then rename
-    tmp = _CONFIG_PATH.with_suffix(".tmp")
-    tmp.write_text(json.dumps(current, indent=2) + "\n", encoding="utf-8")
-    shutil.move(str(tmp), str(_CONFIG_PATH))
-
-    reset_config_cache()
-    return current
-
-
 def get_api_key() -> str:
     return str(get_config().get("api_key") or "dev-key")
 

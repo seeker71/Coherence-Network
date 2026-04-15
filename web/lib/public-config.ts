@@ -6,13 +6,6 @@ declare global {
   }
 }
 
-/**
- * Client-safe defaults. These must match the defaults in app-config.ts.
- *
- * We cannot import app-config.ts here because it uses node:fs which
- * breaks client bundles. Server-side code should use loadPublicWebConfig()
- * from app-config.ts directly for merged config with env var overrides.
- */
 export const PUBLIC_WEB_DEFAULTS: PublicWebConfig = {
   apiBaseUrl: "https://api.coherencycoin.com",
   localApiBaseUrl: "http://localhost:8000",

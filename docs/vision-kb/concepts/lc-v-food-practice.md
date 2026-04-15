@@ -74,4 +74,8 @@ The compost cycle closes the loop visibly. Scraps from dinner preparation go int
 
 ## Connected Frequencies
 
-→ lc-nourishment, lc-land, lc-health, lc-ceremony, lc-composting
+→ [Nourishment](lc-nourishment.md) — the deeper principle that food practice embodies
+→ [Land](lc-land.md) — the soil that grows everything
+→ [Health & Healing](lc-health.md) — garden as pharmacy, kitchen as medicine
+→ [Ceremony](lc-ceremony.md) — the meal as daily ceremony
+→ [Composting](lc-composting.md) — the scraps return to become next season's food

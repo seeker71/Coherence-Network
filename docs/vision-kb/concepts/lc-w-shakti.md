@@ -72,4 +72,9 @@ tears, the passion between lovers and the passion between a potter and clay.
 
 ## Connected Frequencies
 
+Shakti is the raw force — without it, every other concept is a dry riverbed:
+- Through **Spanda** — shakti is the force, spanda is its vibration
+- Through **Vitality** — what the field calls health is shakti flowing freely
+- Through **Play** — play is shakti in its most joyful expression
+
 → lc-vitality, lc-energy, lc-w-spanda, lc-play

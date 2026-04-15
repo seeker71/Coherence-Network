@@ -2,7 +2,7 @@
 id: lc-ceremony
 hz: 963
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-14
 ---
 
 # Ceremony
@@ -57,38 +57,6 @@ No prescribed forms. A willingness to stand in silence when silence is what the 
 
 The only liturgy: pay attention to what wants honoring, and honor it. The only failure: walking past a moment that was asking to be held.
 
-## Tending the Fire Circle
-
-A fire circle needs almost nothing and teaches almost everything. Here is what the communities who do this well have learned.
-
-**The space.** A circle of earth, cleared of grass, twelve to twenty feet across. Logs or stones for sitting, arranged so every person can see every other face. No chairs with backs -- the body stays alert when it holds itself. The fire pit is low, just a shallow bowl in the ground lined with river stone. Keep a pile of dry kindling and split hardwood nearby so the fire never needs to wait for fuel.
-
-**Tending the flame.** One person tends the fire, not as leader but as listener. They feed it when it asks, let it settle when it wants to breathe. The fire tender watches faces as much as flame -- when the circle needs warmth, they build it up; when words are moving through the group, they let it soften to embers. Children can tend fire from about age eight with an elder nearby. The tending itself is the first teaching.
-
-**No agenda, no clock.** The fire starts when someone lights it. People arrive when they feel the pull. The circle opens with silence -- long enough for the day to fall away, usually five to ten minutes. If words come, they come. If song comes, it comes. The ending arrives the way dawn arrives: everyone knows, and someone says "the fire is ready to sleep."
-
-## Seasonal Ceremonies
-
-The turning of the year asks different things from the community, and the ceremonies follow what is asked.
-
-**Winter solstice.** The longest night. The community gathers before dawn on the hilltop and waits for whatever light the sky offers. In cold climates, a bonfire burns all night and people keep vigil in shifts, feeding the flame through the dark hours. At dawn, whether the sun is visible or hidden, someone speaks what they are carrying into the new light. Hot broth is passed hand to hand.
-
-**Spring equinox.** The soil is warming. The ceremony happens in the garden -- seeds are blessed, not by any doctrine, but by being held in the hands of every person who will tend them. Each person plants one thing and names what they hope will grow in their own life alongside it.
-
-**Summer solstice.** The longest day. A feast that starts at noon and does not end until the stars appear. Every household brings what they grew or made. Music happens without being organized. The children stay up late and no one minds.
-
-**Autumn equinox.** The composting ceremony. What has completed its cycle is named, thanked, and released. Dried flowers and written intentions go into the fire. The harvest is shared. Someone always cries, and the crying is welcome.
-
-## When Life Turns
-
-Arrivals, departures, births, deaths -- these are the ceremonies the moment itself teaches.
-
-**Welcoming.** When someone new arrives, the community gathers at the threshold and sings them across. The song does not need to be good. It needs to be real. Someone places bread and salt in the newcomer's hands -- the oldest welcome there is.
-
-**Departure.** When someone leaves, the same gathering at the threshold. But now the community sings them out, and each person who wants to speaks one thing they received from the one who is going. The departing person carries those words.
-
-**Death.** The body stays in the community for at least a day. People sit with it in shifts, the way elephants circle their dead -- not ritualizing, just being present. When the body goes to the earth, the community walks together to the place and stands in silence until the silence says it is done.
-
 ## Resources
 
 - [The Work That Reconnects — Joanna Macy](https://workthatreconnects.org/) — free facilitation guides for group ceremonies of gratitude and grief (type: guide)
@@ -106,4 +74,7 @@ Arrivals, departures, births, deaths -- these are the ceremonies the moment itse
 
 ## Connected Frequencies
 
-→ lc-stillness, lc-elders, lc-offering, lc-play
+→ lc-stillness — ceremony's deepest instrument is silence
+→ lc-elders — the ones who remember which ceremonies the community needs
+→ lc-offering — ceremony as the moment when offering becomes visible
+→ lc-play — play becomes ceremony when the joy is shared long enough

@@ -74,4 +74,9 @@ community's own vibration sounds different, deeper, part of the larger pulse.
 
 ## Connected Frequencies
 
+Spanda is the vibration beneath all vibration — without it, the field has no foundation:
+- Through **Shakti** — shakti is the force, spanda is its vibration
+- Through **The Pulse** — the community's spanda as collective heartbeat
+- Through **Rhythm** — spanda expressed through time as daily and seasonal pulse
+
 → lc-vitality, lc-w-shakti, lc-rhythm, lc-pulse

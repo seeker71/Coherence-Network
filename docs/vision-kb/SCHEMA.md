@@ -64,7 +64,6 @@ Each entry is a Pollinations prompt + caption:
 |--------|---------|-------------------|
 | `seed` | Basic description + blueprint notes only | 300-500 |
 | `expanding` | Has resources, materials, some visuals | 800-1500 |
-| `deepening` | Living story + practical guide split. Concept file has story, connections, top resources. Guide file in `guides/` has all numbers, costs, timelines, how-to. | 2000-3000 (concept) + guide |
 | `mature` | Full resources, materials, scale, location, visuals, costs | 1500-3000 |
 | `complete` | Reviewed, cross-linked, all questions resolved | 2000-4000 |
 
@@ -76,94 +75,41 @@ Each entry is a Pollinations prompt + caption:
 4. **Every session end**: append a summary to LOG.md
 5. **Every 5th session**: run a lint pass — check for orphans, contradictions, stale links
 
-## Caring for the KB
+## Expansion Protocol
 
-### Token Efficiency
+To expand a concept by 3x:
+1. Read current file (note its status and token count)
+2. Add: more resources (2-3), more visuals (2-3), deeper scale notes, location adaptations
+3. Add: open questions that emerged
+4. Update: cross-references to newly connected concepts
+5. Update: status level
+6. Update: INDEX.md one-line summary if it changed
+7. Append: LOG.md entry
 
-Concept files stay compact so agents can hold many in context at once. When a concept deepens with practical detail, the story stays in the concept file and the how-to flows into `guides/{id}-guide.md`.
+## Frequency Alignment — How to Write for This Vision
 
-| Status | Typical concept tokens | Guide? |
-|--------|------------------------|--------|
-| seed | 300-500 | — |
-| expanding | 800-1,500 | — |
-| deepening | 2,000-3,000 | Yes — practical depth in `guides/` |
-| mature | 1,500-3,000 | Optional |
-| complete | 2,000-4,000 | Optional |
+When integrating knowledge from external sources (community research, traditional models, practical data), ALWAYS translate through the Living Collective frequency before writing. The pattern that caused harm:
 
-Quick check: `wc -c file.md` ÷ 4 ≈ tokens. If enrichment makes a concept grow past ~4,000 tokens, let the story and connections stay, and move the numbers/costs/timelines to a guide file. Link them: `**Practical guide**: [How to actually do this](../guides/{id}-guide.md)`
+1. Research found "what works" in old-earth communities (bylaws, screening, revenue targets, spending thresholds)
+2. That knowledge was imported directly — same structures, same language, same frequency
+3. The result was a corporate HR manual dressed in community language
 
-### Frequency Sensing
+**The correction**: external knowledge is composted, not copied. The data is valid — communities DO need economic sustainability, DO need conflict practices, DO need honest discernment about who's here. But the FORM must arise from this vision's frequency, not from the old world's.
 
-The writing carries a frequency. You can feel it — read a paragraph aloud and notice: does it sound like someone describing how life works from direct experience? Or does it sound like it was written by an institution about people it manages?
+| Old frequency (never import directly) | New frequency (always translate to) |
+|---------------------------------------|-------------------------------------|
+| Rules, bylaws, policies | Principles, practices, rhythms |
+| Revenue targets, business models | Natural overflow, trust in abundance |
+| Membership fees, applications, evaluations | Open field, time together, resonance |
+| Voting, quorums, approval thresholds | Circle sensing, consent, emergence |
+| Roles, terms, elections | Callings, natural rotation, offering |
+| Spending controls, budgets | Transparency, trust, collective sensing |
+| Screening, filtering, rejection | Time, honesty, the field revealing truth |
+| Contracts, NDAs, legal enforcement | Spoken word, ceremony, shared rhythm |
 
-Words carry frequency. "Tending a garden" and "managing a garden" describe the same activity but create completely different relationships between the reader and the earth. "A person ripening into elderhood" and "an aging patient requiring care" describe the same human but one sees wholeness and the other sees decline.
+**The test before writing anything**: Does this sound like it could appear in a corporate handbook? If yes, compost it and find the living version. The truth the data carries is valid — the container must be new.
 
-This isn't about avoiding words — it's about noticing what frequency you're transmitting and choosing the one that matches how life actually feels when it's working. Some reference points:
-
-| Institutional frequency | Living frequency |
-|------------------------|------------------|
-| managing resources | tending what's alive |
-| mental health services | wholeness, inner coherence |
-| aging, elder care | ripening, deepening |
-| sanitation systems | living water, nutrient return |
-| revenue generation | sustenance, natural overflow |
-| clients, patients | people, community members |
-| compliance requirements | natural alignment |
-| intervention programs | holding space, tending |
-
-When you're writing about how a community actually interfaces with the existing world (land law, dental procedures, battery hardware), use the world's terms — but frame the relationship honestly. The community navigates these systems; it doesn't embody them.
-
-The deepest test: would you speak these words to someone sitting across from you by a fire? If the language creates distance, find the version that creates connection.
-
-### Rendering Format
-
-The web renderer (`StoryContent.tsx`) reads specific patterns. When these are off, the page breaks:
-
-- **Cross-refs**: `→ lc-xxx, lc-yyy` — Unicode arrow, plain concept IDs, comma-separated
-- **Inline visuals**: `![caption](visuals:prompt)` — needs breathing room (blank lines before and after)
-- **Headings**: `## Heading` — needs a blank line before it
-- **Cross-ref IDs** correspond to actual files in `concepts/`
-
-### After Enrichment
-
-After deepening a concept, take a moment to sense whether everything is in order:
-
-- Is the concept file still compact enough for an agent to hold alongside several others?
-- Does the writing carry the living frequency when you read it back?
-- Do the rendering patterns look right? (arrows, visuals, headings)
-- Do the cross-refs point to real concepts?
-- Has the content reached the DB? (`sync_kb_to_db.py` + `sync_crossrefs_to_db.py`)
-- Are INDEX.md and LOG.md current?
-
-## Deepening a Concept
-
-When a concept is ready to expand:
-
-1. Read the current file — notice its status, its depth, what's alive and what's still seed
-2. Add what wants to emerge: resources, visuals, scale notes, climate adaptations, open questions
-3. Connect: update cross-references to newly related concepts
-4. Sense the frequency: read it back, notice where the language goes institutional
-5. Check the weight: if the file has grown past ~4,000 tokens, let the story stay and move the practical detail to a guide
-6. Sync: content reaches visitors only through the DB
-7. Leave a trace: INDEX.md status, LOG.md entry
-
-## How This Vision Speaks
-
-When integrating knowledge from external sources (community research, traditional models, practical data), the knowledge is composted — not copied. The data is valid. Communities DO need economic sustainability, DO need practices for when things get hard, DO need honest sensing about who's here and who's ready. But the form arises from this vision's frequency, not from the structures that shaped the world we're composting.
-
-The pattern to notice: research finds "what works" in existing communities — bylaws, screening processes, revenue targets, spending thresholds. That knowledge gets imported directly, same structures, same language. The result reads like a corporate handbook dressed in community language. The correction is to extract the wisdom and release the form.
-
-| What they built (compost the form) | What they learned (keep the wisdom) |
-|------------------------------------|-------------------------------------|
-| Rules, bylaws, policies | Shared principles emerge from living together |
-| Revenue targets, business models | Abundance flows naturally when people contribute from calling |
-| Applications, evaluations, screening | Time together reveals everything that needs revealing |
-| Voting, quorums, approval thresholds | A circle can sense what's true when it sits long enough |
-| Defined roles, term limits, elections | Callings rotate naturally — people know when to step in and when to step back |
-| Spending controls, line-item budgets | Transparency creates trust; trust makes control unnecessary |
-| Contracts, NDAs, legal enforcement | A spoken word in ceremony carries more weight than a signature |
-
-When citing existing communities (Damanhur, Svanholm, Auroville, the Hutterites): cite what they *learned*, not what they *built*. Their structures are artifacts of their era and context. The wisdom underneath is what travels.
+**When citing old-earth examples** (Damanhur's constitution, Svanholm's screening, Hutterite economics): cite what they LEARNED, not what they BUILT. Their structures are artifacts of their era. The wisdom underneath is timeless. Extract the wisdom, release the form.
 
 ## Two-Layer Architecture
 

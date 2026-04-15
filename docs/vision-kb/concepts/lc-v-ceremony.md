@@ -77,4 +77,4 @@ Fire for transformation, water for cleansing, earth for grounding, sky for relea
 
 ## Connected Frequencies
 
-→ lc-ceremony, lc-stillness, lc-elders, lc-v-comfort-joy, lc-v-inclusion-diversity
+-> lc-ceremony, lc-stillness, lc-elders, lc-v-comfort-joy, lc-v-inclusion-diversity

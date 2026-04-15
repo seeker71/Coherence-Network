@@ -2,7 +2,7 @@
 id: lc-expressing
 hz: 741
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-14
 ---
 
 # Expressing
@@ -55,24 +55,6 @@ Display everything the community makes. Everywhere. Walls, paths, gardens, the s
 
 The only rule: if you take something from the material shelves, replenish when you can. The workshop sustains itself the way a forest does — what falls feeds what grows.
 
-## Creation Spaces
-
-Expression needs rooms that are always warm, always open, always stocked with real materials. Not scraps -- the good wood, the pigments that sing, the clay that responds. Cheap materials teach people their expression is not worth much.
-
-**The workshop (hands).** Wood, metal, fabric, stone. Hand tools hung on pegs at reachable heights -- including child heights. A workbench long enough for two people to work side by side. Sawdust on the floor. The smell of cedar and beeswax. Open from before dawn to after dark because expression does not arrive on schedule. A teenager who cannot sleep at two in the morning should be able to walk in and carve.
-
-**The studio (vision).** Paint, clay, ink, light. A wheel and kiln for ceramics. Easels and a wall-sized surface for murals. Natural light from the north and a few warm lamps for night work. Unfinished work in progress everywhere, because a studio that gets cleaned up too often is a studio that discourages the half-formed thing, and the half-formed thing is where all expression begins.
-
-**The sound room (what has no image).** Instruments on the wall like fruit waiting to be picked. A guitar, three djembes, a violin, singing bowls, a wooden flute someone carved last winter. Enough acoustic absorption that a beginner feels safe being bad. A door that closes so the midnight drummer does not wake the sleepers. This room exists for the voice that does not know its own sound yet.
-
-## Artistic Practice in Community
-
-**No audience, only witnesses.** The evening sharing circle is not a performance. Someone reads what they wrote. Someone plays what they heard in the wind. Someone shows the bowl that cracked in the kiln and became more beautiful for breaking. An audience consumes. Witnesses receive. When the field receives your expression, the circle from inner knowing to shared reality completes.
-
-**Children and adults on the same wall.** A five-year-old paints next to the community's strongest muralist. No one judges. No one instructs unless asked. The result: a village where every surface tells a story. Tiles pressed with small handprints. A gate hinge shaped like a vine. A compost bin covered in mosaics because the hands that built it were full of color that day.
-
-**Collaborative creation.** Some expression wants more than one body. A mural that takes a month and a dozen painters. A song that starts with one voice and gathers others over days until the whole community is humming it. A harvest table built by six hands from a fallen oak. The collaboration is not organized -- it emerges when someone begins something that has room in it for others to join.
-
 ## Resources
 
 - [Summerhill School](https://www.summerhillschool.co.uk/) — freedom of expression in education (type: community)
@@ -89,5 +71,10 @@ These are not questions to answer but questions to live inside:
 - What happens to a community where every person's overflow is received without judgment?
 
 ## Connected Frequencies
+
+Expression is the outward breath of what Sensing takes in. What the field feels, expression gives form to:
+- Through **Resonating** — expression finds its audience not by seeking but by vibrating at its true frequency
+- Through **Offering** — the bower bird's palace: expression and gift are the same gesture
+- Through **Beauty** — not decoration but the inevitable shape of honest expression
 
 → lc-resonating, lc-offering, lc-v-freedom-expression, lc-beauty

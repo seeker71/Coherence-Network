@@ -49,7 +49,7 @@ export default async function FlyerPage() {
         <div className="max-w-lg w-full space-y-10 text-center">
           {/* Title */}
           <div className="space-y-3">
-            <p className="text-sm sensing-[0.4em] uppercase text-stone-500 font-medium">
+            <p className="text-sm tracking-[0.4em] uppercase text-stone-500 font-medium">
               A new way of living together
             </p>
             <h1 className="text-5xl md:text-6xl font-extralight tracking-tight text-stone-800 leading-tight">

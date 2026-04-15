@@ -51,7 +51,7 @@ The CEB press costs four thousand dollars to construct and produces compressed e
 
 In MIT's Fab Lab network, now spanning over two thousand locations worldwide, communities fabricate what they need from digital designs — housing components, prosthetics, water filters, agricultural tools. The designs travel at the speed of light. The fabrication happens at the speed of hands.
 
-The Arduino community, born in a design school in Ivrea, Italy, gave the world a five-dollar microcontroller that a child can learn and a grandmother can benefit from. These are not technology companies. They are instrument-makers — extending what communities can sense, build, and repair with their own hands and their own understanding.
+The Arduino community, born in a design school in Ivrea, Italy, gave the world a five-dollar microcontroller that a child can program and a grandmother can benefit from. These are not technology companies. They are instrument-makers — extending what communities can sense, build, and repair with their own hands and their own understanding.
 
 ![A community energy dashboard on a large wall screen showing solar and battery data, people in a cozy common room](visuals:photorealistic large wall mounted screen in a warm community common room showing colorful real-time energy dashboard with solar generation curve battery percentage and water tank levels, exposed wooden beams overhead, two people sitting at a wooden table nearby with mugs, natural light from large windows, bookshelves on side wall, cozy and informative atmosphere)
 

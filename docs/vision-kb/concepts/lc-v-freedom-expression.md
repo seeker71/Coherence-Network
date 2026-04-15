@@ -78,4 +78,4 @@ The test is simple: does this structure enable expression or constrain it? Does 
 
 ## Connected Frequencies
 
-→ lc-play, lc-offering, lc-v-play-expansion, lc-v-inclusion-diversity
+-> lc-play, lc-offering, lc-v-play-expansion, lc-v-inclusion-diversity, new-earth-integration

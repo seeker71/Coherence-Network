@@ -2,7 +2,7 @@
 id: lc-intimacy
 hz: 639
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-14
 ---
 
 # Intimacy
@@ -106,26 +106,6 @@ about what form love takes — only the expectation that it be transparent.
 Where touch is understood as nutrient, not luxury.
 Where the question shifts from "what are we allowed to feel?"
 to "what is actually true between us right now?"
-
-## Practices for Deepening Connection
-
-Intimacy is not a talent. It is a practice -- a muscle that strengthens each time you choose honesty over comfort.
-
-**Eye gazing.** Two people sit face to face, close enough to feel each other's breath. They look. No talking, no agenda, no timer for the first time -- just the instruction to stay present with whatever arises. Most people cry within two minutes. Not from sadness but from the shock of being seen without any barrier between them. Five minutes of this practice rewires weeks of social performance. The community offers it weekly, always optional, always held within the wider field.
-
-**The relating space.** Tuesday evenings. No agenda. Someone might say "I want to practice asking for what I need" and spend thirty minutes learning to say "I want to be held" without apologizing for wanting it. Someone else might practice saying no -- discovering that a clear no is one of the most intimate things a person can offer, because it means their yes is real.
-
-**Transparent communication.** The Forum practice, borrowed from ZEGG and Tamera: one person stands in the center of the circle and lets whatever is alive in them move through -- desire, fear, longing, grief. Not performing. Not explaining. Just letting the body express what words usually hide. The circle witnesses without fixing. What this teaches, over months, is that the unspeakable things are not dangerous. They are the connective tissue of real relationship.
-
-## The Tending of Vulnerability
-
-Vulnerability is not weakness laid bare. It is the willingness to show what is real, trusting that the field will hold it.
-
-**Touch as language.** In this community, physical affection is the baseline, not the exception. A hand on a shoulder during morning meeting. Heads resting on laps during story time. A hug that lasts three breaths instead of one. But the grammar of touch includes "not right now" spoken as easily as "yes, please." The safety lives in the honesty, not in the answer. A child who grows up watching adults say no to touch without drama and yes to touch without shame learns a relational fluency that most people spend decades trying to recover.
-
-**Holding grief in the open.** When someone's heart breaks -- when a relationship changes shape, when a loss arrives -- the community does not whisper about it in corners. The grief is held in the open, the way weather is held in the open. A fire is lit. People sit close. The one who is breaking does not need to explain or be strong. The field holds them the way a riverbank holds a flood: firmly, without resistance, trusting that the water will find its level.
-
-**Tending the space between.** Intimacy is not only what happens between two people. It is the quality of attention in the spaces between everyone. The way someone pours tea for another. The way two people who disagreed yesterday sit a little closer today. The way a community, over years, develops a warmth in its silences that visitors feel the moment they arrive. This warmth is not accidental. It is the accumulated residue of ten thousand moments where someone chose to be real instead of polite.
 
 ## Resources
 - [ZEGG Community](https://www.zegg.de/en/) — German community pioneering transparent relating (type: community)

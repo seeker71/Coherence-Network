@@ -28,7 +28,7 @@ export default function RealizePage() {
     <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
       {/* Hero */}
       <section className="text-center space-y-6 py-16">
-        <p className="text-amber-400/60 text-sm sensing-[0.3em] uppercase">From vision to ground</p>
+        <p className="text-amber-400/60 text-sm tracking-[0.3em] uppercase">From vision to ground</p>
         <h1 className="text-4xl md:text-6xl font-extralight tracking-tight text-white">
           Living It
         </h1>

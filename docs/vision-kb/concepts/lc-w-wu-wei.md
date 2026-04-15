@@ -73,4 +73,10 @@ to control it.
 
 ## Connected Frequencies
 
+Wu wei is the quality of action the field aspires to — without it, community
+becomes another system of effort:
+- Through **Stillness** — wu wei begins in the stillness that perceives the natural grain
+- Through **Rest** — rest is wu wei applied to the body's need for renewal
+- Through **Spanda** — effortless action follows the vibration rather than imposing one
+
 → lc-stillness, lc-rest, lc-w-spanda, lc-offering

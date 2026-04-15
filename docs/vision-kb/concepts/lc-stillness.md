@@ -2,7 +2,7 @@
 id: lc-stillness
 hz: 174
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-14
 ---
 
 # Stillness
@@ -55,40 +55,6 @@ The deeper project: a community where pauses are trusted. Where someone can say 
 
 A bell, like Plum Village uses — rung at unpredictable moments throughout the day. Everyone stops. Three breaths. Then life resumes. Not interruption but homecoming. A hundred small returns to the present, stitched through the hours like thread through fabric, holding the whole day together.
 
-## Sanctuary Design
-
-A stillness sanctuary is the quietest room the community will ever build. Every choice serves silence.
-
-**Shape.** Round or octagonal -- corners trap sound and attention. A circle lets the silence pool. Twelve to fifteen feet across is enough for eight to ten people sitting, large enough to hold the field, small enough that each person feels the others.
-
-**Walls.** Thick. Eighteen inches of cob, rammed earth, or straw bale. Mass absorbs sound the way soil absorbs rain -- not blocking it but receiving it. Double-wall construction if near a road or workshop. The silence inside should feel like a physical substance, something you step into.
-
-**Floor.** Cool clay or smooth stone, with cushions and wool blankets. Bare feet on earth is the point. Warmth from a radiant floor in cold months -- no forced air, no fan hum.
-
-**Light.** One circular window facing east, sized so the first dawn light enters without glare. No overhead lighting. A niche for a single candle. The darkness is not a problem to solve. It is the medium the sanctuary works in.
-
-**Door.** Heavy, oiled, with felt edges. It closes without a click. The threshold itself becomes a practice -- the moment you cross it, you leave the day's noise behind.
-
-## Group Silence Practice
-
-The practices below grow from simple to deep. A community can start with the first and let the others arrive over months.
-
-**The morning quiet hour (6-7am).** Not silence enforced but silence offered. Kitchen open, voices at a whisper, no power tools, no music. Each person finds their own form -- sitting, walking slowly, lying awake in bed. The practice is collective restraint, and the reward is a day that begins from depth instead of surface.
-
-**The weekly sit.** Thirty minutes to an hour. No bell marks the start -- people gather and the settling is the opening. No technique is prescribed. Some follow the breath. Some simply listen. When the sitting ends, it ends the way a wave recedes: naturally, without announcement. Someone might share a word. Often no one does.
-
-**The seasonal daylong.** Once a quarter, a full day of silence -- sunrise to sunset. Normal life continues: meals are prepared, dishes washed, paths walked. But no one speaks. By afternoon, the silence has weight and warmth, and the faces around the table carry an expression that has no name except presence.
-
-## Contemplative Rhythms Woven Through the Day
-
-Stillness is not only what happens in the sanctuary. It is the texture of pauses throughout the hours.
-
-**The bell.** A single bell, rung at unplanned moments two or three times a day. When it sounds, everyone pauses -- mid-step, mid-sentence, mid-thought. Three full breaths. Then life resumes, but the rhythm has been reset. Over months, the bell teaches the nervous system that stopping is safe.
-
-**Meeting silence.** When an important question lands, no one answers immediately. The pause is given the same weight as the question. Thirty seconds. Sometimes a full minute. Decisions made after this kind of pause have a different quality -- slower, steadier, less likely to need undoing.
-
-**Threshold pauses.** Before entering the common room, the kitchen, or the sanctuary, a breath at the door. Not a rule -- a habit that spreads by example. The pause between spaces is where attention resets, and a community that pauses at thresholds moves through its day with a different quality of presence.
-
 ## Resources
 
 - [Plum Village Practice Resources](https://plumvillage.org/) — Thich Nhat Hanh's community practice guides, free online (type: guide)
@@ -106,4 +72,9 @@ Stillness is not only what happens in the sanctuary. It is the texture of pauses
 
 ## Connected Frequencies
 
-→ lc-ceremony, lc-rest, lc-elders, lc-space, lc-offering, lc-play
+→ lc-ceremony — the deepest ceremonies are mostly silence
+→ lc-rest — stillness is rest at its most awake
+→ lc-elders — elders carry a slower frequency that teaches the value of pause
+→ lc-space — the rooms that hold silence shape what the silence can become
+→ lc-offering — in stillness you hear what you actually have to give
+→ lc-play — stillness is the exhale that makes the next breath of play possible

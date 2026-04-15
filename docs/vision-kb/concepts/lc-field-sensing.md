@@ -72,4 +72,9 @@ These are not questions to answer but questions to live inside:
 
 ## Connected Frequencies
 
-→ lc-vitality, lc-sensing
+Field sensing is the community's nervous system. Every other frequency depends on it:
+- Through **Vitality** — when the field senses clearly, life force flows to where it's needed without negotiation
+- Through **Sensing** — individual sensing is the root note; field sensing is the chord
+- Through **Attunement** — the practice of tuning your individual instrument to the field's key
+
+→ lc-vitality, lc-sensing, new-earth-integration

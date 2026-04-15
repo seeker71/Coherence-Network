@@ -49,7 +49,7 @@ interface InventoryResponse {
     lineage_links_count: number;
     usage_events_count: number;
   };
-  sensing: {
+  tracking: {
     tracked_idea_ids_count: number;
     runtime_events_count: number;
     spec_discovery_source: string;
@@ -174,12 +174,12 @@ export default function PortfolioPage() {
         <>
           <section className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-              <p className="text-muted-foreground">Plants sensed</p>
+              <p className="text-muted-foreground">Plants tracked</p>
               <p className="text-2xl font-light text-primary">{inventory.ideas.summary.total_ideas}</p>
             </div>
             <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-              <p className="text-muted-foreground">Sensed ideas</p>
-              <p className="text-2xl font-light text-primary">{inventory.sensing.tracked_idea_ids_count}</p>
+              <p className="text-muted-foreground">Tracked ideas</p>
+              <p className="text-2xl font-light text-primary">{inventory.tracking.tracked_idea_ids_count}</p>
             </div>
             <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
               <p className="text-muted-foreground">Specs discovered</p>
@@ -193,7 +193,7 @@ export default function PortfolioPage() {
 
           {storage && (
             <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 text-sm space-y-1">
-              <p className="text-xl font-medium">Sensing Backend</p>
+              <p className="text-xl font-medium">Tracking Backend</p>
               <p className="text-muted-foreground">
                 {storage.backend} | {storage.idea_count} ideas | {storage.question_count} questions | bootstrap{" "}
                 {storage.bootstrap_source}
@@ -203,7 +203,7 @@ export default function PortfolioPage() {
           )}
 
           <p className="text-xs text-muted-foreground">
-            Spec source: {inventory.specs.source} | Runtime events: {inventory.sensing.runtime_events_count} | Unanswered questions:{" "}
+            Spec source: {inventory.specs.source} | Runtime events: {inventory.tracking.runtime_events_count} | Unanswered questions:{" "}
             {inventory.questions.unanswered_count} | Growth potential: {inventory.ideas.summary.total_value_gap}
           </p>
 

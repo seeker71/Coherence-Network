@@ -112,7 +112,7 @@ function AssetsPageContent() {
           <p className="mt-2 text-3xl font-light">{formatCount(filteredRows.length)}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Sensed Cost</p>
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">Tracked Cost</p>
           <p className="mt-2 text-3xl font-light">{formatCost(totalCost)}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">

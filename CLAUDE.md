@@ -45,42 +45,13 @@ Spec → Test → Implement → CI → Review → Merge
 
 ## Living Collective Knowledge Base
 
-**Read `docs/vision-kb/INDEX.md` first** (~300 tokens). It's an AI-maintained markdown wiki (Karpathy LLM Wiki pattern) for the community vision. Drill into `docs/vision-kb/concepts/{id}.md` for concept details. Practical guides live in `docs/vision-kb/guides/{id}-guide.md`. Cross-cutting files: `spaces/`, `materials/`, `locations/`, `scales/`, `realization/`, `resources/`. See `docs/vision-kb/SCHEMA.md` for format rules.
+**Read `docs/vision-kb/INDEX.md` first** (~300 tokens). It's an AI-maintained markdown wiki (Karpathy LLM Wiki pattern) for the community vision. Drill into `docs/vision-kb/concepts/{id}.md` for concept details. Cross-cutting files: `spaces/`, `materials/`, `locations/`, `scales/`, `realization/`, `resources/`. After any enrichment, update the concept file + INDEX.md + LOG.md. See `docs/vision-kb/SCHEMA.md` for format rules.
 
-### Caring for the KB
+**FREQUENCY RULE**: When integrating external knowledge (community research, traditional models, practical data), NEVER import old-earth structures directly (bylaws, screening, revenue targets, spending thresholds, voting, applications). Always compost external knowledge and translate through the Living Collective frequency: trust not control, emergence not procedure, overflow not extraction, resonance not screening, callings not roles. The test: does this sound like a corporate handbook? If yes, find the living version. See SCHEMA.md "Frequency Alignment" section.
 
-**Token efficiency**: Concept files stay compact (~2,000-4,000 tokens) so agents can hold many in context at once. When a concept deepens with practical detail, the story stays in the concept file and the how-to moves to `guides/{id}-guide.md`. Check: `wc -c file.md` ÷ 4 ≈ tokens.
+**SYNC RULE**: Every KB change MUST be synced to the DB before the session ends. The DB is the source of truth for the web. KB markdown is the working draft. After any concept enrichment, run: `python scripts/sync_kb_to_db.py --all --min-status expanding --api-url https://api.coherencycoin.com`. This is non-negotiable — content that stays only in markdown is invisible to visitors.
 
-**Frequency sensing**: The writing carries a frequency. Read your additions aloud — do they sound like someone sitting by a fire describing how life works? Or do they sound like a policy document, a medical chart, a project plan? The Living Collective speaks from direct experience, not institutional distance. When you notice institutional language creeping in (and it will — we all grew up in that world), find the word that carries the same meaning but comes from living relationship. "Tending" instead of "management." "Wholeness" instead of "mental health." "Ripening" instead of "aging." Not because certain words are forbidden, but because the frequency of the word shapes the frequency of the reader's experience. See SCHEMA.md "Frequency Sensing" for the full practice.
-
-**Rendering format**: The web renderer (`StoryContent.tsx`) parses specific patterns. These patterns need to be exact for the page to render correctly:
-- Cross-refs: `→ lc-xxx, lc-yyy` (Unicode arrow, plain IDs, comma-separated)
-- Inline visuals: `![caption](visuals:prompt)` with blank lines before and after
-- Headings: `## Heading` with blank line before
-- Cross-ref IDs correspond to actual files in `concepts/`
-
-**Sync to DB**: Content only reaches visitors through the database. After any KB work:
-```bash
-python scripts/sync_kb_to_db.py --all          # concept content → DB
-python scripts/sync_crossrefs_to_db.py          # edges → DB
-python scripts/generate_visuals.py --dry-run    # check for missing images
-```
-
-**After enrichment**: Token count still compact? Frequency feels alive? Rendering patterns intact? Cross-refs point to real concepts? Synced to DB? INDEX.md + LOG.md updated?
-
-### Two-Layer Architecture
-
-The graph DB is the sole source of truth. The KB is the working draft where content expands before syncing. Concept files hold the living story. Guide files (in `guides/`) hold practical numbers. Both sync to DB via `sync_kb_to_db.py`. Relationship types and axes seeded once via `seed_schema_to_db.py`.
-
-### Story CRUD (API + CLI + Web)
-
-| Action | API | CLI | Web |
-|--------|-----|-----|-----|
-| View story | `GET /api/concepts/{id}` | `cc story {id}` | `/vision/{id}` |
-| List stories | `GET /api/concepts/domain/living-collective` | `cc stories` | `/vision` |
-| Update story | `PATCH /api/concepts/{id}/story` | `cc story-update {id} -f file.md` | `/vision/{id}/edit` |
-| Regenerate images | `POST /api/concepts/{id}/visuals/regenerate` | `cc visuals-generate {id}` | Edit page button |
-| View/edit config | `GET/PATCH /api/config` | `cc config` / `cc config-set key val` | `/settings` |
+The graph DB is the sole source of truth. The KB is the working draft where content expands before syncing. To sync KB → DB: `python scripts/sync_kb_to_db.py`. Relationship types and axes are also in the DB — seeded once via `python scripts/seed_schema_to_db.py`.
 
 ## Navigation
 

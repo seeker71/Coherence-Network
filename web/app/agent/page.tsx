@@ -92,7 +92,7 @@ export default async function AgentPage() {
 
       <h1 className="text-2xl font-bold">Agent Service Visibility</h1>
       <p className="text-muted-foreground">
-        Live overview of pipeline activity, model usage, and execution sensing coverage.
+        Live overview of pipeline activity, model usage, and execution tracking coverage.
       </p>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4 text-sm">
@@ -135,7 +135,7 @@ export default async function AgentPage() {
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4 text-sm">
-        <h2 className="text-xl font-semibold">Usage Sensing Coverage</h2>
+        <h2 className="text-xl font-semibold">Usage Tracking Coverage</h2>
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-xl border border-border/20 bg-background/40 p-3">
             <p className="text-muted-foreground text-xs">Health</p>
@@ -220,7 +220,7 @@ export default async function AgentPage() {
           <h2 className="text-xl font-semibold">Execution by Executor</h2>
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-xl border border-border/20 bg-background/40 p-3">
-              <p className="text-muted-foreground text-xs">Sensed runs</p>
+              <p className="text-muted-foreground text-xs">Tracked runs</p>
               <p className="text-lg font-semibold">{execution?.tracked_runs ?? 0}</p>
             </div>
             <div className="rounded-xl border border-border/20 bg-background/40 p-3">
@@ -251,7 +251,7 @@ export default async function AgentPage() {
               <p className="text-lg font-semibold">{execution?.codex_runs ?? 0}</p>
             </div>
             <div className="rounded-xl border border-border/20 bg-background/40 p-3">
-              <p className="text-muted-foreground text-xs">Sensed task runs</p>
+              <p className="text-muted-foreground text-xs">Tracked task runs</p>
               <p className="text-lg font-semibold">{coverage?.tracked_task_runs ?? 0}</p>
             </div>
           </div>
@@ -304,7 +304,7 @@ export default async function AgentPage() {
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
-        <h2 className="text-xl font-semibold">Recent Sensed Runs</h2>
+        <h2 className="text-xl font-semibold">Recent Tracked Runs</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -345,7 +345,7 @@ export default async function AgentPage() {
             </tbody>
           </table>
           {(execution?.recent_runs ?? []).length === 0 && (
-            <p className="text-muted-foreground py-2">No sensed execution events yet.</p>
+            <p className="text-muted-foreground py-2">No tracked execution events yet.</p>
           )}
         </div>
       </section>

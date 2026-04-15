@@ -288,7 +288,7 @@ export default function ContributePage() {
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
         <h2 className="text-xl font-semibold">Register as a Contributor</h2>
-        <p className="text-sm text-muted-foreground">Create your identity in the network so your contributions are sensed and credited.</p>
+        <p className="text-sm text-muted-foreground">Create your identity in the network so your contributions are tracked and credited.</p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
           <div className="space-y-1">
             <label htmlFor="contributor-name" className="text-xs text-muted-foreground">Name</label>

@@ -224,7 +224,7 @@ export default async function IdeasPage({
           </h2>
           <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
             {showAll
-              ? "The complete landscape — every idea sensed across the fractal."
+              ? "The complete landscape — every idea tracked across the fractal."
               : "Sixteen super-ideas grouped by pillar. Drill into any one to see the absorbed ideas and linked specs."}
           </p>
         </div>

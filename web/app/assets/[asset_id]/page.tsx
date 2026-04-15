@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
-import { ModelViewer } from "./_components/ModelViewer";
 
 type Asset = {
   id: string;
@@ -52,57 +51,36 @@ function formatDate(value: string | undefined): string {
 
 async function loadAssetPage(assetId: string): Promise<{ asset: Asset | null; contributions: Contribution[]; contributorsById: Map<string, string> }> {
   const API = getApiBase();
+  const [assetRes, contributionsRes, contributorsRes] = await Promise.all([
+    fetch(`${API}/api/assets/${encodeURIComponent(assetId)}`, { cache: "no-store" }),
+    fetch(`${API}/api/assets/${encodeURIComponent(assetId)}/contributions`, { cache: "no-store" }),
+    fetch(`${API}/api/contributors`, { cache: "no-store" }).catch(() => null),
+  ]);
 
-  // All assets are graph nodes. Single source of truth.
-  // Try direct node ID first, then legacy "asset:{uuid}" prefix.
-  let asset: Asset | null = null;
-
-  for (const nodeId of [assetId, `asset:${assetId}`]) {
-    try {
-      const res = await fetch(`${API}/api/graph/nodes/${encodeURIComponent(nodeId)}`, { cache: "no-store" });
-      if (res.ok) {
-        const node = await res.json();
-        asset = {
-          id: node.id,
-          type: node.properties?.asset_type || node.type || "asset",
-          description: node.description || node.name || assetId,
-          total_cost: node.properties?.total_cost || "0",
-          created_at: node.created_at,
-          ...node.properties,
-          name: node.name,
-        } as any;
-        break;
-      }
-    } catch {}
-  }
-
-  if (!asset) {
+  if (assetRes.status === 404) {
     return { asset: null, contributions: [], contributorsById: new Map() };
   }
+  if (!assetRes.ok || !contributionsRes.ok) {
+    throw new Error(`HTTP ${assetRes.status}/${contributionsRes.status}/${contributorsRes?.status ?? "contributors-unavailable"}`);
+  }
 
-  // Try to load contributions
-  let contributions: Contribution[] = [];
-  try {
-    const res = await fetch(`${API}/api/assets/${encodeURIComponent(assetId)}/contributions`, { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      contributions = data?.items ?? (Array.isArray(data) ? data : []);
-    }
-  } catch {}
-
+  const asset = (await assetRes.json()) as Asset;
+  const contributionsJson = await contributionsRes.json();
+  const contributions = contributionsJson?.items ?? (Array.isArray(contributionsJson) ? contributionsJson : []);
   const contributorsById = new Map<string, string>();
-  try {
-    const res = await fetch(`${API}/api/contributors`, { cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const list = data?.items ?? (Array.isArray(data) ? data : []);
-      for (const c of list as Contributor[]) {
-        if (c.id && c.name) contributorsById.set(c.id, c.name);
-      }
+  if (contributorsRes?.ok) {
+    const contributorsJson = await contributorsRes.json();
+    const contributors = contributorsJson?.items ?? (Array.isArray(contributorsJson) ? contributorsJson : []);
+    for (const contributor of contributors as Contributor[]) {
+      if (contributor.id && contributor.name) contributorsById.set(contributor.id, contributor.name);
     }
-  } catch {}
+  }
 
-  return { asset, contributions: Array.isArray(contributions) ? contributions : [], contributorsById };
+  return {
+    asset,
+    contributions: Array.isArray(contributions) ? contributions : [],
+    contributorsById,
+  };
 }
 
 export default async function AssetDetailPage({ params }: { params: Promise<{ asset_id: string }> }) {
@@ -145,7 +123,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
             <p className="text-sm text-muted-foreground font-mono">{asset.id}</p>
           </div>
           <div className="text-right text-sm text-muted-foreground">
-            <p>Total cost</p>
+            <p>Total tracked cost</p>
             <p className="text-2xl font-light text-foreground">{formatCost(asset.total_cost)}</p>
           </div>
         </div>
@@ -165,26 +143,6 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
           <p className="mt-2 text-3xl font-light">{avgCoherence === null ? "—" : avgCoherence.toFixed(2)}</p>
         </div>
       </section>
-
-      {/* 3D Model / NFT rendering */}
-      {(asset.type === "MODEL_3D" || asset.description?.includes("3D") || asset.id?.includes("model-")) && (
-        <section className="rounded-2xl border border-stone-800/40 bg-stone-900/30 overflow-hidden">
-          <ModelViewer
-            modelUrl="/assets/models/community-nest.gltf"
-            caption={`${asset.description || asset.type} — interactive 3D model. Drag to rotate, scroll to zoom.`}
-          />
-          <div className="p-4 space-y-2 border-t border-stone-800/20">
-            <div className="flex items-center gap-2">
-              <span className="text-xs px-2 py-0.5 rounded-full border border-amber-500/30 text-amber-300/80">NFT</span>
-              <span className="text-xs px-2 py-0.5 rounded-full border border-teal-500/30 text-teal-300/80">3D Model</span>
-              <span className="text-xs text-stone-500 ml-auto">Rendered by gltf-viewer-v1</span>
-            </div>
-            <p className="text-xs text-stone-600">
-              Every view earns CC: 80% asset creator / 15% renderer / 5% host node
-            </p>
-          </div>
-        </section>
-      )}
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
         <div className="flex items-center justify-between gap-3">
