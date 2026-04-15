@@ -5,15 +5,24 @@ Configuration precedence:
   2. ~/.coherence-network/config.json
   3. hard-coded defaults
 
-No environment variables are read for application config — with ONE
-infrastructure-shaped exception: `database_url()` honors the standard
-`DATABASE_URL` environment variable with higher precedence than the
-config file's default, and per-service overrides honor
-`<SERVICE>_DATABASE_URL` (uppercased) when set. Rationale: the database
-URL is the canonical 12-factor override. Dev environments keep the
-config-file sqlite default; production compose files set
-`DATABASE_URL=postgresql://...` and have it flow through without
-needing to edit the checked-in config file.
+No environment variables are read for application config — with a
+deliberately small set of infrastructure-shaped exceptions. Each helper
+below has its own precedence docstring; the common shape is
+
+    env var (if set) → config file → hard-coded default
+
+Exceptions:
+  - `database_url()`        honors DATABASE_URL (and <SERVICE>_DATABASE_URL)
+  - `server_environment()`  honors ENVIRONMENT (dev/staging/production/test)
+  - `auth_api_key()`        honors AUTH_API_KEY
+  - `auth_admin_key()`      honors AUTH_ADMIN_KEY
+
+Rationale: these are 12-factor infrastructure values that routinely
+differ between dev (sqlite, dev-key, development) and production (real
+postgres, strong random keys, production environment). Letting the env
+var override the config file's default keeps the config file honest as
+a dev-friendly starting point while still honoring production intent
+without needing to edit the checked-in config.
 
 Usage:
     from app.config_loader import api_config, database_url
@@ -524,13 +533,6 @@ def database_url(service: str | None = None) -> str:
       3. Global DATABASE_URL env var  (standard 12-factor override)
       4. Global config default        (config.database.url)
       5. Fallback                     (sqlite:///data/coherence.db)
-
-    The rest of this module refuses to read env vars for application
-    config, but the database URL is an infrastructure-shaped value that
-    routinely differs between dev (sqlite), staging, and production
-    (postgres). Letting the env var override the config file's default
-    keeps the config file honest as a dev-friendly starting point while
-    still honoring production's explicit intent.
     """
     config = _load()
     if service:
@@ -544,6 +546,51 @@ def database_url(service: str | None = None) -> str:
     if env_global:
         return env_global
     return str(config.get("database", {}).get("url", "sqlite:///data/coherence.db"))
+
+
+def server_environment() -> str:
+    """Resolve the server environment name.
+
+    Precedence: ENVIRONMENT env var → config.server.environment → "development".
+
+    Valid values conventionally: "development", "test", "testing",
+    "staging", "production". Callers that need a boolean use
+    `app.services.config_service.is_production()` which delegates here.
+    """
+    env = os.environ.get("ENVIRONMENT", "").strip().lower()
+    if env:
+        return env
+    config = _load()
+    return str(config.get("server", {}).get("environment", "development"))
+
+
+def auth_api_key() -> str:
+    """Resolve the shared API key used by `require_api_key`.
+
+    Precedence: AUTH_API_KEY env var → config.auth.api_key → "dev-key".
+
+    The keystore (`~/.coherence-network/keys.json`) is read by
+    `config_service.get_config()` which takes precedence over this
+    helper for CLI/user contexts. This helper is for server-side
+    middleware that must enforce a single canonical key.
+    """
+    env_key = os.environ.get("AUTH_API_KEY", "").strip()
+    if env_key:
+        return env_key
+    config = _load()
+    return str(config.get("auth", {}).get("api_key", "dev-key"))
+
+
+def auth_admin_key() -> str:
+    """Resolve the admin key used for destructive operations.
+
+    Precedence: AUTH_ADMIN_KEY env var → config.auth.admin_key → "dev-admin".
+    """
+    env_key = os.environ.get("AUTH_ADMIN_KEY", "").strip()
+    if env_key:
+        return env_key
+    config = _load()
+    return str(config.get("auth", {}).get("admin_key", "dev-admin"))
 
 
 def get_float(section: str, key: str, default: float = 0.0) -> float:
