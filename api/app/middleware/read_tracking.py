@@ -81,68 +81,19 @@ def _frequency_profile(asset_id: str) -> dict[str, float]:
     if asset_id in _asset_vitality:
         return _asset_vitality[asset_id]
 
-    profile: dict[str, float] = {}
+    multiplier = 1.0
     try:
-        # Extract concept ID from asset ID
-        concept_id = asset_id
-        if concept_id.startswith("visual-"):
-            concept_id = concept_id[7:]
-        if "-story-" in concept_id:
-            concept_id = concept_id[:concept_id.index("-story-")]
-        elif concept_id[-1:].isdigit() and "-" in concept_id:
-            concept_id = concept_id[:concept_id.rindex("-")]
-
-        # The asset's primary concept is its strongest frequency
-        profile[concept_id] = 1.0
-
-        # Get connected concepts from edges — each connection adds a frequency
-        from app.services import concept_service
-        edges = concept_service.get_concept_edges(concept_id)
-        for edge in edges:
-            connected = edge.get("to") if edge.get("from") == concept_id else edge.get("from", "")
-            if connected and connected.startswith("lc-"):
-                # Edge strength becomes frequency strength (weaker = more distant)
-                strength = float(edge.get("strength", 0.5))
-                profile[connected] = max(profile.get(connected, 0), strength * 0.6)
-
-        # Get frequency score of the content itself — adds a "living" dimension
-        from app.services import frequency_scoring
-        concept = concept_service.get_concept(concept_id)
-        if concept and concept.get("story_content"):
-            result = frequency_scoring.score_frequency(concept["story_content"])
-            profile["_living"] = result.get("score", 0.5)
+        from app.services import frequency_profile_service
+        profile = frequency_profile_service.get_profile(asset_id)
+        if profile:
+            mag = frequency_profile_service.magnitude(profile)
+            # Normalize magnitude to multiplier range [1.0, 4.0]
+            multiplier = max(1.0, min(4.0, mag))
     except Exception:
         pass
 
-    _asset_vitality[asset_id] = profile
-    return profile
-
-
-def _profile_magnitude(profile: dict[str, float]) -> float:
-    """The overall signal strength of a frequency profile.
-
-    Higher magnitude = the asset resonates more strongly across
-    more dimensions = worth tracking more carefully.
-    """
-    if not profile:
-        return 1.0
-    import math
-    # L2 norm of the profile vector — richer profiles have higher magnitude
-    magnitude = math.sqrt(sum(v * v for v in profile.values()))
-    # Normalize to a useful multiplier range [1.0, 4.0]
-    # A concept with 5 connections at 0.6 + living score 0.8 ≈ magnitude 1.7 → multiplier 2.5
-    return max(1.0, min(4.0, magnitude))
-
-
-def _vitality_multiplier(asset_id: str) -> float:
-    """How strongly does this asset resonate across frequency space?
-
-    Uses the full frequency profile (vector, not scalar) to determine
-    tracking priority. Assets that resonate across more dimensions
-    and carry more living frequency get tracked sooner.
-    """
-    profile = _frequency_profile(asset_id)
-    return _profile_magnitude(profile)
+    _asset_vitality[asset_id] = multiplier
+    return multiplier
 
 
 def _maybe_promote(asset_id: str) -> None:

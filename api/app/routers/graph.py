@@ -273,6 +273,94 @@ async def get_graph_proof():
     return graph_service.get_proof()
 
 
+# ── Frequency profile endpoints (universal — any entity) ─────────────
+
+
+@router.get("/profile/{entity_id}", summary="Get the frequency profile for any entity")
+async def get_entity_profile(entity_id: str):
+    """Returns the multi-dimensional frequency profile for any graph entity.
+
+    Works for ideas, specs, assets, concepts, contributors, providers —
+    anything in the graph. The profile is a vector across all dimensions
+    (concept connections, keywords, domains, content frequency, edge types).
+
+    No auth required — profiles are transparent and verifiable.
+    """
+    from app.services import frequency_profile_service
+    profile = frequency_profile_service.get_profile(entity_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found or has no profile")
+    return {
+        "entity_id": entity_id,
+        "dimensions": len(profile),
+        "magnitude": round(frequency_profile_service.magnitude(profile), 4),
+        "hash": frequency_profile_service.profile_hash(entity_id),
+        "top": [{"dimension": d, "strength": round(s, 4)}
+                for d, s in frequency_profile_service.top_dimensions(profile, n=15)],
+        "profile": {k: round(v, 4) for k, v in sorted(profile.items(), key=lambda x: -x[1])},
+    }
+
+
+@router.get("/profile/{entity_id}/verify", summary="Verify a profile hash")
+async def verify_entity_profile(entity_id: str, expected_hash: str = Query(..., alias="hash")):
+    """Recompute a profile from graph data and verify it matches the expected hash.
+
+    No auth required. This is the public verification endpoint for profiles.
+    """
+    from app.services import frequency_profile_service
+    frequency_profile_service.invalidate(entity_id)  # force recompute
+    actual_hash = frequency_profile_service.profile_hash(entity_id)
+    return {
+        "entity_id": entity_id,
+        "expected_hash": expected_hash,
+        "actual_hash": actual_hash,
+        "valid": expected_hash == actual_hash,
+    }
+
+
+@router.post("/resonance", summary="Compute resonance between any two entities")
+async def compute_resonance(body: dict):
+    """Cosine similarity between two entities' frequency profiles.
+
+    Pass {a: entity_id, b: entity_id}. Works across entity types:
+    idea-to-concept, contributor-to-asset, spec-to-spec, anything.
+    """
+    from app.services import frequency_profile_service
+    a_id = body.get("a", "")
+    b_id = body.get("b", "")
+    score = frequency_profile_service.resonance(a_id, b_id)
+    return {
+        "a": a_id,
+        "b": b_id,
+        "resonance": round(score, 4),
+    }
+
+
+@router.post("/profile/{entity_id}/sign", summary="Cryptographically sign an entity's frequency profile")
+async def sign_entity_profile(entity_id: str):
+    """Ed25519 sign the current frequency profile of any entity.
+
+    Returns: profile hash, signature, public key, timestamp.
+    Anyone can verify: recompute the profile hash, check the signature
+    against the public key. Proves "this entity had this profile at this time."
+    """
+    from app.services import frequency_profile_service
+    profile = frequency_profile_service.get_profile(entity_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found")
+    return frequency_profile_service.sign_profile(entity_id)
+
+
+@router.get("/profile/{entity_id}/resonant", summary="Find entities that resonate with this one")
+async def find_resonant(entity_id: str, top: int = Query(10, ge=1, le=50)):
+    """Find the most resonant entities to a given entity.
+
+    Searches the living-collective concept space by default.
+    """
+    from app.services import frequency_profile_service
+    return frequency_profile_service.find_resonant(entity_id, top_n=top)
+
+
 # ── DIF Feedback endpoints ───────────────────────────────────────────
 
 @router.get("/dif/feedback/stats", summary="Get DIF feedback statistics — true/false positive rates, accuracy")

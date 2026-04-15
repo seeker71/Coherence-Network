@@ -1,122 +1,165 @@
-"""Frequency profile service — vector representation of asset/reader resonance.
+"""Frequency profile service — every entity in the graph resonates.
 
-Every asset and every reader has a frequency profile: a vector across all
-concept dimensions. Resonance between a reader and an asset is the cosine
-similarity of their two profiles.
+Every idea, spec, asset, contributor, contribution, provider, and concept
+has a frequency profile: a vector across all dimensions of the system.
+Resonance between any two entities = cosine similarity of their profiles.
 
-An asset's profile comes from:
-  - Its concept tags (primary dimensions)
-  - Its connected concepts via graph edges (secondary dimensions)
-  - Its content's living frequency score (the "_living" dimension)
+Profiles are:
+  - Computed from the entity's graph neighborhood (what it connects to)
+  - Enriched by content analysis (if the entity has text content)
+  - Transparent: anyone can request any entity's profile via API
+  - Verifiable: the profile is deterministically computed from graph data
 
-A reader's profile comes from:
-  - Their explicit concept weights (manual resonance settings)
-  - Their reading history (auto-computed from which concepts they read most)
-  - Their contribution history (which concepts they create for)
+An entity's profile emerges from three sources:
+  1. Its own properties (concept tags, domains, keywords, content frequency)
+  2. Its graph neighborhood (what it connects to, edge types and strengths)
+  3. Its activity (what reads/uses/creates it — for contributors)
 
-CC flow between reader and creator is proportional to their resonance
-(cosine similarity of profiles). This replaces percentage-based concept
-weights with continuous, high-dimensional resonance matching.
+This replaces all hardcoded category assignments with continuous,
+high-dimensional resonance that emerges from the data itself.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from typing import Any
 
-# Cache profiles in memory (invalidated on concept/edge changes)
-_profile_cache: dict[str, dict[str, float]] = {}
+# Profile cache — keyed by entity_id
+_cache: dict[str, dict[str, float]] = {}
 
 
-def get_asset_profile(asset_id: str) -> dict[str, float]:
-    """Compute the frequency profile vector for an asset.
+# ---------------------------------------------------------------------------
+# Core: universal entity profiling
+# ---------------------------------------------------------------------------
 
-    Returns {dimension: strength} where dimensions are concept IDs
-    plus special dimensions like "_living" for content frequency.
+def get_profile(entity_id: str) -> dict[str, float]:
+    """Get the frequency profile for ANY entity in the graph.
+
+    Works for concepts, ideas, specs, assets, contributors, providers —
+    anything that exists as a graph node.
     """
-    if asset_id in _profile_cache:
-        return _profile_cache[asset_id]
+    if entity_id in _cache:
+        return _cache[entity_id]
 
     profile: dict[str, float] = {}
 
-    # Extract concept ID
-    concept_id = _asset_to_concept(asset_id)
-    if not concept_id:
+    try:
+        from app.services import graph_service
+        node = graph_service.get_node(entity_id)
+        if not node:
+            return profile
+
+        node_type = node.get("type", "")
+
+        # 1. Properties-based dimensions
+        profile.update(_profile_from_properties(node))
+
+        # 2. Graph neighborhood dimensions
+        profile.update(_profile_from_neighborhood(entity_id, node_type))
+
+        # 3. Content frequency dimension (if entity has text content)
+        profile.update(_profile_from_content(node))
+
+    except Exception:
+        pass
+
+    _cache[entity_id] = profile
+    return profile
+
+
+def _profile_from_properties(node: dict) -> dict[str, float]:
+    """Extract frequency dimensions from node properties."""
+    profile: dict[str, float] = {}
+
+    # Domains
+    for domain in node.get("domains", []):
+        profile[f"_domain:{domain}"] = 0.5
+
+    # Keywords
+    for kw in node.get("keywords", []):
+        profile[f"_kw:{kw}"] = 0.3
+
+    # Concept tags (ideas/specs tagged with concepts)
+    for tag in node.get("concept_tags", []):
+        if isinstance(tag, dict):
+            profile[tag.get("concept_id", "")] = float(tag.get("weight", 0.5))
+        elif isinstance(tag, str):
+            profile[tag] = 0.5
+
+    # Sacred frequency (Hz family)
+    hz = node.get("sacred_frequency", {}).get("hz") if isinstance(node.get("sacred_frequency"), dict) else None
+    if hz:
+        profile[f"_hz:{hz}"] = 0.4
+
+    # Node type as a dimension
+    node_type = node.get("type", "")
+    if node_type:
+        profile[f"_type:{node_type}"] = 0.2
+
+    # Phase/lifecycle
+    phase = node.get("phase", "")
+    if phase:
+        profile[f"_phase:{phase}"] = 0.15
+
+    return profile
+
+
+def _profile_from_neighborhood(entity_id: str, node_type: str) -> dict[str, float]:
+    """Extract frequency dimensions from graph connections."""
+    profile: dict[str, float] = {}
+
+    try:
+        from app.services import graph_service
+        neighbors = graph_service.get_neighbors(entity_id, direction="both")
+
+        for neighbor in neighbors:
+            nid = neighbor.get("id", "")
+            if not nid:
+                continue
+
+            edge_type = neighbor.get("edge_type", "related")
+            strength = float(neighbor.get("strength", 0.5))
+
+            # The neighbor's ID becomes a dimension
+            # Strength decays: direct connection at 0.6x, further at 0.3x
+            profile[nid] = max(profile.get(nid, 0), strength * 0.6)
+
+            # The edge type itself is a dimension
+            profile[f"_edge:{edge_type}"] = max(
+                profile.get(f"_edge:{edge_type}", 0), 0.2
+            )
+
+    except Exception:
+        pass
+
+    return profile
+
+
+def _profile_from_content(node: dict) -> dict[str, float]:
+    """Extract frequency dimensions from text content analysis."""
+    profile: dict[str, float] = {}
+
+    # Story content (concepts)
+    story = node.get("story_content", "")
+    # Description (ideas, specs)
+    desc = node.get("description", "")
+    # Combine available text
+    text = story or desc
+    if not text or len(text) < 50:
         return profile
 
-    # Primary: the asset's own concept
-    profile[concept_id] = 1.0
-
     try:
-        from app.services import concept_service
+        from app.services import frequency_scoring
+        result = frequency_scoring.score_frequency(text)
+        profile["_living"] = result.get("score", 0.5)
 
-        # Secondary: connected concepts from graph edges
-        edges = concept_service.get_concept_edges(concept_id)
-        for edge in edges:
-            connected = edge.get("to") if edge.get("from") == concept_id else edge.get("from", "")
-            if connected and connected.startswith("lc-"):
-                strength = float(edge.get("strength", 0.5))
-                profile[connected] = max(profile.get(connected, 0), strength * 0.6)
-
-        # Tertiary: sacred frequency family (concepts sharing the same Hz)
-        concept = concept_service.get_concept(concept_id)
-        if concept:
-            hz = concept.get("sacred_frequency", {}).get("hz")
-            if hz:
-                profile[f"_hz_{hz}"] = 0.4  # frequency family dimension
-
-            # Living frequency from content analysis
-            story = concept.get("story_content", "")
-            if story:
-                try:
-                    from app.services import frequency_scoring
-                    result = frequency_scoring.score_frequency(story)
-                    profile["_living"] = result.get("score", 0.5)
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    _profile_cache[asset_id] = profile
-    return profile
-
-
-def get_reader_profile(reader_id: str) -> dict[str, float]:
-    """Compute the frequency profile vector for a reader.
-
-    Blends explicit concept weights with auto-computed reading patterns.
-    """
-    profile: dict[str, float] = {}
-
-    try:
-        # Auto-compute from reading history
-        from app.services import read_tracking_service
-        from datetime import date, timedelta
-        import json
-
-        today = date.today()
-        thirty_days_ago = today - timedelta(days=30)
-
-        # Get all reads in the last 30 days
-        # This is approximate — we aggregate across all assets
-        from app.services.read_tracking_service import AssetReadDaily, _session, _ensure_ready
-        _ensure_ready()
-
-        with _session() as s:
-            rows = (
-                s.query(AssetReadDaily)
-                .filter(AssetReadDaily.day >= thirty_days_ago)
-                .all()
-            )
-            for row in rows:
-                concepts = json.loads(row.concepts or "{}")
-                for concept_id, count in concepts.items():
-                    profile[concept_id] = profile.get(concept_id, 0) + count
-
-        # Normalize to unit vector
-        if profile:
-            total = sum(profile.values())
-            profile = {k: v / total for k, v in profile.items()}
+        # Top markers become dimensions too
+        for marker in result.get("top_living", []):
+            word = marker.get("word", "")
+            if word:
+                profile[f"_marker:{word}"] = marker.get("signal", 0.3) * 0.3
 
     except Exception:
         pass
@@ -124,16 +167,24 @@ def get_reader_profile(reader_id: str) -> dict[str, float]:
     return profile
 
 
-def resonance(profile_a: dict[str, float], profile_b: dict[str, float]) -> float:
-    """Cosine similarity between two frequency profiles.
+# ---------------------------------------------------------------------------
+# Resonance computation
+# ---------------------------------------------------------------------------
 
-    Returns 0.0 (no resonance) to 1.0 (perfect alignment).
-    This is the core function that determines CC flow weighting.
+def resonance(entity_a: str, entity_b: str) -> float:
+    """Cosine similarity between two entities' frequency profiles.
+
+    This is the core function. CC flow, tracking priority, search ranking,
+    recommendation — everything flows from resonance.
     """
+    return resonance_profiles(get_profile(entity_a), get_profile(entity_b))
+
+
+def resonance_profiles(profile_a: dict[str, float], profile_b: dict[str, float]) -> float:
+    """Cosine similarity between two profile vectors."""
     if not profile_a or not profile_b:
         return 0.0
 
-    # Dot product over shared dimensions
     shared = set(profile_a) & set(profile_b)
     if not shared:
         return 0.0
@@ -149,36 +200,116 @@ def resonance(profile_a: dict[str, float], profile_b: dict[str, float]) -> float
 
 
 def magnitude(profile: dict[str, float]) -> float:
-    """L2 norm — how strongly the profile resonates overall."""
+    """L2 norm — overall resonance strength."""
     if not profile:
         return 0.0
     return math.sqrt(sum(v * v for v in profile.values()))
 
 
 def top_dimensions(profile: dict[str, float], n: int = 10) -> list[tuple[str, float]]:
-    """Top N strongest dimensions in a profile."""
+    """Strongest dimensions in a profile."""
     return sorted(profile.items(), key=lambda x: -x[1])[:n]
 
 
-def invalidate_cache(asset_id: str | None = None) -> None:
-    """Clear cached profiles. Call after concept/edge changes."""
-    if asset_id:
-        _profile_cache.pop(asset_id, None)
+# ---------------------------------------------------------------------------
+# Profile verification
+# ---------------------------------------------------------------------------
+
+def profile_hash(entity_id: str) -> str:
+    """Deterministic SHA-256 hash of an entity's profile.
+
+    For verification: anyone can recompute the profile from the graph
+    and confirm it matches this hash.
+    """
+    profile = get_profile(entity_id)
+    # Sort keys for determinism
+    canonical = json.dumps(
+        {k: round(v, 6) for k, v in sorted(profile.items())},
+        sort_keys=True,
+    )
+    return hashlib.sha256(f"{entity_id}|{canonical}".encode()).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Batch operations
+# ---------------------------------------------------------------------------
+
+def get_profiles_batch(entity_ids: list[str]) -> dict[str, dict[str, float]]:
+    """Get profiles for multiple entities at once."""
+    return {eid: get_profile(eid) for eid in entity_ids}
+
+
+def find_resonant(entity_id: str, candidates: list[str] | None = None,
+                  top_n: int = 10) -> list[dict[str, Any]]:
+    """Find the most resonant entities to a given entity.
+
+    If candidates is None, searches all concepts in the living-collective domain.
+    """
+    profile = get_profile(entity_id)
+    if not profile:
+        return []
+
+    if candidates is None:
+        try:
+            from app.services import concept_service
+            result = concept_service.list_concepts_by_domain("living-collective", limit=200)
+            candidates = [c["id"] for c in result.get("items", [])]
+        except Exception:
+            return []
+
+    results = []
+    for cid in candidates:
+        if cid == entity_id:
+            continue
+        score = resonance(entity_id, cid)
+        if score > 0:
+            results.append({"entity_id": cid, "resonance": round(score, 4)})
+
+    results.sort(key=lambda x: -x["resonance"])
+    return results[:top_n]
+
+
+# ---------------------------------------------------------------------------
+# Cache management
+# ---------------------------------------------------------------------------
+
+def sign_profile(entity_id: str) -> dict[str, str]:
+    """Cryptographically sign an entity's frequency profile.
+
+    Returns the profile hash, Ed25519 signature, public key, and timestamp.
+    Anyone can verify: recompute the profile, hash it, check the signature.
+    """
+    from datetime import datetime, timezone
+
+    profile = get_profile(entity_id)
+    p_hash = profile_hash(entity_id)
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    # Sign: entity_id | hash | timestamp
+    message = f"{entity_id}|{p_hash}|{timestamp}"
+
+    try:
+        from app.services.verification_service import sign_message, get_public_key
+        signature = sign_message(message.encode("utf-8"))
+        pub_key = get_public_key()
+    except Exception:
+        signature = ""
+        pub_key = ""
+
+    return {
+        "entity_id": entity_id,
+        "profile_hash": p_hash,
+        "timestamp": timestamp,
+        "signature": signature,
+        "public_key": pub_key,
+        "message": message,
+        "dimensions": len(profile),
+    }
+
+
+def invalidate(entity_id: str | None = None) -> None:
+    """Clear cached profiles."""
+    if entity_id:
+        _cache.pop(entity_id, None)
     else:
-        _profile_cache.clear()
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _asset_to_concept(asset_id: str) -> str | None:
-    """Extract concept ID from an asset ID."""
-    concept_id = asset_id
-    if concept_id.startswith("visual-"):
-        concept_id = concept_id[7:]
-    if "-story-" in concept_id:
-        concept_id = concept_id[:concept_id.index("-story-")]
-    elif concept_id and concept_id[-1:].isdigit() and "-" in concept_id:
-        concept_id = concept_id[:concept_id.rindex("-")]
-    return concept_id if concept_id.startswith("lc-") else None
+        _cache.clear()
