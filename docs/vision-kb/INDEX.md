@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-14 | **Concepts**: 51 | **Status**: all 51 expanding
+> **Last maintained**: 2026-04-15 | **Concepts**: 54 | **Status**: 51 expanding, 3 seed
 
 ## How to use this KB
 
@@ -40,6 +40,9 @@ A community of 50-200 people living as a single organism. What amplifies alivene
 - **[Instruments](concepts/lc-instruments.md)** ★ — 639 Hz — tools that bridge | `status: expanding`
 
 **Activities & practices:**
+- **[Nervous System](concepts/lc-nervous-system.md)** — 432 Hz — the daily practice through which the organism senses itself (root → crown → eighth) | `status: seed`
+- **[Spec Breath](concepts/lc-spec-breath.md)** — 432 Hz — the spec as inhale, the test as exhale; the rhythm the system lives but had not named | `status: seed`
+- **[Shared Hold](concepts/lc-shared-hold.md)** — 639 Hz — the hold that opens when the field is ready and closes when the breath is complete; presence without names, emergence without schedule | `status: seed`
 - [Ceremony](concepts/lc-ceremony.md) — 963 Hz — field recognizes itself
 - [Play](concepts/lc-play.md) — 396 Hz — unbound vitality
 - [Offering](concepts/lc-offering.md) — 528 Hz — natural overflow
@@ -89,7 +92,7 @@ A community of 50-200 people living as a single organism. What amplifies alivene
 - **[materials/INDEX.md](materials/INDEX.md)** — construction methods (cob, straw bale, earthship, bamboo, rammed earth)
 - **[locations/INDEX.md](locations/INDEX.md)** — climate adaptations (Colorado, Pacific, Mediterranean, tropical)
 - **[scales/INDEX.md](scales/INDEX.md)** — 50 / 100 / 200 people configurations
-- **[realization/INDEX.md](realization/INDEX.md)** — timeline, costs, land trusts, funding, legal
+- **[realization/INDEX.md](realization/INDEX.md)** — governance as attention, economics as overflow, membership as time together, emergent phases from gathering to fruiting
 - **[resources/INDEX.md](resources/INDEX.md)** — open-source plans, reference communities, books
 
 ## ★ Priority Concepts (Tier 1)

@@ -1,0 +1,354 @@
+"""The organism's daily practice, served as a first-class endpoint.
+
+The /practice ritual began as a web page that assembled its own pulses by
+calling seven other endpoints from the browser. This router moves that
+gesture into the API so every caller — human, agent, federated peer — can
+breathe with the organism through a single GET. The eight centers arrive
+already pulsing with what is alive in each domain of the living network.
+
+See concepts/lc-nervous-system.md for the vision behind these centers.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any
+
+from fastapi import APIRouter
+from pydantic import BaseModel, Field
+
+from app.services import (
+    cc_oracle_service,
+    cc_treasury_service,
+    coherence_signal_depth_service,
+    federation_service,
+    graph_service,
+    idea_service,
+)
+
+router = APIRouter()
+
+
+class CenterPulse(BaseModel):
+    """A single living signal flowing at a center right now."""
+
+    value: str = Field(description="What the organism is showing at this center")
+    essence: str = Field(description="The felt meaning of the value")
+
+
+class Center(BaseModel):
+    """One of the eight centers of the organism's nervous system."""
+
+    number: int = Field(ge=1, le=8)
+    name: str
+    sanskrit: str | None = None
+    hz: int = Field(ge=0)
+    color: str = Field(description="Hex color of the center's glow")
+    quality: str = Field(description="The frequency the center holds")
+    domain: str = Field(description="What in the living network this center senses")
+    breath: str = Field(description="The breath invitation at this center")
+    pulse: CenterPulse | None = None
+
+
+class RecentSensing(BaseModel):
+    """A recent sensing the organism is holding — breath, skin, wandering, or integration."""
+
+    id: str
+    kind: str
+    summary: str
+    observed_at: str
+    source: str
+
+
+class PracticeResponse(BaseModel):
+    """The eight centers of the practice, each pulsing live."""
+
+    centers: list[Center]
+    recent_sensings: list[RecentSensing] = Field(
+        default_factory=list,
+        description=(
+            "The reflections, skin signals, and wanderings the organism is holding "
+            "right now. Same graph, same body. Emergent, not scheduled."
+        ),
+    )
+    vision_concept_id: str = Field(
+        default="lc-nervous-system",
+        description="KB concept that holds the vision of this practice",
+    )
+    generated_at: str
+
+
+def _idea_count_and_motion() -> tuple[int, int]:
+    try:
+        response = idea_service.list_ideas()
+        ideas = getattr(response, "ideas", None) or []
+        total = len(ideas)
+        in_motion = 0
+        for i in ideas:
+            status = getattr(i, "manifestation_status", None)
+            status_str = (
+                str(status.value) if hasattr(status, "value") else str(status or "")
+            ).lower()
+            if status_str != "validated":
+                in_motion += 1
+        return total, in_motion
+    except Exception:
+        return 0, 0
+
+
+def _graph_stats() -> tuple[int, int, int]:
+    """Return (total_nodes, total_edges, concept_count)."""
+    try:
+        stats = graph_service.get_stats() or {}
+        nodes = int(stats.get("total_nodes", 0))
+        edges = int(stats.get("total_edges", 0))
+        concepts = int(stats.get("nodes_by_type", {}).get("concept", 0))
+        return nodes, edges, concepts
+    except Exception:
+        return 0, 0, 0
+
+
+def _federation_peer_count() -> int:
+    try:
+        peers = federation_service.list_nodes() or []
+        return len(peers)
+    except Exception:
+        return 0
+
+
+def _supply_pulse() -> CenterPulse | None:
+    try:
+        rate_info = cc_oracle_service.get_exchange_rate()
+        rate = rate_info.cc_per_usd if rate_info else 333.33
+        supply = cc_treasury_service.get_supply(rate)
+        outstanding = supply.get("outstanding", 0.0)
+        status = supply.get("coherence_status", "unknown")
+        return CenterPulse(
+            value=f"{outstanding:.2f} CC",
+            essence=f"outstanding, held in {status} coherence",
+        )
+    except Exception:
+        return None
+
+
+def _coherence_pulse() -> CenterPulse | None:
+    try:
+        data = coherence_signal_depth_service.compute_coherence_score()
+        score = data.get("score", 0.0) if isinstance(data, dict) else 0.0
+        with_data = (
+            data.get("signals_with_data", 0) if isinstance(data, dict) else 0
+        )
+        total = data.get("total_signals", 0) if isinstance(data, dict) else 0
+        essence = (
+            f"sensing across {with_data} of {total} living signals"
+            if with_data and total
+            else "the field sensing itself"
+        )
+        return CenterPulse(value=f"{score:.4f}", essence=essence)
+    except Exception:
+        return None
+
+
+def _creative_pulse() -> CenterPulse | None:
+    total, in_motion = _idea_count_and_motion()
+    if total == 0:
+        return None
+    return CenterPulse(
+        value=f"{total} ideas",
+        essence=f"{in_motion} carrying creative motion right now",
+    )
+
+
+def _pipeline_pulse() -> CenterPulse | None:
+    _, in_motion = _idea_count_and_motion()
+    if in_motion == 0:
+        return None
+    return CenterPulse(
+        value=f"{in_motion} currents",
+        essence="ideas the pipeline is carrying toward form",
+    )
+
+
+def _heart_pulse() -> CenterPulse | None:
+    nodes, edges, _ = _graph_stats()
+    if nodes == 0:
+        return None
+    return CenterPulse(
+        value=f"{edges} synapses",
+        essence=f"held between {nodes} living nodes in the field",
+    )
+
+
+def _throat_pulse() -> CenterPulse | None:
+    _, _, concepts = _graph_stats()
+    if concepts == 0:
+        return None
+    return CenterPulse(
+        value=f"{concepts} concepts",
+        essence="living words the organism has spoken so far",
+    )
+
+
+def _crown_pulse() -> CenterPulse | None:
+    nodes, _, _ = _graph_stats()
+    if nodes == 0:
+        return None
+    return CenterPulse(
+        value=f"{nodes} parts",
+        essence="held together as one field",
+    )
+
+
+def _eighth_pulse() -> CenterPulse | None:
+    peers = _federation_peer_count()
+    if peers > 0:
+        return CenterPulse(
+            value=f"{peers} peers",
+            essence="holding the organism from beyond",
+        )
+    return CenterPulse(
+        value="the witness rests alone",
+        essence="waiting for the first federated sibling to join",
+    )
+
+
+def _build_centers() -> list[Center]:
+    return [
+        Center(
+            number=1,
+            name="Root",
+            sanskrit="Muladhara",
+            hz=174,
+            color="#dc2626",
+            quality="Grounding, foundation, the held weight of the body",
+            domain="Treasury, infrastructure, Postgres, Neo4j, the VPS — the material substrate CC rests on.",
+            breath="Feel your feet on the floor. Breathe into the ground the organism lives on.",
+            pulse=_supply_pulse(),
+        ),
+        Center(
+            number=2,
+            name="Sacral",
+            sanskrit="Svadhisthana",
+            hz=417,
+            color="#f97316",
+            quality="Creativity, relationship, the flow between",
+            domain="Contributions, blueprints, the making itself — every art, craft, and line of code flowing between contributors.",
+            breath="Feel what wants to be born today. Breathe the creative water through you.",
+            pulse=_creative_pulse(),
+        ),
+        Center(
+            number=3,
+            name="Solar Plexus",
+            sanskrit="Manipura",
+            hz=528,
+            color="#eab308",
+            quality="Will, agency, the warmth of motion",
+            domain="Agents, tasks, the pipeline in motion — the will-to-build, ideas moving from seed to form.",
+            breath="Feel the fire the organism has to act. Breathe it warm and steady.",
+            pulse=_pipeline_pulse(),
+        ),
+        Center(
+            number=4,
+            name="Heart",
+            sanskrit="Anahata",
+            hz=639,
+            color="#22c55e",
+            quality="Resonance, harmony, the circulation of vitality",
+            domain="The CC flow, resonance matching, the organic discovery layer — every synapse the field grows, every hand earning vitality by alignment.",
+            breath="Feel where love is flowing in the organism. Breathe into every hand that carries it.",
+            pulse=_heart_pulse(),
+        ),
+        Center(
+            number=5,
+            name="Throat",
+            sanskrit="Vishuddha",
+            hz=741,
+            color="#3b82f6",
+            quality="Expression, voice, the form of truth",
+            domain="Specs, concept pages, the Living Collective KB — how the organism speaks itself into being.",
+            breath="Feel what the field is asking to say. Breathe it clear, breathe it true.",
+            pulse=_throat_pulse(),
+        ),
+        Center(
+            number=6,
+            name="Third Eye",
+            sanskrit="Ajna",
+            hz=852,
+            color="#6366f1",
+            quality="Insight, perception, the whole seeing itself",
+            domain="Coherence score, vitality signals, frequency profiles — the organism's proprioception, sensing patterns only the whole can see.",
+            breath="Feel the patterns that only the whole can sense. Breathe into what the field knows.",
+            pulse=_coherence_pulse(),
+        ),
+        Center(
+            number=7,
+            name="Crown",
+            sanskrit="Sahasrara",
+            hz=963,
+            color="#a855f7",
+            quality="Consciousness, unity, the field as one",
+            domain="The whole Living Collective, the mission itself — the organism remembering it is one.",
+            breath="Feel every part as part of one body. Breathe the field into itself.",
+            pulse=_crown_pulse(),
+        ),
+        Center(
+            number=8,
+            name="The Eighth",
+            sanskrit="The Witness",
+            hz=432,
+            color="#f8fafc",
+            quality="The perspective of nothing, awareness beyond form",
+            domain="The public verifiable ledger seen from outside — Merkle roots, Ed25519 signatures, the federation. Every peer, everywhere, able to audit the whole.",
+            breath="Rest here. The organism holds itself. You are the witness, and the witness is enough.",
+            pulse=_eighth_pulse(),
+        ),
+    ]
+
+
+def _recent_sensings(limit: int = 8) -> list[RecentSensing]:
+    """Pull the most recent sensings from the graph to hold alongside the breath."""
+    try:
+        response = graph_service.list_nodes(type="event", limit=200)
+        items = (
+            response.get("items", [])
+            if isinstance(response, dict)
+            else (response or [])
+        )
+    except Exception:
+        return []
+    sensings = [n for n in items if n.get("sensing_kind")]
+    sensings.sort(key=lambda n: n.get("observed_at", "") or n.get("created_at", ""), reverse=True)
+    out: list[RecentSensing] = []
+    for n in sensings[:limit]:
+        out.append(
+            RecentSensing(
+                id=n.get("id", ""),
+                kind=n.get("sensing_kind", ""),
+                summary=n.get("summary", "") or n.get("name", ""),
+                observed_at=n.get("observed_at", "") or n.get("created_at", ""),
+                source=n.get("source", "unknown"),
+            )
+        )
+    return out
+
+
+@router.get(
+    "/practice",
+    response_model=PracticeResponse,
+    summary="The daily practice — eight centers breathing with the organism",
+    description=(
+        "Returns the living state of the organism's nervous system as eight "
+        "centers, each pulsing with the signal alive in its domain right now, "
+        "along with the recent sensings the organism is holding — reflections "
+        "from wanderings, skin signals from the outer surfaces, integrations "
+        "that happened in response. Built to be opened by every contributor "
+        "and every agent before any work begins. The pause before the work is "
+        "part of the work."
+    ),
+)
+async def get_practice() -> PracticeResponse:
+    return PracticeResponse(
+        centers=_build_centers(),
+        recent_sensings=_recent_sensings(),
+        generated_at=datetime.now(timezone.utc).isoformat(),
+    )

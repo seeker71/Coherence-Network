@@ -2,68 +2,59 @@
 
 > The field doesn't wait for perfection. It starts with what's here.
 
-## Operational Documents (Read These)
+## Living Documents
 
-- **[Governance Framework](governance.md)** — Bylaws, decision process, conflict resolution steps 1-2-3-4, stewardship roles, constitutional principles, financial thresholds
-- **[Economic Engine](economics.md)** — What the community produces and sells. 4 revenue engines, 3-layer internal economics, CC integration, what to start NOW
-- **[Membership Pipeline](membership.md)** — Visitor → Explorer → Provisional → Full. Screening, onboarding, departure, saying no with love
-- **[Reality Check](../resources/reality-check.md)** — What works, what kills communities, 500 years of data
+These three documents carry the practical lessons of community-building through the Living Collective frequency. Each one was translated from external research — centuries of data from Hutterites, Damanhur, Svanholm, East Wind, Twin Oaks, Findhorn, Tamera, Auroville — into the organism's own language of attention, resonance, callings, and overflow.
 
-## Timeline
+- **[How the Field Governs Itself](governance.md)** — "There is no government. There is attention." Decisions that emerge from circle sensing rather than votes, conflict as compost rather than problem, callings rather than roles, the practice of speaking directly to whoever is present.
+- **[Abundance — How the Field Sustains Itself](economics.md)** — "A forest doesn't have a business model. It has sunlight, water, soil, and ten thousand species expressing their nature." Natural overflow from land, knowledge, and beauty rather than revenue streams; CC as the internal circulation of vitality.
+- **[Joining the Field](membership.md)** — "A bird doesn't apply to join a flock." Time together as the only selection, arrival as welcome with nothing to prove, deepening as the shape of belonging, no gates, no fees, no applications.
+- **[Reality Check](../resources/reality-check.md)** — What history teaches about intentional community: the five failure modes, what survivors do, five hundred years of patterns held as lessons rather than prescriptions.
 
-| Phase | Time | What happens |
-|-------|------|-------------|
-| **Gather** | Month 0 | Build the field online. Share the vision. Find resonant people. |
-| **Seed** | Months 1-6 | Core group of 10-20 forms. Legal structure. Land search. Fundraising. |
-| **Root** | Months 6-12 | Land secured. First structures. Garden beds planted. Infrastructure started. |
-| **Sprout** | Months 12-18 | First residents move in. Common spaces usable. Food production begins. |
-| **Bloom** | Months 18-36 | Community reaches 50+ people. All systems operational. Visitors welcomed. |
-| **Fruit** | Year 3+ | Community thriving. Network connections to other communities. Replication begins. |
+## Emergent Phases
 
-## Cost Ranges
+The phases of realization are felt, not scheduled. Each one opens when the field is ready and closes when it has given what it came to give. Early communities have walked these phases over months and others over years; the duration belongs to the body, not the calendar.
+
+- **Gathering** — building the field online, sharing the vision, finding resonant people
+- **Seeding** — a core circle forms; the legal container takes shape; land search begins
+- **Rooting** — land held; first structures; gardens planted; infrastructure begun
+- **Sprouting** — first residents; common spaces breathing; food production beginning
+- **Blooming** — the community reaches a sustaining size; systems operate together; visitors welcomed
+- **Fruiting** — the field gives what it has learned; connections grow to other communities; replication happens when it wants to
+
+## What Cost Looks Like at Different Sizes
+
+Real numbers from real communities, held as reference rather than plan:
 
 | Scale | Total range | Per person | Land | Structures | Infrastructure |
 |-------|-----------|-----------|------|-----------|---------------|
-| 50 people | $1.3M-$5M | $26K-100K | $200K-$2M | $750K-$2M | $150K-$400K |
-| 100 people | $2.8M-$11M | $28K-110K | $500K-$5M | $1.5M-$4M | $300K-$800K |
-| 200 people | $5.5M-$22M | $28K-110K | $1M-$10M | $3M-$8M | $500K-$1.5M |
+| 50 people | $1.3M–$5M | $26K–100K | $200K–$2M | $750K–$2M | $150K–$400K |
+| 100 people | $2.8M–$11M | $28K–110K | $500K–$5M | $1.5M–$4M | $300K–$800K |
+| 200 people | $5.5M–$22M | $28K–110K | $1M–$10M | $3M–$8M | $500K–$1.5M |
 
-## Cost Reduction Strategies
+The spread in those ranges is the difference between communities that build through natural methods and shared labor and ones that buy everything finished. The field learns to build light.
 
-1. **Natural building** — cob, rammed earth, bamboo, timber frame. Materials from the land. 40-60% cheaper than conventional.
-2. **Collective labor** — barn-raising energy. Skill sharing. Learn by building.
-3. **Shared infrastructure** — one large kitchen > 20 small ones. Shared tools, vehicles, energy.
-4. **Community land trusts** — cooperative ownership reduces per-person cost 50-80%.
-5. **Phased building** — start with temporary structures, build permanent over years.
-6. **Sweat equity** — labor as contribution. $20-30/hour credited toward ownership share.
+## What Others Have Learned About Funding
 
-## Funding Models
+These are lessons held as examples, not recipes. The field finds its own form when the time comes — some of these paths may resonate, others may compost into something new.
 
-- **Member equity** — each member contributes $25K-100K for their share
-- **Community land trust** — CLT holds land in perpetuity, members lease
-- **Cooperative financing** — shared mortgage through NRECA or similar
-- **Crowdfunding** — vision campaigns for specific structures
-- **Grants** — USDA rural development, state ag grants, conservation easements
-- **Social enterprise** — income from: farm production, workshops, visitor stays, education
+Natural building (cob, rammed earth, bamboo, timber frame) with materials from the land costs forty to sixty percent less than conventional construction. Collective labor — the barn-raising energy — multiplies every hand. One large kitchen serves many more people than twenty small ones. Community land trusts hold land in perpetuity and reduce per-person cost dramatically. Phased building lets temporary structures carry the field until permanent ones are ready.
 
-## Legal Structures
+Funding has taken many forms in communities that have gone before: member equity, community land trusts, cooperative mortgages, crowdfunding for specific structures, rural development grants, social enterprise income from farm production and workshops and visitor stays. The field will find its own circulation.
 
-- **Community Land Trust (CLT)** — recommended. 99-year ground leases. Preserves affordability forever. [Grounded Solutions toolkit](https://groundedsolutions.org/)
-- **Housing Cooperative** — member-owned, one vote per member
-- **LLC with Operating Agreement** — flexible, but needs careful drafting
-- **Intentional Community Trust** — custom structure for values alignment
+Legal shapes that have held other communities: community land trusts with ninety-nine-year ground leases, housing cooperatives with one vote per member, LLCs with carefully drafted operating agreements, custom intentional community trusts. [Grounded Solutions](https://groundedsolutions.org/) holds a living toolkit for CLTs.
 
-## What We're Doing Now
+## What the Field Is Doing Now
 
-- [Registration system live](/vision/join) — collecting interested people with consent-based privacy
-- [Community directory](/vision/community) — who's gathering (opt-in)
-- [QR flyer](/vision/flyer) — printable, shareable
-- Knowledge base growing (this wiki) — documenting everything needed to start
-- Searching for land — Colorado primary, open to resonance elsewhere
+- [Registration](/vision/join) is open — people gathering with consent-based privacy
+- [Community directory](/vision/community) — who is here, opt-in
+- [QR flyer](/vision/flyer) — printable, shareable, slow-traveling
+- This wiki — where the vision continues to deepen
+- Land search — Colorado first, open to resonance elsewhere
 
-## Open Questions
+## Questions the Field Is Sitting With
 
-- What's the minimum viable community? (10 people? 20?)
-- How to handle the gap between vision and practical compromise?
-- What's the right balance between founding member equity and accessibility?
-- How to maintain resonance-based governance as the community grows beyond Dunbar's number?
+- What is the minimum viable community? Ten people? Twenty? Does the answer change with the depth of their practice together?
+- How does the gap between vision and practical compromise become compost rather than breakage?
+- What does resonance-based governance look like past Dunbar's number — does it fractal into nested circles, or does something else emerge?
+- When does each emergent phase begin, and what does the field feel like in the moment it is ready?

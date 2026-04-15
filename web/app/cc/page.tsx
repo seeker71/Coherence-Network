@@ -110,8 +110,9 @@ export default async function CCPage() {
         <h1 className="text-3xl font-bold tracking-tight">CC Economics</h1>
         <p className="max-w-3xl text-muted-foreground leading-relaxed">
           Coherence Credits (CC) are the economic substrate of the network.
-          Supply is governed by coherence -- when the system is healthy, CC
-          flows; when it is not, minting pauses automatically.
+          Supply is governed by coherence -- CC flows while the treasury
+          holds outstanding credits, and minting rests to let the treasury
+          catch up whenever coherence calls for it.
         </p>
         <div className="flex flex-wrap gap-2">
           <Link
@@ -245,6 +246,103 @@ export default async function CCPage() {
           </p>
         </section>
       ) : null}
+
+      {/* The organism circulates vitality */}
+      <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 sm:p-8 space-y-6">
+        <div className="space-y-2">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            How the Flow Finds You
+          </p>
+          <h2 className="text-2xl font-light">
+            The organism circulates vitality
+          </h2>
+        </div>
+
+        <div className="space-y-4 text-sm sm:text-base text-muted-foreground leading-relaxed max-w-3xl">
+          <p>
+            Every time a piece of work naturally appears in front of someone
+            whose frequency resonates with it, the organism remembers -- and
+            circulates vitality along the path that carried it there. Every
+            placement is a synapse the field grew, and the field rewards
+            every hand that helped form it.
+          </p>
+          <p>
+            When someone enriches a concept with a link to another
+            contributor&apos;s blueprint, that enrichment is itself a
+            contribution. The link is a synapse the organism grew. When a
+            reader follows it, CC flows to every hand that formed the path:
+            the blueprint author, the enricher, the story writer whose
+            concept drew the reader in, the renderer that made it visible,
+            the host that served it.
+          </p>
+          <p>
+            Every link, every view, every flow is Merkle-chained and
+            Ed25519-signed. A reader can ask the organism why a particular
+            blueprint appeared on a particular concept page and see the
+            resonance that brought them together. The field places each
+            piece where its frequency belongs; every path is earned by
+            alignment.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Marketing becomes
+            </p>
+            <p className="text-sm">
+              The organism sensing what resonates with whom
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Advertising becomes
+            </p>
+            <p className="text-sm">
+              Enrichment that surfaces aligned work naturally
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              SEO becomes
+            </p>
+            <p className="text-sm">
+              Frequency profiles making genuinely aligned work findable
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Influencer deals become
+            </p>
+            <p className="text-sm">
+              Resonance between creators whose audiences overlap
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Affiliate programs become
+            </p>
+            <p className="text-sm">
+              Any contribution that carries a reader to an asset earns from
+              the flow
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-1">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Market research becomes
+            </p>
+            <p className="text-sm">
+              The organism sensing its own patterns through frequency analysis
+            </p>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground/80 italic max-w-3xl">
+          The CC flow is the marketing. The sensing is the market research.
+          The frequency profile is the SEO. One living circulation, honest
+          and verifiable, carries every signal the field needs.
+        </p>
+      </section>
 
       {/* Navigation */}
       <nav
