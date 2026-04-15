@@ -7,8 +7,10 @@ type KeypairData = { public_key_hex: string; private_key_hex: string; fingerprin
 
 export function ContributorSetup() {
   const [step, setStep] = useState(1);
+  const [mode, setMode] = useState<"generate" | "bring" | null>(null);
   const [contributorId, setContributorId] = useState("");
   const [keypair, setKeypair] = useState<KeypairData | null>(null);
+  const [ownPublicKey, setOwnPublicKey] = useState("");
   const [registered, setRegistered] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,13 +80,25 @@ export function ContributorSetup() {
               Your identity is an Ed25519 cryptographic keypair. The public key is your address in the network.
               The private key stays with you — it proves you are who you say you are.
             </p>
-            <button
-              onClick={generateKeypair}
-              disabled={loading}
-              className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40"
-            >
-              {loading ? "Generating..." : "Generate Keypair"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setMode("generate"); generateKeypair(); }}
+                disabled={loading}
+                className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40"
+              >
+                {loading ? "Generating..." : "Generate Keypair"}
+              </button>
+              <button
+                onClick={() => { setMode("bring"); setStep(2); }}
+                className="px-5 py-2.5 rounded-xl border border-stone-800/40 text-stone-500 hover:text-stone-300 transition-all text-sm"
+              >
+                I have my own key
+              </button>
+            </div>
+            <p className="text-xs text-stone-600">
+              If you prefer not to trust this server with key generation, bring your own Ed25519 public key.
+              Generate locally with: <code className="text-amber-400/40">openssl genpkey -algorithm Ed25519</code>
+            </p>
           </>
         )}
         {step > 1 && keypair && (
@@ -93,7 +107,7 @@ export function ContributorSetup() {
       </section>
 
       {/* Step 2: Save Private Key */}
-      {step >= 2 && keypair && (
+      {step >= 2 && (
         <section className={`rounded-2xl border p-6 space-y-4 transition-all ${
           step === 2 ? "border-amber-500/30 bg-amber-900/5" : step > 2 ? "border-emerald-800/20 bg-emerald-900/5 opacity-70" : "border-stone-800/40"
         }`}>
@@ -104,7 +118,7 @@ export function ContributorSetup() {
             <h2 className="text-lg font-light text-stone-300">Save Your Private Key</h2>
           </div>
 
-          {step === 2 && (
+          {step === 2 && mode === "generate" && keypair && (
             <>
               <div className="rounded-xl border border-red-800/20 bg-red-900/5 p-4 space-y-2">
                 <p className="text-xs text-red-300/80 font-medium">This is shown once. Save it now.</p>
@@ -133,6 +147,30 @@ export function ContributorSetup() {
                 className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Continue
+              </button>
+            </>
+          )}
+          {step === 2 && mode === "bring" && (
+            <>
+              <p className="text-sm text-stone-400">
+                Paste your Ed25519 public key (hex encoded, 64 characters).
+                Your private key never touches this server.
+              </p>
+              <input
+                value={ownPublicKey}
+                onChange={(e) => setOwnPublicKey(e.target.value.replace(/\s/g, ""))}
+                placeholder="Ed25519 public key (64 hex characters)"
+                className="w-full px-3 py-2 bg-stone-900/50 border border-stone-800/40 rounded-xl text-sm text-stone-300 font-mono focus:outline-none focus:border-amber-500/30"
+              />
+              <button
+                onClick={() => {
+                  setKeypair({ public_key_hex: ownPublicKey, private_key_hex: "", fingerprint: ownPublicKey.slice(0, 16), algorithm: "Ed25519-external" });
+                  setStep(3);
+                }}
+                disabled={ownPublicKey.length < 32}
+                className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Use this key
               </button>
             </>
           )}
