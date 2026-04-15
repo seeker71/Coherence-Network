@@ -49,13 +49,42 @@ _SKIP_PATTERNS = [
 _mem_counters: dict[str, int] = defaultdict(int)
 _last_flush = time.monotonic()
 
-# Tier thresholds
+# Tier thresholds (base — adjusted by vitality score)
 SAMPLE_PROMOTE_THRESHOLD = 10   # reads before untracked → sampled
 FULL_PROMOTE_THRESHOLD = 100    # reads before sampled → full
 SAMPLE_RATE = 10                # 1-in-N for sampled tier
 
+# Concepts that carry core community values — contributions tagged with these
+# promote faster because they bring more life to the community.
+# Higher value = promotes sooner (thresholds divided by this multiplier)
+_VITALITY_CONCEPTS: dict[str, float] = {
+    # Core life frequencies
+    "lc-ceremony": 3.0,
+    "lc-stillness": 2.5,
+    "lc-play": 3.0,
+    "lc-intimacy": 2.5,
+    "lc-offering": 2.5,
+    "lc-beauty": 2.0,
+    "lc-elders": 2.5,
+    "lc-resonating": 2.0,
+    "lc-rest": 2.0,
+    "lc-discovery": 2.0,
+    # Nourishing the body and land
+    "lc-nourishment": 2.0,
+    "lc-nourishing": 2.0,
+    "lc-health": 2.0,
+    "lc-vitality": 2.5,
+    # Connection and expression
+    "lc-expressing": 2.0,
+    "lc-attunement": 2.0,
+    "lc-composting": 1.5,
+    "lc-transmission": 2.0,
+    "lc-pulse": 2.5,
+}
+
 # Asset tier cache (in-memory, starts empty — everything begins untracked)
 _asset_tiers: dict[str, int] = {}  # asset_id → tier (1=full, 2=sampled, 3=untracked)
+_asset_vitality: dict[str, float] = {}  # cached vitality multiplier per asset
 
 # Performance budget: max microseconds per request for tracking overhead
 MAX_TRACKING_US = 500  # 0.5ms
@@ -67,16 +96,57 @@ def _get_tier(asset_id: str) -> int:
     return _asset_tiers.get(asset_id, 3)
 
 
+def _vitality_multiplier(asset_id: str) -> float:
+    """How much life does this asset's concept carry?
+
+    A ceremony recording promotes to full tracking 3x faster than
+    a technical config document, because it brings more vitality,
+    joy, and freedom to the community.
+    """
+    if asset_id in _asset_vitality:
+        return _asset_vitality[asset_id]
+
+    # Extract concept ID from asset ID
+    # visual-lc-space-0 → lc-space, lc-ceremony → lc-ceremony
+    concept_id = asset_id
+    if concept_id.startswith("visual-"):
+        concept_id = concept_id[7:]  # strip "visual-"
+    # Remove trailing -N or -story-N
+    if "-story-" in concept_id:
+        concept_id = concept_id[:concept_id.index("-story-")]
+    elif concept_id[-1].isdigit() and "-" in concept_id:
+        concept_id = concept_id[:concept_id.rindex("-")]
+
+    multiplier = _VITALITY_CONCEPTS.get(concept_id, 1.0)
+    _asset_vitality[asset_id] = multiplier
+    return multiplier
+
+
 def _maybe_promote(asset_id: str) -> None:
-    """Auto-promote asset tier based on read volume."""
+    """Auto-promote asset tier based on read volume × vitality.
+
+    High-vitality assets (ceremony, play, stillness) promote faster
+    because they bring more life to the community — tracking them
+    is more worthwhile.
+    """
     count = _mem_counters[asset_id]
+    vitality = _vitality_multiplier(asset_id)
     current = _get_tier(asset_id)
-    if current == 3 and count >= SAMPLE_PROMOTE_THRESHOLD:
-        _asset_tiers[asset_id] = 2  # promote to sampled
-        log.debug("read_tracking: %s promoted to sampled (count=%d)", asset_id, count)
-    elif current == 2 and count >= FULL_PROMOTE_THRESHOLD:
-        _asset_tiers[asset_id] = 1  # promote to full
-        log.debug("read_tracking: %s promoted to full (count=%d)", asset_id, count)
+
+    # Vitality lowers the promotion threshold
+    # ceremony (3.0x) promotes to sampled at ~3 reads instead of 10
+    # ceremony promotes to full at ~33 reads instead of 100
+    sample_threshold = max(2, int(SAMPLE_PROMOTE_THRESHOLD / vitality))
+    full_threshold = max(10, int(FULL_PROMOTE_THRESHOLD / vitality))
+
+    if current == 3 and count >= sample_threshold:
+        _asset_tiers[asset_id] = 2
+        log.debug("read_tracking: %s promoted to sampled (count=%d, vitality=%.1f)",
+                   asset_id, count, vitality)
+    elif current == 2 and count >= full_threshold:
+        _asset_tiers[asset_id] = 1
+        log.debug("read_tracking: %s promoted to full (count=%d, vitality=%.1f)",
+                   asset_id, count, vitality)
 
 
 class ReadTrackingMiddleware(BaseHTTPMiddleware):
