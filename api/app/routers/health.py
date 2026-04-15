@@ -4,11 +4,12 @@ from datetime import datetime, timezone
 import logging
 import os
 import ast
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.middleware.request_outcomes import recent_outcomes_snapshot
 from app.services import persistence_contract_service
 from app.services import unified_db
 from app.services import audit_ledger_service
@@ -123,6 +124,17 @@ class HealthResponse(_BaseHealthResponse):
     smart_reap_import_error: Annotated[
         str | None,
         Field(description="Import error message if smart_reap_service failed to load"),
+    ] = None
+    recent_outcomes: Annotated[
+        dict[str, Any] | None,
+        Field(
+            description=(
+                "Real-user traffic outcome snapshot from "
+                "RequestOutcomesMiddleware: rolling per-status-class counts "
+                "over the last 1 and 5 minutes. Read by pulse to flag the "
+                "api organ as strained when recent_outcomes.last_1m.5xx > 0."
+            )
+        ),
     ] = None
 
 
@@ -250,6 +262,14 @@ async def health():
         smart_reap_available = False
         smart_reap_import_error = str(_e)
 
+    # Real-user traffic outcome snapshot. If the middleware isn't wired
+    # (e.g. during a test client run without the full stack), this fails
+    # softly and the field is None.
+    try:
+        recent_outcomes = recent_outcomes_snapshot()
+    except Exception:
+        recent_outcomes = None
+
     return HealthResponse(
         status="ok",
         version=HEALTH_VERSION,
@@ -263,4 +283,5 @@ async def health():
         schema_ok=schema_ok,
         smart_reap_available=smart_reap_available,
         smart_reap_import_error=smart_reap_import_error,
+        recent_outcomes=recent_outcomes,
     )
