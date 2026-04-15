@@ -21,6 +21,30 @@ type BreathRhythm = {
   ice: number;
 };
 
+/**
+ * The live API (see api/app/services/vitality_service.py) returns `signals`
+ * as a dict of numeric scores keyed by snake_case id, with `breath_rhythm`
+ * nested inside it as a gas/water/ice dict. This type mirrors that reality.
+ */
+type VitalityApiResponse = {
+  workspace_id: string;
+  vitality_score: number;
+  health_description: string;
+  signals: {
+    diversity_index: number;
+    resonance_density: number;
+    flow_rate: number;
+    breath_rhythm: BreathRhythm;
+    connection_strength: number;
+    activity_pulse: number;
+  };
+  generated_at: string;
+};
+
+/**
+ * Shape used inside this page after normalising the API response into an
+ * array of signal cards plus a top-level breath rhythm.
+ */
 type VitalityResponse = {
   workspace_id: string;
   vitality_score: number;
@@ -30,83 +54,59 @@ type VitalityResponse = {
   computed_at: string;
 };
 
-// The API at /api/workspaces/{id}/vitality returns signals as an object keyed
-// by snake_case names, with breath_rhythm nested inside. The page renders them
-// as an array of human-readable signals. This helper bridges the two shapes so
-// every signal from the living API flows into the UI without leaving any out.
-type VitalityApiResponse = {
-  workspace_id?: string;
-  vitality_score?: number;
-  health_description?: string;
-  generated_at?: string;
-  signals?: Record<string, number | BreathRhythm | undefined> & {
-    diversity_index?: number;
-    resonance_density?: number;
-    flow_rate?: number;
-    connection_strength?: number;
-    activity_pulse?: number;
-    breath_rhythm?: BreathRhythm;
-  };
+/** Human-readable signal descriptions, living in the same vocabulary as the body. */
+const SIGNAL_DESCRIPTIONS: Record<string, { label: string; description: string }> = {
+  diversity_index: {
+    label: "Diversity Index",
+    description:
+      "How many different shapes of contribution are alive in the network right now.",
+  },
+  resonance_density: {
+    label: "Resonance Density",
+    description:
+      "How tightly the ideas, specs, and contributions are woven to each other.",
+  },
+  flow_rate: {
+    label: "Flow Rate",
+    description:
+      "How readily the work moves through the pipeline from seed to realized form.",
+  },
+  connection_strength: {
+    label: "Connection Strength",
+    description:
+      "How present contributors are to each other — the tissue that binds the organism.",
+  },
+  activity_pulse: {
+    label: "Activity Pulse",
+    description:
+      "The tempo at which the network is currently breathing, growing, and resting.",
+  },
 };
 
-const SIGNAL_ORDER: Array<{
-  key:
-    | "diversity_index"
-    | "resonance_density"
-    | "flow_rate"
-    | "connection_strength"
-    | "activity_pulse";
-  name: string;
-  description: string;
-}> = [
-  {
-    key: "diversity_index",
-    name: "Diversity Index",
-    description: "how many different voices, ideas, and frequencies the field is holding at once",
-  },
-  {
-    key: "resonance_density",
-    name: "Resonance Density",
-    description: "how densely the living connections are woven through the network",
-  },
-  {
-    key: "flow_rate",
-    name: "Flow Rate",
-    description: "how freely vitality is circulating between contributors and ideas",
-  },
-  {
-    key: "connection_strength",
-    name: "Connection Strength",
-    description: "how sturdy the synapses are that already exist in the field",
-  },
-  {
-    key: "activity_pulse",
-    name: "Activity Pulse",
-    description: "how awake the organism is right now, across the last breath of time",
-  },
-];
-
-function normalizeVitality(api: VitalityApiResponse | null): VitalityResponse | null {
-  if (!api) return null;
-  const apiSignals = api.signals ?? {};
-  const signals: VitalitySignal[] = SIGNAL_ORDER.map((s) => ({
-    name: s.name,
-    value: typeof apiSignals[s.key] === "number" ? (apiSignals[s.key] as number) : 0,
-    description: s.description,
-  }));
-  const breath: BreathRhythm =
-    (apiSignals.breath_rhythm as BreathRhythm | undefined) ?? {
-      gas: 0.33,
-      water: 0.34,
-      ice: 0.33,
+function normaliseVitality(api: VitalityApiResponse): VitalityResponse {
+  const s = api.signals;
+  const order: Array<keyof VitalityApiResponse["signals"]> = [
+    "diversity_index",
+    "resonance_density",
+    "flow_rate",
+    "connection_strength",
+    "activity_pulse",
+  ];
+  const signals: VitalitySignal[] = order.map((key) => {
+    const meta = SIGNAL_DESCRIPTIONS[key as string];
+    return {
+      name: meta.label,
+      value: typeof s[key] === "number" ? (s[key] as number) : 0,
+      description: meta.description,
     };
+  });
   return {
-    workspace_id: api.workspace_id ?? "coherence-network",
-    vitality_score: api.vitality_score ?? 0,
-    health_description: api.health_description ?? "",
+    workspace_id: api.workspace_id,
+    vitality_score: api.vitality_score,
+    health_description: api.health_description,
     signals,
-    breath_rhythm: breath,
-    computed_at: api.generated_at ?? "",
+    breath_rhythm: s.breath_rhythm ?? { gas: 0.33, water: 0.34, ice: 0.33 },
+    computed_at: api.generated_at,
   };
 }
 
@@ -186,8 +186,10 @@ async function loadVitality(): Promise<VitalityResponse | null> {
       { cache: "no-store" },
     );
     if (!res.ok) return null;
-    const api = (await res.json()) as VitalityApiResponse;
-    return normalizeVitality(api);
+    const body = (await res.json()) as VitalityApiResponse;
+    // Guard against missing or malformed payloads — let the empty state show.
+    if (!body || typeof body !== "object" || !body.signals) return null;
+    return normaliseVitality(body);
   } catch {
     return null;
   }
@@ -381,6 +383,9 @@ export default async function VitalityPage() {
           Explore more
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/pulse" className="text-emerald-400 hover:underline">
+            Pulse — the outer breath
+          </Link>
           <Link href="/discover" className="text-purple-400 hover:underline">
             Discover
           </Link>

@@ -39,6 +39,9 @@ const SECONDARY_NAV = [
   { href: "/automation", label: "Automation" },
   { href: "/friction", label: "Friction" },
   { href: "/identity", label: "Identity" },
+  // Health & vitality of the body
+  { href: "/pulse", label: "Pulse" },
+  { href: "/vitality", label: "Vitality" },
 ];
 
 function HeartbeatIcon() {
