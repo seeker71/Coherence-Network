@@ -6,15 +6,39 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
       "port": 8000,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/stupefied-dhawan/api"
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/clever-volhard/api"
     },
     {
       "name": "web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "NEXT_PUBLIC_PULSE_URL=http://127.0.0.1:8100",
+        "npm",
+        "run",
+        "dev"
+      ],
       "port": 3000,
       "autoPort": true,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/stupefied-dhawan/web"
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/clever-volhard/web"
+    },
+    {
+      "name": "pulse",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "PULSE_API_BASE=https://api.coherencycoin.com",
+        "PULSE_WEB_BASE=https://coherencycoin.com",
+        "PULSE_DB_PATH=./data/pulse.db",
+        "PULSE_INTERVAL_SECONDS=15",
+        "PULSE_CORS_ORIGINS=*",
+        ".venv/bin/uvicorn",
+        "pulse_app.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8100"
+      ],
+      "port": 8100,
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/clever-volhard/pulse"
     }
   ]
 }

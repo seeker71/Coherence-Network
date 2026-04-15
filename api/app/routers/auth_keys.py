@@ -1,19 +1,28 @@
 """Per-contributor API key management.
 
 Implements: identity-driven-onboarding
+
+Storage lives in `app.services.contributor_key_store` — this router is a
+thin HTTP layer over that service. Legacy callers that imported
+`verify_contributor_key` from here still work: it now delegates to the
+store.
 """
 
 from __future__ import annotations
 
-import hashlib
-import os
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 
+from app.deps.identity import (
+    Attribution,
+    get_attribution,
+    require_verified_contributor,
+)
 from app.middleware.traceability import traces_to
+from app.services import contributor_key_store
 
 router = APIRouter()
 
@@ -22,6 +31,7 @@ class KeyRequest(BaseModel):
     contributor_id: str
     provider: str  # identity provider used for verification
     provider_id: str  # identity handle (github username, email, etc.)
+    label: str | None = None  # optional user-friendly label
 
 
 class KeyResponse(BaseModel):
@@ -29,21 +39,42 @@ class KeyResponse(BaseModel):
     contributor_id: str
     created_at: str
     scopes: list[str]
+    label: str | None = None
 
 
-# In-memory key store (production should use DB)
-# Maps api_key_hash → {contributor_id, provider, created_at, scopes}
-_KEY_STORE: dict[str, dict] = {}
+class KeyListItem(BaseModel):
+    id: str
+    contributor_id: str
+    label: str | None
+    fingerprint: str
+    provider: str | None
+    scopes: list[str]
+    created_at: str
+    last_used_at: str | None
+    revoked_at: str | None
 
 
-def _hash_key(key: str) -> str:
-    return hashlib.sha256(key.encode()).hexdigest()
+class KeyListResponse(BaseModel):
+    keys: list[KeyListItem]
 
 
 def verify_contributor_key(api_key: str) -> dict | None:
-    """Verify an API key and return the contributor info, or None."""
-    h = _hash_key(api_key)
-    return _KEY_STORE.get(h)
+    """Backward-compatible wrapper kept for legacy imports.
+
+    Returns a dict shaped like the old in-memory store so existing callers
+    keep working. Prefer `contributor_key_store.verify(...)` in new code.
+    """
+    row = contributor_key_store.verify(api_key)
+    if row is None:
+        return None
+    return {
+        "contributor_id": row.contributor_id,
+        "provider": row.provider,
+        "provider_id": row.provider_id,
+        "created_at": row.created_at,
+        "scopes": list(row.scopes),
+        "label": row.label,
+    }
 
 
 @router.post("/auth/keys", status_code=201, summary="Generate a personal API key for a contributor")
@@ -85,24 +116,19 @@ async def generate_api_key(body: KeyRequest) -> KeyResponse:
         except Exception:
             pass  # May already exist with different casing
 
-    # Generate key
-    raw_key = f"cc_{body.contributor_id}_{secrets.token_hex(16)}"
-    key_hash = _hash_key(raw_key)
-    now = datetime.now(timezone.utc).isoformat()
-
-    _KEY_STORE[key_hash] = {
-        "contributor_id": body.contributor_id,
-        "provider": body.provider,
-        "provider_id": body.provider_id,
-        "created_at": now,
-        "scopes": ["own:read", "own:write", "contribute", "stake", "vote"],
-    }
+    minted = contributor_key_store.mint(
+        contributor_id=body.contributor_id,
+        label=body.label,
+        provider=body.provider,
+        provider_id=body.provider_id,
+    )
 
     return KeyResponse(
-        api_key=raw_key,
-        contributor_id=body.contributor_id,
-        created_at=now,
-        scopes=["own:read", "own:write", "contribute", "stake", "vote"],
+        api_key=minted.raw_key,
+        contributor_id=minted.row.contributor_id,
+        created_at=minted.row.created_at,
+        scopes=list(minted.row.scopes),
+        label=minted.row.label,
     )
 
 
@@ -278,40 +304,48 @@ async def onboard_contributor(body: OnboardRequest) -> dict:
         except Exception:
             pass
 
-    # 4. Generate personal API key
-    raw_key = f"cc_{body.name}_{secrets.token_hex(16)}"
-    key_hash = _hash_key(raw_key)
-    now = datetime.now(timezone.utc).isoformat()
-
-    scopes = ["own:read", "own:write", "contribute", "stake", "vote"]
-    _KEY_STORE[key_hash] = {
-        "contributor_id": body.name,
-        "provider": body.provider,
-        "provider_id": body.provider_id,
-        "created_at": now,
-        "scopes": scopes,
-    }
+    # 4. Generate personal API key via the durable store
+    minted = contributor_key_store.mint(
+        contributor_id=body.name,
+        label=None,
+        provider=body.provider,
+        provider_id=body.provider_id,
+    )
 
     return {
-        "contributor_id": body.name,
-        "api_key": raw_key,
+        "contributor_id": minted.row.contributor_id,
+        "api_key": minted.raw_key,
         "provider": body.provider,
         "provider_id": body.provider_id,
-        "created_at": now,
-        "scopes": scopes,
+        "created_at": minted.row.created_at,
+        "scopes": list(minted.row.scopes),
         "message": f"Welcome to Coherence Network, {body.name}! Key saved — run: cc status",
     }
 
 
 @router.get("/auth/whoami", summary="Check who the current API key belongs to")
 async def whoami(
+    request: Request,
     x_api_key: str | None = Header(None, alias="X-API-Key"),
     api_key_query: str | None = None,
 ):
     """Check who the current API key belongs to.
 
-    Accepts the key via X-API-Key header (preferred) or api_key_query param.
+    Prefers the attribution already extracted by the attribution
+    middleware (from Authorization: Bearer cc_* or X-Contributor-Id).
+    Falls back to the legacy X-API-Key flow for compatibility.
     """
+    # Prefer the middleware's already-extracted attribution.
+    att: Attribution = get_attribution(request)
+    if att.contributor_id:
+        return {
+            "authenticated": att.source == "verified",
+            "contributor_id": att.contributor_id,
+            "source": att.source,
+            "scopes": list(att.scopes),
+        }
+
+    # Legacy compatibility: callers sending X-API-Key (or ?api_key_query=).
     key = x_api_key or api_key_query
     if not key:
         return {"authenticated": False, "message": "No API key provided. Run: cc setup"}
@@ -326,3 +360,53 @@ async def whoami(
         return {"authenticated": True, "contributor_id": "system", "scopes": ["admin"]}
 
     return {"authenticated": False, "message": "Invalid API key"}
+
+
+@router.get("/auth/keys", response_model=KeyListResponse, summary="List this contributor's API keys")
+async def list_keys(
+    att: Attribution = Depends(require_verified_contributor),
+    include_revoked: bool = False,
+) -> KeyListResponse:
+    """List keys minted for the verified contributor.
+
+    Requires a verified `Authorization: Bearer cc_*` — a claimed
+    `X-Contributor-Id` header is not sufficient for this endpoint, because
+    listing keys is a self-administration action that must prove ownership.
+    Raw keys are never returned, only metadata.
+    """
+    assert att.contributor_id is not None  # guaranteed by require_verified_contributor
+    rows = contributor_key_store.list_for(att.contributor_id, include_revoked=include_revoked)
+    return KeyListResponse(
+        keys=[
+            KeyListItem(
+                id=r.id,
+                contributor_id=r.contributor_id,
+                label=r.label,
+                fingerprint=r.fingerprint,
+                provider=r.provider,
+                scopes=list(r.scopes),
+                created_at=r.created_at,
+                last_used_at=r.last_used_at,
+                revoked_at=r.revoked_at,
+            )
+            for r in rows
+        ],
+    )
+
+
+@router.delete("/auth/keys/{key_id}", status_code=204, summary="Revoke one of this contributor's keys")
+async def revoke_key(
+    key_id: str,
+    att: Attribution = Depends(require_verified_contributor),
+) -> None:
+    """Revoke an owned API key. Requires a different verified key to act."""
+    assert att.contributor_id is not None
+    existing = contributor_key_store.get_by_id(key_id)
+    if existing is None:
+        raise HTTPException(404, "key not found")
+    if existing.contributor_id != att.contributor_id:
+        # Don't leak whether the key exists for another contributor.
+        raise HTTPException(404, "key not found")
+    if not contributor_key_store.revoke(key_id, owner_contributor_id=att.contributor_id):
+        raise HTTPException(409, "key already revoked")
+    return None

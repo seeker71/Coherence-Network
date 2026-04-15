@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 
 const API = getApiBase();
@@ -253,12 +254,28 @@ export default function IdentityPage() {
 
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Your Identity</h1>
+      <header className="space-y-3">
+        <h1 className="text-3xl font-bold tracking-tight">Your Identity</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
           Link your accounts to get credit for your contributions across platforms.
           Nothing here is required &mdash; use whatever feels natural.
         </p>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <Link
+            href="/identity/keys"
+            className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/40 bg-purple-500/5 px-3 py-1 text-purple-300 hover:bg-purple-500/10 transition-colors"
+          >
+            <span>API keys</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+          <Link
+            href="/pulse"
+            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/5 px-3 py-1 text-emerald-300 hover:bg-emerald-500/10 transition-colors"
+          >
+            <span>Pulse</span>
+            <span aria-hidden="true">→</span>
+          </Link>
+        </div>
       </header>
 
       {message && (
