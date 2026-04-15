@@ -5,6 +5,7 @@ import { getPulseBaseServer } from "@/lib/pulse-server";
 
 import { OrganRow } from "./organ-row";
 import { OverallBanner } from "./overall-banner";
+import { RangeToggle } from "./range-toggle";
 import { SilenceList } from "./silence-list";
 import { WitnessQuiet } from "./witness-quiet";
 import type { PulseHistory, PulseNow, PulseSilences } from "./types";
@@ -19,7 +20,8 @@ export const metadata: Metadata = {
 // anything finer is wasted work.
 export const revalidate = 60;
 
-const DAYS = 90;
+const ALLOWED_DAYS = [7, 30, 90] as const;
+const DEFAULT_DAYS = 90;
 
 type PulseSnapshot = {
   now: PulseNow | null;
@@ -27,14 +29,14 @@ type PulseSnapshot = {
   silences: PulseSilences | null;
 };
 
-async function loadPulse(base: string): Promise<PulseSnapshot> {
+async function loadPulse(base: string, days: number): Promise<PulseSnapshot> {
   if (!base) return { now: null, history: null, silences: null };
 
   const opts: RequestInit = { cache: "no-store" };
   const urls = [
     `${base}/pulse/now`,
-    `${base}/pulse/history?days=${DAYS}`,
-    `${base}/pulse/silences?days=${DAYS}`,
+    `${base}/pulse/history?days=${days}`,
+    `${base}/pulse/silences?days=${days}`,
   ];
 
   try {
@@ -65,25 +67,42 @@ async function loadPulse(base: string): Promise<PulseSnapshot> {
   }
 }
 
-export default async function PulsePage() {
+function resolveDays(raw: string | string[] | undefined): number {
+  const s = Array.isArray(raw) ? raw[0] : raw;
+  const n = Number(s);
+  if (ALLOWED_DAYS.includes(n as (typeof ALLOWED_DAYS)[number])) return n;
+  return DEFAULT_DAYS;
+}
+
+export default async function PulsePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ days?: string | string[] }>;
+}) {
+  const params = (await searchParams) ?? {};
+  const days = resolveDays(params.days);
   const pulseBase = getPulseBaseServer();
-  const { now, history, silences } = await loadPulse(pulseBase);
+  const { now, history, silences } = await loadPulse(pulseBase, days);
   const witnessAlive = now !== null && history !== null;
 
   const organsNowByName = new Map(
     (now?.organs ?? []).map((o) => [o.name, o]),
   );
+  const silenceList = silences?.silences ?? [];
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-8">
       {/* Header */}
-      <header className="space-y-2">
-        <div className="flex items-center gap-3">
-          <span className="relative inline-flex h-3 w-3" aria-hidden="true">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/40" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500/80" />
-          </span>
-          <h1 className="text-3xl font-bold tracking-tight">Pulse</h1>
+      <header className="space-y-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <span className="relative inline-flex h-3 w-3" aria-hidden="true">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/40" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500/80" />
+            </span>
+            <h1 className="text-3xl font-bold tracking-tight">Pulse</h1>
+          </div>
+          {witnessAlive && <RangeToggle active={days} />}
         </div>
         <p className="max-w-3xl text-muted-foreground leading-relaxed">
           The breath of our living body, remembered. An external witness
@@ -98,6 +117,8 @@ export default async function PulsePage() {
             overall={now.overall}
             checkedAt={now.checked_at}
             ongoing={now.ongoing_silences}
+            historyOverall={history.overall ?? null}
+            windowDays={days}
           />
 
           <section className="space-y-3">
@@ -108,12 +129,13 @@ export default async function PulsePage() {
                   key={organ.name}
                   history={organ}
                   now={organsNowByName.get(organ.name)}
+                  silences={silenceList.filter((s) => s.organ === organ.name)}
                 />
               ))}
             </div>
           </section>
 
-          <SilenceList silences={silences?.silences ?? []} />
+          <SilenceList silences={silenceList} />
 
           <p className="text-[11px] text-muted-foreground/60 text-center">
             Witness started {new Date(now.witness_started_at).toLocaleString()}
