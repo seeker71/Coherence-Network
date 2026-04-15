@@ -2,7 +2,7 @@
 id: lc-sensing
 hz: 741
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Sensing
@@ -54,6 +54,16 @@ The sensing round is the heartbeat of the day — five minutes each morning that
 The architecture supports this. Round rooms, not rectangles — so every person can see every other. No stages, no front of the room. Shared meals where you sit close enough to feel the person beside you. Paths that bring bodies past each other, not isolated corridors. The physical design is itself a sensing organ: when you can see the garden from the kitchen, you know who's working, who's resting, who's disappeared. Not sensing — intimacy. The kind of knowing that a family has when the house is small enough to hear each other breathe.
 
 At fifty people, the field senses itself the way a small choir hears every voice. At a hundred, the sensing develops layers — you feel your immediate circle deeply, the wider field as a background hum. At two hundred, the sensing might need bridges: field readers who move between the sub-fields, carrying the signal the way neurons carry it between brain regions.
+
+## Practical Sensing Work
+
+The practices below move from individual body awareness to group field reading. A community can begin with the sensing round and let the deeper practices arrive as the field matures. See the [practical guide](../guides/lc-sensing-guide.md) for detailed facilitation patterns and scaling notes.
+
+**Body-based check-in.** Before the morning sensing round, each person takes thirty seconds alone: feet on the ground, one hand on the belly, one on the chest. What is the body carrying today? Not a thought -- a sensation. Tightness, warmth, buzzing, heaviness, lightness. This is the raw data the sensing round draws from. When people speak from the body rather than the mind, the field receives cleaner signal.
+
+**The field reader role.** One person each week carries extra attention -- not responsibility, but antenna. They walk the community with open awareness, noticing what is under the words. In the evening circle they name what they sensed: "There is something unfinished moving through us." "The children are unusually quiet today, and I wonder what they are feeling." The naming does not fix anything. It lets the field feel itself more honestly.
+
+**Sensing at scale.** At fifty people, the field senses itself the way a small choir hears every voice. At a hundred, sensing develops layers -- deep intimacy with your immediate circle, the wider field as background hum. At two hundred, field readers become bridges, carrying signal between sub-fields the way neurons carry it between brain regions.
 
 ## Resources
 
