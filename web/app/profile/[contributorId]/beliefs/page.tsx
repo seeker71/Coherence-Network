@@ -25,7 +25,8 @@ const API_BASE = getApiBase();
 
 export default function BeliefProfilePage() {
   const params = useParams();
-  const handle = typeof params?.handle === "string" ? params.handle : "";
+  const handle =
+    typeof params?.contributorId === "string" ? params.contributorId : "";
 
   const [profile, setProfile] = useState<BeliefProfile | null>(null);
   const [loading, setLoading] = useState(true);
