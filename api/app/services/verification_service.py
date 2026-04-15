@@ -447,9 +447,68 @@ def compute_weekly_snapshot(week: str | None = None) -> dict[str, Any]:
         s.add(snapshot)
         s.commit()
 
+        # Publish to archive.org (free permanent storage)
+        archive_url = publish_to_archive_org(week, payload_json)
+        if archive_url:
+            snapshot.arweave_tx = archive_url  # reuse field for archive URL
+            s.commit()
+
         result = snapshot.to_dict()
         result["payload"] = payload
+        if archive_url:
+            result["archive_url"] = archive_url
         return result
+
+
+def publish_to_archive_org(week: str, payload_json: str) -> str | None:
+    """Publish a snapshot to archive.org as free permanent storage.
+
+    Uses the Internet Archive's S3-compatible API. Requires archive.org
+    credentials in ~/.coherence-network/keys.json:
+    {"archive_org": {"access_key": "...", "secret_key": "..."}}
+
+    Returns the public URL or None if not configured/failed.
+    """
+    try:
+        from app.services.config_service import get_config
+        config = get_config()
+        keys = config.get("keys", {}).get("archive_org", {})
+        access_key = keys.get("access_key", "")
+        secret_key = keys.get("secret_key", "")
+
+        if not access_key or not secret_key:
+            log.info("verification: archive.org not configured — skipping publication")
+            return None
+
+        import httpx
+        identifier = "coherence-network-ledger"
+        filename = f"{week}.json"
+        url = f"https://s3.us.archive.org/{identifier}/{filename}"
+
+        headers = {
+            "Authorization": f"LOW {access_key}:{secret_key}",
+            "Content-Type": "application/json",
+            "x-archive-meta-title": f"Coherence Network Verification Snapshot {week}",
+            "x-archive-meta-description": "Weekly Merkle root + Ed25519 signed snapshot of all CC flows",
+            "x-archive-meta-collection": "opensource",
+            "x-archive-meta-mediatype": "data",
+            "x-archive-meta-creator": "Coherence Network",
+            "x-archive-meta-subject": "verification;merkle;ed25519;cc-economics",
+            "x-amz-auto-make-bucket": "1",
+        }
+
+        resp = httpx.put(url, content=payload_json.encode(), headers=headers, timeout=30)
+        if resp.status_code in (200, 201):
+            public_url = f"https://archive.org/download/{identifier}/{filename}"
+            log.info("verification: published to archive.org: %s", public_url)
+            return public_url
+        else:
+            log.warning("verification: archive.org upload failed: %s %s",
+                        resp.status_code, resp.text[:200])
+            return None
+    except Exception as e:
+        log.warning("verification: archive.org publication failed: %s", e)
+        return None
 
 
 def get_snapshot(week: str) -> dict[str, Any] | None:
