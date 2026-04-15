@@ -7,7 +7,7 @@ type KeypairData = { public_key_hex: string; private_key_hex: string; fingerprin
 
 export function ContributorSetup() {
   const [step, setStep] = useState(1);
-  const [mode, setMode] = useState<"generate" | "bring" | null>(null);
+  const [mode, setMode] = useState<"generate" | "bring" | "wallet" | null>(null);
   const [contributorId, setContributorId] = useState("");
   const [keypair, setKeypair] = useState<KeypairData | null>(null);
   const [ownPublicKey, setOwnPublicKey] = useState("");
@@ -94,10 +94,16 @@ export function ContributorSetup() {
               >
                 I have my own key
               </button>
+              <button
+                onClick={() => { setMode("wallet"); setStep(2); }}
+                className="px-5 py-2.5 rounded-xl border border-stone-800/40 text-stone-500 hover:text-stone-300 transition-all text-sm"
+              >
+                Use my wallet
+              </button>
             </div>
             <p className="text-xs text-stone-600">
-              If you prefer not to trust this server with key generation, bring your own Ed25519 public key.
-              Generate locally with: <code className="text-amber-400/40">openssl genpkey -algorithm Ed25519</code>
+              Bring your own Ed25519 key, or connect your existing EVM wallet (MetaMask, Rainbow, etc.)
+              for on-chain CC tracking. Your keys never leave your control.
             </p>
           </>
         )}
@@ -147,6 +153,35 @@ export function ContributorSetup() {
                 className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Continue
+              </button>
+            </>
+          )}
+          {step === 2 && mode === "wallet" && (
+            <>
+              <p className="text-sm text-stone-400">
+                Connect your EVM wallet. Your wallet address becomes your contributor identity.
+                CC earned on-chain settles directly to this address. Full self-custody — we never hold your keys.
+              </p>
+              <input
+                value={ownPublicKey}
+                onChange={(e) => setOwnPublicKey(e.target.value.replace(/\s/g, ""))}
+                placeholder="0x... (your wallet address)"
+                className="w-full px-3 py-2 bg-stone-900/50 border border-stone-800/40 rounded-xl text-sm text-stone-300 font-mono focus:outline-none focus:border-amber-500/30"
+              />
+              <div className="text-xs text-stone-600 space-y-1">
+                <p>Paste your wallet address, or connect via WalletConnect (coming soon).</p>
+                <p>This address will be used for Story Protocol IP registration, x402 micropayments, and USDC settlement.</p>
+              </div>
+              <button
+                onClick={() => {
+                  const addr = ownPublicKey.startsWith("0x") ? ownPublicKey : `0x${ownPublicKey}`;
+                  setKeypair({ public_key_hex: addr, private_key_hex: "", fingerprint: addr.slice(2, 10), algorithm: "EVM-wallet" });
+                  setStep(3);
+                }}
+                disabled={ownPublicKey.length < 10}
+                className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Use this wallet
               </button>
             </>
           )}
