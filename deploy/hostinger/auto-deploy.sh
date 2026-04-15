@@ -102,16 +102,21 @@ cd "$COMPOSE_ROOT"
 docker compose build api web >> "$LOG_FILE" 2>&1
 docker compose up -d api web >> "$LOG_FILE" 2>&1
 
-# Give each container patient time to come up. A cold rebuild can take
-# more than a minute from `up -d` through the first successful health
-# response (python imports, router registration, DB connection warm-up).
-# Fixed sleeps either wait too long on the fast path or give up too
-# early on the slow path; a retry loop waits only as long as the
-# container needs and no longer.
-wait_for_api_health() {
+# Wait for both containers to reach the "running" state in docker compose.
+# The deeper health check is left to the workflow's Verify Public Deployment
+# step, which curls the real public domain through the full request path
+# (Traefik, Cloudflare, TLS). That sensor sees the organism the way every
+# caller sees it and is the truth. Anything we could check here locally is
+# a thinner, redundant version of the same question, and the previous
+# `docker compose exec api curl` shape caught a false failure when curl
+# happened not to be present inside the api container image.
+wait_for_running() {
+  local service="$1"
   local deadline=$(( $(date +%s) + 180 ))
   while (( $(date +%s) < deadline )); do
-    if docker compose exec -T api curl -fsS --max-time 5 http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
+    local state
+    state="$(docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$service" '$1==s {print $2}')"
+    if [[ "$state" == "running" ]]; then
       return 0
     fi
     sleep 3
@@ -119,29 +124,18 @@ wait_for_api_health() {
   return 1
 }
 
-if wait_for_api_health; then
-  log "API health OK"
+if wait_for_running api; then
+  log "api container running"
 else
-  log "FAIL: API health check did not reach ok within 180s after deploy"
+  log "FAIL: api container did not reach running state within 180s"
   exit 1
 fi
 
-wait_for_web_root() {
-  local deadline=$(( $(date +%s) + 120 ))
-  while (( $(date +%s) < deadline )); do
-    if docker compose exec -T web sh -lc 'wget -q -O - http://127.0.0.1:3000/ >/dev/null 2>&1' >/dev/null 2>&1; then
-      return 0
-    fi
-    sleep 3
-  done
-  return 1
-}
-
-if wait_for_web_root; then
-  log "Web health OK"
+if wait_for_running web; then
+  log "web container running"
 else
-  log "FAIL: web root check failed after deploy"
+  log "FAIL: web container did not reach running state within 180s"
   exit 1
 fi
 
-log "Deploy complete (${TARGET_SHA:0:12})"
+log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"
