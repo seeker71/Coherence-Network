@@ -86,6 +86,7 @@ from app.routers import vitality as vitality_router
 from app.middleware.attribution import AttributionMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.request_duration import RequestDurationMiddleware
+from app.middleware.request_outcomes import RequestOutcomesMiddleware
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 
@@ -526,6 +527,11 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(RequestDurationMiddleware, threshold_seconds=1.0)
+# RequestOutcomesMiddleware sits inside RateLimitMiddleware (added later
+# = outer) so it counts requests that actually reached the route, not
+# ones rejected at the rate-limit layer. Its snapshot is exposed via
+# /api/health for the pulse witness to read.
+app.add_middleware(RequestOutcomesMiddleware)
 app.add_middleware(RateLimitMiddleware)
 # AttributionMiddleware is added LAST so it becomes the outermost middleware
 # in the stack — it populates request.state.contributor_id before the rate

@@ -94,6 +94,9 @@ def _short_error(exc: BaseException) -> str:
     return text[:200]
 
 
+_SLOW_PREFIX = "slow: "
+
+
 def _apply(organ: Organ, result: UpstreamResult, ts: str) -> Sample:
     if result.error is not None:
         return Sample(
@@ -104,12 +107,25 @@ def _apply(organ: Organ, result: UpstreamResult, ts: str) -> Sample:
             detail=result.error,
         )
     verdict = organ.extractor(result)
+    detail = verdict.detail
+    # Post-verdict threshold check: a probe that passed content assertions
+    # can still be "slow" — detail is set but ok stays True. The current
+    # status then reads as "strained" via status_from_last_sample while
+    # the historical uptime stays at 100% (nothing was wrong, just slow).
+    if (
+        verdict.ok
+        and organ.latency_threshold_ms
+        and result.latency_ms > organ.latency_threshold_ms
+    ):
+        detail = (
+            f"{_SLOW_PREFIX}{result.latency_ms}ms > {organ.latency_threshold_ms}ms threshold"
+        )
     return Sample(
         ts=ts,
         organ=organ.name,
         ok=verdict.ok,
         latency_ms=result.latency_ms,
-        detail=verdict.detail,
+        detail=detail,
     )
 
 
