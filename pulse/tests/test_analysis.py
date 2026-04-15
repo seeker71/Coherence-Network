@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 
 from pulse_app.analysis import (
+    latency_percentiles,
     overall_status,
     reconcile_silences,
     rollup_daily,
@@ -132,6 +133,77 @@ def test_rollup_half_or_more_failures_is_silent():
     ]
     buckets = rollup_daily(samples, days=1, now=now)
     assert buckets[0].status == "silent"
+
+
+# --- latency aggregation -------------------------------------------------
+
+def test_rollup_computes_latency_percentiles_on_successful_samples():
+    now = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
+    # 10 successful samples today with latencies 10..100 (step 10)
+    samples = [
+        Sample(ts=f"2026-04-15T{hour:02d}:00:00Z", organ="api", ok=True,
+               latency_ms=(hour + 1) * 10, detail=None)
+        for hour in range(10)
+    ]
+    buckets = rollup_daily(samples, days=1, now=now)
+    b = buckets[0]
+    assert b.samples == 10
+    assert b.failures == 0
+    # Nearest-rank p50 on a sorted 10-element list = 5th element (10, 20, 30, 40, 50)
+    assert b.latency_p50_ms == 50
+    # p95 on a 10-element list = ceil(.95*10)=10th element = 100
+    assert b.latency_p95_ms == 100
+
+
+def test_rollup_latency_ignores_failed_samples():
+    now = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
+    # 3 ok latencies (100, 200, 300), 2 failed with very high latencies
+    samples = [
+        Sample(ts="2026-04-15T09:00:00Z", organ="api", ok=True, latency_ms=100, detail=None),
+        Sample(ts="2026-04-15T10:00:00Z", organ="api", ok=True, latency_ms=200, detail=None),
+        Sample(ts="2026-04-15T11:00:00Z", organ="api", ok=True, latency_ms=300, detail=None),
+        Sample(ts="2026-04-15T12:00:00Z", organ="api", ok=False, latency_ms=9999, detail="timeout"),
+        Sample(ts="2026-04-15T13:00:00Z", organ="api", ok=False, latency_ms=9999, detail="timeout"),
+    ]
+    buckets = rollup_daily(samples, days=1, now=now)
+    b = buckets[0]
+    # Percentiles come from the ok samples only, not the failures
+    assert b.latency_p50_ms == 200
+    assert b.latency_p95_ms == 300
+
+
+def test_rollup_latency_none_when_no_successes():
+    now = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
+    samples = [
+        Sample(ts="2026-04-15T09:00:00Z", organ="api", ok=False, latency_ms=10, detail="x"),
+    ]
+    buckets = rollup_daily(samples, days=1, now=now)
+    assert buckets[0].latency_p50_ms is None
+    assert buckets[0].latency_p95_ms is None
+
+
+def test_rollup_latency_none_for_empty_day():
+    now = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
+    buckets = rollup_daily([], days=3, now=now)
+    for b in buckets:
+        assert b.latency_p50_ms is None
+        assert b.latency_p95_ms is None
+
+
+def test_latency_percentiles_window():
+    samples = [
+        Sample(ts="2026-04-15T09:00:00Z", organ="api", ok=True, latency_ms=100, detail=None),
+        Sample(ts="2026-04-15T10:00:00Z", organ="api", ok=True, latency_ms=200, detail=None),
+        Sample(ts="2026-04-15T11:00:00Z", organ="api", ok=True, latency_ms=300, detail=None),
+        Sample(ts="2026-04-15T12:00:00Z", organ="api", ok=True, latency_ms=400, detail=None),
+    ]
+    p50, p95 = latency_percentiles(samples)
+    assert p50 == 200  # ceil(.5*4)=2nd element = 200
+    assert p95 == 400  # ceil(.95*4)=4th element = 400
+
+
+def test_latency_percentiles_empty():
+    assert latency_percentiles([]) == (None, None)
 
 
 # --- reconcile_silences ---------------------------------------------------

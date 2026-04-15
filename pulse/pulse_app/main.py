@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pulse_app import __version__
 from pulse_app.analysis import (
     duration_seconds_until_now,
+    latency_percentiles,
     overall_status,
     rollup_daily,
     silence_duration,
@@ -36,6 +37,7 @@ from pulse_app.models import (
     OrganHistory,
     OrganNow,
     PulseHistory,
+    PulseHistoryOverall,
     PulseNow,
     PulseSilences,
     Silence,
@@ -204,27 +206,47 @@ async def pulse_history(days: int = Query(90, ge=1, le=180)) -> PulseHistory:
     for organ in ORGANS:
         samples = store.samples_for_organ_since(organ.name, since)
         buckets = rollup_daily(samples, days=days, now=now)
+        p50, p95 = latency_percentiles(samples)
         organ_histories.append(
             OrganHistory(
                 name=organ.name,
                 label=organ.label,
                 description=organ.description,
                 uptime_pct=uptime_percent(samples),
+                latency_p50_ms=p50,
+                latency_p95_ms=p95,
                 daily=[
                     DailyBar(
                         date=b.date,
                         status=b.status,  # type: ignore[arg-type]
                         samples=b.samples,
                         failures=b.failures,
+                        latency_p50_ms=b.latency_p50_ms,
+                        latency_p95_ms=b.latency_p95_ms,
                     )
                     for b in buckets
                 ],
             )
         )
 
+    # Cross-organ rollup for the banner.
+    if organ_histories:
+        avg_uptime = round(
+            sum(o.uptime_pct for o in organ_histories) / len(organ_histories), 2
+        )
+        worst = min(organ_histories, key=lambda o: o.uptime_pct)
+        overall = PulseHistoryOverall(
+            uptime_pct=avg_uptime,
+            worst_uptime_pct=worst.uptime_pct,
+            worst_organ=worst.name if worst.uptime_pct < 100 else None,
+        )
+    else:
+        overall = PulseHistoryOverall(uptime_pct=0.0, worst_uptime_pct=0.0, worst_organ=None)
+
     return PulseHistory(
         days=days,
         generated_at=iso_utc(now),
+        overall=overall,
         organs=organ_histories,
     )
 
