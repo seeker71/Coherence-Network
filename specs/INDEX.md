@@ -1,8 +1,8 @@
 # Spec Index
 
-> 65 specs, all done. Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 66 specs (65 done, 1 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (16 ideas → 65 specs)
+## By Idea (16 ideas → 66 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -58,7 +58,7 @@
 - [mvp-cost-and-acceptance-proof](mvp-cost-and-acceptance-proof.md) — MVP cost + acceptance proof
 - [portfolio-governance-effectiveness](portfolio-governance-effectiveness.md) — governance effectiveness scoring
 
-### value-attribution (7 specs)
+### value-attribution (8 specs)
 - [assets-api](assets-api.md) — asset CRUD + lineage
 - [contributions-api](contributions-api.md) — contribution tracking API
 - [contributor-onboarding-and-governed-change-flow](contributor-onboarding-and-governed-change-flow.md) — governed change flow
@@ -66,6 +66,7 @@
 - [normalize-github-commit-cost-estimation](normalize-github-commit-cost-estimation.md) — GitHub commit cost estimation
 - [task-claim-tracking-and-roi-dedupe](task-claim-tracking-and-roi-dedupe.md) — task claim tracking + ROI dedup
 - [value-lineage-and-payout-attribution](value-lineage-and-payout-attribution.md) — value lineage chain
+- [story-protocol-integration](story-protocol-integration.md) — Story Protocol IP + x402 micropayments + Arweave storage
 
 ### user-surfaces (6 specs)
 - [coherence-cli-comprehensive](coherence-cli-comprehensive.md) — CLI 35+ commands
