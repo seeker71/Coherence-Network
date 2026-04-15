@@ -13,7 +13,7 @@ updated: 2026-04-14
 
 You wake before the alarm. Not because you're anxious — because your body
 knows. Dawn is coming. Something in your cells, older than language, older
-than thought, has been tracking the light through your closed eyelids and
+than thought, has been sensing the light through your closed eyelids and
 the temperature through your skin, and now it says: rise. This is rhythm.
 Not the clock on the wall but the clock in the blood.
 

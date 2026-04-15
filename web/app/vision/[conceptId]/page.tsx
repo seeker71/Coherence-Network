@@ -106,7 +106,7 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
 
   return (
     <main>
-      {/* NFT tracking suggestion for unregistered readers */}
+      {/* NFT sensing suggestion for unregistered readers */}
       <TrackingSuggestion conceptId={conceptId} />
 
       {/* Hero */}

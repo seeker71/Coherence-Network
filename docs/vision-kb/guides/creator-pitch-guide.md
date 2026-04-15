@@ -26,7 +26,7 @@ Imagine this:
 
 You make a video about building raised garden beds. You post it on YouTube like always — that's where your audience is. But you also register it here. Takes 30 seconds. You tag it with what it's about (gardening, food growing, DIY).
 
-Someone watches it through a link on our platform. They don't pay. Viewing is free, always. But their view is tracked — tied to what they care about.
+Someone watches it through a link on our platform. They don't pay. Viewing is free, always. But their view is sensed — tied to what they care about.
 
 Six months later, that viewer creates their own content — a timelapse of the garden they built using your technique. Their creation generates value in the network. And because your video is in their history — because it's part of what shaped their contribution — **a portion of their earnings flows back to you**.
 
@@ -40,11 +40,11 @@ And here's the thing: **you can verify every cent.** It's not a trust-me promise
 
 **Step 2: Register your content.** Link your videos, articles, designs, music, courses. Each one gets a permanent fingerprint (a hash) that proves it's yours. Think of it like timestamping + watermarking, but on a public ledger.
 
-**Step 3: Add a tracking link.** In your video description or bio, add a link like:
+**Step 3: Add a sensing link.** In your video description or bio, add a link like:
 ```
 🌱 More on growing food: coherencycoin.com/r/yourname/nourishment
 ```
-Every click through that link is a tracked read. Your content resonates through our network even though it lives on YouTube.
+Every click through that link is a sensed read. Your content resonates through our network even though it lives on YouTube.
 
 **Step 4: Your profile builds automatically.** The more you create and the more people engage with it, the clearer your frequency profile becomes. Think of it like Spotify Wrapped, but for your creative DNA — what you make, what you care about, what resonates with your audience.
 
@@ -82,7 +82,7 @@ But here's what you get **right now** that no platform gives you:
 
 Don't pitch them a platform. Nobody wants another platform. Instead:
 
-> "Hey — I found something interesting. You know how we both make [permaculture/music/meditation/hardware] content and YouTube barely pays? There's a network where your existing content gets tracked differently. You don't leave YouTube. You register what you already make, add a link in your description, and earn based on how much your work actually inspires other creators — not based on ads. The cool part: when enough of us join, we design our own earning rules together. No algorithm we can't see. No platform taking a cut they didn't earn. Want me to show you my profile?"
+> "Hey — I found something interesting. You know how we both make [permaculture/music/meditation/hardware] content and YouTube barely pays? There's a network where your existing content gets sensed differently. You don't leave YouTube. You register what you already make, add a link in your description, and earn based on how much your work actually inspires other creators — not based on ads. The cool part: when enough of us join, we design our own earning rules together. No algorithm we can't see. No platform taking a cut they didn't earn. Want me to show you my profile?"
 
 Then show them:
 - Your frequency profile: `coherencycoin.com/profile/yourname`

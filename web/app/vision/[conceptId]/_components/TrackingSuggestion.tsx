@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 /**
- * Shows a gentle suggestion to identify yourself for read tracking
+ * Shows a gentle suggestion to identify yourself for read sensing
  * when viewing NFT/high-value assets. Only shows if:
  * - The user hasn't registered a contributor ID yet
  * - The asset has generated measurable value (reads, CC)

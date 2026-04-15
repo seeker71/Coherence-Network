@@ -1,4 +1,4 @@
-"""Read tracking service — records asset reads as daily aggregated counters.
+"""Read sensing service — records asset reads as daily aggregated counters.
 
 Every GET of a concept or asset increments a daily counter. No per-read rows
 (storage efficient). HyperLogLog-style unique counting not needed at this
@@ -136,7 +136,7 @@ RETENTION_DAYS = 90
 
 
 def get_table_stats() -> dict[str, Any]:
-    """Get read tracking table stats for monitoring."""
+    """Get read sensing table stats for monitoring."""
     _ensure_ready()
     with _session() as s:
         total_rows = s.query(AssetReadDaily).count()

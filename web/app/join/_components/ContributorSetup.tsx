@@ -46,7 +46,7 @@ export function ContributorSetup() {
       const data = await r.json();
       if (data.registered) {
         setRegistered(true);
-        // Store contributor ID in localStorage for read tracking
+        // Store contributor ID in localStorage for read sensing
         localStorage.setItem("coherence_contributor_id", contributorId.trim());
         localStorage.setItem("coherence_public_key", keypair.public_key_hex);
         localStorage.setItem("coherence_fingerprint", keypair.fingerprint);
@@ -103,7 +103,7 @@ export function ContributorSetup() {
             </div>
             <p className="text-xs text-stone-600">
               Bring your own Ed25519 key, or connect your existing EVM wallet (MetaMask, Rainbow, etc.)
-              for on-chain CC tracking. Your keys never leave your control.
+              for on-chain CC sensing. Your keys never leave your control.
             </p>
           </>
         )}
@@ -266,11 +266,11 @@ export function ContributorSetup() {
             <div className="space-y-2 text-sm text-stone-400">
               <div className="flex gap-2">
                 <span className="text-amber-400/50 shrink-0">{"\u2726"}</span>
-                <span>Your reads on this site are now tracked with your contributor ID — building your frequency profile</span>
+                <span>Your reads on this site are now sensed with your contributor ID — building your frequency profile</span>
               </div>
               <div className="flex gap-2">
                 <span className="text-amber-400/50 shrink-0">{"\u2726"}</span>
-                <span>NFT assets will suggest you identify yourself for tracking — because every tracked view flows CC to the creator</span>
+                <span>NFT assets will suggest you identify yourself for sensing — because every sensed view flows CC to the creator</span>
               </div>
               <div className="flex gap-2">
                 <span className="text-amber-400/50 shrink-0">{"\u2726"}</span>

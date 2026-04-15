@@ -145,7 +145,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
             <p className="text-sm text-muted-foreground font-mono">{asset.id}</p>
           </div>
           <div className="text-right text-sm text-muted-foreground">
-            <p>Total tracked cost</p>
+            <p>Total cost</p>
             <p className="text-2xl font-light text-foreground">{formatCost(asset.total_cost)}</p>
           </div>
         </div>

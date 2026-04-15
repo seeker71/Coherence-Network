@@ -114,7 +114,7 @@ export default function VisionPage() {
       <section className="relative flex flex-col items-center justify-center min-h-[80vh] px-6 text-center">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(234,179,8,0.08)_0%,_transparent_70%)]" />
         <div className="relative z-10 max-w-3xl space-y-8">
-          <p className="text-amber-400/80 text-sm tracking-[0.3em] uppercase">
+          <p className="text-amber-400/80 text-sm sensing-[0.3em] uppercase">
             A Frequency-Based Blueprint
           </p>
           <h1 className="text-5xl md:text-7xl font-extralight tracking-tight leading-[1.1]">

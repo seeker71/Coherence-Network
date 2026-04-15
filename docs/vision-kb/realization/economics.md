@@ -57,7 +57,7 @@ If someone in the field says "I need this," the field trusts. Not blindly — wi
 ## The Three Circulations
 
 ### Within the Field
-The common fund holds what the field has. Every cell draws what it needs — food, shelter, energy, health, materials for their offering. No tracking of who takes what. A body doesn't meter its own blood.
+The common fund holds what the field has. Every cell draws what it needs — food, shelter, energy, health, materials for their offering. No sensing of who takes what. A body doesn't meter its own blood.
 
 ### At the Membrane
 The field meets the external economy as one organism. It doesn't send 50 individuals to negotiate with the world. It sends its overflow — food, beauty, knowledge, healing — and receives what it needs in return. The interface is handled by whoever naturally tends that calling, with full transparency to the circle.

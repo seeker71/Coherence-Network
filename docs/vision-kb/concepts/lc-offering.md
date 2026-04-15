@@ -21,7 +21,7 @@ This is what offering feels like from the inside: not sacrifice, not duty, not e
 
 There is a board on the wall of the common house. One side says what the community needs — a fence mended, a child watched on Thursday afternoon, someone who understands plumbing. The other side says what people want to give — a woman who makes cheese wants to teach others, a teenager who builds furniture is looking for a project, an elder wants someone to walk with and talk about trees. People read the board the way you read a river — you see where the current wants to flow and you step in where your shape fits.
 
-There are no assigned roles. No job titles. No hours tracked. Once a week, an offering circle: people sit together and say what they want to give next. Not what they think they should give. Not what the community most needs. What is alive in them, pressing to come out. A man who spent thirty years as an accountant discovers he wants to build dry stone walls. A woman who thought she had nothing to offer realizes the community has been orbiting her kitchen for months — her cooking is the gravitational center no one named.
+There are no assigned roles. No job titles. No hours sensed. Once a week, an offering circle: people sit together and say what they want to give next. Not what they think they should give. Not what the community most needs. What is alive in them, pressing to come out. A man who spent thirty years as an accountant discovers he wants to build dry stone walls. A woman who thought she had nothing to offer realizes the community has been orbiting her kitchen for months — her cooking is the gravitational center no one named.
 
 The hard part is not getting people to contribute. It is getting people to trust that what they naturally give is enough. That the bird does not justify its song.
 
@@ -51,7 +51,7 @@ In Kerala, the kudumbashree system organizes two hundred thousand neighborhood g
 
 ## What We're Building
 
-A resonance board, not a job board — a living surface where needs and gifts find each other without managers, without algorithms, without performance reviews. Weekly offering circles where the question is not "what should you do?" but "what is alive in you?" Tracking offerings, not hours — what did you give this week that was genuinely yours to give?
+A resonance board, not a job board — a living surface where needs and gifts find each other without managers, without algorithms, without performance reviews. Weekly offering circles where the question is not "what should you do?" but "what is alive in you?" Sensing offerings, not hours — what did you give this week that was genuinely yours to give?
 
 The deeper build: a culture where the distinction between self-expression and service dissolves. Where nobody has to justify their contribution in someone else's terms. Where the person who cooks and the person who builds and the person who sits with the dying are all understood to be doing the same thing — letting what is inside them become what the community needs.
 

@@ -168,6 +168,6 @@ GET /api/verification/recompute/{asset_id} -- anyone can recompute and compare
 
 A community member in Portugal contributes a detailed rammed-earth building blueprint (GLTF 3D model + step-by-step instruction). It costs them 50 CC to produce (time, renders, documentation).
 
-Over the next year, 47 communities worldwide view and download it. Each read is tracked. The blueprint earns 180 CC through micro-attribution. The creator's contribution is proven by the Merkle chain — anyone can verify. When a community in New Zealand actually builds from the blueprint and records implementation evidence, a larger CC flow triggers — the blueprint is now proven to serve life, not just attract attention.
+Over the next year, 47 communities worldwide view and download it. Each read is sensed. The blueprint earns 180 CC through micro-attribution. The creator's contribution is proven by the Merkle chain — anyone can verify. When a community in New Zealand actually builds from the blueprint and records implementation evidence, a larger CC flow triggers — the blueprint is now proven to serve life, not just attract attention.
 
 The reader in New Zealand had their resonance profile set to 50% space, 30% land, 20% nourishment. Their reads naturally weighted CC toward creators who serve those concepts. The Portuguese blueprint creator didn't need to know this reader existed — the economic field connected them through shared resonance.
