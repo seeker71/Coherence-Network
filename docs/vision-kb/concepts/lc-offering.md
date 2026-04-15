@@ -2,7 +2,7 @@
 id: lc-offering
 hz: 528
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Offering
@@ -56,6 +56,26 @@ A resonance board, not a job board — a living surface where needs and gifts fi
 The deeper build: a culture where the distinction between self-expression and service dissolves. Where nobody has to justify their contribution in someone else's terms. Where the person who cooks and the person who builds and the person who sits with the dying are all understood to be doing the same thing — letting what is inside them become what the community needs.
 
 No performance reviews. No annual assessments. Instead, a question asked gently in the offering circle once a season: is what you are giving still alive in you, or has it become obligation? The moment an offering becomes a job, something essential has been lost. The community's task is to notice before the giver does, and to create space for what wants to emerge next.
+
+## Gift Economy in Practice
+
+The shift from transaction to offering does not happen by declaring it. It happens through daily practices that rewire the habit of keeping score.
+
+**The resonance board.** Two columns on the common house wall: "What I can give" and "What I need." Handwritten cards, pinned with wooden pegs. Someone offers violin lessons. Someone needs help splitting firewood. Someone wants to share their sourdough starter. The board is not a marketplace -- there is no matching, no obligation. People read it the way you read a garden: noticing what is ripe, what needs tending, what is ready to be picked.
+
+**The offering circle.** Weekly, after a shared meal. Each person says what wants to come through them this week -- not what they think they should do, but what is alive in them. A retired teacher feels pulled toward the woodshop. A teenager wants to cook for the elders. A newcomer does not know yet, and that is held as gently as any clear offering. The circle is not assignment. It is listening for what wants to happen.
+
+**Invisible offerings.** Some gifts have no name and no card on the board. The person who always notices when the soap needs refilling. The one who sits with people in their hard nights. The one whose laughter changes the weather in a room. The offering circle names these too -- gently, publicly -- so the givers know they are seen.
+
+## Skill Sharing and Time Exchange
+
+Every person who lives here carries knowledge that someone else is hungry for. The skill share is how that hunger gets fed.
+
+**Monthly skill shares.** One evening a month, three people teach what they know. The blacksmith shows forge welding. A grandmother teaches fermentation. A child demonstrates the constellations she memorized. No expertise required -- only the willingness to share what you love. Teaching something you love in front of people who are curious is one of the purest forms of offering.
+
+**Apprenticeship by proximity.** Formal skill transfers happen not in classrooms but in kitchens, workshops, and gardens. If you want to learn woodworking, you spend mornings with the woodworker. If you want to learn herbalism, you walk with the herbalist. The learning happens through shared hours, through watching hands, through the thousand small corrections that come from working side by side.
+
+**Time as a river, not a ledger.** Some communities use time banks where an hour of plumbing equals an hour of poetry. Here the approach is simpler: you give what you can, when you can. The person who gave four hours in the garden this morning might receive a repaired bicycle this afternoon, or might not. The trust is in the flow, not in the accounting. Over weeks and months, the river evens itself -- not because anyone calculates, but because generosity is contagious and the field remembers.
 
 ## Resources
 

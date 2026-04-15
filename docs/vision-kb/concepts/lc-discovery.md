@@ -2,7 +2,7 @@
 id: lc-discovery
 hz: 852
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Discovery
@@ -87,6 +87,30 @@ types sits next to a telescope sits next to a loom. The organizing principle is 
 Decimal. It is the actual curiosities of the people who live here. Notebooks fill with
 drawings and observations. Maps of the land accumulate detail year by year. The library is
 not a building. It is the community's collective memory of what it has noticed.
+
+## Learning Spaces
+
+Discovery needs spaces that provoke curiosity the way a good question provokes thought -- not by directing, but by opening.
+
+**The living library.** Part workshop, part seed bank, part observatory, part kitchen. A telescope sits next to a loom sits next to hand-labeled jars of local soil. The organizing principle is not Dewey Decimal but the actual curiosities of the people who live here. Books, tools, seeds, and instruments share shelves because knowledge does not sort itself into departments. The door is never locked. Discovery does not arrive on schedule.
+
+**The edge zones.** The richest learning happens at boundaries -- where garden meets forest, where workshop meets kitchen, where the child's world meets the elder's. Physical spaces are designed to create these edges: a workbench at the boundary of the carpentry shop and the children's area, so a seven-year-old can watch a mortise joint being cut and ask to try. A herb garden that borders the kitchen, so the connection between plant and plate is three steps, not an abstraction.
+
+**Observation stations.** Simple setups at key points around the land: a rain gauge, a wind vane, a bird count board, a soil temperature probe. Not for science as a subject but for science as a practice of paying attention. Anyone can record what they notice. Over years, the community builds a body of knowledge about its own place that no textbook could provide.
+
+## Curiosity Practices
+
+**Following the thread.** When a child -- or an adult -- falls in love with a question, the community protects that falling. No one interrupts with "but you should also learn..." The nine-year-old who spent three months studying spiders was not behind in anything. She was ahead in the thing that matters most: the practice of following aliveness wherever it leads.
+
+**Monthly skill shares.** Anyone teaches anything. The blacksmith shows forge welding. A teenager demonstrates the constellations. An elder reads the weather from cloud shapes. The practice teaches two things at once: how to learn from anyone, and how to teach from love rather than authority.
+
+**Asking, not answering.** In the discovery culture, the question "what are you curious about now?" replaces "what did you learn?" The first opens a door. The second closes one. When adults ask children real questions -- "Why do you think the bees prefer that flower?" -- and genuinely want to hear the answer, the whole field learns to stay curious.
+
+## Between the Generations
+
+The deepest discovery happens between ages. An elder who has read the sky for sixty years sits with a child who has never seen a thunderstorm build. A teenager who understands circuits teaches the grandmother who wants to build a weather station. The knowledge flows in all directions, because no generation has a monopoly on noticing.
+
+The apprenticeship model lives here naturally: you learn woodworking by spending mornings with the woodworker, herbalism by walking with the herbalist, beekeeping by standing next to the beekeeper in the quiet hum of the hive. Not instruction but proximity. Not curriculum but companionship. The elder gives knowledge. The child gives wonder. Both receive something they cannot get alone.
 
 ## Resources
 - [Permaculture Research Institute](https://permaculturenews.org/) -- discovery through observation (type: guide)

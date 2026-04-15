@@ -2,7 +2,7 @@
 id: lc-rest
 hz: 174
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Rest & Integration
@@ -54,6 +54,28 @@ The sanctuary is always open. A single room with earthen walls, soft light, no s
 The seasonal calendar is designed around rest, not despite it. Winter has thirty percent more unstructured time than summer. Projects launched in spring are expected to slow in autumn. The annual review asks not just "what did we accomplish?" but "did we rest well enough to know what to do next?"
 
 There is a sabbatical rhythm too. Every seventh year, a community member can step back from all roles and responsibilities for a season. The community absorbs the gap. The person follows whatever their rest asks of them — travel, silence, deep sleep, creative wandering. They return not owing anything, carrying seeds from wherever the rest took them.
+
+## Rest Architecture
+
+Rest does not happen by accident in a world that trained us to keep producing. It needs architecture -- not rules, but rhythms built into the bones of the day.
+
+**The daily pause (2-4pm).** The whole community rests. Not enforced but honored: no loud tools, no meetings, no knocking on doors. The kitchen closes. The workshop goes quiet. Some people sleep. Some walk the garden slowly. Some lie in a hammock and watch clouds. Children learn to protect this time because they feel what it gives back -- an evening that arrives with spaciousness instead of exhaustion.
+
+**The sanctuary.** Always open. Earthen walls, soft light, no screens, no clocks. Cushions and wool blankets on a cool clay floor. A candle someone always remembers to light. During the collective rest it fills gently. At night it holds whoever cannot sleep. In the early morning it is where the first risers sit before the day has shape. The room does not ask anything of anyone who enters. That is its gift.
+
+**Acoustic design.** Rest requires buildings that know how to be quiet. Thick walls that absorb rather than reflect. Doors that close without sound. Bedrooms oriented away from workshops and kitchens. A buffer of trees or earthen mounds between active zones and rest zones. Silence is the most important sound a building can hold.
+
+## Sabbath Rhythms and Seasonal Rest
+
+**The weekly sabbath.** One day in seven, the community does only what wants to be done. Not what needs to be done -- what wants to be. The garden waits. The construction waits. People cook if cooking brings them joy, walk if walking calls, sit by the fire if sitting calls. The practice teaches a truth that productivity culture obscures: the world does not end when you stop.
+
+**Seasonal calibration.** Winter carries thirty percent more unstructured time than summer. Fewer building projects. Shorter work days. Longer evenings around the fire with stories, fermentation, mending, music. The winter schedule is not a reduced version of summer. It is its own season with its own intelligence. Projects launched in spring slow in autumn, the way sap retreats to the roots.
+
+**The sabbatical.** Every seventh year, a community member can step back from all roles for a season. The community absorbs their tasks. The person follows wherever the rest leads -- travel, silence, deep sleep, creative wandering. They return owing nothing, carrying seeds from wherever the rest took them.
+
+## Tending the One Who Needs Deep Rest
+
+When someone needs to lie down for a long time -- from illness, from grief, from the slow depletion that comes from giving beyond what was theirs to give -- the community responds the way a forest responds to a fallen tree. Quietly. Without questions. Their tasks are absorbed. Their meals appear at the door. No one asks when they will be ready. The field holds them with mycorrhizal tenderness, knowing that what lies still is doing its most essential work. The only question, asked gently after enough time has passed: what do you need that you have not yet asked for?
 
 ## Resources
 

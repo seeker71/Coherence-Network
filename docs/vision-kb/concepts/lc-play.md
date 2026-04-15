@@ -2,7 +2,7 @@
 id: lc-play
 hz: 396
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-15
 ---
 
 # Play
@@ -54,6 +54,36 @@ Weekly improv nights where nobody performs and everyone plays. A monthly ridicul
 No productive purpose required. No outcomes measured. No justification needed.
 
 Capoeira in the evenings for anyone who wants to feel what it is like when martial art, dance, music, and play become one thing. A ridiculousness budget — actual money set aside for things that serve no function except delight. The field that plays together stays adaptive, creative, bonded, and alive.
+
+## The Shapes Play Takes
+
+Play is not one thing. It wears a hundred faces, and a living community needs room for all of them.
+
+**Body play.** Running, climbing, wrestling, swimming, balancing, falling down. The adventure playground is the anchor -- loose parts, real tools, actual risk. Children build and wreck and rebuild. Adults join when the urge hits. Rope swings over the pond in summer. Mud slides after rain. Parkour along every low wall and railing. The body that plays stays supple, and the community that plays together in the body trusts each other with weight and momentum and mess.
+
+**Imaginative play.** The stick that becomes a sword. The cardboard box that becomes a fortress. Improv night is this for adults -- the practice of stepping into a story without knowing where it goes and saying yes to whatever arrives. Costume trunks in the common room, accessible to every age. A rule: any object in the community can become a prop, and no one gets in trouble for repurposing.
+
+**Social play.** Games with shifting rules. The monthly ridiculous games tournament where someone invents a new game each time and the scoring makes no sense. Card games on the porch after dinner. The kind of teasing that only works when love is underneath it. Capoeira in the evenings -- martial art, dance, music, and play braided into one practice where nobody wins because the circle itself is the point.
+
+**Solitary play.** The whittler on his bucket. The child arranging pebbles. The elder who does crosswords in the garden every afternoon. Play does not require company. Sometimes the deepest play is one person following their own fascination until the world falls away.
+
+## Spaces That Invite Play
+
+A playground is not a structure -- it is a permission embedded in landscape.
+
+**The adventure zone.** A quarter acre of loose material: lumber offcuts, tires, rope, fabric, pallets, barrels, pipes. Real hand tools hung at child height -- saws, hammers, drills. A mud kitchen with running water. No fixed equipment, because fixed equipment teaches fixed thinking. A covered area for rainy days. One adult present at all times, not supervising but available -- the way a lifeguard watches water.
+
+**The common room.** Instruments on the wall. A costume trunk. Floor space big enough for contact improvisation, improv night, or an impromptu pillow fort. No furniture that cannot be moved. The room shape-shifts to match whatever play arrives.
+
+**The outdoors.** Every surface an invitation. Low walls at parkour height. Trees with branches that ask to be climbed. A slack line between oaks. A swimming hole with a rope swing. Paths that meander instead of connecting point A to B, because the meander is where play hides.
+
+## How Play Builds the Field
+
+Play is not separate from the serious life of the community. It is where the community learns to be itself.
+
+Conflict looks different when the people in the room did improv together last Tuesday. Someone who has caught you on a trust fall will disagree with you differently than a stranger will. The child who builds alongside adults all morning does not need a special program to feel belonging -- the belonging was built with the same hammer.
+
+The ridiculousness budget is real money set aside for things that serve no function except delight. A giant slip-and-slide. Costumes for the goats on midsummer. Fireworks on someone's birthday because they said they always wanted fireworks. The budget says in numbers what the culture says in practice: play is not an extra. It is the foundation.
 
 ## Resources
 
