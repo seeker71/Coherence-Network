@@ -69,6 +69,14 @@ class DailyBar(BaseModel):
     status: BreathStatus
     samples: int
     failures: int
+    latency_p50_ms: int | None = Field(
+        default=None,
+        description="p50 latency across successful samples for the day (ms); None when no successes",
+    )
+    latency_p95_ms: int | None = Field(
+        default=None,
+        description="p95 latency across successful samples for the day (ms); None when no successes",
+    )
 
 
 class OrganHistory(BaseModel):
@@ -80,7 +88,31 @@ class OrganHistory(BaseModel):
     uptime_pct: float = Field(
         description="Steady-breath percentage across the requested window"
     )
+    latency_p50_ms: int | None = Field(
+        default=None,
+        description="p50 latency across all successful samples in the window (ms)",
+    )
+    latency_p95_ms: int | None = Field(
+        default=None,
+        description="p95 latency across all successful samples in the window (ms)",
+    )
     daily: list[DailyBar]
+
+
+class PulseHistoryOverall(BaseModel):
+    """Rollup across all organs for the requested window."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    uptime_pct: float = Field(
+        description="Average steady-breath percentage across all organs in the window"
+    )
+    worst_uptime_pct: float = Field(
+        description="The lowest per-organ uptime in the window (which organ is struggling most)"
+    )
+    worst_organ: str | None = Field(
+        default=None, description="Name of the organ with the lowest uptime, if any"
+    )
 
 
 class PulseHistory(BaseModel):
@@ -90,6 +122,7 @@ class PulseHistory(BaseModel):
 
     days: int
     generated_at: str
+    overall: PulseHistoryOverall
     organs: list[OrganHistory]
 
 

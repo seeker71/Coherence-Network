@@ -36,6 +36,8 @@ export type DailyBar = {
   status: BreathStatus;
   samples: number;
   failures: number;
+  latency_p50_ms: number | null;
+  latency_p95_ms: number | null;
 };
 
 export type OrganHistory = {
@@ -43,12 +45,21 @@ export type OrganHistory = {
   label: string;
   description: string;
   uptime_pct: number;
+  latency_p50_ms: number | null;
+  latency_p95_ms: number | null;
   daily: DailyBar[];
+};
+
+export type PulseHistoryOverall = {
+  uptime_pct: number;
+  worst_uptime_pct: number;
+  worst_organ: string | null;
 };
 
 export type PulseHistory = {
   days: number;
   generated_at: string;
+  overall: PulseHistoryOverall;
   organs: OrganHistory[];
 };
 

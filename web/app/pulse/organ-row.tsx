@@ -1,17 +1,24 @@
-import type { OrganHistory, OrganNow } from "./types";
-import { STATUS_BAR, STATUS_DOT, STATUS_LABEL, STATUS_TEXT } from "./status-tokens";
+import type { OrganHistory, OrganNow, Silence } from "./types";
+import { STATUS_BAR, STATUS_DOT, STATUS_TEXT } from "./status-tokens";
+import { DayBar } from "./day-tooltip";
+import { LatencySparkline } from "./latency-sparkline";
+import { silencesOnDay } from "./silences-on-day";
 
 /**
- * One organ, one row. Current status dot on the left, label and uptime %
- * in the middle, a 90-day bar chart on the right. The bars are plain
- * CSS grid divs — no charting library — so this component has zero JS cost.
+ * One organ, one row. Current status dot on the left, label, uptime %, and
+ * a N-day daily bar chart on the right. Each bar is a rich-tooltip DayBar
+ * that shows the samples/failures/latency of that day plus any silences
+ * that overlapped it. A small latency sparkline sits under the bar chart
+ * so you can see the body's tempo, not just its aliveness.
  */
 export function OrganRow({
   now,
   history,
+  silences,
 }: {
   now: OrganNow | undefined;
   history: OrganHistory;
+  silences: Silence[];
 }) {
   const currentStatus = now?.status ?? "unknown";
   const uptime = history.uptime_pct;
@@ -19,6 +26,12 @@ export function OrganRow({
     history.daily.every((d) => d.samples === 0)
       ? "—"
       : `${uptime.toFixed(uptime === 100 ? 0 : 2)}%`;
+
+  // Pre-compute silences per day once rather than per-bar.
+  const byDate: Record<string, Silence[]> = {};
+  for (const d of history.daily) {
+    byDate[d.date] = silencesOnDay(silences, d.date);
+  }
 
   return (
     <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-4">
@@ -56,15 +69,12 @@ export function OrganRow({
           aria-label={`${history.label} daily breath over ${history.daily.length} days`}
         >
           {history.daily.map((d) => (
-            <div
+            <DayBar
               key={d.date}
-              className={`flex-1 min-w-[3px] rounded-sm ${STATUS_BAR[d.status]} hover:opacity-100 opacity-90 transition-opacity`}
-              style={{ height: d.samples === 0 ? "35%" : "100%" }}
-              title={`${d.date} · ${STATUS_LABEL[d.status]}${
-                d.samples > 0
-                  ? ` · ${d.samples} sample${d.samples > 1 ? "s" : ""}, ${d.failures} failure${d.failures === 1 ? "" : "s"}`
-                  : " · no samples"
-              }`}
+              day={d}
+              silencesForDay={byDate[d.date] ?? []}
+              organLabel={history.label}
+              barClass={STATUS_BAR[d.status]}
             />
           ))}
         </div>
@@ -73,6 +83,18 @@ export function OrganRow({
           <span>today</span>
         </div>
       </div>
+
+      {/* Latency sparkline — collected all along, finally visible */}
+      {history.latency_p50_ms !== null && (
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            tempo
+          </p>
+          <div className={STATUS_TEXT[currentStatus]}>
+            <LatencySparkline daily={history.daily} />
+          </div>
+        </div>
+      )}
 
       {/* Detail line when not breathing */}
       {now && now.detail && currentStatus !== "breathing" && (
