@@ -10,6 +10,7 @@ import { StoryContent } from "./_components/StoryContent";
 import { ConnectedConcepts } from "./_components/ConnectedConcepts";
 import { FrequencyDisplay } from "./_components/FrequencyDisplay";
 import { StructuredContent } from "./_components/StructuredContent";
+import { TrackingSuggestion } from "./_components/TrackingSuggestion";
 
 export const dynamic = "force-dynamic";
 
@@ -105,6 +106,9 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
 
   return (
     <main>
+      {/* NFT tracking suggestion for unregistered readers */}
+      <TrackingSuggestion conceptId={conceptId} />
+
       {/* Hero */}
       {visual ? (
         <section className="relative w-full aspect-[16/6] overflow-hidden">
