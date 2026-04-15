@@ -54,37 +54,9 @@ SAMPLE_PROMOTE_THRESHOLD = 10   # reads before untracked → sampled
 FULL_PROMOTE_THRESHOLD = 100    # reads before sampled → full
 SAMPLE_RATE = 10                # 1-in-N for sampled tier
 
-# Concepts that carry core community values — contributions tagged with these
-# promote faster because they bring more life to the community.
-# Higher value = promotes sooner (thresholds divided by this multiplier)
-_VITALITY_CONCEPTS: dict[str, float] = {
-    # Core life frequencies
-    "lc-ceremony": 3.0,
-    "lc-stillness": 2.5,
-    "lc-play": 3.0,
-    "lc-intimacy": 2.5,
-    "lc-offering": 2.5,
-    "lc-beauty": 2.0,
-    "lc-elders": 2.5,
-    "lc-resonating": 2.0,
-    "lc-rest": 2.0,
-    "lc-discovery": 2.0,
-    # Nourishing the body and land
-    "lc-nourishment": 2.0,
-    "lc-nourishing": 2.0,
-    "lc-health": 2.0,
-    "lc-vitality": 2.5,
-    # Connection and expression
-    "lc-expressing": 2.0,
-    "lc-attunement": 2.0,
-    "lc-composting": 1.5,
-    "lc-transmission": 2.0,
-    "lc-pulse": 2.5,
-}
-
 # Asset tier cache (in-memory, starts empty — everything begins untracked)
 _asset_tiers: dict[str, int] = {}  # asset_id → tier (1=full, 2=sampled, 3=untracked)
-_asset_vitality: dict[str, float] = {}  # cached vitality multiplier per asset
+_asset_vitality: dict[str, float] = {}  # cached frequency score per asset
 
 # Performance budget: max microseconds per request for tracking overhead
 MAX_TRACKING_US = 500  # 0.5ms
@@ -97,27 +69,48 @@ def _get_tier(asset_id: str) -> int:
 
 
 def _vitality_multiplier(asset_id: str) -> float:
-    """How much life does this asset's concept carry?
+    """Sense how much life this asset carries using its frequency score.
 
-    A ceremony recording promotes to full tracking 3x faster than
-    a technical config document, because it brings more vitality,
-    joy, and freedom to the community.
+    Uses the frequency scoring algorithm to measure the living quality
+    of the content. Higher frequency = promotes to tracking sooner.
+    No hardcoded concept lists — the content speaks for itself.
+
+    Score 0.80+ → 3x multiplier (deeply alive)
+    Score 0.70  → 2x multiplier
+    Score 0.60  → 1.5x multiplier
+    Score 0.50  → 1x (baseline)
+    Unmeasured  → 1x (neutral until scored)
     """
     if asset_id in _asset_vitality:
         return _asset_vitality[asset_id]
 
-    # Extract concept ID from asset ID
-    # visual-lc-space-0 → lc-space, lc-ceremony → lc-ceremony
-    concept_id = asset_id
-    if concept_id.startswith("visual-"):
-        concept_id = concept_id[7:]  # strip "visual-"
-    # Remove trailing -N or -story-N
-    if "-story-" in concept_id:
-        concept_id = concept_id[:concept_id.index("-story-")]
-    elif concept_id[-1].isdigit() and "-" in concept_id:
-        concept_id = concept_id[:concept_id.rindex("-")]
+    # Try to get the concept's frequency score from the DB
+    multiplier = 1.0
+    try:
+        from app.services import frequency_scoring
+        # Extract concept ID from asset ID
+        concept_id = asset_id
+        if concept_id.startswith("visual-"):
+            concept_id = concept_id[7:]
+        if "-story-" in concept_id:
+            concept_id = concept_id[:concept_id.index("-story-")]
+        elif concept_id[-1:].isdigit() and "-" in concept_id:
+            concept_id = concept_id[:concept_id.rindex("-")]
 
-    multiplier = _VITALITY_CONCEPTS.get(concept_id, 1.0)
+        # Try to get story content for this concept
+        from app.services import concept_service
+        concept = concept_service.get_concept(concept_id)
+        if concept and concept.get("story_content"):
+            result = frequency_scoring.score_frequency(concept["story_content"])
+            score = result.get("score", 0.5)
+            # Map frequency score to tracking multiplier
+            # Continuous, not stepped — the frequency IS the multiplier
+            # score 0.5 → 1.0x, score 0.75 → 2.5x, score 1.0 → 4.0x
+            multiplier = 1.0 + (score - 0.5) * 6.0
+            multiplier = max(1.0, min(4.0, multiplier))
+    except Exception:
+        pass  # can't score — neutral multiplier
+
     _asset_vitality[asset_id] = multiplier
     return multiplier
 
