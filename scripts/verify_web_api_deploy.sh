@@ -17,6 +17,11 @@ CURL_MAX_TIME="${CURL_MAX_TIME:-25}"
 CURL_CONNECT_TIMEOUT="${CURL_CONNECT_TIMEOUT:-5}"
 CURL_RETRIES="${CURL_RETRIES:-3}"
 CURL_RETRY_SLEEP_SECONDS="${CURL_RETRY_SLEEP_SECONDS:-3}"
+# How long to stay patient with a gateway that says "still starting" (502/503/504).
+# A fresh deploy can land the verify step mid-restart; the upstream container is
+# up but Traefik's connection hasn't re-established yet. Wait for it.
+GATEWAY_PATIENCE_SECONDS="${GATEWAY_PATIENCE_SECONDS:-90}"
+GATEWAY_PATIENCE_INTERVAL="${GATEWAY_PATIENCE_INTERVAL:-5}"
 VERIFY_REQUIRE_GATES_MAIN_HEAD="${VERIFY_REQUIRE_GATES_MAIN_HEAD:-1}"
 VERIFY_REQUIRE_PERSISTENCE_CHECK="${VERIFY_REQUIRE_PERSISTENCE_CHECK:-1}"
 VERIFY_REQUIRE_TELEGRAM_ALERTS="${VERIFY_REQUIRE_TELEGRAM_ALERTS:-0}"
@@ -79,23 +84,42 @@ check_url() {
   echo
   echo "==> ${name}: ${url}"
 
-  if ! run_with_retries "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" \
-    --max-time "$CURL_MAX_TIME" \
-    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
-    "$url" >/dev/null; then
-    echo "FAIL: request error"
-    sed -n '1,12p' "$headers_file" 2>/dev/null || true
-    return 1
-  fi
+  # Patient retry for fresh-deploy gateway states. 502/503/504 from
+  # Cloudflare/Traefik right after a rollout usually mean the upstream
+  # container is up but the gateway's connection is still re-establishing.
+  # Wait for it rather than reporting failure on the first probe.
+  local deadline=$(( $(date +%s) + GATEWAY_PATIENCE_SECONDS ))
+  local status=""
+  local server=""
+  while :; do
+    if ! run_with_retries "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" \
+      --max-time "$CURL_MAX_TIME" \
+      --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+      "$url" >/dev/null; then
+      if (( $(date +%s) < deadline )); then
+        echo "WARN: curl request error; waiting ${GATEWAY_PATIENCE_INTERVAL}s for the gateway..."
+        sleep "$GATEWAY_PATIENCE_INTERVAL"
+        continue
+      fi
+      echo "FAIL: request error"
+      sed -n '1,12p' "$headers_file" 2>/dev/null || true
+      return 1
+    fi
 
-  local status
-  status="$(awk 'toupper($1) ~ /^HTTP\// { code=$2 } END { print code }' "$headers_file")"
-  local server
-  server="$(awk 'tolower($1) == "server:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
-  if [[ -z "${status}" ]]; then
-    echo "FAIL: could not read HTTP status"
-    return 1
-  fi
+    status="$(awk 'toupper($1) ~ /^HTTP\// { code=$2 } END { print code }' "$headers_file")"
+    server="$(awk 'tolower($1) == "server:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+    if [[ -z "${status}" ]]; then
+      echo "FAIL: could not read HTTP status"
+      return 1
+    fi
+
+    if [[ "$status" == "502" || "$status" == "503" || "$status" == "504" ]] && (( $(date +%s) < deadline )); then
+      echo "WARN: gateway status ${status}; waiting ${GATEWAY_PATIENCE_INTERVAL}s for upstream to reconnect..."
+      sleep "$GATEWAY_PATIENCE_INTERVAL"
+      continue
+    fi
+    break
+  done
 
   echo "HTTP status: ${status}"
   [[ -n "$server" ]] && echo "Server: ${server}"
