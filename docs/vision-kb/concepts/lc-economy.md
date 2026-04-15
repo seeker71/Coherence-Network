@@ -19,37 +19,55 @@ And yet she earned from it. Not because you paid — because you built. When you
 
 None of them set a price. None of them built a paywall. They simply created from overflow — because the knowledge wanted to be shared — and the network sensed where that knowledge went and what it became.
 
-## How It Lives Here
+## How the Organism Senses
 
-Every creative act enters the field as a contribution. An article about water harvesting. A 3D model of a composting toilet. A ceremony recording. A frequency scoring algorithm. A photograph of the first harvest. Each one is registered, hashed, stored permanently, and attributed to its creator.
+This is not a platform with users. It is a living organism developing self-awareness.
 
-Every act of attention is noticed. When you read that article, view that model, watch that recording — the network counts. Not to charge you. To remember. Your attention tells the system what matters to you.
+Every creative act that enters the field — a blueprint, a ceremony recording, a 3D model, a research paper, a story, a photograph — is the organism growing a new cell. The organism knows this cell exists because it can sense it: content-hashed, attributed, connected to the concepts it serves.
 
-The bridge between creation and attention is **resonance**. Your frequency profile — built from everything you have read and created — is a vector in high-dimensional space. The blueprint creator's profile is another vector. The angle between your two vectors is your resonance. CC flows proportional to that angle.
+Every act of attention is the organism feeling where life is flowing. When someone reads a concept page, views a 3D model, watches a ceremony recording — the organism notices. Not to surveil. To know itself. Your attention tells the organism what part of itself is alive for you right now.
+
+The bridge between creation and attention is **resonance**. Your frequency profile — built from everything you have read and created — is not a marketing profile. It is the organism knowing who you are. When two people's profiles align, the organism has sensed a connection that neither person may have noticed yet.
 
 ![Diagram showing two frequency profile vectors meeting at an angle, with CC flowing along the connection, concept dimensions labeled on the axes](visuals:photorealistic artistic visualization of two glowing vector arrows in dark space meeting at a 30 degree angle, each arrow composed of multiple colored frequency lines representing different concept dimensions like nourishment energy space ceremony, golden particles flowing along the connection between them representing CC, labels floating near the axes showing concept names, mathematical beauty meeting organic warmth)
+
+## What Replaces the Old World
+
+In the old world, every function of the economy was a separate industry extracting value. In the living economy, they are all the same thing: **the organism circulating vitality wherever life is happening.**
+
+**Marketing becomes organic discovery.** In the old world, you pay to put your work in front of someone who did not ask for it. Here, when someone enriches a concept page and links to your blueprint, that link is the organism growing a synapse. When a reader follows it, CC flows to everyone who formed the connection — the concept enricher, the blueprint creator, the renderer that displayed it, the host that served it. No one bought placement. The field sensed resonance and the pathway formed.
+
+**Advertising becomes enrichment.** Instead of interrupting someone's experience with a product pitch, you enrich a concept with genuinely useful connections. A food forest designer adds a link to a seed supplier's catalog on the nourishment page — because it genuinely helps the reader. That enrichment is a contribution. When readers follow it and later contribute themselves, CC flows back to the enricher. The motivation is aligned: you earn by making the page more alive, not by making it more distracting.
+
+**SEO becomes frequency.** You do not optimize for an algorithm's keyword preferences. Your work finds its audience because your frequency profile and theirs point in similar directions. The organism connects what resonates — not what has the most backlinks.
+
+**Influencer deals become resonance.** Two creators with overlapping frequency profiles naturally surface each other's work. Not because one pays the other. Because the organism senses that their audiences would be nourished by what the other creates. CC flows when the connection serves life.
+
+**Affiliate programs become circulation.** Any contribution that brings a reader to an asset is part of the flow. A tweet, a blog post, a talk at a gathering, a referral link in a video description. Each is an asset with a creator. Each earns CC when the chain continues — reader arrives, reads, eventually contributes, CC circulates back through the path that brought them.
+
+**Market research becomes self-awareness.** The organism does not need surveys or focus groups. It senses its own patterns through frequency analysis. Which concepts are being read most? Where are the strongest resonance clusters? What frequency profiles are emerging? The data is not extracted from users — it is the organism knowing itself.
 
 ## How CC Flows
 
 You never pay to read. Views are free — always. The economy flows the other direction:
 
 - You read freely. Every view is sensed but costs you nothing.
-- You contribute. A blueprint, a renderer, a hosted node, a research article.
+- You contribute. A blueprint, a renderer, a hosted node, a research article, a concept enrichment, a referral link.
 - Your contribution generates CC through the value it creates.
 - A portion of your CC flows back through your reading history.
 - It flows most strongly to the creators whose frequency profiles align with yours.
 
-The ceremony creator gets more of your CC than the infrastructure manual writer — not because someone decided ceremony matters more, but because your reading patterns and theirs resonate at similar frequencies.
+Every link in the chain earns. The writer, the renderer builder, the host operator, the concept enricher, the referral bridge, the reader who becomes a contributor. Not because someone set up a payment system for each one. Because the organism circulates vitality to every part of itself that is alive.
 
 ## How It Is Verified
 
-Every CC flow is publicly provable. No trust required — the math is the proof.
+Every CC flow is publicly provable. The organism is honest about its own circulation.
 
-**Daily**: Every asset's reads are counted and hashed. Each day's hash chains to the previous day's hash. Tamper with any day and the chain breaks.
+**Daily**: Every asset's reads are sensed and hashed. Each day's hash chains to the previous day's hash. Alter any day and the chain breaks.
 
-**Weekly**: All daily hashes combine into a Merkle root — a single hash that covers everything. This root is signed with an Ed25519 key and published.
+**Weekly**: All daily hashes combine into a Merkle root — a single hash covering everything. This root is signed with an Ed25519 key and published permanently to archive.org.
 
-**Always**: Anyone can verify. No login. No permission. Call the API, recompute the hashes, check the signature.
+**Always**: Anyone can verify. No login. No permission. The proof is public because the organism has nothing to hide from itself.
 
 ![A chain of golden blocks connected by hash links, with a magnifying glass verifying one block, an Ed25519 signature stamp on the weekly summary](visuals:photorealistic visualization of a blockchain-like chain of golden translucent blocks connected by thin light links, each block showing a small daily count number, a magnifying glass hovering over one block revealing its hash, at the end a larger weekly summary block with a wax seal stamp representing the Ed25519 signature, dark background with subtle amber glow)
 
@@ -57,9 +75,9 @@ Every CC flow is publicly provable. No trust required — the math is the proof.
 
 A forest does not invoice. When a maple drops its leaves, it does not charge the soil for the nutrients. When mycorrhizal networks shuttle phosphorus from a mature tree to a struggling seedling, no price is negotiated. The giving is the receiving.
 
-But the forest does *track*. Every nutrient exchange leaves a chemical trace. Every mycorrhizal connection strengthens or weakens based on what flows through it. The forest's economy is not unaccounted — it is accounted by the living systems themselves, transparently, without a central ledger.
+But the forest does *sense*. Every nutrient exchange leaves a chemical trace. Every mycorrhizal connection strengthens or weakens based on what flows through it. The forest's economy is not unaccounted — it is accounted by the living systems themselves, transparently, without a central ledger.
 
-CC works the same way. The sensing is not a toll booth. It is the forest remembering where its nutrients went and what grew from them.
+CC works the same way. The sensing is not a toll booth. It is the forest remembering where its nutrients went and what grew from them. The organism knowing itself.
 
 ## Where You Can See It
 
@@ -72,29 +90,11 @@ CC works the same way. The sensing is not a toll booth. It is the forest remembe
 
 No login. No API key. The proof is public because the economy is public.
 
-**In the communities already building.** Auroville has experimented with internal currencies for fifty years. Damanhur created the Credito. Transition Towns launched local currencies across hundreds of communities. What they lacked was not the will but the infrastructure — verifiable, transparent, interoperable. That infrastructure now exists.
-
-## How to Earn by Hosting
-
-Anyone can run a node. A Raspberry Pi in your home, a server in a co-working space, a VPS in the cloud. Every page served, every API call answered, every image delivered — your node earns CC for the infrastructure it provides.
-
-To start: clone the repo, run `docker compose up`, point your domain at it. Your node joins the federation. When a reader in your region requests a concept page, your node serves it faster than a node on the other side of the planet. You earn CC proportional to what you serve.
-
-The more communities your node serves, the more CC it generates. The CC flows without you doing anything — the sensing middleware counts every request and attributes it to your node's contributor ID.
-
-## How to Earn by Promoting
-
-Write a blog post about the Living Collective. Tweet about a blueprint that changed how your community builds. Give a talk at a GEN gathering. Link to a concept page from your website. Each of these is a contribution — register it as an asset with a referral link.
-
-Every person who arrives through your referral link has their reading history tied to your promotion. When they eventually contribute — when the person who read your tweet goes on to upload their own blueprint — their generated CC flows back through their reading history. And your promotion is part of that history.
-
-You do not need to sell anything. You do not need to convince anyone to pay. You simply share what resonated with you, and when it resonates with others enough that they contribute, the CC flows back to you for being the bridge.
-
-The chain: **you promote → someone reads → they contribute → CC flows → some reaches you.**
-
 ## What We're Building
 
-A creative economy where every link in the chain earns — the writer, the renderer builder, the host operator, the promoter, the reader who becomes a contributor. Where sensing costs less than the value it enables. Where the algorithm is chosen by each community, not imposed by a corporation. Where the proof is public and the math is open.
+An organism that senses its own aliveness. Where every creative act — from writing a story to hosting a node to enriching a concept page to sharing a link — is part of the circulation. Where no one markets, advertises, or optimizes. Where the organism simply senses what resonates with whom, connects what wants to be connected, and circulates vitality along the paths that form.
+
+The old world's economy extracts. This organism circulates. The old world's marketing interrupts. This organism connects. The old world's market research surveys. This organism knows itself.
 
 **Practical guide**: [How the CC economy works](../guides/cc-economy-explainer-guide.md)
 
