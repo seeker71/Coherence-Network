@@ -39,8 +39,68 @@ HEALTHY_READY = {
     "integrity_compromised": False,
 }
 
+HEALTHY_IDEAS = {
+    "ideas": [
+        {"id": "idea-1", "name": "First idea", "description": "..."},
+        {"id": "idea-2", "name": "Second idea", "description": "..."},
+    ],
+    "pagination": {"total": 2, "page": 1, "page_size": 50},
+    "summary": {"count": 2},
+}
 
-def _handler(api_health_body=None, ready_body=None, ready_status=200, web_status=200):
+HEALTHY_VITALITY = {
+    "workspace_id": "coherence-network",
+    "vitality_score": 0.69,
+    "health_description": "Growing",
+    "signals": {
+        "diversity_index": 0.5,
+        "resonance_density": 0.8,
+        "flow_rate": 0.7,
+        "breath_rhythm": {"gas": 0.3, "water": 0.4, "ice": 0.3},
+        "connection_strength": 0.6,
+        "activity_pulse": 0.55,
+    },
+    "generated_at": "2026-04-15T12:00:00Z",
+}
+
+HEALTHY_HOME_HTML = """<!DOCTYPE html><html><body>
+<a href="/">Coherence Network</a>
+<main>welcome to the living network</main>
+</body></html>"""
+
+HEALTHY_PULSE_HTML = """<!DOCTYPE html><html><body>
+<h1>Pulse</h1>
+<p>The breath of our living body, remembered.</p>
+<section>All organs breathing</section>
+</body></html>"""
+
+HEALTHY_VITALITY_HTML = """<!DOCTYPE html><html><body>
+<h1>Vitality</h1>
+<p>Network Vitality 69%</p>
+<h3>Diversity Index</h3><h3>Resonance Density</h3>
+</body></html>"""
+
+# Marker Next.js emits when an error boundary catches a render failure.
+ERROR_BOUNDARY_HTML = """<!DOCTYPE html><html><body>
+<h2>Something went wrong</h2>
+</body></html>"""
+
+
+def _handler(
+    api_health_body=None,
+    ready_body=None,
+    ready_status=200,
+    ideas_body=None,
+    ideas_status=200,
+    vitality_api_body=None,
+    vitality_api_status=200,
+    web_status=200,
+    web_body=HEALTHY_HOME_HTML,
+    web_pulse_status=200,
+    web_pulse_body=HEALTHY_PULSE_HTML,
+    web_vitality_status=200,
+    web_vitality_body=HEALTHY_VITALITY_HTML,
+):
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path
         if path == "/api/health":
@@ -55,8 +115,24 @@ def _handler(api_health_body=None, ready_body=None, ready_status=200, web_status
                 content=json.dumps(ready_body or HEALTHY_READY),
                 headers={"content-type": "application/json"},
             )
+        if path == "/api/ideas":
+            return httpx.Response(
+                ideas_status,
+                content=json.dumps(ideas_body if ideas_body is not None else HEALTHY_IDEAS),
+                headers={"content-type": "application/json"},
+            )
+        if path == "/api/workspaces/coherence-network/vitality":
+            return httpx.Response(
+                vitality_api_status,
+                content=json.dumps(vitality_api_body if vitality_api_body is not None else HEALTHY_VITALITY),
+                headers={"content-type": "application/json"},
+            )
         if path == "/":
-            return httpx.Response(web_status, content="<html></html>")
+            return httpx.Response(web_status, content=web_body, headers={"content-type": "text/html"})
+        if path == "/pulse":
+            return httpx.Response(web_pulse_status, content=web_pulse_body, headers={"content-type": "text/html"})
+        if path == "/vitality":
+            return httpx.Response(web_vitality_status, content=web_vitality_body, headers={"content-type": "text/html"})
         return httpx.Response(404, content="not found")
 
     return handler
@@ -69,12 +145,18 @@ async def _run(handler) -> dict[str, object]:
     return {s.organ: s for s in samples}
 
 
+# ----- infrastructure organs ------------------------------------------------
+
 @pytest.mark.asyncio
 async def test_all_healthy():
     by = await _run(_handler())
-    assert set(by.keys()) == {"api", "web", "postgres", "neo4j", "schema", "audit_integrity"}
-    for s in by.values():
-        assert s.ok is True, f"{s.organ} not ok: {s.detail}"
+    expected = {
+        "api", "web", "postgres", "neo4j", "schema", "audit_integrity",
+        "page_pulse", "page_vitality", "endpoint_ideas", "endpoint_vitality",
+    }
+    assert set(by.keys()) == expected
+    for name, sample in by.items():
+        assert sample.ok is True, f"{name} not ok: {sample.detail}"
 
 
 @pytest.mark.asyncio
@@ -82,7 +164,6 @@ async def test_api_status_not_ok():
     bad = {**HEALTHY_HEALTH, "status": "degraded"}
     by = await _run(_handler(api_health_body=bad))
     assert by["api"].ok is False
-    # Schema and audit still read from same body — they should still be OK.
     assert by["schema"].ok is True
     assert by["audit_integrity"].ok is True
 
@@ -91,7 +172,7 @@ async def test_api_status_not_ok():
 async def test_integrity_compromised_flags_audit_only():
     bad = {**HEALTHY_HEALTH, "integrity_compromised": True}
     by = await _run(_handler(api_health_body=bad))
-    assert by["api"].ok is True         # status=="ok" still
+    assert by["api"].ok is True
     assert by["audit_integrity"].ok is False
     assert "integrity" in (by["audit_integrity"].detail or "")
 
@@ -106,18 +187,15 @@ async def test_schema_not_ok():
 
 @pytest.mark.asyncio
 async def test_ready_503_graph_store_missing_flags_neo4j():
-    # FastAPI HTTPException with plain detail='not ready' when graph_store is None.
     body = {"detail": "not ready"}
     by = await _run(_handler(ready_status=503, ready_body=body))
     assert by["neo4j"].ok is False
     assert "graph_store" in (by["neo4j"].detail or "")
-    # API organ reads a different upstream, so it's unaffected.
     assert by["api"].ok is True
 
 
 @pytest.mark.asyncio
 async def test_ready_503_persistence_contract_flags_postgres_not_neo4j():
-    # The real shape seen in prod: detail is a dict with persistence_contract_failed.
     body = {
         "detail": {
             "error": "persistence_contract_failed",
@@ -128,7 +206,6 @@ async def test_ready_503_persistence_contract_flags_postgres_not_neo4j():
     by = await _run(_handler(ready_status=503, ready_body=body))
     assert by["postgres"].ok is False
     assert "persistence" in (by["postgres"].detail or "")
-    # neo4j is not implicated by this 503 cause.
     assert by["neo4j"].ok is True
 
 
@@ -140,12 +217,110 @@ async def test_db_disconnected_flags_postgres_only():
     assert by["neo4j"].ok is True
 
 
+# ----- web root organ ------------------------------------------------------
+
 @pytest.mark.asyncio
 async def test_web_down():
     by = await _run(_handler(web_status=503))
     assert by["web"].ok is False
     assert by["api"].ok is True
 
+
+@pytest.mark.asyncio
+async def test_web_missing_branding():
+    by = await _run(_handler(web_body="<html><body>different site</body></html>"))
+    assert by["web"].ok is False
+    assert "Coherence Network" in (by["web"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_web_error_boundary_flags_silent():
+    by = await _run(_handler(web_body=ERROR_BOUNDARY_HTML))
+    assert by["web"].ok is False
+    assert "error boundary" in (by["web"].detail or "")
+
+
+# ----- outcome organs: pages ------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_page_pulse_error_boundary():
+    """This is the class of bug the outcome organs were built to catch."""
+    by = await _run(_handler(web_pulse_body=ERROR_BOUNDARY_HTML))
+    assert by["page_pulse"].ok is False
+    assert "error boundary" in (by["page_pulse"].detail or "")
+    # Infrastructure organs are unaffected — this is a page-level sensing win.
+    assert by["api"].ok is True
+    assert by["web"].ok is True
+
+
+@pytest.mark.asyncio
+async def test_page_pulse_missing_h1():
+    body = "<html><body>Pulse is broken — no h1 here</body></html>"
+    by = await _run(_handler(web_pulse_body=body))
+    assert by["page_pulse"].ok is False
+    assert "Pulse h1" in (by["page_pulse"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_page_vitality_error_boundary_catches_signals_map_crash():
+    """The exact class of bug this session hit: /vitality renders an error boundary."""
+    by = await _run(_handler(web_vitality_body=ERROR_BOUNDARY_HTML))
+    assert by["page_vitality"].ok is False
+    assert "error boundary" in (by["page_vitality"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_page_vitality_missing_diversity_signal():
+    body = "<html><body><h1>Vitality</h1><p>but no signals</p></body></html>"
+    by = await _run(_handler(web_vitality_body=body))
+    assert by["page_vitality"].ok is False
+    assert "Diversity" in (by["page_vitality"].detail or "")
+
+
+# ----- outcome organs: api shape -------------------------------------------
+
+@pytest.mark.asyncio
+async def test_endpoint_ideas_missing_ideas_key():
+    body = {"pagination": {}, "summary": {}}  # no ideas key at all
+    by = await _run(_handler(ideas_body=body))
+    assert by["endpoint_ideas"].ok is False
+    assert "ideas" in (by["endpoint_ideas"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_endpoint_ideas_wrong_type():
+    body = {"ideas": {"not": "a list"}}
+    by = await _run(_handler(ideas_body=body))
+    assert by["endpoint_ideas"].ok is False
+    assert "list" in (by["endpoint_ideas"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_endpoint_ideas_http_error():
+    by = await _run(_handler(ideas_status=500))
+    assert by["endpoint_ideas"].ok is False
+    assert "500" in (by["endpoint_ideas"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_endpoint_vitality_shape_drift():
+    """Signals is an array, not a dict — the historical drift this session hit."""
+    body = {**HEALTHY_VITALITY, "signals": ["array", "instead", "of", "dict"]}
+    by = await _run(_handler(vitality_api_body=body))
+    assert by["endpoint_vitality"].ok is False
+    assert "signals" in (by["endpoint_vitality"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_endpoint_vitality_missing_diversity_index():
+    partial_signals = {k: v for k, v in HEALTHY_VITALITY["signals"].items() if k != "diversity_index"}
+    body = {**HEALTHY_VITALITY, "signals": partial_signals}
+    by = await _run(_handler(vitality_api_body=body))
+    assert by["endpoint_vitality"].ok is False
+    assert "diversity_index" in (by["endpoint_vitality"].detail or "")
+
+
+# ----- network errors ------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_network_error_marks_everything_down():
