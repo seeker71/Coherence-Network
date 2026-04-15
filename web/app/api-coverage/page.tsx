@@ -189,8 +189,8 @@ export default function ApiCoveragePage() {
                     <td className={`py-2 pr-4 ${row.traceability?.fully_traced ? "text-emerald-700" : "text-destructive"}`}>
                       {row.traceability?.fully_traced ? "fully_traced" : "gapped"}
                     </td>
-                    <td className={`py-2 pr-4 ${row.web_link?.sensed ? "text-emerald-700" : "text-destructive"}`}>
-                      {row.web_link?.sensed ? "linked" : "missing"}
+                    <td className={`py-2 pr-4 ${row.web_link?.tracked ? "text-emerald-700" : "text-destructive"}`}>
+                      {row.web_link?.tracked ? "linked" : "missing"}
                       {firstEvidence?.source_file ? (
                         <span className="block text-xs text-muted-foreground">
                           {firstEvidence.source_file}

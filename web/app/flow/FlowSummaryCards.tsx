@@ -6,11 +6,11 @@ type Props = {
 };
 
 export function FlowSummaryCards({ filteredItems, flow }: Props) {
-  const plannedCount = filteredItems.filter((row) => row.spec.sensed).length;
-  const workCount = filteredItems.filter((row) => row.process.sensed).length;
-  const proofCount = filteredItems.filter((row) => row.implementation.sensed || row.validation.sensed).length;
+  const plannedCount = filteredItems.filter((row) => row.spec.tracked).length;
+  const workCount = filteredItems.filter((row) => row.process.tracked).length;
+  const proofCount = filteredItems.filter((row) => row.implementation.tracked || row.validation.tracked).length;
   const fullStoryCount = filteredItems.filter(
-    (row) => row.spec.sensed && row.process.sensed && row.implementation.sensed && row.validation.sensed,
+    (row) => row.spec.tracked && row.process.tracked && row.implementation.tracked && row.validation.tracked,
   ).length;
 
   return (

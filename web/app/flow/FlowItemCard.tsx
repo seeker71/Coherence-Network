@@ -35,13 +35,13 @@ function statusBadge(item: FlowItem): { label: string; color: string } {
   if (item.interdependencies.blocked) {
     return { label: "Stuck", color: "bg-red-500/10 text-red-500" };
   }
-  if (item.validation.sensed && (item.validation.local.pass > 0 || item.validation.ci.pass > 0 || item.validation.e2e.pass > 0)) {
+  if (item.validation.tracked && (item.validation.local.pass > 0 || item.validation.ci.pass > 0 || item.validation.e2e.pass > 0)) {
     return { label: "Has proof", color: "bg-green-500/10 text-green-500" };
   }
-  if (item.process.sensed && item.process.task_ids.length > 0) {
+  if (item.process.tracked && item.process.task_ids.length > 0) {
     return { label: "In progress", color: "bg-blue-500/10 text-blue-500" };
   }
-  if (item.spec.sensed) {
+  if (item.spec.tracked) {
     return { label: "Planned", color: "bg-amber-500/10 text-amber-500" };
   }
   return { label: "Early", color: "bg-muted text-muted-foreground" };
@@ -73,11 +73,11 @@ export function FlowItemCard({ item }: Props) {
   const hasPeople = item.contributors.total_unique > 0;
   const hasResults = item.implementation.runtime_events_count > 0 || item.contributions.usage_events_count > 0;
 
-  const pills: Array<{ label: string; sensed: boolean }> = [
-    { label: "Plan", sensed: item.spec.sensed },
-    { label: "Work", sensed: item.process.sensed },
-    { label: "Results", sensed: item.implementation.sensed },
-    { label: "Checks", sensed: item.validation.sensed },
+  const pills: Array<{ label: string; tracked: boolean }> = [
+    { label: "Plan", tracked: item.spec.tracked },
+    { label: "Work", tracked: item.process.tracked },
+    { label: "Results", tracked: item.implementation.tracked },
+    { label: "Checks", tracked: item.validation.tracked },
   ];
 
   return (
@@ -115,10 +115,10 @@ export function FlowItemCard({ item }: Props) {
           <span
             key={pill.label}
             className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] leading-tight ${
-              pill.sensed ? "bg-green-500/10 text-green-600" : "bg-muted/50 text-muted-foreground"
+              pill.tracked ? "bg-green-500/10 text-green-600" : "bg-muted/50 text-muted-foreground"
             }`}
           >
-            <span>{pill.sensed ? "\u2713" : "\u2717"}</span>
+            <span>{pill.tracked ? "\u2713" : "\u2717"}</span>
             {pill.label}
           </span>
         ))}
