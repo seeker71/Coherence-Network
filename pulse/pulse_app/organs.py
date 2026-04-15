@@ -48,11 +48,17 @@ Extractor = Callable[["UpstreamResult"], OrganVerdict]
 class Organ:
     """One observable subsystem."""
 
-    name: str               # stable id used in storage + API
-    label: str              # human-readable name for the UI
-    description: str        # one-line explanation
-    upstream: str           # one of UPSTREAM_* below
+    name: str                          # stable id used in storage + API
+    label: str                         # human-readable name for the UI
+    description: str                   # one-line explanation
+    upstream: str                      # one of UPSTREAM_* below
     extractor: Extractor
+    latency_threshold_ms: int = 2000   # above this, a successful probe is
+                                       # still flagged "slow: Xms > Yms" —
+                                       # the sample is ok=True but its
+                                       # detail is set, so the current
+                                       # status reads as "strained" while
+                                       # the historical uptime stays at 100%
 
 
 # --- upstream labels ------------------------------------------------------
@@ -93,7 +99,18 @@ def _require_text(result: "UpstreamResult") -> str | None:
 # ==========================================================================
 
 def extract_api(r: "UpstreamResult") -> OrganVerdict:
-    """API organ: /api/health returns 200 with status == "ok"."""
+    """API organ: /api/health status ok + no 5xx in real user traffic.
+
+    The api container exposes `recent_outcomes` in the health response via
+    RequestOutcomesMiddleware. It's a rolling 1-and-5 minute snapshot of
+    per-status-class counts across all non-health routes. When the last
+    minute has any 5xx responses, the organ is flagged "slow: N× 5xx in
+    last 1m" — the probe itself still succeeded, so the sample is ok=True
+    with a slow-style detail, and `status_from_last_sample` maps that to
+    'strained' instead of 'silent'. This means real-user 5xx counts show
+    up as strain on the pulse page within 30 seconds of occurring, even
+    on routes the synthetic probes don't touch.
+    """
     if not _is_ok(r.status):
         return OrganVerdict(False, f"HTTP {r.status}")
     body = _require_body(r)
@@ -101,6 +118,29 @@ def extract_api(r: "UpstreamResult") -> OrganVerdict:
         return OrganVerdict(False, "empty response body")
     if body.get("status") != "ok":
         return OrganVerdict(False, f"status={body.get('status')!r}")
+
+    # Real user traffic check — never gates ok=True; surfaces as a
+    # "slow:" detail so status_from_last_sample reads strained.
+    outcomes = body.get("recent_outcomes")
+    if isinstance(outcomes, dict):
+        last_1m = outcomes.get("last_1m") or {}
+        recent_5xx = int(last_1m.get("5xx") or 0)
+        recent_4xx = int(last_1m.get("4xx") or 0)
+        recent_total = int(last_1m.get("total") or 0)
+        if recent_5xx > 0:
+            return OrganVerdict(
+                True,
+                f"slow: {recent_5xx}× 5xx in last 1m (of {recent_total} requests)",
+            )
+        # A very high 4xx rate usually means broken clients, not broken
+        # api — but if nearly everything is 4xx, something upstream is
+        # feeding the api bad requests en masse. Flag only at high ratio.
+        if recent_total >= 20 and recent_4xx * 2 > recent_total:
+            return OrganVerdict(
+                True,
+                f"slow: {recent_4xx}× 4xx in last 1m (of {recent_total} requests)",
+            )
+
     return OrganVerdict(True)
 
 
@@ -313,13 +353,14 @@ ORGANS: list[Organ] = [
         upstream=UPSTREAM_API_HEALTH,
         extractor=extract_audit,
     ),
-    # --- outcome organs: rendered pages ---
+    # --- outcome organs: rendered pages (SSR is slower than a JSON response) ---
     Organ(
         name="page_pulse",
         label="Pulse page",
         description="The /pulse surface — the organ that shows the other organs to the world.",
         upstream=UPSTREAM_WEB_PULSE,
         extractor=extract_web_pulse,
+        latency_threshold_ms=3000,
     ),
     Organ(
         name="page_vitality",
@@ -327,6 +368,7 @@ ORGANS: list[Organ] = [
         description="The /vitality surface — the deeper signal of life, rendered for humans.",
         upstream=UPSTREAM_WEB_VITALITY,
         extractor=extract_web_vitality,
+        latency_threshold_ms=3000,
     ),
     # --- outcome organs: api surface shape ---
     Organ(
@@ -335,6 +377,7 @@ ORGANS: list[Organ] = [
         description="GET /api/ideas — the primary data surface for the idea pipeline.",
         upstream=UPSTREAM_API_IDEAS,
         extractor=extract_api_ideas,
+        latency_threshold_ms=1500,
     ),
     Organ(
         name="endpoint_vitality",
@@ -342,6 +385,7 @@ ORGANS: list[Organ] = [
         description="GET /api/workspaces/coherence-network/vitality — the living signals shape.",
         upstream=UPSTREAM_API_VITALITY,
         extractor=extract_api_vitality,
+        latency_threshold_ms=1500,
     ),
 ]
 
