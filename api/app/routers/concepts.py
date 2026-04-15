@@ -72,6 +72,19 @@ class PlainConceptSubmit(BaseModel):
     contributor: str = "anonymous"
 
 
+def _format_profile(entity_id: str, profile: dict) -> dict:
+    from app.services import frequency_profile_service
+    return {
+        "entity_id": entity_id,
+        "dimensions": len(profile),
+        "magnitude": round(frequency_profile_service.magnitude(profile), 4),
+        "hash": frequency_profile_service.profile_hash(entity_id),
+        "top": [{"dimension": d, "strength": round(s, 4)}
+                for d, s in frequency_profile_service.top_dimensions(profile, n=15)],
+        "profile": {k: round(v, 4) for k, v in sorted(profile.items(), key=lambda x: -x[1])},
+    }
+
+
 class FrequencyScoreRequest(BaseModel):
     """Request body for frequency scoring."""
     text: str = Field(..., min_length=1, description="Text to score for living vs institutional frequency")
@@ -93,44 +106,18 @@ async def frequency_score(body: FrequencyScoreRequest):
 
 
 @router.get("/concepts/{concept_id}/frequency-profile", summary="Get the frequency profile vector for a concept")
-async def get_frequency_profile(concept_id: str):
+async def get_concept_frequency_profile(concept_id: str):
     """Returns the multi-dimensional frequency profile for a concept.
 
     Not a single score — a vector across all concept dimensions.
-    Used for resonance matching between readers and assets.
+    Used for resonance matching. See also GET /api/profile/{entity_id}
+    for the universal version that works with any entity type.
     """
     from app.services import frequency_profile_service
-    profile = frequency_profile_service.get_asset_profile(concept_id)
+    profile = frequency_profile_service.get_profile(concept_id)
     if not profile:
         raise HTTPException(status_code=404, detail=f"No profile for '{concept_id}'")
-    return {
-        "concept_id": concept_id,
-        "dimensions": len(profile),
-        "magnitude": round(frequency_profile_service.magnitude(profile), 4),
-        "top": [{"dimension": d, "strength": round(s, 4)} for d, s in frequency_profile_service.top_dimensions(profile)],
-        "profile": {k: round(v, 4) for k, v in profile.items()},
-    }
-
-
-@router.post("/concepts/resonance", summary="Compute resonance between two frequency profiles")
-async def compute_resonance(body: dict):
-    """Cosine similarity between two concept/asset frequency profiles.
-
-    Pass {a: concept_id, b: concept_id} to measure how strongly they resonate.
-    """
-    from app.services import frequency_profile_service
-    a_id = body.get("a", "")
-    b_id = body.get("b", "")
-    profile_a = frequency_profile_service.get_asset_profile(a_id)
-    profile_b = frequency_profile_service.get_asset_profile(b_id)
-    score = frequency_profile_service.resonance(profile_a, profile_b)
-    return {
-        "a": a_id,
-        "b": b_id,
-        "resonance": round(score, 4),
-        "a_dimensions": len(profile_a),
-        "b_dimensions": len(profile_b),
-    }
+    return _format_profile(concept_id, profile)
 
 
 @router.post("/concepts/frequency-field", summary="Token-level frequency field analysis")
