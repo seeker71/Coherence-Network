@@ -2,10 +2,12 @@
 id: lc-w-field
 hz: 963
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Field
+
+> The relational medium itself. Not a container around life but the living condition that appears when cells, place, memory, and attention begin to move as one.
 
 ## The Feeling
 
@@ -48,6 +50,8 @@ No one owns the field. No one controls it. You can only tend it or
 neglect it. It is the commons beneath all commons.
 
 ## The Questions That Live Here
+
+These are questions to carry in the wider atmosphere:
 
 - Can a visitor feel the field immediately, or does it take time to
   attune?

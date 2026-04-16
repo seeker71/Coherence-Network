@@ -33,6 +33,18 @@ A forest feeds itself through death. Leaves fall, fungi digest them, nutrients r
 
 The Korean tradition of kimchi-making -- kimjang -- is a communal event. An entire neighborhood gathers in late autumn to chop, salt, spice, and pack hundreds of heads of cabbage. The hands that touch the food become part of its culture -- literally. The microbiome of your skin seeds the ferment. Nourishment as communion is not a metaphor. It's microbiology.
 
+## Embodied Now
+
+Nourishment does not wait for six acres and a mature food forest. It begins the moment a kitchen, hall, porch, or pantry keeps its physical shape but sheds its old assumptions: meals are no longer private cleanup burdens, schedules are no longer optimized for isolation, and food becomes a shared rhythm again.
+
+**In a city building.** One floor shares a weekly meal, a common pantry shelf, and a fermentation fridge. The first infrastructure is not a farm. It is a table people can count on.
+
+**On an urban block.** A church kitchen, storefront kitchen, or community hall opens one public meal night, one soup-and-repair afternoon, one bread cycle. The neighborhood begins trusting the place because food is visible there.
+
+**On a suburban lane.** Several homes rotate school breakfasts, preserve together in autumn, and keep one garage pantry for staples that no household needs to carry alone. The lane starts tasting like a commons before it looks like one.
+
+**On rural land.** A house, greenhouse, or barn kitchen becomes the anchor where produce, preserves, seed starts, herbal knowledge, and guest meals flow through one warm center. The field becomes believable because you can smell it before you understand it.
+
 ## Where You Can See It
 
 **Satoyama, Japan** -- centuries-old mosaics of forest, rice paddy, vegetable garden, and fish pond. Human cultivation increased biodiversity. The paddy fields became habitat for frogs and herons. Food production as relationship, not extraction.

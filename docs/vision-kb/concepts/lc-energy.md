@@ -37,6 +37,18 @@ A mature forest is a net producer. It generates more oxygen than it consumes, st
 
 A human body at rest generates about a hundred watts of heat. Twenty people in a room generate two kilowatts -- enough to noticeably warm a well-insulated space. The oldest heating system in the world is gathering. The passive solar house simply extends this ancient principle: let the sun in, keep the warmth close, release it slowly. The insulated wall does what fur does. The south-facing window does what a flower does. The thermal mass floor does what a sun-warmed rock does. None of this is technology in the modern sense. It is architecture remembering that it lives inside a star's energy field.
 
+## Embodied Now
+
+Energy transformation rarely starts with a brand-new site plan. It starts when the structure stays put and the community reimagines everything around the flow: what gets measured, which room gets warmed first, what waste becomes fuel, how comfort is shared, and where healthy buffering actually serves life.
+
+**One visible dashboard.** Put generation, consumption, storage, and surplus where everyone can see it. Awareness changes use faster than private bills ever will.
+
+**One room heated well.** Retune one commons room with insulation, thermal mass, shading, and shared warmth before trying to perfect every square foot. The social center becomes the energy center.
+
+**One kitchen-waste loop.** Food scraps, greywater, compost heat, or a small biodigester turn yesterday's leftovers into tomorrow's fertility or flame. The loop becomes real because it is local enough to smell and understand.
+
+**One shared buffer.** A battery bank, wood store, repair reserve, or shaded cool room is held for weather, illness, and transition -- not as prestige storage but as a vital buffer that keeps the organism supple.
+
 ## Where You Can See It
 
 **Samso Island, Denmark** -- four thousand people decided in 1997 to become energy self-sufficient. A farmer put up the first wind turbine because he thought it was right. Within a decade, the island was producing more than it consumed. The turbines are community-owned. The profits stay. Energy sovereignty became economic sovereignty became cultural pride.

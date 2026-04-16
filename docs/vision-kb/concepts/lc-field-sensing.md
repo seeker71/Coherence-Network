@@ -29,7 +29,7 @@ The subtlest part of field sensing is the difference between individual intuitio
 
 ## What Nature Teaches
 
-An octopus has more neurons in its arms than in its brain. Each arm can taste, touch, decide, and act independently. An arm severed from the body will still reach for food and bring it to where the mouth would be. Yet when the whole animal moves, the arms coordinate seamlessly — hunting, camouflaging, problem-solving — with an intelligence that lives nowhere in particular and everywhere at once. This is field sensing at the scale of a single body: distributed, parallel, each node fully autonomous and fully integrated.
+An octopus has more neurons in its arms than in its brain. Each arm can taste, touch, decide, and act independently. An arm severed from the body will still reach for food and bring it to where the mouth would be. Yet when the whole animal moves, the arms coordinate seamlessly — hunting, camouflaging, adaptive patterning — with an intelligence that lives nowhere in particular and everywhere at once. This is field sensing at the scale of a single body: distributed, parallel, each node fully autonomous and fully integrated.
 
 ![Mycelial network](visuals:photorealistic cross-section of forest floor showing glowing mycelial network connecting tree roots underground, bioluminescent fungal threads branching in fractal patterns through dark soil, tree roots visible above, tiny mushrooms emerging at the surface, a fallen leaf decomposing where mycelium touches it, sense of hidden vast intelligence beneath the visible world)
 

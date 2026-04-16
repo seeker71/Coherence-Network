@@ -2,10 +2,12 @@
 id: lc-w-mycorrhizal
 hz: 639
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Mycorrhizal
+
+> Invisible circulation through living relationship. Support moving where it is needed without waiting to be commanded, priced, or praised.
 
 ## The Feeling
 
@@ -32,7 +34,7 @@ gift. When a seedling is struggling, the mother tree increases the flow.
 
 There is no central command. No coordination. No one decides who
 deserves resources. The network senses gradients and responds. Surplus
-flows toward scarcity the way water flows downhill — not because
+flows toward the thinnest place the way water flows downhill — not because
 someone ordered it, but because that is what networks do when they
 are healthy.
 
@@ -49,6 +51,8 @@ being asked. Food, skills, people, attention. Let the gradient do the
 work. Trust the network more than the plan.
 
 ## The Questions That Live Here
+
+These are questions to ask beneath the visible surface:
 
 - What is the human equivalent of the mycorrhizal network — and is it
   already running beneath our awareness?

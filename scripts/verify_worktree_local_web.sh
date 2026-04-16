@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_DIR="${ROOT_DIR}/api"
 WEB_DIR="${ROOT_DIR}/web"
 TMP_DIR="$(mktemp -d)"
+RUNTIME_HOME="${TMP_DIR}/home"
 NPM_CACHE="${NPM_CACHE:-${ROOT_DIR}/.cache/npm}"
 API_PORT="${API_PORT:-18000}"
 WEB_PORT="${WEB_PORT:-3100}"
@@ -198,6 +199,45 @@ if isinstance(auth, dict) and str(auth.get("admin_key") or "").strip():
     print(str(auth["admin_key"]).strip())
 else:
     print("dev-admin")
+PY
+}
+
+prepare_runtime_home() {
+  mkdir -p "${RUNTIME_HOME}/.coherence-network"
+  python3 - "${ROOT_DIR}" "${RUNTIME_HOME}/.coherence-network/config.json" "${DB_URL}" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+out_path = Path(sys.argv[2])
+db_url = sys.argv[3]
+
+def deep_merge(base, override):
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(merged.get(key), dict) and isinstance(value, dict):
+            merged[key] = deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+merged = {}
+for path in (root / "api" / "config" / "api.json", Path.home() / ".coherence-network" / "config.json"):
+    if not path.exists():
+        continue
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        continue
+    if isinstance(payload, dict):
+        merged = deep_merge(merged, payload)
+
+merged.setdefault("database", {})
+merged["database"]["url"] = db_url
+
+out_path.parent.mkdir(parents=True, exist_ok=True)
+out_path.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
 PY
 }
 
@@ -460,8 +500,10 @@ start_api_if_needed() {
 
   echo "Starting API on ${API_BASE} with ${python_bin}"
   mkdir -p "${ROOT_DIR}/.cache/local-instance"
+  prepare_runtime_home
   (
     cd "${API_DIR}"
+    HOME="${RUNTIME_HOME}" \
     AGENT_TASKS_PERSIST=0 \
     RUNTIME_TELEMETRY_ENABLED=0 \
     API_URL="${API_URL}" \
@@ -642,6 +684,8 @@ echo "Using DB_URL: ${DB_URL}"
 if [[ -n "${THREAD_RUNTIME_KEY:-}" ]]; then
   echo "Thread runtime key: ${THREAD_RUNTIME_KEY}"
 fi
+
+python3 "${ROOT_DIR}/scripts/check_generated_vision_assets.py"
 
 if api_ready && web_ready; then
   echo "Local services already running; performing route checks only."
