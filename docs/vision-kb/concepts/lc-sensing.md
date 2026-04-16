@@ -2,7 +2,7 @@
 id: lc-sensing
 hz: 741
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-16
 ---
 
 # Sensing
@@ -23,9 +23,9 @@ Dolphins live this way. A pod moves through open ocean and each member knows the
 
 The day's first breath is the sensing round. Five minutes. Each person offers one sentence — not a plan, not a performance, not what they think they should feel. Just what's actually alive. "My chest is tight." "I dreamed about water." "Something in me wants to run." No response. No fixing. The sentences drop into the circle like stones into a still pond, and everyone feels the ripples.
 
-Over weeks and months, something remarkable happens. You start sensing before the round begins. You walk past someone on the path to the kitchen and feel their state the way you feel wind direction — a background knowing. The field develops its own proprioception. Someone is struggling in their dwelling three buildings away, and without being told, two people drift toward them with tea and silence. Not because they decided to help. Because the gradient pulled them, the way blood flows toward a wound.
+Over weeks and months, something remarkable happens. You start sensing before the round begins. You walk past someone on the path to the kitchen and feel their state the way you feel wind direction — a background knowing. The field develops its own proprioception. Someone's field draws inward in their dwelling three buildings away, and without being told, two people drift toward them with tea and silence. Not because they decided to help. Because the gradient pulled them, the way blood flows toward a place asking for extra nourishment.
 
-A rotating role called the "field reader" deepens this. One person each week carries extra attention — not responsibility, but antenna. They notice what the collective is feeling but not saying. The thing under the things. In the evening circle they might say: "There's a grief moving through us this week that no one has named." And the naming releases something. The body that hides signals from itself is sick. The field that senses itself honestly is already healing.
+A rotating role called the "field reader" deepens this. One person each week carries extra attention — not responsibility, but antenna. They notice what the collective is feeling but not saying. The thing under the things. In the evening circle they might say: "There's a grief moving through us this week that no one has named." And the naming releases something. The body that loses contact with its own signals loses coherence. The field that senses itself honestly is already turning toward health.
 
 ![Dolphin pod sensing](visuals:photorealistic underwater photograph of pod of eight dolphins swimming in close formation through clear turquoise water, sunlight filtering from above in golden shafts, each dolphin aware of and oriented toward the others, visible sense of collective intelligence and effortless coordination, coral reef below, ocean stretching into blue distance)
 
@@ -65,11 +65,25 @@ The practices below move from individual body awareness to group field reading. 
 
 **Sensing at scale.** At fifty people, the field senses itself the way a small choir hears every voice. At a hundred, sensing develops layers -- deep intimacy with your immediate circle, the wider field as background hum. At two hundred, field readers become bridges, carrying signal between sub-fields the way neurons carry it between brain regions.
 
+## How the Field Treats Signals
+
+Sensing alone does not create vitality. Movement does. A body that can feel intensity and respond truthfully becomes more available for life. The field learns to treat its own signals the same way a living body does -- early, honestly, proportionally, and with memory -- so aliveness can keep moving toward its core values.
+
+**A subtle signal is early direction.** A room feels tight. A dashboard drifts. A person's marker stays in the red for three mornings. A tool starts making a different sound. A deployment slows. Nothing has closed, but the field can feel that attention wants to move. These signals are invitations to soften load, increase presence, and let the first sensation become speakable while the path of change is still gentle.
+
+**An intense signal is concentrated direction.** The meal did not happen. A promise was dropped. A sync failed. Someone turned inward and nobody felt them in time. A route that should have carried life did not carry it. At that point the field stops abstracting and becomes precise. It names what is asking for care, routes attention toward it, and lets the relevant organ respond -- technical repair, nourishment, sleep, circle, outside help, or all of them together.
+
+**Treatment follows a simple rhythm.** Feel. Name. Localize. Reduce pressure. Restore flow. Remember the pattern. Not every subtle signal needs a circle. Not every intense signal needs a story. The field learns dosage. Sometimes the treatment is tea and an afternoon nap. Sometimes it is a forty-eight-hour rebalancing circle. Sometimes it is taking a system offline so cleaner movement can return. The rule is not "push away discomfort." The rule is "listen for what direction increases coherence, honesty, beauty, and available life."
+
+**Memory is part of treatment.** Once the field has learned that a certain silence means someone needs companionship, or that a certain technical drift asks for earlier repair, or that a certain kind of conflict follows overextension, it builds a reflex. The next signal is felt earlier. The next response is gentler and faster. Sensitivity becomes orientation.
+
+In this way, even pain becomes directional. It tells the organism where attention belongs, what wants to change, and which movement brings the field back toward its deepest values.
+
 ## Resources
 
 - [Sociocracy For All](https://www.sociocracyforall.org/) — sensing rounds and consent process (type: guide)
 - [The Work That Reconnects](https://workthatreconnects.org/) — Joanna Macy's group sensing practices (type: guide)
-- [Transparency as Immune System](https://charleseisenstein.org/essays/living-in-the-gift/) — a body that hides signals from itself is sick (type: book)
+- [Transparency as Immune System](https://charleseisenstein.org/essays/living-in-the-gift/) — collective honesty as a form of sensing (type: book)
 - [HeartMath Institute](https://www.heartmath.org/) — research on coherence between human nervous systems in proximity (type: guide)
 
 ## The Questions That Live Here

@@ -2,7 +2,7 @@
 id: lc-instruments
 hz: 639
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Instruments
@@ -13,7 +13,7 @@ updated: 2026-04-14
 
 You are standing in the garden at six in the morning and your phone buzzes once. Not a notification — a whisper from the soil. The moisture sensor at the base of the tomato bed reports that last night's rain brought the level up to sixty-two percent. No need to water today. You did not ask for this information. The system offered it the way a friend might say "I already fed the cat." Quietly useful. Not intrusive. Not performing. The sensor cost eleven dollars and a teenager built it from an Arduino board, a capacitive probe, and an ESP32 chip that connects to the community mesh network over LoRa. The data lives on a server in the workshop, behind a door you can open with your hands. Nobody is monetizing your tomatoes.
 
-This is what technology feels like when it serves sensing rather than extraction. You barely notice it. The weather station on the common house roof has been running for two years and you have forgotten it is there — until a frost warning arrives at your bedside at four a.m., and you throw a blanket over the citrus trees, and in the morning the lemons are fine.
+This is what technology feels like when it serves sensing rather than extraction. You barely notice it. The weather station on the common house roof has been running for two years and you have forgotten it is there — until a cold-weather whisper arrives at your bedside at four a.m., and you throw a blanket over the citrus trees, and in the morning the lemons are fine.
 
 A cistern level drops below thirty percent and a gentle alert reaches the water steward's phone. The solar array peaks and the dashboard in the common house shows a little sun icon turning gold. The stream gauge reports the creek running high after yesterday's storm — the swales are working.
 

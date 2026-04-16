@@ -2,7 +2,7 @@
 id: lc-attunement-joining
 hz: 639
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Attunement (Joining)
@@ -70,7 +70,7 @@ A body does not integrate a new cell by interrogating it.
 The immune system recognizes self from other through molecular resonance —
 surface proteins that either match the body's frequency or do not.
 When they match, the cell is welcomed, fed, given work.
-When they do not match, the body does not punish. It simply does not integrate.
+When they do not match, the body does not harden. It simply waits for a truer match.
 The process is constant, quiet, and remarkably accurate.
 It happens through contact, not through evaluation.
 
@@ -103,7 +103,7 @@ not through orientation. The body arrives first. The understanding follows.
 
 An attunement period of two to four weeks where the only invitation is presence.
 A mutual sensing conversation where both the newcomer and the field have equal voice.
-A culture where leaving after attunement carries no failure — only the gift of brief contact.
+A culture where leaving after attunement carries no diminishment — only the gift of brief contact.
 A welcoming ceremony that marks the moment a new frequency joins the chord.
 A community that grows not by recruitment but by resonance.
 

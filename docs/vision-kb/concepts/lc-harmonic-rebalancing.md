@@ -2,7 +2,7 @@
 id: lc-harmonic-rebalancing
 hz: 396
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Harmonic Rebalancing
@@ -73,7 +73,7 @@ A guitar string, plucked hard, vibrates wildly. It looks chaotic.
 But within milliseconds the overtones organize themselves,
 the fundamental reasserts, and the string finds its frequency —
 not the same stillness as before, but a new, ringing stability.
-The disturbance was not a problem. It was the mechanism of sound.
+The surge was not a mistake. It was the mechanism of sound finding form.
 
 Thunderstorms work this way. Electrical tension builds
 between cloud and ground until the difference becomes unbearable.
@@ -83,11 +83,11 @@ the dust is washed away, everything smells alive.
 The atmosphere needed the storm to rebalance itself.
 
 Even the immune system does not resolve conflict. It rebalances.
-When a pathogen enters, the body does not punish it.
+When a new organism enters, the body does not moralize the contact.
 It adjusts its chemistry — inflammation, fever, antibody production —
 until a new equilibrium emerges. The body after illness
 is not the same body as before. It is a body that has integrated new information.
-It is stronger at the broken places.
+It has learned how to carry more life in the places that had to reorganize.
 
 ## Where You Can See It
 
@@ -111,6 +111,16 @@ not to arbitrate but to listen until the field reorganizes itself.
 A follow-up rhythm that trusts the new harmonic to hold and checks gently whether it did.
 A community that understands its most creative moments often begin
 with its most uncomfortable ones.
+
+## The Treatment Path
+
+Rebalancing begins before eruption when the field is listening well enough.
+
+**First come subtle signals.** Sideways speech. Repeated lateness. A room that keeps going flat. A dashboard that drifts. A person's body saying no long before their mouth does. These are directional sensations. The treatment here is light and early: naming, slowing, reducing pressure, pairing people back into contact, moving a task, opening a smaller circle while the path of change is still graceful.
+
+**Then comes a stronger signal if the first one was not followed.** Raised voices, dropped work, a failed handoff, someone leaving the room, someone leaving themselves. At this stage the field stops treating the signal as background and treats it as focused guidance. Holding first, explanation later. The relevant people are held. The wider field is informed enough to stay honest. The circle gathers quickly because stronger signals are asking for clearer attention.
+
+**Finally comes integration.** Not "everything is okay again." Something was learned. The field remembers what the early signs felt like, what dosage restored coherence, what intervention reopened beauty and flow. This memory is how rebalancing becomes living intelligence rather than repeated drama. A healthy organism becomes more skillful, more spacious, and more available for vitality the next time intensity arrives.
 
 ## Resources
 - [Sociocracy For All](https://www.sociocracyforall.org/) — consent-based conflict resolution (type: guide)

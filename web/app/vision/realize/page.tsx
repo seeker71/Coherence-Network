@@ -11,11 +11,15 @@ export const metadata: Metadata = {
 const VOCAB = [
   ["Work", "Offering", "What flows from your natural frequency"],
   ["Property", "Custodianship", "Mutual stewardship — the land holds you as you hold it"],
+  ["Planning", "Attunement", "Vision gives direction; the now gives instruction"],
   ["Budget", "Circulation", "Resources flowing like blood — visible, trusted, alive"],
+  ["Money", "Visible flow", "Tracking what moved and what needs replenishment, not who gets denied"],
   ["Leadership", "Calling", "Not assigned. The garden finds the gardener."],
   ["Meeting", "Circle", "The field sensing itself. One voice at a time."],
   ["Decision", "Emergence", "What crystallizes when the circle is fully present"],
   ["School", "Participation", "Children learn by doing real things alongside real people"],
+  ["Store", "Provision house", "Receiving, repair, borrowing, exchange"],
+  ["Restaurant", "Nourishment hall", "Meal as ritual, regulation, and shared presence"],
   ["Salary", "(dissolves)", "The field nourishes. Expression IS nourishment."],
   ["Complaint", "Honest speech", "What's felt is spoken. Directly. Today."],
   ["Retirement", "Deepening", "Elders at the center, not the edge"],
@@ -111,7 +115,7 @@ export default function RealizePage() {
 
         <div className="p-6 rounded-2xl border border-stone-800/30 bg-stone-900/20 space-y-3">
           <h3 className="text-sm font-medium text-stone-500 uppercase tracking-wider">On money</h3>
-          <p className="text-stone-400 leading-relaxed">All money is visible. Everyone can see what's here, what came in, what went out. If someone needs resources, they speak it in the circle. The field feels into it. If it's aligned, the resources flow. Trust IS the economic system — the trust that comes from eating together every day, from knowing each other's faces in the morning silence.</p>
+          <p className="text-stone-400 leading-relaxed">All money is visible. Everyone can see what moved, what came in, what went out, what is being buffered, and what needs replenishment. Money is not permission here. It is a sensing layer. If someone needs resources, they speak it in the circle. The field feels into it. If it increases vitality, the resources flow. Trust IS the economic system — the trust that comes from eating together every day, from knowing each other's faces in the morning silence.</p>
         </div>
       </section>
 
@@ -132,6 +136,46 @@ export default function RealizePage() {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* Existing Structures */}
+      <section className="space-y-6">
+        <h2 className="text-3xl font-extralight text-stone-300">Existing Structures, New Meanings</h2>
+        <p className="text-stone-400 leading-relaxed">This vision does not wait for a blank slate. It moves through the shells we already built and retunes them for aliveness. The frontier is no longer only new villages on open land. It is attuned apartments, loosened suburbs, metabolized strip malls, and towers that learn how to behave like vertical neighborhoods.</p>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          {[
+            {
+              title: "Apartment → Coherent cell",
+              body: "A small room stops being storage for a private life and becomes a quiet cell in a larger organism: less clutter, more presence, stronger links to pantry, rooftop, stairwell, workshop, and commons."
+            },
+            {
+              title: "Skyscraper → Vertical village",
+              body: "Floors become distinct communities and gathering bands: quiet nests, nourishment halls, maker floors, child commons, healing rooms, roof gardens. Elevators become circulation organs, not commute machinery."
+            },
+            {
+              title: "Store → Provision house",
+              body: "What used to push inventory becomes a place for receiving, repair, borrowing, fitting, and exchange. The checkout dissolves. What matters is whether the thing increases vitality."
+            },
+            {
+              title: "Restaurant → Nourishment hall",
+              body: "The meal is no longer purchased performance. It is a visible kitchen, a long table, fermentation, gratitude, and the regulation of bodies through shared presence."
+            },
+            {
+              title: "Lobby → Threshold chamber",
+              body: "Arrival is tuned instead of accelerated. Sound softens, breath slows, the field of the day becomes legible, and people choose where to go by resonance instead of habit."
+            },
+          ].map((item) => (
+            <div key={item.title} className="p-5 rounded-2xl border border-stone-800/30 bg-stone-900/20 space-y-2">
+              <h3 className="text-sm font-medium text-amber-300/70">{item.title}</h3>
+              <p className="text-xs text-stone-500 leading-relaxed">{item.body}</p>
+            </div>
+          ))}
+        </div>
+
+        <p className="text-sm text-stone-500 leading-relaxed">
+          The shift in understanding after the latest merge is simple: these are not only distant images any more. The organism has started building the sensing layer that can feel attention, vitality, and field rhythm, which makes the re-tuning of space feel less hypothetical and more like an early practice.
+        </p>
       </section>
 
       {/* How People Arrive */}

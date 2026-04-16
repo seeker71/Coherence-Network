@@ -2,7 +2,7 @@
 id: lc-ceremony
 hz: 963
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-16
 ---
 
 # Ceremony
@@ -55,7 +55,7 @@ A fire circle at every new moon. Seasonal ceremonies at solstice and equinox —
 
 No prescribed forms. A willingness to stand in silence when silence is what the moment needs. A willingness to sing when singing is what the moment needs. A fire that is always ready to be lit, because you never know when the moment will arrive that needs one.
 
-The only liturgy: pay attention to what wants honoring, and honor it. The only failure: walking past a moment that was asking to be held.
+The only liturgy: pay attention to what wants honoring, and honor it. The invitation is simple: do not walk past the moments that are asking to be held.
 
 ## Tending the Fire Circle
 
