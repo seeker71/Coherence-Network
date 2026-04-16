@@ -61,8 +61,9 @@ Spec → Test → Implement → CI → Review → Merge
 
 **Sync to DB**: Content only reaches visitors through the database. After any KB work:
 ```bash
-python scripts/sync_kb_to_db.py --all          # concept content → DB
-python scripts/sync_crossrefs_to_db.py          # edges → DB
+python scripts/sync_kb_to_db.py lc-space lc-energy --api-key dev-key  # touched concepts → DB + analogous-to edges
+python scripts/sync_kb_to_db.py --all                                 # full concept content + analogous-to edge reconciliation
+python scripts/sync_crossrefs_to_db.py                                # only when INDEX hierarchy / parent-of edges changed or full rebuild needed
 python scripts/generate_visuals.py --dry-run    # check for missing images
 ```
 
@@ -130,6 +131,15 @@ ssh -i ~/.ssh/hostinger-openclaw root@187.77.152.42 \
 ```
 
 Verify: `curl https://api.coherencycoin.com/api/health`
+
+Fast deploy sensing:
+1. Merge the PR.
+2. Watch the main push workflows instead of polling live endpoints blindly:
+   - `gh run list --repo seeker71/Coherence-Network --branch main --limit 5`
+   - `gh run watch <public-deploy-run-id> --repo seeker71/Coherence-Network`
+   - `gh run watch <hostinger-run-id> --repo seeker71/Coherence-Network`
+3. If `verify_web_api_deploy.sh` shows `main-head` ahead of the live API SHA while `Hostinger Auto Deploy` is still running, treat that as rollout lag, not a fresh code failure.
+4. Re-run `./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com` once the host rollout finishes.
 
 ### Infrastructure
 
