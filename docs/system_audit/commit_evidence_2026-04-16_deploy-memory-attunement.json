@@ -1,0 +1,87 @@
+{
+  "date": "2026-04-16",
+  "thread_branch": "codex/deploy-memory-attunement",
+  "commit_scope": "Tighten the deploy playbooks so agents watch the main push workflows first, recognize rollout lag as a normal transition state, use the updated KB sync path that now reconciles touched concept edges together with concept content, and fix generated-asset verification so translated concept files resolve story image names from frontmatter concept ids instead of localized filenames.",
+  "files_owned": [
+    "AGENT.md",
+    "CLAUDE.md",
+    "api/tests/test_check_generated_vision_assets.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-04-16_deploy-memory-attunement.json",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/check_generated_vision_assets.py"
+  ],
+  "idea_ids": [
+    "deploy-memory-attunement"
+  ],
+  "spec_ids": [
+    "split-review-deploy-verify-phases"
+  ],
+  "task_ids": [
+    "deploy-memory-attunement-2026-04-16"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/pull/1005",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/24535257894",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/24535400609",
+    "https://github.com/seeker71/Coherence-Network/actions/runs/24535400468"
+  ],
+  "change_files": [
+    "AGENT.md",
+    "CLAUDE.md",
+    "api/tests/test_check_generated_vision_assets.py",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/model_executor_runs.jsonl",
+    "scripts/check_generated_vision_assets.py"
+  ],
+  "change_intent": "process_only",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "git fetch origin main",
+      "git rebase --autostash origin/main",
+      "cd api && pytest -q tests/test_check_generated_vision_assets.py",
+      "python3 scripts/check_generated_vision_assets.py",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-16_deploy-memory-attunement.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-pr"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit creation, push, PR checks, merge, and post-merge deploy verification."
+  }
+}
