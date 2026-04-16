@@ -236,8 +236,12 @@ def _sense_quality(name: str, meta: dict, raw: dict) -> dict[str, Any]:
     if name == "vital":
         vitality = raw.get("vitality", {})
         score = vitality.get("vitality_score", 0)
-        activity = vitality.get("signals", [])
-        active_signals = [s for s in activity if s.get("value", 0) > 0.5]
+        # vitality_service returns signals as a dict {name: score} — not a list
+        signals = vitality.get("signals", {})
+        if isinstance(signals, dict):
+            active_signals = [n for n, v in signals.items() if isinstance(v, (int, float)) and v > 0.5]
+        else:
+            active_signals = [s for s in signals if isinstance(s, dict) and s.get("value", 0) > 0.5]
         return {
             "energy": score,
             "feeling": _feeling_vital(score),
@@ -306,10 +310,15 @@ def _sense_quality(name: str, meta: dict, raw: dict) -> dict[str, Any]:
 
     elif name == "understanding":
         vitality = raw.get("vitality", {})
-        diversity = 0
-        for sig in vitality.get("signals", []):
-            if sig.get("name") == "diversity_index":
-                diversity = sig.get("value", 0)
+        # signals is a dict {name: score} from vitality_service
+        signals = vitality.get("signals", {})
+        if isinstance(signals, dict):
+            diversity = float(signals.get("diversity_index", 0) or 0)
+        else:
+            diversity = 0
+            for sig in signals:
+                if isinstance(sig, dict) and sig.get("name") == "diversity_index":
+                    diversity = float(sig.get("value", 0) or 0)
         energy = diversity
         signs = []
         if diversity > 0.7:
