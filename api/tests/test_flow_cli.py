@@ -225,6 +225,42 @@ class TestAPIContract:
 # ---------------------------------------------------------------------------
 
 _NODE = shutil.which("node") or "/opt/homebrew/bin/node"
+_NPM = shutil.which("npm") or "/opt/homebrew/bin/npm"
+
+
+def _ensure_cli_deps() -> str | None:
+    """Install cli/node_modules if missing. Returns a skip reason if install fails.
+
+    Runs once per test session (idempotent if the lockfile hasn't changed) so the
+    CLI subprocess tests don't silently fail from a missing dependency — the
+    package-lock.json is the source of truth, and we keep the working tree
+    aligned with it.
+    """
+    if (CLI_DIR / "node_modules" / "chalk").exists():
+        return None
+    if not Path(_NPM).exists():
+        return "npm not found; cannot install CLI dependencies"
+    try:
+        result = subprocess.run(
+            [_NPM, "install", "--prefer-offline", "--no-audit", "--no-fund"],
+            cwd=str(CLI_DIR),
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except Exception as exc:
+        return f"npm install failed: {exc}"
+    if result.returncode != 0:
+        return f"npm install exited {result.returncode}: {result.stderr[-500:]}"
+    return None
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _cli_deps_installed():
+    skip_reason = _ensure_cli_deps()
+    if skip_reason:
+        pytest.skip(skip_reason, allow_module_level=False)
 
 
 def _free_port() -> int:
