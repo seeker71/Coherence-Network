@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
+import { useT, useLocale } from "@/components/MessagesProvider";
 
 const API_URL = getApiBase();
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: string): string {
   try {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    return d.toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
   } catch {
     return iso;
   }
@@ -45,6 +46,8 @@ type ContributorRelations = {
 };
 
 function ContributorsPageContent() {
+  const t = useT();
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<Contributor[]>([]);
   const [flowRows, setFlowRows] = useState<FlowItem[]>([]);
@@ -121,34 +124,35 @@ function ContributorsPageContent() {
   return (
     <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto space-y-6">
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
-        <p className="text-sm text-muted-foreground">Contributors</p>
-        <h1 className="text-3xl md:text-4xl font-light tracking-tight">Contributors</h1>
+        <p className="text-sm text-muted-foreground">{t("contributors.eyebrow")}</p>
+        <h1 className="text-3xl md:text-4xl font-light tracking-tight">{t("contributors.title")}</h1>
         <p className="max-w-3xl text-muted-foreground">
-          People and agents contributing to the network.
+          {t("contributors.lede")}
           {selectedContributorId ? (
             <>
               {" "}
-              Showing results for one contributor.
+              {t("contributors.filteredOne")}
             </>
           ) : null}
         </p>
         <p className="text-sm text-muted-foreground">
-          To register a new contributor and submit changes, use the{" "}
-          <Link href="/contribute" className="underline hover:text-foreground transition-colors duration-300">Contribution Console</Link>.
+          {t("contributors.registerHintBefore")}
+          <Link href="/contribute" className="underline hover:text-foreground transition-colors duration-300">{t("contributors.console")}</Link>
+          {t("contributors.registerHintAfter")}
         </p>
       </section>
 
-      {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
-      {status === "error" && <p className="text-destructive">Error: {error}</p>}
+      {status === "loading" && <p className="text-muted-foreground">{t("common.loading")}</p>}
+      {status === "error" && <p className="text-destructive">{t("contributors.errorPrefix")}{error}</p>}
 
       {status === "ok" && (
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
           <p className="text-sm text-muted-foreground">
-            {filteredRows.length} contributors
+            {t("contributors.countLabel", { n: filteredRows.length })}
             {selectedContributorId ? (
               <>
                 {" "}
-                | <Link href="/contributors" className="underline hover:text-foreground transition-colors duration-300">Clear filter</Link>
+                | <Link href="/contributors" className="underline hover:text-foreground transition-colors duration-300">{t("contributors.clearFilter")}</Link>
               </>
             ) : null}
           </p>
@@ -173,40 +177,42 @@ function ContributorsPageContent() {
                         ? "bg-blue-500/10 text-blue-500"
                         : "bg-green-500/10 text-green-500"
                     }`}>
-                      {(c.type || "Human").charAt(0).toUpperCase() + (c.type || "Human").slice(1).toLowerCase()}
+                      {c.type === "SYSTEM" || c.type === "system" ? t("contributors.typeSystem") :
+                        c.type === "AGENT" || c.type === "agent" ? t("contributors.typeAgent") :
+                          t("contributors.typeHuman")}
                     </span>
                   </div>
                   <Link
                     href={`/contributions?contributor_id=${encodeURIComponent(c.id)}`}
                     className="text-xs underline text-muted-foreground hover:text-foreground"
                   >
-                    View contributions
+                    {t("contributors.viewContributions")}
                   </Link>
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                   {c.email && <span>{c.email}</span>}
-                  {c.created_at && <span>Joined {formatDate(c.created_at)}</span>}
+                  {c.created_at && <span>{t("contributors.joined", { date: formatDate(c.created_at, locale) })}</span>}
                 </div>
                 {hasRelations && (
                   <div className="flex flex-wrap gap-2 pt-1">
                     {rel!.ideaIds.length > 0 && (
                       <Link href={`/ideas/${encodeURIComponent(rel!.ideaIds[0])}`} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
-                        {rel!.ideaIds.length} {rel!.ideaIds.length === 1 ? "idea" : "ideas"}
+                        {t(rel!.ideaIds.length === 1 ? "contributors.ideaOne" : "contributors.ideaMany", { n: rel!.ideaIds.length })}
                       </Link>
                     )}
                     {rel!.specIds.length > 0 && (
                       <Link href={`/specs/${encodeURIComponent(rel!.specIds[0])}`} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
-                        {rel!.specIds.length} {rel!.specIds.length === 1 ? "spec" : "specs"}
+                        {t(rel!.specIds.length === 1 ? "contributors.specOne" : "contributors.specMany", { n: rel!.specIds.length })}
                       </Link>
                     )}
                     {rel!.processIdeaIds.length > 0 && (
                       <Link href={`/flow?idea_id=${encodeURIComponent(rel!.processIdeaIds[0])}`} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
-                        {rel!.processIdeaIds.length} in process
+                        {t("contributors.inProcess", { n: rel!.processIdeaIds.length })}
                       </Link>
                     )}
                     {rel!.implementationRefs.length > 0 && (
                       <Link href={`/flow?contributor_id=${encodeURIComponent(c.id)}`} className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground">
-                        {rel!.implementationRefs.length} {rel!.implementationRefs.length === 1 ? "implementation" : "implementations"}
+                        {t(rel!.implementationRefs.length === 1 ? "contributors.implementationOne" : "contributors.implementationMany", { n: rel!.implementationRefs.length })}
                       </Link>
                     )}
                   </div>
@@ -221,9 +227,18 @@ function ContributorsPageContent() {
   );
 }
 
+function LoadingFallback() {
+  const t = useT();
+  return (
+    <main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto">
+      <p className="text-muted-foreground">{t("contributors.loading")}</p>
+    </main>
+  );
+}
+
 export default function ContributorsPage() {
   return (
-    <Suspense fallback={<main className="min-h-screen px-4 md:px-8 py-10 max-w-5xl mx-auto"><p className="text-muted-foreground">Loading contributors…</p></main>}>
+    <Suspense fallback={<LoadingFallback />}>
       <ContributorsPageContent />
     </Suspense>
   );

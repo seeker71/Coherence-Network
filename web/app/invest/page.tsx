@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 import { getApiBase } from "@/lib/api";
 import { formatUsd, humanizeManifestationStatus } from "@/lib/humanize";
 import { InvestBalanceSection } from "./InvestBalanceSection";
+import { createTranslator, type Translator } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import type { IdeaWithScore } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -29,12 +32,12 @@ function gardenStage(status: string): GardenStage {
   return "seed"; // default for idea / empty / unknown
 }
 
-const STAGE_CONFIG: Record<GardenStage, { label: string; emoji: string; index: number }> = {
-  seed: { label: "Seed", emoji: "🌱", index: 0 },
-  seedling: { label: "Seedling", emoji: "🌿", index: 1 },
-  sapling: { label: "Sapling", emoji: "🌳", index: 2 },
-  tree: { label: "Tree", emoji: "🌲", index: 3 },
-  dormant: { label: "Dormant", emoji: "🍂", index: 4 },
+const STAGE_CONFIG: Record<GardenStage, { labelKey: string; emoji: string; index: number }> = {
+  seed: { labelKey: "invest.stageSeed", emoji: "🌱", index: 0 },
+  seedling: { labelKey: "invest.stageSeedling", emoji: "🌿", index: 1 },
+  sapling: { labelKey: "invest.stageSapling", emoji: "🌳", index: 2 },
+  tree: { labelKey: "invest.stageTree", emoji: "🌲", index: 3 },
+  dormant: { labelKey: "invest.stageDormant", emoji: "🍂", index: 4 },
 };
 
 /** Legacy alias for test compatibility — returns emoji icon for a garden stage */
@@ -43,37 +46,38 @@ function stageIcon(stage: GardenStage): string {
 }
 
 /** Get action verb based on garden stage (Spec R3) */
-function gardenVerb(stage: GardenStage): string {
-  if (stage === "seed") return "Plant";
-  if (stage === "tree") return "Tend";
-  return "Water";
+function gardenVerb(stage: GardenStage, t: Translator): string {
+  if (stage === "seed") return t("invest.verbPlant");
+  if (stage === "tree") return t("invest.verbTend");
+  return t("invest.verbWater");
 }
 
 /** Growth description based on free_energy_score (Spec R5) */
-function growthDescription(score: number | null | undefined): string {
-  if (score === null || score === undefined) return "Young and untested — be the first to tend this idea.";
-  if (score > 0.7) return "This plant has strong roots and is ready to grow fast.";
-  if (score >= 0.4) return "Steady growth — regular tending will help it thrive.";
-  return "Needs attention — a little water could unlock real growth.";
+function growthDescription(score: number | null | undefined, t: Translator): string {
+  if (score === null || score === undefined) return t("invest.growthSeed");
+  if (score > 0.7) return t("invest.growthStrong");
+  if (score >= 0.4) return t("invest.growthSteady");
+  return t("invest.growthNeeds");
 }
 
 /** 5-cell stage strip with current stage pulsing (Spec R2) */
-function StageStrip({ currentStage }: { currentStage: GardenStage }) {
+function StageStrip({ currentStage, t }: { currentStage: GardenStage; t: Translator }) {
   const stageOrder: GardenStage[] = ["seed", "seedling", "sapling", "tree", "dormant"];
   const currentIndex = STAGE_CONFIG[currentStage].index;
 
   return (
-    <div className="flex items-center gap-1" role="group" aria-label={`Growth stage: ${STAGE_CONFIG[currentStage].label} (current)`}>
+    <div className="flex items-center gap-1" role="group" aria-label={`Growth stage: ${t(STAGE_CONFIG[currentStage].labelKey)}`}>
       {stageOrder.map((stage, i) => {
         const config = STAGE_CONFIG[stage];
         const isCurrent = i === currentIndex;
         const isPast = i <= currentIndex;
+        const stageLabel = t(config.labelKey);
 
         return (
           <span
             key={stage}
             role="img"
-            aria-label={`Stage: ${config.label}${isCurrent ? " (current)" : ""}`}
+            aria-label={`${stageLabel}${isCurrent ? " (current)" : ""}`}
             className={`text-base leading-none transition-all duration-300 ${
               isCurrent
                 ? "opacity-100 scale-110 ring-2 ring-emerald-500/50 rounded-full p-0.5 animate-pulse"
@@ -83,7 +87,7 @@ function StageStrip({ currentStage }: { currentStage: GardenStage }) {
             }`}
           >
             <span aria-hidden="true">{config.emoji}</span>
-            <span className="sr-only">{config.label}{isCurrent ? ", current stage" : ""}</span>
+            <span className="sr-only">{stageLabel}{isCurrent ? ", current stage" : ""}</span>
           </span>
         );
       })}
@@ -109,32 +113,32 @@ function computeRoi(idea: IdeaWithScore): number {
 }
 
 /** Expected yield badge text (Spec R2) */
-function expectedYield(roi: number): string {
+function expectedYield(roi: number, t: Translator): string {
   if (!isFinite(roi) || roi <= 0) return "—";
-  return `×${roi.toFixed(1)} expected yield`;
+  return t("invest.expectedYield", { roi: roi.toFixed(1) });
 }
 
 /** Secondary numeric details (Spec R4) */
-function SecondaryDetails({ idea }: { idea: IdeaWithScore }) {
+function SecondaryDetails({ idea, t }: { idea: IdeaWithScore; t: Translator }) {
   const roi = computeRoi(idea);
 
   return (
     <details className="group">
       <summary className="cursor-pointer text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors list-none flex items-center gap-1 select-none">
         <span className="group-open:rotate-90 inline-block transition-transform">›</span>
-        See soil facts
+        {t("invest.seeSoilFacts")}
       </summary>
       <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
         <div>
-          <p className="text-xs text-muted-foreground/80" aria-label="Growth potential (value gap)">Growth potential</p>
+          <p className="text-xs text-muted-foreground/80">{t("invest.growthPotential")}</p>
           <p className="font-medium">{formatUsd(idea.value_gap)}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground/80" aria-label="Water needed (estimated cost)">Water needed</p>
+          <p className="text-xs text-muted-foreground/80">{t("invest.waterNeeded")}</p>
           <p className="text-muted-foreground">{formatUsd(idea.estimated_cost)}</p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground/80" aria-label="Expected yield (ROI)">Expected yield</p>
+          <p className="text-xs text-muted-foreground/80">{t("invest.expectedYieldLabel")}</p>
           <p className="font-medium text-primary">{roi.toFixed(1)}x</p>
         </div>
       </div>
@@ -143,19 +147,22 @@ function SecondaryDetails({ idea }: { idea: IdeaWithScore }) {
 }
 
 export default async function InvestPage() {
-  const ideas = await loadIdeas();
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
 
+  const ideas = await loadIdeas();
   const sorted = [...ideas].sort((a, b) => computeRoi(b) - computeRoi(a));
 
   return (
     <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <header>
         <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Garden of Ideas
+          {t("invest.title")}
         </h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          Every idea you nurture grows into real code. Your attention is water —
-          direct it toward the seeds you believe in most.
+          {t("invest.lede")}
         </p>
       </header>
 
@@ -165,13 +172,13 @@ export default async function InvestPage() {
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
           <p className="text-4xl" aria-hidden="true">🌱</p>
           <p className="text-lg text-muted-foreground">
-            The garden is empty. Plant the first seed.
+            {t("invest.emptyGarden")}
           </p>
           <Link
             href="/"
             className="inline-block text-primary hover:text-foreground transition-colors underline underline-offset-4"
           >
-            Share an idea &rarr;
+            {t("ideas.shareArrow")}
           </Link>
         </div>
       ) : (
@@ -180,8 +187,9 @@ export default async function InvestPage() {
             const roi = computeRoi(idea);
             const stage = gardenStage(idea.manifestation_status);
             const stageConfig = STAGE_CONFIG[stage];
-            const actionVerb = gardenVerb(stage);
-            const description = growthDescription(idea.free_energy_score);
+            const stageLabel = t(stageConfig.labelKey);
+            const actionVerb = gardenVerb(stage, t);
+            const description = growthDescription(idea.free_energy_score, t);
 
             return (
               <div
@@ -200,8 +208,8 @@ export default async function InvestPage() {
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs rounded-full border border-border/40 px-2.5 py-0.5 bg-muted/30 text-muted-foreground">
                         <span aria-hidden="true">{stageConfig.emoji}</span>
-                        <span className="sr-only">{stageConfig.label}</span>
-                        {stageConfig.label}
+                        <span className="sr-only">{stageLabel}</span>
+                        {stageLabel}
                       </span>
                     </div>
                   </div>
@@ -221,17 +229,16 @@ export default async function InvestPage() {
 
                 {/* Growth visualization: stage strip + expected yield badge (Spec R2) */}
                 <div className="flex items-center justify-between gap-2">
-                  <StageStrip currentStage={stage} />
+                  <StageStrip currentStage={stage} t={t} />
                   <span
                     className="text-xs text-muted-foreground/70 whitespace-nowrap"
-                    aria-label={`Expected yield: ${expectedYield(roi)}`}
                   >
-                    {expectedYield(roi)}
+                    {expectedYield(roi, t)}
                   </span>
                 </div>
 
                 {/* Secondary numeric details — accessible but quieter (Spec R4) */}
-                <SecondaryDetails idea={idea} />
+                <SecondaryDetails idea={idea} t={t} />
               </div>
             );
           })}
@@ -239,12 +246,12 @@ export default async function InvestPage() {
       )}
 
       {/* Where to go next */}
-      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
-        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">Where to go next</p>
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label={t("ideas.whereNext")}>
+        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">{t("ideas.whereNext")}</p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">All ideas</Link>
-          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
-          <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">Resonance</Link>
+          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.ideas")}</Link>
+          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.contribute")}</Link>
+          <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.resonance")}</Link>
         </div>
       </nav>
     </main>

@@ -31,6 +31,13 @@ class ContributorBase(BaseModel):
     hourly_rate: Optional[Decimal] = None
     daily_cc_budget: Optional[Decimal] = Field(None, description="Max CC spend per 24h")
     monthly_cc_budget: Optional[Decimal] = Field(None, description="Max CC spend per month")
+    locale: Optional[str] = Field(
+        default=None,
+        description="Preferred language (ISO 639-1: en, de, es, id, ...). "
+                    "Drives which view of a concept the contributor sees, which language "
+                    "their new contributions default to, and the UI chrome language. "
+                    "None means no preference set — fall back to cookie/browser/default.",
+    )
 
 
 class ContributorCreate(ContributorBase):

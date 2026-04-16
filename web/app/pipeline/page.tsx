@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { readActiveWorkspaceFromCookie, withWorkspaceScope } from "@/lib/workspace";
+import { useT } from "@/components/MessagesProvider";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -248,6 +249,7 @@ function ProviderRow({
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 
 function PipelineDashboardContent() {
+  const t = useT();
   const [nodes, setNodes] = useState<NetworkNode[]>([]);
   const [activeTasks, setActiveTasks] = useState<ActivityEvent[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityEvent[]>([]);
@@ -315,30 +317,30 @@ function PipelineDashboardContent() {
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Live view</p>
-              <h1 className="text-3xl md:text-4xl font-light tracking-tight">What Is Happening Now</h1>
+              <p className="text-sm text-muted-foreground">{t("pipeline.liveView")}</p>
+              <h1 className="text-3xl md:text-4xl font-light tracking-tight">{t("pipeline.title")}</h1>
               <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-                Nodes claiming tasks, providers executing, ideas advancing through stages — the network is alive.
+                {t("pipeline.liveLede")}
               </p>
             </div>
             {lastRefresh && (
               <p className="text-xs text-muted-foreground shrink-0 tabular-nums pt-1">
-                Updated {elapsed(lastRefresh.toISOString())}
+                {t("pipeline.updated", { time: elapsed(lastRefresh.toISOString()) })}
               </p>
             )}
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/tasks" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-              Work Cards
+              {t("nav.workCards")}
             </Link>
             <Link href="/nodes" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-              Nodes
+              {t("nav.nodes")}
             </Link>
             <Link href="/ideas" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-              Ideas
+              {t("nav.ideas")}
             </Link>
             <Link href="/flow" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-              Progress
+              {t("pipeline.progress")}
             </Link>
           </div>
         </section>
@@ -346,11 +348,11 @@ function PipelineDashboardContent() {
         {/* Summary stats */}
         <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[
-            { label: "Nodes online", value: onlineNodes.length, total: nodes.length, accent: onlineNodes.length > 0 },
-            { label: "Tasks executing", value: activeTasks.length, total: null, accent: activeTasks.length > 0 },
-            { label: "Tasks pending", value: taskSummary?.pending ?? "—", total: null, accent: false },
-            { label: "Completed (stream)", value: recentCompleted, total: null, accent: recentCompleted > 0 },
-            { label: "Failed (stream)", value: recentFailed, total: null, accent: false, warn: recentFailed > 0 },
+            { label: t("pipeline.statNodesOnline"), value: onlineNodes.length, total: nodes.length, accent: onlineNodes.length > 0 },
+            { label: t("pipeline.statTasksExecuting"), value: activeTasks.length, total: null, accent: activeTasks.length > 0 },
+            { label: t("pipeline.statTasksPending"), value: taskSummary?.pending ?? "—", total: null, accent: false },
+            { label: t("pipeline.statCompletedStream"), value: recentCompleted, total: null, accent: recentCompleted > 0 },
+            { label: t("pipeline.statFailedStream"), value: recentFailed, total: null, accent: false, warn: recentFailed > 0 },
           ].map((s) => (
             <div key={s.label} className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1">
               <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -370,7 +372,7 @@ function PipelineDashboardContent() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/60" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
               </span>
-              <h2 className="text-lg font-medium">Executing Right Now</h2>
+              <h2 className="text-lg font-medium">{t("pipeline.executingNow")}</h2>
               <span className="text-sm text-muted-foreground">({activeTasks.length})</span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -408,19 +410,19 @@ function PipelineDashboardContent() {
           {/* Nodes */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">Nodes</h2>
+              <h2 className="text-lg font-medium">{t("pipeline.nodes")}</h2>
               <Link href="/nodes" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                View all →
+                {t("common.seeAll")}
               </Link>
             </div>
             {status === "loading" && (
               <div className="rounded-2xl border border-border/30 bg-card/30 p-8 text-center">
-                <p className="text-sm text-muted-foreground">Loading nodes…</p>
+                <p className="text-sm text-muted-foreground">{t("pipeline.loadingNodes")}</p>
               </div>
             )}
             {nodes.length === 0 && status === "ok" && (
               <div className="rounded-2xl border border-border/30 bg-card/30 p-8 text-center">
-                <p className="text-sm text-muted-foreground">No nodes registered.</p>
+                <p className="text-sm text-muted-foreground">{t("pipeline.noNodes")}</p>
               </div>
             )}
             <div className="space-y-3">
@@ -433,7 +435,7 @@ function PipelineDashboardContent() {
           {/* Provider health */}
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-medium">Provider Health</h2>
+              <h2 className="text-lg font-medium">{t("pipeline.providerHealth")}</h2>
               {providerStats && (
                 <span className="text-xs text-muted-foreground">
                   {providerStats.summary.healthy_providers}/{providerStats.summary.total_providers} healthy
@@ -451,13 +453,13 @@ function PipelineDashboardContent() {
             )}
             <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 px-4 py-2">
               {status === "loading" && (
-                <p className="py-4 text-sm text-muted-foreground text-center">Loading provider stats…</p>
+                <p className="py-4 text-sm text-muted-foreground text-center">{t("pipeline.loadingProvider")}</p>
               )}
               {providerStats && Object.entries(providerStats.providers).map(([name, stats]) => (
                 <ProviderRow key={name} name={name} stats={stats} />
               ))}
               {providerStats && Object.keys(providerStats.providers).length === 0 && (
-                <p className="py-4 text-sm text-muted-foreground text-center">No provider data yet.</p>
+                <p className="py-4 text-sm text-muted-foreground text-center">{t("pipeline.noProvider")}</p>
               )}
             </div>
           </section>
@@ -465,13 +467,13 @@ function PipelineDashboardContent() {
 
         {/* Activity stream */}
         <section className="space-y-3">
-          <h2 className="text-lg font-medium">Activity Stream</h2>
+          <h2 className="text-lg font-medium">{t("pipeline.activityStream")}</h2>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-1.5 max-h-96 overflow-y-auto">
             {status === "loading" && (
-              <p className="text-sm text-muted-foreground text-center py-4">Loading activity…</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t("pipeline.loadingActivity")}</p>
             )}
             {recentActivity.length === 0 && status === "ok" && (
-              <p className="text-sm text-muted-foreground text-center py-4">No recent activity.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">{t("pipeline.noActivity")}</p>
             )}
             {[...recentActivity].reverse().map((event, i) => {
               const ideaId = String(event.data?.idea_id ?? "");
@@ -510,13 +512,18 @@ function PipelineDashboardContent() {
   );
 }
 
+function PipelineLoadingFallback() {
+  const t = useT();
+  return <p className="text-muted-foreground">{t("pipeline.loadingPipeline")}</p>;
+}
+
 export default function PipelinePage() {
   return (
     <Suspense
       fallback={
         <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-7xl">
-            <p className="text-muted-foreground">Loading pipeline…</p>
+            <PipelineLoadingFallback />
           </div>
         </main>
       }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useT } from "@/components/MessagesProvider";
 
 /**
  * Shows a gentle suggestion to identify yourself for read sensing
@@ -12,6 +13,7 @@ import Link from "next/link";
 export function TrackingSuggestion({ conceptId }: { conceptId: string }) {
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     // Check if user already has a contributor ID
@@ -46,12 +48,10 @@ export function TrackingSuggestion({ conceptId }: { conceptId: string }) {
       <div className="rounded-2xl border border-amber-500/20 bg-stone-950/95 backdrop-blur-sm p-5 shadow-2xl space-y-3">
         <div className="flex items-start justify-between">
           <p className="text-sm text-stone-300 leading-relaxed pr-4">
-            Identify yourself and the network starts building your frequency profile —
-            a living map of what resonates with you. You will see which creators align
-            with your path, discover concepts you have not found yet, and when you
-            contribute your own work, CC flows back to everyone who shaped your understanding.
+            {t("profileNudge.body")}
           </p>
           <button
+            aria-label={t("profileNudge.dismissAria")}
             onClick={() => { setDismissed(true); sessionStorage.setItem("tracking_suggestion_dismissed", "1"); }}
             className="text-stone-600 hover:text-stone-400 text-sm shrink-0"
           >
@@ -61,15 +61,15 @@ export function TrackingSuggestion({ conceptId }: { conceptId: string }) {
         <div className="flex gap-2">
           <Link href="/join"
             className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-xs font-medium">
-            Start your profile
+            {t("profileNudge.startCta")}
           </Link>
           <button
             onClick={() => { setDismissed(true); sessionStorage.setItem("tracking_suggestion_dismissed", "1"); }}
             className="px-4 py-2 rounded-xl border border-stone-800/40 text-stone-500 text-xs">
-            Not now
+            {t("profileNudge.laterCta")}
           </button>
         </div>
-        <p className="text-xs text-stone-600">Reading is always free. Your profile is yours to build.</p>
+        <p className="text-xs text-stone-600">{t("profileNudge.footer")}</p>
       </div>
     </div>
   );

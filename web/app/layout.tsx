@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
 
@@ -7,7 +8,10 @@ import LiveUpdatesController from "@/components/live_updates_controller";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ExpertModeProvider } from "@/components/expert-mode-context";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { MessagesProvider } from "@/components/MessagesProvider";
 import { loadPublicWebConfig } from "@/lib/app-config";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
+import { getMessages, createTranslator } from "@/lib/i18n";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 
 const spaceGrotesk = Space_Grotesk({
@@ -37,14 +41,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const publicConfig = loadPublicWebConfig();
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  const messages = getMessages(lang);
+  const fallback = getMessages(DEFAULT_LOCALE);
+  const t = createTranslator(lang);
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={lang} suppressHydrationWarning>
       <head>
         {/*
           Anti-flash script — Spec 165.
@@ -67,19 +77,21 @@ export default function RootLayout({
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:rounded focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
         >
-          Skip to main content
+          {t("common.skipToContent")}
         </a>
         <RuntimeBeacon />
-        <ThemeProvider>
-          <ExpertModeProvider>
-            <SiteHeader />
-            <LiveUpdatesController />
-            <main id="main-content" className="pb-16 md:pb-0">
-              {children}
-            </main>
-            <MobileBottomNav />
-          </ExpertModeProvider>
-        </ThemeProvider>
+        <MessagesProvider lang={lang} messages={messages} fallback={fallback}>
+          <ThemeProvider>
+            <ExpertModeProvider>
+              <SiteHeader />
+              <LiveUpdatesController />
+              <main id="main-content" className="pb-16 md:pb-0">
+                {children}
+              </main>
+              <MobileBottomNav />
+            </ExpertModeProvider>
+          </ThemeProvider>
+        </MessagesProvider>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/components/MessagesProvider";
 
 type FederationNode = {
   node_id: string;
@@ -24,6 +25,7 @@ export default function MessageForm({
   nodes: FederationNode[];
   apiBase: string;
 }) {
+  const t = useT();
   const [targetNode, setTargetNode] = useState<string>("broadcast");
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
@@ -102,7 +104,7 @@ export default function MessageForm({
     <>
       {/* Message compose form */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4 text-sm">
-        <h2 className="text-xl font-semibold">Send Message</h2>
+        <h2 className="text-xl font-semibold">{t("messageForm.sendHeading")}</h2>
         <form onSubmit={handleSend} className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             <select
@@ -110,7 +112,7 @@ export default function MessageForm({
               onChange={(e) => setTargetNode(e.target.value)}
               className="rounded-lg border border-border/40 bg-background/60 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500/50"
             >
-              <option value="broadcast">Broadcast (all nodes)</option>
+              <option value="broadcast">{t("messageForm.broadcast")}</option>
               {nodes.map((n) => (
                 <option key={n.node_id} value={n.node_id}>
                   {n.hostname}
@@ -121,7 +123,7 @@ export default function MessageForm({
               type="text"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              placeholder="Type a message..."
+              placeholder={t("messageForm.placeholder")}
               className="flex-1 rounded-lg border border-border/40 bg-background/60 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500/50"
             />
             <button
@@ -129,7 +131,7 @@ export default function MessageForm({
               disabled={sending || !messageText.trim()}
               className="rounded-lg bg-amber-600 hover:bg-amber-500 disabled:opacity-40 px-4 py-2 text-sm font-medium text-white transition-colors"
             >
-              {sending ? "Sending..." : "Send"}
+              {sending ? `${t("messageForm.loading")}` : t("messageForm.sendBtn")}
             </button>
           </div>
           {sendResult && (
@@ -142,13 +144,13 @@ export default function MessageForm({
 
       {/* Recent messages */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-4 text-sm">
-        <h2 className="text-xl font-semibold">Recent Messages</h2>
+        <h2 className="text-xl font-semibold">{t("messageForm.recentHeading")}</h2>
         <select
           value={selectedNodeForMessages}
           onChange={(e) => loadMessages(e.target.value)}
           className="rounded-lg border border-border/40 bg-background/60 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-amber-500/50"
         >
-          <option value="">Select a node to view messages</option>
+          <option value="">{t("messageForm.selectNode")}</option>
           {nodes.map((n) => (
             <option key={n.node_id} value={n.node_id}>
               {n.hostname}
@@ -156,10 +158,10 @@ export default function MessageForm({
           ))}
         </select>
 
-        {loadingMessages && <p className="text-muted-foreground">Loading messages...</p>}
+        {loadingMessages && <p className="text-muted-foreground">{t("messageForm.loading")}</p>}
 
         {!loadingMessages && selectedNodeForMessages && messages.length === 0 && (
-          <p className="text-muted-foreground">No messages found.</p>
+          <p className="text-muted-foreground">{t("messageForm.noMessages")}</p>
         )}
 
         {messages.length > 0 && (
