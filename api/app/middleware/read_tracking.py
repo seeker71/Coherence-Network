@@ -147,6 +147,9 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
                 # Check if reader voluntarily identified themselves
                 # X-Contributor-Id header: voluntary on reads, required on writes
                 reader_id = request.headers.get("x-contributor-id", "")
+                session_fingerprint = request.headers.get("x-session-fingerprint", "")
+                page_route = request.headers.get("x-page-route", "")
+                referrer_contributor_id = request.headers.get("x-referrer-contributor-id", "")
 
                 # Check if this is an NFT/registered asset (has a graph node)
                 # NFT assets: identified reads encouraged for CC sensing
@@ -170,16 +173,37 @@ class ReadTrackingMiddleware(BaseHTTPMiddleware):
                     if _mem_counters[asset_id] % SAMPLE_RATE == 0:
                         try:
                             from app.services import read_tracking_service
-                            read_tracking_service.record_read(asset_id, concept_id)
+                            read_tracking_service.record_read(
+                                asset_id, concept_id,
+                                contributor_id=reader_id or None,
+                            )
                         except Exception as e:
                             log.debug("read_tracking: %s", e)
                 elif tier == 1:
                     # Full — every read recorded
                     try:
                         from app.services import read_tracking_service
-                        read_tracking_service.record_read(asset_id, concept_id)
+                        read_tracking_service.record_read(
+                            asset_id, concept_id,
+                            contributor_id=reader_id or None,
+                        )
                     except Exception as e:
                         log.debug("read_tracking: %s", e)
+
+                # Record per-contributor view event for EVERY matched read
+                # (view events are cheap, per-contributor tracking matters for CC)
+                try:
+                    from app.services import read_tracking_service
+                    read_tracking_service.record_view(
+                        asset_id=asset_id,
+                        concept_id=concept_id,
+                        contributor_id=reader_id or None,
+                        session_fingerprint=session_fingerprint or None,
+                        source_page=page_route or None,
+                        referrer_contributor_id=referrer_contributor_id or None,
+                    )
+                except Exception as e:
+                    log.debug("read_tracking: view event failed: %s", e)
 
                 # Monitor our own overhead
                 elapsed_us = (time.monotonic() - t0) * 1_000_000

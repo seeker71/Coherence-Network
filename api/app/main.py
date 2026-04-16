@@ -722,6 +722,14 @@ app.include_router(ui_preferences_router.router)
 from app.routers import interest as interest_router  # noqa: E402
 app.include_router(interest_router.router, tags=["interest"])
 
+# View tracking — per-contributor view events, trending, discovery chains
+from app.routers import views as views_router  # noqa: E402
+app.include_router(views_router.router, prefix="/api", tags=["views"])
+
+# Wallet integration — connect, verify, manage on-chain wallets
+from app.routers import wallets as wallets_router  # noqa: E402
+app.include_router(wallets_router.router, prefix="/api", tags=["wallets"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).

@@ -7,6 +7,7 @@ import LiveUpdatesController from "@/components/live_updates_controller";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ExpertModeProvider } from "@/components/expert-mode-context";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import WalletProvider from "@/components/wallet/WalletProvider";
 import { loadPublicWebConfig } from "@/lib/app-config";
 import { IBM_Plex_Mono, Space_Grotesk } from "next/font/google";
 
@@ -70,16 +71,18 @@ export default function RootLayout({
           Skip to main content
         </a>
         <RuntimeBeacon />
-        <ThemeProvider>
-          <ExpertModeProvider>
-            <SiteHeader />
-            <LiveUpdatesController />
-            <main id="main-content" className="pb-16 md:pb-0">
-              {children}
-            </main>
-            <MobileBottomNav />
-          </ExpertModeProvider>
-        </ThemeProvider>
+        <WalletProvider>
+          <ThemeProvider>
+            <ExpertModeProvider>
+              <SiteHeader />
+              <LiveUpdatesController />
+              <main id="main-content" className="pb-16 md:pb-0">
+                {children}
+              </main>
+              <MobileBottomNav />
+            </ExpertModeProvider>
+          </ThemeProvider>
+        </WalletProvider>
       </body>
     </html>
   );
