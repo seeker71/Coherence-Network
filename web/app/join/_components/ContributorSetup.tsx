@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useT } from "@/components/MessagesProvider";
 
 type KeypairData = { public_key_hex: string; private_key_hex: string; fingerprint: string; algorithm: string };
 
 export function ContributorSetup() {
+  const t = useT();
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<"generate" | "bring" | "wallet" | null>(null);
   const [contributorId, setContributorId] = useState("");
@@ -21,12 +23,12 @@ export function ContributorSetup() {
     setError(null);
     try {
       const r = await fetch("/api/contributors/generate-keypair", { method: "POST" });
-      if (!r.ok) throw new Error("Failed to generate keypair");
+      if (!r.ok) throw new Error(t("join.failGenerate"));
       const data = await r.json();
       setKeypair(data);
       setStep(2);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error generating keypair");
+      setError(e instanceof Error ? e.message : t("join.errorGenerating"));
     } finally {
       setLoading(false);
     }
@@ -42,20 +44,19 @@ export function ContributorSetup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ public_key_hex: keypair.public_key_hex }),
       });
-      if (!r.ok) throw new Error("Failed to register");
+      if (!r.ok) throw new Error(t("join.failRegister"));
       const data = await r.json();
       if (data.registered) {
         setRegistered(true);
-        // Store contributor ID in localStorage for read sensing
         localStorage.setItem("coherence_contributor_id", contributorId.trim());
         localStorage.setItem("coherence_public_key", keypair.public_key_hex);
         localStorage.setItem("coherence_fingerprint", keypair.fingerprint);
         setStep(4);
       } else {
-        throw new Error(data.error || "Registration failed");
+        throw new Error(data.error || t("join.failRegister"));
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error registering");
+      setError(e instanceof Error ? e.message : t("join.errorRegistering"));
     } finally {
       setLoading(false);
     }
@@ -71,14 +72,13 @@ export function ContributorSetup() {
           <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
             step > 1 ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
           }`}>{step > 1 ? "\u2713" : "1"}</span>
-          <h2 className="text-lg font-light text-stone-300">Generate Your Identity</h2>
+          <h2 className="text-lg font-light text-stone-300">{t("join.step1Title")}</h2>
         </div>
 
         {step === 1 && (
           <>
             <p className="text-sm text-stone-400 leading-relaxed">
-              Your identity is an Ed25519 cryptographic keypair. The public key is your address in the network.
-              The private key stays with you — it proves you are who you say you are.
+              {t("join.step1Body")}
             </p>
             <div className="flex gap-3">
               <button
@@ -86,29 +86,28 @@ export function ContributorSetup() {
                 disabled={loading}
                 className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40"
               >
-                {loading ? "Generating..." : "Generate Keypair"}
+                {loading ? t("join.step1Generating") : t("join.step1Generate")}
               </button>
               <button
                 onClick={() => { setMode("bring"); setStep(2); }}
                 className="px-5 py-2.5 rounded-xl border border-stone-800/40 text-stone-500 hover:text-stone-300 transition-all text-sm"
               >
-                I have my own key
+                {t("join.step1HaveKey")}
               </button>
               <button
                 onClick={() => { setMode("wallet"); setStep(2); }}
                 className="px-5 py-2.5 rounded-xl border border-stone-800/40 text-stone-500 hover:text-stone-300 transition-all text-sm"
               >
-                Use my wallet
+                {t("join.step1UseWallet")}
               </button>
             </div>
             <p className="text-xs text-stone-600">
-              Bring your own Ed25519 key, or connect your existing EVM wallet (MetaMask, Rainbow, etc.)
-              for on-chain CC sensing. Your keys never leave your control.
+              {t("join.step1Footnote")}
             </p>
           </>
         )}
         {step > 1 && keypair && (
-          <p className="text-xs text-emerald-400/60">Keypair generated: {keypair.fingerprint}</p>
+          <p className="text-xs text-emerald-400/60">{t("join.step1Ready", { fingerprint: keypair.fingerprint })}</p>
         )}
       </section>
 
@@ -121,19 +120,19 @@ export function ContributorSetup() {
             <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
               step > 2 ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
             }`}>{step > 2 ? "\u2713" : "2"}</span>
-            <h2 className="text-lg font-light text-stone-300">Save Your Private Key</h2>
+            <h2 className="text-lg font-light text-stone-300">{t("join.step2Title")}</h2>
           </div>
 
           {step === 2 && mode === "generate" && keypair && (
             <>
               <div className="rounded-xl border border-red-800/20 bg-red-900/5 p-4 space-y-2">
-                <p className="text-xs text-red-300/80 font-medium">This is shown once. Save it now.</p>
+                <p className="text-xs text-red-300/80 font-medium">{t("join.step2ShownOnce")}</p>
                 <code className="block text-xs text-stone-300 font-mono break-all bg-stone-900/50 p-3 rounded-lg select-all">
                   {keypair.private_key_hex}
                 </code>
               </div>
               <div className="space-y-2">
-                <p className="text-xs text-stone-500">Your public key (this is shared):</p>
+                <p className="text-xs text-stone-500">{t("join.step2PublicLabel")}</p>
                 <code className="block text-xs text-amber-400/50 font-mono break-all bg-stone-900/30 p-2 rounded-lg">
                   {keypair.public_key_hex}
                 </code>
@@ -145,32 +144,31 @@ export function ContributorSetup() {
                   onChange={(e) => setPrivateSaved(e.target.checked)}
                   className="rounded border-stone-700"
                 />
-                I have saved my private key somewhere safe
+                {t("join.step2Confirm")}
               </label>
               <button
                 onClick={() => setStep(3)}
                 disabled={!privateSaved}
                 className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Continue
+                {t("join.step2Continue")}
               </button>
             </>
           )}
           {step === 2 && mode === "wallet" && (
             <>
               <p className="text-sm text-stone-400">
-                Connect your EVM wallet. Your wallet address becomes your contributor identity.
-                CC earned on-chain settles directly to this address. Full self-custody — we never hold your keys.
+                {t("join.step2WalletBody")}
               </p>
               <input
                 value={ownPublicKey}
                 onChange={(e) => setOwnPublicKey(e.target.value.replace(/\s/g, ""))}
-                placeholder="0x... (your wallet address)"
+                placeholder={t("join.step2WalletPlaceholder")}
                 className="w-full px-3 py-2 bg-stone-900/50 border border-stone-800/40 rounded-xl text-sm text-stone-300 font-mono focus:outline-none focus:border-amber-500/30"
               />
               <div className="text-xs text-stone-600 space-y-1">
-                <p>Paste your wallet address, or connect via WalletConnect (coming soon).</p>
-                <p>This address will be used for Story Protocol IP registration, x402 micropayments, and USDC settlement.</p>
+                <p>{t("join.step2WalletHelp1")}</p>
+                <p>{t("join.step2WalletHelp2")}</p>
               </div>
               <button
                 onClick={() => {
@@ -181,20 +179,19 @@ export function ContributorSetup() {
                 disabled={ownPublicKey.length < 10}
                 className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Use this wallet
+                {t("join.step2UseWallet")}
               </button>
             </>
           )}
           {step === 2 && mode === "bring" && (
             <>
               <p className="text-sm text-stone-400">
-                Paste your Ed25519 public key (hex encoded, 64 characters).
-                Your private key never touches this server.
+                {t("join.step2BringBody")}
               </p>
               <input
                 value={ownPublicKey}
                 onChange={(e) => setOwnPublicKey(e.target.value.replace(/\s/g, ""))}
-                placeholder="Ed25519 public key (64 hex characters)"
+                placeholder={t("join.step2BringPlaceholder")}
                 className="w-full px-3 py-2 bg-stone-900/50 border border-stone-800/40 rounded-xl text-sm text-stone-300 font-mono focus:outline-none focus:border-amber-500/30"
               />
               <button
@@ -205,7 +202,7 @@ export function ContributorSetup() {
                 disabled={ownPublicKey.length < 32}
                 className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Use this key
+                {t("join.step2UseKey")}
               </button>
             </>
           )}
@@ -221,17 +218,17 @@ export function ContributorSetup() {
             <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
               step > 3 ? "bg-emerald-500/20 text-emerald-300" : "bg-amber-500/20 text-amber-300"
             }`}>{step > 3 ? "\u2713" : "3"}</span>
-            <h2 className="text-lg font-light text-stone-300">Choose Your Contributor Name</h2>
+            <h2 className="text-lg font-light text-stone-300">{t("join.step3Title")}</h2>
           </div>
 
           {step === 3 && (
             <>
-              <p className="text-sm text-stone-400">This is how you appear in the network. Lowercase, hyphens allowed.</p>
+              <p className="text-sm text-stone-400">{t("join.step3Body")}</p>
               <div className="flex gap-2">
                 <input
                   value={contributorId}
                   onChange={(e) => setContributorId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                  placeholder="your-name"
+                  placeholder={t("join.step3Placeholder")}
                   className="flex-1 px-3 py-2 bg-stone-900/50 border border-stone-800/40 rounded-xl text-sm text-stone-300 focus:outline-none focus:border-amber-500/30"
                 />
                 <button
@@ -239,7 +236,7 @@ export function ContributorSetup() {
                   disabled={loading || !contributorId.trim()}
                   className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium disabled:opacity-40"
                 >
-                  {loading ? "Registering..." : "Register"}
+                  {loading ? t("join.step3Registering") : t("join.step3Register")}
                 </button>
               </div>
             </>
@@ -252,33 +249,33 @@ export function ContributorSetup() {
         <section className="rounded-2xl border border-emerald-800/20 bg-emerald-900/5 p-6 space-y-4">
           <div className="flex items-center gap-3">
             <span className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium bg-emerald-500/20 text-emerald-300">{"\u2713"}</span>
-            <h2 className="text-lg font-light text-emerald-300">You Are In The Network</h2>
+            <h2 className="text-lg font-light text-emerald-300">{t("join.step4Title")}</h2>
           </div>
 
           <div className="space-y-2 text-sm text-stone-400">
-            <div>Contributor: <span className="text-stone-300 font-medium">{contributorId}</span></div>
-            <div>Fingerprint: <span className="text-amber-400/60 font-mono">{keypair?.fingerprint}</span></div>
-            <div>Public key: <span className="text-amber-400/40 font-mono text-xs">{keypair?.public_key_hex.slice(0, 24)}...</span></div>
+            <div>{t("join.step4ContributorLabel")} <span className="text-stone-300 font-medium">{contributorId}</span></div>
+            <div>{t("join.step4FingerprintLabel")} <span className="text-amber-400/60 font-mono">{keypair?.fingerprint}</span></div>
+            <div>{t("join.step4PublicKeyLabel")} <span className="text-amber-400/40 font-mono text-xs">{keypair?.public_key_hex.slice(0, 24)}...</span></div>
           </div>
 
           <div className="space-y-3 pt-4 border-t border-stone-800/20">
-            <p className="text-sm text-stone-300 font-medium">What happens now:</p>
+            <p className="text-sm text-stone-300 font-medium">{t("join.step4Heading")}</p>
             <div className="space-y-2 text-sm text-stone-400">
               <div className="flex gap-2">
                 <span className="text-amber-400/50 shrink-0">{"\u2726"}</span>
-                <span>Your reads on this site are now sensed with your contributor ID — building your frequency profile</span>
+                <span>{t("join.step4Point1")}</span>
               </div>
               <div className="flex gap-2">
                 <span className="text-amber-400/50 shrink-0">{"\u2726"}</span>
-                <span>NFT assets will suggest you identify yourself for sensing — because every sensed view flows CC to the creator</span>
+                <span>{t("join.step4Point2")}</span>
               </div>
               <div className="flex gap-2">
                 <span className="text-amber-400/50 shrink-0">{"\u2726"}</span>
-                <span>When you contribute (an article, a blueprint, a hosted node), you start generating CC</span>
+                <span>{t("join.step4Point3")}</span>
               </div>
               <div className="flex gap-2">
                 <span className="text-amber-400/50 shrink-0">{"\u2726"}</span>
-                <span>Your reading history shapes where your CC flows — to the creators who resonated with you</span>
+                <span>{t("join.step4Point4")}</span>
               </div>
             </div>
           </div>
@@ -286,20 +283,20 @@ export function ContributorSetup() {
           <div className="flex gap-3 pt-4">
             <Link href="/vision/economy"
               className="px-5 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-sm font-medium">
-              Explore the Economy
+              {t("join.step4ExploreEconomy")}
             </Link>
             <Link href="/vision"
               className="px-5 py-2.5 rounded-xl border border-stone-800/40 text-stone-500 hover:text-stone-300 transition-all text-sm">
-              Browse Concepts
+              {t("join.step4BrowseConcepts")}
             </Link>
             <Link href="/verify"
               className="px-5 py-2.5 rounded-xl border border-stone-800/40 text-stone-500 hover:text-stone-300 transition-all text-sm">
-              Verify the Math
+              {t("join.step4VerifyMath")}
             </Link>
           </div>
 
           <p className="text-xs text-stone-600 pt-2">
-            Your public key is verifiable at: <code className="text-amber-400/40">/api/contributors/{contributorId}/public-key</code>
+            {t("join.step4VerifyHint")} <code className="text-amber-400/40">/api/contributors/{contributorId}/public-key</code>
           </p>
         </section>
       )}

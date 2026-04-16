@@ -1,5 +1,7 @@
 /** Shared types for Living Collective vision pages. */
 
+import type { LanguageMeta } from "@/lib/locales";
+
 export type Concept = {
   id: string;
   name: string;
@@ -22,6 +24,7 @@ export type Concept = {
   location_adaptations?: Array<{ climate: string; notes: string }>;
   visuals?: Array<{ prompt: string; caption: string }>;
   cost_notes?: string;
+  language_meta?: LanguageMeta;
 };
 
 export type Edge = { id: string; from: string; to: string; type: string };

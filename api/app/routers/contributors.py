@@ -39,6 +39,7 @@ def _node_to_contributor(node: dict) -> Contributor:
         email=email,
         wallet_address=node.get("wallet_address") or None,
         hourly_rate=float(node["hourly_rate"]) if node.get("hourly_rate") else None,
+        locale=node.get("locale") or None,
     )
 
 

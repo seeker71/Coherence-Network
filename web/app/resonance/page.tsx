@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 import { getApiBase } from "@/lib/api";
 import { formatUsd } from "@/lib/humanize";
+import { createTranslator, type Translator } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
 export const metadata: Metadata = {
   title: "Resonance",
@@ -42,10 +45,11 @@ type NewsItem = {
   source: string;
 };
 
-async function loadResonance(): Promise<ResonanceItem[]> {
+async function loadResonance(lang: LocaleCode): Promise<ResonanceItem[]> {
   try {
     const API = getApiBase();
-    const res = await fetch(`${API}/api/ideas/resonance?window_hours=72&limit=30`, {
+    const langParam = lang === DEFAULT_LOCALE ? "" : `&lang=${lang}`;
+    const res = await fetch(`${API}/api/ideas/resonance?window_hours=72&limit=30${langParam}`, {
       cache: "no-store",
     });
     if (!res.ok) return [];
@@ -70,13 +74,15 @@ async function loadActivity(ideaId: string): Promise<ActivityEvent[]> {
   }
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: Translator): string {
   const diff = Date.now() - new Date(iso).getTime();
-  const hours = Math.floor(diff / 3600000);
-  if (hours < 1) return "just now";
-  if (hours < 24) return `${hours}h ago`;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return t("time.justNow");
+  if (minutes < 60) return t("time.minutesAgo", { n: minutes });
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t("time.hoursAgo", { n: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t("time.daysAgo", { n: days });
 }
 
 function statusIcon(status: string): string {
@@ -109,10 +115,11 @@ async function loadNewsFeed(): Promise<NewsItem[]> {
   }
 }
 
-async function loadFallbackIdeas(): Promise<FallbackIdea[]> {
+async function loadFallbackIdeas(lang: LocaleCode): Promise<FallbackIdea[]> {
   try {
     const API = getApiBase();
-    const res = await fetch(`${API}/api/ideas?limit=60`, { cache: "no-store" });
+    const langParam = lang === DEFAULT_LOCALE ? "" : `&lang=${lang}`;
+    const res = await fetch(`${API}/api/ideas?limit=60${langParam}`, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     const ideas: FallbackIdea[] = data.ideas ?? [];
@@ -125,12 +132,16 @@ async function loadFallbackIdeas(): Promise<FallbackIdea[]> {
 }
 
 export default async function ResonancePage() {
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
+
   const [items, newsItems] = await Promise.all([
-    loadResonance(),
+    loadResonance(lang),
     loadNewsFeed(),
   ]);
 
-  // Load activity for top items
   const itemsWithActivity = await Promise.all(
     items.slice(0, 15).map(async (item) => ({
       ...item,
@@ -142,16 +153,15 @@ export default async function ResonancePage() {
     <main className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       <header>
         <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Resonance
+          {t("resonance.title")}
         </h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          This is the heartbeat of the network. Every question asked, every spec
-          written, every contribution — it shows up here.
+          {t("resonance.lede")}
         </p>
       </header>
 
       {itemsWithActivity.length === 0 ? (
-        <FallbackIdeasSection />
+        <FallbackIdeasSection lang={lang} t={t} />
       ) : (
         <div className="space-y-4">
           {itemsWithActivity.map((item, idx) => (
@@ -170,11 +180,11 @@ export default async function ResonancePage() {
                   </Link>
                   <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
                     <span>
-                      Energy: {item.free_energy_score?.toFixed(1) || "?"}
+                      {t("resonance.energy")}: {item.free_energy_score?.toFixed(1) || "?"}
                     </span>
                     <span>&middot;</span>
                     <span>
-                      {timeAgo(item.last_activity_at)}
+                      {timeAgo(item.last_activity_at, t)}
                     </span>
                   </div>
                 </div>
@@ -182,7 +192,7 @@ export default async function ResonancePage() {
                   href={`/ideas/${item.idea_id}`}
                   className="shrink-0 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
                 >
-                  Join
+                  {t("resonance.join")}
                 </Link>
               </div>
 
@@ -198,7 +208,7 @@ export default async function ResonancePage() {
                       </span>
                       <span className="flex-1">{event.summary}</span>
                       <span className="shrink-0 text-xs text-muted-foreground/80">
-                        {timeAgo(event.timestamp)}
+                        {timeAgo(event.timestamp, t)}
                       </span>
                     </div>
                   ))}
@@ -212,9 +222,9 @@ export default async function ResonancePage() {
       {/* News Feed */}
       {newsItems.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold text-foreground">News Feed</h2>
+          <h2 className="text-xl font-semibold text-foreground">{t("resonance.newsFeed")}</h2>
           <p className="text-sm text-muted-foreground">
-            Latest headlines from across the network&rsquo;s sources.
+            {t("resonance.newsFeedLede")}
           </p>
           <div className="space-y-3">
             {newsItems.map((news, idx) => (
@@ -238,7 +248,7 @@ export default async function ResonancePage() {
                       {news.published_at && (
                         <>
                           <span>&middot;</span>
-                          <span>{timeAgo(news.published_at)}</span>
+                          <span>{timeAgo(news.published_at, t)}</span>
                         </>
                       )}
                     </div>
@@ -251,32 +261,32 @@ export default async function ResonancePage() {
       )}
 
       {/* Where to go next */}
-      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
-        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">Where to go next</p>
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label={t("ideas.whereNext")}>
+        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">{t("ideas.whereNext")}</p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">All ideas</Link>
-          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
-          <Link href="/invest" className="text-amber-600 dark:text-amber-400 hover:underline">Invest</Link>
+          <Link href="/ideas" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.ideas")}</Link>
+          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.contribute")}</Link>
+          <Link href="/invest" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.invest")}</Link>
         </div>
       </nav>
     </main>
   );
 }
 
-async function FallbackIdeasSection() {
-  const ideas = await loadFallbackIdeas();
+async function FallbackIdeasSection({ lang, t }: { lang: LocaleCode; t: Translator }) {
+  const ideas = await loadFallbackIdeas(lang);
 
   if (ideas.length === 0) {
     return (
       <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center">
         <p className="text-muted-foreground mb-3">
-          The network is quiet right now. Be the first to share an idea.
+          {t("resonance.quiet")}
         </p>
         <Link
           href="/"
           className="text-primary hover:text-foreground transition-colors underline underline-offset-4"
         >
-          Share an idea &rarr;
+          {t("ideas.shareArrow")}
         </Link>
       </div>
     );
@@ -285,7 +295,7 @@ async function FallbackIdeasSection() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground text-center">
-        No recent resonance activity. Here are the most active ideas:
+        {t("resonance.noRecent")}
       </p>
       {ideas.map((idea, idx) => (
         <article
@@ -302,7 +312,7 @@ async function FallbackIdeasSection() {
                 {statusIcon(idea.manifestation_status)} {idea.name}
               </Link>
               <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
-                <span>Growth potential: {formatUsd(idea.value_gap)}</span>
+                <span>{t("resonance.growthPotential", { amount: formatUsd(idea.value_gap) })}</span>
                 <span>&middot;</span>
                 <span>{idea.manifestation_status}</span>
               </div>
@@ -311,7 +321,7 @@ async function FallbackIdeasSection() {
               href={`/ideas/${encodeURIComponent(idea.id)}`}
               className="shrink-0 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
             >
-              Learn more
+              {t("common.learnMore")}
             </Link>
           </div>
         </article>
