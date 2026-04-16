@@ -90,6 +90,20 @@ But the forest does *sense*. Every nutrient exchange leaves a chemical trace. Ev
 
 CC works the same way. The sensing is not a toll booth. It is the forest remembering where its nutrients went and what grew from them. The organism knowing itself. A healthy economy does not ask how to withhold flow. It asks how to keep every part fed without letting circulation stagnate into hoarding.
 
+## Embodied Now
+
+The living economy does not begin when every contribution is perfectly measured. It begins the moment a group leaves the physical shell in place and questions everything else: the names of things, when they open, who they are for, what counts as contribution, how buffers are held, and how access stops being used as leverage.
+
+**A city creator commons.** One floor in an existing building becomes a shared work organism: open studio hours, common tools, a visible meal buffer, published output, and attribution that stays attached as work moves. The first shift is not complex software. It is moving from private hustle to public contribution.
+
+**An urban provision house.** A storefront stops treating every interaction as a sale. Repair, borrowing, fitting, pantry flow, shared learning, and neighborhood referrals start living in the same room. Some old-money interfaces remain because the wider world still exists, but inside the node the question becomes "what increased vitality here today?"
+
+**A suburban support ring.** Several households share staples, child support, rides, tools, and a modest resilience buffer for illness, winter, and repair. The practice is simple: one weekly meal, one visible board or ledger, one truthful conversation about what is abundant and what is needed.
+
+**A rural anchor membrane.** A house, barn, or greenhouse becomes the place where surplus eggs, preserves, seedlings, workshop hours, guest beds, and care capacity move through one visible membrane instead of a dozen separate side hustles. The field becomes economically legible because the exchange is finally local enough to feel.
+
+**A digital creator field.** Work stays open. Attribution, discovery paths, and downstream creation are sensed clearly enough that contributors can be nourished without locking knowledge behind paywalls. This is why the creator economy is the doorway: it is where the first tissue is easiest to see.
+
 ## Where You Can See It
 
 **Right now, on this page.** The verification endpoints are live:

@@ -685,6 +685,8 @@ if [[ -n "${THREAD_RUNTIME_KEY:-}" ]]; then
   echo "Thread runtime key: ${THREAD_RUNTIME_KEY}"
 fi
 
+python3 "${ROOT_DIR}/scripts/check_generated_vision_assets.py"
+
 if api_ready && web_ready; then
   echo "Local services already running; performing route checks only."
 elif (( START_SERVERS == 1 )); then
