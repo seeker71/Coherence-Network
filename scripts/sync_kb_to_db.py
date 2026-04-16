@@ -23,10 +23,18 @@ import argparse
 import sys
 from pathlib import Path
 
+import hashlib
+import re
+
 from kb_common import (
     KB_DIR, DEFAULT_API, STATUS_ORDER,
-    parse_concept_file, parse_crossrefs, api_delete, api_get, api_patch, api_post,
+    parse_concept_file, parse_frontmatter, extract_story_content, parse_crossrefs,
+    api_delete, api_get, api_patch, api_post,
 )
+
+GLOSSARY_DIR = KB_DIR.parent / "glossary"
+IDEAS_DIR = KB_DIR.parent.parent.parent / "ideas"  # repo root /ideas
+SUPPORTED_LANGS = {"en", "de", "es", "id"}
 
 DEFAULT_WRITE_API_KEY = "dev-key"
 
@@ -191,6 +199,317 @@ def sync_concept(
     return sync_analogous_edges(concept_id, api_url, dry_run, api_key, crossref_map)
 
 
+# ---------------------------------------------------------------------------
+# Language views — every concept can have views in multiple languages
+# ---------------------------------------------------------------------------
+
+def content_hash(markdown: str, title: str, description: str) -> str:
+    payload = f"{title}\n\n{description}\n\n{markdown}".encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def parse_view_file(filepath: Path) -> dict:
+    """Parse a view file: English original (lc-xxx.md) or a non-English view
+    (lc-xxx.<lang>.md). Returns lang, title, description, markdown, and any
+    translation metadata declared in frontmatter.
+    """
+    text = filepath.read_text(encoding="utf-8")
+    fm = parse_frontmatter(text)
+    stem = filepath.stem  # e.g. "lc-nourishing" or "lc-nourishing.de"
+    parts = stem.split(".")
+    if len(parts) == 2 and parts[1] in SUPPORTED_LANGS:
+        concept_id = parts[0]
+        lang = fm.get("lang", parts[1])
+    else:
+        concept_id = stem
+        lang = fm.get("lang", "en")
+
+    title_m = re.search(r"^# (.+)$", text, re.MULTILINE)
+    desc_m = re.search(r"^>\s*(.+)$", text, re.MULTILINE)
+    title = title_m.group(1).strip() if title_m else ""
+    description = desc_m.group(1).strip() if desc_m else ""
+    story = extract_story_content(text) or ""
+
+    # Default author_type:
+    #   - English view -> original_human (unless frontmatter says otherwise)
+    #   - non-English with translated_from -> translation_human
+    #   - non-English with no translated_from -> original_human (authored directly in that lang)
+    declared_author = fm.get("author_type")
+    if declared_author:
+        author_type = declared_author
+    else:
+        if lang == "en" and not fm.get("translated_from"):
+            author_type = "original_human"
+        elif fm.get("translated_from"):
+            author_type = "translation_human"
+        else:
+            author_type = "original_human"
+
+    return {
+        "concept_id": concept_id,
+        "lang": lang,
+        "title": title,
+        "description": description,
+        "markdown": story,
+        "author_type": author_type,
+        "translated_from": fm.get("translated_from"),
+        "notes": fm.get("notes"),
+    }
+
+
+def view_files_for_concept(concept_id: str) -> list[Path]:
+    """All view files for a concept: the English original plus any <lang>.md siblings."""
+    files = []
+    en = KB_DIR / f"{concept_id}.md"
+    if en.exists():
+        files.append(en)
+    for lang in SUPPORTED_LANGS - {"en"}:
+        p = KB_DIR / f"{concept_id}.{lang}.md"
+        if p.exists():
+            files.append(p)
+    return files
+
+
+def sync_views_for_concept(
+    concept_id: str, api_url: str, dry_run: bool, api_key: str | None
+) -> tuple[int, int]:
+    """Project every language view file for a concept into the DB.
+
+    Order matters: sync the anchor-eligible (non-translated) view first so its
+    content_hash is available to the translated views for linkage. For now the
+    English file acts as the starting point if no other lang file is marked as
+    the anchor; when a non-English view is edited to become the anchor, a
+    subsequent sync pass will re-read the files and update accordingly.
+    """
+    files = view_files_for_concept(concept_id)
+    if not files:
+        return (0, 0)
+
+    # First pass: parse all views
+    parsed_views = [parse_view_file(f) for f in files]
+
+    # Build a map lang -> content_hash so translated views can reference
+    hashes: dict[str, str] = {}
+    for v in parsed_views:
+        hashes[v["lang"]] = content_hash(v["markdown"], v["title"], v["description"])
+
+    written = 0
+    failed = 0
+    for v in parsed_views:
+        body: dict = {
+            "lang": v["lang"],
+            "content_title": v["title"],
+            "content_description": v["description"],
+            "content_markdown": v["markdown"],
+            "author_type": v["author_type"],
+        }
+        if v["translated_from"]:
+            body["translated_from_lang"] = v["translated_from"]
+            body["translated_from_hash"] = hashes.get(v["translated_from"], "")
+        if v["notes"]:
+            body["notes"] = v["notes"]
+
+        if dry_run:
+            print(f"    [DRY RUN] would POST /api/concepts/{concept_id}/views ({v['lang']}, {v['author_type']})")
+            written += 1
+            continue
+
+        status = api_post(
+            f"{api_url}/api/concepts/{concept_id}/views",
+            body,
+            headers=_write_headers(api_key),
+        )
+        if status in (200, 201):
+            print(f"    view synced: {v['lang']} ({v['author_type']})")
+            written += 1
+        else:
+            print(f"    view FAILED: {v['lang']} (status {status})", file=sys.stderr)
+            failed += 1
+    return written, failed
+
+
+# ---------------------------------------------------------------------------
+# Idea view files — ideas/{slug}.{lang}.md project into /api/views/idea/{slug}
+# ---------------------------------------------------------------------------
+
+def parse_idea_view_file(filepath: Path) -> dict:
+    """Parse ideas/<slug>.<lang>.md into a view payload.
+
+    The non-language file (ideas/agent-pipeline.md) is the English view.
+    Files with a .<lang>.md suffix (agent-pipeline.de.md) are translations.
+    """
+    text = filepath.read_text(encoding="utf-8")
+    fm = parse_frontmatter(text)
+    stem = filepath.stem
+    parts = stem.split(".")
+    if len(parts) == 2 and parts[1] in SUPPORTED_LANGS:
+        idea_id = parts[0]
+        lang = fm.get("lang", parts[1])
+    else:
+        idea_id = stem
+        lang = fm.get("lang", "en")
+
+    title_m = re.search(r"^# (.+)$", text, re.MULTILINE)
+    desc_m = re.search(r"^>\s*(.+)$", text, re.MULTILINE)
+    title = (title_m.group(1) if title_m else "").strip()
+    description = (desc_m.group(1) if desc_m else "").strip()
+
+    declared_author = fm.get("author_type")
+    if declared_author:
+        author_type = declared_author
+    else:
+        if lang == "en" and not fm.get("translated_from"):
+            author_type = "original_human"
+        elif fm.get("translated_from"):
+            author_type = "translation_human"
+        else:
+            author_type = "original_human"
+
+    return {
+        "idea_id": idea_id,
+        "lang": lang,
+        "title": title,
+        "description": description,
+        "markdown": text,  # full body as content_markdown
+        "author_type": author_type,
+        "translated_from": fm.get("translated_from"),
+        "notes": fm.get("notes"),
+    }
+
+
+def idea_view_files_for(idea_slug: str) -> list[Path]:
+    if not IDEAS_DIR.exists():
+        return []
+    files = []
+    en = IDEAS_DIR / f"{idea_slug}.md"
+    if en.exists():
+        files.append(en)
+    for lang in SUPPORTED_LANGS - {"en"}:
+        p = IDEAS_DIR / f"{idea_slug}.{lang}.md"
+        if p.exists():
+            files.append(p)
+    return files
+
+
+def sync_idea_views_for(
+    idea_slug: str, api_url: str, dry_run: bool, api_key: str | None
+) -> tuple[int, int]:
+    files = idea_view_files_for(idea_slug)
+    if not files:
+        return (0, 0)
+
+    parsed = [parse_idea_view_file(f) for f in files]
+    hashes: dict[str, str] = {}
+    for v in parsed:
+        hashes[v["lang"]] = content_hash(v["markdown"], v["title"], v["description"])
+
+    written = 0
+    failed = 0
+    for v in parsed:
+        body: dict = {
+            "lang": v["lang"],
+            "content_title": v["title"],
+            "content_description": v["description"],
+            "content_markdown": v["markdown"],
+            "author_type": v["author_type"],
+        }
+        if v["translated_from"]:
+            body["translated_from_lang"] = v["translated_from"]
+            body["translated_from_hash"] = hashes.get(v["translated_from"], "")
+        if v["notes"]:
+            body["notes"] = v["notes"]
+
+        if dry_run:
+            print(f"    [DRY RUN] would POST /api/entity-views/idea/{idea_slug} ({v['lang']}, {v['author_type']})")
+            written += 1
+            continue
+
+        status = api_post(
+            f"{api_url}/api/entity-views/idea/{idea_slug}",
+            body,
+            headers=_write_headers(api_key),
+        )
+        if status in (200, 201):
+            print(f"    idea view synced: {v['lang']} ({v['author_type']})")
+            written += 1
+        else:
+            print(f"    idea view FAILED: {v['lang']} (status {status})", file=sys.stderr)
+            failed += 1
+    return written, failed
+
+
+def sync_all_idea_views(api_url: str, dry_run: bool, api_key: str | None) -> tuple[int, int]:
+    if not IDEAS_DIR.exists():
+        return (0, 0)
+    seen: set[str] = set()
+    total_written = 0
+    total_failed = 0
+    for f in sorted(IDEAS_DIR.glob("*.md")):
+        parts = f.stem.split(".")
+        slug = parts[0]
+        if slug in seen:
+            continue
+        seen.add(slug)
+        w, fail = sync_idea_views_for(slug, api_url, dry_run, api_key)
+        total_written += w
+        total_failed += fail
+    return total_written, total_failed
+
+
+# ---------------------------------------------------------------------------
+# Glossary sync
+# ---------------------------------------------------------------------------
+
+def parse_glossary_file(filepath: Path) -> tuple[str, list[dict]]:
+    """Parse docs/vision-kb/glossary/<lang>.md into (lang, entries).
+
+    Entries are bullet lines of the form:
+      - **<source>** → **<target>** — <notes>
+    """
+    text = filepath.read_text(encoding="utf-8")
+    fm = parse_frontmatter(text)
+    lang = fm.get("lang", filepath.stem)
+    entries: list[dict] = []
+    for line in text.splitlines():
+        m = re.match(
+            r"^\s*-\s+\*\*(?P<src>[^*]+)\*\*\s*→\s*\*\*(?P<tgt>[^*]+)\*\*\s*(?:—\s*(?P<notes>.*))?$",
+            line,
+        )
+        if m:
+            entries.append({
+                "source_term": m.group("src").strip(),
+                "target_term": m.group("tgt").strip(),
+                "notes": (m.group("notes") or "").strip() or None,
+            })
+    return lang, entries
+
+
+def sync_glossary(api_url: str, dry_run: bool, api_key: str | None) -> int:
+    """Project every glossary file under docs/vision-kb/glossary/ into the DB."""
+    if not GLOSSARY_DIR.exists():
+        return 0
+    total = 0
+    for f in sorted(GLOSSARY_DIR.glob("*.md")):
+        lang, entries = parse_glossary_file(f)
+        if not entries:
+            continue
+        if dry_run:
+            print(f"  glossary {lang}: [DRY RUN] would upsert {len(entries)} entries")
+            total += len(entries)
+            continue
+        ok = api_patch(
+            f"{api_url}/api/glossary/{lang}",
+            {"entries": entries},
+            headers=_write_headers(api_key),
+        )
+        if ok:
+            print(f"  glossary {lang}: upserted {len(entries)} entries")
+            total += len(entries)
+        else:
+            print(f"  glossary {lang}: FAILED", file=sys.stderr)
+    return total
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Sync KB markdown -> Graph DB via API")
     parser.add_argument("concepts", nargs="*", help="Concept IDs to sync (e.g., lc-space)")
@@ -199,18 +518,26 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dry-run", action="store_true", help="Show what would be synced without making changes")
     parser.add_argument("--api-url", default=DEFAULT_API, help=f"API base URL (default: {DEFAULT_API})")
     parser.add_argument("--api-key", default=DEFAULT_WRITE_API_KEY, help="Write API key for POST/PATCH operations (default: dev-key)")
+    parser.add_argument("--views", action="store_true", help="Also sync language view files (lc-xxx.<lang>.md) for each concept")
+    parser.add_argument("--idea-views", action="store_true", help="Sync idea view files (ideas/<slug>.<lang>.md) into /api/views/idea/<slug>")
+    parser.add_argument("--glossary", action="store_true", help="Also sync glossary files under docs/vision-kb/glossary/")
     args = parser.parse_args(argv)
 
-    if not args.concepts and not args.all:
+    if not args.concepts and not args.all and not args.glossary and not args.idea_views:
         parser.print_help()
         return 1
 
     min_status_level = STATUS_ORDER.get(args.min_status, 0)
 
-    # Collect files to sync
+    # Collect files to sync — only the canonical per-concept files (lc-xxx.md),
+    # not per-language views. View files are handled separately when --views is set.
     files: list[Path] = []
     if args.all:
-        files = sorted(KB_DIR.glob("*.md"))
+        for f in sorted(KB_DIR.glob("*.md")):
+            parts = f.stem.split(".")
+            if len(parts) == 2 and parts[1] in SUPPORTED_LANGS:
+                continue  # per-lang view file, handled by --views
+            files.append(f)
     else:
         for cid in args.concepts:
             f = KB_DIR / f"{cid}.md"
@@ -253,6 +580,22 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"    FAILED")
             failed += 1
+
+        if args.views:
+            v_written, v_failed = sync_views_for_concept(
+                concept_id, args.api_url, args.dry_run, args.api_key
+            )
+            failed += v_failed
+
+    if args.glossary:
+        print("\nSyncing glossary...")
+        sync_glossary(args.api_url, args.dry_run, args.api_key)
+
+    if args.idea_views:
+        print("\nSyncing idea views...")
+        w, f = sync_all_idea_views(args.api_url, args.dry_run, args.api_key)
+        failed += f
+        print(f"  idea views: {w} synced, {f} failed")
 
     print(f"\nDone: {synced} synced, {skipped} skipped, {failed} failed")
     return 1 if failed else 0

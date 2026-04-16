@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
+import { useT } from "@/components/MessagesProvider";
 import type { IdeaQuestion } from "@/lib/types";
 
 const API = getApiBase();
@@ -60,6 +61,7 @@ const REQUEST_TYPE_LABELS: Record<string, string> = {
 };
 
 export default function ContributePage() {
+  const t = useT();
   const [contributors, setContributors] = useState<Contributor[]>([]);
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [specs, setSpecs] = useState<SpecEntry[]>([]);
@@ -280,32 +282,32 @@ export default function ContributePage() {
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Contribute</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">{t("contribute.title")}</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          Every contribution moves the network forward. Register, propose changes, and review what others have submitted. Approved requests apply automatically.
+          {t("contribute.introLede")}
         </p>
       </div>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
-        <h2 className="text-xl font-semibold">Register as a Contributor</h2>
-        <p className="text-sm text-muted-foreground">Create your identity in the network so your contributions are sensed and credited.</p>
+        <h2 className="text-xl font-semibold">{t("contribute.registerHeading")}</h2>
+        <p className="text-sm text-muted-foreground">{t("contribute.registerBody")}</p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-sm">
           <div className="space-y-1">
             <label htmlFor="contributor-name" className="text-xs text-muted-foreground">Name</label>
             <input
               id="contributor-name"
               className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
-              placeholder="Name"
+              placeholder={t("contribute.namePlaceholder")}
               value={newContributorName}
               onChange={(e) => setNewContributorName(e.target.value)}
             />
           </div>
           <div className="space-y-1">
-            <label htmlFor="contributor-email" className="text-xs text-muted-foreground">Email</label>
+            <label htmlFor="contributor-email" className="text-xs text-muted-foreground">{t("contribute.emailPlaceholder")}</label>
             <input
               id="contributor-email"
               className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
-              placeholder="Email"
+              placeholder={t("contribute.emailPlaceholder")}
               value={newContributorEmail}
               onChange={(e) => setNewContributorEmail(e.target.value)}
             />
@@ -323,7 +325,7 @@ export default function ContributePage() {
             </select>
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground invisible">Action</label>
+            <label className="text-xs text-muted-foreground invisible">{t("contribute.action")}</label>
             <button
               type="button"
               className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2 hover:bg-accent"
@@ -333,22 +335,22 @@ export default function ContributePage() {
               }}
               disabled={busy === "register" || !newContributorName.trim() || !newContributorEmail.trim()}
             >
-              {busy === "register" ? "Registering…" : "Register"}
+              {busy === "register" ? t("contribute.registering") : t("contribute.register")}
             </button>
           </div>
         </div>
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-        <h2 className="text-xl font-semibold">Select Proposer and Reviewer</h2>
-        <p className="text-sm text-muted-foreground">Choose who is proposing changes and who will review them. This determines attribution and vote authority.</p>
+        <h2 className="text-xl font-semibold">{t("contribute.selectPair")}</h2>
+        <p className="text-sm text-muted-foreground">{t("contribute.selectPairBody")}</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
           <select
             className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2"
             value={proposerId}
             onChange={(e) => setProposerId(e.target.value)}
           >
-            <option value="">Select proposer contributor</option>
+            <option value="">{t("contribute.selectProposer")}</option>
             {contributors.map((item) => (
               <option key={item.id} value={item.id}>{item.name} ({item.id})</option>
             ))}
@@ -358,7 +360,7 @@ export default function ContributePage() {
             value={reviewerId}
             onChange={(e) => setReviewerId(e.target.value)}
           >
-            <option value="">Select reviewer contributor</option>
+            <option value="">{t("contribute.selectReviewer")}</option>
             {contributors.map((item) => (
               <option key={item.id} value={item.id}>{item.name} ({item.id})</option>
             ))}
@@ -376,11 +378,11 @@ export default function ContributePage() {
 
       <section className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-          <h3 className="text-xl font-semibold">Create an Idea</h3>
-          <p className="text-sm text-muted-foreground">Submit a new idea to the network. It starts as a proposal and gets reviewed before going live.</p>
+          <h3 className="text-xl font-semibold">{t("contribute.createIdea")}</h3>
+          <p className="text-sm text-muted-foreground">{t("contribute.createIdeaBody")}</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <div className="space-y-1">
-              <label htmlFor="idea-create-id" className="text-xs text-muted-foreground">Idea ID</label>
+              <label htmlFor="idea-create-id" className="text-xs text-muted-foreground">{t("contribute.ideaIdLabel")}</label>
               <input id="idea-create-id" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="idea_id" value={ideaCreateId} onChange={(e) => setIdeaCreateId(e.target.value)} />
             </div>
             <div className="space-y-1">
@@ -388,20 +390,20 @@ export default function ContributePage() {
               <input id="idea-create-name" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="name" value={ideaCreateName} onChange={(e) => setIdeaCreateName(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <label htmlFor="idea-create-desc" className="text-xs text-muted-foreground">Description</label>
+              <label htmlFor="idea-create-desc" className="text-xs text-muted-foreground">{t("contribute.descriptionLabel")}</label>
               <textarea id="idea-create-desc" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" rows={3} placeholder="description" value={ideaCreateDescription} onChange={(e) => setIdeaCreateDescription(e.target.value)} />
             </div>
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
-                <label htmlFor="idea-create-potential" className="text-xs text-muted-foreground">Potential value</label>
+                <label htmlFor="idea-create-potential" className="text-xs text-muted-foreground">{t("contribute.potentialValue")}</label>
                 <input id="idea-create-potential" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="potential_value" value={ideaCreatePotential} onChange={(e) => setIdeaCreatePotential(e.target.value)} />
               </div>
               <div className="space-y-1">
-                <label htmlFor="idea-create-cost" className="text-xs text-muted-foreground">Estimated cost</label>
+                <label htmlFor="idea-create-cost" className="text-xs text-muted-foreground">{t("contribute.estimatedCost")}</label>
                 <input id="idea-create-cost" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="estimated_cost" value={ideaCreateCost} onChange={(e) => setIdeaCreateCost(e.target.value)} />
               </div>
               <div className="space-y-1">
-                <label htmlFor="idea-create-confidence" className="text-xs text-muted-foreground">Confidence</label>
+                <label htmlFor="idea-create-confidence" className="text-xs text-muted-foreground">{t("contribute.confidence")}</label>
                 <input id="idea-create-confidence" className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="confidence" value={ideaCreateConfidence} onChange={(e) => setIdeaCreateConfidence(e.target.value)} />
               </div>
             </div>
@@ -421,17 +423,17 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "idea_create" ? "Submitting…" : "Submit Idea Create Request"}
+              {busy === "idea_create" ? t("contribute.submitting") : t("contribute.submitIdeaCreate")}
             </button>
           </div>
         </article>
 
         <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-          <h3 className="text-xl font-semibold">Update an Idea</h3>
-          <p className="text-sm text-muted-foreground">Adjust values, cost, confidence, or status of an existing idea as new information emerges.</p>
+          <h3 className="text-xl font-semibold">{t("contribute.updateIdea")}</h3>
+          <p className="text-sm text-muted-foreground">{t("contribute.updateIdeaBody")}</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={ideaUpdateId} onChange={(e) => setIdeaUpdateId(e.target.value)}>
-              <option value="">Select idea</option>
+              <option value="">{t("contribute.selectIdea")}</option>
               {ideas.map((item) => (
                 <option key={item.id} value={item.id}>{item.id}</option>
               ))}
@@ -458,17 +460,17 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "idea_update" ? "Submitting…" : "Submit Idea Update Request"}
+              {busy === "idea_update" ? t("contribute.submitting") : t("contribute.submitIdeaUpdate")}
             </button>
           </div>
         </article>
 
         <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-          <h3 className="text-xl font-semibold">Questions</h3>
-          <p className="text-sm text-muted-foreground">Ask questions that need answering before an idea can move forward, or provide answers to existing ones.</p>
+          <h3 className="text-xl font-semibold">{t("contribute.questions")}</h3>
+          <p className="text-sm text-muted-foreground">{t("contribute.questionsBody")}</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={questionIdeaId} onChange={(e) => setQuestionIdeaId(e.target.value)}>
-              <option value="">Select idea for new question</option>
+              <option value="">{t("contribute.selectIdeaQuestion")}</option>
               {ideas.map((item) => (
                 <option key={item.id} value={item.id}>{item.id}</option>
               ))}
@@ -491,19 +493,19 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "idea_add_question" ? "Submitting…" : "Submit Add-Question Request"}
+              {busy === "idea_add_question" ? t("contribute.submitting") : t("contribute.submitAddQuestion")}
             </button>
           </div>
 
           <div className="border-t pt-3 grid grid-cols-1 gap-2 text-sm">
             <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={answerIdeaId} onChange={(e) => setAnswerIdeaId(e.target.value)}>
-              <option value="">Select idea for answer</option>
+              <option value="">{t("contribute.selectIdeaAnswer")}</option>
               {ideas.map((item) => (
                 <option key={item.id} value={item.id}>{item.id}</option>
               ))}
             </select>
             <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={answerQuestion} onChange={(e) => setAnswerQuestion(e.target.value)}>
-              <option value="">Select question</option>
+              <option value="">{t("contribute.selectQuestion")}</option>
               {answerQuestions.map((item) => (
                 <option key={item.question} value={item.question}>{item.question}</option>
               ))}
@@ -523,14 +525,14 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "idea_answer_question" ? "Submitting…" : "Submit Answer Request"}
+              {busy === "idea_answer_question" ? t("contribute.submitting") : t("contribute.submitAnswer")}
             </button>
           </div>
         </article>
 
         <article className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-          <h3 className="text-xl font-semibold">Specs</h3>
-          <p className="text-sm text-muted-foreground">Create or update a feature specification. Specs define what gets built and link to ideas for context.</p>
+          <h3 className="text-xl font-semibold">{t("contribute.specs")}</h3>
+          <p className="text-sm text-muted-foreground">{t("contribute.specsBody")}</p>
           <div className="grid grid-cols-1 gap-2 text-sm">
             <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="new spec_id" value={specCreateId} onChange={(e) => setSpecCreateId(e.target.value)} />
             <input className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" placeholder="new spec title" value={specCreateTitle} onChange={(e) => setSpecCreateTitle(e.target.value)} />
@@ -578,13 +580,13 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "spec_create" ? "Submitting…" : "Submit Spec Create Request"}
+              {busy === "spec_create" ? t("contribute.submitting") : t("contribute.submitSpecCreate")}
             </button>
           </div>
 
           <div className="border-t pt-3 grid grid-cols-1 gap-2 text-sm">
             <select className="w-full rounded-xl border border-border/40 bg-card/60 px-3 py-2" value={specUpdateId} onChange={(e) => setSpecUpdateId(e.target.value)}>
-              <option value="">Select spec</option>
+              <option value="">{t("contribute.selectSpec")}</option>
               {specs.map((item) => (
                 <option key={item.spec_id} value={item.spec_id}>{item.spec_id}</option>
               ))}
@@ -632,16 +634,16 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "spec_update" ? "Submitting…" : "Submit Spec Update Request"}
+              {busy === "spec_update" ? t("contribute.submitting") : t("contribute.submitSpecUpdate")}
             </button>
           </div>
         </article>
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
-        <h2 className="text-xl font-semibold">Review Queue</h2>
+        <h2 className="text-xl font-semibold">{t("contribute.reviewQueue")}</h2>
         <p className="text-sm text-muted-foreground">
-          Default policy is one approval required. When contributor volume grows, increase `CHANGE_REQUEST_MIN_APPROVALS`.
+          {t("contribute.approvalPolicy")}
         </p>
         <ul className="space-y-3 text-sm">
           {changeRequests.map((row) => (
@@ -691,21 +693,21 @@ export default function ContributePage() {
             </li>
           ))}
           {changeRequests.length === 0 && (
-            <li className="text-muted-foreground">No change requests yet.</li>
+            <li className="text-muted-foreground">{t("contribute.noChangeRequests")}</li>
           )}
         </ul>
       </section>
 
       <details className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
-        <summary className="text-xl font-semibold cursor-pointer">For developers and scripts</summary>
-        <p className="text-sm text-muted-foreground mt-2">All the actions above can also be done programmatically — useful for bots, scripts, or AI agents.</p>
-        <p>Register contributor: <code>POST /api/contributors</code></p>
-        <p>Submit change request: <code>POST /api/governance/change-requests</code></p>
-        <p>Vote yes/no: <code>POST /api/governance/change-requests/&lt;id&gt;/votes</code></p>
-        <p>List specs: <code>GET /api/spec-registry</code> | list queue: <code>GET /api/governance/change-requests</code></p>
+        <summary className="text-xl font-semibold cursor-pointer">{t("contribute.forDevsHeading")}</summary>
+        <p className="text-sm text-muted-foreground mt-2">{t("contribute.forDevsBody")}</p>
+        <p>{t("contribute.devRegisterContributor")} <code>POST /api/contributors</code></p>
+        <p>{t("contribute.devSubmitRequest")} <code>POST /api/governance/change-requests</code></p>
+        <p>{t("contribute.devVote")} <code>POST /api/governance/change-requests/&lt;id&gt;/votes</code></p>
+        <p>{t("contribute.devListSpecs")}</p>
       </details>
 
-      {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
+      {status === "loading" && <p className="text-muted-foreground">{t("common.loading")}</p>}
       {status === "error" && <p className="text-destructive">Error: {error}</p>}
       {error && status !== "error" && <p className="text-destructive">Error: {error}</p>}
 

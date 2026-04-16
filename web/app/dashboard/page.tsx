@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
 import { readActiveWorkspaceFromCookie, withWorkspaceScope } from "@/lib/workspace";
+import { useT } from "@/components/MessagesProvider";
 
 const API = getApiBase();
 
@@ -126,6 +127,7 @@ function TaskTab({ task, isActive, onClick }: { task: RunningTask; isActive: boo
 }
 
 function TaskStream({ taskId }: { taskId: string }) {
+  const t = useT();
   const [events, setEvents] = useState<SSEEvent[]>([]);
   const [connected, setConnected] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -173,7 +175,7 @@ function TaskStream({ taskId }: { taskId: string }) {
   return (
     <div ref={scrollRef} className="h-48 overflow-y-auto p-3 space-y-1 text-xs font-mono">
       {!connected && events.length === 0 && (
-        <p className="text-muted-foreground">Connecting...</p>
+        <p className="text-muted-foreground">{t("dashboard.connecting")}</p>
       )}
       {events.map((ev, i) => {
         const ts = new Date(ev.timestamp).toLocaleTimeString();
@@ -214,6 +216,7 @@ function TaskStream({ taskId }: { taskId: string }) {
 // ── Main Dashboard ─────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const t = useT();
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [tasks, setTasks] = useState<RunningTask[]>([]);
   const [pulse, setPulse] = useState<PulseData | null>(null);
@@ -261,12 +264,12 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-background text-foreground p-4 space-y-4 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Pipeline Dashboard</h1>
+        <h1 className="text-xl font-semibold">{t("dashboard.title")}</h1>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span>Refreshed {relTime(new Date(lastRefresh).toISOString())}</span>
-          <Link href="/" className="underline hover:text-foreground">Home</Link>
-          <Link href="/nodes" className="underline hover:text-foreground">Nodes</Link>
-          <Link href="/tasks" className="underline hover:text-foreground">Tasks</Link>
+          <Link href="/" className="underline hover:text-foreground">{t("dashboard.home")}</Link>
+          <Link href="/nodes" className="underline hover:text-foreground">{t("nav.nodes")}</Link>
+          <Link href="/tasks" className="underline hover:text-foreground">{t("nav.workCards")}</Link>
         </div>
       </div>
 
@@ -274,41 +277,41 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {/* Fleet Summary */}
         <div className="rounded-xl border border-border/20 bg-card/40 p-4 space-y-2">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Fleet</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("dashboard.fleet")}</p>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div>
               <p className="text-2xl font-bold">{nodes.length}</p>
-              <p className="text-[10px] text-muted-foreground">nodes</p>
+              <p className="text-[10px] text-muted-foreground">{t("dashboard.fleetNodes")}</p>
             </div>
             <div>
               <p className="text-2xl font-bold">{totalRunning}</p>
-              <p className="text-[10px] text-muted-foreground">running</p>
+              <p className="text-[10px] text-muted-foreground">{t("dashboard.fleetRunning")}</p>
             </div>
             <div>
               <p className={`text-2xl font-bold ${fleetRate >= 70 ? "text-green-500" : fleetRate >= 40 ? "text-yellow-500" : "text-red-500"}`}>
                 {fleetRate}%
               </p>
-              <p className="text-[10px] text-muted-foreground">success</p>
+              <p className="text-[10px] text-muted-foreground">{t("dashboard.fleetSuccess")}</p>
             </div>
           </div>
         </div>
 
         {/* Bottleneck */}
         <div className="rounded-xl border border-border/20 bg-card/40 p-4 space-y-2">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Bottleneck</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("dashboard.bottleneck")}</p>
           {pulse ? (
             <>
               <p className="text-sm font-medium">{bottleneckTitle}</p>
               <p className="text-xs text-muted-foreground line-clamp-2">{bottleneckDetail}</p>
             </>
           ) : (
-            <p className="text-xs text-muted-foreground">Loading...</p>
+            <p className="text-xs text-muted-foreground">{t("common.loading")}</p>
           )}
         </div>
 
         {/* Phase Stats */}
         <div className="rounded-xl border border-border/20 bg-card/40 p-4 space-y-2">
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">Phases</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">{t("dashboard.phases")}</p>
           {pulse && (
             <div className="space-y-1">
               {Object.entries(pulse.phase_stats).map(([phase, s]) => {
@@ -388,7 +391,7 @@ export default function DashboardPage() {
       <div className="rounded-xl border border-border/20 bg-card/40 overflow-hidden">
         <div className="flex items-center gap-1 px-3 pt-2 overflow-x-auto">
           {tasks.length === 0 ? (
-            <p className="text-xs text-muted-foreground p-2">No running tasks</p>
+            <p className="text-xs text-muted-foreground p-2">{t("dashboard.noRunning")}</p>
           ) : (
             tasks.map(t => (
               <TaskTab

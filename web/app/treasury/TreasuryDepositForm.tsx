@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
+import { useT } from "@/components/MessagesProvider";
 
 const STORAGE_KEY = "coherence_contributor_id";
 
@@ -15,6 +16,7 @@ type TreasuryInfo = {
 };
 
 export function TreasuryDepositForm() {
+  const t = useT();
   const [info, setInfo] = useState<TreasuryInfo | null>(null);
   const [contributorId, setContributorId] = useState("");
   const [asset, setAsset] = useState("eth");
@@ -52,12 +54,12 @@ export function TreasuryDepositForm() {
       setError("");
       setResult(null);
       if (!contributorId.trim() || !amount.trim() || !txHash.trim()) {
-        setError("All fields are required.");
+        setError(t("treasury.allFieldsRequired"));
         return;
       }
       const numAmount = parseFloat(amount);
       if (isNaN(numAmount) || numAmount <= 0) {
-        setError("Amount must be a positive number.");
+        setError(t("treasury.amountPositive"));
         return;
       }
       setSubmitting(true);
@@ -99,7 +101,7 @@ export function TreasuryDepositForm() {
           }
         }
       } catch {
-        setError("Network error. Please try again.");
+        setError(t("treasury.networkError"));
       } finally {
         setSubmitting(false);
       }
@@ -117,28 +119,28 @@ export function TreasuryDepositForm() {
         <div className="grid gap-4 sm:grid-cols-2">
           {info.eth_address && (
             <div className="rounded-xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">ETH Treasury Wallet</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("treasury.ethWallet")}</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 truncate text-sm text-foreground/80">{info.eth_address}</code>
                 <button
                   onClick={() => copyAddress(info.eth_address, "eth")}
                   className="shrink-0 rounded-lg border border-border/40 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-all duration-200 min-h-[44px]"
                 >
-                  {copied === "eth" ? "Copied" : "Copy"}
+                  {copied === "eth" ? t("treasury.copied") : t("treasury.copy")}
                 </button>
               </div>
             </div>
           )}
           {info.btc_address && (
             <div className="rounded-xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4 space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">BTC Treasury Wallet</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{t("treasury.btcWallet")}</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 truncate text-sm text-foreground/80">{info.btc_address}</code>
                 <button
                   onClick={() => copyAddress(info.btc_address, "btc")}
                   className="shrink-0 rounded-lg border border-border/40 px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-border transition-all duration-200 min-h-[44px]"
                 >
-                  {copied === "btc" ? "Copied" : "Copy"}
+                  {copied === "btc" ? t("treasury.copied") : t("treasury.copy")}
                 </button>
               </div>
             </div>
@@ -146,12 +148,12 @@ export function TreasuryDepositForm() {
         </div>
       ) : !info ? (
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
-          <p className="text-lg text-muted-foreground">Treasury not configured yet. Check back soon.</p>
+          <p className="text-lg text-muted-foreground">{t("treasury.notConfigured")}</p>
           <a
             href="/invest"
             className="inline-block text-primary hover:text-foreground transition-colors underline underline-offset-4 text-sm"
           >
-            Water seeds on ideas directly &rarr;
+            {t("treasury.waterDirectly")}
           </a>
         </div>
       ) : null}
@@ -162,42 +164,42 @@ export function TreasuryDepositForm() {
           <span>1 ETH = {info.cc_per_eth.toLocaleString()} CC</span>
           <span>1 BTC = {info.cc_per_btc.toLocaleString()} CC</span>
           {info.deposit_count > 0 && (
-            <span>{info.total_cc_converted.toLocaleString()} CC converted from {info.deposit_count} deposit{info.deposit_count !== 1 ? "s" : ""}</span>
+            <span>{t(info.deposit_count === 1 ? "treasury.depositsCountOne" : "treasury.depositsCount", { cc: info.total_cc_converted.toLocaleString(), n: info.deposit_count })}</span>
           )}
         </div>
       )}
 
       {/* Deposit form */}
       <form onSubmit={handleSubmit} className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 md:p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Record a Deposit</h2>
+        <h2 className="text-lg font-semibold">{t("treasury.recordHeading")}</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1">
-            <span className="text-sm text-muted-foreground">Your Name / ID</span>
+            <span className="text-sm text-muted-foreground">{t("treasury.yourName")}</span>
             <input
               type="text"
               value={contributorId}
               onChange={(e) => setContributorId(e.target.value)}
-              placeholder="e.g. alice"
+              placeholder={t("treasury.yourNamePlaceholder")}
               className="w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </label>
           <label className="block space-y-1">
-            <span className="text-sm text-muted-foreground">Asset</span>
+            <span className="text-sm text-muted-foreground">{t("treasury.asset")}</span>
             <select
               value={asset}
               onChange={(e) => setAsset(e.target.value)}
               className="w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="eth">ETH (Ethereum)</option>
-              <option value="btc">BTC (Bitcoin)</option>
+              <option value="eth">{t("treasury.assetEth")}</option>
+              <option value="btc">{t("treasury.assetBtc")}</option>
             </select>
           </label>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block space-y-1">
-            <span className="text-sm text-muted-foreground">Amount ({asset.toUpperCase()})</span>
+            <span className="text-sm text-muted-foreground">{t("treasury.amount", { asset: asset.toUpperCase() })}</span>
             <input
               type="number"
               step="any"
@@ -212,7 +214,7 @@ export function TreasuryDepositForm() {
             )}
           </label>
           <label className="block space-y-1">
-            <span className="text-sm text-muted-foreground">Transaction Hash</span>
+            <span className="text-sm text-muted-foreground">{t("treasury.txHash")}</span>
             <input
               type="text"
               value={txHash}
@@ -224,15 +226,15 @@ export function TreasuryDepositForm() {
         </div>
 
         <label className="block space-y-1">
-          <span className="text-sm text-muted-foreground">Staking Strategy</span>
+          <span className="text-sm text-muted-foreground">{t("treasury.strategy")}</span>
           <select
             value={strategy}
             onChange={(e) => setStrategy(e.target.value)}
             className="w-full rounded-lg border border-border/50 bg-background/50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="highest_roi">Highest ROI idea</option>
-            <option value="spread">Spread across top 3 ideas</option>
-            <option value="">Do not auto-stake</option>
+            <option value="highest_roi">{t("treasury.strategyHighest")}</option>
+            <option value="spread">{t("treasury.strategySpread")}</option>
+            <option value="">{t("treasury.strategyNone")}</option>
           </select>
         </label>
 
@@ -242,9 +244,9 @@ export function TreasuryDepositForm() {
 
         {result && (
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm space-y-1">
-            <p className="font-medium text-primary">Deposit recorded</p>
+            <p className="font-medium text-primary">{t("treasury.depositRecorded")}</p>
             <p className="text-muted-foreground">
-              {result.amount as number} {(result.asset as string || "").toUpperCase()} converted to {result.cc_converted as number} CC
+              {t("treasury.depositSummary", { amount: String(result.amount), asset: (result.asset as string || "").toUpperCase(), cc: String(result.cc_converted) })}
             </p>
           </div>
         )}
@@ -254,7 +256,7 @@ export function TreasuryDepositForm() {
           disabled={submitting}
           className="rounded-full bg-primary/10 px-6 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
         >
-          {submitting ? "Recording..." : "Record Deposit"}
+          {submitting ? t("treasury.recording") : t("treasury.recordBtn")}
         </button>
       </form>
     </div>

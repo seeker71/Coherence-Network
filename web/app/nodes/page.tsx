@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 import { getApiBase } from "@/lib/api";
 import MessageForm from "./MessageForm";
+import { createTranslator } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
 export const metadata: Metadata = {
   title: "Nodes",
@@ -230,6 +233,10 @@ async function loadData() {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function NodesPage() {
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
   const { nodes, execStats, readiness } = await loadData();
   const apiBase = getApiBase();
   const sorted = [...nodes].sort((a, b) => a.hostname.localeCompare(b.hostname));
@@ -242,9 +249,9 @@ export default async function NodesPage() {
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Nodes</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">{t("nodes.title")}</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          All registered federation nodes — status, capabilities, provider health, and remote messaging.
+          {t("nodes.lede")}
         </p>
       </div>
 
@@ -253,17 +260,17 @@ export default async function NodesPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
             <p className="text-2xl font-bold">{nodes.length}</p>
-            <p className="text-xs text-muted-foreground">total nodes</p>
+            <p className="text-xs text-muted-foreground">{t("nodes.statTotal")}</p>
           </div>
           <div>
             <p className="text-2xl font-bold text-green-500">{onlineCount}</p>
-            <p className="text-xs text-muted-foreground">online</p>
+            <p className="text-xs text-muted-foreground">{t("nodes.statOnline")}</p>
           </div>
           <div>
             <p className="text-2xl font-bold">
               {nodes.reduce((sum, n) => sum + (n.streak?.executing ?? 0), 0)}
             </p>
-            <p className="text-xs text-muted-foreground">tasks running</p>
+            <p className="text-xs text-muted-foreground">{t("pipeline.statTasksExecuting")}</p>
           </div>
           <div>
             <p className={`text-2xl font-bold ${fleetRate >= 70 ? "text-green-500" : fleetRate >= 40 ? "text-yellow-500" : "text-red-500"}`}>
@@ -278,7 +285,7 @@ export default async function NodesPage() {
       {execStats && (
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Provider Health</h2>
+            <h2 className="text-xl font-semibold">{t("nodes.providerHealth")}</h2>
             <span className="text-xs text-muted-foreground">
               {execStats.summary.healthy_providers}/{execStats.summary.total_providers} healthy · {execStats.summary.total_measurements} measurements
             </span>
@@ -306,11 +313,11 @@ export default async function NodesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/30 text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="pb-2 pr-4">Provider</th>
-                  <th className="pb-2 pr-4">Overall Rate</th>
-                  <th className="pb-2 pr-4">Last 5</th>
-                  <th className="pb-2 pr-4">Avg Speed</th>
-                  <th className="pb-2">Status</th>
+                  <th className="pb-2 pr-4">{t("nodes.colProvider")}</th>
+                  <th className="pb-2 pr-4">{t("nodes.colOverall")}</th>
+                  <th className="pb-2 pr-4">{t("nodes.colLast5")}</th>
+                  <th className="pb-2 pr-4">{t("nodes.colSpeed")}</th>
+                  <th className="pb-2">{t("nodes.colStatus")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -356,17 +363,17 @@ export default async function NodesPage() {
                   <p className="font-medium text-sm">{name}</p>
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
-                      <p className="text-muted-foreground">Overall</p>
+                      <p className="text-muted-foreground">{t("nodes.overall")}</p>
                       <p>{(entry.success_rate * 100).toFixed(0)}%</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Last 5</p>
+                      <p className="text-muted-foreground">{t("nodes.last5")}</p>
                       <p className={entry.last_5_rate < 0.5 ? "text-red-600 dark:text-red-400" : entry.last_5_rate < 0.8 ? "text-amber-600 dark:text-amber-400" : ""}>
                         {(entry.last_5_rate * 100).toFixed(0)}%
                       </p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Status</p>
+                      <p className="text-muted-foreground">{t("nodes.status")}</p>
                       <p>{entry.blocked ? "blocked" : entry.needs_attention ? "attention" : "ok"}</p>
                     </div>
                   </div>
@@ -379,7 +386,7 @@ export default async function NodesPage() {
       {/* Provider readiness */}
       {readiness && !readiness.all_required_ready && (
         <section className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6 space-y-3">
-          <h2 className="text-xl font-semibold text-red-600 dark:text-red-400">Provider Configuration Issues</h2>
+          <h2 className="text-xl font-semibold text-red-600 dark:text-red-400">{t("nodes.providerConfigIssues")}</h2>
           {readiness.blocking_issues.map((issue, i) => (
             <p key={`issue-${i}`} className="text-sm text-red-600 dark:text-red-400">⚠ {issue}</p>
           ))}
@@ -395,9 +402,9 @@ export default async function NodesPage() {
 
       {/* Node list */}
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3 text-sm">
-        <h2 className="text-xl font-semibold">Registered Nodes</h2>
+        <h2 className="text-xl font-semibold">{t("nodes.registeredNodes")}</h2>
         {sorted.length === 0 && (
-          <p className="text-muted-foreground">No federation nodes registered yet.</p>
+          <p className="text-muted-foreground">{t("nodes.noNodes")}</p>
         )}
         <ul className="space-y-3">
           {sorted.map((node) => {

@@ -57,6 +57,8 @@ from app.routers import cc_exchange as cc_exchange_router
 from app.routers import accessible_ontology as accessible_ontology_router
 from app.routers import beliefs
 from app.routers import concepts
+from app.routers import locales as locales_router
+from app.routers import entity_views as entity_views_router
 from app.routers import debug as debug_router
 from app.routers import dif_feedback
 from app.routers import models as models_router
@@ -661,6 +663,26 @@ async def startup_indexer():
         _startup_logger.info("startup: content_indexer_stats=%s", stats)
     except Exception:
         _startup_logger.error("startup: content_indexer failed", exc_info=True)
+
+
+@app.on_event("startup")
+async def startup_translator_backend():
+    """Register the on-demand attunement backend.
+
+    Defaults to LibreTranslate (free, no key) so the platform translates
+    content the moment a visitor requests a locale we don't have cached yet.
+    Set ``COHERENCE_TRANSLATOR=anthropic`` + provide ``ANTHROPIC_API_KEY`` to
+    upgrade to Claude for richer attunement with prompt-carried glossary.
+    """
+    try:
+        from app.services import translator_backends
+        name = translator_backends.register_default_backend()
+        if name:
+            _startup_logger.info("startup: translator_backend=%s (on-demand attunement active)", name)
+        else:
+            _startup_logger.info("startup: translator_backend=none (views serve anchor only)")
+    except Exception:
+        _startup_logger.error("startup: translator_backend registration failed", exc_info=True)
 app.include_router(providers.router, prefix="/api", tags=["agent"])
 app.include_router(agent_grounded_metrics_routes.router, prefix="/api", tags=["ideas"])
 app.include_router(treasury.router, prefix="/api", tags=["treasury"])
@@ -671,6 +693,8 @@ app.include_router(service_registry_router.router, prefix="/api", tags=["service
 app.include_router(cc_economics_router.router, prefix="/api", tags=["cc-economics"])
 app.include_router(cc_exchange_router.router, prefix="/api", tags=["cc-exchange"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
+app.include_router(locales_router.router, prefix="/api", tags=["locales"])
+app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
 app.include_router(accessible_ontology_router.router, prefix="/api", tags=["ontology"])
 app.include_router(data_retention_router.router, prefix="/api", tags=["data-retention"])
 app.include_router(beliefs.router, prefix="/api", tags=["beliefs"])

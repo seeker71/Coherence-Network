@@ -1,10 +1,16 @@
 """Concepts router — CRUD for the ontology. All data lives in graph DB."""
 
-from fastapi import APIRouter, HTTPException, Query, Response
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from typing import Any
 
-from app.services import concept_auto_tagger, concept_service, translate_service
+from app.services import (
+    concept_auto_tagger,
+    concept_service,
+    translate_service,
+    translation_cache_service as translation_cache,
+    translator_service,
+)
 from app.services.translate_service import TranslateLens
 
 router = APIRouter()
@@ -37,6 +43,32 @@ class StoryPatch(BaseModel):
     """Update a concept's living story content."""
     story_content: str | None = None
     visuals: list[dict[str, str]] | None = None  # [{prompt, caption}]
+
+
+class ViewUpsert(BaseModel):
+    """Upsert a language view of a concept. Used by the KB sync pass and by
+    community contributors editing or translating.
+
+    author_type:
+      - original_human: this view was authored directly in ``lang`` (no source)
+      - translation_human: this view was attuned from ``translated_from_lang``
+        by a human
+      - translation_machine: this view was attuned by a machine backend
+
+    ``translated_from_lang`` and ``translated_from_hash`` are required for the
+    two translation types so the anchor logic can detect staleness when the
+    origin view moves.
+    """
+    lang: str
+    content_title: str = ""
+    content_description: str = ""
+    content_markdown: str = ""
+    author_type: str = "translation_human"
+    author_id: str | None = None
+    translator_model: str | None = None
+    translated_from_lang: str | None = None
+    translated_from_hash: str | None = None
+    notes: str | None = None
 
 
 class EdgeCreate(BaseModel):
@@ -206,14 +238,27 @@ async def auto_tag_all_ideas() -> dict[str, Any]:
 async def list_concepts_by_domain(
     domain: str,
     limit: int = Query(200, ge=1, le=1000),
+    lang: str | None = Query(None, description="Target language view. When set and a canonical view exists, each concept's name/description come from that view."),
 ) -> dict:
     """Return concepts filtered by domain (e.g. 'living-collective').
 
-    Each concept carries a `domains` array; this endpoint returns those
-    whose domains include the requested value. Results include the
-    concept hierarchy (level 0-3) and all metadata.
+    When ``lang`` is supplied, each concept's name and description are replaced
+    with the canonical view for that language where one exists. Concepts
+    without a view in the target language keep their anchor content.
     """
     result = concept_service.list_concepts_by_domain(domain, limit=limit)
+    if lang and translator_service.is_supported(lang) and lang != translator_service.DEFAULT_LOCALE:
+        items = result.get("items") or result.get("concepts") or []
+        for c in items:
+            cid = c.get("id") if isinstance(c, dict) else None
+            if not cid:
+                continue
+            rec = translation_cache.canonical_view("concept", cid, lang)
+            if rec:
+                if rec.content_title:
+                    c["name"] = rec.content_title
+                if rec.content_description:
+                    c["description"] = rec.content_description
     return result
 
 
@@ -332,6 +377,10 @@ async def update_story(concept_id: str, body: StoryPatch):
 
     If visuals are not explicitly provided, they are auto-extracted from
     inline ``![caption](visuals:prompt)`` entries in story_content.
+
+    Note: this endpoint writes to the graph-node's unlocalized story_content
+    for backward compatibility. To author or update a specific language view
+    (including English as a view), use ``POST /api/concepts/{id}/views``.
     """
     concept = concept_service.get_concept(concept_id)
     if not concept:
@@ -341,6 +390,118 @@ async def update_story(concept_id: str, body: StoryPatch):
         story_content=body.story_content,
         visuals=body.visuals,
     )
+
+
+@router.post("/concepts/{concept_id}/views", summary="Upsert a language view of a concept")
+async def upsert_concept_view(concept_id: str, body: ViewUpsert):
+    """Upsert a language view for a concept. Every language is equal — this
+    endpoint accepts the view ``en``, ``de``, ``es``, ``id`` on the same
+    footing. The anchor (freshest human-touched view) is discovered at read
+    time, not hardcoded.
+
+    Called by the KB sync pass (reading ``docs/vision-kb/concepts/{id}.{lang}.md``)
+    and by community contributors authoring or attuning directly. The new row
+    becomes canonical immediately; any prior canonical row for the same
+    (concept, lang) is preserved as superseded so the history is visible.
+    """
+    if not concept_service.get_concept(concept_id):
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+    if not translator_service.is_supported(body.lang):
+        raise HTTPException(status_code=400, detail=f"Unsupported locale '{body.lang}'")
+    if body.author_type not in {
+        translation_cache.AUTHOR_TYPE_ORIGINAL_HUMAN,
+        translation_cache.AUTHOR_TYPE_TRANSLATION_HUMAN,
+        translation_cache.AUTHOR_TYPE_TRANSLATION_MACHINE,
+    }:
+        raise HTTPException(status_code=400, detail=f"Invalid author_type '{body.author_type}'")
+
+    if body.author_type != translation_cache.AUTHOR_TYPE_ORIGINAL_HUMAN:
+        if not body.translated_from_lang or not body.translated_from_hash:
+            raise HTTPException(
+                status_code=400,
+                detail="translated_from_lang and translated_from_hash are required "
+                       "unless author_type is 'original_human'",
+            )
+
+    rec = translation_cache.write_view(
+        entity_type="concept",
+        entity_id=concept_id,
+        lang=body.lang,
+        content_title=body.content_title,
+        content_description=body.content_description,
+        content_markdown=body.content_markdown,
+        author_type=body.author_type,
+        author_id=body.author_id,
+        translator_model=body.translator_model,
+        translated_from_lang=body.translated_from_lang,
+        translated_from_hash=body.translated_from_hash,
+        notes=body.notes,
+    )
+    return {
+        "id": rec.id,
+        "concept_id": concept_id,
+        "lang": rec.lang,
+        "content_hash": rec.content_hash,
+        "author_type": rec.author_type,
+        "translated_from_lang": rec.translated_from_lang,
+        "translated_from_hash": rec.translated_from_hash,
+        "status": rec.status,
+        "updated_at": rec.updated_at.isoformat() if rec.updated_at else None,
+    }
+
+
+@router.get("/concepts/{concept_id}/views", summary="List all language views for a concept (with anchor + staleness)")
+async def list_concept_views(concept_id: str):
+    """Every canonical view for a concept, plus which one is the anchor and
+    which are stale. The edit UI uses this to show the full language map.
+    """
+    if not concept_service.get_concept(concept_id):
+        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+
+    views = translation_cache.all_canonical_views("concept", concept_id)
+    anchor = translation_cache.find_anchor(views)
+    return {
+        "concept_id": concept_id,
+        "anchor_lang": anchor.lang if anchor else None,
+        "views": [
+            {
+                "lang": v.lang,
+                "author_type": v.author_type,
+                "content_hash": v.content_hash,
+                "translated_from_lang": v.translated_from_lang,
+                "translated_from_hash": v.translated_from_hash,
+                "is_anchor": anchor is not None and v.id == anchor.id,
+                "stale": translation_cache.is_stale(v, anchor),
+                "updated_at": v.updated_at.isoformat() if v.updated_at else None,
+            }
+            for v in views
+        ],
+    }
+
+
+@router.get("/concepts/{concept_id}/views/{lang}/history", summary="History of a single language view (canonical + superseded)")
+async def list_view_history(concept_id: str, lang: str):
+    if not translator_service.is_supported(lang):
+        raise HTTPException(status_code=400, detail=f"Unsupported locale '{lang}'")
+    rows = translation_cache.list_history("concept", concept_id, lang)
+    return {
+        "concept_id": concept_id,
+        "lang": lang,
+        "views": [
+            {
+                "id": r.id,
+                "status": r.status,
+                "author_type": r.author_type,
+                "author_id": r.author_id,
+                "content_hash": r.content_hash,
+                "translated_from_lang": r.translated_from_lang,
+                "translated_from_hash": r.translated_from_hash,
+                "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+                "notes": r.notes,
+            }
+            for r in rows
+        ],
+    }
 
 
 @router.post("/concepts/{concept_id}/visuals/regenerate", summary="Regenerate story and gallery images for a concept")
@@ -357,11 +518,100 @@ async def regenerate_visuals(concept_id: str, force: bool = Query(False, descrip
 
 
 @router.get("/concepts/{concept_id}", summary="Get a single concept by ID with full metadata")
-async def get_concept(concept_id: str):
-    """Get a single concept by ID with full metadata."""
+async def get_concept(
+    concept_id: str,
+    background_tasks: BackgroundTasks,
+    lang: str | None = Query(
+        default=None,
+        description="Optional language view (en, de, es, id). When set, the concept is "
+                    "rendered in that language view if one exists. A language_meta block "
+                    "declares which view is the anchor (freshest human-touched expression) "
+                    "and whether the returned view is stale relative to it. "
+                    "If no view exists yet and an LLM backend is registered, a background "
+                    "attunement is enqueued and the next request will be served from cache.",
+    ),
+):
+    """Get a single concept by ID.
+
+    When ``lang`` is supplied and a canonical view exists for that language,
+    the concept's ``name``, ``description``, and ``story_content`` come from
+    that view. ``language_meta`` exposes:
+
+    - ``lang``: what was returned
+    - ``is_anchor``: true if this view is the most recently human-touched
+    - ``stale``: true if this view was translated from an earlier state of
+      the anchor and needs re-attunement
+    - ``anchor``: the anchor view's lang + updated_at, so UI can offer
+      "read the anchor in German" if a stale English view is served
+    - ``available_langs``: every language that has a canonical view
+    """
     concept = concept_service.get_concept(concept_id)
     if not concept:
         raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+
+    views = translation_cache.all_canonical_views("concept", concept_id)
+    anchor = translation_cache.find_anchor(views)
+
+    # When no views exist yet, fall back to the base concept (legacy unlocalized data)
+    if not views:
+        if lang and lang != translator_service.DEFAULT_LOCALE:
+            if not translator_service.is_supported(lang):
+                raise HTTPException(status_code=400, detail=f"Unsupported locale '{lang}'")
+            concept["language_meta"] = {
+                "lang": lang,
+                "is_anchor": False,
+                "stale": False,
+                "available_langs": [],
+                "pending": True,
+                "anchor": None,
+            }
+        return concept
+
+    # Decide which view to return
+    target_lang = lang or (anchor.lang if anchor else translator_service.DEFAULT_LOCALE)
+    if lang and not translator_service.is_supported(lang):
+        raise HTTPException(status_code=400, detail=f"Unsupported locale '{lang}'")
+
+    chosen = next((v for v in views if v.lang == target_lang), None)
+    pending = chosen is None
+
+    # On-demand attunement: if the view is missing or stale and a backend is
+    # configured, enqueue a translation. The current request still serves the
+    # anchor (no latency penalty); the next request reads from the cache.
+    if (
+        (pending or (chosen and translation_cache.is_stale(chosen, anchor)))
+        and target_lang != translator_service.DEFAULT_LOCALE
+        and translator_service.has_backend()
+    ):
+        background_tasks.add_task(
+            translator_service.attune_from_anchor,
+            entity_type="concept",
+            entity_id=concept_id,
+            target_lang=target_lang,
+        )
+
+    if chosen is not None:
+        concept["name"] = chosen.content_title or concept.get("name")
+        concept["description"] = chosen.content_description or concept.get("description")
+        concept["story_content"] = chosen.content_markdown or concept.get("story_content")
+
+    concept["language_meta"] = {
+        "lang": target_lang,
+        "is_anchor": chosen is not None and anchor is not None and chosen.id == anchor.id,
+        "stale": chosen is not None and translation_cache.is_stale(chosen, anchor),
+        "pending": pending,
+        "available_langs": sorted([v.lang for v in views]),
+        "anchor": (
+            {
+                "lang": anchor.lang,
+                "author_type": anchor.author_type,
+                "updated_at": anchor.updated_at.isoformat() if anchor.updated_at else None,
+                "content_hash": anchor.content_hash,
+            }
+            if anchor
+            else None
+        ),
+    }
     return concept
 
 

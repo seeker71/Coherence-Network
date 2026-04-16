@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
+import { useT } from "@/components/MessagesProvider";
 
 type LedgerBalance = {
   total: number;
@@ -15,6 +16,7 @@ type LedgerResponse = {
 const STORAGE_KEY = "coherence_contributor_id";
 
 export function InvestBalanceSection() {
+  const t = useT();
   const [contributorId, setContributorId] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [balance, setBalance] = useState<LedgerBalance | null>(null);
@@ -66,9 +68,9 @@ export function InvestBalanceSection() {
   if (!contributorId) {
     return (
       <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5 space-y-3">
-        <p className="text-sm font-medium text-primary">Seeds available</p>
+        <p className="text-sm font-medium text-primary">{t("investBalance.seedsAvailable")}</p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Enter your contributor name to see how many seeds you have.
+          {t("investBalance.enterName")}
         </p>
         <div className="flex gap-2">
           <input
@@ -76,7 +78,7 @@ export function InvestBalanceSection() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            placeholder="Your contributor name"
+            placeholder={t("investBalance.namePlaceholder")}
             className="flex-1 rounded-xl border border-border/40 bg-card/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           <button
@@ -84,7 +86,7 @@ export function InvestBalanceSection() {
             onClick={handleSave}
             className="rounded-xl bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
           >
-            Save
+            {t("investBalance.saveBtn")}
           </button>
         </div>
       </section>
@@ -93,12 +95,12 @@ export function InvestBalanceSection() {
 
   return (
     <section className="mb-8 rounded-2xl border border-primary/20 bg-primary/5 p-5">
-      <p className="text-sm font-medium text-primary">Seeds available</p>
-      <p className="mt-1 text-2xl font-light text-foreground" aria-label={`${balance ? Math.round(balance.total) : 0} seeds available`}>
-        {loading ? "Loading..." : balance ? `${Math.round(balance.total)} seeds` : "Unavailable"}
+      <p className="text-sm font-medium text-primary">{t("investBalance.seedsAvailable")}</p>
+      <p className="mt-1 text-2xl font-light text-foreground">
+        {loading ? t("investBalance.loadingBalance") : balance ? t("investBalance.seedsLabel", { n: Math.round(balance.total) }) : t("investBalance.unavailable")}
       </p>
       <p className="mt-1 text-xs text-muted-foreground flex items-center gap-2">
-        Contributor: {contributorId}
+        {t("investBalance.contributorPrefix")} {contributorId}
         <button
           type="button"
           onClick={() => {
@@ -109,7 +111,7 @@ export function InvestBalanceSection() {
           }}
           className="text-primary/60 hover:text-primary underline text-xs"
         >
-          change
+          {t("investBalance.changeBtn")}
         </button>
       </p>
     </section>

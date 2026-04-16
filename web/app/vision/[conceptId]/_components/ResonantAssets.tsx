@@ -19,6 +19,7 @@
 
 import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
+import { useT } from "@/components/MessagesProvider";
 
 interface AssetVariant {
   path: string;
@@ -34,6 +35,7 @@ interface ResonantAssetsProps {
 export function ResonantAssets({ conceptId }: ResonantAssetsProps) {
   const [assets, setAssets] = useState<AssetVariant[]>([]);
   const [selected, setSelected] = useState<AssetVariant | null>(null);
+  const t = useT();
 
   useEffect(() => {
     // Build asset list from known visual patterns
@@ -91,10 +93,10 @@ export function ResonantAssets({ conceptId }: ResonantAssetsProps) {
       {showGrid && (
         <section className="pt-6">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-stone-500 mb-3">
-            Visual expressions
+            {t("vision.visualExpressionsHeading")}
           </h3>
           <p className="text-xs text-stone-600 mb-3">
-            Each expression is a unique contribution. The most resonant rises to the surface.
+            {t("vision.resonantAssetsIntro")}
           </p>
 
           {/* Grid of variants */}

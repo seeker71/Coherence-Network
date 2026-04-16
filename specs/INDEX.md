@@ -1,8 +1,8 @@
 # Spec Index
 
-> 68 specs (65 done, 3 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 69 specs (65 done, 4 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (18 ideas → 68 specs)
+## By Idea (18 ideas → 69 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -99,8 +99,9 @@
 ### federation-and-nodes (1 spec)
 - [federation-network-layer](federation-network-layer.md) — multi-node federation protocol
 
-### external-presence (1 spec)
+### external-presence (2 specs)
 - [external-presence-bots-and-news](external-presence-bots-and-news.md) — social bots + news ingestion
+- [multilingual-web](multilingual-web.md) — multilingual UI + content, machine and community translations
 
 ### public-verification-framework (1 spec)
 - [public-verification-framework](public-verification-framework.md) — Merkle hash chains, Arweave snapshots, public audit API

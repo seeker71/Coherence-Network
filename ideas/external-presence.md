@@ -6,6 +6,7 @@ work_type: feature
 pillar: foundation
 specs:
   - [external-presence-bots-and-news](../specs/external-presence-bots-and-news.md)
+  - [multilingual-web](../specs/multilingual-web.md)
 ---
 
 # External Presence and Ecosystem
