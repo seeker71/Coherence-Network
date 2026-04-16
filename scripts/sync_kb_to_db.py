@@ -25,7 +25,7 @@ from pathlib import Path
 
 from kb_common import (
     KB_DIR, DEFAULT_API, STATUS_ORDER,
-    parse_concept_file, api_get, api_patch, api_post,
+    parse_concept_file, parse_crossrefs, api_delete, api_get, api_patch, api_post,
 )
 
 DEFAULT_WRITE_API_KEY = "dev-key"
@@ -83,17 +83,112 @@ def patch_node(api_url: str, node_id: str, properties: dict, api_key: str | None
     )
 
 
-def sync_concept(parsed: dict, api_url: str, dry_run: bool, api_key: str | None) -> bool:
+def load_crossref_map() -> dict[str, set[str]]:
+    crossrefs: dict[str, set[str]] = {}
+    for filepath in sorted(KB_DIR.glob("*.md")):
+        concept_id = filepath.stem
+        refs = set(parse_crossrefs(filepath.read_text(encoding="utf-8")))
+        refs.discard(concept_id)
+        crossrefs[concept_id] = refs
+    return crossrefs
+
+
+def fetch_concept_edges(api_url: str, concept_id: str) -> list[dict]:
+    data = api_get(f"{api_url}/api/concepts/{concept_id}/edges")
+    return data if isinstance(data, list) else []
+
+
+def create_edge(api_url: str, from_id: str, to_id: str, edge_type: str, api_key: str | None) -> bool:
+    status = api_post(
+        f"{api_url}/api/graph/edges",
+        {
+            "from_id": from_id,
+            "to_id": to_id,
+            "type": edge_type,
+            "created_by": "sync_kb_to_db",
+        },
+        headers=_write_headers(api_key),
+    )
+    return status in (200, 201, 409)
+
+
+def delete_edge(api_url: str, edge_id: str, api_key: str | None) -> bool:
+    status = api_delete(f"{api_url}/api/graph/edges/{edge_id}", headers=_write_headers(api_key))
+    return status in (200, 404)
+
+
+def sync_analogous_edges(
+    concept_id: str,
+    api_url: str,
+    dry_run: bool,
+    api_key: str | None,
+    crossref_map: dict[str, set[str]],
+) -> bool:
+    desired_peers = set(crossref_map.get(concept_id, set()))
+    desired_peers.update(other for other, refs in crossref_map.items() if concept_id in refs)
+
+    if dry_run:
+        print(f"    [DRY RUN] would reconcile analogous-to edges for {concept_id}: {sorted(desired_peers)}")
+        return True
+
+    try:
+        edges = fetch_concept_edges(api_url, concept_id)
+    except Exception as exc:
+        print(f"    edge fetch FAILED ({exc})", file=sys.stderr)
+        return False
+
+    analogous_edges = [
+        edge for edge in edges
+        if edge.get("type") == "analogous-to"
+        and (edge.get("from") == concept_id or edge.get("to") == concept_id)
+    ]
+
+    by_peer: dict[str, list[dict]] = {}
+    for edge in analogous_edges:
+        peer = edge["to"] if edge.get("from") == concept_id else edge["from"]
+        by_peer.setdefault(peer, []).append(edge)
+
+    ok = True
+
+    for peer, peer_edges in by_peer.items():
+        extras = peer_edges[1:]
+        if peer not in desired_peers:
+            extras = peer_edges
+        for edge in extras:
+            if not delete_edge(api_url, edge["id"], api_key):
+                print(f"    delete FAILED ({edge['id']})", file=sys.stderr)
+                ok = False
+
+    for peer in sorted(desired_peers):
+        if peer in by_peer:
+            continue
+        from_id, to_id = sorted([concept_id, peer])
+        if not create_edge(api_url, from_id, to_id, "analogous-to", api_key):
+            print(f"    edge create FAILED ({from_id} -> {to_id})", file=sys.stderr)
+            ok = False
+
+    return ok
+
+
+def sync_concept(
+    parsed: dict,
+    api_url: str,
+    dry_run: bool,
+    api_key: str | None,
+    crossref_map: dict[str, set[str]],
+) -> bool:
     concept_id = parsed["id"]
     props = parsed["properties"]
 
     if dry_run:
         print(f"    [DRY RUN] would ensure + PATCH /api/graph/nodes/{concept_id}")
-        return True
+        return sync_analogous_edges(concept_id, api_url, dry_run, api_key, crossref_map)
 
     if not ensure_concept_node(api_url, parsed, api_key):
         return False
-    return patch_node(api_url, concept_id, props, api_key)
+    if not patch_node(api_url, concept_id, props, api_key):
+        return False
+    return sync_analogous_edges(concept_id, api_url, dry_run, api_key, crossref_map)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -131,6 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     synced = 0
     skipped = 0
     failed = 0
+    crossref_map = load_crossref_map()
 
     for filepath in files:
         parsed = parse_concept_file(filepath)
@@ -151,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
         field_summary = ", ".join(f"{k}({len(v) if isinstance(v, (list, dict)) else 'str'})" for k, v in props.items())
         print(f"  {concept_id}: {field_summary}")
 
-        if sync_concept(parsed, args.api_url, args.dry_run, args.api_key):
+        if sync_concept(parsed, args.api_url, args.dry_run, args.api_key, crossref_map):
             print(f"    synced to DB")
             synced += 1
         else:

@@ -99,7 +99,7 @@ const CONTEXT_PAIRS = [
   },
   {
     context: "Suburban",
-    transformedImage: "/visuals/generated/lc-attuned-spaces-0.jpg",
+    transformedImage: "/visuals/transform-suburb.png",
     transformedTitle: "Transform what is here",
     transformedBody:
       "Connected lanes, shared porches, common gardens, repurposed garages, and slow streets let a suburban pattern become one field without waiting for large capital.",
@@ -110,7 +110,7 @@ const CONTEXT_PAIRS = [
   },
   {
     context: "Rural",
-    transformedImage: "/visuals/community-earthship.png",
+    transformedImage: "/visuals/transform-village.png",
     transformedTitle: "Transform what is here",
     transformedBody:
       "A house, greenhouse, barn, or stewarded structure becomes the anchor for food, tools, bathing, and hospitality before the wider land build-out arrives.",
@@ -118,6 +118,23 @@ const CONTEXT_PAIRS = [
     envisionedTitle: "Build what follows",
     envisionedBody:
       "Brand-new rural embodiment can grow as a land-rooted cluster: shared paths, curved shelter, open commons, and structures that feel more grown than imposed.",
+  },
+];
+
+const DUAL_PATHS = [
+  {
+    label: "Repurposed now",
+    title: "Keep the shell, change the field",
+    image: "/visuals/transform-neighborhood.png",
+    body:
+      "Existing apartments, storefronts, towers, churches, schools, garages, barns, and civic rooms can be retuned today. The fastest move is often relational, not structural.",
+  },
+  {
+    label: "Pure imagination",
+    title: "Let the form start from coherence",
+    image: "/visuals/generated/lc-v-living-spaces-3.jpg",
+    body:
+      "The unconstrained image still matters. It shows what the organism chooses when beauty, circulation, and belonging shape the structure from the first line.",
   },
 ];
 
@@ -134,7 +151,8 @@ export default function RealizePage() {
         </h1>
         <p className="text-lg text-stone-400 font-light max-w-2xl mx-auto leading-relaxed">
           What a morning tastes like. How a conflict composts. How children grow with fifty parents.
-          How the field meets the world through overflow.
+          How the field meets the world through overflow. See both the nearest transformation and
+          the unconstrained form it is moving toward.
         </p>
         <div className="flex gap-6 justify-center pt-4">
           <Link href="/vision" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">← The vision</Link>
@@ -143,11 +161,48 @@ export default function RealizePage() {
         </div>
       </section>
 
+      <section className="space-y-8">
+        <div className="space-y-3">
+          <p className="text-sm uppercase tracking-[0.28em] text-stone-500">Two doors into the same future</p>
+          <h2 className="text-3xl font-extralight text-stone-300">Feel both before you read</h2>
+          <p className="max-w-3xl text-stone-400 leading-relaxed">
+            One door shows how the vision lands inside the structures already around us. The other
+            shows what becomes possible when we are free to build from coherence from the start.
+            Both are real. One grounds the change. One keeps the horizon open.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {DUAL_PATHS.map((path) => (
+            <article
+              key={path.label}
+              className="overflow-hidden rounded-[1.75rem] border border-stone-800/30 bg-stone-900/20"
+            >
+              <div className="relative aspect-[16/10] overflow-hidden">
+                <Image
+                  src={path.image}
+                  alt={path.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent" />
+              </div>
+              <div className="space-y-3 p-5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">{path.label}</p>
+                <h3 className="text-2xl font-extralight text-white">{path.title}</h3>
+                <p className="text-sm leading-relaxed text-stone-400">{path.body}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {/* Where it can land now */}
       <section className="space-y-8">
         <div className="space-y-3">
-          <p className="text-sm uppercase tracking-[0.28em] text-stone-500">Where the field can land now</p>
-          <h2 className="text-3xl font-extralight text-stone-300">Existing spaces are part of the build</h2>
+          <p className="text-sm uppercase tracking-[0.28em] text-stone-500">Repurposed now</p>
+          <h2 className="text-3xl font-extralight text-stone-300">Existing spaces are already part of the build</h2>
           <p className="max-w-3xl text-stone-400 leading-relaxed">
             We do not wait for ideal land to begin. City apartments, urban blocks, suburban lanes,
             rural houses, studios, halls, and neighborhoods can already host the qualities that make
@@ -282,11 +337,11 @@ export default function RealizePage() {
       <section className="space-y-8">
         <div className="space-y-3">
           <p className="text-sm uppercase tracking-[0.28em] text-stone-500">Both ways of seeing matter</p>
-          <h2 className="text-3xl font-extralight text-stone-300">Transform what exists and envision what comes next</h2>
+          <h2 className="text-3xl font-extralight text-stone-300">See the repurposed field and the pure form side by side</h2>
           <p className="max-w-3xl text-stone-400 leading-relaxed">
-            The future lands through both paths at once. Some places change by retuning the rooms,
-            blocks, towers, lanes, and houses already here. Other places show the fuller form that
-            becomes possible once the pattern has enough coherence to build from the ground up.
+            The future lands through both paths at once. One image asks what this context can become
+            without waiting for demolition. The other asks what it would look like if coherence were
+            free to choose the structure from the beginning.
           </p>
         </div>
 
@@ -312,7 +367,7 @@ export default function RealizePage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/10 to-transparent" />
                   </div>
                   <div className="space-y-3 p-5">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-teal-300/70">Transform what is here</p>
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-teal-300/70">Repurpose now</p>
                     <h3 className="text-lg font-light text-white">{pair.transformedTitle}</h3>
                     <p className="text-sm text-stone-400 leading-relaxed">{pair.transformedBody}</p>
                   </div>
@@ -330,7 +385,7 @@ export default function RealizePage() {
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/10 to-transparent" />
                   </div>
                   <div className="space-y-3 p-5">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/70">Build what follows</p>
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/70">Imagine freely</p>
                     <h3 className="text-lg font-light text-white">{pair.envisionedTitle}</h3>
                     <p className="text-sm text-stone-400 leading-relaxed">{pair.envisionedBody}</p>
                   </div>
