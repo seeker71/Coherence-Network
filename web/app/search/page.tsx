@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getApiBase } from "@/lib/api";
 import { useLiveRefresh } from "@/lib/live_refresh";
+import { useT } from "@/components/MessagesProvider";
 
 const API_URL = getApiBase();
 
@@ -16,6 +17,7 @@ interface ProjectSummary {
 }
 
 export default function SearchPage() {
+  const t = useT();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ProjectSummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -62,38 +64,38 @@ export default function SearchPage() {
           ← Coherence Network
         </Link>
         <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
+          {t("search.portfolio")}
         </Link>
         <Link href="/ideas" className="text-muted-foreground hover:text-foreground">
-          Ideas
+          {t("nav.ideas")}
         </Link>
         <Link href="/usage" className="text-muted-foreground hover:text-foreground">
-          Usage
+          {t("search.usage")}
         </Link>
       </div>
-      <h1 className="text-2xl font-bold mb-4">Search projects</h1>
+      <h1 className="text-2xl font-bold mb-4">{t("search.title")}</h1>
       <form onSubmit={handleSearch} className="flex gap-2 mb-6">
         <Input
           type="search"
-          placeholder="e.g. react, lodash"
+          placeholder={t("search.placeholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="flex-1"
         />
         <Button type="submit" disabled={status === "loading"}>
-          Search
+          {t("search.button")}
         </Button>
       </form>
-      {status === "loading" && <p className="text-muted-foreground">Searching…</p>}
+      {status === "loading" && <p className="text-muted-foreground">{t("search.searching")}</p>}
       {status === "error" && (
         <p className="text-destructive">
-          API error: {error}. Is the API running?
+          {t("search.apiError", { error: error || "" })}
         </p>
       )}
       {status === "ok" && (
         <section>
           <p className="text-sm text-muted-foreground mb-4">
-            {total} result{total !== 1 ? "s" : ""}
+            {t(total === 1 ? "search.results" : "search.resultsPlural", { n: total })}
           </p>
           <ul className="space-y-3">
             {results.map((r) => (

@@ -188,6 +188,46 @@
     "loading": "Nachrichten werden geladen …",
     "noMessages": "Keine Nachrichten gefunden."
   },
+  "assets": {
+    "title": "Werke-Katalog",
+    "lede": "Werke sind die Dinge, die Menschen wirklich berühren: Code, Inhalt, Modelle und Daten. Diese Seite zeigt, was da ist, was es gekostet hat und wo die Beitrags-Geschichte dranhängt.",
+    "statVisible": "Sichtbare Werke",
+    "statCost": "Gespürter Aufwand",
+    "statTopType": "Häufigster Typ",
+    "statLinked": "Verknüpfte Arbeit",
+    "linkedHint": "Springe von einem Werk ins Beitrags-Hauptbuch, um zu sehen, wer es geformt hat und was es kostete.",
+    "browseAll": "Alle angemeldeten Netz-Werke durchstöbern.",
+    "showingOne": "Zeige ein Werk.",
+    "assetOne": "{n} Werk",
+    "assetMany": "{n} Werke",
+    "loadingAssets": "Werke werden geladen …"
+  },
+  "search": {
+    "title": "Projekte suchen",
+    "placeholder": "z. B. react, lodash",
+    "button": "Suchen",
+    "searching": "Wird gesucht …",
+    "apiError": "API-Fehler: {error}. Läuft die API?",
+    "results": "{n} Treffer",
+    "resultsPlural": "{n} Treffer",
+    "portfolio": "Portfolio",
+    "usage": "Nutzung"
+  },
+  "treasury": {
+    "title": "Schatz",
+    "lede": "Lege ETH oder BTC in den Schatz des Coherence Network. Deine Krypto wandelt sich in CC (Coherence Credits), die auf die Ideen gesetzt werden, an die du glaubst.",
+    "howItWorks": "So geht es",
+    "step1Label": "Sende ETH oder BTC",
+    "step1After": " an die unten gezeigte Schatz-Adresse.",
+    "step2Label": "Trage deine Einlage ein",
+    "step2After": " mit dem Blockchain-Transaktions-Hash, damit wir sie prüfen können.",
+    "step3Label": "Dein CC wird gesetzt",
+    "step3After": " auf Ideen, an die du glaubst – und lenkt echte Rechenkraft dorthin.",
+    "step4Label": "Wenn Ideen Wert erzeugen",
+    "step4After": ", fließt dein Anteil durch die Wert-Linie zurück – anteilig zu deinem Beitrag.",
+    "footnote": "Einlagen werden in einem nur-hinzufügenden Hauptbuch festgehalten. Der eigentliche Krypto-Transfer geschieht on-chain; dieses System hält den Transaktions-Hash zur Prüfung fest.",
+    "viewIdeas": "Alle Ideen ansehen und direkt setzen →"
+  },
   "dashboard": {
     "title": "Werkstatt-Überblick",
     "refreshed": "Aktualisiert {time}",

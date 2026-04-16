@@ -188,6 +188,46 @@
     "loading": "Loading messages...",
     "noMessages": "No messages found."
   },
+  "assets": {
+    "title": "Asset Catalog",
+    "lede": "Assets are the things people actually touch: code, content, models, and data. This page shows what exists, what it cost, and where contribution history is attached.",
+    "statVisible": "Visible Assets",
+    "statCost": "Sensed Cost",
+    "statTopType": "Top Type",
+    "statLinked": "Linked Work",
+    "linkedHint": "Jump from an asset into the contribution ledger to see who shaped it and what it cost.",
+    "browseAll": "Browse all registered network assets.",
+    "showingOne": "Showing one asset.",
+    "assetOne": "{n} asset",
+    "assetMany": "{n} assets",
+    "loadingAssets": "Loading assets…"
+  },
+  "search": {
+    "title": "Search projects",
+    "placeholder": "e.g. react, lodash",
+    "button": "Search",
+    "searching": "Searching…",
+    "apiError": "API error: {error}. Is the API running?",
+    "results": "{n} result",
+    "resultsPlural": "{n} results",
+    "portfolio": "Portfolio",
+    "usage": "Usage"
+  },
+  "treasury": {
+    "title": "Treasury",
+    "lede": "Deposit ETH or BTC into the Coherence Network treasury. Your crypto converts to CC (Coherence Credits) which get staked on the ideas you believe in.",
+    "howItWorks": "How it works",
+    "step1Label": "Send ETH or BTC",
+    "step1After": " to the treasury wallet address shown below.",
+    "step2Label": "Record your deposit",
+    "step2After": " with the blockchain transaction hash so we can verify it.",
+    "step3Label": "Your CC gets staked",
+    "step3After": " on ideas you believe in — directing real compute toward them.",
+    "step4Label": "When ideas create value",
+    "step4After": ", your share flows back through value lineage — proportional to your contribution.",
+    "footnote": "Deposits are recorded on an append-only ledger. The actual crypto transfer happens on-chain; this system records the transaction hash for verification.",
+    "viewIdeas": "View all ideas & stake directly →"
+  },
   "dashboard": {
     "title": "Pipeline Dashboard",
     "refreshed": "Refreshed {time}",
