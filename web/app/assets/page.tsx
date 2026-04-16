@@ -87,19 +87,19 @@ function AssetsPageContent() {
     <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-6">
       <div className="flex flex-wrap gap-3 text-sm">
         <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← Home
+          ← {t("dashboard.home")}
         </Link>
         <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          Portfolio
+          {t("search.portfolio")}
         </Link>
         <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
-          Contributors
+          {t("nav.contributors")}
         </Link>
         <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          Contributions
+          {t("contribute.title")}
         </Link>
         <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          Tasks
+          {t("nav.workCards")}
         </Link>
       </div>
       <div className="space-y-2">

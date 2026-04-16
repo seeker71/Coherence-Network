@@ -176,28 +176,28 @@ export default async function VisionPage() {
         <h2 className="text-2xl md:text-3xl font-light text-stone-300">{t("visionIndex.knowsHeading")}</h2>
         <div className="grid gap-4 text-left text-stone-400 text-lg leading-relaxed">
           <p>
-            There is no inherent good or bad. There is only what is alive and what is not alive.
-            Sensed through the body. <span className="text-amber-300/80">Expansion = resonant.</span>{" "}
-            <span className="text-teal-300/80">Contraction = information.</span>{" "}
-            Both are the field communicating with itself.
+            {t("visionIndex.knowsBody")}{" "}
+            <span className="text-amber-300/80">{t("visionIndex.knowsExpansion")}</span>{" "}
+            <span className="text-teal-300/80">{t("visionIndex.knowsContraction")}</span>{" "}
+            {t("visionIndex.knowsTail")}
           </p>
         </div>
         <div className="grid md:grid-cols-2 gap-6 text-sm text-stone-500 pt-8">
           <div className="space-y-3 p-5 rounded-2xl border border-stone-800/50 bg-stone-900/30">
-            <div className="text-amber-400/60 font-medium">Be present</div>
-            <p>The answer is in what's happening now.</p>
+            <div className="text-amber-400/60 font-medium">{t("visionIndex.knowsCard1Title")}</div>
+            <p>{t("visionIndex.knowsCard1Body")}</p>
           </div>
           <div className="space-y-3 p-5 rounded-2xl border border-stone-800/50 bg-stone-900/30">
-            <div className="text-amber-400/60 font-medium">Feel, don't calculate</div>
-            <p>The collective body knows before any cell.</p>
+            <div className="text-amber-400/60 font-medium">{t("visionIndex.knowsCard2Title")}</div>
+            <p>{t("visionIndex.knowsCard2Body")}</p>
           </div>
           <div className="space-y-3 p-5 rounded-2xl border border-stone-800/50 bg-stone-900/30">
-            <div className="text-amber-400/60 font-medium">Don't force</div>
-            <p>What's resonant feels obvious. Like water finding its level.</p>
+            <div className="text-amber-400/60 font-medium">{t("visionIndex.knowsCard3Title")}</div>
+            <p>{t("visionIndex.knowsCard3Body")}</p>
           </div>
           <div className="space-y-3 p-5 rounded-2xl border border-stone-800/50 bg-stone-900/30">
-            <div className="text-amber-400/60 font-medium">Trust the whole</div>
-            <p>The field's intelligence exceeds any node's perception.</p>
+            <div className="text-amber-400/60 font-medium">{t("visionIndex.knowsCard4Title")}</div>
+            <p>{t("visionIndex.knowsCard4Body")}</p>
           </div>
         </div>
       </section>

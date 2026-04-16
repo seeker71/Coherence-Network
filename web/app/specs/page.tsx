@@ -109,11 +109,11 @@ function collectSpecRelations(flowItems: FlowItem[]): Map<string, SpecRelations>
   return map;
 }
 
-function humanizeSource(value: string): string {
+function humanizeSource(value: string, t: Translator): string {
   const normalized = value.trim().toLowerCase();
-  if (!normalized) return "Unknown";
-  if (normalized === "local") return "This workspace";
-  if (normalized === "api") return "Live API";
+  if (!normalized) return t("specs.sourceUnknown");
+  if (normalized === "local") return t("specs.sourceThisWorkspace");
+  if (normalized === "api") return t("specs.sourceLiveApi");
   return value;
 }
 
@@ -159,7 +159,7 @@ async function loadSpecs(workspaceId: string): Promise<{ source: string; items: 
   };
 }
 
-function buildSpecCards(source: string, specs: SpecItem[], registry: SpecRegistryEntry[], flowItems: FlowItem[]): SpecCard[] {
+function buildSpecCards(source: string, specs: SpecItem[], registry: SpecRegistryEntry[], flowItems: FlowItem[], t: Translator): SpecCard[] {
   const relationsBySpec = collectSpecRelations(flowItems);
   const inventoryById = new Map(specs.map((item) => [item.spec_id, item]));
   const registryById = new Map(registry.map((item) => [item.spec_id, item]));
@@ -179,7 +179,7 @@ function buildSpecCards(source: string, specs: SpecItem[], registry: SpecRegistr
       spec_id,
       title: registryItem?.title || inventoryItem?.title || spec_id,
       api_path: registryItem ? `/api/spec-registry/${encodeURIComponent(spec_id)}` : inventoryItem?.api_path,
-      source_label: registryItem && inventoryItem ? `${humanizeSource(source)} + Registry` : registryItem ? "Registry" : humanizeSource(source),
+      source_label: registryItem && inventoryItem ? `${humanizeSource(source, t)} + Registry` : registryItem ? "Registry" : humanizeSource(source, t),
       inventoryItem,
       registryItem,
       relations,
@@ -257,7 +257,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
   const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
   const t = createTranslator(lang);
   const { source, items: specs, registry, flowItems } = await loadSpecs(workspaceId);
-  const specCards = buildSpecCards(source, specs, registry, flowItems);
+  const specCards = buildSpecCards(source, specs, registry, flowItems, t);
   const filteredSpecs = specFilter ? specCards.filter((s) => s.spec_id === specFilter) : specCards;
   const filteredRegistry = filteredSpecs.filter((spec) => Boolean(spec.registryItem));
 
@@ -266,7 +266,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">{t("specs.title")}</h1>
         <p className="max-w-3xl leading-relaxed text-muted-foreground">
-          Specs are the delivery contracts between ideas, implementation work, and verification. This view shows what the repo can currently discover, what the registry knows, and where the links are still missing.
+          {t("specs.lede")}
         </p>
       </div>
 
@@ -286,11 +286,11 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
           <div>
             <h2 className="text-lg font-medium">{t("specs.visibleHeading")}</h2>
             <p className="text-sm text-muted-foreground">
-              {filteredSpecs.length} visible specs from {humanizeSource(source)} and the registry.
+              {t("specs.visibleSub", { n: filteredSpecs.length, source: humanizeSource(source, t) })}
             </p>
           </div>
           <Link href="/contribute" className="text-sm underline hover:text-foreground">
-            Add or update spec metadata
+            {t("specs.addMetadata")}
           </Link>
         </div>
 
@@ -331,20 +331,20 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
                       )}
                     </div>
                     <p className="text-muted-foreground">
-                      {registryItem?.summary || "Discovered from system lineage. Add registry metadata to make this spec measurable and easier to reason about."}
+                      {registryItem?.summary || t("specs.discoveredLineage")}
                     </p>
                   </div>
 
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                     <Link href={`/flow?spec_id=${encodeURIComponent(spec.spec_id)}`} className="underline hover:text-foreground">
-                      Process view
+                      {t("specs.processView")}
                     </Link>
                     <Link href={`/specs/${encodeURIComponent(spec.spec_id)}`} className="underline hover:text-foreground">
-                      Spec detail
+                      {t("specs.title").replace(/s$/, '')}
                     </Link>
                     {spec.api_path ? (
                       <a href={spec.api_path} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">
-                        Open API
+                        {t("specs.openApi")}
                       </a>
                     ) : null}
                   </div>
@@ -393,7 +393,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
                       ROI est {formatNumber(registryItem.estimated_roi)} | ROI actual {formatNumber(registryItem.actual_roi)} | value gap {formatNumber(registryItem.value_gap)} | updated {formatDate(registryItem.updated_at)}
                     </p>
                   ) : (
-                    <p>Registry metrics missing. Link this spec in the registry to expose ROI, gap, and summary data.</p>
+                    <p>{t("specs.registryMissing")}</p>
                   )}
                 </div>
               </li>
@@ -411,7 +411,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
         <h2 className="text-lg font-medium">{t("specs.registryCoverage")}</h2>
         <p className="text-sm text-muted-foreground">
-          {filteredRegistry.length} of {filteredSpecs.length} visible specs currently have registry metadata attached.
+          {t("specs.registryCoverageSub", { n: filteredRegistry.length, total: filteredSpecs.length })}
         </p>
         <div className="flex flex-wrap gap-3 text-sm">
           <Link href="/contribute" className="underline hover:text-foreground">

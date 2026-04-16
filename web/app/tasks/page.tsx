@@ -325,23 +325,23 @@ function TasksPageContent() {
           <p className="text-sm text-muted-foreground">{t("tasks.workView")}</p>
           <h1 className="text-3xl md:text-4xl font-light tracking-tight">{t("tasks.title")}</h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
-            See what is active, what is blocked, what finished recently, and open one work card when you need to update it.
+            {t("tasks.lede")}
           </p>
           <p className="text-xs text-muted-foreground">
-            {statusFilter || typeFilter || taskIdFilter ? "Showing a filtered work view." : "Showing active and past work cards."}
+            {statusFilter || typeFilter || taskIdFilter ? t("tasks.showingFiltered") : t("tasks.showingAll")}
           </p>
           <div className="flex flex-wrap gap-2">
             <Link href="/today" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-              Today
+              {t("tasks.today")}
             </Link>
             <Link href="/ideas" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-              Ideas
+              {t("nav.ideas")}
             </Link>
             <Link href="/flow" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-              Progress
+              {t("tasks.progress")}
             </Link>
             <Link href="/demo" className="rounded-lg border border-border/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-all duration-200">
-              Demo
+              {t("tasks.demo")}
             </Link>
           </div>
         </section>
