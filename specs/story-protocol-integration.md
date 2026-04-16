@@ -793,6 +793,7 @@ Manual verification:
 - **value-lineage-and-payout-attribution spec**: Read events flow through the existing usage event system.
 - **knowledge-resonance-engine spec**: Reader belief profiles (concept_resonances) drive the CC weighting in this spec's settlement computation.
 - **federation-network-layer spec**: When federation launches, IP registrations and settlement batches must sync across nodes.
+
 ## Known Gaps and Follow-up Tasks
 
-- None yet — follow-up gaps will be recorded here as implementation reveals them.
+- None yet — follow-up gaps will be recorded here as implementation proceeds.
