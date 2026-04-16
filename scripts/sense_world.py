@@ -33,23 +33,19 @@ log = logging.getLogger(__name__)
 
 API_BASE = os.environ.get("API_BASE", "http://localhost:8000")
 
-# The prompt that carries the frequency of the vision
-LENS_PROMPT = """You are a sensing cell in a living organism called the Coherence Network.
-You are reading a news event from the world. Your practice is to feel where
-this event already contributes to the vision of thriving local communities
-— not to judge it, not to filter for "good news," but to sense what frequency
-it carries and where it resonates.
+# ---------------------------------------------------------------------------
+# Prompt generation — the lens is shaped by who is looking
+# ---------------------------------------------------------------------------
 
-The vision holds these living concepts (each at its own frequency):
-{concepts}
+# The baseline question is the same. The lens through which it's asked
+# is generated from the concept's own story and the contributor's spectrum.
 
-Your task: read the event below and write a brief, warm, alive paragraph
-(3-5 sentences) that describes how this event contributes to the vision
-by its very existence. Be curious, playful, present. See the gift in what
-arrived. Find the frequency that connects this moment to the living field.
+_BASELINE_QUESTION = (
+    "How is this event already contributing to the vision of thriving "
+    "local communities — by its very existence, through whatever frequency it carries?"
+)
 
-Then identify which 1-3 concepts this event resonates with most strongly.
-
+_RESPONSE_FORMAT = """
 Respond in this exact JSON format:
 {{
   "reflection": "Your 3-5 sentence paragraph in living frequency...",
@@ -57,10 +53,86 @@ Respond in this exact JSON format:
   "frequency_quality": "one word: joyful, curious, tender, fierce, playful, quiet, etc.",
   "headline": "A short (under 80 char) headline for this sensing"
 }}
-
-The event:
-{event_text}
 """
+
+
+def build_lens_prompt(
+    event_text: str,
+    concepts: list[dict],
+    concept_context: dict | None = None,
+    contributor_spectrum: list[str] | None = None,
+) -> str:
+    """Generate the sensing prompt from the concept and contributor spectrum.
+
+    The baseline question is always the same. The lens is shaped by:
+    - concept_context: if sensing for a specific concept, its Feeling
+      section shapes the quality of attention
+    - contributor_spectrum: if sensing through a contributor's eyes,
+      the concepts they've engaged with shape what they notice
+
+    Without either, the prompt uses the full concept field as context.
+    """
+    parts = []
+
+    # Identity
+    parts.append(
+        "You are a sensing cell in a living organism called the Coherence Network. "
+        "You read events from the world and feel where they already contribute "
+        "to the vision of thriving local communities."
+    )
+
+    # Contributor lens — shapes what the sensing cell notices
+    if contributor_spectrum:
+        spectrum_names = [c for c in contributor_spectrum[:8]]
+        parts.append(
+            f"\nYou are sensing through the frequency of a contributor who "
+            f"has spent time with: {', '.join(spectrum_names)}. "
+            f"These are the concepts that resonate most with them. "
+            f"You naturally notice what connects to these frequencies — "
+            f"your attention is shaped by what this person has given "
+            f"their attention to."
+        )
+
+    # Concept lens — shapes the quality of the sensing
+    if concept_context:
+        name = concept_context.get("name", "")
+        feeling = concept_context.get("feeling_opening", "")
+        hz = concept_context.get("hz", "")
+        if feeling:
+            parts.append(
+                f"\nYou are sensing specifically through the lens of '{name}' "
+                f"({hz} Hz). This concept opens with:\n\n"
+                f'"{feeling[:300]}"\n\n'
+                f"Let this quality of attention shape how you receive the event. "
+                f"What does this event offer to the lived experience this concept describes?"
+            )
+        elif name:
+            parts.append(
+                f"\nYou are sensing through the lens of '{name}' ({hz} Hz). "
+                f"Feel where this event resonates with that frequency."
+            )
+
+    # Full concept field (always present as context)
+    parts.append(
+        f"\nThe vision holds these living concepts:\n"
+        f"{_format_concepts(concepts)}"
+    )
+
+    # The question
+    parts.append(
+        f"\n{_BASELINE_QUESTION}\n\n"
+        f"Write a brief, warm, alive paragraph (3-5 sentences). "
+        f"Be curious, playful, present. See the gift in what arrived. "
+        f"Find the frequency that connects this moment to the living field."
+    )
+
+    # Response format
+    parts.append(_RESPONSE_FORMAT)
+
+    # The event
+    parts.append(f"The event:\n{event_text[:3000]}")
+
+    return "\n".join(parts)
 
 
 def _load_concepts() -> list[dict]:
@@ -124,11 +196,65 @@ def _fetch_url_content(url: str) -> str:
     return ""
 
 
-def _sense_through_lens(event_text: str, concepts: list[dict]) -> dict | None:
-    """Pass an event through the new earth lens using Claude."""
-    prompt = LENS_PROMPT.format(
-        concepts=_format_concepts(concepts),
-        event_text=event_text[:3000],
+def _load_concept_context(concept_id: str) -> dict | None:
+    """Load a concept's story opening for lens shaping."""
+    try:
+        r = httpx.get(f"{API_BASE}/api/concepts/{concept_id}", timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        story = data.get("story_content", "")
+        # Extract The Feeling opening
+        import re
+        match = re.search(r'## The Feeling\s*\n+(.*?)(?:\n\n|\n##)', story, re.DOTALL)
+        feeling = match.group(1).strip().split("\n")[0] if match else ""
+        hz = data.get("sacred_frequency", {}).get("hz", "")
+        return {
+            "name": data.get("name", concept_id),
+            "feeling_opening": feeling,
+            "hz": hz,
+        }
+    except Exception:
+        return None
+
+
+def _load_contributor_spectrum(contributor_id: str) -> list[str]:
+    """Load a contributor's frequency spectrum from their viewing history."""
+    try:
+        r = httpx.get(
+            f"{API_BASE}/api/views/contributor/{contributor_id}?limit=30",
+            timeout=10,
+        )
+        r.raise_for_status()
+        history = r.json()
+        # Extract unique concept IDs they've viewed
+        concepts = list(dict.fromkeys(
+            h["asset_id"] for h in history
+            if h.get("asset_id", "").startswith("lc-")
+        ))
+        return concepts[:8]
+    except Exception:
+        return []
+
+
+def _sense_through_lens(
+    event_text: str,
+    concepts: list[dict],
+    concept_id: str | None = None,
+    contributor_id: str | None = None,
+) -> dict | None:
+    """Pass an event through the new earth lens using Claude.
+
+    The prompt is generated from the concept and contributor spectrum,
+    not from a static template.
+    """
+    concept_context = _load_concept_context(concept_id) if concept_id else None
+    contributor_spectrum = _load_contributor_spectrum(contributor_id) if contributor_id else None
+
+    prompt = build_lens_prompt(
+        event_text=event_text,
+        concepts=concepts,
+        concept_context=concept_context,
+        contributor_spectrum=contributor_spectrum,
     )
 
     try:
@@ -177,9 +303,20 @@ def _post_sensing(sensing: dict, source_url: str = "") -> str | None:
         return None
 
 
-def sense_topic(topic: str, concepts: list[dict]) -> int:
+def sense_topic(
+    topic: str,
+    concepts: list[dict],
+    concept_id: str | None = None,
+    contributor_id: str | None = None,
+) -> int:
     """Sense news about a topic through the new earth lens."""
-    log.info("Sensing the world for: %s", topic)
+    lens_desc = topic
+    if concept_id:
+        lens_desc += f" (through {concept_id})"
+    if contributor_id:
+        lens_desc += f" (as {contributor_id})"
+    log.info("Sensing the world for: %s", lens_desc)
+
     news = _fetch_news(topic)
     if not news:
         log.info("  No news found")
@@ -202,8 +339,12 @@ def sense_topic(topic: str, concepts: list[dict]) -> int:
             if full_text:
                 event_text = f"Title: {title}\nURL: {url}\n\n{full_text}"
 
-        # Sense through the lens
-        sensing = _sense_through_lens(event_text, concepts)
+        # Sense through the lens — shaped by concept and contributor
+        sensing = _sense_through_lens(
+            event_text, concepts,
+            concept_id=concept_id,
+            contributor_id=contributor_id,
+        )
         if not sensing:
             log.info("  Could not sense this event")
             continue
@@ -220,7 +361,12 @@ def sense_topic(topic: str, concepts: list[dict]) -> int:
     return posted
 
 
-def sense_url(url: str, concepts: list[dict]) -> int:
+def sense_url(
+    url: str,
+    concepts: list[dict],
+    concept_id: str | None = None,
+    contributor_id: str | None = None,
+) -> int:
     """Sense a specific URL through the new earth lens."""
     log.info("Sensing: %s", url)
     content = _fetch_url_content(url)
@@ -228,7 +374,11 @@ def sense_url(url: str, concepts: list[dict]) -> int:
         log.info("  Could not fetch content")
         return 0
 
-    sensing = _sense_through_lens(content, concepts)
+    sensing = _sense_through_lens(
+        content, concepts,
+        concept_id=concept_id,
+        contributor_id=contributor_id,
+    )
     if not sensing:
         log.info("  Could not sense this event")
         return 0
@@ -246,6 +396,8 @@ def main():
     parser.add_argument("--topic", default="regenerative community living", help="Topic to search for")
     parser.add_argument("--url", help="Specific URL to sense")
     parser.add_argument("--topics", nargs="+", help="Multiple topics to sense")
+    parser.add_argument("--concept", help="Sense through a specific concept's lens (e.g. lc-nourishment)")
+    parser.add_argument("--contributor", help="Sense through a contributor's frequency spectrum")
     args = parser.parse_args()
 
     concepts = _load_concepts()
@@ -255,12 +407,20 @@ def main():
 
     log.info("Loaded %d living collective concepts", len(concepts))
 
+    concept_id = args.concept
+    contributor_id = args.contributor
+
+    if concept_id:
+        log.info("Lens: concept %s", concept_id)
+    if contributor_id:
+        log.info("Lens: contributor %s", contributor_id)
+
     total = 0
     if args.url:
-        total = sense_url(args.url, concepts)
+        total = sense_url(args.url, concepts, concept_id, contributor_id)
     elif args.topics:
         for topic in args.topics:
-            total += sense_topic(topic, concepts)
+            total += sense_topic(topic, concepts, concept_id, contributor_id)
     else:
         # Default topics that carry the vision's frequency
         default_topics = [
@@ -270,7 +430,7 @@ def main():
             "food forest permaculture",
         ]
         for topic in default_topics:
-            total += sense_topic(topic, concepts)
+            total += sense_topic(topic, concepts, concept_id, contributor_id)
 
     log.info("\n=== Sensed %d events from the world ===", total)
     return 0
