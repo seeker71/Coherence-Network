@@ -188,6 +188,19 @@
     "loading": "Cargando mensajes...",
     "noMessages": "No se encontraron mensajes."
   },
+  "tasks": {
+    "workView": "Vista de trabajo",
+    "title": "Trabajo en movimiento",
+    "statCards": "Tarjetas de trabajo visibles",
+    "statReady": "Listo para comenzar",
+    "statInProgress": "En progreso",
+    "statAttention": "Necesita atención",
+    "statFinished": "Finalizado",
+    "activeNow": "Activo ahora",
+    "recentActivity": "Actividad reciente",
+    "selectedCard": "Tarjeta de trabajo seleccionada",
+    "loadingCards": "Cargando tarjetas de trabajo…"
+  },
   "invest": {
     "title": "Jardín de ideas",
     "lede": "Cada idea que nutres crece hasta ser código real. Tu atención es agua — dirígela hacia las semillas en las que más crees.",

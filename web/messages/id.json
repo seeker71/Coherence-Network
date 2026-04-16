@@ -188,6 +188,19 @@
     "loading": "Memuat pesan...",
     "noMessages": "Tidak ada pesan."
   },
+  "tasks": {
+    "workView": "Tampilan kerja",
+    "title": "Yang sedang bergerak",
+    "statCards": "Kartu kerja terlihat",
+    "statReady": "Siap dimulai",
+    "statInProgress": "Sedang dikerjakan",
+    "statAttention": "Butuh perhatian",
+    "statFinished": "Selesai",
+    "activeNow": "Aktif sekarang",
+    "recentActivity": "Aktivitas terkini",
+    "selectedCard": "Kartu kerja terpilih",
+    "loadingCards": "Memuat kartu kerja…"
+  },
   "invest": {
     "title": "Kebun Gagasan",
     "lede": "Setiap gagasan yang kamu pelihara tumbuh menjadi kode nyata. Perhatianmu adalah air — arahkan ke benih yang paling kamu percayai.",
