@@ -1,26 +1,40 @@
-"""Flow-centric tests for multilingual concept views.
+"""Flow-centric tests for the multilingual platform.
 
-Every language rendering is an equal view. The anchor (freshest human-touched
-view) can live in any language. Stale views emerge from the hash graph, not
-from a hardcoded source-language assumption.
+One file covers the whole content-in-any-voice flow:
 
-Covers:
-  - GET /api/locales
-  - PATCH /api/glossary/{lang}
-  - POST /api/concepts/{id}/views  (original_human, translation_human)
-  - GET /api/concepts/{id}?lang=... returns the right view + language_meta
-  - GET /api/concepts/{id}/views lists the anchor + staleness
-  - Editing the anchor view stales the other-lang views until they re-attune
+1. View CRUD, anchor discovery, staleness (language views as first-class
+   records; anchor is the freshest human-touched view; stale views emerge
+   from hash mismatches, not hardcoded "source is English" rules).
+2. On-demand attunement (when a view is missing and a backend is registered,
+   the endpoint enqueues background attunement; the current request still
+   serves the anchor).
+3. LibreTranslate backend glossary post-substitution (free, no key; carries
+   frequency anchors like tending→hüten even though LibreTranslate isn't
+   prompt-aware).
+
+Covers the full flow a German-speaking visitor walks from first visit to
+human-translated view. Uses stub backends to stay fast and deterministic.
 """
 
 from __future__ import annotations
 
+import asyncio
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import (
+    translation_cache_service as _cache,
+    translator_service,
+)
+from app.services.translator_backends import (
+    LibreTranslateBackend,
+    _apply_glossary,
+    register_default_backend,
+)
 
 BASE = "http://test"
 
@@ -29,8 +43,8 @@ def _uid(prefix: str = "view-test") -> str:
     return f"{prefix}-{uuid4().hex[:8]}"
 
 
-async def _create_concept(c: AsyncClient) -> str:
-    cid = _uid()
+async def _create_concept(c: AsyncClient, suffix: str = "view-test") -> str:
+    cid = _uid(suffix)
     payload = {
         "id": cid,
         "type": "concept",
@@ -50,7 +64,7 @@ async def _post_view(c: AsyncClient, cid: str, **body) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Locales listing
+# Locale listing + glossary
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
@@ -62,10 +76,6 @@ async def test_list_locales_includes_en_de_es_id():
         assert {"en", "de", "es", "id"}.issubset(codes)
         assert r.json()["default"] == "en"
 
-
-# ---------------------------------------------------------------------------
-# Glossary PATCH
-# ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
 async def test_glossary_upsert_and_read():
@@ -98,7 +108,7 @@ async def test_glossary_rejects_unsupported_locale():
 
 
 # ---------------------------------------------------------------------------
-# View CRUD + anchor + staleness
+# View CRUD, anchor discovery, staleness
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
@@ -151,8 +161,6 @@ async def test_human_translation_references_source_hash_and_is_fresh():
             translated_from_hash=en_hash,
         )
 
-        # Fetching in German gets the German view; it's not the anchor (EN was more recent),
-        # but it's fresh (translated_from_hash matches EN's current content_hash)
         r = await c.get(f"/api/concepts/{cid}?lang=de")
         meta = r.json()["language_meta"]
         assert r.json()["name"] == "Nährend"
@@ -184,7 +192,6 @@ async def test_editing_anchor_stales_attuned_views():
             translated_from_hash=en1["content_hash"],
         )
 
-        # Edit the English view — its hash changes; German now points at the old hash
         await _post_view(
             c, cid,
             lang="en",
@@ -198,15 +205,11 @@ async def test_editing_anchor_stales_attuned_views():
         views = {v["lang"]: v for v in r.json()["views"]}
         assert views["en"]["is_anchor"] is True
         assert views["en"]["stale"] is False
-        # German referenced the old English hash → now stale
         assert views["de"]["stale"] is True
 
 
 @pytest.mark.asyncio
 async def test_anchor_moves_to_edited_language():
-    """When a non-English view is edited as original_human authoring in that
-    language, it becomes the anchor even if an English view exists.
-    """
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         cid = await _create_concept(c)
 
@@ -218,7 +221,6 @@ async def test_anchor_moves_to_edited_language():
             content_markdown="EN body",
             author_type="original_human",
         )
-        # A German speaker authors an updated version directly in German
         await _post_view(
             c, cid,
             lang="de",
@@ -233,8 +235,6 @@ async def test_anchor_moves_to_edited_language():
         assert body["anchor_lang"] == "de"
         views = {v["lang"]: v for v in body["views"]}
         assert views["de"]["is_anchor"] is True
-        # EN is now not the anchor; it's also not stale by translated_from_hash
-        # (it was authored directly, translated_from_lang is null)
         assert views["en"]["is_anchor"] is False
 
 
@@ -298,6 +298,198 @@ async def test_history_preserves_superseded_views():
         views = r.json()["views"]
         assert len(views) == 2
         statuses = [v["status"] for v in views]
-        # newest-first ordering — the v2 canonical, v1 superseded
         assert statuses[0] == "canonical"
         assert statuses[1] == "superseded"
+
+
+# ---------------------------------------------------------------------------
+# On-demand attunement (stub backend)
+# ---------------------------------------------------------------------------
+
+class _StubBackend:
+    """Deterministic attunement: prepends a lang marker to each field."""
+
+    calls: list[dict] = []
+
+    def attune(
+        self,
+        *,
+        source_markdown: str,
+        source_title: str,
+        source_description: str,
+        source_lang: str,
+        target_lang: str,
+        glossary_prompt: str,
+    ) -> tuple[str, str, str]:
+        _StubBackend.calls.append({
+            "source_lang": source_lang,
+            "target_lang": target_lang,
+            "glossary_prompt": glossary_prompt,
+        })
+        marker = f"[{target_lang}] "
+        return (marker + source_title, marker + source_description, marker + source_markdown)
+
+
+@pytest.fixture
+def stub_backend():
+    """Register the stub backend for the duration of a test."""
+    _StubBackend.calls = []
+    translator_service.set_backend(_StubBackend())
+    yield _StubBackend
+    translator_service.set_backend(None)
+
+
+@pytest.mark.asyncio
+async def test_missing_view_enqueues_attunement(stub_backend):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = await _create_concept(c, "on-demand")
+        await c.post(f"/api/concepts/{cid}/views", json={
+            "lang": "en",
+            "content_title": "Anchor Title",
+            "content_description": "Anchor description",
+            "content_markdown": "# Anchor\n\nAnchor body.",
+            "author_type": "original_human",
+        })
+        r = await c.get(f"/api/concepts/{cid}?lang=de")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["language_meta"]["lang"] == "de"
+
+    for _ in range(40):
+        if any(c["target_lang"] == "de" for c in stub_backend.calls):
+            break
+        await asyncio.sleep(0.05)
+    assert any(c["target_lang"] == "de" for c in stub_backend.calls), \
+        "expected background attunement to run for de"
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r2 = await c.get(f"/api/concepts/{cid}?lang=de")
+        assert r2.status_code == 200
+        body2 = r2.json()
+        assert body2["language_meta"]["pending"] is False
+        assert body2["name"].startswith("[de] ")
+        assert body2["story_content"].startswith("[de] ")
+
+
+@pytest.mark.asyncio
+async def test_attunement_carries_glossary(stub_backend):
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = await _create_concept(c, "glossary-attune")
+        await c.patch("/api/glossary/de", json={"entries": [
+            {"source_term": "tending", "target_term": "hüten", "notes": "Schäferin"},
+        ]})
+        await c.post(f"/api/concepts/{cid}/views", json={
+            "lang": "en",
+            "content_title": "Nourishing",
+            "content_description": "Everything that sustains.",
+            "content_markdown": "# Nourishing\n\nTending circulates.",
+            "author_type": "original_human",
+        })
+        await c.get(f"/api/concepts/{cid}?lang=de")
+
+    for _ in range(40):
+        if any(c["target_lang"] == "de" for c in stub_backend.calls):
+            break
+        await asyncio.sleep(0.05)
+
+    assert stub_backend.calls, "expected backend to have been invoked"
+    call = next(c for c in stub_backend.calls if c["target_lang"] == "de")
+    assert "tending" in call["glossary_prompt"]
+    assert "hüten" in call["glossary_prompt"]
+
+
+@pytest.mark.asyncio
+async def test_no_backend_no_attunement():
+    """With no backend registered, pending views serve anchor and never call anything."""
+    translator_service.set_backend(None)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = await _create_concept(c, "no-backend")
+        await c.post(f"/api/concepts/{cid}/views", json={
+            "lang": "en",
+            "content_title": "Anchor",
+            "content_description": "Anchor desc",
+            "content_markdown": "Anchor body",
+            "author_type": "original_human",
+        })
+        r = await c.get(f"/api/concepts/{cid}?lang=de")
+        assert r.status_code == 200
+        assert r.json()["language_meta"]["pending"] is True
+        rows = _cache.all_canonical_views("concept", cid)
+        assert all(v.lang != "de" for v in rows)
+
+
+# ---------------------------------------------------------------------------
+# LibreTranslate backend (free, no key) + glossary post-substitution
+# ---------------------------------------------------------------------------
+
+def _mock_translate_response(text: str):
+    resp = MagicMock()
+    resp.status_code = 200
+    resp.raise_for_status = MagicMock()
+    resp.json = MagicMock(return_value={"translatedText": text})
+    return resp
+
+
+def test_libretranslate_translates_plain_text():
+    backend = LibreTranslateBackend(base_url="http://stub")
+    with patch("httpx.Client") as ClientCls:
+        client = MagicMock()
+        client.post = MagicMock(return_value=_mock_translate_response("Hallo Welt"))
+        ClientCls.return_value.__enter__ = MagicMock(return_value=client)
+        ClientCls.return_value.__exit__ = MagicMock(return_value=False)
+        title, desc, md = backend.attune(
+            source_markdown="Hello world",
+            source_title="Hello",
+            source_description="Hello friend",
+            source_lang="en",
+            target_lang="de",
+            glossary_prompt="",
+        )
+        assert "Hallo" in title
+        assert client.post.called
+
+
+def test_glossary_post_substitutes_anchor_terms():
+    """Glossary tending→hüten + ripening→reifen appear in the output."""
+    glossary = [("tending", "hüten"), ("ripening", "reifen")]
+    out = _apply_glossary("The practice is tending and ripening.", glossary)
+    assert "hüten" in out
+    assert "reifen" in out
+
+
+def test_glossary_preserves_code_fences_and_urls():
+    glossary = [("tending", "hüten")]
+    raw = "Read tending at `tending.md` or https://example.com/tending for details."
+    out = _apply_glossary(raw, glossary)
+    assert "`tending.md`" in out
+    assert "https://example.com/tending" in out
+    assert "Read hüten at" in out
+
+
+def test_glossary_word_boundary_case_insensitive():
+    """Substitution matches whole words only, case-insensitive — 'Pretending' doesn't match 'tending'."""
+    glossary = [("tending", "hüten")]
+    raw = "Tending is tending. Pretending? No."
+    out = _apply_glossary(raw, glossary)
+    assert "hüten" in out.lower()
+    assert "Pretending" in out or "pretending" in out.lower()
+
+
+def test_glossary_preserves_image_syntax():
+    glossary = [("tending", "hüten")]
+    raw = "See ![the tending](visuals:tending prompt) and tending."
+    out = _apply_glossary(raw, glossary)
+    assert "visuals:tending prompt" in out
+    assert "hüten" in out
+
+
+def test_register_default_prefers_libretranslate_without_key(monkeypatch):
+    """With no COHERENCE_TRANSLATOR set and no anthropic key, installs LibreTranslate."""
+    translator_service.set_backend(None)
+    monkeypatch.delenv("COHERENCE_TRANSLATOR", raising=False)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    with patch("app.services.translator_backends._read_keystore_key", return_value=None):
+        name = register_default_backend()
+    assert name == "libretranslate"
+    assert translator_service.has_backend() is True
+    translator_service.set_backend(None)
