@@ -188,6 +188,28 @@
     "loading": "Cargando mensajes...",
     "noMessages": "No se encontraron mensajes."
   },
+  "invest": {
+    "title": "Jardín de ideas",
+    "lede": "Cada idea que nutres crece hasta ser código real. Tu atención es agua — dirígela hacia las semillas en las que más crees.",
+    "emptyGarden": "El jardín está vacío. Planta la primera semilla.",
+    "stageSeed": "Semilla",
+    "stageSeedling": "Brote",
+    "stageSapling": "Árbol joven",
+    "stageTree": "Árbol",
+    "stageDormant": "Dormida",
+    "verbPlant": "Plantar",
+    "verbWater": "Regar",
+    "verbTend": "Cuidar",
+    "growthSeed": "Joven y sin probar — sé la primera en cuidar esta idea.",
+    "growthStrong": "Esta planta tiene raíces fuertes y está lista para crecer rápido.",
+    "growthSteady": "Crecimiento constante — el cuidado regular la ayudará a florecer.",
+    "growthNeeds": "Necesita atención — un poco de agua podría desbloquear crecimiento real.",
+    "expectedYield": "×{roi} rendimiento esperado",
+    "seeSoilFacts": "Ver detalles del suelo",
+    "growthPotential": "Potencial de crecimiento",
+    "waterNeeded": "Agua necesaria",
+    "expectedYieldLabel": "Rendimiento esperado"
+  },
   "assets": {
     "title": "Catálogo de obras",
     "lede": "Las obras son las cosas que la gente realmente toca: código, contenido, modelos y datos. Esta página muestra qué existe, cuánto costó y dónde se adhiere la historia de contribución.",

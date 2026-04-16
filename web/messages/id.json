@@ -188,6 +188,28 @@
     "loading": "Memuat pesan...",
     "noMessages": "Tidak ada pesan."
   },
+  "invest": {
+    "title": "Kebun Gagasan",
+    "lede": "Setiap gagasan yang kamu pelihara tumbuh menjadi kode nyata. Perhatianmu adalah air — arahkan ke benih yang paling kamu percayai.",
+    "emptyGarden": "Kebun masih kosong. Tanam benih pertama.",
+    "stageSeed": "Benih",
+    "stageSeedling": "Tunas",
+    "stageSapling": "Semai",
+    "stageTree": "Pohon",
+    "stageDormant": "Istirahat",
+    "verbPlant": "Tanam",
+    "verbWater": "Siram",
+    "verbTend": "Rawat",
+    "growthSeed": "Muda dan belum diuji — jadilah yang pertama merawat gagasan ini.",
+    "growthStrong": "Tanaman ini berakar kuat dan siap tumbuh cepat.",
+    "growthSteady": "Pertumbuhan stabil — perawatan rutin akan membantunya berkembang.",
+    "growthNeeds": "Perlu perhatian — sedikit air bisa membuka pertumbuhan nyata.",
+    "expectedYield": "×{roi} hasil diharapkan",
+    "seeSoilFacts": "Lihat rincian tanah",
+    "growthPotential": "Potensi tumbuh",
+    "waterNeeded": "Air yang dibutuhkan",
+    "expectedYieldLabel": "Hasil diharapkan"
+  },
   "assets": {
     "title": "Katalog karya",
     "lede": "Karya adalah hal-hal yang benar-benar disentuh orang: kode, konten, model, dan data. Halaman ini menunjukkan apa yang ada, berapa biayanya, dan di mana riwayat sumbangan melekat.",

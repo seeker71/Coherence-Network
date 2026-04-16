@@ -188,6 +188,28 @@
     "loading": "Nachrichten werden geladen …",
     "noMessages": "Keine Nachrichten gefunden."
   },
+  "invest": {
+    "title": "Garten der Ideen",
+    "lede": "Jede Idee, die du nährst, wächst zu echtem Code. Deine Aufmerksamkeit ist Wasser – leite sie zu den Samen, an die du am meisten glaubst.",
+    "emptyGarden": "Der Garten ist leer. Pflanze den ersten Samen.",
+    "stageSeed": "Samen",
+    "stageSeedling": "Keimling",
+    "stageSapling": "Setzling",
+    "stageTree": "Baum",
+    "stageDormant": "Ruhend",
+    "verbPlant": "Pflanzen",
+    "verbWater": "Gießen",
+    "verbTend": "Hüten",
+    "growthSeed": "Jung und ungetestet – sei die erste, die diese Idee hütet.",
+    "growthStrong": "Diese Pflanze hat starke Wurzeln und ist bereit, schnell zu wachsen.",
+    "growthSteady": "Stetiges Wachstum – regelmäßige Pflege hilft ihr zu gedeihen.",
+    "growthNeeds": "Braucht Aufmerksamkeit – ein wenig Wasser könnte echtes Wachstum freisetzen.",
+    "expectedYield": "×{roi} erwarteter Ertrag",
+    "seeSoilFacts": "Boden-Details ansehen",
+    "growthPotential": "Wachstumsraum",
+    "waterNeeded": "Wasser-Bedarf",
+    "expectedYieldLabel": "Erwarteter Ertrag"
+  },
   "assets": {
     "title": "Werke-Katalog",
     "lede": "Werke sind die Dinge, die Menschen wirklich berühren: Code, Inhalt, Modelle und Daten. Diese Seite zeigt, was da ist, was es gekostet hat und wo die Beitrags-Geschichte dranhängt.",

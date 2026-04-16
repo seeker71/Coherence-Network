@@ -188,6 +188,28 @@
     "loading": "Loading messages...",
     "noMessages": "No messages found."
   },
+  "invest": {
+    "title": "Garden of Ideas",
+    "lede": "Every idea you nurture grows into real code. Your attention is water — direct it toward the seeds you believe in most.",
+    "emptyGarden": "The garden is empty. Plant the first seed.",
+    "stageSeed": "Seed",
+    "stageSeedling": "Seedling",
+    "stageSapling": "Sapling",
+    "stageTree": "Tree",
+    "stageDormant": "Dormant",
+    "verbPlant": "Plant",
+    "verbWater": "Water",
+    "verbTend": "Tend",
+    "growthSeed": "Young and untested — be the first to tend this idea.",
+    "growthStrong": "This plant has strong roots and is ready to grow fast.",
+    "growthSteady": "Steady growth — regular tending will help it thrive.",
+    "growthNeeds": "Needs attention — a little water could unlock real growth.",
+    "expectedYield": "×{roi} expected yield",
+    "seeSoilFacts": "See soil facts",
+    "growthPotential": "Growth potential",
+    "waterNeeded": "Water needed",
+    "expectedYieldLabel": "Expected yield"
+  },
   "assets": {
     "title": "Asset Catalog",
     "lede": "Assets are the things people actually touch: code, content, models, and data. This page shows what exists, what it cost, and where contribution history is attached.",
