@@ -30,10 +30,10 @@ jobs:
       AUTOMATION_REQUIRED_PROVIDERS: ${{ vars.AUTOMATION_REQUIRED_PROVIDERS }}
       AUTOMATION_PROVIDER_VALIDATION_REQUIRED: ${{ vars.AUTOMATION_PROVIDER_VALIDATION_REQUIRED }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
