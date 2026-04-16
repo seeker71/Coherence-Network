@@ -722,6 +722,34 @@ app.include_router(ui_preferences_router.router)
 from app.routers import interest as interest_router  # noqa: E402
 app.include_router(interest_router.router, tags=["interest"])
 
+# View tracking — per-contributor view events, trending, discovery chains
+from app.routers import views as views_router  # noqa: E402
+app.include_router(views_router.router, prefix="/api", tags=["views"])
+
+# Wallet integration — connect, verify, manage on-chain wallets
+from app.routers import wallets as wallets_router  # noqa: E402
+app.include_router(wallets_router.router, prefix="/api", tags=["wallets"])
+
+# Reward policies — community-configurable reward formulas
+from app.routers import reward_policies as reward_policies_router  # noqa: E402
+app.include_router(reward_policies_router.router, prefix="/api", tags=["reward-policies"])
+
+# Flow simulator — visualize CC flow, simulate scenarios, sense vitality
+from app.routers import flow_simulator as flow_simulator_router  # noqa: E402
+app.include_router(flow_simulator_router.router, prefix="/api", tags=["flow"])
+
+# Energy sensing — frequencies, harmonies, the organism sees itself
+from app.routers import energy_sensing as energy_sensing_router  # noqa: E402
+app.include_router(energy_sensing_router.router, prefix="/api", tags=["energy"])
+
+# Flow renderer — live energy flow topology for particle visualization
+from app.routers import flow_renderer as flow_renderer_router  # noqa: E402
+app.include_router(flow_renderer_router.router, prefix="/api", tags=["flow"])
+
+# World lens — see the world through concept/contributor/community frequency
+from app.routers import world_lens as world_lens_router  # noqa: E402
+app.include_router(world_lens_router.router, prefix="/api", tags=["world"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).

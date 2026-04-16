@@ -33,6 +33,11 @@ export function StoryContent({
         const trimmed = block.trim();
         if (!trimmed) return null;
 
+        // # Top-level heading — skip it, the page already shows the title
+        if (trimmed.startsWith("# ") && !trimmed.startsWith("## ")) {
+          return null;
+        }
+
         // ## Heading (may include list items if no blank line follows)
         if (trimmed.startsWith("## ") || trimmed.startsWith("### ")) {
           const isH3 = trimmed.startsWith("### ");

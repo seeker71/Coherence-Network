@@ -27,8 +27,15 @@ export function TrackingSuggestion({ conceptId }: { conceptId: string }) {
     const dismissed = sessionStorage.getItem("tracking_suggestion_dismissed");
     if (dismissed) return;
 
-    // Show after a short delay (don't interrupt first impression)
-    const timer = setTimeout(() => setShow(true), 5000);
+    // Show after a longer delay — let the reader settle into the content first
+    // Only show once per session across all concept pages
+    const shownCount = parseInt(sessionStorage.getItem("tracking_suggestion_shown") || "0", 10);
+    if (shownCount > 0) return;
+
+    const timer = setTimeout(() => {
+      setShow(true);
+      sessionStorage.setItem("tracking_suggestion_shown", "1");
+    }, 15000);
     return () => clearTimeout(timer);
   }, []);
 

@@ -446,6 +446,12 @@ export default function VisionPage() {
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
+              href="/vision/immerse"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 hover:border-amber-500/30 transition-all font-medium"
+            >
+              Surround yourself with it
+            </Link>
+            <Link
               href="/vision/lived"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-300/90 hover:bg-violet-500/20 hover:border-violet-500/30 transition-all font-medium"
             >
