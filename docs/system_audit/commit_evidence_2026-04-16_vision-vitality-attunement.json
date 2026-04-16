@@ -73,15 +73,20 @@
     "https://api.coherencycoin.com/api/concepts/lc-economy"
   ],
   "change_files": [
+    "docs/system_audit/model_executor_runs.jsonl",
     "docs/vision-kb/concepts/lc-attuned-spaces.md",
     "docs/vision-kb/concepts/lc-attunement.md",
+    "docs/vision-kb/concepts/lc-circulation.md",
     "docs/vision-kb/concepts/lc-economy.md",
+    "docs/vision-kb/concepts/lc-energy.md",
     "docs/vision-kb/concepts/lc-field-edge.md",
     "docs/vision-kb/concepts/lc-field-sensing.md",
+    "docs/vision-kb/concepts/lc-nourishment.md",
     "docs/vision-kb/concepts/lc-play.md",
     "docs/vision-kb/concepts/lc-pulse.md",
     "docs/vision-kb/concepts/lc-rhythm.md",
     "docs/vision-kb/concepts/lc-sensing.md",
+    "docs/vision-kb/concepts/lc-space.md",
     "docs/vision-kb/concepts/lc-stillness.md",
     "docs/vision-kb/concepts/lc-w-cell.md",
     "docs/vision-kb/concepts/lc-w-coherence.md",
@@ -92,11 +97,34 @@
     "docs/vision-kb/concepts/lc-w-shakti.md",
     "docs/vision-kb/concepts/lc-w-spanda.md",
     "docs/vision-kb/concepts/lc-w-wu-wei.md",
+    "docs/visuals/transformation-context-prompt-pack.md",
+    "scripts/check_generated_vision_assets.py",
     "scripts/verify_worktree_local_web.sh",
-    "docs/system_audit/model_executor_runs.jsonl",
-    "docs/system_audit/commit_evidence_2026-04-16_vision-vitality-attunement.json"
+    "scripts/worktree_pr_guard.py",
+    "web/app/vision/aligned/page.tsx",
+    "web/app/vision/community/page.tsx",
+    "web/app/vision/economy/page.tsx",
+    "web/app/vision/immerse/page.tsx",
+    "web/app/vision/lived/page.tsx",
+    "web/app/vision/realize/page.tsx",
+    "web/public/visuals/generated/lc-attuned-spaces-0.jpg",
+    "web/public/visuals/generated/lc-attuned-spaces-1.jpg",
+    "web/public/visuals/generated/lc-attuned-spaces-2.jpg",
+    "web/public/visuals/generated/lc-attuned-spaces-3.jpg",
+    "web/public/visuals/generated/lc-attuned-spaces-story-0.jpg",
+    "web/public/visuals/generated/lc-attuned-spaces-story-1.jpg",
+    "web/public/visuals/generated/lc-attuned-spaces-story-2.jpg",
+    "web/public/visuals/generated/lc-attuned-spaces-story-3.jpg",
+    "web/public/visuals/generated/lc-nervous-system-0.jpg",
+    "web/public/visuals/generated/lc-nervous-system-1.jpg",
+    "web/public/visuals/generated/lc-nervous-system-2.jpg",
+    "web/public/visuals/generated/lc-nervous-system-story-0.jpg",
+    "web/public/visuals/generated/lc-nervous-system-story-1.jpg",
+    "web/public/visuals/generated/lc-nervous-system-story-2.jpg",
+    "web/public/visuals/generated/lc-v-living-spaces-3.jpg",
+    "web/public/visuals/generated/lc-v-living-spaces-story-3.jpg"
   ],
-  "change_intent": "process_only",
+  "change_intent": "runtime_feature",
   "local_validation": {
     "status": "pass",
     "commands": [
@@ -122,6 +150,23 @@
   "deploy_validation": {
     "status": "pending",
     "environment": "github-pr"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Visitors encounter the vision as both a pure-form field and an embodied-now transformation surface, with existing structures reframed as repurposable shells and inline generated story imagery guaranteed to resolve from tracked assets.",
+    "public_endpoints": [
+      "/vision/economy",
+      "/vision/realize",
+      "/vision/lc-attuned-spaces",
+      "/vision/lc-sensing",
+      "/vision/lc-rhythm"
+    ],
+    "test_flows": [
+      "Open /vision/economy and confirm the pure-form plus embodied-now sections render together",
+      "Open /vision/realize and confirm the any-shell transformation section renders across city, urban, suburban, and rural contexts",
+      "Open representative concept story pages such as /vision/lc-attuned-spaces and /vision/lc-sensing and confirm inline generated visuals resolve",
+      "Run scripts/check_generated_vision_assets.py and confirm every referenced generated image is present and tracked"
+    ]
   },
   "phase_gate": {
     "can_move_next_phase": false,
