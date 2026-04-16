@@ -13,6 +13,8 @@ import { StructuredContent } from "./_components/StructuredContent";
 import { TrackingSuggestion } from "./_components/TrackingSuggestion";
 import { ReaderPresence } from "./_components/ReaderPresence";
 import { WorldSignals } from "./_components/WorldSignals";
+import { EnergyContributors } from "./_components/EnergyContributors";
+import { ResonantAssets } from "./_components/ResonantAssets";
 
 export const dynamic = "force-dynamic";
 
@@ -164,15 +166,22 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
           <>
             <StoryContent content={concept.story_content!} conceptId={conceptId} nameMap={nameMap} />
 
+            {/* Who brought this concept to life */}
+            <div className="max-w-3xl">
+              <EnergyContributors conceptId={conceptId} />
+            </div>
+
+            {/* Multiple visual expressions — most resonant rises */}
+            <div className="max-w-3xl">
+              <ResonantAssets conceptId={conceptId} />
+            </div>
+
             {/* Live signals from the world resonating with this concept */}
             <div className="max-w-3xl">
               <WorldSignals conceptId={conceptId} />
             </div>
 
             <div className="max-w-3xl space-y-4 pt-8">
-              {concept.sacred_frequency && (
-                <FrequencyDisplay frequency={concept.sacred_frequency} siblings={frequencySiblings} mode="inline" />
-              )}
               <ConnectedConcepts outgoing={outgoing} incoming={incoming} nameMap={nameMap} mode="full" />
               <div className="flex gap-4 text-sm pt-4">
                 <Link href="/vision" className="text-stone-500 hover:text-amber-300/80 transition-colors">&larr; The Living Collective</Link>
