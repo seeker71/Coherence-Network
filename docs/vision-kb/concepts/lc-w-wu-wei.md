@@ -2,7 +2,7 @@
 id: lc-w-wu-wei
 hz: 432
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Wu Wei
@@ -45,7 +45,7 @@ and the brush merely revealed it.
 
 ## How It Lives Here
 
-When a project feels stuck, the community pauses it. Not abandons — pauses.
+When a project feels heavy, the community pauses it. Not abandons — pauses.
 Puts it down the way you put down a jar lid that won't open, walk away, come
 back, and it turns easily. Forcing is treated as information: something is
 not aligned yet. Rather than pushing harder, the field asks: what wants to
@@ -63,6 +63,8 @@ to control it.
 ![Water over stone](visuals:photorealistic mountain stream flowing over smooth ancient river rocks, crystal clear water finding its path effortlessly around and over every obstacle, moss on stones, dappled forest light, long exposure showing the water as silk, the stone shaped by centuries of soft persistence, no force only flow)
 
 ## The Questions That Live Here
+
+These are questions to relax into rather than force:
 
 - How do you tell the difference between wu wei and avoidance — between
   patient waiting and hiding from action?

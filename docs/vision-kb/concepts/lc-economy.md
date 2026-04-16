@@ -125,6 +125,15 @@ The old world's economy extracts. This organism circulates. The old world's mark
 - [Global Ecovillage Network](https://ecovillage.org/) — 10,000+ communities experimenting with alternative economies (type: community)
 - [Sacred Economics](https://sacred-economics.com/) — Charles Eisenstein on gift economy and the story of interbeing (type: book)
 
+## The Questions That Live Here
+
+These are not optimization questions. They are questions about honest circulation:
+
+- How does the field widen from digital traces into sensing meals, repairs, care work, land restoration, and spatial holding without pretending certainty where it does not yet exist?
+- What kinds of buffers keep the organism supple, and when does stored energy stop serving life?
+- How transparent can circulation become before visibility starts shaping performance rather than truth?
+- What forms of contribution become newly legible when the economy is tuned for vitality instead of gatekeeping?
+
 ## Connected Frequencies
 
 → lc-circulation, lc-offering, lc-network, lc-pulse
