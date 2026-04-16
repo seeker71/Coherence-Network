@@ -746,6 +746,10 @@ app.include_router(energy_sensing_router.router, prefix="/api", tags=["energy"])
 from app.routers import flow_renderer as flow_renderer_router  # noqa: E402
 app.include_router(flow_renderer_router.router, prefix="/api", tags=["flow"])
 
+# World lens — see the world through concept/contributor/community frequency
+from app.routers import world_lens as world_lens_router  # noqa: E402
+app.include_router(world_lens_router.router, prefix="/api", tags=["world"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).

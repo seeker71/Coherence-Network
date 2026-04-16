@@ -12,6 +12,7 @@ import { FrequencyDisplay } from "./_components/FrequencyDisplay";
 import { StructuredContent } from "./_components/StructuredContent";
 import { TrackingSuggestion } from "./_components/TrackingSuggestion";
 import { ReaderPresence } from "./_components/ReaderPresence";
+import { WorldSignals } from "./_components/WorldSignals";
 
 export const dynamic = "force-dynamic";
 
@@ -162,6 +163,11 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
         {hasStory && (
           <>
             <StoryContent content={concept.story_content!} conceptId={conceptId} nameMap={nameMap} />
+
+            {/* Live signals from the world resonating with this concept */}
+            <div className="max-w-3xl">
+              <WorldSignals conceptId={conceptId} />
+            </div>
 
             <div className="max-w-3xl space-y-4 pt-8">
               {concept.sacred_frequency && (
