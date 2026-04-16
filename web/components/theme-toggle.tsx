@@ -8,18 +8,21 @@
  */
 
 import { useTheme } from "./theme-provider";
+import { useT } from "@/components/MessagesProvider";
 
 export function ThemeToggle({ className = "" }: { className?: string }) {
   const { resolvedTheme, toggleTheme } = useTheme();
+  const t = useT();
 
   const isDark = resolvedTheme === "dark";
+  const label = isDark ? t("header.themeToLight") : t("header.themeToDark");
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-label={label}
+      title={label}
       className={[
         "inline-flex items-center justify-center",
         "w-8 h-8 rounded-lg",

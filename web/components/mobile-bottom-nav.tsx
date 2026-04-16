@@ -2,22 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useT } from "@/components/MessagesProvider";
 
 const BOTTOM_NAV = [
-  { href: "/vision", label: "Vision", icon: "✨" },
-  { href: "/ideas", label: "Ideas", icon: "💡" },
-  { href: "/contribute", label: "Contribute", icon: "🤝" },
-  { href: "/resonance", label: "Resonance", icon: "🔮" },
-  { href: "/pipeline", label: "Pipeline", icon: "⚡" },
+  { href: "/vision", labelKey: "nav.vision", icon: "✨" },
+  { href: "/ideas", labelKey: "nav.ideas", icon: "💡" },
+  { href: "/contribute", labelKey: "nav.contribute", icon: "🤝" },
+  { href: "/resonance", labelKey: "nav.resonance", icon: "🔮" },
+  { href: "/pipeline", labelKey: "nav.pipeline", icon: "⚡" },
 ];
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-40 md:hidden border-t border-border/40 bg-background/95 backdrop-blur-md safe-area-bottom"
-      aria-label="Mobile navigation"
+      aria-label={t("nav.mobile")}
     >
       <div className="flex h-16 items-center justify-around px-2">
         {BOTTOM_NAV.map((item) => {
@@ -35,7 +37,7 @@ export function MobileBottomNav() {
               aria-current={isActive ? "page" : undefined}
             >
               <span className="text-base leading-none" aria-hidden="true">{item.icon}</span>
-              <span>{item.label}</span>
+              <span>{t(item.labelKey)}</span>
             </Link>
           );
         })}

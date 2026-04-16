@@ -1,6 +1,25 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { createTranslator } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
+import { getApiBase } from "@/lib/api";
+
+async function fetchConceptNames(conceptIds: string[], lang: LocaleCode): Promise<Record<string, string>> {
+  const qs = lang === DEFAULT_LOCALE ? "?limit=200" : `?limit=200&lang=${lang}`;
+  try {
+    const res = await fetch(`${getApiBase()}/api/concepts/domain/living-collective${qs}`, { next: { revalidate: 60 } });
+    if (!res.ok) return {};
+    const data = await res.json();
+    const items: Array<{ id: string; name: string }> = data?.items || [];
+    const out: Record<string, string> = {};
+    for (const it of items) {
+      if (it.id && it.name && conceptIds.includes(it.id)) out[it.id] = it.name;
+    }
+    return out;
+  } catch { return {}; }
+}
 
 export const metadata: Metadata = {
   title: "The Living Collective | Coherence Network",
@@ -107,7 +126,20 @@ const SECTIONS = [
 
 /* ── Page ─────────────────────────────────────────────────────────────── */
 
-export default function VisionPage() {
+export default async function VisionPage() {
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
+
+  // Concept titles come from the DB (concept views) via the API, not from the
+  // hardcoded SECTIONS data. Single batched fetch against the domain list
+  // endpoint — returns every concept's localized name in one request.
+  const fetchedNames = await fetchConceptNames(SECTIONS.map((s) => s.conceptId), lang);
+  const conceptNames = Object.fromEntries(
+    SECTIONS.map((s) => [s.conceptId, fetchedNames[s.conceptId] || s.title]),
+  );
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-stone-950 via-stone-950 to-stone-900 text-stone-100">
       {/* Hero */}
@@ -115,20 +147,19 @@ export default function VisionPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(234,179,8,0.08)_0%,_transparent_70%)]" />
         <div className="relative z-10 max-w-3xl space-y-8">
           <p className="text-amber-400/80 text-sm sensing-[0.3em] uppercase">
-            A Frequency-Based Blueprint
+            {t("visionIndex.heroEyebrow")}
           </p>
           <h1 className="text-5xl md:text-7xl font-extralight tracking-tight leading-[1.1]">
-            The Living{" "}
+            {t("visionIndex.heroTitle1")}{" "}
             <span className="bg-gradient-to-r from-amber-300 via-teal-300 to-violet-300 bg-clip-text text-transparent">
-              Collective
+              {t("visionIndex.heroTitle2")}
             </span>
           </h1>
           <p className="text-xl md:text-2xl text-stone-400 font-light leading-relaxed max-w-2xl mx-auto">
-            What emerges when community is designed from resonance, vitality, and coherence
-            — not from contracts, property, or obligation.
+            {t("visionIndex.heroLede")}
           </p>
           <div className="pt-4 text-stone-500 text-sm italic">
-            Alive. Changing. Nothing fixed.
+            {t("visionIndex.heroTag")}
           </div>
         </div>
 
@@ -142,7 +173,7 @@ export default function VisionPage() {
 
       {/* How It Knows */}
       <section className="max-w-3xl mx-auto px-6 py-24 text-center space-y-8">
-        <h2 className="text-2xl md:text-3xl font-light text-stone-300">How the Field Knows</h2>
+        <h2 className="text-2xl md:text-3xl font-light text-stone-300">{t("visionIndex.knowsHeading")}</h2>
         <div className="grid gap-4 text-left text-stone-400 text-lg leading-relaxed">
           <p>
             There is no inherent good or bad. There is only what is alive and what is not alive.
@@ -198,7 +229,7 @@ export default function VisionPage() {
             <div className="space-y-4">
               <Link href={`/vision/${section.conceptId}`} className="group">
                 <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-white group-hover:text-amber-200/90 transition-colors">
-                  {section.title}
+                  {conceptNames[section.conceptId] || section.title}
                   <span className="ml-3 text-stone-600 group-hover:text-amber-400/50 text-2xl transition-colors">→</span>
                 </h2>
               </Link>
@@ -218,8 +249,8 @@ export default function VisionPage() {
         {/* Sacred Spaces */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-extralight text-stone-300">Sacred Spaces</h2>
-            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">See all →</Link>
+            <h2 className="text-2xl font-extralight text-stone-300">{t("visionIndex.galleryHeadingSpaces")}</h2>
+            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">{t("common.seeAll")}</Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
@@ -244,8 +275,8 @@ export default function VisionPage() {
         {/* Practices & Ceremonies */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-extralight text-stone-300">Practices & Ceremonies</h2>
-            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">See all →</Link>
+            <h2 className="text-2xl font-extralight text-stone-300">{t("visionIndex.galleryHeadingPractices")}</h2>
+            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">{t("common.seeAll")}</Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
@@ -270,8 +301,8 @@ export default function VisionPage() {
         {/* People, Nature, Animals */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-extralight text-stone-300">People, Nature, Animals</h2>
-            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">See all →</Link>
+            <h2 className="text-2xl font-extralight text-stone-300">{t("visionIndex.galleryHeadingPeople")}</h2>
+            <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">{t("common.seeAll")}</Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
@@ -296,8 +327,8 @@ export default function VisionPage() {
         {/* The Network */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-extralight text-stone-300">The Network</h2>
-            <Link href="/vision/lc-network" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">Explore →</Link>
+            <h2 className="text-2xl font-extralight text-stone-300">{t("visionIndex.galleryHeadingNetwork")}</h2>
+            <Link href="/vision/lc-network" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">{t("common.explore")}</Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
@@ -320,7 +351,7 @@ export default function VisionPage() {
             href="/vision/lived"
             className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-300/90 hover:bg-violet-500/20 hover:border-violet-500/30 transition-all font-medium"
           >
-            Walk through the lived experience — stories, scenes, daily rhythm
+            {t("visionIndex.storiesCta")}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M5 12h14m0 0l-6-6m6 6l-6 6" />
             </svg>
@@ -333,11 +364,10 @@ export default function VisionPage() {
         <div className="max-w-5xl mx-auto px-6 py-24 space-y-10">
           <div className="text-center space-y-4">
             <h2 className="text-3xl md:text-4xl font-extralight text-stone-300">
-              Blueprints & Resources
+              {t("visionIndex.blueprintsHeading")}
             </h2>
             <p className="text-stone-500 text-lg max-w-2xl mx-auto">
-              Real open-source plans, materials, costs, and methods for each aspect of the community.
-              Each concept page has resources you can use today.
+              {t("visionIndex.blueprintsLede")}
             </p>
           </div>
 
@@ -362,7 +392,7 @@ export default function VisionPage() {
                     {bp.title}
                   </h3>
                   <span className="text-[10px] px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-400/70 border border-teal-500/20">
-                    {bp.tag}
+                    {t("visionIndex.blueprintsResourcesTag", { n: parseInt(bp.tag, 10) || 0 })}
                   </span>
                 </div>
                 <p className="text-xs text-stone-500 leading-relaxed">
@@ -377,7 +407,7 @@ export default function VisionPage() {
               href="/concepts/garden?domain=living-collective"
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-300/80 hover:bg-teal-500/20 transition-all text-sm font-medium"
             >
-              Browse all 51 concepts
+              {t("visionIndex.blueprintsBrowseAll")}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M5 12h14m0 0l-6-6m6 6l-6 6" />
               </svg>
@@ -390,11 +420,10 @@ export default function VisionPage() {
       <section className="max-w-4xl mx-auto px-6 py-32 space-y-16">
         <div className="text-center space-y-4">
           <h2 className="text-3xl md:text-4xl font-extralight text-stone-300">
-            Emerging Visions
+            {t("visionIndex.emergingHeading")}
           </h2>
           <p className="text-stone-500 text-lg max-w-2xl mx-auto">
-            The anchors are strong enough to begin envisioning form.
-            Each domain is where flows converge into inhabitable, livable expression.
+            {t("visionIndex.emergingLede")}
           </p>
         </div>
 
@@ -449,40 +478,40 @@ export default function VisionPage() {
               href="/vision/immerse"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 hover:border-amber-500/30 transition-all font-medium"
             >
-              Surround yourself with it
+              {t("visionIndex.orientationImmerse")}
             </Link>
             <Link
               href="/vision/lived"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-300/90 hover:bg-violet-500/20 hover:border-violet-500/30 transition-all font-medium"
             >
-              The lived experience
+              {t("visionIndex.orientationLived")}
             </Link>
             <Link
               href="/vision/realize"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-300/90 hover:bg-teal-500/20 hover:border-teal-500/30 transition-all font-medium"
             >
-              How it becomes real
+              {t("visionIndex.orientationRealize")}
             </Link>
             <Link
               href="/vision/join"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 hover:border-amber-500/30 transition-all font-medium"
             >
-              Join the vision
+              {t("visionIndex.orientationJoin")}
             </Link>
           </div>
           <Link href="/vision/aligned" className="text-sm text-stone-500 hover:text-violet-300/80 transition-colors">
-            See communities already living this →
+            {t("visionIndex.orientationAligned")}
           </Link>
           <p className="text-stone-600 text-sm pt-6">
-            The Coherence Network is the crystalline nervous system for the emerging network of living fields.
+            {t("visionIndex.orientationNervous")}
           </p>
-          <p className="text-stone-700 text-xs italic">It is alive. It changes. It grows. It radiates.</p>
+          <p className="text-stone-700 text-xs italic">{t("visionIndex.orientationItsAlive")}</p>
           <div className="pt-8">
             <Link
               href="/"
               className="text-sm text-stone-500 hover:text-amber-400/80 transition-colors"
             >
-              &larr; Return to the network
+              {t("visionIndex.orientationReturn")}
             </Link>
           </div>
         </div>

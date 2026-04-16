@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 import { Button } from "@/components/ui/button";
 import { IdeaSubmitForm } from "@/components/idea_submit_form";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
 import type { IdeaWithScore } from "@/lib/types";
+import { createTranslator, type Translator } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
 type IdeasResponse = {
   ideas: IdeaWithScore[];
@@ -33,34 +36,24 @@ type CoherenceScoreResponse = {
 };
 
 const HOW_IT_WORKS = [
-  {
-    icon: "\uD83D\uDCA1",
-    title: "Share an idea",
-    description: "Type what you're thinking. No sign-up needed.",
-  },
-  {
-    icon: "\uD83C\uDF31",
-    title: "Watch it grow",
-    description: "Others ask questions, write specs, build.",
-  },
-  {
-    icon: "\uD83D\uDD04",
-    title: "Value flows back",
-    description: "Every contribution is recorded. Credit flows to creators.",
-  },
+  { icon: "\uD83D\uDCA1", titleKey: "home.howTitle1", descKey: "home.howDesc1" },
+  { icon: "\uD83C\uDF31", titleKey: "home.howTitle2", descKey: "home.howDesc2" },
+  { icon: "\uD83D\uDD04", titleKey: "home.howTitle3", descKey: "home.howDesc3" },
 ];
 
 export const revalidate = 90;
 export const dynamic = "force-dynamic";
 
-async function loadIdeas(): Promise<IdeasResponse | null> {
-  return fetchJsonOrNull<IdeasResponse>(`${getApiBase()}/api/ideas`, {}, 5000);
+async function loadIdeas(lang: LocaleCode): Promise<IdeasResponse | null> {
+  const qs = lang === DEFAULT_LOCALE ? "" : `?lang=${lang}`;
+  return fetchJsonOrNull<IdeasResponse>(`${getApiBase()}/api/ideas${qs}`, {}, 5000);
 }
 
-async function loadResonance(): Promise<ResonanceItem[]> {
+async function loadResonance(lang: LocaleCode): Promise<ResonanceItem[]> {
+  const langParam = lang === DEFAULT_LOCALE ? "" : `&lang=${lang}`;
   try {
     const data = await fetchJsonOrNull<ResonanceItem[] | { ideas: ResonanceItem[] }>(
-      `${getApiBase()}/api/ideas/resonance?window_hours=72&limit=3`,
+      `${getApiBase()}/api/ideas/resonance?window_hours=72&limit=3${langParam}`,
       {},
       5000,
     );
@@ -88,9 +81,9 @@ async function loadNodeCount(): Promise<number> {
   }
 }
 
-function formatNumber(value: number | undefined): string {
+function formatNumber(value: number | undefined, locale: string): string {
   if (typeof value !== "number" || Number.isNaN(value)) return "0";
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
 }
 
 function formatCoherenceScore(value: number | undefined): string {
@@ -98,28 +91,32 @@ function formatCoherenceScore(value: number | undefined): string {
   return value.toFixed(2);
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: Translator): string {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("time.justNow");
+  if (minutes < 60) return t("time.minutesAgo", { n: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("time.hoursAgo", { n: hours });
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return t("time.daysAgo", { n: days });
 }
 
 export default async function Home() {
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
+
   const [ideasData, resonanceItems, coherenceScore, nodeCount] = await Promise.all([
-    loadIdeas(),
-    loadResonance(),
+    loadIdeas(lang),
+    loadResonance(lang),
     loadCoherenceScore(),
     loadNodeCount(),
   ]);
 
   const summary = ideasData?.summary;
 
-  // Fallback: if resonance feed is empty, show top 3 ideas by selection weight
   const topIdeas = resonanceItems.length === 0 && ideasData?.ideas
     ? [...ideasData.ideas].sort((a, b) => (b.free_energy_score ?? 0) - (a.free_energy_score ?? 0)).slice(0, 3)
     : [];
@@ -128,7 +125,6 @@ export default async function Home() {
     <main className="min-h-[calc(100vh-3.5rem)]">
       {/* Section 1: HERO — THE QUESTION */}
       <section className="flex flex-col justify-center items-center text-center px-4 pt-12 pb-6 relative">
-        {/* Soft ambient glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/4 left-1/3 w-96 h-96 rounded-full bg-primary/10 blur-[120px]" />
           <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full bg-chart-2/8 blur-[100px]" />
@@ -136,14 +132,12 @@ export default async function Home() {
 
         <div className="relative max-w-2xl mx-auto space-y-6 animate-fade-in-up">
           <h1 className="hero-headline text-3xl md:text-5xl lg:text-6xl font-normal md:font-light tracking-tight leading-[1.15]">
-            What idea are you holding?
+            {t("home.heroHeadline")}
           </h1>
           <p className="text-base md:text-lg text-foreground/90 max-w-xl mx-auto leading-relaxed">
-            A pattern you noticed. A gap that needs filling. A better way.
-            Share it — someone out there is looking for exactly this.
+            {t("home.heroLede")}
           </p>
 
-          {/* Pulse stats — visible without scrolling */}
           {(summary || coherenceScore) && (
             <div className="flex flex-wrap justify-center gap-6 md:gap-10 text-center">
               <div className="flex items-center gap-2">
@@ -152,7 +146,7 @@ export default async function Home() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
                 </span>
                 <span className="text-sm text-foreground/90">
-                  <span className="text-foreground font-medium">{formatNumber(summary?.total_ideas)}</span> ideas alive
+                  <span className="text-foreground font-medium">{formatNumber(summary?.total_ideas, lang)}</span> {t("home.statIdeasAlive")}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -161,7 +155,7 @@ export default async function Home() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-2/60" />
                 </span>
                 <span className="text-sm text-foreground/90">
-                  <span className="text-foreground font-medium">{formatNumber(summary?.total_actual_value)}</span> value created
+                  <span className="text-foreground font-medium">{formatNumber(summary?.total_actual_value, lang)}</span> {t("home.statValueCreated")}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -170,7 +164,7 @@ export default async function Home() {
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-chart-3/60" />
                 </span>
                 <span className="text-sm text-foreground/90">
-                  <span className="text-foreground font-medium">{nodeCount}</span>{" "}node{nodeCount !== 1 ? "s" : ""}
+                  <span className="text-foreground font-medium">{nodeCount}</span>{" "}{nodeCount !== 1 ? t("home.statNodes") : t("home.statNode")}
                 </span>
               </div>
               {coherenceScore && (
@@ -180,41 +174,39 @@ export default async function Home() {
                     <span className="relative inline-flex h-2 w-2 rounded-full bg-primary/60" />
                   </span>
                   <span className="text-sm text-foreground/90">
-                    <span className="text-foreground font-medium">{formatCoherenceScore(coherenceScore.score)}</span> coherence
+                    <span className="text-foreground font-medium">{formatCoherenceScore(coherenceScore.score)}</span> {t("home.statCoherence")}
                   </span>
                 </div>
               )}
             </div>
           )}
 
-          {/* The text box — submits directly to the API */}
           <IdeaSubmitForm />
         </div>
       </section>
 
-      {/* Section 2: HOW IT WORKS — 3 steps with connecting lines */}
+      {/* Section 2: HOW IT WORKS */}
       <section className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto animate-fade-in-up delay-100">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-          {/* Connecting lines (desktop only) */}
           <div className="hidden md:block absolute top-10 left-[calc(33.3%+0.75rem)] right-[calc(33.3%+0.75rem)] h-px bg-border/40" />
-          {HOW_IT_WORKS.map((step, i) => (
-            <div key={step.title} className="text-center space-y-3 relative">
+          {HOW_IT_WORKS.map((step) => (
+            <div key={step.titleKey} className="text-center space-y-3 relative">
               <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-card/80 border border-border/30 text-2xl">
                 {step.icon}
               </div>
-              <h3 className="text-base font-medium">{step.title}</h3>
+              <h3 className="text-base font-medium">{t(step.titleKey)}</h3>
               <p className="text-sm text-foreground/90 leading-relaxed max-w-[240px] mx-auto">
-                {step.description}
+                {t(step.descKey)}
               </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Section 3: LIVE FEED PREVIEW — recent resonance or top ideas fallback */}
+      {/* Section 3: LIVE FEED PREVIEW */}
       <section className="px-4 sm:px-6 lg:px-8 py-6 max-w-4xl mx-auto animate-fade-in-up delay-200">
         <h2 className="text-lg font-medium text-center mb-6 text-foreground/90">
-          {resonanceItems.length > 0 ? "Recent activity" : "Active ideas"}
+          {resonanceItems.length > 0 ? t("home.recentActivity") : t("home.activeIdeas")}
         </h2>
         {resonanceItems.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -229,7 +221,7 @@ export default async function Home() {
                   {item.activity_type ? item.activity_type.replace(/_/g, " ") : item.manifestation_status}
                 </p>
                 <p className="text-xs text-foreground/90">
-                  {timeAgo(item.last_activity_at)}
+                  {timeAgo(item.last_activity_at, t)}
                 </p>
               </Link>
             ))}
@@ -247,14 +239,14 @@ export default async function Home() {
                   {idea.manifestation_status}
                 </p>
                 <p className="text-xs text-foreground/90">
-                  {formatNumber(idea.value_gap)} CC remaining
+                  {t("home.ccRemaining", { amount: formatNumber(idea.value_gap, lang) })}
                 </p>
               </Link>
             ))}
           </div>
         ) : (
           <p className="text-center text-sm text-foreground/90">
-            No recent activity yet. Be the first to share an idea.
+            {t("home.emptyActivity")}
           </p>
         )}
         {(resonanceItems.length > 0 || topIdeas.length > 0) && (
@@ -263,7 +255,7 @@ export default async function Home() {
               href={resonanceItems.length > 0 ? "/resonance" : "/ideas"}
               className="text-xs text-foreground/90 hover:text-foreground transition-colors underline underline-offset-4"
             >
-              {resonanceItems.length > 0 ? "See all activity" : "See all ideas"}
+              {t("common.seeAll")}
             </Link>
           </p>
         )}
@@ -272,14 +264,14 @@ export default async function Home() {
       {/* Section 5: EXPLORE NUDGE */}
       <section className="px-4 sm:px-6 lg:px-8 py-8 max-w-2xl mx-auto text-center animate-fade-in-up delay-400">
         <Button asChild className="rounded-full px-8 py-3 text-base bg-primary hover:bg-primary/90">
-          <Link href="/ideas">Explore Ideas &rarr;</Link>
+          <Link href="/ideas">{t("home.exploreIdeasCta")}</Link>
         </Button>
         <p className="mt-3">
           <Link
             href="/resonance"
             className="text-sm text-foreground/90 hover:text-foreground transition-colors underline underline-offset-4"
           >
-            or browse the resonance feed
+            {t("home.orBrowseResonance")}
           </Link>
         </p>
       </section>
@@ -287,32 +279,32 @@ export default async function Home() {
       {/* Section 6: THE GENTLE TAP */}
       <section className="px-4 sm:px-6 lg:px-8 py-16 max-w-2xl mx-auto text-center">
         <p className="text-xl md:text-2xl font-light text-foreground/90 leading-relaxed">
-          You don&apos;t need permission.<br />
-          You don&apos;t need to know everything.<br />
-          You just need one thought worth sharing.
+          {t("home.gentleTap1")}<br />
+          {t("home.gentleTap2")}<br />
+          {t("home.gentleTap3")}
         </p>
       </section>
 
       {/* Footer */}
       <footer className="px-4 sm:px-6 lg:px-8 py-12 max-w-3xl mx-auto text-center border-t border-border/20">
         <div className="flex flex-wrap justify-center gap-6 text-sm text-foreground/90 mb-4">
-          <Link href="/resonance" className="hover:text-foreground transition-colors">Resonance</Link>
-          <Link href="/ideas" className="hover:text-foreground transition-colors">Ideas</Link>
-          <Link href="/invest" className="hover:text-foreground transition-colors">Invest</Link>
-          <Link href="/contribute" className="hover:text-foreground transition-colors">Contribute</Link>
+          <Link href="/resonance" className="hover:text-foreground transition-colors">{t("nav.resonance")}</Link>
+          <Link href="/ideas" className="hover:text-foreground transition-colors">{t("nav.ideas")}</Link>
+          <Link href="/invest" className="hover:text-foreground transition-colors">{t("nav.invest")}</Link>
+          <Link href="/contribute" className="hover:text-foreground transition-colors">{t("nav.contribute")}</Link>
         </div>
         <details className="text-xs text-foreground/60 mb-4">
-          <summary className="cursor-pointer hover:text-foreground/85 transition-colors">For developers</summary>
+          <summary className="cursor-pointer hover:text-foreground/85 transition-colors">{t("home.forDevelopers")}</summary>
           <div className="flex flex-wrap justify-center gap-4 mt-2">
-            <a href="https://github.com/seeker71/Coherence-Network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">GitHub</a>
-            <a href="https://www.npmjs.com/package/coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Command line tool</a>
-            <a href="https://www.npmjs.com/package/coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">AI assistant integration</a>
-            <a href="https://api.coherencycoin.com/docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Developer documentation</a>
-            <a href="https://clawhub.ai/skills/coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">OpenClaw Skill</a>
+            <a href="https://github.com/seeker71/Coherence-Network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devGithub")}</a>
+            <a href="https://www.npmjs.com/package/coherence-cli" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devCli")}</a>
+            <a href="https://www.npmjs.com/package/coherence-mcp-server" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devMcp")}</a>
+            <a href="https://api.coherencycoin.com/docs" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devDocs")}</a>
+            <a href="https://clawhub.ai/skills/coherence-network" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">{t("home.devOpenClaw")}</a>
           </div>
         </details>
         <p className="text-xs text-foreground/85 leading-relaxed">
-          Ideas into realization — through attention, curiosity, and collaboration.
+          {t("home.footerTagline")}
         </p>
       </footer>
     </main>

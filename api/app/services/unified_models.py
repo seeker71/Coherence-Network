@@ -106,3 +106,9 @@ from app.services.wallet_service import WalletRecord  # noqa: F401
 
 # Reward policy models
 from app.services.reward_policy_service import RewardPolicyRecord  # noqa: F401
+
+# Multilingual concept views + glossary
+from app.services.translation_cache_service import (  # noqa: F401
+    EntityViewRecord,
+    GlossaryEntryRecord,
+)

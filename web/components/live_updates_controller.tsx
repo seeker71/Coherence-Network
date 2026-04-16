@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { LIVE_REFRESH_EVENT } from "@/lib/live_refresh";
 import { readPublicWebConfig } from "@/lib/public-config";
+import { useT } from "@/components/MessagesProvider";
 
 const DEFAULT_POLL_MS = 120000;
 const MIN_POLL_MS = 30000;
@@ -25,6 +26,7 @@ type ChangeTokenResponse = {
 export default function LiveUpdatesController() {
   const router = useRouter();
   const pathname = usePathname();
+  const t = useT();
   const [enabled, setEnabled] = useState(true);
   const [lastRefreshAt, setLastRefreshAt] = useState<string>("never");
   const webVersionRef = useRef<string>("");
@@ -149,31 +151,33 @@ export default function LiveUpdatesController() {
     };
   }, [enabled, isEligiblePath, pollMs, router, routerRefreshEveryTicks, skipRouterRefresh]);
 
-  const statusLabel = enabled ? (isEligiblePath ? "On" : "Available") : "Off";
+  const statusLabel = enabled
+    ? (isEligiblePath ? t("autoRefresh.statusOn") : t("autoRefresh.statusAvailable"))
+    : t("autoRefresh.statusOff");
 
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-40">
       <details className="group pointer-events-auto">
         <summary className="list-none cursor-pointer rounded-full border border-border/70 bg-card/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
-          Auto refresh <span className="font-semibold text-foreground">{statusLabel}</span>
+          {t("autoRefresh.label")} <span className="font-semibold text-foreground">{statusLabel}</span>
         </summary>
         <div className="mt-2 w-64 rounded-2xl border border-border/70 bg-card/95 p-3 text-xs shadow-lg backdrop-blur">
           <p className="text-muted-foreground">
-            Keep this page up to date while you work, then pause when you want a quieter view.
+            {t("autoRefresh.body")}
           </p>
           <p className="mt-2 text-muted-foreground">
-            Path <code>{pathname || "/"}</code>
+            {t("autoRefresh.pathLabel")} <code>{pathname || "/"}</code>
           </p>
           <p className="text-muted-foreground">
-            Last refresh{" "}
-            <code>{lastRefreshAt === "never" ? "never" : new Date(lastRefreshAt).toLocaleTimeString()}</code>
+            {t("autoRefresh.lastRefresh")}{" "}
+            <code>{lastRefreshAt === "never" ? t("autoRefresh.never") : new Date(lastRefreshAt).toLocaleTimeString()}</code>
           </p>
           <button
             type="button"
             onClick={() => setEnabled((prev) => !prev)}
             className="mt-3 w-full rounded-md border px-2 py-1.5 text-foreground hover:bg-accent"
           >
-            {enabled ? "Pause for now" : "Resume sync"}
+            {enabled ? t("autoRefresh.pauseNow") : t("autoRefresh.resume")}
           </button>
         </div>
       </details>

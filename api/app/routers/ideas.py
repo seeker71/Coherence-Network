@@ -67,10 +67,11 @@ async def list_ideas(
     curated_only: bool = Query(False, description="When true, only return the 16 curated super-ideas from ideas/*.md."),
     pillar: str | None = Query(None, description="Filter by pillar: realization|pipeline|economics|surfaces|network|foundation."),
     workspace_id: str | None = Query(None, description="Filter by owning workspace. Defaults to all workspaces."),
+    lang: str | None = Query(None, description="Target language view. When set and a canonical idea view exists, name/description come from the view."),
 ) -> IdeaPortfolioResponse:
     raw_tags = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
     parsed_tags = idea_service.normalize_tags(raw_tags) if raw_tags else None
-    return idea_service.list_ideas(
+    resp = idea_service.list_ideas(
         only_unvalidated=only_unvalidated,
         include_internal=include_internal,
         limit=limit,
@@ -82,6 +83,31 @@ async def list_ideas(
         pillar=pillar,
         workspace_id=workspace_id,
     )
+    return _apply_lang_views(resp, lang)
+
+
+def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPortfolioResponse:
+    """When a language is requested, substitute each idea's name/description
+    with the canonical view for that lang (if one exists). Ideas without a
+    view in the target language keep the anchor content — the caller can tell
+    which is which via a separate view fetch.
+    """
+    from app.services import translator_service
+    from app.services import translation_cache_service as _tcache
+
+    if not lang or not translator_service.is_supported(lang) or lang == translator_service.DEFAULT_LOCALE:
+        return resp
+    for idea in resp.ideas:
+        rec = _tcache.canonical_view("idea", idea.id, lang)
+        if rec and rec.content_hash:
+            if rec.content_title:
+                idea.name = rec.content_title
+            if rec.content_description and hasattr(idea, "description"):
+                try:
+                    idea.description = rec.content_description
+                except Exception:
+                    pass
+    return resp
 
 
 @router.get("/ideas/tags", response_model=IdeaTagCatalogResponse, summary="Return the normalized idea tag catalog with idea counts (spec 129)")
@@ -228,9 +254,22 @@ async def list_ideas_showcase() -> IdeaShowcaseResponse:
 async def get_resonance(
     window_hours: int = Query(24, ge=1, le=720),
     limit: int = Query(20, ge=1, le=100),
+    lang: str | None = Query(None, description="Target language view — when set, idea names come from canonical views for that lang where available."),
 ) -> list[dict]:
     """Return ideas with recent activity, sorted by most-recent-activity-first."""
-    return idea_service.get_resonance_feed(window_hours=window_hours, limit=limit)
+    from app.services import translator_service
+    from app.services import translation_cache_service as _tcache
+
+    items = idea_service.get_resonance_feed(window_hours=window_hours, limit=limit)
+    if lang and translator_service.is_supported(lang) and lang != translator_service.DEFAULT_LOCALE:
+        for it in items:
+            iid = it.get("idea_id") or it.get("id")
+            if not iid:
+                continue
+            rec = _tcache.canonical_view("idea", iid, lang)
+            if rec and rec.content_title:
+                it["name"] = rec.content_title
+    return items
 
 
 @router.get("/ideas/{idea_id}/concept-resonance", response_model=IdeaConceptResonanceResponse, summary="Return conceptually related ideas, preferring matches from different domains")

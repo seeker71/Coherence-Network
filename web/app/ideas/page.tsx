@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 import { getApiBase } from "@/lib/api";
 import {
@@ -8,6 +9,8 @@ import {
 import IdeasListView from "@/components/ideas/IdeasListView";
 import { withWorkspaceScope } from "@/lib/workspace";
 import { getActiveWorkspaceFromCookie } from "@/lib/workspace-server";
+import { createTranslator } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import type { IdeaQuestion, IdeaWithScore } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -50,13 +53,13 @@ const PILLAR_ORDER = [
 
 type PillarName = (typeof PILLAR_ORDER)[number];
 
-const PILLAR_LABEL: Record<PillarName, string> = {
-  realization: "Realization — Track every idea from inception to impact",
-  pipeline: "Pipeline — Turn ideas into working software",
-  economics: "Economics — CC as unit of account, value flows fairly",
-  surfaces: "Surfaces — Where users meet the system",
-  network: "Network — How the platform federates and welcomes people",
-  foundation: "Foundation — Substrate everything rests on",
+const PILLAR_KEY: Record<PillarName, string> = {
+  realization: "ideas.pillarRealization",
+  pipeline: "ideas.pillarPipeline",
+  economics: "ideas.pillarEconomics",
+  surfaces: "ideas.pillarSurfaces",
+  network: "ideas.pillarNetwork",
+  foundation: "ideas.pillarFoundation",
 };
 
 const STAGE_ORDER = [
@@ -70,29 +73,21 @@ const STAGE_ORDER = [
 
 type StageName = (typeof STAGE_ORDER)[number];
 
-const STAGE_LABEL: Record<StageName, string> = {
-  none: "Backlog",
-  specced: "Specced",
-  implementing: "Implementing",
-  testing: "Testing",
-  reviewing: "Reviewing",
-  complete: "Complete",
-};
-
 const AUTO_ADVANCE_TRIGGERS: Array<{
   taskType: string;
   movesTo: StageName;
-  detail: string;
+  detailKey: string;
 }> = [
-  { taskType: "spec", movesTo: "specced", detail: "Task completion moves from backlog to specced." },
-  { taskType: "impl", movesTo: "implementing", detail: "Task completion starts active implementation." },
-  { taskType: "test", movesTo: "testing", detail: "Task completion moves work into verification." },
-  { taskType: "review", movesTo: "reviewing", detail: "Task completion pushes to review readiness." },
+  { taskType: "spec", movesTo: "specced", detailKey: "ideas.trigger.spec" },
+  { taskType: "impl", movesTo: "implementing", detailKey: "ideas.trigger.impl" },
+  { taskType: "test", movesTo: "testing", detailKey: "ideas.trigger.test" },
+  { taskType: "review", movesTo: "reviewing", detailKey: "ideas.trigger.review" },
 ];
 
-async function loadIdeas(curatedOnly: boolean, workspaceId: string): Promise<IdeasResponse> {
+async function loadIdeas(curatedOnly: boolean, workspaceId: string, lang: LocaleCode): Promise<IdeasResponse> {
   const API = getApiBase();
-  const qs = curatedOnly ? "?curated_only=true&limit=50" : "?limit=500";
+  const langParam = lang === DEFAULT_LOCALE ? "" : `&lang=${lang}`;
+  const qs = curatedOnly ? `?curated_only=true&limit=50${langParam}` : `?limit=500${langParam}`;
   const url = withWorkspaceScope(`${API}/api/ideas${qs}`, workspaceId);
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -182,7 +177,11 @@ export default async function IdeasPage({
   const params = (await searchParams) ?? {};
   const showAll = params.all === "1" || params.all === "true";
   const workspaceId = await getActiveWorkspaceFromCookie();
-  const data = await loadIdeas(!showAll, workspaceId);
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
+  const data = await loadIdeas(!showAll, workspaceId, lang);
   const progress = await loadProgressDashboard(data.ideas, workspaceId);
 
   const allIdeas = data.ideas;
@@ -194,25 +193,24 @@ export default async function IdeasPage({
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-5xl mx-auto space-y-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Ideas
+          {t("ideas.title")}
         </h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          Ideas are living things. They start as a thought, attract attention,
-          grow through collaboration, and create real value.
+          {t("ideas.lede")}
         </p>
       </div>
 
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-sm text-muted-foreground">Total ideas</p>
+          <p className="text-sm text-muted-foreground">{t("ideas.statTotal")}</p>
           <p className="text-2xl font-light text-primary">{data.summary.total_ideas}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-sm text-muted-foreground">Value created</p>
+          <p className="text-sm text-muted-foreground">{t("ideas.statValue")}</p>
           <p className="text-2xl font-light text-primary">{formatUsd(data.summary.total_actual_value)}</p>
         </div>
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-          <p className="text-sm text-muted-foreground">Remaining opportunity</p>
+          <p className="text-sm text-muted-foreground">{t("ideas.statGap")}</p>
           <p className="text-2xl font-light text-primary">{formatUsd(data.summary.total_value_gap)}</p>
         </div>
       </section>
@@ -220,22 +218,20 @@ export default async function IdeasPage({
       <section className="space-y-4" aria-labelledby="ideas-list-heading">
         <div className="space-y-2">
           <h2 id="ideas-list-heading" className="text-xl font-semibold tracking-tight">
-            {showAll ? "All ideas" : "Portfolio"}
+            {showAll ? t("ideas.sectionAll") : t("ideas.sectionPortfolio")}
           </h2>
           <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-            {showAll
-              ? "The complete landscape — every idea sensed across the fractal."
-              : "Sixteen super-ideas grouped by pillar. Drill into any one to see the absorbed ideas and linked specs."}
+            {showAll ? t("ideas.sectionAllLede") : t("ideas.sectionPortfolioLede")}
           </p>
         </div>
         {allIdeas.length === 0 ? (
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-8 text-center space-y-3">
-            <p className="text-lg text-muted-foreground">No ideas yet. Be the first to share one.</p>
+            <p className="text-lg text-muted-foreground">{t("ideas.empty")}</p>
             <Link
               href="/"
               className="inline-block text-primary hover:text-foreground transition-colors underline underline-offset-4"
             >
-              Share an idea &rarr;
+              {t("ideas.shareArrow")}
             </Link>
           </div>
         ) : showAll ? (
@@ -248,7 +244,7 @@ export default async function IdeasPage({
               return (
                 <div key={pillar} className="space-y-3">
                   <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/90 border-b border-border/30 pb-2">
-                    {PILLAR_LABEL[pillar]}
+                    {t(PILLAR_KEY[pillar])}
                   </h3>
                   <IdeasListView ideas={bucket} />
                 </div>
@@ -257,7 +253,7 @@ export default async function IdeasPage({
             {grouped["_unknown"] && grouped["_unknown"].length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/90 border-b border-border/30 pb-2">
-                  Other
+                  {t("ideas.other")}
                 </h3>
                 <IdeasListView ideas={grouped["_unknown"]} />
               </div>
@@ -269,7 +265,7 @@ export default async function IdeasPage({
             href={showAll ? "/ideas" : "/ideas?all=1"}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
           >
-            {showAll ? "Show curated super-ideas only" : "Show every idea (the full landscape)"}
+            {showAll ? t("ideas.toggleShowCurated") : t("ideas.toggleShowAll")}
           </Link>
         </div>
       </section>
@@ -277,13 +273,13 @@ export default async function IdeasPage({
       {/* Lifecycle dashboard — collapsible, default closed */}
       <details className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30">
         <summary className="cursor-pointer p-5 md:p-6 text-sm font-medium text-foreground hover:text-primary transition-colors select-none">
-          Show lifecycle details ({completionPct}% complete)
+          {t("ideas.lifecycleDetails", { pct: completionPct })}
         </summary>
         <div className="px-5 md:px-6 pb-5 md:pb-6 space-y-5">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Portfolio completion</span>
-              <span>{completionPct}% complete</span>
+              <span>{t("ideas.portfolioCompletion")}</span>
+              <span>{t("ideas.percentComplete", { pct: completionPct })}</span>
             </div>
             <div className="h-2.5 rounded-full bg-muted/40 overflow-hidden">
               <div
@@ -295,7 +291,7 @@ export default async function IdeasPage({
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <article className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
-              <h3 className="text-sm font-medium text-foreground">Stage transitions</h3>
+              <h3 className="text-sm font-medium text-foreground">{t("ideas.stageTransitions")}</h3>
               <ol className="space-y-2 text-sm">
                 {STAGE_ORDER.map((stage, idx) => {
                   const next = STAGE_ORDER[idx + 1];
@@ -303,8 +299,8 @@ export default async function IdeasPage({
                   return (
                     <li key={stage} className="flex items-center justify-between gap-2">
                       <span className="text-foreground">
-                        {STAGE_LABEL[stage]}
-                        {next ? ` -> ${STAGE_LABEL[next]}` : " (terminal)"}
+                        {t(`ideas.stage.${stage}`)}
+                        {next ? ` -> ${t(`ideas.stage.${next}`)}` : ` ${t("ideas.terminal")}`}
                       </span>
                       <span className="text-xs rounded-full border border-border/40 px-2 py-0.5 bg-muted/30 text-foreground">
                         {bucket.count}
@@ -316,16 +312,16 @@ export default async function IdeasPage({
             </article>
 
             <article className="rounded-xl border border-border/30 bg-background/40 p-4 space-y-3">
-              <h3 className="text-sm font-medium text-foreground">Auto-advancement triggers</h3>
+              <h3 className="text-sm font-medium text-foreground">{t("ideas.autoAdvanceTriggers")}</h3>
               <ul className="space-y-2 text-sm">
                 {AUTO_ADVANCE_TRIGGERS.map((trigger) => (
                   <li key={trigger.taskType} className="space-y-1">
                     <p className="text-foreground">
                       <span className="font-medium">{trigger.taskType}</span>
                       {" "}
-                      {"task \u2192 "}<span className="text-primary">{STAGE_LABEL[trigger.movesTo]}</span>
+                      {t("ideas.taskArrow")}{" "}<span className="text-primary">{t(`ideas.stage.${trigger.movesTo}`)}</span>
                     </p>
-                    <p className="text-xs text-muted-foreground">{trigger.detail}</p>
+                    <p className="text-xs text-muted-foreground">{t(trigger.detailKey)}</p>
                   </li>
                 ))}
               </ul>
@@ -333,7 +329,7 @@ export default async function IdeasPage({
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-foreground">Progress by phase</h3>
+            <h3 className="text-sm font-medium text-foreground">{t("ideas.progressByPhase")}</h3>
             <ul className="space-y-2">
               {STAGE_ORDER.map((stage) => {
                 const bucket = progress.by_stage[stage] ?? emptyStageBucket();
@@ -343,8 +339,8 @@ export default async function IdeasPage({
                 return (
                   <li key={stage} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs text-foreground">
-                      <span>{STAGE_LABEL[stage]}</span>
-                      <span>{bucket.count} ideas ({pct}%)</span>
+                      <span>{t(`ideas.stage.${stage}`)}</span>
+                      <span>{t("ideas.ideasCountPct", { count: bucket.count, pct })}</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
                       <div
@@ -357,7 +353,7 @@ export default async function IdeasPage({
               })}
             </ul>
             <p className="text-xs text-muted-foreground">
-              Snapshot: {new Date(progress.snapshot_at).toLocaleString()}
+              {t("ideas.snapshot", { time: new Date(progress.snapshot_at).toLocaleString(lang) })}
             </p>
           </div>
         </div>
@@ -365,22 +361,22 @@ export default async function IdeasPage({
 
       {/* Bottom nudge */}
       <section className="py-8 text-center border-t border-border/20">
-        <p className="text-muted-foreground mb-3">Have an idea?</p>
+        <p className="text-muted-foreground mb-3">{t("ideas.haveIdea")}</p>
         <Link
           href="/"
           className="text-primary hover:text-foreground transition-colors duration-300 underline underline-offset-4"
         >
-          Share it &rarr;
+          {t("ideas.shareIt")}
         </Link>
       </section>
 
       {/* Where to go next */}
-      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label="Where to go next">
-        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">Where to go next</p>
+      <nav className="py-8 text-center space-y-2 border-t border-border/20" aria-label={t("ideas.whereNext")}>
+        <p className="text-xs text-muted-foreground/80 uppercase tracking-wider">{t("ideas.whereNext")}</p>
         <div className="flex flex-wrap justify-center gap-4 text-sm">
-          <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">Resonance</Link>
-          <Link href="/invest" className="text-amber-600 dark:text-amber-400 hover:underline">Invest</Link>
-          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
+          <Link href="/resonance" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.resonance")}</Link>
+          <Link href="/invest" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.invest")}</Link>
+          <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">{t("nav.contribute")}</Link>
         </div>
       </nav>
     </main>

@@ -4,6 +4,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getApiBase } from "@/lib/api";
 import type { Concept, Edge, RelatedItems, LCConcept } from "@/lib/types/vision";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import {
+  DEFAULT_LOCALE,
+  isSupportedLocale,
+  type LocaleCode,
+  type LanguageMeta,
+} from "@/lib/locales";
+import { createTranslator } from "@/lib/i18n";
+import { createLocaleFetch } from "@/lib/locale-fetch";
 
 import { LevelBadge } from "./_components/LevelBadge";
 import { StoryContent } from "./_components/StoryContent";
@@ -20,10 +29,14 @@ export const dynamic = "force-dynamic";
 
 /* ── Data fetching ─────────────────────────────────────────────────── */
 
-async function fetchConcept(id: string): Promise<Concept | null> {
+async function fetchConcept(id: string, lang?: LocaleCode): Promise<Concept | null> {
   const base = getApiBase();
+  // Always forward the lang — the API decides whether a view exists and what
+  // to return. Omitting lang would surface the anchor (freshest) view, which
+  // is correct for "no preference" but wrong for "explicitly chose English".
+  const qs = lang ? `?lang=${lang}` : "";
   try {
-    const res = await fetch(`${base}/api/concepts/${id}`, { next: { revalidate: 30 } });
+    const res = await fetch(`${base}/api/concepts/${id}${qs}`, { next: { revalidate: 30 } });
     if (!res.ok) return null;
     return res.json();
   } catch { return null; }
@@ -39,10 +52,11 @@ async function fetchEdges(id: string): Promise<Edge[]> {
   } catch { return []; }
 }
 
-async function fetchAllLC(): Promise<LCConcept[]> {
+async function fetchAllLC(lang: LocaleCode): Promise<LCConcept[]> {
   const base = getApiBase();
+  const qs = lang === DEFAULT_LOCALE ? "?limit=200" : `?limit=200&lang=${lang}`;
   try {
-    const res = await fetch(`${base}/api/concepts/domain/living-collective?limit=200`, { next: { revalidate: 60 } });
+    const res = await fetch(`${base}/api/concepts/domain/living-collective${qs}`, { next: { revalidate: 60 } });
     if (!res.ok) return [];
     const data = await res.json();
     return data?.items || [];
@@ -61,9 +75,18 @@ async function fetchRelated(id: string): Promise<RelatedItems> {
 
 /* ── Metadata ──────────────────────────────────────────────────────── */
 
-export async function generateMetadata({ params }: { params: Promise<{ conceptId: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ conceptId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}): Promise<Metadata> {
   const { conceptId } = await params;
-  const concept = await fetchConcept(conceptId);
+  const sp = await searchParams;
+  const raw = typeof sp.lang === "string" ? sp.lang : undefined;
+  const lang: LocaleCode | undefined = isSupportedLocale(raw) ? raw : undefined;
+  const concept = await fetchConcept(conceptId, lang);
 
   // Pull the most alive description: first from The Feeling section,
   // falling back to the concept description
@@ -95,16 +118,29 @@ export async function generateMetadata({ params }: { params: Promise<{ conceptId
 
 /* ── Page ──────────────────────────────────────────────────────────── */
 
-export default async function VisionConceptPage({ params }: { params: Promise<{ conceptId: string }> }) {
+export default async function VisionConceptPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ conceptId: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { conceptId } = await params;
+  const sp = await searchParams;
+  const rawLang = typeof sp.lang === "string" ? sp.lang : undefined;
+  const lang: LocaleCode = isSupportedLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
+
   const [concept, edges, related, allLC] = await Promise.all([
-    fetchConcept(conceptId),
+    fetchConcept(conceptId, lang),
     fetchEdges(conceptId),
     fetchRelated(conceptId),
-    fetchAllLC(),
+    fetchAllLC(lang),
   ]);
 
   if (!concept) notFound();
+
+  const languageMeta = concept.language_meta;
 
   const isLC = concept.domains?.includes("living-collective");
   if (!isLC) redirect(`/concepts/${conceptId}`);
@@ -144,9 +180,14 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
       )}
 
       <div className={`relative ${visual ? "-mt-32 md:-mt-44" : ""} z-10 max-w-4xl mx-auto px-6 pb-20`}>
+        {/* Language switcher */}
+        <div className="mb-4">
+          <LocaleSwitcher currentLang={lang} meta={languageMeta ?? null} />
+        </div>
+
         {/* Breadcrumb */}
         <nav className="text-sm text-stone-500 mb-6 flex items-center gap-2" aria-label="breadcrumb">
-          <Link href="/vision" className="hover:text-amber-400/80 transition-colors">The Living Collective</Link>
+          <Link href="/vision" className="hover:text-amber-400/80 transition-colors">{t("vision.breadcrumbRoot")}</Link>
           <span className="text-stone-700">/</span>
           <span className="text-stone-300">{concept.name}</span>
         </nav>
@@ -184,10 +225,10 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
             <div className="max-w-3xl space-y-4 pt-8">
               <ConnectedConcepts outgoing={outgoing} incoming={incoming} nameMap={nameMap} mode="full" />
               <div className="flex gap-4 text-sm pt-4">
-                <Link href="/vision" className="text-stone-500 hover:text-amber-300/80 transition-colors">&larr; The Living Collective</Link>
-                <Link href="/vision/realize" className="text-stone-500 hover:text-amber-300/80 transition-colors">Living it</Link>
-                <Link href="/vision/join" className="text-stone-500 hover:text-teal-300/80 transition-colors">Join</Link>
-                <Link href={`/vision/${conceptId}/edit`} className="text-stone-600 hover:text-amber-300/60 transition-colors ml-auto">Edit story</Link>
+                <Link href="/vision" className="text-stone-500 hover:text-amber-300/80 transition-colors">{t("vision.backToRoot")}</Link>
+                <Link href="/vision/realize" className="text-stone-500 hover:text-amber-300/80 transition-colors">{t("vision.livingIt")}</Link>
+                <Link href="/vision/join" className="text-stone-500 hover:text-teal-300/80 transition-colors">{t("vision.join")}</Link>
+                <Link href={`/vision/${conceptId}/edit`} className="text-stone-600 hover:text-amber-300/60 transition-colors ml-auto">{t("vision.editStory")}</Link>
               </div>
             </div>
           </>
