@@ -35,19 +35,33 @@ interface FrequencySpectrumProps {
   contributorId: string;
 }
 
-// Hz → frequency band name and color
-const FREQUENCY_BANDS: Record<number, { name: string; color: string; quality: string }> = {
-  174: { name: "Root", color: "#ef4444", quality: "Grounding, nourishment, physical tending" },
-  285: { name: "Healing", color: "#f97316", quality: "Composting, health, cellular renewal" },
-  396: { name: "Liberation", color: "#eab308", quality: "Play, harmonizing, rebalancing" },
-  417: { name: "Change", color: "#84cc16", quality: "Energy, phase transitions, edges" },
-  432: { name: "Presence", color: "#22c55e", quality: "Pulse, attunement, rhythm, stillness" },
-  528: { name: "Transformation", color: "#06b6d4", quality: "Vitality, resonance, offering" },
-  639: { name: "Connection", color: "#3b82f6", quality: "Network, intimacy, instruments" },
-  741: { name: "Expression", color: "#8b5cf6", quality: "Sensing, expressing, freedom" },
-  852: { name: "Intuition", color: "#a855f7", quality: "Elders, transmission, discovery" },
-  963: { name: "Unity", color: "#ec4899", quality: "Ceremony, beauty, the whole field" },
+// Hz → color only. Band names come from the concepts the contributor visited.
+// No hardcoded labels — the concepts name themselves.
+const HZ_COLORS: Record<number, string> = {
+  174: "#ef4444",
+  285: "#f97316",
+  396: "#eab308",
+  417: "#84cc16",
+  432: "#22c55e",
+  528: "#06b6d4",
+  639: "#3b82f6",
+  741: "#8b5cf6",
+  852: "#a855f7",
+  963: "#ec4899",
 };
+
+function hzColor(hz: number): string {
+  // Find nearest mapped color or interpolate
+  const keys = Object.keys(HZ_COLORS).map(Number).sort((a, b) => a - b);
+  const exact = HZ_COLORS[hz];
+  if (exact) return exact;
+  // Nearest
+  let closest = keys[0];
+  for (const k of keys) {
+    if (Math.abs(k - hz) < Math.abs(closest - hz)) closest = k;
+  }
+  return HZ_COLORS[closest] || "#9ca3af";
+}
 
 export function FrequencySpectrum({ contributorId }: FrequencySpectrumProps) {
   const [spectrum, setSpectrum] = useState<SpectrumData | null>(null);
@@ -144,15 +158,18 @@ export function FrequencySpectrum({ contributorId }: FrequencySpectrumProps) {
 
   if (!spectrum) return null;
 
-  // Build frequency band histogram
+  // Build frequency band histogram from actual concepts visited
   const bandTotals: Record<number, number> = {};
+  const bandConcepts: Record<number, ConceptTouch[]> = {};
   for (const t of spectrum.touches) {
     bandTotals[t.hz] = (bandTotals[t.hz] || 0) + t.views;
+    if (!bandConcepts[t.hz]) bandConcepts[t.hz] = [];
+    bandConcepts[t.hz].push(t);
   }
   const maxBandViews = Math.max(...Object.values(bandTotals), 1);
 
-  // All possible bands
-  const allBands = Object.keys(FREQUENCY_BANDS).map(Number).sort((a, b) => a - b);
+  // Only show bands the contributor has actually touched
+  const activeBands = Object.keys(bandTotals).map(Number).sort((a, b) => a - b);
 
   return (
     <section className="rounded-2xl border border-violet-500/20 bg-gradient-to-b from-violet-500/5 to-card/30 p-6 sm:p-8 space-y-5">
@@ -165,73 +182,67 @@ export function FrequencySpectrum({ contributorId }: FrequencySpectrumProps) {
         </p>
       </div>
 
-      {/* Spectrum visualization — vertical bars per Hz band */}
-      <div className="space-y-2">
-        {allBands.map((hz) => {
-          const band = FREQUENCY_BANDS[hz];
+      {/* Spectrum — only bands the contributor has touched */}
+      <div className="space-y-3">
+        {activeBands.map((hz) => {
           const total = bandTotals[hz] || 0;
-          const width = total > 0 ? Math.max(4, (total / maxBandViews) * 100) : 0;
-          const conceptsAtHz = spectrum.touches.filter((t) => t.hz === hz);
+          const width = Math.max(8, (total / maxBandViews) * 100);
+          const concepts = bandConcepts[hz] || [];
+          const color = hzColor(hz);
+          // The band names itself from the concepts visited at this frequency
+          const bandLabel = concepts.map((c) => c.concept_name).join(", ");
 
           return (
-            <div key={hz} className="group">
+            <div key={hz}>
               <div className="flex items-center gap-3">
                 <span className="w-16 text-right font-mono text-xs text-muted-foreground">
                   {hz} Hz
                 </span>
                 <div className="flex-1 h-5 rounded-full bg-muted/20 overflow-hidden">
-                  {width > 0 && (
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{
-                        width: `${width}%`,
-                        backgroundColor: band.color,
-                        opacity: 0.7,
-                      }}
-                    />
-                  )}
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${width}%`,
+                      backgroundColor: color,
+                      opacity: 0.7,
+                    }}
+                  />
                 </div>
-                <span className="w-20 text-xs text-muted-foreground">
-                  {band.name}
-                </span>
               </div>
-
-              {/* Expanded concept list on hover/focus */}
-              {conceptsAtHz.length > 0 && (
-                <div className="ml-[76px] mt-1 hidden group-hover:block">
-                  <div className="flex flex-wrap gap-1">
-                    {conceptsAtHz.map((c) => (
-                      <a
-                        key={c.concept_id}
-                        href={`/vision/${c.concept_id}`}
-                        className="text-xs px-2 py-0.5 rounded-full border border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60 transition-colors"
-                      >
-                        {c.concept_name}
-                        {c.views > 1 && (
-                          <span className="ml-1 text-muted-foreground/50">×{c.views}</span>
-                        )}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* Concepts at this frequency — the band names itself */}
+              <div className="ml-[76px] mt-1 flex flex-wrap gap-1">
+                {concepts.map((c) => (
+                  <a
+                    key={c.concept_id}
+                    href={`/vision/${c.concept_id}`}
+                    className="text-xs px-2 py-0.5 rounded-full border border-border/30 text-muted-foreground hover:text-foreground hover:border-border/60 transition-colors"
+                  >
+                    {c.concept_name}
+                    {c.views > 1 && (
+                      <span className="ml-1 text-muted-foreground/50">×{c.views}</span>
+                    )}
+                  </a>
+                ))}
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Dominant frequency */}
+      {/* Dominant frequency — named by the concepts at that Hz */}
       {spectrum.dominant_frequency && (
         <div className="pt-2 border-t border-border/20">
           <p className="text-xs text-muted-foreground">
-            Dominant frequency:{" "}
-            <span style={{ color: FREQUENCY_BANDS[spectrum.dominant_frequency]?.color }}>
-              {spectrum.dominant_frequency} Hz — {FREQUENCY_BANDS[spectrum.dominant_frequency]?.name}
+            Strongest resonance:{" "}
+            <span style={{ color: hzColor(spectrum.dominant_frequency) }}>
+              {spectrum.dominant_frequency} Hz
             </span>
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-0.5">
-            {FREQUENCY_BANDS[spectrum.dominant_frequency]?.quality}
-          </p>
+          {bandConcepts[spectrum.dominant_frequency] && (
+            <p className="text-xs text-muted-foreground/60 mt-0.5">
+              {bandConcepts[spectrum.dominant_frequency].map((c) => c.concept_name).join(", ")}
+            </p>
+          )}
         </div>
       )}
 
