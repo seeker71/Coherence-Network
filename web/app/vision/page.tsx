@@ -373,18 +373,19 @@ export default async function VisionPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { title: "Space", id: "lc-space", desc: "Common houses, private nests, workshops. Cob, timber, rammed earth.", tag: "7 resources" },
-              { title: "Nourishment", id: "lc-nourishment", desc: "Food forests, community kitchens, fermentation. Permaculture plans.", tag: "8 resources" },
-              { title: "Land", id: "lc-land", desc: "Keyline design, CLT setup, regeneration. Water harvesting systems.", tag: "8 resources" },
-              { title: "Energy", id: "lc-energy", desc: "Solar arrays, biogas, micro-hydro. Open-source charge controllers.", tag: "8 resources" },
-              { title: "Health", id: "lc-health", desc: "Herb gardens, apothecary, sauna. Community health worker training.", tag: "6 resources" },
-              { title: "Instruments", id: "lc-instruments", desc: "Sensor networks, maker spaces, fab labs. IoT for gardens & energy.", tag: "7 resources" },
-              { title: "Shelter", id: "lc-v-shelter-organism", desc: "Cob, CEB, SuperAdobe, bamboo, mycelium. Open-source building plans.", tag: "11 resources" },
-              { title: "Living Spaces", id: "lc-v-living-spaces", desc: "Pattern language, cohousing design. Inside-outside gradients.", tag: "8 resources" },
+              { title: "Economy", href: "/vision/economy", desc: "Energy in social form. Visible circulation, contribution, vitality buffers, and repurposed-now transformations.", tag: "live story" },
+              { title: "Space", href: "/vision/lc-space", desc: "Common houses, private nests, workshops. Cob, timber, rammed earth.", tag: "7 resources" },
+              { title: "Nourishment", href: "/vision/lc-nourishment", desc: "Food forests, community kitchens, fermentation. Permaculture plans.", tag: "8 resources" },
+              { title: "Land", href: "/vision/lc-land", desc: "Keyline design, CLT setup, regeneration. Water harvesting systems.", tag: "8 resources" },
+              { title: "Energy", href: "/vision/lc-energy", desc: "Solar arrays, biogas, micro-hydro. Open-source charge controllers.", tag: "8 resources" },
+              { title: "Health", href: "/vision/lc-health", desc: "Herb gardens, apothecary, sauna. Community health worker training.", tag: "6 resources" },
+              { title: "Instruments", href: "/vision/lc-instruments", desc: "Sensor networks, maker spaces, fab labs. IoT for gardens & energy.", tag: "7 resources" },
+              { title: "Shelter", href: "/vision/lc-v-shelter-organism", desc: "Cob, CEB, SuperAdobe, bamboo, mycelium. Open-source building plans.", tag: "11 resources" },
+              { title: "Living Spaces", href: "/vision/lc-v-living-spaces", desc: "Pattern language, cohousing design. Inside-outside gradients.", tag: "8 resources" },
             ].map((bp) => (
               <Link
-                key={bp.id}
-                href={`/vision/${bp.id}`}
+                key={bp.href}
+                href={bp.href}
                 className="group p-5 rounded-2xl border border-teal-800/30 bg-teal-900/10 hover:bg-teal-900/20 hover:border-teal-700/40 transition-all duration-300 space-y-2"
               >
                 <div className="flex items-center justify-between">

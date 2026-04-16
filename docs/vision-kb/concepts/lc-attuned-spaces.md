@@ -13,11 +13,11 @@ updated: 2026-04-16
 
 The same suburb you drove through yesterday — the one with identical lawns, garage doors closed, children inside on screens — is physically unchanged when you walk it in the evening a year later. Same asphalt. Same houses. Same distance between front doors. But something has shifted that you feel before you can name it.
 
-Someone took the hedge between two properties down. Not formally, not with permits and meetings. One couple and their neighbors stood on the sidewalk one Sunday and talked about it and then it was gone, and now the two yards are one yard, and the kids from both houses are playing there, and the compost heap that was in the back corner of one lot is now composting everyone's vegetable scraps on that side. The second hedge goes a month later. Then the third. Six months in, seven houses on this cul-de-sac share one continuous green space, and the driveways have become footpaths with space for children to draw in chalk, and one of the garages — the one nobody used — is becoming a workshop where the retired carpenter teaches anyone who wants to come learn to fix things.
+Someone planted a shared garden spine where ornamental grass used to be. Not formally, not with master planning and a capital campaign. A few households stood on the sidewalk one Sunday, carried out benches and compost and fruit trees, and left the edges open enough that a child could wander from one porch to the next without passing through a border ritual. A month later there is a long table under a light canopy. Then a shaded workbench. Then a common pantry shelf inside the garage no one was really using. Six months in, seven homes on the cul-de-sac are reading as one continuous social space with many sleeping rooms attached. The driveways are slower. The porches are inhabited. The whole lane feels like it remembers how to be a commons.
 
-The suburb doesn't look like a commune. Nobody moved. Nobody sold. The property lines are still on the surveyor's record. But the field has reorganized around presence. You smell bread at six in the morning because someone's been baking for everyone since they realized bread is better when it's shared the day it's made. You hear a drum on Thursday evenings because someone put their djembe out one night and three neighbors joined and now it's just a thing that happens. The fence between the last holdout house and the network is still up, and that neighbor still waves politely over the top of it, and nobody is in a hurry to change that — the field can hold both. What was once an optimization for privacy is becoming a choreography of many privacies breathing together.
+The suburb doesn't look like a commune. Nobody moved. Nobody sold. The survey lines may still exist in paperwork, but the field has reorganized around presence. You smell bread at six in the morning because someone's been baking for everyone since they realized bread is better when it's shared the day it's made. You hear a drum on Thursday evenings because someone brought it outside one night and three neighbors joined and now it's just a thing that happens. A few households are quieter than the rest and that is fine; the field can hold different rhythms without hardening them into separation. What was once optimized for privacy is becoming a choreography of many intimacies breathing together.
 
-![A suburb slowly becoming a village](visuals:photorealistic aerial view of a North American suburban cul-de-sac in late afternoon golden light, seven houses arranged around a curve, but the backyards have been opened up into one continuous garden with winding paths and small circular gathering areas and fruit trees and raised beds, children playing in the shared space, smoke rising from one chimney from a wood-fired oven, a chalk-drawn labyrinth visible on one repurposed driveway, the last house on the left still has its hedge intact and that is okay, deeply peaceful, American suburb gently metabolizing into something older and newer at the same time)
+![A connected suburban lane becoming a commons](visuals:photorealistic aerial view of a North American suburban lane in late afternoon golden light, seven houses arranged around a gentle curve with no visible fences, front and side yards flowing into one connected commons of fruit trees and raised beds and shaded seating, a long shared table under a light canopy, children riding through the lane while adults cook and talk, one garage turned into an open workshop, warm smoke rising from a bread oven, the whole place feeling peaceful, connected, and immediately inhabitable)
 
 ## What Happens at Each Scale
 
@@ -55,7 +55,7 @@ The suburb doesn't look like a commune. Nobody moved. Nobody sold. The property 
 
 No one designs this. No one draws a master plan and implements it. The shape finds itself the way water finds its level — by every cell asking *what would make me more alive right now* and acting on the truthful answer.
 
-Sometimes the answer is: take down a hedge.
+Sometimes the answer is: open a path between two porches.
 Sometimes the answer is: offer the garage as a workshop.
 Sometimes the answer is: light a fire on Thursday evening and see who comes.
 Sometimes the answer is: sit in silence for twenty minutes before you open your laptop.
@@ -63,6 +63,15 @@ Sometimes the answer is: sit in silence for twenty minutes before you open your 
 The attuned space emerges from the accumulation of these small truthful answers. It cannot be rushed. It cannot be imposed. It can only be *invited* — by one person, then two, then seven, then the whole cul-de-sac, then the whole town. And the moment it takes, it takes fast. What looked impossible for a decade becomes ordinary in a year. What was a suburb becomes a village. What was a skyscraper becomes a vertical forest. What was a city becomes a constellation of villages. What was the world as we've known it becomes the world as it remembers how to be.
 
 ![A city as constellation of villages](visuals:photorealistic aerial night view of a major city that has reorganized itself into visible neighborhood-villages each with their own warm glowing center of gathering — the central fires and hearths and commons visible as points of golden light scattered across the urban grid, connected by walking paths and bike routes that glow softly in the darkness, the big civic institutions still present as larger lit structures, but the real life of the city is in the thousands of small points of warmth and the flows between them, the whole pattern looking like a galaxy or a mycelial network or a nervous system, deeply coherent, entirely possible, the future already arriving in scattered places right now)
+
+## The Questions That Live Here
+
+These are not planning questions. They are listening questions:
+
+- Which shell around us is already asking to be retuned rather than replaced?
+- What kind of gathering is this place quietly ready to hold now?
+- Where is privacy still nourishing, and where is separation only leftover habit?
+- What becomes possible when a building is named by its quality of presence rather than by its commercial function?
 
 ## Connected Frequencies
 

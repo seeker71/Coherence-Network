@@ -2,10 +2,12 @@
 id: lc-w-coherence
 hz: 432
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Coherence
+
+> Alignment without flattening. Many notes discovering they belong together strongly enough to become one living tone.
 
 ## The Feeling
 
@@ -50,6 +52,8 @@ the conditions — shared presence, honest listening, a willingness to let
 your note adjust — and then feel when the room locks in.
 
 ## The Questions That Live Here
+
+These are questions to keep listening for in the room:
 
 - What is the relationship between one person's coherence and the
   coherence of the whole?

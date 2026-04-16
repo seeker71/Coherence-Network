@@ -350,6 +350,40 @@ def api_post(
     return 0
 
 
+def api_delete(
+    url: str,
+    timeout: int = 30,
+    retries: int = 3,
+    headers: dict[str, str] | None = None,
+) -> int:
+    """DELETE URL with retries. Returns HTTP status code (0 on total failure)."""
+    request_headers = headers or {}
+    for attempt in range(retries):
+        try:
+            if httpx:
+                resp = httpx.delete(url, timeout=timeout, headers=request_headers)
+                if resp.status_code == 429:
+                    time.sleep(2 ** attempt)
+                    continue
+                return resp.status_code
+            req = urllib.request.Request(url, method="DELETE")
+            for key, value in request_headers.items():
+                req.add_header(key, value)
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.status
+        except Exception as e:
+            err_str = str(e)
+            for code in ("404", "409", "429"):
+                if code in err_str:
+                    if code == "429":
+                        time.sleep(2 ** attempt)
+                        continue
+                    return int(code)
+            if attempt == retries - 1:
+                print(f"  ERROR: {e}", file=sys.stderr)
+    return 0
+
+
 def download_image(url: str, dest: Path, retries: int = 5, min_bytes: int = 1000) -> bool:
     """Download an image with retries. Handles 503 (busy) and 429 (rate limit)."""
     for attempt in range(retries):

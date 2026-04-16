@@ -2,7 +2,7 @@
 id: lc-rhythm
 hz: 432
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Rhythm
@@ -65,7 +65,21 @@ is also the path of deepest nourishment.
 
 ![Seasonal rhythm](visuals:photorealistic split composition showing same community courtyard in four seasons arranged as quadrants: spring with blossoming trees and people planting, summer with lush green and people eating outdoors in bright sun, autumn with golden leaves and people harvesting, winter with soft snow and people gathered around indoor fire, the same space transformed four ways by the turning year)
 
+## Where You Can See It
+
+**Benedictine monasteries.** Matins before dawn, shared work in the morning, common meal, prayer, silence, sleep. Not productivity software. A human day shaped so the body remembers how to bow to time.
+
+**Mediterranean towns in summer.** Morning market while the light is gentle, midday pause while the heat gathers, evening piazza when the air opens again. The same street carrying three different frequencies in one day.
+
+**A household living close to land.** Fire lit before sunrise, hands in soil while the dew still holds, long table at midday, shade in the afternoon, porch talk at dusk, deep night with no blue light cutting across it. Rhythm becomes visible when the day belongs to the world again.
+
+## What We're Building
+
+Not schedules that dominate the body, but rhythms the body can trust. A day with distinct frequencies. A week with built-in widening and softening. A year that honors inward seasons as much as outward ones. Enough repetition for the field to settle. Enough openness for the living pattern to keep breathing.
+
 ## The Questions That Live Here
+
+These are questions the body keeps listening with:
 
 - How does a community hold collective rhythm when individual rhythms
   genuinely conflict — the night owl and the early riser sharing a kitchen?
