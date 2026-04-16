@@ -36,6 +36,7 @@ Mandatory for every prompt (new or follow-up). This command is continuation-safe
 - dirty worktree: skips start-gate/rebase and treats the prompt as in-flight continuation,
 - detached HEAD: fails fast with exact branch attach commands.
 - sibling continuity guard: fails fast if another linked worktree has risky state (`dirty`, `detached`, or local commits ahead of `origin/main` without upstream), to prevent abandoned changes across threads.
+- autonomous worker sidecars under `.claude/worktrees/*` are excluded from sibling continuity risk so Claude workers can run in parallel without blocking Codex prompt entry.
 
 Equivalent legacy flow (manual/clean tree): `make start-gate`.
 

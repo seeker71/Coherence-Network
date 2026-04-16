@@ -2,7 +2,7 @@
 id: lc-field-sensing
 hz: 741
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Field Sensing
@@ -25,7 +25,7 @@ The field council meets weekly but it doesn't look like a meeting. Five to seven
 
 Decisions here don't happen through votes or even through the elegant rounds of sociocracy, though those tools are available when needed. Most decisions emerge. Someone notices a need. They begin to respond. Others feel the movement and join or don't. If the response is right, the field supports it — people show up, materials appear, energy flows. If it's wrong, the field resists — everything feels heavy, forced, uphill. The community has learned to trust this resistance as intelligence, not obstacle. When a good idea meets field resistance, it usually means the timing is off, not the idea.
 
-The hardest part of field sensing is the difference between individual intuition and field intelligence. Your gut might say one thing. The field might say another. The practice is not to override your gut but to hold it alongside what you're sensing from the collective and let the fuller picture emerge. Sometimes your gut is picking up what the field hasn't surfaced yet. Sometimes your gut is just your own fear talking. Learning the difference takes years. The field is patient.
+The subtlest part of field sensing is the difference between individual intuition and field intelligence. Your gut might say one thing. The field might say another. The practice is not to override your gut but to hold it alongside what you're sensing from the collective and let the fuller picture emerge. Sometimes your gut is picking up what the field hasn't surfaced yet. Sometimes your gut is echoing an older protective pattern. Learning the difference takes years. The field is patient.
 
 ## What Nature Teaches
 
@@ -33,7 +33,7 @@ An octopus has more neurons in its arms than in its brain. Each arm can taste, t
 
 ![Mycelial network](visuals:photorealistic cross-section of forest floor showing glowing mycelial network connecting tree roots underground, bioluminescent fungal threads branching in fractal patterns through dark soil, tree roots visible above, tiny mushrooms emerging at the surface, a fallen leaf decomposing where mycelium touches it, sense of hidden vast intelligence beneath the visible world)
 
-The mycelial network beneath a forest connects every tree to every other tree through fungal highways that trade nutrients, water, and chemical signals. A Douglas fir being attacked by insects sends chemical warnings through the mycelium, and neighboring trees begin producing defensive compounds before the insects arrive. No tree decided this. No tree planned it. The field sensed a threat and the field responded. When researchers mapped these networks, they found that the largest trees — the "mother trees" — are connected to hundreds of others, functioning as hubs in a network that has no center and no hierarchy. The forest thinks. Not the way we think. Better.
+The mycelial network beneath a forest connects every tree to every other tree through fungal highways that trade nutrients, water, and chemical signals. A Douglas fir sensing a surge of insects sends chemistry through the mycelium, and neighboring trees begin shifting their own chemistry before the insects arrive. No tree decided this. No tree planned it. The field sensed a change and the field responded. When researchers mapped these networks, they found that the largest trees — the "mother trees" — are connected to hundreds of others, functioning as hubs in a network that has no center and no hierarchy. The forest thinks. Not the way we think. Better.
 
 A jazz ensemble: four musicians who have played together long enough that something takes over. The bassist feels the drummer lean into a new rhythm before the sticks change pattern. The pianist hears a harmonic space opening and fills it with a chord no one expected but everyone needed. The saxophone player closes their eyes and rides the wave. Afterward, asked who decided to change key in the bridge, each musician points to someone else. No one decided. The field decided. The musicians were its instruments.
 

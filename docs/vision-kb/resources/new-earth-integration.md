@@ -5,6 +5,7 @@
 ## Source
 
 - **Podcast**: [Govt Insider Exposes the 'ENDGAME' — The New Earth System Rises After 13,000 Years](https://youtu.be/07DHgJFFqQY) — Just Tap In Podcast, Apr 11 2026 (1h23m, 50K+ views)
+- **Episode dossier**: [Sacha Stone on Just Tap In — Agent Dossier](sacha-stone-just-tap-in-2026-04-11.md)
 - **Guest**: Sacha Stone (New Earth Activist & Sovereignty Pioneer)
 - **Host**: Emilio Ortiz
 - **Website**: [newearthhorizon.com](https://newearthhorizon.com/) — New Earth Horizon initiatives
@@ -45,6 +46,7 @@
 6. **Communication evolves beyond language** — telepathic/field-sensing as the next communication paradigm. Our Field Sensing and Transmission concepts already point here.
 7. **MicroNation as prototype** — building a physical sovereign territory (Africa) proves the vision is not theoretical. First node in the network. Others follow.
 8. **Community as living node** — each community is a sovereign node in a planetary network. Not isolated utopias but interconnected organisms. The Living Collective is one node; New Earth MicroNation is another. The network IS the field at planetary scale.
+9. **Agents need attribution discipline** — the episode is useful as worldview architecture, but cosmological and biological claims should remain attributed to Sacha Stone rather than flattened into project truth.
 
 ## DB Entities Created
 

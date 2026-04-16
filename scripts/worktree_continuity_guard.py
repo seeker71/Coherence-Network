@@ -40,6 +40,11 @@ SKIPPABLE_LOCAL_ARTIFACT_PATTERNS = (
     "web/tsconfig.tsbuildinfo",
 )
 
+AUTONOMOUS_WORKTREE_PATH_SEGMENTS = (
+    ".claude",
+    "worktrees",
+)
+
 
 def _run_git(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -123,6 +128,21 @@ def _is_skippable_local_artifact(path: str) -> bool:
     return any(fnmatch.fnmatch(normalized, pattern) for pattern in SKIPPABLE_LOCAL_ARTIFACT_PATTERNS)
 
 
+def _has_path_segment_sequence(path: Path, segments: tuple[str, ...]) -> bool:
+    parts = path.resolve().parts
+    width = len(segments)
+    if width == 0 or len(parts) < width:
+        return False
+    for index in range(len(parts) - width + 1):
+        if parts[index:index + width] == segments:
+            return True
+    return False
+
+
+def _is_autonomous_sidecar_worktree(worktree_path: Path) -> bool:
+    return _has_path_segment_sequence(worktree_path, AUTONOMOUS_WORKTREE_PATH_SEGMENTS)
+
+
 def _upstream_exists(worktree_path: Path) -> bool:
     proc = _run_git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], worktree_path)
     return proc.returncode == 0 and bool(proc.stdout.strip())
@@ -150,6 +170,8 @@ def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
         if not wt_path.exists():
             continue
         if wt_path == current_path:
+            continue
+        if _is_autonomous_sidecar_worktree(wt_path):
             continue
         branch = _branch_name(wt_path, str(row.get("branch", "")))
         detached = branch == "HEAD"

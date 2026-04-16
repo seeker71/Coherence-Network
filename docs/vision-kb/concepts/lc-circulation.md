@@ -2,12 +2,12 @@
 id: lc-circulation
 hz: 528
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-16
 ---
 
 # Circulation
 
-> Resources flow like a mycorrhizal network — from where abundant to where needed. No ledger. No debt. The gradient is felt and the flow follows.
+> Resources flow like a mycorrhizal network — from where abundant to where needed. The ledger is transparent, but it is not a gate. The gradient is felt and the flow follows.
 
 ## The Feeling
 
@@ -21,7 +21,7 @@ The relief of this takes weeks to settle into your body. You keep waiting for th
 
 ## How It Lives Here
 
-The community runs on three layers of circulation. Inside, a common fund covers every basic need — food, shelter, energy, health, learning. No individual handles money for daily life, the way no cell in your body negotiates for oxygen. The fund is visible: a simple dashboard in the common room shows what came in, what went out, what is held, what is needed. No individual sensing. Collective flow.
+The community runs on three layers of circulation. Inside, a common fund covers every basic need — food, shelter, energy, health, learning. No individual handles money for daily life, the way no cell in your body negotiates for oxygen. The fund is visible: a simple dashboard in the common room shows what came in, what went out, what is held, what is needed. The dashboard is not there to ration. It is there so the field can feel where nourishment wants to move next, where surplus wants to circulate, and where a part of the organism is asking for more rest or support.
 
 At the membrane — where community meets the outside world — the organism interfaces as one. Income arrives from community enterprises, from members who earn externally and contribute voluntarily, from people who believe in what is being grown here. Nothing is extracted. Nothing is obligated. The membrane breathes in both directions.
 
@@ -33,7 +33,7 @@ And at the network layer, surplus moves outward. To other communities just start
 
 A forest has no accounting department. Phosphorus moves from where it is abundant to where it is scarce through fungal highways that stretch for miles. A mother tree facing death dumps her carbon reserves into the network — not to her own offspring specifically, but to whoever needs it most. The network decides. The network knows.
 
-Your own blood carries this same intelligence. Oxygen moves to the cell that needs it. Waste is carried away. No organ sends an invoice. The heart does not charge the lungs for pumping. When circulation is healthy, every part thrives. When it is blocked — when one organ hoards, when a vessel narrows — the whole body suffers.
+Your own blood carries this same intelligence. Oxygen moves to the cell that needs it. Waste is carried away. No organ sends an invoice. The heart does not charge the lungs for pumping. When circulation is healthy, every part thrives. When the flow slows or gathers too tightly, the body notices quickly and redirects life where it is wanted.
 
 The potlatch ceremonies of Pacific Northwest peoples understood this: the most respected person was not the one who accumulated the most, but the one who gave the most away. Generosity was status. Flow was wealth. The gifts kept moving, and the movement itself was the prosperity.
 
@@ -63,6 +63,14 @@ The three layers of circulation -- inner, membrane, and network -- each need pra
 
 **The membrane.** New members keep their external income for six to twelve months while trust builds. No pressure, no extraction. Gradually, as needs are met and the flow becomes real, the membrane becomes more permeable. Some contribute everything. Some contribute what they can. The field does not measure the amount. It reads the willingness.
 
+## What the Ledger Is For
+
+The old economy used measurement to decide who deserved access. The living economy uses measurement to keep circulation honest.
+
+The ledger shows who and what is being fed, where energy is piling up without purpose, where a part of the organism is carrying too much, and where a buffer is actually healthy. A winter battery bank is healthy. A repair reserve is healthy. A birth fund is healthy. A recovery buffer when someone is sick is healthy. Storage that serves resilience is part of flow. Storage for control is stagnation.
+
+No one has to earn breakfast. No one has to hit a number before they may rest. Tracking is not there to shrink people into caution; it is there to help the whole feel its own metabolism with enough clarity to respond in time.
+
 ## Sharing Systems
 
 **The tool library.** Every tool belongs to the community. Hammers, saws, sewing machines, bicycles, vehicles -- all shared, all maintained by whoever notices the need. A simple board tracks what is borrowed, not for accounting but for finding: "Where is the drill?" "Lina took it to the orchard." Ownership dissolves naturally when everything you need is available and cared for.
@@ -91,7 +99,7 @@ The three layers of circulation -- inner, membrane, and network -- each need pra
 
 ## The Questions That Live Here
 
-- How does someone transition from a lifetime of scarcity conditioning into trust-based flow?
+- How does someone transition from a lifetime of bracing and holding tight into trust-based flow?
 - What transparency is enough — full visibility of collective flow, or does that create its own pressure?
 - How does the membrane handle external obligations — taxes, insurance, pensions — while building the new?
 - When surplus circulates to other communities, who feels the call and how is it honored?

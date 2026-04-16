@@ -2,7 +2,7 @@
 id: lc-transmission
 hz: 852
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Transmission
@@ -30,7 +30,7 @@ that reaches it.
 The community does not have teachers. It has people who have gone further along certain
 paths and who make themselves available. The woodworker keeps her shop open. The herbalist
 walks the garden in the mornings. The musician plays. If you want to learn, you show up.
-You watch. You begin. You fail. You watch some more. The transmission happens in the
+You watch. You begin. You wobble. You watch some more. The transmission happens in the
 proximity, in the shared doing, in the hours of unglamorous repetition where the elder's
 hands correct yours without a word.
 

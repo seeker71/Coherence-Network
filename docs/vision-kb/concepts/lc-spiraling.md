@@ -2,7 +2,7 @@
 id: lc-spiraling
 hz: 432
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Spiraling
@@ -11,9 +11,9 @@ updated: 2026-04-14
 
 ## The Feeling
 
-It's the autumn equinox and you're sitting in the same circle, on the same ground, with many of the same faces as last year. Someone opens the community journal and reads aloud what was written twelve months ago: "The well ran dry. Three families left. We're afraid." You remember that fear in your body — it lived in your stomach for weeks. And now you're sitting here with a full well, four new families, and a knowing in your bones that you could not have arrived at this moment without that dry season.
+It's the autumn equinox and you're sitting in the same circle, on the same ground, with many of the same faces as last year. Someone opens the community journal and reads aloud what was written twelve months ago: "The well ran dry. Three families left. We are learning what this season is asking." You remember the density of that season in your body — it lived in your stomach for weeks. And now you're sitting here with a full well, four new families, and a knowing in your bones that you could not have arrived at this moment without that dry season.
 
-This is what the spiral feels like from inside: you return to the same place and find you are not the same person. The autumn smells the same — woodsmoke and fallen apples and the first cold edge in the air — but you hold it differently. Last year, the coming winter frightened you. This year, you know what winter is for. You've composted through one full cycle and the soil of your understanding is richer for it.
+This is what the spiral feels like from inside: you return to the same place and find you are not the same person. The autumn smells the same — woodsmoke and fallen apples and the first cold edge in the air — but you hold it differently. Last year, the coming winter felt bigger than you. This year, you know what winter is for. You've composted through one full cycle and the soil of your understanding is richer for it.
 
 Put your hand on a cross-section of tree trunk and trace the rings. Each ring IS a year — not a memory of a year but the year itself, stored in wood. The tree doesn't leave its past behind. It builds on it. Every ring includes all the rings before. This is the spiral made visible: growth that deepens rather than just extends.
 
@@ -53,7 +53,7 @@ A community that lives in spiral time rather than linear time. Practically: a jo
 
 No anniversaries. Instead, spiral markers: "This is our seventh turn through autumn." The language matters. An anniversary implies repetition. A spiral turn implies deepening. The community measures its age not in years elapsed but in cycles completed — and what each cycle composted into wisdom.
 
-When someone is struggling, the spiral offers comfort no platitude can: you have been here before. Not this exact here, but this quality of here. And last time, you moved through. The spiral always moves. That's its nature. The only way to get stuck is to refuse to turn.
+When someone is moving through a dense turn, the spiral offers comfort no platitude can: you have been here before. Not this exact here, but this quality of here. And last time, you moved through. The spiral always moves. That's its nature. It keeps inviting the turn.
 
 ## Resources
 

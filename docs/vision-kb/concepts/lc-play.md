@@ -2,7 +2,7 @@
 id: lc-play
 hz: 396
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-16
 ---
 
 # Play
@@ -31,7 +31,7 @@ Saturday mornings, contact improvisation in the barn. No choreography, no teache
 
 Dolphins invest up to eighty percent of their waking time in play. Not because they have leisure — because play is how intelligence happens. Social complexity, adaptive capacity, innovation under pressure — all of it built in the body through roughhousing, chasing, inventing games with seaweed and bubbles. The most successful species on Earth are the ones that never stop playing.
 
-Young ravens slide down snow-covered roofs on their backs, climb to the top, and do it again. Otters juggle pebbles for no apparent reason. Octopuses disassemble their tanks and rearrange the parts. Play is not a break from the serious business of survival. Play is how organisms stay alive in a world that keeps changing. The creature that stops playing is the one that can't adapt when the river shifts.
+Young ravens slide down snow-covered roofs on their backs, climb to the top, and do it again. Otters juggle pebbles for no apparent reason. Octopuses disassemble their tanks and rearrange the parts. Play is not separate from adaptation. Play is how organisms keep discovering new ways to move with a world that keeps changing. The creature that stays playful is the one that can meet the river when it shifts.
 
 In human children, pretend play — the kind where a stick becomes a horse and a cardboard box becomes a castle — exercises exactly the cognitive muscles needed for abstract thought, empathy, and creative problem-solving. Adventure playgrounds, born in Denmark in the 1940s, proved that children given loose materials, real tools, and trust build things no adult architect would imagine. The key ingredient was not the materials. It was the absence of anyone telling them what to build.
 
@@ -41,7 +41,7 @@ At an adventure playground in London, a seven-year-old is sawing a plank in half
 
 In the Basque hills at Mondragon, workers on their lunch break play pelota against the factory wall — the same wall their grandparents played against. The game carries forward a kind of knowing about cooperation that no tending training ever will.
 
-At a Baining fire dance in Papua New Guinea, adults leap through bonfires at night while the village watches and cheers. The flames are real. The risk is real. The aliveness is so thick you can taste it. Play and ceremony merge when the stakes are high enough and the trust is deep enough. Nobody is performing. Everybody is alive.
+At a Baining fire dance in Papua New Guinea, adults leap through bonfires at night while the village watches and cheers. The flames are real. The intensity is real. The aliveness is so thick you can taste it. Play and ceremony merge when the stakes are high enough and the trust is deep enough. Nobody is performing. Everybody is alive.
 
 ![Natural water play in summer](visuals:photorealistic natural swimming pond surrounded by wildflowers, people of all ages splashing and laughing, a rope swing mid-arc over green water, a rough wooden dock, children diving, an elder floating on her back with eyes closed, mountains in soft background haze, full summer light)
 
@@ -59,7 +59,7 @@ Capoeira in the evenings for anyone who wants to feel what it is like when marti
 
 Play is not one thing. It wears a hundred faces, and a living community needs room for all of them.
 
-**Body play.** Running, climbing, wrestling, swimming, balancing, falling down. The adventure playground is the anchor -- loose parts, real tools, actual risk. Children build and wreck and rebuild. Adults join when the urge hits. Rope swings over the pond in summer. Mud slides after rain. Parkour along every low wall and railing. The body that plays stays supple, and the community that plays together in the body trusts each other with weight and momentum and mess.
+**Body play.** Running, climbing, wrestling, swimming, balancing, tumbling. The adventure playground is the anchor -- loose parts, real tools, real sensation. Children build and wreck and rebuild. Adults join when the urge hits. Rope swings over the pond in summer. Mud slides after rain. Parkour along every low wall and railing. The body that plays stays supple, and the community that plays together in the body trusts each other with weight and momentum and mess.
 
 **Imaginative play.** The stick that becomes a sword. The cardboard box that becomes a fortress. Improv night is this for adults -- the practice of stepping into a story without knowing where it goes and saying yes to whatever arrives. Costume trunks in the common room, accessible to every age. A rule: any object in the community can become a prop, and no one gets in trouble for repurposing.
 
