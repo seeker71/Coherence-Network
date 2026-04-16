@@ -188,6 +188,24 @@
     "loading": "Nachrichten werden geladen …",
     "noMessages": "Keine Nachrichten gefunden."
   },
+  "specs": {
+    "title": "Entwurfs-Karte",
+    "lede": "Entwürfe sind die Liefer-Verträge zwischen Ideen, Umsetzung und Prüfung. Diese Ansicht zeigt, was das Repo derzeit entdecken kann, was die Registry kennt und wo die Verbindungen noch fehlen.",
+    "statVisible": "Sichtbare Entwürfe",
+    "statMeasured": "Gemessen",
+    "statMeasuredSub": "Entwürfe mit Wert-/Aufwand-Metadaten aus der Registry",
+    "statLinkedIdeas": "Verknüpfte Ideen",
+    "statContributors": "Mitwirkende",
+    "visibleHeading": "Sichtbare Entwürfe",
+    "visibleSub": "{n} sichtbare Entwürfe aus {source} und der Registry.",
+    "addMetadata": "Entwurfs-Metadaten hinzufügen oder aktualisieren",
+    "registryCoverage": "Registry-Abdeckung",
+    "colIdeas": "Ideen",
+    "colContributors": "Mitwirkende",
+    "colTasks": "Aufgaben",
+    "colImplRefs": "Umsetzungs-Referenzen",
+    "filterActive": "Entwurfs-Filter aktiv für"
+  },
   "tasks": {
     "workView": "Arbeits-Ansicht",
     "title": "Was sich gerade bewegt",
