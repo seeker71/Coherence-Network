@@ -287,3 +287,158 @@ class TestDiscoveryRewards:
         assert data["unique_viewers_referred"] == 3
         assert data["unique_assets_shared"] == 1
         assert data["estimated_view_rewards_cc"] > 0
+
+
+# ---------------------------------------------------------------------------
+# Reward policies
+# ---------------------------------------------------------------------------
+
+class TestRewardPolicies:
+    """Community-configurable reward formulas."""
+
+    def test_list_policies_returns_defaults(self):
+        res = client.get("/api/reward-policies")
+        assert res.status_code == 200
+        policies = res.json()
+        assert isinstance(policies, list)
+        keys = {p["key"] for p in policies}
+        assert "discovery.view_reward_cc" in keys
+        assert "discovery.transaction_fee_rate" in keys
+
+    def test_get_single_policy(self):
+        res = client.get("/api/reward-policies/discovery.view_reward_cc")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["key"] == "discovery.view_reward_cc"
+        assert data["source"] == "code_default"
+
+    def test_override_policy(self):
+        res = client.put(
+            "/api/reward-policies/discovery.view_reward_cc",
+            json={
+                "value": {"value": 0.05, "unit": "CC", "description": "Custom view reward"},
+                "updated_by": "test_community",
+            },
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["source"] == "community_override"
+
+        # Verify the override takes effect
+        get_res = client.get("/api/reward-policies/discovery.view_reward_cc")
+        assert get_res.status_code == 200
+        assert get_res.json()["source"] == "community_override"
+
+    def test_delete_policy_reverts_to_default(self):
+        # Set override
+        client.put(
+            "/api/reward-policies/discovery.max_view_rewards_daily",
+            json={"value": {"value": 200, "unit": "count"}, "updated_by": "test"},
+        )
+        # Delete it
+        res = client.delete("/api/reward-policies/discovery.max_view_rewards_daily")
+        assert res.status_code == 200
+
+        # Verify reverted to default
+        get_res = client.get("/api/reward-policies/discovery.max_view_rewards_daily")
+        assert get_res.json()["source"] == "code_default"
+
+    def test_policy_snapshot_for_traceability(self):
+        res = client.get("/api/reward-policies-snapshot")
+        assert res.status_code == 200
+        data = res.json()
+        assert "snapshot_at" in data
+        assert "policies" in data
+        assert "discovery.view_reward_cc" in data["policies"]
+
+    def test_workspace_scoping(self):
+        """Policies are scoped to workspaces."""
+        # Set a policy for a custom workspace
+        res = client.put(
+            "/api/reward-policies/discovery.view_reward_cc?workspace_id=test-community",
+            json={
+                "value": {"value": 0.1, "unit": "CC"},
+                "updated_by": "test",
+            },
+        )
+        assert res.status_code == 200
+
+        # Default workspace should still have original
+        default_res = client.get("/api/reward-policies/discovery.view_reward_cc")
+        custom_res = client.get(
+            "/api/reward-policies/discovery.view_reward_cc?workspace_id=test-community"
+        )
+        # Both should return, but sources differ
+        assert default_res.status_code == 200
+        assert custom_res.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Flow simulator
+# ---------------------------------------------------------------------------
+
+class TestFlowSimulator:
+    """CC flow simulation."""
+
+    def test_simulate_basic_scenario(self):
+        res = client.post("/api/flow/simulate", json={
+            "contributors": 10,
+            "assets_created": 5,
+            "views_per_asset": 100,
+            "referral_rate": 0.15,
+            "transaction_rate": 0.05,
+            "avg_transaction_cc": 50,
+            "avg_contribution_cc": 100,
+            "avg_coherence_score": 0.75,
+            "staking_rate": 0.3,
+        })
+        assert res.status_code == 200
+        data = res.json()
+        assert "nodes" in data
+        assert "edges" in data
+        assert "totals" in data
+        assert "policy_snapshot" in data
+        assert "vitality_signals" in data
+        assert data["totals"]["monthly_cc_minted"] > 0
+        assert len(data["nodes"]) >= 5
+        assert len(data["edges"]) >= 5
+
+    def test_simulate_high_coherence_triggers_bonus(self):
+        res = client.post("/api/flow/simulate", json={
+            "contributors": 10,
+            "avg_coherence_score": 0.95,
+        })
+        assert res.status_code == 200
+        data = res.json()
+        assert data["totals"]["coherence_bonus_applied"] is True
+
+    def test_simulate_low_coherence_no_bonus(self):
+        res = client.post("/api/flow/simulate", json={
+            "contributors": 10,
+            "avg_coherence_score": 0.5,
+        })
+        assert res.status_code == 200
+        data = res.json()
+        assert data["totals"]["coherence_bonus_applied"] is False
+
+    def test_simulate_zero_activity(self):
+        res = client.post("/api/flow/simulate", json={
+            "contributors": 1,
+            "assets_created": 0,
+            "views_per_asset": 0,
+            "referral_rate": 0,
+            "transaction_rate": 0,
+            "avg_transaction_cc": 0,
+            "avg_contribution_cc": 0,
+        })
+        assert res.status_code == 200
+        data = res.json()
+        assert data["totals"]["monthly_cc_minted"] == 0
+
+    def test_live_flow_endpoint(self):
+        res = client.get("/api/flow/live?days=7")
+        assert res.status_code == 200
+        data = res.json()
+        assert "views" in data
+        assert "cc" in data
+        assert "active_policies" in data

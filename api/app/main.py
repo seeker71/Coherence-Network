@@ -730,6 +730,14 @@ app.include_router(views_router.router, prefix="/api", tags=["views"])
 from app.routers import wallets as wallets_router  # noqa: E402
 app.include_router(wallets_router.router, prefix="/api", tags=["wallets"])
 
+# Reward policies — community-configurable reward formulas
+from app.routers import reward_policies as reward_policies_router  # noqa: E402
+app.include_router(reward_policies_router.router, prefix="/api", tags=["reward-policies"])
+
+# Flow simulator — visualize CC flow, simulate scenarios, sense vitality
+from app.routers import flow_simulator as flow_simulator_router  # noqa: E402
+app.include_router(flow_simulator_router.router, prefix="/api", tags=["flow"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).

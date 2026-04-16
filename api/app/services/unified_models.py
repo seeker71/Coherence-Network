@@ -103,3 +103,6 @@ from app.services.read_tracking_service import AssetReadDaily, AssetViewEvent  #
 
 # Wallet models
 from app.services.wallet_service import WalletRecord  # noqa: F401
+
+# Reward policy models
+from app.services.reward_policy_service import RewardPolicyRecord  # noqa: F401
