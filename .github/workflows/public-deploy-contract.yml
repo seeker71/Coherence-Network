@@ -6,8 +6,11 @@ on:
     paths:
       - 'api/**'
       - 'web/**'
+      - 'deploy/hostinger/**'
       - 'Dockerfile*'
       - 'docker-compose*.yml'
+      - 'scripts/verify_web_api_deploy.sh'
+      - '.github/workflows/**'
   schedule:
     - cron: "17 6 * * *"  # daily (was twice daily)
   workflow_dispatch:
