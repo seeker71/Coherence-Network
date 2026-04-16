@@ -113,11 +113,22 @@ check_url() {
       return 1
     fi
 
-    if [[ "$status" == "502" || "$status" == "503" || "$status" == "504" ]] && (( $(date +%s) < deadline )); then
-      echo "WARN: gateway status ${status}; waiting ${GATEWAY_PATIENCE_INTERVAL}s for upstream to reconnect..."
-      sleep "$GATEWAY_PATIENCE_INTERVAL"
-      continue
-    fi
+    # Patient retry covers the brief window right after a rollout where the
+    # gateway is reconnecting to a fresh upstream. 502/503/504 are the
+    # expected "backend unreachable" signals, but 404 also appears briefly
+    # when Traefik has torn down the old route and not yet registered the
+    # new one — the catch-all handler returns 404 while the routing table
+    # is mid-update. Treating 404 as a transient during the rollout window
+    # lets the body finish its own breath before the verify script reports.
+    case "$status" in
+      502|503|504|404)
+        if (( $(date +%s) < deadline )); then
+          echo "WARN: rollout status ${status}; waiting ${GATEWAY_PATIENCE_INTERVAL}s for the gateway to settle..."
+          sleep "$GATEWAY_PATIENCE_INTERVAL"
+          continue
+        fi
+        ;;
+    esac
     break
   done
 
