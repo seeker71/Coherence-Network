@@ -114,6 +114,9 @@ The field that hides subtle signals from itself becomes numb. The field that amp
 → lc-pulse — the single heartbeat of cell-and-field
 → lc-sensing — the organism's faculty of self-awareness, of which this practice is the daily act
 → lc-field-sensing — the collective version, the weekly shared hold
+→ lc-energy — the electrical, thermal, mechanical, and metabolic life the body can feel moving
+→ lc-economy — the social sensing layer that records what moved, restored, and wants to flow next
+→ lc-circulation — the pathways through which care, matter, and attention travel
 → lc-rest — the deep integration that closes every practice
 → lc-ceremony — the form this practice takes when held together
 → lc-discovery — the curiosity that makes wandering possible

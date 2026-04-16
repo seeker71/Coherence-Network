@@ -150,4 +150,4 @@ These are not optimization questions. They are questions about honest circulatio
 
 ## Connected Frequencies
 
-→ lc-circulation, lc-offering, lc-network, lc-pulse
+→ lc-circulation, lc-energy, lc-field-sensing, lc-nervous-system, lc-nourishment, lc-land, lc-offering, lc-network, lc-pulse
