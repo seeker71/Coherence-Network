@@ -37,6 +37,18 @@ Your own blood carries this same intelligence. Oxygen moves to the cell that nee
 
 The potlatch ceremonies of Pacific Northwest peoples understood this: the most respected person was not the one who accumulated the most, but the one who gave the most away. Generosity was status. Flow was wealth. The gifts kept moving, and the movement itself was the prosperity.
 
+## Embodied Now
+
+Circulation becomes real long before a whole society stops naming private ownership. It starts wherever the shell stays and the pattern inside it is reimagined: the pantry instead of the closet, the commons calendar instead of private guesswork, the shared reserve instead of five isolated stress responses.
+
+**In a city building.** One pantry shelf, one guest room calendar, one shared meal fund, and one tool closet replace five private emergency buffers. The shift is small in form and large in feeling: the building begins acting like one body with many doors.
+
+**On an urban block.** A storefront wall or workshop table becomes the place where repairs, borrowing, referrals, and local surplus move without friction. The circulation is not abstract. It is the drill, the stroller, the bag of rice, the name of the electrician, the afternoon someone needed child care and found it.
+
+**On a suburban lane.** A handful of households share bulk staples, school pickups, ladders, rides, and a winter repair reserve. The board or spreadsheet is not the point. The point is that the field can see where strain is gathering before someone has to carry it in silence.
+
+**On rural land.** One barn, shed, or common room becomes the membrane for eggs, seedlings, preserves, batteries, spare tools, guest bedding, and work days. Surplus stops reading as "mine plus extra" and starts reading as nutrition already asking where it belongs.
+
 ## Where You Can See It
 
 At Auroville in Tamil Nadu, three thousand people have lived without private property for over fifty years. A central fund receives and distributes. It is imperfect and still evolving, but it exists — proof that the question "but who pays?" has more than one answer.
@@ -106,4 +118,4 @@ No one has to earn breakfast. No one has to hit a number before they may rest. T
 
 ## Connected Frequencies
 
-→ lc-offering, lc-w-mycorrhizal, lc-nourishment, lc-land, lc-network
+→ lc-offering, lc-w-mycorrhizal, lc-nourishment, lc-land, lc-network, lc-economy, lc-energy, lc-field-sensing

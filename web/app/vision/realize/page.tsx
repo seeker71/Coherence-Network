@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -25,6 +26,118 @@ const VOCAB = [
   ["Retirement", "Deepening", "Elders at the center, not the edge"],
 ];
 
+const HOST_SPACES = [
+  {
+    title: "City apartment band",
+    image: "/visuals/transform-apartment.png",
+    context: "city",
+    energy: "light-touch",
+    body:
+      "A private corridor becomes a quiet band of cells with shared meals, rooftop tending, child support, and rooms that can host stillness, listening, and making.",
+    firstMove: "Open one floor, roof, or shared landing to nourishment, welcome, and rest before changing walls.",
+  },
+  {
+    title: "Urban block host",
+    image: "/visuals/transform-neighborhood.png",
+    context: "urban",
+    energy: "light-touch",
+    body:
+      "A storefront, studio, or hall becomes a visible local host for nourishment, repair, workshops, and gatherings that let new cells participate through presence or offering.",
+    firstMove: "Retune one front-facing room so the commons is visible from the street.",
+  },
+  {
+    title: "Suburban commons lane",
+    image: "/visuals/generated/lc-attuned-spaces-1.jpg",
+    context: "suburban",
+    energy: "light-touch",
+    body:
+      "A cul-de-sac, porch line, shared side yard, or underused garage becomes a connected commons where food, child support, craft, and neighborhood presence start moving between houses.",
+    firstMove: "Link two porches, one pantry shelf, and one shared table before touching the larger plan.",
+  },
+  {
+    title: "Rural anchor house",
+    image: "/visuals/community-earthship.png",
+    context: "rural edge",
+    energy: "medium-touch",
+    body:
+      "One existing home or stewarded building becomes the shared kitchen, bath, greenhouse, tool room, and welcome point for a growing field.",
+    firstMove: "Let one house become the commons before any larger site plan appears.",
+  },
+  {
+    title: "Land-rooted cluster",
+    image: "/visuals/community-findhorn.png",
+    context: "rural",
+    energy: "medium-touch",
+    body:
+      "When enough coherence accumulates, paths, gardens, bathing, and gathering start reading as one organism rather than separated holdings.",
+    firstMove: "Connect paths, food, bathing, and gathering first so the land feels shared before new structures multiply.",
+  },
+];
+
+const CONTEXT_PAIRS = [
+  {
+    context: "City",
+    transformedImage: "/visuals/transform-apartment.png",
+    transformedTitle: "Transform what is here",
+    transformedBody:
+      "Apartment floors, rooftops, lobbies, and tower commons are the fastest city-scale shifts because the shell already exists and the main move is relational.",
+    envisionedImage: "/visuals/generated/lc-space-0.jpg",
+    envisionedTitle: "Build what follows",
+    envisionedBody:
+      "Dense city embodiment can still feel warm, earth-held, and communal: shared kitchens, civic hearths, and vertical commons built from coherence instead of isolation.",
+  },
+  {
+    context: "Urban",
+    transformedImage: "/visuals/transform-neighborhood.png",
+    transformedTitle: "Transform what is here",
+    transformedBody:
+      "A streetfront, studio, workshop, or underused hall becomes a provision house, creation room, or neighborhood threshold with relatively little physical energy.",
+    envisionedImage: "/visuals/generated/lc-space-story-0.jpg",
+    envisionedTitle: "Build what follows",
+    envisionedBody:
+      "Over time, the urban fabric can hold deeper forms: nourishment halls, courtyards, and shared civic interiors designed from belonging rather than throughput.",
+  },
+  {
+    context: "Suburban",
+    transformedImage: "/visuals/transform-suburb.png",
+    transformedTitle: "Transform what is here",
+    transformedBody:
+      "Connected lanes, shared porches, common gardens, repurposed garages, and slow streets let a suburban pattern become one field without waiting for large capital.",
+    envisionedImage: "/visuals/generated/lc-v-living-spaces-0.jpg",
+    envisionedTitle: "Build what follows",
+    envisionedBody:
+      "If the pattern matures, a suburban field can become a clustered village body with shared fires, circular paths, and structures designed for gathering from the start.",
+  },
+  {
+    context: "Rural",
+    transformedImage: "/visuals/transform-village.png",
+    transformedTitle: "Transform what is here",
+    transformedBody:
+      "A house, greenhouse, barn, or stewarded structure becomes the anchor for food, tools, bathing, and hospitality before the wider land build-out arrives.",
+    envisionedImage: "/visuals/generated/lc-v-shelter-organism-story-0.jpg",
+    envisionedTitle: "Build what follows",
+    envisionedBody:
+      "Brand-new rural embodiment can grow as a land-rooted cluster: shared paths, curved shelter, open commons, and structures that feel more grown than imposed.",
+  },
+];
+
+const DUAL_PATHS = [
+  {
+    label: "Repurposed now",
+    title: "Keep the shell, change the field",
+    image: "/visuals/transform-neighborhood.png",
+    body:
+      "Existing apartments, storefronts, towers, churches, schools, garages, barns, and civic rooms can be retuned today. The fastest move is often relational, not structural.",
+  },
+  {
+    label: "Pure imagination",
+    title: "Let the form start from coherence",
+    image: "/visuals/generated/lc-v-living-spaces-3.jpg",
+    body:
+      "The unconstrained image still matters. It shows what the organism chooses when beauty, circulation, and belonging shape the structure from the first line.",
+  },
+];
+
 /* ── Page ──────────────────────────────────────────────────────────── */
 
 export default function RealizePage() {
@@ -32,18 +145,254 @@ export default function RealizePage() {
     <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
       {/* Hero */}
       <section className="text-center space-y-6 py-16">
-        <p className="text-amber-400/60 text-sm sensing-[0.3em] uppercase">From vision to ground</p>
+        <p className="text-amber-400/60 text-sm tracking-[0.3em] uppercase">From vision to ground</p>
         <h1 className="text-4xl md:text-6xl font-extralight tracking-tight text-white">
           Living It
         </h1>
         <p className="text-lg text-stone-400 font-light max-w-2xl mx-auto leading-relaxed">
           What a morning tastes like. How a conflict composts. How children grow with fifty parents.
-          How the field meets the world through overflow.
+          How the field meets the world through overflow. See both the nearest transformation and
+          the unconstrained form it is moving toward.
         </p>
         <div className="flex gap-6 justify-center pt-4">
           <Link href="/vision" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">← The vision</Link>
           <Link href="/vision/aligned" className="text-sm text-stone-500 hover:text-violet-300/80 transition-colors">Communities</Link>
           <Link href="/vision/join" className="text-sm text-stone-500 hover:text-teal-300/80 transition-colors">Join →</Link>
+        </div>
+      </section>
+
+      <section className="space-y-8">
+        <div className="space-y-3">
+          <p className="text-sm uppercase tracking-[0.28em] text-stone-500">Two doors into the same future</p>
+          <h2 className="text-3xl font-extralight text-stone-300">Feel both before you read</h2>
+          <p className="max-w-3xl text-stone-400 leading-relaxed">
+            One door shows how the vision lands inside the structures already around us. The other
+            shows what becomes possible when we are free to build from coherence from the start.
+            Both are real. One grounds the change. One keeps the horizon open.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {DUAL_PATHS.map((path) => (
+            <article
+              key={path.label}
+              className="overflow-hidden rounded-[1.75rem] border border-stone-800/30 bg-stone-900/20"
+            >
+              <div className="relative aspect-[16/10] overflow-hidden">
+                <Image
+                  src={path.image}
+                  alt={path.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent" />
+              </div>
+              <div className="space-y-3 p-5">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">{path.label}</p>
+                <h3 className="text-2xl font-extralight text-white">{path.title}</h3>
+                <p className="text-sm leading-relaxed text-stone-400">{path.body}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Where it can land now */}
+      <section className="space-y-8">
+        <div className="space-y-3">
+          <p className="text-sm uppercase tracking-[0.28em] text-stone-500">Repurposed now</p>
+          <h2 className="text-3xl font-extralight text-stone-300">Existing spaces are already part of the build</h2>
+          <p className="max-w-3xl text-stone-400 leading-relaxed">
+            We do not wait for ideal land to begin. City apartments, urban blocks, suburban lanes,
+            rural houses, studios, halls, and neighborhoods can already host the qualities that make
+            a larger organism viable: hospitality, coherence, creativity, nourishment, learning,
+            repair, and shared rhythm.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          {HOST_SPACES.map((space) => (
+            <article
+              key={space.title}
+              className="overflow-hidden rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20"
+            >
+              <div className="relative aspect-[16/10] overflow-hidden">
+                <Image
+                  src={space.image}
+                  alt={space.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent" />
+              </div>
+              <div className="space-y-3 p-5">
+                <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-stone-500">
+                  <span>{space.context}</span>
+                  <span className="text-stone-700">•</span>
+                  <span>{space.energy}</span>
+                </div>
+                <h3 className="text-lg font-light text-teal-200">{space.title}</h3>
+                <p className="text-sm text-stone-400 leading-relaxed">{space.body}</p>
+                <div className="rounded-xl border border-stone-800/30 bg-stone-950/30 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">First move</p>
+                  <p className="mt-1 text-xs leading-relaxed text-stone-400">{space.firstMove}</p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Fastest opportunities */}
+      <section className="space-y-6">
+        <h2 className="text-3xl font-extralight text-stone-300">Fastest Change Opportunities</h2>
+        <p className="text-stone-400 leading-relaxed">
+          The least-energy transformations are usually social first and architectural second. The shell
+          stays recognizable while the meaning of the space changes: a room becomes a commons, a lobby
+          becomes a threshold, a kitchen becomes a nourishment hall, and a roof becomes a garden people
+          actually share.
+        </p>
+
+        <div className="grid md:grid-cols-4 gap-4">
+          {[
+            {
+              title: "Open one commons room",
+              body: "Start with one room that can hold tea, circle, rest, food, or making. The field needs one honest host before it needs a campus.",
+            },
+            {
+              title: "Make nourishment visible",
+              body: "A visible kitchen, shared table, pantry wall, or bread oven changes trust faster than branding or mission language ever will.",
+            },
+            {
+              title: "Retune circulation zones",
+              body: "Hallways, lobbies, rooftops, and laundry rooms become the first commons because they are already shared and need little structural energy.",
+            },
+            {
+              title: "Link hosts together",
+              body: "When one apartment, one storefront, and one outdoor gathering rhythm start reinforcing each other, a neighborhood begins behaving like a field.",
+            },
+          ].map((item) => (
+            <div key={item.title} className="p-5 rounded-2xl border border-teal-800/20 bg-teal-900/5 space-y-2">
+              <h3 className="text-sm font-medium text-teal-300/80">{item.title}</h3>
+              <p className="text-xs text-stone-500 leading-relaxed">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-8">
+        <div className="space-y-3">
+          <p className="text-sm uppercase tracking-[0.28em] text-stone-500">Any shell, new field</p>
+          <h2 className="text-3xl font-extralight text-stone-300">
+            Existing structures can look and feel completely different
+          </h2>
+          <p className="max-w-3xl text-stone-400 leading-relaxed">
+            The deepest shift is not only aesthetic. A structure can keep its walls and still become
+            another reality because the naming, timing, access, sound, ritual, circulation, and
+            social logic inside it have changed. The shell remains. The lived field does not.
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              title: "Office floor → vertical neighborhood",
+              body: "Private desks give way to commons bands, nourishment rooms, stillness pockets, child support, maker space, and slower transitions between layers of life.",
+            },
+            {
+              title: "Strip mall → civic organism",
+              body: "Vacant units become a provision house, repair atelier, clinic, kitchen, and gathering room that make a block feel metabolically alive again.",
+            },
+            {
+              title: "Church hall → neighborhood hearth",
+              body: "A ceremonial shell widens into meals, grief tending, elder circles, children’s making, rest, and seasonal gatherings without losing its sacred quality.",
+            },
+            {
+              title: "Schoolyard → learning commons",
+              body: "The timetable loosens, gardens and workshops become visible, mixed ages participate together, and the grounds begin teaching as much as the classrooms.",
+            },
+            {
+              title: "Warehouse → creation and recovery hall",
+              body: "Large spans of empty volume become music, fabrication, movement, bathing, fermentation, storage, and public hospitality under one roof.",
+            },
+            {
+              title: "Barn or garage → anchor membrane",
+              body: "Tool flow, pantry flow, repair, care, seed starts, guest welcome, and local exchange gather in one honest room before any larger build-out begins.",
+            },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20 p-5 space-y-2"
+            >
+              <h3 className="text-lg font-light text-amber-200">{item.title}</h3>
+              <p className="text-sm leading-relaxed text-stone-400">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Both transformed and new embodiment */}
+      <section className="space-y-8">
+        <div className="space-y-3">
+          <p className="text-sm uppercase tracking-[0.28em] text-stone-500">Both ways of seeing matter</p>
+          <h2 className="text-3xl font-extralight text-stone-300">See the repurposed field and the pure form side by side</h2>
+          <p className="max-w-3xl text-stone-400 leading-relaxed">
+            The future lands through both paths at once. One image asks what this context can become
+            without waiting for demolition. The other asks what it would look like if coherence were
+            free to choose the structure from the beginning.
+          </p>
+        </div>
+
+        <div className="grid gap-6">
+          {CONTEXT_PAIRS.map((pair) => (
+            <article
+              key={pair.context}
+              className="overflow-hidden rounded-[1.75rem] border border-stone-800/30 bg-stone-900/20"
+            >
+              <div className="border-b border-stone-800/30 px-6 py-4">
+                <p className="text-xs uppercase tracking-[0.24em] text-stone-500">{pair.context}</p>
+              </div>
+              <div className="grid gap-0 md:grid-cols-2">
+                <div className="border-b border-stone-800/20 md:border-b-0 md:border-r md:border-stone-800/20">
+                  <div className="relative aspect-[16/10] overflow-hidden">
+                    <Image
+                      src={pair.transformedImage}
+                      alt={`${pair.context} transformed existing structure`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/10 to-transparent" />
+                  </div>
+                  <div className="space-y-3 p-5">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-teal-300/70">Repurpose now</p>
+                    <h3 className="text-lg font-light text-white">{pair.transformedTitle}</h3>
+                    <p className="text-sm text-stone-400 leading-relaxed">{pair.transformedBody}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="relative aspect-[16/10] overflow-hidden">
+                    <Image
+                      src={pair.envisionedImage}
+                      alt={`${pair.context} brand-new embodiment`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/10 to-transparent" />
+                  </div>
+                  <div className="space-y-3 p-5">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/70">Imagine freely</p>
+                    <h3 className="text-lg font-light text-white">{pair.envisionedTitle}</h3>
+                    <p className="text-sm text-stone-400 leading-relaxed">{pair.envisionedBody}</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 
@@ -141,7 +490,7 @@ export default function RealizePage() {
       {/* Existing Structures */}
       <section className="space-y-6">
         <h2 className="text-3xl font-extralight text-stone-300">Existing Structures, New Meanings</h2>
-        <p className="text-stone-400 leading-relaxed">This vision does not wait for a blank slate. It moves through the shells we already built and retunes them for aliveness. The frontier is no longer only new villages on open land. It is attuned apartments, loosened suburbs, metabolized strip malls, and towers that learn how to behave like vertical neighborhoods.</p>
+        <p className="text-stone-400 leading-relaxed">This vision does not wait for a blank slate. It moves through the shells we already built and retunes them for aliveness. The frontier is no longer only new villages on open land. It is attuned apartments, connected streets, metabolized strip malls, shared civic rooms, and towers that learn how to behave like vertical neighborhoods.</p>
 
         <div className="grid md:grid-cols-2 gap-4">
           {[

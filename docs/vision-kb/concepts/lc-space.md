@@ -39,6 +39,20 @@ The Japanese tea room strips space to its essence. Four and a half tatami mats. 
 
 The forest is the master architect. It creates clearings for sun-loving species and canopy for shade-dwellers. It builds edges -- the most biodiverse zones -- where one type of space meets another. Nothing is zoned. Everything is gradient, transition, relationship.
 
+## Embodied Now
+
+Space does not have to wait for a blank site to become alive. Existing shells can stay exactly where they are while nearly everything else is reimagined: what the room is called, how the threshold feels, what time of day it wakes up, which bodies it serves, how sound moves, what rituals happen there, and which forms of contribution become visible inside it. Office floors, schools, churches, strip malls, warehouses, garages, barns, towers, and cul-de-sacs are all still available to be renamed by the quality they can hold.
+
+**An apartment becomes a coherent cell.** Clear the room until the floor can hold presence again. Add one shared pantry edge, one guest mattress, one rooftop or stairwell commons, and suddenly a private unit starts behaving like part of a larger organism.
+
+**A lobby becomes a threshold chamber.** Soften the sound, slow the lighting, add tea, a bench, a notice of what the building is holding today. Arrival stops being throughput and starts becoming orientation.
+
+**A storefront becomes a hearth-den hybrid.** Keep the shell, change the use: shared table, repair bench, listening circle, making surface, visible kitchen edge. The room becomes legible as commons without needing an expensive renovation.
+
+**A suburban lane becomes a connected commons.** Open paths between porches, share one garage workshop, plant one garden spine, place one long table. The houses remain, but the land between them stops acting like leftover separation.
+
+**A rural barn becomes an anchor.** One existing structure starts holding tools, meals, bathing, stillness, and welcome. New buildings can come later. The first real step is giving the field one place that already knows how to receive it.
+
 ## Where You Can See It
 
 **Hakka tulou, Fujian, China** -- circular structures up to five stories, open courtyard at center, three hundred people living in one building for eight hundred years. Ground floor: kitchen and storage. Upper floors: private rooms. Courtyard: weddings, festivals, daily gathering. The circle means no one has a better position. Everyone faces the center.

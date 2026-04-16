@@ -2,7 +2,7 @@
 id: lc-w-spanda
 hz: 528
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Spanda
@@ -64,6 +64,8 @@ community's own vibration sounds different, deeper, part of the larger pulse.
 ![Forest attunement](visuals:photorealistic group of 8 people walking single file through ancient forest in morning mist, barefoot on soft earth path, eyes half-closed, hands slightly open at sides, massive old-growth trees with moss and ferns, golden light filtering through canopy, silence so deep it feels like sound, each person clearly attuned to the same invisible frequency)
 
 ## The Questions That Live Here
+
+These are questions to listen for in the subtler pulse:
 
 - Can you feel the spanda right now — not your heartbeat, but the subtler
   vibration beneath it?

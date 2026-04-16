@@ -2,7 +2,7 @@
 id: lc-w-phase-transition
 hz: 417
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Phase Transition
@@ -61,6 +61,8 @@ wisdom of what came before.
 ![The transitions fire](visuals:photorealistic evening fire ceremony in outdoor circle, people standing around a large bonfire, one person placing a symbolic object into the flames, sparks rising into twilight sky, faces lit with warmth and gravity, wildflowers at the circle edge, the moment held between release and renewal)
 
 ## The Questions That Live Here
+
+These are questions to stay near when form is loosening:
 
 - How do you create conditions for phase transition without forcing it —
   how do you bring heat without burning?

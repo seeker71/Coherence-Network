@@ -2,7 +2,7 @@
 id: lc-w-shakti
 hz: 528
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Shakti
@@ -12,7 +12,7 @@ updated: 2026-04-14
 ## The Feeling
 
 You've been pushing for hours — forcing words onto a page, wrestling a
-problem into submission, grinding through obligation — and then you stop.
+question into form, grinding through obligation — and then you stop.
 You walk outside. The air hits your skin. Something in your chest unlocks.
 And suddenly the idea arrives whole, the energy floods back, the body wants
 to move. Not because you produced something. Because you stopped blocking
@@ -62,6 +62,8 @@ tears, the passion between lovers and the passion between a potter and clay.
 ![The dance](visuals:photorealistic community dance by firelight outdoors at night, diverse group of people moving freely with abandon, some with drums, firelight casting long shadows, bare feet on earth, faces showing ecstasy and release, no stage no audience just collective movement, stars visible above, primal and alive)
 
 ## The Questions That Live Here
+
+These are questions to feel in the body, not solve from above:
 
 - How do you cultivate shakti without burning out — where is the line
   between flow and fever?
