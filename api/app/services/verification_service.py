@@ -182,16 +182,30 @@ def _load_or_generate_keys() -> tuple[bytes, bytes]:
         serialization.PublicFormat.Raw,
     )
 
-    # Save
-    _KEYS_DIR.mkdir(parents=True, exist_ok=True)
-    _VERIFICATION_KEY_PATH.write_text(json.dumps({
-        "private_key": priv_bytes.hex(),
-        "public_key": pub_bytes.hex(),
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-    }, indent=2), encoding="utf-8")
-    _VERIFICATION_KEY_PATH.chmod(0o600)
+    # Save — best effort. If the filesystem is read-only or permission-denied
+    # (common in container environments without mounted keystore), the in-memory
+    # key is still returned. In that case a new keypair regenerates each process
+    # lifetime, which means signatures from previous runs can't be verified —
+    # but the endpoint stays healthy and signing works for the current run.
+    try:
+        _KEYS_DIR.mkdir(parents=True, exist_ok=True)
+        _VERIFICATION_KEY_PATH.write_text(json.dumps({
+            "private_key": priv_bytes.hex(),
+            "public_key": pub_bytes.hex(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }, indent=2), encoding="utf-8")
+        try:
+            _VERIFICATION_KEY_PATH.chmod(0o600)
+        except (OSError, PermissionError):
+            pass
+        log.info("verification: generated and saved new Ed25519 keypair")
+    except (OSError, PermissionError) as e:
+        log.warning(
+            "verification: generated keypair but could not persist to %s: %s "
+            "(signing works for this process; mount a keystore volume for durability)",
+            _VERIFICATION_KEY_PATH, e,
+        )
 
-    log.info("verification: generated new Ed25519 keypair")
     return priv_bytes, pub_bytes
 
 
