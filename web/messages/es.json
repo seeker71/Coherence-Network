@@ -188,6 +188,46 @@
     "loading": "Cargando mensajes...",
     "noMessages": "No se encontraron mensajes."
   },
+  "assets": {
+    "title": "Catálogo de obras",
+    "lede": "Las obras son las cosas que la gente realmente toca: código, contenido, modelos y datos. Esta página muestra qué existe, cuánto costó y dónde se adhiere la historia de contribución.",
+    "statVisible": "Obras visibles",
+    "statCost": "Costo sentido",
+    "statTopType": "Tipo principal",
+    "statLinked": "Trabajo vinculado",
+    "linkedHint": "Salta de una obra al libro de contribuciones para ver quién la dio forma y cuánto costó.",
+    "browseAll": "Explora todas las obras registradas en la red.",
+    "showingOne": "Mostrando una obra.",
+    "assetOne": "{n} obra",
+    "assetMany": "{n} obras",
+    "loadingAssets": "Cargando obras…"
+  },
+  "search": {
+    "title": "Buscar proyectos",
+    "placeholder": "p. ej. react, lodash",
+    "button": "Buscar",
+    "searching": "Buscando…",
+    "apiError": "Error de API: {error}. ¿Está la API en ejecución?",
+    "results": "{n} resultado",
+    "resultsPlural": "{n} resultados",
+    "portfolio": "Portafolio",
+    "usage": "Uso"
+  },
+  "treasury": {
+    "title": "Tesoro",
+    "lede": "Deposita ETH o BTC en el tesoro de Coherence Network. Tu cripto se convierte en CC (Créditos de Coherencia) que se apuestan en las ideas en las que crees.",
+    "howItWorks": "Cómo funciona",
+    "step1Label": "Envía ETH o BTC",
+    "step1After": " a la dirección del tesoro que se muestra abajo.",
+    "step2Label": "Registra tu depósito",
+    "step2After": " con el hash de la transacción para que podamos verificarlo.",
+    "step3Label": "Tu CC se apuesta",
+    "step3After": " en las ideas que respaldas — dirigiendo cómputo real hacia ellas.",
+    "step4Label": "Cuando las ideas crean valor",
+    "step4After": ", tu parte regresa a través del linaje de valor — proporcional a tu aporte.",
+    "footnote": "Los depósitos se registran en un libro solo-agregar. La transferencia ocurre en cadena; este sistema registra el hash para verificación.",
+    "viewIdeas": "Ver todas las ideas y apostar directamente →"
+  },
   "dashboard": {
     "title": "Panel del taller",
     "refreshed": "Actualizado {time}",

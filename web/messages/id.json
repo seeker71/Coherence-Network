@@ -188,6 +188,46 @@
     "loading": "Memuat pesan...",
     "noMessages": "Tidak ada pesan."
   },
+  "assets": {
+    "title": "Katalog karya",
+    "lede": "Karya adalah hal-hal yang benar-benar disentuh orang: kode, konten, model, dan data. Halaman ini menunjukkan apa yang ada, berapa biayanya, dan di mana riwayat sumbangan melekat.",
+    "statVisible": "Karya terlihat",
+    "statCost": "Biaya terasa",
+    "statTopType": "Jenis teratas",
+    "statLinked": "Pekerjaan terkait",
+    "linkedHint": "Lompat dari karya ke buku besar sumbangan untuk melihat siapa yang membentuknya dan biayanya.",
+    "browseAll": "Jelajahi semua karya jejaring yang terdaftar.",
+    "showingOne": "Menampilkan satu karya.",
+    "assetOne": "{n} karya",
+    "assetMany": "{n} karya",
+    "loadingAssets": "Memuat karya…"
+  },
+  "search": {
+    "title": "Cari proyek",
+    "placeholder": "mis. react, lodash",
+    "button": "Cari",
+    "searching": "Mencari…",
+    "apiError": "Kesalahan API: {error}. Apakah API berjalan?",
+    "results": "{n} hasil",
+    "resultsPlural": "{n} hasil",
+    "portfolio": "Portofolio",
+    "usage": "Penggunaan"
+  },
+  "treasury": {
+    "title": "Perbendaharaan",
+    "lede": "Titipkan ETH atau BTC ke perbendaharaan Coherence Network. Kriptomu diubah menjadi CC (Coherence Credits) yang disertakan pada gagasan yang kamu dukung.",
+    "howItWorks": "Cara kerjanya",
+    "step1Label": "Kirim ETH atau BTC",
+    "step1After": " ke alamat dompet perbendaharaan di bawah.",
+    "step2Label": "Catat depositmu",
+    "step2After": " dengan hash transaksi blockchain agar dapat diverifikasi.",
+    "step3Label": "CC-mu disertakan",
+    "step3After": " pada gagasan yang kamu percayai — mengarahkan komputasi nyata ke arahnya.",
+    "step4Label": "Ketika gagasan menciptakan nilai",
+    "step4After": ", bagianmu kembali melalui garis nilai — sebanding dengan sumbanganmu.",
+    "footnote": "Deposit tercatat dalam buku besar yang hanya-tambah. Transfer kripto terjadi on-chain; sistem ini mencatat hash transaksi untuk verifikasi.",
+    "viewIdeas": "Lihat semua gagasan dan sertakan langsung →"
+  },
   "dashboard": {
     "title": "Panel bengkel",
     "refreshed": "Diperbarui {time}",
