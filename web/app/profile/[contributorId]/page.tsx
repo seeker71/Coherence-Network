@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getApiBase } from "@/lib/api";
+import { FrequencySpectrum } from "./_components/FrequencySpectrum";
 
 export const dynamic = "force-dynamic";
 
@@ -187,6 +188,9 @@ export default async function ContributorProfilePage({
           </p>
         )}
       </section>
+
+      {/* ── Living Frequency Spectrum — shaped by attention ──── */}
+      <FrequencySpectrum contributorId={contributorId} />
 
       {/* ── Frequency Profile ───────────────────────────────────── */}
       <section className="rounded-2xl border border-amber-500/20 bg-gradient-to-b from-amber-500/5 to-card/30 p-6 sm:p-8 space-y-5">

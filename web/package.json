@@ -13,6 +13,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@rainbow-me/rainbowkit": "^2.2.0",
     "@radix-ui/react-slot": "^1.2.4",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
@@ -24,9 +25,12 @@
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "@tanstack/react-query": "^5.62.0",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
-    "three": "^0.183.2"
+    "three": "^0.183.2",
+    "viem": "^2.21.0",
+    "wagmi": "^2.14.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
