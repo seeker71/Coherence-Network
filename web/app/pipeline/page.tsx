@@ -412,7 +412,7 @@ function PipelineDashboardContent() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-medium">{t("pipeline.nodes")}</h2>
               <Link href="/nodes" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                View all →
+                {t("common.seeAll")}
               </Link>
             </div>
             {status === "loading" && (

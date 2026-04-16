@@ -284,7 +284,7 @@ export default function ContributePage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight mb-2">{t("contribute.title")}</h1>
         <p className="text-muted-foreground max-w-2xl leading-relaxed">
-          Every contribution moves the network forward. Register, propose changes, and review what others have submitted. Approved requests apply automatically.
+          {t("contribute.introLede")}
         </p>
       </div>
 
@@ -335,7 +335,7 @@ export default function ContributePage() {
               }}
               disabled={busy === "register" || !newContributorName.trim() || !newContributorEmail.trim()}
             >
-              {busy === "register" ? "Registering…" : "Register"}
+              {busy === "register" ? t("contribute.registering") : t("contribute.register")}
             </button>
           </div>
         </div>
@@ -423,7 +423,7 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "idea_create" ? "Submitting…" : "Submit Idea Create Request"}
+              {busy === "idea_create" ? t("contribute.submitting") : t("contribute.submitIdeaCreate")}
             </button>
           </div>
         </article>
@@ -460,7 +460,7 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "idea_update" ? "Submitting…" : "Submit Idea Update Request"}
+              {busy === "idea_update" ? t("contribute.submitting") : t("contribute.submitIdeaUpdate")}
             </button>
           </div>
         </article>
@@ -493,7 +493,7 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "idea_add_question" ? "Submitting…" : "Submit Add-Question Request"}
+              {busy === "idea_add_question" ? t("contribute.submitting") : t("contribute.submitAddQuestion")}
             </button>
           </div>
 
@@ -525,7 +525,7 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "idea_answer_question" ? "Submitting…" : "Submit Answer Request"}
+              {busy === "idea_answer_question" ? t("contribute.submitting") : t("contribute.submitAnswer")}
             </button>
           </div>
         </article>
@@ -580,7 +580,7 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "spec_create" ? "Submitting…" : "Submit Spec Create Request"}
+              {busy === "spec_create" ? t("contribute.submitting") : t("contribute.submitSpecCreate")}
             </button>
           </div>
 
@@ -634,7 +634,7 @@ export default function ContributePage() {
                 })
               }
             >
-              {busy === "spec_update" ? "Submitting…" : "Submit Spec Update Request"}
+              {busy === "spec_update" ? t("contribute.submitting") : t("contribute.submitSpecUpdate")}
             </button>
           </div>
         </article>
@@ -643,7 +643,7 @@ export default function ContributePage() {
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-3">
         <h2 className="text-xl font-semibold">{t("contribute.reviewQueue")}</h2>
         <p className="text-sm text-muted-foreground">
-          Default policy is one approval required. When contributor volume grows, increase `CHANGE_REQUEST_MIN_APPROVALS`.
+          {t("contribute.approvalPolicy")}
         </p>
         <ul className="space-y-3 text-sm">
           {changeRequests.map((row) => (
@@ -701,13 +701,13 @@ export default function ContributePage() {
       <details className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-6 space-y-2 text-sm">
         <summary className="text-xl font-semibold cursor-pointer">{t("contribute.forDevsHeading")}</summary>
         <p className="text-sm text-muted-foreground mt-2">{t("contribute.forDevsBody")}</p>
-        <p>Register contributor: <code>POST /api/contributors</code></p>
-        <p>Submit change request: <code>POST /api/governance/change-requests</code></p>
-        <p>Vote yes/no: <code>POST /api/governance/change-requests/&lt;id&gt;/votes</code></p>
-        <p>List specs: <code>GET /api/spec-registry</code> | list queue: <code>GET /api/governance/change-requests</code></p>
+        <p>{t("contribute.devRegisterContributor")} <code>POST /api/contributors</code></p>
+        <p>{t("contribute.devSubmitRequest")} <code>POST /api/governance/change-requests</code></p>
+        <p>{t("contribute.devVote")} <code>POST /api/governance/change-requests/&lt;id&gt;/votes</code></p>
+        <p>{t("contribute.devListSpecs")}</p>
       </details>
 
-      {status === "loading" && <p className="text-muted-foreground">Loading…</p>}
+      {status === "loading" && <p className="text-muted-foreground">{t("common.loading")}</p>}
       {status === "error" && <p className="text-destructive">Error: {error}</p>}
       {error && status !== "error" && <p className="text-destructive">Error: {error}</p>}
 

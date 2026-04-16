@@ -270,7 +270,7 @@ export default async function NodesPage() {
             <p className="text-2xl font-bold">
               {nodes.reduce((sum, n) => sum + (n.streak?.executing ?? 0), 0)}
             </p>
-            <p className="text-xs text-muted-foreground">tasks running</p>
+            <p className="text-xs text-muted-foreground">{t("pipeline.statTasksExecuting")}</p>
           </div>
           <div>
             <p className={`text-2xl font-bold ${fleetRate >= 70 ? "text-green-500" : fleetRate >= 40 ? "text-yellow-500" : "text-red-500"}`}>
