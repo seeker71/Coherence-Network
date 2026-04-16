@@ -11,6 +11,7 @@ import { ConnectedConcepts } from "./_components/ConnectedConcepts";
 import { FrequencyDisplay } from "./_components/FrequencyDisplay";
 import { StructuredContent } from "./_components/StructuredContent";
 import { TrackingSuggestion } from "./_components/TrackingSuggestion";
+import { ReaderPresence } from "./_components/ReaderPresence";
 
 export const dynamic = "force-dynamic";
 
@@ -60,12 +61,31 @@ async function fetchRelated(id: string): Promise<RelatedItems> {
 export async function generateMetadata({ params }: { params: Promise<{ conceptId: string }> }): Promise<Metadata> {
   const { conceptId } = await params;
   const concept = await fetchConcept(conceptId);
+
+  // Pull the most alive description: first from The Feeling section,
+  // falling back to the concept description
+  const storyContent: string = concept?.story_content || "";
+  const feelingMatch = storyContent.match(/## The Feeling\s*\n+([\s\S]*?)(?=\n##|\n→|$)/);
+  const feelingText = feelingMatch?.[1]?.trim().split("\n")[0] || "";
+  const ogDescription = feelingText.slice(0, 200) || concept?.description?.slice(0, 200) || "";
+  const metaDescription = feelingText.slice(0, 300) || concept?.description?.slice(0, 300) || "";
+
+  // Use the concept's visual as the OG image
+  const ogImage = concept?.visual_path || undefined;
+
   return {
     title: concept ? `${concept.name} — The Living Collective` : "Concept",
-    description: concept?.description?.slice(0, 300) || "",
+    description: metaDescription,
     openGraph: {
       title: concept?.name || "Living Collective Concept",
-      description: concept?.description?.slice(0, 200) || "",
+      description: ogDescription,
+      ...(ogImage ? { images: [{ url: ogImage, width: 1200, height: 630 }] } : {}),
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title: concept?.name || "Living Collective Concept",
+      description: ogDescription,
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
   };
 }
@@ -135,6 +155,7 @@ export default async function VisionConceptPage({ params }: { params: Promise<{ 
             <LevelBadge level={concept.level} />
           </div>
           <p className="text-lg md:text-xl text-stone-300 font-light leading-relaxed max-w-3xl">{concept.description}</p>
+          <ReaderPresence conceptId={conceptId} />
         </div>
 
         {/* Story mode (primary when story_content exists) */}
