@@ -77,6 +77,24 @@ async def sense_all(
 
 
 @router.get(
+    "/energy/pulse",
+    summary="Community felt pulse — qualities sensed from inside",
+    description=(
+        "The organism feels itself as qualities: vital, joyful, curious, "
+        "abundant, free, open, understanding, trusting, loving, graceful, "
+        "grateful, present, alive. Each returns a feeling, energy level, "
+        "and signs from the body."
+    ),
+)
+async def community_pulse(
+    workspace_id: str = Query("coherence-network"),
+) -> dict[str, Any]:
+    """Feel the community pulse from inside."""
+    from app.services import community_pulse_service
+    return community_pulse_service.sense_community_pulse(workspace_id)
+
+
+@router.get(
     "/energy/harmonies",
     summary="Frequency harmonies and dissonances",
     description="Where signals resonate and where they diverge.",
