@@ -2,7 +2,7 @@
 id: lc-space
 hz: 432
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Space
@@ -24,6 +24,8 @@ This is what it means for space to have quality rather than function. A conferen
 Every space has a name that tells you what it offers, not what it's for. The Hearth: warmth, nourishment, gathering. The Nest: rest, intimacy, the animal comfort of a small curved room that holds you like cupped hands. The Clearing: sky above, earth below, the circle of benches where fifty people can sit facing each other with fire between them. The Den: focused making, tools on walls, the concentration that wants no interruption. The Spring: water visible and audible, the cleansing that happens when you let water touch your skin with intention.
 
 No space belongs to anyone. You flow to what serves you. The community reads its own needs through watching where people gather. When the Sanctuary is full for three days running, the field is processing something. When the Den is buzzing at midnight, a creative wave is moving through. The spaces are the community's body language.
+
+The field does not plan space by freezing a future use and defending it forever. It listens for what is active now. A room that held silence last winter may hold weaving this spring and grief tending in autumn. The intelligence is not in prediction. It is in disciplined responsiveness.
 
 Inside and outside are gradients, not boundaries. The Hearth's kitchen wall is half-open to the garden. The Clearing has no roof. The Nests have round windows that frame a specific view. Every wall is thick enough to keep weather out and porous enough to let the land in. Living roofs grow wildflowers and sedums that change with the seasons -- in spring green, by August gold and purple, by December silver with frost.
 
@@ -49,6 +51,8 @@ The forest is the master architect. It creates clearings for sun-loving species 
 
 A community is grown in the right order: shelter first (platform tents, yurts), then the Hearth (community kitchen, the first permanent structure, where the community discovers itself over shared meals), then the Clearing (a circle of benches around a fire pit -- the highest-return build at $500-3,000), then the Sanctuary (thick-walled stillness room, the community's building training project), then the Den (workshop), and only then the Nests (private dwellings). Building methods follow climate and hands: cob at $15-50/sqft in temperate zones, bamboo at $8-25/sqft in the tropics, earthbag at $5-20/sqft anywhere. The layout follows concentric rings from the Hearth outward: core commons, nesting ring, growing ring, wild edge. No vehicles inside. Paths curve, following contour. Fifty people can build a full settlement for $50,000 to $200,000 with their own hands.
 
+The same principle applies in cities. An old office floor can become a den, a former restaurant can become a hearth, a concrete atrium can become a threshold chamber, and a tower can become stacked neighborhoods instead of stacked leases. The next layer of the work is not only building new villages from earth and timber. It is attuning the shells already here: apartments, cul-de-sacs, schoolyards, town halls, strip malls, and skyscrapers. Space is not sacred because it is pristine. It becomes sacred when its present use increases aliveness.
+
 **Practical guide**: [How to actually do this](../guides/lc-space-guide.md)
 
 ## Resources
@@ -69,4 +73,4 @@ A community is grown in the right order: shelter first (platform tents, yurts), 
 
 ## Connected Frequencies
 
-→ lc-nourishing, lc-v-shelter-organism, lc-v-living-spaces, lc-land, lc-energy, lc-nourishment, lc-instruments
+→ lc-nourishing, lc-v-shelter-organism, lc-v-living-spaces, lc-attuned-spaces, lc-land, lc-energy, lc-nourishment, lc-instruments

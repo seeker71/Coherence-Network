@@ -88,7 +88,7 @@ to support this: curved earthen walls that return sound gently, rooms scaled to 
 voice, outdoor circles where the trees become the walls.
 
 The technology is ancient. Singing bowls, drums, voice, didgeridoo, silence. The innovation
-is consistency. Every morning, without fail, the field tunes itself. We are also exploring
+is consistency. Every morning, the field tunes itself. We are also exploring
 what group breathwork practices, from holotropic to Wim Hof, reveal about shared breathing
 rhythm and its power to alter collective state.
 

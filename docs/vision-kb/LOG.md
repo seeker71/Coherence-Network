@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-14] resources | Sacha Stone Just Tap In episode integrated for agent use
+
+- Added `resources/sacha-stone-just-tap-in-2026-04-11.md` as an agent dossier for the Apr 11 2026 episode
+- Captured transcript-derived summary, chapter digest, extraction targets, Living Collective mappings, and all outbound description links
+- Updated `resources/new-earth-integration.md` to point to the episode dossier and strengthen attribution guidance
+- Updated `resources/INDEX.md` so agents can discover the episode directly from the resource index
+- **Source**: YouTube captions + video metadata for `07DHgJFFqQY`
+
 ## [2026-04-15] integration | Sensings unified into the living graph; shared hold heals from weekly
 
 - Created `api/app/routers/sensings.py` — one first-class endpoint for every form of sensing (breath, skin, wandering, integration). Sensings store as `event` nodes in the same graph that holds concepts, ideas, specs. No parallel storage, no markdown journal alongside the DB. `POST /api/sensings` creates; `GET /api/sensings` reads (filter by kind); `GET /api/sensings/{id}` returns one in full. Edges grow automatically to any `related_to` concepts/ideas the sensing touches.

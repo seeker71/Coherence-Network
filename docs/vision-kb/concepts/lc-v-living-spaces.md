@@ -2,12 +2,12 @@
 id: lc-v-living-spaces
 hz: 432
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Living Spaces
 
-> Not rooms — resonance zones. Structures that breathe, reconfigure, grow, and eventually return to the earth they came from.
+> Not rooms — resonance zones. Structures that breathe, reconfigure, grow, and eventually return to the earth they came from. The shape follows what is alive now.
 
 ## The Feeling
 
@@ -26,6 +26,8 @@ Spaces here are named by the quality they hold, not the function they serve. The
 The inside-outside gradient is deliberate. Between the Hearth and the garden there is a covered porch with a hammock and climbing jasmine. Between your Nest and the path there is a screened alcove where you can sit in rain without getting wet. There is no moment where you are suddenly inside or suddenly outside — the transition is continuous, like wading into water instead of jumping off a dock.
 
 Spaces reconfigure. Sliding panels and woven curtains let a room that held morning movement practice become the afternoon workshop. The clearing — an outdoor circle of packed earth and low stone seating — holds ceremonies, meetings, dances, and on some evenings, nothing at all. The buildings are not finished. They are never finished. A new alcove appears when someone feels the need for one and spends a week with clay and water and straw.
+
+Planning means something different here. It does not mean forcing a fixed future onto a site. It means sensing the field clearly enough to place the next wall, open the next threshold, or leave the next patch empty because emptiness is what the organism needs today. Memory matters. Vision matters. But the active instruction is always in the now.
 
 ![The Hearth at evening meal](visuals:photorealistic large open community dining and gathering space with long wooden tables, people sharing food and conversation, wood fire burning in central stone hearth, dried herbs hanging from exposed roundwood timber ceiling, earthen plastered walls with warm texture, high windows showing dark blue evening sky, candles and warm light, feeling of deep togetherness)
 
@@ -46,6 +48,22 @@ At the Green School in Bali, IBUKU has built cathedral-scale structures entirely
 In Vienna, the Hundertwasser buildings have trees growing from windows, undulating floors, facades painted by tenants, and not a single straight line in the entire structure. Hundertwasser called the straight line "the devil's tool." He was not wrong. Walk through his buildings and your body relaxes in a way that right angles never permit.
 
 ![Living roof close-up](visuals:photorealistic close-up of living green roof on earthen building, native wildflowers and grasses growing thickly, a bee visiting purple clover blooms, curved edge of cob wall visible below, blue sky above, rainwater dripping from roof edge into a stone gutter, the building becoming landscape)
+
+## How Existing Structures Change
+
+This vision does not require waiting for untouched land. It can move through the structures that already exist.
+
+The understanding deepens when attuned spaces become visible as their own layer. The future is not only fresh cob villages on open land. It is also apartments becoming coherent cells, suburbs loosening into villages, town infrastructure remembering that it is shared, and towers learning how to breathe.
+
+**The skyscraper becomes a vertical village.** Floors stop being rentable compartments and become community layers. One floor is a quiet band of nests and recovery rooms. Another becomes a nourishment hall with a shared kitchen, fermentation wall, and long table. Another becomes a maker floor. Another holds children, tutors, elders, and music. Roofs become gardens and wind catchers. Elevators stop being commute tubes and become circulation organs moving people between states of activity.
+
+**The shopping street becomes a provision corridor.** What used to be stores become provision houses, material commons, seed libraries, repair ateliers, fitting rooms for shared clothing, and exchange counters where things move because they are needed, not because they were pushed into demand.
+
+**The restaurant becomes a nourishment hall.** No one performs service for tips. People arrive to receive the meal of the day, help plate, sit at long tables, and leave more regulated than when they entered. The kitchen becomes visible, the fermentation becomes visible, and the ritual of gratitude becomes part of digestion.
+
+**The office lobby becomes a threshold chamber.** Instead of advertising, branding, and throughput, it regulates arrival: sound softened, bodies slowed, the day's field made visible, and the next layer of activity chosen by present resonance rather than calendar compulsion.
+
+![Existing glass skyscraper transformed into vertical village](visuals:photorealistic existing glass skyscraper retrofitted into a vertical village at dusk, multiple floors visibly holding different communal activities including shared kitchen, garden terrace, quiet reading floor, workshop floor and child commons, warm amber interior lighting contrasting with city skyline, rooftop greenhouse and wind catchers, sacred civic atmosphere, realistic urban architecture)
 
 ## What We're Building
 
@@ -73,4 +91,4 @@ And when a building finally reaches the end of its lifecycle — decades from no
 
 ## Connected Frequencies
 
-→ lc-space, lc-v-shelter-organism, lc-land, lc-nourishment, lc-composting
+→ lc-space, lc-attuned-spaces, lc-v-shelter-organism, lc-land, lc-nourishment, lc-composting

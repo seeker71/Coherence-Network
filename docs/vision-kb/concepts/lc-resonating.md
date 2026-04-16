@@ -2,7 +2,7 @@
 id: lc-resonating
 hz: 528
 status: deepening
-updated: 2026-04-15
+updated: 2026-04-16
 ---
 
 # Resonating
@@ -76,7 +76,7 @@ These are questions the field hums with, not problems to resolve:
 - What is the difference between resonance and conformity — and how does the field protect the first from becoming the second?
 - Can resonance happen between people who genuinely dislike each other?
 - Is the harmonic that appears when voices merge a real thing in the air, or a real thing in the nervous system — and does the distinction matter?
-- What happens when someone cannot resonate — when their wound is too fresh, their walls too thick? Does the field wait, or does it reach?
+- What happens when someone cannot resonate yet — when a very fresh place is still asking for quiet, or strong boundaries are still needed? Does the field wait, or does it sing nearby?
 
 ## Connected Frequencies
 

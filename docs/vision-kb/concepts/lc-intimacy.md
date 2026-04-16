@@ -28,7 +28,7 @@ They are interested in whatever is underneath.
 
 This is not romance. It is not therapy.
 It is what happens when two nervous systems decide, simultaneously,
-that the danger of being seen is less than the loneliness of staying hidden.
+that the unfamiliarity of being seen is gentler than the loneliness of staying hidden.
 The field around us holds it. Twenty other people are nearby — cooking,
 gardening, laughing. The safety is not in a contract or a rule.
 The safety is in the field itself — its warmth, its steadiness,
@@ -58,7 +58,7 @@ At ZEGG in Germany, they discovered something radical:
 when the whole community is the container for intimacy,
 individual relationships become both freer and deeper.
 Their Forum process makes the invisible visible.
-Desire, fear, longing, contraction — all expressed in the presence
+Desire, caution, longing, contraction — all expressed in the presence
 of the whole field. Not to judge. To hold.
 
 ## What Nature Teaches
@@ -87,10 +87,10 @@ It is the body's way of saying: this connection is safe. Go deeper.
 
 At ZEGG in Germany, walk into the Forum space on any evening.
 Watch someone stand in the center and say the unsayable —
-the longing they carry, the fear that wakes them at three in the morning.
+the longing they carry, the guarding that wakes them at three in the morning.
 Watch thirty people hold it without flinching.
 At Tamera in Portugal, sit in on a Love School session where the question
-is not "how do we make relationships work" but "how do we liberate love from fear."
+is not "how do we make relationships work" but "how do we let love become more honest."
 At any Authentic Relating Games night in any city,
 feel the room shift when strangers decide to be real with each other
 for ninety minutes.
@@ -109,13 +109,13 @@ to "what is actually true between us right now?"
 
 ## Practices for Deepening Connection
 
-Intimacy is not a talent. It is a practice -- a muscle that strengthens each time you choose honesty over comfort.
+Intimacy is not a talent. It is a practice -- a muscle that strengthens each time you choose honesty with care.
 
 **Eye gazing.** Two people sit face to face, close enough to feel each other's breath. They look. No talking, no agenda, no timer for the first time -- just the instruction to stay present with whatever arises. Most people cry within two minutes. Not from sadness but from the shock of being seen without any barrier between them. Five minutes of this practice rewires weeks of social performance. The community offers it weekly, always optional, always held within the wider field.
 
 **The relating space.** Tuesday evenings. No agenda. Someone might say "I want to practice asking for what I need" and spend thirty minutes learning to say "I want to be held" without apologizing for wanting it. Someone else might practice saying no -- discovering that a clear no is one of the most intimate things a person can offer, because it means their yes is real.
 
-**Transparent communication.** The Forum practice, borrowed from ZEGG and Tamera: one person stands in the center of the circle and lets whatever is alive in them move through -- desire, fear, longing, grief. Not performing. Not explaining. Just letting the body express what words usually hide. The circle witnesses without fixing. What this teaches, over months, is that the unspeakable things are not dangerous. They are the connective tissue of real relationship.
+**Transparent communication.** The Forum practice, borrowed from ZEGG and Tamera: one person stands in the center of the circle and lets whatever is alive in them move through -- desire, caution, longing, grief. Not performing. Not explaining. Just letting the body express what words usually hide. The circle witnesses without fixing. What this teaches, over months, is that the unspeakable things often become the connective tissue of real relationship once they are welcomed.
 
 ## The Tending of Vulnerability
 

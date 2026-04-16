@@ -2,6 +2,8 @@
 
 The local worker runs as a background service, processing tasks from the Coherence Network pipeline. It runs in its own git worktree to avoid conflicts with development work.
 
+Prompt-gate note: `.claude/worktrees/*` lanes are treated as autonomous sidecars by the sibling continuity guard, so an active Claude worker does not block Codex prompt entry in another worktree.
+
 ## Architecture
 
 ```

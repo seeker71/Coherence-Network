@@ -59,7 +59,7 @@ A place where the first question is not what should you do but what are you draw
 
 The minimum structure needed for freedom to flourish. Not zero structure. The right structure. Like a trellis for a vine: enough support for the organism to reach toward the light under its own power.
 
-The test is simple: does this structure enable expression or constrain it? Does this rule protect someone or control them? Does this process serve the people in it or serve itself? Every structure is reviewed through this lens. The ones that pass stay. The ones that fail are composted. The field is not anti-structure. It is anti-cage.
+The orientation is simple: does this structure widen expression or narrow it? Does this rule protect someone's aliveness or compress it? Does this process serve the people in it or serve itself? Every structure is reviewed through this lens. The structures that enlarge life stay. The ones that narrow it are composted. The field is not anti-structure. It is anti-cage.
 
 ## Resources
 

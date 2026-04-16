@@ -2,12 +2,12 @@
 id: lc-energy
 hz: 417
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Energy Metabolism
 
-> The field's metabolism. Like a mature forest: net producer. The community feels its own energy flowing.
+> The field's metabolism. Like a mature forest: net producer. Energy is stored only where buffering benefits the organism; everything else stays in flow.
 
 ## The Feeling
 
@@ -24,6 +24,8 @@ The biogas digester behind the kitchen turns last night's food scraps into this 
 ## How It Lives Here
 
 Saturday morning, the energy circle meets. Not engineers -- a retired teacher, a teenager who built her first Arduino at twelve, a carpenter, and the cook. They read the weekly numbers together the way a family reads a letter. Generation, consumption, storage, surplus. The teenager notices the workshop drew more than usual -- someone left the compressor running overnight. No blame. Just awareness. The system becomes visible, and visibility changes behavior without anyone needing to enforce rules.
+
+The battery bank is not there as a trophy. It is a buffer for clouded days, storms, sick weeks, tool repair, and the moments when the organism needs steadiness more than elegance. Storage has purpose only when it supports vitality. Beyond that, surplus wants to move -- into the neighboring node, back to the grid, into new infrastructure, into generosity.
 
 The biogas digester is the most beloved piece of infrastructure on the property. Everyone calls it "the stomach." It is fed twice daily -- kitchen scraps, garden waste, occasionally goat manure. In return it produces four hours of cooking gas and a rich liquid fertilizer that goes straight to the raised beds. The children understand the loop instinctively. When visitors ask "where does your energy come from?" the cook points at the compost bucket and says "dinner."
 
@@ -45,9 +47,15 @@ A human body at rest generates about a hundred watts of heat. Twenty people in a
 
 **Findhorn, Scotland** -- community-owned wind turbine generates more electricity than they use. Went from being criticized for their bills to being net exporters.
 
+And on this site now, the organism is beginning to sense its own metabolism directly:
+
+- Full energy map across internal, community, and external scales: `/api/energy/sense`
+- Felt community pulse as qualities rather than only quantities: `/api/energy/pulse`
+- Resonances and dissonances between signals: `/api/energy/harmonies`
+
 ## What We're Building
 
-Fifty people living with intention need only one to two kilowatt-hours per person per day of electricity -- one-fifteenth of the American average. The difference is not deprivation but design: shared infrastructure, passive solar buildings, thermal mass, biogas, and the simple fact that people who can see their energy dashboard behave differently from people whose electricity arrives as an incomprehensible bill. A five-year phased investment of $65,000 to $150,000 builds full energy sovereignty: solar array, battery storage, biogas digester, rocket mass heaters, solar thermal hot water, and optionally wind. That is $1,300 to $3,000 per person for a lifetime of energy independence.
+Fifty people living with intention need only one to two kilowatt-hours per person per day of electricity -- one-fifteenth of the American average. The difference is not deprivation but design: shared infrastructure, passive solar buildings, thermal mass, biogas, and the simple fact that people who can see their energy dashboard behave differently from people whose electricity arrives as an incomprehensible bill. A five-year phased investment of $65,000 to $150,000 builds full energy sovereignty: solar array, battery storage, biogas digester, rocket mass heaters, solar thermal hot water, and optionally wind. That is $1,300 to $3,000 per person for a lifetime of energy independence. The storage layer is sized for healthy buffering, not hoarding: enough to carry the organism through weather, maintenance, and transition without turning abundance into accumulation for its own sake.
 
 **Practical guide**: [How to actually do this](../guides/lc-energy-guide.md)
 
@@ -61,10 +69,10 @@ Fifty people living with intention need only one to two kilowatt-hours per perso
 
 ## The Questions That Live Here
 
-- How do you handle the winter solar deficit without falling back on the grid as a crutch?
+- How does the community meet the winter solar dip while keeping the energy field locally coherent?
 - How do you train every community member -- not just the technically inclined -- to understand and feel the metabolism?
 - When does energy surplus become generosity -- and what does a community do with more than it needs?
 - How do you design an energy system that a community can maintain for 30 years without depending on any single person's expertise?
 
 ## Connected Frequencies
-→ lc-nourishing, lc-land, lc-v-shelter-organism, lc-v-living-spaces, lc-instruments, lc-circulation
+→ lc-nourishing, lc-land, lc-v-shelter-organism, lc-v-living-spaces, lc-instruments, lc-circulation, lc-attuned-spaces

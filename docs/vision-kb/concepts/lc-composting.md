@@ -31,13 +31,13 @@ The annual cycle makes this tangible. Each autumn, the community asks: what has 
 
 ## What Nature Teaches
 
-Watch a forest floor in October. The falling is not failure — it is the tree's most generous act. Every leaf carries minerals pulled from deep bedrock, sugars synthesized from sunlight, and the tree releases all of it back to the soil. Fungi break it down. Bacteria transform it. By spring, that leaf is feeding the roots of the tree that dropped it, and the wildflowers beside it, and the seedling that just arrived.
+Watch a forest floor in October. The falling is generosity. Every leaf carries minerals pulled from deep bedrock, sugars synthesized from sunlight, and the tree releases all of it back to the soil. Fungi break it down. Bacteria transform it. By spring, that leaf is feeding the roots of the tree that dropped it, and the wildflowers beside it, and the seedling that just arrived.
 
-Fermentation teaches the same lesson from another angle. The grape does not die when it becomes wine. The cabbage does not fail when it becomes kimchi. Something more complex, more nourishing, more alive emerges from what looked like decay. The microorganisms that drive fermentation are not destroyers — they are collaborators working at a scale we cannot see.
+Fermentation teaches the same lesson from another angle. The grape does not disappear when it becomes wine. The cabbage does not diminish when it becomes kimchi. Something more complex, more nourishing, more alive emerges from what looked like decay. The microorganisms that drive fermentation are not destroyers — they are collaborators working at a scale we cannot see.
 
 The phoenix appears in every culture's mythology because every culture has watched this happen. Fire is not the opposite of life. It is the fastest form of composting — carbon returning to air, minerals returning to soil, heat released for whoever stands near enough to feel it.
 
-Even stars compost. Every heavy element in your body — the iron in your blood, the calcium in your bones — was forged in a star that died. The star's composting is what made you possible. Transformation at every scale, from the microbial to the cosmic, follows the same pattern: completion becomes nourishment becomes new life.
+Even stars compost. Every heavy element in your body — the iron in your blood, the calcium in your bones — was forged in a star that completed its cycle. The star's composting is what made you possible. Transformation at every scale, from the microbial to the cosmic, follows the same pattern: completion becomes nourishment becomes new life.
 
 ## Where You Can See It
 

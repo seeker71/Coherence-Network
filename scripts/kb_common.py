@@ -208,6 +208,10 @@ def parse_concept_file(filepath: Path) -> dict[str, Any]:
     text = filepath.read_text(encoding="utf-8")
     fm = parse_frontmatter(text)
     props: dict[str, Any] = {}
+    title_match = re.search(r"^# (.+)$", text, re.MULTILINE)
+    quote_match = re.search(r"^>\s*(.+)$", text, re.MULTILINE)
+    hz_raw = fm.get("hz", "").strip()
+    hz: int | None = int(hz_raw) if hz_raw.isdigit() else None
 
     # Full story content (the living narrative)
     story = extract_story_content(text)
@@ -246,6 +250,9 @@ def parse_concept_file(filepath: Path) -> dict[str, Any]:
 
     return {
         "id": fm.get("id", filepath.stem),
+        "name": title_match.group(1).strip() if title_match else filepath.stem.replace("-", " ").title(),
+        "description": quote_match.group(1).strip() if quote_match else "",
+        "hz": hz,
         "status": fm.get("status", "seed"),
         "properties": props,
     }
@@ -264,11 +271,18 @@ def api_get(url: str, timeout: int = 30) -> Any:
             return json.loads(resp.read())
 
 
-def api_patch(url: str, body: dict, timeout: int = 30, retries: int = 4) -> bool:
+def api_patch(
+    url: str,
+    body: dict,
+    timeout: int = 30,
+    retries: int = 4,
+    headers: dict[str, str] | None = None,
+) -> bool:
     """PATCH JSON to URL. Returns True on 200. Backs off on 429 rate limits."""
+    request_headers = headers or {}
     for attempt in range(retries):
         if httpx:
-            resp = httpx.patch(url, json=body, timeout=timeout)
+            resp = httpx.patch(url, json=body, timeout=timeout, headers=request_headers)
             if resp.status_code == 200:
                 return True
             if resp.status_code == 429 and attempt < retries - 1:
@@ -280,6 +294,8 @@ def api_patch(url: str, body: dict, timeout: int = 30, retries: int = 4) -> bool
             data = json.dumps(body).encode()
             req = urllib.request.Request(url, data=data, method="PATCH")
             req.add_header("Content-Type", "application/json")
+            for key, value in request_headers.items():
+                req.add_header(key, value)
             try:
                 with urllib.request.urlopen(req, timeout=timeout) as resp:
                     return resp.status == 200
@@ -295,12 +311,19 @@ def api_patch(url: str, body: dict, timeout: int = 30, retries: int = 4) -> bool
     return False
 
 
-def api_post(url: str, body: dict, timeout: int = 30, retries: int = 3) -> int:
+def api_post(
+    url: str,
+    body: dict,
+    timeout: int = 30,
+    retries: int = 3,
+    headers: dict[str, str] | None = None,
+) -> int:
     """POST JSON to URL with retries. Returns HTTP status code (0 on total failure)."""
+    request_headers = headers or {}
     for attempt in range(retries):
         try:
             if httpx:
-                resp = httpx.post(url, json=body, timeout=timeout)
+                resp = httpx.post(url, json=body, timeout=timeout, headers=request_headers)
                 if resp.status_code == 429:
                     time.sleep(2 ** attempt)
                     continue
@@ -309,6 +332,8 @@ def api_post(url: str, body: dict, timeout: int = 30, retries: int = 3) -> int:
                 data = json.dumps(body).encode()
                 req = urllib.request.Request(url, data=data, method="POST")
                 req.add_header("Content-Type", "application/json")
+                for key, value in request_headers.items():
+                    req.add_header(key, value)
                 with urllib.request.urlopen(req, timeout=timeout) as resp:
                     return resp.status
         except Exception as e:

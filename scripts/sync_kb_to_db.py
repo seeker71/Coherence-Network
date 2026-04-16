@@ -14,6 +14,7 @@ Usage:
     python scripts/sync_kb_to_db.py --all --min-status expanding # only expanding+
     python scripts/sync_kb_to_db.py lc-space --dry-run          # show what would change
     python scripts/sync_kb_to_db.py lc-space --api-url http://localhost:8000  # local API
+    python scripts/sync_kb_to_db.py lc-space --api-key dev-key  # explicit write auth
 """
 
 from __future__ import annotations
@@ -24,27 +25,90 @@ from pathlib import Path
 
 from kb_common import (
     KB_DIR, DEFAULT_API, STATUS_ORDER,
-    parse_concept_file, api_patch,
+    parse_concept_file, api_get, api_patch, api_post,
 )
 
+DEFAULT_WRITE_API_KEY = "dev-key"
 
-def patch_node(api_url: str, node_id: str, properties: dict) -> bool:
+def _write_headers(api_key: str | None) -> dict[str, str]:
+    return {"X-API-Key": api_key} if api_key else {}
+
+
+def build_create_payload(parsed: dict) -> dict:
+    properties = {
+        "domains": ["living-collective"],
+        "level": 2,
+        "lifecycle_state": "gas",
+    }
+    if parsed.get("hz") is not None:
+        properties["sacred_frequency"] = {"hz": parsed["hz"]}
+    return {
+        "id": parsed["id"],
+        "type": "concept",
+        "name": parsed.get("name") or parsed["id"],
+        "description": parsed.get("description", ""),
+        "phase": "gas",
+        "properties": properties,
+    }
+
+
+def ensure_concept_node(api_url: str, parsed: dict, api_key: str | None) -> bool:
+    concept_id = parsed["id"]
+    try:
+        api_get(f"{api_url}/api/concepts/{concept_id}")
+        return True
+    except Exception:
+        pass
+
+    status = api_post(
+        f"{api_url}/api/graph/nodes",
+        build_create_payload(parsed),
+        headers=_write_headers(api_key),
+    )
+    if status in (200, 201):
+        print("    created missing concept node")
+        return True
+    if status == 409:
+        return True
+    print(f"    create FAILED ({status})", file=sys.stderr)
+    return False
+
+
+def patch_node(api_url: str, node_id: str, properties: dict, api_key: str | None) -> bool:
     """PATCH /api/graph/nodes/{id} with new properties."""
-    return api_patch(f"{api_url}/api/graph/nodes/{node_id}", {"properties": properties})
+    return api_patch(
+        f"{api_url}/api/graph/nodes/{node_id}",
+        {"properties": properties},
+        headers=_write_headers(api_key),
+    )
 
 
-def main():
+def sync_concept(parsed: dict, api_url: str, dry_run: bool, api_key: str | None) -> bool:
+    concept_id = parsed["id"]
+    props = parsed["properties"]
+
+    if dry_run:
+        print(f"    [DRY RUN] would ensure + PATCH /api/graph/nodes/{concept_id}")
+        return True
+
+    if not ensure_concept_node(api_url, parsed, api_key):
+        return False
+    return patch_node(api_url, concept_id, props, api_key)
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Sync KB markdown -> Graph DB via API")
     parser.add_argument("concepts", nargs="*", help="Concept IDs to sync (e.g., lc-space)")
     parser.add_argument("--all", action="store_true", help="Sync all concept files")
     parser.add_argument("--min-status", default="seed", help="Minimum status to sync (seed|expanding|deepening|mature|complete)")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be synced without making changes")
     parser.add_argument("--api-url", default=DEFAULT_API, help=f"API base URL (default: {DEFAULT_API})")
-    args = parser.parse_args()
+    parser.add_argument("--api-key", default=DEFAULT_WRITE_API_KEY, help="Write API key for POST/PATCH operations (default: dev-key)")
+    args = parser.parse_args(argv)
 
     if not args.concepts and not args.all:
         parser.print_help()
-        sys.exit(1)
+        return 1
 
     min_status_level = STATUS_ORDER.get(args.min_status, 0)
 
@@ -62,7 +126,7 @@ def main():
 
     if not files:
         print("No concept files to sync.")
-        sys.exit(0)
+        return 0
 
     synced = 0
     skipped = 0
@@ -87,12 +151,7 @@ def main():
         field_summary = ", ".join(f"{k}({len(v) if isinstance(v, (list, dict)) else 'str'})" for k, v in props.items())
         print(f"  {concept_id}: {field_summary}")
 
-        if args.dry_run:
-            print(f"    [DRY RUN] would PATCH /api/graph/nodes/{concept_id}")
-            synced += 1
-            continue
-
-        if patch_node(args.api_url, concept_id, props):
+        if sync_concept(parsed, args.api_url, args.dry_run, args.api_key):
             print(f"    synced to DB")
             synced += 1
         else:
@@ -100,7 +159,8 @@ def main():
             failed += 1
 
     print(f"\nDone: {synced} synced, {skipped} skipped, {failed} failed")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

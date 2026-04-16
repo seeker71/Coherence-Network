@@ -49,9 +49,10 @@
 | New Earth Exchange | [newearthhorizon.com](https://newearthhorizon.com/) | Alternative economic system outside debt-based fiat currency |
 | Sacha Stone | [sachastone.com](https://sachastone.com/) | New Earth activist, sovereignty pioneer, art-as-blueprint vision |
 | Just Tap In Podcast | [youtube.com/@EmilioOrtiz](https://youtube.com/@EmilioOrtiz) | Host Emilio Ortiz, 243K subscribers — consciousness and sovereignty |
+| Just Tap In — Sacha Stone episode | [youtu.be/07DHgJFFqQY](https://youtu.be/07DHgJFFqQY) | Apr 11 2026 episode on ascension, jurisdiction, New Earth Exchange, and the MicroNation prototype |
 | New Living Expo | [newlivingexpo.com](https://newlivingexpo.com/) | Annual gathering, San Rafael CA — New Earth community convergence |
 
-> See [new-earth-integration.md](new-earth-integration.md) for full concept mapping (3 Pillars → Living Collective)
+> See [new-earth-integration.md](new-earth-integration.md) for the high-level concept mapping and [sacha-stone-just-tap-in-2026-04-11.md](sacha-stone-just-tap-in-2026-04-11.md) for the agent-ready episode summary and outbound links.
 
 ## Reference Communities
 

@@ -2,7 +2,7 @@
 id: lc-attunement
 hz: 432
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Attunement
@@ -25,13 +25,13 @@ Tuesday evening, the tuning session. Forty-five minutes that the community has c
 
 A talking piece moves around the circle. One person says the kitchen feels rushed lately — meals appearing on time but without the usual love. Another says the children's energy has been wild, boundary-less, and something in the adult field isn't holding them. A third says nothing with words but hums a note, low and steady, and three other voices join it, and for a moment the room is vibrating with a chord that says more than language could.
 
-No one tries to fix what was named. That is the discipline. Attunement is not problem-solving. It is the field looking at itself in a mirror and saying: "Ah. That's what's here." The naming itself shifts the frequency. By the time the session ends with everyone humming together — finding one shared note and holding it until it fades naturally — the kitchen will already feel different tomorrow. Not because anyone decided to change it. Because the field felt its own dissonance and, like the choir, adjusted by the pull of the harmonic.
+No one rushes to redirect what was named. That is the discipline. Attunement is not about forcing a solution. It is the field looking at itself in a mirror and saying: "Ah. That's what's here." The naming itself shifts the frequency. By the time the session ends with everyone humming together — finding one shared note and holding it until it fades naturally — the kitchen will already feel different tomorrow. Not because anyone decided to change it. Because the field felt its own dissonance and, like the choir, adjusted by the pull of the harmonic.
 
 ![Humming circle at twilight](visuals:photorealistic interior of round room with curved wooden walls and earthen floor, evening light through round windows, 35 people sitting in circle on cushions with eyes closed humming together, singing bowls and candles on floor in center, vibration almost visible as warmth in the air, deep peace and unity on every face, wooden beams overhead like ribs of a great body)
 
 ## What Nature Teaches
 
-An elephant herd walks with a young bull who is testing boundaries — charging at bushes, trumpeting, bumping the older females. No elephant punishes him. No elephant lectures. The matriarch shifts her weight, the herd adjusts its pace, and the young bull finds himself contained not by force but by the sheer gravitational presence of aligned bodies. The herd is attuned to him. His wildness is held, not broken. Over months, his frequency integrates into the herd's chord. This is immune function without violence.
+An elephant herd walks with a young bull who is testing boundaries — charging at bushes, trumpeting, bumping the older females. No elephant turns him into a problem. No elephant lectures. The matriarch shifts her weight, the herd adjusts its pace, and the young bull finds himself contained not by force but by the sheer gravitational presence of aligned bodies. The herd is attuned to him. His wildness is held, not diminished. Over months, his frequency integrates into the herd's chord. This is immune function without violence.
 
 Your own body does this every second. A cell mutates. The immune system doesn't convene a tribunal. It recognizes the mutation — not with moral judgment but with pattern recognition — and responds. Most of the time, the response is gentle: surrounding the cell, offering it a chance to correct. Only when the mutation threatens the whole does the response intensify. The body doesn't hate its own cells. It attunes to what serves life.
 
@@ -53,7 +53,7 @@ The weekly tuning session is the most visible practice, but attunement lives in 
 
 When a new person arrives, the field doesn't rush to integrate them. There is a period of mutual listening — weeks, sometimes months — where the new frequency and the existing chord learn each other. The community holds the paradox that everything belongs to existence and not everything harmonizes with this particular field right now. Someone may discover that their deepest note doesn't sound here. The field's gift to them is honesty, not accommodation. Sending someone on their way with love is as much an act of attunement as welcoming them in.
 
-The architecture of attunement is the round room, the talking piece, the shared hum. But the real architecture is attention. A community that attends to its own chord — that stops regularly to ask "what are we sounding like?" — develops an immune function as elegant as the body's own. Dissonance is not failure. It's information. The field that can hold dissonance without panic, and let it resolve in its own time, is the field that can hold anything.
+The architecture of attunement is the round room, the talking piece, the shared hum. But the real architecture is attention. A community that attends to its own chord — that stops regularly to ask "what are we sounding like?" — develops an immune function as elegant as the body's own. Dissonance is directional information. The field that can hold dissonance without panic, and let it resolve in its own time, is the field that can hold anything.
 
 ## Resources
 
@@ -63,7 +63,7 @@ The architecture of attunement is the round room, the talking piece, the shared 
 
 ## The Questions That Live Here
 
-These are not problems to solve but tensions to inhabit:
+These are not questions to close but directions to listen with:
 
 - How does the field distinguish between a frequency that needs more time and one that genuinely doesn't belong?
 - Can attunement happen across distance, or does it require shared breath?

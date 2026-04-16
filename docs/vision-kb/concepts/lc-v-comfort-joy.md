@@ -2,7 +2,7 @@
 id: lc-v-comfort-joy
 hz: 528
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Comfort, Joy, Softness
@@ -35,7 +35,7 @@ Evening comes and the common room fills without announcement. Someone lights can
 
 A cat does not apologize for finding the warmest spot in the room. A dog does not justify circling three times before lying down in exactly the right position. Animals treat comfort as information. They move toward warmth, softness, shelter, not because they are lazy but because their nervous systems are calibrated to seek what sustains them.
 
-Pleasure is the body's way of saying yes. Pain is the body's way of saying stop. A culture that teaches people to override their comfort signals produces people who cannot feel when they are breaking. A field that honors comfort produces people who know when they are thriving.
+Pleasure is the body's way of saying yes. Intensity is the body's way of asking for a different shape, rhythm, or pace. A culture that teaches people to override their comfort signals produces people who lose track of what keeps them whole. A field that honors comfort produces people who know when they are thriving.
 
 The Finnish word for the steam that rises when water hits sauna stones is loyly. It has no direct translation. It means something like the spirit of the sauna, the living breath of heat. A whole culture built around the understanding that hot water, hot air, and bare skin together produce something essential for human health. Not a theory. A practice sustained across a thousand winters.
 
