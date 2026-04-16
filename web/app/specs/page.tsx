@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 
 import { getApiBase } from "@/lib/api";
 import { withWorkspaceScope } from "@/lib/workspace";
 import { getActiveWorkspaceFromCookie } from "@/lib/workspace-server";
+import { createTranslator, type Translator } from "@/lib/i18n";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
 export const metadata: Metadata = {
   title: "Specs",
@@ -184,7 +187,7 @@ function buildSpecCards(source: string, specs: SpecItem[], registry: SpecRegistr
   });
 }
 
-function SpecsSummary({ filteredSpecs }: { filteredSpecs: SpecCard[] }) {
+function SpecsSummary({ filteredSpecs, t }: { filteredSpecs: SpecCard[]; t: Translator }) {
   const linkedIdeas = new Set(filteredSpecs.flatMap((spec) => [...spec.relations.ideaIds]));
   const contributors = new Set(filteredSpecs.flatMap((spec) => [...spec.relations.contributorIds]));
   const measured = filteredSpecs.filter((spec) => Boolean(spec.registryItem)).length;
@@ -192,20 +195,20 @@ function SpecsSummary({ filteredSpecs }: { filteredSpecs: SpecCard[] }) {
   return (
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Visible Specs</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("specs.statVisible")}</p>
         <p className="mt-2 text-3xl font-light">{filteredSpecs.length}</p>
       </div>
       <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Measured</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("specs.statMeasured")}</p>
         <p className="mt-2 text-3xl font-light">{measured}</p>
-        <p className="mt-1 text-xs text-muted-foreground">Specs with registry value/cost metadata</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t("specs.statMeasuredSub")}</p>
       </div>
       <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Linked Ideas</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("specs.statLinkedIdeas")}</p>
         <p className="mt-2 text-3xl font-light">{linkedIdeas.size}</p>
       </div>
       <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
-        <p className="text-xs uppercase tracking-widest text-muted-foreground">Contributors</p>
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("specs.statContributors")}</p>
         <p className="mt-2 text-3xl font-light">{contributors.size}</p>
       </div>
     </section>
@@ -249,6 +252,10 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
   const resolvedSearchParams = await searchParams;
   const specFilter = normalizeFilter(resolvedSearchParams.spec_id);
   const workspaceId = await getActiveWorkspaceFromCookie();
+  const cookieStore = await cookies();
+  const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
+  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
   const { source, items: specs, registry, flowItems } = await loadSpecs(workspaceId);
   const specCards = buildSpecCards(source, specs, registry, flowItems);
   const filteredSpecs = specFilter ? specCards.filter((s) => s.spec_id === specFilter) : specCards;
@@ -257,7 +264,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto space-y-8">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Specification Map</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t("specs.title")}</h1>
         <p className="max-w-3xl leading-relaxed text-muted-foreground">
           Specs are the delivery contracts between ideas, implementation work, and verification. This view shows what the repo can currently discover, what the registry knows, and where the links are still missing.
         </p>
@@ -272,12 +279,12 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
         </p>
       ) : null}
 
-      <SpecsSummary filteredSpecs={filteredSpecs} />
+      <SpecsSummary filteredSpecs={filteredSpecs} t={t} />
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-medium">Visible Specs</h2>
+            <h2 className="text-lg font-medium">{t("specs.visibleHeading")}</h2>
             <p className="text-sm text-muted-foreground">
               {filteredSpecs.length} visible specs from {humanizeSource(source)} and the registry.
             </p>
@@ -349,7 +356,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
                     <p className="mt-2 font-medium">{ideaIds.length}</p>
                   </div>
                   <div className="rounded-xl border border-border/20 bg-card/30 p-3">
-                    <p className="text-xs uppercase tracking-widest text-muted-foreground">Contributors</p>
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground">{t("specs.statContributors")}</p>
                     <p className="mt-2 font-medium">{contributorIds.length}</p>
                   </div>
                   <div className="rounded-xl border border-border/20 bg-card/30 p-3">
@@ -402,7 +409,7 @@ export default async function SpecsPage({ searchParams }: { searchParams: SpecsS
       </section>
 
       <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
-        <h2 className="text-lg font-medium">Registry Coverage</h2>
+        <h2 className="text-lg font-medium">{t("specs.registryCoverage")}</h2>
         <p className="text-sm text-muted-foreground">
           {filteredRegistry.length} of {filteredSpecs.length} visible specs currently have registry metadata attached.
         </p>

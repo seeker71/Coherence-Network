@@ -188,6 +188,24 @@
     "loading": "Memuat pesan...",
     "noMessages": "Tidak ada pesan."
   },
+  "specs": {
+    "title": "Peta rancangan",
+    "lede": "Rancangan adalah kontrak pengiriman antara gagasan, pengerjaan, dan pemeriksaan. Tampilan ini menunjukkan yang bisa ditemukan repo saat ini, yang diketahui registri, dan di mana tautan masih kurang.",
+    "statVisible": "Rancangan terlihat",
+    "statMeasured": "Terukur",
+    "statMeasuredSub": "Rancangan dengan metadata nilai/biaya di registri",
+    "statLinkedIdeas": "Gagasan terhubung",
+    "statContributors": "Penyumbang",
+    "visibleHeading": "Rancangan terlihat",
+    "visibleSub": "{n} rancangan terlihat dari {source} dan registri.",
+    "addMetadata": "Tambah atau perbarui metadata rancangan",
+    "registryCoverage": "Cakupan registri",
+    "colIdeas": "Gagasan",
+    "colContributors": "Penyumbang",
+    "colTasks": "Tugas",
+    "colImplRefs": "Referensi implementasi",
+    "filterActive": "Filter rancangan aktif untuk"
+  },
   "tasks": {
     "workView": "Tampilan kerja",
     "title": "Yang sedang bergerak",

@@ -188,6 +188,24 @@
     "loading": "Loading messages...",
     "noMessages": "No messages found."
   },
+  "specs": {
+    "title": "Specification Map",
+    "lede": "Specs are the delivery contracts between ideas, implementation work, and verification. This view shows what the repo can currently discover, what the registry knows, and where the links are still missing.",
+    "statVisible": "Visible Specs",
+    "statMeasured": "Measured",
+    "statMeasuredSub": "Specs with registry value/cost metadata",
+    "statLinkedIdeas": "Linked Ideas",
+    "statContributors": "Contributors",
+    "visibleHeading": "Visible Specs",
+    "visibleSub": "{n} visible specs from {source} and the registry.",
+    "addMetadata": "Add or update spec metadata",
+    "registryCoverage": "Registry Coverage",
+    "colIdeas": "Ideas",
+    "colContributors": "Contributors",
+    "colTasks": "Tasks",
+    "colImplRefs": "Implementation Refs",
+    "filterActive": "Spec filter active for"
+  },
   "tasks": {
     "workView": "Work view",
     "title": "Work That Is Moving",

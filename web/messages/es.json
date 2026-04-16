@@ -188,6 +188,24 @@
     "loading": "Cargando mensajes...",
     "noMessages": "No se encontraron mensajes."
   },
+  "specs": {
+    "title": "Mapa de especificaciones",
+    "lede": "Las especificaciones son los contratos de entrega entre ideas, implementación y verificación. Esta vista muestra lo que el repositorio puede descubrir actualmente, lo que conoce el registro y dónde faltan los enlaces.",
+    "statVisible": "Especificaciones visibles",
+    "statMeasured": "Medidas",
+    "statMeasuredSub": "Especificaciones con metadatos de valor/costo en el registro",
+    "statLinkedIdeas": "Ideas vinculadas",
+    "statContributors": "Contribuyentes",
+    "visibleHeading": "Especificaciones visibles",
+    "visibleSub": "{n} especificaciones visibles desde {source} y el registro.",
+    "addMetadata": "Agregar o actualizar metadatos de especificación",
+    "registryCoverage": "Cobertura del registro",
+    "colIdeas": "Ideas",
+    "colContributors": "Contribuyentes",
+    "colTasks": "Tareas",
+    "colImplRefs": "Referencias de implementación",
+    "filterActive": "Filtro de especificación activo para"
+  },
   "tasks": {
     "workView": "Vista de trabajo",
     "title": "Trabajo en movimiento",
