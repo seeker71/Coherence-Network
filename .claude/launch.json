@@ -6,7 +6,7 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
       "port": 8000,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/clever-volhard/api"
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/adoring-lewin/api"
     },
     {
       "name": "web",
@@ -19,7 +19,7 @@
       ],
       "port": 3000,
       "autoPort": true,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/clever-volhard/web"
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/adoring-lewin/web"
     },
     {
       "name": "pulse",
@@ -38,7 +38,7 @@
         "8100"
       ],
       "port": 8100,
-      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/clever-volhard/pulse"
+      "cwd": "/Users/ursmuff/source/Coherence-Network/.claude/worktrees/adoring-lewin/pulse"
     }
   ]
 }
