@@ -742,6 +742,10 @@ app.include_router(flow_simulator_router.router, prefix="/api", tags=["flow"])
 from app.routers import energy_sensing as energy_sensing_router  # noqa: E402
 app.include_router(energy_sensing_router.router, prefix="/api", tags=["energy"])
 
+# Flow renderer — live energy flow topology for particle visualization
+from app.routers import flow_renderer as flow_renderer_router  # noqa: E402
+app.include_router(flow_renderer_router.router, prefix="/api", tags=["flow"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
