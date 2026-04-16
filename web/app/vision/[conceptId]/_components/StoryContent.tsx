@@ -27,9 +27,17 @@ export function StoryContent({
 }) {
   let storyVisualIndex = 0;
 
+  // Strip the "## Connected Frequencies" section from story content —
+  // the graph-backed ConnectedConcepts section below the story is the
+  // single source of truth for connected concepts. Rendering the
+  // markdown cross-refs too would duplicate the "Connected Frequencies"
+  // heading and show stale/hand-written links alongside live graph edges.
+  const connectedIdx = content.search(/^##\s+Connected\s+Frequencies/im);
+  const cleanContent = connectedIdx >= 0 ? content.slice(0, connectedIdx).trimEnd() : content;
+
   return (
     <div className="mb-12 max-w-3xl space-y-6">
-      {content.split("\n\n").map((block, i) => {
+      {cleanContent.split("\n\n").map((block, i) => {
         const trimmed = block.trim();
         if (!trimmed) return null;
 
