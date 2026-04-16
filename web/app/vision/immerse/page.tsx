@@ -99,6 +99,8 @@ const ALL_VISUALS: VisualSource[] = [
   { file: "v-shelter-organism.png", title: "Shelter as Skin", category: "space" },
   { file: "transform-apartment.png", title: "City Apartment Commons", category: "transform" },
   { file: "transform-neighborhood.png", title: "Urban Block Host", category: "transform" },
+  { file: "transform-suburb.png", title: "Suburban Lane Commons", category: "transform" },
+  { file: "transform-village.png", title: "Rural Anchor Village", category: "transform" },
   { file: "community-auroville.png", title: "Auroville", category: "community" },
   { file: "community-damanhur.png", title: "Damanhur", category: "community" },
   { file: "community-earthship.png", title: "Earthship", category: "community" },
@@ -133,6 +135,8 @@ const ALL_VISUALS: VisualSource[] = [
 const FAST_TRANSFORMATION_FILES = new Set([
   "transform-apartment.png",
   "transform-neighborhood.png",
+  "transform-suburb.png",
+  "transform-village.png",
   "generated/lc-attuned-spaces-0.jpg",
   "generated/lc-attuned-spaces-1.jpg",
   "generated/lc-attuned-spaces-story-0.jpg",
@@ -143,6 +147,38 @@ const FAST_TRANSFORMATION_FILES = new Set([
   "space-hearth-interior.png",
   "life-shared-meal.png",
   "life-creation-workshop.png",
+]);
+
+const REPURPOSED_NOW_FILES = new Set([
+  "transform-apartment.png",
+  "transform-neighborhood.png",
+  "transform-suburb.png",
+  "transform-village.png",
+  "generated/lc-attuned-spaces-0.jpg",
+  "generated/lc-attuned-spaces-1.jpg",
+  "generated/lc-attuned-spaces-story-0.jpg",
+  "generated/lc-attuned-spaces-story-3.jpg",
+  "life-shared-meal.png",
+  "life-creation-workshop.png",
+  "practice-shared-washing.png",
+  "community-earthship.png",
+]);
+
+const PURE_IMAGINATION_FILES = new Set([
+  "generated/lc-space-0.jpg",
+  "generated/lc-space-1.jpg",
+  "generated/lc-space-story-0.jpg",
+  "generated/lc-v-living-spaces-0.jpg",
+  "generated/lc-v-living-spaces-3.jpg",
+  "generated/lc-v-living-spaces-story-0.jpg",
+  "generated/lc-v-living-spaces-story-3.jpg",
+  "generated/lc-v-shelter-organism-0.jpg",
+  "generated/lc-v-shelter-organism-1.jpg",
+  "generated/lc-v-shelter-organism-story-0.jpg",
+  "space-hearth-interior.png",
+  "space-gathering-bowl.png",
+  "space-stillness-sanctuary.png",
+  "nature-architecture-blend.png",
 ]);
 
 const CITY_CONTEXT_FILES = new Set([
@@ -193,6 +229,8 @@ function visualPath(img: VisualSource): string {
 
 const CATEGORIES: Category[] = [
   { id: "all", label: "All", filter: () => true },
+  { id: "repurposed-now", label: "Repurposed Now", filter: (i) => REPURPOSED_NOW_FILES.has(visualKey(i)) },
+  { id: "pure-imagination", label: "Pure Imagination", filter: (i) => PURE_IMAGINATION_FILES.has(visualKey(i)) },
   { id: "transform", label: "Fast Transformations", filter: (i) => FAST_TRANSFORMATION_FILES.has(visualKey(i)) },
   { id: "city", label: "City", filter: (i) => CITY_CONTEXT_FILES.has(visualKey(i)) },
   { id: "urban", label: "Urban", filter: (i) => URBAN_CONTEXT_FILES.has(visualKey(i)) },

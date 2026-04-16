@@ -118,4 +118,4 @@ No one has to earn breakfast. No one has to hit a number before they may rest. T
 
 ## Connected Frequencies
 
-→ lc-offering, lc-w-mycorrhizal, lc-nourishment, lc-land, lc-network
+→ lc-offering, lc-w-mycorrhizal, lc-nourishment, lc-land, lc-network, lc-economy, lc-energy, lc-field-sensing
