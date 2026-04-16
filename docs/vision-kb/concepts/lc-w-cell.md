@@ -2,10 +2,12 @@
 id: lc-w-cell
 hz: 285
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Cell
+
+> A complete local expression of the whole. Membrane, sovereignty, exchange. Not separate from the organism — how the organism becomes intimate with itself.
 
 ## The Feeling
 
@@ -49,6 +51,8 @@ to say not now, to sit with your own weather — is honored the way a body
 honors the walls of its cells. Without membranes, there is no life. Only soup.
 
 ## The Questions That Live Here
+
+These are questions to keep close to the membrane:
 
 - Where does the cell end and the field begin — and does the question
   itself contain a false assumption?

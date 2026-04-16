@@ -29,7 +29,7 @@ Within ten minutes I am sitting at a long table with a bowl of soup
 and the feeling that I have crossed not a border but a membrane —
 something alive that noticed me passing through it.
 
-This is not a wall. A wall is built from fear.
+This is not a wall. A wall is built from contraction.
 This is a membrane, built from self-knowledge.
 It knows what it lets in. It knows what it lets out.
 And it trusts itself enough to stay open.

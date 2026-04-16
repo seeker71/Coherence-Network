@@ -33,7 +33,7 @@ Dolphins invest up to eighty percent of their waking time in play. Not because t
 
 Young ravens slide down snow-covered roofs on their backs, climb to the top, and do it again. Otters juggle pebbles for no apparent reason. Octopuses disassemble their tanks and rearrange the parts. Play is not separate from adaptation. Play is how organisms keep discovering new ways to move with a world that keeps changing. The creature that stays playful is the one that can meet the river when it shifts.
 
-In human children, pretend play — the kind where a stick becomes a horse and a cardboard box becomes a castle — exercises exactly the cognitive muscles needed for abstract thought, empathy, and creative problem-solving. Adventure playgrounds, born in Denmark in the 1940s, proved that children given loose materials, real tools, and trust build things no adult architect would imagine. The key ingredient was not the materials. It was the absence of anyone telling them what to build.
+In human children, pretend play — the kind where a stick becomes a horse and a cardboard box becomes a castle — exercises exactly the cognitive muscles needed for abstract thought, empathy, and inventive thinking. Adventure playgrounds, born in Denmark in the 1940s, proved that children given loose materials, real tools, and trust build things no adult architect would imagine. The key ingredient was not the materials. It was the absence of anyone telling them what to build.
 
 ## Where You Can See It
 

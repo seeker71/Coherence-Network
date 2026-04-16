@@ -65,7 +65,7 @@ A stillness sanctuary is the quietest room the community will ever build. Every 
 
 **Floor.** Cool clay or smooth stone, with cushions and wool blankets. Bare feet on earth is the point. Warmth from a radiant floor in cold months -- no forced air, no fan hum.
 
-**Light.** One circular window facing east, sized so the first dawn light enters without glare. No overhead lighting. A niche for a single candle. The darkness is not a problem to solve. It is the medium the sanctuary works in.
+**Light.** One circular window facing east, sized so the first dawn light enters without glare. No overhead lighting. A niche for a single candle. The darkness is not a condition to erase. It is the medium the sanctuary works in.
 
 **Door.** Heavy, oiled, with felt edges. It closes without a click. The threshold itself becomes a practice -- the moment you cross it, you leave the day's noise behind.
 

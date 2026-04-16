@@ -31,7 +31,7 @@ No one rushes to redirect what was named. That is the discipline. Attunement is 
 
 ## What Nature Teaches
 
-An elephant herd walks with a young bull who is testing boundaries — charging at bushes, trumpeting, bumping the older females. No elephant turns him into a problem. No elephant lectures. The matriarch shifts her weight, the herd adjusts its pace, and the young bull finds himself contained not by force but by the sheer gravitational presence of aligned bodies. The herd is attuned to him. His wildness is held, not diminished. Over months, his frequency integrates into the herd's chord. This is immune function without violence.
+An elephant herd walks with a young bull who is testing boundaries — charging at bushes, trumpeting, bumping the older females. No elephant treats him as an interruption. No elephant lectures. The matriarch shifts her weight, the herd adjusts its pace, and the young bull finds himself contained not by force but by the sheer gravitational presence of aligned bodies. The herd is attuned to him. His wildness is held, not diminished. Over months, his frequency integrates into the herd's chord. This is immune function without violence.
 
 Your own body does this every second. A cell mutates. The immune system doesn't convene a tribunal. It recognizes the mutation — not with moral judgment but with pattern recognition — and responds. Most of the time, the response is gentle: surrounding the cell, offering it a chance to correct. Only when the mutation threatens the whole does the response intensify. The body doesn't hate its own cells. It attunes to what serves life.
 

@@ -64,6 +64,15 @@ The attuned space emerges from the accumulation of these small truthful answers.
 
 ![A city as constellation of villages](visuals:photorealistic aerial night view of a major city that has reorganized itself into visible neighborhood-villages each with their own warm glowing center of gathering — the central fires and hearths and commons visible as points of golden light scattered across the urban grid, connected by walking paths and bike routes that glow softly in the darkness, the big civic institutions still present as larger lit structures, but the real life of the city is in the thousands of small points of warmth and the flows between them, the whole pattern looking like a galaxy or a mycelial network or a nervous system, deeply coherent, entirely possible, the future already arriving in scattered places right now)
 
+## The Questions That Live Here
+
+These are not planning questions. They are listening questions:
+
+- Which shell around us is already asking to be retuned rather than replaced?
+- What kind of gathering is this place quietly ready to hold now?
+- Where is privacy still nourishing, and where is separation only leftover habit?
+- What becomes possible when a building is named by its quality of presence rather than by its commercial function?
+
 ## Connected Frequencies
 
 → lc-v-living-spaces — the space concept
