@@ -738,6 +738,10 @@ app.include_router(reward_policies_router.router, prefix="/api", tags=["reward-p
 from app.routers import flow_simulator as flow_simulator_router  # noqa: E402
 app.include_router(flow_simulator_router.router, prefix="/api", tags=["flow"])
 
+# Energy sensing — frequencies, harmonies, the organism sees itself
+from app.routers import energy_sensing as energy_sensing_router  # noqa: E402
+app.include_router(energy_sensing_router.router, prefix="/api", tags=["energy"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
