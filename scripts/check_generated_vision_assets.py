@@ -17,6 +17,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from kb_common import parse_frontmatter
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONCEPT_DIR = REPO_ROOT / "docs" / "vision-kb" / "concepts"
 VISION_WEB_DIR = REPO_ROOT / "web" / "app" / "vision"
@@ -37,17 +39,25 @@ def is_git_tracked(path: Path) -> bool:
     return proc.returncode == 0
 
 
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
 def concept_story_requirements() -> list[tuple[str, Path, Path]]:
     requirements: list[tuple[str, Path, Path]] = []
     for concept_path in sorted(CONCEPT_DIR.glob("lc-*.md")):
         content = concept_path.read_text(encoding="utf-8")
-        concept_id = concept_path.stem
+        frontmatter = parse_frontmatter(content)
+        concept_id = frontmatter.get("id") or concept_path.stem.split(".")[0]
         count = len(INLINE_VISUAL_RE.findall(content))
         for index in range(count):
             asset_path = GENERATED_DIR / f"{concept_id}-story-{index}.jpg"
             requirements.append(
                 (
-                    f"{concept_path.relative_to(REPO_ROOT)} inline visual {index}",
+                    f"{display_path(concept_path)} inline visual {index}",
                     asset_path,
                     concept_path,
                 )
@@ -69,7 +79,7 @@ def explicit_generated_requirements() -> list[tuple[str, Path, Path]]:
             asset_path = GENERATED_DIR / asset_name
             requirements.append(
                 (
-                    f"{file_path.relative_to(REPO_ROOT)} reference {asset_name}",
+                    f"{display_path(file_path)} reference {asset_name}",
                     asset_path,
                     file_path,
                 )

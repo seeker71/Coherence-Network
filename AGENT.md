@@ -69,6 +69,23 @@ python3 scripts/validate_spec_quality.py --base origin/main --head HEAD
   - Record in `docs/system_audit/*` evidence artifacts.
   - Continue with merge/deploy blockers clearly documented.
 
+### 5) Main deploy looks stale right after merge
+
+Do not loop the public verify script while the host rollout is still in progress.
+
+Use this order instead:
+
+```bash
+gh run list --repo seeker71/Coherence-Network --branch main --limit 5
+gh run watch <public-deploy-run-id> --repo seeker71/Coherence-Network
+gh run watch <hostinger-run-id> --repo seeker71/Coherence-Network
+./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com
+```
+
+- If `/api/gates/main-head` reports the new SHA but `/api/health` still reports the previous SHA while `Hostinger Auto Deploy` is running, treat it as rollout lag, not as a new code defect.
+- Re-run the public verify once the host job finishes.
+- Only escalate to repair when the host job is complete or failed and SHA parity still does not settle.
+
 ## Required Before Commit
 
 - Add or update commit evidence file:
