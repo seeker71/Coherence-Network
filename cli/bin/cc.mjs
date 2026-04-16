@@ -8,6 +8,9 @@
  */
 
 import { appendFileSync } from "node:fs";
+import { resolveLocale, createT } from "../lib/i18n.mjs";
+const _locale = resolveLocale(process.argv);
+const t = createT(_locale);
 import {
   listIdeas, showIdea, shareIdea, stakeOnIdea, forkIdea, createIdea,
   triageIdeas, setIdeaWorkType, linkIdea, showIdeaChildren, showIdeaDeps,
@@ -112,12 +115,13 @@ if (_invokedAs === 'cc') {
 //   --timeout <ms>      Override the request timeout (alternative: COHERENCE_TIMEOUT_MS).
 function _extractGlobalFlags(argv) {
   const out = [];
-  const TAKES_VALUE = new Set(["--workspace", "--api-url", "--api-key", "--timeout"]);
+  const TAKES_VALUE = new Set(["--workspace", "--api-url", "--api-key", "--timeout", "--lang"]);
   const APPLY = {
     "--workspace": setActiveWorkspaceOverride,
     "--api-url": setApiUrlOverride,
     "--api-key": setApiKeyOverride,
     "--timeout": setTimeoutOverride,
+    "--lang": () => {}, // locale already resolved at module load; swallow value
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -580,9 +584,9 @@ function showHelp() {
   console.log(`
 \x1b[1mcc\x1b[0m — Coherence Network CLI
 
-\x1b[1mUsage:\x1b[0m cc <command> [args]
+\x1b[1m${t("help.usage")}\x1b[0m ${t("help.usageLine")}
 
-\x1b[1mExplore:\x1b[0m
+\x1b[1m${t("help.sectionExplore")}\x1b[0m
   focus                   Interactive idea picker to set active focus
   focus <id>              Set active focus non-interactively
   peers                   Discover contributors by resonance or proximity
@@ -612,7 +616,7 @@ function showHelp() {
   resonance               What's alive right now
   status                  Network health + node info
 
-\x1b[1mContribute:\x1b[0m
+\x1b[1m${t("help.sectionContribute")}\x1b[0m
   share                   Submit a new idea (interactive)
   blueprints              List project roadmap templates
   blueprint apply <id>    Seed a full roadmap from a template
@@ -624,7 +628,7 @@ function showHelp() {
   stake <id> <cc>         Stake CC on an idea
   fork <id>               Fork an idea
 
-\x1b[1mIdentity:\x1b[0m
+\x1b[1m${t("help.sectionIdentity")}\x1b[0m
   setup                   Interactive onboarding — creates contributor + API key
   setup --reset           Re-run setup (replace existing key)
   whoami                  Show authenticated contributor + key status
@@ -637,19 +641,19 @@ function showHelp() {
   credentials             Manage repo-specific tokens (add, list, remove)
   guide                   Guided experience for new contributors
 
-\x1b[1mFederation:\x1b[0m
+\x1b[1m${t("help.sectionFederation")}\x1b[0m
   nodes                   List federation nodes
   msg <node|all> <text>   Send message (accepts name, alias: mac/win)
   cmd <node|all> <cmd>    Send command: update, status, restart, pause
   inbox                   Read your messages
   listen                  Real-time event stream
 
-\x1b[1mContributors:\x1b[0m
+\x1b[1m${t("help.sectionContributors")}\x1b[0m
   contributors [limit]    List contributors
   contributor <id>        View contributor detail
   contributor <id> contributions  View contributions
 
-\x1b[1mTasks (agent work protocol):\x1b[0m
+\x1b[1m${t("help.sectionTasks")}\x1b[0m
   ops [--snapshot|--json] Operator diagnostics snapshot
   ops                     Interactive diagnostics console
   ops --watch 5           Refresh operator snapshot every 5 seconds
@@ -665,7 +669,7 @@ function showHelp() {
   task count              JSON task counts (/api/agent/tasks/count)
   task events <id> [N]    Paginated activity events for a task
 
-\x1b[1mConfig:\x1b[0m
+\x1b[1m${t("help.sectionConfig")}\x1b[0m
   config show             Show remote allowlisted config
   config set <path> <value>   Update remote allowlisted config
   config unset <path>         Clear remote allowlisted config field
@@ -673,13 +677,13 @@ function showHelp() {
   config show --local     Show ~/.coherence-network/config.json
   config set <path> <value> --local  Update local config file
 
-\x1b[1mUniversal API (full coverage):\x1b[0m
+\x1b[1m${t("help.sectionUniversal")}\x1b[0m
   rest coverage           Canonical route count + proof JSON
   rest GET /api/...       Raw authenticated GET (any path)
   rest POST /api/... --body '{"k":"v"}'   Raw POST/PATCH/PUT/DELETE
   rest ... -q limit=10 -H "X-Custom: 1"   Query + extra headers
 
-\x1b[1mAgent pipeline:\x1b[0m
+\x1b[1m${t("help.sectionAgentPipeline")}\x1b[0m
   agent                   Status report (default)
   agent route [type]      Routing hint for task_type (default impl)
   agent execute <id>      POST execute (set AGENT_EXECUTE_TOKEN)
@@ -687,30 +691,30 @@ function showHelp() {
   agent smart-reap        Preview; agent smart-reap run
   agent metrics|issues|effectiveness|...  (see agent.mjs)
 
-\x1b[1mAssets:\x1b[0m
+\x1b[1m${t("help.sectionAssets")}\x1b[0m
   assets [limit]          List assets
   asset <id>              View asset detail
   asset create <type> <desc>  Create an asset
 
-\x1b[1mNews:\x1b[0m
+\x1b[1m${t("help.sectionNews")}\x1b[0m
   news                    News feed
   news trending           Trending news
   news sources            List news sources
   news source add <url> <name>  Add a news source
   news resonance [contributor]  News resonance
 
-\x1b[1mTreasury:\x1b[0m
+\x1b[1m${t("help.sectionTreasury")}\x1b[0m
   treasury                Treasury overview
   treasury deposits <id>  Deposits for contributor
   treasury deposit <amt> <asset>  Make a deposit
 
-\x1b[1mLineage:\x1b[0m
+\x1b[1m${t("help.sectionLineage")}\x1b[0m
   lineage [limit]         Value lineage links
   lineage <id>            View lineage link
   lineage <id> valuation  Link valuation
   lineage <id> payout <amt>  Payout preview
 
-\x1b[1mEdge Navigation:\x1b[0m
+\x1b[1m${t("help.sectionEdge")}\x1b[0m
   edges <id>              List all edges for an entity (alias: edg)
   edg <id>                Shorthand alias for cc edges
   edges <id> --type <t>  Filter edges by relationship type
@@ -718,39 +722,39 @@ function showHelp() {
   edge create <from> <type> <to>  Create a typed edge
   edge delete <edge-id>   Delete an edge
 
-\x1b[1mGovernance:\x1b[0m
+\x1b[1m${t("help.sectionGovernance")}\x1b[0m
   governance              List change requests
   governance <id>         View change request
   governance vote <id> <yes|no>  Vote on change request
   governance propose <title> <desc>  Create proposal
 
-\x1b[1mServices:\x1b[0m
+\x1b[1m${t("help.sectionServices")}\x1b[0m
   services                List services
   service <id>            View service detail
   services health         Services health check
   services deps           Service dependencies
 
-\x1b[1mFriction:\x1b[0m
+\x1b[1m${t("help.sectionFriction")}\x1b[0m
   friction                Friction report
   friction events [limit] Friction events
   friction categories     Friction categories
 
-\x1b[1mProviders:\x1b[0m
+\x1b[1m${t("help.sectionProviders")}\x1b[0m
   providers               List providers
   providers stats         Provider statistics
 
-\x1b[1mTraceability:\x1b[0m
+\x1b[1m${t("help.sectionTraceability")}\x1b[0m
   trace                   Traceability overview
   trace coverage          Traceability coverage
   trace idea <id>         Trace an idea
   trace spec <id>         Trace a spec
 
-\x1b[1mAuth:\x1b[0m
+\x1b[1m${t("help.sectionAuth")}\x1b[0m
   login merly             Log into Merly (browser OAuth)
   logout merly            Clear Merly session
   auth status [--json]    Show auth + DIF key status
 
-\x1b[1mDIF:\x1b[0m
+\x1b[1m${t("help.sectionDif")}\x1b[0m
   dif verify --language <lang> --code <code> | --file <path>
   dif key ensure          Bootstrap DIF key from Merly
   dif key status          Show DIF key + Merly auth status
@@ -774,7 +778,7 @@ function showHelp() {
    onboarding session      Get contributor profile from session token
    onboarding upgrade      Upgrade trust level to verified (stub)
 
-\x1b[1mGlobal flags:\x1b[0m
+\x1b[1m${t("help.sectionGlobalFlags")}\x1b[0m
   --workspace <id>        Scope commands to a specific workspace (overrides config)
   --api-url <url>         Override the API origin (or set COHERENCE_API_URL env var)
   --api-key <key>         Override the API key (or set COHERENCE_API_KEY env var)
@@ -782,7 +786,7 @@ function showHelp() {
   --json                  Machine-readable JSON output (auto-enabled when piped)
   --no-json               Force human-readable output even when piped
 
-\x1b[1mEnvironment variables:\x1b[0m
+\x1b[1m${t("help.sectionEnvVars")}\x1b[0m
   COHERENCE_API_URL       API origin (default: ${hubUrl})
   COHERENCE_API_KEY       API key for write operations
   COHERENCE_TIMEOUT_MS    Request timeout in milliseconds (default: 12000)

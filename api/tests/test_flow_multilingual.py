@@ -483,6 +483,84 @@ def test_glossary_preserves_image_syntax():
     assert "hüten" in out
 
 
+# ---------------------------------------------------------------------------
+# Localized API error messages
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_concept_not_found_localized_via_query_lang():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/concepts/does-not-exist?lang=de")
+        assert r.status_code == 404
+        # German message for concept_not_found
+        assert "Begriff 'does-not-exist' nicht gefunden" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_concept_not_found_localized_via_accept_language():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get(
+            "/api/concepts/does-not-exist",
+            headers={"accept-language": "es-ES,es;q=0.9,en;q=0.8"},
+        )
+        assert r.status_code == 404
+        assert "no encontrado" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_unsupported_locale_localized():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = await _create_concept(c, "bad-lang")
+        r = await c.post(
+            f"/api/concepts/{cid}/views",
+            json={
+                "lang": "zz",
+                "content_title": "x",
+                "author_type": "original_human",
+            },
+        )
+        assert r.status_code == 400
+        # Without Accept-Language, default is English
+        assert "Unsupported locale 'zz'" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_spec_list_honors_lang():
+    """The spec-registry list endpoint substitutes title/summary from spec views."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # Create a spec entry directly
+        spec_id = f"test-spec-{uuid4().hex[:6]}"
+        r = await c.post(
+            "/api/spec-registry",
+            json={
+                "spec_id": spec_id,
+                "title": "English Spec Title",
+                "summary": "English spec summary",
+            },
+            headers={"X-API-Key": "dev-key"},
+        )
+        assert r.status_code == 201, r.text
+
+        # Write a German view for it via the generic entity-views endpoint
+        r = await c.post(
+            f"/api/entity-views/spec/{spec_id}",
+            json={
+                "lang": "de",
+                "content_title": "Deutscher Entwurfs-Titel",
+                "content_description": "Deutsche Zusammenfassung",
+                "author_type": "original_human",
+            },
+        )
+        assert r.status_code == 200, r.text
+
+        # Listing with ?lang=de should substitute
+        r = await c.get("/api/spec-registry?lang=de")
+        assert r.status_code == 200
+        by_id = {s["spec_id"]: s for s in r.json() if s["spec_id"] == spec_id}
+        assert spec_id in by_id
+        assert by_id[spec_id]["title"] == "Deutscher Entwurfs-Titel"
+
+
 def test_register_default_prefers_libretranslate_without_key(monkeypatch):
     """With no COHERENCE_TRANSLATOR set and no anthropic key, installs LibreTranslate."""
     translator_service.set_backend(None)

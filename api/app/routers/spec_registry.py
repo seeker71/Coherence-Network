@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from app.middleware.auth import require_api_key
 from app.models.spec_registry import SpecRegistryCreate, SpecRegistryEntry, SpecRegistryUpdate
@@ -22,9 +22,28 @@ async def list_specs(
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     workspace_id: str | None = Query(None, description="Filter by owning workspace. Defaults to all workspaces."),
+    lang: str | None = Query(None, description="Target language view. When set and a canonical spec view exists, title/summary come from the view."),
 ) -> list[SpecRegistryEntry]:
     response.headers["x-total-count"] = str(spec_registry_service.count_specs(workspace_id=workspace_id))
-    return spec_registry_service.list_specs(limit=limit, offset=offset, workspace_id=workspace_id)
+    items = spec_registry_service.list_specs(limit=limit, offset=offset, workspace_id=workspace_id)
+    return _apply_spec_lang(items, lang)
+
+
+def _apply_spec_lang(items: list[SpecRegistryEntry], lang: str | None) -> list[SpecRegistryEntry]:
+    from app.services import translator_service
+    from app.services import translation_cache_service as _tcache
+    if not lang or not translator_service.is_supported(lang) or lang == translator_service.DEFAULT_LOCALE:
+        return items
+    for spec in items:
+        rec = _tcache.canonical_view("spec", spec.spec_id, lang)
+        if rec and rec.content_title:
+            spec.title = rec.content_title
+        if rec and rec.content_description:
+            try:
+                spec.summary = rec.content_description
+            except Exception:
+                pass
+    return items
 
 
 @router.get("/spec-registry/cards", summary="List Spec Cards")
@@ -62,11 +81,16 @@ async def list_spec_cards(
 
 
 @router.get("/spec-registry/{spec_id}", response_model=SpecRegistryEntry, summary="Get Spec")
-async def get_spec(spec_id: str) -> SpecRegistryEntry:
+async def get_spec(
+    spec_id: str,
+    request: Request,
+    lang: str | None = Query(None, description="Target language view for spec title/summary."),
+) -> SpecRegistryEntry:
+    from app.services.localized_errors import caller_lang, localize
     found = spec_registry_service.get_spec(spec_id)
     if found is None:
-        raise HTTPException(status_code=404, detail="Spec not found")
-    return found
+        raise HTTPException(status_code=404, detail=localize("spec_not_found", caller_lang(request, lang), id=spec_id))
+    return _apply_spec_lang([found], lang)[0]
 
 
 @router.post("/spec-registry", response_model=SpecRegistryEntry, status_code=201, summary="Create Spec")

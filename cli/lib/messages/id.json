@@ -1,0 +1,55 @@
+{
+  "help": {
+    "tagline": "CLI Coherence Network",
+    "usage": "Penggunaan:",
+    "usageLine": "cc <perintah> [argumen]",
+    "sectionExplore": "Jelajahi:",
+    "sectionContribute": "Ikut serta:",
+    "sectionIdentity": "Identitas:",
+    "sectionFederation": "Federasi:",
+    "sectionContributors": "Penyumbang:",
+    "sectionTasks": "Tugas (protokol kerja agen):",
+    "sectionConfig": "Konfigurasi:",
+    "sectionUniversal": "API universal (cakupan penuh):",
+    "sectionAgentPipeline": "Bengkel agen:",
+    "sectionAssets": "Karya:",
+    "sectionNews": "Berita:",
+    "sectionTreasury": "Perbendaharaan:",
+    "sectionLineage": "Silsilah nilai:",
+    "sectionEdge": "Navigasi tepi:",
+    "sectionGovernance": "Tata kelola:",
+    "sectionServices": "Layanan:",
+    "sectionFriction": "Gesekan:",
+    "sectionProviders": "Penyedia:",
+    "sectionTraceability": "Keterlacakan:",
+    "sectionAuth": "Otentikasi:",
+    "sectionDif": "DIF:",
+    "sectionMarketplace": "Pasar:",
+    "sectionGraph": "Graf:",
+    "sectionOnboarding": "Masuk:",
+    "sectionGlobalFlags": "Bendera global:",
+    "sectionEnvVars": "Variabel lingkungan:",
+    "hubLine": "Simpul: {url}",
+    "langFlagDescription": "--lang <kode>  Menimpa bahasa CLI hanya untuk pemanggilan ini (en|de|es|id)"
+  },
+  "status": {
+    "ok": "OK",
+    "error": "Kesalahan",
+    "warning": "Peringatan",
+    "loading": "Memuat…",
+    "done": "Selesai"
+  },
+  "errors": {
+    "networkFailed": "Permintaan jaringan gagal: {reason}",
+    "notAuthenticated": "Belum otentikasi. Jalankan: cc setup",
+    "unknownCommand": "Perintah tidak dikenal: {command}. Jalankan: cc help",
+    "missingArg": "Argumen tidak ada: {arg}",
+    "badRequest": "Permintaan salah: {reason}"
+  },
+  "common": {
+    "yes": "ya",
+    "no": "tidak",
+    "none": "tidak ada",
+    "unknown": "tidak diketahui"
+  }
+}
