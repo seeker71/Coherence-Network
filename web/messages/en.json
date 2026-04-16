@@ -188,6 +188,19 @@
     "loading": "Loading messages...",
     "noMessages": "No messages found."
   },
+  "tasks": {
+    "workView": "Work view",
+    "title": "Work That Is Moving",
+    "statCards": "Work cards in view",
+    "statReady": "Ready to start",
+    "statInProgress": "In progress",
+    "statAttention": "Needs attention",
+    "statFinished": "Finished",
+    "activeNow": "Active Now",
+    "recentActivity": "Recent Activity",
+    "selectedCard": "Selected Work Card",
+    "loadingCards": "Loading work cards…"
+  },
   "invest": {
     "title": "Garden of Ideas",
     "lede": "Every idea you nurture grows into real code. Your attention is water — direct it toward the seeds you believe in most.",

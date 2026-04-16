@@ -188,6 +188,19 @@
     "loading": "Nachrichten werden geladen …",
     "noMessages": "Keine Nachrichten gefunden."
   },
+  "tasks": {
+    "workView": "Arbeits-Ansicht",
+    "title": "Was sich gerade bewegt",
+    "statCards": "Arbeitskarten sichtbar",
+    "statReady": "Bereit zu beginnen",
+    "statInProgress": "In Arbeit",
+    "statAttention": "Braucht Aufmerksamkeit",
+    "statFinished": "Abgeschlossen",
+    "activeNow": "Gerade aktiv",
+    "recentActivity": "Jüngste Aktivität",
+    "selectedCard": "Ausgewählte Arbeitskarte",
+    "loadingCards": "Arbeitskarten werden geladen …"
+  },
   "invest": {
     "title": "Garten der Ideen",
     "lede": "Jede Idee, die du nährst, wächst zu echtem Code. Deine Aufmerksamkeit ist Wasser – leite sie zu den Samen, an die du am meisten glaubst.",

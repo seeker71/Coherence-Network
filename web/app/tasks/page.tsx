@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 
 import { useLiveRefresh } from "@/lib/live_refresh";
 import { withWorkspaceScope, readActiveWorkspaceFromCookie } from "@/lib/workspace";
+import { useT } from "@/components/MessagesProvider";
 
 import { EvidenceTrail } from "./EvidenceTrail";
 import { TasksListSection } from "./TasksListSection";
@@ -58,6 +59,7 @@ function elapsed(timestamp: string): string {
 }
 
 function TasksPageContent() {
+  const t = useT();
   const searchParams = useSearchParams();
   const [rows, setRows] = useState<AgentTask[]>([]);
   const [totalTasks, setTotalTasks] = useState<number>(0);
@@ -320,8 +322,8 @@ function TasksPageContent() {
     <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-7xl space-y-4">
         <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 sm:p-7 space-y-3">
-          <p className="text-sm text-muted-foreground">Work view</p>
-          <h1 className="text-3xl md:text-4xl font-light tracking-tight">Work That Is Moving</h1>
+          <p className="text-sm text-muted-foreground">{t("tasks.workView")}</p>
+          <h1 className="text-3xl md:text-4xl font-light tracking-tight">{t("tasks.title")}</h1>
           <p className="max-w-3xl text-sm text-muted-foreground sm:text-base">
             See what is active, what is blocked, what finished recently, and open one work card when you need to update it.
           </p>
@@ -346,23 +348,23 @@ function TasksPageContent() {
 
         <section className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-            <p className="text-muted-foreground">Work cards in view</p>
+            <p className="text-muted-foreground">{t("tasks.statCards")}</p>
             <p className="text-2xl font-light text-primary">{filteredRows.length}</p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-            <p className="text-muted-foreground">Ready to start</p>
+            <p className="text-muted-foreground">{t("tasks.statReady")}</p>
             <p className="text-2xl font-light text-primary">{readyCount}</p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-            <p className="text-muted-foreground">In progress</p>
+            <p className="text-muted-foreground">{t("tasks.statInProgress")}</p>
             <p className="text-2xl font-light text-primary">{activeCount}</p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-            <p className="text-muted-foreground">Needs attention</p>
+            <p className="text-muted-foreground">{t("tasks.statAttention")}</p>
             <p className="text-2xl font-light text-primary">{blockedCount}</p>
           </div>
           <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-1">
-            <p className="text-muted-foreground">Finished</p>
+            <p className="text-muted-foreground">{t("tasks.statFinished")}</p>
             <p className="text-2xl font-light text-primary">{finishedCount}</p>
           </div>
         </section>
@@ -374,7 +376,7 @@ function TasksPageContent() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400/60" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-400" />
               </span>
-              <h2 className="text-lg font-medium">Active Now</h2>
+              <h2 className="text-lg font-medium">{t("tasks.activeNow")}</h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {activeTasks.map((task) => (
@@ -410,7 +412,7 @@ function TasksPageContent() {
 
         {recentActivity.length > 0 && !taskIdFilter && (
           <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-3">
-            <h2 className="text-lg font-medium">Recent Activity</h2>
+            <h2 className="text-lg font-medium">{t("tasks.recentActivity")}</h2>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {recentActivity.slice().reverse().map((event, i) => (
                 <div key={event.timestamp + i} className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -452,12 +454,12 @@ function TasksPageContent() {
 
         {taskIdFilter ? (
           <section className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-5 space-y-2">
-            <h2 className="text-xl font-medium">Selected Work Card</h2>
+            <h2 className="text-xl font-medium">{t("tasks.selectedCard")}</h2>
             <p className="text-sm text-muted-foreground">{selectedSummary}</p>
           </section>
         ) : null}
 
-        {status === "loading" && <p className="text-muted-foreground">Loading work cards…</p>}
+        {status === "loading" && <p className="text-muted-foreground">{t("tasks.loadingCards")}</p>}
         {status === "error" && <p className="text-destructive">Error: {error}</p>}
 
         {status === "ok" && (
@@ -498,17 +500,20 @@ function TasksPageContent() {
   );
 }
 
+function TasksLoadingFallback() {
+  const t = useT();
+  return (
+    <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-7xl">
+        <p className="text-muted-foreground">{t("tasks.loadingCards")}</p>
+      </div>
+    </main>
+  );
+}
+
 export default function TasksPage() {
   return (
-    <Suspense
-      fallback={
-        <main className="min-h-screen px-4 pb-8 pt-6 sm:px-6 lg:px-8">
-          <div className="mx-auto w-full max-w-7xl">
-            <p className="text-muted-foreground">Loading work cards…</p>
-          </div>
-        </main>
-      }
-    >
+    <Suspense fallback={<TasksLoadingFallback />}>
       <TasksPageContent />
     </Suspense>
   );
