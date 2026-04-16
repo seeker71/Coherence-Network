@@ -87,4 +87,4 @@ Fifty people living with intention need only one to two kilowatt-hours per perso
 - How do you design an energy system that a community can maintain for 30 years without depending on any single person's expertise?
 
 ## Connected Frequencies
-→ lc-nourishing, lc-land, lc-v-shelter-organism, lc-v-living-spaces, lc-instruments, lc-circulation, lc-attuned-spaces
+→ lc-nourishing, lc-land, lc-v-shelter-organism, lc-v-living-spaces, lc-instruments, lc-circulation, lc-attuned-spaces, lc-economy, lc-field-sensing, lc-nervous-system

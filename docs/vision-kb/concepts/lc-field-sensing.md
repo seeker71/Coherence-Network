@@ -72,4 +72,4 @@ These are not questions to answer but questions to live inside:
 
 ## Connected Frequencies
 
-→ lc-vitality, lc-sensing
+→ lc-vitality, lc-sensing, lc-nervous-system, lc-energy, lc-economy, lc-circulation, lc-land, lc-nourishment

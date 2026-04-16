@@ -12,6 +12,7 @@ Use this pack when generating new vision images that need to show both:
 - people actively using the space, not empty architectural rendering
 - transformation is legible through use, warmth, and relationship
 - city, urban, suburban, and rural contexts should all feel invitational
+- when possible, show transformed and scratch-built variants as a pair so the contrast is felt before it is explained
 
 ## City
 

@@ -2,10 +2,17 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
+import type { Concept, Edge, LCConcept } from "@/lib/types/vision";
+import { ConnectedConcepts } from "../[conceptId]/_components/ConnectedConcepts";
+import { EnergyContributors } from "../[conceptId]/_components/EnergyContributors";
+import { ReaderPresence } from "../[conceptId]/_components/ReaderPresence";
+import { ResonantAssets } from "../[conceptId]/_components/ResonantAssets";
 import { StoryContent } from "../[conceptId]/_components/StoryContent";
+import { WorldSignals } from "../[conceptId]/_components/WorldSignals";
 import { LiveProof } from "./_components/LiveProof";
 
 export const dynamic = "force-dynamic";
+const CONCEPT_ID = "lc-economy";
 
 export const metadata: Metadata = {
   title: "The Living Economy — The Living Collective",
@@ -100,10 +107,27 @@ const RENAMES = [
   ["Savings", "Vital buffer"],
 ];
 
-async function fetchConcept() {
+const VISUAL_DOORS = [
+  {
+    label: "Repurposed now",
+    title: "An existing shell drops extraction logic",
+    image: "/visuals/transform-neighborhood.png",
+    body:
+      "A storefront, floor, hall, or studio keeps its walls and changes its social metabolism: less checkout, more repair, nourishment, visibility, and shared contribution.",
+  },
+  {
+    label: "Pure imagination",
+    title: "The economy as architecture from the beginning",
+    image: "/visuals/generated/lc-economy-0.jpg",
+    body:
+      "When the field is free to build from first principles, creation, hospitality, vitality buffers, and beauty become visible in the structure itself, not added later as programs.",
+  },
+];
+
+async function fetchConcept(): Promise<Concept | null> {
   const base = getApiBase();
   try {
-    const res = await fetch(`${base}/api/concepts/lc-economy`, { next: { revalidate: 30 } });
+    const res = await fetch(`${base}/api/concepts/${CONCEPT_ID}`, { next: { revalidate: 30 } });
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -111,7 +135,21 @@ async function fetchConcept() {
   }
 }
 
-async function fetchAllLC() {
+async function fetchEdges(): Promise<Edge[]> {
+  const base = getApiBase();
+  try {
+    const res = await fetch(`${base}/api/concepts/${CONCEPT_ID}/edges`, {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchAllLC(): Promise<LCConcept[]> {
   const base = getApiBase();
   try {
     const res = await fetch(`${base}/api/concepts/domain/living-collective?limit=200`, {
@@ -126,12 +164,17 @@ async function fetchAllLC() {
 }
 
 export default async function EconomyPage() {
-  const [concept, allLC] = await Promise.all([fetchConcept(), fetchAllLC()]);
+  const [concept, edges, allLC] = await Promise.all([fetchConcept(), fetchEdges(), fetchAllLC()]);
 
   const nameMap: Record<string, string> = {};
   for (const c of allLC) {
     if (c.id && c.name) nameMap[c.id] = c.name;
   }
+
+  const lcEdges = edges.filter((e) => e.from.startsWith("lc-") || e.to.startsWith("lc-"));
+  const outgoing = lcEdges.filter((e) => e.from === CONCEPT_ID);
+  const incoming = lcEdges.filter((e) => e.to === CONCEPT_ID);
+  const pageTitle = concept?.name || "The Living Economy";
 
   return (
     <main>
@@ -148,6 +191,9 @@ export default async function EconomyPage() {
             creation economy where meals, repair, care work, hosting, design, code, land tending,
             and wisdom all become visible contributions, while basics stop being used as leverage.
           </p>
+          <div className="mt-4 flex justify-center">
+            <ReaderPresence conceptId={CONCEPT_ID} />
+          </div>
           <div className="mt-8 flex flex-wrap justify-center gap-3 text-sm">
             <Link
               href="/vision/realize"
@@ -156,8 +202,14 @@ export default async function EconomyPage() {
               See space transformations
             </Link>
             <Link
-              href="/energy-flow"
+              href="/vision/lc-energy"
               className="rounded-full border border-teal-500/30 bg-teal-500/10 px-4 py-2 text-teal-200 transition-colors hover:border-teal-400/40 hover:text-teal-100"
+            >
+              Trace energy across forms
+            </Link>
+            <Link
+              href="/energy-flow"
+              className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-emerald-200 transition-colors hover:border-emerald-400/40 hover:text-emerald-100"
             >
               Sense live energy
             </Link>
@@ -177,7 +229,7 @@ export default async function EconomyPage() {
             The Living Collective
           </Link>
           <span className="text-stone-700">/</span>
-          <span className="text-stone-300">The Living Economy</span>
+          <span className="text-stone-300">{pageTitle}</span>
         </nav>
 
         <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -209,6 +261,42 @@ export default async function EconomyPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        <section className="mt-12 space-y-8">
+          <div className="space-y-3">
+            <p className="text-sm uppercase tracking-[0.28em] text-stone-500">See it quickly</p>
+            <h2 className="text-3xl font-extralight text-stone-200">The economy also needs two visual doors</h2>
+            <p className="max-w-3xl text-stone-400 leading-relaxed">
+              One image shows what can be repurposed now inside existing shells. The other protects
+              the uncompressed horizon so reuse does not become another name for compromise.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {VISUAL_DOORS.map((item) => (
+              <article
+                key={item.label}
+                className="overflow-hidden rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20"
+              >
+                <div className="relative aspect-[16/10] overflow-hidden">
+                  <Image
+                    src={item.image}
+                    alt={item.title}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent" />
+                </div>
+                <div className="space-y-3 p-5">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">{item.label}</p>
+                  <h3 className="text-xl font-light text-white">{item.title}</h3>
+                  <p className="text-sm leading-relaxed text-stone-400">{item.body}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -312,10 +400,17 @@ export default async function EconomyPage() {
         </section>
 
         {concept?.story_content && (
-          <div className="mt-12">
-            <StoryContent content={concept.story_content} conceptId="lc-economy" nameMap={nameMap} />
+          <div className="mt-12 max-w-3xl">
+            <StoryContent content={concept.story_content} conceptId={CONCEPT_ID} nameMap={nameMap} />
           </div>
         )}
+
+        <div className="mt-12 max-w-3xl space-y-8">
+          <EnergyContributors conceptId={CONCEPT_ID} />
+          <ResonantAssets conceptId={CONCEPT_ID} />
+          <WorldSignals conceptId={CONCEPT_ID} />
+          <ConnectedConcepts outgoing={outgoing} incoming={incoming} nameMap={nameMap} mode="full" />
+        </div>
 
         <section className="mt-12 rounded-2xl border border-stone-800/40 bg-stone-900/30 p-6 space-y-3">
           <h2 className="text-lg font-light text-stone-300">First organs live</h2>
