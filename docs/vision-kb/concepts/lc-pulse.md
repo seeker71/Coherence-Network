@@ -2,7 +2,7 @@
 id: lc-pulse
 hz: 432
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # The Pulse
@@ -111,13 +111,10 @@ At 200, it buds — the field has reached its natural limit and a new community 
 
 These are not questions to answer but questions to live inside:
 
-Can you feel it right now, reading this? Where in your body? Is it the memory of a time you felt the pulse — or is it the pulse itself, reaching through words on a screen?
-
-What's the smallest number of people where the pulse becomes undeniable? We think it's 8-12 — the size of a fire circle, the number your nervous system can track simultaneously. But maybe it's 2. Maybe every real conversation between two present humans IS the pulse.
-
-Is the pulse something humans create, or something we stop blocking? The research suggests the latter. Heartbeats synchronize naturally when people are in proximity. The default state is coherence. It takes active effort — distraction, disconnection, performance — to prevent it.
-
-Can the pulse of one community reach another across distance? The network is our experiment. Fifty communities connected through attention, through shared celebrations, through CC flowing between them like blood. If the medium is attention and attention has no spatial limit — then the pulse has no spatial limit. We're building the instrument to find out.
+- Can you feel it right now, reading this? Where in your body? Is it the memory of a time you felt the pulse — or is it the pulse itself, reaching through words on a screen?
+- What's the smallest number of people where the pulse becomes undeniable? We think it's 8-12 — the size of a fire circle, the number your nervous system can track simultaneously. But maybe it's 2. Maybe every real conversation between two present humans IS the pulse.
+- Is the pulse something humans create, or something we stop blocking? The research suggests the latter. Heartbeats synchronize naturally when people are in proximity. The default state is coherence. It takes active effort — distraction, disconnection, performance — to prevent it.
+- Can the pulse of one community reach another across distance? The network is our experiment. Fifty communities connected through attention, through shared celebrations, through CC flowing between them like blood. If the medium is attention and attention has no spatial limit — then the pulse has no spatial limit. We're building the instrument to find out.
 
 ## Connected Frequencies
 

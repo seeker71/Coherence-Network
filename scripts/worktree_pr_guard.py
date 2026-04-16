@@ -394,18 +394,15 @@ def _changed_paths_range(base_ref: str, head_ref: str = "HEAD") -> tuple[list[st
     return paths, None
 
 
-def _is_runtime_change(path: str) -> bool:
-    checks = (
-        "api/app/",
-        "api/scripts/",
-        "web/app/",
-        "web/components/",
-        "web/lib/",
-    )
+def _is_maintainability_scoped_change(path: str) -> bool:
+    # The maintainability audit currently measures backend runtime architecture
+    # and function/module complexity under api/app. Web surfaces are covered by
+    # the web build plus runtime verifier, so they should not trigger this API-only gate.
+    checks = ("api/app/",)
     return path.startswith(checks)
 
 
-def _worktree_has_runtime_changes(base_ref: str) -> bool:
+def _worktree_has_maintainability_scoped_changes(base_ref: str) -> bool:
     changed, err = _changed_paths_range(base_ref)
     worktree_changed = _changed_paths_worktree()
     if err:
@@ -413,7 +410,7 @@ def _worktree_has_runtime_changes(base_ref: str) -> bool:
         return True
     all_changed = set(changed)
     all_changed.update(worktree_changed)
-    return any(_is_runtime_change(path) for path in all_changed)
+    return any(_is_maintainability_scoped_change(path) for path in all_changed)
 
 
 def _run_commit_evidence_guard(base_ref: str) -> StepResult:
@@ -598,7 +595,7 @@ def _local_steps(
             ),
         ]
     )
-    if not _worktree_has_runtime_changes(base_ref):
+    if not _worktree_has_maintainability_scoped_changes(base_ref):
         steps = [s for s in steps if s[0] != "maintainability-regression-guard"]
     if require_gh_auth:
         steps.insert(0, ("dev-auth-preflight", "python3 scripts/check_dev_auth.py --json"))

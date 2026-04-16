@@ -2,10 +2,12 @@
 id: lc-w-frequency
 hz: 741
 status: deepening
-updated: 2026-04-14
+updated: 2026-04-16
 ---
 
 # Frequency
+
+> The rate and quality of vibration that lets a being, space, or act be itself. Not branding. Not mood. A real pattern the body can feel.
 
 ## The Feeling
 
@@ -48,6 +50,8 @@ it — to listen. The way a musician listens to the room before
 choosing what to play.
 
 ## The Questions That Live Here
+
+These are questions to tune by, not resolve:
 
 - How do individual frequencies combine into a collective tone?
 - Can frequency be intentionally shifted, or must it always be
