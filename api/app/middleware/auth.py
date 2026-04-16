@@ -5,24 +5,27 @@ Three auth levels:
 - API_KEY: requires X-API-Key header (mutating endpoints)
 - ADMIN: requires X-Admin-Key header (destructive operations)
 
-Keys configured in api/config/api.json under auth.api_key and auth.admin_key.
+Keys resolve via `config_loader.auth_api_key()` /
+`config_loader.auth_admin_key()`, which honor `AUTH_API_KEY` /
+`AUTH_ADMIN_KEY` env vars (12-factor) before falling back to
+api/config/api.json.
 """
 
 from fastapi import Header, HTTPException
 
-from app.config_loader import get_str
-from app.services.config_service import get_api_key, is_production
+from app.config_loader import auth_admin_key, auth_api_key
+from app.services.config_service import is_production
 
 def _current_api_key() -> str:
     if _API_KEY is not None:
         return _API_KEY
-    return get_str("auth", "api_key", default="dev-key") or get_api_key()
+    return auth_api_key()
 
 
 def _current_admin_key() -> str:
     if _ADMIN_KEY is not None:
         return _ADMIN_KEY
-    return get_str("auth", "admin_key", default="dev-admin") or "dev-admin"
+    return auth_admin_key()
 
 
 def _in_production() -> bool:

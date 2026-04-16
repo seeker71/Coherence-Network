@@ -72,11 +72,19 @@ def _outstanding() -> float:
 def _coherence_score(exchange_rate: float) -> float:
     outstanding = _outstanding()
     if outstanding <= 0:
-        return 1.0  # No CC outstanding means fully backed
+        # Empty treasury is fully backed by definition (every outstanding
+        # credit, all zero of them, has treasury behind it).
+        return 1.0
     return _treasury["treasury_value_usd"] / (outstanding / exchange_rate)
 
 
 def coherence_status(exchange_rate: float) -> str:
+    # An empty treasury is part of the healthy flow: the organism has
+    # minted nothing yet, so there is nothing at risk. Reintegrate the
+    # pre-launch / idle state into "healthy" rather than flagging it as a
+    # warning for being exactly at parity.
+    if _outstanding() <= 0:
+        return "healthy"
     score = _coherence_score(exchange_rate)
     if score < 1.0:
         return "paused"

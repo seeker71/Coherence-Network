@@ -84,9 +84,11 @@ from app.routers import provider_stats
 from app.routers import service_registry_router
 from app.routers import constellation as constellation_router
 from app.routers import vitality as vitality_router
+from app.middleware.attribution import AttributionMiddleware
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.middleware.read_tracking import ReadTrackingMiddleware
 from app.middleware.request_duration import RequestDurationMiddleware
+from app.middleware.request_outcomes import RequestOutcomesMiddleware
 from app.models.runtime import RuntimeEventCreate
 from app.services import runtime_service
 
@@ -528,7 +530,16 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestIDMiddleware)
 app.add_middleware(ReadTrackingMiddleware)
 app.add_middleware(RequestDurationMiddleware, threshold_seconds=1.0)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
+# RequestOutcomesMiddleware sits inside RateLimitMiddleware (added later
+# = outer) so it counts requests that actually reached the route, not
+# ones rejected at the rate-limit layer. Its snapshot is exposed via
+# /api/health for the pulse witness to read.
+app.add_middleware(RequestOutcomesMiddleware)
+app.add_middleware(RateLimitMiddleware)
+# AttributionMiddleware is added LAST so it becomes the outermost middleware
+# in the stack — it populates request.state.contributor_id before the rate
+# limiter runs, so Phase 2 can trivially bucket by contributor.
+app.add_middleware(AttributionMiddleware)
 
 # Initialize graph store based on config
 if get_bool("api", "testing", False) or get_str("server", "environment", "development") == "test":
@@ -619,6 +630,10 @@ app.include_router(memberships_router.router, prefix="/api", tags=["memberships"
 app.include_router(lenses.router, prefix="/api", tags=["lenses"])
 app.include_router(spec_registry.router, prefix="/api", tags=["spec-registry"])
 app.include_router(coherence.router, prefix="/api", tags=["coherence"])
+from app.routers import practice as practice_router
+from app.routers import sensings as sensings_router
+app.include_router(practice_router.router, prefix="/api", tags=["practice"])
+app.include_router(sensings_router.router, prefix="/api", tags=["sensings"])
 app.include_router(governance.router, prefix="/api", tags=["governance"])
 app.include_router(federation.router, prefix="/api", tags=["federation"])
 app.include_router(openclaw_node_bridge.router, prefix="/api", tags=["federation"])
@@ -706,6 +721,34 @@ app.include_router(ui_preferences_router.router)
 # Living Collective interest registration — privacy-first community gathering
 from app.routers import interest as interest_router  # noqa: E402
 app.include_router(interest_router.router, tags=["interest"])
+
+# View tracking — per-contributor view events, trending, discovery chains
+from app.routers import views as views_router  # noqa: E402
+app.include_router(views_router.router, prefix="/api", tags=["views"])
+
+# Wallet integration — connect, verify, manage on-chain wallets
+from app.routers import wallets as wallets_router  # noqa: E402
+app.include_router(wallets_router.router, prefix="/api", tags=["wallets"])
+
+# Reward policies — community-configurable reward formulas
+from app.routers import reward_policies as reward_policies_router  # noqa: E402
+app.include_router(reward_policies_router.router, prefix="/api", tags=["reward-policies"])
+
+# Flow simulator — visualize CC flow, simulate scenarios, sense vitality
+from app.routers import flow_simulator as flow_simulator_router  # noqa: E402
+app.include_router(flow_simulator_router.router, prefix="/api", tags=["flow"])
+
+# Energy sensing — frequencies, harmonies, the organism sees itself
+from app.routers import energy_sensing as energy_sensing_router  # noqa: E402
+app.include_router(energy_sensing_router.router, prefix="/api", tags=["energy"])
+
+# Flow renderer — live energy flow topology for particle visualization
+from app.routers import flow_renderer as flow_renderer_router  # noqa: E402
+app.include_router(flow_renderer_router.router, prefix="/api", tags=["flow"])
+
+# World lens — see the world through concept/contributor/community frequency
+from app.routers import world_lens as world_lens_router  # noqa: E402
+app.include_router(world_lens_router.router, prefix="/api", tags=["world"])
 
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained

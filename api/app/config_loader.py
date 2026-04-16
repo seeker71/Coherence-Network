@@ -1,11 +1,17 @@
 """API configuration loader — single source of truth.
 
-Configuration precedence:
-  1. api/config/api.json
-  2. ~/.coherence-network/config.json
-  3. hard-coded defaults
+Configuration precedence (deep-merged at load time):
+  1. hard-coded defaults from `_default_config()`
+  2. api/config/api.json              (checked-in dev defaults)
+  3. ~/.coherence-network/config.json (deployment overlay)
 
-No environment variables are read for application config.
+No environment variables are read for application config. Production
+containers mount `/root/.coherence-network/config.json` as a read-only
+volume and put their real database URL, API keys, and environment
+string there. Env vars are static at container start, fragmented across
+compose + .env + shell, and opaque to the running body; config files
+are versioned, deep-merged, discoverable on disk, and can be reloaded
+with `reload_config()` without a rebuild. Prefer the config file.
 
 Usage:
     from app.config_loader import api_config, database_url
@@ -507,12 +513,54 @@ def full_config() -> dict[str, Any]:
 
 
 def database_url(service: str | None = None) -> str:
+    """Resolve the database URL for a domain, or the global default.
+
+    Precedence:
+      1. Per-service config override  (config.database_overrides.<service>)
+      2. Global config                (config.database.url)
+      3. Fallback                     (sqlite:///data/coherence.db)
+
+    Production containers set `database.url` in the mounted overlay
+    `/root/.coherence-network/config.json`. Dev uses the sqlite fallback
+    (or overrides in their own user config).
+    """
     config = _load()
     if service:
         override = config.get("database_overrides", {}).get(service)
         if override:
             return str(override)
     return str(config.get("database", {}).get("url", "sqlite:///data/coherence.db"))
+
+
+def server_environment() -> str:
+    """Resolve the server environment name.
+
+    Reads `config.server.environment`, falling back to `"development"`.
+    Production containers set this in the mounted config overlay.
+    Callers that need a boolean use
+    `app.services.config_service.is_production()`, which delegates here.
+    """
+    config = _load()
+    return str(config.get("server", {}).get("environment", "development"))
+
+
+def auth_api_key() -> str:
+    """Resolve the shared API key used by `require_api_key`.
+
+    Reads `config.auth.api_key`, falling back to `"dev-key"`. Production
+    containers set the real key in the mounted config overlay.
+    """
+    config = _load()
+    return str(config.get("auth", {}).get("api_key", "dev-key"))
+
+
+def auth_admin_key() -> str:
+    """Resolve the admin key used for destructive operations.
+
+    Reads `config.auth.admin_key`, falling back to `"dev-admin"`.
+    """
+    config = _load()
+    return str(config.get("auth", {}).get("admin_key", "dev-admin"))
 
 
 def get_float(section: str, key: str, default: float = 0.0) -> float:

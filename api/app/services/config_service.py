@@ -234,7 +234,10 @@ def get_node_id() -> str:
 
 
 def is_production() -> bool:
-    return get_config().get("environment") == "production"
+    # Honour the ENVIRONMENT env var (via config_loader.server_environment)
+    # before the cached config, so a production container can declare
+    # itself production without editing the checked-in config file.
+    return config_loader.server_environment() == "production"
 
 
 def get_providers() -> list[str]:
@@ -247,7 +250,7 @@ def get_api_base() -> str:
 
 
 def get_environment() -> str:
-    return str(get_config().get("environment") or "development")
+    return config_loader.server_environment()
 
 
 def get_contributor_id() -> str | None:

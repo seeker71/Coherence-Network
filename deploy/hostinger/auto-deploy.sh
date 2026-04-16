@@ -37,14 +37,41 @@ fi
 
 git cat-file -e "${TARGET_SHA}^{commit}"
 
-if [[ "$OLD_SHA" == "$TARGET_SHA" ]]; then
-  log "No changes (still at ${OLD_SHA:0:12})"
+# Sense whether the RUNNING API is already at the target SHA. The previous
+# guard only compared the repo's git HEAD to the target and skipped deploy
+# when they matched — but that answered the wrong question. What the field
+# needs to know is whether the CONTAINERS are serving the target code, not
+# whether the filesystem mirrors it. When a manual `git pull` on the VPS
+# advances the repo without rebuilding, subsequent deploys saw "no changes"
+# and never rebuilt, so the running API stayed on the old SHA while the
+# verification step kept failing. This query asks the living container.
+RUNNING_SHA=""
+HEALTH_JSON="$(docker compose -f "$COMPOSE_ROOT/docker-compose.yml" exec -T api \
+    sh -lc 'curl -fsS --max-time 5 http://127.0.0.1:8000/api/health 2>/dev/null' \
+    2>/dev/null || true)"
+if [[ -n "$HEALTH_JSON" ]]; then
+  RUNNING_SHA="$(printf '%s' "$HEALTH_JSON" \
+    | python3 -c 'import sys, json
+try:
+    print((json.loads(sys.stdin.read()).get("deployed_sha") or "").strip())
+except Exception:
+    pass' 2>/dev/null || true)"
+fi
+RUNNING_SHORT="${RUNNING_SHA:0:12}"
+[[ -z "$RUNNING_SHORT" ]] && RUNNING_SHORT="unknown"
+
+if [[ "$OLD_SHA" == "$TARGET_SHA" && "$RUNNING_SHA" == "$TARGET_SHA" ]]; then
+  log "Already flowing at ${TARGET_SHA:0:12} (repo and running API aligned)"
   exit 0
 fi
 
-log "Deploying ${OLD_SHA:0:12} -> ${TARGET_SHA:0:12}"
-git reset --hard "$TARGET_SHA" >/dev/null
-git clean -fd >/dev/null
+if [[ "$OLD_SHA" == "$TARGET_SHA" ]]; then
+  log "Repo aligned at ${TARGET_SHA:0:12} but running API is at ${RUNNING_SHORT} — rebuilding containers"
+else
+  log "Deploying ${OLD_SHA:0:12} -> ${TARGET_SHA:0:12} (running API at ${RUNNING_SHORT})"
+  git reset --hard "$TARGET_SHA" >/dev/null
+  git clean -fd >/dev/null
+fi
 
 python3 - <<PY
 from pathlib import Path
@@ -75,20 +102,40 @@ cd "$COMPOSE_ROOT"
 docker compose build api web >> "$LOG_FILE" 2>&1
 docker compose up -d api web >> "$LOG_FILE" 2>&1
 
-sleep 10
+# Wait for both containers to reach the "running" state in docker compose.
+# The deeper health check is left to the workflow's Verify Public Deployment
+# step, which curls the real public domain through the full request path
+# (Traefik, Cloudflare, TLS). That sensor sees the organism the way every
+# caller sees it and is the truth. Anything we could check here locally is
+# a thinner, redundant version of the same question, and the previous
+# `docker compose exec api curl` shape caught a false failure when curl
+# happened not to be present inside the api container image.
+wait_for_running() {
+  local service="$1"
+  local deadline=$(( $(date +%s) + 180 ))
+  while (( $(date +%s) < deadline )); do
+    local state
+    state="$(docker compose ps --format '{{.Service}} {{.State}}' 2>/dev/null | awk -v s="$service" '$1==s {print $2}')"
+    if [[ "$state" == "running" ]]; then
+      return 0
+    fi
+    sleep 3
+  done
+  return 1
+}
 
-if docker compose exec -T api curl -fsS --max-time 10 http://127.0.0.1:8000/api/health >/dev/null 2>&1; then
-  log "API health OK"
+if wait_for_running api; then
+  log "api container running"
 else
-  log "FAIL: API health check failed after deploy"
+  log "FAIL: api container did not reach running state within 180s"
   exit 1
 fi
 
-if docker compose exec -T web sh -lc 'wget -q -O - http://127.0.0.1:3000/ >/dev/null 2>&1' >/dev/null 2>&1; then
-  log "Web health OK"
+if wait_for_running web; then
+  log "web container running"
 else
-  log "FAIL: web root check failed after deploy"
+  log "FAIL: web container did not reach running state within 180s"
   exit 1
 fi
 
-log "Deploy complete (${TARGET_SHA:0:12})"
+log "Deploy complete (${TARGET_SHA:0:12}) — public health check runs next in CI"

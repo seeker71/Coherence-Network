@@ -60,3 +60,25 @@ export function getApiBase(): string {
   if (isBrowser) return "";
   return DEV_API_URL;
 }
+
+/**
+ * Resolve the base URL for the Pulse Monitor (the external witness).
+ *
+ * Unlike the API, the pulse service lives on its own origin (e.g.
+ * `pulse.coherencycoin.com`) — it is never served through the same-origin
+ * Traefik path. The /pulse page fetches server-side at request time, so
+ * this returns a fully-qualified URL in both server and browser contexts.
+ *
+ * NEXT_PUBLIC_PULSE_URL is honoured everywhere — Next inlines it into the
+ * client bundle at build time, and server components read it at request
+ * time from process.env. An empty or unset value falls through to the
+ * default baked into the public web config; returning "" from both makes
+ * the /pulse page render a muted "witness is quiet" state.
+ */
+export function getPulseBase(): string {
+  const fromEnv =
+    typeof process !== "undefined" && process.env?.NEXT_PUBLIC_PULSE_URL;
+  const configured = (fromEnv && String(fromEnv).trim()) || readPublicWebConfig().pulseBaseUrl;
+  if (!configured) return "";
+  return _stripTrailingSlash(configured.trim());
+}
