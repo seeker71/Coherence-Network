@@ -1,6 +1,6 @@
 """Concepts router — CRUD for the ontology. All data lives in graph DB."""
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
 from typing import Any
 
@@ -11,6 +11,7 @@ from app.services import (
     translation_cache_service as translation_cache,
     translator_service,
 )
+from app.services.localized_errors import caller_lang, localize
 from app.services.translate_service import TranslateLens
 
 router = APIRouter()
@@ -393,7 +394,7 @@ async def update_story(concept_id: str, body: StoryPatch):
 
 
 @router.post("/concepts/{concept_id}/views", summary="Upsert a language view of a concept")
-async def upsert_concept_view(concept_id: str, body: ViewUpsert):
+async def upsert_concept_view(concept_id: str, body: ViewUpsert, request: Request):
     """Upsert a language view for a concept. Every language is equal — this
     endpoint accepts the view ``en``, ``de``, ``es``, ``id`` on the same
     footing. The anchor (freshest human-touched view) is discovered at read
@@ -404,23 +405,23 @@ async def upsert_concept_view(concept_id: str, body: ViewUpsert):
     becomes canonical immediately; any prior canonical row for the same
     (concept, lang) is preserved as superseded so the history is visible.
     """
+    err_lang = caller_lang(request, body.lang if translator_service.is_supported(body.lang) else None)
     if not concept_service.get_concept(concept_id):
-        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+        raise HTTPException(status_code=404, detail=localize("concept_not_found", err_lang, id=concept_id))
     if not translator_service.is_supported(body.lang):
-        raise HTTPException(status_code=400, detail=f"Unsupported locale '{body.lang}'")
+        raise HTTPException(status_code=400, detail=localize("unsupported_locale", err_lang, code=body.lang))
     if body.author_type not in {
         translation_cache.AUTHOR_TYPE_ORIGINAL_HUMAN,
         translation_cache.AUTHOR_TYPE_TRANSLATION_HUMAN,
         translation_cache.AUTHOR_TYPE_TRANSLATION_MACHINE,
     }:
-        raise HTTPException(status_code=400, detail=f"Invalid author_type '{body.author_type}'")
+        raise HTTPException(status_code=400, detail=localize("invalid_author_type", err_lang, type=body.author_type))
 
     if body.author_type != translation_cache.AUTHOR_TYPE_ORIGINAL_HUMAN:
         if not body.translated_from_lang or not body.translated_from_hash:
             raise HTTPException(
                 status_code=400,
-                detail="translated_from_lang and translated_from_hash are required "
-                       "unless author_type is 'original_human'",
+                detail=localize("translated_from_required", err_lang),
             )
 
     rec = translation_cache.write_view(
@@ -521,6 +522,7 @@ async def regenerate_visuals(concept_id: str, force: bool = Query(False, descrip
 async def get_concept(
     concept_id: str,
     background_tasks: BackgroundTasks,
+    request: Request,
     lang: str | None = Query(
         default=None,
         description="Optional language view (en, de, es, id). When set, the concept is "
@@ -545,9 +547,10 @@ async def get_concept(
       "read the anchor in German" if a stale English view is served
     - ``available_langs``: every language that has a canonical view
     """
+    err_lang = caller_lang(request, lang)
     concept = concept_service.get_concept(concept_id)
     if not concept:
-        raise HTTPException(status_code=404, detail=f"Concept '{concept_id}' not found")
+        raise HTTPException(status_code=404, detail=localize("concept_not_found", err_lang, id=concept_id))
 
     views = translation_cache.all_canonical_views("concept", concept_id)
     anchor = translation_cache.find_anchor(views)
@@ -556,7 +559,7 @@ async def get_concept(
     if not views:
         if lang and lang != translator_service.DEFAULT_LOCALE:
             if not translator_service.is_supported(lang):
-                raise HTTPException(status_code=400, detail=f"Unsupported locale '{lang}'")
+                raise HTTPException(status_code=400, detail=localize("unsupported_locale", err_lang, code=lang))
             concept["language_meta"] = {
                 "lang": lang,
                 "is_anchor": False,
@@ -570,7 +573,7 @@ async def get_concept(
     # Decide which view to return
     target_lang = lang or (anchor.lang if anchor else translator_service.DEFAULT_LOCALE)
     if lang and not translator_service.is_supported(lang):
-        raise HTTPException(status_code=400, detail=f"Unsupported locale '{lang}'")
+        raise HTTPException(status_code=400, detail=localize("unsupported_locale", err_lang, code=lang))
 
     chosen = next((v for v in views if v.lang == target_lang), None)
     pending = chosen is None
