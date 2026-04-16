@@ -436,3 +436,7 @@ python3 scripts/validate_spec_quality.py specs/public-verification-framework.md
 - **Assumption**: Read counts in PostgreSQL are authoritative. If reads are lost before database write, the hash chain reflects the loss honestly (which is the correct behavior -- the chain verifies what the platform recorded, not what happened in reality).
 - **Assumption**: Arweave permanent storage costs remain economically viable at <$0.10/week for weekly snapshots. Current pricing supports this for snapshots up to ~100KB.
 - **Risk**: Ed25519 private key compromise would allow forged snapshots. Mitigation: key stored in platform keystore (mode 600), key rotation supported, all historical snapshots on Arweave are immutable regardless of key status.
+
+## Known Gaps and Follow-up Tasks
+
+- None yet — follow-up gaps will be recorded here as implementation proceeds.

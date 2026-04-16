@@ -630,3 +630,7 @@ python3 scripts/validate_spec_quality.py specs/financial-integration.md
 - **KYC provider selection**: Persona vs Jumio vs Onfido. Decision needed before Phase 4. Evaluation criteria: price per verification, global ID coverage, API integration complexity, data retention policies.
 - **KYC threshold**: $2,000/30-day is the initial proposal. May need adjustment based on legal counsel for specific jurisdictions.
 - **Spread destination**: Current spec burns spread CC (deflationary). Alternative: route spread to platform operations fund. Decision impacts tokenomics.
+
+## Known Gaps and Follow-up Tasks
+
+- None yet — follow-up gaps will be recorded here as implementation proceeds.
