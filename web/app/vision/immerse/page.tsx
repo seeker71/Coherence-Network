@@ -26,6 +26,7 @@ type VisualSource = {
   file: string;
   title: string;
   category: string;
+  folder?: "generated";
 };
 
 type ImageEntry = {
@@ -96,10 +97,8 @@ const ALL_VISUALS: VisualSource[] = [
   { file: "space-creation-arc-overview.png", title: "Creation Arc", category: "space" },
   { file: "space-movement-ground.png", title: "Movement Ground", category: "space" },
   { file: "v-shelter-organism.png", title: "Shelter as Skin", category: "space" },
-  { file: "transform-apartment.png", title: "Apartment Transformed", category: "space" },
-  { file: "transform-neighborhood.png", title: "Neighborhood", category: "space" },
-  { file: "transform-suburb.png", title: "Suburb", category: "space" },
-  { file: "transform-village.png", title: "Village", category: "space" },
+  { file: "transform-apartment.png", title: "City Apartment Commons", category: "transform" },
+  { file: "transform-neighborhood.png", title: "Urban Block Host", category: "transform" },
   { file: "community-auroville.png", title: "Auroville", category: "community" },
   { file: "community-damanhur.png", title: "Damanhur", category: "community" },
   { file: "community-earthship.png", title: "Earthship", category: "community" },
@@ -121,10 +120,84 @@ const ALL_VISUALS: VisualSource[] = [
   { file: "v-inclusion.png", title: "Inclusion", category: "scale" },
   { file: "resource-solar-array.png", title: "Solar Array", category: "scale" },
   { file: "resource-creation-arc-full.png", title: "Creation Arc Full", category: "scale" },
+  { file: "lc-space-0.jpg", title: "City Vertical Hearth", category: "space", folder: "generated" },
+  { file: "lc-space-story-0.jpg", title: "Urban Commons Interior", category: "space", folder: "generated" },
+  { file: "lc-attuned-spaces-0.jpg", title: "Suburban Commons Lane", category: "transform", folder: "generated" },
+  { file: "lc-attuned-spaces-1.jpg", title: "Shared Porch Spine", category: "transform", folder: "generated" },
+  { file: "lc-attuned-spaces-story-0.jpg", title: "Suburban Evening Commons", category: "transform", folder: "generated" },
+  { file: "lc-v-living-spaces-0.jpg", title: "Suburban Village Cluster", category: "space", folder: "generated" },
+  { file: "lc-v-living-spaces-story-0.jpg", title: "Shared Village Rhythm", category: "space", folder: "generated" },
+  { file: "lc-v-shelter-organism-story-0.jpg", title: "Rural Shelter Organism", category: "space", folder: "generated" },
 ];
+
+const FAST_TRANSFORMATION_FILES = new Set([
+  "transform-apartment.png",
+  "transform-neighborhood.png",
+  "generated/lc-attuned-spaces-0.jpg",
+  "generated/lc-attuned-spaces-1.jpg",
+  "generated/lc-attuned-spaces-story-0.jpg",
+  "community-earthship.png",
+  "community-findhorn.png",
+  "community-auroville.png",
+  "nature-architecture-blend.png",
+  "space-hearth-interior.png",
+  "life-shared-meal.png",
+  "life-creation-workshop.png",
+]);
+
+const CITY_CONTEXT_FILES = new Set([
+  "transform-apartment.png",
+  "generated/lc-space-0.jpg",
+  "generated/lc-space-story-0.jpg",
+  "life-nomad-arrival.png",
+  "life-morning-circle.png",
+  "space-hearth-interior.png",
+]);
+
+const URBAN_CONTEXT_FILES = new Set([
+  "transform-neighborhood.png",
+  "generated/lc-space-story-0.jpg",
+  "life-shared-meal.png",
+  "life-creation-workshop.png",
+  "network-traveling-musicians.png",
+  "practice-shared-washing.png",
+]);
+
+const SUBURBAN_CONTEXT_FILES = new Set([
+  "generated/lc-attuned-spaces-0.jpg",
+  "generated/lc-attuned-spaces-1.jpg",
+  "generated/lc-attuned-spaces-story-0.jpg",
+  "generated/lc-v-living-spaces-0.jpg",
+  "life-shared-meal.png",
+  "joy-collective-build.png",
+]);
+
+const RURAL_CONTEXT_FILES = new Set([
+  "community-findhorn.png",
+  "community-earthship.png",
+  "community-auroville.png",
+  "nature-architecture-blend.png",
+  "generated/lc-v-shelter-organism-story-0.jpg",
+  "generated/lc-v-living-spaces-story-0.jpg",
+  "life-garden-planting.png",
+  "nature-food-forest-walk.png",
+]);
+
+function visualKey(img: VisualSource): string {
+  return img.folder ? `${img.folder}/${img.file}` : img.file;
+}
+
+function visualPath(img: VisualSource): string {
+  return img.folder === "generated" ? `/visuals/generated/${img.file}` : `/visuals/${img.file}`;
+}
 
 const CATEGORIES: Category[] = [
   { id: "all", label: "All", filter: () => true },
+  { id: "transform", label: "Fast Transformations", filter: (i) => FAST_TRANSFORMATION_FILES.has(visualKey(i)) },
+  { id: "city", label: "City", filter: (i) => CITY_CONTEXT_FILES.has(visualKey(i)) },
+  { id: "urban", label: "Urban", filter: (i) => URBAN_CONTEXT_FILES.has(visualKey(i)) },
+  { id: "suburban", label: "Suburban", filter: (i) => SUBURBAN_CONTEXT_FILES.has(visualKey(i)) },
+  { id: "rural", label: "Rural", filter: (i) => RURAL_CONTEXT_FILES.has(visualKey(i)) },
   { id: "ceremony", label: "Ceremony & Presence", filter: (i) => i.category === "ceremony" },
   { id: "joy", label: "Joy & Play", filter: (i) => i.category === "joy" },
   { id: "nourishment", label: "Nourishment & Land", filter: (i) => i.category === "nourishment" },
@@ -184,7 +257,7 @@ export default function ImmersePage() {
   const images = useMemo(() => {
     const cat = CATEGORIES.find((c) => c.id === categoryId) || CATEGORIES[0];
     const filtered = ALL_VISUALS.filter(cat.filter).map((v) => ({
-      path: `/visuals/${v.file}`,
+      path: visualPath(v),
       title: v.title,
       category: v.category,
     }));
