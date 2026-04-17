@@ -160,7 +160,10 @@
     "recentVoices": "Recent voices",
     "recentReactions": "Recent reactions",
     "goExplore": "Walk a serendipitous queue →",
-    "goPropose": "+ Propose something"
+    "goPropose": "+ Propose something",
+    "waitingHeading": "Concepts waiting to be met",
+    "waitingLede": "Any one of these would welcome a reader. Tap to begin.",
+    "walkAll": "Walk the whole vision →"
   },
   "explore": {
     "empty": "Nothing new to meet right now. Try a different walk.",

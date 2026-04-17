@@ -160,7 +160,10 @@
     "recentVoices": "Voces recientes",
     "recentReactions": "Reacciones recientes",
     "goExplore": "Caminar un camino →",
-    "goPropose": "+ Proponer algo"
+    "goPropose": "+ Proponer algo",
+    "waitingHeading": "Conceptos esperando encuentro",
+    "waitingLede": "Cualquiera de ellos recibiría a un lector. Toca para comenzar.",
+    "walkAll": "Caminar toda la visión →"
   },
   "explore": {
     "empty": "Ahora no hay nadie nuevo por conocer. Prueba otro camino.",

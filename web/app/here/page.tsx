@@ -46,6 +46,13 @@ interface PresenceRow {
   present: number;
 }
 
+interface WaitingConcept {
+  id: string;
+  name: string;
+  description: string;
+  visual_path?: string | null;
+}
+
 interface RecentReaction {
   id: string;
   entity_type: string;
@@ -103,15 +110,33 @@ export default async function HerePage() {
   const lang: LocaleCode = isSupportedLocale(candidate) ? candidate : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  const [presenceData, reactionsData, voicesData] = await Promise.all([
+  const [presenceData, reactionsData, voicesData, waitingData] = await Promise.all([
     fetchJson<{ total_entities: number; top: PresenceRow[] }>("/api/presence/summary"),
     fetchJson<{ reactions: RecentReaction[] }>("/api/reactions/recent?limit=10"),
     fetchJson<{ voices: RecentVoice[] }>("/api/concepts/voices/recent?limit=10"),
+    // Grab a generous set so we can shuffle and surface a variable feel
+    fetchJson<{ items: WaitingConcept[] }>(
+      "/api/concepts/domain/living-collective?limit=30",
+    ),
   ]);
 
   const presenceRows = presenceData?.top || [];
   const recentReactions = (reactionsData?.reactions || []).slice(0, 8);
   const recentVoices = (voicesData?.voices || []).slice(0, 6);
+
+  // Shuffle the waiting pool so each visit feels fresh; pick 3 concepts that
+  // don't already appear in presence/voices (they are truly "waiting").
+  const presentIds = new Set(
+    presenceRows.filter((r) => r.entity_type === "concept").map((r) => r.entity_id),
+  );
+  const voicedIds = new Set(recentVoices.map((v) => v.concept_id));
+  const waitingPool = (waitingData?.items || [])
+    .filter((c) => c.id && !presentIds.has(c.id) && !voicedIds.has(c.id));
+  const waiting: WaitingConcept[] = waitingPool
+    .map((c) => ({ c, r: Math.random() }))
+    .sort((a, b) => a.r - b.r)
+    .slice(0, 3)
+    .map((p) => p.c);
 
   const quiet =
     presenceRows.length === 0 &&
@@ -133,14 +158,52 @@ export default async function HerePage() {
       <FeedTabs />
 
       {quiet ? (
-        <section className="rounded-lg border border-stone-800/60 bg-stone-900/40 p-6 text-center">
-          <p className="text-stone-300 mb-3">{t("here.empty")}</p>
-          <Link
-            href="/vision"
-            className="inline-block rounded-md bg-amber-700/80 hover:bg-amber-600/90 text-stone-950 px-4 py-2 text-sm font-medium"
-          >
-            {t("here.emptyCta")}
-          </Link>
+        <section className="space-y-4">
+          <div className="rounded-lg border border-stone-800/60 bg-stone-900/40 p-6 text-center">
+            <p className="text-stone-300 mb-3">{t("here.empty")}</p>
+          </div>
+          {waiting.length > 0 && (
+            <div>
+              <h2 className="text-xs uppercase tracking-widest text-amber-300/90 mb-2">
+                {t("here.waitingHeading")}
+              </h2>
+              <p className="text-sm text-stone-400 mb-3">
+                {t("here.waitingLede")}
+              </p>
+              <ul className="space-y-2">
+                {waiting.map((c) => (
+                  <li
+                    key={c.id}
+                    className="rounded-lg border border-amber-800/30 bg-amber-950/10"
+                  >
+                    <Link
+                      href={`/meet/concept/${encodeURIComponent(c.id)}`}
+                      className="flex items-start gap-3 p-3 hover:bg-amber-950/30 rounded-lg"
+                    >
+                      <div className="text-2xl leading-none shrink-0 w-10 text-center">
+                        🌱
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-stone-100 font-medium">{c.name}</p>
+                        <p className="text-sm text-stone-400 line-clamp-2 mt-1">
+                          {c.description}
+                        </p>
+                      </div>
+                      <span className="text-amber-300 self-center">→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="text-center pt-2">
+            <Link
+              href="/explore/concept"
+              className="inline-block rounded-md bg-amber-700/80 hover:bg-amber-600/90 text-stone-950 px-4 py-2 text-sm font-medium"
+            >
+              {t("here.walkAll")}
+            </Link>
+          </div>
         </section>
       ) : (
         <div className="space-y-6">
