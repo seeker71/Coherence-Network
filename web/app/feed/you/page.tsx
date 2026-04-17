@@ -6,6 +6,7 @@ import { FeedTabs } from "@/components/FeedTabs";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PersonalFeed } from "@/components/PersonalFeed";
 import { InviteFriend } from "@/components/InviteFriend";
+import { SinceLastVisit } from "@/components/SinceLastVisit";
 
 /**
  * /feed/you — your corner of the organism.
@@ -56,6 +57,9 @@ export default async function PersonalFeedPage() {
         <NotificationBell />
       </header>
       <FeedTabs />
+      <div className="mb-4">
+        <SinceLastVisit />
+      </div>
       <PersonalFeed
         strings={{
           empty: t("feed.personalEmpty"),
