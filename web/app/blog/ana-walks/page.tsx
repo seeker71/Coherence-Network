@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { loadPublicWebConfig } from "@/lib/app-config";
+import { ReactionBar } from "@/components/ReactionBar";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
 
@@ -33,8 +34,12 @@ interface StepProps {
 }
 
 function Step({ n, image, alt, title, children }: StepProps) {
+  // Each step gets a stable entity id so per-chapter reactions land on
+  // the real reactions API surface. Readers can tap a warm emoji on any
+  // chapter; the aggregate shows back to every future reader.
+  const entityId = `ana-walks-ch-${String(n).padStart(2, "0")}`;
   return (
-    <section className="my-12 scroll-mt-16">
+    <section className="my-12 scroll-mt-16" id={entityId}>
       <h2 className="text-xl font-medium tracking-tight mb-4">
         <span className="text-muted-foreground/60 font-mono mr-3">
           {String(n).padStart(2, "0")}
@@ -51,6 +56,9 @@ function Step({ n, image, alt, title, children }: StepProps) {
         />
       </div>
       <div className="space-y-3">{children}</div>
+      <div className="not-prose mt-6 border-t border-border/20 pt-4">
+        <ReactionBar entityType="story" entityId={entityId} compact />
+      </div>
     </section>
   );
 }
@@ -516,7 +524,7 @@ export default function AnaWalksPage() {
         <Step
           n={11}
           image="/stories/ana-walk/12-meet-nourishing-welcome-mobile.png"
-          alt="Mobile screenshot of /meet/concept/lc-nourishing showing a 'Willkommen, Mama — Patrick lädt dich ein' banner above the concept image, with two pulse circles and the title 'Nourishing' below."
+          alt="Mobile screenshot of /meet/concept/lc-nourishing showing a 'Willkommen, Mama — Patrick lädt dich ein' banner above the concept image, two pulse circles flanking the mycorrhizal image, and the title 'Nährend' with a full German description below."
           title="/meet/concept/lc-nourishing?from=Patrick&name=Mama&lang=de — her first breath"
         >
           <p>
@@ -526,33 +534,35 @@ export default function AnaWalksPage() {
             name. Nothing asks her to sign in.
           </p>
           <p>
-            Below it: the mycorrhizal image in the center, two pulse
-            circles flanking it ( <em>15 du</em> · <em>31 dies</em> with
-            &quot;STILL · 2 weitere sind hier&quot; between them), and
-            the title <em>Nourishing</em>.
+            Below it: two pulse circles ( <em>15 du</em> · <em>49 dies</em>,
+            with <em>STILL</em> between them), the mycorrhizal image,
+            and the title in her own language — <em>Nährend</em>. The
+            description reads: <em>&quot;Alles, was hält — zirkuliert
+            wie Blut, Wasser durch Erde, Nährstoffe durch Myzel. Ströme,
+            wo die Vitalität sie braucht. Mutter Bäume füttern
+            Sämlinge.&quot;</em>
           </p>
           <Alive>
-            The banner does the work of a hundred onboarding screens. No
-            form, no question, no barrier. Her name is in the greeting
-            and the inviter&apos;s name is named. She feels addressed.
+            The frame and the content finally speak the same tongue.
+            A concept-name glossary (cycle M) overrides the translator
+            for single-word titles like <em>Nourishing → Nährend</em>,
+            and LibreTranslate now handles the description inline on
+            first fetch. She is not reading a translation layer; she is
+            reading the concept, in her language, as a first fact about
+            this place.
           </Alive>
           <Alive>
-            The chrome is in her language — the language switcher at the
-            top (EN · DE · ES · ID), the pulse labels (du, dies), the
-            &quot;bereit&quot; status chip at the bottom. Cycle 21
-            shipped full translation for every UI string.
+            The image is a mycorrhizal root system, lit gold. It speaks
+            without needing words at all. Her gardener&apos;s eye will
+            recognize it before her mind finds the sentence.
           </Alive>
-          <Tender>
-            The concept title is still <em>Nourishing</em>, not
-            <em> Nährend</em>. The description below it stays in
-            English. LibreTranslate is installed on the VPS, but
-            single-word concept titles and the living-collective
-            descriptions haven&apos;t been re-projected through the
-            translator for the snippet-fallback path on this specific
-            concept. The frame welcomes her in German; the content
-            inside the frame doesn&apos;t yet. This is the next piece
-            of work that has to land before the welcome feels complete.
-          </Tender>
+          <Alive>
+            Nothing here asks her to register. She has been greeted by
+            name, shown what this concept is, and invited into her own
+            pulse — all before she has to do anything. The three
+            minutes we promise begin here, on the warmest possible
+            surface.
+          </Alive>
         </Step>
 
         <Step
@@ -596,41 +606,137 @@ export default function AnaWalksPage() {
         <Step
           n={13}
           image="/stories/ana-walk/14-home-morning-mobile.png"
-          alt="Mobile screenshot of the home page the next morning showing a warm amber 'Guten Morgen' panel with Mama's name, a summary line, and a live news link."
-          title="The next morning — a small door, left open"
+          alt="Mobile screenshot of the home page the next morning showing a warm amber 'Guten Morgen' panel addressing Mama by name, with her own voice quoted back to her from yesterday, above the LiveBreathPanel."
+          title="The next morning — her voice, reflected"
         >
           <p>
             Twelve hours later, in the kitchen, she opens the app on
             her phone. It is 7:42 on Tuesday morning. The first thing
-            on the page is a warm amber panel: <em>&quot;Mama, seit du
-            zuletzt hier warst:&quot;</em> Below that, <em>&quot;Aus der
-            weiten Welt:&quot;</em> and a live link to a real TechCrunch
-            article that the news-resonance engine pulled and matched
-            against the ideas in the graph overnight.
+            on the page is a warm amber panel:
+          </p>
+          <p>
+            <em>&quot;Guten Morgen — Mama, seit du zuletzt hier warst:
+            Eine neue Stimme auf einem Begriff, den du berührt hast.&quot;</em>
+          </p>
+          <p>
+            And then, rendered as a soft italic blockquote below the
+            summary, her own words from yesterday: <em>&quot;Bei uns
+            im Garten fließt es auch so — die Kompostwärme macht den
+            Boden lebendig.&quot;</em>
           </p>
           <Alive>
-            The panel fires only when three things line up: she has a
-            soft identity, she has been here before, and her local
-            clock is between 06:00 and 11:00. Otherwise it stays quiet.
-            No false urgency, no badge nagging her at midnight.
+            The organism reflects her back to herself. The first
+            returning-visitor feeling is not &quot;look what we have
+            for you&quot; — it is &quot;you are here, what you offered
+            yesterday is seen.&quot; The most vital thing to show her
+            on day two is her own contribution. That is what she finds.
           </Alive>
           <Alive>
-            The news link is the first time the news-resonance work —
-            quietly matching RSS to ideas for months — meets someone
-            whose day it could actually shape. The signal existed. It
-            was waiting for a person to receive it.
+            The panel fires only when three gates line up: she has a
+            soft identity, she has been here at least once, her local
+            clock is between 06:00 and 11:00. Outside the window it
+            stays quiet. No false urgency, no badge nagging her at
+            midnight.
+          </Alive>
+          <Alive>
+            Below the amber panel, the LiveBreathPanel continues in her
+            language: <em>&quot;Stimmen gerade geteilt&quot;</em> —
+            voices just shared — with thumb-sized invitations to go
+            there now or walk the vision. The flow from morning
+            greeting into the living organism is one sustained
+            gesture, not a handoff.
           </Alive>
           <Tender>
-            The amber text is saturated and clips the &quot;Guten
-            Morgen&quot; eyebrow on 390px. The &quot;Aus der weiten
-            Welt:&quot; label plus the English headline of the matched
-            article sit next to each other — she sees a German
-            greeting introducing an English news title. The news title
-            translation is the next gap to close. And the real push
-            notification — the one that arrives when the app is closed
-            — still wants a service worker, VAPID keys, and a
-            server-side schedule. That is the next cycle.
+            There is no news-from-the-wider-world line today — the
+            Resilience.org feed had no items fresher than her last
+            visit (the recency window was strict). When the morning
+            catches a breaking piece, the panel grows a link; when it
+            doesn&apos;t, the panel stays small and honest. Real push
+            notifications (VAPID + service worker + server-side 09:00
+            schedule) are the next cycle after this.
           </Tender>
+        </Step>
+
+        <Step
+          n={14}
+          image="/stories/ana-walk/15-corner-morning-mobile.png"
+          alt="Mobile screenshot of /feed/you showing her personal corner with SinceLastVisit echoing her own voice, KinActivity below, and the 'Deine Ecke wartet' prompt with an 'Etwas Lebendiges finden' button."
+          title="/feed/you — her corner, breathing"
+        >
+          <p>
+            She scrolls up to the bottom nav and taps <em>Du</em>. Her
+            corner of the organism loads: <em>&quot;Stimmen, die du
+            gegeben hast, Reaktionen, die du angeboten hast, Antworten,
+            die zu dir zurückkamen, Vorschläge, die du gehoben
+            hast.&quot;</em>
+          </p>
+          <p>
+            Above the fold: the same morning echo of her voice in
+            amber. Below it: <em>&quot;Deine Ecke wartet. Teile eine
+            Stimme zu etwas Lebendigem, dann sammelt sich hier
+            etwas.&quot;</em> A warm amber button: <em>&quot;Etwas
+            Lebendiges finden&quot;</em>.
+          </p>
+          <Alive>
+            Every string is in German. The tabs (<em>Jetzt hier · Alle ·
+            Du</em>), the heading, the empty-state prompt, the button
+            label. Cycles 20–22 shipped full-UI translation; here it
+            lands whole.
+          </Alive>
+          <Alive>
+            The empty-state says &quot;etwas sammelt sich&quot; — something
+            gathers. Not &quot;you have zero items&quot;. The frequency is
+            alive. She is being invited to keep tending, not shown a
+            debt.
+          </Alive>
+        </Step>
+
+        <Step
+          n={15}
+          image="/stories/ana-walk/16-concept-voices-mobile.png"
+          alt="Mobile screenshot of the concept page voices section showing Mama's contribution: 'Bei uns im Garten fließt es auch so — die Kompostwärme macht den Boden lebendig' with Schweiz · 17.4.2026 · DE attribution and a 'Diese Stimme zu einem Vorschlag heben' button."
+          title="/vision/lc-nourishing — her voice, visible to anyone"
+        >
+          <p>
+            She taps the concept again. Scrolls past the Nährend
+            description, past the &quot;Wie es hier lebt&quot; (how it
+            lives here) section, past the kitchen image, down to
+            <em> Stimmen aus dem Feld</em> — voices from the field.
+          </p>
+          <p>
+            And there, as the first voice: her own. <em>&quot;Bei uns im
+            Garten fließt es auch so — die Kompostwärme macht den Boden
+            lebendig. Wenn wir gemeinsam kochen, schenkt jede Hand etwas
+            weiter, und niemand merkt, wo die eigene Gabe endet.&quot;</em>
+            Under it: <em>Mama · Schweiz · 17.4.2026 · DE</em>. Under
+            that: a button, <em>&quot;Diese Stimme zu einem Vorschlag
+            heben&quot;</em> — &quot;lift this voice into a proposal&quot;.
+          </p>
+          <p>
+            Anyone walking through this concept from any language will
+            see her sentence — translated if they arrive in Spanish,
+            Indonesian, or English — and may choose to turn it into
+            something the collective votes on. A Swiss grandmother&apos;s
+            garden wisdom can become a proposal the network actually
+            tracks, funds, and realizes.
+          </p>
+          <Alive>
+            This is the closing loop of the arc. She was invited, she
+            was greeted, she offered a voice on her first visit, she
+            saw herself reflected in the morning — and now her
+            sentence is a living thing on the concept, visible to
+            whoever reads next, with a path to proposal built in. The
+            distance from &quot;WhatsApp link&quot; to &quot;contribution
+            that others can lift&quot; is one quiet afternoon.
+          </Alive>
+          <Alive>
+            Below her voice, the <em>&quot;Teile deine Stimme&quot;</em>
+            form is open for the next reader: a name field, a message
+            prompt (<em>&quot;Wie lebst du das? Was hast du gesehen?
+            Zwei Sätze reichen.&quot;</em>), an optional location, and
+            a submit button. The frequency is consistent: arrive,
+            offer, be seen, grow.
+          </Alive>
         </Step>
 
         <section className="space-y-4 mt-12">
@@ -642,15 +748,105 @@ export default function AnaWalksPage() {
             unplanned, because Mama&apos;s arrival asked for them — was
             an invitation that carries her name, a banner that
             pre-registers her, a language override that respects her
-            phone, an inline voice on first reaction, a &quot;since you
-            last were here&quot; delta, and the beginning of a morning
-            nudge that folds a real news signal into a felt greeting.
+            phone, an inline voice on first reaction, a concept-name
+            glossary so <em>Nourishing</em> reads as <em>Nährend</em>
+            on first paint, a morning nudge that reflects her own voice
+            back to her, and a living-collective news stream (Resilience,
+            Mongabay, YES!) that gives the morning greeting something
+            to carry when a fresh article belongs to her world.
           </p>
           <p className="leading-relaxed text-muted-foreground">
             None of these were on a roadmap. Each came from the same
-            question asked twelve times: <em>would this make sense to
+            question asked fifteen times: <em>would this make sense to
             her?</em> When the answer was no, something was built until
             it was yes. That is the shape of the work now.
+          </p>
+        </section>
+
+        <hr className="border-border/30 my-12" />
+
+        <section className="space-y-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            Field notes · Part three — this story belongs to you too
+          </p>
+          <h2 className="text-2xl font-light tracking-tight">
+            Make this blog yours
+          </h2>
+          <p className="leading-relaxed text-muted-foreground">
+            A blog post is usually a closed object: the author types,
+            the reader reads. The Coherence Network wants to hold
+            something else — a living surface that the reader can
+            inhabit. If something on this page could be warmer, clearer,
+            more true to your own living, you should be able to say so
+            without leaving this page, and the organism should grow
+            with your contribution.
+          </p>
+
+          <div className="rounded-2xl border border-teal-700/30 bg-gradient-to-br from-teal-950/20 via-stone-900/30 to-amber-950/15 p-5 space-y-4">
+            <h3 className="text-base font-medium text-teal-200">
+              Four doors on every paragraph, coming next
+            </h3>
+            <ul className="space-y-3 text-sm text-stone-300 leading-relaxed">
+              <li>
+                <span className="text-amber-300 mr-2">💛</span>
+                <strong className="text-stone-100">React.</strong> A
+                small emoji bar next to each chapter — the same five
+                gestures Mama meets on the concept page. Love. Fire.
+                Seed. Bow. Keep going. No comment needed; the first
+                touch is enough.
+              </li>
+              <li>
+                <span className="text-amber-300 mr-2">✍️</span>
+                <strong className="text-stone-100">Suggest a better
+                sentence.</strong> A softly-visible pencil on every
+                paragraph opens a tiny inline editor. What you type
+                becomes a proposal on the blog post — other readers
+                can lift it, and when it ripens, the text quietly
+                updates. Every paragraph is versioned; nothing is
+                ever lost.
+              </li>
+              <li>
+                <span className="text-amber-300 mr-2">🎨</span>
+                <strong className="text-stone-100">Re-imagine an
+                image.</strong> Every generated visual carries its
+                prompt in the alt-text. A second tap opens the
+                prompt in an editor with a &quot;regenerate with
+                your words&quot; button. The image on this page can
+                become your image if it finds deeper resonance.
+              </li>
+              <li>
+                <span className="text-amber-300 mr-2">🤝</span>
+                <strong className="text-stone-100">Bring your own
+                agent.</strong> A small handoff button opens the
+                post in Claude, ChatGPT, Codex, or your local agent
+                with the full context pre-loaded — the paragraph
+                you&apos;re on, the concepts it touches, the ideas
+                behind them. You ask your agent to improve it. What
+                comes back becomes a suggestion, credited to the
+                pairing of you + your agent.
+              </li>
+            </ul>
+            <p className="text-xs text-stone-500 leading-relaxed">
+              None of the four doors exist yet on this page. They are
+              named here because naming them makes them the next
+              cycles. React (the simplest) lands first. Suggest-a-sentence
+              lands on the shared reaction-bar substrate that already
+              serves concepts, ideas, and contributors. Image
+              regeneration needs the visuals-generate endpoint to
+              accept a contributor-authored prompt and credit the
+              change. Bring-your-own-agent needs a /handoff URL with
+              a standardized context blob — we already ship an MCP
+              server, so this is the shortest path to the largest
+              felt difference.
+            </p>
+          </div>
+
+          <p className="leading-relaxed text-muted-foreground">
+            The goal is simple: by the time Mama&apos;s friend walks
+            this blog, she will not feel like she is reading someone
+            else&apos;s story. She will feel like she has already been
+            invited into it, and that the story is waiting for her
+            contribution as much as it is waiting for her attention.
           </p>
         </section>
 
