@@ -246,7 +246,10 @@
     "ideasOne": "1 new idea aligned with you",
     "ideasMany": "{count} new ideas aligned with you",
     "newsLead": "From the wider world:",
-    "openCorner": "Open your corner"
+    "openCorner": "Open your corner",
+    "someone": "Someone",
+    "reactedToYourVoice": "laid this on your voice.",
+    "repliedToYou": "replied to you:"
   },
   "welcome": {
     "ariaLabel": "Welcome — what this place is",

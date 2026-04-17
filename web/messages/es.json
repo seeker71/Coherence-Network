@@ -246,7 +246,10 @@
     "ideasOne": "1 idea nueva alineada contigo",
     "ideasMany": "{count} ideas nuevas alineadas contigo",
     "newsLead": "Del mundo más amplio:",
-    "openCorner": "Abrir tu rincón"
+    "openCorner": "Abrir tu rincón",
+    "someone": "Alguien",
+    "reactedToYourVoice": "puso esto sobre tu voz.",
+    "repliedToYou": "te respondió:"
   },
   "welcome": {
     "ariaLabel": "Bienvenida — de qué se trata este lugar",
