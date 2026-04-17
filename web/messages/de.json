@@ -122,6 +122,7 @@
     "empty": "Der Strom ist still. Sei der erste Atem.",
     "exploreVision": "Die Vision erkunden",
     "stepIn": "Ins Netz eintreten",
+    "tabHere": "Jetzt hier",
     "tabCollective": "Alle",
     "tabPersonal": "Du",
     "personalHeading": "Deine Ecke",
@@ -131,6 +132,19 @@
     "personalNoIdentity": "Noch ist kein Name hier. Wähle einen, und deine Ecke beginnt.",
     "personalNoIdentityCta": "Ins Netz eintreten",
     "personalLoading": "Deine Ecke wird gesammelt …"
+  },
+  "here": {
+    "heading": "Wo gerade Aufmerksamkeit ist",
+    "lede": "Der Atem des Organismus jetzt — wer wem begegnet, was zuletzt gesagt und angerührt wurde.",
+    "empty": "Der Organismus ist gerade still. Begegne etwas, und du erweckst es.",
+    "emptyCta": "Einem Konzept begegnen",
+    "meetingNow": "Begegnen gerade",
+    "onePresent": "1 Person hier",
+    "manyPresent": "{count} Personen hier",
+    "recentVoices": "Jüngste Stimmen",
+    "recentReactions": "Jüngste Reaktionen",
+    "goExplore": "Einen Weg gehen →",
+    "goPropose": "+ Etwas vorschlagen"
   },
   "explore": {
     "empty": "Im Moment ist niemand Neues da. Versuche einen anderen Weg.",

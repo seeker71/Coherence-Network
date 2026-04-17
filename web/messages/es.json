@@ -122,6 +122,7 @@
     "empty": "El flujo está en silencio. Sé el primer aliento.",
     "exploreVision": "Explora la visión",
     "stepIn": "Entra en la red",
+    "tabHere": "Aquí ahora",
     "tabCollective": "Todos",
     "tabPersonal": "Tú",
     "personalHeading": "Tu rincón",
@@ -131,6 +132,19 @@
     "personalNoIdentity": "Todavía no hay un nombre. Elige uno y tu rincón empieza.",
     "personalNoIdentityCta": "Entra en la red",
     "personalLoading": "Reuniendo tu rincón…"
+  },
+  "here": {
+    "heading": "Dónde está la atención ahora",
+    "lede": "El aliento del organismo ahora — quién se encuentra con qué, y qué se dijo y se tocó recientemente.",
+    "empty": "El organismo está en silencio ahora. Encuéntrate con algo y lo traes a la vida.",
+    "emptyCta": "Encuentra un concepto",
+    "meetingNow": "Se encuentran ahora",
+    "onePresent": "1 persona aquí",
+    "manyPresent": "{count} personas aquí",
+    "recentVoices": "Voces recientes",
+    "recentReactions": "Reacciones recientes",
+    "goExplore": "Caminar un camino →",
+    "goPropose": "+ Proponer algo"
   },
   "explore": {
     "empty": "Ahora no hay nadie nuevo por conocer. Prueba otro camino.",
