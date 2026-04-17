@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.middleware.auth import require_api_key
@@ -14,6 +14,8 @@ from app.services import news_resonance_service
 from app.services import idea_service
 from app.services import contribution_ledger_service
 from app.services import translate_service
+from app.services import translator_service
+from app.services.locale_projection import project_many, resolve_caller_lang
 
 router = APIRouter()
 
@@ -106,9 +108,11 @@ def _ideas_as_dicts(ideas) -> list[dict]:
 @router.get("/news/feed", summary="Latest news items from RSS feeds")
 @traces_to(spec="151", idea="configurable-news-sources", description="Fetch news from configured RSS sources")
 async def get_news_feed(
+    request: Request,
     limit: int = Query(50, ge=1, le=200),
     source: Optional[str] = Query(None, description="Filter by source name"),
     refresh: bool = Query(False, description="Force refresh feeds"),
+    lang: Optional[str] = Query(None, description="Target language. When set, item titles and descriptions are rendered in this locale on-demand."),
     pov: Optional[str] = Query(
         None,
         description="Point-of-view lens id: rank items by affinity (e.g. libertarian, engineer, institutionalist).",
@@ -116,6 +120,7 @@ async def get_news_feed(
     pov_min_score: float = Query(0.0, ge=0.0, le=1.0, description="When pov is set, drop items below this affinity."),
 ):
     """Latest news items from RSS feeds."""
+    target_lang = resolve_caller_lang(request, lang)
     items = await news_ingestion_service.fetch_feeds(force_refresh=refresh)
     if source:
         source_lower = source.lower()
@@ -133,9 +138,21 @@ async def get_news_feed(
         scored.sort(key=lambda x: x[0], reverse=True)
         out_items = [it for sc, it in scored if sc >= pov_min_score]
     out_items = out_items[:limit]
+    item_dicts = [i.to_dict() for i in out_items]
+    if target_lang and target_lang != "en":
+        for d in item_dicts:
+            t_title, t_desc = translator_service.translate_snippet(
+                d.get("title", "") or "",
+                d.get("description", "") or "",
+                source_lang="en",
+                target_lang=target_lang,
+            )
+            d["title"] = t_title
+            d["description"] = t_desc
     payload = {
-        "count": len(out_items),
-        "items": [i.to_dict() for i in out_items],
+        "count": len(item_dicts),
+        "items": item_dicts,
+        "lang": target_lang,
     }
     if pov:
         payload["pov"] = pov
@@ -145,23 +162,40 @@ async def get_news_feed(
 
 @router.get("/news/resonance", summary="News items matched to ideas with resonance scores and explanations")
 async def get_news_resonance(
+    request: Request,
     top_n: int = Query(5, ge=1, le=20, description="Top N matches per idea"),
     limit: int = Query(100, ge=1, le=500, description="Max news items to consider"),
     refresh: bool = Query(False, description="Force refresh feeds"),
+    lang: Optional[str] = Query(None, description="Target language. Idea names and news snippets render in this locale."),
 ):
     """News items matched to ideas with resonance scores and explanations."""
+    target_lang = resolve_caller_lang(request, lang)
     items = await news_ingestion_service.fetch_feeds(force_refresh=refresh)
     items = items[:limit]
 
     portfolio = idea_service.list_ideas()
+    project_many(portfolio.ideas, "idea", target_lang)
     idea_dicts = _ideas_as_dicts(portfolio.ideas)
 
     results = news_resonance_service.compute_resonance(items, idea_dicts, top_n=top_n)
+    result_payload = [r.to_dict() for r in results]
+    if target_lang and target_lang != "en":
+        for r in result_payload:
+            for match in r.get("matches", []) or []:
+                t_title, t_desc = translator_service.translate_snippet(
+                    match.get("news_title", "") or "",
+                    match.get("news_summary", "") or "",
+                    source_lang="en",
+                    target_lang=target_lang,
+                )
+                match["news_title"] = t_title
+                match["news_summary"] = t_desc
 
     return {
         "news_count": len(items),
         "idea_count": len(idea_dicts),
-        "results": [r.to_dict() for r in results],
+        "results": result_payload,
+        "lang": target_lang,
     }
 
 

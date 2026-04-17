@@ -774,6 +774,34 @@ app.include_router(flow_renderer_router.router, prefix="/api", tags=["flow"])
 from app.routers import world_lens as world_lens_router  # noqa: E402
 app.include_router(world_lens_router.router, prefix="/api", tags=["world"])
 
+# Fallback witness — honest record of silent-degradation paths
+from app.routers import fallbacks as fallbacks_router  # noqa: E402
+app.include_router(fallbacks_router.router, prefix="/api", tags=["sensing"])
+
+# Reactions — emoji + comment on any entity
+from app.routers import reactions as reactions_router  # noqa: E402
+app.include_router(reactions_router.router, prefix="/api", tags=["reactions"])
+
+# Meeting — felt state of viewer + content as a combined organism
+from app.routers import meetings as meetings_router  # noqa: E402
+app.include_router(meetings_router.router, prefix="/api", tags=["meeting"])
+
+# Explore queue — serendipitous walks across the graph
+from app.routers import explore as explore_router  # noqa: E402
+app.include_router(explore_router.router, prefix="/api", tags=["explore"])
+
+# Proposals — light governance via the meeting gesture
+from app.routers import proposals as proposals_router  # noqa: E402
+app.include_router(proposals_router.router, prefix="/api", tags=["proposals"])
+
+# Notifications — quiet witness of who spoke back
+from app.routers import notifications as notifications_router  # noqa: E402
+app.include_router(notifications_router.router, prefix="/api", tags=["notifications"])
+
+# Personal feed — your corner of the organism
+from app.routers import personal_feed as personal_feed_router  # noqa: E402
+app.include_router(personal_feed_router.router, prefix="/api", tags=["feed"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).

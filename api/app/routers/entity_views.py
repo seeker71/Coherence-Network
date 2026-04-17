@@ -25,7 +25,7 @@ from app.services import translator_service
 router = APIRouter()
 
 
-SUPPORTED_ENTITY_TYPES = {"concept", "idea", "contribution", "asset"}
+SUPPORTED_ENTITY_TYPES = {"concept", "idea", "contribution", "asset", "spec"}
 
 
 class ViewUpsert(BaseModel):
