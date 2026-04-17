@@ -184,6 +184,14 @@
     "propose": "Usul",
     "you": "Kamu"
   },
+  "sinceLast": {
+    "eyebrow": "Sejak kunjungan terakhirmu ({when} lalu)",
+    "generic": "Sesuatu terjadi saat kamu pergi.",
+    "replies": "{n} balasan untukmu",
+    "reactions": "{n} reaksi pada suaramu",
+    "lifts": "{n} usulan yang kamu dukung diangkat",
+    "mentions": "{n} sebutan"
+  },
   "me": {
     "stepIn": "Masuk",
     "you": "Kamu",
