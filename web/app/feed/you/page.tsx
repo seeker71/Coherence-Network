@@ -5,6 +5,7 @@ import { createTranslator } from "@/lib/i18n";
 import { FeedTabs } from "@/components/FeedTabs";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PersonalFeed } from "@/components/PersonalFeed";
+import { InviteFriend } from "@/components/InviteFriend";
 
 /**
  * /feed/you — your corner of the organism.
@@ -64,6 +65,9 @@ export default async function PersonalFeedPage() {
           loading: t("feed.personalLoading"),
         }}
       />
+      <div className="mt-8">
+        <InviteFriend />
+      </div>
     </main>
   );
 }

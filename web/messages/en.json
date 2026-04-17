@@ -184,6 +184,29 @@
     "propose": "Propose",
     "you": "You"
   },
+  "me": {
+    "stepIn": "Step in",
+    "you": "You",
+    "menuLabel": "Your corner",
+    "heading": "Your corner",
+    "viewProfile": "Your profile",
+    "myCorner": "Your feed",
+    "hereNow": "Here now",
+    "portfolio": "Your portfolio",
+    "beliefs": "Your beliefs",
+    "inviteFriend": "Invite a friend"
+  },
+  "invite": {
+    "eyebrow": "Bring someone in",
+    "headline": "Who would love this?",
+    "lede": "Share a direct link to a concept that moved you. They arrive at a full-screen first meeting, not a wall of text.",
+    "cta": "Invite a friend",
+    "copied": "Link copied ✓",
+    "shared": "Thanks for sharing 🌿",
+    "title": "Come meet this",
+    "message": "I found something that feels alive. Take three minutes and see.",
+    "messageWithName": "{name} found something that feels alive. Take three minutes and see."
+  },
   "welcome": {
     "ariaLabel": "Welcome — what this place is",
     "eyebrow": "New here?",

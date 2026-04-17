@@ -184,6 +184,29 @@
     "propose": "Usul",
     "you": "Kamu"
   },
+  "me": {
+    "stepIn": "Masuk",
+    "you": "Kamu",
+    "menuLabel": "Sudutmu",
+    "heading": "Sudutmu",
+    "viewProfile": "Profilmu",
+    "myCorner": "Arusmu",
+    "hereNow": "Di sini kini",
+    "portfolio": "Portofoliomu",
+    "beliefs": "Keyakinanmu",
+    "inviteFriend": "Undang teman"
+  },
+  "invite": {
+    "eyebrow": "Ajak seseorang",
+    "headline": "Siapa yang akan menyukai ini?",
+    "lede": "Bagikan tautan langsung ke konsep yang menggerakkanmu. Mereka mendarat di perjumpaan layar penuh, bukan dinding teks.",
+    "cta": "Undang teman",
+    "copied": "Tautan disalin ✓",
+    "shared": "Terima kasih sudah berbagi 🌿",
+    "title": "Datang temui ini",
+    "message": "Aku menemukan sesuatu yang terasa hidup. Ambil tiga menit dan lihat.",
+    "messageWithName": "{name} menemukan sesuatu yang terasa hidup. Ambil tiga menit dan lihat."
+  },
   "welcome": {
     "ariaLabel": "Selamat datang — tentang tempat ini",
     "eyebrow": "Baru di sini?",

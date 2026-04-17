@@ -184,6 +184,29 @@
     "propose": "Propuesta",
     "you": "Tú"
   },
+  "me": {
+    "stepIn": "Entrar",
+    "you": "Tú",
+    "menuLabel": "Tu rincón",
+    "heading": "Tu rincón",
+    "viewProfile": "Tu perfil",
+    "myCorner": "Tu flujo",
+    "hereNow": "Aquí ahora",
+    "portfolio": "Tu portafolio",
+    "beliefs": "Tus creencias",
+    "inviteFriend": "Invitar a alguien"
+  },
+  "invite": {
+    "eyebrow": "Trae a alguien",
+    "headline": "¿A quién le gustaría esto?",
+    "lede": "Comparte un enlace directo a un concepto que te movió. Aterrizan en un primer encuentro a pantalla completa, no en un muro de texto.",
+    "cta": "Invitar a alguien",
+    "copied": "Enlace copiado ✓",
+    "shared": "Gracias por compartir 🌿",
+    "title": "Ven a encontrarte con esto",
+    "message": "Encontré algo que se siente vivo. Tómate tres minutos y mira.",
+    "messageWithName": "{name} encontró algo que se siente vivo. Tómate tres minutos y mira."
+  },
   "welcome": {
     "ariaLabel": "Bienvenida — de qué se trata este lugar",
     "eyebrow": "¿Eres nueva aquí?",
