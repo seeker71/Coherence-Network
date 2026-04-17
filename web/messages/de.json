@@ -221,7 +221,10 @@
     "messageWithBoth": "{name} hat an dich gedacht, {recipient}. Etwas Lebendiges wartet — nimm dir drei Minuten und schau.",
     "recipientLabel": "Ihr Name",
     "recipientPlaceholder": "z. B. Mama, Sam, Aisha",
-    "recipientHint": "Sie kommt schon mit Namen begrüßt an — nichts zu registrieren, nichts zu merken."
+    "recipientHint": "Sie kommt schon mit Namen begrüßt an — nichts zu registrieren, nichts zu merken.",
+    "langLabel": "Ihre Sprache",
+    "langAuto": "Ihr Gerät soll entscheiden",
+    "langHint": "Standardmäßig wählt ihr Handy die Sprache. Überschreib das hier, wenn du sie besser kennst als ihre Browser-Einstellungen."
   },
   "inviteBanner": {
     "ariaLabel": "Einladung",

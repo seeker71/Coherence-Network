@@ -221,7 +221,10 @@
     "messageWithBoth": "{name} memikirkanmu, {recipient}. Sesuatu yang hidup menantimu — ambil tiga menit dan lihat.",
     "recipientLabel": "Nama mereka",
     "recipientPlaceholder": "mis. Mama, Sam, Aisha",
-    "recipientHint": "Mereka tiba sudah disapa dengan nama — tidak ada yang perlu didaftar, tidak ada yang perlu diingat."
+    "recipientHint": "Mereka tiba sudah disapa dengan nama — tidak ada yang perlu didaftar, tidak ada yang perlu diingat.",
+    "langLabel": "Bahasa mereka",
+    "langAuto": "Biarkan perangkatnya memilih",
+    "langHint": "Secara default, ponselnya memilih bahasa. Ganti di sini jika kamu mengenalnya lebih baik dari pengaturan peramban-nya."
   },
   "inviteBanner": {
     "ariaLabel": "Undangan",

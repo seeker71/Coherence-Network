@@ -221,7 +221,10 @@
     "messageWithBoth": "{name} thought of you, {recipient}. Something alive is waiting — take three minutes and see.",
     "recipientLabel": "Their name",
     "recipientPlaceholder": "e.g. Mama, Sam, Aisha",
-    "recipientHint": "They arrive already greeted by name — nothing to register, nothing to remember."
+    "recipientHint": "They arrive already greeted by name — nothing to register, nothing to remember.",
+    "langLabel": "Their language",
+    "langAuto": "Let her device decide",
+    "langHint": "By default, her phone picks the language. Override here if you know her better than her browser settings do."
   },
   "inviteBanner": {
     "ariaLabel": "Invitation",
