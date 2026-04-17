@@ -51,7 +51,12 @@ SUPPORTED_ENTITY_TYPES = {
 
 
 class ReactionRecord(Base):
-    """One reaction tied to one entity. Either emoji or comment (or both)."""
+    """One reaction tied to one entity. Either emoji or comment (or both).
+
+    A reaction may also be a reply to another reaction, forming threaded
+    conversations on any entity. Replies are ordinary reactions with
+    ``parent_reaction_id`` set, so every thread node is itself meetable.
+    """
 
     __tablename__ = "reactions"
 
@@ -63,6 +68,9 @@ class ReactionRecord(Base):
     emoji: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     locale: Mapped[str] = mapped_column(String, nullable=False, default="en")
+    # Threaded reply support — a reply is a reaction whose parent is another
+    # reaction on the same entity. Top-level reactions have parent=None.
+    parent_reaction_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
@@ -77,6 +85,51 @@ def _session():
 
 def _ensure_schema() -> None:
     _udb.engine()
+    _ensure_reply_column()
+
+
+_REPLY_COLUMN_CHECKED = False
+
+
+def _ensure_reply_column() -> None:
+    """Idempotently add the parent_reaction_id column to existing SQLite
+    reactions tables. New tables already have it; this heals the evolving
+    schema for databases that existed before threading landed.
+    """
+    global _REPLY_COLUMN_CHECKED
+    if _REPLY_COLUMN_CHECKED:
+        return
+    try:
+        eng = _udb.engine()
+        with eng.connect() as conn:
+            dialect = conn.dialect.name
+            if dialect != "sqlite":
+                _REPLY_COLUMN_CHECKED = True
+                return
+            from sqlalchemy import text
+            rows = conn.exec_driver_sql("PRAGMA table_info(reactions)").fetchall()
+            if not rows:
+                _REPLY_COLUMN_CHECKED = True
+                return
+            names = {r[1] for r in rows}
+            if "parent_reaction_id" not in names:
+                conn.exec_driver_sql(
+                    "ALTER TABLE reactions ADD COLUMN parent_reaction_id VARCHAR"
+                )
+                try:
+                    conn.exec_driver_sql(
+                        "CREATE INDEX IF NOT EXISTS ix_reactions_parent_reaction_id "
+                        "ON reactions(parent_reaction_id)"
+                    )
+                except Exception:
+                    pass
+                conn.commit()
+    except Exception:
+        # Best-effort — if the check fails we'll still operate on the table;
+        # the ORM will raise a clearer error on first insert if needed.
+        pass
+    finally:
+        _REPLY_COLUMN_CHECKED = True
 
 
 def add_reaction(
@@ -88,6 +141,7 @@ def add_reaction(
     comment: Optional[str] = None,
     author_id: Optional[str] = None,
     locale: str = "en",
+    parent_reaction_id: Optional[str] = None,
 ) -> dict:
     _ensure_schema()
     if entity_type not in SUPPORTED_ENTITY_TYPES:
@@ -104,6 +158,15 @@ def add_reaction(
     # paragraph being slipped into the emoji field.
     if emoji_v and len(emoji_v) > 16:
         raise ValueError("emoji should be short (under 16 characters)")
+    # Validate parent belongs to the same entity so threads cannot cross
+    # conversations — a reply always sits with the thing it replies about.
+    if parent_reaction_id:
+        with _session() as s:
+            parent = s.get(ReactionRecord, parent_reaction_id)
+            if parent is None:
+                raise ValueError("parent_reaction_id not found")
+            if parent.entity_type != entity_type or parent.entity_id != entity_id:
+                raise ValueError("parent belongs to a different entity")
     rec = ReactionRecord(
         id=uuid4().hex,
         entity_type=entity_type,
@@ -113,6 +176,7 @@ def add_reaction(
         emoji=emoji_v,
         comment=comment_v,
         locale=locale or "en",
+        parent_reaction_id=parent_reaction_id,
     )
     with _session() as s:
         s.add(rec)
@@ -202,5 +266,58 @@ def _to_dict(rec: ReactionRecord) -> dict:
         "emoji": rec.emoji,
         "comment": rec.comment,
         "locale": rec.locale,
+        "parent_reaction_id": rec.parent_reaction_id,
         "created_at": rec.created_at.isoformat() if rec.created_at else None,
     }
+
+
+def build_threads(entity_type: str, entity_id: str, limit: int = 500) -> list[dict]:
+    """Return top-level reactions with replies nested inline.
+
+    Shape:
+      [
+        {...reaction fields..., "replies": [{...}, {...}]},
+        {...},
+      ]
+    Only reactions that carry a comment are included at the top level —
+    pure emoji reactions stay in the aggregate summary, not the thread.
+    Replies include both comment and emoji reactions (an emoji reply is a
+    small gesture on the parent).
+    """
+    _ensure_schema()
+    with _session() as s:
+        rows = (
+            s.execute(
+                select(ReactionRecord)
+                .where(
+                    ReactionRecord.entity_type == entity_type,
+                    ReactionRecord.entity_id == entity_id,
+                )
+                .order_by(ReactionRecord.created_at.asc())
+                .limit(limit)
+            )
+            .scalars()
+            .all()
+        )
+    all_reactions = [_to_dict(r) for r in rows]
+    by_parent: dict[str, list[dict]] = {}
+    for r in all_reactions:
+        parent = r.get("parent_reaction_id")
+        if parent:
+            by_parent.setdefault(parent, []).append(r)
+
+    threads: list[dict] = []
+    for r in all_reactions:
+        if r.get("parent_reaction_id"):
+            continue
+        if not r.get("comment"):
+            # Top-level emoji-only reactions are summarised elsewhere; only
+            # comment-rooted reactions begin a thread.
+            continue
+        replies = by_parent.get(r["id"], [])
+        r_with = dict(r)
+        r_with["replies"] = replies
+        threads.append(r_with)
+    # Newest thread roots first, matching feed sensibility
+    threads.sort(key=lambda t: t.get("created_at") or "", reverse=True)
+    return threads

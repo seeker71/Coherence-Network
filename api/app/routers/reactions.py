@@ -23,6 +23,10 @@ class ReactionIn(BaseModel):
     comment: str | None = Field(None, description="A short thought (optional if emoji is set)")
     locale: str = Field("en", description="Caller locale (for comment display)")
     author_id: str | None = Field(None, description="Optional contributor ID")
+    parent_reaction_id: str | None = Field(
+        None,
+        description="Optional — set this to thread a reply under another reaction on the same entity",
+    )
 
 
 def _check_entity_type(entity_type: str, request: Request) -> None:
@@ -58,6 +62,7 @@ async def add_reaction(
             comment=payload.comment,
             locale=payload.locale,
             author_id=payload.author_id,
+            parent_reaction_id=payload.parent_reaction_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -83,6 +88,26 @@ async def list_reactions(
         "entity_id": entity_id,
         "reactions": reactions,
         "summary": summary,
+    }
+
+
+@router.get(
+    "/reactions/{entity_type}/{entity_id}/threads",
+    summary="Comment-rooted reactions with replies nested — conversation view",
+)
+async def list_threads(
+    entity_type: str,
+    entity_id: str,
+    request: Request,
+    limit: int = Query(200, ge=1, le=500),
+) -> dict:
+    _check_entity_type(entity_type, request)
+    threads = reaction_service.build_threads(entity_type, entity_id, limit=limit)
+    return {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "threads": threads,
+        "count": len(threads),
     }
 
 

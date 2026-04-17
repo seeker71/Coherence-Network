@@ -156,6 +156,9 @@
     "send": "Enviar",
     "sending": "Enviando…",
     "thanks": "gracias",
+    "reply": "responder",
+    "replying": "respondiendo…",
+    "replyPlaceholder": "Tu respuesta…",
     "inviteContributorLede": "Tu gesto amoroso está aquí. Hazte colaborador·a para que tu nombre acompañe esta parte de la visión —",
     "inviteContributorLink": "entra en la red"
   },
