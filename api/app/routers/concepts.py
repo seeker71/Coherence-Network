@@ -923,6 +923,10 @@ class ConceptVoiceIn(BaseModel):
     # Short opaque client-supplied token so two visitors sharing a
     # display name get distinct contributor_ids during auto-graduation.
     device_fingerprint: str | None = None
+    # Chain lineage: the contributor_id of whoever invited this
+    # person here. Recorded on the new contributor node at
+    # auto-graduation so the invite chain is queryable in the graph.
+    invited_by: str | None = None
 
 
 @router.post(
@@ -939,6 +943,9 @@ async def add_concept_voice(concept_id: str, body: ConceptVoiceIn, request: Requ
     and returns ``author_id`` in the response. The web client writes it back
     to ``cc-contributor-id`` so the visitor is now a real contributor in
     every subsequent surface — no signup screen involved.
+
+    When ``invited_by`` is present, the chain lineage is recorded on the
+    new contributor node so the invite graph is preserved server-side.
     """
     if not concept_service.get_concept(concept_id):
         raise HTTPException(
@@ -954,6 +961,7 @@ async def add_concept_voice(concept_id: str, body: ConceptVoiceIn, request: Requ
             author_id=body.author_id,
             location=body.location,
             device_fingerprint=body.device_fingerprint,
+            invited_by=body.invited_by,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

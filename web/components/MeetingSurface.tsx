@@ -204,6 +204,14 @@ export function MeetingSurface({
       setAuthorName(name);
       const base = getApiBase();
       const fingerprint = ensureFingerprint();
+      // Chain lineage: if this viewer came through an invite link,
+      // ``cc-invited-by`` holds the inviter's contributor_id. Forward
+      // it so the server records the invite chain on the new
+      // contributor node at auto-graduation time.
+      let invitedBy = "";
+      try {
+        invitedBy = localStorage.getItem("cc-invited-by") || "";
+      } catch { /* ignore */ }
       // For concepts, store as a voice (richer shape + ripens into proposals
       // later). For any other entity, store as a reaction with a comment.
       //
@@ -223,6 +231,7 @@ export function MeetingSurface({
             locale,
             author_id: contributorId,
             device_fingerprint: fingerprint,
+            invited_by: invitedBy || undefined,
           }),
         });
         try {

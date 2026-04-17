@@ -4,13 +4,88 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
 
 from app.models.contributor import Contributor, ContributorCreate
 from app.models.error import ErrorDetail
 from app.models.pagination import PaginatedResponse
-from app.services import graph_service
+from app.services import graph_service, contributor_service
 
 router = APIRouter()
+
+
+class GraduateIn(BaseModel):
+    """Soft-identity graduation request.
+
+    A visitor who wants to invite/react/voice can graduate to a real
+    contributor node without a signup form — just a display name + a
+    per-device fingerprint. No email, no password, no public key. The
+    same frequency as the voice-posting auto-graduation in
+    concept_voice_service.
+    """
+    author_name: str
+    device_fingerprint: str | None = None
+    invited_by: str | None = None
+
+
+class GraduateOut(BaseModel):
+    contributor_id: str
+    created: bool
+    invited_by: str | None = None
+
+
+@router.post(
+    "/contributors/graduate",
+    response_model=GraduateOut,
+    summary="Soft-identity graduation — mint a contributor node from name + fingerprint",
+)
+def graduate_contributor(body: GraduateIn) -> GraduateOut:
+    """Create (or return) a contributor node keyed by name + fingerprint.
+
+    Idempotent: calling twice with the same name+fingerprint returns
+    the existing node. When ``invited_by`` is supplied and the
+    contributor is new, we record the invite-chain link on the
+    contributor's graph properties so the lineage is preserved in the
+    database, not just the inviter's localStorage.
+    """
+    name = (body.author_name or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="author_name is required")
+    fp = (body.device_fingerprint or uuid4().hex[:8]).strip()[:24]
+    safe_name = "".join(c for c in name.lower() if c.isalnum() or c in "-_") or "friend"
+    safe_fp = "".join(c for c in fp.lower() if c.isalnum() or c in "-_") or uuid4().hex[:8]
+    candidate_id = f"{safe_name}-{safe_fp}"[:64]
+
+    existing = graph_service.get_node(f"contributor:{candidate_id}")
+    if existing:
+        return GraduateOut(
+            contributor_id=candidate_id,
+            created=False,
+            invited_by=(existing.get("invited_by") if isinstance(existing, dict) else None) or None,
+        )
+
+    # Create, and record invited_by attribution on the properties so the
+    # chain is queryable server-side.
+    invited_by = (body.invited_by or "").strip() or None
+    node_id = f"contributor:{candidate_id}"
+    graph_service.create_node(
+        id=node_id,
+        type="contributor",
+        name=candidate_id,
+        description="HUMAN contributor",
+        phase="water",
+        properties={
+            "contributor_type": "HUMAN",
+            "email": f"{candidate_id}@coherence.network",
+            "author_display_name": name,
+            "invited_by": invited_by,
+        },
+    )
+    return GraduateOut(
+        contributor_id=candidate_id,
+        created=True,
+        invited_by=invited_by,
+    )
 
 
 def _node_to_contributor(node: dict) -> Contributor:
