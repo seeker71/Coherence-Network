@@ -27,7 +27,16 @@ const plexMono = IBM_Plex_Mono({
   display: "swap",
 });
 
+// metadataBase makes relative og:image / twitter:image URLs absolute using
+// this origin instead of http://localhost:3000. Override per environment
+// via SITE_URL when running behind a different public hostname.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.SITE_URL ||
+  "https://coherencycoin.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Coherence Network",
     template: "%s | Coherence Network",
