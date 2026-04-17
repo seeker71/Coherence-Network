@@ -263,17 +263,50 @@ def build_personal_feed(
 
             # 6. Reactions on concepts I voiced
             my_voices = s.execute(
-                select(ConceptVoiceRecord.concept_id).where(
+                select(ConceptVoiceRecord.concept_id, ConceptVoiceRecord.id).where(
                     ConceptVoiceRecord.author_id == contributor_id
                 )
             ).all()
             voiced_cids = {r[0] for r in my_voices}
+            my_voice_ids = {r[1] for r in my_voices}
             if voiced_cids:
                 rows = s.execute(
                     select(ReactionRecord)
                     .where(
                         ReactionRecord.entity_type == "concept",
                         ReactionRecord.entity_id.in_(voiced_cids),
+                        or_(
+                            ReactionRecord.author_id.is_(None),
+                            ReactionRecord.author_id != contributor_id,
+                        ),
+                    )
+                    .order_by(ReactionRecord.created_at.desc())
+                    .limit(limit)
+                ).scalars().all()
+                for r in rows:
+                    items.append(
+                        {
+                            "entity_type": r.entity_type,
+                            "entity_id": r.entity_id,
+                            "kind": "reaction_on_my_voice",
+                            "title": r.entity_id,
+                            "snippet": (r.comment or r.emoji or "")[:200],
+                            "actor_name": r.author_name,
+                            "reason": "reaction_on_my_voice",
+                            "reason_label": captions["reaction_on_my_voice"],
+                            "created_at": _iso(r.created_at),
+                        }
+                    )
+            # 6b. Reactions landed directly on my individual voices
+            # (entity_type="voice"). Cycle P made voices reactable at
+            # that entity_type, so the warmth someone offers to one of
+            # her specific sentences must surface here.
+            if my_voice_ids:
+                rows = s.execute(
+                    select(ReactionRecord)
+                    .where(
+                        ReactionRecord.entity_type == "voice",
+                        ReactionRecord.entity_id.in_(my_voice_ids),
                         or_(
                             ReactionRecord.author_id.is_(None),
                             ReactionRecord.author_id != contributor_id,
@@ -348,6 +381,36 @@ def build_personal_feed(
                             "created_at": _iso(r.created_at),
                         }
                     )
+                # Soft-identity warmth-back: reactions other readers
+                # laid on the voices she wrote under this name. This
+                # is how Mama's morning nudge learns that someone
+                # gave her a heart last night.
+                my_voice_ids = {v.id for v in v_rows}
+                if my_voice_ids:
+                    react_on_voice = s.execute(
+                        select(ReactionRecord)
+                        .where(
+                            ReactionRecord.entity_type == "voice",
+                            ReactionRecord.entity_id.in_(my_voice_ids),
+                            ReactionRecord.author_name != an,
+                        )
+                        .order_by(ReactionRecord.created_at.desc())
+                        .limit(limit)
+                    ).scalars().all()
+                    for r in react_on_voice:
+                        items.append(
+                            {
+                                "entity_type": r.entity_type,
+                                "entity_id": r.entity_id,
+                                "kind": "reaction_on_my_voice",
+                                "title": r.entity_id,
+                                "snippet": (r.comment or r.emoji or "")[:200],
+                                "actor_name": r.author_name,
+                                "reason": "reaction_on_my_voice",
+                                "reason_label": captions["reaction_on_my_voice"],
+                                "created_at": _iso(r.created_at),
+                            }
+                        )
 
     # Dedup by (entity_type, entity_id, reason, actor_name, created_at)
     seen = set()

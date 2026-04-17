@@ -246,7 +246,10 @@
     "ideasOne": "1 neue Idee in deiner Nähe",
     "ideasMany": "{count} neue Ideen in deiner Nähe",
     "newsLead": "Aus der weiten Welt:",
-    "openCorner": "Deine Ecke öffnen"
+    "openCorner": "Deine Ecke öffnen",
+    "someone": "Jemand",
+    "reactedToYourVoice": "hat das auf deine Stimme gelegt.",
+    "repliedToYou": "hat dir geantwortet:"
   },
   "welcome": {
     "ariaLabel": "Willkommen — worum es hier geht",
