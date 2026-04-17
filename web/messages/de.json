@@ -184,6 +184,29 @@
     "propose": "Vorschlag",
     "you": "Du"
   },
+  "me": {
+    "stepIn": "Eintreten",
+    "you": "Du",
+    "menuLabel": "Deine Ecke",
+    "heading": "Deine Ecke",
+    "viewProfile": "Dein Profil",
+    "myCorner": "Dein Strom",
+    "hereNow": "Jetzt hier",
+    "portfolio": "Dein Portfolio",
+    "beliefs": "Deine Überzeugungen",
+    "inviteFriend": "Freund·in einladen"
+  },
+  "invite": {
+    "eyebrow": "Jemanden einladen",
+    "headline": "Wen würde das freuen?",
+    "lede": "Teile einen direkten Link zu einem Begriff, der dich bewegt hat. Die Person landet in einer ganzseitigen ersten Begegnung, nicht bei einer Textwand.",
+    "cta": "Freund·in einladen",
+    "copied": "Link kopiert ✓",
+    "shared": "Danke fürs Teilen 🌿",
+    "title": "Komm und begegne dem",
+    "message": "Ich habe etwas gefunden, das sich lebendig anfühlt. Nimm dir drei Minuten und schau.",
+    "messageWithName": "{name} hat etwas gefunden, das sich lebendig anfühlt. Nimm dir drei Minuten und schau."
+  },
   "welcome": {
     "ariaLabel": "Willkommen — worum es hier geht",
     "eyebrow": "Neu hier?",
