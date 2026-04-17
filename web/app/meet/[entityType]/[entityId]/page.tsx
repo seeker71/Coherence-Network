@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies, headers } from "next/headers";
 
@@ -182,6 +183,73 @@ async function fetchEntityFacet(
     return null;
   }
 }
+
+
+// Human-readable label per entity type for page titles + OG previews.
+const TYPE_LABEL: Record<string, string> = {
+  concept: "Concept",
+  idea: "Idea",
+  spec: "Spec",
+  contributor: "Contributor",
+  community: "Community",
+  workspace: "Workspace",
+  asset: "Asset",
+  contribution: "Contribution",
+  story: "Story",
+  config: "Config",
+  insight: "Insight",
+  agent_task: "Agent task",
+  agent_run: "Agent run",
+  proposal: "Proposal",
+};
+
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ entityType: string; entityId: string }>;
+}): Promise<Metadata> {
+  const { entityType, entityId } = await params;
+  if (!SUPPORTED_TYPES.has(entityType)) {
+    return { title: "Meeting | Coherence Network" };
+  }
+  const cookieLocale = (await cookies()).get("NEXT_LOCALE")?.value;
+  const headerLang = (await headers())
+    .get("accept-language")
+    ?.split(",")[0]
+    ?.split("-")[0];
+  const candidate = cookieLocale || headerLang;
+  const lang: LocaleCode = isSupportedLocale(candidate) ? candidate : DEFAULT_LOCALE;
+
+  const facet = await fetchEntityFacet(entityType, entityId, lang);
+  if (!facet) {
+    return { title: `${TYPE_LABEL[entityType] || entityType} | Coherence Network` };
+  }
+
+  const typeLabel = TYPE_LABEL[entityType] || entityType;
+  const title = `${facet.title} — ${typeLabel}`;
+  const description = (facet.description || "").slice(0, 280);
+  const image = facet.imageUrl || undefined;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      siteName: "Coherence Network",
+      title,
+      description,
+      ...(image ? { images: [{ url: image, width: 1200, height: 630 }] } : {}),
+    },
+    twitter: {
+      card: image ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(image ? { images: [image] } : {}),
+    },
+  };
+}
+
 
 export default async function MeetingPage({
   params,

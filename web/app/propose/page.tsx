@@ -13,7 +13,26 @@ import { ProposeForm } from "@/components/ProposeForm";
  * tally after the window closes.
  */
 
+import type { Metadata } from "next";
+
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Propose — Coherence Network",
+  description: "Offer something for the collective to meet. Reactions become the vote.",
+  openGraph: {
+    type: "website",
+    siteName: "Coherence Network",
+    title: "Propose to the collective",
+    description: "Offer something for the collective to meet. Reactions become the vote.",
+    images: [{ url: "/assets/logo.svg" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Propose — Coherence Network",
+    description: "Offer something for the collective to meet.",
+  },
+};
 
 export default async function ProposePage() {
   const cookieLocale = (await cookies()).get("NEXT_LOCALE")?.value;

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { notFound } from "next/navigation";
 
@@ -19,6 +20,51 @@ const SUPPORTED_TYPES = new Set([
   "contributor",
   "proposal",
 ]);
+
+const TYPE_LABEL: Record<string, { title: string; description: string }> = {
+  concept: {
+    title: "Walk the concepts — Coherence Network",
+    description: "Meet one Living Collective concept at a time. Every gesture lifts both pulses.",
+  },
+  idea: {
+    title: "Walk the ideas — Coherence Network",
+    description: "Meet ideas being realized, one at a time.",
+  },
+  contributor: {
+    title: "Walk with contributors — Coherence Network",
+    description: "Meet the people weaving this network.",
+  },
+  proposal: {
+    title: "Walk the proposals — Coherence Network",
+    description: "Meet proposals the collective is considering. Vote with your reactions.",
+  },
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ entityType: string }>;
+}): Promise<Metadata> {
+  const { entityType } = await params;
+  const meta = TYPE_LABEL[entityType];
+  if (!meta) return { title: "Explore — Coherence Network" };
+  return {
+    title: meta.title,
+    description: meta.description,
+    openGraph: {
+      type: "website",
+      siteName: "Coherence Network",
+      title: meta.title,
+      description: meta.description,
+      images: [{ url: "/assets/logo.svg" }],
+    },
+    twitter: {
+      card: "summary",
+      title: meta.title,
+      description: meta.description,
+    },
+  };
+}
 
 export default async function ExplorePage({
   params,

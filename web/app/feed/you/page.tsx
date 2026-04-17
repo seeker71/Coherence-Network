@@ -15,7 +15,26 @@ import { PersonalFeed } from "@/components/PersonalFeed";
  * identity lives in localStorage; the server doesn't know who you are.
  */
 
+import type { Metadata } from "next";
+
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Your corner — Coherence Network",
+  description: "Voices you gave, reactions you offered, replies that came back to you, proposals you lifted.",
+  openGraph: {
+    type: "website",
+    siteName: "Coherence Network",
+    title: "Your corner of the organism",
+    description: "Voices you gave, reactions you offered, replies that came back to you.",
+    images: [{ url: "/assets/logo.svg" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Your corner — Coherence Network",
+    description: "Your corner of the organism.",
+  },
+};
 
 export default async function PersonalFeedPage() {
   const cookieLocale = (await cookies()).get("NEXT_LOCALE")?.value;
