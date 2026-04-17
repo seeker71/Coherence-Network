@@ -483,6 +483,84 @@ def test_glossary_preserves_image_syntax():
     assert "hüten" in out
 
 
+# ---------------------------------------------------------------------------
+# Localized API error messages
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_concept_not_found_localized_via_query_lang():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/concepts/does-not-exist?lang=de")
+        assert r.status_code == 404
+        # German message for concept_not_found
+        assert "Begriff 'does-not-exist' nicht gefunden" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_concept_not_found_localized_via_accept_language():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get(
+            "/api/concepts/does-not-exist",
+            headers={"accept-language": "es-ES,es;q=0.9,en;q=0.8"},
+        )
+        assert r.status_code == 404
+        assert "no encontrado" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_unsupported_locale_localized():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = await _create_concept(c, "bad-lang")
+        r = await c.post(
+            f"/api/concepts/{cid}/views",
+            json={
+                "lang": "zz",
+                "content_title": "x",
+                "author_type": "original_human",
+            },
+        )
+        assert r.status_code == 400
+        # Without Accept-Language, default is English
+        assert "Unsupported locale 'zz'" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_spec_list_honors_lang():
+    """The spec-registry list endpoint substitutes title/summary from spec views."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # Create a spec entry directly
+        spec_id = f"test-spec-{uuid4().hex[:6]}"
+        r = await c.post(
+            "/api/spec-registry",
+            json={
+                "spec_id": spec_id,
+                "title": "English Spec Title",
+                "summary": "English spec summary",
+            },
+            headers={"X-API-Key": "dev-key"},
+        )
+        assert r.status_code == 201, r.text
+
+        # Write a German view for it via the generic entity-views endpoint
+        r = await c.post(
+            f"/api/entity-views/spec/{spec_id}",
+            json={
+                "lang": "de",
+                "content_title": "Deutscher Entwurfs-Titel",
+                "content_description": "Deutsche Zusammenfassung",
+                "author_type": "original_human",
+            },
+        )
+        assert r.status_code == 200, r.text
+
+        # Listing with ?lang=de should substitute
+        r = await c.get("/api/spec-registry?lang=de")
+        assert r.status_code == 200
+        by_id = {s["spec_id"]: s for s in r.json() if s["spec_id"] == spec_id}
+        assert spec_id in by_id
+        assert by_id[spec_id]["title"] == "Deutscher Entwurfs-Titel"
+
+
 def test_register_default_prefers_libretranslate_without_key(monkeypatch):
     """With no COHERENCE_TRANSLATOR set and no anthropic key, installs LibreTranslate."""
     translator_service.set_backend(None)
@@ -492,4 +570,235 @@ def test_register_default_prefers_libretranslate_without_key(monkeypatch):
         name = register_default_backend()
     assert name == "libretranslate"
     assert translator_service.has_backend() is True
+
+
+# ---------------------------------------------------------------------------
+# Caller locale flows through every text-returning surface
+# ---------------------------------------------------------------------------
+
+class _StubSnippetBackend:
+    """Deterministic snippet backend for testing news/discovery on-demand flow.
+
+    Returns `[{lang}] {text}` so tests can assert the locale arrived at the
+    backend without depending on a network translator.
+    """
+
+    def attune(self, *, source_markdown, source_title, source_description,
+               source_lang, target_lang, glossary_prompt):
+        def stamp(s: str) -> str:
+            return f"[{target_lang}] {s}" if s else s
+        return stamp(source_title), stamp(source_description), stamp(source_markdown)
+
+
+@pytest.mark.asyncio
+async def test_ideas_list_honors_accept_language_header(monkeypatch):
+    """/api/ideas picks up `Accept-Language` even when ?lang= is absent."""
+    from app.services import translator_service as _tsvc
+    prev = _tsvc._BACKEND
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+            # Seed an idea
+            idea_id = f"view-idea-{uuid4().hex[:6]}"
+            r = await c.post(
+                "/api/ideas",
+                json={
+                    "id": idea_id,
+                    "name": "Tending the garden",
+                    "description": "Practice of attending to a living field.",
+                    "potential_value": 1.0,
+                    "estimated_cost": 1.0,
+                },
+                headers={"X-API-Key": "dev-key"},
+            )
+            assert r.status_code in (200, 201), r.text
+
+            # Write a German view
+            r = await c.post(
+                f"/api/entity-views/idea/{idea_id}",
+                json={
+                    "lang": "de",
+                    "content_title": "Den Garten hüten",
+                    "content_description": "Praxis des Hütens eines lebendigen Feldes.",
+                    "author_type": "original_human",
+                },
+            )
+            assert r.status_code == 200
+
+            # Accept-Language only — no ?lang=
+            r = await c.get(
+                "/api/ideas",
+                headers={"accept-language": "de-DE,de;q=0.9"},
+            )
+            assert r.status_code == 200
+            ideas = {i["id"]: i for i in r.json()["ideas"]}
+            assert idea_id in ideas
+            assert ideas[idea_id]["name"] == "Den Garten hüten"
+    finally:
+        _tsvc.set_backend(prev)
+
+
+@pytest.mark.asyncio
+async def test_spec_list_honors_accept_language_header():
+    """/api/spec-registry picks up `Accept-Language` without ?lang=."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        spec_id = f"view-spec-{uuid4().hex[:6]}"
+        r = await c.post(
+            "/api/spec-registry",
+            json={"spec_id": spec_id, "title": "Feature X", "summary": "Does X."},
+            headers={"X-API-Key": "dev-key"},
+        )
+        assert r.status_code == 201
+        r = await c.post(
+            f"/api/entity-views/spec/{spec_id}",
+            json={
+                "lang": "es",
+                "content_title": "Característica X",
+                "content_description": "Hace X.",
+                "author_type": "original_human",
+            },
+        )
+        assert r.status_code == 200
+        r = await c.get(
+            "/api/spec-registry",
+            headers={"accept-language": "es"},
+        )
+        assert r.status_code == 200
+        matches = [s for s in r.json() if s["spec_id"] == spec_id]
+        assert matches, f"spec {spec_id} missing from list"
+        assert matches[0]["title"] == "Característica X"
+
+
+@pytest.mark.asyncio
+async def test_concepts_domain_list_honors_accept_language_header():
+    """/api/concepts/domain/{domain} picks up `Accept-Language` without ?lang=."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = await _create_concept(c, "domain-accept-lang")
+        await _post_view(
+            c, cid,
+            lang="en",
+            content_title="Nourishing",
+            content_description="Everything that sustains circulates.",
+            content_markdown="# Nourishing\n\nbody",
+            author_type="original_human",
+        )
+        r = await c.post(
+            f"/api/entity-views/concept/{cid}",
+            json={
+                "lang": "de",
+                "content_title": "Nährend",
+                "content_description": "Alles, was erhält, zirkuliert.",
+                "author_type": "original_human",
+            },
+        )
+        assert r.status_code == 200
+        r = await c.get(
+            "/api/concepts/domain/living-collective",
+            headers={"accept-language": "de"},
+        )
+        assert r.status_code == 200
+        items = r.json().get("items") or r.json().get("concepts") or []
+        hits = [c for c in items if c.get("id") == cid]
+        assert hits, f"concept {cid} not in domain list"
+        assert hits[0]["name"] == "Nährend"
+
+
+@pytest.mark.asyncio
+async def test_news_feed_translates_snippets_on_demand(monkeypatch):
+    """/api/news/feed runs titles/descriptions through the snippet backend."""
+    import app.services.translator_service as _tsvc
+    prev = _tsvc._BACKEND
+    _tsvc.set_backend(_StubSnippetBackend())
+    _tsvc._SNIPPET_CACHE.clear()
+    # Stub fetch_feeds to return a deterministic item
+    from app.services import news_ingestion_service
+    from app.services.news_ingestion_service import NewsItem
+
+    async def _fake_fetch(*_args, **_kwargs):
+        return [
+            NewsItem(
+                title="A gentle rain",
+                description="The river breathes.",
+                url="https://example.com/rain",
+                published_at="2026-04-16T00:00:00Z",
+                source="Example",
+            ),
+        ]
+
+    monkeypatch.setattr(news_ingestion_service, "fetch_feeds", _fake_fetch)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+            r = await c.get("/api/news/feed", headers={"accept-language": "de"})
+            assert r.status_code == 200, r.text
+            body = r.json()
+            assert body["lang"] == "de"
+            assert body["items"][0]["title"].startswith("[de] ")
+            assert body["items"][0]["description"].startswith("[de] ")
+    finally:
+        _tsvc.set_backend(prev)
+        _tsvc._SNIPPET_CACHE.clear()
+
+
+@pytest.mark.asyncio
+async def test_news_feed_english_returns_raw_titles(monkeypatch):
+    """English callers get RSS items untouched — no pointless round trip."""
+    import app.services.translator_service as _tsvc
+    prev = _tsvc._BACKEND
+    _tsvc.set_backend(_StubSnippetBackend())
+    from app.services import news_ingestion_service
+    from app.services.news_ingestion_service import NewsItem
+
+    async def _fake_fetch(*_args, **_kwargs):
+        return [NewsItem(title="A gentle rain", description="The river breathes.",
+                         url="https://example.com/rain", published_at=None, source="X")]
+
+    monkeypatch.setattr(news_ingestion_service, "fetch_feeds", _fake_fetch)
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+            r = await c.get("/api/news/feed")
+            assert r.status_code == 200
+            assert r.json()["items"][0]["title"] == "A gentle rain"
+    finally:
+        _tsvc.set_backend(prev)
+
+
+@pytest.mark.asyncio
+async def test_translate_snippet_memoizes_backend_calls(monkeypatch):
+    """Same snippet + target_lang should hit the backend once, not twice."""
+    import app.services.translator_service as _tsvc
+    prev = _tsvc._BACKEND
+    calls = {"n": 0}
+
+    class _CountingBackend:
+        def attune(self, *, source_markdown, source_title, source_description,
+                   source_lang, target_lang, glossary_prompt):
+            calls["n"] += 1
+            return f"T({source_title})", f"T({source_description})", source_markdown
+
+    _tsvc.set_backend(_CountingBackend())
+    _tsvc._SNIPPET_CACHE.clear()
+    try:
+        _tsvc.translate_snippet("hello", "world", source_lang="en", target_lang="de")
+        _tsvc.translate_snippet("hello", "world", source_lang="en", target_lang="de")
+        assert calls["n"] == 1
+    finally:
+        _tsvc.set_backend(prev)
+        _tsvc._SNIPPET_CACHE.clear()
+
+
+@pytest.mark.asyncio
+async def test_resonance_cross_domain_substitutes_idea_names():
+    """/api/resonance/cross-domain renders idea names in the caller's locale."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # The endpoint reads whatever pairs are cached — just verify it accepts
+        # lang and passes it through without error. We can't cheaply seed a
+        # structural pair here, so we assert the envelope and that the endpoint
+        # doesn't 500 on Accept-Language paths.
+        r = await c.get(
+            "/api/resonance/cross-domain?limit=1",
+            headers={"accept-language": "de"},
+        )
+        assert r.status_code == 200
+        body = r.json()
+        assert "pairs" in body
+        assert "min_coherence_used" in body
     translator_service.set_backend(None)

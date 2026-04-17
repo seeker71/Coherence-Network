@@ -109,6 +109,119 @@ async def harmonies_only(
     return _compute_harmonies(internal, community, external)
 
 
+@router.get(
+    "/energy/recommend",
+    summary="Invitations — turn sensing into response",
+    description=(
+        "The organism senses its own state and offers warm invitations to "
+        "strengthen where it is quiet, celebrate where it is thriving, and "
+        "attend to where it is tender. Read any signal that feels quiet/"
+        "dormant and you'll see a specific thing to do next."
+    ),
+)
+async def energy_recommendations(
+    workspace_id: str = Query("coherence-network"),
+) -> dict[str, Any]:
+    """Read the sensing map and emit invitations (not warnings)."""
+    internal = await _sense_internal()
+    community = await _sense_community(workspace_id)
+    external = await _sense_external()
+
+    invitations: list[dict[str, Any]] = []
+    for signal in (internal.get("signals") or []):
+        inv = _signal_to_invitation("internal", signal)
+        if inv:
+            invitations.append(inv)
+    for signal in (community.get("signals") or []):
+        inv = _signal_to_invitation("community", signal)
+        if inv:
+            invitations.append(inv)
+    for signal in (external.get("signals") or []):
+        inv = _signal_to_invitation("external", signal)
+        if inv:
+            invitations.append(inv)
+
+    severity_order = {"tender": 0, "quiet": 1, "resting": 2, "growing": 3, "thriving": 4}
+    invitations.sort(key=lambda i: severity_order.get(i.get("felt_as", "resting"), 5))
+
+    return {
+        "sensed_at": datetime.now(timezone.utc).isoformat(),
+        "workspace_id": workspace_id,
+        "invitations": invitations,
+        "count": len(invitations),
+    }
+
+
+def _signal_to_invitation(scale: str, signal: dict[str, Any]) -> dict[str, Any] | None:
+    """Translate a signal's vitality into a warm, specific invitation.
+
+    Only emit invitations when the signal asks for attention (quiet/dormant/
+    resting). Thriving signals don't need a recommendation — they need witness.
+    """
+    vitality = signal.get("vitality", "")
+    if vitality in ("thriving", "growing"):
+        # Celebrate thriving signals in their own channel below, not as invitations.
+        return None
+    sig_id = signal.get("id", "")
+    label = signal.get("label", sig_id)
+    detail = signal.get("detail", "")
+
+    # Map sensed states into warm invitations. The mapping is intentional:
+    # read aloud, each invitation sounds like someone who knows you offering
+    # a next step, not like an alert.
+    invitations_by_signal = {
+        "coherence_score": (
+            "Spend a few minutes in a single concept page and notice what is "
+            "alive there. Coherence grows when attention lingers."
+        ),
+        "body_health": (
+            "One service is breathing shallowly. Open /api/health and follow "
+            "the thread — often a single dependency wants waking."
+        ),
+        "practice_centers": (
+            "A practice center is quiet. Share a voice on a concept you've "
+            "lived. Living texture flows back when one person speaks first."
+        ),
+        "request_flow": (
+            "Request flow is low. Invite a friend to browse /vision — the "
+            "organism breathes when it has readers."
+        ),
+        "vitality": (
+            "Community vitality is resting. Post a short note on "
+            "/api/activity or add a voice to a concept — warmth spreads."
+        ),
+        "view_health": (
+            "Some concepts haven't been translated yet. Pick one in a language "
+            "you speak and offer a view — every language is equal here."
+        ),
+        "edge_density": (
+            "The concept web is sparse. Link two concepts that feel related "
+            "and the whole graph brightens."
+        ),
+        "external_skin": (
+            "The external skin is quiet. Run `python scripts/sense_external_"
+            "signals.py` and let the world's breath reach the body."
+        ),
+    }
+    invitation_body = invitations_by_signal.get(sig_id)
+    if invitation_body is None:
+        invitation_body = (
+            f"{label} is {vitality}. Even a small touch — a voice, a link, a "
+            "translation — will shift this signal."
+        )
+
+    felt_as = vitality if vitality in ("quiet", "dormant", "resting") else "tender"
+    return {
+        "scale": scale,
+        "signal_id": sig_id,
+        "signal_label": label,
+        "felt_as": felt_as,
+        "detail": detail,
+        "invitation": invitation_body,
+        "frequency_hz": signal.get("frequency_hz"),
+    }
+
+
 # ── Internal body sensing ────────────────────────────────────────
 
 async def _sense_internal() -> dict[str, Any]:

@@ -207,3 +207,71 @@ def attune_from_anchor(
     fresh_views = _cache.all_canonical_views(entity_type, entity_id)
     fresh_anchor = _cache.find_anchor(fresh_views)
     return _view_to_response(rec, fresh_anchor)
+
+
+# ---------------------------------------------------------------------------
+# In-memory snippet translation for transient content (news items, search
+# results, ad-hoc labels). Does not write to entity_views — intended for
+# content we don't own and can't stably identify, where a best-effort
+# inline render is the right pattern.
+# ---------------------------------------------------------------------------
+
+_SNIPPET_CACHE: dict[tuple[str, str, str], tuple[str, str]] = {}
+_SNIPPET_CACHE_MAX = 2000
+
+
+def translate_snippet(
+    title: str,
+    description: str,
+    source_lang: str,
+    target_lang: str,
+) -> tuple[str, str]:
+    """Translate a (title, description) pair into ``target_lang`` via the
+    registered backend. Returns the input unchanged when target == source
+    or no backend is available.
+
+    Results are memoized in-process to avoid repeat backend calls on the same
+    transient snippet (RSS items, discovery feed labels) within a session.
+    """
+    if not target_lang or target_lang == source_lang:
+        return title, description
+    if _BACKEND is None:
+        try:
+            from app.services import fallback_witness_service as _fw
+            _fw.witness(
+                source="translator:no-backend",
+                reason=f"No translator backend registered; returning source text for {target_lang}",
+                context={"target_lang": target_lang},
+            )
+        except Exception:
+            pass
+        return title, description
+    key = (source_lang, target_lang, f"{title}\x1f{description}")
+    cached = _SNIPPET_CACHE.get(key)
+    if cached is not None:
+        return cached
+    try:
+        t_title, t_desc, _ = _BACKEND.attune(
+            source_markdown="",
+            source_title=title or "",
+            source_description=description or "",
+            source_lang=source_lang,
+            target_lang=target_lang,
+            glossary_prompt=build_glossary_prompt(target_lang),
+        )
+    except Exception as e:
+        try:
+            from app.services import fallback_witness_service as _fw
+            _fw.witness(
+                source="translator:attune-failed",
+                reason=f"Backend attune raised {type(e).__name__}; returning source text",
+                context={"target_lang": target_lang},
+            )
+        except Exception:
+            pass
+        return title, description
+    result = (t_title or title, t_desc or description)
+    if len(_SNIPPET_CACHE) >= _SNIPPET_CACHE_MAX:
+        _SNIPPET_CACHE.clear()
+    _SNIPPET_CACHE[key] = result
+    return result

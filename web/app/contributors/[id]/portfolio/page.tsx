@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { getApiBase } from "@/lib/api";
+import { ReactionBar } from "@/components/ReactionBar";
 
 const API = getApiBase();
 
@@ -516,6 +517,10 @@ export default function ContributorPortfolioPage() {
           Visit the Garden →
         </Link>
       </div>
+
+      <section className="max-w-3xl mx-auto px-4 pb-10">
+        <ReactionBar entityType="contributor" entityId={contributorId} />
+      </section>
     </main>
   );
 }

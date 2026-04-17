@@ -10,6 +10,7 @@ import {
 // Reuse the shared REPO_BLOB_MAIN/REPO_TREE derivation from flow/types so the
 // spec page and the flow visualizer stay in sync when the repo URL changes.
 import { REPO_BLOB_MAIN, REPO_TREE } from "@/app/flow/types";
+import { ReactionBar } from "@/components/ReactionBar";
 
 export const revalidate = 90;
 
@@ -445,6 +446,10 @@ export default async function SpecDetailPage({ params }: { params: Promise<{ spe
             </a>
           </li>
         </ul>
+      </section>
+
+      <section className="max-w-3xl mx-auto px-4 pb-10">
+        <ReactionBar entityType="spec" entityId={specId} />
       </section>
     </main>
   );
