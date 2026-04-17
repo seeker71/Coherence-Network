@@ -220,8 +220,24 @@ async function main(): Promise<void> {
       ignoreHTTPSErrors: true,
       locale: "en-US",
     });
+    // Dark-mode captures (the current default theme).
     for (const shot of SHOTS) {
       await runShot(context, shot);
+    }
+    // Light-mode captures of the same scenes so we can verify both
+    // themes carry the same quality of contrast + polish. Output names
+    // get a "-light" suffix and land in the same directory.
+    for (const shot of SHOTS) {
+      const lightShot: Shot = {
+        ...shot,
+        name: shot.name.replace(/\.png$/, "-light.png"),
+        preMount: (shot.preMount || "") + `
+          document.documentElement.classList.remove("dark");
+          document.documentElement.classList.add("light");
+          try { localStorage.setItem("cc-theme", "light"); } catch {}
+        `,
+      };
+      await runShot(context, lightShot);
     }
     await context.close();
   } finally {
