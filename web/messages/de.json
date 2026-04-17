@@ -184,6 +184,10 @@
     "propose": "Vorschlag",
     "you": "Du"
   },
+  "kin": {
+    "eyebrow": "Nahe bei dir",
+    "headline": "Bewegung auf dem, was du berührt hast."
+  },
   "sinceLast": {
     "eyebrow": "Seit deinem letzten Besuch (vor {when})",
     "generic": "Während du weg warst, ist etwas geschehen.",

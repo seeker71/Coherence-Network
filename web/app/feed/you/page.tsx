@@ -7,6 +7,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { PersonalFeed } from "@/components/PersonalFeed";
 import { InviteFriend } from "@/components/InviteFriend";
 import { SinceLastVisit } from "@/components/SinceLastVisit";
+import { KinActivity } from "@/components/KinActivity";
 
 /**
  * /feed/you — your corner of the organism.
@@ -57,8 +58,9 @@ export default async function PersonalFeedPage() {
         <NotificationBell />
       </header>
       <FeedTabs />
-      <div className="mb-4">
+      <div className="mb-4 space-y-4">
         <SinceLastVisit />
+        <KinActivity />
       </div>
       <PersonalFeed
         strings={{
