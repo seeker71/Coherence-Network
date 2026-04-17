@@ -213,12 +213,12 @@ export function MorningNudge() {
       )}
       {digest.news && (
         <p>
-          <span className="text-stone-500 mr-1">{t("morningNudge.newsLead")}</span>
+          <span className="text-muted-foreground mr-1">{t("morningNudge.newsLead")}</span>
           <a
             href={digest.news.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-teal-300 hover:text-teal-200 underline underline-offset-2 decoration-teal-700/40"
+            className="text-[hsl(var(--chart-2))] hover:opacity-80 underline underline-offset-2 decoration-[hsl(var(--chart-2)/0.4)]"
           >
             {digest.news.title}
           </a>
