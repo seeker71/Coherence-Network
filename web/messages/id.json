@@ -117,6 +117,13 @@
     "exploreVision": "Jelajahi visi",
     "stepIn": "Masuk ke jaringan"
   },
+  "explore": {
+    "empty": "Belum ada yang baru untuk ditemui. Coba jalan lain.",
+    "exploreMore": "Jelajahi lebih jauh",
+    "loading": "Menyiapkan jalan…",
+    "walkDone": "Kamu sudah bertemu semua di jalan ini.",
+    "restart": "Berjalan lagi"
+  },
   "meeting": {
     "viewerPulse": "kamu",
     "contentPulse": "ini",

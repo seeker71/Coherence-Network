@@ -215,9 +215,15 @@ export default async function FeedPage() {
         <div className="space-y-3">{items.map((i) => i.node)}</div>
       )}
 
-      <footer className="mt-8 flex items-center justify-between text-xs text-stone-500">
+      <footer className="mt-8 flex items-center justify-between gap-3 text-xs text-stone-500">
         <Link href="/vision" className="hover:text-amber-300/90">
           {t("feed.exploreVision")}
+        </Link>
+        <Link
+          href="/explore/concept"
+          className="rounded-full bg-amber-700/70 hover:bg-amber-600/80 text-stone-950 px-3 py-1 font-medium"
+        >
+          {t("explore.exploreMore")} →
         </Link>
         <Link href="/join" className="hover:text-teal-300/90">
           {t("feed.stepIn")}
