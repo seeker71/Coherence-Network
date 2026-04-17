@@ -184,6 +184,15 @@
     "propose": "Propose",
     "you": "You"
   },
+  "welcome": {
+    "ariaLabel": "Welcome — what this place is",
+    "eyebrow": "New here?",
+    "dismiss": "Dismiss",
+    "headline": "A living network where ideas become real.",
+    "lede": "Meet one concept. Offer a small gesture of care. If something resonates, share your voice — and the collective begins to feel you. Three minutes is enough to see what this is.",
+    "startCta": "Begin with one concept",
+    "walkCta": "Or take a short walk"
+  },
   "homeBreath": {
     "ariaLabel": "What is alive on the network right now",
     "label": "Live breath",

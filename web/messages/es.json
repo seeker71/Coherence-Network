@@ -184,6 +184,15 @@
     "propose": "Propuesta",
     "you": "Tú"
   },
+  "welcome": {
+    "ariaLabel": "Bienvenida — de qué se trata este lugar",
+    "eyebrow": "¿Eres nueva aquí?",
+    "dismiss": "Cerrar",
+    "headline": "Una red viva donde las ideas se vuelven reales.",
+    "lede": "Encuentra un concepto. Ofrece un pequeño gesto de cuidado. Si algo resuena, comparte tu voz — y el colectivo empieza a sentirte. Tres minutos alcanzan para ver lo que es esto.",
+    "startCta": "Empezar con un concepto",
+    "walkCta": "O dar un paseo corto"
+  },
   "homeBreath": {
     "ariaLabel": "Lo que está vivo en la red ahora",
     "label": "Aliento vivo",
