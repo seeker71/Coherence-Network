@@ -315,7 +315,14 @@
     "amplify": "amplify",
     "inviteHint": "Your gesture raised both pulses. Join so your name walks with it",
     "othersHereOne": "1 other here now",
-    "othersHereMany": "{count} others here now"
+    "othersHereMany": "{count} others here now",
+    "sayHeading": "Want to say something?",
+    "sayNamePlaceholder": "Your name",
+    "sayPlaceholder": "Two sentences is enough. What did you feel?",
+    "saySubmit": "Offer this",
+    "saySending": "Offering…",
+    "saySent": "Thank you — your voice is here.",
+    "sayDismiss": "not now"
   },
   "reactions": {
     "ariaLabel": "Reactions and comments",
