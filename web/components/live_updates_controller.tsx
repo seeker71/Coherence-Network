@@ -156,7 +156,10 @@ export default function LiveUpdatesController() {
     : t("autoRefresh.statusOff");
 
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-40">
+    // Hidden on mobile — it's developer-facing chrome, not the warmest
+    // thing a first-time visitor from a phone should see. Desktop keeps
+    // the affordance for contributors who want to pause live refresh.
+    <div className="hidden md:block pointer-events-none fixed bottom-4 right-4 z-40">
       <details className="group pointer-events-auto">
         <summary className="list-none cursor-pointer rounded-full border border-border/70 bg-card/90 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur">
           {t("autoRefresh.label")} <span className="font-semibold text-foreground">{statusLabel}</span>
