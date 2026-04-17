@@ -84,3 +84,23 @@ async def tally(proposal_id: str) -> dict:
     if not p:
         raise HTTPException(status_code=404, detail="proposal not found")
     return proposal_service.tally(proposal_id)
+
+
+@router.post(
+    "/proposals/{proposal_id}/resolve",
+    summary="Lift a resonant proposal into a kinetic idea",
+    description=(
+        "When the tally reads 'resonant' and the proposal is unresolved, "
+        "this seeds an idea from the proposal and records the link. "
+        "Idempotent — calling again on an already-resolved proposal "
+        "returns the existing idea id without reseeding."
+    ),
+)
+async def resolve(proposal_id: str) -> dict:
+    try:
+        return proposal_service.resolve_into_idea(proposal_id)
+    except ValueError as e:
+        msg = str(e)
+        if "not found" in msg:
+            raise HTTPException(status_code=404, detail=msg)
+        raise HTTPException(status_code=400, detail=msg)

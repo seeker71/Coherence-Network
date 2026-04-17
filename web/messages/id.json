@@ -141,6 +141,18 @@
     "thanks": "Usulanmu ada di jalan.",
     "viewAll": "Lihat semua usulan"
   },
+  "proposal": {
+    "readyToLift": "Suara-suara beresonansi. Usulan ini siap menjadi ide.",
+    "lift": "Angkat menjadi ide",
+    "lifting": "Mengangkat…",
+    "lifted": "Kolektif telah mengangkat usulan ini.",
+    "viewIdea": "Lihat idenya",
+    "statusQuiet": "Sunyi — belum ada suara",
+    "statusWarming": "Menghangat — suara condong ke ya",
+    "statusBalanced": "Seimbang — suara terbagi",
+    "statusCooling": "Mendingin — suara condong ke tidak",
+    "statusResonant": "Beresonansi — suara selaras"
+  },
   "meeting": {
     "viewerPulse": "kamu",
     "contentPulse": "ini",

@@ -141,6 +141,18 @@
     "thanks": "Dein Vorschlag ist im Weg.",
     "viewAll": "Alle Vorschläge sehen"
   },
+  "proposal": {
+    "readyToLift": "Die Stimmen resonieren. Dieser Vorschlag kann zur Idee werden.",
+    "lift": "In eine Idee heben",
+    "lifting": "Wird gehoben …",
+    "lifted": "Dieser Vorschlag wurde vom Kollektiv gehoben.",
+    "viewIdea": "Zur Idee",
+    "statusQuiet": "Still – noch keine Stimmen",
+    "statusWarming": "Erwärmt sich – die Stimmen tendieren zum Ja",
+    "statusBalanced": "Ausgewogen – die Stimmen sind geteilt",
+    "statusCooling": "Kühlt ab – die Stimmen tendieren zum Nein",
+    "statusResonant": "Resonant – die Stimmen sind ausgerichtet"
+  },
   "meeting": {
     "viewerPulse": "du",
     "contentPulse": "dies",

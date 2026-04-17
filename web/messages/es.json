@@ -141,6 +141,18 @@
     "thanks": "Tu propuesta está en el camino.",
     "viewAll": "Ver todas las propuestas"
   },
+  "proposal": {
+    "readyToLift": "Las voces resuenan. Esta propuesta está lista para volverse una idea.",
+    "lift": "Elevar a una idea",
+    "lifting": "Elevando…",
+    "lifted": "El colectivo elevó esta propuesta.",
+    "viewIdea": "Ver la idea",
+    "statusQuiet": "Silencioso — aún sin voces",
+    "statusWarming": "Entibiándose — las voces inclinan al sí",
+    "statusBalanced": "Equilibrado — las voces están divididas",
+    "statusCooling": "Enfriándose — las voces inclinan al no",
+    "statusResonant": "Resonante — las voces están alineadas"
+  },
   "meeting": {
     "viewerPulse": "tú",
     "contentPulse": "esto",
