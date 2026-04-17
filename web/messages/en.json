@@ -217,11 +217,20 @@
     "shared": "Thanks for sharing 🌿",
     "title": "Come meet this",
     "message": "I found something that feels alive. Take three minutes and see.",
-    "messageWithName": "{name} found something that feels alive. Take three minutes and see."
+    "messageWithName": "{name} found something that feels alive. Take three minutes and see.",
+    "messageWithBoth": "{name} thought of you, {recipient}. Something alive is waiting — take three minutes and see.",
+    "recipientLabel": "Their name",
+    "recipientPlaceholder": "e.g. Mama, Sam, Aisha",
+    "recipientHint": "They arrive already greeted by name — nothing to register, nothing to remember."
   },
   "inviteBanner": {
     "ariaLabel": "Invitation",
     "inviting": "invited you to meet this.",
+    "welcomeLead": "Welcome,",
+    "invitedYou": "invited you to meet this.",
+    "welcomeNamed": "Welcome, {name}.",
+    "welcomeNamedFrom": "Welcome, {name} — {from} invited you to meet this.",
+    "welcomeBackNamed": "{name}, welcome back. Here's what's stirring for you.",
     "dismiss": "Dismiss"
   },
   "welcome": {
