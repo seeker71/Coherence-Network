@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { IdeaSubmitForm } from "@/components/idea_submit_form";
 import { LiveBreathPanel } from "@/components/LiveBreathPanel";
+import { FirstTimeWelcome } from "@/components/FirstTimeWelcome";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
 import type { IdeaWithScore } from "@/lib/types";
@@ -136,6 +137,7 @@ export default async function Home() {
   return (
     <main className="min-h-[calc(100vh-3.5rem)]">
       <LiveBreathPanel lang={lang} />
+      <FirstTimeWelcome />
       {/* Section 1: HERO — THE QUESTION */}
       <section className="flex flex-col justify-center items-center text-center px-4 pt-12 pb-6 relative">
         <div className="absolute inset-0 pointer-events-none">

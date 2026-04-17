@@ -184,6 +184,15 @@
     "propose": "Vorschlag",
     "you": "Du"
   },
+  "welcome": {
+    "ariaLabel": "Willkommen — worum es hier geht",
+    "eyebrow": "Neu hier?",
+    "dismiss": "Schließen",
+    "headline": "Ein lebendiges Netz, in dem Ideen wirklich werden.",
+    "lede": "Begegne einem Begriff. Schenk eine kleine Geste der Zuwendung. Wenn etwas mitschwingt, teile deine Stimme — und das Kollektiv beginnt, dich zu spüren. Drei Minuten reichen, um zu sehen, was das hier ist.",
+    "startCta": "Mit einem Begriff beginnen",
+    "walkCta": "Oder einen kurzen Weg gehen"
+  },
   "homeBreath": {
     "ariaLabel": "Was jetzt lebendig ist im Netz",
     "label": "Lebendiger Atem",

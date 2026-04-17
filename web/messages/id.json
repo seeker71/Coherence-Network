@@ -184,6 +184,15 @@
     "propose": "Usul",
     "you": "Kamu"
   },
+  "welcome": {
+    "ariaLabel": "Selamat datang — tentang tempat ini",
+    "eyebrow": "Baru di sini?",
+    "dismiss": "Tutup",
+    "headline": "Jaringan hidup tempat ide-ide menjadi nyata.",
+    "lede": "Temui satu konsep. Beri isyarat kecil peduli. Jika ada yang beresonansi, bagikan suaramu — dan kolektif mulai merasakanmu. Tiga menit cukup untuk merasakan apa ini.",
+    "startCta": "Mulai dengan satu konsep",
+    "walkCta": "Atau jalan singkat"
+  },
   "homeBreath": {
     "ariaLabel": "Apa yang hidup di jaringan saat ini",
     "label": "Napas hidup",
