@@ -173,11 +173,37 @@ export function MeetingSurface({
     const name = authorName.trim() || "friend";
     try {
       const base = getApiBase();
-      await fetch(`${base}/api/reactions/${entityType}/${entityId}`, {
+      const fingerprint = ensureFingerprint();
+      // Forward invite lineage so a reaction-only arrival (someone
+      // who taps 💛 but never types a voice) still becomes a
+      // contributor with the chain recorded server-side.
+      let invitedBy = "";
+      try {
+        invitedBy = localStorage.getItem("cc-invited-by") || "";
+      } catch { /* ignore */ }
+      const res = await fetch(`${base}/api/reactions/${entityType}/${entityId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ author_name: name, emoji, locale, author_id: contributorId }),
+        body: JSON.stringify({
+          author_name: name,
+          emoji,
+          locale,
+          author_id: contributorId,
+          device_fingerprint: fingerprint,
+          invited_by: invitedBy || undefined,
+        }),
       });
+      // Persist the minted contributor_id when the server auto-graduated.
+      try {
+        if (res.ok) {
+          const data = await res.json();
+          const newId: string | undefined = data?.reaction?.author_id;
+          if (newId && !contributorId) {
+            localStorage.setItem(CONTRIBUTOR_KEY, newId);
+            setContributorId(newId);
+          }
+        }
+      } catch { /* non-critical */ }
       triggerPulse();
       loadMeeting();
       // After the first warm gesture, invite a sentence. The panel opens
