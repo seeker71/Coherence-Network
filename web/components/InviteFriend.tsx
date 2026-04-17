@@ -3,28 +3,40 @@
 /**
  * InviteFriend — a small "bring someone in" block.
  *
- * The inviter types the recipient's name (first name is enough), and
- * optionally the concept / idea they want to share. The generated link
- * carries both the inviter's name and the recipient's name:
+ * The inviter types the recipient's name (first name is enough) and
+ * picks the language the recipient should arrive in. The generated
+ * link:
  *
- *   /meet/.../?from=<inviter>&name=<recipient>&invited_by=<contributor-id>
+ *   /meet/.../?from=<inviter>&name=<recipient>&invited_by=<contributor-id>[&lang=<locale>]
+ *
+ * Language selector defaults to "auto-detect from her browser" (no
+ * ?lang= in the URL, middleware picks from Accept-Language). The
+ * inviter can override per-invite — e.g. Patrick (browsing in English)
+ * wants his German mother to arrive in German without setting his own
+ * site to German first.
  *
  * When the recipient taps the link, InviteBanner writes `name` into
  * `cc-reaction-author-name` so she arrives already carrying a soft
  * identity — no registration screen, no private key, no friction.
- * She can react, voice, comment immediately. Phone/email/wallet can
- * follow at her pace via the incremental profile card.
  *
- * If the recipient has been here before (any identity already stored),
- * we do not overwrite — her device's identity wins over URL claims.
+ * On return visits, InviteBanner honors her device's identity; no
+ * duplicates. See InviteBanner for that half of the contract.
  * Uses Web Share API when available, clipboard as fallback.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useT, useLocale } from "@/components/MessagesProvider";
+import { createTranslator } from "@/lib/i18n";
+import { LOCALES, type LocaleCode } from "@/lib/locales";
 
 const NAME_KEY = "cc-reaction-author-name";
 const CONTRIBUTOR_KEY = "cc-contributor-id";
+
+// Language selection for the invite link.
+// "auto" means "no ?lang= in URL" — let middleware pick from the
+// recipient's Accept-Language header. This is the safest default
+// because it honors her device, not the inviter's.
+type InviteLang = "auto" | LocaleCode;
 
 interface Props {
   /** Which page to land them on. Defaults to /meet/concept/lc-nourishing —
@@ -47,6 +59,10 @@ export function InviteFriend({
   const [inviterName, setInviterName] = useState<string>("");
   const [inviterId, setInviterId] = useState<string>("");
   const [recipientName, setRecipientName] = useState<string>("");
+  // Default to "auto" — let the recipient's own browser decide.
+  // The inviter's own locale is just a UI language for this form,
+  // not a claim about what the recipient speaks.
+  const [inviteLang, setInviteLang] = useState<InviteLang>("auto");
   const [copied, setCopied] = useState<"idle" | "copied" | "shared">("idle");
 
   useEffect(() => {
@@ -64,30 +80,44 @@ export function InviteFriend({
     if (inviterName.trim()) url.searchParams.set("from", inviterName.trim());
     if (recipientName.trim()) url.searchParams.set("name", recipientName.trim().slice(0, 80));
     if (inviterId.trim()) url.searchParams.set("invited_by", inviterId.trim());
-    // Hint the UI to the inviter's language so the banner greets in
-    // a tongue the sender chose. The receiver's browser detection
-    // still wins if different and supported.
-    if (locale) url.searchParams.set("lang", locale);
+    // Language policy:
+    //   "auto" (default) — no ?lang= in URL. The middleware honors
+    //     the recipient's browser Accept-Language on first paint.
+    //     This is the warmest default: the recipient's own device
+    //     decides, not the inviter.
+    //   explicit locale — inviter overrides for this recipient,
+    //     e.g. Patrick (English UI) inviting his German mother.
+    if (inviteLang !== "auto") {
+      url.searchParams.set("lang", inviteLang);
+    }
     return url.toString();
   }
+
+  // Compose the share message in the recipient's language when the
+  // inviter picked one explicitly. For "auto" we fall back to the
+  // inviter's UI locale — that's what they'll be reading anyway in
+  // the share sheet, and the recipient's device will retranslate
+  // the site once she taps through.
+  const shareLang: LocaleCode = inviteLang === "auto" ? (locale as LocaleCode) : inviteLang;
+  const tShare = useMemo(() => createTranslator(shareLang), [shareLang]);
 
   async function onInvite() {
     const url = buildUrl();
     const rName = recipientName.trim();
     const iName = inviterName.trim();
-    // Pick the warmest localized line we have
+    // Pick the warmest localized line we have — in the recipient's language
     let message: string;
     if (rName && iName) {
-      message = t("invite.messageWithBoth")
+      message = tShare("invite.messageWithBoth")
         .replace("{recipient}", rName)
         .replace("{name}", iName);
     } else if (iName) {
-      message = t("invite.messageWithName").replace("{name}", iName);
+      message = tShare("invite.messageWithName").replace("{name}", iName);
     } else {
-      message = t("invite.message");
+      message = tShare("invite.message");
     }
     const payload = {
-      title: t("invite.title"),
+      title: tShare("invite.title"),
       text: message,
       url,
     };
@@ -149,6 +179,27 @@ export function InviteFriend({
         />
         <p className="text-[11px] text-stone-500 leading-snug">
           {t("invite.recipientHint")}
+        </p>
+      </div>
+      <div className="space-y-2">
+        <label className="block text-xs text-stone-400" htmlFor="invite-lang">
+          {t("invite.langLabel")}
+        </label>
+        <select
+          id="invite-lang"
+          value={inviteLang}
+          onChange={(e) => setInviteLang(e.target.value as InviteLang)}
+          className="w-full rounded-lg border border-teal-900/50 bg-stone-950/60 px-3 py-2 text-sm text-stone-100 focus:border-teal-600 focus:outline-none"
+        >
+          <option value="auto">{t("invite.langAuto")}</option>
+          {LOCALES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.nativeName}
+            </option>
+          ))}
+        </select>
+        <p className="text-[11px] text-stone-500 leading-snug">
+          {t("invite.langHint")}
         </p>
       </div>
       <button
