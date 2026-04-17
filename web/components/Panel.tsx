@@ -10,38 +10,30 @@
  * padding. The accumulation felt fragmented even when each choice
  * was defensible in isolation.
  *
- * Panel reduces the surface to four variants × four slots:
+ * Panel reduces the surface to four variants × four slots and binds
+ * all color values to semantic theme tokens (bg-card, text-foreground,
+ * border-border) so the panel adapts to dark + light modes instead of
+ * hard-coding a single palette. The small warm/cool accents use
+ * theme-aware opacity overlays on top of the semantic base.
  *
  *   Variants (tone):
- *     • "warm"      — amber-on-stone, used for the viewer's own
- *                     moments (morning greeting, their contribution
- *                     reflected). The hero.
- *     • "cool"      — teal-on-stone, used for the organism's own
- *                     moments (invitations, breath, kin activity).
- *     • "neutral"   — stone-only, used for quieter content.
- *     • "empty"     — same surface as neutral but dimmer, used for
- *                     empty states that want to recede.
+ *     • "warm"     — the viewer's own moments (morning greeting, their
+ *                    contribution reflected). Amber accents.
+ *     • "cool"     — the organism's own moments (invitations, breath,
+ *                    kin activity). Teal accents.
+ *     • "neutral"  — quieter content, no accent color.
+ *     • "empty"    — same surface as neutral but dimmer, for empty
+ *                    states that want to recede.
  *
  *   Slots:
- *     • eyebrow     — small uppercase tracking-wide caption (time of
- *                     day, section label).
- *     • heading     — near-white body in a readable size (the main
- *                     sentence addressing the viewer).
- *     • body        — the content itself — children allows any JSX
- *                     (paragraphs, quotes, lists, forms).
- *     • cta         — an amber-tinted link or button at the foot.
+ *     • eyebrow    — small uppercase tracking-wide caption
+ *     • heading    — foreground-tone body text, the main sentence
+ *     • body       — children, any JSX (paragraphs, quotes, lists)
+ *     • cta        — link or button at the foot
  *
- *   Other props:
- *     • icon        — optional emoji or small element at the left,
- *                     vertically aligned to the heading's optical
- *                     center (uses a flex row with items-start + mt-0.5
- *                     trim — standard across every panel).
- *     • onDismiss   — renders the × in the top-right at a consistent
- *                     position, size, and hover affordance.
- *
- * Every shared value (radius, padding, border color, gradient stops,
- * eyebrow scale, heading scale, icon size, dismiss size) is defined
- * once below. Future consistency improvements happen in one place.
+ *   Other:
+ *     • icon       — optional emoji or element, optically centered
+ *     • onDismiss  — renders the × at a consistent position
  */
 
 import type { ReactNode } from "react";
@@ -63,51 +55,57 @@ interface PanelProps {
 }
 
 // Shared tokens — the whole design system for panels lives here.
-// Changing a token here changes every panel everywhere; that is the
-// point of the primitive.
+// Colors bind to semantic theme variables so dark + light both look
+// considered. Accent tints are added as thin overlay layers so the
+// base card color always wins on contrast.
 const PANEL_BASE =
   "relative max-w-3xl mx-3 sm:mx-auto rounded-2xl px-5 py-4 " +
-  "shadow-[0_1px_0_0_rgba(255,255,255,0.02)_inset]";
+  "bg-card text-card-foreground border " +
+  "transition-colors";
 
+// Warm tint: amber ring on the border, faint warm overlay on the base.
+// The ring-inset pseudo-background uses the chart-1 (gold) token which
+// is defined for both themes with AA-compliant contrast.
 const VARIANT_CLASSES: Record<PanelVariant, string> = {
   warm:
-    "border border-amber-600/20 " +
-    "bg-gradient-to-br from-stone-900/95 via-stone-900/90 to-amber-950/25",
+    "border-[hsl(var(--primary)/0.25)] " +
+    "bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--card))_55%,hsl(var(--primary)/0.08)_100%)]",
   cool:
-    "border border-teal-600/25 " +
-    "bg-gradient-to-br from-stone-900/95 via-stone-900/90 to-teal-950/30",
-  neutral:
-    "border border-stone-700/40 " +
-    "bg-gradient-to-br from-stone-900/95 via-stone-900/90 to-stone-900/80",
+    "border-[hsl(var(--chart-2)/0.35)] " +
+    "bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--card))_55%,hsl(var(--chart-2)/0.10)_100%)]",
+  neutral: "border-border",
   empty:
-    "border border-stone-800/60 " +
-    "bg-gradient-to-br from-stone-900/70 via-stone-900/60 to-stone-900/50",
+    "border-[hsl(var(--border)/0.6)] " +
+    "bg-[hsl(var(--card)/0.6)]",
 };
 
+// Eyebrow colors pick from theme-aware chart tokens that stay legible
+// in both modes (primary = gold, chart-2 = teal, muted-foreground).
 const EYEBROW_CLASSES: Record<PanelVariant, string> = {
-  warm: "text-amber-400",
-  cool: "text-teal-300",
-  neutral: "text-stone-400",
-  empty: "text-stone-500",
+  warm: "text-[hsl(var(--primary))]",
+  cool: "text-[hsl(var(--chart-2))]",
+  neutral: "text-muted-foreground",
+  empty: "text-muted-foreground/80",
 };
 
 const EYEBROW_BASE =
-  "text-[11px] uppercase tracking-[0.18em] font-medium mb-1.5";
+  "text-[11px] uppercase tracking-[0.18em] font-semibold mb-1.5";
 
-const HEADING_BASE =
-  "text-base md:text-lg font-light leading-snug mb-2";
+const HEADING_BASE = "text-base md:text-lg font-light leading-snug mb-2";
 
+// Heading uses the theme foreground everywhere — it's the place where
+// contrast discipline matters most.
 const HEADING_TONE: Record<PanelVariant, string> = {
-  warm: "text-stone-50",
-  cool: "text-stone-50",
-  neutral: "text-stone-100",
-  empty: "text-stone-300",
+  warm: "text-foreground",
+  cool: "text-foreground",
+  neutral: "text-foreground",
+  empty: "text-foreground/80",
 };
 
 const DISMISS_BASE =
   "absolute top-2.5 right-2.5 w-7 h-7 rounded-full flex items-center " +
-  "justify-center text-stone-500 hover:text-stone-200 " +
-  "hover:bg-stone-800/40 transition-colors";
+  "justify-center text-muted-foreground hover:text-foreground " +
+  "hover:bg-accent/40 transition-colors";
 
 export function Panel({
   variant = "neutral",
@@ -141,9 +139,6 @@ export function Panel({
       )}
       <div className={hasIcon ? "flex items-start gap-3" : ""}>
         {hasIcon && (
-          // Icons carry a single standard sizing and an mt-0.5 trim so
-          // the optical center sits with the heading's cap-height even
-          // when the heading wraps to multiple lines.
           <span
             className="text-lg leading-none mt-0.5 shrink-0"
             aria-hidden="true"
@@ -162,7 +157,11 @@ export function Panel({
               {heading}
             </div>
           )}
-          {children && <div className="text-sm text-stone-300 leading-relaxed space-y-3">{children}</div>}
+          {children && (
+            <div className="text-sm text-muted-foreground leading-relaxed space-y-3">
+              {children}
+            </div>
+          )}
           {cta && <div className="mt-3">{cta}</div>}
         </div>
       </div>
@@ -171,10 +170,9 @@ export function Panel({
 }
 
 /**
- * A viewer-voice blockquote — when the panel's body needs to hold the
- * viewer's own words (or anyone's voice) as the hero element. Warm
- * amber italic with a gold left-border. Imported by MorningNudge +
- * SinceLastVisit + the blog-reaction-summary panels.
+ * VoiceQuote — the viewer's own words as hero element. Warm italic
+ * with a gold left-border, theme-aware so it reads correctly against
+ * both dark and light panel surfaces.
  */
 interface VoiceQuoteProps {
   children: ReactNode;
@@ -185,13 +183,15 @@ export function VoiceQuote({ children, attribution }: VoiceQuoteProps) {
   return (
     <blockquote
       className={
-        "text-[15px] md:text-base italic text-amber-50/90 " +
-        "border-l-2 border-amber-500/60 pl-3.5 pr-1 leading-relaxed"
+        "text-[15px] md:text-base italic " +
+        "text-foreground/95 " +
+        "border-l-2 border-[hsl(var(--primary)/0.6)] " +
+        "pl-3.5 pr-1 leading-relaxed"
       }
     >
       <span>“{children}…”</span>
       {attribution && (
-        <footer className="mt-1.5 text-xs not-italic text-stone-400">
+        <footer className="mt-1.5 text-xs not-italic text-muted-foreground">
           {attribution}
         </footer>
       )}
@@ -200,8 +200,7 @@ export function VoiceQuote({ children, attribution }: VoiceQuoteProps) {
 }
 
 /**
- * A Panel-consistent CTA link. Matches the panel's tone by default.
- * Use for "Open your corner →", "See all voices →" style affordances.
+ * Panel-tone CTA link. Tone matches panel variant by default.
  */
 interface PanelLinkProps {
   href: string;
@@ -210,11 +209,16 @@ interface PanelLinkProps {
   external?: boolean;
 }
 
-export function PanelLink({ href, tone = "warm", children, external = false }: PanelLinkProps) {
+export function PanelLink({
+  href,
+  tone = "warm",
+  children,
+  external = false,
+}: PanelLinkProps) {
   const color =
     tone === "warm"
-      ? "text-amber-300 hover:text-amber-200"
-      : "text-teal-300 hover:text-teal-200";
+      ? "text-[hsl(var(--primary))] hover:opacity-80"
+      : "text-[hsl(var(--chart-2))] hover:opacity-80";
   const externalProps = external
     ? { target: "_blank" as const, rel: "noopener noreferrer" as const }
     : {};
