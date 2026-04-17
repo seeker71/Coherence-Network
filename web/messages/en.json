@@ -184,6 +184,10 @@
     "propose": "Propose",
     "you": "You"
   },
+  "kin": {
+    "eyebrow": "Things near you",
+    "headline": "Activity on what you've touched."
+  },
   "sinceLast": {
     "eyebrow": "Since your last visit ({when} ago)",
     "generic": "Something happened while you were away.",

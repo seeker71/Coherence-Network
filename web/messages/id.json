@@ -184,6 +184,10 @@
     "propose": "Usul",
     "you": "Kamu"
   },
+  "kin": {
+    "eyebrow": "Dekat denganmu",
+    "headline": "Gerak pada apa yang telah kamu sentuh."
+  },
   "sinceLast": {
     "eyebrow": "Sejak kunjungan terakhirmu ({when} lalu)",
     "generic": "Sesuatu terjadi saat kamu pergi.",
