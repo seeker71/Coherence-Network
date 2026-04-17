@@ -116,6 +116,19 @@
     "markSeen": "tandai terlihat",
     "empty": "Tidak ada yang baru. Kembali lagi setelah kamu menawarkan suaramu."
   },
+  "homeBreath": {
+    "ariaLabel": "Apa yang hidup di jaringan saat ini",
+    "label": "Napas hidup",
+    "oneMeetingNow": "1 orang sedang menemui sesuatu",
+    "manyMeetingNow": "{count} orang sedang menemui sesuatu",
+    "acrossEntities": "di {count} bagian visi",
+    "recentVoicesLine": "{count} suara baru baru saja ditawarkan",
+    "recentReactionsLine": "{count} isyarat peduli terkini",
+    "quiet": "Organisme sedang istirahat. Jadilah napas pertama.",
+    "goHere": "Di sini kini →",
+    "goExplore": "Jalani visi →",
+    "goPropose": "+ Usulkan"
+  },
   "feed": {
     "heading": "Denyut yang terasa",
     "lede": "Apa yang hidup di jaringan saat ini — reaksi, suara, bibit baru.",

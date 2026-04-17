@@ -116,6 +116,19 @@
     "markSeen": "als gesehen markieren",
     "empty": "Nichts Neues. Komm wieder, nachdem du deine Stimme geteilt hast."
   },
+  "homeBreath": {
+    "ariaLabel": "Was jetzt lebendig ist im Netz",
+    "label": "Lebendiger Atem",
+    "oneMeetingNow": "1 Person begegnet gerade etwas",
+    "manyMeetingNow": "{count} Menschen begegnen gerade etwas",
+    "acrossEntities": "an {count} Stellen der Vision",
+    "recentVoicesLine": "{count} neue Stimmen gerade geteilt",
+    "recentReactionsLine": "{count} jüngste Gesten der Zuwendung",
+    "quiet": "Der Organismus ruht. Sei der erste Atem.",
+    "goHere": "Jetzt hier →",
+    "goExplore": "Die Vision gehen →",
+    "goPropose": "+ Vorschlagen"
+  },
   "feed": {
     "heading": "Der gefühlte Puls",
     "lede": "Was jetzt lebendig ist im Netz — Reaktionen, Stimmen, neue Samen.",

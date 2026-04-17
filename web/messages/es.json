@@ -116,6 +116,19 @@
     "markSeen": "marcar como visto",
     "empty": "Nada nuevo. Vuelve después de ofrecer una voz."
   },
+  "homeBreath": {
+    "ariaLabel": "Lo que está vivo en la red ahora",
+    "label": "Aliento vivo",
+    "oneMeetingNow": "1 persona está encontrándose con algo",
+    "manyMeetingNow": "{count} personas están encontrándose con algo",
+    "acrossEntities": "en {count} partes de la visión",
+    "recentVoicesLine": "{count} voces nuevas recién ofrecidas",
+    "recentReactionsLine": "{count} gestos recientes de cuidado",
+    "quiet": "El organismo descansa. Sé el primer aliento.",
+    "goHere": "Aquí ahora →",
+    "goExplore": "Caminar la visión →",
+    "goPropose": "+ Proponer"
+  },
   "feed": {
     "heading": "El pulso sentido",
     "lede": "Lo que está vivo en la red ahora — reacciones, voces, semillas nuevas.",
