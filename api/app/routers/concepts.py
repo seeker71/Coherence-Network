@@ -824,3 +824,41 @@ async def list_concept_voices(concept_id: str, limit: int = Query(50, ge=1, le=2
 async def recent_concept_voices(limit: int = Query(20, ge=1, le=100)) -> dict:
     voices = concept_voice_service.recent_voices(limit=limit)
     return {"voices": voices, "total": len(voices)}
+
+
+class VoiceRipenIn(BaseModel):
+    title: str | None = Field(
+        None,
+        description="Optional override — default derives from the voice's first sentence",
+    )
+    body: str | None = Field(
+        None,
+        description="Optional override — default uses the voice body verbatim",
+    )
+    author_id: str | None = None
+
+
+@router.post(
+    "/concepts/voices/{voice_id}/propose",
+    status_code=201,
+    summary="Ripen a voice into a proposal the collective can vote on",
+    description=(
+        "Any reader can lift a voice they find worth offering to the "
+        "collective. The proposal carries the voice's text forward and "
+        "links back to the concept where it was spoken. Idempotent."
+    ),
+)
+async def ripen_voice(voice_id: str, payload: VoiceRipenIn | None = None) -> dict:
+    payload = payload or VoiceRipenIn()
+    try:
+        return concept_voice_service.ripen_into_proposal(
+            voice_id,
+            title=payload.title,
+            body=payload.body,
+            author_id=payload.author_id,
+        )
+    except ValueError as e:
+        msg = str(e)
+        if "not found" in msg:
+            raise HTTPException(status_code=404, detail=msg)
+        raise HTTPException(status_code=400, detail=msg)
