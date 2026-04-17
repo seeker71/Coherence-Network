@@ -3,6 +3,7 @@ import { getApiBase } from "@/lib/api";
 import { cookies, headers } from "next/headers";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { createTranslator } from "@/lib/i18n";
+import { NotificationBell } from "@/components/NotificationBell";
 
 /**
  * /feed — the felt pulse of the collective.
@@ -194,11 +195,14 @@ export default async function FeedPage() {
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-6">
-      <header className="mb-6">
-        <h1 className="text-2xl md:text-3xl font-light text-white mb-1">
-          {t("feed.heading")}
-        </h1>
-        <p className="text-sm text-stone-400">{t("feed.lede")}</p>
+      <header className="mb-6 flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl md:text-3xl font-light text-white mb-1">
+            {t("feed.heading")}
+          </h1>
+          <p className="text-sm text-stone-400">{t("feed.lede")}</p>
+        </div>
+        <NotificationBell />
       </header>
 
       {items.length === 0 ? (
