@@ -60,18 +60,19 @@ export default async function SiteHeader() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/40 bg-background/85 backdrop-blur-md" role="banner">
-      <div className="mx-auto max-w-6xl px-4 md:px-8">
-        <div className="flex h-14 items-center gap-4">
+      <div className="mx-auto max-w-6xl px-2 sm:px-4 md:px-8">
+        <div className="flex h-14 items-center gap-1.5 sm:gap-2 md:gap-4 min-w-0">
           <Link
             href="/"
-            className="flex items-center gap-2 font-semibold tracking-tight text-foreground hover:text-primary transition-colors duration-300"
+            className="flex items-center gap-1.5 sm:gap-2 font-semibold tracking-tight text-foreground hover:text-primary transition-colors duration-300 shrink-0"
             aria-label={t("header.brandHome")}
           >
             <span className="relative flex h-2.5 w-2.5" aria-hidden="true" title={t("header.heartbeatTitle")}>
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary/80" />
             </span>
-            Coherence Network
+            <span className="hidden xs:inline sm:inline">Coherence</span>
+            <span className="hidden md:inline">Network</span>
           </Link>
 
           <nav className="hidden md:flex items-center gap-1 text-sm" aria-label={t("nav.primary")}>
@@ -87,16 +88,24 @@ export default async function SiteHeader() {
 
           <div className="flex-1" />
 
-          {/* Workspace picker — Wave 2 multi-tenancy */}
-          <WorkspacePicker />
-
-          {/* Locale switcher — visible on desktop, always reachable */}
+          {/* Workspace picker — Wave 2 multi-tenancy (desktop only;
+              mobile keeps the header thumb-zone clear) */}
           <div className="hidden md:block">
-            <LocaleSwitcherCompact ariaLabel={t("locale.switcherLabel")} />
+            <WorkspacePicker />
           </div>
 
-          {/* Mode switcher — expert / simple */}
-          <ModeSwitcher />
+          {/* Locale switcher — always reachable, always visible.
+              Size tuned so four letters + container fit at 390px. */}
+          <LocaleSwitcherCompact
+            ariaLabel={t("locale.switcherLabel")}
+            size="xs"
+            className="shrink-0"
+          />
+
+          {/* Mode switcher — expert / simple (desktop only) */}
+          <div className="hidden md:block">
+            <ModeSwitcher />
+          </div>
 
           {/* Theme toggle — Spec 165 */}
           <ThemeToggle />

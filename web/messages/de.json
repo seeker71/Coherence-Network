@@ -177,6 +177,13 @@
       "formGrower": { "name": "Form-Gärtner·in", "desc": "Erdarbeitende, Holzbauende, Steinmetz·innen, Hände, die atmenden Raum gestalten" }
     }
   },
+  "bottomNav": {
+    "here": "Hier",
+    "feed": "Strom",
+    "vision": "Vision",
+    "propose": "Vorschlag",
+    "you": "Du"
+  },
   "homeBreath": {
     "ariaLabel": "Was jetzt lebendig ist im Netz",
     "label": "Lebendiger Atem",

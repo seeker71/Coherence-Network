@@ -97,6 +97,14 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
+    /* Mobile keystone — prevent horizontal scroll on any viewport. Any
+       descendant that sets its own overflow or max-width overrides this. */
+    overflow-x: hidden;
+  }
+  html, body {
+    /* Ensure the document itself cannot be wider than the viewport, so
+       no child element forces a 430-pixel text line on a 390-pixel phone. */
+    max-width: 100vw;
   }
   code, pre, kbd, samp {
     font-family: var(--font-mono);
