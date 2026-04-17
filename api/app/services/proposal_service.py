@@ -149,6 +149,26 @@ def get_proposal(proposal_id: str) -> Optional[dict]:
     return _to_dict(rec) if rec else None
 
 
+def get_proposal_by_idea(idea_id: str) -> Optional[dict]:
+    """Reverse lookup: the proposal (if any) that was lifted into this idea.
+
+    Returns the proposal dict with an added ``tally`` summary so the
+    consumer can render the origin fully without a second fetch.
+    """
+    _ensure_schema()
+    with _session() as s:
+        rec = s.execute(
+            select(ProposalRecord).where(
+                ProposalRecord.resolved_as_idea_id == idea_id
+            )
+        ).scalar_one_or_none()
+    if not rec:
+        return None
+    payload = _to_dict(rec)
+    payload["tally"] = tally(rec.id)
+    return payload
+
+
 def list_proposals(
     *, limit: int = 50, only_open: bool = True
 ) -> list[dict]:

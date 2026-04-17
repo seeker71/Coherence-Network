@@ -164,6 +164,9 @@
     "thanks": "Your proposal is in the walk.",
     "viewAll": "See all proposals"
   },
+  "proposalOrigin": {
+    "lede": "This idea was born from a proposal the collective lifted."
+  },
   "proposal": {
     "readyToLift": "The voices resonate. This proposal is ready to become an idea.",
     "lift": "Lift it into an idea",

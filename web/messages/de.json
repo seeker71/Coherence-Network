@@ -164,6 +164,9 @@
     "thanks": "Dein Vorschlag ist im Weg.",
     "viewAll": "Alle Vorschläge sehen"
   },
+  "proposalOrigin": {
+    "lede": "Diese Idee wurde aus einem Vorschlag geboren, den das Kollektiv gehoben hat."
+  },
   "proposal": {
     "readyToLift": "Die Stimmen resonieren. Dieser Vorschlag kann zur Idee werden.",
     "lift": "In eine Idee heben",
