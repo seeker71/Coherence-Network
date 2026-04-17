@@ -118,3 +118,6 @@ from app.services.concept_voice_service import ConceptVoiceRecord  # noqa: F401
 
 # Reactions — emoji + comment on any entity
 from app.services.reaction_service import ReactionRecord  # noqa: F401
+
+# Proposals — light governance the collective meets
+from app.services.proposal_service import ProposalRecord  # noqa: F401

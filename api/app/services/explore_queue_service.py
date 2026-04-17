@@ -108,10 +108,28 @@ def _contributor_candidates(limit: int) -> list[dict]:
     return out
 
 
+def _proposal_candidates(limit: int) -> list[dict]:
+    from app.services import proposal_service
+    items = proposal_service.list_proposals(limit=limit * 3, only_open=True)
+    out: list[dict] = []
+    for p in items or []:
+        out.append(
+            {
+                "entity_type": "proposal",
+                "entity_id": p["id"],
+                "title": p["title"],
+                "description": (p.get("body") or "")[:400],
+                "image_url": None,
+            }
+        )
+    return out
+
+
 _BUILDERS = {
     "concept": _concept_candidates,
     "idea": _idea_candidates,
     "contributor": _contributor_candidates,
+    "proposal": _proposal_candidates,
 }
 
 

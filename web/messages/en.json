@@ -124,6 +124,17 @@
     "walkDone": "You've met everyone on this walk.",
     "restart": "Walk again"
   },
+  "propose": {
+    "heading": "Propose",
+    "lede": "Offer something for the collective to meet. Your proposal enters the walk right away; reactions become the vote.",
+    "titlePlaceholder": "Your proposal, in one line",
+    "bodyPlaceholder": "A few sentences. What changes? Why now?",
+    "authorPlaceholder": "Your name",
+    "submit": "Offer this",
+    "submitting": "Offering…",
+    "thanks": "Your proposal is in the walk.",
+    "viewAll": "See all proposals"
+  },
   "meeting": {
     "viewerPulse": "you",
     "contentPulse": "this",

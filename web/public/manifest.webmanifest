@@ -42,6 +42,12 @@
       "short_name": "Explore",
       "url": "/explore/concept",
       "description": "Walk through concepts, one meeting at a time"
+    },
+    {
+      "name": "Propose",
+      "short_name": "Propose",
+      "url": "/propose",
+      "description": "Offer a proposal for the collective to meet"
     }
   ]
 }
