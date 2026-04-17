@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { loadPublicWebConfig } from "@/lib/app-config";
 
 const _WEB_UI = loadPublicWebConfig().webUiBaseUrl;
@@ -16,6 +17,25 @@ export const metadata: Metadata = {
 export default function BlogPage() {
   return (
     <main id="main-content" className="mx-auto max-w-2xl px-4 sm:px-6 py-12 space-y-10">
+      {/* Recent field notes — newest first */}
+      <section className="not-prose">
+        <Link
+          href="/blog/ana-walks"
+          className="block rounded-xl border border-border/30 bg-gradient-to-b from-amber-500/5 to-card/30 hover:from-amber-500/10 p-5 transition-colors"
+        >
+          <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+            Field note · April 2026
+          </p>
+          <h2 className="text-xl font-light mb-1">Ana walks the field</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            A new contributor arrives on her phone. Nine pages, nine first
+            impressions — what's alive, what's tender, and what this walk asks
+            of us before adding another feature.
+          </p>
+          <p className="text-xs text-amber-400/80 mt-3">Read the walk →</p>
+        </Link>
+      </section>
+
       <article className="prose prose-stone dark:prose-invert prose-headings:tracking-tight prose-a:text-amber-600 dark:prose-a:text-amber-400 max-w-none">
         <h1 className="text-3xl font-bold tracking-tight">
           We ran 842 tasks across 6 AI providers. Here&apos;s what the data says.
