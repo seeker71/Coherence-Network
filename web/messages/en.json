@@ -116,6 +116,19 @@
     "markSeen": "mark as seen",
     "empty": "Nothing new. Come back after you've offered a voice."
   },
+  "homeBreath": {
+    "ariaLabel": "What is alive on the network right now",
+    "label": "Live breath",
+    "oneMeetingNow": "1 person is meeting something",
+    "manyMeetingNow": "{count} people are meeting something",
+    "acrossEntities": "across {count} pieces of the vision",
+    "recentVoicesLine": "{count} new voices just offered",
+    "recentReactionsLine": "{count} recent gestures of care",
+    "quiet": "The organism is resting. Be the first breath.",
+    "goHere": "Here now →",
+    "goExplore": "Walk the vision →",
+    "goPropose": "+ Propose"
+  },
   "feed": {
     "heading": "The felt pulse",
     "lede": "What is alive on the network right now — reactions, voices, new seeds.",
