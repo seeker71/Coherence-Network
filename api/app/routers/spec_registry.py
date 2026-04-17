@@ -18,15 +18,17 @@ router = APIRouter()
 
 @router.get("/spec-registry", response_model=list[SpecRegistryEntry], summary="List Specs")
 async def list_specs(
+    request: Request,
     response: Response,
     limit: int = Query(200, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     workspace_id: str | None = Query(None, description="Filter by owning workspace. Defaults to all workspaces."),
     lang: str | None = Query(None, description="Target language view. When set and a canonical spec view exists, title/summary come from the view."),
 ) -> list[SpecRegistryEntry]:
+    from app.services.locale_projection import resolve_caller_lang
     response.headers["x-total-count"] = str(spec_registry_service.count_specs(workspace_id=workspace_id))
     items = spec_registry_service.list_specs(limit=limit, offset=offset, workspace_id=workspace_id)
-    return _apply_spec_lang(items, lang)
+    return _apply_spec_lang(items, resolve_caller_lang(request, lang))
 
 
 def _apply_spec_lang(items: list[SpecRegistryEntry], lang: str | None) -> list[SpecRegistryEntry]:
@@ -87,10 +89,11 @@ async def get_spec(
     lang: str | None = Query(None, description="Target language view for spec title/summary."),
 ) -> SpecRegistryEntry:
     from app.services.localized_errors import caller_lang, localize
+    resolved = caller_lang(request, lang)
     found = spec_registry_service.get_spec(spec_id)
     if found is None:
-        raise HTTPException(status_code=404, detail=localize("spec_not_found", caller_lang(request, lang), id=spec_id))
-    return _apply_spec_lang([found], lang)[0]
+        raise HTTPException(status_code=404, detail=localize("spec_not_found", resolved, id=spec_id))
+    return _apply_spec_lang([found], resolved)[0]
 
 
 @router.post("/spec-registry", response_model=SpecRegistryEntry, status_code=201, summary="Create Spec")

@@ -15,12 +15,14 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from typing import Optional
 
 from app.services import idea_service
 from app.services import idea_resonance_service as resonance_svc
+from app.services.locale_projection import DEFAULT_LOCALE, SUPPORTED_LOCALES, resolve_caller_lang
+from app.services import translation_cache_service as _tcache
 
 router = APIRouter()
 
@@ -93,13 +95,22 @@ def _idea_to_dict(idea) -> dict:
     }
 
 
-def _pair_to_out(pair: "resonance_svc.ResonancePair") -> ResonancePairOut:
+def _pair_to_out(pair: "resonance_svc.ResonancePair", lang: str | None = None) -> ResonancePairOut:
+    name_a = pair.name_a
+    name_b = pair.name_b
+    if lang and lang in SUPPORTED_LOCALES and lang != DEFAULT_LOCALE:
+        view_a = _tcache.canonical_view("idea", pair.idea_id_a, lang)
+        if view_a and view_a.content_title:
+            name_a = view_a.content_title
+        view_b = _tcache.canonical_view("idea", pair.idea_id_b, lang)
+        if view_b and view_b.content_title:
+            name_b = view_b.content_title
     return ResonancePairOut(
         idea_id_a=pair.idea_id_a,
-        name_a=pair.name_a,
+        name_a=name_a,
         domain_a=pair.domain_a,
         idea_id_b=pair.idea_id_b,
-        name_b=pair.name_b,
+        name_b=name_b,
         domain_b=pair.domain_b,
         crk_score=pair.crk_score,
         ot_distance=pair.ot_distance,
@@ -121,8 +132,10 @@ def _all_ideas_as_dicts() -> list[dict]:
 
 @router.get("/resonance/cross-domain", response_model=CrossDomainResponse, summary="Return top cross-domain idea pairs ranked by CRK coherence")
 async def get_cross_domain_resonances(
+    request: Request,
     limit: int = Query(20, ge=1, le=100, description="Max pairs to return"),
     min_coherence: float = Query(0.0, ge=0.0, le=1.0, description="Minimum CRK coherence filter"),
+    lang: str | None = Query(None, description="Target language. Idea names in the returned pairs render in this locale when a view exists."),
 ) -> CrossDomainResponse:
     """Return top cross-domain idea pairs ranked by CRK coherence.
 
@@ -132,6 +145,7 @@ async def get_cross_domain_resonances(
 
     Results are cached per-pair; first call may be slow for large portfolios.
     """
+    target_lang = resolve_caller_lang(request, lang)
     all_ideas = _all_ideas_as_dicts()
     pairs = resonance_svc.get_cross_domain_pairs(
         all_ideas=all_ideas,
@@ -140,7 +154,7 @@ async def get_cross_domain_resonances(
     )
     effective_min = max(min_coherence, resonance_svc.CROSS_DOMAIN_MIN_COHERENCE)
     return CrossDomainResponse(
-        pairs=[_pair_to_out(p) for p in pairs],
+        pairs=[_pair_to_out(p, target_lang) for p in pairs],
         total=len(pairs),
         min_coherence_used=effective_min,
     )
@@ -148,10 +162,12 @@ async def get_cross_domain_resonances(
 
 @router.get("/resonance/ideas/{idea_id}", response_model=ResonanceForIdeaResponse, summary="Return ideas that resonate structurally with the given idea")
 async def get_resonance_for_idea(
+    request: Request,
     idea_id: str,
     limit: int = Query(10, ge=1, le=50),
     min_coherence: float = Query(0.0, ge=0.0, le=1.0),
     cross_domain_only: bool = Query(False, description="Return only cross-domain resonances"),
+    lang: str | None = Query(None, description="Target language. Idea name and match names render in this locale when views exist."),
 ) -> ResonanceForIdeaResponse:
     """Return ideas that resonate structurally with the given idea.
 
@@ -159,9 +175,11 @@ async def get_resonance_for_idea(
     Cross-domain resonances are scored with a lower threshold to surface
     surprising connections between biology, software, physics, etc.
     """
+    target_lang = resolve_caller_lang(request, lang)
     source_raw = idea_service.get_idea(idea_id)
     if source_raw is None:
-        raise HTTPException(status_code=404, detail=f"Idea '{idea_id}' not found")
+        from app.services.localized_errors import localize
+        raise HTTPException(status_code=404, detail=localize("idea_not_found", target_lang, id=idea_id))
 
     source_dict = _idea_to_dict(source_raw)
     all_ideas = _all_ideas_as_dicts()
@@ -179,11 +197,17 @@ async def get_resonance_for_idea(
         source_dict.get("interfaces", []),
     )
 
+    source_name = source_dict.get("name", idea_id)
+    if target_lang and target_lang in SUPPORTED_LOCALES and target_lang != DEFAULT_LOCALE:
+        src_view = _tcache.canonical_view("idea", idea_id, target_lang)
+        if src_view and src_view.content_title:
+            source_name = src_view.content_title
+
     return ResonanceForIdeaResponse(
         idea_id=idea_id,
-        name=source_dict.get("name", idea_id),
+        name=source_name,
         domain=domain,
-        matches=[_pair_to_out(p) for p in matches],
+        matches=[_pair_to_out(p, target_lang) for p in matches],
         total=len(matches),
     )
 

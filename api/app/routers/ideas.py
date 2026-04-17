@@ -5,11 +5,12 @@ Implements: spec-053 (portfolio governance), spec-126 (idea lifecycle)
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 
 from app.middleware.auth import require_api_key
 from app.middleware.traceability import traces_to
+from app.services.locale_projection import resolve_caller_lang
 
 from app.models.idea import (
     GovernanceHealth,
@@ -57,6 +58,7 @@ router = APIRouter()
 @router.get("/ideas", response_model=IdeaPortfolioResponse, summary="List Ideas")
 @traces_to(spec="053", idea="portfolio-governance", description="Browse the idea portfolio ranked by ROI")
 async def list_ideas(
+    request: Request,
     only_unvalidated: bool = Query(False, description="When true, only return ideas not yet validated."),
     include_internal: bool = Query(True, description="When false, hide system-generated/internal ideas."),
     limit: int = Query(200, ge=1, le=500),
@@ -83,7 +85,7 @@ async def list_ideas(
         pillar=pillar,
         workspace_id=workspace_id,
     )
-    return _apply_lang_views(resp, lang)
+    return _apply_lang_views(resp, resolve_caller_lang(request, lang))
 
 
 def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPortfolioResponse:
