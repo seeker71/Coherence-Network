@@ -355,7 +355,10 @@
     "saySubmit": "Offer this",
     "saySending": "Offering…",
     "saySent": "Thank you — your voice is here.",
-    "sayDismiss": "not now"
+    "sayDismiss": "not now",
+    "quickPhrase1": "This moves me",
+    "quickPhrase2": "This feels alive",
+    "quickPhrase3": "I want more of this"
   },
   "reactions": {
     "ariaLabel": "Reactions and comments",

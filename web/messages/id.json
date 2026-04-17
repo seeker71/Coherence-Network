@@ -355,7 +355,10 @@
     "saySubmit": "Tawarkan",
     "saySending": "Mengirim…",
     "saySent": "Terima kasih — suaramu ada di sini.",
-    "sayDismiss": "nanti saja"
+    "sayDismiss": "nanti saja",
+    "quickPhrase1": "Ini menggerakkanku",
+    "quickPhrase2": "Ini terasa hidup",
+    "quickPhrase3": "Aku ingin lebih"
   },
   "reactions": {
     "ariaLabel": "Reaksi dan komentar",
