@@ -172,7 +172,9 @@
     "offer": "zugewandt",
     "dismiss": "weitergehen",
     "amplify": "verstärken",
-    "inviteHint": "Deine Geste hat beide Pulse gehoben. Tritt bei, damit dein Name mitgeht"
+    "inviteHint": "Deine Geste hat beide Pulse gehoben. Tritt bei, damit dein Name mitgeht",
+    "othersHereOne": "Eine weitere Person ist hier",
+    "othersHereMany": "{count} weitere sind hier"
   },
   "reactions": {
     "ariaLabel": "Reaktionen und Kommentare",

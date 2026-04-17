@@ -172,7 +172,9 @@
     "offer": "peduli",
     "dismiss": "lanjut",
     "amplify": "perkuat",
-    "inviteHint": "Isyaratmu menaikkan dua denyut. Bergabunglah agar namamu menyertai"
+    "inviteHint": "Isyaratmu menaikkan dua denyut. Bergabunglah agar namamu menyertai",
+    "othersHereOne": "1 orang lain di sini",
+    "othersHereMany": "{count} orang lain di sini"
   },
   "reactions": {
     "ariaLabel": "Reaksi dan komentar",
