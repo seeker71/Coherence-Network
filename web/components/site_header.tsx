@@ -6,6 +6,7 @@ import { ActiveNavLink } from "./active_nav_link";
 import { ThemeToggle } from "./theme-toggle";
 import { ModeSwitcher } from "./mode-switcher";
 import { WorkspacePicker } from "./workspace-picker";
+import { LocaleSwitcherCompact } from "./LocaleSwitcherCompact";
 import { createTranslator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
@@ -88,6 +89,11 @@ export default async function SiteHeader() {
           {/* Workspace picker — Wave 2 multi-tenancy */}
           <WorkspacePicker />
 
+          {/* Locale switcher — visible on desktop, always reachable */}
+          <div className="hidden md:block">
+            <LocaleSwitcherCompact ariaLabel={t("locale.switcherLabel")} />
+          </div>
+
           {/* Mode switcher — expert / simple */}
           <ModeSwitcher />
 
@@ -143,6 +149,16 @@ export default async function SiteHeader() {
               aria-label={t("nav.mobile")}
             >
               <div className="p-3 space-y-1">
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="text-[11px] uppercase tracking-wider text-muted-foreground/80">
+                    {t("locale.switcherLabel")}
+                  </span>
+                  <LocaleSwitcherCompact
+                    ariaLabel={t("locale.switcherLabel")}
+                    size="xs"
+                  />
+                </div>
+                <div className="border-t border-border/30 my-2" />
                 {PRIMARY_NAV.map((n) => (
                   <Link
                     key={n.href}
