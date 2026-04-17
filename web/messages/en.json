@@ -110,6 +110,12 @@
     "voicesThankYou": "Thank you — your voice is here.",
     "voicesLoading": "Listening for voices…"
   },
+  "notifications": {
+    "bellLabel": "Recent replies and mentions",
+    "heading": "Spoken back to you",
+    "markSeen": "mark as seen",
+    "empty": "Nothing new. Come back after you've offered a voice."
+  },
   "feed": {
     "heading": "The felt pulse",
     "lede": "What is alive on the network right now — reactions, voices, new seeds.",

@@ -110,6 +110,12 @@
     "voicesThankYou": "Terima kasih — suaramu ada di sini.",
     "voicesLoading": "Mendengarkan suara…"
   },
+  "notifications": {
+    "bellLabel": "Balasan dan sebutan terbaru",
+    "heading": "Ada yang membalasmu",
+    "markSeen": "tandai terlihat",
+    "empty": "Tidak ada yang baru. Kembali lagi setelah kamu menawarkan suaramu."
+  },
   "feed": {
     "heading": "Denyut yang terasa",
     "lede": "Apa yang hidup di jaringan saat ini — reaksi, suara, bibit baru.",

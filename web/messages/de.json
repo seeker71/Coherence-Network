@@ -110,6 +110,12 @@
     "voicesThankYou": "Danke — deine Stimme ist hier.",
     "voicesLoading": "Lausche auf Stimmen …"
   },
+  "notifications": {
+    "bellLabel": "Neue Antworten und Erwähnungen",
+    "heading": "Dir wurde geantwortet",
+    "markSeen": "als gesehen markieren",
+    "empty": "Nichts Neues. Komm wieder, nachdem du deine Stimme geteilt hast."
+  },
   "feed": {
     "heading": "Der gefühlte Puls",
     "lede": "Was jetzt lebendig ist im Netz — Reaktionen, Stimmen, neue Samen.",
