@@ -41,6 +41,8 @@ interface Props {
     dismiss: string;
     amplify: string;
     inviteHint: string;
+    othersHereOne?: string;
+    othersHereMany?: string;
   };
 }
 
@@ -182,6 +184,8 @@ export function ExplorePager({ entityType, strings }: Props) {
           dismiss: strings.dismiss,
           amplify: strings.amplify,
           inviteHint: strings.inviteHint,
+          othersHereOne: strings.othersHereOne,
+          othersHereMany: strings.othersHereMany,
         }}
       />
 
