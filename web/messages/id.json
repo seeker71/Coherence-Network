@@ -108,7 +108,10 @@
     "voicesSubmit": "Tawarkan suara ini",
     "voicesSubmitting": "Menawarkan…",
     "voicesThankYou": "Terima kasih — suaramu ada di sini.",
-    "voicesLoading": "Mendengarkan suara…"
+    "voicesLoading": "Mendengarkan suara…",
+    "voiceRipen": "Angkat suara ini menjadi usulan",
+    "voiceRipening": "Mengangkat…",
+    "voiceBecameProposal": "Suara ini menjadi usulan"
   },
   "notifications": {
     "bellLabel": "Balasan dan sebutan terbaru",
