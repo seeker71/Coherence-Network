@@ -124,6 +124,22 @@ gh api -X PUT repos/seeker71/Coherence-Network/pulls/<pr_number>/merge -f merge_
 gh api -X DELETE repos/seeker71/Coherence-Network/git/refs/heads/codex/<thread-name>
 ```
 
+## Post-Merge Deploy Watch (fast path)
+
+After merge, do not guess whether production has caught up. Watch the main push workflows, then verify once the host rollout settles:
+
+```bash
+gh run list --repo seeker71/Coherence-Network --branch main --limit 5
+gh run watch <public-deploy-run-id> --repo seeker71/Coherence-Network
+gh run watch <hostinger-run-id> --repo seeker71/Coherence-Network
+./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com
+```
+
+Interpretation:
+- `Public Deploy Contract` green + `Hostinger Auto Deploy` still running means "wait", not "retry the same public verify in a loop".
+- If `/api/gates/main-head` has the new SHA but `/api/health` still serves the previous SHA before Hostinger finishes, that is rollout lag.
+- Re-run the public verify after Hostinger finishes. Treat it as a blocker only if SHA parity is still wrong after the host job settles.
+
 ## Recover Common Failures
 
 - `next: command not found`: run `cd web && npm ci --cache /tmp/npm-codex-cache`.
