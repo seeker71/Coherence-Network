@@ -305,6 +305,33 @@ async def lifespan(app: FastAPI):
     _ensure_db_tables()
     _warm_startup_caches()
     await _setup_service_registry(app)
+
+    # Register the on-demand translator backend. Because the app uses a
+    # lifespan context manager, @app.on_event("startup") decorators are
+    # ignored by FastAPI — so we do startup work here to make sure it
+    # actually runs.
+    try:
+        from app.services import translator_backends
+        from app.services import content_indexer_service
+
+        idx_stats = content_indexer_service.scan_and_index_specs()
+        _startup_logger.info("startup: content_indexer_stats=%s", idx_stats)
+
+        backend_name = translator_backends.register_default_backend()
+        if backend_name:
+            _startup_logger.info(
+                "startup: translator_backend=%s (on-demand attunement active)",
+                backend_name,
+            )
+        else:
+            _startup_logger.info(
+                "startup: translator_backend=none (views serve anchor only)"
+            )
+    except Exception:
+        _startup_logger.error(
+            "startup: translator/indexer registration failed", exc_info=True,
+        )
+
     yield
     # shutdown: nothing needed currently
 
