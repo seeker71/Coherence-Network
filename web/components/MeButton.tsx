@@ -108,6 +108,13 @@ export function MeButton() {
               {t("me.beliefs")}
             </Link>
           )}
+          <div className="border-t border-border/30 my-2" />
+          <Link
+            href="/feed/you#invite"
+            className="block rounded-lg px-3 py-2 text-sm text-teal-300 hover:bg-teal-950/30 transition-colors"
+          >
+            {t("me.inviteFriend")}
+          </Link>
         </div>
       </div>
     </details>
