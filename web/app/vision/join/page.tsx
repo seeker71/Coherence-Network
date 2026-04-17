@@ -1,27 +1,71 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies, headers } from "next/headers";
+
 import { InterestForm } from "@/components/vision";
+import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
+import { createTranslator } from "@/lib/i18n";
 
-export const metadata: Metadata = {
-  title: "Join the Vision — The Living Collective",
-  description: "The field is forming. Express your interest, share what you bring, find others who resonate. Privacy-first — you choose what's visible.",
-};
+export const dynamic = "force-dynamic";
 
-export default function JoinPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const cookieLocale = (await cookies()).get("NEXT_LOCALE")?.value;
+  const headerLang = (await headers())
+    .get("accept-language")
+    ?.split(",")[0]
+    ?.split("-")[0];
+  const candidate = cookieLocale || headerLang;
+  const lang: LocaleCode = isSupportedLocale(candidate) ? candidate : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
+  return {
+    title: t("visionJoin.metaTitle"),
+    description: t("visionJoin.metaDescription"),
+    openGraph: {
+      type: "website",
+      siteName: "Coherence Network",
+      title: t("visionJoin.metaTitle"),
+      description: t("visionJoin.metaDescription"),
+      images: [{ url: "/assets/logo.svg" }],
+    },
+    twitter: {
+      card: "summary",
+      title: t("visionJoin.metaTitle"),
+      description: t("visionJoin.metaDescription"),
+    },
+  };
+}
+
+const ROLE_KEYS = [
+  "livingStructureWeaver",
+  "nourishmentAlchemist",
+  "frequencyHolder",
+  "vitalityKeeper",
+  "transmissionSource",
+  "formGrower",
+] as const;
+
+export default async function JoinPage() {
+  const cookieLocale = (await cookies()).get("NEXT_LOCALE")?.value;
+  const headerLang = (await headers())
+    .get("accept-language")
+    ?.split(",")[0]
+    ?.split("-")[0];
+  const candidate = cookieLocale || headerLang;
+  const lang: LocaleCode = isSupportedLocale(candidate) ? candidate : DEFAULT_LOCALE;
+  const t = createTranslator(lang);
+
   return (
     <main className="max-w-4xl mx-auto px-6 py-20 space-y-24">
       {/* Hero */}
       <section className="text-center space-y-8">
         <h1 className="text-4xl md:text-6xl font-extralight tracking-tight text-white">
-          The field is{" "}
+          {t("visionJoin.heroLine1")}{" "}
           <span className="bg-gradient-to-r from-amber-300 via-teal-300 to-violet-300 bg-clip-text text-transparent">
-            forming
+            {t("visionJoin.heroLine2")}
           </span>
         </h1>
         <p className="text-xl text-stone-400 font-light leading-relaxed max-w-2xl mx-auto">
-          The Living Collective is not a finished design. It's a frequency
-          pattern — a seed that grows differently in every soil. What you're
-          reading is an open invitation to co-create what wants to emerge.
+          {t("visionJoin.heroLede")}
         </p>
       </section>
 
@@ -33,11 +77,10 @@ export default function JoinPage() {
         >
           <div className="text-4xl">✦</div>
           <h2 className="text-xl font-light text-amber-300/80 group-hover:text-amber-300 transition-colors">
-            Explore
+            {t("visionJoin.pathExploreTitle")}
           </h2>
           <p className="text-sm text-stone-500 leading-relaxed">
-            Walk through the 51 concepts. Read the descriptions, the living
-            examples, the aligned places. Feel which ones resonate with you.
+            {t("visionJoin.pathExploreBody")}
           </p>
         </Link>
 
@@ -47,11 +90,10 @@ export default function JoinPage() {
         >
           <div className="text-4xl">◈</div>
           <h2 className="text-xl font-light text-teal-300/80 group-hover:text-teal-300 transition-colors">
-            Join
+            {t("visionJoin.pathJoinTitle")}
           </h2>
           <p className="text-sm text-stone-500 leading-relaxed">
-            Express your interest. Share what you bring — skills, materials,
-            ideas, land, energy, heart. Find others who resonate.
+            {t("visionJoin.pathJoinBody")}
           </p>
         </a>
 
@@ -61,11 +103,10 @@ export default function JoinPage() {
         >
           <div className="text-4xl">◉</div>
           <h2 className="text-xl font-light text-violet-300/80 group-hover:text-violet-300 transition-colors">
-            See who's gathering
+            {t("visionJoin.pathGatherTitle")}
           </h2>
           <p className="text-sm text-stone-500 leading-relaxed">
-            Browse the community directory. See who else feels the field.
-            Everyone here has chosen to be visible — consent first, always.
+            {t("visionJoin.pathGatherBody")}
           </p>
         </Link>
       </section>
@@ -73,23 +114,20 @@ export default function JoinPage() {
       {/* What the field calls for */}
       <section className="space-y-8">
         <h2 className="text-2xl font-light text-stone-300 text-center">
-          What the field is calling for
+          {t("visionJoin.callingHeading")}
         </h2>
         <div className="grid md:grid-cols-2 gap-6">
-          {[
-            { role: "Living-structure weavers", desc: "People who sense how the field wants to shelter itself. Architects, builders, earthship enthusiasts, cob practitioners, bamboo growers." },
-            { role: "Nourishment alchemists", desc: "People attuned to how land wants to feed the field. Permaculturists, fermentation practitioners, food foresters, communal cooks." },
-            { role: "Frequency holders", desc: "People whose sound attunes the field. Musicians, sound healers, voice practitioners, silence holders." },
-            { role: "Vitality keepers", desc: "People whose presence amplifies the glow. Bodyworkers, movement facilitators, nature immersion guides, breathwork practitioners." },
-            { role: "Transmission sources", desc: "People whose mastery radiates. Experienced community builders, facilitators, elders of any tradition that resonates." },
-            { role: "Form-growers", desc: "People who work with earth, timber, stone, water as living materials. Hands that know how to shape space that breathes." },
-          ].map((need) => (
+          {ROLE_KEYS.map((k) => (
             <div
-              key={need.role}
+              key={k}
               className="p-5 rounded-2xl border border-stone-800/30 bg-stone-900/20 space-y-2"
             >
-              <h3 className="text-amber-300/70 font-medium text-sm">{need.role}</h3>
-              <p className="text-stone-500 text-sm leading-relaxed">{need.desc}</p>
+              <h3 className="text-amber-300/70 font-medium text-sm">
+                {t(`interestForm.roles.${k}.name`)}
+              </h3>
+              <p className="text-stone-500 text-sm leading-relaxed">
+                {t(`interestForm.roles.${k}.desc`)}
+              </p>
             </div>
           ))}
         </div>
@@ -99,12 +137,10 @@ export default function JoinPage() {
       <section id="register" className="space-y-8 scroll-mt-20">
         <div className="text-center space-y-4">
           <h2 className="text-3xl md:text-4xl font-extralight text-stone-200">
-            Express your resonance
+            {t("visionJoin.registerHeading")}
           </h2>
           <p className="text-stone-500 text-lg max-w-2xl mx-auto">
-            The field doesn't ask for credentials. It senses resonance.
-            Share what feels right. Your email is never exposed — everything
-            else is your choice.
+            {t("visionJoin.registerLede")}
           </p>
         </div>
 
@@ -113,11 +149,8 @@ export default function JoinPage() {
 
       {/* Footer */}
       <section className="text-center text-xs text-stone-700 space-y-2 pt-8 border-t border-stone-800/20">
-        <p>
-          The Coherence Network is the crystalline nervous system for the
-          emerging network of living fields.
-        </p>
-        <p>It is alive. It changes. It grows. It radiates.</p>
+        <p>{t("visionJoin.footerLine1")}</p>
+        <p>{t("visionJoin.footerLine2")}</p>
       </section>
     </main>
   );

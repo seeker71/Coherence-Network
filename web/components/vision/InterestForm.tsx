@@ -1,20 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/components/MessagesProvider";
 
-type Role = {
-  slug: string;
-  name: string;
-  description: string;
-};
+type RoleKey =
+  | "livingStructureWeaver"
+  | "nourishmentAlchemist"
+  | "frequencyHolder"
+  | "vitalityKeeper"
+  | "transmissionSource"
+  | "formGrower";
 
-const ROLES: Role[] = [
-  { slug: "living-structure-weaver", name: "Living-structure weaver", description: "Architects, builders, earthship enthusiasts, cob practitioners, bamboo growers" },
-  { slug: "nourishment-alchemist", name: "Nourishment alchemist", description: "Permaculturists, fermentation practitioners, food foresters, communal cooks" },
-  { slug: "frequency-holder", name: "Frequency holder", description: "Musicians, sound healers, voice practitioners, silence holders" },
-  { slug: "vitality-keeper", name: "Vitality keeper", description: "Bodyworkers, movement facilitators, nature immersion guides, breathwork practitioners" },
-  { slug: "transmission-source", name: "Transmission source", description: "Experienced community builders, facilitators, elders of any tradition that resonates" },
-  { slug: "form-grower", name: "Form-grower", description: "Earth workers, timber framers, stone masons, hands that shape space that breathes" },
+// Slugs sent to the API stay English-slug-stable across languages.
+const ROLES: { key: RoleKey; slug: string }[] = [
+  { key: "livingStructureWeaver", slug: "living-structure-weaver" },
+  { key: "nourishmentAlchemist", slug: "nourishment-alchemist" },
+  { key: "frequencyHolder", slug: "frequency-holder" },
+  { key: "vitalityKeeper", slug: "vitality-keeper" },
+  { key: "transmissionSource", slug: "transmission-source" },
+  { key: "formGrower", slug: "form-grower" },
 ];
 
 type FormState = {
@@ -48,6 +52,7 @@ const INITIAL: FormState = {
 };
 
 export function InterestForm() {
+  const t = useT();
   const [form, setForm] = useState<FormState>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -76,12 +81,13 @@ export function InterestForm() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Something went wrong. Please try again.");
+        throw new Error(data.detail || t("interestForm.errorGeneric"));
       }
 
       setSubmitted(true);
-    } catch (err: any) {
-      setError(err.message || "Connection error. Please try again.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("interestForm.errorNetwork");
+      setError(message);
     } finally {
       setSubmitting(false);
     }
@@ -92,17 +98,17 @@ export function InterestForm() {
       <div className="text-center space-y-6 py-12">
         <div className="text-5xl">✦</div>
         <h3 className="text-2xl font-light text-amber-300/90">
-          The field feels you
+          {t("interestForm.thanksTitle")}
         </h3>
         <p className="text-stone-400 max-w-md mx-auto leading-relaxed">
-          Your resonance has been registered. You are now part of the forming
-          field. {form.consent_email_updates && "We'll keep you in the flow as things emerge."}
+          {t("interestForm.thanksBody")}{" "}
+          {form.consent_email_updates && t("interestForm.thanksUpdates")}
         </p>
         <button
           onClick={() => { setSubmitted(false); setForm(INITIAL); }}
           className="text-sm text-stone-600 hover:text-stone-400 transition-colors"
         >
-          Register another soul
+          {t("interestForm.registerAgain")}
         </button>
       </div>
     );
@@ -113,25 +119,25 @@ export function InterestForm() {
       {/* Name + Email */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <label className="text-sm text-stone-400">Your name *</label>
+          <label className="text-sm text-stone-400">{t("interestForm.labelName")}</label>
           <input
             type="text"
             required
             minLength={2}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="How the field knows you"
+            placeholder={t("interestForm.placeholderName")}
             className="w-full px-4 py-3 rounded-xl bg-stone-900/40 border border-stone-800/40 text-stone-200 placeholder:text-stone-700 focus:border-amber-500/30 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition-all"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm text-stone-400">Email *</label>
+          <label className="text-sm text-stone-400">{t("interestForm.labelEmail")}</label>
           <input
             type="email"
             required
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
-            placeholder="Never shared without your consent"
+            placeholder={t("interestForm.placeholderEmail")}
             className="w-full px-4 py-3 rounded-xl bg-stone-900/40 border border-stone-800/40 text-stone-200 placeholder:text-stone-700 focus:border-amber-500/30 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition-all"
           />
         </div>
@@ -140,22 +146,22 @@ export function InterestForm() {
       {/* Location + Skills */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-2">
-          <label className="text-sm text-stone-400">Where are you?</label>
+          <label className="text-sm text-stone-400">{t("interestForm.labelLocation")}</label>
           <input
             type="text"
             value={form.location}
             onChange={(e) => setForm({ ...form, location: e.target.value })}
-            placeholder="City, region, or just the continent"
+            placeholder={t("interestForm.placeholderLocation")}
             className="w-full px-4 py-3 rounded-xl bg-stone-900/40 border border-stone-800/40 text-stone-200 placeholder:text-stone-700 focus:border-amber-500/30 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition-all"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm text-stone-400">What do you bring?</label>
+          <label className="text-sm text-stone-400">{t("interestForm.labelSkills")}</label>
           <input
             type="text"
             value={form.skills}
             onChange={(e) => setForm({ ...form, skills: e.target.value })}
-            placeholder="Skills, materials, ideas, energy, land..."
+            placeholder={t("interestForm.placeholderSkills")}
             className="w-full px-4 py-3 rounded-xl bg-stone-900/40 border border-stone-800/40 text-stone-200 placeholder:text-stone-700 focus:border-amber-500/30 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition-all"
           />
         </div>
@@ -163,7 +169,7 @@ export function InterestForm() {
 
       {/* Roles */}
       <div className="space-y-4">
-        <label className="text-sm text-stone-400">Which roles call to you?</label>
+        <label className="text-sm text-stone-400">{t("interestForm.labelRoles")}</label>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {ROLES.map((role) => {
             const selected = form.resonant_roles.includes(role.slug);
@@ -178,8 +184,12 @@ export function InterestForm() {
                     : "border-stone-800/30 bg-stone-900/20 text-stone-500 hover:border-stone-700/40 hover:text-stone-400"
                 }`}
               >
-                <div className="text-sm font-medium mb-1">{role.name}</div>
-                <div className="text-xs leading-relaxed opacity-70">{role.description}</div>
+                <div className="text-sm font-medium mb-1">
+                  {t(`interestForm.roles.${role.key}.name`)}
+                </div>
+                <div className="text-xs leading-relaxed opacity-70">
+                  {t(`interestForm.roles.${role.key}.desc`)}
+                </div>
               </button>
             );
           })}
@@ -188,11 +198,11 @@ export function InterestForm() {
 
       {/* Offering */}
       <div className="space-y-2">
-        <label className="text-sm text-stone-400">How do you want to contribute?</label>
+        <label className="text-sm text-stone-400">{t("interestForm.labelOffering")}</label>
         <textarea
           value={form.offering}
           onChange={(e) => setForm({ ...form, offering: e.target.value })}
-          placeholder="Time, land, resources, specific skills, funding, simply holding space... anything that feels right"
+          placeholder={t("interestForm.placeholderOffering")}
           rows={3}
           className="w-full px-4 py-3 rounded-xl bg-stone-900/40 border border-stone-800/40 text-stone-200 placeholder:text-stone-700 focus:border-amber-500/30 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition-all resize-none"
         />
@@ -200,11 +210,11 @@ export function InterestForm() {
 
       {/* Message */}
       <div className="space-y-2">
-        <label className="text-sm text-stone-400">A message from your heart</label>
+        <label className="text-sm text-stone-400">{t("interestForm.labelMessage")}</label>
         <textarea
           value={form.message}
           onChange={(e) => setForm({ ...form, message: e.target.value })}
-          placeholder="What draws you? What do you feel? What do you envision?"
+          placeholder={t("interestForm.placeholderMessage")}
           rows={3}
           className="w-full px-4 py-3 rounded-xl bg-stone-900/40 border border-stone-800/40 text-stone-200 placeholder:text-stone-700 focus:border-amber-500/30 focus:outline-none focus:ring-1 focus:ring-amber-500/20 transition-all resize-none"
         />
@@ -212,18 +222,19 @@ export function InterestForm() {
 
       {/* Consent */}
       <div className="space-y-4 p-6 rounded-xl border border-stone-800/20 bg-stone-900/10">
-        <p className="text-sm text-stone-400 font-medium">Your privacy, your choice</p>
+        <p className="text-sm text-stone-400 font-medium">
+          {t("interestForm.privacyTitle")}
+        </p>
         <p className="text-xs text-stone-600 leading-relaxed">
-          Your email is never shared. Everything else is opt-in.
-          Choose what you're comfortable sharing with other people who are also gathering.
+          {t("interestForm.privacyLede")}
         </p>
         <div className="space-y-3">
           {[
-            { key: "consent_share_name" as const, label: "Show my name to other interested people" },
-            { key: "consent_share_location" as const, label: "Show my general location" },
-            { key: "consent_share_skills" as const, label: "Show what I bring" },
-            { key: "consent_findable" as const, label: "Appear in the community directory" },
-            { key: "consent_email_updates" as const, label: "Keep me updated on progress" },
+            { key: "consent_share_name" as const, labelKey: "interestForm.consentShareName" },
+            { key: "consent_share_location" as const, labelKey: "interestForm.consentShareLocation" },
+            { key: "consent_share_skills" as const, labelKey: "interestForm.consentShareSkills" },
+            { key: "consent_findable" as const, labelKey: "interestForm.consentFindable" },
+            { key: "consent_email_updates" as const, labelKey: "interestForm.consentUpdates" },
           ].map((c) => (
             <label key={c.key} className="flex items-start gap-3 cursor-pointer group">
               <input
@@ -233,7 +244,7 @@ export function InterestForm() {
                 className="mt-0.5 rounded border-stone-700 bg-stone-900/60 text-amber-500 focus:ring-amber-500/30 focus:ring-offset-0"
               />
               <span className="text-sm text-stone-500 group-hover:text-stone-400 transition-colors">
-                {c.label}
+                {t(c.labelKey)}
               </span>
             </label>
           ))}
@@ -254,7 +265,7 @@ export function InterestForm() {
           disabled={submitting}
           className="px-10 py-4 rounded-xl bg-gradient-to-r from-amber-500/20 via-teal-500/20 to-violet-500/20 border border-amber-500/20 text-amber-300/90 hover:from-amber-500/30 hover:via-teal-500/30 hover:to-violet-500/30 hover:border-amber-500/30 transition-all duration-500 font-medium text-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {submitting ? "Sending your resonance..." : "I feel it. I'm in."}
+          {submitting ? t("interestForm.submitting") : t("interestForm.submit")}
         </button>
       </div>
     </form>
