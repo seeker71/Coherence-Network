@@ -315,7 +315,14 @@
     "amplify": "amplificar",
     "inviteHint": "Tu gesto elevó ambos pulsos. Únete para que tu nombre lo acompañe",
     "othersHereOne": "Una persona más está aquí",
-    "othersHereMany": "{count} personas más están aquí"
+    "othersHereMany": "{count} personas más están aquí",
+    "sayHeading": "¿Quieres decir algo?",
+    "sayNamePlaceholder": "Tu nombre",
+    "sayPlaceholder": "Dos frases son suficientes. ¿Qué sentiste?",
+    "saySubmit": "Ofrecer",
+    "saySending": "Enviando…",
+    "saySent": "Gracias — tu voz está aquí.",
+    "sayDismiss": "ahora no"
   },
   "reactions": {
     "ariaLabel": "Reacciones y comentarios",

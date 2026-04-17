@@ -59,6 +59,13 @@ interface Props {
     inviteHint: string;
     othersHereOne?: string;
     othersHereMany?: string;
+    sayHeading?: string;
+    sayNamePlaceholder?: string;
+    sayPlaceholder?: string;
+    saySubmit?: string;
+    saySending?: string;
+    saySent?: string;
+    sayDismiss?: string;
   };
 }
 
@@ -77,6 +84,10 @@ export function MeetingSurface({
   const [contributorId, setContributorId] = useState<string | null>(null);
   const [pulse, setPulse] = useState(false);
   const [othersHere, setOthersHere] = useState(0);
+  const [sayOpen, setSayOpen] = useState(false);
+  const [sayText, setSayText] = useState("");
+  const [sayingName, setSayingName] = useState("");
+  const [sayState, setSayState] = useState<"idle" | "sending" | "sent">("idle");
   const fingerprintRef = useRef<string>("");
   const heartbeat = useRef<ReturnType<typeof setInterval> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -163,7 +174,65 @@ export function MeetingSurface({
       });
       triggerPulse();
       loadMeeting();
+      // After the first warm gesture, invite a sentence. The panel opens
+      // only if the viewer hasn't already sent a voice this session.
+      if (emoji !== "➡️" && sayState !== "sent") {
+        setSayOpen(true);
+        setSayingName(authorName);
+      }
     } catch { /* transient */ }
+  }
+
+  async function saySomething() {
+    const name = sayingName.trim();
+    const body = sayText.trim();
+    if (!name || !body) return;
+    setSayState("sending");
+    try {
+      // Store the name in localStorage for future visits
+      try {
+        localStorage.setItem(NAME_KEY, name);
+      } catch {
+        /* ignore */
+      }
+      setAuthorName(name);
+      const base = getApiBase();
+      // For concepts, store as a voice (richer shape + ripens into proposals
+      // later). For any other entity, store as a reaction with a comment.
+      if (entityType === "concept") {
+        await fetch(`${base}/api/concepts/${encodeURIComponent(entityId)}/voices`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            author_name: name,
+            body,
+            locale,
+            author_id: contributorId,
+          }),
+        });
+      } else {
+        await fetch(`${base}/api/reactions/${entityType}/${entityId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            author_name: name,
+            comment: body,
+            locale,
+            author_id: contributorId,
+          }),
+        });
+      }
+      setSayState("sent");
+      setSayText("");
+      triggerPulse();
+      loadMeeting();
+      setTimeout(() => {
+        setSayOpen(false);
+        setSayState("idle");
+      }, 2400);
+    } catch {
+      setSayState("idle");
+    }
   }
 
   const pulseLabel =
@@ -226,6 +295,70 @@ export function MeetingSurface({
           <p className="text-base md:text-lg text-stone-300 max-w-xl w-full leading-relaxed break-words whitespace-normal px-1">{description}</p>
         )}
       </section>
+
+      {/* Inline voice/comment — opens after a warm reaction.
+          For concepts, stores as a voice; elsewhere as a commented
+          reaction. Same gesture surface, different shape underneath. */}
+      {sayOpen && (
+        <section className="px-5 pb-4 border-t border-stone-800/60 bg-stone-900/40">
+          <div className="max-w-md mx-auto pt-4 space-y-2">
+            {sayState === "sent" ? (
+              <p className="text-sm text-emerald-300 text-center py-3">
+                {strings.saySent || "Thank you — your voice is here."}
+              </p>
+            ) : (
+              <>
+                <label className="text-xs uppercase tracking-widest text-amber-300/90">
+                  {strings.sayHeading || "Say something?"}
+                </label>
+                <input
+                  type="text"
+                  value={sayingName}
+                  onChange={(e) => setSayingName(e.target.value)}
+                  placeholder={strings.sayNamePlaceholder || "Your name"}
+                  className="w-full rounded-md bg-stone-950/60 border border-stone-800 px-3 py-2 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/60"
+                  maxLength={80}
+                />
+                <textarea
+                  value={sayText}
+                  onChange={(e) => setSayText(e.target.value)}
+                  placeholder={strings.sayPlaceholder || "Two sentences is enough."}
+                  rows={2}
+                  maxLength={1000}
+                  className="w-full rounded-md bg-stone-950/60 border border-stone-800 px-3 py-2 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/60 resize-y"
+                  autoFocus
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={saySomething}
+                    disabled={
+                      sayState === "sending" ||
+                      !sayingName.trim() ||
+                      !sayText.trim()
+                    }
+                    className="rounded-full bg-amber-700/80 hover:bg-amber-600/90 disabled:bg-stone-800 disabled:text-stone-600 text-stone-950 px-4 py-1.5 text-sm font-medium transition-colors"
+                  >
+                    {sayState === "sending"
+                      ? strings.saySending || "Sending…"
+                      : strings.saySubmit || "Offer this"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSayOpen(false);
+                      setSayText("");
+                    }}
+                    className="text-xs text-stone-500 hover:text-stone-300"
+                  >
+                    {strings.sayDismiss || "later"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Bottom gesture row */}
       <footer className="px-5 pb-6 pt-4 border-t border-stone-800/60">
