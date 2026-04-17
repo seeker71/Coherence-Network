@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
 import { useT, useLocale } from "@/components/MessagesProvider";
+import { ReactionBar } from "@/components/ReactionBar";
 
 const CONTRIBUTOR_KEY = "cc-contributor-id";
 
@@ -167,6 +168,21 @@ export function ConceptVoices({ conceptId }: Props) {
                 )}
                 <span className="uppercase tracking-wide">· {v.locale}</span>
               </p>
+              {/* Each voice is itself a surface for care — a reader can
+                  react with a warm emoji or add a short reply. This turns
+                  the voice list into a choir: her sentence, others' hearts
+                  arriving under it, a felt sense of being received. The
+                  emoji palette here is intentionally smaller than the
+                  concept-level bar so voice-reactions read as light,
+                  intimate gestures rather than a full decision surface. */}
+              <div className="mt-3 border-t border-stone-800/40 pt-3">
+                <ReactionBar
+                  entityType="voice"
+                  entityId={v.id}
+                  palette={["💛", "🙏", "🌱", "🫶"]}
+                  compact
+                />
+              </div>
               <div className="mt-3 flex items-center gap-3 text-xs">
                 {v.proposed_as_proposal_id ? (
                   <Link

@@ -27,7 +27,9 @@ type EntityType =
   | "workspace"
   | "asset"
   | "contribution"
-  | "story";
+  | "story"
+  | "voice"
+  | "blog";
 
 interface Reaction {
   id: string;
