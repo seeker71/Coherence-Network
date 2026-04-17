@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
 import { useLocale } from "@/components/MessagesProvider";
+import { Panel } from "@/components/Panel";
 
 const NAME_KEY = "cc-reaction-author-name";
 const CONTRIBUTOR_KEY = "cc-contributor-id";
@@ -137,29 +138,35 @@ export function PersonalFeed({ strings }: Props) {
 
   if (hasIdentity === false) {
     return (
-      <div className="rounded-lg border border-stone-800/60 bg-stone-900/40 p-6 text-center space-y-3">
-        <p className="text-stone-300">{strings.noIdentity}</p>
-        <Link
-          href="/vision/join"
-          className="inline-block rounded-md bg-teal-700/80 hover:bg-teal-600/90 text-stone-950 px-4 py-2 text-sm font-medium"
-        >
-          {strings.noIdentityCta}
-        </Link>
-      </div>
+      <Panel
+        variant="empty"
+        heading={strings.noIdentity}
+        cta={
+          <Link
+            href="/vision/join"
+            className="inline-block rounded-full bg-teal-600/90 hover:bg-teal-500/90 text-stone-950 px-4 py-2 text-sm font-medium transition-colors"
+          >
+            {strings.noIdentityCta}
+          </Link>
+        }
+      />
     );
   }
 
   if (!items || items.length === 0) {
     return (
-      <div className="rounded-lg border border-stone-800/60 bg-stone-900/40 p-6 text-center space-y-3">
-        <p className="text-stone-300">{strings.empty}</p>
-        <Link
-          href="/vision"
-          className="inline-block rounded-md bg-amber-700/80 hover:bg-amber-600/90 text-stone-950 px-4 py-2 text-sm font-medium"
-        >
-          {strings.emptyCta}
-        </Link>
-      </div>
+      <Panel
+        variant="empty"
+        heading={strings.empty}
+        cta={
+          <Link
+            href="/vision"
+            className="inline-block rounded-full bg-amber-600/90 hover:bg-amber-500/90 text-stone-950 px-4 py-2 text-sm font-medium transition-colors"
+          >
+            {strings.emptyCta}
+          </Link>
+        }
+      />
     );
   }
 
