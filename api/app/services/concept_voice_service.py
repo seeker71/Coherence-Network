@@ -62,34 +62,52 @@ _RIPENING_COL_CHECKED = False
 
 
 def _ensure_ripening_column() -> None:
-    """Heal live SQLite DBs that predate the voice→proposal link."""
+    """Heal live SQLite *or* Postgres DBs that predate the voice→proposal link.
+
+    Both dialects support an idempotent ADD COLUMN IF NOT EXISTS on
+    their own terms — Postgres with the IF NOT EXISTS keyword, SQLite
+    via PRAGMA table_info to check first. Indexes use CREATE INDEX IF
+    NOT EXISTS which both dialects accept.
+    """
     global _RIPENING_COL_CHECKED
     if _RIPENING_COL_CHECKED:
         return
     try:
         eng = _udb.engine()
         with eng.connect() as conn:
-            if conn.dialect.name != "sqlite":
-                _RIPENING_COL_CHECKED = True
-                return
-            rows = conn.exec_driver_sql("PRAGMA table_info(concept_voices)").fetchall()
-            if not rows:
-                _RIPENING_COL_CHECKED = True
-                return
-            names = {r[1] for r in rows}
-            if "proposed_as_proposal_id" not in names:
-                conn.exec_driver_sql(
-                    "ALTER TABLE concept_voices ADD COLUMN proposed_as_proposal_id VARCHAR"
-                )
-                try:
+            dialect = conn.dialect.name
+            if dialect == "sqlite":
+                rows = conn.exec_driver_sql(
+                    "PRAGMA table_info(concept_voices)"
+                ).fetchall()
+                if not rows:
+                    return
+                names = {r[1] for r in rows}
+                if "proposed_as_proposal_id" not in names:
                     conn.exec_driver_sql(
-                        "CREATE INDEX IF NOT EXISTS ix_concept_voices_proposed_id "
+                        "ALTER TABLE concept_voices "
+                        "ADD COLUMN proposed_as_proposal_id VARCHAR"
+                    )
+                    conn.exec_driver_sql(
+                        "CREATE INDEX IF NOT EXISTS "
+                        "ix_concept_voices_proposed_id "
                         "ON concept_voices(proposed_as_proposal_id)"
                     )
-                except Exception:
-                    pass
+                    conn.commit()
+            elif dialect == "postgresql":
+                conn.exec_driver_sql(
+                    "ALTER TABLE concept_voices "
+                    "ADD COLUMN IF NOT EXISTS proposed_as_proposal_id VARCHAR"
+                )
+                conn.exec_driver_sql(
+                    "CREATE INDEX IF NOT EXISTS "
+                    "ix_concept_voices_proposed_id "
+                    "ON concept_voices(proposed_as_proposal_id)"
+                )
                 conn.commit()
     except Exception:
+        # Best-effort healing — if it fails the ORM will raise a clearer
+        # error on first insert.
         pass
     finally:
         _RIPENING_COL_CHECKED = True

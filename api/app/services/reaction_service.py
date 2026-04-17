@@ -92,9 +92,10 @@ _REPLY_COLUMN_CHECKED = False
 
 
 def _ensure_reply_column() -> None:
-    """Idempotently add the parent_reaction_id column to existing SQLite
-    reactions tables. New tables already have it; this heals the evolving
-    schema for databases that existed before threading landed.
+    """Idempotently add the parent_reaction_id column to existing
+    reactions tables on either SQLite or Postgres. New tables already
+    have it; this heals the evolving schema for databases that existed
+    before threading landed.
     """
     global _REPLY_COLUMN_CHECKED
     if _REPLY_COLUMN_CHECKED:
@@ -103,30 +104,31 @@ def _ensure_reply_column() -> None:
         eng = _udb.engine()
         with eng.connect() as conn:
             dialect = conn.dialect.name
-            if dialect != "sqlite":
-                _REPLY_COLUMN_CHECKED = True
-                return
-            from sqlalchemy import text
-            rows = conn.exec_driver_sql("PRAGMA table_info(reactions)").fetchall()
-            if not rows:
-                _REPLY_COLUMN_CHECKED = True
-                return
-            names = {r[1] for r in rows}
-            if "parent_reaction_id" not in names:
-                conn.exec_driver_sql(
-                    "ALTER TABLE reactions ADD COLUMN parent_reaction_id VARCHAR"
-                )
-                try:
+            if dialect == "sqlite":
+                rows = conn.exec_driver_sql("PRAGMA table_info(reactions)").fetchall()
+                if not rows:
+                    return
+                names = {r[1] for r in rows}
+                if "parent_reaction_id" not in names:
+                    conn.exec_driver_sql(
+                        "ALTER TABLE reactions ADD COLUMN parent_reaction_id VARCHAR"
+                    )
                     conn.exec_driver_sql(
                         "CREATE INDEX IF NOT EXISTS ix_reactions_parent_reaction_id "
                         "ON reactions(parent_reaction_id)"
                     )
-                except Exception:
-                    pass
+                    conn.commit()
+            elif dialect == "postgresql":
+                conn.exec_driver_sql(
+                    "ALTER TABLE reactions "
+                    "ADD COLUMN IF NOT EXISTS parent_reaction_id VARCHAR"
+                )
+                conn.exec_driver_sql(
+                    "CREATE INDEX IF NOT EXISTS ix_reactions_parent_reaction_id "
+                    "ON reactions(parent_reaction_id)"
+                )
                 conn.commit()
     except Exception:
-        # Best-effort — if the check fails we'll still operate on the table;
-        # the ORM will raise a clearer error on first insert if needed.
         pass
     finally:
         _REPLY_COLUMN_CHECKED = True
