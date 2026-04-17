@@ -7,6 +7,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { ModeSwitcher } from "./mode-switcher";
 import { WorkspacePicker } from "./workspace-picker";
 import { LocaleSwitcherCompact } from "./LocaleSwitcherCompact";
+import { MeButton } from "./MeButton";
 import { createTranslator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
@@ -100,6 +101,9 @@ export default async function SiteHeader() {
           {/* Theme toggle — Spec 165 */}
           <ThemeToggle />
 
+          {/* Me — the signed-in contributor's doorway to their own surfaces */}
+          <MeButton />
+
           {/* Desktop "More" dropdown — secondary pages */}
           <details className="relative hidden md:block group">
             <summary
@@ -145,7 +149,7 @@ export default async function SiteHeader() {
               {t("header.menu")}
             </summary>
             <nav
-              className="absolute right-0 mt-2 w-56 rounded-xl border border-border/50 bg-popover/95 backdrop-blur-md shadow-xl"
+              className="absolute right-0 mt-2 w-56 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-xl border border-border/50 bg-popover/95 backdrop-blur-md shadow-xl overscroll-contain"
               aria-label={t("nav.mobile")}
             >
               <div className="p-3 space-y-1">

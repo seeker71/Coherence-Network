@@ -142,6 +142,8 @@
     "thanksBody": "Tu resonancia se ha registrado. Ahora eres parte del campo que se forma.",
     "thanksUpdates": "Te mantendremos en el flujo a medida que surjan cosas.",
     "registerAgain": "Registrar otra alma",
+    "labelLocale": "Tu idioma",
+    "localeHint": "Te contactaremos en este idioma. Puedes cambiarlo en cualquier momento desde la parte superior.",
     "labelName": "Tu nombre *",
     "placeholderName": "Cómo te conoce el campo",
     "labelEmail": "Correo *",

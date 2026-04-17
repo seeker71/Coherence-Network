@@ -30,11 +30,18 @@ class RegisterInterestRequest(BaseModel):
     offering: str = ""
     resonant_roles: list[str] = []
     message: str = ""
+    locale: str = "en"
     consent_share_name: bool = False
     consent_share_location: bool = False
     consent_share_skills: bool = False
     consent_findable: bool = False
     consent_email_updates: bool = False
+
+    @field_validator("locale")
+    @classmethod
+    def validate_locale(cls, v: str) -> str:
+        v = (v or "").strip().lower()
+        return v if v in {"en", "de", "es", "id"} else "en"
 
     @field_validator("name")
     @classmethod
@@ -110,6 +117,7 @@ async def register_interest(body: RegisterInterestRequest) -> RegisterInterestRe
             offering=body.offering,
             resonant_roles=body.resonant_roles,
             message=body.message,
+            locale=body.locale,
             consent_share_name=body.consent_share_name,
             consent_share_location=body.consent_share_location,
             consent_share_skills=body.consent_share_skills,

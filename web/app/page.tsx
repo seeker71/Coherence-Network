@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { Button } from "@/components/ui/button";
 import { IdeaSubmitForm } from "@/components/idea_submit_form";
@@ -106,7 +106,18 @@ function timeAgo(iso: string, t: Translator): string {
 export default async function Home() {
   const cookieStore = await cookies();
   const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
-  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  // First-visit auto-detect — fall back to Accept-Language so the home
+  // page meets the viewer in their language on the very first render,
+  // before the middleware-set cookie is visible on subsequent requests.
+  const headerLang = (await headers())
+    .get("accept-language")
+    ?.split(",")[0]
+    ?.split("-")[0];
+  const lang: LocaleCode = isSupportedLocale(cookieLang)
+    ? cookieLang
+    : isSupportedLocale(headerLang)
+    ? headerLang
+    : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
   const [ideasData, resonanceItems, coherenceScore, nodeCount] = await Promise.all([

@@ -64,6 +64,7 @@ def register_interest(
     offering: str = "",
     resonant_roles: list[str] | None = None,
     message: str = "",
+    locale: str = "en",
     consent_share_name: bool = False,
     consent_share_location: bool = False,
     consent_share_skills: bool = False,
@@ -76,6 +77,11 @@ def register_interest(
     # Validate roles
     roles = [r for r in (resonant_roles or []) if r in VALID_ROLES]
 
+    # Normalize locale to one of the supported codes; fall back to en.
+    locale_code = (locale or "en").strip().lower()
+    if locale_code not in {"en", "de", "es", "id"}:
+        locale_code = "en"
+
     properties: dict[str, Any] = {
         "email": email,
         "location": location,
@@ -83,6 +89,7 @@ def register_interest(
         "offering": offering,
         "resonant_roles": roles,
         "message": message,
+        "locale": locale_code,
         "consent_share_name": consent_share_name,
         "consent_share_location": consent_share_location,
         "consent_share_skills": consent_share_skills,
