@@ -215,6 +215,11 @@
     "message": "I found something that feels alive. Take three minutes and see.",
     "messageWithName": "{name} found something that feels alive. Take three minutes and see."
   },
+  "inviteBanner": {
+    "ariaLabel": "Invitation",
+    "inviting": "invited you to meet this.",
+    "dismiss": "Dismiss"
+  },
   "welcome": {
     "ariaLabel": "Welcome — what this place is",
     "eyebrow": "New here?",
