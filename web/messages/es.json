@@ -110,6 +110,25 @@
     "voicesThankYou": "Gracias — tu voz está aquí.",
     "voicesLoading": "Escuchando voces…"
   },
+  "feed": {
+    "heading": "El pulso sentido",
+    "lede": "Lo que está vivo en la red ahora — reacciones, voces, semillas nuevas.",
+    "empty": "El flujo está en silencio. Sé el primer aliento.",
+    "exploreVision": "Explora la visión",
+    "stepIn": "Entra en la red"
+  },
+  "reactions": {
+    "ariaLabel": "Reacciones y comentarios",
+    "addComment": "+ di algo",
+    "closeComment": "cerrar",
+    "authorPlaceholder": "Tu nombre",
+    "commentPlaceholder": "Un pensamiento breve…",
+    "send": "Enviar",
+    "sending": "Enviando…",
+    "thanks": "gracias",
+    "inviteContributorLede": "Tu gesto amoroso está aquí. Hazte colaborador·a para que tu nombre acompañe esta parte de la visión —",
+    "inviteContributorLink": "entra en la red"
+  },
   "locale": {
     "switcherLabel": "Idioma",
     "noViewYet": "Aún sin vista"

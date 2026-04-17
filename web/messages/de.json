@@ -110,6 +110,25 @@
     "voicesThankYou": "Danke — deine Stimme ist hier.",
     "voicesLoading": "Lausche auf Stimmen …"
   },
+  "feed": {
+    "heading": "Der gefühlte Puls",
+    "lede": "Was jetzt lebendig ist im Netz — Reaktionen, Stimmen, neue Samen.",
+    "empty": "Der Strom ist still. Sei der erste Atem.",
+    "exploreVision": "Die Vision erkunden",
+    "stepIn": "Ins Netz eintreten"
+  },
+  "reactions": {
+    "ariaLabel": "Reaktionen und Kommentare",
+    "addComment": "+ etwas sagen",
+    "closeComment": "schließen",
+    "authorPlaceholder": "Dein Name",
+    "commentPlaceholder": "Ein kurzer Gedanke …",
+    "send": "Senden",
+    "sending": "Wird gesendet …",
+    "thanks": "danke",
+    "inviteContributorLede": "Deine liebevolle Geste ist hier. Werde Mitwirkende·r, damit dein Name bei diesem Teil der Vision steht —",
+    "inviteContributorLink": "tritt ins Netz ein"
+  },
   "locale": {
     "switcherLabel": "Sprache",
     "noViewYet": "Noch keine Sicht"

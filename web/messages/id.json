@@ -110,6 +110,25 @@
     "voicesThankYou": "Terima kasih — suaramu ada di sini.",
     "voicesLoading": "Mendengarkan suara…"
   },
+  "feed": {
+    "heading": "Denyut yang terasa",
+    "lede": "Apa yang hidup di jaringan saat ini — reaksi, suara, bibit baru.",
+    "empty": "Arus sedang sunyi. Jadilah napas pertama.",
+    "exploreVision": "Jelajahi visi",
+    "stepIn": "Masuk ke jaringan"
+  },
+  "reactions": {
+    "ariaLabel": "Reaksi dan komentar",
+    "addComment": "+ sampaikan sesuatu",
+    "closeComment": "tutup",
+    "authorPlaceholder": "Namamu",
+    "commentPlaceholder": "Pikiran singkat…",
+    "send": "Kirim",
+    "sending": "Mengirim…",
+    "thanks": "terima kasih",
+    "inviteContributorLede": "Isyarat kasihmu ada di sini. Jadilah kontributor agar namamu berdiri bersama bagian visi ini —",
+    "inviteContributorLink": "masuk ke jaringan"
+  },
   "locale": {
     "switcherLabel": "Bahasa",
     "noViewYet": "Belum ada pandangan"

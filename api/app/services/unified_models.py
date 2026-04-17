@@ -115,3 +115,6 @@ from app.services.translation_cache_service import (  # noqa: F401
 
 # Community voices — lived experience on concepts
 from app.services.concept_voice_service import ConceptVoiceRecord  # noqa: F401
+
+# Reactions — emoji + comment on any entity
+from app.services.reaction_service import ReactionRecord  # noqa: F401
