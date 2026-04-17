@@ -25,8 +25,13 @@ interface Shot {
   name: string;
   url: string;
   /** Optional JS to run after load (simulate state that only exists locally,
-   *  e.g. seed localStorage before rendering). */
+   *  e.g. seed localStorage before rendering). Evaluated on the origin
+   *  BEFORE the test URL is loaded — so reads survive the navigation. */
   preMount?: string;
+  /** Optional script to inject via Playwright's addInitScript — runs in
+   *  every new document, surviving navigations. Use for Date overrides
+   *  etc. that must be in place when the page first executes JS. */
+  initScript?: string;
   /** Wait ms after page ready before snapshotting. */
   settleMs?: number;
   /** Optional scroll position. */
@@ -49,7 +54,7 @@ const SHOTS: Shot[] = [
       localStorage.setItem("cc-contributor-id", "patrick-local");
     `,
     settleMs: 2500,
-    scrollY: 600, // scroll down to reveal the InviteFriend card
+    scrollY: 1200, // scroll down to reveal the InviteFriend card
   },
   {
     // Chapter 11: first arrival as Mama, invited by Patrick, in German
@@ -76,15 +81,28 @@ const SHOTS: Shot[] = [
   },
   {
     // Chapter 13: the next morning — seed cc-last-visit-at to yesterday
-    // so the morning nudge gate passes. Also seed a contributor name.
+    // so the morning nudge gate passes. Also pretend the local time
+    // is 07:42 so the 06:00–11:00 window matches.
     name: "14-home-morning-mobile.png",
     url: "/",
     preMount: `
       localStorage.setItem("cc-reaction-author-name", "Mama");
+      localStorage.removeItem("cc-morning-nudge-dismissed");
       const yesterday = new Date(Date.now() - 18 * 3600 * 1000).toISOString();
       localStorage.setItem("cc-last-visit-at", yesterday);
     `,
-    settleMs: 3500, // nudge fetches three endpoints — give it time
+    initScript: `
+      // Force Date#getHours to report 07:42 so the morning window gate
+      // (06:00–11:00 local) passes regardless of when this script runs.
+      // Survives the page navigation because it's an addInitScript.
+      (function() {
+        const _orig = Date.prototype.getHours;
+        Date.prototype.getHours = function() { return 7; };
+        const _origMin = Date.prototype.getMinutes;
+        Date.prototype.getMinutes = function() { return 42; };
+      })();
+    `,
+    settleMs: 4500,
   },
 ];
 
@@ -92,8 +110,11 @@ async function runShot(context: BrowserContext, shot: Shot): Promise<void> {
   const page: Page = await context.newPage();
   const url = BASE + shot.url;
   try {
+    if (shot.initScript) {
+      await page.addInitScript({ content: shot.initScript });
+    }
     // First, navigate to the site origin so we can set localStorage for it.
-    await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 60000 });
     if (shot.preMount) {
       await page.evaluate(shot.preMount);
     }
