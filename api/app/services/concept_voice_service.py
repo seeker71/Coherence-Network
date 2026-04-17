@@ -121,14 +121,59 @@ def add_voice(
     locale: str = "en",
     author_id: Optional[str] = None,
     location: Optional[str] = None,
+    device_fingerprint: Optional[str] = None,
 ) -> dict:
+    """Record a lived-experience voice on a concept.
+
+    Soft-identity auto-graduation: when the caller provides only
+    ``author_name`` (no ``author_id``), a contributor graph node is
+    quietly created for them — their voice becomes the registration
+    event. The returned dict includes ``author_id``; the web client
+    writes it back to localStorage so subsequent voices, reactions,
+    and proposals attribute correctly. No signup screen, no private
+    key, no gate — you become a contributor by caring enough to
+    speak.
+
+    ``device_fingerprint`` is an optional short opaque string from
+    the client that lets us disambiguate two contributors who share
+    a display name (e.g. two "Mama"s on different devices). When
+    absent we fall back to a random uuid suffix.
+    """
     _ensure_schema()
     if not concept_id or not body.strip() or not author_name.strip():
         raise ValueError("concept_id, author_name, and body are required")
+    trimmed_name = author_name.strip()
+
+    # Auto-graduate: if no author_id was supplied, try to find an
+    # existing contributor with the same display name + fingerprint;
+    # otherwise mint a fresh contributor node.
+    if not author_id:
+        try:
+            from app.services import contributor_service
+            from app.services import graph_service
+
+            suffix = (device_fingerprint or uuid4().hex[:8]).strip()[:24]
+            safe_name = "".join(c for c in trimmed_name.lower() if c.isalnum() or c in "-_") or "friend"
+            safe_suffix = "".join(c for c in suffix.lower() if c.isalnum() or c in "-_") or uuid4().hex[:8]
+            candidate_id = f"{safe_name}-{safe_suffix}"[:64]
+            existing = graph_service.get_node(f"contributor:{candidate_id}")
+            if existing:
+                author_id = existing.get("legacy_id") or candidate_id
+            else:
+                node = contributor_service.create_contributor(
+                    name=candidate_id,
+                    contributor_type="HUMAN",
+                )
+                author_id = node.get("legacy_id") or candidate_id
+        except Exception:
+            # If contributor creation fails for any reason, the voice
+            # still lands with just author_name — soft identity holds.
+            author_id = None
+
     rec = ConceptVoiceRecord(
         id=uuid4().hex,
         concept_id=concept_id,
-        author_name=author_name.strip(),
+        author_name=trimmed_name,
         author_id=author_id,
         locale=locale or "en",
         body=body.strip(),
