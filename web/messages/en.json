@@ -177,6 +177,13 @@
       "formGrower": { "name": "Form-grower", "desc": "Earth workers, timber framers, stone masons, hands that shape space that breathes" }
     }
   },
+  "bottomNav": {
+    "here": "Here",
+    "feed": "Feed",
+    "vision": "Vision",
+    "propose": "Propose",
+    "you": "You"
+  },
   "homeBreath": {
     "ariaLabel": "What is alive on the network right now",
     "label": "Live breath",

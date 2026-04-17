@@ -177,6 +177,13 @@
       "formGrower": { "name": "Cultivador·a de forma", "desc": "Trabajador·es de la tierra, carpintero·as, canteros, manos que dan forma a espacio que respira" }
     }
   },
+  "bottomNav": {
+    "here": "Aquí",
+    "feed": "Pulso",
+    "vision": "Visión",
+    "propose": "Propuesta",
+    "you": "Tú"
+  },
   "homeBreath": {
     "ariaLabel": "Lo que está vivo en la red ahora",
     "label": "Aliento vivo",
