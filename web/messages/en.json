@@ -121,7 +121,16 @@
     "lede": "What is alive on the network right now — reactions, voices, new seeds.",
     "empty": "The feed is quiet. Be the first breath.",
     "exploreVision": "Explore the vision",
-    "stepIn": "Step into the network"
+    "stepIn": "Step into the network",
+    "tabCollective": "Everyone",
+    "tabPersonal": "You",
+    "personalHeading": "Your corner",
+    "personalLede": "Voices you gave, reactions you offered, replies that came back to you, proposals you lifted.",
+    "personalEmpty": "Your corner is waiting. Offer a voice on something alive and it will gather here.",
+    "personalEmptyCta": "Find something alive",
+    "personalNoIdentity": "No name is here yet. Choose one and your corner begins.",
+    "personalNoIdentityCta": "Step into the network",
+    "personalLoading": "Gathering your corner…"
   },
   "explore": {
     "empty": "Nothing new to meet right now. Try a different walk.",

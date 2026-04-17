@@ -121,7 +121,16 @@
     "lede": "Lo que está vivo en la red ahora — reacciones, voces, semillas nuevas.",
     "empty": "El flujo está en silencio. Sé el primer aliento.",
     "exploreVision": "Explora la visión",
-    "stepIn": "Entra en la red"
+    "stepIn": "Entra en la red",
+    "tabCollective": "Todos",
+    "tabPersonal": "Tú",
+    "personalHeading": "Tu rincón",
+    "personalLede": "Las voces que ofreciste, las reacciones que diste, las respuestas que te llegaron, las propuestas que elevaste.",
+    "personalEmpty": "Tu rincón te espera. Ofrece una voz sobre algo vivo y se juntará aquí.",
+    "personalEmptyCta": "Encuentra algo vivo",
+    "personalNoIdentity": "Todavía no hay un nombre. Elige uno y tu rincón empieza.",
+    "personalNoIdentityCta": "Entra en la red",
+    "personalLoading": "Reuniendo tu rincón…"
   },
   "explore": {
     "empty": "Ahora no hay nadie nuevo por conocer. Prueba otro camino.",

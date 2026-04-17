@@ -798,6 +798,10 @@ app.include_router(proposals_router.router, prefix="/api", tags=["proposals"])
 from app.routers import notifications as notifications_router  # noqa: E402
 app.include_router(notifications_router.router, prefix="/api", tags=["notifications"])
 
+# Personal feed — your corner of the organism
+from app.routers import personal_feed as personal_feed_router  # noqa: E402
+app.include_router(personal_feed_router.router, prefix="/api", tags=["feed"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
