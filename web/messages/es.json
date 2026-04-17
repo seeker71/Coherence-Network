@@ -221,7 +221,10 @@
     "messageWithBoth": "{name} pensó en ti, {recipient}. Algo vivo te espera — tómate tres minutos y mira.",
     "recipientLabel": "Su nombre",
     "recipientPlaceholder": "p. ej. Mamá, Sam, Aisha",
-    "recipientHint": "Llega saludada por su nombre — nada que registrar, nada que recordar."
+    "recipientHint": "Llega saludada por su nombre — nada que registrar, nada que recordar.",
+    "langLabel": "Su idioma",
+    "langAuto": "Deja que su dispositivo decida",
+    "langHint": "Por defecto, su teléfono elige el idioma. Cámbialo aquí si la conoces mejor que sus ajustes del navegador."
   },
   "inviteBanner": {
     "ariaLabel": "Invitación",
