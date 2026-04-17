@@ -109,6 +109,22 @@ def _apply_lang_views(resp: IdeaPortfolioResponse, lang: str | None) -> IdeaPort
                     idea.description = rec.content_description
                 except Exception:
                     pass
+            continue
+        # No canonical view — fall back to live snippet translation so
+        # the listing speaks the viewer's language. Cached in-process.
+        src_title = idea.name or ""
+        src_desc = getattr(idea, "description", "") or ""
+        if src_title or src_desc:
+            t_title, t_desc = translator_service.translate_snippet(
+                src_title, src_desc, source_lang="en", target_lang=lang,
+            )
+            if t_title:
+                idea.name = t_title
+            if t_desc and hasattr(idea, "description"):
+                try:
+                    idea.description = t_desc
+                except Exception:
+                    pass
     return resp
 
 
