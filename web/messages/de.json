@@ -236,6 +236,18 @@
     "welcomeBackNamed": "{name}, schön dass du wieder da bist. Hier ist, was für dich geschieht.",
     "dismiss": "Schließen"
   },
+  "morningNudge": {
+    "ariaLabel": "Morgen-Rückblick",
+    "eyebrow": "Guten Morgen",
+    "dismiss": "Später",
+    "heading": "{name}, seit du zuletzt hier warst:",
+    "voicesOne": "1 neue Stimme zu einem Begriff, den du berührt hast",
+    "voicesMany": "{count} neue Stimmen zu Begriffen, die du berührt hast",
+    "ideasOne": "1 neue Idee in deiner Nähe",
+    "ideasMany": "{count} neue Ideen in deiner Nähe",
+    "newsLead": "Aus der weiten Welt:",
+    "openCorner": "Deine Ecke öffnen"
+  },
   "welcome": {
     "ariaLabel": "Willkommen — worum es hier geht",
     "eyebrow": "Neu hier?",
