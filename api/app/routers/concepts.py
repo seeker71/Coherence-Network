@@ -609,6 +609,25 @@ async def get_concept(
         if lang and lang != translator_service.DEFAULT_LOCALE:
             if not translator_service.is_supported(lang):
                 raise HTTPException(status_code=400, detail=localize("unsupported_locale", err_lang, code=lang))
+            # Snippet-fallback: even before the background attunement lands,
+            # translate the name + description synchronously so a first-time
+            # visitor in this language doesn't see English content. The
+            # translator backend memoizes, so repeated calls are cheap.
+            src_title = concept.get("name", "")
+            src_desc = concept.get("description", "")
+            if src_title or src_desc:
+                try:
+                    t_title, t_desc = translator_service.translate_snippet(
+                        src_title, src_desc,
+                        source_lang=translator_service.DEFAULT_LOCALE,
+                        target_lang=lang,
+                    )
+                    if t_title:
+                        concept["name"] = t_title
+                    if t_desc:
+                        concept["description"] = t_desc
+                except Exception:
+                    pass
             concept["language_meta"] = {
                 "lang": lang,
                 "is_anchor": False,
@@ -646,6 +665,25 @@ async def get_concept(
         concept["name"] = chosen.content_title or concept.get("name")
         concept["description"] = chosen.content_description or concept.get("description")
         concept["story_content"] = chosen.content_markdown or concept.get("story_content")
+    elif target_lang != translator_service.DEFAULT_LOCALE:
+        # No canonical view in the target lang yet — synchronously translate
+        # name + description so the visitor meets the concept in her language
+        # before the background attunement finishes. Cached by the translator.
+        src_title = concept.get("name", "")
+        src_desc = concept.get("description", "")
+        if src_title or src_desc:
+            try:
+                t_title, t_desc = translator_service.translate_snippet(
+                    src_title, src_desc,
+                    source_lang=translator_service.DEFAULT_LOCALE,
+                    target_lang=target_lang,
+                )
+                if t_title:
+                    concept["name"] = t_title
+                if t_desc:
+                    concept["description"] = t_desc
+            except Exception:
+                pass
 
     concept["language_meta"] = {
         "lang": target_lang,

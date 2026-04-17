@@ -96,16 +96,23 @@ export function MorningNudge() {
       if (dismissedToday === todayKey()) return;
 
       // Fetch the digest — keep it cheap, a single Promise.allSettled
-      // of small endpoints rather than a bespoke aggregate route.
+      // of small endpoints. For news we query only the living-collective-
+      // aligned sources so the morning greeting feels like it belongs
+      // to the same world as the concepts she has been exploring, not a
+      // generic tech-news feed. News is also translated into her locale
+      // server-side (?lang=).
       const base = getApiBase();
+      const lang = locale || "en";
       const [voicesRes, ideasRes, newsRes] = await Promise.allSettled([
         fetch(`${base}/api/concepts/voices/recent?limit=3`, { cache: "no-store" })
           .then((r) => (r.ok ? r.json() : null))
           .catch(() => null),
-        fetch(`${base}/api/ideas/resonance?window_hours=36&limit=5`, { cache: "no-store" })
+        fetch(`${base}/api/ideas/resonance?window_hours=36&limit=5&lang=${lang}`, { cache: "no-store" })
           .then((r) => (r.ok ? r.json() : null))
           .catch(() => null),
-        fetch(`${base}/api/news/feed?limit=3`, { cache: "no-store" })
+        // Prefer living-collective-aligned sources. Resilience.org is
+        // most likely to match nourishing/community/regeneration themes.
+        fetch(`${base}/api/news/feed?source=resilience&limit=3&lang=${lang}`, { cache: "no-store" })
           .then((r) => (r.ok ? r.json() : null))
           .catch(() => null),
       ]);
