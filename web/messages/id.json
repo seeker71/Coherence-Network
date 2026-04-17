@@ -142,6 +142,8 @@
     "thanksBody": "Resonansimu sudah tercatat. Kamu sekarang bagian dari medan yang sedang terbentuk.",
     "thanksUpdates": "Kami akan menjagamu tetap dalam alir seiring hal-hal muncul.",
     "registerAgain": "Daftarkan jiwa lain",
+    "labelLocale": "Bahasamu",
+    "localeHint": "Kami akan menghubungimu dalam bahasa ini. Kamu bisa mengubahnya kapan saja dari bagian atas halaman.",
     "labelName": "Namamu *",
     "placeholderName": "Bagaimana medan mengenalmu",
     "labelEmail": "Surel *",

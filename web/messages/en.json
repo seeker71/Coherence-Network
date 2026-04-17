@@ -142,6 +142,8 @@
     "thanksBody": "Your resonance has been registered. You are now part of the forming field.",
     "thanksUpdates": "We'll keep you in the flow as things emerge.",
     "registerAgain": "Register another soul",
+    "labelLocale": "Your language",
+    "localeHint": "We'll reach you in this language. You can change it any time from the top of the page.",
     "labelName": "Your name *",
     "placeholderName": "How the field knows you",
     "labelEmail": "Email *",

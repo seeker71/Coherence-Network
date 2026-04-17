@@ -142,6 +142,8 @@
     "thanksBody": "Deine Resonanz ist registriert. Du bist jetzt Teil des sich formenden Feldes.",
     "thanksUpdates": "Wir halten dich im Fluss, während die Dinge entstehen.",
     "registerAgain": "Eine weitere Seele eintragen",
+    "labelLocale": "Deine Sprache",
+    "localeHint": "Wir wenden uns in dieser Sprache an dich. Oben auf der Seite kannst du sie jederzeit ändern.",
     "labelName": "Dein Name *",
     "placeholderName": "Wie das Feld dich kennt",
     "labelEmail": "E-Mail *",

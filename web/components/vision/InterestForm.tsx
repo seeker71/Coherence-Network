@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useT } from "@/components/MessagesProvider";
+import { useT, useLocale } from "@/components/MessagesProvider";
+import { LOCALES, type LocaleCode } from "@/lib/locales";
 
 type RoleKey =
   | "livingStructureWeaver"
@@ -29,6 +30,7 @@ type FormState = {
   offering: string;
   resonant_roles: string[];
   message: string;
+  locale: LocaleCode;
   consent_share_name: boolean;
   consent_share_location: boolean;
   consent_share_skills: boolean;
@@ -36,24 +38,28 @@ type FormState = {
   consent_email_updates: boolean;
 };
 
-const INITIAL: FormState = {
-  name: "",
-  email: "",
-  location: "",
-  skills: "",
-  offering: "",
-  resonant_roles: [],
-  message: "",
-  consent_share_name: false,
-  consent_share_location: false,
-  consent_share_skills: false,
-  consent_findable: false,
-  consent_email_updates: false,
-};
+function initialState(detected: LocaleCode): FormState {
+  return {
+    name: "",
+    email: "",
+    location: "",
+    skills: "",
+    offering: "",
+    resonant_roles: [],
+    message: "",
+    locale: detected,
+    consent_share_name: false,
+    consent_share_location: false,
+    consent_share_skills: false,
+    consent_findable: false,
+    consent_email_updates: false,
+  };
+}
 
 export function InterestForm() {
   const t = useT();
-  const [form, setForm] = useState<FormState>(INITIAL);
+  const detectedLocale = useLocale() as LocaleCode;
+  const [form, setForm] = useState<FormState>(() => initialState(detectedLocale));
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -105,7 +111,7 @@ export function InterestForm() {
           {form.consent_email_updates && t("interestForm.thanksUpdates")}
         </p>
         <button
-          onClick={() => { setSubmitted(false); setForm(INITIAL); }}
+          onClick={() => { setSubmitted(false); setForm(initialState(detectedLocale)); }}
           className="text-sm text-stone-600 hover:text-stone-400 transition-colors"
         >
           {t("interestForm.registerAgain")}
@@ -116,6 +122,40 @@ export function InterestForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
+      {/* Your language — pre-filled from the viewer's current locale.
+          Always visible so the contributor can correct the guess. */}
+      <div className="space-y-2">
+        <label className="text-sm text-stone-400">
+          {t("interestForm.labelLocale")}
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          {LOCALES.map((loc) => {
+            const selected = form.locale === loc.code;
+            return (
+              <button
+                key={loc.code}
+                type="button"
+                onClick={() => setForm({ ...form, locale: loc.code })}
+                aria-pressed={selected}
+                className={`rounded-full px-3 py-1.5 text-sm border transition-colors ${
+                  selected
+                    ? "border-amber-500/60 bg-amber-500/10 text-amber-200"
+                    : "border-stone-800/60 bg-stone-900/40 text-stone-400 hover:border-stone-700 hover:text-stone-300"
+                }`}
+              >
+                <span className="font-medium uppercase tracking-wider mr-2 text-xs">
+                  {loc.code}
+                </span>
+                {loc.nativeName}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-stone-600 leading-relaxed">
+          {t("interestForm.localeHint")}
+        </p>
+      </div>
+
       {/* Name + Email */}
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-2">
