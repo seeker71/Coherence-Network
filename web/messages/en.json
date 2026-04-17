@@ -110,6 +110,25 @@
     "voicesThankYou": "Thank you — your voice is here.",
     "voicesLoading": "Listening for voices…"
   },
+  "feed": {
+    "heading": "The felt pulse",
+    "lede": "What is alive on the network right now — reactions, voices, new seeds.",
+    "empty": "The feed is quiet. Be the first breath.",
+    "exploreVision": "Explore the vision",
+    "stepIn": "Step into the network"
+  },
+  "reactions": {
+    "ariaLabel": "Reactions and comments",
+    "addComment": "+ say something",
+    "closeComment": "close",
+    "authorPlaceholder": "Your name",
+    "commentPlaceholder": "A short thought…",
+    "send": "Send",
+    "sending": "Sending…",
+    "thanks": "thank you",
+    "inviteContributorLede": "Your loving gesture is here. Become a contributor so your name stands with this part of the vision as a whole —",
+    "inviteContributorLink": "step into the network"
+  },
   "locale": {
     "switcherLabel": "Language",
     "noViewYet": "No view yet"

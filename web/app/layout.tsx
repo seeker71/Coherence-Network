@@ -33,12 +33,26 @@ export const metadata: Metadata = {
     template: "%s | Coherence Network",
   },
   description: "Ideas deserve to become real. Share what you see, build what matters, and trace every contribution from thought to impact.",
+  manifest: "/manifest.webmanifest",
+  applicationName: "Coherence Network",
+  appleWebApp: {
+    capable: true,
+    title: "Coherence",
+    statusBarStyle: "black-translucent",
+  },
   openGraph: {
     type: "website",
     siteName: "Coherence Network",
     title: "Coherence Network",
     description: "Ideas deserve to become real. Share what you see, build what matters, and trace every contribution from thought to impact.",
   },
+};
+
+export const viewport = {
+  themeColor: "#0c0a09",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
 };
 
 export default async function RootLayout({

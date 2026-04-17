@@ -51,6 +51,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "forbidden": "Not allowed",
         "workspace_identity_required": "Workspace '{workspace}' requires a signed-in contributor (X-Contributor-Id)",
         "workspace_access_denied": "Not a member of workspace '{workspace}'",
+        "unsupported_entity_type": "Reactions are not supported for entity type '{entity_type}'",
     },
     "de": {
         "concept_not_found": "Begriff '{id}' nicht gefunden",
@@ -72,6 +73,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "forbidden": "Nicht erlaubt",
         "workspace_identity_required": "Arbeitsbereich '{workspace}' benötigt eine angemeldete Identität (X-Contributor-Id)",
         "workspace_access_denied": "Nicht Mitglied des Arbeitsbereichs '{workspace}'",
+        "unsupported_entity_type": "Reaktionen sind für Entitätstyp '{entity_type}' nicht unterstützt",
     },
     "es": {
         "concept_not_found": "Concepto '{id}' no encontrado",
@@ -93,6 +95,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "forbidden": "No permitido",
         "workspace_identity_required": "El espacio '{workspace}' requiere un contribuyente identificado (X-Contributor-Id)",
         "workspace_access_denied": "No eres miembro del espacio '{workspace}'",
+        "unsupported_entity_type": "Las reacciones no están disponibles para el tipo de entidad '{entity_type}'",
     },
     "id": {
         "concept_not_found": "Gagasan konsep '{id}' tidak ditemukan",
@@ -114,6 +117,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "forbidden": "Tidak diizinkan",
         "workspace_identity_required": "Ruang kerja '{workspace}' perlu kontributor yang masuk (X-Contributor-Id)",
         "workspace_access_denied": "Bukan anggota ruang kerja '{workspace}'",
+        "unsupported_entity_type": "Reaksi tidak tersedia untuk tipe entitas '{entity_type}'",
     },
 }
 

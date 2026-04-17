@@ -25,6 +25,7 @@ import { WorldSignals } from "./_components/WorldSignals";
 import { EnergyContributors } from "./_components/EnergyContributors";
 import { ResonantAssets } from "./_components/ResonantAssets";
 import { ConceptVoices } from "./_components/ConceptVoices";
+import { ReactionBar } from "@/components/ReactionBar";
 
 export const dynamic = "force-dynamic";
 
@@ -222,6 +223,11 @@ export default async function VisionConceptPage({
             <div className="max-w-3xl">
               <WorldSignals conceptId={conceptId} />
             </div>
+
+            {/* Quick reactions — a pulse of felt-ness on this concept */}
+            <section className="max-w-3xl pt-6">
+              <ReactionBar entityType="concept" entityId={conceptId} compact />
+            </section>
 
             {/* Community voices — lived experience from those living it */}
             <ConceptVoices conceptId={conceptId} />

@@ -778,6 +778,10 @@ app.include_router(world_lens_router.router, prefix="/api", tags=["world"])
 from app.routers import fallbacks as fallbacks_router  # noqa: E402
 app.include_router(fallbacks_router.router, prefix="/api", tags=["sensing"])
 
+# Reactions — emoji + comment on any entity
+from app.routers import reactions as reactions_router  # noqa: E402
+app.include_router(reactions_router.router, prefix="/api", tags=["reactions"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
