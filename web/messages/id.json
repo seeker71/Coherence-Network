@@ -122,6 +122,7 @@
     "empty": "Arus sedang sunyi. Jadilah napas pertama.",
     "exploreVision": "Jelajahi visi",
     "stepIn": "Masuk ke jaringan",
+    "tabHere": "Di sini kini",
     "tabCollective": "Semua",
     "tabPersonal": "Kamu",
     "personalHeading": "Sudutmu",
@@ -131,6 +132,19 @@
     "personalNoIdentity": "Belum ada nama di sini. Pilih satu dan sudutmu dimulai.",
     "personalNoIdentityCta": "Masuk ke jaringan",
     "personalLoading": "Mengumpulkan sudutmu…"
+  },
+  "here": {
+    "heading": "Di mana perhatian sekarang",
+    "lede": "Napas organisme saat ini — siapa bertemu apa, dan apa yang disuarakan serta disentuh baru-baru ini.",
+    "empty": "Organisme sedang sunyi. Temui sesuatu dan kamu menghidupkannya.",
+    "emptyCta": "Temui sebuah konsep",
+    "meetingNow": "Bertemu sekarang",
+    "onePresent": "1 orang di sini",
+    "manyPresent": "{count} orang di sini",
+    "recentVoices": "Suara terkini",
+    "recentReactions": "Reaksi terkini",
+    "goExplore": "Jalani jalan →",
+    "goPropose": "+ Usulkan sesuatu"
   },
   "explore": {
     "empty": "Belum ada yang baru untuk ditemui. Coba jalan lain.",

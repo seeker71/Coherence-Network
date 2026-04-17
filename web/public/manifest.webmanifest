@@ -20,6 +20,12 @@
   ],
   "shortcuts": [
     {
+      "name": "Here",
+      "short_name": "Here",
+      "url": "/here",
+      "description": "Where the organism's attention is right now"
+    },
+    {
       "name": "Feed",
       "short_name": "Feed",
       "url": "/feed",
