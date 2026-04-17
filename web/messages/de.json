@@ -236,6 +236,18 @@
     "welcomeBackNamed": "{name}, schön dass du wieder da bist. Hier ist, was für dich geschieht.",
     "dismiss": "Schließen"
   },
+  "people": {
+    "eyebrow": "Eine Ecke des Organismus",
+    "tagline": "{voices} Stimmen gegeben · {warmth} Herzen empfangen",
+    "voicesHeading": "Stimmen, die sie gegeben hat",
+    "warmthHeading": "Wärme, die zu ihr fand",
+    "someone": "Jemand",
+    "reacted": "hat das auf ihre Stimme gelegt.",
+    "replied": "hat geantwortet:",
+    "emptyHeading": "Ein Name, dessen Garten noch wartet.",
+    "emptyLede": "Sie hat eine Mitwirkenden-ID, aber noch nicht gesprochen oder Reaktionen empfangen. Ihre Ecke wartet.",
+    "backToVision": "Die Vision begehen"
+  },
   "morningNudge": {
     "ariaLabel": "Morgen-Rückblick",
     "eyebrow": "Guten Morgen",

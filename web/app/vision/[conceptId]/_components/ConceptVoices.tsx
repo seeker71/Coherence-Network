@@ -20,6 +20,7 @@ interface Voice {
   id: string;
   concept_id: string;
   author_name: string;
+  author_id: string | null;
   locale: string;
   body: string;
   location: string | null;
@@ -159,7 +160,16 @@ export function ConceptVoices({ conceptId }: Props) {
             >
               <p className="text-stone-200 leading-relaxed whitespace-pre-wrap">{v.body}</p>
               <p className="text-xs text-stone-500 mt-3 flex flex-wrap gap-x-3 gap-y-1">
-                <span className="text-amber-300/80">{v.author_name}</span>
+                {v.author_id ? (
+                  <Link
+                    href={`/people/${encodeURIComponent(v.author_id)}`}
+                    className="text-amber-300/90 hover:text-amber-200 underline-offset-4 hover:underline transition-colors"
+                  >
+                    {v.author_name}
+                  </Link>
+                ) : (
+                  <span className="text-amber-300/80">{v.author_name}</span>
+                )}
                 {v.location && <span>· {v.location}</span>}
                 {v.created_at && (
                   <time dateTime={v.created_at}>
