@@ -256,7 +256,7 @@ export default async function FeedPage() {
         >
           {t("propose.heading")} +
         </Link>
-        <Link href="/join" className="hover:text-teal-300/90">
+        <Link href="/vision/join" className="hover:text-teal-300/90">
           {t("feed.stepIn")}
         </Link>
       </footer>
