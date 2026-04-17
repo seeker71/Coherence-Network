@@ -39,6 +39,12 @@ SUPPORTED_ENTITY_TYPES = {
     "asset",
     "contribution",
     "story",
+    # Every piece of content in the system is meetable — config keys,
+    # insights from agent orchestration, running tasks, completed runs.
+    "config",
+    "insight",
+    "agent_task",
+    "agent_run",
 }
 
 

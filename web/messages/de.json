@@ -117,6 +117,18 @@
     "exploreVision": "Die Vision erkunden",
     "stepIn": "Ins Netz eintreten"
   },
+  "meeting": {
+    "viewerPulse": "du",
+    "contentPulse": "dies",
+    "firstMeeting": "erste Begegnung",
+    "familiar": "vertraut",
+    "resonant": "resonant",
+    "quiet": "still",
+    "offer": "zugewandt",
+    "dismiss": "weitergehen",
+    "amplify": "verstärken",
+    "inviteHint": "Deine Geste hat beide Pulse gehoben. Tritt bei, damit dein Name mitgeht"
+  },
   "reactions": {
     "ariaLabel": "Reaktionen und Kommentare",
     "addComment": "+ etwas sagen",

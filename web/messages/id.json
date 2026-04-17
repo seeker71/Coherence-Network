@@ -117,6 +117,18 @@
     "exploreVision": "Jelajahi visi",
     "stepIn": "Masuk ke jaringan"
   },
+  "meeting": {
+    "viewerPulse": "kamu",
+    "contentPulse": "ini",
+    "firstMeeting": "pertemuan pertama",
+    "familiar": "akrab",
+    "resonant": "beresonansi",
+    "quiet": "sunyi",
+    "offer": "peduli",
+    "dismiss": "lanjut",
+    "amplify": "perkuat",
+    "inviteHint": "Isyaratmu menaikkan dua denyut. Bergabunglah agar namamu menyertai"
+  },
   "reactions": {
     "ariaLabel": "Reaksi dan komentar",
     "addComment": "+ sampaikan sesuatu",
