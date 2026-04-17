@@ -236,6 +236,18 @@
     "welcomeBackNamed": "{name}, senang melihatmu kembali. Inilah yang hidup untukmu.",
     "dismiss": "Tutup"
   },
+  "people": {
+    "eyebrow": "Sudut dari organisme",
+    "tagline": "{voices} suara diberikan · {warmth} hati diterima",
+    "voicesHeading": "Suara yang ia berikan",
+    "warmthHeading": "Kehangatan yang menemukannya",
+    "someone": "Seseorang",
+    "reacted": "meletakkan ini pada suaranya.",
+    "replied": "membalas:",
+    "emptyHeading": "Nama yang tamannya masih menunggu.",
+    "emptyLede": "Ia memiliki id penyumbang tetapi belum bersuara atau menerima reaksi. Sudutnya menunggu.",
+    "backToVision": "Jelajahi visi"
+  },
   "morningNudge": {
     "ariaLabel": "Rangkuman pagi",
     "eyebrow": "Selamat pagi",
