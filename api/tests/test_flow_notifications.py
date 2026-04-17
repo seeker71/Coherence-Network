@@ -123,6 +123,62 @@ async def test_since_filter_excludes_older_events():
 
 
 @pytest.mark.asyncio
+async def test_proposal_lifted_notifies_author_and_supporters():
+    """When a resonant proposal is lifted, the author and every supporter
+    see a 'lifted' event in their notifications."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        author = "lift-author-id"
+        supporter = "lift-supporter-id"
+        # Author creates the proposal
+        r = await c.post(
+            "/api/proposals",
+            json={
+                "title": "Weekly pot-luck under the fig tree",
+                "body": "",
+                "author_name": "Author",
+                "author_id": author,
+            },
+        )
+        pid = r.json()["id"]
+        # Supporter amplifies (💛 or 🔥 counts as support)
+        await c.post(
+            f"/api/reactions/proposal/{pid}",
+            json={"author_name": "Ally", "emoji": "💛", "author_id": supporter},
+        )
+        await c.post(
+            f"/api/reactions/proposal/{pid}",
+            json={"author_name": "Ally", "emoji": "🔥", "author_id": supporter},
+        )
+        # Pump to resonant with two more 💛 from strangers
+        await c.post(
+            f"/api/reactions/proposal/{pid}",
+            json={"author_name": "Stranger A", "emoji": "💛"},
+        )
+        await c.post(
+            f"/api/reactions/proposal/{pid}",
+            json={"author_name": "Stranger B", "emoji": "💛"},
+        )
+        # Lift
+        r = await c.post(f"/api/proposals/{pid}/resolve")
+        assert r.status_code == 200
+        idea_id = r.json()["idea_id"]
+
+        # Author sees proposal_lifted
+        r = await c.get(f"/api/notifications?contributor_id={author}")
+        events = r.json()["events"]
+        assert any(
+            e["kind"] == "proposal_lifted" and e["entity_id"] == idea_id
+            for e in events
+        )
+
+        # Supporter sees lift_i_supported (and NOT proposal_lifted — they aren't the author)
+        r = await c.get(f"/api/notifications?contributor_id={supporter}")
+        events = r.json()["events"]
+        assert any(e["kind"] == "lift_i_supported" and e["entity_id"] == idea_id for e in events)
+        assert not any(e["kind"] == "proposal_lifted" for e in events)
+
+
+@pytest.mark.asyncio
 async def test_no_identity_returns_empty():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         r = await c.get("/api/notifications")

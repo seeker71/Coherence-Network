@@ -20,7 +20,12 @@ const CONTRIBUTOR_KEY = "cc-contributor-id";
 const SINCE_KEY = "cc-notifications-since";
 
 interface Event {
-  kind: "reply_to_me" | "reaction_to_my_voice" | "mention";
+  kind:
+    | "reply_to_me"
+    | "reaction_to_my_voice"
+    | "mention"
+    | "proposal_lifted"
+    | "lift_i_supported";
   entity_type: string;
   entity_id: string;
   body: string;
@@ -163,6 +168,10 @@ export function NotificationBell() {
                     ? "↩️"
                     : e.kind === "reaction_to_my_voice"
                     ? "💛"
+                    : e.kind === "proposal_lifted"
+                    ? "🌱"
+                    : e.kind === "lift_i_supported"
+                    ? "🌾"
                     : "@";
                 return (
                   <li key={`${e.created_at}-${i}`} className="px-4 py-3 text-sm">

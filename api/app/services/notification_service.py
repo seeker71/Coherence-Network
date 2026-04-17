@@ -50,6 +50,7 @@ def unseen_for(
         return []
     from app.services.reaction_service import ReactionRecord
     from app.services.concept_voice_service import ConceptVoiceRecord
+    from app.services.proposal_service import ProposalRecord
 
     # SQLite stores datetimes naive; normalize `since` so comparisons work.
     if since is not None and since.tzinfo is not None:
@@ -146,6 +147,65 @@ def unseen_for(
                             "body": r.comment or "",
                             "actor_name": r.author_name,
                             "created_at": _iso(r.created_at),
+                        }
+                    )
+
+        # 4. Proposals you authored or supported that just became ideas
+        if contributor_id:
+            # Authored proposals
+            q_auth = select(ProposalRecord).where(
+                ProposalRecord.author_id == contributor_id,
+                ProposalRecord.resolved_as_idea_id.isnot(None),
+            )
+            if since:
+                q_auth = q_auth.where(ProposalRecord.resolved_at > since)
+            for p in s.execute(q_auth).scalars().all():
+                events.append(
+                    {
+                        "kind": "proposal_lifted",
+                        "entity_type": "idea",
+                        "entity_id": p.resolved_as_idea_id,
+                        "body": (
+                            f"Your proposal '{p.title}' was lifted into an idea."
+                        ),
+                        "actor_name": "the collective",
+                        "created_at": _iso(p.resolved_at),
+                    }
+                )
+
+            # Proposals I support/amplified (and am not the author of)
+            my_support_rows = s.execute(
+                select(ReactionRecord.entity_id).where(
+                    ReactionRecord.entity_type == "proposal",
+                    ReactionRecord.author_id == contributor_id,
+                    ReactionRecord.emoji.in_(["💛", "🔥"]),
+                )
+            ).all()
+            my_supported_ids = {r[0] for r in my_support_rows}
+            if my_supported_ids:
+                q_sup = select(ProposalRecord).where(
+                    ProposalRecord.id.in_(my_supported_ids),
+                    ProposalRecord.resolved_as_idea_id.isnot(None),
+                    # Exclude self-authored to avoid duplicate with the above
+                    or_(
+                        ProposalRecord.author_id.is_(None),
+                        ProposalRecord.author_id != contributor_id,
+                    ),
+                )
+                if since:
+                    q_sup = q_sup.where(ProposalRecord.resolved_at > since)
+                for p in s.execute(q_sup).scalars().all():
+                    events.append(
+                        {
+                            "kind": "lift_i_supported",
+                            "entity_type": "idea",
+                            "entity_id": p.resolved_as_idea_id,
+                            "body": (
+                                f"A proposal you supported — '{p.title}' — was "
+                                "lifted into an idea."
+                            ),
+                            "actor_name": "the collective",
+                            "created_at": _iso(p.resolved_at),
                         }
                     )
 
