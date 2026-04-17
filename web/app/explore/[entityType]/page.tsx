@@ -53,6 +53,8 @@ export default async function ExplorePage({
         dismiss: t("meeting.dismiss"),
         amplify: t("meeting.amplify"),
         inviteHint: t("meeting.inviteHint"),
+        othersHereOne: t("meeting.othersHereOne"),
+        othersHereMany: t("meeting.othersHereMany"),
       }}
     />
   );

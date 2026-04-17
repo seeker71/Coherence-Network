@@ -218,6 +218,8 @@ export default async function MeetingPage({
           dismiss: t("meeting.dismiss"),
           amplify: t("meeting.amplify"),
           inviteHint: t("meeting.inviteHint"),
+          othersHereOne: t("meeting.othersHereOne"),
+          othersHereMany: t("meeting.othersHereMany"),
         }}
       />
       {entityType === "proposal" && (
