@@ -184,6 +184,14 @@
     "propose": "Vorschlag",
     "you": "Du"
   },
+  "sinceLast": {
+    "eyebrow": "Seit deinem letzten Besuch (vor {when})",
+    "generic": "Während du weg warst, ist etwas geschehen.",
+    "replies": "{n} Antworten an dich",
+    "reactions": "{n} Reaktionen auf deine Stimmen",
+    "lifts": "{n} gehobene Vorschläge, die du unterstützt hast",
+    "mentions": "{n} Erwähnungen"
+  },
   "me": {
     "stepIn": "Eintreten",
     "you": "Du",
