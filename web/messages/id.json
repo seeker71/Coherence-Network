@@ -177,6 +177,13 @@
       "formGrower": { "name": "Penumbuh bentuk", "desc": "Pekerja tanah, tukang kayu, pemahat batu, tangan yang membentuk ruang yang bernapas" }
     }
   },
+  "bottomNav": {
+    "here": "Di sini",
+    "feed": "Arus",
+    "vision": "Visi",
+    "propose": "Usul",
+    "you": "Kamu"
+  },
   "homeBreath": {
     "ariaLabel": "Apa yang hidup di jaringan saat ini",
     "label": "Napas hidup",
