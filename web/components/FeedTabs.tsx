@@ -14,13 +14,25 @@ export function FeedTabs() {
   const t = useT();
   const pathname = usePathname() || "";
   const isPersonal = pathname.startsWith("/feed/you");
+  const isHere = pathname.startsWith("/here");
+  const isCollective = !isPersonal && !isHere;
 
   return (
-    <nav className="flex items-center gap-1 mb-4 text-sm">
+    <nav className="flex items-center gap-1 mb-4 text-sm flex-wrap">
+      <Link
+        href="/here"
+        className={`px-3 py-1.5 rounded-full transition-colors ${
+          isHere
+            ? "bg-teal-700/70 text-stone-950 font-medium"
+            : "text-stone-400 hover:text-teal-300/90"
+        }`}
+      >
+        {t("feed.tabHere")}
+      </Link>
       <Link
         href="/feed"
         className={`px-3 py-1.5 rounded-full transition-colors ${
-          !isPersonal
+          isCollective
             ? "bg-amber-700/70 text-stone-950 font-medium"
             : "text-stone-400 hover:text-amber-300/90"
         }`}

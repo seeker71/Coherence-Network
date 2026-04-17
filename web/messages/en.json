@@ -122,6 +122,7 @@
     "empty": "The feed is quiet. Be the first breath.",
     "exploreVision": "Explore the vision",
     "stepIn": "Step into the network",
+    "tabHere": "Here now",
     "tabCollective": "Everyone",
     "tabPersonal": "You",
     "personalHeading": "Your corner",
@@ -131,6 +132,19 @@
     "personalNoIdentity": "No name is here yet. Choose one and your corner begins.",
     "personalNoIdentityCta": "Step into the network",
     "personalLoading": "Gathering your corner…"
+  },
+  "here": {
+    "heading": "Where attention is now",
+    "lede": "The organism's current breath — who is meeting what, and what was voiced and reacted to recently.",
+    "empty": "The organism is quiet right now. Meet something and you bring it to life.",
+    "emptyCta": "Meet a concept",
+    "meetingNow": "Meeting now",
+    "onePresent": "1 person here",
+    "manyPresent": "{count} people here",
+    "recentVoices": "Recent voices",
+    "recentReactions": "Recent reactions",
+    "goExplore": "Walk a serendipitous queue →",
+    "goPropose": "+ Propose something"
   },
   "explore": {
     "empty": "Nothing new to meet right now. Try a different walk.",
