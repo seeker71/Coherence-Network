@@ -223,7 +223,7 @@ export function MeetingSurface({
         )}
         <h1 className="text-3xl md:text-4xl font-light tracking-tight mb-3">{title}</h1>
         {description && (
-          <p className="text-base md:text-lg text-stone-300 max-w-xl leading-relaxed">{description}</p>
+          <p className="text-base md:text-lg text-stone-300 max-w-xl w-full leading-relaxed break-words whitespace-normal px-1">{description}</p>
         )}
       </section>
 
