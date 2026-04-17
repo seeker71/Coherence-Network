@@ -920,6 +920,9 @@ class ConceptVoiceIn(BaseModel):
     locale: str = "en"
     location: str | None = None
     author_id: str | None = None
+    # Short opaque client-supplied token so two visitors sharing a
+    # display name get distinct contributor_ids during auto-graduation.
+    device_fingerprint: str | None = None
 
 
 @router.post(
@@ -930,6 +933,12 @@ class ConceptVoiceIn(BaseModel):
 async def add_concept_voice(concept_id: str, body: ConceptVoiceIn, request: Request) -> dict:
     """Open write-back surface on any concept. Trust by default — no moderation
     queue. A voice is a short testimony: "this is how we live it here".
+
+    Soft-identity auto-graduation: if ``author_id`` is omitted, the service
+    creates a contributor node keyed by ``author_name`` + ``device_fingerprint``
+    and returns ``author_id`` in the response. The web client writes it back
+    to ``cc-contributor-id`` so the visitor is now a real contributor in
+    every subsequent surface — no signup screen involved.
     """
     if not concept_service.get_concept(concept_id):
         raise HTTPException(
@@ -944,6 +953,7 @@ async def add_concept_voice(concept_id: str, body: ConceptVoiceIn, request: Requ
             locale=body.locale,
             author_id=body.author_id,
             location=body.location,
+            device_fingerprint=body.device_fingerprint,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
