@@ -117,6 +117,13 @@
     "exploreVision": "Explore the vision",
     "stepIn": "Step into the network"
   },
+  "explore": {
+    "empty": "Nothing new to meet right now. Try a different walk.",
+    "exploreMore": "Explore more",
+    "loading": "Gathering a walk…",
+    "walkDone": "You've met everyone on this walk.",
+    "restart": "Walk again"
+  },
   "meeting": {
     "viewerPulse": "you",
     "contentPulse": "this",

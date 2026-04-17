@@ -117,6 +117,13 @@
     "exploreVision": "Die Vision erkunden",
     "stepIn": "Ins Netz eintreten"
   },
+  "explore": {
+    "empty": "Im Moment ist niemand Neues da. Versuche einen anderen Weg.",
+    "exploreMore": "Mehr erkunden",
+    "loading": "Ein Weg wird gesammelt …",
+    "walkDone": "Du bist allen auf diesem Weg begegnet.",
+    "restart": "Noch einmal gehen"
+  },
   "meeting": {
     "viewerPulse": "du",
     "contentPulse": "dies",

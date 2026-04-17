@@ -36,6 +36,12 @@
       "short_name": "Ideas",
       "url": "/ideas",
       "description": "Ideas being realized"
+    },
+    {
+      "name": "Explore",
+      "short_name": "Explore",
+      "url": "/explore/concept",
+      "description": "Walk through concepts, one meeting at a time"
     }
   ]
 }

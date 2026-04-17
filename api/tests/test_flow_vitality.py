@@ -288,6 +288,42 @@ async def test_meeting_returns_combined_organism_vitality():
 
 
 @pytest.mark.asyncio
+async def test_explore_queue_returns_entities_viewer_has_not_met():
+    """Explore queue returns entities filtered by the viewer's prior
+    reactions — so a walk never repeats someone the viewer already met."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # Seed two concepts
+        for cid in ("lc-explore-a", "lc-explore-b"):
+            await c.post(
+                "/api/graph/nodes",
+                json={
+                    "id": cid, "type": "concept", "name": f"Explore {cid}",
+                    "description": "T", "properties": {"domains": ["living-collective"]},
+                },
+            )
+        # A viewer reacts to one
+        viewer = "walker-one"
+        await c.post(
+            "/api/reactions/concept/lc-explore-a",
+            json={"author_name": "Walker", "emoji": "💛", "author_id": viewer},
+        )
+        r = await c.get(f"/api/explore/concept?limit=20&contributor_id={viewer}")
+        assert r.status_code == 200
+        body = r.json()
+        ids = {q["entity_id"] for q in body["queue"]}
+        assert "lc-explore-a" not in ids  # already met — skipped
+        assert "lc-explore-b" in ids      # still to meet
+
+
+@pytest.mark.asyncio
+async def test_explore_unsupported_entity_type_localized():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/explore/lobster", headers={"accept-language": "es"})
+        assert r.status_code == 400
+        assert "tipo de entidad" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_meeting_unsupported_entity_localized():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         r = await c.get("/api/meeting/lobster/soup", headers={"accept-language": "de"})
