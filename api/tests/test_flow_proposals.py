@@ -95,6 +95,50 @@ async def test_proposal_missing_returns_404():
 
 
 @pytest.mark.asyncio
+async def test_resonant_proposal_lifts_into_idea():
+    """A proposal at resonant status can be lifted into an idea. Idempotent."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.post(
+            "/api/proposals",
+            json={"title": "Kinetic test", "body": "Lift me", "author_name": "K"},
+        )
+        pid = r.json()["id"]
+        # Pump reactions to reach resonant (support≥3, amplify>0, weighted 5>=3*1)
+        for emoji in ("💛", "💛", "💛", "🔥"):
+            await c.post(
+                f"/api/reactions/proposal/{pid}",
+                json={"author_name": "voter", "emoji": emoji},
+            )
+        # Tally should be resonant
+        r = await c.get(f"/api/proposals/{pid}/tally")
+        assert r.json()["status"] == "resonant"
+        # Lift
+        r = await c.post(f"/api/proposals/{pid}/resolve")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["already_resolved"] is False
+        idea_id = body["idea_id"]
+        assert idea_id
+        assert body["proposal"]["resolved_as_idea_id"] == idea_id
+        # Idempotent on second call
+        r2 = await c.post(f"/api/proposals/{pid}/resolve")
+        assert r2.json()["already_resolved"] is True
+        assert r2.json()["idea_id"] == idea_id
+
+
+@pytest.mark.asyncio
+async def test_non_resonant_proposal_refuses_to_lift():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.post(
+            "/api/proposals",
+            json={"title": "Quiet still", "body": "", "author_name": "K"},
+        )
+        pid = r.json()["id"]
+        r = await c.post(f"/api/proposals/{pid}/resolve")
+        assert r.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_explore_proposal_returns_open_proposals():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         await c.post(

@@ -5,6 +5,7 @@ import { getApiBase } from "@/lib/api";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { createTranslator } from "@/lib/i18n";
 import { MeetingSurface } from "@/components/MeetingSurface";
+import { ProposalLift } from "@/components/ProposalLift";
 
 /**
  * /meet/[entityType]/[entityId] — full-screen meeting with a single entity.
@@ -165,9 +166,12 @@ async function fetchEntityFacet(
         const tally = p.tally
           ? ` — ${p.tally.status} · ${p.tally.counts.support + p.tally.counts.amplify} for, ${p.tally.counts.decline} against`
           : "";
+        const lifted = p.resolved_as_idea_id
+          ? `\n\n🌱 lifted into idea: ${p.resolved_as_idea_id}`
+          : "";
         return {
           title: p.title || entityId,
-          description: `${p.body || ""}${tally}`.trim(),
+          description: `${p.body || ""}${tally}${lifted}`.trim(),
         };
       }
       default:
@@ -196,24 +200,33 @@ export default async function MeetingPage({
   if (!facet) notFound();
 
   return (
-    <MeetingSurface
-      entityType={entityType}
-      entityId={entityId}
-      title={facet.title}
-      description={facet.description}
-      imageUrl={facet.imageUrl || null}
-      strings={{
-        viewerPulse: t("meeting.viewerPulse"),
-        contentPulse: t("meeting.contentPulse"),
-        firstMeeting: t("meeting.firstMeeting"),
-        familiar: t("meeting.familiar"),
-        resonant: t("meeting.resonant"),
-        quiet: t("meeting.quiet"),
-        offer: t("meeting.offer"),
-        dismiss: t("meeting.dismiss"),
-        amplify: t("meeting.amplify"),
-        inviteHint: t("meeting.inviteHint"),
-      }}
-    />
+    <>
+      <MeetingSurface
+        entityType={entityType}
+        entityId={entityId}
+        title={facet.title}
+        description={facet.description}
+        imageUrl={facet.imageUrl || null}
+        strings={{
+          viewerPulse: t("meeting.viewerPulse"),
+          contentPulse: t("meeting.contentPulse"),
+          firstMeeting: t("meeting.firstMeeting"),
+          familiar: t("meeting.familiar"),
+          resonant: t("meeting.resonant"),
+          quiet: t("meeting.quiet"),
+          offer: t("meeting.offer"),
+          dismiss: t("meeting.dismiss"),
+          amplify: t("meeting.amplify"),
+          inviteHint: t("meeting.inviteHint"),
+        }}
+      />
+      {entityType === "proposal" && (
+        <div className="fixed bottom-28 left-0 right-0 px-4 z-20">
+          <div className="max-w-md mx-auto">
+            <ProposalLift proposalId={entityId} />
+          </div>
+        </div>
+      )}
+    </>
   );
 }

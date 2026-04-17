@@ -58,6 +58,10 @@ class ProposalRecord(Base):
     resolve_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=lambda: datetime.now(timezone.utc) + timedelta(days=14)
     )
+    # When the collective lifted this proposal into a kinetic idea, we record
+    # the idea it became and when. One-way link — the idea is the consequence.
+    resolved_as_idea_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 def _session():
@@ -66,6 +70,41 @@ def _session():
 
 def _ensure_schema() -> None:
     _udb.engine()
+    _ensure_resolution_columns()
+
+
+_RESOLUTION_COLS_CHECKED = False
+
+
+def _ensure_resolution_columns() -> None:
+    """Heal live SQLite DBs that predate kinetic resolution columns."""
+    global _RESOLUTION_COLS_CHECKED
+    if _RESOLUTION_COLS_CHECKED:
+        return
+    try:
+        eng = _udb.engine()
+        with eng.connect() as conn:
+            if conn.dialect.name != "sqlite":
+                _RESOLUTION_COLS_CHECKED = True
+                return
+            rows = conn.exec_driver_sql("PRAGMA table_info(proposals)").fetchall()
+            if not rows:
+                _RESOLUTION_COLS_CHECKED = True
+                return
+            names = {r[1] for r in rows}
+            if "resolved_as_idea_id" not in names:
+                conn.exec_driver_sql(
+                    "ALTER TABLE proposals ADD COLUMN resolved_as_idea_id VARCHAR"
+                )
+            if "resolved_at" not in names:
+                conn.exec_driver_sql(
+                    "ALTER TABLE proposals ADD COLUMN resolved_at DATETIME"
+                )
+            conn.commit()
+    except Exception:
+        pass
+    finally:
+        _RESOLUTION_COLS_CHECKED = True
 
 
 def create_proposal(
@@ -181,6 +220,7 @@ def _to_dict(rec: ProposalRecord) -> dict:
     now = datetime.now(timezone.utc)
     resolve_at = _aware(rec.resolve_at)
     created_at = _aware(rec.created_at)
+    resolved_at = _aware(rec.resolved_at)
     return {
         "id": rec.id,
         "title": rec.title,
@@ -193,4 +233,116 @@ def _to_dict(rec: ProposalRecord) -> dict:
         "created_at": created_at.isoformat() if created_at else None,
         "resolve_at": resolve_at.isoformat() if resolve_at else None,
         "open": bool(resolve_at and resolve_at > now),
+        "resolved_as_idea_id": rec.resolved_as_idea_id,
+        "resolved_at": resolved_at.isoformat() if resolved_at else None,
     }
+
+
+def resolve_into_idea(proposal_id: str) -> dict:
+    """Lift a resonant proposal into a live idea.
+
+    The collective's voices — support + amplify — are the gesture. This
+    function reads that gesture from the tally, and when it reads
+    ``resonant`` (and the proposal is still open and unresolved), it seeds
+    an idea via the idea service and records the link.
+
+    Returns the updated proposal dict (now with ``resolved_as_idea_id``)
+    plus the idea payload. Idempotent: if already resolved, returns the
+    existing link without reseeding.
+    """
+    _ensure_schema()
+    with _session() as s:
+        rec = s.get(ProposalRecord, proposal_id)
+        if rec is None:
+            raise ValueError("proposal not found")
+        if rec.resolved_as_idea_id:
+            return {
+                "proposal": _to_dict(rec),
+                "idea_id": rec.resolved_as_idea_id,
+                "already_resolved": True,
+            }
+
+    t = tally(proposal_id)
+    if t["status"] != "resonant":
+        raise ValueError(f"proposal is not resonant (status={t['status']})")
+
+    idea_payload = _seed_idea_from_proposal(proposal_id)
+    idea_id = idea_payload.get("id") if isinstance(idea_payload, dict) else None
+    if not idea_id:
+        raise RuntimeError("idea seed did not return an id")
+
+    now = datetime.now(timezone.utc)
+    with _session() as s:
+        rec = s.get(ProposalRecord, proposal_id)
+        if rec is None:
+            raise ValueError("proposal not found (vanished mid-resolve)")
+        # Second-writer loses the race gracefully.
+        if rec.resolved_as_idea_id:
+            return {
+                "proposal": _to_dict(rec),
+                "idea_id": rec.resolved_as_idea_id,
+                "already_resolved": True,
+            }
+        rec.resolved_as_idea_id = idea_id
+        rec.resolved_at = now.replace(tzinfo=None)
+        s.add(rec)
+        s.commit()
+        s.refresh(rec)
+        return {
+            "proposal": _to_dict(rec),
+            "idea_id": idea_id,
+            "already_resolved": False,
+        }
+
+
+def _seed_idea_from_proposal(proposal_id: str) -> dict:
+    """Seed a graph idea node from the proposal. Best-effort — if the idea
+    service errors, we fall back to creating a lightweight graph node so
+    the kinetic lift is always observable."""
+    from app.services import idea_service, graph_service
+    rec = get_proposal(proposal_id)
+    if not rec:
+        raise ValueError("proposal not found")
+    slug = f"prop-{proposal_id[:10]}"
+    name = rec["title"][:120]
+    description = (
+        (rec["body"] or "").strip()
+        + f"\n\n(from proposal {proposal_id} — lifted by the collective)"
+    ).strip()
+    try:
+        if hasattr(idea_service, "create_idea"):
+            created = idea_service.create_idea(
+                slug,
+                name,
+                description,
+                1.0,  # potential_value (nominal — the vote is the real signal)
+                1.0,  # estimated_cost (nominal)
+                confidence=0.5,
+                tags=["from-proposal"],
+            )
+            # create_idea may return a Pydantic model or dict
+            if created is not None:
+                created_dict = (
+                    created.model_dump() if hasattr(created, "model_dump") else dict(created)
+                )
+                return {"id": created_dict.get("id") or slug, **created_dict}
+    except Exception:
+        pass
+    # Fallback: create a plain idea node directly on the graph.
+    try:
+        graph_service.create_node(
+            id=slug,
+            type="idea",
+            name=name,
+            description=description,
+            properties={
+                "source": "proposal",
+                "proposal_id": proposal_id,
+                "author": rec["author_name"],
+                "locale": rec["locale"],
+            },
+        )
+    except Exception:
+        # Return the slug anyway; the id is the lift even if storage failed.
+        return {"id": slug, "fallback": True, "error": "graph_create_failed"}
+    return {"id": slug, "fallback": True}

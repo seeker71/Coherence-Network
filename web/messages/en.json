@@ -141,6 +141,18 @@
     "thanks": "Your proposal is in the walk.",
     "viewAll": "See all proposals"
   },
+  "proposal": {
+    "readyToLift": "The voices resonate. This proposal is ready to become an idea.",
+    "lift": "Lift it into an idea",
+    "lifting": "Lifting…",
+    "lifted": "This proposal was lifted by the collective.",
+    "viewIdea": "See the idea",
+    "statusQuiet": "Quiet — no voices yet",
+    "statusWarming": "Warming — the voices lean toward yes",
+    "statusBalanced": "Balanced — voices are split",
+    "statusCooling": "Cooling — voices lean toward no",
+    "statusResonant": "Resonant — the voices are aligned"
+  },
   "meeting": {
     "viewerPulse": "you",
     "contentPulse": "this",
