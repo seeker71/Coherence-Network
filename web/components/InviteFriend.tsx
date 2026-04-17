@@ -28,9 +28,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { createTranslator } from "@/lib/i18n";
 import { LOCALES, type LocaleCode } from "@/lib/locales";
-
-const NAME_KEY = "cc-reaction-author-name";
-const CONTRIBUTOR_KEY = "cc-contributor-id";
+import { ensureContributorId, NAME_KEY, CONTRIBUTOR_KEY } from "@/lib/identity";
+import { getApiBase } from "@/lib/api";
 
 // Language selection for the invite link.
 // "auto" means "no ?lang= in URL" — let middleware pick from the
@@ -74,12 +73,12 @@ export function InviteFriend({
     }
   }, []);
 
-  function buildUrl(): string {
+  function buildUrlWithId(resolvedInviterId: string): string {
     const base = siteBase();
     const url = new URL(targetPath, base);
     if (inviterName.trim()) url.searchParams.set("from", inviterName.trim());
     if (recipientName.trim()) url.searchParams.set("name", recipientName.trim().slice(0, 80));
-    if (inviterId.trim()) url.searchParams.set("invited_by", inviterId.trim());
+    if (resolvedInviterId.trim()) url.searchParams.set("invited_by", resolvedInviterId.trim());
     // Language policy:
     //   "auto" (default) — no ?lang= in URL. The middleware honors
     //     the recipient's browser Accept-Language on first paint.
@@ -102,7 +101,23 @@ export function InviteFriend({
   const tShare = useMemo(() => createTranslator(shareLang), [shareLang]);
 
   async function onInvite() {
-    const url = buildUrl();
+    // Before building the URL: if the inviter doesn't have a
+    // contributor_id yet, graduate them. An invitation IS an active
+    // gesture — "I'm sending someone here" is reason enough to mint
+    // a node. Without this step, the invite chain would degrade to
+    // display-name matching (not unique) and the lineage would be
+    // lost in the graph.
+    let activeInviterId = inviterId;
+    if (!activeInviterId && inviterName.trim()) {
+      try {
+        const minted = await ensureContributorId(getApiBase());
+        if (minted) {
+          activeInviterId = minted;
+          setInviterId(minted);
+        }
+      } catch { /* best-effort */ }
+    }
+    const url = buildUrlWithId(activeInviterId);
     const rName = recipientName.trim();
     const iName = inviterName.trim();
     // Pick the warmest localized line we have — in the recipient's language
