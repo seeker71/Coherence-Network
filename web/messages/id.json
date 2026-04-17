@@ -217,11 +217,20 @@
     "shared": "Terima kasih sudah berbagi 🌿",
     "title": "Datang temui ini",
     "message": "Aku menemukan sesuatu yang terasa hidup. Ambil tiga menit dan lihat.",
-    "messageWithName": "{name} menemukan sesuatu yang terasa hidup. Ambil tiga menit dan lihat."
+    "messageWithName": "{name} menemukan sesuatu yang terasa hidup. Ambil tiga menit dan lihat.",
+    "messageWithBoth": "{name} memikirkanmu, {recipient}. Sesuatu yang hidup menantimu — ambil tiga menit dan lihat.",
+    "recipientLabel": "Nama mereka",
+    "recipientPlaceholder": "mis. Mama, Sam, Aisha",
+    "recipientHint": "Mereka tiba sudah disapa dengan nama — tidak ada yang perlu didaftar, tidak ada yang perlu diingat."
   },
   "inviteBanner": {
     "ariaLabel": "Undangan",
     "inviting": "mengundangmu menemui ini.",
+    "welcomeLead": "Selamat datang,",
+    "invitedYou": "mengundangmu menemui ini.",
+    "welcomeNamed": "Selamat datang, {name}.",
+    "welcomeNamedFrom": "Selamat datang, {name} — {from} mengundangmu menemui ini.",
+    "welcomeBackNamed": "{name}, senang melihatmu kembali. Inilah yang hidup untukmu.",
     "dismiss": "Tutup"
   },
   "welcome": {
