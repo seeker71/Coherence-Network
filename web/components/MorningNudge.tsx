@@ -23,10 +23,10 @@
  * so we know what a push notification body should even say.
  */
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
 import { useT, useLocale } from "@/components/MessagesProvider";
+import { Panel, PanelLink, VoiceQuote } from "@/components/Panel";
 
 const NAME_KEY = "cc-reaction-author-name";
 const CONTRIBUTOR_KEY = "cc-contributor-id";
@@ -189,45 +189,30 @@ export function MorningNudge() {
     );
   }
 
-  // Visual rules for warmth + legibility:
-  //   · darker, calmer background (stone-900 with just a kiss of amber)
-  //     so warm accent color belongs to the content, not the frame
-  //   · eyebrow in high-contrast amber so the time-of-day lands
-  //   · heading in near-white for maximum reading calm
-  //   · the viewer's own quote (when present) becomes the hero — larger,
-  //     italic, warm cream rather than muted stone, with a generous
-  //     gold left-border that says "your voice is held here"
+  // Every panel on every screen uses the same Panel primitive so the
+  // visual language stays one language. MorningNudge is the canonical
+  // "warm" panel — the viewer's own moment, held.
   return (
-    <section
-      className="relative max-w-3xl mx-3 sm:mx-auto mt-3 px-4 py-5 rounded-2xl border border-amber-600/20 bg-gradient-to-br from-stone-900/95 via-stone-900/90 to-amber-950/25 shadow-[0_1px_0_0_rgba(217,119,6,0.08)_inset]"
-      aria-label={t("morningNudge.ariaLabel")}
+    <Panel
+      variant="warm"
+      ariaLabel={t("morningNudge.ariaLabel")}
+      eyebrow={t("morningNudge.eyebrow")}
+      heading={t("morningNudge.heading").replace("{name}", name)}
+      onDismiss={dismiss}
+      dismissLabel={t("morningNudge.dismiss")}
+      cta={
+        <PanelLink href="/feed/you" tone="warm">
+          {t("morningNudge.openCorner")} →
+        </PanelLink>
+      }
+      className="mt-3"
     >
-      <button
-        type="button"
-        onClick={dismiss}
-        className="absolute top-2 right-2 text-stone-500 hover:text-stone-300 w-7 h-7 rounded-full flex items-center justify-center"
-        aria-label={t("morningNudge.dismiss")}
-      >
-        ×
-      </button>
-      <p className="text-[11px] uppercase tracking-[0.18em] text-amber-400 font-medium mb-1.5">
-        {t("morningNudge.eyebrow")}
-      </p>
-      <p className="text-base md:text-lg font-light text-stone-50 leading-snug mb-3">
-        {t("morningNudge.heading").replace("{name}", name)}
-      </p>
-      {parts.length > 0 && (
-        <p className="text-sm text-stone-300 leading-relaxed mb-3">
-          {parts.join(" · ")}
-        </p>
-      )}
+      {parts.length > 0 && <p>{parts.join(" · ")}</p>}
       {digest.newVoicesPreview && (
-        <blockquote className="text-[15px] md:text-base italic text-amber-50/90 border-l-2 border-amber-500/60 pl-3.5 pr-1 mb-4 leading-relaxed">
-          “{digest.newVoicesPreview}…”
-        </blockquote>
+        <VoiceQuote>{digest.newVoicesPreview}</VoiceQuote>
       )}
       {digest.news && (
-        <p className="text-sm text-stone-300 mb-3 leading-relaxed">
+        <p>
           <span className="text-stone-500 mr-1">{t("morningNudge.newsLead")}</span>
           <a
             href={digest.news.url}
@@ -239,12 +224,6 @@ export function MorningNudge() {
           </a>
         </p>
       )}
-      <Link
-        href="/feed/you"
-        className="inline-flex items-center gap-1 text-sm font-medium text-amber-300 hover:text-amber-200"
-      >
-        {t("morningNudge.openCorner")} →
-      </Link>
-    </section>
+    </Panel>
   );
 }
