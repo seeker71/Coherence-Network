@@ -155,28 +155,31 @@ export function InviteBanner() {
   })();
 
   // The greeting is composed into the Panel primitive's heading slot.
-  // Two-line shape when both names are present keeps each name on its
-  // own rhythm instead of clipping on a single line.
+  // Two-line shape when both names are present. All tones bind to
+  // semantic theme tokens so the banner reads in both themes:
+  //   · text-foreground              — main greeting words
+  //   · hsl(var(--primary))          — name accents (gold)
+  //   · text-foreground/80           — secondary greeting line
   const headingNode =
     mode === "welcomeBack" && recipientName ? (
       <p>
-        <span className="text-teal-200 font-semibold">{recipientName}</span>
+        <span className="text-[hsl(var(--chart-2))] font-semibold">{recipientName}</span>
         {greeting.slice(recipientName.length)}
       </p>
     ) : recipientName && from ? (
       <>
-        <p className="text-stone-50 font-medium">
+        <p className="text-foreground font-medium">
           {t("inviteBanner.welcomeLead")}{" "}
-          <span className="text-amber-200">{recipientName}</span>
+          <span className="text-[hsl(var(--primary))]">{recipientName}</span>
         </p>
-        <p className="text-teal-100/90 mt-0.5">
-          <span className="text-amber-200/90 font-medium">{from}</span>{" "}
+        <p className="text-foreground/85 mt-0.5">
+          <span className="text-[hsl(var(--primary))] font-medium">{from}</span>{" "}
           {t("inviteBanner.invitedYou")}
         </p>
       </>
     ) : from ? (
       <p>
-        <span className="text-amber-200 font-medium">{from}</span>{" "}
+        <span className="text-[hsl(var(--primary))] font-medium">{from}</span>{" "}
         {t("inviteBanner.inviting")}
       </p>
     ) : (
