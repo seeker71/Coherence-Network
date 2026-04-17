@@ -11,10 +11,11 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 
 from app.models.discovery import DiscoveryFeed
-from app.services import discovery_service
+from app.services import discovery_service, translator_service
+from app.services.locale_projection import project, resolve_caller_lang
 
 router = APIRouter()
 
@@ -26,8 +27,10 @@ router = APIRouter()
     tags=["discovery"],
 )
 async def get_discovery_feed(
+    request: Request,
     contributor_id: str,
     limit: int = Query(30, ge=1, le=100, description="Max items to return"),
+    lang: str | None = Query(None, description="Target language. Item titles and summaries render in this locale."),
 ) -> DiscoveryFeed:
     """Return a personalized discovery feed for the given contributor.
 
@@ -38,7 +41,24 @@ async def get_discovery_feed(
     If the contributor has no belief profile yet, the feed falls back
     to general popularity-based results.
     """
-    return discovery_service.build_discovery_feed(contributor_id, limit=limit)
+    feed = discovery_service.build_discovery_feed(contributor_id, limit=limit)
+    target_lang = resolve_caller_lang(request, lang)
+    if target_lang and target_lang != "en":
+        for item in feed.items:
+            # Entities we own (idea, concept, spec): substitute from entity_views.
+            if item.entity_type in {"idea", "concept", "spec", "contribution", "asset"}:
+                project(item, item.entity_type, item.entity_id, target_lang, title_field="title", body_field="summary")
+            else:
+                # Transient content (news, edges): on-demand snippet translation.
+                t_title, t_summary = translator_service.translate_snippet(
+                    item.title or "",
+                    item.summary or "",
+                    source_lang="en",
+                    target_lang=target_lang,
+                )
+                item.title = t_title
+                item.summary = t_summary
+    return feed
 
 
 @router.get(

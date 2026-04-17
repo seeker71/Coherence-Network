@@ -195,11 +195,28 @@ async def frequency_edit(body: FrequencyScoreRequest):
 
 @router.get("/concepts", summary="List concepts from the ontology (paged)")
 async def list_concepts(
+    request: Request,
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    lang: str | None = Query(None, description="Target language for concept name/description."),
 ):
     """List concepts from the ontology (paged)."""
-    return concept_service.list_concepts(limit=limit, offset=offset)
+    from app.services.locale_projection import resolve_caller_lang
+    target_lang = resolve_caller_lang(request, lang)
+    result = concept_service.list_concepts(limit=limit, offset=offset)
+    if target_lang and translator_service.is_supported(target_lang) and target_lang != translator_service.DEFAULT_LOCALE:
+        items = result.get("items") or result.get("concepts") or []
+        for c in items:
+            cid = c.get("id") if isinstance(c, dict) else None
+            if not cid:
+                continue
+            rec = translation_cache.canonical_view("concept", cid, target_lang)
+            if rec:
+                if rec.content_title:
+                    c["name"] = rec.content_title
+                if rec.content_description:
+                    c["description"] = rec.content_description
+    return result
 
 
 @router.post("/concepts", status_code=201, summary="Create a new user-defined concept (extends the ontology)")
@@ -238,23 +255,27 @@ async def auto_tag_all_ideas() -> dict[str, Any]:
 @router.get("/concepts/domain/{domain}", summary="List concepts belonging to a specific domain")
 async def list_concepts_by_domain(
     domain: str,
+    request: Request,
     limit: int = Query(200, ge=1, le=1000),
     lang: str | None = Query(None, description="Target language view. When set and a canonical view exists, each concept's name/description come from that view."),
 ) -> dict:
     """Return concepts filtered by domain (e.g. 'living-collective').
 
-    When ``lang`` is supplied, each concept's name and description are replaced
-    with the canonical view for that language where one exists. Concepts
-    without a view in the target language keep their anchor content.
+    When ``lang`` is supplied (or Accept-Language resolves to a supported
+    locale), each concept's name and description are replaced with the
+    canonical view for that language where one exists. Concepts without a
+    view in the target language keep their anchor content.
     """
+    from app.services.locale_projection import resolve_caller_lang
+    target_lang = resolve_caller_lang(request, lang)
     result = concept_service.list_concepts_by_domain(domain, limit=limit)
-    if lang and translator_service.is_supported(lang) and lang != translator_service.DEFAULT_LOCALE:
+    if target_lang and translator_service.is_supported(target_lang) and target_lang != translator_service.DEFAULT_LOCALE:
         items = result.get("items") or result.get("concepts") or []
         for c in items:
             cid = c.get("id") if isinstance(c, dict) else None
             if not cid:
                 continue
-            rec = translation_cache.canonical_view("concept", cid, lang)
+            rec = translation_cache.canonical_view("concept", cid, target_lang)
             if rec:
                 if rec.content_title:
                     c["name"] = rec.content_title
