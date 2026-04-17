@@ -164,6 +164,9 @@
     "thanks": "Usulanmu ada di jalan.",
     "viewAll": "Lihat semua usulan"
   },
+  "proposalOrigin": {
+    "lede": "Ide ini lahir dari usulan yang diangkat oleh kolektif."
+  },
   "proposal": {
     "readyToLift": "Suara-suara beresonansi. Usulan ini siap menjadi ide.",
     "lift": "Angkat menjadi ide",

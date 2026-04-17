@@ -86,6 +86,22 @@ async def tally(proposal_id: str) -> dict:
     return proposal_service.tally(proposal_id)
 
 
+@router.get(
+    "/proposals/by-idea/{idea_id}",
+    summary="Reverse lookup — the proposal (if any) that was lifted into this idea",
+    description=(
+        "Returns the proposal with its current tally so an idea page can "
+        "render its origin: the whispers that became it. Returns 404 when "
+        "the idea was not born from a proposal."
+    ),
+)
+async def proposal_by_idea(idea_id: str) -> dict:
+    p = proposal_service.get_proposal_by_idea(idea_id)
+    if not p:
+        raise HTTPException(status_code=404, detail="no proposal lifted into this idea")
+    return p
+
+
 @router.post(
     "/proposals/{proposal_id}/resolve",
     summary="Lift a resonant proposal into a kinetic idea",

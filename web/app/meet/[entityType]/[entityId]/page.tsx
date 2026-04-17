@@ -6,6 +6,7 @@ import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locale
 import { createTranslator } from "@/lib/i18n";
 import { MeetingSurface } from "@/components/MeetingSurface";
 import { ProposalLift } from "@/components/ProposalLift";
+import { ProposalOrigin } from "@/components/ProposalOrigin";
 
 /**
  * /meet/[entityType]/[entityId] — full-screen meeting with a single entity.
@@ -226,6 +227,13 @@ export default async function MeetingPage({
         <div className="fixed bottom-28 left-0 right-0 px-4 z-20">
           <div className="max-w-md mx-auto">
             <ProposalLift proposalId={entityId} />
+          </div>
+        </div>
+      )}
+      {entityType === "idea" && (
+        <div className="fixed bottom-28 left-0 right-0 px-4 z-20">
+          <div className="max-w-md mx-auto">
+            <ProposalOrigin ideaId={entityId} />
           </div>
         </div>
       )}
