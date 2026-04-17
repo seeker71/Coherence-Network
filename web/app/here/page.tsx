@@ -19,7 +19,26 @@ import { NotificationBell } from "@/components/NotificationBell";
  * is the organism's attention right now" for anyone who lands fresh.
  */
 
+import type { Metadata } from "next";
+
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Here now — Coherence Network",
+  description: "Where the organism's attention is right now — who is meeting what, and what was just voiced.",
+  openGraph: {
+    type: "website",
+    siteName: "Coherence Network",
+    title: "Here now",
+    description: "Where the organism's attention is right now.",
+    images: [{ url: "/assets/logo.svg" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "Here now — Coherence Network",
+    description: "Where the organism's attention is right now.",
+  },
+};
 
 interface PresenceRow {
   entity_type: string;
