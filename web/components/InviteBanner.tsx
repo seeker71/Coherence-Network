@@ -28,6 +28,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useT } from "@/components/MessagesProvider";
+import { Panel } from "@/components/Panel";
 
 const NAME_KEY = "cc-reaction-author-name";
 const CONTRIBUTOR_KEY = "cc-contributor-id";
@@ -153,52 +154,44 @@ export function InviteBanner() {
     return t("inviteBanner.inviting");
   })();
 
-  // Visual rules matching the morning-nudge frequency:
-  //   · deeper, calmer background so the warm names pop without clipping
-  //   · generous vertical rhythm — greeting on two lines when both names
-  //     are present, rather than a single clipped line
-  //   · higher-contrast prose (text-teal-50 vs the old text-teal-100)
-  //   · icon sized to the text, left-aligned with generous gap
+  // The greeting is composed into the Panel primitive's heading slot.
+  // Two-line shape when both names are present keeps each name on its
+  // own rhythm instead of clipping on a single line.
+  const headingNode =
+    mode === "welcomeBack" && recipientName ? (
+      <p>
+        <span className="text-teal-200 font-semibold">{recipientName}</span>
+        {greeting.slice(recipientName.length)}
+      </p>
+    ) : recipientName && from ? (
+      <>
+        <p className="text-stone-50 font-medium">
+          {t("inviteBanner.welcomeLead")}{" "}
+          <span className="text-amber-200">{recipientName}</span>
+        </p>
+        <p className="text-teal-100/90 mt-0.5">
+          <span className="text-amber-200/90 font-medium">{from}</span>{" "}
+          {t("inviteBanner.invitedYou")}
+        </p>
+      </>
+    ) : from ? (
+      <p>
+        <span className="text-amber-200 font-medium">{from}</span>{" "}
+        {t("inviteBanner.inviting")}
+      </p>
+    ) : (
+      <p>{greeting}</p>
+    );
+
   return (
-    <section
-      className="relative max-w-3xl mx-3 sm:mx-auto mt-3 px-4 py-3.5 rounded-xl border border-teal-600/25 bg-gradient-to-br from-stone-900/95 to-teal-950/30 text-sm text-teal-50 flex items-start gap-3 shadow-[0_1px_0_0_rgba(20,184,166,0.08)_inset]"
-      aria-label={t("inviteBanner.ariaLabel")}
-    >
-      <span className="text-lg mt-0.5" aria-hidden="true">🌿</span>
-      <div className="flex-1 min-w-0">
-        {mode === "welcomeBack" && recipientName ? (
-          <p className="leading-relaxed">
-            <span className="text-teal-200 font-semibold">{recipientName}</span>
-            {greeting.slice(recipientName.length)}
-          </p>
-        ) : recipientName && from ? (
-          <>
-            <p className="text-teal-50 font-medium leading-snug">
-              {t("inviteBanner.welcomeLead")}{" "}
-              <span className="text-amber-200">{recipientName}</span>
-            </p>
-            <p className="text-teal-200/90 mt-0.5 leading-snug">
-              <span className="text-amber-200/90 font-medium">{from}</span>{" "}
-              {t("inviteBanner.invitedYou")}
-            </p>
-          </>
-        ) : from ? (
-          <p className="leading-relaxed">
-            <span className="text-amber-200 font-medium">{from}</span>{" "}
-            {t("inviteBanner.inviting")}
-          </p>
-        ) : (
-          <p className="leading-relaxed">{greeting}</p>
-        )}
-      </div>
-      <button
-        type="button"
-        onClick={dismiss}
-        className="text-teal-400/70 hover:text-teal-100 shrink-0 -mr-1"
-        aria-label={t("inviteBanner.dismiss")}
-      >
-        ×
-      </button>
-    </section>
+    <Panel
+      variant="cool"
+      ariaLabel={t("inviteBanner.ariaLabel")}
+      icon="🌿"
+      heading={headingNode}
+      onDismiss={dismiss}
+      dismissLabel={t("inviteBanner.dismiss")}
+      className="mt-3"
+    />
   );
 }
