@@ -92,10 +92,18 @@ function initialFromName(name: string): string {
   return first ? first.toUpperCase() : "·";
 }
 
-function displayName(node: ContributorNode | null, fallback: string): string {
+function displayName(
+  node: ContributorNode | null,
+  voiceAuthorName: string | null,
+  fallback: string,
+): string {
+  // The voice's author_name is the real human name (e.g. "TestSoul",
+  // "Mama") that the person typed when they spoke their first voice.
+  // That's the warmest display option. Fall back to the contributor
+  // node's slug name (with the fingerprint suffix trimmed) or the
+  // raw id only when no voice author_name is available.
+  if (voiceAuthorName && voiceAuthorName.trim()) return voiceAuthorName.trim();
   const raw = (node?.name as string) || fallback;
-  // contributor ids look like "mama-abc123"; trim the fingerprint suffix
-  // for display. The full id still appears in the URL.
   return raw.replace(/-[a-z0-9]{6,}$/, "");
 }
 
@@ -147,7 +155,14 @@ export default async function PersonPage({
     notFound();
   }
 
-  const name = displayName(contributor, id);
+  // Prefer the author_name from one of her own voices (real human name
+  // like "TestSoul") over the contributor-node slug (like
+  // "testsoul-test-fp-cycle-o").
+  const voiceAuthorName =
+    voices.find((v) => v.actor_name)?.actor_name ||
+    items.find((i) => i.reason === "i_voiced" && i.actor_name)?.actor_name ||
+    null;
+  const name = displayName(contributor, voiceAuthorName, id);
   const initial = initialFromName(name);
 
   return (
