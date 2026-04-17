@@ -47,6 +47,13 @@ SUPPORTED_ENTITY_TYPES = {
     "agent_run",
     # Proposals — the collective votes on them through the same meeting gesture
     "proposal",
+    # Voices — a reader can react directly to a concept voice, turning a
+    # list of voices into a choir where each testimony is itself a surface
+    # for care. The entity_id is the voice's uuid.
+    "voice",
+    # Blog-post chapter — per-section reactions on /blog/ana-walks etc.
+    # (already used informally by the ana-walks ReactionBar drops)
+    "blog",
 }
 
 
