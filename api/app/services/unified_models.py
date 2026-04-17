@@ -112,3 +112,6 @@ from app.services.translation_cache_service import (  # noqa: F401
     EntityViewRecord,
     GlossaryEntryRecord,
 )
+
+# Community voices — lived experience on concepts
+from app.services.concept_voice_service import ConceptVoiceRecord  # noqa: F401

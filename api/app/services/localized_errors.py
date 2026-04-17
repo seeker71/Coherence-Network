@@ -49,6 +49,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "rate_limited": "Too many requests — please slow down",
         "unauthorized": "Authentication required",
         "forbidden": "Not allowed",
+        "workspace_identity_required": "Workspace '{workspace}' requires a signed-in contributor (X-Contributor-Id)",
+        "workspace_access_denied": "Not a member of workspace '{workspace}'",
     },
     "de": {
         "concept_not_found": "Begriff '{id}' nicht gefunden",
@@ -68,6 +70,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "rate_limited": "Zu viele Anfragen – bitte verlangsamen",
         "unauthorized": "Anmeldung erforderlich",
         "forbidden": "Nicht erlaubt",
+        "workspace_identity_required": "Arbeitsbereich '{workspace}' benötigt eine angemeldete Identität (X-Contributor-Id)",
+        "workspace_access_denied": "Nicht Mitglied des Arbeitsbereichs '{workspace}'",
     },
     "es": {
         "concept_not_found": "Concepto '{id}' no encontrado",
@@ -87,6 +91,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "rate_limited": "Demasiadas solicitudes — por favor baja el ritmo",
         "unauthorized": "Autenticación requerida",
         "forbidden": "No permitido",
+        "workspace_identity_required": "El espacio '{workspace}' requiere un contribuyente identificado (X-Contributor-Id)",
+        "workspace_access_denied": "No eres miembro del espacio '{workspace}'",
     },
     "id": {
         "concept_not_found": "Gagasan konsep '{id}' tidak ditemukan",
@@ -106,6 +112,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "rate_limited": "Permintaan terlalu banyak — mohon pelankan",
         "unauthorized": "Autentikasi diperlukan",
         "forbidden": "Tidak diizinkan",
+        "workspace_identity_required": "Ruang kerja '{workspace}' perlu kontributor yang masuk (X-Contributor-Id)",
+        "workspace_access_denied": "Bukan anggota ruang kerja '{workspace}'",
     },
 }
 

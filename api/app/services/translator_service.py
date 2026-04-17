@@ -236,6 +236,15 @@ def translate_snippet(
     if not target_lang or target_lang == source_lang:
         return title, description
     if _BACKEND is None:
+        try:
+            from app.services import fallback_witness_service as _fw
+            _fw.witness(
+                source="translator:no-backend",
+                reason=f"No translator backend registered; returning source text for {target_lang}",
+                context={"target_lang": target_lang},
+            )
+        except Exception:
+            pass
         return title, description
     key = (source_lang, target_lang, f"{title}\x1f{description}")
     cached = _SNIPPET_CACHE.get(key)
@@ -250,7 +259,16 @@ def translate_snippet(
             target_lang=target_lang,
             glossary_prompt=build_glossary_prompt(target_lang),
         )
-    except Exception:
+    except Exception as e:
+        try:
+            from app.services import fallback_witness_service as _fw
+            _fw.witness(
+                source="translator:attune-failed",
+                reason=f"Backend attune raised {type(e).__name__}; returning source text",
+                context={"target_lang": target_lang},
+            )
+        except Exception:
+            pass
         return title, description
     result = (t_title or title, t_desc or description)
     if len(_SNIPPET_CACHE) >= _SNIPPET_CACHE_MAX:

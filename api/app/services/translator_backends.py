@@ -150,6 +150,15 @@ class LibreTranslateBackend:
                 _logger.warning("libretranslate returned unexpected shape: %r", data)
         except httpx.HTTPError as e:
             _logger.warning("libretranslate call failed: %s", e)
+            try:
+                from app.services import fallback_witness_service as _fw
+                _fw.witness(
+                    source="translator:libretranslate-http",
+                    reason=f"libretranslate {type(e).__name__}; returning source text",
+                    context={"target_lang": target_lang},
+                )
+            except Exception:
+                pass
         # Fail-open: return source text so caller still has something
         return text
 
