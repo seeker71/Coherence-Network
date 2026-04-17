@@ -37,11 +37,22 @@ const MORNING_START_HOUR = 6;
 const MORNING_END_HOUR = 11;
 const MIN_HOURS_BETWEEN_VISITS = 8;
 
+interface WarmthEvent {
+  emoji: string | null;
+  actorName: string | null;
+  bodyPreview: string | null;
+}
+
 interface Digest {
   voices: number;
   newVoicesPreview: string | null;
   ideas: number;
   news: { title: string; url: string } | null;
+  // The warmth she received back on her own voice(s) since she last
+  // visited. Each event is one reaction another reader laid on
+  // something she said. Rendered before everything else because it
+  // is the closing of her contribution loop.
+  warmth: WarmthEvent[];
 }
 
 function localMorningWindow(): boolean {
@@ -103,7 +114,15 @@ export function MorningNudge() {
       // server-side (?lang=).
       const base = getApiBase();
       const lang = locale || "en";
-      const [voicesRes, ideasRes, newsRes] = await Promise.allSettled([
+      // Build the personal-feed URL from whichever identity she holds.
+      // Cycle O auto-graduates her to a contributor on first voice, so
+      // contributorId is the common case. We still pass author_name so
+      // voices recorded before she had a contributor_id still match.
+      const personalParams = new URLSearchParams({ limit: "20", lang });
+      if (contributorId) personalParams.set("contributor_id", contributorId);
+      if (storedName) personalParams.set("author_name", storedName);
+
+      const [voicesRes, ideasRes, newsRes, personalRes] = await Promise.allSettled([
         fetch(`${base}/api/concepts/voices/recent?limit=3`, { cache: "no-store" })
           .then((r) => (r.ok ? r.json() : null))
           .catch(() => null),
@@ -113,6 +132,13 @@ export function MorningNudge() {
         // Prefer living-collective-aligned sources. Resilience.org is
         // most likely to match nourishing/community/regeneration themes.
         fetch(`${base}/api/news/feed?source=resilience&limit=3&lang=${lang}`, { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null),
+        // The personal feed surfaces reactions on her voices, replies
+        // to her reactions, proposals she supported becoming ideas —
+        // the full shape of "the organism received you". We filter it
+        // down to what happened *since her last visit*.
+        fetch(`${base}/api/feed/personal?${personalParams}`, { cache: "no-store" })
           .then((r) => (r.ok ? r.json() : null))
           .catch(() => null),
       ]);
@@ -148,11 +174,45 @@ export function MorningNudge() {
         }
       }
 
-      const anythingWorthShowing = voices > 0 || ideas > 0 || !!news;
+      // Reactions/replies that landed on what she contributed — the
+      // shape that turns "you spoke" into "you were heard."
+      const warmth: WarmthEvent[] = [];
+      if (personalRes.status === "fulfilled" && personalRes.value) {
+        interface FeedItem {
+          reason?: string;
+          actor_name?: string | null;
+          snippet?: string | null;
+          created_at?: string | null;
+        }
+        const items = (personalRes.value.items || []) as FeedItem[];
+        const warmthReasons = new Set([
+          "reaction_on_my_voice",
+          "replied_to_me",
+          "lifted_from_my_proposal",
+          "lifted_from_proposal_i_supported",
+        ]);
+        for (const it of items) {
+          if (!it.reason || !warmthReasons.has(it.reason)) continue;
+          if (!it.created_at || Date.parse(it.created_at) <= lastVisitMs) continue;
+          // snippet shape depends on the reason — for reactions, the
+          // snippet is the emoji. For replies, it's the reply text.
+          const raw = (it.snippet || "").trim();
+          const emoji = raw.length > 0 && raw.length <= 6 ? raw : null;
+          warmth.push({
+            emoji,
+            actorName: it.actor_name || null,
+            bodyPreview: emoji ? null : raw.slice(0, 80),
+          });
+          if (warmth.length >= 3) break;
+        }
+      }
+
+      const anythingWorthShowing =
+        voices > 0 || ideas > 0 || !!news || warmth.length > 0;
       if (!anythingWorthShowing || cancelled) return;
 
       setName(storedName.trim());
-      setDigest({ voices, newVoicesPreview, ideas, news });
+      setDigest({ voices, newVoicesPreview, ideas, news, warmth });
       setVisible(true);
     })();
     return () => {
@@ -207,6 +267,32 @@ export function MorningNudge() {
       }
       className="mt-3"
     >
+      {/* Warmth-she-received comes first — the closing of her own
+          contribution loop takes precedence over network-wide updates. */}
+      {digest.warmth.length > 0 && (
+        <div className="space-y-1.5">
+          {digest.warmth.map((w, idx) => (
+            <p key={idx} className="text-foreground/90">
+              {w.emoji && (
+                <span className="text-lg mr-1.5" aria-hidden="true">{w.emoji}</span>
+              )}
+              <span>
+                {(w.actorName || t("morningNudge.someone"))}{" "}
+                <span className="text-muted-foreground">
+                  {w.emoji
+                    ? t("morningNudge.reactedToYourVoice")
+                    : t("morningNudge.repliedToYou")}
+                </span>
+              </span>
+              {w.bodyPreview && (
+                <span className="block text-sm italic text-muted-foreground mt-0.5 pl-6">
+                  {w.bodyPreview}
+                </span>
+              )}
+            </p>
+          ))}
+        </div>
+      )}
       {parts.length > 0 && <p>{parts.join(" · ")}</p>}
       {digest.newVoicesPreview && (
         <VoiceQuote>{digest.newVoicesPreview}</VoiceQuote>
