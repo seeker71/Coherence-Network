@@ -22,6 +22,7 @@ import { IdeaStakeForm } from "@/components/idea_stake_form";
 import IdeaLensPanel from "@/components/ideas/IdeaLensPanel";
 import IdeaDetailTabs from "@/components/ideas/IdeaDetailTabs";
 import { ReactionBar } from "@/components/ReactionBar";
+import { ProposalOrigin } from "@/components/ProposalOrigin";
 import { loadPublicWebConfig } from "@/lib/app-config";
 import type { IdeaQuestion, IdeaWithScore } from "@/lib/types";
 
@@ -420,6 +421,10 @@ export default async function IdeaDetailPage({ params }: { params: Promise<{ ide
           <Link href="/contribute" className="text-amber-600 dark:text-amber-400 hover:underline">Contribute</Link>
         </div>
       </nav>
+
+      <section className="max-w-3xl mx-auto px-4 pb-4">
+        <ProposalOrigin ideaId={idea.id} />
+      </section>
 
       <section className="max-w-3xl mx-auto px-4 pb-10">
         <ReactionBar entityType="idea" entityId={idea.id} />
