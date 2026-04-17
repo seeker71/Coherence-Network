@@ -68,7 +68,7 @@ export function NotificationBell() {
       }
       setHasIdentity(true);
       const since = localStorage.getItem(SINCE_KEY);
-      const params = new URLSearchParams({ limit: "30" });
+      const params = new URLSearchParams({ limit: "30", lang: locale });
       if (contributor) params.set("contributor_id", contributor);
       if (name) params.set("author_name", name);
       if (since) params.set("since", since);
@@ -80,7 +80,7 @@ export function NotificationBell() {
     } catch {
       /* transient — try again next tick */
     }
-  }, []);
+  }, [locale]);
 
   useEffect(() => {
     poll();

@@ -8,9 +8,15 @@ read over existing tables:
   · someone replied to a reaction whose author_id is yours
   · someone reacted (emoji or comment) to a voice you offered
   · someone mentioned you by author_name in a comment (simple @-match)
+  · a proposal you authored was lifted into an idea
+  · a proposal you supported was lifted into an idea
 
 Nothing is stored. The only state per viewer is "last_checked_at"
 which is the caller's cookie/localStorage timestamp sent on each read.
+
+Event bodies are narrative strings. When the caller declares a locale,
+the service renders the body in that language — small message bundle,
+viewer-facing content, same warmth in every tongue.
 """
 
 from __future__ import annotations
@@ -34,12 +40,43 @@ def _iso(dt: datetime | None) -> str | None:
     return dt.isoformat() if dt else None
 
 
+# Localized narrative bodies. Each entry is a function that accepts the
+# scalar context it needs and returns the rendered sentence in that locale.
+# Keep the strings short and warm; they render inside a small bell.
+_BODIES = {
+    "proposal_lifted": {
+        "en": "Your proposal '{title}' was lifted into an idea.",
+        "de": "Dein Vorschlag „{title}“ wurde zu einer Idee gehoben.",
+        "es": "Tu propuesta '{title}' fue elevada a una idea.",
+        "id": "Usulanmu '{title}' diangkat menjadi sebuah ide.",
+    },
+    "lift_i_supported": {
+        "en": "A proposal you supported — '{title}' — was lifted into an idea.",
+        "de": "Ein Vorschlag, den du unterstützt hast – „{title}“ – wurde zur Idee gehoben.",
+        "es": "Una propuesta que apoyaste — '{title}' — fue elevada a una idea.",
+        "id": "Usulan yang kamu dukung — '{title}' — diangkat menjadi ide.",
+    },
+}
+
+
+def _body(kind: str, locale: str, **params: object) -> str:
+    bundle = _BODIES.get(kind)
+    if not bundle:
+        return ""
+    template = bundle.get(locale) or bundle.get("en") or ""
+    try:
+        return template.format(**params)
+    except Exception:
+        return template
+
+
 def unseen_for(
     contributor_id: Optional[str],
     author_name: Optional[str],
     since: Optional[datetime],
     *,
     limit: int = 50,
+    locale: str = "en",
 ) -> list[dict]:
     """Return recent events that mention or respond to this viewer.
 
@@ -165,9 +202,7 @@ def unseen_for(
                         "kind": "proposal_lifted",
                         "entity_type": "idea",
                         "entity_id": p.resolved_as_idea_id,
-                        "body": (
-                            f"Your proposal '{p.title}' was lifted into an idea."
-                        ),
+                        "body": _body("proposal_lifted", locale, title=p.title),
                         "actor_name": "the collective",
                         "created_at": _iso(p.resolved_at),
                     }
@@ -200,9 +235,8 @@ def unseen_for(
                             "kind": "lift_i_supported",
                             "entity_type": "idea",
                             "entity_id": p.resolved_as_idea_id,
-                            "body": (
-                                f"A proposal you supported — '{p.title}' — was "
-                                "lifted into an idea."
+                            "body": _body(
+                                "lift_i_supported", locale, title=p.title
                             ),
                             "actor_name": "the collective",
                             "created_at": _iso(p.resolved_at),

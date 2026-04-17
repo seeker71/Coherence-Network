@@ -179,6 +179,50 @@ async def test_proposal_lifted_notifies_author_and_supporters():
 
 
 @pytest.mark.asyncio
+async def test_lift_notification_body_honors_caller_locale():
+    """The body text of a proposal_lifted event meets the viewer in their
+    language — tested with German, Spanish, Indonesian."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        author = "locale-author"
+        r = await c.post(
+            "/api/proposals",
+            json={
+                "title": "Compost circle on Saturdays",
+                "body": "",
+                "author_name": "Author",
+                "author_id": author,
+            },
+        )
+        pid = r.json()["id"]
+        for emoji in ("💛", "💛", "💛", "🔥"):
+            await c.post(
+                f"/api/reactions/proposal/{pid}",
+                json={"author_name": "voter", "emoji": emoji},
+            )
+        await c.post(f"/api/proposals/{pid}/resolve")
+
+        checks = {
+            "de": "gehoben",
+            "es": "elevada",
+            "id": "diangkat",
+        }
+        for lang, expected_token in checks.items():
+            r = await c.get(
+                "/api/notifications",
+                params={"contributor_id": author, "lang": lang},
+            )
+            events = r.json()["events"]
+            lifted = next(
+                (e for e in events if e["kind"] == "proposal_lifted"),
+                None,
+            )
+            assert lifted is not None, f"no proposal_lifted event for lang={lang}"
+            assert expected_token in lifted["body"], (
+                f"lang={lang} body was: {lifted['body']!r}"
+            )
+
+
+@pytest.mark.asyncio
 async def test_no_identity_returns_empty():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         r = await c.get("/api/notifications")
