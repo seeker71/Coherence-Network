@@ -236,6 +236,18 @@
     "welcomeBackNamed": "{name}, welcome back. Here's what's stirring for you.",
     "dismiss": "Dismiss"
   },
+  "people": {
+    "eyebrow": "A corner of the organism",
+    "tagline": "{voices} voices given · {warmth} hearts received",
+    "voicesHeading": "Voices she has given",
+    "warmthHeading": "Warmth that found her",
+    "someone": "Someone",
+    "reacted": "laid this on her voice.",
+    "replied": "replied:",
+    "emptyHeading": "A name without its garden yet.",
+    "emptyLede": "She has a contributor id but hasn't voiced or been reacted to yet. Her corner is waiting.",
+    "backToVision": "Walk the vision"
+  },
   "morningNudge": {
     "ariaLabel": "Morning catch-up",
     "eyebrow": "Good morning",
