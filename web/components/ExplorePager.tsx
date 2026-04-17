@@ -43,6 +43,13 @@ interface Props {
     inviteHint: string;
     othersHereOne?: string;
     othersHereMany?: string;
+    sayHeading?: string;
+    sayNamePlaceholder?: string;
+    sayPlaceholder?: string;
+    saySubmit?: string;
+    saySending?: string;
+    saySent?: string;
+    sayDismiss?: string;
   };
 }
 
@@ -186,6 +193,13 @@ export function ExplorePager({ entityType, strings }: Props) {
           inviteHint: strings.inviteHint,
           othersHereOne: strings.othersHereOne,
           othersHereMany: strings.othersHereMany,
+          sayHeading: strings.sayHeading,
+          sayNamePlaceholder: strings.sayNamePlaceholder,
+          sayPlaceholder: strings.sayPlaceholder,
+          saySubmit: strings.saySubmit,
+          saySending: strings.saySending,
+          saySent: strings.saySent,
+          sayDismiss: strings.sayDismiss,
         }}
       />
 
