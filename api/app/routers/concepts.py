@@ -7,6 +7,7 @@ from typing import Any
 from app.services import (
     concept_auto_tagger,
     concept_service,
+    concept_voice_service,
     translate_service,
     translation_cache_service as translation_cache,
     translator_service,
@@ -765,3 +766,61 @@ async def submit_plain_concept(body: PlainConceptSubmit):
     if concept_service.get_concept(body.id):
         raise HTTPException(status_code=409, detail=f"Concept '{body.id}' already exists")
     return concept_service.create_concept_from_plain(body.model_dump())
+
+
+# ---------------------------------------------------------------------------
+# Community voices — readers offering their lived experience
+# ---------------------------------------------------------------------------
+
+
+class ConceptVoiceIn(BaseModel):
+    author_name: str
+    body: str
+    locale: str = "en"
+    location: str | None = None
+    author_id: str | None = None
+
+
+@router.post(
+    "/concepts/{concept_id}/voices",
+    status_code=201,
+    summary="Offer a lived-experience voice on this concept",
+)
+async def add_concept_voice(concept_id: str, body: ConceptVoiceIn, request: Request) -> dict:
+    """Open write-back surface on any concept. Trust by default — no moderation
+    queue. A voice is a short testimony: "this is how we live it here".
+    """
+    if not concept_service.get_concept(concept_id):
+        raise HTTPException(
+            status_code=404,
+            detail=localize("concept_not_found", caller_lang(request), id=concept_id),
+        )
+    try:
+        return concept_voice_service.add_voice(
+            concept_id=concept_id,
+            author_name=body.author_name,
+            body=body.body,
+            locale=body.locale,
+            author_id=body.author_id,
+            location=body.location,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get(
+    "/concepts/{concept_id}/voices",
+    summary="List lived-experience voices for a concept",
+)
+async def list_concept_voices(concept_id: str, limit: int = Query(50, ge=1, le=200)) -> dict:
+    voices = concept_voice_service.list_voices(concept_id, limit=limit)
+    return {"concept_id": concept_id, "voices": voices, "total": len(voices)}
+
+
+@router.get(
+    "/concepts/voices/recent",
+    summary="Recent voices across all concepts — the community pulse of lived experience",
+)
+async def recent_concept_voices(limit: int = Query(20, ge=1, le=100)) -> dict:
+    voices = concept_voice_service.recent_voices(limit=limit)
+    return {"voices": voices, "total": len(voices)}

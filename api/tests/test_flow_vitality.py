@@ -118,3 +118,154 @@ async def test_health_description_non_empty():
         desc = body["health_description"]
         assert isinstance(desc, str)
         assert len(desc) > 0
+
+
+# ---------------------------------------------------------------------------
+# Community voices — lived experience on concepts
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_add_and_list_concept_voice():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = "lc-voice-test"
+        r = await c.post(
+            "/api/graph/nodes",
+            json={
+                "id": cid,
+                "type": "concept",
+                "name": "Voice test concept",
+                "description": "A concept to attach a voice to.",
+                "properties": {"domains": ["living-collective"]},
+            },
+        )
+        assert r.status_code == 200, r.text
+
+        r = await c.post(
+            f"/api/concepts/{cid}/voices",
+            json={
+                "author_name": "Ana from Bali",
+                "body": "We practice this every morning before the rice terraces.",
+                "locale": "id",
+                "location": "Ubud, Bali",
+            },
+        )
+        assert r.status_code == 201, r.text
+        created = r.json()
+        assert created["concept_id"] == cid
+        assert created["locale"] == "id"
+
+        r = await c.get(f"/api/concepts/{cid}/voices")
+        assert r.status_code == 200
+        assert any(v["author_name"] == "Ana from Bali" for v in r.json()["voices"])
+
+
+@pytest.mark.asyncio
+async def test_voice_on_missing_concept_returns_404_localized():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.post(
+            "/api/concepts/does-not-exist/voices",
+            json={"author_name": "Anon", "body": "hello"},
+            headers={"accept-language": "de"},
+        )
+        assert r.status_code == 404
+        assert "nicht gefunden" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_voice_rejects_empty_body():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = "lc-voice-empty"
+        await c.post(
+            "/api/graph/nodes",
+            json={
+                "id": cid, "type": "concept", "name": "Empty",
+                "description": "T", "properties": {"domains": ["living-collective"]},
+            },
+        )
+        r = await c.post(
+            f"/api/concepts/{cid}/voices",
+            json={"author_name": "A", "body": "   "},
+        )
+        assert r.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_recent_voices_surface_across_concepts():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        for cid in ("lc-voice-recent-a", "lc-voice-recent-b"):
+            await c.post(
+                "/api/graph/nodes",
+                json={
+                    "id": cid, "type": "concept", "name": f"Recent {cid}",
+                    "description": "T", "properties": {"domains": ["living-collective"]},
+                },
+            )
+            await c.post(
+                f"/api/concepts/{cid}/voices",
+                json={"author_name": "Tester", "body": f"Voice for {cid}"},
+            )
+        r = await c.get("/api/concepts/voices/recent?limit=10")
+        assert r.status_code == 200
+        ids = {v["concept_id"] for v in r.json()["voices"]}
+        assert {"lc-voice-recent-a", "lc-voice-recent-b"}.issubset(ids)
+
+
+# ---------------------------------------------------------------------------
+# /api/energy/recommend — warm invitations from sensing
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_energy_recommend_returns_invitations_not_warnings():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/energy/recommend")
+        assert r.status_code == 200
+        body = r.json()
+        assert "invitations" in body and "count" in body
+        for inv in body["invitations"]:
+            assert "invitation" in inv
+            assert inv["felt_as"] in ("tender", "quiet", "dormant", "resting")
+            assert "ERROR" not in inv["invitation"].upper()
+            assert "WARNING" not in inv["invitation"].upper()
+
+
+# ---------------------------------------------------------------------------
+# /api/fallbacks — honest record of silent degradation
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_fallback_witness_records_and_reads():
+    from app.services import fallback_witness_service as fw
+    fw.clear()
+    fw.witness(source="test:example", reason="demo reason", context={"k": "v"})
+    fw.witness(source="test:other", reason="second reason")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/fallbacks")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["count"] >= 2
+        sources = {e["source"] for e in body["events"]}
+        assert {"test:example", "test:other"}.issubset(sources)
+
+        r = await c.get("/api/fallbacks?source=test:ex")
+        assert all(e["source"].startswith("test:ex") for e in r.json()["events"])
+
+        r = await c.get("/api/fallbacks/summary")
+        assert r.json()["total"] >= 2
+
+
+@pytest.mark.asyncio
+async def test_translator_fallback_is_witnessed():
+    """No backend → witness records it, source text returned."""
+    from app.services import translator_service as _tsvc
+    from app.services import fallback_witness_service as fw
+    fw.clear()
+    prev = _tsvc._BACKEND
+    _tsvc.set_backend(None)
+    try:
+        t, d = _tsvc.translate_snippet("hi", "there", source_lang="en", target_lang="de")
+        assert t == "hi"
+        events = fw.recent(limit=10, source_prefix="translator")
+        assert any(e["source"] == "translator:no-backend" for e in events)
+    finally:
+        _tsvc.set_backend(prev)

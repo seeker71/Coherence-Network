@@ -774,6 +774,10 @@ app.include_router(flow_renderer_router.router, prefix="/api", tags=["flow"])
 from app.routers import world_lens as world_lens_router  # noqa: E402
 app.include_router(world_lens_router.router, prefix="/api", tags=["world"])
 
+# Fallback witness — honest record of silent-degradation paths
+from app.routers import fallbacks as fallbacks_router  # noqa: E402
+app.include_router(fallbacks_router.router, prefix="/api", tags=["sensing"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).
