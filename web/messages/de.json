@@ -215,6 +215,11 @@
     "message": "Ich habe etwas gefunden, das sich lebendig anfühlt. Nimm dir drei Minuten und schau.",
     "messageWithName": "{name} hat etwas gefunden, das sich lebendig anfühlt. Nimm dir drei Minuten und schau."
   },
+  "inviteBanner": {
+    "ariaLabel": "Einladung",
+    "inviting": "lädt dich ein, diesem zu begegnen.",
+    "dismiss": "Schließen"
+  },
   "welcome": {
     "ariaLabel": "Willkommen — worum es hier geht",
     "eyebrow": "Neu hier?",

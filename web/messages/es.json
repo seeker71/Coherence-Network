@@ -215,6 +215,11 @@
     "message": "Encontré algo que se siente vivo. Tómate tres minutos y mira.",
     "messageWithName": "{name} encontró algo que se siente vivo. Tómate tres minutos y mira."
   },
+  "inviteBanner": {
+    "ariaLabel": "Invitación",
+    "inviting": "te invita a encontrarte con esto.",
+    "dismiss": "Cerrar"
+  },
   "welcome": {
     "ariaLabel": "Bienvenida — de qué se trata este lugar",
     "eyebrow": "¿Eres nueva aquí?",

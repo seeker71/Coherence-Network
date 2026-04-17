@@ -8,6 +8,7 @@ import { createTranslator } from "@/lib/i18n";
 import { MeetingSurface } from "@/components/MeetingSurface";
 import { ProposalLift } from "@/components/ProposalLift";
 import { ProposalOrigin } from "@/components/ProposalOrigin";
+import { InviteBanner } from "@/components/InviteBanner";
 
 /**
  * /meet/[entityType]/[entityId] — full-screen meeting with a single entity.
@@ -270,6 +271,7 @@ export default async function MeetingPage({
 
   return (
     <>
+      <InviteBanner />
       <MeetingSurface
         entityType={entityType}
         entityId={entityId}
