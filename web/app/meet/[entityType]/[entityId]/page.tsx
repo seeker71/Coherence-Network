@@ -298,6 +298,9 @@ export default async function MeetingPage({
           saySending: t("meeting.saySending"),
           saySent: t("meeting.saySent"),
           sayDismiss: t("meeting.sayDismiss"),
+          quickPhrase1: t("meeting.quickPhrase1"),
+          quickPhrase2: t("meeting.quickPhrase2"),
+          quickPhrase3: t("meeting.quickPhrase3"),
         }}
       />
       {entityType === "proposal" && (

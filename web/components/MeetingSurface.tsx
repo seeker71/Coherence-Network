@@ -66,6 +66,12 @@ interface Props {
     saySending?: string;
     saySent?: string;
     sayDismiss?: string;
+    /** Three warm one-tap phrases a visitor can offer without typing.
+     *  Each phrase, when tapped, fills the voice body and enables the
+     *  submit button — so "offering" is as easy as tapping an emoji. */
+    quickPhrase1?: string;
+    quickPhrase2?: string;
+    quickPhrase3?: string;
   };
 }
 
@@ -328,6 +334,25 @@ export function MeetingSurface({
                   className="w-full rounded-md bg-stone-950/60 border border-stone-800 px-3 py-2 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/60 resize-y"
                   autoFocus
                 />
+                {/* One-tap phrases — for when words are hard or time is
+                    short. Tapping fills the textarea and the visitor can
+                    submit immediately, or keep typing to deepen it. */}
+                {(strings.quickPhrase1 || strings.quickPhrase2 || strings.quickPhrase3) && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {[strings.quickPhrase1, strings.quickPhrase2, strings.quickPhrase3]
+                      .filter((p): p is string => !!p && p.length > 0)
+                      .map((phrase) => (
+                        <button
+                          key={phrase}
+                          type="button"
+                          onClick={() => setSayText(phrase)}
+                          className="rounded-full border border-amber-700/40 bg-amber-950/20 hover:bg-amber-900/30 text-amber-100/90 text-xs px-3 py-1 transition-colors"
+                        >
+                          {phrase}
+                        </button>
+                      ))}
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
