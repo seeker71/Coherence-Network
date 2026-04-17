@@ -77,30 +77,45 @@ _RESOLUTION_COLS_CHECKED = False
 
 
 def _ensure_resolution_columns() -> None:
-    """Heal live SQLite DBs that predate kinetic resolution columns."""
+    """Heal live SQLite or Postgres DBs that predate kinetic resolution."""
     global _RESOLUTION_COLS_CHECKED
     if _RESOLUTION_COLS_CHECKED:
         return
     try:
         eng = _udb.engine()
         with eng.connect() as conn:
-            if conn.dialect.name != "sqlite":
-                _RESOLUTION_COLS_CHECKED = True
-                return
-            rows = conn.exec_driver_sql("PRAGMA table_info(proposals)").fetchall()
-            if not rows:
-                _RESOLUTION_COLS_CHECKED = True
-                return
-            names = {r[1] for r in rows}
-            if "resolved_as_idea_id" not in names:
+            dialect = conn.dialect.name
+            if dialect == "sqlite":
+                rows = conn.exec_driver_sql(
+                    "PRAGMA table_info(proposals)"
+                ).fetchall()
+                if not rows:
+                    return
+                names = {r[1] for r in rows}
+                if "resolved_as_idea_id" not in names:
+                    conn.exec_driver_sql(
+                        "ALTER TABLE proposals "
+                        "ADD COLUMN resolved_as_idea_id VARCHAR"
+                    )
+                if "resolved_at" not in names:
+                    conn.exec_driver_sql(
+                        "ALTER TABLE proposals ADD COLUMN resolved_at DATETIME"
+                    )
+                conn.commit()
+            elif dialect == "postgresql":
                 conn.exec_driver_sql(
-                    "ALTER TABLE proposals ADD COLUMN resolved_as_idea_id VARCHAR"
+                    "ALTER TABLE proposals "
+                    "ADD COLUMN IF NOT EXISTS resolved_as_idea_id VARCHAR"
                 )
-            if "resolved_at" not in names:
                 conn.exec_driver_sql(
-                    "ALTER TABLE proposals ADD COLUMN resolved_at DATETIME"
+                    "ALTER TABLE proposals "
+                    "ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP"
                 )
-            conn.commit()
+                conn.exec_driver_sql(
+                    "CREATE INDEX IF NOT EXISTS ix_proposals_resolved_as_idea_id "
+                    "ON proposals(resolved_as_idea_id)"
+                )
+                conn.commit()
     except Exception:
         pass
     finally:
