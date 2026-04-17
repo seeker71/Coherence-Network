@@ -37,7 +37,12 @@ interface Reaction {
   emoji: string | null;
   comment: string | null;
   locale: string;
+  parent_reaction_id: string | null;
   created_at: string | null;
+}
+
+interface Thread extends Reaction {
+  replies: Reaction[];
 }
 
 interface Summary {
@@ -69,10 +74,11 @@ export function ReactionBar({
   const locale = useLocale();
 
   const [summary, setSummary] = useState<Summary | null>(null);
-  const [reactions, setReactions] = useState<Reaction[] | null>(null);
+  const [threads, setThreads] = useState<Thread[] | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [authorName, setAuthorName] = useState("");
   const [comment, setComment] = useState("");
+  const [replyTo, setReplyTo] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [thanked, setThanked] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,31 +96,29 @@ export function ReactionBar({
     }
   }, []);
 
-  // Fetch current reactions + summary
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const base = getApiBase();
-        const res = await fetch(
-          `${base}/api/reactions/${entityType}/${entityId}?limit=50`,
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        setSummary(data.summary);
-        setReactions(data.reactions || []);
-      } catch {
-        /* transient — ignore, try next mount */
+  async function refreshThreads() {
+    try {
+      const base = getApiBase();
+      const [summaryRes, threadsRes] = await Promise.all([
+        fetch(`${base}/api/reactions/${entityType}/${entityId}/summary`),
+        fetch(`${base}/api/reactions/${entityType}/${entityId}/threads?limit=200`),
+      ]);
+      if (summaryRes.ok) setSummary(await summaryRes.json());
+      if (threadsRes.ok) {
+        const data = await threadsRes.json();
+        setThreads(data.threads || []);
       }
+    } catch {
+      /* transient */
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
+  }
+
+  useEffect(() => {
+    refreshThreads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityType, entityId]);
 
-  async function send(params: { emoji?: string; comment?: string }) {
+  async function send(params: { emoji?: string; comment?: string; parentId?: string }) {
     if (!authorName.trim()) {
       setExpanded(true);
       return;
@@ -136,6 +140,7 @@ export function ReactionBar({
           emoji: params.emoji,
           comment: params.comment,
           locale,
+          parent_reaction_id: params.parentId ?? null,
         }),
       });
       if (!res.ok) {
@@ -143,14 +148,11 @@ export function ReactionBar({
         setError(payload?.detail || "could not send reaction");
         return;
       }
-      const data = await res.json();
-      setSummary(data.summary);
-      setReactions((prev) => [data.reaction, ...(prev || [])]);
       setThanked(true);
       setTimeout(() => setThanked(false), 2500);
       if (params.comment) setComment("");
-      // If they are not yet a contributor, invite them to let their name stand
-      // with this vision. Shown softly — never as a gate.
+      setReplyTo(null);
+      await refreshThreads();
       if (!isContributor) setShowInvite(true);
     } catch (err) {
       setError(String(err));
@@ -244,6 +246,18 @@ export function ReactionBar({
       {/* Comment slot */}
       {expanded && (
         <div className="space-y-2">
+          {replyTo && (
+            <div className="text-xs text-teal-200/80 flex items-center gap-2">
+              <span>{t("reactions.replying")}</span>
+              <button
+                type="button"
+                onClick={() => setReplyTo(null)}
+                className="text-stone-500 hover:text-stone-300"
+              >
+                ×
+              </button>
+            </div>
+          )}
           <input
             type="text"
             value={authorName}
@@ -255,7 +269,7 @@ export function ReactionBar({
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder={t("reactions.commentPlaceholder")}
+            placeholder={replyTo ? t("reactions.replyPlaceholder") : t("reactions.commentPlaceholder")}
             className="w-full rounded-md bg-stone-950/60 border border-stone-800 px-3 py-1.5 text-sm text-stone-200 placeholder-stone-600 focus:outline-none focus:border-amber-600/60 resize-y"
             rows={2}
             maxLength={800}
@@ -263,7 +277,10 @@ export function ReactionBar({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => comment.trim() && send({ comment })}
+              onClick={() =>
+                comment.trim() &&
+                send({ comment, parentId: replyTo || undefined })
+              }
               disabled={submitting || !authorName.trim() || !comment.trim()}
               className="rounded-md bg-amber-700/80 hover:bg-amber-600/90 disabled:bg-stone-800 disabled:text-stone-600 text-stone-950 px-3 py-1 text-xs font-medium transition-colors"
             >
@@ -274,29 +291,61 @@ export function ReactionBar({
         </div>
       )}
 
-      {/* Comment stream */}
-      {!compact && reactions && reactions.filter((r) => r.comment).length > 0 && (
-        <ul className="space-y-2 pt-2 border-t border-stone-800/40">
-          {reactions
-            .filter((r) => r.comment)
-            .slice(0, 10)
-            .map((r) => (
-              <li key={r.id} className="text-sm">
-                {r.emoji && <span className="mr-1">{r.emoji}</span>}
-                <span className="text-stone-200">{r.comment}</span>
+      {/* Threads */}
+      {!compact && threads && threads.length > 0 && (
+        <ul className="space-y-3 pt-2 border-t border-stone-800/40">
+          {threads.slice(0, 10).map((th) => (
+            <li key={th.id} className="text-sm space-y-1">
+              <div>
+                {th.emoji && <span className="mr-1">{th.emoji}</span>}
+                <span className="text-stone-200">{th.comment}</span>
                 <span className="text-xs text-stone-500 ml-2">
-                  — {r.author_name}
-                  {r.created_at && (
+                  — {th.author_name}
+                  {th.created_at && (
                     <>
                       {" · "}
-                      <time dateTime={r.created_at}>
-                        {new Date(r.created_at).toLocaleDateString(locale)}
+                      <time dateTime={th.created_at}>
+                        {new Date(th.created_at).toLocaleDateString(locale)}
                       </time>
                     </>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplyTo(th.id);
+                      setExpanded(true);
+                    }}
+                    className="ml-2 text-teal-400 hover:text-teal-300"
+                  >
+                    {t("reactions.reply")}
+                  </button>
                 </span>
-              </li>
-            ))}
+              </div>
+              {th.replies && th.replies.length > 0 && (
+                <ul className="pl-4 border-l border-stone-800/60 space-y-1">
+                  {th.replies.map((rp) => (
+                    <li key={rp.id} className="text-sm">
+                      {rp.emoji && <span className="mr-1">{rp.emoji}</span>}
+                      {rp.comment && (
+                        <span className="text-stone-300">{rp.comment}</span>
+                      )}
+                      <span className="text-xs text-stone-500 ml-2">
+                        — {rp.author_name}
+                        {rp.created_at && (
+                          <>
+                            {" · "}
+                            <time dateTime={rp.created_at}>
+                              {new Date(rp.created_at).toLocaleDateString(locale)}
+                            </time>
+                          </>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
         </ul>
       )}
     </section>

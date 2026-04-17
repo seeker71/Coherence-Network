@@ -156,6 +156,9 @@
     "send": "Kirim",
     "sending": "Mengirim…",
     "thanks": "terima kasih",
+    "reply": "balas",
+    "replying": "membalas…",
+    "replyPlaceholder": "Balasanmu…",
     "inviteContributorLede": "Isyarat kasihmu ada di sini. Jadilah kontributor agar namamu berdiri bersama bagian visi ini —",
     "inviteContributorLink": "masuk ke jaringan"
   },
