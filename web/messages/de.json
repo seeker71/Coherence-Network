@@ -108,7 +108,10 @@
     "voicesSubmit": "Diese Stimme teilen",
     "voicesSubmitting": "Wird geteilt …",
     "voicesThankYou": "Danke — deine Stimme ist hier.",
-    "voicesLoading": "Lausche auf Stimmen …"
+    "voicesLoading": "Lausche auf Stimmen …",
+    "voiceRipen": "Diese Stimme zu einem Vorschlag heben",
+    "voiceRipening": "Wird gehoben …",
+    "voiceBecameProposal": "Diese Stimme wurde zu einem Vorschlag"
   },
   "notifications": {
     "bellLabel": "Neue Antworten und Erwähnungen",

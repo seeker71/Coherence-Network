@@ -108,7 +108,10 @@
     "voicesSubmit": "Ofrecer esta voz",
     "voicesSubmitting": "Ofreciendo…",
     "voicesThankYou": "Gracias — tu voz está aquí.",
-    "voicesLoading": "Escuchando voces…"
+    "voicesLoading": "Escuchando voces…",
+    "voiceRipen": "Elevar esta voz a una propuesta",
+    "voiceRipening": "Elevando…",
+    "voiceBecameProposal": "Esta voz se volvió una propuesta"
   },
   "notifications": {
     "bellLabel": "Respuestas y menciones recientes",

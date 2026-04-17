@@ -190,6 +190,58 @@ async def test_voice_rejects_empty_body():
 
 
 @pytest.mark.asyncio
+async def test_voice_ripens_into_proposal_linked_back_to_concept():
+    """A voice on a concept can be lifted into a proposal. The proposal
+    carries the voice's text, a derived title, and links back to the
+    source concept. Idempotent."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = "lc-voice-ripen"
+        await c.post(
+            "/api/graph/nodes",
+            json={
+                "id": cid, "type": "concept", "name": "Voice ripen",
+                "description": "T", "properties": {"domains": ["living-collective"]},
+            },
+        )
+        r = await c.post(
+            f"/api/concepts/{cid}/voices",
+            json={
+                "author_name": "Ana",
+                "body": "We should share the rice harvest on Sundays. This weaves us tighter.",
+                "locale": "en",
+            },
+        )
+        vid = r.json()["id"]
+        r = await c.post(f"/api/concepts/voices/{vid}/propose")
+        assert r.status_code == 201, r.text
+        body = r.json()
+        assert body["already_ripened"] is False
+        prop = body["proposal"]
+        assert prop["title"].startswith("We should share")
+        assert prop["linked_entity_type"] == "concept"
+        assert prop["linked_entity_id"] == cid
+        # Idempotent
+        r2 = await c.post(f"/api/concepts/voices/{vid}/propose")
+        assert r2.status_code == 201
+        assert r2.json()["already_ripened"] is True
+        assert r2.json()["proposal_id"] == body["proposal_id"]
+
+        # Voice list now carries the back-pointer
+        r = await c.get(f"/api/concepts/{cid}/voices")
+        voices = r.json()["voices"]
+        matching = [v for v in voices if v["id"] == vid]
+        assert matching
+        assert matching[0]["proposed_as_proposal_id"] == body["proposal_id"]
+
+
+@pytest.mark.asyncio
+async def test_ripen_unknown_voice_returns_404():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.post("/api/concepts/voices/no-such-voice/propose")
+        assert r.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_recent_voices_surface_across_concepts():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         for cid in ("lc-voice-recent-a", "lc-voice-recent-b"):
