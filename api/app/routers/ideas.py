@@ -287,6 +287,21 @@ async def get_resonance(
             rec = _tcache.canonical_view("idea", iid, lang)
             if rec and rec.content_title:
                 it["name"] = rec.content_title
+                if rec.content_description and "description" in it:
+                    it["description"] = rec.content_description
+                continue
+            # Fall through to live snippet translation so the resonance
+            # feed reads in the viewer's tongue.
+            src_title = it.get("name", "")
+            src_desc = it.get("description", "") or ""
+            if src_title or src_desc:
+                t_title, t_desc = translator_service.translate_snippet(
+                    src_title, src_desc, source_lang="en", target_lang=lang,
+                )
+                if t_title:
+                    it["name"] = t_title
+                if t_desc and "description" in it:
+                    it["description"] = t_desc
     return items
 
 

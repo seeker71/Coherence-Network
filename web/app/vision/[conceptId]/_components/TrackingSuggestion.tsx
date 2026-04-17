@@ -59,7 +59,7 @@ export function TrackingSuggestion({ conceptId }: { conceptId: string }) {
           </button>
         </div>
         <div className="flex gap-2">
-          <Link href="/join"
+          <Link href="/vision/join"
             className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300/90 hover:bg-amber-500/20 transition-all text-xs font-medium">
             {t("profileNudge.startCta")}
           </Link>
