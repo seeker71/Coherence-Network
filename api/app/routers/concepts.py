@@ -217,6 +217,19 @@ async def list_concepts(
                     c["name"] = rec.content_title
                 if rec.content_description:
                     c["description"] = rec.content_description
+                continue
+            # Fall back to live snippet translation (cached) when no
+            # canonical view exists yet.
+            src_title = c.get("name", "")
+            src_desc = c.get("description", "")
+            if src_title or src_desc:
+                t_title, t_desc = translator_service.translate_snippet(
+                    src_title, src_desc, source_lang="en", target_lang=target_lang,
+                )
+                if t_title:
+                    c["name"] = t_title
+                if t_desc:
+                    c["description"] = t_desc
     return result
 
 
@@ -282,6 +295,20 @@ async def list_concepts_by_domain(
                     c["name"] = rec.content_title
                 if rec.content_description:
                     c["description"] = rec.content_description
+                continue
+            # No canonical view for this concept yet — fall back to a live
+            # snippet translation so the listing reads in the viewer's tongue.
+            # Cached in-process so repeat requests are cheap.
+            src_title = c.get("name", "")
+            src_desc = c.get("description", "")
+            if src_title or src_desc:
+                t_title, t_desc = translator_service.translate_snippet(
+                    src_title, src_desc, source_lang="en", target_lang=target_lang,
+                )
+                if t_title:
+                    c["name"] = t_title
+                if t_desc:
+                    c["description"] = t_desc
     return result
 
 
