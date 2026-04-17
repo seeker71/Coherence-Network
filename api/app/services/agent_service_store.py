@@ -1,7 +1,6 @@
 """Agent task store: in-memory store, persistence, serialization."""
 
 import json
-import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,6 +8,7 @@ from typing import Any
 
 from app.config_loader import get_bool, get_float, get_int, get_str
 from app.models.agent import TaskStatus, TaskType
+from app.services.app_mode import test_context_id
 from app.services import agent_task_store_service
 
 class TaskClaimConflictError(RuntimeError):
@@ -204,7 +204,7 @@ def _ensure_store_loaded(*, force_reload: bool = False, include_output: bool = F
     global _store_loaded_includes_output, _store_loaded_at_monotonic
     store_path = _store_path()
     current_path = str(store_path)
-    current_test = os.getenv("PYTEST_CURRENT_TEST")
+    current_test = test_context_id() or None
 
     if not _persistence_enabled() and current_test and _store_loaded_test_context != current_test:
         _store.clear()

@@ -1,12 +1,12 @@
 """Agent task list and counts: list_tasks, get_attention_tasks, get_task_count, get_review_summary."""
 
-import os
 from typing import Any, List, Optional, Tuple
 
 from app.config_loader import get_bool, get_int, get_str
 from app.models.agent import TaskStatus, TaskType
 
 from app.services import agent_task_store_service
+from app.services.app_mode import running_under_test
 from app.services.agent_service_store import (
     _deserialize_task,
     _ensure_store_loaded,
@@ -26,8 +26,7 @@ def _should_backfill_runtime_tasks(existing_count: int) -> bool:
 
 def _runtime_fallback_events_for_tasks(existing_count: int) -> list[Any]:
     fallback_in_tests = get_bool("agent_tasks", "runtime_fallback_in_tests", default=False)
-    running_under_pytest = bool(os.getenv("PYTEST_CURRENT_TEST"))
-    if running_under_pytest:
+    if running_under_test():
         if not fallback_in_tests:
             return []
         should_backfill = existing_count == 0 or _should_backfill_runtime_tasks(existing_count)

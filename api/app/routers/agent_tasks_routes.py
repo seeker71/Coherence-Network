@@ -1,12 +1,12 @@
 """Agent task CRUD and list routes."""
 
 import logging
-import os
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
 
+from app.config_loader import get_bool
 from app.models.agent import (
     AgentTask,
     AgentTaskCreate,
@@ -27,6 +27,7 @@ from app.routers.agent_helpers import (
     task_update_has_fields,
 )
 from app.routers.agent_telegram import format_task_alert, is_runner_task_update
+from app.services.app_mode import running_under_test
 from app.services import agent_service
 
 logger = logging.getLogger(__name__)
@@ -35,14 +36,9 @@ router = APIRouter()
 
 
 def _route_side_effects_enabled_in_tests() -> bool:
-    if not os.getenv("PYTEST_CURRENT_TEST"):
+    if not running_under_test():
         return True
-    return os.getenv("AGENT_ROUTE_SIDE_EFFECTS_IN_TESTS", "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
+    return get_bool("agent_tasks", "route_side_effects_in_tests", default=False)
 
 
 @router.post(
@@ -282,12 +278,11 @@ async def update_task(
     context_patch = target_state_context_patch(data)
     # Pre-completion gate: reject hollow completions before they stick
     hollow_guard_enabled = True
-    if os.getenv("PYTEST_CURRENT_TEST") and os.getenv("AGENT_HOLLOW_COMPLETION_GUARD", "").strip().lower() not in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }:
+    if running_under_test() and not get_bool(
+        "agent_tasks",
+        "hollow_completion_guard_in_tests",
+        default=False,
+    ):
         hollow_guard_enabled = False
     if data.status == TaskStatus.COMPLETED and hollow_guard_enabled:
         output_text = (data.output or "").strip()

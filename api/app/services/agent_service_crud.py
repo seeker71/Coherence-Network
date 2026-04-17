@@ -1,7 +1,6 @@
 """Agent task CRUD: create_task, get_task, update_task, claim, resolve_route, target state."""
 
 import logging
-import os
 from typing import Any, Optional
 
 log = logging.getLogger(__name__)
@@ -11,6 +10,7 @@ from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 
 from app.services import agent_routing_service as routing_service
 from app.services import agent_task_store_service
+from app.services.app_mode import running_under_test
 from app.services.agent_service_executor import (
     AGENT_BY_TASK_TYPE,
     COMMAND_TEMPLATES,
@@ -413,7 +413,7 @@ def get_task(task_id: str) -> Optional[dict]:
     task = _store.get(task_id)
     if task is not None:
         return task
-    if os.getenv("PYTEST_CURRENT_TEST") and not get_bool(
+    if running_under_test() and not get_bool(
         "agent_tasks",
         "runtime_fallback_in_tests",
         default=False,

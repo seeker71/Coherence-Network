@@ -255,6 +255,7 @@ def _runtime_endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | Non
         get_str("database_overrides", "runtime") or "",
         database_url(None) or "",
         str(get_bool("api", "testing", False)),
+        get_str("api", "test_context_id") or "",
         str(_runtime_events_store_cache_key()),
         str(_RUNTIME_ENDPOINT_CACHE_BUSTER),
     ]
