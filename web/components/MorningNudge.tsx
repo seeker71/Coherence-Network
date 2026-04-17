@@ -189,9 +189,17 @@ export function MorningNudge() {
     );
   }
 
+  // Visual rules for warmth + legibility:
+  //   · darker, calmer background (stone-900 with just a kiss of amber)
+  //     so warm accent color belongs to the content, not the frame
+  //   · eyebrow in high-contrast amber so the time-of-day lands
+  //   · heading in near-white for maximum reading calm
+  //   · the viewer's own quote (when present) becomes the hero — larger,
+  //     italic, warm cream rather than muted stone, with a generous
+  //     gold left-border that says "your voice is held here"
   return (
     <section
-      className="relative max-w-3xl mx-3 sm:mx-auto mt-3 px-4 py-4 rounded-2xl border border-amber-700/30 bg-gradient-to-br from-amber-950/20 via-stone-900/30 to-teal-950/20"
+      className="relative max-w-3xl mx-3 sm:mx-auto mt-3 px-4 py-5 rounded-2xl border border-amber-600/20 bg-gradient-to-br from-stone-900/95 via-stone-900/90 to-amber-950/25 shadow-[0_1px_0_0_rgba(217,119,6,0.08)_inset]"
       aria-label={t("morningNudge.ariaLabel")}
     >
       <button
@@ -202,10 +210,10 @@ export function MorningNudge() {
       >
         ×
       </button>
-      <p className="text-xs uppercase tracking-widest text-amber-300/90 mb-1">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-amber-400 font-medium mb-1.5">
         {t("morningNudge.eyebrow")}
       </p>
-      <p className="text-base md:text-lg font-light text-stone-100 leading-snug mb-2">
+      <p className="text-base md:text-lg font-light text-stone-50 leading-snug mb-3">
         {t("morningNudge.heading").replace("{name}", name)}
       </p>
       {parts.length > 0 && (
@@ -214,12 +222,12 @@ export function MorningNudge() {
         </p>
       )}
       {digest.newVoicesPreview && (
-        <blockquote className="text-sm italic text-stone-400 border-l-2 border-teal-600/40 pl-3 mb-3 leading-relaxed">
+        <blockquote className="text-[15px] md:text-base italic text-amber-50/90 border-l-2 border-amber-500/60 pl-3.5 pr-1 mb-4 leading-relaxed">
           “{digest.newVoicesPreview}…”
         </blockquote>
       )}
       {digest.news && (
-        <div className="text-sm text-stone-300 mb-3">
+        <p className="text-sm text-stone-300 mb-3 leading-relaxed">
           <span className="text-stone-500 mr-1">{t("morningNudge.newsLead")}</span>
           <a
             href={digest.news.url}
@@ -229,11 +237,11 @@ export function MorningNudge() {
           >
             {digest.news.title}
           </a>
-        </div>
+        </p>
       )}
       <Link
         href="/feed/you"
-        className="inline-flex items-center gap-1 text-sm text-teal-300 hover:text-teal-200"
+        className="inline-flex items-center gap-1 text-sm font-medium text-amber-300 hover:text-amber-200"
       >
         {t("morningNudge.openCorner")} →
       </Link>
