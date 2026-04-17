@@ -8,9 +8,12 @@
  * existing voices as a warm invitation.
  */
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
 import { useT, useLocale } from "@/components/MessagesProvider";
+
+const CONTRIBUTOR_KEY = "cc-contributor-id";
 
 interface Voice {
   id: string;
@@ -20,6 +23,7 @@ interface Voice {
   body: string;
   location: string | null;
   created_at: string | null;
+  proposed_as_proposal_id: string | null;
 }
 
 interface Props {
@@ -32,6 +36,7 @@ export function ConceptVoices({ conceptId }: Props) {
 
   const [voices, setVoices] = useState<Voice[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ripening, setRipening] = useState<string | null>(null);
 
   // Form state
   const [authorName, setAuthorName] = useState("");
@@ -64,6 +69,34 @@ export function ConceptVoices({ conceptId }: Props) {
       cancelled = true;
     };
   }, [conceptId]);
+
+  async function ripenVoice(voiceId: string) {
+    setRipening(voiceId);
+    try {
+      let authorId: string | null = null;
+      try {
+        authorId = localStorage.getItem(CONTRIBUTOR_KEY);
+      } catch {
+        /* ignore */
+      }
+      const base = getApiBase();
+      const res = await fetch(`${base}/api/concepts/voices/${voiceId}/propose`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ author_id: authorId }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const pid: string = data.proposal_id;
+      setVoices((prev) =>
+        (prev || []).map((v) =>
+          v.id === voiceId ? { ...v, proposed_as_proposal_id: pid } : v,
+        ),
+      );
+    } finally {
+      setRipening(null);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -134,6 +167,25 @@ export function ConceptVoices({ conceptId }: Props) {
                 )}
                 <span className="uppercase tracking-wide">· {v.locale}</span>
               </p>
+              <div className="mt-3 flex items-center gap-3 text-xs">
+                {v.proposed_as_proposal_id ? (
+                  <Link
+                    href={`/meet/proposal/${encodeURIComponent(v.proposed_as_proposal_id)}`}
+                    className="text-emerald-300 hover:text-emerald-200"
+                  >
+                    {t("vision.voiceBecameProposal")} →
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => ripenVoice(v.id)}
+                    disabled={ripening === v.id}
+                    className="rounded-full border border-teal-700/40 bg-teal-950/20 hover:bg-teal-950/40 text-teal-200 px-3 py-1 transition-colors disabled:opacity-50"
+                  >
+                    {ripening === v.id ? t("vision.voiceRipening") : t("vision.voiceRipen")}
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>

@@ -23,7 +23,13 @@ from app.services.unified_db import Base
 
 
 class ConceptVoiceRecord(Base):
-    """One lived-experience testimony tied to a concept."""
+    """One lived-experience testimony tied to a concept.
+
+    A voice can ripen into a proposal when a reader finds it worth
+    offering to the collective for a vote. The ripening records a
+    one-way link ``proposed_as_proposal_id`` — the voice stays where
+    it was spoken; the proposal walks forward to meet the collective.
+    """
 
     __tablename__ = "concept_voices"
 
@@ -37,6 +43,9 @@ class ConceptVoiceRecord(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True
     )
+    proposed_as_proposal_id: Mapped[str | None] = mapped_column(
+        String, nullable=True, index=True
+    )
 
 
 def _session():
@@ -46,6 +55,44 @@ def _session():
 def _ensure_schema() -> None:
     # Engine creation auto-creates tables (checkfirst=True).
     _udb.engine()
+    _ensure_ripening_column()
+
+
+_RIPENING_COL_CHECKED = False
+
+
+def _ensure_ripening_column() -> None:
+    """Heal live SQLite DBs that predate the voice→proposal link."""
+    global _RIPENING_COL_CHECKED
+    if _RIPENING_COL_CHECKED:
+        return
+    try:
+        eng = _udb.engine()
+        with eng.connect() as conn:
+            if conn.dialect.name != "sqlite":
+                _RIPENING_COL_CHECKED = True
+                return
+            rows = conn.exec_driver_sql("PRAGMA table_info(concept_voices)").fetchall()
+            if not rows:
+                _RIPENING_COL_CHECKED = True
+                return
+            names = {r[1] for r in rows}
+            if "proposed_as_proposal_id" not in names:
+                conn.exec_driver_sql(
+                    "ALTER TABLE concept_voices ADD COLUMN proposed_as_proposal_id VARCHAR"
+                )
+                try:
+                    conn.exec_driver_sql(
+                        "CREATE INDEX IF NOT EXISTS ix_concept_voices_proposed_id "
+                        "ON concept_voices(proposed_as_proposal_id)"
+                    )
+                except Exception:
+                    pass
+                conn.commit()
+    except Exception:
+        pass
+    finally:
+        _RIPENING_COL_CHECKED = True
 
 
 def add_voice(
@@ -117,4 +164,106 @@ def _to_dict(rec: ConceptVoiceRecord) -> dict:
         "body": rec.body,
         "location": rec.location,
         "created_at": rec.created_at.isoformat() if rec.created_at else None,
+        "proposed_as_proposal_id": rec.proposed_as_proposal_id,
     }
+
+
+def get_voice(voice_id: str) -> Optional[dict]:
+    _ensure_schema()
+    with _session() as s:
+        rec = s.get(ConceptVoiceRecord, voice_id)
+    return _to_dict(rec) if rec else None
+
+
+def ripen_into_proposal(
+    voice_id: str,
+    *,
+    title: Optional[str] = None,
+    body: Optional[str] = None,
+    author_id: Optional[str] = None,
+) -> dict:
+    """Lift a voice into a proposal the collective can vote on.
+
+    Idempotent: if already ripened, returns the existing proposal id.
+    The proposal's title defaults to the voice's first sentence (or its
+    body truncated); body defaults to the full voice text. The
+    proposal is linked back to the concept where the voice was spoken.
+    """
+    from app.services import proposal_service
+    _ensure_schema()
+    with _session() as s:
+        rec = s.get(ConceptVoiceRecord, voice_id)
+        if rec is None:
+            raise ValueError("voice not found")
+        if rec.proposed_as_proposal_id:
+            existing = proposal_service.get_proposal(rec.proposed_as_proposal_id)
+            return {
+                "voice": _to_dict(rec),
+                "proposal_id": rec.proposed_as_proposal_id,
+                "proposal": existing,
+                "already_ripened": True,
+            }
+        voice_dict = _to_dict(rec)
+        author_name = rec.author_name
+        voice_body = rec.body or ""
+        concept_id = rec.concept_id
+        locale = rec.locale
+    derived_title = (title or _derive_title(voice_body))[:200]
+    derived_body = (body or voice_body).strip()
+    if not derived_title:
+        raise ValueError("could not derive proposal title from voice")
+
+    created = proposal_service.create_proposal(
+        title=derived_title,
+        body=derived_body,
+        author_name=author_name,
+        author_id=author_id,
+        linked_entity_type="concept",
+        linked_entity_id=concept_id,
+        locale=locale,
+    )
+    proposal_id = created.get("id")
+    if not proposal_id:
+        raise RuntimeError("proposal creation did not return an id")
+
+    with _session() as s:
+        rec = s.get(ConceptVoiceRecord, voice_id)
+        if rec is None:
+            raise ValueError("voice vanished mid-ripening")
+        if rec.proposed_as_proposal_id:
+            # Second-writer loses the race gracefully.
+            return {
+                "voice": _to_dict(rec),
+                "proposal_id": rec.proposed_as_proposal_id,
+                "proposal": proposal_service.get_proposal(rec.proposed_as_proposal_id),
+                "already_ripened": True,
+            }
+        rec.proposed_as_proposal_id = proposal_id
+        s.add(rec)
+        s.commit()
+        s.refresh(rec)
+        voice_dict = _to_dict(rec)
+    return {
+        "voice": voice_dict,
+        "proposal_id": proposal_id,
+        "proposal": created,
+        "already_ripened": False,
+    }
+
+
+def _derive_title(body: str) -> str:
+    """Pick a warm one-line title from a voice. First sentence or ~80 chars."""
+    s = (body or "").strip()
+    if not s:
+        return ""
+    # First sentence up to a terminator
+    for terminator in (". ", "! ", "? ", "\n"):
+        idx = s.find(terminator)
+        if 0 < idx < 200:
+            return s[: idx + 1].strip(".!? ").strip()
+    if len(s) <= 120:
+        return s
+    # Fall back to a gentle truncation at the last word boundary under 120 chars
+    truncated = s[:120]
+    space = truncated.rfind(" ")
+    return (truncated[:space] if space > 40 else truncated).rstrip(".!? ").strip() + "…"
