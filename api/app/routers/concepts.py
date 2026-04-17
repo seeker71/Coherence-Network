@@ -19,6 +19,70 @@ router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
+# Living-Collective concept-name glossary (inline).
+# LibreTranslate sometimes returns single-word titles unchanged (treats them
+# as proper nouns). This seed map gives names that translate beautifully in
+# the community's own vocabulary. Consulted as a post-process after the
+# snippet-translate call in the single-concept endpoint below.
+# ---------------------------------------------------------------------------
+_CONCEPT_NAME_GLOSSARY: dict[str, dict[str, str]] = {
+    "de": {
+        "Nourishing": "Nährend",
+        "Community": "Gemeinschaft",
+        "Ritual": "Ritual",
+        "Stillness": "Stille",
+        "Longing": "Sehnen",
+        "Belonging": "Zugehörigkeit",
+        "Holding": "Halten",
+        "Listening": "Lauschen",
+        "Remembering": "Erinnern",
+        "Tending": "Hüten",
+        "Ripening": "Reifen",
+        "Wholeness": "Ganzheit",
+        "Space": "Raum",
+        "Energy": "Energie",
+        "Presence": "Gegenwart",
+        "Attunement": "Einstimmung",
+        "Resonance": "Resonanz",
+        "Emergence": "Entfalten",
+        "Weaving": "Weben",
+    },
+    "es": {
+        "Nourishing": "Nutritivo",
+        "Community": "Comunidad",
+        "Ritual": "Ritual",
+        "Stillness": "Quietud",
+        "Belonging": "Pertenencia",
+        "Listening": "Escucha",
+        "Tending": "Cuidar",
+        "Wholeness": "Plenitud",
+        "Energy": "Energía",
+        "Presence": "Presencia",
+        "Resonance": "Resonancia",
+        "Weaving": "Tejer",
+    },
+    "id": {
+        "Nourishing": "Menyuburkan",
+        "Community": "Komunitas",
+        "Belonging": "Kepemilikan",
+        "Listening": "Mendengarkan",
+        "Wholeness": "Keutuhan",
+        "Presence": "Kehadiran",
+        "Resonance": "Resonansi",
+    },
+}
+
+
+def _glossary_title(title: str, lang: str) -> str | None:
+    """Look up a concept title in the LC glossary. Returns the translated
+    term when found, else None (caller keeps the backend's output)."""
+    if not title or not lang:
+        return None
+    table = _CONCEPT_NAME_GLOSSARY.get(lang) or {}
+    return table.get(title.strip())
+
+
+# ---------------------------------------------------------------------------
 # Request models
 # ---------------------------------------------------------------------------
 
@@ -613,6 +677,8 @@ async def get_concept(
             # translate the name + description synchronously so a first-time
             # visitor in this language doesn't see English content. The
             # translator backend memoizes, so repeated calls are cheap.
+            # Single-word concept names get a glossary override because the
+            # backend (LibreTranslate) often returns them unchanged.
             src_title = concept.get("name", "")
             src_desc = concept.get("description", "")
             if src_title or src_desc:
@@ -622,7 +688,12 @@ async def get_concept(
                         source_lang=translator_service.DEFAULT_LOCALE,
                         target_lang=lang,
                     )
-                    if t_title:
+                    # Glossary wins for known LC concept names — the community
+                    # vocabulary is the ground truth, not the backend.
+                    gloss = _glossary_title(src_title, lang)
+                    if gloss:
+                        concept["name"] = gloss
+                    elif t_title:
                         concept["name"] = t_title
                     if t_desc:
                         concept["description"] = t_desc
@@ -669,6 +740,8 @@ async def get_concept(
         # No canonical view in the target lang yet — synchronously translate
         # name + description so the visitor meets the concept in her language
         # before the background attunement finishes. Cached by the translator.
+        # Single-word concept names get a glossary override because the
+        # backend (LibreTranslate) often returns them unchanged.
         src_title = concept.get("name", "")
         src_desc = concept.get("description", "")
         if src_title or src_desc:
@@ -678,7 +751,10 @@ async def get_concept(
                     source_lang=translator_service.DEFAULT_LOCALE,
                     target_lang=target_lang,
                 )
-                if t_title:
+                gloss = _glossary_title(src_title, target_lang)
+                if gloss:
+                    concept["name"] = gloss
+                elif t_title:
                     concept["name"] = t_title
                 if t_desc:
                     concept["description"] = t_desc
