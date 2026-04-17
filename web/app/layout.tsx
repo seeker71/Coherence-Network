@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import "./globals.css";
 import RuntimeBeacon from "@/components/runtime-beacon";
 
@@ -72,7 +72,19 @@ export default async function RootLayout({
   const publicConfig = loadPublicWebConfig();
   const cookieStore = await cookies();
   const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
-  const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
+  // Cookie takes precedence (set by middleware or by an explicit switcher
+  // click). On first visit before the middleware response is honored,
+  // fall back to Accept-Language so the *very first render* already meets
+  // the viewer in their language.
+  const headerLang = (await headers())
+    .get("accept-language")
+    ?.split(",")[0]
+    ?.split("-")[0];
+  const lang: LocaleCode = isSupportedLocale(cookieLang)
+    ? cookieLang
+    : isSupportedLocale(headerLang)
+    ? headerLang
+    : DEFAULT_LOCALE;
   const messages = getMessages(lang);
   const fallback = getMessages(DEFAULT_LOCALE);
   const t = createTranslator(lang);
