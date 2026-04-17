@@ -17,7 +17,26 @@ import { FeedTabs } from "@/components/FeedTabs";
  * reader deeper, not toward outrage or comparison.
  */
 
+import type { Metadata } from "next";
+
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "The felt pulse — Coherence Network",
+  description: "What is alive on the network right now — reactions, voices, new seeds.",
+  openGraph: {
+    type: "website",
+    siteName: "Coherence Network",
+    title: "The felt pulse",
+    description: "What is alive on the network right now — reactions, voices, new seeds.",
+    images: [{ url: "/assets/logo.svg" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "The felt pulse — Coherence Network",
+    description: "What is alive on the network right now — reactions, voices, new seeds.",
+  },
+};
 
 interface Reaction {
   id: string;
