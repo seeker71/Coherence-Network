@@ -215,6 +215,11 @@
     "message": "Aku menemukan sesuatu yang terasa hidup. Ambil tiga menit dan lihat.",
     "messageWithName": "{name} menemukan sesuatu yang terasa hidup. Ambil tiga menit dan lihat."
   },
+  "inviteBanner": {
+    "ariaLabel": "Undangan",
+    "inviting": "mengundangmu menemui ini.",
+    "dismiss": "Tutup"
+  },
   "welcome": {
     "ariaLabel": "Selamat datang — tentang tempat ini",
     "eyebrow": "Baru di sini?",
