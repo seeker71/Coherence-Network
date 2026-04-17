@@ -127,6 +127,41 @@ async def test_resonant_proposal_lifts_into_idea():
 
 
 @pytest.mark.asyncio
+async def test_proposal_by_idea_returns_origin_with_tally():
+    """After a resonant proposal is lifted, /proposals/by-idea/{idea_id}
+    returns the origin proposal with its tally so the idea page can show
+    the voices that birthed it."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.post(
+            "/api/proposals",
+            json={"title": "Origin test", "body": "trace", "author_name": "O"},
+        )
+        pid = r.json()["id"]
+        for emoji in ("💛", "💛", "💛", "🔥"):
+            await c.post(
+                f"/api/reactions/proposal/{pid}",
+                json={"author_name": "voter", "emoji": emoji},
+            )
+        r = await c.post(f"/api/proposals/{pid}/resolve")
+        idea_id = r.json()["idea_id"]
+
+        r = await c.get(f"/api/proposals/by-idea/{idea_id}")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["id"] == pid
+        assert body["title"] == "Origin test"
+        assert body["tally"]["status"] == "resonant"
+        assert body["tally"]["counts"]["amplify"] == 1
+
+
+@pytest.mark.asyncio
+async def test_proposal_by_idea_404_when_idea_not_from_proposal():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/proposals/by-idea/not-a-lifted-idea")
+        assert r.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_non_resonant_proposal_refuses_to_lift():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         r = await c.post(

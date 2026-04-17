@@ -164,6 +164,9 @@
     "thanks": "Tu propuesta está en el camino.",
     "viewAll": "Ver todas las propuestas"
   },
+  "proposalOrigin": {
+    "lede": "Esta idea nació de una propuesta que el colectivo elevó."
+  },
   "proposal": {
     "readyToLift": "Las voces resuenan. Esta propuesta está lista para volverse una idea.",
     "lift": "Elevar a una idea",
