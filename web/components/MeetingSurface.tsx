@@ -203,10 +203,18 @@ export function MeetingSurface({
       }
       setAuthorName(name);
       const base = getApiBase();
+      const fingerprint = ensureFingerprint();
       // For concepts, store as a voice (richer shape + ripens into proposals
       // later). For any other entity, store as a reaction with a comment.
+      //
+      // Auto-graduation: if the viewer doesn't have a contributor_id yet,
+      // the server mints one keyed by her name + device fingerprint and
+      // returns it in the voice payload. We persist it to localStorage so
+      // every subsequent surface (reactions, profile, feed) attributes
+      // her correctly. No signup screen, no private key — contribution
+      // IS the registration.
       if (entityType === "concept") {
-        await fetch(`${base}/api/concepts/${encodeURIComponent(entityId)}/voices`, {
+        const res = await fetch(`${base}/api/concepts/${encodeURIComponent(entityId)}/voices`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -214,8 +222,19 @@ export function MeetingSurface({
             body,
             locale,
             author_id: contributorId,
+            device_fingerprint: fingerprint,
           }),
         });
+        try {
+          if (res.ok) {
+            const voice = await res.json();
+            const newId = voice?.author_id;
+            if (newId && !contributorId) {
+              localStorage.setItem(CONTRIBUTOR_KEY, newId);
+              setContributorId(newId);
+            }
+          }
+        } catch { /* non-critical */ }
       } else {
         await fetch(`${base}/api/reactions/${entityType}/${entityId}`, {
           method: "POST",
