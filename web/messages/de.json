@@ -217,11 +217,20 @@
     "shared": "Danke fürs Teilen 🌿",
     "title": "Komm und begegne dem",
     "message": "Ich habe etwas gefunden, das sich lebendig anfühlt. Nimm dir drei Minuten und schau.",
-    "messageWithName": "{name} hat etwas gefunden, das sich lebendig anfühlt. Nimm dir drei Minuten und schau."
+    "messageWithName": "{name} hat etwas gefunden, das sich lebendig anfühlt. Nimm dir drei Minuten und schau.",
+    "messageWithBoth": "{name} hat an dich gedacht, {recipient}. Etwas Lebendiges wartet — nimm dir drei Minuten und schau.",
+    "recipientLabel": "Ihr Name",
+    "recipientPlaceholder": "z. B. Mama, Sam, Aisha",
+    "recipientHint": "Sie kommt schon mit Namen begrüßt an — nichts zu registrieren, nichts zu merken."
   },
   "inviteBanner": {
     "ariaLabel": "Einladung",
     "inviting": "lädt dich ein, diesem zu begegnen.",
+    "welcomeLead": "Willkommen,",
+    "invitedYou": "lädt dich ein, diesem zu begegnen.",
+    "welcomeNamed": "Willkommen, {name}.",
+    "welcomeNamedFrom": "Willkommen, {name} — {from} lädt dich ein, diesem zu begegnen.",
+    "welcomeBackNamed": "{name}, schön dass du wieder da bist. Hier ist, was für dich geschieht.",
     "dismiss": "Schließen"
   },
   "welcome": {
