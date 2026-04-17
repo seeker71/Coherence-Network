@@ -516,112 +516,120 @@ export default function AnaWalksPage() {
         <Step
           n={11}
           image="/stories/ana-walk/12-meet-nourishing-welcome-mobile.png"
-          alt="Mobile screenshot of /meet/concept/lc-nourishing showing a personalized teal 'Welcome, Mama — Patrick invited you to meet this' banner above the concept."
+          alt="Mobile screenshot of /meet/concept/lc-nourishing showing a 'Willkommen, Mama — Patrick lädt dich ein' banner above the concept image, with two pulse circles and the title 'Nourishing' below."
           title="/meet/concept/lc-nourishing?from=Patrick&name=Mama&lang=de — her first breath"
         >
           <p>
             She taps the WhatsApp link. The first thing she sees is a
             small teal line: <em>&quot;Willkommen, Mama — Patrick lädt
-            dich ein, diesem zu begegnen.&quot;</em>
+            dich ein, diesem zu begegnen.&quot;</em> Her own name. His
+            name. Nothing asks her to sign in.
           </p>
           <p>
-            Below it: the mycorrhizal image, the title <em>Nährend</em>,
-            and a description that begins &quot;Leben gibt großzügig, ohne
-            zu erschöpfen.&quot; Her own name is in the welcome. Patrick&apos;s
-            name is in the welcome. Nothing asks her to sign in.
+            Below it: the mycorrhizal image in the center, two pulse
+            circles flanking it ( <em>15 du</em> · <em>31 dies</em> with
+            &quot;STILL · 2 weitere sind hier&quot; between them), and
+            the title <em>Nourishing</em>.
           </p>
           <Alive>
             The banner does the work of a hundred onboarding screens. No
-            form, no question, no barrier. She is already greeted.
+            form, no question, no barrier. Her name is in the greeting
+            and the inviter&apos;s name is named. She feels addressed.
           </Alive>
           <Alive>
-            The description is in her language — because cycle 21 shipped
-            full translation and my override picked German. Her browser
-            wouldn&apos;t have needed it; her confidence does.
+            The chrome is in her language — the language switcher at the
+            top (EN · DE · ES · ID), the pulse labels (du, dies), the
+            &quot;bereit&quot; status chip at the bottom. Cycle 21
+            shipped full translation for every UI string.
           </Alive>
           <Tender>
-            The first word on the page is still <em>Willkommen</em>, which
-            is affectionate but not yet meaningful. What if the banner
-            showed, right there, the one voice someone has already left
-            on this concept? Three lines of someone else&apos;s lived
-            experience, in her language, would make the warmth feel
-            earned rather than decorative.
+            The concept title is still <em>Nourishing</em>, not
+            <em> Nährend</em>. The description below it stays in
+            English. LibreTranslate is installed on the VPS, but
+            single-word concept titles and the living-collective
+            descriptions haven&apos;t been re-projected through the
+            translator for the snippet-fallback path on this specific
+            concept. The frame welcomes her in German; the content
+            inside the frame doesn&apos;t yet. This is the next piece
+            of work that has to land before the welcome feels complete.
           </Tender>
         </Step>
 
         <Step
           n={12}
           image="/stories/ana-walk/13-meeting-gesture-mobile.png"
-          alt="Mobile screenshot of the meeting surface after tapping the amber heart — an inline 'say something' panel has appeared with name and message fields."
+          alt="Mobile screenshot of the meeting surface after tapping the amber heart — an inline 'Möchtest du etwas sagen?' panel has appeared with Mama pre-filled in the name field and a German placeholder asking her to share two sentences."
           title="Her first gesture"
         >
           <p>
-            She reads the three sentences. There are five emoji below:
-            🙏 💛 🔥 🌱 ➡️. No instructions. She taps the amber heart.
+            She scrolls to the amber heart below the concept and taps
+            it. A small panel unfolds right where her finger was:{" "}
+            <em>&quot;MÖCHTEST DU ETWAS SAGEN?&quot;</em> Her name is
+            already in the name field — <em>Mama</em>, pre-filled from
+            the invite link. The placeholder reads <em>&quot;Zwei Sätze
+            reichen. Was hast du gespürt?&quot;</em>
           </p>
           <p>
-            A small panel unfolds right where her finger was. <em>&quot;Teile
-            einen Gedanken dazu — zwei Sätze reichen.&quot;</em> Her name
-            is already in the name field (pre-filled from the invite). She
-            types: <em>&quot;Bei uns im Garten fließt es auch so — die
-            Kompostwärme macht den Boden lebendig.&quot;</em>
+            She could type something like <em>&quot;Bei uns im Garten
+            fließt es auch so — die Kompostwärme macht den Boden
+            lebendig.&quot;</em> When she taps <em>Anbieten</em>, her
+            voice lands on the concept. Anyone can later lift it into
+            a proposal.
           </p>
           <Alive>
-            She did not have to navigate anywhere. The gesture and the
-            voice are the same motion. Cycle 20 folded the say-something
-            panel into the reaction — the first emoji opens the second
-            door.
+            The gesture and the voice are the same motion. Cycle 20
+            folded the say-something panel into the reaction — the
+            first emoji opens the second door. The amber heart at the
+            bottom of the screenshot is now lit, indicating she tapped
+            it; the panel appeared above, not below, so her finger
+            doesn&apos;t have to travel to find the form.
           </Alive>
           <Alive>
-            When she submits, her voice lands as a concept-voice, which
-            anyone else can later lift into a proposal. Two sentences from
-            a Swiss grandmother can become a piece of the vision. The
-            organism now knows a thing it did not know before: that
-            compost warmth is mycorrhizal language for someone who
-            still keeps a garden.
+            Every piece of the panel — heading, placeholder, submit
+            button, dismiss link — is in German. Her name was carried
+            over by the invite so she does not have to type it. Two
+            sentences from a Swiss grandmother can become a piece of
+            the vision.
           </Alive>
         </Step>
 
         <Step
           n={13}
           image="/stories/ana-walk/14-home-morning-mobile.png"
-          alt="Mobile screenshot of the home page the next morning showing a small amber 'Guten Morgen' panel with a personalized summary."
+          alt="Mobile screenshot of the home page the next morning showing a warm amber 'Guten Morgen' panel with Mama's name, a summary line, and a live news link."
           title="The next morning — a small door, left open"
         >
           <p>
-            Twelve hours later, in the kitchen, she opens WhatsApp and
-            taps the same link again. It is 7:42 on Tuesday morning. The
-            InviteBanner recognizes her device — no duplicate, no
-            re-registration — and greets her back: <em>&quot;Mama, schön
-            dass du wieder da bist.&quot;</em>
-          </p>
-          <p>
-            Below that, a softer amber panel: <em>Guten Morgen. Seit
-            gestern: eine neue Stimme zu Nährend. Eine neue Idee in
-            deiner Nähe. Aus der weiten Welt: »Boden als
-            Lebensgemeinschaft — ein UN-Bericht«.</em>
+            Twelve hours later, in the kitchen, she opens the app on
+            her phone. It is 7:42 on Tuesday morning. The first thing
+            on the page is a warm amber panel: <em>&quot;Mama, seit du
+            zuletzt hier warst:&quot;</em> Below that, <em>&quot;Aus der
+            weiten Welt:&quot;</em> and a live link to a real TechCrunch
+            article that the news-resonance engine pulled and matched
+            against the ideas in the graph overnight.
           </p>
           <Alive>
-            She did not get a push notification (that cycle is next —
-            service worker, VAPID keys, a scheduled 09:00-local digest).
-            But the in-app nudge does most of what a push notification
-            would do: it lands her on something that matters before she
-            has to search for it.
+            The panel fires only when three things line up: she has a
+            soft identity, she has been here before, and her local
+            clock is between 06:00 and 11:00. Otherwise it stays quiet.
+            No false urgency, no badge nagging her at midnight.
           </Alive>
           <Alive>
-            The news item is from the real news resonance engine that
-            has been quietly matching incoming RSS to the ideas in the
-            graph. For the first time, that work meets someone whose
-            day it could actually shape. This is why the loop matters —
-            the signal was there for months; now there is someone to
-            receive it.
+            The news link is the first time the news-resonance work —
+            quietly matching RSS to ideas for months — meets someone
+            whose day it could actually shape. The signal existed. It
+            was waiting for a person to receive it.
           </Alive>
           <Tender>
-            True push — a notification that arrives when the app is
-            closed — still needs a service worker, VAPID keys, and a
-            server-side schedule job. That&apos;s the next cycle. Until
-            then, the nudge only fires when she opens the app herself.
-            Honest about where we are.
+            The amber text is saturated and clips the &quot;Guten
+            Morgen&quot; eyebrow on 390px. The &quot;Aus der weiten
+            Welt:&quot; label plus the English headline of the matched
+            article sit next to each other — she sees a German
+            greeting introducing an English news title. The news title
+            translation is the next gap to close. And the real push
+            notification — the one that arrives when the app is closed
+            — still wants a service worker, VAPID keys, and a
+            server-side schedule. That is the next cycle.
           </Tender>
         </Step>
 
