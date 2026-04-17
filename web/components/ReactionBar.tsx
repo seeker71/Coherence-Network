@@ -134,6 +134,22 @@ export function ReactionBar({
         /* ignore */
       }
       const base = getApiBase();
+      // Read identity once so we can pass contributor_id (if present),
+      // fingerprint, and invited_by — the auto-graduation trio. A
+      // reaction from someone with only a name is enough to mint
+      // their contributor node with chain lineage recorded.
+      let fp = "";
+      let invitedBy = "";
+      let contributorId = "";
+      try {
+        fp = localStorage.getItem("cc-presence-fingerprint") || "";
+        if (!fp) {
+          fp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+          localStorage.setItem("cc-presence-fingerprint", fp);
+        }
+        invitedBy = localStorage.getItem("cc-invited-by") || "";
+        contributorId = localStorage.getItem(CONTRIBUTOR_KEY) || "";
+      } catch { /* ignore */ }
       const res = await fetch(`${base}/api/reactions/${entityType}/${entityId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -143,6 +159,9 @@ export function ReactionBar({
           comment: params.comment,
           locale,
           parent_reaction_id: params.parentId ?? null,
+          author_id: contributorId || undefined,
+          device_fingerprint: fp || undefined,
+          invited_by: invitedBy || undefined,
         }),
       });
       if (!res.ok) {
@@ -150,6 +169,15 @@ export function ReactionBar({
         setError(payload?.detail || "could not send reaction");
         return;
       }
+      // Persist minted contributor_id when the server auto-graduated us.
+      try {
+        const data = await res.clone().json();
+        const newId: string | undefined = data?.reaction?.author_id;
+        if (newId && !contributorId) {
+          localStorage.setItem(CONTRIBUTOR_KEY, newId);
+          setIsContributor(true);
+        }
+      } catch { /* non-critical */ }
       setThanked(true);
       setTimeout(() => setThanked(false), 2500);
       if (params.comment) setComment("");
