@@ -90,6 +90,7 @@ const SHOTS: Shot[] = [
       localStorage.removeItem("cc-morning-nudge-dismissed");
       const yesterday = new Date(Date.now() - 18 * 3600 * 1000).toISOString();
       localStorage.setItem("cc-last-visit-at", yesterday);
+      document.cookie = "NEXT_LOCALE=de; path=/; max-age=31536000";
     `,
     initScript: `
       // Force Date#getHours to report 07:42 so the morning window gate
@@ -102,7 +103,45 @@ const SHOTS: Shot[] = [
         Date.prototype.getMinutes = function() { return 42; };
       })();
     `,
+    settleMs: 5500,
+  },
+  {
+    // Chapter 14: her personal corner /feed/you next morning. The
+    // SinceLastVisit panel + MorningNudge + KinActivity all fire because
+    // she has an identity, a prior visit timestamp, and has been gone
+    // long enough. She also has a real voice on lc-nourishing from
+    // yesterday so PersonalFeed below the fold has something to show.
+    name: "15-corner-morning-mobile.png",
+    url: "/feed/you",
+    preMount: `
+      localStorage.setItem("cc-reaction-author-name", "Mama");
+      localStorage.removeItem("cc-morning-nudge-dismissed");
+      const yesterday = new Date(Date.now() - 18 * 3600 * 1000).toISOString();
+      localStorage.setItem("cc-last-visit-at", yesterday);
+      document.cookie = "NEXT_LOCALE=de; path=/; max-age=31536000";
+    `,
+    initScript: `
+      (function() {
+        Date.prototype.getHours = function() { return 7; };
+        Date.prototype.getMinutes = function() { return 42; };
+      })();
+    `,
+    settleMs: 5500,
+  },
+  {
+    // Chapter 15: the concept page returned-visitor view with her own
+    // voice now visible among "Stimmen aus dem Feld" — proof that her
+    // contribution is seen. We scroll deep enough to land in the voices
+    // section. The URL uses ?scroll=voices so a client-side effect
+    // can position us there; otherwise we eyeball scrollY.
+    name: "16-concept-voices-mobile.png",
+    url: "/vision/lc-nourishing?lang=de",
+    preMount: `
+      localStorage.setItem("cc-reaction-author-name", "Mama");
+      document.cookie = "NEXT_LOCALE=de; path=/; max-age=31536000";
+    `,
     settleMs: 4500,
+    // scrollY omitted — handled in runShot by locating the voices heading.
   },
 ];
 
@@ -118,7 +157,13 @@ async function runShot(context: BrowserContext, shot: Shot): Promise<void> {
     if (shot.preMount) {
       await page.evaluate(shot.preMount);
     }
-    await page.goto(url, { waitUntil: "networkidle", timeout: 45000 });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    // Give client hydration + localStorage-gated components time to render
+    try {
+      await page.waitForLoadState("networkidle", { timeout: 20000 });
+    } catch {
+      /* some endpoints keep-alive; domcontentloaded + settleMs is enough */
+    }
     if (shot.name === "13-meeting-gesture-mobile.png") {
       // Try to click the amber heart to open the say-something panel.
       // The selector is emoji-text; match the button that contains "💛".
@@ -133,6 +178,21 @@ async function runShot(context: BrowserContext, shot: Shot): Promise<void> {
     }
     if (shot.scrollY) {
       await page.evaluate((y) => window.scrollTo(0, y), shot.scrollY);
+    } else if (shot.name === "16-concept-voices-mobile.png") {
+      // Scroll to the "Stimmen aus dem Feld" heading if it exists, otherwise
+      // the bottom of the page where voices live.
+      await page.evaluate(() => {
+        const headings = Array.from(document.querySelectorAll("h2, h3"));
+        const voices = headings.find((h) =>
+          /Stimmen|Voices from the field/i.test(h.textContent || ""),
+        );
+        if (voices) {
+          voices.scrollIntoView({ block: "start" });
+        } else {
+          window.scrollTo(0, document.body.scrollHeight);
+        }
+      });
+      await page.waitForTimeout(800);
     }
     await page.waitForTimeout(shot.settleMs ?? 1500);
     const outPath = path.join(OUT_DIR, shot.name);
