@@ -97,7 +97,18 @@
     "resonantAssetsIntro": "Jeder Ausdruck ist ein einzigartiger Beitrag. Der resonanteste steigt an die Oberfläche.",
     "needsNativeVoice": "Braucht eine muttersprachliche Stimme – schlage eine bessere Übersetzung vor",
     "pendingTranslation": "Noch keine Sicht in dieser Sprache – zeige die Anker-Sicht",
-    "staleAwaitingReattunement": "Die Anker-Sicht hat sich bewegt – diese Sicht wartet auf Nachstimmung"
+    "staleAwaitingReattunement": "Die Anker-Sicht hat sich bewegt – diese Sicht wartet auf Nachstimmung",
+    "voicesHeading": "Stimmen aus dem Feld",
+    "voicesLede": "Wie dieses Konzept im Leben klingt, erzählt von denen, die es leben.",
+    "voicesEmpty": "Noch keine Stimme. Deine wäre die erste — ein Geschenk an alle, die danach lesen.",
+    "voicesShareHeading": "Teile deine Stimme",
+    "voicesAuthorPlaceholder": "Dein Name oder deine Gemeinschaft (z. B. Ana aus Ubud)",
+    "voicesBodyPlaceholder": "Wie lebst du das? Was hast du gesehen? Zwei Sätze reichen.",
+    "voicesLocationPlaceholder": "Ort (freiwillig)",
+    "voicesSubmit": "Diese Stimme teilen",
+    "voicesSubmitting": "Wird geteilt …",
+    "voicesThankYou": "Danke — deine Stimme ist hier.",
+    "voicesLoading": "Lausche auf Stimmen …"
   },
   "locale": {
     "switcherLabel": "Sprache",
