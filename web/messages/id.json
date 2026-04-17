@@ -246,7 +246,10 @@
     "ideasOne": "1 gagasan baru yang selaras denganmu",
     "ideasMany": "{count} gagasan baru yang selaras denganmu",
     "newsLead": "Dari dunia yang lebih luas:",
-    "openCorner": "Buka sudutmu"
+    "openCorner": "Buka sudutmu",
+    "someone": "Seseorang",
+    "reactedToYourVoice": "meletakkan ini pada suaramu.",
+    "repliedToYou": "membalasmu:"
   },
   "welcome": {
     "ariaLabel": "Selamat datang — tentang tempat ini",
