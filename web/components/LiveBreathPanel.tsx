@@ -73,19 +73,21 @@ export async function LiveBreathPanel({ lang }: Props) {
 
   return (
     <section
-      className="relative z-10 w-full border-b border-stone-800/40 bg-gradient-to-b from-teal-950/20 via-transparent to-transparent"
+      className="relative z-10 w-full border-b border-border/40 bg-[linear-gradient(180deg,hsl(var(--chart-2)/0.08),transparent)]"
       aria-label={t("homeBreath.ariaLabel")}
     >
-      <div className="max-w-4xl mx-auto px-4 py-5 flex flex-col md:flex-row md:items-center gap-4">
+      <div className="max-w-4xl mx-auto px-5 py-4 flex flex-col md:flex-row md:items-center gap-4">
         <div className="flex-1 min-w-0">
-          <p className="text-xs uppercase tracking-widest text-teal-300/90 mb-1">
+          {/* Eyebrow tokens match the Panel primitive and adapt to both
+              themes via the chart-2 (teal) semantic token. */}
+          <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-[hsl(var(--chart-2))] mb-1.5">
             {t("homeBreath.label")}
           </p>
           {hasSignal ? (
-            <p className="text-base md:text-lg text-stone-100">
+            <p className="text-base md:text-lg text-foreground">
               {meetingNow > 0 && (
                 <>
-                  <span className="text-teal-200 font-medium">
+                  <span className="text-[hsl(var(--chart-2))] font-medium">
                     {meetingNow === 1
                       ? t("homeBreath.oneMeetingNow")
                       : t("homeBreath.manyMeetingNow").replace(
@@ -102,7 +104,7 @@ export async function LiveBreathPanel({ lang }: Props) {
                 </>
               )}
               {recentVoices.length > 0 && (
-                <span className="text-stone-300">
+                <span className="text-muted-foreground">
                   {t("homeBreath.recentVoicesLine").replace(
                     "{count}",
                     String(recentVoices.length),
@@ -110,7 +112,7 @@ export async function LiveBreathPanel({ lang }: Props) {
                 </span>
               )}
               {recentVoices.length === 0 && recentReactions.length > 0 && (
-                <span className="text-stone-300">
+                <span className="text-muted-foreground">
                   {t("homeBreath.recentReactionsLine").replace(
                     "{count}",
                     String(recentReactions.length),
@@ -119,7 +121,7 @@ export async function LiveBreathPanel({ lang }: Props) {
               )}
             </p>
           ) : (
-            <p className="text-base md:text-lg text-stone-200">
+            <p className="text-base md:text-lg text-foreground">
               {t("homeBreath.quiet")}
             </p>
           )}
@@ -128,19 +130,19 @@ export async function LiveBreathPanel({ lang }: Props) {
         <div className="flex items-center gap-2 flex-wrap">
           <Link
             href="/here"
-            className="rounded-full bg-teal-700/80 hover:bg-teal-600/90 text-stone-950 px-4 py-2 text-sm font-medium transition-colors"
+            className="rounded-full bg-[hsl(var(--chart-2))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium transition-opacity"
           >
             {t("homeBreath.goHere")}
           </Link>
           <Link
             href="/explore/concept"
-            className="rounded-full bg-amber-700/80 hover:bg-amber-600/90 text-stone-950 px-4 py-2 text-sm font-medium transition-colors"
+            className="rounded-full bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium transition-opacity"
           >
             {t("homeBreath.goExplore")}
           </Link>
           <Link
             href="/propose"
-            className="rounded-full border border-teal-700/40 bg-teal-950/20 hover:bg-teal-950/40 text-teal-200 px-4 py-2 text-sm font-medium transition-colors"
+            className="rounded-full border border-[hsl(var(--chart-2)/0.4)] hover:bg-[hsl(var(--chart-2)/0.1)] text-[hsl(var(--chart-2))] px-4 py-2 text-sm font-medium transition-colors"
           >
             {t("homeBreath.goPropose")}
           </Link>
