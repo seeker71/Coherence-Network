@@ -782,6 +782,10 @@ app.include_router(fallbacks_router.router, prefix="/api", tags=["sensing"])
 from app.routers import reactions as reactions_router  # noqa: E402
 app.include_router(reactions_router.router, prefix="/api", tags=["reactions"])
 
+# Meeting — felt state of viewer + content as a combined organism
+from app.routers import meetings as meetings_router  # noqa: E402
+app.include_router(meetings_router.router, prefix="/api", tags=["meeting"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).

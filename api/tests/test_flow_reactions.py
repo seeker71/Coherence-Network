@@ -94,7 +94,11 @@ async def test_recent_reactions_stream():
 @pytest.mark.asyncio
 async def test_reaction_on_multiple_entity_types():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        for et in ("concept", "idea", "spec", "contributor", "community", "workspace", "asset", "contribution", "story"):
+        for et in (
+            "concept", "idea", "spec", "contributor", "community",
+            "workspace", "asset", "contribution", "story",
+            "config", "insight", "agent_task", "agent_run",
+        ):
             r = await c.post(
                 f"/api/reactions/{et}/test-{et}",
                 json={"author_name": "P", "emoji": "✨"},

@@ -117,6 +117,18 @@
     "exploreVision": "Explore the vision",
     "stepIn": "Step into the network"
   },
+  "meeting": {
+    "viewerPulse": "you",
+    "contentPulse": "this",
+    "firstMeeting": "first meeting",
+    "familiar": "familiar",
+    "resonant": "resonant",
+    "quiet": "quiet",
+    "offer": "care",
+    "dismiss": "move on",
+    "amplify": "amplify",
+    "inviteHint": "Your gesture raised both pulses. Join so your name walks with it"
+  },
   "reactions": {
     "ariaLabel": "Reactions and comments",
     "addComment": "+ say something",

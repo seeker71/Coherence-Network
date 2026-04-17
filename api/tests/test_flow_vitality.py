@@ -255,6 +255,47 @@ async def test_fallback_witness_records_and_reads():
 
 
 @pytest.mark.asyncio
+async def test_meeting_returns_combined_organism_vitality():
+    """The /api/meeting endpoint returns viewer+content vitalities and a
+    qualitative shared pulse so full-screen surfaces can render both sides
+    of the encounter."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        cid = "lc-meeting-test"
+        await c.post(
+            "/api/graph/nodes",
+            json={
+                "id": cid, "type": "concept", "name": "Meeting test",
+                "description": "T", "properties": {"domains": ["living-collective"]},
+            },
+        )
+        # First meeting — no prior reactions, anonymous viewer
+        r = await c.get(f"/api/meeting/concept/{cid}")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["content"]["first_meeting"] is True
+        assert body["shared"]["pulse"] == "first_meeting"
+        assert body["viewer"]["is_contributor"] is False
+
+        # After a reaction, content vitality rises
+        await c.post(
+            f"/api/reactions/concept/{cid}",
+            json={"author_name": "Meeting friend", "emoji": "💛"},
+        )
+        r = await c.get(f"/api/meeting/concept/{cid}")
+        body2 = r.json()
+        assert body2["content"]["vitality"] > body["content"]["vitality"]
+        assert body2["content"]["first_meeting"] is False
+
+
+@pytest.mark.asyncio
+async def test_meeting_unsupported_entity_localized():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.get("/api/meeting/lobster/soup", headers={"accept-language": "de"})
+        assert r.status_code == 400
+        assert "nicht unterstützt" in r.json()["detail"]
+
+
+@pytest.mark.asyncio
 async def test_translator_fallback_is_witnessed():
     """No backend → witness records it, source text returned."""
     from app.services import translator_service as _tsvc

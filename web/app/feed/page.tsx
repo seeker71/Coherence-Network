@@ -122,6 +122,7 @@ export default async function FeedPage() {
   for (const r of reactions) {
     const ts = parseTs(r.created_at);
     const href = entityHref(r.entity_type, r.entity_id);
+    const meetHref = `/meet/${r.entity_type}/${encodeURIComponent(r.entity_id)}`;
     items.push({
       kind: "reaction",
       key: `r-${r.id}`,
@@ -140,6 +141,9 @@ export default async function FeedPage() {
               <span>·</span>
               <Link href={href} className="text-stone-400 hover:text-amber-300/90">
                 {r.entity_type}: {r.entity_id}
+              </Link>
+              <Link href={meetHref} className="ml-1 text-teal-400 hover:text-teal-300" aria-label="full screen">
+                ↗
               </Link>
               <span className="ml-auto">{relativeTime(r.created_at, lang)}</span>
             </div>
