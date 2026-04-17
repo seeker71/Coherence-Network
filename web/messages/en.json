@@ -236,6 +236,18 @@
     "welcomeBackNamed": "{name}, welcome back. Here's what's stirring for you.",
     "dismiss": "Dismiss"
   },
+  "morningNudge": {
+    "ariaLabel": "Morning catch-up",
+    "eyebrow": "Good morning",
+    "dismiss": "Later",
+    "heading": "{name}, since you were last here:",
+    "voicesOne": "1 new voice on a concept you touched",
+    "voicesMany": "{count} new voices on concepts you touched",
+    "ideasOne": "1 new idea aligned with you",
+    "ideasMany": "{count} new ideas aligned with you",
+    "newsLead": "From the wider world:",
+    "openCorner": "Open your corner"
+  },
   "welcome": {
     "ariaLabel": "Welcome — what this place is",
     "eyebrow": "New here?",

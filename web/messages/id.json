@@ -236,6 +236,18 @@
     "welcomeBackNamed": "{name}, senang melihatmu kembali. Inilah yang hidup untukmu.",
     "dismiss": "Tutup"
   },
+  "morningNudge": {
+    "ariaLabel": "Rangkuman pagi",
+    "eyebrow": "Selamat pagi",
+    "dismiss": "Nanti",
+    "heading": "{name}, sejak terakhir kamu di sini:",
+    "voicesOne": "1 suara baru pada konsep yang kamu sentuh",
+    "voicesMany": "{count} suara baru pada konsep yang kamu sentuh",
+    "ideasOne": "1 gagasan baru yang selaras denganmu",
+    "ideasMany": "{count} gagasan baru yang selaras denganmu",
+    "newsLead": "Dari dunia yang lebih luas:",
+    "openCorner": "Buka sudutmu"
+  },
   "welcome": {
     "ariaLabel": "Selamat datang — tentang tempat ini",
     "eyebrow": "Baru di sini?",
