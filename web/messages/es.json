@@ -124,6 +124,17 @@
     "walkDone": "Te has encontrado con todos en este camino.",
     "restart": "Caminar otra vez"
   },
+  "propose": {
+    "heading": "Proponer",
+    "lede": "Ofrece algo al colectivo. Tu propuesta entra al camino enseguida; las reacciones son el voto.",
+    "titlePlaceholder": "Tu propuesta, en una línea",
+    "bodyPlaceholder": "Unas frases. ¿Qué cambia? ¿Por qué ahora?",
+    "authorPlaceholder": "Tu nombre",
+    "submit": "Ofrecer esto",
+    "submitting": "Ofreciendo…",
+    "thanks": "Tu propuesta está en el camino.",
+    "viewAll": "Ver todas las propuestas"
+  },
   "meeting": {
     "viewerPulse": "tú",
     "contentPulse": "esto",

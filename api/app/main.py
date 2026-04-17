@@ -790,6 +790,10 @@ app.include_router(meetings_router.router, prefix="/api", tags=["meeting"])
 from app.routers import explore as explore_router  # noqa: E402
 app.include_router(explore_router.router, prefix="/api", tags=["explore"])
 
+# Proposals — light governance via the meeting gesture
+from app.routers import proposals as proposals_router  # noqa: E402
+app.include_router(proposals_router.router, prefix="/api", tags=["proposals"])
+
 # Backward compatibility for legacy clients; hidden from OpenAPI.
 # These /v1/ aliases map to the same routers as /api/ and will be maintained
 # for at least 6 months after any future /v2/ release (see versioning strategy above).

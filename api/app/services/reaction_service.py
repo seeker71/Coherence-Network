@@ -45,6 +45,8 @@ SUPPORTED_ENTITY_TYPES = {
     "insight",
     "agent_task",
     "agent_run",
+    # Proposals — the collective votes on them through the same meeting gesture
+    "proposal",
 }
 
 

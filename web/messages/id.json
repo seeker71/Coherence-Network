@@ -124,6 +124,17 @@
     "walkDone": "Kamu sudah bertemu semua di jalan ini.",
     "restart": "Berjalan lagi"
   },
+  "propose": {
+    "heading": "Usulkan",
+    "lede": "Tawarkan sesuatu untuk ditemui kolektif. Usulanmu langsung masuk ke jalan; reaksi menjadi suara.",
+    "titlePlaceholder": "Usulanmu, satu baris",
+    "bodyPlaceholder": "Beberapa kalimat. Apa yang berubah? Mengapa sekarang?",
+    "authorPlaceholder": "Namamu",
+    "submit": "Tawarkan ini",
+    "submitting": "Menawarkan…",
+    "thanks": "Usulanmu ada di jalan.",
+    "viewAll": "Lihat semua usulan"
+  },
   "meeting": {
     "viewerPulse": "kamu",
     "contentPulse": "ini",

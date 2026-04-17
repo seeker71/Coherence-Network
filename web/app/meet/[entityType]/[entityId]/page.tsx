@@ -34,6 +34,7 @@ const SUPPORTED_TYPES = new Set([
   "insight",
   "agent_task",
   "agent_run",
+  "proposal",
 ]);
 
 interface EntityFacet {
@@ -153,6 +154,20 @@ async function fetchEntityFacet(
         return {
           title: a.title || a.name || a.idea_id || entityId,
           description: a.description || a.status || a.phase || "",
+        };
+      }
+      case "proposal": {
+        const res = await fetch(`${base}/api/proposals/${entityId}`, {
+          cache: "no-store",
+        });
+        if (!res.ok) return null;
+        const p = await res.json();
+        const tally = p.tally
+          ? ` — ${p.tally.status} · ${p.tally.counts.support + p.tally.counts.amplify} for, ${p.tally.counts.decline} against`
+          : "";
+        return {
+          title: p.title || entityId,
+          description: `${p.body || ""}${tally}`.trim(),
         };
       }
       default:

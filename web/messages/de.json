@@ -124,6 +124,17 @@
     "walkDone": "Du bist allen auf diesem Weg begegnet.",
     "restart": "Noch einmal gehen"
   },
+  "propose": {
+    "heading": "Vorschlagen",
+    "lede": "Biete dem Kollektiv etwas zum Begegnen. Dein Vorschlag geht sofort in den Weg; Reaktionen werden zur Stimme.",
+    "titlePlaceholder": "Dein Vorschlag, in einer Zeile",
+    "bodyPlaceholder": "Ein paar Sätze. Was verändert sich? Warum jetzt?",
+    "authorPlaceholder": "Dein Name",
+    "submit": "Dies anbieten",
+    "submitting": "Wird angeboten …",
+    "thanks": "Dein Vorschlag ist im Weg.",
+    "viewAll": "Alle Vorschläge sehen"
+  },
   "meeting": {
     "viewerPulse": "du",
     "contentPulse": "dies",

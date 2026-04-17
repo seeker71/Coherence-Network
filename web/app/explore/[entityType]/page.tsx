@@ -17,6 +17,7 @@ const SUPPORTED_TYPES = new Set([
   "concept",
   "idea",
   "contributor",
+  "proposal",
 ]);
 
 export default async function ExplorePage({

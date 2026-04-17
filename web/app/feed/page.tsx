@@ -225,6 +225,12 @@ export default async function FeedPage() {
         >
           {t("explore.exploreMore")} →
         </Link>
+        <Link
+          href="/propose"
+          className="rounded-full bg-teal-700/70 hover:bg-teal-600/80 text-stone-950 px-3 py-1 font-medium"
+        >
+          {t("propose.heading")} +
+        </Link>
         <Link href="/join" className="hover:text-teal-300/90">
           {t("feed.stepIn")}
         </Link>
