@@ -20,6 +20,19 @@ import { useLocale } from "@/components/MessagesProvider";
 
 const CONTRIBUTOR_KEY = "cc-contributor-id";
 const NAME_KEY = "cc-reaction-author-name";
+const FINGERPRINT_KEY = "cc-presence-fingerprint";
+
+function ensureFingerprint(): string {
+  try {
+    const existing = localStorage.getItem(FINGERPRINT_KEY);
+    if (existing) return existing;
+    const fresh = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(FINGERPRINT_KEY, fresh);
+    return fresh;
+  } catch {
+    return `anon-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
 
 interface MeetingData {
   content: { vitality: number; reactions: number; voices: number; first_meeting: boolean };
@@ -44,6 +57,8 @@ interface Props {
     dismiss: string;
     amplify: string;
     inviteHint: string;
+    othersHereOne?: string;
+    othersHereMany?: string;
   };
 }
 
@@ -61,6 +76,9 @@ export function MeetingSurface({
   const [authorName, setAuthorName] = useState<string>("");
   const [contributorId, setContributorId] = useState<string | null>(null);
   const [pulse, setPulse] = useState(false);
+  const [othersHere, setOthersHere] = useState(0);
+  const fingerprintRef = useRef<string>("");
+  const heartbeat = useRef<ReturnType<typeof setInterval> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -68,7 +86,51 @@ export function MeetingSurface({
       setAuthorName(localStorage.getItem(NAME_KEY) || "");
       setContributorId(localStorage.getItem(CONTRIBUTOR_KEY));
     } catch { /* ignore */ }
+    fingerprintRef.current = ensureFingerprint();
   }, []);
+
+  // Heartbeat + presence poll — every 30s the viewer says "I'm here" and
+  // reads how many others are too. Cleans up on unmount / entity change.
+  useEffect(() => {
+    let cancelled = false;
+    const base = getApiBase();
+    const fp = fingerprintRef.current || ensureFingerprint();
+    fingerprintRef.current = fp;
+
+    async function tick() {
+      try {
+        const res = await fetch(
+          `${base}/api/presence/${entityType}/${encodeURIComponent(entityId)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fingerprint: fp }),
+          },
+        );
+        if (!res.ok || cancelled) return;
+        // Read an "others" count — the service subtracts myself
+        const cnt = await fetch(
+          `${base}/api/presence/${entityType}/${encodeURIComponent(entityId)}?fingerprint=${encodeURIComponent(fp)}`,
+        );
+        if (!cnt.ok || cancelled) return;
+        const data = await cnt.json();
+        if (!cancelled) setOthersHere(Math.max(0, data.others || 0));
+      } catch {
+        /* transient */
+      }
+    }
+    tick();
+    heartbeat.current = setInterval(tick, 30_000);
+    function onVisible() {
+      if (document.visibilityState === "visible") tick();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      if (heartbeat.current) clearInterval(heartbeat.current);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [entityType, entityId]);
 
   async function loadMeeting() {
     try {
@@ -123,8 +185,21 @@ export function MeetingSurface({
           pulse={pulse}
           tint="teal"
         />
-        <div className="text-center text-xs uppercase tracking-widest text-stone-500">
-          {pulseLabel}
+        <div className="text-center text-xs uppercase tracking-widest text-stone-500 flex flex-col items-center gap-0.5">
+          <span>{pulseLabel}</span>
+          {othersHere > 0 && (
+            <span
+              className="text-[10px] normal-case tracking-normal text-teal-300/90"
+              aria-live="polite"
+            >
+              {othersHere === 1
+                ? (strings.othersHereOne || "1 other here")
+                : (strings.othersHereMany || `${othersHere} others here`).replace(
+                    "{count}",
+                    String(othersHere),
+                  )}
+            </span>
+          )}
         </div>
         <VitalityPulse
           label={strings.contentPulse}

@@ -172,7 +172,9 @@
     "offer": "cuidar",
     "dismiss": "seguir",
     "amplify": "amplificar",
-    "inviteHint": "Tu gesto elevó ambos pulsos. Únete para que tu nombre lo acompañe"
+    "inviteHint": "Tu gesto elevó ambos pulsos. Únete para que tu nombre lo acompañe",
+    "othersHereOne": "Una persona más está aquí",
+    "othersHereMany": "{count} personas más están aquí"
   },
   "reactions": {
     "ariaLabel": "Reacciones y comentarios",

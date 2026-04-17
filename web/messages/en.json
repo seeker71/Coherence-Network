@@ -172,7 +172,9 @@
     "offer": "care",
     "dismiss": "move on",
     "amplify": "amplify",
-    "inviteHint": "Your gesture raised both pulses. Join so your name walks with it"
+    "inviteHint": "Your gesture raised both pulses. Join so your name walks with it",
+    "othersHereOne": "1 other here now",
+    "othersHereMany": "{count} others here now"
   },
   "reactions": {
     "ariaLabel": "Reactions and comments",
