@@ -297,6 +297,58 @@ def build_personal_feed(
                         }
                     )
 
+        # Soft-identity branch: when no contributor_id is available but
+        # the viewer has a stored author_name (e.g. Mama, invited and
+        # pre-registered without a private key), surface voices and
+        # reactions she wrote under that name. Her corner no longer
+        # lies about being empty when she has spoken.
+        if author_name and not contributor_id:
+            an = author_name.strip()
+            if an:
+                v_rows = s.execute(
+                    select(ConceptVoiceRecord)
+                    .where(ConceptVoiceRecord.author_name == an)
+                    .order_by(ConceptVoiceRecord.created_at.desc())
+                    .limit(limit)
+                ).scalars().all()
+                for v in v_rows:
+                    items.append(
+                        {
+                            "entity_type": "concept",
+                            "entity_id": v.concept_id,
+                            "kind": "voice",
+                            "title": v.concept_id,
+                            "snippet": (v.body or "")[:200],
+                            "actor_name": v.author_name,
+                            "reason": "i_voiced",
+                            "reason_label": captions["i_voiced"],
+                            "created_at": _iso(v.created_at),
+                        }
+                    )
+                r_rows = s.execute(
+                    select(ReactionRecord)
+                    .where(
+                        ReactionRecord.author_name == an,
+                        ReactionRecord.comment.isnot(None),
+                    )
+                    .order_by(ReactionRecord.created_at.desc())
+                    .limit(limit)
+                ).scalars().all()
+                for r in r_rows:
+                    items.append(
+                        {
+                            "entity_type": r.entity_type,
+                            "entity_id": r.entity_id,
+                            "kind": "reaction",
+                            "title": r.entity_id,
+                            "snippet": (r.comment or r.emoji or "")[:200],
+                            "actor_name": r.author_name,
+                            "reason": "i_reacted",
+                            "reason_label": captions["i_reacted"],
+                            "created_at": _iso(r.created_at),
+                        }
+                    )
+
     # Dedup by (entity_type, entity_id, reason, actor_name, created_at)
     seen = set()
     unique: list[dict] = []
