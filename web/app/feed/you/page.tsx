@@ -8,6 +8,7 @@ import { PersonalFeed } from "@/components/PersonalFeed";
 import { InviteFriend } from "@/components/InviteFriend";
 import { SinceLastVisit } from "@/components/SinceLastVisit";
 import { KinActivity } from "@/components/KinActivity";
+import { MorningNudge } from "@/components/MorningNudge";
 
 /**
  * /feed/you — your corner of the organism.
@@ -59,6 +60,7 @@ export default async function PersonalFeedPage() {
       </header>
       <FeedTabs />
       <div className="mb-4 space-y-4">
+        <MorningNudge />
         <SinceLastVisit />
         <KinActivity />
       </div>

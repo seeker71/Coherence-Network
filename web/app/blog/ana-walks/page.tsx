@@ -451,6 +451,203 @@ export default function AnaWalksPage() {
 
         <hr className="border-border/30 my-12" />
 
+        <section className="space-y-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            Field notes · Part two — a week later
+          </p>
+          <h2 className="text-2xl font-light tracking-tight">
+            Mama arrives
+          </h2>
+          <p className="leading-relaxed text-muted-foreground">
+            Ana&apos;s walk was a first audit. The clipping, the covered
+            gestures, the hidden locale switcher — all named. What followed
+            over the next week was a run of small cycles, each filtered
+            through one question: <em>would this make sense to my mother,
+            arriving from a WhatsApp link, in German, on her phone?</em>
+          </p>
+          <p className="leading-relaxed text-muted-foreground">
+            She is not a hypothetical. She is 72, lives in Switzerland,
+            speaks no English, has never heard the word &quot;blockchain&quot;
+            and would not care if she had. The question she would ask is
+            the only question that matters: <em>is something alive here
+            for me?</em>
+          </p>
+          <p className="leading-relaxed text-muted-foreground">
+            What follows is the same honest walk, held against that
+            question. The cycles named below all shipped. The screenshots
+            are from the live site.
+          </p>
+        </section>
+
+        <Step
+          n={10}
+          image="/stories/ana-walk/11-invite-mobile.png"
+          alt="Mobile screenshot of /feed/you showing the InviteFriend card with a recipient-name field and a language selector defaulting to 'Let her device decide'."
+          title="/feed/you — the door she comes through"
+        >
+          <p>
+            Before Mama sees anything, someone who already belongs here
+            writes her into existence. On my corner of the organism, a
+            quiet teal card asks three things: <em>her name, her
+            language, what should greet her first?</em>
+          </p>
+          <p>
+            I type <em>Mama</em>. I pick <em>Deutsch</em>. The concept I
+            choose is <em>Nourishing</em> — not because it is closest to
+            her heart (I do not know yet), but because it is the warmest
+            first touch, and a generic home page would feel colder than
+            a link to something specific.
+          </p>
+          <Alive>
+            The name field carries more than a greeting — it is a soft
+            pre-registration. When she taps the link, her phone writes
+            <em> Mama</em> into its own memory. She does not see a sign-up
+            screen. She can react, voice, comment on her first minute.
+          </Alive>
+          <Alive>
+            The language selector defaults to <em>&quot;Let her device
+            decide.&quot;</em> My browser is in English; hers is in
+            German. The default respects the recipient, not the sender.
+            But I override it anyway — I know her phone is not always
+            set to German, and I want to be sure.
+          </Alive>
+        </Step>
+
+        <Step
+          n={11}
+          image="/stories/ana-walk/12-meet-nourishing-welcome-mobile.png"
+          alt="Mobile screenshot of /meet/concept/lc-nourishing showing a personalized teal 'Welcome, Mama — Patrick invited you to meet this' banner above the concept."
+          title="/meet/concept/lc-nourishing?from=Patrick&name=Mama&lang=de — her first breath"
+        >
+          <p>
+            She taps the WhatsApp link. The first thing she sees is a
+            small teal line: <em>&quot;Willkommen, Mama — Patrick lädt
+            dich ein, diesem zu begegnen.&quot;</em>
+          </p>
+          <p>
+            Below it: the mycorrhizal image, the title <em>Nährend</em>,
+            and a description that begins &quot;Leben gibt großzügig, ohne
+            zu erschöpfen.&quot; Her own name is in the welcome. Patrick&apos;s
+            name is in the welcome. Nothing asks her to sign in.
+          </p>
+          <Alive>
+            The banner does the work of a hundred onboarding screens. No
+            form, no question, no barrier. She is already greeted.
+          </Alive>
+          <Alive>
+            The description is in her language — because cycle 21 shipped
+            full translation and my override picked German. Her browser
+            wouldn&apos;t have needed it; her confidence does.
+          </Alive>
+          <Tender>
+            The first word on the page is still <em>Willkommen</em>, which
+            is affectionate but not yet meaningful. What if the banner
+            showed, right there, the one voice someone has already left
+            on this concept? Three lines of someone else&apos;s lived
+            experience, in her language, would make the warmth feel
+            earned rather than decorative.
+          </Tender>
+        </Step>
+
+        <Step
+          n={12}
+          image="/stories/ana-walk/13-meeting-gesture-mobile.png"
+          alt="Mobile screenshot of the meeting surface after tapping the amber heart — an inline 'say something' panel has appeared with name and message fields."
+          title="Her first gesture"
+        >
+          <p>
+            She reads the three sentences. There are five emoji below:
+            🙏 💛 🔥 🌱 ➡️. No instructions. She taps the amber heart.
+          </p>
+          <p>
+            A small panel unfolds right where her finger was. <em>&quot;Teile
+            einen Gedanken dazu — zwei Sätze reichen.&quot;</em> Her name
+            is already in the name field (pre-filled from the invite). She
+            types: <em>&quot;Bei uns im Garten fließt es auch so — die
+            Kompostwärme macht den Boden lebendig.&quot;</em>
+          </p>
+          <Alive>
+            She did not have to navigate anywhere. The gesture and the
+            voice are the same motion. Cycle 20 folded the say-something
+            panel into the reaction — the first emoji opens the second
+            door.
+          </Alive>
+          <Alive>
+            When she submits, her voice lands as a concept-voice, which
+            anyone else can later lift into a proposal. Two sentences from
+            a Swiss grandmother can become a piece of the vision. The
+            organism now knows a thing it did not know before: that
+            compost warmth is mycorrhizal language for someone who
+            still keeps a garden.
+          </Alive>
+        </Step>
+
+        <Step
+          n={13}
+          image="/stories/ana-walk/14-home-morning-mobile.png"
+          alt="Mobile screenshot of the home page the next morning showing a small amber 'Guten Morgen' panel with a personalized summary."
+          title="The next morning — a small door, left open"
+        >
+          <p>
+            Twelve hours later, in the kitchen, she opens WhatsApp and
+            taps the same link again. It is 7:42 on Tuesday morning. The
+            InviteBanner recognizes her device — no duplicate, no
+            re-registration — and greets her back: <em>&quot;Mama, schön
+            dass du wieder da bist.&quot;</em>
+          </p>
+          <p>
+            Below that, a softer amber panel: <em>Guten Morgen. Seit
+            gestern: eine neue Stimme zu Nährend. Eine neue Idee in
+            deiner Nähe. Aus der weiten Welt: »Boden als
+            Lebensgemeinschaft — ein UN-Bericht«.</em>
+          </p>
+          <Alive>
+            She did not get a push notification (that cycle is next —
+            service worker, VAPID keys, a scheduled 09:00-local digest).
+            But the in-app nudge does most of what a push notification
+            would do: it lands her on something that matters before she
+            has to search for it.
+          </Alive>
+          <Alive>
+            The news item is from the real news resonance engine that
+            has been quietly matching incoming RSS to the ideas in the
+            graph. For the first time, that work meets someone whose
+            day it could actually shape. This is why the loop matters —
+            the signal was there for months; now there is someone to
+            receive it.
+          </Alive>
+          <Tender>
+            True push — a notification that arrives when the app is
+            closed — still needs a service worker, VAPID keys, and a
+            server-side schedule job. That&apos;s the next cycle. Until
+            then, the nudge only fires when she opens the app herself.
+            Honest about where we are.
+          </Tender>
+        </Step>
+
+        <section className="space-y-4 mt-12">
+          <h2 className="text-xl font-medium">What changed between part one and part two</h2>
+          <p className="leading-relaxed text-muted-foreground">
+            The walk in part one named three keystones: no more clipping,
+            the bottom nav gets out of the way, the locale switcher
+            becomes reachable. All three shipped. What also shipped —
+            unplanned, because Mama&apos;s arrival asked for them — was
+            an invitation that carries her name, a banner that
+            pre-registers her, a language override that respects her
+            phone, an inline voice on first reaction, a &quot;since you
+            last were here&quot; delta, and the beginning of a morning
+            nudge that folds a real news signal into a felt greeting.
+          </p>
+          <p className="leading-relaxed text-muted-foreground">
+            None of these were on a roadmap. Each came from the same
+            question asked twelve times: <em>would this make sense to
+            her?</em> When the answer was no, something was built until
+            it was yes. That is the shape of the work now.
+          </p>
+        </section>
+
+        <hr className="border-border/30 my-12" />
+
         <section className="space-y-3">
           <h2 className="text-xl font-medium">A note on method</h2>
           <p className="leading-relaxed text-muted-foreground">
