@@ -160,7 +160,10 @@
     "recentVoices": "Suara terkini",
     "recentReactions": "Reaksi terkini",
     "goExplore": "Jalani jalan →",
-    "goPropose": "+ Usulkan sesuatu"
+    "goPropose": "+ Usulkan sesuatu",
+    "waitingHeading": "Konsep yang menanti ditemui",
+    "waitingLede": "Semua siap menyambut seorang pembaca. Sentuh untuk memulai.",
+    "walkAll": "Jalani seluruh visi →"
   },
   "explore": {
     "empty": "Belum ada yang baru untuk ditemui. Coba jalan lain.",
