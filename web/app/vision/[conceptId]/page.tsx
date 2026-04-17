@@ -24,6 +24,7 @@ import { ReaderPresence } from "./_components/ReaderPresence";
 import { WorldSignals } from "./_components/WorldSignals";
 import { EnergyContributors } from "./_components/EnergyContributors";
 import { ResonantAssets } from "./_components/ResonantAssets";
+import { ConceptVoices } from "./_components/ConceptVoices";
 
 export const dynamic = "force-dynamic";
 
@@ -221,6 +222,9 @@ export default async function VisionConceptPage({
             <div className="max-w-3xl">
               <WorldSignals conceptId={conceptId} />
             </div>
+
+            {/* Community voices — lived experience from those living it */}
+            <ConceptVoices conceptId={conceptId} />
 
             <div className="max-w-3xl space-y-4 pt-8">
               <ConnectedConcepts outgoing={outgoing} incoming={incoming} nameMap={nameMap} mode="full" />

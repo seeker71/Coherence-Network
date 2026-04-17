@@ -97,7 +97,18 @@
     "resonantAssetsIntro": "Cada expresión es una contribución única. La más resonante emerge a la superficie.",
     "needsNativeVoice": "Necesita una voz nativa — propón una mejor traducción",
     "pendingTranslation": "Aún no hay vista en este idioma — mostrando la vista ancla",
-    "staleAwaitingReattunement": "La vista ancla ha cambiado — esta vista espera una nueva sintonización"
+    "staleAwaitingReattunement": "La vista ancla ha cambiado — esta vista espera una nueva sintonización",
+    "voicesHeading": "Voces desde el campo",
+    "voicesLede": "Cómo vive este concepto en la práctica, contado por quienes lo viven.",
+    "voicesEmpty": "Aún no hay voces. La tuya sería la primera — un regalo para quien lea después.",
+    "voicesShareHeading": "Comparte tu voz",
+    "voicesAuthorPlaceholder": "Tu nombre o comunidad (p. ej. Ana de Ubud)",
+    "voicesBodyPlaceholder": "¿Cómo lo vives? ¿Qué has visto? Bastan dos frases.",
+    "voicesLocationPlaceholder": "Lugar (opcional)",
+    "voicesSubmit": "Ofrecer esta voz",
+    "voicesSubmitting": "Ofreciendo…",
+    "voicesThankYou": "Gracias — tu voz está aquí.",
+    "voicesLoading": "Escuchando voces…"
   },
   "locale": {
     "switcherLabel": "Idioma",
