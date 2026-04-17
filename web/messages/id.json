@@ -121,7 +121,16 @@
     "lede": "Apa yang hidup di jaringan saat ini — reaksi, suara, bibit baru.",
     "empty": "Arus sedang sunyi. Jadilah napas pertama.",
     "exploreVision": "Jelajahi visi",
-    "stepIn": "Masuk ke jaringan"
+    "stepIn": "Masuk ke jaringan",
+    "tabCollective": "Semua",
+    "tabPersonal": "Kamu",
+    "personalHeading": "Sudutmu",
+    "personalLede": "Suara yang kamu beri, reaksi yang kamu tawarkan, balasan yang kembali padamu, usulan yang kamu angkat.",
+    "personalEmpty": "Sudutmu menunggu. Tawarkan suara pada sesuatu yang hidup dan akan berkumpul di sini.",
+    "personalEmptyCta": "Temukan yang hidup",
+    "personalNoIdentity": "Belum ada nama di sini. Pilih satu dan sudutmu dimulai.",
+    "personalNoIdentityCta": "Masuk ke jaringan",
+    "personalLoading": "Mengumpulkan sudutmu…"
   },
   "explore": {
     "empty": "Belum ada yang baru untuk ditemui. Coba jalan lain.",
