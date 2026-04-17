@@ -184,6 +184,14 @@
     "propose": "Propose",
     "you": "You"
   },
+  "sinceLast": {
+    "eyebrow": "Since your last visit ({when} ago)",
+    "generic": "Something happened while you were away.",
+    "replies": "{n} replies to you",
+    "reactions": "{n} reactions on your voices",
+    "lifts": "{n} proposals lifted you supported",
+    "mentions": "{n} mentions"
+  },
   "me": {
     "stepIn": "Step in",
     "you": "You",
