@@ -8,8 +8,11 @@ Flow:
   3. Server stores the subscription in push_subscriptions table
   4. Server can send a push via send_push(contributor_id, body)
 
-VAPID keys live in ~/.coherence-network/keys.json or env vars so the
-private key is never in git.
+VAPID keys live in the mounted deployment config at
+`~/.coherence-network/config.json` under the `vapid` section — so the
+private key is never in git. Env vars (VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY
+/ VAPID_SUBJECT) are accepted as a fallback for local dev, but production
+reads the mounted config file (same place auth keys + DB URL live).
 """
 
 from __future__ import annotations
@@ -26,6 +29,7 @@ from pywebpush import WebPushException, webpush
 from sqlalchemy import DateTime, String, Text, select
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.config_loader import api_config
 from app.services import unified_db as _udb
 from app.services.unified_db import Base
 
@@ -76,38 +80,43 @@ _VAPID_CACHE: dict[str, str] | None = None
 
 
 def _load_vapid() -> dict[str, str]:
-    """Load VAPID keys from config. Prefer mounted keystore, fall back to
-    env vars. Returns {'public': <base64url>, 'private': <PEM>, 'subject': <mailto>}.
+    """Load VAPID keys from the mounted deployment config, with env-var
+    fallback for local dev.
 
-    Never logs the private key. Returns an empty dict if keys aren't set
-    so push endpoints can respond with a clear "not configured" error
-    rather than a traceback.
+    Returns {'public': <base64url>, 'private': <PEM>, 'subject': <mailto>}.
+
+    Never logs the private key. Returns a keys dict without public/private
+    when the server isn't configured, so push endpoints can respond with a
+    clear "not configured" error instead of a traceback.
     """
     global _VAPID_CACHE
     if _VAPID_CACHE is not None:
         return _VAPID_CACHE
 
     keys: dict[str, str] = {}
-    keystore_path = Path.home() / ".coherence-network" / "keys.json"
-    if keystore_path.exists():
-        try:
-            data = json.loads(keystore_path.read_text())
-            vp = data.get("vapid") or {}
-            if isinstance(vp, dict):
-                if vp.get("public"):
-                    keys["public"] = vp["public"]
-                if vp.get("private"):
-                    keys["private"] = vp["private"]
-                if vp.get("subject"):
-                    keys["subject"] = vp["subject"]
-        except Exception as e:
-            log.warning("vapid: keystore read failed: %s", type(e).__name__)
 
-    # Env-var overrides (allow the VPS to inject via docker compose)
-    if os.environ.get("VAPID_PUBLIC_KEY"):
+    # Preferred: mounted config overlay (same place auth + DB live).
+    # config.json shape:
+    #   "vapid": { "public": "...", "private": "-----BEGIN ...", "subject": "mailto:..." }
+    try:
+        cfg_public = api_config("vapid", "public")
+        cfg_private = api_config("vapid", "private")
+        cfg_subject = api_config("vapid", "subject")
+        if cfg_public:
+            keys["public"] = str(cfg_public)
+        if cfg_private:
+            # Tolerate escaped newlines if someone edited the JSON by hand
+            pem = str(cfg_private)
+            keys["private"] = pem.replace("\\n", "\n") if "\\n" in pem else pem
+        if cfg_subject:
+            keys["subject"] = str(cfg_subject)
+    except Exception as e:
+        log.warning("vapid: config read failed: %s", type(e).__name__)
+
+    # Env-var fallback (useful for local dev / test overrides only)
+    if not keys.get("public") and os.environ.get("VAPID_PUBLIC_KEY"):
         keys["public"] = os.environ["VAPID_PUBLIC_KEY"]
-    if os.environ.get("VAPID_PRIVATE_KEY"):
-        # Accept either a PEM (with \n literals) or a path to a PEM file
+    if not keys.get("private") and os.environ.get("VAPID_PRIVATE_KEY"):
         val = os.environ["VAPID_PRIVATE_KEY"]
         if val.strip().startswith("-----BEGIN"):
             keys["private"] = val.replace("\\n", "\n")
@@ -116,7 +125,7 @@ def _load_vapid() -> dict[str, str]:
                 keys["private"] = Path(val).read_text()
             except Exception:
                 pass
-    if os.environ.get("VAPID_SUBJECT"):
+    if not keys.get("subject") and os.environ.get("VAPID_SUBJECT"):
         keys["subject"] = os.environ["VAPID_SUBJECT"]
 
     if "subject" not in keys:
