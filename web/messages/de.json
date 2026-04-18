@@ -895,6 +895,10 @@
     "orientationReturn": "← Zurück zum Netz"
   },
   "home": {
+    "meetOneConceptEyebrow": "Begegne einem Begriff",
+    "walkInHint": "Geh die Geschichte. Reagieren willkommen.",
+    "walkInCta": "Eintreten",
+    "orSeeAllConcepts": "oder sieh alle 51 Begriffe der Lebendigen Gemeinschaft",
     "heroHeadline": "Welche Idee trägst du?",
     "heroLede": "Ein Muster, das du bemerkt hast. Eine Lücke, die geschlossen werden will. Ein besserer Weg. Teile sie – irgendwo wartet jemand genau darauf.",
     "statIdeasAlive": "lebendige Ideen",
