@@ -1,36 +1,46 @@
 "use client";
 
 /**
- * EnablePush — the small warm affordance that invites a visitor to let
- * the organism speak back when the app is closed.
+ * EnablePush — a small affordance that frames push notifications as
+ * "on by default, turn them off anytime."
  *
- * Flow on tap:
- *   1. Register /sw.js as a service worker
- *   2. Fetch the VAPID public key from the API
- *   3. Call pushManager.subscribe() with that key
- *   4. POST the resulting PushSubscription to /api/push/subscribe
- *      along with the viewer's contributor_id and fingerprint
- *   5. Flip to "subscribed" state — future pushes land on her device
+ * Default posture is ON, not opt-in. The reasoning:
+ *   · A visitor who reaches /feed/you has already chosen their corner.
+ *     The organism speaking back is part of that corner, not a separate
+ *     consent mechanism.
+ *   · Browsers won't let us auto-prompt for permission (anti-abuse), so
+ *     the first tap still has to confirm. But everything *after* that
+ *     first confirmation stays on without a single follow-up tap, until
+ *     the visitor turns it off.
  *
- * Iron-cast gating: only renders when the browser actually supports
- * service workers + push. iOS requires the site be added to the home
- * screen first (PWA install), so on iOS we show a short instruction
- * instead of a broken button.
+ * State machine:
+ *   loading      — determining browser support + current state
+ *   unsupported  — this browser can't do web push (rendered as null)
+ *   ios-install  — iOS Safari: must add to home screen first
+ *   on           — permission granted + subscription on file
+ *   off          — no subscription (default-deny, or toggled off)
+ *   working      — in-flight transition (subscribing or unsubscribing)
+ *   error        — show the error so we can debug
+ *
+ * Auto-on optimization: on mount, if Notification.permission is already
+ * "granted" but no subscription exists locally, silently subscribe. This
+ * is true "on by default" for visitors who've granted permission before
+ * (even from a different page/visit) — they get a working subscription
+ * with zero taps.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getApiBase } from "@/lib/api";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { ensureFingerprint, readIdentity } from "@/lib/identity";
 
 type State =
-  | "loading"        // determining browser support + current state
-  | "unsupported"    // this browser can't do web push
-  | "ios-install"    // iOS Safari: must install PWA first
-  | "ready"          // supported, not yet subscribed
-  | "subscribing"    // in-flight
-  | "subscribed"     // done
-  | "denied"         // user said no to notification permission
+  | "loading"
+  | "unsupported"
+  | "ios-install"
+  | "on"
+  | "off"
+  | "working"
   | "error";
 
 function urlB64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
@@ -65,6 +75,80 @@ export function EnablePush() {
   const locale = useLocale();
   const [state, setState] = useState<State>("loading");
   const [error, setError] = useState<string | null>(null);
+  // Prevent the auto-subscribe pass from racing a manual click
+  const autoSubAttempted = useRef(false);
+
+  /**
+   * Subscribe flow. Returns true when a subscription is on file at the
+   * end (either freshly created or already there).
+   *
+   * If `silent`, we won't call requestPermission() — only proceed when
+   * permission is already granted. This is what the auto-on path uses
+   * to avoid surprising the visitor with a prompt at page load.
+   */
+  async function doSubscribe(opts: { silent: boolean }): Promise<boolean> {
+    const base = getApiBase();
+    const keyRes = await fetch(`${base}/api/push/vapid-public-key`);
+    if (!keyRes.ok) throw new Error(`vapid key endpoint: ${keyRes.status}`);
+    const { public_key } = await keyRes.json();
+    if (!public_key) throw new Error("no public key");
+
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+
+    if (Notification.permission !== "granted") {
+      if (opts.silent) return false;
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") return false;
+    }
+
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlB64ToUint8Array(public_key),
+    });
+
+    const { contributorId, fingerprint } = readIdentity();
+    const fp = fingerprint || ensureFingerprint();
+
+    const subRes = await fetch(`${base}/api/push/subscribe`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subscription: sub.toJSON(),
+        contributor_id: contributorId || undefined,
+        fingerprint: fp,
+        user_agent: navigator.userAgent,
+        locale,
+      }),
+    });
+    if (!subRes.ok) throw new Error(`subscribe endpoint: ${subRes.status}`);
+    return true;
+  }
+
+  /**
+   * Unsubscribe flow. Removes the local PushSubscription and tells the
+   * server to drop the row. Idempotent — safe even if either side is
+   * already cleared.
+   */
+  async function doUnsubscribe(): Promise<void> {
+    const base = getApiBase();
+    const reg = await navigator.serviceWorker.getRegistration("/sw.js");
+    if (!reg) return;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) {
+      const endpoint = existing.endpoint;
+      try {
+        await existing.unsubscribe();
+      } catch {
+        // browser-side failure shouldn't block server-side cleanup
+      }
+      await fetch(`${base}/api/push/unsubscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint }),
+      }).catch(() => undefined);
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -78,135 +162,149 @@ export function EnablePush() {
           }
           return;
         }
-        // On iOS, push only works if the site is installed to home screen
         if (isIosSafari() && !isStandalone()) {
           setState("ios-install");
           return;
         }
+
         const reg = await navigator.serviceWorker.register("/sw.js");
         const existing = await reg.pushManager.getSubscription();
         if (existing) {
-          setState("subscribed");
+          setState("on");
           return;
         }
-        if (Notification.permission === "denied") {
-          setState("denied");
-          return;
+
+        // Auto-on path: if permission is already granted, subscribe
+        // silently — the visitor never has to tap.
+        if (Notification.permission === "granted" && !autoSubAttempted.current) {
+          autoSubAttempted.current = true;
+          try {
+            const ok = await doSubscribe({ silent: true });
+            setState(ok ? "on" : "off");
+            return;
+          } catch (e) {
+            // Non-fatal; fall through to render the manual toggle
+            console.warn("auto-subscribe failed:", e);
+          }
         }
-        setState("ready");
+        setState("off");
       } catch (e) {
         setError(String(e));
         setState("error");
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function subscribe() {
-    setState("subscribing");
-    setError(null);
-    try {
-      const base = getApiBase();
-      const keyRes = await fetch(`${base}/api/push/vapid-public-key`);
-      if (!keyRes.ok) {
-        throw new Error(`vapid key endpoint: ${keyRes.status}`);
+  async function handleToggle() {
+    if (state === "working") return;
+    if (state === "on") {
+      setState("working");
+      setError(null);
+      try {
+        await doUnsubscribe();
+        setState("off");
+      } catch (e) {
+        setError(String(e));
+        setState("error");
       }
-      const { public_key } = await keyRes.json();
-      if (!public_key) throw new Error("no public key");
-
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setState(permission === "denied" ? "denied" : "ready");
-        return;
+      return;
+    }
+    if (state === "off") {
+      setState("working");
+      setError(null);
+      try {
+        const ok = await doSubscribe({ silent: false });
+        setState(ok ? "on" : "off");
+      } catch (e) {
+        setError(String(e));
+        setState("error");
       }
-
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlB64ToUint8Array(public_key),
-      });
-
-      const { contributorId, fingerprint } = readIdentity();
-      const fp = fingerprint || ensureFingerprint();
-
-      const subRes = await fetch(`${base}/api/push/subscribe`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subscription: sub.toJSON(),
-          contributor_id: contributorId || undefined,
-          fingerprint: fp,
-          user_agent: navigator.userAgent,
-          locale,
-        }),
-      });
-      if (!subRes.ok) {
-        throw new Error(`subscribe endpoint: ${subRes.status}`);
-      }
-      setState("subscribed");
-    } catch (e) {
-      setError(String(e));
-      setState("error");
+      return;
     }
   }
 
   if (state === "loading" || state === "unsupported") return null;
 
-  // One small container — warm, present, not insistent.
+  // The iOS install nudge stays a card — there's nothing to toggle yet.
+  if (state === "ios-install") {
+    return (
+      <section
+        className="max-w-3xl mx-3 sm:mx-auto mt-3 px-5 py-4 rounded-2xl border border-[hsl(var(--primary)/0.25)] bg-card"
+        aria-label={t("enablePush.ariaLabel")}
+      >
+        <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-[hsl(var(--primary))] mb-1.5">
+          {t("enablePush.eyebrow")}
+        </p>
+        <p className="text-base font-light text-foreground leading-snug mb-2">
+          {t("enablePush.iosHeading")}
+        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          {t("enablePush.iosLede")}
+        </p>
+      </section>
+    );
+  }
+
+  const isOn = state === "on";
+  const isWorking = state === "working";
+  // Toggle defaults to ON visually unless we know we're off or errored.
+  // (loading already returned null above.)
+  const visuallyOn = isOn || isWorking;
+
   return (
     <section
       className="max-w-3xl mx-3 sm:mx-auto mt-3 px-5 py-4 rounded-2xl border border-[hsl(var(--primary)/0.25)] bg-card"
       aria-label={t("enablePush.ariaLabel")}
     >
-      <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-[hsl(var(--primary))] mb-1.5">
-        {t("enablePush.eyebrow")}
-      </p>
-      {state === "ready" && (
-        <>
-          <p className="text-base font-light text-foreground leading-snug mb-3">
-            {t("enablePush.heading")}
+      <div className="flex items-start gap-4">
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-[hsl(var(--primary))] mb-1.5">
+            {t("enablePush.eyebrow")}
           </p>
-          <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-            {t("enablePush.lede")}
-          </p>
-          <button
-            type="button"
-            onClick={subscribe}
-            className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium transition-opacity"
-          >
-            {t("enablePush.cta")}
-          </button>
-        </>
-      )}
-      {state === "subscribing" && (
-        <p className="text-sm text-muted-foreground">{t("enablePush.subscribing")}</p>
-      )}
-      {state === "subscribed" && (
-        <p className="text-sm text-foreground">
-          <span className="text-lg mr-1.5" aria-hidden="true">✓</span>
-          {t("enablePush.subscribed")}
-        </p>
-      )}
-      {state === "ios-install" && (
-        <>
-          <p className="text-base font-light text-foreground leading-snug mb-2">
-            {t("enablePush.iosHeading")}
+          <p className="text-base font-light text-foreground leading-snug mb-1">
+            {isOn
+              ? t("enablePush.onHeading")
+              : t("enablePush.offHeading")}
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            {t("enablePush.iosLede")}
+            {isOn
+              ? t("enablePush.onLede")
+              : t("enablePush.offLede")}
           </p>
-        </>
-      )}
-      {state === "denied" && (
-        <p className="text-sm text-muted-foreground">{t("enablePush.denied")}</p>
-      )}
-      {state === "error" && (
-        <p className="text-sm text-muted-foreground">
-          {t("enablePush.error")}
-          {error && <span className="block mt-1 text-xs opacity-60">{error}</span>}
-        </p>
-      )}
+          {state === "error" && error && (
+            <p className="mt-2 text-xs text-muted-foreground opacity-70">
+              {t("enablePush.error")}
+              <span className="block mt-1 opacity-60">{error}</span>
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={visuallyOn}
+          aria-label={
+            isOn ? t("enablePush.toggleOffAria") : t("enablePush.toggleOnAria")
+          }
+          onClick={handleToggle}
+          disabled={isWorking}
+          className={[
+            "relative inline-flex shrink-0 items-center h-7 w-12 rounded-full transition-colors",
+            visuallyOn
+              ? "bg-[hsl(var(--primary))]"
+              : "bg-muted border border-border",
+            isWorking ? "opacity-60" : "",
+          ].join(" ")}
+        >
+          <span
+            className={[
+              "inline-block h-5 w-5 rounded-full bg-white shadow transition-transform",
+              visuallyOn ? "translate-x-6" : "translate-x-1",
+            ].join(" ")}
+            aria-hidden="true"
+          />
+        </button>
+      </div>
     </section>
   );
 }
