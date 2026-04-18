@@ -194,13 +194,30 @@ export default async function VisionConceptPage({
           <span className="text-stone-300">{concept.name}</span>
         </nav>
 
-        {/* Title + level */}
+        {/* Title + level.
+            When a concept has a visual, the title sits on top of the
+            hero image (with a dark gradient overlay), so it needs
+            light text regardless of the visitor's theme preference.
+            When there is no visual, the title sits on the page
+            background, so it uses theme-aware foreground. */}
         <div className="mb-6 space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-4xl md:text-5xl font-extralight tracking-tight text-foreground">{concept.name}</h1>
+            <h1
+              className={`text-4xl md:text-5xl font-extralight tracking-tight ${
+                visual ? "text-white" : "text-foreground"
+              }`}
+            >
+              {concept.name}
+            </h1>
             <LevelBadge level={concept.level} />
           </div>
-          <p className="text-lg md:text-xl text-foreground/85 font-light leading-relaxed max-w-3xl">{concept.description}</p>
+          <p
+            className={`text-lg md:text-xl font-light leading-relaxed max-w-3xl ${
+              visual ? "text-stone-200" : "text-foreground/85"
+            }`}
+          >
+            {concept.description}
+          </p>
           <ReaderPresence conceptId={conceptId} />
         </div>
 
