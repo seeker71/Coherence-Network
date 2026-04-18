@@ -236,6 +236,19 @@
     "welcomeBackNamed": "{name}, welcome back. Here's what's stirring for you.",
     "dismiss": "Dismiss"
   },
+  "enablePush": {
+    "ariaLabel": "Morning notifications",
+    "eyebrow": "A gentle door",
+    "heading": "Let the organism speak back.",
+    "lede": "One quiet note in the morning when a voice arrives on something you touched, or a heart lands on what you said. You can turn it off any time.",
+    "cta": "Receive morning notes",
+    "subscribing": "Asking your device…",
+    "subscribed": "Your device is ready. A note will find you when something alive is waiting.",
+    "iosHeading": "Add this to your home screen first",
+    "iosLede": "On iPhone, morning notifications need the app installed. Tap the share icon below, then 'Add to Home Screen', then open it from there.",
+    "denied": "Your device is declining notifications. Enable them in Settings → Notifications → Safari to receive morning notes.",
+    "error": "Something prevented the subscription from landing. Try again in a moment."
+  },
   "people": {
     "eyebrow": "A corner of the organism",
     "voicesHeading": "Voices she has given",

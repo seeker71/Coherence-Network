@@ -9,6 +9,7 @@ import { InviteFriend } from "@/components/InviteFriend";
 import { SinceLastVisit } from "@/components/SinceLastVisit";
 import { KinActivity } from "@/components/KinActivity";
 import { MorningNudge } from "@/components/MorningNudge";
+import { EnablePush } from "@/components/EnablePush";
 
 /**
  * /feed/you — your corner of the organism.
@@ -61,6 +62,7 @@ export default async function PersonalFeedPage() {
       <FeedTabs />
       <div className="mb-4 space-y-4">
         <MorningNudge />
+        <EnablePush />
         <SinceLastVisit />
         <KinActivity />
       </div>

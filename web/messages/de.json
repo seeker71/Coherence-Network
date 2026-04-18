@@ -236,6 +236,19 @@
     "welcomeBackNamed": "{name}, schön dass du wieder da bist. Hier ist, was für dich geschieht.",
     "dismiss": "Schließen"
   },
+  "enablePush": {
+    "ariaLabel": "Morgen-Benachrichtigungen",
+    "eyebrow": "Eine sanfte Tür",
+    "heading": "Lass den Organismus zurücksprechen.",
+    "lede": "Eine stille Nachricht am Morgen, wenn eine Stimme zu etwas kommt, das du berührt hast, oder ein Herz auf dem landet, was du gesagt hast. Du kannst es jederzeit ausschalten.",
+    "cta": "Morgennachrichten empfangen",
+    "subscribing": "Frage dein Gerät …",
+    "subscribed": "Dein Gerät ist bereit. Eine Nachricht findet dich, wenn etwas Lebendiges auf dich wartet.",
+    "iosHeading": "Füge das erst zum Startbildschirm hinzu",
+    "iosLede": "Auf dem iPhone brauchen Morgennachrichten eine installierte App. Tippe auf das Teilen-Symbol unten, dann „Zum Home-Bildschirm hinzufügen“, und öffne sie von dort.",
+    "denied": "Dein Gerät lehnt Benachrichtigungen ab. Aktiviere sie in Einstellungen → Mitteilungen → Safari, um Morgennachrichten zu empfangen.",
+    "error": "Etwas hat das Abonnement aufgehalten. Versuch es gleich noch einmal."
+  },
   "people": {
     "eyebrow": "Eine Ecke des Organismus",
     "voicesHeading": "Stimmen, die sie gegeben hat",

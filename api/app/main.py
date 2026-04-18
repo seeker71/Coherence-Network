@@ -76,6 +76,7 @@ from app.routers import onboarding as onboarding_router
 from app.routers import openclaw_node_bridge
 from app.routers import pipeline
 from app.routers import pipeline_policies
+from app.routers import push as push_router
 from app.routers import ui_preferences as ui_preferences_router
 from app.routers import memberships as memberships_router
 from app.routers import activity as activity_router
@@ -716,6 +717,7 @@ app.include_router(treasury.router, prefix="/api", tags=["treasury"])
 app.include_router(provider_stats.router)
 app.include_router(pipeline.router, prefix="/api", tags=["pipeline"])
 app.include_router(pipeline_policies.router, prefix="/api", tags=["pipeline"])
+app.include_router(push_router.router, prefix="/api", tags=["push"])
 app.include_router(service_registry_router.router, prefix="/api", tags=["services"])
 app.include_router(cc_economics_router.router, prefix="/api", tags=["cc-economics"])
 app.include_router(cc_exchange_router.router, prefix="/api", tags=["cc-exchange"])
