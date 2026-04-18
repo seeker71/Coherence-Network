@@ -27,7 +27,10 @@ export type InspiredByNode = {
   image_url?: string | null;
   provider?: string;
   tagline?: string;
-  claimable?: boolean;
+  /** False on placeholder nodes minted by the resolver; undefined or
+   *  true on living contributors. The card surfaces this as a soft
+   *  "unclaimed" tag. */
+  claimed?: boolean;
   presences?: Presence[];
 };
 
@@ -47,7 +50,7 @@ export type InspiredByListResponse = {
 
 export const TYPE_LABEL: Record<string, string> = {
   contributor: "Person",
-  community: "Community / Place",
+  community: "Community",
   "network-org": "Project",
   asset: "Work",
 };
@@ -174,9 +177,12 @@ export function InspiredByCard({ item, onRemove, highlightShared }: CardProps) {
                 visit →
               </a>
             )}
-            {item.node.claimable && (
-              <span className="text-[10px] text-muted-foreground/70 italic">
-                claimable
+            {item.node.claimed === false && (
+              <span
+                className="text-[10px] text-muted-foreground/70 italic"
+                title="Placeholder held open for the real person to claim"
+              >
+                unclaimed
               </span>
             )}
           </div>

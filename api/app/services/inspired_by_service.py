@@ -54,8 +54,8 @@ HOST_HINTS: list[tuple[str, str, str]] = [
     ("patreon.com", "contributor", "patreon"),
     ("instagram.com", "contributor", "instagram"),
     ("tiktok.com", "contributor", "tiktok"),
-    ("twitter.com", "contributor", "twitter"),
-    ("x.com", "contributor", "twitter"),
+    ("twitter.com", "contributor", "x"),
+    ("x.com", "contributor", "x"),
     ("eventbrite.com", "community", "eventbrite"),
     ("eventbrite.co.uk", "community", "eventbrite"),
     ("songkick.com", "community", "songkick"),
@@ -76,8 +76,8 @@ PRESENCE_PROVIDERS: list[tuple[str, str]] = [
     ("patreon.com", "patreon"),
     ("instagram.com", "instagram"),
     ("tiktok.com", "tiktok"),
-    ("twitter.com", "twitter"),
-    ("x.com", "twitter"),
+    ("twitter.com", "x"),
+    ("x.com", "x"),
     ("facebook.com", "facebook"),
     ("linktr.ee", "linktree"),
     ("wikipedia.org", "wikipedia"),
@@ -115,7 +115,6 @@ class ResolvedIdentity:
     image_url: str | None = None
     presences: list[Presence] = field(default_factory=list)
     creations: list[Creation] = field(default_factory=list)
-    raw_metadata: dict[str, Any] = field(default_factory=dict)
 
     def node_id(self) -> str:
         digest = hashlib.sha256(self.canonical_url.encode("utf-8")).hexdigest()[:12]
@@ -487,7 +486,6 @@ def resolve(input_text: str) -> ResolvedIdentity | None:
         image_url=image,
         presences=presences,
         creations=creations,
-        raw_metadata={"og": parsed.og, "title": parsed.title},
     )
 
 
@@ -606,11 +604,10 @@ def import_inspired_by(
         identity_created = False
     else:
         identity_id = resolved.node_id()
-        # Claimed is the signal of life. A claimable placeholder is a
-        # door held open for the real person; a claimed node is someone
-        # who walked through it. Until someone does, both flags stay
-        # honest so the directory can distinguish the living from the
-        # waiting.
+        # ``claimed`` is the single signal of life. A placeholder minted
+        # by the resolver starts unclaimed; the real person walks in and
+        # flips it. The edge and the canonical_url carry the rest —
+        # provenance doesn't need a second copy on the node.
         properties: dict[str, Any] = {
             "tagline": resolved.description,
             "canonical_url": resolved.canonical_url,
@@ -620,10 +617,7 @@ def import_inspired_by(
             "presences": [
                 {"provider": p.provider, "url": p.url} for p in resolved.presences
             ],
-            "claimable": True,
             "claimed": False,
-            "imported_by": source_contributor_id,
-            "import_input": resolved.input,
         }
         # Only contributors that *actually* represent a human carry the
         # HUMAN contributor_type + placeholder email. A festival or a
@@ -650,14 +644,7 @@ def import_inspired_by(
         from_id=source_contributor_id,
         to_id=identity_id,
         type="inspired-by",
-        properties={
-            "input": resolved.input,
-            "weight_signals": {
-                "presences": len(resolved.presences),
-                "creations": len(resolved.creations),
-                "canonical": resolved.provider,
-            },
-        },
+        properties={"input": resolved.input},
         strength=weight,
         created_by="inspired_by_resolver",
     )

@@ -100,16 +100,16 @@ async def test_name_resolves_to_identity_with_presences_and_creations():
         assert r.status_code == 201, r.text
         body = r.json()
 
-        # Identity — placeholder carries explicit claim signals so the
-        # contributors directory can render it distinctly until the real
-        # person walks in.
+        # Identity — placeholder carries the single claim signal so the
+        # contributors directory can render the waiting distinctly from
+        # the walked-in.
         identity = body["identity"]
         assert identity["type"] == "contributor"
         assert identity["name"] == "Liquid Bloom"
         assert identity["canonical_url"] == "https://liquidbloom.bandcamp.com"
         assert identity["provider"] == "bandcamp"
-        assert identity["claimable"] is True
         assert identity["claimed"] is False
+        assert "claimable" not in identity  # one signal, not two
 
         # Presences — same-provider links (liquidbloom.bandcamp.com) excluded;
         # cross-provider socials kept.

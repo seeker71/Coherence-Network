@@ -107,17 +107,11 @@ def _node_to_contributor(node: dict) -> Contributor:
         contrib_type = ContributorType(raw_type)
     except ValueError:
         contrib_type = ContributorType.SYSTEM
-    # Claim + canonical_url default to the "living contributor" shape
-    # (claimed=True, no canonical_url). A placeholder minted by the
-    # inspired-by resolver carries claimed=False + canonical_url, so
-    # the directory can render the waiting ones distinctly.
-    claimed_raw = node.get("claimed")
-    if claimed_raw is None:
-        # Anything without the explicit claim signal is a real
-        # self-registered contributor — treat as claimed.
-        claimed = not bool(node.get("claimable", False))
-    else:
-        claimed = bool(claimed_raw)
+    # ``claimed`` defaults to True for living contributors — only
+    # placeholder identities minted by the inspired-by resolver carry
+    # ``claimed: False``. The directory uses this to render the waiting
+    # distinctly from the walked-in.
+    claimed = bool(node.get("claimed", True))
     return Contributor(
         id=cid,
         name=node.get("name", ""),
