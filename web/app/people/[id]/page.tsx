@@ -182,11 +182,11 @@ export default async function PersonPage({
           <h1 className="text-2xl md:text-3xl font-light tracking-tight text-foreground">
             {name}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1.5">
-            {t("people.tagline")
-              .replace("{voices}", String(voices.length))
-              .replace("{warmth}", String(warmth.length))}
-          </p>
+          {/* No tagline. The sections below carry the substance —
+              her actual voices, the actual warmth she has received.
+              A one-line summary at the top would be scorekeeping
+              translated into template sentences; the specifics below
+              are the only honest reflection of who she is. */}
         </div>
       </Panel>
 
