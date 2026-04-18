@@ -72,6 +72,23 @@ async def subscribe(body: SubscriptionIn) -> dict:
     return {"ok": True, "subscription_id": rec["id"]}
 
 
+class UnsubscribeIn(BaseModel):
+    endpoint: str = Field(..., description="The browser's PushSubscription.endpoint URL")
+
+
+@router.post(
+    "/push/unsubscribe",
+    summary="Forget a browser's push subscription (called when the user toggles off)",
+)
+async def unsubscribe(body: UnsubscribeIn) -> dict:
+    """Remove the subscription for the given endpoint. Idempotent —
+    returns ok even if the row was already gone, since the user's
+    intent ("don't push me") doesn't depend on the row's current state.
+    """
+    removed = push_svc.remove_subscription(endpoint=body.endpoint)
+    return {"ok": True, "removed": removed}
+
+
 @router.post(
     "/push/send",
     summary="Trigger a push to a contributor or device (admin-only)",

@@ -203,6 +203,27 @@ def _to_dict(rec: PushSubscriptionRecord) -> dict:
     }
 
 
+def remove_subscription(*, endpoint: str) -> bool:
+    """Drop a single browser's push subscription by its endpoint.
+
+    Returns True if a row was deleted, False if no match. The endpoint
+    is the natural key the browser also sends to /api/push/subscribe,
+    so the client always knows what to ask the server to forget.
+    """
+    if not endpoint:
+        return False
+    _ensure_schema()
+    with _session() as s:
+        rec = s.execute(
+            select(PushSubscriptionRecord).where(PushSubscriptionRecord.endpoint == endpoint)
+        ).scalar_one_or_none()
+        if not rec:
+            return False
+        s.delete(rec)
+        s.commit()
+        return True
+
+
 def subscriptions_for(
     contributor_id: Optional[str] = None,
     fingerprint: Optional[str] = None,

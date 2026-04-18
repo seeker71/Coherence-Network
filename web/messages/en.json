@@ -239,15 +239,15 @@
   "enablePush": {
     "ariaLabel": "Morning notifications",
     "eyebrow": "A gentle door",
-    "heading": "Let the organism speak back.",
-    "lede": "One quiet note in the morning when a voice arrives on something you touched, or a heart lands on what you said. You can turn it off any time.",
-    "cta": "Receive morning notes",
-    "subscribing": "Asking your device…",
-    "subscribed": "Your device is ready. A note will find you when something alive is waiting.",
+    "onHeading": "Morning notes are on.",
+    "onLede": "A quiet note will find you when a voice arrives on something you touched, or a heart lands on what you said. Turn off any time.",
+    "offHeading": "Morning notes are off.",
+    "offLede": "Turn on to receive a quiet note when a voice arrives on something you touched, or a heart lands on what you said.",
+    "toggleOnAria": "Turn morning notes on",
+    "toggleOffAria": "Turn morning notes off",
     "iosHeading": "Add this to your home screen first",
     "iosLede": "On iPhone, morning notifications need the app installed. Tap the share icon below, then 'Add to Home Screen', then open it from there.",
-    "denied": "Your device is declining notifications. Enable them in Settings → Notifications → Safari to receive morning notes.",
-    "error": "Something prevented the subscription from landing. Try again in a moment."
+    "error": "Something prevented the change from landing. Try again in a moment."
   },
   "people": {
     "eyebrow": "A corner of the organism",
