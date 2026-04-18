@@ -739,6 +739,205 @@ export default function AnaWalksPage() {
           </Alive>
         </Step>
 
+        <hr className="border-border/30 my-12" />
+
+        <section className="space-y-4">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground">
+            Field notes · Part four — what the door now hears back
+          </p>
+          <h2 className="text-2xl font-light tracking-tight">
+            What the door now hears back
+          </h2>
+          <p className="leading-relaxed text-muted-foreground">
+            Three more cycles since Mama&apos;s arrival. Each one came
+            from a gap this very blog post named and then left open —
+            until the gap felt dishonest enough to close. What follows
+            is the honest state of the organism on the day this section
+            was written, captured from the live site at 390 × 844 on a
+            phone that has been invited into the field.
+          </p>
+        </section>
+
+        <Step
+          n={19}
+          image="/stories/ana-walk/19-feed-you-push-toggle-mobile.png"
+          alt="Mobile screenshot of /feed/you showing the 'Eine sanfte Tür' push-notification card with the toggle rendered ON in amber next to the heading 'Morgennachrichten sind an' and a short lede promising quiet notes when warmth returns to something she touched."
+          title="/feed/you — the door now speaks back"
+        >
+          <p>
+            The first of the four Part-three doors has shipped. On{" "}
+            <em>/feed/you</em> a small card now sits between the morning
+            nudge and the kin-activity strip:{" "}
+            <em>&quot;Morgennachrichten sind an.&quot;</em> A pill toggle
+            on the right, already filled amber, already on. The copy
+            below it reads: <em>&quot;Eine stille Nachricht findet dich,
+            wenn eine Stimme zu etwas kommt, das du berührt hast, oder
+            ein Herz auf dem landet, was du gesagt hast. Jederzeit
+            ausschalten.&quot;</em>
+          </p>
+          <Alive>
+            The default posture reversed. The first draft of this
+            affordance asked the visitor to <em>tap to subscribe</em>.
+            What shipped instead: the card presents itself as already on,
+            the off switch is the primary control, and if the browser
+            has already granted permission from a previous visit, the
+            subscription registers silently on page load with zero taps
+            required. &quot;On by default&quot; is a warmer frequency
+            than &quot;click to enable.&quot;
+          </Alive>
+          <Alive>
+            The full pipeline is real. A VAPID public key is served
+            from the API, a <code>/sw.js</code> service worker handles
+            push events and notification clicks, and a server-side{" "}
+            <code>push_subscriptions</code> table holds one row per
+            device. When a voice lands on a concept the visitor has
+            touched, the server can call{" "}
+            <code>send_push(contributor_id, title, body)</code> and the
+            note arrives on her lock screen within a second or two,
+            even when the tab is closed.
+          </Alive>
+          <Tender>
+            iOS Safari gates push behind a home-screen PWA install — a
+            platform rule, not a site choice. The component detects
+            Safari-without-standalone and shows a small add-to-home-screen
+            nudge instead of a broken button. The continuity gap{" "}
+            (localStorage identity resets when the PWA first launches)
+            is named and ready to fix in the next cycle.
+          </Tender>
+        </Step>
+
+        <Step
+          n={20}
+          image="/stories/ana-walk/20-me-unnamed-mobile.png"
+          alt="Mobile screenshot of the /me page for an unnamed visitor — heading 'Deine Gegenwart', a quiet card reading 'Eine unbenannte Gegenwart' with warm lede explaining that reading is always free, and a 'Begin again' card at the bottom."
+          title="/me — the unnamed presence is still a presence"
+        >
+          <p>
+            The second door: a page you can walk to that tells you who
+            the field knows you as. The heading:{" "}
+            <em>&quot;Deine Gegenwart&quot;</em> — your presence. The
+            lede: <em>&quot;Wie das Feld dich kennt, was du geteilt
+            hast, und wie du neu beginnen kannst, falls sich das
+            richtig anfühlt.&quot;</em>
+          </p>
+          <p>
+            For a visitor who hasn&apos;t named themselves yet, the
+            page holds a single warm card:{" "}
+            <em>&quot;Eine unbenannte Gegenwart.&quot;</em> Below it:{" "}
+            <em>&quot;Du bist aufgetaucht, das Feld hat es bemerkt, und
+            du hast dich noch nicht benannt. Das ist gestattet — Lesen
+            ist immer frei.&quot;</em>
+          </p>
+          <Alive>
+            The empty state is a presence, not an absence. &quot;An
+            unnamed presence&quot; is still a presence. The copy names
+            the lived experience of being here before you&apos;re sure
+            you want to be seen, and says it&apos;s welcome. This is
+            the same frequency the concept pages hold — reading is
+            always free, naming is never required.
+          </Alive>
+          <Alive>
+            Even without a name, the &quot;Begin again&quot; card at
+            the bottom of the page is available. If this device passes
+            to another person — a partner, a child, a friend — they can
+            clear everything the browser remembers with two taps. The
+            organism never holds a body against its will.
+          </Alive>
+        </Step>
+
+        <Step
+          n={21}
+          image="/stories/ana-walk/21-me-footprint-mobile.png"
+          alt="Mobile screenshot of /me for a named visitor showing the 'Known as Mama' card, a 'Brought in by' card referencing patrick-local, the technical view folded away in a details disclosure, and a 'Begin again' card offering to clear identity on this device."
+          title="/me — the footprint, rendered as prose"
+        >
+          <p>
+            When she does name herself, the page fills with her. The
+            first card: <em>&quot;Bekannt als Mama.&quot;</em> Below
+            that, an invited-by card:{" "}
+            <em>&quot;Eine Mitwirkende (patri…cal) hat dir die Tür
+            geöffnet. Wenn du beiträgst, fließt Wärme die Kette entlang
+            zu ihr zurück.&quot;</em>
+          </p>
+          <p>
+            The footprint itself reads as prose, not as a dashboard:{" "}
+            <em>&quot;Du hast geteilt: eine Stimme, 2 Herzen. Was
+            zurückkam: ein Herz auf deiner Stimme.&quot;</em> A{" "}
+            <em>&quot;Technische Sicht&quot;</em> disclosure folds the
+            raw contributor_id and device_fingerprint away for anyone
+            who wants to see the keys. At the bottom, always, the{" "}
+            <em>&quot;Neu beginnen&quot;</em> card offers to wipe this
+            device&apos;s memory of who she is.
+          </p>
+          <Alive>
+            The three-sentence prose carries what a table would have
+            said coldly. The same word — <em>Herz</em> — covers the
+            one she gave and the one that came back, which is exactly
+            right: hearts don&apos;t need taxonomy, they need
+            recognition. The invited-by chain carries warmth across the
+            lineage: her contribution flows back to the person who
+            brought her in.
+          </Alive>
+          <Alive>
+            No backend endpoint was added for this. The footprint is
+            aggregated client-side from the existing{" "}
+            <code>/api/feed/personal</code> response, which keeps the
+            page small, private, and fast. The server already knows
+            her; the page just makes the knowledge legible to her.
+          </Alive>
+          <Alive>
+            The &quot;begin again&quot; control is the warmest form of
+            agency the organism can offer: <em>your contributions on
+            the field stay — only this browser forgets.</em> Nothing
+            destructive on the server; the contributor node remains
+            with its lineage intact. She can always return to the same
+            self by re-introducing, or become a different self tomorrow.
+            This is identity the way bodies actually experience it.
+          </Alive>
+        </Step>
+
+        <section className="space-y-4 mt-12">
+          <h2 className="text-xl font-medium">Part-three doors, status today</h2>
+          <div className="rounded-2xl border border-teal-700/30 bg-gradient-to-br from-teal-950/20 via-stone-900/30 to-amber-950/15 p-5 space-y-3">
+            <ul className="space-y-3 text-sm text-stone-300 leading-relaxed">
+              <li>
+                <span className="text-emerald-400 mr-2">✓</span>
+                <strong className="text-stone-100">React.</strong>{" "}
+                Shipped. Every chapter above has a compact reaction bar
+                sitting below its Alive/Tender annotations. The first
+                door stopped being aspirational while this story was
+                still being written.
+              </li>
+              <li>
+                <span className="text-amber-300/80 mr-2">○</span>
+                <strong className="text-stone-100">Suggest a better
+                sentence.</strong> Still ahead. The reaction substrate
+                is in place; the next layer is a small pencil that
+                opens an inline editor and lands what you type as a
+                proposal on the blog post. Other readers can lift it.
+              </li>
+              <li>
+                <span className="text-amber-300/80 mr-2">○</span>
+                <strong className="text-stone-100">Re-imagine an
+                image.</strong> Still ahead. The visuals-generate
+                endpoint would accept a contributor-authored prompt
+                and credit the regeneration back to the pairing.
+              </li>
+              <li>
+                <span className="text-amber-300/80 mr-2">○</span>
+                <strong className="text-stone-100">Bring your own
+                agent.</strong> Still ahead. A <code>/handoff</code>{" "}
+                URL with a standardized context blob, opening the
+                paragraph you&apos;re on inside Claude / ChatGPT /
+                Codex with the full concept graph pre-loaded. The MCP
+                server already exists, so the path is short.
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <hr className="border-border/30 my-12" />
+
         <section className="space-y-4 mt-12">
           <h2 className="text-xl font-medium">What changed between part one and part two</h2>
           <p className="leading-relaxed text-muted-foreground">
@@ -827,9 +1026,11 @@ export default function AnaWalksPage() {
               </li>
             </ul>
             <p className="text-xs text-stone-500 leading-relaxed">
-              None of the four doors exist yet on this page. They are
-              named here because naming them makes them the next
-              cycles. React (the simplest) lands first. Suggest-a-sentence
+              The first door — React — landed while this story was
+              still being written. Every chapter above has a small
+              reaction bar sitting quietly below its Alive/Tender
+              annotations. The other three are still ahead. Naming
+              them makes them the next cycles: suggest-a-sentence
               lands on the shared reaction-bar substrate that already
               serves concepts, ideas, and contributors. Image
               regeneration needs the visuals-generate endpoint to
@@ -837,7 +1038,8 @@ export default function AnaWalksPage() {
               change. Bring-your-own-agent needs a /handoff URL with
               a standardized context blob — we already ship an MCP
               server, so this is the shortest path to the largest
-              felt difference.
+              felt difference. Part four (below) captures what else
+              the door has learned to say back.
             </p>
           </div>
 
