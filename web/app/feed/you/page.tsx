@@ -78,6 +78,14 @@ export default async function PersonalFeedPage() {
       <div className="mt-8">
         <InviteFriend />
       </div>
+      <div className="mt-6 text-center">
+        <a
+          href="/me"
+          className="inline-block text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 decoration-dotted"
+        >
+          {t("me.linkFromFeed")}
+        </a>
+      </div>
     </main>
   );
 }
