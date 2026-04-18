@@ -236,6 +236,19 @@
     "welcomeBackNamed": "{name}, qué bueno volver a verte. Esto es lo que se mueve para ti.",
     "dismiss": "Cerrar"
   },
+  "enablePush": {
+    "ariaLabel": "Notificaciones de la mañana",
+    "eyebrow": "Una puerta suave",
+    "heading": "Deja que el organismo te responda.",
+    "lede": "Una nota tranquila por la mañana cuando una voz llega a algo que tocaste, o un corazón se posa en lo que dijiste. Puedes apagarlo cuando quieras.",
+    "cta": "Recibir notas de la mañana",
+    "subscribing": "Preguntando a tu dispositivo…",
+    "subscribed": "Tu dispositivo está listo. Una nota te encontrará cuando algo vivo te espere.",
+    "iosHeading": "Primero añade esto a tu pantalla de inicio",
+    "iosLede": "En iPhone, las notificaciones de la mañana necesitan que la app esté instalada. Toca el ícono de compartir abajo, luego «Añadir a pantalla de inicio», y ábrelo desde ahí.",
+    "denied": "Tu dispositivo rechaza las notificaciones. Actívalas en Ajustes → Notificaciones → Safari para recibir notas de la mañana.",
+    "error": "Algo impidió que la suscripción llegara. Intenta de nuevo en un momento."
+  },
   "people": {
     "eyebrow": "Un rincón del organismo",
     "voicesHeading": "Voces que ella ha dado",
