@@ -188,6 +188,19 @@ async def test_idempotent_on_canonical_url():
         assert first.json()["identity"]["id"] == second.json()["identity"]["id"]
 
 
+def test_fetch_refuses_internal_addresses():
+    """SSRF guard: the resolver must not reach loopback, private, or
+    link-local addresses even if a user posts one directly. This is
+    tested at the ``_fetch`` level — if it returns None for these
+    URLs, the rest of the resolver can't accidentally fetch them."""
+    # Loopback, private, link-local (AWS metadata), reserved.
+    assert service._fetch("http://127.0.0.1/admin") is None
+    assert service._fetch("http://10.0.0.1/") is None
+    assert service._fetch("http://192.168.1.1/") is None
+    assert service._fetch("http://169.254.169.254/latest/meta-data/") is None
+    assert service._fetch("http://localhost/") is None
+
+
 @pytest.mark.asyncio
 async def test_unresolvable_is_soft_failure_422():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:

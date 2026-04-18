@@ -21,9 +21,11 @@ the signals.
 from __future__ import annotations
 
 import hashlib
+import ipaddress
 import json
 import logging
 import re
+import socket
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from typing import Any
@@ -242,7 +244,44 @@ def _extract_provider_id(url: str, provider: str) -> str:
 # ── Fetch + search ────────────────────────────────────────────────────
 
 
+def _is_public_target(url: str) -> bool:
+    """Refuse anything that resolves to a loopback, private, link-local,
+    or otherwise internal address. The resolver is meant to reach the
+    open web; a user posting ``http://127.0.0.1/admin`` or
+    ``http://169.254.169.254/`` (cloud metadata) would be SSRF, not
+    gratitude. Returns False on any such host or on resolution failure.
+    """
+    p = urlparse(url)
+    host = (p.hostname or "").strip()
+    if not host:
+        return False
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except (socket.gaierror, UnicodeError):
+        return False
+    for info in infos:
+        sockaddr = info[4]
+        raw_ip = sockaddr[0] if sockaddr else ""
+        try:
+            ip = ipaddress.ip_address(raw_ip)
+        except ValueError:
+            return False
+        if (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_reserved
+            or ip.is_multicast
+            or ip.is_unspecified
+        ):
+            return False
+    return True
+
+
 def _fetch(url: str) -> tuple[str, str] | None:
+    if not _is_public_target(url):
+        log.info("inspired_by refusing non-public target: %s", url)
+        return None
     try:
         with httpx.Client(
             timeout=FETCH_TIMEOUT,
@@ -251,6 +290,11 @@ def _fetch(url: str) -> tuple[str, str] | None:
         ) as client:
             r = client.get(url)
             if r.status_code >= 400:
+                return None
+            # Re-check the final URL after redirects — a public host can
+            # redirect to an internal one.
+            if not _is_public_target(str(r.url)):
+                log.info("inspired_by refusing redirect to non-public: %s", r.url)
                 return None
             return str(r.url), r.text
     except httpx.HTTPError:
