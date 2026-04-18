@@ -100,13 +100,16 @@ async def test_name_resolves_to_identity_with_presences_and_creations():
         assert r.status_code == 201, r.text
         body = r.json()
 
-        # Identity
+        # Identity — placeholder carries explicit claim signals so the
+        # contributors directory can render it distinctly until the real
+        # person walks in.
         identity = body["identity"]
         assert identity["type"] == "contributor"
         assert identity["name"] == "Liquid Bloom"
         assert identity["canonical_url"] == "https://liquidbloom.bandcamp.com"
         assert identity["provider"] == "bandcamp"
         assert identity["claimable"] is True
+        assert identity["claimed"] is False
 
         # Presences — same-provider links (liquidbloom.bandcamp.com) excluded;
         # cross-provider socials kept.
@@ -158,6 +161,11 @@ async def test_event_resolves_to_community_identity():
         identity = r.json()["identity"]
         assert identity["type"] == "community"
         assert identity["provider"] == "eventbrite"
+        # A festival is not a HUMAN contributor — it's a community node.
+        # No contributor_type + no placeholder email should be forced on
+        # it, so nothing pollutes /api/contributors.
+        assert "contributor_type" not in identity
+        assert "email" not in identity
 
 
 @pytest.mark.asyncio

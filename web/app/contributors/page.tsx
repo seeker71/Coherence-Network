@@ -25,6 +25,8 @@ type Contributor = {
   type: string;
   email: string;
   created_at: string;
+  claimed?: boolean;
+  canonical_url?: string | null;
 };
 
 type FlowItem = {
@@ -166,9 +168,13 @@ function ContributorsPageContent() {
                 rel.implementationRefs.length > 0
               );
               return (
-              <li key={c.id} className="rounded-xl border border-border/20 bg-background/40 p-4 space-y-2">
+              <li key={c.id} className={`rounded-xl border p-4 space-y-2 ${
+                c.claimed === false
+                  ? "border-border/10 bg-background/20 opacity-70"
+                  : "border-border/20 bg-background/40"
+              }`}>
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Link href={`/contributors?contributor_id=${encodeURIComponent(c.id)}`} className="font-medium hover:underline">
                       {c.name}
                     </Link>
@@ -181,6 +187,14 @@ function ContributorsPageContent() {
                         c.type === "AGENT" || c.type === "agent" ? t("contributors.typeAgent") :
                           t("contributors.typeHuman")}
                     </span>
+                    {c.claimed === false && (
+                      <span
+                        className="inline-flex items-center rounded-full border border-border/40 px-2 py-0.5 text-[10px] uppercase tracking-[0.14em] text-muted-foreground italic"
+                        title="Placeholder held open for the real person to claim"
+                      >
+                        unclaimed
+                      </span>
+                    )}
                   </div>
                   <Link
                     href={`/contributions?contributor_id=${encodeURIComponent(c.id)}`}

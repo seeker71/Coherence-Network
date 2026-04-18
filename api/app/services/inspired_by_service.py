@@ -606,6 +606,11 @@ def import_inspired_by(
         identity_created = False
     else:
         identity_id = resolved.node_id()
+        # Claimed is the signal of life. A claimable placeholder is a
+        # door held open for the real person; a claimed node is someone
+        # who walked through it. Until someone does, both flags stay
+        # honest so the directory can distinguish the living from the
+        # waiting.
         properties: dict[str, Any] = {
             "tagline": resolved.description,
             "canonical_url": resolved.canonical_url,
@@ -616,9 +621,14 @@ def import_inspired_by(
                 {"provider": p.provider, "url": p.url} for p in resolved.presences
             ],
             "claimable": True,
+            "claimed": False,
             "imported_by": source_contributor_id,
             "import_input": resolved.input,
         }
+        # Only contributors that *actually* represent a human carry the
+        # HUMAN contributor_type + placeholder email. A festival or a
+        # network-org isn't a person; forcing HUMAN onto their node
+        # pollutes the contributors directory and breaks the claim story.
         if resolved.node_type == "contributor":
             properties.update({
                 "contributor_type": "HUMAN",
