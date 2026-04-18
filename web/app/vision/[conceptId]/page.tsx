@@ -195,13 +195,34 @@ export default async function VisionConceptPage({
         </nav>
 
         {/* Title + level */}
-        <div className="mb-8 space-y-3">
+        <div className="mb-6 space-y-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-4xl md:text-5xl font-extralight tracking-tight text-white">{concept.name}</h1>
+            <h1 className="text-4xl md:text-5xl font-extralight tracking-tight text-foreground">{concept.name}</h1>
             <LevelBadge level={concept.level} />
           </div>
-          <p className="text-lg md:text-xl text-stone-300 font-light leading-relaxed max-w-3xl">{concept.description}</p>
+          <p className="text-lg md:text-xl text-foreground/85 font-light leading-relaxed max-w-3xl">{concept.description}</p>
           <ReaderPresence conceptId={conceptId} />
+        </div>
+
+        {/*
+         * Above-the-fold meeting affordance.
+         *
+         * A friend who lands here from a shared link should see the
+         * two gestures that make this a meeting instead of a read-only
+         * article — a quick reaction, and a doorway to leave their own
+         * voice — in the first viewport, before the long prose below.
+         * Both also appear again after the story for anyone who wants
+         * to dwell first and respond after.
+         */}
+        <div className="mb-8 flex flex-wrap items-center gap-3">
+          <ReactionBar entityType="concept" entityId={conceptId} compact />
+          <a
+            href="#voices"
+            className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--primary)/0.4)] bg-[hsl(var(--primary)/0.1)] hover:bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary))] px-4 py-2 text-sm font-medium transition-colors"
+          >
+            <span aria-hidden="true">🗣</span>
+            {t("vision.shareVoiceCta")}
+          </a>
         </div>
 
         {/* Story mode (primary when story_content exists) */}
@@ -229,8 +250,11 @@ export default async function VisionConceptPage({
               <ReactionBar entityType="concept" entityId={conceptId} compact />
             </section>
 
-            {/* Community voices — lived experience from those living it */}
-            <ConceptVoices conceptId={conceptId} />
+            {/* Community voices — lived experience from those living it.
+                Anchor target for the above-fold "Share your voice ↓" link. */}
+            <div id="voices" className="scroll-mt-16">
+              <ConceptVoices conceptId={conceptId} />
+            </div>
 
             <div className="max-w-3xl space-y-4 pt-8">
               <ConnectedConcepts outgoing={outgoing} incoming={incoming} nameMap={nameMap} mode="full" />
