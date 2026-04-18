@@ -147,10 +147,10 @@ export default async function HerePage() {
     <main className="max-w-2xl mx-auto px-4 py-6">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl md:text-3xl font-light text-white mb-1">
+          <h1 className="text-2xl md:text-3xl font-light text-foreground mb-1">
             {t("here.heading")}
           </h1>
-          <p className="text-sm text-stone-400">{t("here.lede")}</p>
+          <p className="text-sm text-muted-foreground">{t("here.lede")}</p>
         </div>
         <NotificationBell />
       </header>
@@ -159,37 +159,37 @@ export default async function HerePage() {
 
       {quiet ? (
         <section className="space-y-4">
-          <div className="rounded-lg border border-stone-800/60 bg-stone-900/40 p-6 text-center">
-            <p className="text-stone-300 mb-3">{t("here.empty")}</p>
+          <div className="rounded-lg border border-border bg-card p-6 text-center">
+            <p className="text-foreground mb-3">{t("here.empty")}</p>
           </div>
           {waiting.length > 0 && (
             <div>
-              <h2 className="text-xs uppercase tracking-widest text-amber-300/90 mb-2">
+              <h2 className="text-xs uppercase tracking-widest text-[hsl(var(--primary))] mb-2">
                 {t("here.waitingHeading")}
               </h2>
-              <p className="text-sm text-stone-400 mb-3">
+              <p className="text-sm text-muted-foreground mb-3">
                 {t("here.waitingLede")}
               </p>
               <ul className="space-y-2">
                 {waiting.map((c) => (
                   <li
                     key={c.id}
-                    className="rounded-lg border border-amber-800/30 bg-amber-950/10"
+                    className="rounded-lg border border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--primary)/0.05)]"
                   >
                     <Link
                       href={`/meet/concept/${encodeURIComponent(c.id)}`}
-                      className="flex items-start gap-3 p-3 hover:bg-amber-950/30 rounded-lg"
+                      className="flex items-start gap-3 p-3 hover:bg-[hsl(var(--primary)/0.1)] rounded-lg"
                     >
                       <div className="text-2xl leading-none shrink-0 w-10 text-center">
                         🌱
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-stone-100 font-medium">{c.name}</p>
-                        <p className="text-sm text-stone-400 line-clamp-2 mt-1">
+                        <p className="text-foreground font-medium">{c.name}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
                           {c.description}
                         </p>
                       </div>
-                      <span className="text-amber-300 self-center">→</span>
+                      <span className="text-[hsl(var(--primary))] self-center">→</span>
                     </Link>
                   </li>
                 ))}
@@ -199,7 +199,7 @@ export default async function HerePage() {
           <div className="text-center pt-2">
             <Link
               href="/explore/concept"
-              className="inline-block rounded-md bg-amber-700/80 hover:bg-amber-600/90 text-stone-950 px-4 py-2 text-sm font-medium"
+              className="inline-block rounded-md bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium"
             >
               {t("here.walkAll")}
             </Link>
@@ -209,29 +209,29 @@ export default async function HerePage() {
         <div className="space-y-6">
           {presenceRows.length > 0 && (
             <section>
-              <h2 className="text-xs uppercase tracking-widest text-teal-300/90 mb-2">
+              <h2 className="text-xs uppercase tracking-widest text-[hsl(var(--chart-2))] mb-2">
                 {t("here.meetingNow")}
               </h2>
               <ul className="space-y-2">
                 {presenceRows.map((row) => (
                   <li
                     key={`${row.entity_type}-${row.entity_id}`}
-                    className="rounded-lg border border-teal-800/40 bg-teal-950/10"
+                    className="rounded-lg border border-[hsl(var(--chart-2)/0.3)] bg-[hsl(var(--chart-2)/0.05)]"
                   >
                     <Link
                       href={entityHref(row.entity_type, row.entity_id)}
-                      className="flex items-center gap-3 p-3 hover:bg-teal-950/30 rounded-lg"
+                      className="flex items-center gap-3 p-3 hover:bg-[hsl(var(--chart-2)/0.1)] rounded-lg"
                     >
-                      <div className="h-10 w-10 rounded-full bg-teal-500/10 ring-2 ring-teal-400/40 flex items-center justify-center text-sm font-light tabular-nums text-teal-200">
+                      <div className="h-10 w-10 rounded-full bg-[hsl(var(--chart-2)/0.15)] ring-2 ring-[hsl(var(--chart-2)/0.4)] flex items-center justify-center text-sm font-light tabular-nums text-[hsl(var(--chart-2))]">
                         {row.present}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-stone-200 truncate">{row.entity_id}</p>
-                        <p className="text-xs text-stone-500">
+                        <p className="text-foreground truncate">{row.entity_id}</p>
+                        <p className="text-xs text-muted-foreground">
                           {row.entity_type} · {row.present === 1 ? t("here.onePresent") : t("here.manyPresent").replace("{count}", String(row.present))}
                         </p>
                       </div>
-                      <span className="text-teal-300">→</span>
+                      <span className="text-[hsl(var(--chart-2))]">→</span>
                     </Link>
                   </li>
                 ))}
@@ -241,24 +241,24 @@ export default async function HerePage() {
 
           {recentVoices.length > 0 && (
             <section>
-              <h2 className="text-xs uppercase tracking-widest text-amber-300/90 mb-2">
+              <h2 className="text-xs uppercase tracking-widest text-[hsl(var(--primary))] mb-2">
                 {t("here.recentVoices")}
               </h2>
               <ul className="space-y-2">
                 {recentVoices.map((v) => (
                   <li
                     key={v.id}
-                    className="rounded-lg border border-amber-800/30 bg-amber-950/10"
+                    className="rounded-lg border border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--primary)/0.05)]"
                   >
                     <Link
                       href={`/vision/${encodeURIComponent(v.concept_id)}`}
-                      className="flex items-start gap-3 p-3 hover:bg-amber-950/30 rounded-lg"
+                      className="flex items-start gap-3 p-3 hover:bg-[hsl(var(--primary)/0.1)] rounded-lg"
                     >
                       <div className="text-2xl leading-none shrink-0 w-10 text-center">🌱</div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-stone-200 line-clamp-2">{v.body}</p>
-                        <p className="text-xs text-stone-500 mt-1 flex flex-wrap gap-x-2">
-                          <span className="text-amber-300/90">{v.author_name}</span>
+                        <p className="text-sm text-foreground line-clamp-2">{v.body}</p>
+                        <p className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-2">
+                          <span className="text-[hsl(var(--primary))]">{v.author_name}</span>
                           {v.location && <span>· {v.location}</span>}
                           <span>· {v.concept_id}</span>
                           <span className="ml-auto">{relativeTime(v.created_at, lang)}</span>
@@ -273,32 +273,32 @@ export default async function HerePage() {
 
           {recentReactions.length > 0 && (
             <section>
-              <h2 className="text-xs uppercase tracking-widest text-stone-400 mb-2">
+              <h2 className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
                 {t("here.recentReactions")}
               </h2>
               <ul className="space-y-2">
                 {recentReactions.map((r) => (
                   <li
                     key={r.id}
-                    className="rounded-lg border border-stone-800/50 bg-stone-900/40"
+                    className="rounded-lg border border-border bg-card"
                   >
                     <Link
                       href={entityHref(r.entity_type, r.entity_id)}
-                      className="flex items-start gap-3 p-3 hover:bg-stone-900 rounded-lg"
+                      className="flex items-start gap-3 p-3 hover:bg-muted rounded-lg"
                     >
                       <div className="text-2xl leading-none shrink-0 w-10 text-center">
                         {r.emoji || "💬"}
                       </div>
                       <div className="min-w-0 flex-1">
                         {r.comment ? (
-                          <p className="text-sm text-stone-200 line-clamp-2">{r.comment}</p>
+                          <p className="text-sm text-foreground line-clamp-2">{r.comment}</p>
                         ) : (
-                          <p className="text-sm text-stone-400">
+                          <p className="text-sm text-muted-foreground">
                             {r.entity_type}: {r.entity_id}
                           </p>
                         )}
-                        <p className="text-xs text-stone-500 mt-1 flex flex-wrap gap-x-2">
-                          <span className="text-amber-300/90">{r.author_name}</span>
+                        <p className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-2">
+                          <span className="text-[hsl(var(--primary))]">{r.author_name}</span>
                           <span>· {r.entity_type}: {r.entity_id}</span>
                           <span className="ml-auto">{relativeTime(r.created_at, lang)}</span>
                         </p>
@@ -312,11 +312,11 @@ export default async function HerePage() {
         </div>
       )}
 
-      <footer className="mt-8 flex items-center justify-between gap-3 text-xs text-stone-500">
-        <Link href="/explore/concept" className="hover:text-amber-300/90">
+      <footer className="mt-8 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <Link href="/explore/concept" className="hover:text-[hsl(var(--primary))]">
           {t("here.goExplore")}
         </Link>
-        <Link href="/propose" className="hover:text-teal-300/90">
+        <Link href="/propose" className="hover:text-[hsl(var(--chart-2))]">
           {t("here.goPropose")}
         </Link>
       </footer>

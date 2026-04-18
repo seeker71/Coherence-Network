@@ -151,25 +151,25 @@ export default async function FeedPage() {
       node: (
         <article
           key={`r-${r.id}`}
-          className="flex items-start gap-3 rounded-lg border border-stone-800/50 bg-stone-900/40 p-4"
+          className="flex items-start gap-3 rounded-lg border border-border bg-card p-4"
         >
           <div className="text-2xl leading-none shrink-0 w-10 text-center">
             {r.emoji || "💬"}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-xs text-stone-500 mb-1">
-              <span className="text-amber-300/90 font-medium">{r.author_name}</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <span className="text-[hsl(var(--primary))] font-medium">{r.author_name}</span>
               <span>·</span>
-              <Link href={href} className="text-stone-400 hover:text-amber-300/90">
+              <Link href={href} className="text-muted-foreground hover:text-[hsl(var(--primary))]">
                 {r.entity_type}: {r.entity_id}
               </Link>
-              <Link href={meetHref} className="ml-1 text-teal-400 hover:text-teal-300" aria-label="full screen">
+              <Link href={meetHref} className="ml-1 text-[hsl(var(--chart-2))] hover:opacity-80" aria-label="full screen">
                 ↗
               </Link>
               <span className="ml-auto">{relativeTime(r.created_at, lang)}</span>
             </div>
             {r.comment && (
-              <p className="text-stone-200 leading-relaxed break-words">{r.comment}</p>
+              <p className="text-foreground leading-relaxed break-words">{r.comment}</p>
             )}
           </div>
         </article>
@@ -186,23 +186,23 @@ export default async function FeedPage() {
       node: (
         <article
           key={`v-${v.id}`}
-          className="flex items-start gap-3 rounded-lg border border-amber-800/30 bg-amber-950/10 p-4"
+          className="flex items-start gap-3 rounded-lg border border-[hsl(var(--primary)/0.3)] bg-[hsl(var(--primary)/0.05)] p-4"
         >
           <div className="text-2xl leading-none shrink-0 w-10 text-center">🌱</div>
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-stone-500 mb-2">
-              <span className="text-amber-300/90 font-medium">{v.author_name}</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mb-2">
+              <span className="text-[hsl(var(--primary))] font-medium">{v.author_name}</span>
               {v.location && <span>· {v.location}</span>}
               <span>·</span>
               <Link
                 href={`/vision/${v.concept_id}`}
-                className="text-stone-400 hover:text-amber-300/90"
+                className="text-muted-foreground hover:text-[hsl(var(--primary))]"
               >
                 {v.concept_id}
               </Link>
               <span className="ml-auto">{relativeTime(v.created_at, lang)}</span>
             </div>
-            <p className="text-stone-200 leading-relaxed whitespace-pre-wrap break-words">
+            <p className="text-foreground leading-relaxed whitespace-pre-wrap break-words">
               {v.body}
             </p>
           </div>
@@ -217,21 +217,21 @@ export default async function FeedPage() {
     <main className="max-w-2xl mx-auto px-4 py-6">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl md:text-3xl font-light text-white mb-1">
+          <h1 className="text-2xl md:text-3xl font-light text-foreground mb-1">
             {t("feed.heading")}
           </h1>
-          <p className="text-sm text-stone-400">{t("feed.lede")}</p>
+          <p className="text-sm text-muted-foreground">{t("feed.lede")}</p>
         </div>
         <NotificationBell />
       </header>
       <FeedTabs />
 
       {items.length === 0 ? (
-        <div className="rounded-lg border border-stone-800/50 bg-stone-900/40 p-6 text-center">
-          <p className="text-sm text-stone-400 mb-3">{t("feed.empty")}</p>
+        <div className="rounded-lg border border-border bg-card p-6 text-center">
+          <p className="text-sm text-muted-foreground mb-3">{t("feed.empty")}</p>
           <Link
             href="/vision"
-            className="inline-block rounded-md bg-amber-700/80 hover:bg-amber-600/90 text-stone-950 px-4 py-2 text-sm font-medium"
+            className="inline-block rounded-md bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium"
           >
             {t("feed.exploreVision")}
           </Link>
@@ -240,23 +240,23 @@ export default async function FeedPage() {
         <div className="space-y-3">{items.map((i) => i.node)}</div>
       )}
 
-      <footer className="mt-8 flex items-center justify-between gap-3 text-xs text-stone-500">
-        <Link href="/vision" className="hover:text-amber-300/90">
+      <footer className="mt-8 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+        <Link href="/vision" className="hover:text-[hsl(var(--primary))]">
           {t("feed.exploreVision")}
         </Link>
         <Link
           href="/explore/concept"
-          className="rounded-full bg-amber-700/70 hover:bg-amber-600/80 text-stone-950 px-3 py-1 font-medium"
+          className="rounded-full bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-3 py-1 font-medium"
         >
           {t("explore.exploreMore")} →
         </Link>
         <Link
           href="/propose"
-          className="rounded-full bg-teal-700/70 hover:bg-teal-600/80 text-stone-950 px-3 py-1 font-medium"
+          className="rounded-full bg-[hsl(var(--chart-2))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-3 py-1 font-medium"
         >
           {t("propose.heading")} +
         </Link>
-        <Link href="/vision/join" className="hover:text-teal-300/90">
+        <Link href="/vision/join" className="hover:text-[hsl(var(--chart-2))]">
           {t("feed.stepIn")}
         </Link>
       </footer>
