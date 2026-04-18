@@ -236,6 +236,19 @@
     "welcomeBackNamed": "{name}, senang melihatmu kembali. Inilah yang hidup untukmu.",
     "dismiss": "Tutup"
   },
+  "enablePush": {
+    "ariaLabel": "Pemberitahuan pagi",
+    "eyebrow": "Pintu yang lembut",
+    "heading": "Biarkan organisme berbicara kembali.",
+    "lede": "Satu pesan tenang di pagi hari ketika suara datang ke sesuatu yang kamu sentuh, atau hati hinggap pada yang kamu katakan. Bisa dimatikan kapan saja.",
+    "cta": "Terima pesan pagi",
+    "subscribing": "Bertanya pada perangkatmu…",
+    "subscribed": "Perangkatmu siap. Sebuah pesan akan menemukanmu ketika sesuatu yang hidup menantimu.",
+    "iosHeading": "Tambahkan ini ke layar utama dulu",
+    "iosLede": "Di iPhone, pemberitahuan pagi memerlukan aplikasi yang terpasang. Tekan ikon bagikan di bawah, lalu 'Tambah ke Layar Utama', lalu buka dari sana.",
+    "denied": "Perangkatmu menolak pemberitahuan. Aktifkan di Pengaturan → Notifikasi → Safari untuk menerima pesan pagi.",
+    "error": "Sesuatu menghalangi langganan. Coba lagi sebentar lagi."
+  },
   "people": {
     "eyebrow": "Sudut dari organisme",
     "voicesHeading": "Suara yang ia berikan",
