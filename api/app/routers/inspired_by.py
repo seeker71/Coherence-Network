@@ -52,11 +52,30 @@ async def create_inspired_by(body: InspiredByCreateRequest) -> dict[str, Any]:
 )
 async def list_inspired_by(
     contributor_id: str = Query(..., min_length=1, max_length=255),
+    viewer_id: str | None = Query(
+        None,
+        min_length=1,
+        max_length=255,
+        description=(
+            "Optional viewer contributor id. When provided, each item is "
+            "annotated with ``shared_with_viewer`` — True when the viewer "
+            "is also inspired-by that identity."
+        ),
+    ),
 ) -> dict[str, Any]:
-    """Return every identity the contributor is inspired-by, each with
-    its edge id and weight, newest first."""
-    items = service.list_inspired_by(contributor_id)
-    return {"items": items, "count": len(items)}
+    """Return every identity the contributor is inspired-by.
+
+    When ``viewer_id`` is provided, each item carries a
+    ``shared_with_viewer`` flag so a public profile can surface the
+    kinship thread between the subject and whoever is looking.
+    """
+    items = service.list_inspired_by(contributor_id, viewer_contributor_id=viewer_id)
+    shared = sum(1 for it in items if it.get("shared_with_viewer"))
+    return {
+        "items": items,
+        "count": len(items),
+        "shared_count": shared if viewer_id else None,
+    }
 
 
 @router.delete(

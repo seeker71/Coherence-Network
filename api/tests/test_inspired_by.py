@@ -193,6 +193,49 @@ async def test_unresolvable_is_soft_failure_422():
 
 
 @pytest.mark.asyncio
+async def test_viewer_id_marks_shared_threads():
+    """When a viewer contributor id is supplied, each subject item carries
+    ``shared_with_viewer``. Kinship surfaces automatically wherever the
+    viewer and the subject are both inspired-by the same identity."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        subject = await _create_source(c)
+        viewer = await _create_source(c)
+        stranger = await _create_source(c)
+
+        with patch.object(service, "_fetch", _fake_fetch(ARTIST_HTML, "https://liquidbloom.bandcamp.com/")):
+            await c.post("/api/inspired-by", json={
+                "name": "https://liquidbloom.bandcamp.com",
+                "source_contributor_id": subject,
+            })
+            await c.post("/api/inspired-by", json={
+                "name": "https://liquidbloom.bandcamp.com",
+                "source_contributor_id": viewer,
+            })
+        # Subject has an additional inspiration the viewer does not.
+        with patch.object(service, "_fetch", _fake_fetch(EVENT_HTML, "https://eventbrite.com/e/unison-festival")):
+            await c.post("/api/inspired-by", json={
+                "name": "https://eventbrite.com/e/unison-festival",
+                "source_contributor_id": subject,
+            })
+
+        # Viewer → shared flag set on the one they both carry.
+        listed = await c.get(
+            f"/api/inspired-by?contributor_id={subject}&viewer_id={viewer}"
+        )
+        body = listed.json()
+        assert body["shared_count"] == 1
+        shared = [it for it in body["items"] if it.get("shared_with_viewer")]
+        assert len(shared) == 1
+        assert shared[0]["node"]["name"] == "Liquid Bloom"
+
+        # Stranger (no inspirations) → shared flag present and all False.
+        stranger_view = await c.get(
+            f"/api/inspired-by?contributor_id={subject}&viewer_id={stranger}"
+        )
+        assert stranger_view.json()["shared_count"] == 0
+
+
+@pytest.mark.asyncio
 async def test_list_and_delete_leaves_identity_and_creations_intact():
     """Deleting the inspired-by edge leaves the identity and its
     creation edges in the graph — still claimable, still connected."""

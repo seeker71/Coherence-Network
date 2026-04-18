@@ -675,25 +675,51 @@ def import_inspired_by(
     }
 
 
-def list_inspired_by(source_contributor_id: str) -> list[dict[str, Any]]:
-    """Return every identity the source is inspired-by, with weight + presences."""
+def list_inspired_by(
+    source_contributor_id: str,
+    viewer_contributor_id: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return every identity the source is inspired-by, with weight.
+
+    When a ``viewer_contributor_id`` is supplied and differs from the
+    source, each item is annotated with ``shared_with_viewer`` — True
+    when the viewer is also inspired-by that identity. This is what
+    lights the small thread of kinship on a public person page.
+    """
     source_contributor_id = _normalize_contributor_id(source_contributor_id)
     edges = graph_service.list_edges(
         from_id=source_contributor_id,
         edge_type="inspired-by",
         limit=500,
     )
+
+    viewer_node_ids: set[str] = set()
+    if viewer_contributor_id:
+        viewer_id = _normalize_contributor_id(viewer_contributor_id)
+        if viewer_id != source_contributor_id:
+            viewer_edges = graph_service.list_edges(
+                from_id=viewer_id,
+                edge_type="inspired-by",
+                limit=500,
+            )
+            viewer_node_ids = {
+                e["to_id"] for e in viewer_edges.get("items", []) if e.get("to_id")
+            }
+
     items: list[dict[str, Any]] = []
     for edge in edges.get("items", []):
         node = graph_service.get_node(edge["to_id"])
         if not node:
             continue
-        items.append({
+        item: dict[str, Any] = {
             "edge_id": edge["id"],
             "weight": edge.get("strength", 1.0),
             "node": node,
             "created_at": edge.get("created_at"),
-        })
+        }
+        if viewer_node_ids:
+            item["shared_with_viewer"] = edge["to_id"] in viewer_node_ids
+        items.append(item)
     return items
 
 

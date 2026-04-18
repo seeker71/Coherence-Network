@@ -7,6 +7,7 @@ import { fetchJsonOrNull } from "@/lib/fetch";
 import { createTranslator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { Panel, VoiceQuote } from "@/components/Panel";
+import { PersonInspiredBy } from "@/components/PersonInspiredBy";
 
 /**
  * /people/[id] — a warm public garden view of a contributor.
@@ -265,6 +266,10 @@ export default async function PersonPage({
           </Panel>
         </section>
       )}
+
+      {/* Inspired by — the lineage this person carries, lit up
+          wherever the viewer shares a thread with them. */}
+      <PersonInspiredBy contributorId={id} />
 
       {/* Empty state when there's nothing yet */}
       {voices.length === 0 && warmth.length === 0 && (
