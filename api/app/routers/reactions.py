@@ -27,6 +27,18 @@ class ReactionIn(BaseModel):
         None,
         description="Optional — set this to thread a reply under another reaction on the same entity",
     )
+    # Short opaque per-device token so two visitors sharing a display
+    # name get distinct contributor ids during auto-graduation.
+    device_fingerprint: str | None = Field(
+        None,
+        description="Client-supplied per-device token for soft-identity graduation",
+    )
+    # Chain lineage preserved on the new contributor node when the
+    # reaction triggers auto-graduation.
+    invited_by: str | None = Field(
+        None,
+        description="Contributor id of whoever invited this person, if known",
+    )
 
 
 def _check_entity_type(entity_type: str, request: Request) -> None:
@@ -63,6 +75,8 @@ async def add_reaction(
             locale=payload.locale,
             author_id=payload.author_id,
             parent_reaction_id=payload.parent_reaction_id,
+            device_fingerprint=payload.device_fingerprint,
+            invited_by=payload.invited_by,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
