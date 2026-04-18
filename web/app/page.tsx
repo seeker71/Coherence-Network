@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 
@@ -10,6 +11,7 @@ import { MorningNudge } from "@/components/MorningNudge";
 import { getApiBase } from "@/lib/api";
 import { fetchJsonOrNull } from "@/lib/fetch";
 import type { IdeaWithScore } from "@/lib/types";
+import type { Concept } from "@/lib/types/vision";
 import { createTranslator, type Translator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
@@ -85,6 +87,23 @@ async function loadNodeCount(): Promise<number> {
   }
 }
 
+/**
+ * Load the concept that greets every first-time visitor on the home
+ * page. lc-pulse is the root of the Living Collective ontology — the
+ * warmest and most universally felt note to walk in on.
+ *
+ * If the fetch fails, we simply skip the featured card — the rest of
+ * the page still works.
+ */
+async function loadFeaturedConcept(lang: LocaleCode): Promise<Concept | null> {
+  const qs = lang === DEFAULT_LOCALE ? "" : `?lang=${lang}`;
+  return fetchJsonOrNull<Concept>(
+    `${getApiBase()}/api/concepts/lc-pulse${qs}`,
+    {},
+    5000,
+  );
+}
+
 function formatNumber(value: number | undefined, locale: string): string {
   if (typeof value !== "number" || Number.isNaN(value)) return "0";
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
@@ -123,11 +142,12 @@ export default async function Home() {
     : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  const [ideasData, resonanceItems, coherenceScore, nodeCount] = await Promise.all([
+  const [ideasData, resonanceItems, coherenceScore, nodeCount, featuredConcept] = await Promise.all([
     loadIdeas(lang),
     loadResonance(lang),
     loadCoherenceScore(),
     loadNodeCount(),
+    loadFeaturedConcept(lang),
   ]);
 
   const summary = ideasData?.summary;
@@ -142,6 +162,80 @@ export default async function Home() {
       <MorningNudge />
       <LiveBreathPanel lang={lang} />
       <FirstTimeWelcome />
+
+      {/*
+       * Section 0: MEET ONE CONCEPT.
+       *
+       * A cold visitor arrives and needs to see — not be told — what
+       * this place is. The first felt content on the home page is one
+       * real concept from the Living Collective, rendered as a warm
+       * card: its visual, its name, its description, and a "walk in"
+       * doorway to the full concept page. lc-pulse (the root) is the
+       * default; a future cycle can rotate to a concept that's
+       * currently being met by other visitors, or to one the viewer
+       * hasn't seen yet.
+       *
+       * This is the strongest send-to-friend surface on the page. A
+       * friend who lands here sees the beauty first, the form later.
+       */}
+      {featuredConcept && (
+        <section className="px-4 sm:px-6 pt-6 pb-4 max-w-3xl mx-auto animate-fade-in-up">
+          <p className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[hsl(var(--chart-2))] mb-3 text-center">
+            {t("home.meetOneConceptEyebrow")}
+          </p>
+          <Link
+            href={`/vision/${featuredConcept.id}`}
+            className="block group rounded-2xl overflow-hidden border border-border hover:border-[hsl(var(--primary)/0.6)] transition-colors bg-card shadow-sm hover:shadow-md"
+          >
+            {featuredConcept.visual_path && (
+              <div className="relative aspect-[16/9] overflow-hidden">
+                <Image
+                  src={featuredConcept.visual_path}
+                  alt={featuredConcept.name}
+                  fill
+                  className="object-cover group-hover:scale-[1.03] transition-transform duration-700"
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  priority
+                  unoptimized={featuredConcept.visual_path.startsWith("http")}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/60 via-transparent to-transparent" />
+                <div className="absolute bottom-4 left-5 right-5">
+                  <h2 className="text-2xl md:text-3xl font-light tracking-tight text-white drop-shadow-md">
+                    {featuredConcept.name}
+                  </h2>
+                </div>
+              </div>
+            )}
+            <div className="p-5 space-y-3">
+              {!featuredConcept.visual_path && (
+                <h2 className="text-2xl md:text-3xl font-light tracking-tight text-foreground">
+                  {featuredConcept.name}
+                </h2>
+              )}
+              <p className="text-sm md:text-base text-foreground/85 leading-relaxed line-clamp-3">
+                {featuredConcept.description}
+              </p>
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-sm text-muted-foreground">
+                  {t("home.walkInHint")}
+                </span>
+                <span className="text-[hsl(var(--primary))] font-medium group-hover:translate-x-1 transition-transform">
+                  {t("home.walkInCta")} →
+                </span>
+              </div>
+            </div>
+          </Link>
+          <p className="mt-3 text-center">
+            <Link
+              href="/vision"
+              className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-dotted"
+            >
+              {t("home.orSeeAllConcepts")}
+            </Link>
+          </p>
+        </section>
+      )}
+
       {/* Section 1: HERO — THE QUESTION */}
       <section className="flex flex-col justify-center items-center text-center px-4 pt-12 pb-6 relative">
         <div className="absolute inset-0 pointer-events-none">
