@@ -135,58 +135,30 @@ def add_voice(
     key, no gate — you become a contributor by caring enough to
     speak.
 
-    ``device_fingerprint`` is an optional short opaque string from
-    the client that lets us disambiguate two contributors who share
-    a display name (e.g. two "Mama"s on different devices). When
-    absent we fall back to a random uuid suffix.
-
-    ``invited_by`` records the chain of who brought this person in.
-    When a new contributor node is minted during auto-graduation,
-    the inviter's contributor_id is attached as a graph property so
-    the lineage is queryable server-side, not only in localStorage.
+    ``device_fingerprint`` disambiguates two contributors who share
+    a display name. ``invited_by`` preserves the chain lineage.
+    Both are stored on the new contributor's graph properties via
+    the shared ``graduate_by_name`` helper.
     """
     _ensure_schema()
     if not concept_id or not body.strip() or not author_name.strip():
         raise ValueError("concept_id, author_name, and body are required")
     trimmed_name = author_name.strip()
 
-    # Auto-graduate: if no author_id was supplied, try to find an
-    # existing contributor with the same display name + fingerprint;
-    # otherwise mint a fresh contributor node.
+    # Auto-graduate via the shared helper so voices + reactions mint
+    # contributor nodes the same way.
     if not author_id:
         try:
-            from app.services import graph_service
-
-            suffix = (device_fingerprint or uuid4().hex[:8]).strip()[:24]
-            safe_name = "".join(c for c in trimmed_name.lower() if c.isalnum() or c in "-_") or "friend"
-            safe_suffix = "".join(c for c in suffix.lower() if c.isalnum() or c in "-_") or uuid4().hex[:8]
-            candidate_id = f"{safe_name}-{safe_suffix}"[:64]
-            node_id = f"contributor:{candidate_id}"
-            existing = graph_service.get_node(node_id)
-            if existing:
-                author_id = existing.get("legacy_id") or candidate_id
-            else:
-                # Create the node directly so we can attach the
-                # author_display_name + invited_by properties at
-                # birth — those matter for the community-facing
-                # /people page and for chain lineage.
-                graph_service.create_node(
-                    id=node_id,
-                    type="contributor",
-                    name=candidate_id,
-                    description="HUMAN contributor",
-                    phase="water",
-                    properties={
-                        "contributor_type": "HUMAN",
-                        "email": f"{candidate_id}@coherence.network",
-                        "author_display_name": trimmed_name,
-                        "invited_by": (invited_by or "").strip() or None,
-                    },
-                )
-                author_id = candidate_id
+            from app.services import contributor_service
+            cid, _created = contributor_service.graduate_by_name(
+                author_name=trimmed_name,
+                device_fingerprint=device_fingerprint,
+                invited_by=invited_by,
+            )
+            author_id = cid
         except Exception:
-            # If contributor creation fails for any reason, the voice
-            # still lands with just author_name — soft identity holds.
+            # Best-effort: if graduation fails, the voice still lands
+            # with author_name only — soft identity holds.
             author_id = None
 
     rec = ConceptVoiceRecord(

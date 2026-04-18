@@ -151,7 +151,21 @@ def add_reaction(
     author_id: Optional[str] = None,
     locale: str = "en",
     parent_reaction_id: Optional[str] = None,
+    device_fingerprint: Optional[str] = None,
+    invited_by: Optional[str] = None,
 ) -> dict:
+    """Record a reaction (emoji + optional comment) on any entity.
+
+    Soft-identity auto-graduation matches concept_voice_service:
+    when ``author_id`` is not supplied but ``author_name`` is, we
+    mint (or find) a contributor node keyed by name + fingerprint
+    using the shared helper. A tap of a heart is a real gesture
+    and so is reason enough to be registered.
+
+    ``invited_by`` is preserved on the new contributor node so the
+    chain lineage is queryable in the graph even for people who
+    only ever react (never voice).
+    """
     _ensure_schema()
     if entity_type not in SUPPORTED_ENTITY_TYPES:
         raise ValueError(f"unsupported entity_type: {entity_type}")
@@ -176,6 +190,22 @@ def add_reaction(
                 raise ValueError("parent_reaction_id not found")
             if parent.entity_type != entity_type or parent.entity_id != entity_id:
                 raise ValueError("parent belongs to a different entity")
+
+    # Auto-graduate when the caller supplies a name but no id. Best
+    # effort — if the helper throws, the reaction still lands with
+    # author_name only (soft identity holds).
+    if not author_id:
+        try:
+            from app.services import contributor_service
+            cid, _created = contributor_service.graduate_by_name(
+                author_name=author_name,
+                device_fingerprint=device_fingerprint,
+                invited_by=invited_by,
+            )
+            author_id = cid
+        except Exception:
+            author_id = None
+
     rec = ReactionRecord(
         id=uuid4().hex,
         entity_type=entity_type,
