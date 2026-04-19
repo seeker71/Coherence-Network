@@ -245,7 +245,7 @@ export default async function FeedPage() {
           {t("feed.exploreVision")}
         </Link>
         <Link
-          href="/explore/concept"
+          href="/vision"
           className="rounded-full bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-3 py-1 font-medium"
         >
           {t("explore.exploreMore")} →

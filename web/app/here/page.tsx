@@ -198,7 +198,7 @@ export default async function HerePage() {
           )}
           <div className="text-center pt-2">
             <Link
-              href="/explore/concept"
+              href="/vision"
               className="inline-block rounded-md bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium"
             >
               {t("here.walkAll")}
@@ -313,7 +313,7 @@ export default async function HerePage() {
       )}
 
       <footer className="mt-8 flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <Link href="/explore/concept" className="hover:text-[hsl(var(--primary))]">
+        <Link href="/vision" className="hover:text-[hsl(var(--primary))]">
           {t("here.goExplore")}
         </Link>
         <Link href="/propose" className="hover:text-[hsl(var(--chart-2))]">
