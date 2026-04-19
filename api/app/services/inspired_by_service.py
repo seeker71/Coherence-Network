@@ -352,18 +352,18 @@ def _extract_presences(
 ) -> list[Presence]:
     """Collect outbound links to known-provider platforms.
 
-    Excludes the canonical URL itself and presences on the same provider
-    as the identity (those are just deeper navigation on the same site).
+    Same-provider links (e.g. Bandcamp's own /settings, /cart, or another
+    artist's subdomain) are filtered out — they're navigation chrome or
+    unrelated accounts, not this identity's presences. Cross-platform
+    links are the signal we want.
     """
-    own_host = urlparse(canonical_url).netloc.lower()
     seen: dict[str, Presence] = {}
     for raw_href in parsed.hrefs:
         absolute = urljoin(canonical_url, raw_href)
         provider = _match_presence_provider(absolute)
         if not provider:
             continue
-        host = urlparse(absolute).netloc.lower()
-        if host == own_host and provider == own_provider:
+        if provider == own_provider:
             continue
         normalized = _normalize_url(absolute)
         if normalized in seen:
@@ -477,6 +477,133 @@ def _extract_creations(
     return found
 
 
+# ── Bandcamp artist-page specifics ────────────────────────────────────
+#
+# Bandcamp redirects an artist subdomain root (`artist.bandcamp.com/`)
+# to whatever album they're currently featuring. That's a single-work
+# page with a generic "N track album" OG description — not a presence.
+# The artist's actual front is `/music`: real bio, portrait, album grid.
+# When the resolver lands on an album/track under a `*.bandcamp.com`
+# subdomain, pivot to `/music` once so the identity is the artist, not
+# the album. The album itself still shows up below as a creation.
+
+
+# Match a complete `<li class="music-grid-item">…</li>` block so we can
+# pick the best image attribute (data-original > src) without depending
+# on attribute order.
+_BANDCAMP_GRID_ITEM = re.compile(
+    r'<li[^>]*class="[^"]*music-grid-item[^"]*"[^>]*>(.*?)</li>',
+    re.IGNORECASE | re.DOTALL,
+)
+_BANDCAMP_ITEM_HREF = re.compile(r'<a[^>]*href="(/album/[^"]+)"', re.IGNORECASE)
+_BANDCAMP_ITEM_IMG_DATA = re.compile(r'data-original="([^"]+)"', re.IGNORECASE)
+_BANDCAMP_ITEM_IMG_SRC = re.compile(r'<img[^>]*src="([^"]+)"', re.IGNORECASE)
+_BANDCAMP_ITEM_TITLE = re.compile(
+    r'<p[^>]*class="[^"]*title[^"]*"[^>]*>\s*([^<]+?)\s*(?:<br|</p)',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _is_bandcamp_subdomain(url: str) -> bool:
+    host = urlparse(url).netloc.lower()
+    return host.endswith(".bandcamp.com") and host != "bandcamp.com"
+
+
+def _needs_bandcamp_pivot(url: str) -> bool:
+    """True when we landed on an album/track page under a *.bandcamp.com
+    subdomain and the artist root would carry more identity signal."""
+    if not _is_bandcamp_subdomain(url):
+        return False
+    path = urlparse(url).path or "/"
+    return (
+        path.startswith("/album/")
+        or path.startswith("/track/")
+        or path in ("", "/")
+    )
+
+
+def _bandcamp_music_url(url: str) -> str:
+    p = urlparse(url)
+    return urlunparse((p.scheme or "https", p.netloc, "/music", "", "", ""))
+
+
+_TAGLINE_ADMIN_PREFIX = re.compile(
+    r"^\s*(bookings?|contact|management|press|inquiries|email|booking\s+inquiries?)"
+    r"\s*[:\-–—]\s*\S+.*?(?:\n\s*\n|\. )",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _clean_tagline(raw: str) -> str:
+    """Tighten an og:description into something a reader actually wants.
+
+    Many artist pages open with booking/contact boilerplate
+    ("Bookings: setesh@…") before the real bio. That's admin noise in
+    tagline position. Strip leading admin lines, decode entities,
+    collapse whitespace, then keep the first sentence — a tagline is
+    one held breath, not a press release.
+    """
+    from html import unescape
+
+    text = unescape(raw or "").strip()
+    if not text:
+        return ""
+    text = _TAGLINE_ADMIN_PREFIX.sub("", text, count=1).strip()
+    text = re.sub(r"\s+", " ", text)
+    # Keep the first sentence (up to . ! ?) if that fits under the
+    # tagline budget. Otherwise fall back to a char-clamp on a word
+    # boundary. 180 is a bit beyond the spec's 140 because the
+    # presence-page italic body absorbs one more line gracefully, and
+    # some bios start with a proper opening clause we don't want to cut
+    # mid-word.
+    first = re.match(r"[^.!?]{10,180}[.!?]", text)
+    if first:
+        return first.group(0).strip()
+    if len(text) <= 180:
+        return text
+    return text[:180].rsplit(" ", 1)[0].rstrip(",;:-—") + "…"
+
+
+def _upscale_bandcamp_image(url: str | None) -> str | None:
+    """Rewrite `…_2.jpg` (small thumb) to `…_10.jpg` (1200px). The CDN
+    serves whatever size you ask for — the artist grid page hands us
+    thumbs by default so the list stays light."""
+    if not url or "bcbits.com/img/" not in url:
+        return url
+    return re.sub(r"_(2|3|4|7|11|12|13|23|42)\.(jpg|png|gif)$", r"_10.\2", url)
+
+
+def _extract_bandcamp_albums(html: str, canonical_url: str) -> list[Creation]:
+    """Parse the album grid on a Bandcamp artist `/music` page.
+
+    Bandcamp ships no JSON-LD for the discography; the grid lives as
+    static `<li class="music-grid-item">` anchors. Each has a title,
+    a link, and a cover image we upscale to 1200px. Items below the
+    fold lazy-load — their real image URL sits in `data-original` while
+    `src` points at a 1×1 transparent gif.
+    """
+    from html import unescape
+
+    found: list[Creation] = []
+    for block in _BANDCAMP_GRID_ITEM.findall(html):
+        href_m = _BANDCAMP_ITEM_HREF.search(block)
+        title_m = _BANDCAMP_ITEM_TITLE.search(block)
+        if not href_m or not title_m:
+            continue
+        title = unescape(re.sub(r"\s+", " ", title_m.group(1))).strip()
+        if not title:
+            continue
+        data_m = _BANDCAMP_ITEM_IMG_DATA.search(block)
+        src_m = _BANDCAMP_ITEM_IMG_SRC.search(block)
+        image = (data_m and data_m.group(1)) or (src_m and src_m.group(1)) or None
+        url = _normalize_url(urljoin(canonical_url, href_m.group(1)))
+        image_url = _upscale_bandcamp_image(urljoin(canonical_url, image)) if image else None
+        found.append(Creation(kind="album", name=title[:200], url=url, image_url=image_url))
+        if len(found) >= MAX_CREATIONS:
+            break
+    return found
+
+
 # ── Public API ────────────────────────────────────────────────────────
 
 
@@ -496,6 +623,16 @@ def resolve(input_text: str) -> ResolvedIdentity | None:
     if not fetched:
         return None
     final_url, html = fetched
+
+    # Pivot Bandcamp album/track landings up to the artist `/music` page.
+    # That's where the bio, the portrait, and the full discography live;
+    # the redirected album page only knows about itself.
+    if _needs_bandcamp_pivot(final_url):
+        artist_root = _bandcamp_music_url(final_url)
+        pivoted = _fetch(artist_root)
+        if pivoted:
+            final_url, html = pivoted
+
     parsed = _parse_html(html)
 
     canonical = parsed.canonical or parsed.og.get("og:url") or final_url
@@ -507,17 +644,21 @@ def resolve(input_text: str) -> ResolvedIdentity | None:
         or parsed.title
         or text
     ).strip()
-    description = (
+    description = _clean_tagline(
         parsed.og.get("og:description")
         or parsed.og.get("twitter:description")
         or parsed.description
         or ""
-    ).strip()
+    )
     image = parsed.og.get("og:image") or parsed.og.get("twitter:image")
+    if _is_bandcamp_subdomain(canonical):
+        image = _upscale_bandcamp_image(image)
     node_type, provider = _infer_type_and_provider(canonical)
     provider_id = _extract_provider_id(canonical, provider)
     presences = _extract_presences(parsed, canonical, provider)
     creations = _extract_creations(parsed, canonical)
+    if not creations and _is_bandcamp_subdomain(canonical):
+        creations = _extract_bandcamp_albums(html, canonical)
 
     return ResolvedIdentity(
         input=text,

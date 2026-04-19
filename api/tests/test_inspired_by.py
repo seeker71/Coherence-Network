@@ -62,6 +62,64 @@ THIN_HTML = """
 <html><head><title>Nobody in particular</title></head></html>
 """
 
+# Bandcamp album landing — Bandcamp redirects an artist's subdomain root
+# to a featured album; og:description is generic "N track album" chrome,
+# not the bio. The resolver should pivot to the /music artist page.
+BANDCAMP_ALBUM_LANDING_HTML = """
+<html><head>
+<meta property="og:site_name" content="Liquid Bloom">
+<meta property="og:title" content="Deep Roots, by Liquid Bloom">
+<meta property="og:description" content="8 track album">
+<meta property="og:type" content="album">
+<meta property="og:url" content="https://liquidbloom.bandcamp.com/album/deep-roots">
+<meta property="og:image" content="https://f4.bcbits.com/img/a111_23.jpg">
+<title>Deep Roots | Liquid Bloom</title>
+</head><body></body></html>
+"""
+
+# The /music artist page: real bio in og:description (prefixed with
+# booking boilerplate the cleaner must strip), artist portrait as
+# og:image, no JSON-LD — the discography lives in a static album grid.
+BANDCAMP_MUSIC_HTML = """
+<html><head>
+<meta property="og:site_name" content="Liquid Bloom">
+<meta property="og:title" content="Liquid Bloom">
+<meta property="og:type" content="band">
+<meta property="og:url" content="https://liquidbloom.bandcamp.com">
+<meta property="og:description" content="Bookings: setesh@pivotal-agency.com
+
+Liquid Bloom is a music project led by Amani Friend of Desert Dwellers. It combines ambient, world, and psychedelic elements.">
+<meta property="og:image" content="https://f4.bcbits.com/img/0041296343_23.jpg">
+<link rel="canonical" href="https://liquidbloom.bandcamp.com">
+</head><body>
+<ol id="music-grid">
+    <li class="music-grid-item square first-four">
+        <a href="/album/embers-of-a-forgotten-prayer-revibed">
+            <div class="art">
+                <img src="https://f4.bcbits.com/img/a3661285281_2.jpg" alt="" />
+            </div>
+            <p class="title">
+                Embers of a Forgotten Prayer Revibed
+                <br><span class="artist-override">Liquid Bloom, Bloomurian</span>
+            </p>
+        </a>
+    </li>
+    <li class="music-grid-item square">
+        <a href="/album/reimagined-legacies-liquid-bloom-remixes">
+            <div class="art">
+                <img class="lazy" src="/img/0.gif"
+                    data-original="https://f4.bcbits.com/img/a0374030033_2.jpg" alt="">
+            </div>
+            <p class="title">
+                Reimagined Legacies (Liquid Bloom Remixes)
+                <br><span class="artist-override">Various Artists</span>
+            </p>
+        </a>
+    </li>
+</ol>
+</body></html>
+"""
+
 
 def _fake_fetch(html: str, final_url: str):
     return lambda url: (final_url, html)
@@ -254,6 +312,61 @@ async def test_viewer_id_marks_shared_threads():
             f"/api/inspired-by?contributor_id={subject}&viewer_id={stranger}"
         )
         assert stranger_view.json()["shared_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_bandcamp_pivots_from_album_landing_to_artist_music_page():
+    """Bandcamp redirects `artist.bandcamp.com/` to a featured album.
+    That page is a single-work view with admin-generic copy, not a
+    presence. The resolver must pivot to `/music` — where the artist's
+    bio, portrait, and full discography live — and use that as the
+    identity. Albums are pulled from the grid when no JSON-LD is
+    present, and lazy-loaded covers come from `data-original`.
+    """
+    fetches: list[str] = []
+
+    def _routed_fetch(url: str):
+        fetches.append(url)
+        if url.endswith("/music"):
+            return (url, BANDCAMP_MUSIC_HTML)
+        return (url, BANDCAMP_ALBUM_LANDING_HTML)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        source = await _create_source(c)
+        with patch.object(service, "_fetch", _routed_fetch):
+            r = await c.post("/api/inspired-by", json={
+                "name": "https://liquidbloom.bandcamp.com",
+                "source_contributor_id": source,
+            })
+        assert r.status_code == 201, r.text
+        body = r.json()
+        identity = body["identity"]
+
+        # The pivot fired: we fetched the root then the /music page.
+        assert any(u.endswith("/music") for u in fetches), fetches
+
+        # Canonical anchors on the artist, not the album.
+        assert identity["canonical_url"] == "https://liquidbloom.bandcamp.com"
+
+        # Tagline is the cleaned first sentence of the bio — admin
+        # boilerplate ("Bookings: …") is stripped, not echoed.
+        tagline = identity["tagline"]
+        assert "Bookings:" not in tagline
+        assert tagline.startswith("Liquid Bloom is a music project")
+        assert tagline.endswith(".")
+
+        # Two albums pulled from the grid (JSON-LD absent). Names carry
+        # the full title; lazy-loaded cover is picked up from
+        # data-original and upscaled to Bandcamp's 1200px format.
+        creations = body["creations"]
+        names = [c["node"]["name"] for c in creations]
+        assert "Embers of a Forgotten Prayer Revibed" in names
+        assert "Reimagined Legacies (Liquid Bloom Remixes)" in names
+        for c in creations:
+            assert c["node"]["creation_kind"] == "album"
+            img = c["node"]["image_url"] or ""
+            assert "/img/0.gif" not in img  # lazy-load placeholder never lands in the grid
+            assert "_10." in img  # upscaled from thumb to full-size
 
 
 @pytest.mark.asyncio

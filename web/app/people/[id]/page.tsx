@@ -248,7 +248,17 @@ export default async function PersonPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: rawId } = await params;
+  // Next 15 preserves percent-encoding in dynamic route params — a link
+  // to /people/contributor%3Aliquid-bloom-xxx arrives here with the
+  // literal `%3A` still in place. Decode once so downstream fetches
+  // don't re-encode into `%253A` and miss the node.
+  let id = rawId;
+  try {
+    id = decodeURIComponent(rawId);
+  } catch {
+    /* keep raw */
+  }
 
   const cookieLang = (await cookies()).get("NEXT_LOCALE")?.value;
   const headerLang = (await headers())

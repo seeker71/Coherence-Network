@@ -53,10 +53,19 @@ export type PresenceIdentity = {
 // ── Helpers ───────────────────────────────────────────────────────────
 
 function heroGradient(image_url: string | null | undefined, accent: BrandTone) {
-  // Two-layer: the image (or a brand-accent radial) + a dark bottom fade
-  // so the name + tagline stay legible over any art.
+  // Two-layer: the image (or a brand-accent radial) + a bottom-weighted
+  // dark fade. The fade starts soft at 40% so the subject's face and
+  // shoulders stay lit, then deepens into near-solid #08080a where the
+  // title + tagline sit. Works for portraits, album covers, venue
+  // photos — any composition where the focal point lives in the upper
+  // half.
   const bottomFade =
-    "linear-gradient(to bottom,rgba(0,0,0,0) 0%,rgba(0,0,0,0) 55%,rgba(8,8,10,0.95) 100%)";
+    "linear-gradient(to bottom," +
+    "rgba(0,0,0,0) 0%," +
+    "rgba(0,0,0,0) 35%," +
+    "rgba(8,8,10,0.35) 55%," +
+    "rgba(8,8,10,0.82) 75%," +
+    "rgba(8,8,10,0.98) 100%)";
   if (image_url) {
     return {
       backgroundImage: `${bottomFade},url('${image_url}')`,
