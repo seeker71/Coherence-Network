@@ -348,12 +348,17 @@ async def test_bandcamp_pivots_from_album_landing_to_artist_music_page():
         # Canonical anchors on the artist, not the album.
         assert identity["canonical_url"] == "https://liquidbloom.bandcamp.com"
 
-        # Tagline is the cleaned first sentence of the bio — admin
-        # boilerplate ("Bookings: …") is stripped, not echoed.
-        tagline = identity["tagline"]
-        assert "Bookings:" not in tagline
-        assert tagline.startswith("Liquid Bloom is a music project")
-        assert tagline.endswith(".")
+        # Tagline starts empty — scraped third-party bios never fill
+        # the hero slot. That space is held open for the identity's own
+        # voice to arrive (via claim) or for a visitor who knows them
+        # to type a welcome (via inline edit). The raw og:description
+        # still lives on node.description for search/audit; it just
+        # doesn't masquerade as the person's voice.
+        assert identity["tagline"] == ""
+        # The longer-form description field still carries the cleaned
+        # bio — useful for search and for any future first-person
+        # detector, but explicitly not rendered as the tagline.
+        assert identity["description"].startswith("Liquid Bloom is a music project")
 
         # Two albums pulled from the grid (JSON-LD absent). Names carry
         # the full title; lazy-loaded cover is picked up from

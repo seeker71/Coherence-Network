@@ -789,12 +789,18 @@ def import_inspired_by(
         identity_created = False
     else:
         identity_id = resolved.node_id()
-        # ``claimed`` is the single signal of life. A placeholder minted
-        # by the resolver starts unclaimed; the real person walks in and
-        # flips it. The edge and the canonical_url carry the rest —
-        # provenance doesn't need a second copy on the node.
+        # The tagline slot stays open. The resolver seeds what it can
+        # verify — name, canonical URL, cross-platform presences, album
+        # art — but the voice belongs to the person. Scraping
+        # og:description from a platform like Bandcamp leaves a
+        # third-party blurb in the hero ("led by Amani Friend of
+        # Desert Dwellers" when that's no longer true), which reads as
+        # the platform's voice, not the artist's. An empty tagline is
+        # an honest held breath; the first person who knows the truth
+        # types it in. ``claimed`` flips to true when that person is
+        # the identity itself.
         properties: dict[str, Any] = {
-            "tagline": resolved.description,
+            "tagline": "",
             "canonical_url": resolved.canonical_url,
             "provider": resolved.provider,
             "provider_id": resolved.provider_id,

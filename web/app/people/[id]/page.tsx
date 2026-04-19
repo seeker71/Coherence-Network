@@ -174,11 +174,21 @@ function nodeToPresenceIdentity(
     asset: "Work",
   };
   const nodeType = (node.type as string) || "contributor";
+  // tagline comes from the node's `tagline` property only — never
+  // from `description`. Description is the long-form scraped metadata
+  // (og:description, often a third-party bio); tagline is the felt
+  // sentence rendered in the hero. Falling back would leak
+  // platform-authored blurbs into a slot that's meant for the
+  // identity's own voice.
+  const tagline =
+    typeof node.tagline === "string" && node.tagline.trim()
+      ? (node.tagline as string)
+      : undefined;
   return {
     id: (node.id as string) || "",
     name: (node.name as string) || "",
     category: categoryMap[nodeType] || nodeType,
-    tagline: (node.tagline as string) || (node.description as string) || undefined,
+    tagline,
     canonical_url: (node.canonical_url as string) || "",
     provider: (node.provider as string) || "web",
     image_url: (node.image_url as string) || null,
