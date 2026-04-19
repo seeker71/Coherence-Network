@@ -82,7 +82,7 @@ export function FirstTimeWelcome() {
             {t("welcome.startCta")} →
           </Link>
           <Link
-            href="/explore/concept"
+            href="/vision"
             className="inline-flex items-center gap-1.5 rounded-full border border-stone-700/60 hover:bg-stone-800/40 text-sm text-stone-300 px-4 py-2 transition-colors"
             onClick={dismiss}
           >

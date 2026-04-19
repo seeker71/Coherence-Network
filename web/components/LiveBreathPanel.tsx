@@ -135,7 +135,7 @@ export async function LiveBreathPanel({ lang }: Props) {
             {t("homeBreath.goHere")}
           </Link>
           <Link
-            href="/explore/concept"
+            href="/vision"
             className="rounded-full bg-[hsl(var(--primary))] hover:opacity-90 text-[hsl(var(--primary-foreground))] px-4 py-2 text-sm font-medium transition-opacity"
           >
             {t("homeBreath.goExplore")}
