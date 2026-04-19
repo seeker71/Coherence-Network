@@ -17,6 +17,7 @@
 
 import Link from "next/link";
 import { brandFor, type BrandTone } from "./brand";
+import { UpcomingGatherings } from "./UpcomingGatherings";
 
 export type Presence = {
   provider: string;
@@ -169,14 +170,22 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
         </section>
       )}
 
-      {/* ── Creations ─────────────────────────────────────────────── */}
-      {identity.creations.length > 0 && (
+      {/* ── Upcoming gatherings (client-fetched) ──────────────────── */}
+      <UpcomingGatherings
+        identityId={identity.id}
+        identityName={identity.name}
+        accent={accent}
+      />
+
+      {/* ── Creations — albums, tracks, videos, books. Events live
+           in the Upcoming section above, not in this grid. ─────── */}
+      {identity.creations.filter((c) => c.kind !== "event").length > 0 && (
         <section className="px-6 pt-6">
           <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
             Works
           </p>
           <div className="grid grid-cols-2 gap-3">
-            {identity.creations.map((c) => {
+            {identity.creations.filter((c) => c.kind !== "event").map((c) => {
               const Tag = (c.url ? "a" : "div") as "a" | "div";
               const extra = c.url
                 ? { href: c.url, target: "_blank", rel: "noopener noreferrer" }
