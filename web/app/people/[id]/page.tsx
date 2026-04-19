@@ -8,6 +8,12 @@ import { createTranslator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { Panel, VoiceQuote } from "@/components/Panel";
 import { PersonInspiredBy } from "@/components/PersonInspiredBy";
+import {
+  PresencePage,
+  type Creation,
+  type Presence,
+  type PresenceIdentity,
+} from "@/components/presence/PresencePage";
 
 /**
  * /people/[id] — a warm public garden view of a contributor.
@@ -62,6 +68,125 @@ async function fetchContributor(id: string): Promise<ContributorNode | null> {
     {},
     5000,
   );
+}
+
+/**
+ * Fetch the raw graph node for this identity — properties like
+ * canonical_url, presences[], tagline, image_url live here, not on
+ * the Contributor model. We need them to decide whether to render
+ * the polished presence view or the warm garden view.
+ */
+async function fetchGraphNode(id: string): Promise<Record<string, unknown> | null> {
+  const base = getApiBase();
+  const node = await fetchJsonOrNull<Record<string, unknown>>(
+    `${base}/api/graph/nodes/${encodeURIComponent(id)}`,
+    {},
+    5000,
+  );
+  if (node) return node;
+  // The id might be a bare slug without the "contributor:" prefix
+  // (that's what /contributors/graduate returns, and what lives in
+  // localStorage). Try that shape too.
+  if (!id.includes(":")) {
+    return fetchJsonOrNull<Record<string, unknown>>(
+      `${base}/api/graph/nodes/${encodeURIComponent(`contributor:${id}`)}`,
+      {},
+      5000,
+    );
+  }
+  return null;
+}
+
+type EdgeRow = {
+  id: string;
+  from_id: string;
+  to_id: string;
+  type: string;
+  from_node?: { id: string; name: string; type: string };
+  to_node?: { id: string; name: string; type: string };
+  properties?: { kind?: string } & Record<string, unknown>;
+};
+
+async function fetchCreations(nodeId: string): Promise<Creation[]> {
+  const base = getApiBase();
+  const res = await fetchJsonOrNull<{ items: EdgeRow[] }>(
+    `${base}/api/edges?from_id=${encodeURIComponent(nodeId)}&type=contributes-to&limit=50`,
+    {},
+    5000,
+  );
+  if (!res?.items) return [];
+  const creations: Creation[] = [];
+  for (const edge of res.items) {
+    if (edge.to_node?.type !== "asset") continue;
+    const fullAsset = await fetchJsonOrNull<Record<string, unknown>>(
+      `${base}/api/graph/nodes/${encodeURIComponent(edge.to_id)}`,
+      {},
+      5000,
+    );
+    const kind = (edge.properties?.kind as Creation["kind"]) ||
+      (fullAsset?.creation_kind as Creation["kind"]) ||
+      "work";
+    creations.push({
+      kind,
+      name: (fullAsset?.name as string) || edge.to_node?.name || "Untitled",
+      url: (fullAsset?.canonical_url as string) || null,
+      image_url: (fullAsset?.image_url as string) || null,
+    });
+  }
+  return creations;
+}
+
+async function fetchIdentityInspiredBy(
+  nodeId: string,
+): Promise<{ id: string; name: string; provider?: string }[]> {
+  const base = getApiBase();
+  const res = await fetchJsonOrNull<{
+    items: { node: { id: string; name: string; provider?: string } }[];
+  }>(
+    `${base}/api/inspired-by?contributor_id=${encodeURIComponent(nodeId)}`,
+    {},
+    5000,
+  );
+  if (!res?.items) return [];
+  return res.items.map((it) => ({
+    id: it.node.id,
+    name: it.node.name,
+    provider: it.node.provider,
+  }));
+}
+
+function nodeToPresenceIdentity(
+  node: Record<string, unknown>,
+  creations: Creation[],
+  inspiredBy: { id: string; name: string; provider?: string }[],
+): PresenceIdentity {
+  const rawPresences = Array.isArray(node.presences) ? node.presences : [];
+  const presences: Presence[] = rawPresences
+    .filter((p): p is Presence =>
+      typeof p === "object" && p !== null &&
+      typeof (p as Presence).provider === "string" &&
+      typeof (p as Presence).url === "string",
+    );
+  const categoryMap: Record<string, string> = {
+    contributor: "Artist",
+    community: "Community",
+    "network-org": "Project",
+    asset: "Work",
+  };
+  const nodeType = (node.type as string) || "contributor";
+  return {
+    id: (node.id as string) || "",
+    name: (node.name as string) || "",
+    category: categoryMap[nodeType] || nodeType,
+    tagline: (node.tagline as string) || (node.description as string) || undefined,
+    canonical_url: (node.canonical_url as string) || "",
+    provider: (node.provider as string) || "web",
+    image_url: (node.image_url as string) || null,
+    claimed: node.claimed === false ? false : undefined,
+    presences,
+    creations,
+    inspired_by: inspiredBy,
+  };
 }
 
 async function fetchFeed(id: string, lang: LocaleCode): Promise<FeedResponse | null> {
@@ -137,9 +262,10 @@ export default async function PersonPage({
     : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  const [contributor, feed] = await Promise.all([
+  const [contributor, feed, graphNode] = await Promise.all([
     fetchContributor(id),
     fetchFeed(id, lang),
+    fetchGraphNode(id),
   ]);
 
   const items = feed?.items || [];
@@ -152,8 +278,23 @@ export default async function PersonPage({
 
   // If we know nothing about this contributor — no node, no voices,
   // no reactions — render a gentle not-found rather than a scary 404.
-  if (!contributor && items.length === 0) {
+  if (!contributor && !graphNode && items.length === 0) {
     notFound();
+  }
+
+  // When the graph node carries a canonical_url, this identity has an
+  // outward-facing presence. Render the polished presence page —
+  // hero, platforms, creations, lineage — instead of the warm garden
+  // view. Data flows from the graph; no fields are hardcoded.
+  if (graphNode && typeof graphNode.canonical_url === "string" && graphNode.canonical_url) {
+    const nodeId = (graphNode.id as string) || id;
+    const [creations, inspiredBy] = await Promise.all([
+      fetchCreations(nodeId),
+      fetchIdentityInspiredBy(nodeId),
+    ]);
+    return (
+      <PresencePage identity={nodeToPresenceIdentity(graphNode, creations, inspiredBy)} />
+    );
   }
 
   // Prefer the author_name from one of her own voices (real human name
