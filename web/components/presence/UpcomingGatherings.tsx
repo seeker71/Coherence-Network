@@ -70,6 +70,35 @@ function relativeTime(iso: string | undefined): string | null {
   return new Date(t).toLocaleDateString();
 }
 
+/**
+ * Is this gathering already past? The `when` field is free text —
+ * "May 9 2026", "summer 2025", "next full moon". Chrome's Date.parse
+ * is too lenient for season words ("summer 2026" → Dec 31 2025), so
+ * the tiered heuristic is:
+ *   1. If the string carries a 4-digit year and that year differs
+ *      from the current year, the comparison is unambiguous.
+ *   2. Otherwise (same year or no year), only trust Date.parse when
+ *      the string contains a month name or digit-separated date.
+ *   3. Anything else defaults to upcoming — a held-open date is more
+ *      alive surfaced than tucked into a lineage list.
+ */
+function isPast(when: string | undefined): boolean {
+  if (!when) return false;
+  const yearMatch = when.match(/\b(19|20)\d{2}\b/);
+  const currentYear = new Date().getFullYear();
+  if (yearMatch) {
+    const year = parseInt(yearMatch[0], 10);
+    if (year < currentYear) return true;
+    if (year > currentYear) return false;
+  }
+  const hasMonthOrDay = /\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d{1,2}[/-])/i.test(when);
+  if (hasMonthOrDay) {
+    const parsed = Date.parse(when);
+    if (!Number.isNaN(parsed)) return parsed < Date.now();
+  }
+  return false;
+}
+
 export function UpcomingGatherings({
   identityId,
   identityName,
@@ -214,109 +243,133 @@ export function UpcomingGatherings({
 
   if (!loaded && events.length === 0) return null;
 
+  const upcoming = events.filter((e) => !isPast(e.when));
+  const past = events.filter((e) => isPast(e.when));
+
+  const renderCard = (e: EventNode, tone: "upcoming" | "past") => {
+    const added = relativeTime(e.added_at);
+    const chips = hostsByEvent[e.id] || [];
+    const hosting = chips.find((c) => c.role === "hosting");
+    const coLeaders = chips.filter((c) => c.role === "co-leading");
+    const cardClass =
+      tone === "upcoming"
+        ? "rounded-2xl border border-white/10 bg-white/[0.03] p-4"
+        : "rounded-2xl border border-white/5 bg-white/[0.015] p-4";
+    return (
+      <li key={e.id} className={cardClass}>
+        <p className="text-[15px] leading-snug text-white">{e.name}</p>
+        {(e.when || e.where) && (
+          <p className="mt-1 text-xs text-white/60">
+            {e.when}
+            {e.when && e.where && <span className="mx-1.5">·</span>}
+            {e.where}
+          </p>
+        )}
+        {hosting && (
+          <p className="mt-1.5 text-xs text-white/55">
+            held by{" "}
+            <Link
+              href={`/people/${encodeURIComponent(hosting.id)}`}
+              className="text-white/80 hover:text-white underline-offset-2 hover:underline"
+            >
+              {hosting.name}
+            </Link>
+          </p>
+        )}
+        {coLeaders.length > 0 && (
+          <p className="mt-1 text-xs text-white/55">
+            co-led with{" "}
+            {coLeaders.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && ", "}
+                <Link
+                  href={`/people/${encodeURIComponent(c.id)}`}
+                  className="text-white/80 hover:text-white underline-offset-2 hover:underline"
+                >
+                  {c.name}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
+        {e.note && (
+          <p className="mt-2 text-sm italic text-white/75 leading-relaxed">
+            {e.note}
+          </p>
+        )}
+        <div className="mt-2 flex items-center gap-3 text-xs flex-wrap">
+          {e.url && (
+            <a
+              href={e.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium"
+              style={{ color: accent.bg }}
+            >
+              {tone === "past" ? "see it →" : "register →"}
+            </a>
+          )}
+          {(e.added_by || added) && (
+            <span className="text-white/40">
+              ·{" "}
+              {e.added_by ? (
+                e.added_by_name ? (
+                  <>
+                    added by{" "}
+                    <Link
+                      href={`/people/${encodeURIComponent(e.added_by)}`}
+                      className="hover:text-white/70 underline-offset-2 hover:underline"
+                    >
+                      {e.added_by_name}
+                    </Link>
+                  </>
+                ) : (
+                  <Link
+                    href={`/people/${encodeURIComponent(e.added_by)}`}
+                    className="hover:text-white/70 underline-offset-2 hover:underline"
+                  >
+                    added
+                  </Link>
+                )
+              ) : (
+                <>added</>
+              )}
+              {added && <> · {added}</>}
+            </span>
+          )}
+        </div>
+      </li>
+    );
+  };
+
   return (
     <section className="px-6 pt-8">
-      <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
-        Upcoming
-      </p>
+      {upcoming.length > 0 && (
+        <>
+          <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
+            Upcoming
+          </p>
+          <ul className="space-y-3">
+            {upcoming.map((e) => renderCard(e, "upcoming"))}
+          </ul>
+        </>
+      )}
 
-      {events.length > 0 && (
-        <ul className="space-y-3">
-          {events.map((e) => {
-            const added = relativeTime(e.added_at);
-            const chips = hostsByEvent[e.id] || [];
-            const hosting = chips.find((c) => c.role === "hosting");
-            const coLeaders = chips.filter((c) => c.role === "co-leading");
-            return (
-              <li
-                key={e.id}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"
-              >
-                <p className="text-[15px] leading-snug text-white">{e.name}</p>
-                {(e.when || e.where) && (
-                  <p className="mt-1 text-xs text-white/60">
-                    {e.when}
-                    {e.when && e.where && <span className="mx-1.5">·</span>}
-                    {e.where}
-                  </p>
-                )}
-                {hosting && (
-                  <p className="mt-1.5 text-xs text-white/55">
-                    held by{" "}
-                    <Link
-                      href={`/people/${encodeURIComponent(hosting.id)}`}
-                      className="text-white/80 hover:text-white underline-offset-2 hover:underline"
-                    >
-                      {hosting.name}
-                    </Link>
-                  </p>
-                )}
-                {coLeaders.length > 0 && (
-                  <p className="mt-1 text-xs text-white/55">
-                    co-led with{" "}
-                    {coLeaders.map((c, i) => (
-                      <span key={c.id}>
-                        {i > 0 && ", "}
-                        <Link
-                          href={`/people/${encodeURIComponent(c.id)}`}
-                          className="text-white/80 hover:text-white underline-offset-2 hover:underline"
-                        >
-                          {c.name}
-                        </Link>
-                      </span>
-                    ))}
-                  </p>
-                )}
-                {e.note && (
-                  <p className="mt-2 text-sm italic text-white/75 leading-relaxed">
-                    {e.note}
-                  </p>
-                )}
-                <div className="mt-2 flex items-center gap-3 text-xs flex-wrap">
-                  {e.url && (
-                    <a
-                      href={e.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium"
-                      style={{ color: accent.bg }}
-                    >
-                      register →
-                    </a>
-                  )}
-                  {(e.added_by || added) && (
-                    <span className="text-white/40">
-                      ·{" "}
-                      {e.added_by ? (
-                        e.added_by_name ? (
-                          <>
-                            added by{" "}
-                            <Link
-                              href={`/people/${encodeURIComponent(e.added_by)}`}
-                              className="hover:text-white/70 underline-offset-2 hover:underline"
-                            >
-                              {e.added_by_name}
-                            </Link>
-                          </>
-                        ) : (
-                          <Link
-                            href={`/people/${encodeURIComponent(e.added_by)}`}
-                            className="hover:text-white/70 underline-offset-2 hover:underline"
-                          >
-                            added
-                          </Link>
-                        )
-                      ) : (
-                        <>added</>
-                      )}
-                      {added && <> · {added}</>}
-                    </span>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+      {past.length > 0 && (
+        <>
+          <p className={`text-[10px] uppercase tracking-[0.18em] font-semibold text-white/40 mb-3 ${upcoming.length > 0 ? "mt-6" : ""}`}>
+            Where the sound has traveled
+          </p>
+          <ul className="space-y-3">
+            {past.map((e) => renderCard(e, "past"))}
+          </ul>
+        </>
+      )}
+
+      {upcoming.length === 0 && past.length === 0 && (
+        <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-white/50 mb-3">
+          Upcoming
+        </p>
       )}
 
       {showForm ? (
