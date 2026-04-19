@@ -251,6 +251,7 @@ export function UpcomingGatherings({
     const chips = hostsByEvent[e.id] || [];
     const hosting = chips.find((c) => c.role === "hosting");
     const coLeaders = chips.filter((c) => c.role === "co-leading");
+    const performers = chips.filter((c) => c.role === "performing");
     const cardClass =
       tone === "upcoming"
         ? "rounded-2xl border border-white/10 bg-white/[0.03] p-4"
@@ -280,6 +281,22 @@ export function UpcomingGatherings({
           <p className="mt-1 text-xs text-white/55">
             co-led with{" "}
             {coLeaders.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && ", "}
+                <Link
+                  href={`/people/${encodeURIComponent(c.id)}`}
+                  className="text-white/80 hover:text-white underline-offset-2 hover:underline"
+                >
+                  {c.name}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
+        {performers.length > 0 && (
+          <p className="mt-1 text-xs text-white/55">
+            featuring{" "}
+            {performers.map((c, i) => (
               <span key={c.id}>
                 {i > 0 && ", "}
                 <Link
