@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { createTranslator } from "@/lib/i18n";
@@ -10,6 +10,17 @@ import { ExplorePager } from "@/components/ExplorePager";
  * /explore/[entityType] — a walk through entities, one full-screen meeting
  * at a time. Tap care/amplify/move-on to travel; the queue lazily refreshes
  * when the end approaches so the walk never hits a wall.
+ *
+ * /explore/concept used to render this same swipe deck for Living
+ * Collective concepts. It was bolted on: each meeting had no shareable
+ * URL, no link back to the canonical /vision/[id] page, and a tiny
+ * un-cinematic image on desktop. /vision is the real concept surface
+ * (manifesto + per-concept long-form section + four image galleries),
+ * and every concept lives at a stable, shareable /vision/lc-* URL.
+ *
+ * So /explore/concept now redirects to /vision. /explore/proposal and
+ * other entity types still get the swipe-deck treatment because they
+ * don't have an equivalent canonical surface yet.
  */
 
 export const dynamic = "force-dynamic";
@@ -72,6 +83,9 @@ export default async function ExplorePage({
   params: Promise<{ entityType: string }>;
 }) {
   const { entityType } = await params;
+  // /explore/concept retired in favor of /vision (the canonical concept
+  // surface with shareable per-concept URLs at /vision/lc-*).
+  if (entityType === "concept") redirect("/vision");
   if (!SUPPORTED_TYPES.has(entityType)) notFound();
 
   const cookieLocale = (await cookies()).get("NEXT_LOCALE")?.value;
