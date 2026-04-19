@@ -769,19 +769,18 @@ def _ensure_creation_nodes(
     return out
 
 
-def import_inspired_by(
-    source_contributor_id: str,
-    resolved: ResolvedIdentity,
-) -> dict[str, Any]:
-    """Create (or find) the identity subgraph and the inspired-by edge.
+def ensure_identity(resolved: ResolvedIdentity) -> tuple[dict[str, Any], bool, list[dict[str, Any]]]:
+    """Create (or find) the identity subgraph for a resolved input.
 
-    Idempotent on canonical URL for the identity; creation nodes are
-    keyed by creation URL (or name if URL is missing). Weight on the
-    inspired-by edge is computed from discovery signals.
+    Separate from :func:`import_inspired_by` because not every resolve
+    is a "someone inspired me" gesture. Adding a co-leader to a
+    gathering, linking a collaborator on an album, crediting a teacher
+    on an essay — these all need the resolver's identity-minting
+    behaviour without forging an inspired-by edge the visitor didn't
+    actually mean.
+
+    Returns ``(identity_node, created, creations_out)``.
     """
-    source_contributor_id = _normalize_contributor_id(source_contributor_id)
-    weight = compute_weight(resolved)
-
     existing = find_existing_identity(resolved.canonical_url)
     if existing:
         identity_node = existing
@@ -789,16 +788,6 @@ def import_inspired_by(
         identity_created = False
     else:
         identity_id = resolved.node_id()
-        # The tagline slot stays open. The resolver seeds what it can
-        # verify — name, canonical URL, cross-platform presences, album
-        # art — but the voice belongs to the person. Scraping
-        # og:description from a platform like Bandcamp leaves a
-        # third-party blurb in the hero ("led by Amani Friend of
-        # Desert Dwellers" when that's no longer true), which reads as
-        # the platform's voice, not the artist's. An empty tagline is
-        # an honest held breath; the first person who knows the truth
-        # types it in. ``claimed`` flips to true when that person is
-        # the identity itself.
         properties: dict[str, Any] = {
             "tagline": "",
             "canonical_url": resolved.canonical_url,
@@ -810,10 +799,6 @@ def import_inspired_by(
             ],
             "claimed": False,
         }
-        # Only contributors that *actually* represent a human carry the
-        # HUMAN contributor_type + placeholder email. A festival or a
-        # network-org isn't a person; forcing HUMAN onto their node
-        # pollutes the contributors directory and breaks the claim story.
         if resolved.node_type == "contributor":
             properties.update({
                 "contributor_type": "HUMAN",
@@ -830,6 +815,24 @@ def import_inspired_by(
         identity_created = True
 
     creations_out = _ensure_creation_nodes(identity_id, resolved.creations)
+    return identity_node, identity_created, creations_out
+
+
+def import_inspired_by(
+    source_contributor_id: str,
+    resolved: ResolvedIdentity,
+) -> dict[str, Any]:
+    """Create (or find) the identity subgraph and the inspired-by edge.
+
+    Idempotent on canonical URL for the identity; creation nodes are
+    keyed by creation URL (or name if URL is missing). Weight on the
+    inspired-by edge is computed from discovery signals.
+    """
+    source_contributor_id = _normalize_contributor_id(source_contributor_id)
+    weight = compute_weight(resolved)
+
+    identity_node, identity_created, creations_out = ensure_identity(resolved)
+    identity_id = identity_node["id"]
 
     edge_result = graph_service.create_edge_strict(
         from_id=source_contributor_id,

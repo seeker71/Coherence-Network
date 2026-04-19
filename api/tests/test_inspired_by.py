@@ -375,6 +375,127 @@ async def test_bandcamp_pivots_from_album_landing_to_artist_music_page():
 
 
 @pytest.mark.asyncio
+async def test_gathering_stitches_primary_added_by_and_held_open_names():
+    """Adding a gathering to a presence threads multiple real edges into
+    the graph and keeps unverified names honest.
+
+    The flow: a provisional visitor opens Amani's page and adds a
+    gathering. They include a hosting collective (URL) and two co-
+    leaders: one as a URL and one as a bare first name. After the
+    call, the graph holds:
+
+      · the event node with when/where/note/added_by
+      · a contributes-to edge from Amani (role=primary)
+      · a contributes-to edge from the hosting collective's real
+        node (resolved via URL → inspired-by service)
+      · a contributes-to edge from the URL-named co-leader's real
+        node (same resolver path)
+      · a contributes-to edge from the bare-name co-leader, but
+        their node is a held-open placeholder — no canonical_url,
+        claimed:false, name equal to what was typed
+      · a contributes-to edge from the provisional visitor (added-by)
+        so their footprint mirrors what they've placed
+
+    The single URL we need to reach online is stubbed.
+    """
+    host_url = "https://ecstaticdance.example.org/boulder"
+    host_html = """
+    <html><head>
+    <meta property="og:site_name" content="Ecstatic Dance">
+    <meta property="og:title" content="Boulder Ecstatic Dance">
+    <link rel="canonical" href="https://ecstaticdance.example.org/boulder">
+    </head><body></body></html>
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # Primary identity — a minted artist page the gathering is added to.
+        source = await _create_source(c)
+        with patch.object(service, "_fetch", _fake_fetch(ARTIST_HTML, "https://liquidbloom.bandcamp.com/")):
+            created = await c.post("/api/inspired-by", json={
+                "name": "https://liquidbloom.bandcamp.com",
+                "source_contributor_id": source,
+            })
+        artist_id = created.json()["identity"]["id"]
+
+        # Provisional visitor — a wanderer with no name, created by
+        # the client's ensureVisitorContributor helper.
+        wanderer_id = "contributor:wanderer-test-abc"
+        r = await c.post("/api/graph/nodes", json={
+            "id": wanderer_id,
+            "type": "contributor",
+            "name": wanderer_id.split(":", 1)[1],
+            "description": "",
+            "properties": {"claimed": False, "contributor_type": "HUMAN", "provisional": True},
+        })
+        assert r.status_code == 200
+
+        # Route _fetch: primary identity was already memoized as an
+        # existing node, so only the hosting-collective fetch needs
+        # to succeed for this case.
+        def _routed_fetch(url: str):
+            if "ecstaticdance.example.org" in url:
+                return (host_url, host_html)
+            return None
+
+        with patch.object(service, "_fetch", _routed_fetch):
+            r = await c.post(
+                f"/api/presences/{artist_id}/gatherings",
+                json={
+                    "title": "Breathwork with Liquid Bloom",
+                    "when": "summer 2026",
+                    "where": "Boulder, CO",
+                    "note": "a charged one",
+                    "added_by": wanderer_id,
+                    "hosted_by": host_url,
+                    "co_led_with": [
+                        "https://artist.example.com",  # URL — would resolve
+                        "Robin",                       # bare name — placeholder
+                    ],
+                },
+            )
+        # The URL co-leader's fetch returns None above, so that path
+        # falls through to placeholder too. That's intentional: both
+        # unresolvable URLs and bare names become held-open placeholders
+        # with no canonical_url, never speculative online identities.
+        assert r.status_code == 201, r.text
+        body = r.json()
+        event_id = body["event"]["id"]
+
+        # All the contributes-to edges pointing AT the event.
+        incoming = graph_service.list_edges(
+            to_id=event_id, edge_type="contributes-to", limit=50,
+        ).get("items", [])
+        roles = {(e["from_id"], (e.get("properties") or {}).get("role")) for e in incoming}
+
+        # Primary host = the identity whose page this was added from.
+        assert (artist_id, "primary") in roles
+
+        # Added-by edge from the provisional wanderer — their footprint
+        # now carries this event.
+        assert (wanderer_id, "added-by") in roles
+
+        # Hosting collective — the node was created from the stubbed fetch,
+        # and links back with role=hosting.
+        hosting_ids = [fid for (fid, role) in roles if role == "hosting"]
+        assert len(hosting_ids) == 1
+        hosting_node = graph_service.get_node(hosting_ids[0])
+        assert hosting_node is not None
+        assert hosting_node["canonical_url"] == host_url
+
+        # Co-leaders — both became held-open placeholders (no
+        # canonical_url, claimed:false, names match what was typed).
+        co_leader_ids = [fid for (fid, role) in roles if role == "co-leading"]
+        assert len(co_leader_ids) == 2
+        co_leaders = [graph_service.get_node(cid) for cid in co_leader_ids]
+        co_names = {n["name"] for n in co_leaders if n}
+        assert "Robin" in co_names
+        for n in co_leaders:
+            assert n["claimed"] is False
+            # Placeholders carry no canonical_url — the graph never
+            # pretends they resolved to an online identity.
+            assert not n.get("canonical_url")
+
+
+@pytest.mark.asyncio
 async def test_list_and_delete_leaves_identity_and_creations_intact():
     """Deleting the inspired-by edge leaves the identity and its
     creation edges in the graph — still claimable, still connected."""

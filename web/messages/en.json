@@ -170,12 +170,30 @@
     "errorGeneric": "Something went wrong. Please try again.",
     "errorNetwork": "Connection error. Please try again.",
     "roles": {
-      "livingStructureWeaver": { "name": "Living-structure weaver", "desc": "Architects, builders, earthship enthusiasts, cob practitioners, bamboo growers" },
-      "nourishmentAlchemist": { "name": "Nourishment alchemist", "desc": "Permaculturists, fermentation practitioners, food foresters, communal cooks" },
-      "frequencyHolder": { "name": "Frequency holder", "desc": "Musicians, sound healers, voice practitioners, silence holders" },
-      "vitalityKeeper": { "name": "Vitality keeper", "desc": "Bodyworkers, movement facilitators, nature immersion guides, breathwork practitioners" },
-      "transmissionSource": { "name": "Transmission source", "desc": "Experienced community builders, facilitators, elders of any tradition that resonates" },
-      "formGrower": { "name": "Form-grower", "desc": "Earth workers, timber framers, stone masons, hands that shape space that breathes" }
+      "livingStructureWeaver": {
+        "name": "Living-structure weaver",
+        "desc": "Architects, builders, earthship enthusiasts, cob practitioners, bamboo growers"
+      },
+      "nourishmentAlchemist": {
+        "name": "Nourishment alchemist",
+        "desc": "Permaculturists, fermentation practitioners, food foresters, communal cooks"
+      },
+      "frequencyHolder": {
+        "name": "Frequency holder",
+        "desc": "Musicians, sound healers, voice practitioners, silence holders"
+      },
+      "vitalityKeeper": {
+        "name": "Vitality keeper",
+        "desc": "Bodyworkers, movement facilitators, nature immersion guides, breathwork practitioners"
+      },
+      "transmissionSource": {
+        "name": "Transmission source",
+        "desc": "Experienced community builders, facilitators, elders of any tradition that resonates"
+      },
+      "formGrower": {
+        "name": "Form-grower",
+        "desc": "Earth workers, timber framers, stone masons, hands that shape space that breathes"
+      }
     }
   },
   "bottomNav": {
@@ -201,13 +219,51 @@
     "stepIn": "Step in",
     "you": "You",
     "menuLabel": "Your corner",
-    "heading": "Your corner",
+    "heading": "Your presence",
     "viewProfile": "Your profile",
     "myCorner": "Your feed",
     "hereNow": "Here now",
     "portfolio": "Your portfolio",
     "beliefs": "Your beliefs",
-    "inviteFriend": "Invite a friend"
+    "inviteFriend": "Invite a friend",
+    "lede": "Who the field knows you as, what you've offered, and how to begin again if that feels right.",
+    "loading": "Reading your corner…",
+    "knownAsEyebrow": "Known as",
+    "unnamedHeading": "An unnamed presence",
+    "unnamedLede": "You've shown up, the field has noticed, and you haven't named yourself yet. That's allowed — reading is always free.",
+    "namedNotGraduated": "When you offer a voice, a heart, or a proposal for the first time, you become a contributor with your own page.",
+    "presenceSince": "Present for {days} days of the field's life.",
+    "footprintEyebrow": "Your footprint",
+    "footprintError": "The field is quiet right now. Try again in a moment.",
+    "footprintEmpty": "You've been reading. When you offer a voice or a heart, it will show up here.",
+    "footprintOfferedPrefix": "You offered",
+    "footprintReceivedPrefix": "What came back:",
+    "footprintJoin": ", ",
+    "footprintVoice1": "one voice",
+    "footprintVoicesN": "{n} voices",
+    "footprintHeartGiven1": "one heart",
+    "footprintHeartsGivenN": "{n} hearts",
+    "footprintProposal1": "one proposal",
+    "footprintProposalsN": "{n} proposals",
+    "footprintHeartReceived1": "one heart laid on your voice",
+    "footprintHeartsReceivedN": "{n} hearts laid on your voices",
+    "footprintReply1": "one reply",
+    "footprintRepliesN": "{n} replies",
+    "invitedByEyebrow": "Brought in by",
+    "invitedByBody": "A contributor ({who}) opened the door for you. When you contribute, warmth flows back to them along the chain.",
+    "notYetGraduated": "Once you offer a voice or a heart, your footprint will begin showing up here.",
+    "technicalSummary": "Technical view (the shape of your keys)",
+    "contributorIdLabel": "contributor_id:",
+    "fingerprintLabel": "device_fingerprint:",
+    "clearEyebrow": "Begin again",
+    "clearLede": "Wipe this device's memory of who you are. Your contributions on the field stay — only this browser forgets. The next visit starts fresh.",
+    "clearCta": "Clear identity on this device",
+    "clearConfirm": "Yes, begin again",
+    "clearCancel": "Cancel",
+    "linkFromFeed": "See your presence",
+    "menuHeading": "Your corner",
+    "stepInCount1": "step in · 1 held open",
+    "stepInCountN": "step in · {n} held open"
   },
   "invite": {
     "eyebrow": "Bring someone in",
@@ -249,44 +305,6 @@
     "iosHeading": "Add this to your home screen first",
     "iosLede": "On iPhone, morning notifications need the app installed. Tap the share icon below, then 'Add to Home Screen', then open it from there.",
     "error": "Something prevented the change from landing. Try again in a moment."
-  },
-  "me": {
-    "heading": "Your presence",
-    "lede": "Who the field knows you as, what you've offered, and how to begin again if that feels right.",
-    "loading": "Reading your corner…",
-    "knownAsEyebrow": "Known as",
-    "unnamedHeading": "An unnamed presence",
-    "unnamedLede": "You've shown up, the field has noticed, and you haven't named yourself yet. That's allowed — reading is always free.",
-    "namedNotGraduated": "When you offer a voice, a heart, or a proposal for the first time, you become a contributor with your own page.",
-    "presenceSince": "Present for {days} days of the field's life.",
-    "footprintEyebrow": "Your footprint",
-    "footprintError": "The field is quiet right now. Try again in a moment.",
-    "footprintEmpty": "You've been reading. When you offer a voice or a heart, it will show up here.",
-    "footprintOfferedPrefix": "You offered",
-    "footprintReceivedPrefix": "What came back:",
-    "footprintJoin": ", ",
-    "footprintVoice1": "one voice",
-    "footprintVoicesN": "{n} voices",
-    "footprintHeartGiven1": "one heart",
-    "footprintHeartsGivenN": "{n} hearts",
-    "footprintProposal1": "one proposal",
-    "footprintProposalsN": "{n} proposals",
-    "footprintHeartReceived1": "one heart laid on your voice",
-    "footprintHeartsReceivedN": "{n} hearts laid on your voices",
-    "footprintReply1": "one reply",
-    "footprintRepliesN": "{n} replies",
-    "invitedByEyebrow": "Brought in by",
-    "invitedByBody": "A contributor ({who}) opened the door for you. When you contribute, warmth flows back to them along the chain.",
-    "notYetGraduated": "Once you offer a voice or a heart, your footprint will begin showing up here.",
-    "technicalSummary": "Technical view (the shape of your keys)",
-    "contributorIdLabel": "contributor_id:",
-    "fingerprintLabel": "device_fingerprint:",
-    "clearEyebrow": "Begin again",
-    "clearLede": "Wipe this device's memory of who you are. Your contributions on the field stay — only this browser forgets. The next visit starts fresh.",
-    "clearCta": "Clear identity on this device",
-    "clearConfirm": "Yes, begin again",
-    "clearCancel": "Cancel",
-    "linkFromFeed": "See your presence"
   },
   "people": {
     "eyebrow": "A corner of the organism",
