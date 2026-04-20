@@ -89,6 +89,15 @@ DEFAULT_NODE_TYPE = "contributor"
 MAX_PRESENCES = 10
 MAX_CREATIONS = 8
 
+# When the initial page-scrape returns fewer than this many cross-
+# platform presences, the resolver automatically does a name-search
+# enrichment pass to discover the rest of the constellation. Bandcamp
+# artist pages and Facebook profiles often only surface 0–1 outbound
+# presences; a search for the artist's name reliably finds Spotify,
+# SoundCloud, YouTube, Instagram, etc. Saves the user from having to
+# prompt us for every platform.
+SPARSE_PRESENCE_THRESHOLD = 3
+
 
 @dataclass
 class Presence:
@@ -310,7 +319,15 @@ def _parse_html(html: str) -> _PageParser:
     return parser
 
 
-def _ddg_first_result(query: str) -> str | None:
+def _ddg_search_urls(query: str, limit: int = 20) -> list[str]:
+    """Return the top DDG result URLs for a query.
+
+    DuckDuckGo's HTML endpoint wraps each result's real URL inside a
+    redirector — we unpack the ``uddg`` param back to the canonical
+    target. Used both for the first-result lookup (resolving a bare
+    name) and for the sparse-resolution enrichment pass (harvesting
+    an entity's cross-platform constellation).
+    """
     try:
         with httpx.Client(
             timeout=SEARCH_TIMEOUT,
@@ -322,24 +339,122 @@ def _ddg_first_result(query: str) -> str | None:
                 data={"q": query},
             )
             if r.status_code >= 400:
-                return None
+                return []
             html = r.text
     except httpx.HTTPError:
-        return None
+        return []
 
-    m = re.search(
+    from urllib.parse import parse_qs, urlparse as _u
+
+    urls: list[str] = []
+    for m in re.finditer(
         r'<a[^>]+class="[^"]*result__a[^"]*"[^>]+href="([^"]+)"',
         html,
-    )
-    if not m:
-        return None
-    href = m.group(1)
-    if "uddg=" in href:
-        from urllib.parse import parse_qs, urlparse as _u
-        q = parse_qs(_u(href).query)
-        if "uddg" in q:
-            return q["uddg"][0]
-    return href
+    ):
+        href = m.group(1)
+        if "uddg=" in href:
+            q = parse_qs(_u(href).query)
+            if "uddg" in q:
+                href = q["uddg"][0]
+        urls.append(href)
+        if len(urls) >= limit:
+            break
+    return urls
+
+
+def _ddg_first_result(query: str) -> str | None:
+    results = _ddg_search_urls(query, limit=1)
+    return results[0] if results else None
+
+
+def _name_slug(name: str) -> str:
+    """A lowercased, alphanumeric-only slug for fuzzy URL matching."""
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def _url_verified_against_name(url: str, name: str) -> bool:
+    """Cheap verification for opaque-ID platform URLs (Spotify
+    /artist/{hash}, YouTube /channel/{id}): fetch the page and check
+    if og:title / twitter:title contains the entity name. One HTTP
+    call per candidate — the enrichment runs once per presence and
+    caches into the graph, so this cost is amortized forever."""
+    fetched = _fetch(url)
+    if not fetched:
+        return False
+    _, html = fetched
+    parsed = _parse_html(html)
+    name_slug = _name_slug(name)
+    if not name_slug:
+        return False
+    for key in ("og:title", "twitter:title", "og:site_name"):
+        val = parsed.og.get(key) or ""
+        if name_slug in _name_slug(val):
+            return True
+    if parsed.title and name_slug in _name_slug(parsed.title):
+        return True
+    return False
+
+
+def _search_platform_presences(
+    name: str,
+    own_provider: str,
+    already_have: list[Presence],
+) -> list[Presence]:
+    """Harvest the entity's cross-platform constellation from a name
+    search. For each known platform (Spotify, SoundCloud, YouTube,
+    Instagram…) the resolver takes the first-ranked DDG result on
+    that platform's host and either:
+
+      · accepts it when the entity's name slug appears in the host
+        or path (profile URLs like soundcloud.com/liquidbloom,
+        liquidbloom.bandcamp.com, instagram.com/liquidbloom), OR
+      · fetches the page and accepts when og:title echoes the name
+        (opaque-ID URLs like spotify.com/artist/{hash})
+
+    Same-provider dupes are filtered by keeping the first match per
+    provider. Runs when the initial page-scrape is sparse. The user
+    shouldn't have to ask for each platform — search + verify pulls
+    the whole constellation once.
+    """
+    if not name or len(name) < 3:
+        return []
+    slug = _name_slug(name)
+    if not slug:
+        return []
+    have_norm = {_normalize_url(p.url) for p in already_have}
+    have_providers = {p.provider for p in already_have}
+
+    results = _ddg_search_urls(name, limit=40)
+    found: dict[str, Presence] = {}
+    for raw in results:
+        try:
+            absolute = raw if "://" in raw else f"https://{raw}"
+            host = urlparse(absolute).netloc.lower()
+            path = urlparse(absolute).path.lower()
+        except ValueError:
+            continue
+        provider = _match_presence_provider(absolute)
+        if not provider:
+            continue
+        if provider == own_provider:
+            continue
+        if provider in have_providers or any(
+            p.provider == provider for p in found.values()
+        ):
+            continue
+        normalized = _normalize_url(absolute)
+        if normalized in have_norm or normalized in found:
+            continue
+        host_slug = _name_slug(host)
+        path_slug = _name_slug(path)
+        # Fast path: slug shows up in host or path
+        if slug in host_slug or slug in path_slug:
+            found[normalized] = Presence(provider=provider, url=normalized)
+            continue
+        # Opaque-ID path: verify via fetch + og:title match
+        if _url_verified_against_name(absolute, name):
+            found[normalized] = Presence(provider=provider, url=normalized)
+    return list(found.values())
 
 
 # ── Presences + creations extraction ──────────────────────────────────
@@ -352,12 +467,16 @@ def _extract_presences(
 ) -> list[Presence]:
     """Collect outbound links to known-provider platforms.
 
-    Same-provider links (e.g. Bandcamp's own /settings, /cart, or another
-    artist's subdomain) are filtered out — they're navigation chrome or
-    unrelated accounts, not this identity's presences. Cross-platform
-    links are the signal we want.
+    One URL per provider — most sites link to their main artist page
+    plus a handful of specific videos/tracks/posts on the same
+    platform. The main profile is what a visitor wants as a chip;
+    the rest is noise on a presence row. Same-provider-as-identity
+    links (e.g. bandcamp → bandcamp nav chrome) are filtered out
+    entirely.
     """
-    seen: dict[str, Presence] = {}
+    seen_providers: set[str] = set()
+    seen_urls: set[str] = set()
+    presences: list[Presence] = []
     for raw_href in parsed.hrefs:
         absolute = urljoin(canonical_url, raw_href)
         provider = _match_presence_provider(absolute)
@@ -365,13 +484,17 @@ def _extract_presences(
             continue
         if provider == own_provider:
             continue
-        normalized = _normalize_url(absolute)
-        if normalized in seen:
+        if provider in seen_providers:
             continue
-        seen[normalized] = Presence(provider=provider, url=normalized)
-        if len(seen) >= MAX_PRESENCES:
+        normalized = _normalize_url(absolute)
+        if normalized in seen_urls:
+            continue
+        seen_providers.add(provider)
+        seen_urls.add(normalized)
+        presences.append(Presence(provider=provider, url=normalized))
+        if len(presences) >= MAX_PRESENCES:
             break
-    return list(seen.values())
+    return presences
 
 
 _JSON_LD_CREATION_TYPES = {
@@ -644,6 +767,28 @@ def resolve(input_text: str) -> ResolvedIdentity | None:
         or parsed.title
         or text
     ).strip()
+    # Many sites set og:title to "domain.com – real name – tagline" or
+    # "real name | domain". Strip a leading `domain.com –` / `.com -` /
+    # trailing ` | Site` so the name is the entity itself. This helps
+    # both the visual hero and the name-search enrichment (which uses
+    # the name as the search query).
+    from html import unescape as _unescape
+    name = _unescape(name)
+    # Strip a leading domain-like prefix ending in `.com|.org|.net|.earth` etc.
+    name = re.sub(
+        r"^[a-z0-9][a-z0-9\-\.]*\.(?:com|org|net|earth|io|world|tv|app|one)\s*[\-–—|]\s*",
+        "",
+        name,
+        flags=re.IGNORECASE,
+    )
+    # Strip a trailing ` — tagline` or ` | Site` — keep just the name
+    # on the left of the first separator, but only if that left side
+    # is reasonably specific (≥ 3 chars, not just "The").
+    m = re.match(r"^(.{3,})\s*[\-–—|·]\s", name)
+    if m:
+        left = m.group(1).strip()
+        if len(left) >= 3 and left.lower() not in {"the", "an", "a"}:
+            name = left
     description = _clean_tagline(
         parsed.og.get("og:description")
         or parsed.og.get("twitter:description")
@@ -659,6 +804,22 @@ def resolve(input_text: str) -> ResolvedIdentity | None:
     creations = _extract_creations(parsed, canonical)
     if not creations and _is_bandcamp_subdomain(canonical):
         creations = _extract_bandcamp_albums(html, canonical)
+
+    # Auto-enrich when the initial scrape didn't find the full
+    # constellation. Bandcamp artist pages link to one or two socials
+    # at most; Facebook profiles hide outlinks behind auth; many
+    # personal sites bury them in JS-rendered footers. A name search
+    # reliably surfaces the rest of the presences, and the slug-match
+    # / fetch-verify check keeps random strangers out of the graph.
+    # Threshold is on unique providers (not total URLs), so an artist
+    # with 4 YouTube links still triggers discovery of Spotify etc.
+    unique_providers = {p.provider for p in presences}
+    if len(unique_providers) < SPARSE_PRESENCE_THRESHOLD and name:
+        discovered = _search_platform_presences(name, provider, presences)
+        for p in discovered:
+            if len(presences) >= MAX_PRESENCES:
+                break
+            presences.append(p)
 
     return ResolvedIdentity(
         input=text,

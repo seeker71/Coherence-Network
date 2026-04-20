@@ -189,10 +189,17 @@ async def test_name_resolves_to_identity_with_presences_and_creations():
 
 @pytest.mark.asyncio
 async def test_weight_is_lower_when_discovery_is_thin():
-    """No presences, no creations, obscure host → weight stays near base."""
+    """No presences, no creations, obscure host → weight stays near base.
+
+    With auto-enrichment enabled, a sparse page triggers a name search;
+    this test stubs the search + verify paths to empty so we're still
+    measuring "thin discovery stays thin" rather than the enrichment
+    behaviour (which is covered separately)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         source = await _create_source(c)
-        with patch.object(service, "_fetch", _fake_fetch(THIN_HTML, "https://obscure.example.com/x")):
+        with patch.object(service, "_fetch", _fake_fetch(THIN_HTML, "https://obscure.example.com/x")), \
+             patch.object(service, "_ddg_search_urls", lambda q, limit=40: []), \
+             patch.object(service, "_url_verified_against_name", lambda u, n: False):
             r = await c.post("/api/inspired-by", json={
                 "name": "https://obscure.example.com/x",
                 "source_contributor_id": source,
@@ -493,6 +500,67 @@ async def test_gathering_stitches_primary_added_by_and_held_open_names():
             # Placeholders carry no canonical_url — the graph never
             # pretends they resolved to an online identity.
             assert not n.get("canonical_url")
+
+
+@pytest.mark.asyncio
+async def test_sparse_resolve_auto_enriches_from_name_search():
+    """When an entity's home page surfaces only 0-1 outbound presence
+    links (Bandcamp artist page → Facebook only), the resolver's
+    auto-enrichment runs a name search and picks up the rest of the
+    constellation. Slug-match URLs are accepted directly; opaque-ID
+    URLs (Spotify's /artist/{hash}, YouTube's /channel/{id}) get a
+    cheap og:title verification pass. Both paths are stubbed here so
+    the test doesn't reach the live web."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        source = await _create_source(c)
+
+        # Thin bandcamp-like page: only one social link (Facebook).
+        thin_artist_html = """
+        <html><head>
+        <meta property="og:site_name" content="Desert Seeker">
+        <meta property="og:title" content="Desert Seeker">
+        <meta property="og:description" content="Ambient journey music">
+        <link rel="canonical" href="https://desertseeker.bandcamp.com/">
+        </head><body>
+        <a href="https://www.facebook.com/desertseeker">Facebook</a>
+        </body></html>
+        """
+
+        # What DDG "returns" for the name search. Mix of slug-matches
+        # and opaque IDs.
+        search_hits = [
+            "https://soundcloud.com/desertseeker",             # slug-match
+            "https://www.instagram.com/desertseeker",          # slug-match
+            "https://open.spotify.com/artist/abc123hash",       # opaque, verified
+            "https://www.facebook.com/desertseeker",            # dup with initial
+            "https://open.spotify.com/artist/otherartist",      # opaque, NOT verified
+            "https://www.example.com/random-match-desertseeker", # no provider
+        ]
+
+        # Opaque-ID verification: only the first Spotify URL matches name.
+        def fake_verify(url, name):
+            return url == "https://open.spotify.com/artist/abc123hash"
+
+        with patch.object(service, "_fetch", _fake_fetch(thin_artist_html, "https://desertseeker.bandcamp.com/")), \
+             patch.object(service, "_ddg_search_urls", lambda q, limit=40: search_hits), \
+             patch.object(service, "_url_verified_against_name", fake_verify):
+            r = await c.post("/api/inspired-by", json={
+                "name": "https://desertseeker.bandcamp.com",
+                "source_contributor_id": source,
+            })
+        assert r.status_code == 201, r.text
+        body = r.json()
+        providers = {p["provider"] for p in body["presences"]}
+        # Facebook from the page; SoundCloud + Instagram via slug match;
+        # Spotify via opaque-ID fetch-verify. Second Spotify (different
+        # artist) was rejected by verify.
+        assert "facebook" in providers
+        assert "soundcloud" in providers
+        assert "instagram" in providers
+        assert "spotify" in providers
+        # Only one spotify link — the verified one
+        spotify_urls = [p["url"] for p in body["presences"] if p["provider"] == "spotify"]
+        assert spotify_urls == ["https://open.spotify.com/artist/abc123hash"]
 
 
 @pytest.mark.asyncio
