@@ -135,6 +135,101 @@ def compute_resonance(presence_id: str) -> list[dict[str, Any]]:
     return scored[:MAX_RESONANCES_PER_PRESENCE]
 
 
+def resolve_query(query: str, limit: int = 12) -> dict[str, Any]:
+    """Treat free-text as a spectrum and return the graph that resonates.
+
+    Rather than exact-match word lookup, this extracts keywords from
+    the query and scores every concept and every presence node against
+    that spectrum — what the network already carries that overlaps.
+    Returns a connected web the caller can confirm and integrate:
+
+      · concepts     — vision concepts whose story overlaps the query
+      · presences    — contributors / communities / events / practices
+                        whose spectrum overlaps the query
+      · existing_edges — which of the returned items are already
+                        linked to each other (so a UI can draw
+                        the weave, not just the nodes)
+
+    Each scored item carries its shared_tokens so the reason for
+    inclusion is transparent. Nothing is written — this is the
+    "preview the weave" call. A separate integrate step laid on
+    top can make the inspired-by edges from the viewer real.
+    """
+    keywords = extract_keywords(query or "")
+    if not keywords:
+        return {"query": query, "concepts": [], "presences": [], "existing_edges": []}
+
+    # Score concepts
+    concepts_scored: list[dict[str, Any]] = []
+    for c in graph_service.list_nodes(type="concept", limit=500).get("items", []):
+        c_kw = _concept_keywords(c)
+        if not c_kw:
+            continue
+        shared = keywords & c_kw
+        if len(shared) < 2:
+            continue
+        # Normalise by query-keyword count so we ask "how much of the
+        # query's frequency this concept carries" — matches the intuition.
+        score = round(len(shared) / max(len(keywords), 1), 3)
+        concepts_scored.append({
+            "id": c["id"],
+            "name": c.get("name") or c["id"],
+            "type": "concept",
+            "hz": (c.get("sacred_frequency") or {}).get("hz")
+                  if isinstance(c.get("sacred_frequency"), dict)
+                  else c.get("sacred_frequency"),
+            "score": score,
+            "shared_tokens": sorted(shared)[:12],
+        })
+    concepts_scored.sort(key=lambda x: x["score"], reverse=True)
+    concepts_top = concepts_scored[:limit]
+
+    # Score presences (contributor, community, event, etc.)
+    presences_scored: list[dict[str, Any]] = []
+    for ntype in PRESENCE_TYPES:
+        for n in graph_service.list_nodes(type=ntype, limit=500).get("items", []):
+            p_kw = _presence_keywords(n)
+            if not p_kw:
+                continue
+            shared = keywords & p_kw
+            if len(shared) < 2:
+                continue
+            score = round(len(shared) / max(len(keywords), 1), 3)
+            presences_scored.append({
+                "id": n["id"],
+                "name": n.get("name") or n["id"],
+                "type": n.get("type", "contributor"),
+                "image_url": n.get("image_url"),
+                "canonical_url": n.get("canonical_url"),
+                "score": score,
+                "shared_tokens": sorted(shared)[:12],
+            })
+    presences_scored.sort(key=lambda x: x["score"], reverse=True)
+    presences_top = presences_scored[:limit]
+
+    # Existing edges between the returned nodes — so a UI can draw the
+    # already-woven threads between what the query surfaced.
+    returned_ids = {c["id"] for c in concepts_top} | {p["id"] for p in presences_top}
+    edges_out: list[dict[str, Any]] = []
+    if len(returned_ids) > 1:
+        for nid in returned_ids:
+            for e in graph_service.list_edges(from_id=nid, limit=200).get("items", []):
+                if e["to_id"] in returned_ids and e["to_id"] != nid:
+                    edges_out.append({
+                        "from_id": nid,
+                        "to_id": e["to_id"],
+                        "type": e["type"],
+                        "role": (e.get("properties") or {}).get("role"),
+                    })
+
+    return {
+        "query": query,
+        "concepts": concepts_top,
+        "presences": presences_top,
+        "existing_edges": edges_out,
+    }
+
+
 def attune(presence_id: str) -> dict[str, Any]:
     """Compute + write ``resonates-with`` edges for a presence.
 

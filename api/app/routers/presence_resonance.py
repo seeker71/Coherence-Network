@@ -18,11 +18,78 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from app.services import graph_service, inspired_by_service, resonance_service
 
 
 router = APIRouter()
+
+
+class ResolveQueryRequest(BaseModel):
+    query: str = Field(..., min_length=2, max_length=2000)
+    limit: int = Field(default=12, ge=1, le=40)
+
+
+class IntegrateQueryRequest(BaseModel):
+    source_contributor_id: str = Field(..., min_length=1, max_length=255)
+    target_ids: list[str] = Field(..., min_length=1, max_length=80)
+    query: str | None = Field(default=None, max_length=2000)
+
+
+@router.post(
+    "/resolve/query",
+    summary="Resolve free-text into the graph that resonates — preview only",
+)
+async def resolve_query(body: ResolveQueryRequest) -> dict[str, Any]:
+    """Given any text, return the concepts + presences whose spectrum
+    overlaps it, plus the existing edges between them. Nothing is
+    written; the visitor confirms what to integrate."""
+    return resonance_service.resolve_query(body.query, limit=body.limit)
+
+
+@router.post(
+    "/resolve/query/integrate",
+    status_code=201,
+    summary="Integrate confirmed query matches as inspired-by edges",
+)
+async def integrate_query(body: IntegrateQueryRequest) -> dict[str, Any]:
+    """After the viewer confirms which matches from /resolve/query they
+    want threaded into their own lineage, this lays ``inspired-by``
+    edges from the source contributor to each target. Existing edges
+    are kept (idempotent). Returns which edges were newly written."""
+    source = body.source_contributor_id
+    if not source.startswith("contributor:"):
+        source = f"contributor:{source}"
+    if not graph_service.get_node(source):
+        raise HTTPException(status_code=404, detail=f"Contributor '{source}' not found")
+    written: list[dict[str, Any]] = []
+    existed: list[str] = []
+    for target_id in body.target_ids:
+        node = graph_service.get_node(target_id)
+        if not node:
+            continue
+        if graph_service.list_edges(
+            from_id=source, to_id=target_id, edge_type="inspired-by", limit=1,
+        ).get("items"):
+            existed.append(target_id)
+            continue
+        r = graph_service.create_edge_strict(
+            from_id=source, to_id=target_id, type="inspired-by",
+            properties={"input": (body.query or target_id)[:200], "method": "query-integration"},
+            strength=0.5, created_by="resolve_query_integration",
+        )
+        if r.get("id"):
+            written.append({
+                "target_id": target_id,
+                "target_name": node.get("name") or target_id,
+                "edge_id": r["id"],
+            })
+    return {
+        "source_contributor_id": source,
+        "written": written,
+        "existed": existed,
+    }
 
 
 @router.post(
