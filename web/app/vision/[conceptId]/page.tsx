@@ -24,6 +24,7 @@ import { ReaderPresence } from "./_components/ReaderPresence";
 import { WorldSignals } from "./_components/WorldSignals";
 import { EnergyContributors } from "./_components/EnergyContributors";
 import { ResonantAssets } from "./_components/ResonantAssets";
+import { CarriedBy } from "./_components/CarriedBy";
 import { ConceptVoices } from "./_components/ConceptVoices";
 import { ReactionBar } from "@/components/ReactionBar";
 
@@ -251,6 +252,9 @@ export default async function VisionConceptPage({
             <div className="max-w-3xl">
               <EnergyContributors conceptId={conceptId} />
             </div>
+
+            {/* Presences in the network that resonate with this concept */}
+            <CarriedBy conceptId={conceptId} />
 
             {/* Multiple visual expressions — most resonant rises */}
             <div className="max-w-3xl">

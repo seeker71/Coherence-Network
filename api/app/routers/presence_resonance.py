@@ -37,6 +37,40 @@ async def attune(presence_id: str) -> dict[str, Any]:
 
 
 @router.get(
+    "/concepts/{concept_id}/carried-by",
+    summary="List the presences that resonate with (carry) this concept",
+)
+async def carried_by(concept_id: str) -> dict[str, Any]:
+    """The reverse of /api/presences/{id}/resonances.
+
+    A visitor reading the Ceremony concept sees the artists,
+    sanctuaries, gatherings, and communities that carry its
+    frequency — each one a doorway into their own presence page.
+    Completes the bidirectional bridge of the resonance graph.
+    """
+    edges = graph_service.list_edges(
+        to_id=concept_id, edge_type="resonates-with", limit=200,
+    ).get("items", [])
+    items: list[dict[str, Any]] = []
+    for e in edges:
+        presence = graph_service.get_node(e["from_id"])
+        if not presence:
+            continue
+        props = e.get("properties") or {}
+        items.append({
+            "presence_id": presence["id"],
+            "presence_name": presence.get("name") or presence["id"],
+            "presence_type": presence.get("type", "contributor"),
+            "image_url": presence.get("image_url"),
+            "score": props.get("score", e.get("strength", 0.0)),
+            "shared_tokens": props.get("shared_tokens", []),
+            "method": props.get("method", "keyword-overlap"),
+        })
+    items.sort(key=lambda x: x.get("score") or 0.0, reverse=True)
+    return {"items": items, "count": len(items)}
+
+
+@router.get(
     "/presences/{presence_id}/resonances",
     summary="List the vision concepts this presence resonates with",
 )
