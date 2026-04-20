@@ -18,6 +18,7 @@
 import Link from "next/link";
 import { brandFor, type BrandTone } from "./brand";
 import { UpcomingGatherings } from "./UpcomingGatherings";
+import { ResonatesWith } from "./ResonatesWith";
 
 export type Presence = {
   provider: string;
@@ -219,6 +220,9 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
           </div>
         </section>
       )}
+
+      {/* ── Resonance into vision concepts (client-fetched) ─────── */}
+      <ResonatesWith presenceId={identity.id} />
 
       {/* ── Lineage ───────────────────────────────────────────────── */}
       {identity.inspired_by && identity.inspired_by.length > 0 && (

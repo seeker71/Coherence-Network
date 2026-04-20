@@ -496,6 +496,82 @@ async def test_gathering_stitches_primary_added_by_and_held_open_names():
 
 
 @pytest.mark.asyncio
+async def test_resonance_attune_stitches_presence_into_vision_concepts():
+    """A presence's keyword spectrum aligned against a concept's keyword
+    spectrum becomes a ``resonates-with`` edge. Each edge carries the
+    score + the shared tokens that explain why the link is there, so
+    a later deeper-frequency pass can refresh or disambiguate. Also
+    verifies the read endpoint surfaces them back in score order."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        source = await _create_source(c)
+        # Seed a tiny concept universe — enough to exercise the match
+        # logic without requiring the full KB sync.
+        for cid, name, story in (
+            ("concept:ceremony", "Ceremony",
+             "Sacred fire, ritual, slow music, the gathering around a circle, "
+             "elders holding space, breath and bass and stillness."),
+            ("concept:nervous-system", "Nervous System",
+             "Breathwork regulates the nervous system. Calm, co-regulation, "
+             "somatic grounding, heartbeat, subtle tuning."),
+            ("concept:unrelated", "Spreadsheets",
+             "Rows, columns, pivot tables, accounting, quarterly reports."),
+        ):
+            r = await c.post("/api/graph/nodes", json={
+                "id": cid, "type": "concept", "name": name,
+                "description": story, "properties": {},
+            })
+            assert r.status_code == 200
+
+        # Mint an artist presence with ceremony-flavoured signal.
+        with patch.object(service, "_fetch", _fake_fetch(ARTIST_HTML, "https://liquidbloom.bandcamp.com/")):
+            created = await c.post("/api/inspired-by", json={
+                "name": "https://liquidbloom.bandcamp.com",
+                "source_contributor_id": source,
+            })
+        identity_id = created.json()["identity"]["id"]
+
+        # Layer on a ceremonial note so the resonance has real overlap
+        # against the ceremony concept's story words.
+        await c.patch(
+            f"/api/graph/nodes/{identity_id}",
+            json={
+                "description": (
+                    "Liquid Bloom holds sacred music for ritual — slow bass, "
+                    "ceremony-bass, breath-paced. The fire circle filled with "
+                    "sound."
+                ),
+            },
+        )
+
+        attune = await c.post(f"/api/presences/{identity_id}/resonances/attune")
+        assert attune.status_code == 200, attune.text
+        body = attune.json()
+
+        # Ceremony should emerge as the top resonance; spreadsheet noise
+        # shouldn't.
+        concept_ids = [r["concept_id"] for r in body["written"]]
+        assert "concept:ceremony" in concept_ids
+        assert "concept:unrelated" not in concept_ids
+        top = body["written"][0]
+        assert top["concept_id"] == "concept:ceremony"
+        assert top["shared_tokens"]  # the overlap is visible
+
+        # Read-back endpoint surfaces the same edges in score order.
+        listed = await c.get(f"/api/presences/{identity_id}/resonances")
+        assert listed.status_code == 200
+        items = listed.json()["items"]
+        scores = [it["score"] for it in items]
+        assert scores == sorted(scores, reverse=True)
+        assert items[0]["concept_id"] == "concept:ceremony"
+        assert items[0]["method"] == "keyword-overlap"
+
+        # Re-attuning is idempotent — existing edges don't duplicate.
+        again = await c.post(f"/api/presences/{identity_id}/resonances/attune")
+        assert len(again.json()["written"]) == 0
+        assert len(again.json()["existed"]) == len(body["written"])
+
+
+@pytest.mark.asyncio
 async def test_list_and_delete_leaves_identity_and_creations_intact():
     """Deleting the inspired-by edge leaves the identity and its
     creation edges in the graph — still claimable, still connected."""
