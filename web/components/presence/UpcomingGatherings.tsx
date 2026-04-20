@@ -258,6 +258,7 @@ export function UpcomingGatherings({
     const performers = chips.filter((c) => c.role === "performing");
     const cacaoFacilitators = chips.filter((c) => c.role === "cacao-facilitator");
     const videographers = chips.filter((c) => c.role === "videographer");
+    const partners = chips.filter((c) => c.role === "partner");
     const cardClass =
       tone === "upcoming"
         ? "rounded-2xl border border-white/10 bg-white/[0.03] p-4"
@@ -362,6 +363,22 @@ export function UpcomingGatherings({
           <p className="mt-1 text-xs text-white/55">
             filmed by{" "}
             {videographers.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && ", "}
+                <Link
+                  href={`/people/${encodeURIComponent(c.id)}`}
+                  className="text-white/80 hover:text-white underline-offset-2 hover:underline"
+                >
+                  {c.name}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
+        {partners.length > 0 && (
+          <p className="mt-1 text-xs text-white/55">
+            in partnership with{" "}
+            {partners.map((c, i) => (
               <span key={c.id}>
                 {i > 0 && ", "}
                 <Link
