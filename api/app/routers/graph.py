@@ -116,10 +116,37 @@ async def get_node(node_id: str):
 
 @router.patch("/graph/nodes/{node_id}", summary="Update a node")
 async def update_node(node_id: str, body: NodeUpdate):
-    """Update a node."""
-    result = graph_service.update_node(node_id, **body.model_dump(exclude_none=True))
+    """Update a node.
+
+    When a presence-type node's name or description changes, the
+    resonance service automatically re-runs so the concept edges
+    stay aligned with the current text. The graph keeps itself
+    attuned without anyone having to trigger a manual refresh.
+    """
+    updates = body.model_dump(exclude_none=True)
+    result = graph_service.update_node(node_id, **updates)
     if not result:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+
+    # Re-attune resonance when the textual signal changed (name,
+    # description, or story_content). Skip concept nodes — their
+    # resonance is computed as the destination, not the source.
+    _PRESENCE_TYPES = {
+        "contributor", "community", "network-org", "asset", "event",
+        "scene", "practice", "skill",
+    }
+    if result.get("type") in _PRESENCE_TYPES and (
+        "name" in updates or "description" in updates or "properties" in updates
+    ):
+        try:
+            from app.services import resonance_service
+            resonance_service.attune(node_id)
+        except Exception:  # noqa: BLE001 — re-attune failure doesn't block the update
+            import logging
+            logging.getLogger(__name__).debug(
+                "re-attune on update non-fatal error", exc_info=True,
+            )
+
     return result
 
 

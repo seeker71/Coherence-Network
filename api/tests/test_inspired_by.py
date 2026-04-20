@@ -616,15 +616,16 @@ async def test_resonance_attune_stitches_presence_into_vision_concepts():
         body = attune.json()
 
         # Ceremony should emerge as the top resonance; spreadsheet noise
-        # shouldn't.
-        concept_ids = [r["concept_id"] for r in body["written"]]
-        assert "concept:ceremony" in concept_ids
-        assert "concept:unrelated" not in concept_ids
-        top = body["written"][0]
-        assert top["concept_id"] == "concept:ceremony"
-        assert top["shared_tokens"]  # the overlap is visible
+        # shouldn't. Edges may live in either ``written`` (first time
+        # seen by this attune call) or ``existed`` (already laid by the
+        # auto-attune-on-update hook the graph PATCH triggered just
+        # above). Either placement counts as "the edge is there."
+        all_concept_ids = [r["concept_id"] for r in body["written"] + body["existed"]]
+        assert "concept:ceremony" in all_concept_ids
+        assert "concept:unrelated" not in all_concept_ids
 
-        # Read-back endpoint surfaces the same edges in score order.
+        # Read-back endpoint surfaces the same edges in score order,
+        # with the shared tokens that explain each thread.
         listed = await c.get(f"/api/presences/{identity_id}/resonances")
         assert listed.status_code == 200
         items = listed.json()["items"]
@@ -632,11 +633,12 @@ async def test_resonance_attune_stitches_presence_into_vision_concepts():
         assert scores == sorted(scores, reverse=True)
         assert items[0]["concept_id"] == "concept:ceremony"
         assert items[0]["method"] == "keyword-overlap"
+        assert items[0]["shared_tokens"]
 
-        # Re-attuning is idempotent — existing edges don't duplicate.
+        # Re-attuning is idempotent — existing edges stay put, nothing
+        # duplicates.
         again = await c.post(f"/api/presences/{identity_id}/resonances/attune")
         assert len(again.json()["written"]) == 0
-        assert len(again.json()["existed"]) == len(body["written"])
 
 
 @pytest.mark.asyncio
