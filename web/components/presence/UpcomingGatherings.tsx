@@ -251,10 +251,12 @@ export function UpcomingGatherings({
     const chips = hostsByEvent[e.id] || [];
     const primary = chips.find((c) => c.role === "primary");
     const hosting = chips.find((c) => c.role === "hosting");
+    const presenting = chips.filter((c) => c.role === "presenting");
     const coLeaders = chips.filter(
       (c) => c.role === "co-leading" || c.role === "co-creating",
     );
     const performers = chips.filter((c) => c.role === "performing");
+    const cacaoFacilitators = chips.filter((c) => c.role === "cacao-facilitator");
     const videographers = chips.filter((c) => c.role === "videographer");
     const cardClass =
       tone === "upcoming"
@@ -292,6 +294,22 @@ export function UpcomingGatherings({
             </Link>
           </p>
         )}
+        {presenting.length > 0 && (
+          <p className="mt-1 text-xs text-white/55">
+            presented by{" "}
+            {presenting.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && (i === presenting.length - 1 ? " & " : ", ")}
+                <Link
+                  href={`/people/${encodeURIComponent(c.id)}`}
+                  className="text-white/80 hover:text-white underline-offset-2 hover:underline"
+                >
+                  {c.name}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
         {coLeaders.length > 0 && (
           <p className="mt-1 text-xs text-white/55">
             co-led with{" "}
@@ -312,6 +330,22 @@ export function UpcomingGatherings({
           <p className="mt-1 text-xs text-white/55">
             featuring{" "}
             {performers.map((c, i) => (
+              <span key={c.id}>
+                {i > 0 && ", "}
+                <Link
+                  href={`/people/${encodeURIComponent(c.id)}`}
+                  className="text-white/80 hover:text-white underline-offset-2 hover:underline"
+                >
+                  {c.name}
+                </Link>
+              </span>
+            ))}
+          </p>
+        )}
+        {cacaoFacilitators.length > 0 && (
+          <p className="mt-1 text-xs text-white/55">
+            cacao by{" "}
+            {cacaoFacilitators.map((c, i) => (
               <span key={c.id}>
                 {i > 0 && ", "}
                 <Link
