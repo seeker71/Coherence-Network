@@ -100,6 +100,8 @@ export const PROVIDER_BRAND: Record<string, BrandTone> = {
   vimeo: { label: "Vimeo", bg: "#17d5ff", fg: "#06222c", iconPath: ICON.vimeo },
   imdb: { label: "IMDb", bg: "#f5c518", fg: "#111111", iconPath: ICON.imdb },
   ecstaticdance: { label: "Ecstatic Dance", bg: "#6b46c1", fg: "#ffffff", iconPath: ICON.ecstaticdance },
+  beatport: { label: "Beatport", bg: "#a6ff4d", fg: "#0a0a0a" },
+  threads: { label: "Threads", bg: "#000000", fg: "#ffffff" },
   web: { label: "Site", bg: "#3f3f46", fg: "#ffffff", iconPath: ICON.web },
 };
 
