@@ -19,7 +19,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.services import graph_service, resonance_service
+from app.services import graph_service, inspired_by_service, resonance_service
 
 
 router = APIRouter()
@@ -34,6 +34,24 @@ async def attune(presence_id: str) -> dict[str, Any]:
     if not graph_service.get_node(presence_id):
         raise HTTPException(status_code=404, detail=f"Presence '{presence_id}' not found")
     return resonance_service.attune(presence_id)
+
+
+@router.post(
+    "/presences/{presence_id}/cross-references/scan",
+    status_code=200,
+    summary="Scan existing nodes for mentions of this presence and lay referenced-by edges",
+)
+async def scan_cross_refs(presence_id: str) -> dict[str, Any]:
+    """Retroactive scan endpoint. New identities minted through the
+    resolver get this automatically; existing presences need a
+    manual trigger to backfill the mentions that were already in
+    the graph when they arrived. Idempotent — re-running only
+    writes the edges that don't exist yet."""
+    node = graph_service.get_node(presence_id)
+    if not node:
+        raise HTTPException(status_code=404, detail=f"Presence '{presence_id}' not found")
+    written = inspired_by_service._scan_cross_references(node)
+    return {"presence_id": presence_id, "written_count": len(written), "written": written}
 
 
 @router.get(

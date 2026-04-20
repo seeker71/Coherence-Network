@@ -930,6 +930,95 @@ def _ensure_creation_nodes(
     return out
 
 
+# ── Cross-reference mining ────────────────────────────────────────────
+#
+# When a new identity enters the graph, its name may already appear in
+# other nodes' descriptions — every page a visitor has landed on that
+# mentions the name leaves an implicit thread that's worth surfacing.
+# This scan walks existing nodes and writes a ``referenced-by`` edge
+# for each mention (direction: referenced → referencer, so reading a
+# node's outgoing ``referenced-by`` edges shows "everyone who mentions
+# me"). method="mention-scan" marks the edge so later passes can
+# refine or re-score.
+
+# Node types worth scanning — skip concept/idea/spec etc which are
+# text-dense and would match common nouns. These types carry real
+# presence signal where a mention is meaningful.
+CROSS_REF_NODE_TYPES = frozenset({
+    "contributor", "community", "network-org", "event", "asset",
+    "scene", "practice", "skill",
+})
+
+# Short names would match too broadly ("Anne" mentioned in unrelated
+# contexts). Require at least two words OR a name long enough to be
+# unambiguous.
+def _name_is_scannable(name: str) -> bool:
+    n = (name or "").strip()
+    if len(n) < 4:
+        return False
+    if " " in n:  # multi-word names are inherently more specific
+        return True
+    return len(n) >= 6
+
+
+def _scan_cross_references(identity: dict[str, Any]) -> list[dict[str, Any]]:
+    """Find nodes whose description mentions this identity's name and
+    lay a ``referenced-by`` edge from identity → referencer. Runs once
+    when a new identity is minted, and can be re-run idempotently.
+    """
+    name = (identity.get("name") or "").strip()
+    if not _name_is_scannable(name):
+        return []
+    identity_id = identity["id"]
+    # Also try alternate names if present
+    alt = (identity.get("author_display_name") or "").strip()
+    known_as = (identity.get("also_known_as") or "").strip()
+    needles: list[str] = [name]
+    if alt and alt != name and _name_is_scannable(alt):
+        needles.append(alt)
+    if known_as and known_as != name and _name_is_scannable(known_as):
+        needles.append(known_as)
+    # Compile regexes with word boundaries so we don't match substrings.
+    patterns = [re.compile(r"\b" + re.escape(n) + r"\b", re.IGNORECASE) for n in needles]
+
+    written: list[dict[str, Any]] = []
+    for ntype in CROSS_REF_NODE_TYPES:
+        result = graph_service.list_nodes(type=ntype, limit=500)
+        for node in result.get("items", []):
+            if node["id"] == identity_id:
+                continue
+            haystack = " ".join([
+                str(node.get("description") or ""),
+                str(node.get("tagline") or ""),
+                str(node.get("note") or ""),
+            ])
+            if not haystack:
+                continue
+            if not any(p.search(haystack) for p in patterns):
+                continue
+            # Skip if the edge already exists
+            existing = graph_service.list_edges(
+                from_id=identity_id, to_id=node["id"],
+                edge_type="referenced-by", limit=1,
+            ).get("items", [])
+            if existing:
+                continue
+            r = graph_service.create_edge_strict(
+                from_id=identity_id, to_id=node["id"],
+                type="referenced-by",
+                properties={"method": "mention-scan"},
+                strength=0.3,
+                created_by="cross_reference_scan",
+            )
+            if r.get("id"):
+                written.append({
+                    "referencer_id": node["id"],
+                    "referencer_name": node.get("name") or node["id"],
+                    "edge_id": r["id"],
+                })
+    return written
+
+
 def ensure_identity(resolved: ResolvedIdentity) -> tuple[dict[str, Any], bool, list[dict[str, Any]]]:
     """Create (or find) the identity subgraph for a resolved input.
 
@@ -976,6 +1065,17 @@ def ensure_identity(resolved: ResolvedIdentity) -> tuple[dict[str, Any], bool, l
         identity_created = True
 
     creations_out = _ensure_creation_nodes(identity_id, resolved.creations)
+    # Mention scan — the moment this identity enters the graph, look
+    # for existing nodes whose text carries its name, and lay
+    # ``referenced-by`` edges for each. The graph discovers its own
+    # latent connections rather than waiting for a human to draw them.
+    # Only runs on fresh identities so re-adding an existing presence
+    # doesn't re-scan.
+    if identity_created:
+        try:
+            _scan_cross_references(identity_node)
+        except Exception:  # noqa: BLE001 — don't let a scan failure block resolve
+            log.debug("mention scan non-fatal error", exc_info=True)
     return identity_node, identity_created, creations_out
 
 
