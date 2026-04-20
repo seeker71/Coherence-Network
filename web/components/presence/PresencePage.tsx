@@ -146,24 +146,46 @@ export function PresencePage({ identity }: { identity: PresenceIdentity }) {
             Find them
           </p>
           <div
-            className="flex gap-2 overflow-x-auto -mx-6 px-6 pb-2"
+            className="flex gap-2.5 overflow-x-auto -mx-6 px-6 pb-2"
             style={{ scrollbarWidth: "none" }}
           >
             {identity.presences.map((p) => {
               const tone = brandFor(p.provider);
+              // Icon-only circular chips — each platform's brand colour
+              // is its own signal (visual density per pixel: one glyph
+              // in one hue carries more than the same glyph under a
+              // text label). The label is kept accessible via
+              // aria-label + title tooltip so hover/screen-readers get
+              // the full name.
               return (
                 <a
                   key={p.url}
                   href={p.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="shrink-0 inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium min-h-[44px]"
+                  aria-label={`${tone.label} — ${identity.name}`}
+                  title={tone.label}
+                  className="shrink-0 inline-flex items-center justify-center rounded-full min-w-[44px] min-h-[44px] w-11 h-11 transition-transform hover:scale-105"
                   style={{
                     background: tone.gradient || tone.bg,
                     color: tone.fg,
                   }}
                 >
-                  {tone.label}
+                  {tone.iconPath ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="20"
+                      height="20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path d={tone.iconPath} />
+                    </svg>
+                  ) : (
+                    <span className="text-xs font-semibold tracking-tight px-1">
+                      {tone.label.slice(0, 2)}
+                    </span>
+                  )}
                 </a>
               );
             })}
