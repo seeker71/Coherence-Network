@@ -52,8 +52,15 @@ function AssetsPageContent() {
     setError(null);
     try {
       const res = await fetch(`${API_URL}/api/assets`, { cache: "no-store" });
+      // Check res.ok BEFORE parsing — FastAPI returns plain-text
+      // 'Internal Server Error' on 500, which JSON.parse can't handle
+      // and would surface as a cryptic SyntaxError instead of the
+      // actual HTTP status.
+      if (!res.ok) {
+        const body = await res.text();
+        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
+      }
       const json = await res.json();
-      if (!res.ok) throw new Error(JSON.stringify(json));
       const data = json?.items ?? (Array.isArray(json) ? json : []);
       setRows(data);
       setStatus("ok");

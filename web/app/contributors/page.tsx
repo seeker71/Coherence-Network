@@ -69,10 +69,18 @@ function ContributorsPageContent() {
         fetch(`${API_URL}/api/contributors`, { cache: "no-store" }),
         fetch(`${API_URL}/api/inventory/flow?runtime_window_seconds=86400`, { cache: "no-store" }),
       ]);
+      // Check res.ok BEFORE .json() — FastAPI returns plain-text on
+      // 5xx, which would crash JSON.parse with a cryptic SyntaxError.
+      if (!contributorsRes.ok) {
+        const body = await contributorsRes.text();
+        throw new Error(`contributors HTTP ${contributorsRes.status}: ${body.slice(0, 200)}`);
+      }
+      if (!flowRes.ok) {
+        const body = await flowRes.text();
+        throw new Error(`flow HTTP ${flowRes.status}: ${body.slice(0, 200)}`);
+      }
       const contributorsJson = await contributorsRes.json();
       const flowJson = (await flowRes.json()) as FlowResponse;
-      if (!contributorsRes.ok) throw new Error(JSON.stringify(contributorsJson));
-      if (!flowRes.ok) throw new Error(JSON.stringify(flowJson));
       const contributorData = contributorsJson?.items ?? (Array.isArray(contributorsJson) ? contributorsJson : []);
       setRows(contributorData);
       setFlowRows(Array.isArray(flowJson?.items) ? flowJson.items : []);
