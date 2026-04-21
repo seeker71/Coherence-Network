@@ -685,3 +685,40 @@ async def test_spec_delete_not_found_returns_404():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         r = await c.delete("/api/spec-registry/nonexistent-spec", headers=AUTH)
         assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_assets_handles_non_pipeline_asset_types():
+    """Regression: /api/assets crashed 500 when graph had nodes with
+    asset_type values outside the CODE|MODEL|CONTENT|DATA pipeline
+    enum (e.g. BLUEPRINT, VIDEO, AUDIO from the Living Collective KB
+    seed + resolver-minted album/track nodes). The listing model
+    accepts any string; the POST contract (AssetCreate) keeps the
+    enum tight."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # Seed an asset node directly in the graph with a non-pipeline
+        # asset_type — the exact shape the resolver + KB seed produce.
+        node_id = f"asset-regression-{uuid4().hex[:8]}"
+        r = await c.post(
+            "/api/graph/nodes",
+            json={
+                "id": node_id,
+                "type": "asset",
+                "name": "Regression blueprint",
+                "description": "Non-pipeline asset_type that used to crash list",
+                "properties": {"asset_type": "BLUEPRINT"},
+            },
+        )
+        assert r.status_code in (200, 201), r.text
+
+        # The listing must succeed and include the node we just seeded.
+        r = await c.get("/api/assets?limit=500")
+        assert r.status_code == 200, r.text
+        items = r.json().get("items", [])
+        types_seen = {item.get("type") for item in items}
+        # At minimum, our seeded type must flow through the response
+        # unchanged — not coerced to CONTENT or dropped.
+        assert "BLUEPRINT" in types_seen, (
+            f"expected BLUEPRINT in {types_seen}; the read model must "
+            "accept any asset_type string from the graph"
+        )
