@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import logging
 import math
-import os
 import random
 import re
 import threading
@@ -63,6 +62,7 @@ from app.services import commit_evidence_service
 from app.services import runtime_service
 from app.services import spec_registry_service
 from app.services import value_lineage_service
+from app.services.app_mode import debug_audit_enabled, running_under_test
 
 logger = logging.getLogger(__name__)
 
@@ -401,7 +401,7 @@ def _should_discover_registry_domain_ideas() -> bool:
             return True
         if explicit in {"0", "false", "no", "off"}:
             return False
-    if os.getenv("PYTEST_CURRENT_TEST"):
+    if running_under_test():
         return False
     return True
 
@@ -1382,7 +1382,7 @@ def update_idea(
             idea.interfaces = interfaces
 
         for field, old_val, new_val in changes:
-            if os.getenv("DEBUG_AUDIT"):
+            if debug_audit_enabled():
                 print(f"DEBUG: update_idea creating audit entry for {field}: {old_val} -> {new_val}")
             audit_ledger_service.append_entry(
                 AuditEntryCreate(

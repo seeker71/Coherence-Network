@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import os
 import time
 from datetime import datetime, timezone
 from typing import Any, Generator, Optional, Sequence
@@ -21,6 +20,7 @@ from app.models.audit_ledger import (
     AuditSnapshot,
     VerificationResult,
 )
+from app.services.app_mode import debug_audit_enabled
 from app.services.unified_db import Base, session as db_session, ensure_schema
 
 logger = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ def compute_entry_hash(
         f"{amount_cc:.8f}{reason}{reference_id or ''}{meta_str}"
     )
     res = f"sha256:{hashlib.sha256(content.encode('utf-8')).hexdigest()}"
-    if os.getenv("DEBUG_AUDIT"):
+    if debug_audit_enabled():
         print(f"DEBUG HASH: content={content!r} hash={res}")
     return res
 
@@ -293,7 +293,7 @@ def verify_chain(
             
             # Check 1: Content matches recorded hash
             if actual_computed != r.hash:
-                if os.getenv("DEBUG_AUDIT"):
+                if debug_audit_enabled():
                     print(f"DEBUG: Content hash mismatch at aud_{r.id:05d}")
                     print(f"  Expected (recorded): {r.hash}")
                     print(f"  Actual (computed):   {actual_computed}")
@@ -303,7 +303,7 @@ def verify_chain(
                 
             # Check 2: Chaining matches previous entry
             if r.previous_hash != computed_hash:
-                if os.getenv("DEBUG_AUDIT"):
+                if debug_audit_enabled():
                     print(f"DEBUG: Chaining mismatch at aud_{r.id:05d}")
                     print(f"  Expected prev_hash: {computed_hash}")
                     print(f"  Actual prev_hash:   {r.previous_hash}")

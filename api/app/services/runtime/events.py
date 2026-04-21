@@ -118,7 +118,7 @@ def list_events(
 
 
 def record_event(payload: RuntimeEventCreate) -> RuntimeEvent:
-    normalized_endpoint = normalize_endpoint(payload.endpoint, payload.method)(payload.endpoint, payload.method)
+    normalized_endpoint = normalize_endpoint(payload.endpoint, payload.method)
     raw_endpoint = normalize_path(payload.raw_endpoint or payload.endpoint)
     idea_id = resolve_idea_id(
         endpoint=payload.endpoint, explicit_idea_id=payload.idea_id, method=payload.method
