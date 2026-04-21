@@ -59,7 +59,8 @@
     "explore": "Erkunden",
     "primary": "Hauptnavigation",
     "mobile": "Mobile Navigation",
-    "openMore": "Weitere Navigation öffnen"
+    "openMore": "Weitere Navigation öffnen",
+    "people": "Menschen"
   },
   "autoRefresh": {
     "label": "Selbst-Aktualisierung",

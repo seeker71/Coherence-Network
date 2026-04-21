@@ -59,7 +59,8 @@
     "explore": "Explorar",
     "primary": "Navegación principal",
     "mobile": "Navegación móvil",
-    "openMore": "Abrir más navegación"
+    "openMore": "Abrir más navegación",
+    "people": "Personas"
   },
   "autoRefresh": {
     "label": "Actualización automática",

@@ -19,6 +19,7 @@ type NavItemKey = {
 
 const PRIMARY_NAV: NavItemKey[] = [
   { href: "/vision", labelKey: "nav.vision" },
+  { href: "/people", labelKey: "nav.people" },
   { href: "/ideas", labelKey: "nav.ideas" },
   { href: "/contribute", labelKey: "nav.contribute" },
   { href: "/resonance", labelKey: "nav.resonance", isHeartbeat: true },
