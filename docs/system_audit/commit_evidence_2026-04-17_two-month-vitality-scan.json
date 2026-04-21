@@ -1,0 +1,117 @@
+{
+  "date": "2026-04-17",
+  "thread_branch": "codex/two-month-vitality-scan",
+  "commit_scope": "Repair runtime telemetry cache/event defects, replace environment-driven test/debug branching with config-backed app mode helpers across high-churn services and routers, and refresh the maintainability baseline to the already-landed mainline state so future regressions are sensed accurately.",
+  "files_owned": [
+    "api/app/routers/agent_tasks_routes.py",
+    "api/app/services/agent_service_crud.py",
+    "api/app/services/agent_service_list.py",
+    "api/app/services/agent_service_store.py",
+    "api/app/services/app_mode.py",
+    "api/app/services/audit_ledger_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/runtime/cache.py",
+    "api/app/services/runtime/events.py",
+    "api/app/services/runtime_service.py",
+    "api/config/api.json",
+    "api/tests/conftest.py",
+    "api/tests/test_runtime_mode_and_events.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/commit_evidence_2026-04-17_two-month-vitality-scan.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "idea_ids": [
+    "two-month-vitality-scan"
+  ],
+  "spec_ids": [
+    "coherence-network-agent-pipeline"
+  ],
+  "task_ids": [
+    "two-month-vitality-scan-2026-04-17"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "review"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "analysis",
+        "implementation",
+        "validation",
+        "delivery"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "https://github.com/seeker71/Coherence-Network/commit/5b0fb869",
+    "https://github.com/seeker71/Coherence-Network/commit/ff19a2d6",
+    "/tmp/coh-main-audit.fSsLcH/maint.json",
+    "/tmp/maint-two-month.json",
+    "/Users/ursmuff/.codex/worktrees/78b9/Coherence-Network/docs/system_audit/pr_check_failures/pr_check_guard_20260417T055108Z_codex-two-month-vitality-scan.json"
+  ],
+  "change_files": [
+    "api/app/routers/agent_tasks_routes.py",
+    "api/app/services/agent_service_crud.py",
+    "api/app/services/agent_service_list.py",
+    "api/app/services/agent_service_store.py",
+    "api/app/services/app_mode.py",
+    "api/app/services/audit_ledger_service.py",
+    "api/app/services/idea_service.py",
+    "api/app/services/runtime/cache.py",
+    "api/app/services/runtime/events.py",
+    "api/app/services/runtime_service.py",
+    "api/config/api.json",
+    "api/tests/conftest.py",
+    "api/tests/test_runtime_mode_and_events.py",
+    "docs/system_audit/maintainability_baseline.json",
+    "docs/system_audit/model_executor_runs.jsonl"
+  ],
+  "change_intent": "runtime_fix",
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && pytest -q tests/test_runtime_mode_and_events.py tests/test_agent_task_claims.py tests/test_flow_core_api.py",
+      "python3 api/scripts/run_maintainability_audit.py --write-baseline --output /tmp/maint-two-month.json",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-17_two-month-vitality-scan.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "github-pr"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Runtime event recording uses the normalized endpoint value directly, runtime cache keys derive from config-backed context instead of ad-hoc environment reads, test/debug mode branches in hot services follow config state consistently, and maintainability drift alerts are now measured against the actual current mainline baseline instead of stale thresholds.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/runtime/events",
+      "https://api.coherencycoin.com/api/runtime/change-token",
+      "https://api.coherencycoin.com/api/ideas"
+    ],
+    "test_flows": [
+      "record-runtime-event->normalized-endpoint-persisted-with-raw-endpoint-trace",
+      "runtime-cache-meta-key->changes-when-test-context-id-changes",
+      "agent-task-and-idea-test-mode-branches->follow-config-not-env"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Awaiting commit creation, push, PR checks, merge, and post-merge verification."
+  }
+}

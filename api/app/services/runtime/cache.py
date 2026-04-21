@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import hashlib
 import logging
 import threading
@@ -11,7 +10,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timezone
 from typing import Any, Callable
 
-from app.config_loader import get_int
+from app.config_loader import database_url, get_bool, get_float, get_int, get_str
 from app.services import runtime_event_store, telemetry_persistence_service
 
 from app.services.runtime import paths as runtime_paths
@@ -32,11 +31,7 @@ RUNTIME_ENDPOINT_CACHE_BUSTER = 0
 
 def runtime_events_store_cache_key() -> str:
     if runtime_event_store.enabled():
-        url = (
-            os.getenv("RUNTIME_DATABASE_URL", "").strip()
-            or os.getenv("DATABASE_URL", "").strip()
-            or "<runtime-database>"
-        )
+        url = database_url("runtime") or database_url(None) or "<runtime-database>"
         return f"db:{url}"
     return f"file:{runtime_paths.events_path()}"
 
@@ -53,24 +48,18 @@ def runtime_events_cache_key(limit: int, since: datetime | None, source: str | N
 def runtime_endpoint_cache_ttl_seconds(
     cache_name: str, default: float = RUNTIME_ENDPOINT_CACHE_DEFAULT_TTL_SECONDS
 ) -> float:
-    env_suffix = re.sub(r"[^A-Za-z0-9]+", "_", cache_name).strip("_").upper()
-    env_key = f"RUNTIME_ENDPOINT_CACHE_TTL_{env_suffix}"
-    raw = str(os.getenv(env_key) or "").strip()
-    if not raw:
-        return max(1.0, min(float(default), 86400.0))
-    try:
-        parsed = float(raw)
-    except (TypeError, ValueError):
-        return max(1.0, min(float(default), 86400.0))
+    _ = cache_name
+    parsed = get_float("runtime", "endpoint_cache_ttl_seconds", default)
     return max(1.0, min(float(parsed), 86400.0))
 
 
 def runtime_endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | None = None) -> str:
     scope_parts = [
-        str(os.getenv("RUNTIME_EVENTS_PATH") or ""),
-        str(os.getenv("RUNTIME_DATABASE_URL") or ""),
-        str(os.getenv("DATABASE_URL") or ""),
-        str(os.getenv("PYTEST_CURRENT_TEST") or ""),
+        get_str("runtime", "events_path") or "",
+        get_str("database_overrides", "runtime") or "",
+        database_url(None) or "",
+        str(get_bool("api", "testing", False)),
+        get_str("api", "test_context_id") or "",
         str(runtime_events_store_cache_key()),
         str(RUNTIME_ENDPOINT_CACHE_BUSTER),
     ]

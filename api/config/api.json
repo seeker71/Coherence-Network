@@ -72,6 +72,8 @@
     "runtime_fallback_mode": "disabled",
     "runtime_fallback_limit": 100,
     "runtime_fallback_in_tests": false,
+    "route_side_effects_in_tests": false,
+    "hollow_completion_guard_in_tests": false,
     "task_log_dir": "data/task_logs",
     "smart_reap_max_age_minutes": 15
   },
@@ -200,7 +202,13 @@
     "_doc": "API process settings.",
     "slow_request_ms": 1500.0,
     "testing": false,
+    "test_context_id": null,
     "log_all_requests": false
+  },
+
+  "audit_ledger": {
+    "_doc": "Transparent audit ledger diagnostics.",
+    "debug": false
   },
 
   "web": {

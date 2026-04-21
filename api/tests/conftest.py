@@ -208,7 +208,7 @@ else:
 
 
 @pytest.fixture(autouse=True)
-def _reset_service_caches_between_tests(tmp_path: Path) -> None:
+def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureRequest) -> None:
     """Reset unified DB engine and service caches between tests.
 
     Each test gets a clean engine and a unique, isolated SQLite database
@@ -249,6 +249,8 @@ def _reset_service_caches_between_tests(tmp_path: Path) -> None:
     # Reset config to its baseline first, then apply per-test overrides to the
     # loaded config so later cache invalidations preserve those defaults.
     cs_module.reset_config_cache()
+    config_loader._CONFIG.setdefault("api", {})["testing"] = True
+    config_loader._CONFIG.setdefault("api", {})["test_context_id"] = request.node.nodeid
     config_loader._CONFIG.setdefault("agent_tasks", {})["persist"] = False
     config_loader._CONFIG.setdefault("agent_executor", {})["execute_token_allow_unauth"] = True
     config_loader._CONFIG.setdefault("agent_executor", {})["execute_token"] = None
