@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LOCALES, type LocaleCode } from "@/lib/locales";
+import { getApiBase } from "@/lib/api";
+import {
+  NAME_KEY,
+  CONTRIBUTOR_KEY,
+  ensureFingerprint,
+  ensureContributorId,
+} from "@/lib/identity";
 
 type RoleKey =
   | "livingStructureWeaver"
@@ -86,8 +93,54 @@ export function InterestForm() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || t("interestForm.errorGeneric"));
+        const body = await res.text();
+        // FastAPI returns plain-text on 5xx; try to extract a JSON
+        // detail first, fall back to the status + body prefix.
+        let msg = t("interestForm.errorGeneric");
+        try {
+          const parsed = JSON.parse(body);
+          msg = parsed?.detail || msg;
+        } catch {
+          msg = `HTTP ${res.status}: ${body.slice(0, 120)}`;
+        }
+        throw new Error(msg);
+      }
+
+      // Persist the visitor's identity so the /me page, the MeButton
+      // header door, and downstream attribution all remember them on
+      // the next visit. Without this, joining felt hollow: submit
+      // succeeded server-side but localStorage stayed empty, so the
+      // next page load showed "step in" again.
+      //
+      //   1. Write the display name (the first thing MeButton reads)
+      //   2. Ensure a device fingerprint exists (stable per-browser)
+      //   3. Graduate to a real contributor node — returns a
+      //      contributor_id the graph uses for feeds, reactions,
+      //      votes, and every future contribution
+      try {
+        const trimmed = form.name.trim();
+        if (trimmed) {
+          localStorage.setItem(NAME_KEY, trimmed);
+        }
+        ensureFingerprint();
+        // ensureContributorId reads the name + fingerprint from
+        // localStorage, calls /api/contributors/graduate, and writes
+        // the returned id to CONTRIBUTOR_KEY. Safe to await even when
+        // the network is slow — we still show the thank-you once it
+        // resolves (success or soft-failure).
+        await ensureContributorId(getApiBase());
+        // Signal other tabs / components that identity changed so the
+        // header door re-reads without a manual reload.
+        try {
+          window.dispatchEvent(new StorageEvent("storage", { key: CONTRIBUTOR_KEY }));
+        } catch {
+          /* some browsers gate the StorageEvent ctor — non-fatal */
+        }
+      } catch {
+        // localStorage unavailable (private mode, quota): the server
+        // already has the interest node, so the join itself stands.
+        // The visitor will just need to name themselves again next
+        // session. That's an acceptable graceful degradation.
       }
 
       setSubmitted(true);
