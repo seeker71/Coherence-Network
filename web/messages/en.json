@@ -60,7 +60,28 @@
     "primary": "Primary navigation",
     "mobile": "Mobile navigation",
     "openMore": "Open more navigation options",
-    "people": "People"
+    "people": "People",
+    "layer": {
+      "vision": "The Vision",
+      "presences": "The Presences",
+      "work": "The Work",
+      "pulse": "The Pulse"
+    },
+    "sub": {
+      "all": "All",
+      "people": "People",
+      "communities": "Communities",
+      "scenes": "Places",
+      "gatherings": "Gatherings",
+      "practices": "Practices",
+      "works": "Works",
+      "ideas": "Ideas",
+      "contribute": "Contribute",
+      "pipeline": "Pipeline",
+      "resonance": "Resonance",
+      "nodes": "Nodes"
+    },
+    "secondary": "Layer navigation"
   },
   "autoRefresh": {
     "label": "Auto refresh",

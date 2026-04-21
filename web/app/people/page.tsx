@@ -64,16 +64,22 @@ const SECTIONS: Array<{
   lede: string;
 }> = [
   {
-    key: "persons",
-    title: "Persons",
+    key: "humans",
+    title: "People",
     types: ["contributor"],
     lede: "Artists, healers, teachers, videographers, writers — each a held-open door.",
   },
   {
     key: "communities",
-    title: "Communities & Sanctuaries",
-    types: ["community", "network-org", "scene"],
-    lede: "Collectives, ritual circles, venues and the lands that hold them.",
+    title: "Communities",
+    types: ["community", "network-org"],
+    lede: "Collectives, festivals, producer brands, organizations.",
+  },
+  {
+    key: "scenes",
+    title: "Places",
+    types: ["scene"],
+    lede: "Venues, sanctuaries, resorts, and the lands that hold them.",
   },
   {
     key: "gatherings",
@@ -100,11 +106,22 @@ function initialFor(name: string): string {
   return c ? c.toUpperCase() : "·";
 }
 
-export default async function PeopleIndexPage() {
+export default async function PeopleIndexPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ kind?: string }>;
+}) {
+  const sp = await searchParams;
+  // `?kind=humans` (or communities / scenes / gatherings / practices /
+  // works) filters the page to just that section. No filter → all
+  // sections render, the visitor wanders.
+  const kindFilter = sp?.kind;
+
   // Load every presence-type node. The page groups them below; the
   // search bar overlays a resonance-based filter on top.
   const groups: Record<string, PresenceNode[]> = {};
   for (const section of SECTIONS) {
+    if (kindFilter && section.key !== kindFilter) continue;
     const combined: PresenceNode[] = [];
     for (const t of section.types) {
       const items = await fetchType(t);

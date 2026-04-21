@@ -60,7 +60,28 @@
     "primary": "Navigasi utama",
     "mobile": "Navigasi seluler",
     "openMore": "Buka navigasi lainnya",
-    "people": "Orang"
+    "people": "Orang",
+    "layer": {
+      "vision": "Visi",
+      "presences": "Kehadiran",
+      "work": "Kerja",
+      "pulse": "Denyut"
+    },
+    "sub": {
+      "all": "Semua",
+      "people": "Orang",
+      "communities": "Komunitas",
+      "scenes": "Tempat",
+      "gatherings": "Pertemuan",
+      "practices": "Praktik",
+      "works": "Karya",
+      "ideas": "Ide",
+      "contribute": "Kontribusi",
+      "pipeline": "Pipeline",
+      "resonance": "Resonansi",
+      "nodes": "Node"
+    },
+    "secondary": "Navigasi lapisan"
   },
   "autoRefresh": {
     "label": "Pembaruan otomatis",

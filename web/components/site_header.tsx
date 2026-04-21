@@ -8,6 +8,7 @@ import { ModeSwitcher } from "./mode-switcher";
 import { WorkspacePicker } from "./workspace-picker";
 import { LocaleSwitcherCompact } from "./LocaleSwitcherCompact";
 import { MeButton } from "./MeButton";
+import { SecondaryLayerNav } from "./SecondaryLayerNav";
 import { createTranslator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 
@@ -17,16 +18,19 @@ type NavItemKey = {
   isHeartbeat?: boolean;
 };
 
+// Primary layers — four entry points into the organism, named by
+// what they carry rather than by page. Each one opens into a
+// contextual secondary row (rendered by SecondaryLayerNav) with the
+// pages that live inside that layer.
 const PRIMARY_NAV: NavItemKey[] = [
-  { href: "/vision", labelKey: "nav.vision" },
-  { href: "/people", labelKey: "nav.people" },
-  { href: "/ideas", labelKey: "nav.ideas" },
-  { href: "/contribute", labelKey: "nav.contribute" },
-  { href: "/resonance", labelKey: "nav.resonance", isHeartbeat: true },
-  { href: "/pipeline", labelKey: "nav.pipeline" },
-  { href: "/nodes", labelKey: "nav.nodes" },
+  { href: "/vision", labelKey: "nav.layer.vision" },
+  { href: "/people", labelKey: "nav.layer.presences" },
+  { href: "/ideas", labelKey: "nav.layer.work" },
+  { href: "/resonance", labelKey: "nav.layer.pulse", isHeartbeat: true },
 ];
 
+// Secondary surfaces — tucked into the "More" dropdown since they
+// sit outside the four layers (treasury + infrastructure + admin).
 const SECONDARY_NAV: NavItemKey[] = [
   { href: "/invest", labelKey: "nav.invest" },
   { href: "/treasury", labelKey: "nav.treasury" },
@@ -35,12 +39,9 @@ const SECONDARY_NAV: NavItemKey[] = [
   { href: "/specs", labelKey: "nav.specs" },
   { href: "/blog", labelKey: "nav.blog" },
   { href: "/search", labelKey: "nav.search" },
-  { href: "/tasks", labelKey: "nav.workCards" },
   { href: "/automation", labelKey: "nav.automation" },
   { href: "/friction", labelKey: "nav.friction" },
   { href: "/identity", labelKey: "nav.identity" },
-  { href: "/pulse", labelKey: "nav.pulse" },
-  { href: "/vitality", labelKey: "nav.vitality" },
 ];
 
 function HeartbeatIcon() {
@@ -211,6 +212,10 @@ export default async function SiteHeader() {
           </details>
         </div>
       </div>
+      {/* Secondary layer row — renders only when the visitor is on a
+          page that belongs to a known layer (Vision / Presences /
+          Work / Pulse). Shows the peer pages inside that layer. */}
+      <SecondaryLayerNav />
     </header>
   );
 }
