@@ -460,6 +460,20 @@ def _search_platform_presences(
 # ── Presences + creations extraction ──────────────────────────────────
 
 
+# Social-share URLs aren't an entity's own presence — they're
+# "share this page" buttons that happen to live on the platform's
+# host. Filter them out so Pyramids of Chi doesn't claim
+# facebook.com/sharer/sharer.php as its Facebook account.
+_SHARE_PATH_MARKERS = ("/sharer/", "/share?", "/intent/", "/shareArticle")
+
+
+def _is_share_url(url: str) -> bool:
+    path = urlparse(url).path.lower()
+    query = urlparse(url).query.lower()
+    lowered = f"{path}?{query}"
+    return any(marker in lowered for marker in _SHARE_PATH_MARKERS)
+
+
 def _extract_presences(
     parsed: _PageParser,
     canonical_url: str,
@@ -472,7 +486,9 @@ def _extract_presences(
     platform. The main profile is what a visitor wants as a chip;
     the rest is noise on a presence row. Same-provider-as-identity
     links (e.g. bandcamp → bandcamp nav chrome) are filtered out
-    entirely.
+    entirely, and "share this page" URLs are skipped because they
+    aren't an account — they're social-share buttons that happen to
+    point at the platform's sharer endpoint.
     """
     seen_providers: set[str] = set()
     seen_urls: set[str] = set()
@@ -483,6 +499,8 @@ def _extract_presences(
         if not provider:
             continue
         if provider == own_provider:
+            continue
+        if _is_share_url(absolute):
             continue
         if provider in seen_providers:
             continue
