@@ -128,16 +128,19 @@ async def update_node(node_id: str, body: NodeUpdate):
     if not result:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
 
-    # Re-attune resonance when the textual signal changed (name,
-    # description, or story_content). Skip concept nodes — their
-    # resonance is computed as the destination, not the source.
+    # Re-attune resonance only when the textual signal actually
+    # changed. Properties-only PATCHes (flag updates, phase moves,
+    # metadata tweaks) don't shift the node's keyword spectrum, so
+    # the existing edges remain accurate and the attune call would
+    # just be overhead — particularly in test flows where dozens of
+    # PATCHes per second are common. Name + description changes do
+    # shift the spectrum; those trigger.
     _PRESENCE_TYPES = {
         "contributor", "community", "network-org", "asset", "event",
         "scene", "practice", "skill",
     }
-    if result.get("type") in _PRESENCE_TYPES and (
-        "name" in updates or "description" in updates or "properties" in updates
-    ):
+    text_changed = "name" in updates or "description" in updates
+    if text_changed and result.get("type") in _PRESENCE_TYPES:
         try:
             from app.services import resonance_service
             resonance_service.attune(node_id)

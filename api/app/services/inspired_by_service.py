@@ -981,6 +981,16 @@ def _scan_cross_references(identity: dict[str, Any]) -> list[dict[str, Any]]:
     # Compile regexes with word boundaries so we don't match substrings.
     patterns = [re.compile(r"\b" + re.escape(n) + r"\b", re.IGNORECASE) for n in needles]
 
+    # Cheap first-pass: if the graph doesn't carry many presences
+    # yet, the scan will find nothing — skip the 8-type walk and its
+    # DB cost entirely. Shows up in test flows where each identity
+    # creation would otherwise trip 8 list_nodes queries for nothing.
+    # Threshold 5 is conservative — by the time there are 5+
+    # presences, the chance of a real mention is meaningful.
+    any_existing = graph_service.list_nodes(type="contributor", limit=6)
+    if len(any_existing.get("items", [])) < 2:
+        return []
+
     written: list[dict[str, Any]] = []
     for ntype in CROSS_REF_NODE_TYPES:
         result = graph_service.list_nodes(type=ntype, limit=500)
