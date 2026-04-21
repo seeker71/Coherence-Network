@@ -42,6 +42,8 @@ const LAYER_SUBNAV: Array<{
       { href: "/contribute", labelKey: "nav.sub.contribute" },
       { href: "/pipeline", labelKey: "nav.sub.pipeline" },
       { href: "/tasks", labelKey: "nav.workCards" },
+      { href: "/contributors", labelKey: "nav.sub.contributors" },
+      { href: "/assets", labelKey: "nav.sub.assets" },
     ],
   },
   {
@@ -55,11 +57,15 @@ const LAYER_SUBNAV: Array<{
   },
 ];
 
-// /contribute, /pipeline, /tasks belong under the Work layer
+// Pages that live inside a layer but don't share its url prefix.
+// /contributors + /assets are work-ledger views (who's tending,
+// what's been built + what it cost) — both belong under The Work.
 const LAYER_ALIASES: Record<string, string> = {
   "/contribute": "/ideas",
   "/pipeline": "/ideas",
   "/tasks": "/ideas",
+  "/contributors": "/ideas",
+  "/assets": "/ideas",
   "/nodes": "/resonance",
   "/vitality": "/resonance",
   "/pulse": "/resonance",

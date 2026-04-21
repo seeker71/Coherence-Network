@@ -30,6 +30,7 @@ type PresenceNode = {
   canonical_url?: string;
   image_url?: string | null;
   provider?: string;
+  contributor_type?: string;
 };
 
 async function fetchType(type: string, limit = 200): Promise<PresenceNode[]> {
@@ -48,11 +49,17 @@ async function fetchType(type: string, limit = 200): Promise<PresenceNode[]> {
 
 function filterScannable(items: PresenceNode[]): PresenceNode[] {
   // Skip test/system/visitor contributors — keep only real presences.
+  // SYSTEM + AGENT contributor_types are work-ledger identities
+  // (runners, pipeline bots, Claude agents); they live under
+  // /contributors where the ledger lens fits. Presences are humans +
+  // communities + places + gatherings + practices + works only.
   return items.filter((n) => {
     if (!n.name) return false;
     if (n.id.includes(":wanderer-")) return false;
     if (n.id.includes(":presence-visitor")) return false;
     if (n.id.includes(":test-")) return false;
+    const ct = (n.contributor_type || "").toUpperCase();
+    if (ct === "SYSTEM" || ct === "AGENT") return false;
     return true;
   });
 }

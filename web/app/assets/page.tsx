@@ -85,23 +85,9 @@ function AssetsPageContent() {
 
   return (
     <main className="min-h-screen p-8 max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-wrap gap-3 text-sm">
-        <Link href="/" className="text-muted-foreground hover:text-foreground">
-          ← {t("dashboard.home")}
-        </Link>
-        <Link href="/portfolio" className="text-muted-foreground hover:text-foreground">
-          {t("search.portfolio")}
-        </Link>
-        <Link href="/contributors" className="text-muted-foreground hover:text-foreground">
-          {t("nav.contributors")}
-        </Link>
-        <Link href="/contributions" className="text-muted-foreground hover:text-foreground">
-          {t("contribute.title")}
-        </Link>
-        <Link href="/tasks" className="text-muted-foreground hover:text-foreground">
-          {t("nav.workCards")}
-        </Link>
-      </div>
+      {/* Peer pages (Ideas · Contribute · Pipeline · Work Cards ·
+          Contributors · Assets) live in the layer sub-nav under The
+          Work — no need to duplicate them here. */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">{t("assets.title")}</h1>
         <p className="max-w-3xl text-muted-foreground">

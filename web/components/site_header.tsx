@@ -31,11 +31,10 @@ const PRIMARY_NAV: NavItemKey[] = [
 
 // Secondary surfaces — tucked into the "More" dropdown since they
 // sit outside the four layers (treasury + infrastructure + admin).
+// /contributors + /assets live under The Work layer strip now.
 const SECONDARY_NAV: NavItemKey[] = [
   { href: "/invest", labelKey: "nav.invest" },
   { href: "/treasury", labelKey: "nav.treasury" },
-  { href: "/contributors", labelKey: "nav.contributors" },
-  { href: "/assets", labelKey: "nav.assets" },
   { href: "/specs", labelKey: "nav.specs" },
   { href: "/blog", labelKey: "nav.blog" },
   { href: "/search", labelKey: "nav.search" },
