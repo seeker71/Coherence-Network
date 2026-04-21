@@ -403,6 +403,8 @@ export default async function Home() {
         <div className="flex flex-wrap justify-center gap-6 text-sm text-foreground/90 mb-4">
           <Link href="/resonance" className="hover:text-foreground transition-colors">{t("nav.resonance")}</Link>
           <Link href="/ideas" className="hover:text-foreground transition-colors">{t("nav.ideas")}</Link>
+          <Link href="/pipeline" className="hover:text-foreground transition-colors">{t("nav.pipeline")}</Link>
+          <Link href="/nodes" className="hover:text-foreground transition-colors">{t("nav.nodes")}</Link>
           <Link href="/invest" className="hover:text-foreground transition-colors">{t("nav.invest")}</Link>
           <Link href="/contribute" className="hover:text-foreground transition-colors">{t("nav.contribute")}</Link>
         </div>
