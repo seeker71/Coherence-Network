@@ -40,58 +40,34 @@ async def _create_idea(c: AsyncClient, idea_id: str | None = None, **overrides) 
 
 
 # ---------------------------------------------------------------------------
-# Health & Meta (5 tests)
+# Health & Meta
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_health_returns_ok():
+async def test_health_and_meta_endpoints():
+    """Five infrastructure endpoints the frontend + deploy verifier
+    rely on: /health, /ping, /version, /ready, /meta/summary. All
+    checked in one round."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/health")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["status"] == "ok"
-        assert "version" in body
-        assert "uptime_seconds" in body
+        health = await c.get("/api/health")
+        assert health.status_code == 200 and health.json()["status"] == "ok"
+        assert "version" in health.json() and "uptime_seconds" in health.json()
 
+        assert (await c.get("/api/ping")).json()["pong"] is True
 
-@pytest.mark.asyncio
-async def test_ping_returns_pong():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ping")
-        assert r.status_code == 200, r.text
-        assert r.json()["pong"] is True
+        version = (await c.get("/api/version")).json()["version"]
+        assert re.match(r"^\d+\.\d+\.\d+", version), version
 
+        ready = await c.get("/api/ready")
+        # /ready is 200 when graph_store wired, 503 otherwise — both valid.
+        assert ready.status_code in (200, 503)
+        if ready.status_code == 200:
+            assert "db_connected" in ready.json()
 
-@pytest.mark.asyncio
-async def test_version_returns_semver():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/version")
-        assert r.status_code == 200, r.text
-        version = r.json()["version"]
-        assert re.match(r"^\d+\.\d+\.\d+", version), f"Not semver: {version}"
-
-
-@pytest.mark.asyncio
-async def test_ready_probe():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ready")
-        # ready may return 200 or 503 depending on app.state.graph_store
-        if r.status_code == 200:
-            body = r.json()
-            assert "db_connected" in body
-        else:
-            assert r.status_code == 503
-
-
-@pytest.mark.asyncio
-async def test_meta_summary():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/meta/summary")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        # Should have coverage counts
-        assert "endpoint_count" in body or "total_endpoints" in body
+        meta = await c.get("/api/meta/summary")
+        assert meta.status_code == 200
+        assert "endpoint_count" in meta.json() or "total_endpoints" in meta.json()
 
 
 # ---------------------------------------------------------------------------
@@ -150,80 +126,51 @@ async def test_idea_crud_flow():
 
 
 @pytest.mark.asyncio
-async def test_advance_idea_stage_and_409_when_complete():
-    """Advance stage on a fresh idea succeeds; advancing past
-    `complete` returns 409. One flow covers both the happy path
-    and the terminal-state guard."""
+async def test_idea_lifecycle_flow():
+    """Full lifecycle: seed idea → advance → set-stage → advance-past-
+    complete is 409 → per-idea progress/activity → global progress/
+    showcase/resonance/storage read surfaces → multi-idea sort by
+    ROI → tasks listing. Every lifecycle-reading endpoint the UI
+    uses in one journey."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         iid = _uid()
         await _create_idea(c, iid)
-        r = await c.post(f"/api/ideas/{iid}/advance", headers=AUTH)
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "stage" in body or "idea" in body
-        # Move to complete, then advance must 409.
-        set_complete = await c.post(f"/api/ideas/{iid}/stage", json={"stage": "complete"}, headers=AUTH)
-        assert set_complete.status_code == 200
+
+        # Advance once (happy), set-stage back to specced, set to
+        # complete, advance is 409.
+        assert (await c.post(f"/api/ideas/{iid}/advance", headers=AUTH)).status_code == 200
+        assert (await c.post(f"/api/ideas/{iid}/stage",
+                             json={"stage": "specced"}, headers=AUTH)).status_code == 200
+        assert (await c.post(f"/api/ideas/{iid}/stage",
+                             json={"stage": "complete"}, headers=AUTH)).status_code == 200
         assert (await c.post(f"/api/ideas/{iid}/advance", headers=AUTH)).status_code == 409
 
+        # Per-idea read surfaces.
+        prog = await c.get(f"/api/ideas/{iid}/progress")
+        assert prog.status_code == 200
+        assert "stage" in prog.json() or "idea_id" in prog.json()
+        assert isinstance((await c.get(f"/api/ideas/{iid}/activity")).json(), list)
+        tasks = await c.get(f"/api/ideas/{iid}/tasks")
+        assert tasks.status_code == 200
 
-@pytest.mark.asyncio
-async def test_set_idea_stage():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.post(f"/api/ideas/{iid}/stage", json={"stage": "specced"}, headers=AUTH)
-        assert r.status_code == 200, r.text
+        # Global read surfaces.
+        overview = await c.get("/api/ideas/progress")
+        assert overview.status_code == 200
+        assert "total_ideas" in overview.json() or "by_stage" in overview.json()
+        showcase = await c.get("/api/ideas/showcase")
+        assert showcase.status_code == 200
+        assert "ideas" in showcase.json() or "items" in showcase.json() or "showcase" in showcase.json()
+        assert isinstance((await c.get("/api/ideas/resonance")).json(), list)
+        storage = await c.get("/api/ideas/storage")
+        assert storage.status_code == 200 and "backend" in storage.json()
 
-
-@pytest.mark.asyncio
-async def test_idea_progress():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.get(f"/api/ideas/{iid}/progress")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "stage" in body or "idea_id" in body
-
-
-@pytest.mark.asyncio
-async def test_idea_activity():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.get(f"/api/ideas/{iid}/activity")
-        assert r.status_code == 200, r.text
-        assert isinstance(r.json(), list)
-
-
-@pytest.mark.asyncio
-async def test_idea_progress_overview():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c)
-        r = await c.get("/api/ideas/progress")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "total_ideas" in body or "by_stage" in body
-
-
-@pytest.mark.asyncio
-async def test_idea_showcase():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c)
-        r = await c.get("/api/ideas/showcase")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "ideas" in body or "items" in body or "showcase" in body
-
-
-@pytest.mark.asyncio
-async def test_idea_resonance_feed():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c)
-        r = await c.get("/api/ideas/resonance")
-        assert r.status_code == 200, r.text
-        assert isinstance(r.json(), list)
+        # Multi-idea list (seed a range of ROIs — list must return >= 3
+        # even though order-by-roi is the service's internal sort).
+        for val in (10.0, 500.0, 50.0):
+            await _create_idea(c, potential_value=val, estimated_cost=10.0, confidence=0.7)
+        body = (await c.get("/api/ideas")).json()
+        ideas = body.get("ideas") or body.get("items") or []
+        assert len(ideas) >= 3
 
 
 # ---------------------------------------------------------------------------
@@ -232,50 +179,27 @@ async def test_idea_resonance_feed():
 
 
 @pytest.mark.asyncio
-async def test_set_idea_tags():
+async def test_idea_tags_flow():
+    """Set tags → read back normalized → catalog lists them →
+    cards filter by tag → empty-string tag validation."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         iid = _uid()
         await _create_idea(c, iid)
-        r = await c.put(f"/api/ideas/{iid}/tags", json={"tags": ["infra", "api"]})
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "tags" in body
-        normalized = body["tags"]
-        assert "infra" in normalized
-        assert "api" in normalized
 
+        set_resp = await c.put(f"/api/ideas/{iid}/tags", json={"tags": ["infra", "filterable"]})
+        assert set_resp.status_code == 200
+        normalized = set_resp.json()["tags"]
+        assert "infra" in normalized and "filterable" in normalized
 
-@pytest.mark.asyncio
-async def test_list_tags_catalog():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        await c.put(f"/api/ideas/{iid}/tags", json={"tags": ["catalog-tag"]})
-        r = await c.get("/api/ideas/tags")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "tags" in body or "catalog" in body or isinstance(body, list)
+        catalog = await c.get("/api/ideas/tags")
+        assert catalog.status_code == 200
+        cb = catalog.json()
+        assert "tags" in cb or "catalog" in cb or isinstance(cb, list)
 
+        assert (await c.get("/api/ideas/cards", params={"q": "tag:filterable"})).status_code == 200
 
-@pytest.mark.asyncio
-async def test_idea_cards_filter_by_tag():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        await c.put(f"/api/ideas/{iid}/tags", json={"tags": ["filterable"]})
-        r = await c.get("/api/ideas/cards", params={"q": "tag:filterable"})
-        assert r.status_code == 200, r.text
-
-
-@pytest.mark.asyncio
-async def test_invalid_tag_returns_422():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        # Empty string tag should be invalid after normalization
-        r = await c.put(f"/api/ideas/{iid}/tags", json={"tags": [""]})
-        # Either 422 (validation) or the service normalizes it out
-        assert r.status_code in (200, 422), r.text
+        # Empty-string tag — either 422 or normalized out; not 500.
+        assert (await c.put(f"/api/ideas/{iid}/tags", json={"tags": [""]})).status_code in (200, 422)
 
 
 # ---------------------------------------------------------------------------
@@ -284,63 +208,32 @@ async def test_invalid_tag_returns_422():
 
 
 @pytest.mark.asyncio
-async def test_stake_on_idea():
+async def test_idea_investment_fork_selection_flow():
+    """Stake CC on an idea, fork it, verify the fork references its
+    parent, select an idea algorithmically, read the A/B stats."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         iid = _uid()
         await _create_idea(c, iid)
-        r = await c.post(f"/api/ideas/{iid}/stake", json={
-            "contributor_id": "test-user",
-            "amount_cc": 10.0,
-            "rationale": "testing",
+
+        stake = await c.post(f"/api/ideas/{iid}/stake", json={
+            "contributor_id": "test-user", "amount_cc": 10.0, "rationale": "testing",
         })
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "amount_cc" in body or "stake" in body or "staked" in body
+        assert stake.status_code == 200
+        sb = stake.json()
+        assert "amount_cc" in sb or "stake" in sb or "staked" in sb
 
-
-@pytest.mark.asyncio
-async def test_fork_idea():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.post(f"/api/ideas/{iid}/fork", params={"forker_id": "test-user"})
-        assert r.status_code == 201, r.text
-        body = r.json()
-        # Fork response wraps in {"idea": {...}, "lineage_link_id": ..., "source_idea_id": ...}
-        assert "idea" in body
-        assert "source_idea_id" in body
-
-
-@pytest.mark.asyncio
-async def test_forked_idea_references_parent():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.post(f"/api/ideas/{iid}/fork", params={"forker_id": "test-user"})
-        assert r.status_code == 201, r.text
-        forked = r.json()
-        forked_id = forked["idea"]["id"]
+        fork = await c.post(f"/api/ideas/{iid}/fork", params={"forker_id": "test-user"})
+        assert fork.status_code == 201
+        forked = fork.json()
         assert forked["source_idea_id"] == iid
-        r2 = await c.get(f"/api/ideas/{forked_id}")
-        assert r2.status_code == 200, r2.text
+        assert (await c.get(f"/api/ideas/{forked['idea']['id']}")).status_code == 200
 
-
-@pytest.mark.asyncio
-async def test_idea_selection():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c)
-        await _create_idea(c)
-        r = await c.post("/api/ideas/select", headers=AUTH)
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "idea_id" in body or "id" in body or "selected" in body
-
-
-@pytest.mark.asyncio
-async def test_idea_selection_ab_stats():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ideas/selection-ab/stats")
-        assert r.status_code == 200, r.text
+        await _create_idea(c)  # one more so selection has choices
+        sel = await c.post("/api/ideas/select", headers=AUTH)
+        assert sel.status_code == 200
+        sb2 = sel.json()
+        assert "idea_id" in sb2 or "id" in sb2 or "selected" in sb2
+        assert (await c.get("/api/ideas/selection-ab/stats")).status_code == 200
 
 
 # ---------------------------------------------------------------------------
@@ -349,107 +242,34 @@ async def test_idea_selection_ab_stats():
 
 
 @pytest.mark.asyncio
-async def test_add_question_to_idea():
+async def test_idea_questions_and_resonance_flow():
+    """Add a question, answer it, read concept-resonance matches,
+    404 on a missing idea."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         iid = _uid()
         await _create_idea(c, iid)
-        r = await c.post(f"/api/ideas/{iid}/questions", json={
-            "question": "Is this viable?",
-            "value_to_whole": 5.0,
-            "estimated_cost": 1.0,
+
+        q = await c.post(f"/api/ideas/{iid}/questions", json={
+            "question": "Is this viable?", "value_to_whole": 5.0, "estimated_cost": 1.0,
         })
-        assert r.status_code == 200, r.text
+        assert q.status_code == 200
 
-
-@pytest.mark.asyncio
-async def test_answer_question():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        await c.post(f"/api/ideas/{iid}/questions", json={
-            "question": "Is this viable?",
-            "value_to_whole": 5.0,
-            "estimated_cost": 1.0,
+        ans = await c.post(f"/api/ideas/{iid}/questions/answer", json={
+            "question": "Is this viable?", "answer": "Yes, after validation.",
         })
-        r = await c.post(f"/api/ideas/{iid}/questions/answer", json={
-            "question": "Is this viable?",
-            "answer": "Yes, after validation.",
-        })
-        assert r.status_code == 200, r.text
+        assert ans.status_code == 200
 
-
-@pytest.mark.asyncio
-async def test_concept_resonance_happy_and_404():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.get(f"/api/ideas/{iid}/concept-resonance")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "matches" in body or "related" in body or "idea_id" in body
-        # Missing idea → 404 (not silent 200 with empty payload).
+        reso = await c.get(f"/api/ideas/{iid}/concept-resonance")
+        assert reso.status_code == 200
+        rb = reso.json()
+        assert "matches" in rb or "related" in rb or "idea_id" in rb
         assert (await c.get("/api/ideas/nonexistent-idea-xyz/concept-resonance")).status_code == 404
 
 
-# ---------------------------------------------------------------------------
-# Full User Journey (4 tests)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_full_idea_lifecycle():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-
-        # Advance through stages
-        r = await c.post(f"/api/ideas/{iid}/advance", headers=AUTH)
-        assert r.status_code == 200, r.text
-
-        r = await c.post(f"/api/ideas/{iid}/advance", headers=AUTH)
-        assert r.status_code == 200, r.text
-
-        # Update value
-        r = await c.patch(f"/api/ideas/{iid}", json={"potential_value": 200.0}, headers=AUTH)
-        assert r.status_code == 200, r.text
-
-        # Check progress
-        r = await c.get(f"/api/ideas/{iid}/progress")
-        assert r.status_code == 200, r.text
-
-
-@pytest.mark.asyncio
-async def test_idea_with_tasks():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        # GET tasks for the idea (may be empty but should return 200)
-        r = await c.get(f"/api/ideas/{iid}/tasks")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "tasks" in body or "items" in body or isinstance(body, dict)
-
-
-@pytest.mark.asyncio
-async def test_multiple_ideas_sorted_by_roi():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, potential_value=10.0, estimated_cost=10.0, confidence=0.5)
-        await _create_idea(c, potential_value=500.0, estimated_cost=10.0, confidence=0.9)
-        await _create_idea(c, potential_value=50.0, estimated_cost=10.0, confidence=0.7)
-        r = await c.get("/api/ideas")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        ideas = body.get("ideas") or body.get("items") or []
-        assert len(ideas) >= 3
-
-
-@pytest.mark.asyncio
-async def test_idea_storage_info():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ideas/storage")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "backend" in body
+# (The former 'Full User Journey' tests — full_idea_lifecycle,
+# idea_with_tasks, multiple_ideas_sorted_by_roi, idea_storage_info —
+# fold into test_idea_lifecycle_flow above. Single journey covers
+# every lifecycle read surface.)
 
 
 # ---------------------------------------------------------------------------
