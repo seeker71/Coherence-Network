@@ -137,14 +137,11 @@ export default async function VisionConceptPage({
   const lang: LocaleCode = isSupportedLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  // DIAGNOSTIC: throw a plain error to see if Next's error handling
-  // reaches this page at all. If we get 500, redirect has a bug. If
-  // we get 200, some parent segment is catching everything.
-  console.log(`[vision-page] entered conceptId=${conceptId}`);
-  if (conceptId === "visual-lc-beauty-1") {
-    console.log(`[vision-page] BEFORE throw Error()`);
-    throw new Error("diagnostic: forced throw from /vision/[conceptId]");
-  }
+  // Visual asset ids are redirected at the middleware layer (see
+  // web/middleware.ts) — the server-component redirect() was being
+  // swallowed by Next 15.5's error boundary. Middleware runs before
+  // any page code and returns a real 307, so /vision/visual-lc-*
+  // lands on /assets/[id] where the image actually renders.
 
   const [concept, edges, related, allLC] = await Promise.all([
     fetchConcept(conceptId, lang),
