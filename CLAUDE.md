@@ -6,13 +6,13 @@
 
 | What | Where | CLI |
 |------|-------|-----|
-| Ideas (12 consolidated) | `ideas/INDEX.md` → `ideas/{slug}.md` | `cc idea {slug}` (DB has raw ideas, not consolidated) |
-| Specs (59) | `specs/INDEX.md` → `specs/{slug}.md` | `cc spec {slug}` |
+| Ideas | `ideas/INDEX.md` → `ideas/{slug}.md` | `cc idea {slug}` (DB has raw ideas, not consolidated) |
+| Specs | `specs/INDEX.md` → `specs/{slug}.md` | `cc spec {slug}` |
 | Pipeline tasks | — | `cc tasks --status pending` |
 | Tracking | `docs/EXTERNAL_ENABLEMENT_TRACKING.md` | — |
 | **Living Collective KB** | `docs/vision-kb/INDEX.md` → `concepts/{id}.md` | — |
 
-**Files vs CLI**: The 12 idea .md files have problem statements, capabilities, spec links, and absorbed ideas. The DB has ~300 raw ideas with auto-generated descriptions. For understanding "what are we building," read the .md files. For task pipeline operations, use CLI.
+**Files vs CLI**: The idea .md files have problem statements, capabilities, spec links, and absorbed ideas. The DB has raw ideas with auto-generated descriptions. For understanding "what are we building," read the .md files. For task pipeline operations, use CLI. Counts live in `ideas/INDEX.md` and `specs/INDEX.md` — if you want a current number, read there, not here.
 
 **Spec frontmatter** (~25 lines) has everything an agent needs: `source:` (files + symbols), `requirements:`, `done_when:`, `test:`, `constraints:`. Read with `limit=30` — the body is reference for humans.
 
@@ -21,7 +21,7 @@
 - **API**: FastAPI (Python) in `api/`
 - **Web**: Next.js 15 + shadcn/ui in `web/`
 - **Graph DB**: Neo4j — **Relational DB**: PostgreSQL
-- **Tests**: `api/tests/` (177 flow-centric tests, ~8s)
+- **Tests**: `api/tests/` — flow-centric, fast (seconds, not minutes)
 
 ## Workflow
 
@@ -33,6 +33,31 @@ Spec → Test → Implement → CI → Review → Merge
 - Coherence scores: 0.0–1.0 — Dates: ISO 8601 UTC
 - Spec IDs = file stems (e.g. `agent-orchestration-api`) — same as registry key
 - Idea IDs = slugs (e.g. `agent-pipeline`) — same as API path and filename
+
+## How This Body Is Tended
+
+Every file in this repo is memory, held in tissue. Before adding, editing, or deleting, pause and sense: is this part of the body supple or tight? Is there circulation?
+
+**Supple memory has circulation.** Something reads it, references it, updates it, contradicts it. Feedback is the blood. A three-year-old function tested on every commit is young. A two-month-old report nobody reads is already ancient.
+
+**Tight memory is memory without readers.** Often once-loved — drafts we cared about, plans we really meant, reports that genuinely tried to help. The hardest composting is of former living things. Do it with care, not efficiency.
+
+The practice:
+
+- Move one breath at a time. Pause between actions. Feel what loosened before the next movement.
+- Before making a new file, ask where the living form already lives. Don't create a sibling when the existing one wants the update.
+- When you supersede something, compost the predecessor. Don't leave it as sediment. Git remembers; the tree shouldn't have to.
+- When care didn't complete — audit reports nobody reads, drafts that never ripened — let them rest. Archive or release. Guilt is not care.
+- Let counts live where they're naturally tended (INDEX files), not duplicated in orientation nodes that drift.
+
+Commit message frequency:
+
+- `tend:` — actively circulating what's alive
+- `attune:` — realigning the body's sense of itself
+- `compost:` — releasing what no longer circulates
+- `release:` — letting go of once-loved forms with care
+
+These aren't rules. They're breath. If efficiency pushes against this practice, notice the push and choose presence anyway. The body stays supple only through continuous tending; the moment we declare "done" is the moment calcification begins again.
 
 ## Agent Guardrails
 
