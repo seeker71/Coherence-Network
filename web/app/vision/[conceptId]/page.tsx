@@ -141,22 +141,30 @@ export default async function VisionConceptPage({
     fetchAllLC(lang),
   ]);
 
-  if (!concept) notFound();
+  // When /api/concepts/{id} returns null, the id might still exist as
+  // a different node type (asset, contributor, etc.). Check the graph
+  // node directly and redirect to the right surface rather than
+  // 404ing a valid id — /vision/visual-lc-beauty-1 is an asset, and
+  // the visitor expects to see the image, not a 'not found' page.
+  if (!concept) {
+    try {
+      const base = getApiBase();
+      const nodeRes = await fetch(
+        `${base}/api/graph/nodes/${encodeURIComponent(conceptId)}`,
+        { next: { revalidate: 30 } },
+      );
+      if (nodeRes.ok) {
+        const node = await nodeRes.json() as { type?: string };
+        if (node.type === "asset") redirect(`/assets/${conceptId}`);
+        if (node.type) redirect(`/nodes/${conceptId}`);
+      }
+    } catch {
+      /* fall through to notFound below */
+    }
+    notFound();
+  }
 
   const languageMeta = concept.language_meta;
-
-  // Wrong-type guard: the concepts API used to return any node with a
-  // matching id, so an asset like `visual-lc-beauty-1` (type=asset,
-  // domains=[living-collective]) rendered here with an empty hero.
-  // The service now enforces type=concept, and this page redirects to
-  // the right surface if a caller still lands here with a different
-  // type — defence in depth. Gives visitors a page that actually
-  // shows the image instead of an empty concept skeleton.
-  const conceptType = (concept as { type?: string }).type;
-  if (conceptType && conceptType !== "concept") {
-    if (conceptType === "asset") redirect(`/assets/${conceptId}`);
-    redirect(`/nodes/${conceptId}`);
-  }
 
   const isLC = concept.domains?.includes("living-collective");
   if (!isLC) redirect(`/concepts/${conceptId}`);

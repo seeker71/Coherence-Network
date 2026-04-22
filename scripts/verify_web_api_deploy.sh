@@ -192,12 +192,24 @@ except Exception:
     print("")' "$body_file" 2>/dev/null)"
 
   echo "overall=${overall:-unknown} ongoing_silences=${silences_count}"
-  if [[ "$overall" == "breathing" && "${silences_count:-0}" -eq 0 ]]; then
-    echo "OK: every organ breathing"
+
+  # Only ongoing silences fail the deploy — those are hard organ
+  # breakage. A transient `overall=strained` with zero silences is
+  # common right after a deploy (container warming, latency
+  # briefly high) and shouldn't block. If this matters for an
+  # operator, they see the warn and can re-verify once the
+  # witness's 30s probe cycle catches up. The next deploy will
+  # either catch up naturally or surface a real silence.
+  if [[ "${silences_count:-0}" -eq 0 ]]; then
+    if [[ "$overall" == "breathing" ]]; then
+      echo "OK: every organ breathing"
+    else
+      echo "WARN: overall=${overall} with no ongoing silences (likely transient; re-verify in 30s)"
+    fi
     return 0
   fi
 
-  echo "FAIL: pulse reports unhealthy state"
+  echo "FAIL: pulse reports ongoing silences"
   if [[ -n "$silent_organs" ]]; then
     echo "Silent organs: $silent_organs"
   fi
