@@ -137,14 +137,13 @@ export default async function VisionConceptPage({
   const lang: LocaleCode = isSupportedLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  // DIAGNOSTIC: unconditional redirect for any visual-lc-beauty-1 id —
-  // to isolate whether redirect() works at all from this page, or if
-  // something upstream is swallowing NEXT_REDIRECT in this specific route.
+  // DIAGNOSTIC: throw a plain error to see if Next's error handling
+  // reaches this page at all. If we get 500, redirect has a bug. If
+  // we get 200, some parent segment is catching everything.
   console.log(`[vision-page] entered conceptId=${conceptId}`);
   if (conceptId === "visual-lc-beauty-1") {
-    console.log(`[vision-page] BEFORE redirect call`);
-    redirect(`/assets/${conceptId}`);
-    console.log(`[vision-page] AFTER redirect call — SHOULD NOT SEE THIS`);
+    console.log(`[vision-page] BEFORE throw Error()`);
+    throw new Error("diagnostic: forced throw from /vision/[conceptId]");
   }
 
   const [concept, edges, related, allLC] = await Promise.all([
