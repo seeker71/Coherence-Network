@@ -137,11 +137,14 @@ export default async function VisionConceptPage({
   const lang: LocaleCode = isSupportedLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  // Early route-level type classification — before any concept fetch.
+  // DIAGNOSTIC: unconditional redirect for any visual-lc-beauty-1 id —
+  // to isolate whether redirect() works at all from this page, or if
+  // something upstream is swallowing NEXT_REDIRECT in this specific route.
   console.log(`[vision-page] entered conceptId=${conceptId}`);
-  if (conceptId.startsWith("visual-lc-") || conceptId.startsWith("visual-")) {
-    console.log(`[vision-page] redirecting visual id ${conceptId} to /assets/${conceptId}`);
+  if (conceptId === "visual-lc-beauty-1") {
+    console.log(`[vision-page] BEFORE redirect call`);
     redirect(`/assets/${conceptId}`);
+    console.log(`[vision-page] AFTER redirect call — SHOULD NOT SEE THIS`);
   }
 
   const [concept, edges, related, allLC] = await Promise.all([
