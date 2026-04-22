@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-22 | **Concepts**: 55 | **Status**: 52 expanding, 3 seed
+> **Last maintained**: 2026-04-22 | **Concepts**: 57 | **Status**: 54 expanding, 3 seed
 
 ## How to use this KB
 
@@ -33,6 +33,7 @@ A community of 50-200 people living as a single organism. What amplifies alivene
 
 **Physical spaces & practices:**
 - **[Space](concepts/lc-space.md)** ★ — 432 Hz — shelter that breathes | `status: deepening`
+- **[Attuned Spaces](concepts/lc-attuned-spaces.md)** — 432 Hz — what existing places become when they remember | `status: deepening`
 - **[Nourishment](concepts/lc-nourishment.md)** ★ — 174 Hz — earth→body→vitality | `status: deepening`
 - **[Land](concepts/lc-land.md)** ★ — 174 Hz — earth, root, ground | `status: deepening`
 - **[Energy](concepts/lc-energy.md)** ★ — 417 Hz — field metabolism | `status: deepening`
@@ -58,6 +59,7 @@ A community of 50-200 people living as a single organism. What amplifies alivene
 - [Network](concepts/lc-network.md) — 639 Hz — web linking all fields
 - [Elders](concepts/lc-elders.md) — 852 Hz — accumulated wisdom
 - [Circulation](concepts/lc-circulation.md) — 528 Hz — energy flowing where needed
+- [Economy](concepts/lc-economy.md) — 528 Hz — value flows from contribution through attention to resonance
 - [Composting](concepts/lc-composting.md) — 285 Hz — grief→fertile ground
 - [Harmonic Rebalancing](concepts/lc-harmonic-rebalancing.md) — 396 Hz — release + renew
 - [Phase Transitions](concepts/lc-phase-transitions.md) — 417 Hz — change itself
