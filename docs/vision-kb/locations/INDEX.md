@@ -1,8 +1,10 @@
-# Locations — Climate Adaptations
+# Locations — Where the Vision Takes Form
 
-> The same vision, shaped by different landscapes.
+> The same vision, shaped by where it emerges — both by climate and by the built fabric it begins from.
 
-## Four Reference Locations
+**Companion**: [urban-transformations.md](urban-transformations.md) — how apartments, suburbs, city neighborhoods, and villages become living organisms without demolition.
+
+## Four Reference Climates
 
 ### Colorado Rockies (Temperate/Alpine)
 - **Land**: 30-200 acres, $5K-30K/acre mountain, $2K-10K/acre valley

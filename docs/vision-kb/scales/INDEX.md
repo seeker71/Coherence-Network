@@ -2,6 +2,8 @@
 
 > The same organism at different magnifications.
 
+**Narrative companion**: [organism-stages.md](organism-stages.md) — the lived experience of each scale (Seed 8-15, Sapling 30-50, Tree 80-150, Grove 150-300, Network 5-20 fields), with character portraits and real-world echoes. Read for felt sense; read this file for numbers.
+
 ## 50 People — Seed Community
 
 **The feel**: Everyone knows everyone. Meals together every day. One fire circle holds all. Intimate, transparent, no one invisible.

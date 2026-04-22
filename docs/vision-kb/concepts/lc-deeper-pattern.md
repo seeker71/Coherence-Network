@@ -1,7 +1,16 @@
-# The Living Collective — The Deeper Pattern
+---
+id: lc-deeper-pattern
+hz: 741
+status: expanding
+updated: 2026-04-22
+---
+
+# The Deeper Pattern — The Physics Beneath the Field
 
 > How the imaginary becomes real. How water carries memory.
 > How attention folds dimensions. How the field is already here.
+>
+> *The physics and metaphysics beneath the living organism — why the concepts resonate, why water circulates, why attention matters, why the field needs recognition rather than creation.*
 
 ---
 

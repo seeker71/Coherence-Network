@@ -1,6 +1,6 @@
 # Coherence Network — common targets
 
-.PHONY: test test-quick run setup dev-setup lint seed web-dev api-dev build web-worktree-validate spec-quality pr-preflight start-gate prompt-gate install-pre-push-hook
+.PHONY: test test-quick run setup dev-setup lint seed web-dev api-dev build web-worktree-validate spec-quality pr-preflight start-gate prompt-gate install-pre-push-hook wellness
 
 test:
 	cd api && .venv/bin/pytest -v
@@ -49,3 +49,6 @@ start-gate:
 
 prompt-gate:
 	./scripts/prompt_entry_gate.sh
+
+wellness:
+	@python3 scripts/wellness_check.py
