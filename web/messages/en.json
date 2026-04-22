@@ -287,7 +287,14 @@
     "linkFromFeed": "See your presence",
     "menuHeading": "Your corner",
     "stepInCount1": "step in · 1 held open",
-    "stepInCountN": "step in · {n} held open"
+    "stepInCountN": "step in · {n} held open",
+    "signInEyebrow": "Returning on a new device?",
+    "signInLede": "Your presence lives on the field, not this browser. Type the email you registered with and your full corner opens on this device too.",
+    "signInPlaceholder": "you@example.com",
+    "signInCta": "Open on this device",
+    "signInWorking": "Opening…",
+    "signInNotFound": "That email hasn't registered yet. Step into The Living Collective to join.",
+    "signInError": "The field is quiet right now. Try again in a moment."
   },
   "invite": {
     "eyebrow": "Bring someone in",

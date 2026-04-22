@@ -25,9 +25,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useT } from "@/components/MessagesProvider";
 import { countVisitorFootprint } from "@/lib/visitor";
-
-const CONTRIBUTOR_KEY = "cc-contributor-id";
-const NAME_KEY = "cc-reaction-author-name";
+import { readIdentity } from "@/lib/identity";
 
 export function MeButton() {
   const t = useT();
@@ -37,13 +35,34 @@ export function MeButton() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // readIdentity bridges the legacy coherence_contributor_id key
+    // into the cc-* namespace, so a visitor who joined via the
+    // crypto /join flow is recognized here without re-submitting.
     try {
-      setContributorId(localStorage.getItem(CONTRIBUTOR_KEY));
-      setAuthorName(localStorage.getItem(NAME_KEY) || "");
+      const { contributorId: cid, name } = readIdentity();
+      setContributorId(cid || null);
+      setAuthorName(name);
     } catch {
       /* ignore */
     }
     setReady(true);
+
+    // React to identity changes from other components (the join
+    // form, the 'sign in on this device' card) so the door
+    // re-renders without a manual reload.
+    function onStorage(e: StorageEvent) {
+      if (!e.key || e.key.startsWith("cc-") || e.key === "coherence_contributor_id") {
+        try {
+          const { contributorId: cid, name } = readIdentity();
+          setContributorId(cid || null);
+          setAuthorName(name);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   // When the visitor has a provisional id but no name, show how many

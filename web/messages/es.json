@@ -287,7 +287,14 @@
     "linkFromFeed": "Ver tu presencia",
     "menuHeading": "Tu rincón",
     "stepInCount1": "entra · 1 sostenido",
-    "stepInCountN": "entra · {n} sostenidos"
+    "stepInCountN": "entra · {n} sostenidos",
+    "signInEyebrow": "¿Vuelves desde un nuevo dispositivo?",
+    "signInLede": "Tu presencia vive en el campo, no en este navegador. Escribe el correo con el que te registraste y tu rincón completo se abre también aquí.",
+    "signInPlaceholder": "tu@ejemplo.com",
+    "signInCta": "Abrir en este dispositivo",
+    "signInWorking": "Abriendo…",
+    "signInNotFound": "Ese correo aún no está registrado. Entra en El Colectivo Viviente para unirte.",
+    "signInError": "El campo está en silencio ahora. Inténtalo en un momento."
   },
   "invite": {
     "eyebrow": "Trae a alguien",

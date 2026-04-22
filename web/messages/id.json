@@ -287,7 +287,14 @@
     "linkFromFeed": "Lihat kehadiranmu",
     "menuHeading": "Sudutmu",
     "stepInCount1": "masuk · 1 terbuka",
-    "stepInCountN": "masuk · {n} terbuka"
+    "stepInCountN": "masuk · {n} terbuka",
+    "signInEyebrow": "Kembali di perangkat baru?",
+    "signInLede": "Kehadiranmu hidup di jejaring, bukan di peramban ini. Ketik email yang kamu pakai mendaftar dan sudutmu terbuka di sini juga.",
+    "signInPlaceholder": "kamu@contoh.com",
+    "signInCta": "Buka di perangkat ini",
+    "signInWorking": "Membuka…",
+    "signInNotFound": "Email itu belum terdaftar. Masuk ke Kolektif Hidup untuk bergabung.",
+    "signInError": "Jejaring sedang hening. Coba lagi sebentar."
   },
   "invite": {
     "eyebrow": "Ajak seseorang",

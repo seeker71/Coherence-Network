@@ -287,7 +287,14 @@
     "linkFromFeed": "Deine Gegenwart ansehen",
     "menuHeading": "Dein Platz",
     "stepInCount1": "eintreten · 1 offen gehalten",
-    "stepInCountN": "eintreten · {n} offen gehalten"
+    "stepInCountN": "eintreten · {n} offen gehalten",
+    "signInEyebrow": "Auf einem neuen Gerät?",
+    "signInLede": "Deine Präsenz lebt im Feld, nicht in diesem Browser. Gib die E-Mail an, mit der du dich angemeldet hast, und dein ganzer Platz öffnet sich auch hier.",
+    "signInPlaceholder": "du@beispiel.de",
+    "signInCta": "Auf diesem Gerät öffnen",
+    "signInWorking": "Öffnet…",
+    "signInNotFound": "Diese E-Mail ist noch nicht angemeldet. Tritt in das Lebendige Kollektiv ein, um mitzumachen.",
+    "signInError": "Das Feld ist gerade still. Versuch es gleich nochmal."
   },
   "invite": {
     "eyebrow": "Jemanden einladen",

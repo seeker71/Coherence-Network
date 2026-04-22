@@ -3,12 +3,11 @@
 import { useState } from "react";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LOCALES, type LocaleCode } from "@/lib/locales";
-import { getApiBase } from "@/lib/api";
 import {
   NAME_KEY,
   CONTRIBUTOR_KEY,
+  EMAIL_KEY,
   ensureFingerprint,
-  ensureContributorId,
 } from "@/lib/identity";
 
 type RoleKey =
@@ -106,41 +105,38 @@ export function InterestForm() {
         throw new Error(msg);
       }
 
-      // Persist the visitor's identity so the /me page, the MeButton
-      // header door, and downstream attribution all remember them on
-      // the next visit. Without this, joining felt hollow: submit
-      // succeeded server-side but localStorage stayed empty, so the
-      // next page load showed "step in" again.
+      // The backend register endpoint returns the interested-person
+      // id AND the contributor_id (same email → same contributor on
+      // every device the visitor ever opens the app on). Persisting
+      // both locally is what makes the 'You' page remember them.
       //
-      //   1. Write the display name (the first thing MeButton reads)
-      //   2. Ensure a device fingerprint exists (stable per-browser)
-      //   3. Graduate to a real contributor node — returns a
-      //      contributor_id the graph uses for feeds, reactions,
-      //      votes, and every future contribution
+      // Backend is the source of truth for profile + identity;
+      // localStorage is a fast cache that can be rebuilt any time
+      // via /api/contributors/claim-by-identity on a new device.
+      const data = await res.json().catch(() => ({}));
       try {
         const trimmed = form.name.trim();
-        if (trimmed) {
-          localStorage.setItem(NAME_KEY, trimmed);
+        const emailTrimmed = form.email.trim();
+        if (trimmed) localStorage.setItem(NAME_KEY, trimmed);
+        if (emailTrimmed) localStorage.setItem(EMAIL_KEY, emailTrimmed);
+        if (data.contributor_id) {
+          localStorage.setItem(CONTRIBUTOR_KEY, data.contributor_id);
         }
         ensureFingerprint();
-        // ensureContributorId reads the name + fingerprint from
-        // localStorage, calls /api/contributors/graduate, and writes
-        // the returned id to CONTRIBUTOR_KEY. Safe to await even when
-        // the network is slow — we still show the thank-you once it
-        // resolves (success or soft-failure).
-        await ensureContributorId(getApiBase());
-        // Signal other tabs / components that identity changed so the
-        // header door re-reads without a manual reload.
+        // Signal other mounted components (the MeButton in the
+        // header) that identity changed so they re-read without a
+        // manual reload.
         try {
           window.dispatchEvent(new StorageEvent("storage", { key: CONTRIBUTOR_KEY }));
         } catch {
           /* some browsers gate the StorageEvent ctor — non-fatal */
         }
       } catch {
-        // localStorage unavailable (private mode, quota): the server
-        // already has the interest node, so the join itself stands.
-        // The visitor will just need to name themselves again next
-        // session. That's an acceptable graceful degradation.
+        // localStorage unavailable (private mode, quota): the
+        // server already has the contributor + interest node, so
+        // the visitor can recover on their next visit by signing in
+        // with their email — the backend will return their full
+        // profile.
       }
 
       setSubmitted(true);
