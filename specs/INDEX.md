@@ -1,8 +1,8 @@
 # Spec Index
 
-> 69 specs (65 done, 4 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 73 specs (68 done, 5 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (18 ideas → 69 specs)
+## By Idea (18 ideas → 73 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -50,15 +50,17 @@
 - [unified-sqlite-store](unified-sqlite-store.md) — unified SQLite store (legacy)
 - [universal-node-edge-layer](universal-node-edge-layer.md) — graph DB node + edge CRUD
 
-### coherence-credit (6 specs)
+### coherence-credit (7 specs)
 - [cc-economics-and-value-coherence](cc-economics-and-value-coherence.md) — CC economic model
+- [cc-new-earth-exchange-bridge](cc-new-earth-exchange-bridge.md) — CC ↔ external exchange adapters + swap flow
 - [coherence-credit-internal-currency](coherence-credit-internal-currency.md) — CC as internal currency
 - [grounded-cost-value-measurement](grounded-cost-value-measurement.md) — grounded cost/value measurement
 - [grounded-idea-portfolio-metrics](grounded-idea-portfolio-metrics.md) — portfolio-level metrics
 - [mvp-cost-and-acceptance-proof](mvp-cost-and-acceptance-proof.md) — MVP cost + acceptance proof
 - [portfolio-governance-effectiveness](portfolio-governance-effectiveness.md) — governance effectiveness scoring
 
-### value-attribution (8 specs)
+### value-attribution (9 specs)
+- [asset-renderer-plugin](asset-renderer-plugin.md) — pluggable renderers per MIME type (draft)
 - [assets-api](assets-api.md) — asset CRUD + lineage
 - [contributions-api](contributions-api.md) — contribution tracking API
 - [contributor-onboarding-and-governed-change-flow](contributor-onboarding-and-governed-change-flow.md) — governed change flow
@@ -83,8 +85,10 @@
 - [agent-execution-lifecycle-hooks](agent-execution-lifecycle-hooks.md) — execution lifecycle hooks
 - [unified-agent-cli-flow-patch-on-fail](unified-agent-cli-flow-patch-on-fail.md) — CLI flow + patch-on-fail
 
-### knowledge-and-resonance (1 spec)
+### knowledge-and-resonance (3 specs)
 - [knowledge-resonance-engine](knowledge-resonance-engine.md) — concept layer, belief resonance, discovery feed
+- [living-signal-layer](living-signal-layer.md) — sense signals as a changing field, not fixed categories
+- [source-artifact-sensing-graph-integration](source-artifact-sensing-graph-integration.md) — source artifacts as first-class graph nodes with provenance
 
 ### identity-and-onboarding (2 specs)
 - [identity-driven-onboarding-tofu](identity-driven-onboarding-tofu.md) — TOFU identity + 37 providers
