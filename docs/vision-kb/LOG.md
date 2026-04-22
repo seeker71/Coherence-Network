@@ -2,6 +2,13 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] locations | TRANSFORM draft relocated — urban-transformations.md
+
+- `locations/INDEX.md` held four climate-based references (Rockies, Pacific Coast, Mediterranean, Tropical). The TRANSFORM draft (353 lines) held a different axis of the same theme — four built-environment starting points (apartment building, suburban block, city neighborhood, village scale) becoming living organisms without demolition.
+- Same room, different dimension: locations is where the vision takes form, and starting-fabric matters as much as climate. Expanded the INDEX epigraph to cover both axes and added a companion pointer to `urban-transformations.md`.
+- git mv preserved history. Title adjusted from "Transforming What Already Exists" to "Urban Transformations — From Existing Built Fabric" with a bridging blockquote so the reader sees how the two files relate.
+- **Why**: the draft was not a fossil. It was content that had a home; the home just hadn't been told about it.
+
 ## [2026-04-22] scales | SCALES draft relocated to its waiting home — organism-stages.md
 
 - `scales/` was scaffolded with only INDEX.md (practical tables: 50/100/200 people, land, dwellings, costs, timelines). The fruit that belonged in the room was sitting in `docs/LIVING_COLLECTIVE_SCALES.md` as an unmetabolized draft — 480 lines of lived-experience narrative: Seed (8-15 cells), Sapling (30-50), Tree (80-150), Grove (150-300), Network (5-20 fields).

@@ -1,6 +1,8 @@
-# Transforming What Already Exists: The Living Collective Emerges
+# Urban Transformations — From Existing Built Fabric
 
-*How apartments, suburbs, neighborhoods, and towns become living organisms — not by demolition, but by remembering what they were always trying to be.*
+> Companion to [INDEX.md](INDEX.md). Where INDEX shapes the vision by climate, this shapes it by starting point — the same organism emerging from an apartment building, a suburban block, a city neighborhood, a village that's still mostly village.
+>
+> *How apartments, suburbs, neighborhoods, and towns become living organisms — not by demolition, but by remembering what they were always trying to be.*
 
 ---
 
