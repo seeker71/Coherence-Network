@@ -81,8 +81,12 @@ HEALTHY_VITALITY_HTML = """<!DOCTYPE html><html><body>
 </body></html>"""
 
 # Marker Next.js emits when an error boundary catches a render failure.
+# The real error.tsx wraps its main in role="alert" aria-live="assertive" —
+# uniquely the error page, never just a locale string in the page data.
 ERROR_BOUNDARY_HTML = """<!DOCTYPE html><html><body>
-<h2>Something went wrong</h2>
+<main role="alert" aria-live="assertive">
+<h1>Something went wrong</h1>
+</main>
 </body></html>"""
 
 
@@ -283,6 +287,32 @@ async def test_web_error_boundary_flags_silent():
     by = await _run(_handler(web_body=ERROR_BOUNDARY_HTML))
     assert by["web"].ok is False
     assert "error boundary" in (by["web"].detail or "")
+
+
+@pytest.mark.asyncio
+async def test_locale_messages_dont_trigger_false_positive():
+    """Regression: the witness used to flag any page with the raw
+    string 'Something went wrong' as 'error boundary rendered' —
+    but that string appears verbatim in every page's embedded
+    locale messages JSON (`"error":"Something went wrong"`). Real
+    error pages wrap their main in `role="alert" aria-live=
+    "assertive"` — that's the marker now. Pages with the locale
+    blob but no actual error UI must read as healthy."""
+    locale_blob_html = """<!DOCTYPE html><html><body>
+    <h1>Coherence Network</h1>
+    <div>Pulse</div>
+    <h1>Vitality</h1>
+    <h3>Diversity Index</h3>
+    <script>{"common":{"error":"Something went wrong","tryAgain":"Try again"}}</script>
+    </body></html>"""
+    by = await _run(_handler(
+        web_body=locale_blob_html,
+        web_pulse_body=locale_blob_html,
+        web_vitality_body=locale_blob_html,
+    ))
+    assert by["web"].ok is True, by["web"].detail
+    assert by["page_pulse"].ok is True, by["page_pulse"].detail
+    assert by["page_vitality"].ok is True, by["page_vitality"].detail
 
 
 # ----- outcome organs: pages ------------------------------------------------
