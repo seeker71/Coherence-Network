@@ -4,7 +4,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Header, Query
+from pydantic import BaseModel, Field
 
 from app.services import read_tracking_service
 from app.services import discovery_reward_service
@@ -12,6 +13,61 @@ from app.services import discovery_reward_service
 log = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class PingBody(BaseModel):
+    asset_id: str = Field(..., description="Concept or asset id being read, e.g. lc-sensing")
+    concept_id: str | None = Field(None, description="Concept id when asset_id refers to a concept surface")
+    source_page: str | None = Field(None, description="The page route the read happened on, e.g. /vision/lc-sensing")
+
+
+@router.post(
+    "/views/ping",
+    summary="Record that a contributor met a concept or asset",
+    description=(
+        "Lightweight read-ping the web client fires from the browser when a "
+        "visitor opens a concept page. Carries X-Contributor-Id so the read "
+        "can be attributed back to the person. Anonymous reads (no header) "
+        "are still recorded by session_fingerprint."
+    ),
+)
+async def views_ping(
+    body: PingBody,
+    x_contributor_id: str | None = Header(default=None, alias="X-Contributor-Id"),
+    x_session_fingerprint: str | None = Header(default=None, alias="X-Session-Fingerprint"),
+    x_referrer_contributor_id: str | None = Header(default=None, alias="X-Referrer-Contributor-Id"),
+) -> dict[str, Any]:
+    event_id = read_tracking_service.record_view(
+        asset_id=body.asset_id,
+        concept_id=body.concept_id or (body.asset_id if body.asset_id.startswith("lc-") else None),
+        contributor_id=x_contributor_id or None,
+        session_fingerprint=x_session_fingerprint or None,
+        source_page=body.source_page,
+        referrer_contributor_id=x_referrer_contributor_id or None,
+    )
+    read_tracking_service.record_read(
+        asset_id=body.asset_id,
+        concept_id=body.concept_id or (body.asset_id if body.asset_id.startswith("lc-") else None),
+        contributor_id=x_contributor_id or None,
+    )
+    return {"ok": True, "event_id": event_id}
+
+
+@router.get(
+    "/views/trail/{contributor_id:path}",
+    summary="The concepts a contributor has sat with",
+    description=(
+        "Aggregates a contributor's read history by concept. Each entry is a "
+        "concept they've opened, how many times, and when they last met it. "
+        "This is what a person sees reflected back on /me — their own field-trail."
+    ),
+)
+async def contributor_trail(
+    contributor_id: str,
+    limit: int = Query(10, ge=1, le=50, description="Concepts to return"),
+    days: int = Query(90, ge=1, le=365, description="Lookback window in days"),
+) -> dict[str, Any]:
+    return read_tracking_service.get_contributor_trail(contributor_id, limit=limit, days=days)
 
 
 # ---------------------------------------------------------------------------

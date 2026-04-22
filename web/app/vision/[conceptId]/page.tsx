@@ -21,6 +21,7 @@ import { FrequencyDisplay } from "./_components/FrequencyDisplay";
 import { StructuredContent } from "./_components/StructuredContent";
 import { TrackingSuggestion } from "./_components/TrackingSuggestion";
 import { ReaderPresence } from "./_components/ReaderPresence";
+import { ReadPing } from "./_components/ReadPing";
 import { WorldSignals } from "./_components/WorldSignals";
 import { EnergyContributors } from "./_components/EnergyContributors";
 import { ResonantAssets } from "./_components/ResonantAssets";
@@ -260,6 +261,7 @@ export default async function VisionConceptPage({
             {concept.description}
           </p>
           <ReaderPresence conceptId={conceptId} />
+          <ReadPing conceptId={conceptId} />
         </div>
 
         {/*
