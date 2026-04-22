@@ -37,9 +37,12 @@ async function fetchConcept(id: string, lang?: LocaleCode): Promise<Concept | nu
   // Always forward the lang — the API decides whether a view exists and what
   // to return. Omitting lang would surface the anchor (freshest) view, which
   // is correct for "no preference" but wrong for "explicitly chose English".
+  // No cache: the 404 path feeds a redirect decision downstream, and a
+  // stale cached response for a mis-classified id (e.g. asset with
+  // concept shape) would bypass the redirect and render an empty page.
   const qs = lang ? `?lang=${lang}` : "";
   try {
-    const res = await fetch(`${base}/api/concepts/${id}${qs}`, { next: { revalidate: 30 } });
+    const res = await fetch(`${base}/api/concepts/${id}${qs}`, { cache: "no-store" });
     if (!res.ok) return null;
     return res.json();
   } catch { return null; }
@@ -134,6 +137,17 @@ export default async function VisionConceptPage({
   const lang: LocaleCode = isSupportedLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
+  // Early route-level type classification — before any concept fetch.
+  // The /vision/[conceptId] route is for living-collective concepts.
+  // Visual asset ids ("visual-lc-*") are images generated for those
+  // concepts, served on /assets/[id] where the file_path actually
+  // renders. Classifying the id up-front keeps us from streaming a
+  // half-composed concept page and then trying to redirect mid-stream,
+  // which is where the previous attempt silently failed to escape.
+  if (conceptId.startsWith("visual-lc-") || conceptId.startsWith("visual-")) {
+    redirect(`/assets/${conceptId}`);
+  }
+
   const [concept, edges, related, allLC] = await Promise.all([
     fetchConcept(conceptId, lang),
     fetchEdges(conceptId),
@@ -160,7 +174,7 @@ export default async function VisionConceptPage({
       const base = getApiBase();
       const nodeRes = await fetch(
         `${base}/api/graph/nodes/${encodeURIComponent(conceptId)}`,
-        { next: { revalidate: 30 } },
+        { cache: "no-store" },
       );
       if (nodeRes.ok) {
         const node = (await nodeRes.json()) as { type?: string };
