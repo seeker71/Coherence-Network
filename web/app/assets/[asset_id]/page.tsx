@@ -62,13 +62,18 @@ async function loadAssetPage(assetId: string): Promise<{ asset: Asset | null; co
       const res = await fetch(`${API}/api/graph/nodes/${encodeURIComponent(nodeId)}`, { cache: "no-store" });
       if (res.ok) {
         const node = await res.json();
+        // graph_nodes.to_dict flattens `properties` into top-level
+        // fields, so asset_type / file_path / image_url live directly
+        // on the node — not under node.properties. The earlier reach
+        // for `node.properties?.asset_type` always came back
+        // undefined; this flattened read finds the real shape.
         asset = {
           id: node.id,
-          type: node.properties?.asset_type || node.type || "asset",
+          type: node.asset_type || node.type || "asset",
           description: node.description || node.name || assetId,
-          total_cost: node.properties?.total_cost || "0",
+          total_cost: node.total_cost || "0",
           created_at: node.created_at,
-          ...node.properties,
+          ...node,
           name: node.name,
         } as any;
         break;
@@ -137,7 +142,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold tracking-tight">{asset.description || asset.type || "Untitled asset"}</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{(asset as any).name || asset.description || asset.type || "Untitled asset"}</h1>
               <span className="rounded-full border border-border/30 px-2 py-0.5 text-xs text-muted-foreground">
                 {asset.type}
               </span>
@@ -150,6 +155,28 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ as
           </div>
         </div>
       </section>
+
+      {/* Image / visual — rendered when the asset node carries a
+          file_path or image_url. Generated images from Pollinations
+          (type=IMAGE) land with file_path like
+          /visuals/generated/lc-beauty-1.jpg, served by the web app
+          from /public. External images (resolver-minted album covers)
+          use image_url with an absolute URL. */}
+      {((asset as any).file_path || (asset as any).image_url) && (
+        <section className="rounded-2xl border border-border/30 bg-card/30 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={(asset as any).file_path || (asset as any).image_url}
+            alt={(asset as any).name || asset.description || assetId}
+            className="w-full h-auto max-h-[70vh] object-contain mx-auto"
+          />
+          {asset.description && (asset as any).name && asset.description !== (asset as any).name && (
+            <p className="px-5 py-3 text-sm text-muted-foreground border-t border-border/20">
+              {asset.description}
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-border/30 bg-gradient-to-b from-card/60 to-card/30 p-4">
