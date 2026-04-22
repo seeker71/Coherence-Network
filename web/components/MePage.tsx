@@ -29,6 +29,19 @@ interface FeedItem {
   created_at: string | null;
 }
 
+interface TrailConcept {
+  concept_id: string;
+  asset_id: string;
+  count: number;
+  last_at: string | null;
+}
+
+interface Trail {
+  total_reads: number;
+  concept_count: number;
+  concepts: TrailConcept[];
+}
+
 interface Footprint {
   voices: number;
   heartsGiven: number;
@@ -108,6 +121,7 @@ export function MePage() {
   const [loading, setLoading] = useState(true);
   const [identity, setIdentity] = useState<ReturnType<typeof readIdentity> | null>(null);
   const [footprint, setFootprint] = useState<Footprint>(emptyFootprint());
+  const [trail, setTrail] = useState<Trail | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   // Cross-device sign-in state — a visitor landing here from a new
@@ -125,19 +139,32 @@ export function MePage() {
           return;
         }
         const base = getApiBase();
-        const res = await fetch(
-          `${base}/api/feed/personal?contributor_id=${encodeURIComponent(
-            ident.contributorId,
-          )}&limit=500&lang=${encodeURIComponent(locale)}`,
-        );
-        if (!res.ok) {
-          setFetchError(`feed: ${res.status}`);
+        const [feedRes, trailRes] = await Promise.all([
+          fetch(
+            `${base}/api/feed/personal?contributor_id=${encodeURIComponent(
+              ident.contributorId,
+            )}&limit=200&lang=${encodeURIComponent(locale)}`,
+          ),
+          fetch(
+            `${base}/api/views/trail/${encodeURIComponent(ident.contributorId)}?limit=8&days=180`,
+          ).catch(() => null),
+        ]);
+        if (!feedRes.ok) {
+          setFetchError(`feed: ${feedRes.status}`);
           setLoading(false);
           return;
         }
-        const data = await res.json();
-        const items: FeedItem[] = Array.isArray(data.items) ? data.items : [];
+        const feedData = await feedRes.json();
+        const items: FeedItem[] = Array.isArray(feedData.items) ? feedData.items : [];
         setFootprint(aggregate(items));
+        if (trailRes && trailRes.ok) {
+          const trailData = await trailRes.json();
+          setTrail({
+            total_reads: Number(trailData.total_reads) || 0,
+            concept_count: Number(trailData.concept_count) || 0,
+            concepts: Array.isArray(trailData.concepts) ? trailData.concepts : [],
+          });
+        }
         setLoading(false);
       } catch (e) {
         setFetchError(String(e));
@@ -219,6 +246,24 @@ export function MePage() {
         )}
       </section>
 
+      {/* First-arrival warmth — a graduated contributor with no trail yet.
+         The body says hello before any dashboard-like surface appears. */}
+      {hasContributor && !fetchError && isFirstArrival(footprint, trail) && (
+        <section className="px-5 py-4 rounded-2xl border border-[hsl(var(--primary)/0.35)] bg-[hsl(var(--primary)/0.06)]">
+          <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-[hsl(var(--primary))] mb-1.5">
+            {t("me.arrivalEyebrow")}
+          </p>
+          <p className="text-base text-foreground leading-relaxed">
+            {hasName
+              ? t("me.arrivalGreeting").replace("{name}", identity?.name ?? "")
+              : t("me.arrivalGreetingUnnamed")}
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+            {t("me.arrivalLede")}
+          </p>
+        </section>
+      )}
+
       {/* Footprint — only if graduated, otherwise just a small nudge */}
       {hasContributor && (
         <section className="px-5 py-4 rounded-2xl border border-border bg-card">
@@ -228,7 +273,12 @@ export function MePage() {
           {fetchError ? (
             <p className="text-sm text-muted-foreground">{t("me.footprintError")}</p>
           ) : (
-            <FootprintProse fp={footprint} t={t} />
+            <>
+              <FootprintProse fp={footprint} t={t} />
+              {trail && trail.concepts.length > 0 && (
+                <TrailProse trail={trail} t={t} />
+              )}
+            </>
           )}
         </section>
       )}
@@ -441,4 +491,67 @@ function FootprintProse({
       )}
     </div>
   );
+}
+
+/**
+ * A graduated contributor who has yet to voice, react, or leave reads
+ * we can attribute. The body greets them by name before any metrics
+ * surface appears — "You arrived. The field received you."
+ */
+function isFirstArrival(fp: Footprint, trail: Trail | null): boolean {
+  const offered =
+    fp.voices + fp.heartsGiven + fp.proposals + fp.liftedProposals;
+  const received = fp.heartsReceived + fp.repliesReceived;
+  const reads = trail?.total_reads ?? 0;
+  return offered === 0 && received === 0 && reads === 0;
+}
+
+/**
+ * Render the concept-trail as a warm sentence. The concept ids are
+ * linked so the reader can step back into what drew them.
+ */
+function TrailProse({
+  trail,
+  t,
+}: {
+  trail: Trail;
+  t: ReturnType<typeof useT>;
+}) {
+  if (trail.concepts.length === 0) return null;
+
+  const top = trail.concepts.slice(0, 5);
+  const hasMore = trail.concept_count > top.length;
+
+  return (
+    <p className="mt-3 text-sm text-foreground leading-relaxed">
+      {t("me.trailPrefix")}{" "}
+      {top.map((c, i) => (
+        <span key={c.concept_id}>
+          <a
+            href={`/vision/${encodeURIComponent(c.concept_id)}`}
+            className="text-foreground underline decoration-dotted underline-offset-4 hover:decoration-solid"
+          >
+            {humanizeConceptId(c.concept_id)}
+          </a>
+          {i < top.length - 1 ? t("me.footprintJoin") : hasMore ? "" : "."}
+        </span>
+      ))}
+      {hasMore && (
+        <span className="text-muted-foreground">
+          {" "}
+          {t("me.trailAndMore").replace(
+            "{n}",
+            String(trail.concept_count - top.length),
+          )}
+        </span>
+      )}
+    </p>
+  );
+}
+
+function humanizeConceptId(id: string): string {
+  // lc-sensing → Sensing ; lc-v-living-spaces → Living spaces
+  const stripped = id.replace(/^lc-(v-)?/, "");
+  const spaced = stripped.replace(/-/g, " ");
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }

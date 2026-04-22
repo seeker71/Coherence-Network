@@ -236,6 +236,70 @@ def get_contributor_view_history(
         ]
 
 
+def get_contributor_trail(
+    contributor_id: str, limit: int = 10, days: int = 90
+) -> dict[str, Any]:
+    """Per-concept aggregation of a contributor's reads — the trail they've left.
+
+    Returned shape:
+      {
+        "contributor_id": ...,
+        "days": 90,
+        "total_reads": 17,
+        "concept_count": 4,
+        "concepts": [
+          {"concept_id": "lc-sensing", "asset_id": "lc-sensing", "count": 5, "last_at": "..."},
+          ...
+        ]
+      }
+
+    Concepts are ranked by read count, then by recency. Assets whose id
+    starts with "lc-" are treated as concepts even when concept_id was
+    not separately stored (older events).
+    """
+    _ensure_ready()
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    with _session() as s:
+        rows = (
+            s.query(AssetViewEvent)
+            .filter(
+                AssetViewEvent.contributor_id == contributor_id,
+                AssetViewEvent.created_at >= since,
+            )
+            .all()
+        )
+
+    by_concept: dict[str, dict[str, Any]] = {}
+    total_reads = 0
+    for r in rows:
+        total_reads += 1
+        cid = r.concept_id or (r.asset_id if r.asset_id and r.asset_id.startswith("lc-") else None)
+        if not cid:
+            continue
+        entry = by_concept.setdefault(
+            cid,
+            {"concept_id": cid, "asset_id": r.asset_id, "count": 0, "last_at": None},
+        )
+        entry["count"] += 1
+        if r.created_at and (entry["last_at"] is None or r.created_at.isoformat() > entry["last_at"]):
+            entry["last_at"] = r.created_at.isoformat()
+
+    ranked = sorted(
+        by_concept.values(),
+        key=lambda e: (e["count"], e["last_at"] or ""),
+        reverse=True,
+    )[:limit]
+
+    return {
+        "contributor_id": contributor_id,
+        "days": days,
+        "total_reads": total_reads,
+        "concept_count": len(by_concept),
+        "concepts": ranked,
+    }
+
+
 def get_trending(limit: int = 20, days: int = 7) -> list[dict[str, Any]]:
     """Assets ranked by view velocity (views per day over the period)."""
     _ensure_ready()
