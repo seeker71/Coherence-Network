@@ -1,7 +1,14 @@
 """Right-sizing integration tests (spec 158).
 
-Flow-centric: HTTP requests in, JSON out. No internal service imports
-beyond what is needed for test setup.
+Three flows cover the surface:
+
+  · Portfolio health report + suggestions + apply (dry-run + real)
+    + error paths (422 invalid action, 404 missing idea, 401/403
+    missing API key)
+  · History endpoint + days validation
+  · Service-layer helpers: text overlap (identical/different/similar)
+    + granularity signal (healthy, too_large by questions, too_large
+    by specs, too_small)
 """
 
 from __future__ import annotations
@@ -22,15 +29,10 @@ def _uid(prefix: str = "rs-test") -> str:
 
 
 async def _create_idea(c: AsyncClient, idea_id: str | None = None, **overrides) -> dict:
-    """Helper: create an idea and return the response JSON."""
     iid = idea_id or _uid()
     payload = {
-        "id": iid,
-        "name": f"Idea {iid}",
-        "description": f"Description for {iid}",
-        "potential_value": 100.0,
-        "estimated_cost": 10.0,
-        "confidence": 0.8,
+        "id": iid, "name": f"Idea {iid}", "description": f"Description for {iid}",
+        "potential_value": 100.0, "estimated_cost": 10.0, "confidence": 0.8,
     }
     payload.update(overrides)
     r = await c.post("/api/ideas", json=payload)
@@ -38,334 +40,171 @@ async def _create_idea(c: AsyncClient, idea_id: str | None = None, **overrides) 
     return r.json()
 
 
-# ---------------------------------------------------------------------------
-# R1 + R3: GET /api/ideas/right-sizing — portfolio health report
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
-async def test_right_sizing_report_returns_valid_structure():
-    """Report returns portfolio health counts, suggestions array, and trend."""
+async def test_right_sizing_report_suggestions_and_apply_flow():
+    """Report returns portfolio health + suggestions + trend; a
+    too_large idea surfaces as a split suggestion; apply split
+    (dry-run preview → real create) + error paths (422/404/401)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ideas/right-sizing")
-        assert r.status_code == 200, r.text
-        body = r.json()
-
-        # Portfolio health
-        health = body["portfolio_health"]
-        assert "total" in health
-        assert "healthy" in health
-        assert "too_large" in health
-        assert "too_small" in health
-        assert "overlap" in health
-        assert health["total"] >= 0
-        assert health["healthy"] >= 0
-        assert health["healthy"] <= health["total"]
-
-        # Suggestions
-        assert isinstance(body["suggestions"], list)
-
-        # Trend
-        trend = body["trend"]
-        assert trend["direction"] in ("improving", "stable", "degrading")
-        assert 0.0 <= trend["healthy_pct_now"] <= 1.0
-
-        # Generated timestamp
-        assert "generated_at" in body
-
-
-@pytest.mark.asyncio
-async def test_right_sizing_report_with_many_ideas():
-    """Report works with 10+ ideas and returns sensible counts."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        # Create 12 ideas to ensure >= 10
+        # Seed enough ideas so report has meaningful counts.
         for i in range(12):
             await _create_idea(c, idea_id=f"rs-bulk-{i}-{uuid4().hex[:6]}")
 
-        r = await c.get("/api/ideas/right-sizing")
-        assert r.status_code == 200
-        body = r.json()
-        health = body["portfolio_health"]
-        assert health["total"] >= 10
-
-
-# ---------------------------------------------------------------------------
-# R2: Suggestions with confidence and rationale
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_right_sizing_too_large_detection():
-    """Idea with many open questions is flagged as too_large with split suggestion."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid("rs-large")
-        await _create_idea(c, idea_id=iid)
-
-        # Add 11 open questions to trigger too_large
+        # Trigger too_large: one idea with 11 open questions.
+        large_id = _uid("rs-large")
+        await _create_idea(c, idea_id=large_id)
         for i in range(11):
-            qr = await c.post(f"/api/ideas/{iid}/questions", json={
-                "question": f"Question {i} about {iid}?",
-                "value_to_whole": 1.0,
-                "estimated_cost": 0.5,
+            await c.post(f"/api/ideas/{large_id}/questions", json={
+                "question": f"Question {i} about {large_id}?",
+                "value_to_whole": 1.0, "estimated_cost": 0.5,
             })
-            assert qr.status_code in (200, 201, 409), qr.text
 
-        r = await c.get("/api/ideas/right-sizing")
-        assert r.status_code == 200
-        body = r.json()
-        suggestions = body["suggestions"]
+        # Report shape + content.
+        report = (await c.get("/api/ideas/right-sizing")).json()
+        health = report["portfolio_health"]
+        for field in ("total", "healthy", "too_large", "too_small", "overlap"):
+            assert field in health
+        assert health["total"] >= 10 and health["healthy"] <= health["total"]
+        assert isinstance(report["suggestions"], list)
+        trend = report["trend"]
+        assert trend["direction"] in ("improving", "stable", "degrading")
+        assert 0.0 <= trend["healthy_pct_now"] <= 1.0
+        assert "generated_at" in report
 
-        # Find suggestion for our idea
-        our_suggestions = [s for s in suggestions if s["idea_id"] == iid]
-        assert len(our_suggestions) >= 1, f"Expected split suggestion for {iid}; got {suggestions}"
-        split_sug = our_suggestions[0]
-        assert split_sug["suggestion_type"] == "split"
-        assert split_sug["rationale"]
-        assert 0.0 <= split_sug["confidence"] <= 1.0
-        assert len(split_sug["proposed_children"]) >= 2
+        # The too-large idea surfaces as a split suggestion with
+        # confidence + proposed children.
+        our_suggestion = next(s for s in report["suggestions"] if s["idea_id"] == large_id)
+        assert our_suggestion["suggestion_type"] == "split"
+        assert our_suggestion["rationale"]
+        assert 0.0 <= our_suggestion["confidence"] <= 1.0
+        assert len(our_suggestion["proposed_children"]) >= 2
 
-
-# ---------------------------------------------------------------------------
-# R4: POST /api/ideas/right-sizing/apply — dry_run
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_apply_split_dry_run():
-    """Dry-run split previews changes without writing."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid("rs-split-dry")
-        await _create_idea(c, idea_id=iid)
-
-        r = await c.post("/api/ideas/right-sizing/apply", json={
-            "suggestion_type": "split",
-            "idea_id": iid,
+        # Apply split dry-run — preview changes, no writes.
+        dry_id = _uid("rs-dry")
+        await _create_idea(c, idea_id=dry_id)
+        dry = await c.post("/api/ideas/right-sizing/apply", json={
+            "suggestion_type": "split", "idea_id": dry_id,
             "action": "split_into_children",
             "proposed_children": [
-                {"name": f"{iid} (core)", "description": "Core delivery"},
-                {"name": f"{iid} (research)", "description": "Open questions"},
+                {"name": f"{dry_id} (core)", "description": "Core delivery"},
+                {"name": f"{dry_id} (research)", "description": "Open questions"},
             ],
             "dry_run": True,
         }, headers=AUTH)
+        assert dry.status_code == 200
+        dry_body = dry.json()
+        assert dry_body["applied"] is False and dry_body["dry_run"] is True
+        assert len(dry_body["changes"]) >= 3
+        ops = {ch["op"] for ch in dry_body["changes"]}
+        assert {"create_idea", "update_idea"} <= ops
+        # Super-idea retype is in the update.
+        update_changes = [ch for ch in dry_body["changes"] if ch["op"] == "update_idea"]
+        assert any(ch.get("set", {}).get("idea_type") == "super" for ch in update_changes)
 
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["applied"] is False
-        assert body["dry_run"] is True
-        assert len(body["changes"]) >= 3  # 2 create + 1 update
-
-        # Verify children were NOT actually created
-        ops = [ch["op"] for ch in body["changes"]]
-        assert "create_idea" in ops
-        assert "update_idea" in ops
-
-        # Check that the update sets idea_type to "super"
-        update_changes = [ch for ch in body["changes"] if ch["op"] == "update_idea"]
-        found_super = any(ch.get("set", {}).get("idea_type") == "super" for ch in update_changes)
-        assert found_super, f"Expected idea_type=super in update changes: {update_changes}"
-
-
-@pytest.mark.asyncio
-async def test_apply_split_real():
-    """Non-dry-run split actually creates child ideas."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid("rs-split-real")
-        await _create_idea(c, idea_id=iid)
-
-        r = await c.post("/api/ideas/right-sizing/apply", json={
-            "suggestion_type": "split",
-            "idea_id": iid,
+        # Real apply — split actually creates children.
+        real_id = _uid("rs-real")
+        await _create_idea(c, idea_id=real_id)
+        real = (await c.post("/api/ideas/right-sizing/apply", json={
+            "suggestion_type": "split", "idea_id": real_id,
             "action": "split_into_children",
             "proposed_children": [
-                {"name": f"Split Core {iid}", "description": "Core delivery"},
-                {"name": f"Split Research {iid}", "description": "Research tasks"},
+                {"name": f"Split Core {real_id}", "description": "Core delivery"},
+                {"name": f"Split Research {real_id}", "description": "Research tasks"},
             ],
             "dry_run": False,
+        }, headers=AUTH)).json()
+        assert real["applied"] is True and real["dry_run"] is False
+        assert len(real["changes"]) >= 3
+
+        # Error paths.
+        bad_action = await c.post("/api/ideas/right-sizing/apply", json={
+            "suggestion_type": "split", "idea_id": real_id,
+            "action": "invalid_action", "proposed_children": [], "dry_run": True,
         }, headers=AUTH)
+        assert bad_action.status_code == 422
 
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert body["applied"] is True
-        assert body["dry_run"] is False
-        assert len(body["changes"]) >= 3
-
-
-@pytest.mark.asyncio
-async def test_apply_invalid_action_returns_422():
-    """Invalid action value returns HTTP 422."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid("rs-invalid-action")
-        await _create_idea(c, idea_id=iid)
-
-        r = await c.post("/api/ideas/right-sizing/apply", json={
-            "suggestion_type": "split",
-            "idea_id": iid,
-            "action": "invalid_action",
-            "proposed_children": [],
-            "dry_run": True,
-        }, headers=AUTH)
-
-        assert r.status_code == 422
-
-
-@pytest.mark.asyncio
-async def test_apply_nonexistent_idea_returns_404():
-    """Applying to a nonexistent idea returns 404."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.post("/api/ideas/right-sizing/apply", json={
-            "suggestion_type": "split",
-            "idea_id": "nonexistent-idea-zzz",
+        bad_idea = await c.post("/api/ideas/right-sizing/apply", json={
+            "suggestion_type": "split", "idea_id": "nonexistent-idea-zzz",
             "action": "split_into_children",
-            "proposed_children": [
-                {"name": "Child A", "description": "A"},
-            ],
+            "proposed_children": [{"name": "A", "description": "A"}],
             "dry_run": True,
         }, headers=AUTH)
+        assert bad_idea.status_code == 404
 
-        assert r.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_apply_requires_api_key():
-    """Apply endpoint requires X-API-Key auth."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.post("/api/ideas/right-sizing/apply", json={
-            "suggestion_type": "split",
-            "idea_id": "any-id",
+        no_auth = await c.post("/api/ideas/right-sizing/apply", json={
+            "suggestion_type": "split", "idea_id": "any-id",
             "action": "split_into_children",
-            "proposed_children": [],
-            "dry_run": True,
+            "proposed_children": [], "dry_run": True,
         })
-        # Should get 401 or 403 without API key
-        assert r.status_code in (401, 403), r.text
-
-
-# ---------------------------------------------------------------------------
-# R5: GET /api/ideas/right-sizing/history
-# ---------------------------------------------------------------------------
+        assert no_auth.status_code in (401, 403)
 
 
 @pytest.mark.asyncio
-async def test_history_returns_series():
-    """History endpoint returns an array (may be empty)."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ideas/right-sizing/history?days=7")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "series" in body
-        assert isinstance(body["series"], list)
-
-
-@pytest.mark.asyncio
-async def test_history_with_snapshot():
-    """After taking a snapshot, history returns at least one entry."""
+async def test_right_sizing_history_flow():
+    """History returns a series (possibly empty); after a snapshot
+    it contains at least one well-shaped entry; days out of range
+    returns 422."""
     from app.services import right_sizing_service
-    right_sizing_service.clear_snapshots()
-    right_sizing_service.snapshot_health()
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ideas/right-sizing/history?days=7")
-        assert r.status_code == 200
-        body = r.json()
-        assert len(body["series"]) >= 1
-        entry = body["series"][0]
-        assert "date" in entry
-        assert "healthy" in entry
-        assert "healthy_pct" in entry
+        # Empty is fine.
+        empty = (await c.get("/api/ideas/right-sizing/history?days=7")).json()
+        assert "series" in empty and isinstance(empty["series"], list)
+
+        # With a snapshot, at least one entry appears with the expected shape.
+        right_sizing_service.clear_snapshots()
+        right_sizing_service.snapshot_health()
+        filled = (await c.get("/api/ideas/right-sizing/history?days=7")).json()
+        assert len(filled["series"]) >= 1
+        entry = filled["series"][0]
+        assert "date" in entry and "healthy" in entry and "healthy_pct" in entry
         assert 0.0 <= entry["healthy_pct"] <= 1.0
 
-
-@pytest.mark.asyncio
-async def test_history_days_validation():
-    """days=0 returns 422; days=366 returns 422."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r0 = await c.get("/api/ideas/right-sizing/history?days=0")
-        assert r0.status_code == 422
-
-        r366 = await c.get("/api/ideas/right-sizing/history?days=366")
-        assert r366.status_code == 422
+        # Validation — days=0 and days=366 both 422.
+        assert (await c.get("/api/ideas/right-sizing/history?days=0")).status_code == 422
+        assert (await c.get("/api/ideas/right-sizing/history?days=366")).status_code == 422
 
 
-# ---------------------------------------------------------------------------
-# Unit-level: text overlap
-# ---------------------------------------------------------------------------
+def test_right_sizing_service_helpers():
+    """Text overlap scores identical ~1.0, different < 0.3, similar
+    > 0.4. Granularity signal: healthy (few questions + modest
+    specs), too_large (11 questions OR 7 specs), too_small (0 specs)."""
+    from app.services.right_sizing_service import (
+        compute_text_overlap,
+        compute_granularity_signal,
+        GranularitySignal,
+    )
 
-
-def test_text_overlap_identical():
-    """Identical texts should have overlap score ~1.0."""
-    from app.services.right_sizing_service import compute_text_overlap
+    # Text overlap across three regimes.
     text = "Build a contribution tracking system for open source"
-    score = compute_text_overlap(text, text)
-    assert score > 0.99
+    assert compute_text_overlap(text, text) > 0.99
+    assert compute_text_overlap(
+        "Build a contribution tracking system for open source projects",
+        "Design a mobile game about space exploration with aliens",
+    ) < 0.3
+    assert compute_text_overlap(
+        "Implement idea portfolio tracking with coherence scoring and ranking",
+        "Build idea portfolio management with coherence scoring and analytics",
+    ) > 0.4
 
-
-def test_text_overlap_different():
-    """Completely different texts should have low overlap."""
-    from app.services.right_sizing_service import compute_text_overlap
-    a = "Build a contribution tracking system for open source projects"
-    b = "Design a mobile game about space exploration with aliens"
-    score = compute_text_overlap(a, b)
-    assert score < 0.3
-
-
-def test_text_overlap_similar():
-    """Similar texts should have moderately high overlap."""
-    from app.services.right_sizing_service import compute_text_overlap
-    a = "Implement idea portfolio tracking with coherence scoring and ranking"
-    b = "Build idea portfolio management with coherence scoring and analytics"
-    score = compute_text_overlap(a, b)
-    assert score > 0.4  # Should be somewhat similar
-
-
-# ---------------------------------------------------------------------------
-# Granularity signal computation
-# ---------------------------------------------------------------------------
-
-
-def test_compute_signal_healthy():
-    """Idea with reasonable specs and few questions is healthy."""
-    from app.services.right_sizing_service import compute_granularity_signal, GranularitySignal
-
-    class FakeIdea:
+    # Granularity signal across the four states.
+    class Healthy:
         open_questions = [{"q": "how?"} for _ in range(3)]
         lifecycle = "active"
+    assert compute_granularity_signal(Healthy(), spec_count=2)[0] == GranularitySignal.HEALTHY
 
-    signal, _ = compute_granularity_signal(FakeIdea(), spec_count=2)
-    assert signal == GranularitySignal.HEALTHY
-
-
-def test_compute_signal_too_large():
-    """Idea with 11 open questions triggers too_large."""
-    from app.services.right_sizing_service import compute_granularity_signal, GranularitySignal
-
-    class FakeIdea:
+    class LargeQuestions:
         open_questions = [{"q": f"q{i}"} for i in range(11)]
         lifecycle = "active"
+    signal, meta = compute_granularity_signal(LargeQuestions(), spec_count=2)
+    assert signal == GranularitySignal.TOO_LARGE and meta["open_questions"] == 11
 
-    signal, meta = compute_granularity_signal(FakeIdea(), spec_count=2)
-    assert signal == GranularitySignal.TOO_LARGE
-    assert meta["open_questions"] == 11
-
-
-def test_compute_signal_too_small():
-    """Idea with 0 specs is too_small."""
-    from app.services.right_sizing_service import compute_granularity_signal, GranularitySignal
-
-    class FakeIdea:
+    class LargeSpecs:
         open_questions = []
         lifecycle = "active"
+    assert compute_granularity_signal(LargeSpecs(), spec_count=7)[0] == GranularitySignal.TOO_LARGE
 
-    signal, _ = compute_granularity_signal(FakeIdea(), spec_count=0)
-    assert signal == GranularitySignal.TOO_SMALL
-
-
-def test_compute_signal_too_large_many_specs():
-    """Idea with >5 specs triggers too_large."""
-    from app.services.right_sizing_service import compute_granularity_signal, GranularitySignal
-
-    class FakeIdea:
+    class Small:
         open_questions = []
         lifecycle = "active"
-
-    signal, _ = compute_granularity_signal(FakeIdea(), spec_count=7)
-    assert signal == GranularitySignal.TOO_LARGE
+    assert compute_granularity_signal(Small(), spec_count=0)[0] == GranularitySignal.TOO_SMALL
