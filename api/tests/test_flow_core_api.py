@@ -100,101 +100,48 @@ async def test_meta_summary():
 
 
 @pytest.mark.asyncio
-async def test_create_idea():
+async def test_idea_crud_flow():
+    """Create → duplicate-409 → get → get-missing-404 → list/paginate
+    → update (with + without auth) → count → cards. One CRUD story."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         iid = _uid()
-        data = await _create_idea(c, iid)
-        assert data["id"] == iid
+        created = await _create_idea(c, iid)
+        assert created["id"] == iid
 
-
-@pytest.mark.asyncio
-async def test_create_duplicate_idea_returns_409():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.post("/api/ideas", json={
+        # Duplicate create → 409.
+        dup = await c.post("/api/ideas", json={
             "id": iid, "name": "dup", "description": "dup",
             "potential_value": 1.0, "estimated_cost": 1.0,
         })
-        assert r.status_code == 409, r.text
+        assert dup.status_code == 409, dup.text
 
+        # Get existing + missing.
+        got = await c.get(f"/api/ideas/{iid}")
+        assert got.status_code == 200 and got.json()["id"] == iid, got.text
+        assert (await c.get("/api/ideas/nonexistent-idea-xyz")).status_code == 404
 
-@pytest.mark.asyncio
-async def test_get_idea():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.get(f"/api/ideas/{iid}")
-        assert r.status_code == 200, r.text
-        assert r.json()["id"] == iid
-
-
-@pytest.mark.asyncio
-async def test_get_missing_idea_returns_404():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ideas/nonexistent-idea-xyz")
-        assert r.status_code == 404, r.text
-
-
-@pytest.mark.asyncio
-async def test_list_ideas():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c)
-        r = await c.get("/api/ideas")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "ideas" in body or "items" in body or isinstance(body, list)
-
-
-@pytest.mark.asyncio
-async def test_list_ideas_pagination():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        for _ in range(3):
+        # List + pagination (seed two more for pagination clarity).
+        for _ in range(2):
             await _create_idea(c)
-        r = await c.get("/api/ideas", params={"limit": 2, "offset": 0})
-        assert r.status_code == 200, r.text
-        body = r.json()
-        ideas = body.get("ideas") or body.get("items") or body
-        assert len(ideas) <= 2
+        listed = await c.get("/api/ideas")
+        assert listed.status_code == 200
+        body = listed.json()
+        assert "ideas" in body or "items" in body or isinstance(body, list)
+        paged = await c.get("/api/ideas", params={"limit": 2, "offset": 0})
+        assert len((paged.json().get("ideas") or paged.json().get("items") or paged.json())) <= 2
 
+        # Update requires auth.
+        assert (await c.patch(f"/api/ideas/{iid}", json={"confidence": 0.9})).status_code == 401
+        patched = await c.patch(f"/api/ideas/{iid}", json={"confidence": 0.9}, headers=AUTH)
+        assert patched.status_code == 200
+        assert patched.json()["confidence"] == pytest.approx(0.9, abs=0.01)
 
-@pytest.mark.asyncio
-async def test_update_idea():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.patch(f"/api/ideas/{iid}", json={"confidence": 0.9}, headers=AUTH)
-        assert r.status_code == 200, r.text
-        assert r.json()["confidence"] == pytest.approx(0.9, abs=0.01)
-
-
-@pytest.mark.asyncio
-async def test_update_idea_without_auth_returns_401():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        r = await c.patch(f"/api/ideas/{iid}", json={"confidence": 0.9})
-        assert r.status_code == 401, r.text
-
-
-@pytest.mark.asyncio
-async def test_idea_count():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c)
-        r = await c.get("/api/ideas/count")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "count" in body or "total" in body
-
-
-@pytest.mark.asyncio
-async def test_idea_cards():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c)
-        r = await c.get("/api/ideas/cards")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "items" in body
+        # Count + cards — read surfaces the UI uses.
+        cnt = await c.get("/api/ideas/count")
+        assert cnt.status_code == 200
+        assert "count" in cnt.json() or "total" in cnt.json()
+        cards = await c.get("/api/ideas/cards")
+        assert cards.status_code == 200 and "items" in cards.json()
 
 
 # ---------------------------------------------------------------------------
@@ -203,28 +150,21 @@ async def test_idea_cards():
 
 
 @pytest.mark.asyncio
-async def test_advance_idea_stage():
+async def test_advance_idea_stage_and_409_when_complete():
+    """Advance stage on a fresh idea succeeds; advancing past
+    `complete` returns 409. One flow covers both the happy path
+    and the terminal-state guard."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         iid = _uid()
         await _create_idea(c, iid)
         r = await c.post(f"/api/ideas/{iid}/advance", headers=AUTH)
         assert r.status_code == 200, r.text
         body = r.json()
-        # Stage should have moved from initial
         assert "stage" in body or "idea" in body
-
-
-@pytest.mark.asyncio
-async def test_advance_completed_idea_returns_409():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        iid = _uid()
-        await _create_idea(c, iid)
-        # Set stage to complete (valid enum value)
-        r = await c.post(f"/api/ideas/{iid}/stage", json={"stage": "complete"}, headers=AUTH)
-        assert r.status_code == 200, r.text
-        # Now advance should fail
-        r = await c.post(f"/api/ideas/{iid}/advance", headers=AUTH)
-        assert r.status_code == 409, r.text
+        # Move to complete, then advance must 409.
+        set_complete = await c.post(f"/api/ideas/{iid}/stage", json={"stage": "complete"}, headers=AUTH)
+        assert set_complete.status_code == 200
+        assert (await c.post(f"/api/ideas/{iid}/advance", headers=AUTH)).status_code == 409
 
 
 @pytest.mark.asyncio
@@ -439,7 +379,7 @@ async def test_answer_question():
 
 
 @pytest.mark.asyncio
-async def test_concept_resonance():
+async def test_concept_resonance_happy_and_404():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         iid = _uid()
         await _create_idea(c, iid)
@@ -447,13 +387,8 @@ async def test_concept_resonance():
         assert r.status_code == 200, r.text
         body = r.json()
         assert "matches" in body or "related" in body or "idea_id" in body
-
-
-@pytest.mark.asyncio
-async def test_concept_resonance_missing_idea_returns_404():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/ideas/nonexistent-idea-xyz/concept-resonance")
-        assert r.status_code == 404, r.text
+        # Missing idea → 404 (not silent 200 with empty payload).
+        assert (await c.get("/api/ideas/nonexistent-idea-xyz/concept-resonance")).status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -528,107 +463,57 @@ def _node_id() -> str:
 
 
 @pytest.mark.asyncio
-async def test_register_federation_node():
+async def test_federation_node_registration_flow():
+    """A node registers, appears in the list, heartbeats, shows its
+    capabilities, and deletes cleanly. One lifecycle covers the
+    whole federation node CRUD."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         nid = _node_id()
-        r = await c.post("/api/federation/nodes", json={
-            "node_id": nid,
-            "hostname": "test-host",
-            "os_type": "linux",
-            "providers": ["claude"],
-            "capabilities": {},
-        })
-        assert r.status_code == 201, r.text
-        assert r.json()["node_id"] == nid
-
-
-@pytest.mark.asyncio
-async def test_list_federation_nodes():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        nid = _node_id()
-        await c.post("/api/federation/nodes", json={
-            "node_id": nid,
-            "hostname": "test-host",
-            "os_type": "linux",
-        })
-        r = await c.get("/api/federation/nodes")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        nodes = body if isinstance(body, list) else body.get("nodes", [])
-        node_ids = [n.get("node_id") for n in nodes]
-        assert nid in node_ids
-
-
-@pytest.mark.asyncio
-async def test_node_heartbeat():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        nid = _node_id()
-        await c.post("/api/federation/nodes", json={
-            "node_id": nid,
-            "hostname": "test-host",
-            "os_type": "linux",
-        })
-        r = await c.post(f"/api/federation/nodes/{nid}/heartbeat", json={
-            "status": "idle",
-        })
-        assert r.status_code == 200, r.text
-
-
-@pytest.mark.asyncio
-async def test_fleet_capabilities():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        nid = _node_id()
-        await c.post("/api/federation/nodes", json={
+        reg = await c.post("/api/federation/nodes", json={
             "node_id": nid,
             "hostname": "test-host",
             "os_type": "linux",
             "providers": ["claude"],
             "capabilities": {"task_execution": True},
         })
-        r = await c.get("/api/federation/nodes/capabilities")
-        assert r.status_code == 200, r.text
+        assert reg.status_code == 201 and reg.json()["node_id"] == nid, reg.text
+
+        listed = await c.get("/api/federation/nodes")
+        assert listed.status_code == 200
+        nodes = listed.json() if isinstance(listed.json(), list) else listed.json().get("nodes", [])
+        assert nid in [n.get("node_id") for n in nodes]
+
+        beat = await c.post(f"/api/federation/nodes/{nid}/heartbeat", json={"status": "idle"})
+        assert beat.status_code == 200, beat.text
+
+        caps = await c.get("/api/federation/nodes/capabilities")
+        assert caps.status_code == 200, caps.text
+
+        assert (await c.delete(f"/api/federation/nodes/{nid}")).status_code == 204
 
 
 @pytest.mark.asyncio
-async def test_node_messaging():
+async def test_federation_node_messaging_flow():
+    """Two nodes register, one sends the other a message, the
+    receiver retrieves it. Kept separate from the registration flow
+    because messaging has its own semantics (not just CRUD)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        sender = _node_id()
-        receiver = _node_id()
-        # Register both
-        await c.post("/api/federation/nodes", json={
-            "node_id": sender, "hostname": "sender-host", "os_type": "linux",
+        sender, receiver = _node_id(), _node_id()
+        for nid, host in [(sender, "sender-host"), (receiver, "receiver-host")]:
+            await c.post("/api/federation/nodes", json={
+                "node_id": nid, "hostname": host, "os_type": "linux",
+            })
+        sent = await c.post(f"/api/federation/nodes/{sender}/messages", json={
+            "from_node": sender, "to_node": receiver,
+            "type": "text", "text": "hello from test",
         })
-        await c.post("/api/federation/nodes", json={
-            "node_id": receiver, "hostname": "receiver-host", "os_type": "linux",
-        })
-        # Send message
-        r = await c.post(f"/api/federation/nodes/{sender}/messages", json={
-            "from_node": sender,
-            "to_node": receiver,
-            "type": "text",
-            "text": "hello from test",
-        })
-        assert r.status_code == 201, r.text
+        assert sent.status_code == 201, sent.text
 
-        # Retrieve messages
-        r2 = await c.get(f"/api/federation/nodes/{receiver}/messages", params={"unread_only": "false"})
-        assert r2.status_code == 200, r2.text
-        body = r2.json()
-        msgs = body.get("messages", [])
-        assert any(m.get("text") == "hello from test" for m in msgs), f"Message not found in {msgs}"
-
-
-@pytest.mark.asyncio
-async def test_delete_node():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        nid = _node_id()
-        await c.post("/api/federation/nodes", json={
-            "node_id": nid,
-            "hostname": "test-host",
-            "os_type": "linux",
-        })
-        r = await c.delete(f"/api/federation/nodes/{nid}")
-        assert r.status_code == 204, r.text
+        got = await c.get(f"/api/federation/nodes/{receiver}/messages",
+                          params={"unread_only": "false"})
+        assert got.status_code == 200, got.text
+        msgs = got.json().get("messages", [])
+        assert any(m.get("text") == "hello from test" for m in msgs), msgs
 
 
 # ---------------------------------------------------------------------------
@@ -637,23 +522,12 @@ async def test_delete_node():
 
 
 @pytest.mark.asyncio
-async def test_list_providers():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/providers")
-        assert r.status_code == 200, r.text
-        body = r.json()
-        assert "providers" in body
-        assert isinstance(body["providers"], list)
-
-
-@pytest.mark.asyncio
-async def test_providers_includes_expected():
+async def test_list_providers_returns_at_least_one():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         r = await c.get("/api/providers")
         assert r.status_code == 200, r.text
         providers = r.json()["providers"]
-        provider_ids = [p.get("id") or p for p in providers]
-        assert len(provider_ids) >= 1, "Expected at least one provider"
+        assert isinstance(providers, list) and len(providers) >= 1
 
 
 # ---------------------------------------------------------------------------
@@ -662,29 +536,20 @@ async def test_providers_includes_expected():
 
 
 @pytest.mark.asyncio
-async def test_spec_delete_and_verify_gone():
+async def test_spec_delete_flow():
+    """Create spec → delete → gone (404 on re-get). Deleting an
+    already-missing spec is also 404 so the UI can treat 'not
+    found' as idempotent."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         sid = _uid("spec")
         r = await c.post("/api/spec-registry", json={
             "spec_id": sid, "title": "Deletable", "summary": "Will be deleted.",
         }, headers=AUTH)
         assert r.status_code == 201, r.text
-
-        r2 = await c.get(f"/api/spec-registry/{sid}")
-        assert r2.status_code == 200, r2.text
-
-        r3 = await c.delete(f"/api/spec-registry/{sid}", headers=AUTH)
-        assert r3.status_code == 204, r3.text
-
-        r4 = await c.get(f"/api/spec-registry/{sid}")
-        assert r4.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_spec_delete_not_found_returns_404():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.delete("/api/spec-registry/nonexistent-spec", headers=AUTH)
-        assert r.status_code == 404
+        assert (await c.get(f"/api/spec-registry/{sid}")).status_code == 200
+        assert (await c.delete(f"/api/spec-registry/{sid}", headers=AUTH)).status_code == 204
+        assert (await c.get(f"/api/spec-registry/{sid}")).status_code == 404
+        assert (await c.delete("/api/spec-registry/nonexistent-spec", headers=AUTH)).status_code == 404
 
 
 @pytest.mark.asyncio
