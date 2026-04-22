@@ -19,11 +19,9 @@ import { useEffect, useState } from "react";
 import { getApiBase } from "@/lib/api";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import {
-  NAME_KEY,
-  CONTRIBUTOR_KEY,
-  FINGERPRINT_KEY,
-  INVITED_BY_KEY,
   readIdentity,
+  claimByIdentity,
+  clearLocalIdentity,
 } from "@/lib/identity";
 
 interface FeedItem {
@@ -112,6 +110,10 @@ export function MePage() {
   const [footprint, setFootprint] = useState<Footprint>(emptyFootprint());
   const [confirming, setConfirming] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  // Cross-device sign-in state — a visitor landing here from a new
+  // phone/laptop can type their email to recover their contributor.
+  const [signInEmail, setSignInEmail] = useState("");
+  const [signInStatus, setSignInStatus] = useState<"idle" | "loading" | "notFound" | "error">("idle");
 
   useEffect(() => {
     (async () => {
@@ -145,26 +147,31 @@ export function MePage() {
   }, [locale]);
 
   function clearIdentity() {
-    try {
-      // Known keys first (always wipe these)
-      localStorage.removeItem(NAME_KEY);
-      localStorage.removeItem(CONTRIBUTOR_KEY);
-      localStorage.removeItem(FINGERPRINT_KEY);
-      localStorage.removeItem(INVITED_BY_KEY);
-      // Belt + suspenders: anything else prefixed cc- gets cleaned too.
-      // This catches chat drafts, dismissed nudges, presence caches
-      // that accumulated during this presence's lifetime.
-      const toRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith("cc-")) toRemove.push(k);
-      }
-      toRemove.forEach((k) => localStorage.removeItem(k));
-    } catch {
-      /* ignore */
-    }
-    // Reload to let the fresh first-paint build a new presence
+    // Backend state stays — only the local cache is wiped, so
+    // signing back in with email (here or on another device)
+    // restores the full presence.
+    clearLocalIdentity();
     window.location.href = "/";
+  }
+
+  async function handleSignIn(e: React.FormEvent) {
+    e.preventDefault();
+    const email = signInEmail.trim();
+    if (!email) return;
+    setSignInStatus("loading");
+    try {
+      const profile = await claimByIdentity(getApiBase(), { email });
+      if (!profile) {
+        setSignInStatus("notFound");
+        return;
+      }
+      // claimByIdentity wrote every cc-* key. A hard reload picks
+      // up the freshly-hydrated state end-to-end (server-rendered
+      // metadata + every mounted component).
+      window.location.reload();
+    } catch {
+      setSignInStatus("error");
+    }
   }
 
   if (loading) {
@@ -234,6 +241,56 @@ export function MePage() {
           <p className="text-sm text-muted-foreground leading-relaxed">
             {t("me.notYetGraduated")}
           </p>
+        </section>
+      )}
+
+      {/*
+        * Cross-device sign-in. The visitor's full profile —
+        * name, locale, roles, consent flags, every voice + reaction
+        * + proposal attributed to their contributor_id — lives on
+        * the backend. On a new phone/laptop we just ask for their
+        * email, and the server hands back their contributor so
+        * everything resumes. No magic link yet; anyone who knows
+        * someone's email can claim that soft identity, which is fine
+        * for presence (voices/reactions/resonance) but not for
+        * wallet-signed actions — those layer crypto on top.
+        */}
+      {!hasContributor && (
+        <section className="px-5 py-4 rounded-2xl border border-[hsl(var(--primary)/0.25)] bg-card">
+          <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-[hsl(var(--primary))] mb-1.5">
+            {t("me.signInEyebrow")}
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+            {t("me.signInLede")}
+          </p>
+          <form onSubmit={handleSignIn} className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="email"
+              required
+              value={signInEmail}
+              onChange={(e) => { setSignInEmail(e.target.value); setSignInStatus("idle"); }}
+              placeholder={t("me.signInPlaceholder")}
+              className="flex-1 px-4 py-2 rounded-full bg-background/40 border border-border text-sm text-foreground placeholder:text-muted-foreground focus:border-[hsl(var(--primary))] focus:outline-none transition-colors"
+              disabled={signInStatus === "loading"}
+            />
+            <button
+              type="submit"
+              disabled={signInStatus === "loading" || !signInEmail.trim()}
+              className="px-4 py-2 rounded-full bg-[hsl(var(--primary))] text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+            >
+              {signInStatus === "loading" ? t("me.signInWorking") : t("me.signInCta")}
+            </button>
+          </form>
+          {signInStatus === "notFound" && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("me.signInNotFound")}
+            </p>
+          )}
+          {signInStatus === "error" && (
+            <p className="mt-2 text-xs text-destructive">
+              {t("me.signInError")}
+            </p>
+          )}
         </section>
       )}
 

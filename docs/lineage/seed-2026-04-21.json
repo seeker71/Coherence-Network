@@ -1,0 +1,1111 @@
+{
+  "generated_at": "2026-04-21T08:18:38.011864+00:00",
+  "api_source": "http://localhost:8000",
+  "source_contributor_id": "contributor:presence-visitor",
+  "presences": [
+    {
+      "kind": "resolved",
+      "url": "https://www.udara-bali.com",
+      "id_hint": "contributor:udara-8fc00de4e8d5",
+      "name_hint": "Udara Bali"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.heartspacebali.com",
+      "id_hint": "contributor:heart-space-bali-4f6bab5d7718",
+      "name_hint": "Heart Space Bali"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubudraw.com",
+      "id_hint": "contributor:ubud-raw-chocolate-cacao-60436bcbede6",
+      "name_hint": "Ubud Raw"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.balispiritfestival.com",
+      "id_hint": "contributor:balispirit-festival-48d15fde2da9",
+      "name_hint": "BaliSpirit Festival"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://theyogabarn.com",
+      "id_hint": "contributor:the-yoga-barn-ab0bc7edb1f2",
+      "name_hint": "The Yoga Barn"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/",
+      "id_hint": "contributor:pyramids-of-chi-ab231fed7d12",
+      "name_hint": "Pyramids of Chi"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.andyandlara.com/",
+      "id_hint": "contributor:andy-babb-lara-elle-music-a9e4b6f85812",
+      "name_hint": "Andy Babb & Lara Elle"
+    },
+    {
+      "kind": "manual",
+      "id": "contributor:andy-babb-solo",
+      "type": "contributor",
+      "name": "Andy Babb",
+      "description": "Lead singer and songwriter of Andy Babb and the Big Beautiful Band. Performs acoustic folk with his life partner Lara Elle. Met Lara at Rhythm Sanctuary in February 2014.",
+      "properties": {
+        "presences": [
+          {
+            "provider": "instagram",
+            "url": "https://www.instagram.com/andybabbmusic/"
+          },
+          {
+            "provider": "web",
+            "url": "https://www.andyandlara.com/"
+          }
+        ],
+        "claimed": false,
+        "contributor_type": "HUMAN",
+        "author_display_name": "Andy Babb"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "contributor:lara-elle-solo",
+      "type": "contributor",
+      "name": "Lara Elle",
+      "description": "Songwriter and performer; Andy Babb's life partner and musical duo. They met dancing at Rhythm Sanctuary in February 2014. Held open until Lara claims.",
+      "properties": {
+        "presences": [
+          {
+            "provider": "web",
+            "url": "https://www.andyandlara.com/"
+          }
+        ],
+        "claimed": false,
+        "contributor_type": "HUMAN",
+        "author_display_name": "Lara Elle"
+      }
+    },
+    {
+      "kind": "resolved",
+      "url": "https://robertedwardgrant.com",
+      "id_hint": "contributor:robert-edward-grant-f7e43ccfb4b0",
+      "name_hint": "Robert Edward Grant"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.yaimamusic.com",
+      "id_hint": "contributor:yaima-9a9422e98ee9",
+      "name_hint": "YAIMA"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.matiasdestefano.com/",
+      "id_hint": "contributor:https-matiasdestefano-com-6a5073f5bac7",
+      "name_hint": "Matías De Stefano"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://youaretheportal.com/",
+      "id_hint": "contributor:portal-3980e2c1a203",
+      "name_hint": "PORTAL"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://maps.org",
+      "id_hint": "contributor:multidisciplinary-association-for-psyche-cf0b1e2b252a",
+      "name_hint": "MAPS"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://drjoedispenza.com/",
+      "id_hint": "contributor:the-official-website-of-dr-joe-dispenza-00497d303c42",
+      "name_hint": "Dr Joe Dispenza"
+    },
+    {
+      "kind": "manual",
+      "id": "contributor:tay-blevins-placeholder",
+      "type": "contributor",
+      "name": "Tay Blevins",
+      "description": "Speaker at PORTAL Dome. Held open until a URL or more context arrives.",
+      "properties": {
+        "claimed": false,
+        "contributor_type": "HUMAN",
+        "author_display_name": "Tay Blevins"
+      }
+    },
+    {
+      "kind": "resolved",
+      "url": "https://nextlevelsoul.com",
+      "id_hint": "contributor:next-level-soul-10f43ca1c9e3",
+      "name_hint": "Next Level Soul"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://annetucker.com",
+      "id_hint": "contributor:anne-tucker-is-a-healer-channeling-mothe-dbce0b7bf8f1",
+      "name_hint": "Anne Tucker"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.com/",
+      "id_hint": "contributor:liquid-bloom-0ddab636c396",
+      "name_hint": "Liquid Bloom"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://null",
+      "id_hint": "contributor:only-one-a8528b234274",
+      "name_hint": "Only One"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.facebook.com/ConsciousRootsPresents",
+      "id_hint": "contributor:conscious-roots-presents-boulder-co-d0df161a21f4",
+      "name_hint": "Conscious Roots"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://actualize.earth",
+      "id_hint": "contributor:actualize-earth-the-future-of-conscious--4d812a0238eb",
+      "name_hint": "Actualize Earth"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.bloomurian.com",
+      "id_hint": "contributor:bloomurian-d22c982d7529",
+      "name_hint": "Bloomurian"
+    },
+    {
+      "kind": "manual",
+      "id": "contributor:juicy-placeholder",
+      "type": "contributor",
+      "name": "Juicy",
+      "description": "Artist and conscious-community builder; founder of Actualize Earth. The user met Juicy at the Mose Road-to-Unison Cacao Dance in Boulder — one of the threads that wove through the summer toward Unison. Held open.",
+      "properties": {
+        "claimed": false,
+        "contributor_type": "HUMAN",
+        "author_display_name": "Juicy",
+        "also_known_as": "Juicy Live"
+      }
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.matiakalli.com",
+      "id_hint": "contributor:matiakalli-b3400efa8a1e",
+      "name_hint": "Matia Kalli"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.threads.com/@bruna.bortolato",
+      "id_hint": "contributor:bruna-bortolato-placeholder",
+      "name_hint": "Bruna Bortolato"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://roccomountain.com/",
+      "id_hint": "contributor:facebook-cd3d506908c9",
+      "name_hint": "Rocco Tortorella"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.z2ent.com/boulder-theater-venue",
+      "id_hint": "contributor:boulder-theater-z2-entertainment-d33919cccb51",
+      "name_hint": "Boulder Theater"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://samjmusic.com",
+      "id_hint": "contributor:samuel-j-music-802552a82967",
+      "name_hint": "Samuel J"
+    },
+    {
+      "kind": "manual",
+      "id": "contributor:shawn-heinrichs-placeholder",
+      "type": "contributor",
+      "name": "Shawn Heinrichs",
+      "description": "Emmy-winning underwater cinematographer, ocean conservation storyteller. Co-created Ocean Bloom with Samuel J. Held open.",
+      "properties": {
+        "claimed": false,
+        "contributor_type": "HUMAN",
+        "author_display_name": "Shawn Heinrichs"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "contributor:ubbe-maclean-placeholder",
+      "type": "contributor",
+      "name": "Ubbe MacLean",
+      "description": "Producer of the Pagan Ritual (Dance) Party series at Vali Soul Sanctuary in Boulder. Co-leads opening ceremonies alongside Angelia LaRue, carrying Pleiadian and Arcturian frequency — and a Mjolnir replica to bless each gathering. Held open for Ubbe to claim.",
+      "properties": {
+        "claimed": false,
+        "contributor_type": "HUMAN",
+        "author_display_name": "Ubbe MacLean"
+      }
+    },
+    {
+      "kind": "resolved",
+      "url": "https://unisonfest.com",
+      "id_hint": "contributor:unison-festival-798611077fc4",
+      "name_hint": "Unison Festival"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ticotimeresort.com",
+      "id_hint": "contributor:tico-time-8adfd2f3248a",
+      "name_hint": "Tico Time River Resort"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.porangui.com",
+      "id_hint": "contributor:porangui-com-d278c79f5738",
+      "name_hint": "Poranguí"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.crystalarrays.com",
+      "id_hint": "contributor:crystalarrays-0ef98c885395",
+      "name_hint": "Angelia LaRue"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://boulderdance.org/venue/the-avalon-ballroom",
+      "id_hint": "contributor:upcoming-events-boulder-dance-coalition-4fda0abccc4a",
+      "name_hint": "Avalon Ballroom"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.mosemusica.com",
+      "id_hint": "contributor:mose-403f4edacc5b",
+      "name_hint": "Mose"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.ecstaticmovementtribe.com",
+      "id_hint": "contributor:e-m-t-e7431e7a6b58",
+      "name_hint": "E.M.T."
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ecstaticdance.org/dance/boulder-ecstatic-dance-bed",
+      "id_hint": "contributor:ecstatic-dance-46eeec72972b",
+      "name_hint": "Boulder Ecstatic Dance"
+    },
+    {
+      "kind": "manual",
+      "id": "contributor:presence-visitor",
+      "type": "contributor",
+      "name": "presence-visitor",
+      "description": "Local visitor for presence iteration",
+      "properties": {
+        "contributor_type": "HUMAN",
+        "email": "visitor@local.test"
+      }
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.rhythmsanctuary.com",
+      "id_hint": "contributor:rhythm-sanctuary-fca3dbb567da",
+      "name_hint": "Rhythm Sanctuary"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.ministryofmovement.love",
+      "id_hint": "contributor:ministry-of-movement-787aebff0b09",
+      "name_hint": "Ministry of Movement"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://boulderdance.org/organizer/onebody-dance/",
+      "id_hint": "community:onebody-dance",
+      "name_hint": "OneBody Dance"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.reciprocitymusic.world/",
+      "id_hint": "community:reciprocity-music",
+      "name_hint": "Reciprocity Music"
+    },
+    {
+      "kind": "manual",
+      "id": "community:pagan-ritual-boulder",
+      "type": "community",
+      "name": "Pagan Ritual",
+      "description": "Pagan Ritual (Dance) Party — a seasonal ceremonial gathering series at Vali Soul Sanctuary in Boulder, carrying Pleiadian and Arcturian energy. Opening ritual by Ubbe MacLean and Angelia LaRue; featured artists have included Liquid Bloom. Numbered events follow the Norse pagan wheel — Yule (winter solstice), Imbolc, Beltane, Haustblot (fall equinox), Vetrnaetr.",
+      "properties": {
+        "claimed": false,
+        "also_known_as": "Pagan Ritual Dance Party"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "community:vali-soul-sanctuary-boulder",
+      "type": "community",
+      "name": "Vali Soul Sanctuary",
+      "description": "A sanctuary in Boulder (6717 Valmont Rd) holding space for music, yoga, kirtan, ceremony, and community gathering. Founded on a dream to build a temple connected to home and serve people.",
+      "properties": {
+        "claimed": false,
+        "location": "6717 Valmont Rd, Boulder, CO 80301",
+        "geo": "40.033989,-105.197353"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "event:anne-tucker-retreat-sept-2024",
+      "type": "event",
+      "name": "Retreat with Anne Tucker (Sept 2024)",
+      "description": "Anne Tucker retreat, Sept 2024 — specific name to be confirmed; Anne's annual Expand Your Heart retreat runs in late October.",
+      "properties": {
+        "when": "September 2024",
+        "where": "Seattle",
+        "note": "The retreat that deepened the lineage after Soul Convergence.",
+        "added_by": "contributor:presence-visitor"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "event:mose-at-avalon-ballroom-a064ac9a8b92",
+      "type": "event",
+      "name": "Road to Unison · Cacao Dance",
+      "description": "Road to Unison · Cacao Dance with Mose, Bloomurian, and special guest Matia Kalli, at Avalon Ballroom, Boulder — Tues July 23, 2024, 6:30–10:30 PM MT. Cacao by Bruna Bortolato. Presented by Boulder Ecstatic Dance & Reciprocity Music.",
+      "properties": {
+        "when": "Tues July 23, 2024, 6:30–10:30 PM MT",
+        "where": "Avalon Ballroom, 6185 Arapahoe Rd, Boulder CO 80303",
+        "starts_at": "2024-07-23T18:30:00-06:00",
+        "ends_at": "2024-07-23T22:30:00-06:00",
+        "url": "https://mosemusica.com",
+        "note": "A gathering on the road to Unison Festival — one of the threads that wove through the summer ceremony and opened the shift. Cacao ground the room; devotional voice opened it; Mose and Bloomurian filled it.",
+        "added_by": "contributor:presence-visitor",
+        "added_at": "2026-04-19T15:53:54.993566+00:00"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "event:ocean-bloom-2024",
+      "type": "event",
+      "name": "Ocean Bloom at Boulder Theater",
+      "description": "Ocean Bloom — Dec 11, 2024 at Boulder Theater, an immersive live visual and music experience to celebrate and protect the oceans.",
+      "properties": {
+        "when": "December 11, 2024",
+        "where": "Boulder Theater, Boulder CO",
+        "starts_at": "2024-12-11T20:00:00-07:00",
+        "url": "https://www.z2ent.com/events/detail/ocean-bloom-2024-bt",
+        "note": "Boulder Theater transformed into an underwater world — Shawn Heinrichs's underwater cinematography projected behind Samuel J's live score, with full performances by Poranguí, Liquid Bloom, and Bloomurian. Partner: the ocean NGO Only One. A profound moment on the journey.",
+        "added_by": "contributor:presence-visitor"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "event:unison-2024",
+      "type": "event",
+      "name": "Unison 2024",
+      "description": "Unison Festival 2024 — Sept 5–8, 2024 at Tico Time River Resort, Aztec, NM",
+      "properties": {
+        "when": "Sept 5–8, 2024",
+        "where": "Tico Time River Resort, Aztec, NM (Animas River)",
+        "starts_at": "2024-09-05T00:00:00-06:00",
+        "ends_at": "2024-09-08T23:59:00-06:00",
+        "note": "Four days on the Animas River. Live and electronic music, ceremonial dance, sound healing, workshops, children's activities, and singing and storytelling around the Native American sacred fire that burned through the whole gathering. The shift that came arrived here.",
+        "added_by": "contributor:presence-visitor",
+        "added_at": "2026-04-19T16:00:00+00:00"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "event:liquid-bloom-at-vali-soul-sanctuary-41b9620b59fc",
+      "type": "event",
+      "name": "Liquid Bloom at Pagan Ritual (Dance) Party #20 — Haustblot",
+      "description": "Liquid Bloom at Pagan Ritual (Dance) Party #20 — Haustblot (Fall Equinox), Vali Soul Sanctuary, Sept 20 2024",
+      "properties": {
+        "when": "Fri Sept 20 2024, 8:01 PM — Sat Sept 21, 4:20 AM MT",
+        "where": "Vali Soul Sanctuary, Boulder",
+        "starts_at": "2024-09-20T20:01:00-06:00",
+        "ends_at": "2024-09-21T04:20:00-06:00",
+        "note": "Pagan Ritual (Dance) Party #20 — Haustblot (Fall Equinox). Eight hours, from 8:01 PM into the small hours. Opening ceremony by Ubbe MacLean and Angelia LaRue, then Liquid Bloom's sound filling the room. The doorway that opened the path into Ecstatic Movement Tribe and Contact Improv.",
+        "added_by": "contributor:presence-visitor",
+        "added_at": "2026-04-19T15:53:56.570754+00:00"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "event:pagan-ritual-may-9th-8eef009503c8",
+      "type": "event",
+      "name": "Pagan Ritual — May 9th",
+      "description": "Pagan Ritual — May 9th",
+      "properties": {
+        "when": "May 9 2026",
+        "where": "Boulder",
+        "url": "https://www.facebook.com/search/top?q=pagan%20ritual%20-dance-%20parties",
+        "note": "Pleiadian and Arcturian energy, co-led by Ubbe MacLean and Angelia LaRue.",
+        "added_by": "contributor:presence-visitor",
+        "added_at": "2026-04-19T15:53:56.595086+00:00"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "event:breathwork-with-liquid-bloom-643d0b722aee",
+      "type": "event",
+      "name": "Breathwork with Liquid Bloom",
+      "description": "Breathwork with Liquid Bloom",
+      "properties": {
+        "when": "summer 2026",
+        "where": "Boulder, CO",
+        "note": "he is returning to Colorado — this one is charged.",
+        "added_by": "contributor:presence-visitor",
+        "added_by_name": "visitor",
+        "added_at": "2026-04-19T13:41:05.991647+00:00"
+      }
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/event/journey-to-7-chakras",
+      "id_hint": "asset:journey-to-7-chakras-e5c9e95094fa",
+      "name_hint": "Journey to 7 Chakras"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/event/rebirthing-kundalini-sound-journey",
+      "id_hint": "asset:rebirthing-kundalini-038-sound-journey-f8836c25cbb2",
+      "name_hint": "Rebirthing Kundalini &#038; Sound Journey"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/event/third-eye-meditation",
+      "id_hint": "asset:third-eye-meditation-e08191834385",
+      "name_hint": "Third Eye Meditation"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/event/yogic-breathwork-meditation",
+      "id_hint": "asset:yogic-breathwork-meditation-0ac726d5a3b9",
+      "name_hint": "Yogic Breathwork Meditation"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/event/breathwork-ice-immersion",
+      "id_hint": "asset:breathwork-and-ice-immersion-887cbca82684",
+      "name_hint": "Breathwork and Ice Immersion"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/event/rapid-transformational-hypnotherapy",
+      "id_hint": "asset:self-love-rtt-hypnotherapy-3f461a01a059",
+      "name_hint": "Self Love RTT Hypnotherapy"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/event/breathwork-shamanic-journeying",
+      "id_hint": "asset:breathwork-and-shamanic-journeying-6cdd513daaba",
+      "name_hint": "Breathwork and Shamanic Journeying"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://ubud.pyramidsofchi.com/event/kundalini-meditation",
+      "id_hint": "asset:kundalini-meditation-948152f439da",
+      "name_hint": "Kundalini Meditation"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.facebook.com/ConsciousRootsPresents",
+      "id_hint": "asset:conscious-roots-presents-boulder-co-3b4e374c8d5b",
+      "name_hint": "Conscious Roots Presents | Boulder CO"
+    },
+    {
+      "kind": "manual",
+      "id": "asset:bloomurian-the-portal-dome-psychedelic-s-f81825333c80",
+      "type": "asset",
+      "name": "Bloomurian @ the PORTAL Dome. Psychedelic Science Conference 6/21/25",
+      "description": "Bloomurian @ the PORTAL Dome. Psychedelic Science Conference 6/21/25",
+      "properties": {
+        "asset_type": "CONTENT",
+        "creation_kind": "video",
+        "total_cost": "0",
+        "claimable": true
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "asset:bloomurian-abraxas-sunrise-set-2024-1ceb1fa79c02",
+      "type": "asset",
+      "name": "Bloomurian Abraxas Sunrise Set )'( 2024",
+      "description": "Bloomurian Abraxas Sunrise Set )'( 2024",
+      "properties": {
+        "asset_type": "CONTENT",
+        "creation_kind": "video",
+        "total_cost": "0",
+        "claimable": true
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "asset:bloomurian-live-experience-unison-fest-2-d2433cedf29d",
+      "type": "asset",
+      "name": "Bloomurian Live Experience Unison Fest 2025",
+      "description": "Bloomurian Live Experience Unison Fest 2025",
+      "properties": {
+        "asset_type": "CONTENT",
+        "creation_kind": "video",
+        "total_cost": "0",
+        "claimable": true
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "asset:bloomurian-community-tree-planting-day-w-0fd9de437a84",
+      "type": "asset",
+      "name": "🌳 Bloomurian Community Tree Planting Day with Drylands AgroEcology Research (DAR) at Metacarbon Farm",
+      "description": "🌳 Bloomurian Community Tree Planting Day with Drylands AgroEcology Research (DAR) at Metacarbon Farm",
+      "properties": {
+        "asset_type": "CONTENT",
+        "creation_kind": "video",
+        "total_cost": "0",
+        "claimable": true
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "asset:the-black-box-bloomurian-recap-direct-su-e92f28585142",
+      "type": "asset",
+      "name": "The Black Box - Bloomurian Recap - Direct Support for Savej, Geometrae & Johnny Buffalo",
+      "description": "The Black Box - Bloomurian Recap - Direct Support for Savej, Geometrae & Johnny Buffalo",
+      "properties": {
+        "asset_type": "CONTENT",
+        "creation_kind": "video",
+        "total_cost": "0",
+        "claimable": true
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "asset:shaman-s-dream-liquid-bloom-rise-up-remi-83468d4c0dc4",
+      "type": "asset",
+      "name": "Shaman's Dream & Liquid Bloom - Rise Up Remix (Feat Paul Stamets & Bloomurian)",
+      "description": "Shaman's Dream & Liquid Bloom - Rise Up Remix (Feat Paul Stamets & Bloomurian)",
+      "properties": {
+        "asset_type": "CONTENT",
+        "creation_kind": "video",
+        "total_cost": "0",
+        "claimable": true
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "asset:liquid-bloom-bloomurian-snow-raven-feat--69ec7d3d4239",
+      "type": "asset",
+      "name": "Liquid Bloom, Bloomurian & Snow Raven, Feat. Inin Rao Shipibo & Yube - Fragrance",
+      "description": "Liquid Bloom, Bloomurian & Snow Raven, Feat. Inin Rao Shipibo & Yube - Fragrance",
+      "properties": {
+        "asset_type": "CONTENT",
+        "creation_kind": "video",
+        "total_cost": "0",
+        "claimable": true
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "asset:bloomurian-solarpunk-performance-2022-34652ca903af",
+      "type": "asset",
+      "name": "Bloomurian SolarPunk Performance 2022",
+      "description": "Bloomurian SolarPunk Performance 2022",
+      "properties": {
+        "asset_type": "CONTENT",
+        "creation_kind": "video",
+        "total_cost": "0",
+        "claimable": true
+      }
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.wellnessliving.com/gym/software",
+      "id_hint": "asset:one-gen-gym-a-new-era-of-fitness-powered-e1799dce707f",
+      "name_hint": "One Gen Gym: A New Era of Fitness Powered by WellnessLiving | Grand Opening Interview"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/album/embers-of-a-forgotten-prayer-revibed",
+      "id_hint": "asset:embers-of-a-forgotten-prayer-revibed-c61554529d94",
+      "name_hint": "Embers of a Forgotten Prayer Revibed"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/album/psychedelic-prayers",
+      "id_hint": "asset:psychedelic-prayers-2b2702a1b008",
+      "name_hint": "Psychedelic Prayers"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/album/heartbeat-of-the-sacred-valley",
+      "id_hint": "asset:heartbeat-of-the-sacred-valley-bf60de7478ed",
+      "name_hint": "Heartbeat of the Sacred Valley"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/album/elemental-soundscapes-for-breathwork-facilitators-guides",
+      "id_hint": "asset:elemental-soundscapes-for-breathwork-fac-9198e2cb40f5",
+      "name_hint": "Elemental Soundscapes for Breathwork Facilitators & Guides"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/album/reimagined-legacies-liquid-bloom-remixes",
+      "id_hint": "asset:reimagined-legacies-liquid-bloom-remixes-903853056e9c",
+      "name_hint": "Reimagined Legacies (Liquid Bloom Remixes)"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.songkick.com/festivals/3766732-emc2-music/id/42997970-emc2-music-festival-2026?utm_source=1471&utm_medium=partner",
+      "id_hint": "asset:emc2-music-festival-comet-mo-107345dec047",
+      "name_hint": "EMC2 Music Festival, Comet, MO"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://www.songkick.com/concerts/43114193-liquid-bloom-at-third-room?utm_source=1471&utm_medium=partner",
+      "id_hint": "asset:third-room-asheville-nc-f793651f09f6",
+      "name_hint": "Third Room, Asheville, NC"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/track/embers-of-a-forgotten-prayer-serpentis-revibe",
+      "id_hint": "asset:embers-of-a-forgotten-prayer-serpentis-r-2bef17a5d3da",
+      "name_hint": "Embers of a Forgotten Prayer (Serpentis Revibe)"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/track/embers-of-a-forgotten-prayer-akriza-revibe",
+      "id_hint": "asset:embers-of-a-forgotten-prayer-akriza-revi-0877ca7b1f86",
+      "name_hint": "Embers of a Forgotten Prayer (Akriza Revibe)"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/track/embers-of-a-forgotten-prayer-murkury-revibe",
+      "id_hint": "asset:embers-of-a-forgotten-prayer-murkury-rev-40055f7376d3",
+      "name_hint": "Embers of a Forgotten Prayer (Murkury Revibe)"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/track/embers-of-a-forgotten-prayer-azlan-revibe",
+      "id_hint": "asset:embers-of-a-forgotten-prayer-azlan-revib-0d71b6fb3e12",
+      "name_hint": "Embers of a Forgotten Prayer (Azlan Revibe)"
+    },
+    {
+      "kind": "resolved",
+      "url": "https://liquidbloom.bandcamp.com/track/embers-of-a-forgotten-prayer-the-great-medicine-show-revibe",
+      "id_hint": "asset:embers-of-a-forgotten-prayer-the-great-m-cbce26f9fc5a",
+      "name_hint": "Embers of a Forgotten Prayer (The Great Medicine Show Revibe)"
+    },
+    {
+      "kind": "manual",
+      "id": "scene:ubud-bali",
+      "type": "scene",
+      "name": "Ubud",
+      "description": "Ubud — the inland spiritual and wellness hub of Bali, nestled among rice terraces and river valleys. A global convergence point for yoga, cacao ceremony, sound healing, ecstatic dance, breathwork, bhakti music, and plant medicine traditions — held by temples and studios woven through the town and its surrounding villages.",
+      "properties": {
+        "claimed": false,
+        "location": "Ubud, Bali, Indonesia",
+        "geo": "-8.5069,115.2625"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "practice:peace-bathing",
+      "type": "practice",
+      "name": "Peace Bathing",
+      "description": "Peace Bathing — monthly online group channeled healing sessions held by Anne Tucker, where the Angels raise vibration into the soothing realm of peace, adapting to current Earth energies. A practice the user was already holding before finding Anne; joining the sessions deepened it.",
+      "properties": {
+        "claimed": false,
+        "scope": "global"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "practice:contact-improv",
+      "type": "practice",
+      "name": "Contact Improv",
+      "description": "Contact Improvisation — a post-modern dance practice of shared weight, spontaneous duets, listening through skin. Global tradition (founded in 1972 by Steve Paxton) with deep local embodiments — in Boulder, Ecstatic Movement Tribe holds regular jams that open awareness to an entire community of moving bodies learning each other's weight.",
+      "properties": {
+        "claimed": false,
+        "scope": "global-and-local"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "practice:cacao-ceremony",
+      "type": "practice",
+      "name": "Cacao Ceremony",
+      "description": "Cacao Ceremony — an indigenous-rooted container where cacao is held as medicine and teacher, opening the heart, grounding the body, preparing the room for deeper presence. The practice travels globally; each ceremonialist holds it in their own voice (Bruna Bortolato's lineage runs through Mayan Guatemala with Mose).",
+      "properties": {
+        "claimed": false,
+        "scope": "global-and-local"
+      }
+    },
+    {
+      "kind": "manual",
+      "id": "skill:soul-convergence",
+      "type": "skill",
+      "name": "Soul Convergence",
+      "description": "Soul Convergence (SC1 + SC2) — Anne Tucker's program for accessing and healing the formative wounds from ages 0–7 that form the most persistent patterns of a life. Daily meditations and reflection work. The user went through both levels.",
+      "properties": {
+        "claimed": false,
+        "levels": [
+          "SC1",
+          "SC2"
+        ]
+      }
+    }
+  ],
+  "gatherings": [
+    {
+      "title": "Retreat with Anne Tucker (Sept 2024)",
+      "description": "Anne Tucker retreat, Sept 2024 — specific name to be confirmed; Anne's annual Expand Your Heart retreat runs in late October.",
+      "when": "September 2024",
+      "starts_at": null,
+      "ends_at": null,
+      "where": "Seattle",
+      "url": null,
+      "note": "The retreat that deepened the lineage after Soul Convergence.",
+      "primary_ref": "https://annetucker.com",
+      "hosted_by_ref": null,
+      "co_leaders_ref": [],
+      "performers_ref": [],
+      "presenters_ref": [],
+      "cacao_facilitators_ref": [],
+      "videographers_ref": [],
+      "partners_ref": []
+    },
+    {
+      "title": "Road to Unison · Cacao Dance",
+      "description": "Road to Unison · Cacao Dance with Mose, Bloomurian, and special guest Matia Kalli, at Avalon Ballroom, Boulder — Tues July 23, 2024, 6:30–10:30 PM MT. Cacao by Bruna Bortolato. Presented by Boulder Ecstatic Dance & Reciprocity Music.",
+      "when": "Tues July 23, 2024, 6:30–10:30 PM MT",
+      "starts_at": "2024-07-23T18:30:00-06:00",
+      "ends_at": "2024-07-23T22:30:00-06:00",
+      "where": "Avalon Ballroom, 6185 Arapahoe Rd, Boulder CO 80303",
+      "url": "https://mosemusica.com",
+      "note": "A gathering on the road to Unison Festival — one of the threads that wove through the summer ceremony and opened the shift. Cacao ground the room; devotional voice opened it; Mose and Bloomurian filled it.",
+      "primary_ref": "https://www.mosemusica.com",
+      "hosted_by_ref": "https://boulderdance.org/venue/the-avalon-ballroom",
+      "co_leaders_ref": [],
+      "performers_ref": [
+        "https://www.bloomurian.com",
+        "https://www.matiakalli.com"
+      ],
+      "presenters_ref": [
+        "https://ecstaticdance.org/dance/boulder-ecstatic-dance-bed",
+        "https://www.reciprocitymusic.world/"
+      ],
+      "cacao_facilitators_ref": [
+        "https://www.threads.com/@bruna.bortolato"
+      ],
+      "videographers_ref": [],
+      "partners_ref": []
+    },
+    {
+      "title": "Ocean Bloom at Boulder Theater",
+      "description": "Ocean Bloom — Dec 11, 2024 at Boulder Theater, an immersive live visual and music experience to celebrate and protect the oceans.",
+      "when": "December 11, 2024",
+      "starts_at": "2024-12-11T20:00:00-07:00",
+      "ends_at": null,
+      "where": "Boulder Theater, Boulder CO",
+      "url": "https://www.z2ent.com/events/detail/ocean-bloom-2024-bt",
+      "note": "Boulder Theater transformed into an underwater world — Shawn Heinrichs's underwater cinematography projected behind Samuel J's live score, with full performances by Poranguí, Liquid Bloom, and Bloomurian. Partner: the ocean NGO Only One. A profound moment on the journey.",
+      "primary_ref": "https://samjmusic.com",
+      "hosted_by_ref": "https://www.z2ent.com/boulder-theater-venue",
+      "co_leaders_ref": [
+        "contributor:shawn-heinrichs-placeholder"
+      ],
+      "performers_ref": [
+        "https://www.porangui.com",
+        "https://liquidbloom.com/",
+        "https://www.bloomurian.com"
+      ],
+      "presenters_ref": [],
+      "cacao_facilitators_ref": [],
+      "videographers_ref": [
+        "https://roccomountain.com/"
+      ],
+      "partners_ref": [
+        "https://null"
+      ]
+    },
+    {
+      "title": "Unison 2024",
+      "description": "Unison Festival 2024 — Sept 5–8, 2024 at Tico Time River Resort, Aztec, NM",
+      "when": "Sept 5–8, 2024",
+      "starts_at": "2024-09-05T00:00:00-06:00",
+      "ends_at": "2024-09-08T23:59:00-06:00",
+      "where": "Tico Time River Resort, Aztec, NM (Animas River)",
+      "url": null,
+      "note": "Four days on the Animas River. Live and electronic music, ceremonial dance, sound healing, workshops, children's activities, and singing and storytelling around the Native American sacred fire that burned through the whole gathering. The shift that came arrived here.",
+      "primary_ref": null,
+      "hosted_by_ref": "https://ticotimeresort.com",
+      "co_leaders_ref": [],
+      "performers_ref": [
+        "https://www.mosemusica.com",
+        "https://www.porangui.com"
+      ],
+      "presenters_ref": [],
+      "cacao_facilitators_ref": [],
+      "videographers_ref": [],
+      "partners_ref": []
+    },
+    {
+      "title": "Liquid Bloom at Pagan Ritual (Dance) Party #20 — Haustblot",
+      "description": "Liquid Bloom at Pagan Ritual (Dance) Party #20 — Haustblot (Fall Equinox), Vali Soul Sanctuary, Sept 20 2024",
+      "when": "Fri Sept 20 2024, 8:01 PM — Sat Sept 21, 4:20 AM MT",
+      "starts_at": "2024-09-20T20:01:00-06:00",
+      "ends_at": "2024-09-21T04:20:00-06:00",
+      "where": "Vali Soul Sanctuary, Boulder",
+      "url": null,
+      "note": "Pagan Ritual (Dance) Party #20 — Haustblot (Fall Equinox). Eight hours, from 8:01 PM into the small hours. Opening ceremony by Ubbe MacLean and Angelia LaRue, then Liquid Bloom's sound filling the room. The doorway that opened the path into Ecstatic Movement Tribe and Contact Improv.",
+      "primary_ref": "https://liquidbloom.com/",
+      "hosted_by_ref": "community:vali-soul-sanctuary-boulder",
+      "co_leaders_ref": [
+        "contributor:ubbe-maclean-placeholder",
+        "https://www.crystalarrays.com"
+      ],
+      "performers_ref": [],
+      "presenters_ref": [],
+      "cacao_facilitators_ref": [],
+      "videographers_ref": [],
+      "partners_ref": []
+    },
+    {
+      "title": "Pagan Ritual — May 9th",
+      "description": "Pagan Ritual — May 9th",
+      "when": "May 9 2026",
+      "starts_at": null,
+      "ends_at": null,
+      "where": "Boulder",
+      "url": "https://www.facebook.com/search/top?q=pagan%20ritual%20-dance-%20parties",
+      "note": "Pleiadian and Arcturian energy, co-led by Ubbe MacLean and Angelia LaRue.",
+      "primary_ref": "community:pagan-ritual-boulder",
+      "hosted_by_ref": null,
+      "co_leaders_ref": [
+        "contributor:ubbe-maclean-placeholder",
+        "https://www.crystalarrays.com"
+      ],
+      "performers_ref": [],
+      "presenters_ref": [],
+      "cacao_facilitators_ref": [],
+      "videographers_ref": [],
+      "partners_ref": []
+    },
+    {
+      "title": "Breathwork with Liquid Bloom",
+      "description": "Breathwork with Liquid Bloom",
+      "when": "summer 2026",
+      "starts_at": null,
+      "ends_at": null,
+      "where": "Boulder, CO",
+      "url": null,
+      "note": "he is returning to Colorado — this one is charged.",
+      "primary_ref": "https://liquidbloom.com/",
+      "hosted_by_ref": "https://ecstaticdance.org/dance/boulder-ecstatic-dance-bed",
+      "co_leaders_ref": [],
+      "performers_ref": [],
+      "presenters_ref": [],
+      "cacao_facilitators_ref": [],
+      "videographers_ref": [],
+      "partners_ref": []
+    }
+  ],
+  "inspired_by": [
+    {
+      "target_ref": "scene:ubud-bali",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://www.udara-bali.com",
+      "weight": 0.55
+    },
+    {
+      "target_ref": "https://www.heartspacebali.com",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://ubudraw.com",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://www.balispiritfestival.com",
+      "weight": 0.6
+    },
+    {
+      "target_ref": "https://ubud.pyramidsofchi.com/",
+      "weight": 0.85
+    },
+    {
+      "target_ref": "https://theyogabarn.com",
+      "weight": 0.55
+    },
+    {
+      "target_ref": "https://boulderdance.org/organizer/onebody-dance/",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "contributor:andy-babb-solo",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "contributor:lara-elle-solo",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://www.andyandlara.com/",
+      "weight": 0.55
+    },
+    {
+      "target_ref": "https://www.rhythmsanctuary.com",
+      "weight": 0.65
+    },
+    {
+      "target_ref": "https://www.ministryofmovement.love",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "contributor:tay-blevins-placeholder",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://www.matiasdestefano.com/",
+      "weight": 0.4
+    },
+    {
+      "target_ref": "https://youaretheportal.com/",
+      "weight": 0.55
+    },
+    {
+      "target_ref": "https://www.yaimamusic.com",
+      "weight": 0.55
+    },
+    {
+      "target_ref": "https://maps.org",
+      "weight": 0.6
+    },
+    {
+      "target_ref": "https://drjoedispenza.com/",
+      "weight": 0.4
+    },
+    {
+      "target_ref": "https://robertedwardgrant.com",
+      "weight": 0.6
+    },
+    {
+      "target_ref": "practice:peace-bathing",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "skill:soul-convergence",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "event:anne-tucker-retreat-sept-2024",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://nextlevelsoul.com",
+      "weight": 0.65
+    },
+    {
+      "target_ref": "https://annetucker.com",
+      "weight": 0.45
+    },
+    {
+      "target_ref": "contributor:juicy-placeholder",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "practice:contact-improv",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "practice:cacao-ceremony",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://null",
+      "weight": 0.6
+    },
+    {
+      "target_ref": "https://actualize.earth",
+      "weight": 0.4
+    },
+    {
+      "target_ref": "https://www.facebook.com/ConsciousRootsPresents",
+      "weight": 0.45
+    },
+    {
+      "target_ref": "https://www.threads.com/@bruna.bortolato",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://www.reciprocitymusic.world/",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://www.matiakalli.com",
+      "weight": 0.6
+    },
+    {
+      "target_ref": "contributor:shawn-heinrichs-placeholder",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://www.bloomurian.com",
+      "weight": 0.8
+    },
+    {
+      "target_ref": "https://www.z2ent.com/boulder-theater-venue",
+      "weight": 0.65
+    },
+    {
+      "target_ref": "https://samjmusic.com",
+      "weight": 0.65
+    },
+    {
+      "target_ref": "https://roccomountain.com/",
+      "weight": 0.4
+    },
+    {
+      "target_ref": "https://ticotimeresort.com",
+      "weight": 0.55
+    },
+    {
+      "target_ref": "https://www.porangui.com",
+      "weight": 0.65
+    },
+    {
+      "target_ref": "community:vali-soul-sanctuary-boulder",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "community:pagan-ritual-boulder",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "contributor:ubbe-maclean-placeholder",
+      "weight": 0.5
+    },
+    {
+      "target_ref": "https://www.crystalarrays.com",
+      "weight": 0.55
+    },
+    {
+      "target_ref": "https://boulderdance.org/venue/the-avalon-ballroom",
+      "weight": 0.4
+    },
+    {
+      "target_ref": "https://www.mosemusica.com",
+      "weight": 0.65
+    },
+    {
+      "target_ref": "https://www.ecstaticmovementtribe.com",
+      "weight": 0.55
+    },
+    {
+      "target_ref": "https://unisonfest.com",
+      "weight": 0.65
+    },
+    {
+      "target_ref": "https://liquidbloom.com/",
+      "weight": 0.8
+    }
+  ]
+}

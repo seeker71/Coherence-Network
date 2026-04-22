@@ -116,10 +116,40 @@ async def get_node(node_id: str):
 
 @router.patch("/graph/nodes/{node_id}", summary="Update a node")
 async def update_node(node_id: str, body: NodeUpdate):
-    """Update a node."""
-    result = graph_service.update_node(node_id, **body.model_dump(exclude_none=True))
+    """Update a node.
+
+    When a presence-type node's name or description changes, the
+    resonance service automatically re-runs so the concept edges
+    stay aligned with the current text. The graph keeps itself
+    attuned without anyone having to trigger a manual refresh.
+    """
+    updates = body.model_dump(exclude_none=True)
+    result = graph_service.update_node(node_id, **updates)
     if not result:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+
+    # Re-attune resonance only when the textual signal actually
+    # changed. Properties-only PATCHes (flag updates, phase moves,
+    # metadata tweaks) don't shift the node's keyword spectrum, so
+    # the existing edges remain accurate and the attune call would
+    # just be overhead — particularly in test flows where dozens of
+    # PATCHes per second are common. Name + description changes do
+    # shift the spectrum; those trigger.
+    _PRESENCE_TYPES = {
+        "contributor", "community", "network-org", "asset", "event",
+        "scene", "practice", "skill",
+    }
+    text_changed = "name" in updates or "description" in updates
+    if text_changed and result.get("type") in _PRESENCE_TYPES:
+        try:
+            from app.services import resonance_service
+            resonance_service.attune(node_id)
+        except Exception:  # noqa: BLE001 — re-attune failure doesn't block the update
+            import logging
+            logging.getLogger(__name__).debug(
+                "re-attune on update non-fatal error", exc_info=True,
+            )
+
     return result
 
 

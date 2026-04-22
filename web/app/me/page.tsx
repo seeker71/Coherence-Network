@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { createTranslator } from "@/lib/i18n";
 import { MePage } from "@/components/MePage";
+import { InspiredByPreview } from "@/components/InspiredByPreview";
 
 /**
  * /me — your presence in the field, made visible.
@@ -40,6 +41,9 @@ export default async function YourPresencePage() {
         <p className="text-sm text-muted-foreground">{t("me.lede")}</p>
       </header>
       <MePage />
+      <div className="mt-8">
+        <InspiredByPreview />
+      </div>
     </main>
   );
 }

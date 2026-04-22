@@ -3,6 +3,12 @@
 import { useState } from "react";
 import { useT, useLocale } from "@/components/MessagesProvider";
 import { LOCALES, type LocaleCode } from "@/lib/locales";
+import {
+  NAME_KEY,
+  CONTRIBUTOR_KEY,
+  EMAIL_KEY,
+  ensureFingerprint,
+} from "@/lib/identity";
 
 type RoleKey =
   | "livingStructureWeaver"
@@ -86,8 +92,51 @@ export function InterestForm() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || t("interestForm.errorGeneric"));
+        const body = await res.text();
+        // FastAPI returns plain-text on 5xx; try to extract a JSON
+        // detail first, fall back to the status + body prefix.
+        let msg = t("interestForm.errorGeneric");
+        try {
+          const parsed = JSON.parse(body);
+          msg = parsed?.detail || msg;
+        } catch {
+          msg = `HTTP ${res.status}: ${body.slice(0, 120)}`;
+        }
+        throw new Error(msg);
+      }
+
+      // The backend register endpoint returns the interested-person
+      // id AND the contributor_id (same email → same contributor on
+      // every device the visitor ever opens the app on). Persisting
+      // both locally is what makes the 'You' page remember them.
+      //
+      // Backend is the source of truth for profile + identity;
+      // localStorage is a fast cache that can be rebuilt any time
+      // via /api/contributors/claim-by-identity on a new device.
+      const data = await res.json().catch(() => ({}));
+      try {
+        const trimmed = form.name.trim();
+        const emailTrimmed = form.email.trim();
+        if (trimmed) localStorage.setItem(NAME_KEY, trimmed);
+        if (emailTrimmed) localStorage.setItem(EMAIL_KEY, emailTrimmed);
+        if (data.contributor_id) {
+          localStorage.setItem(CONTRIBUTOR_KEY, data.contributor_id);
+        }
+        ensureFingerprint();
+        // Signal other mounted components (the MeButton in the
+        // header) that identity changed so they re-read without a
+        // manual reload.
+        try {
+          window.dispatchEvent(new StorageEvent("storage", { key: CONTRIBUTOR_KEY }));
+        } catch {
+          /* some browsers gate the StorageEvent ctor — non-fatal */
+        }
+      } catch {
+        // localStorage unavailable (private mode, quota): the
+        // server already has the contributor + interest node, so
+        // the visitor can recover on their next visit by signing in
+        // with their email — the backend will return their full
+        // profile.
       }
 
       setSubmitted(true);

@@ -3,6 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useT } from "@/components/MessagesProvider";
+import {
+  CONTRIBUTOR_KEY,
+  NAME_KEY,
+  FINGERPRINT_KEY,
+} from "@/lib/identity";
 
 type KeypairData = { public_key_hex: string; private_key_hex: string; fingerprint: string; algorithm: string };
 
@@ -48,9 +53,22 @@ export function ContributorSetup() {
       const data = await r.json();
       if (data.registered) {
         setRegistered(true);
-        localStorage.setItem("coherence_contributor_id", contributorId.trim());
+        const id = contributorId.trim();
+        // Legacy crypto-flow keys — kept so existing code paths
+        // (wallet connect, idea submit, treasury deposit, stake,
+        // identity page) that read coherence_* continue to find
+        // the visitor.
+        localStorage.setItem("coherence_contributor_id", id);
         localStorage.setItem("coherence_public_key", keypair.public_key_hex);
         localStorage.setItem("coherence_fingerprint", keypair.fingerprint);
+        // Unified cc-* keys — MeButton, MePage, ReactionBar,
+        // ProposeForm, and every other presence-aware surface reads
+        // from these. Writing them here means a visitor who joined
+        // via the crypto flow is recognized in the 'You' corner
+        // immediately, not forgotten on the next page load.
+        localStorage.setItem(CONTRIBUTOR_KEY, id);
+        localStorage.setItem(NAME_KEY, id);
+        localStorage.setItem(FINGERPRINT_KEY, keypair.fingerprint);
         setStep(4);
       } else {
         throw new Error(data.error || t("join.failRegister"));

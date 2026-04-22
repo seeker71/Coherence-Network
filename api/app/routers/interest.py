@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, EmailStr, field_validator
 
 from app.services import interest_service
+from app.routers.contributors import GraduateIn, graduate_contributor
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/interest", tags=["interest"])
@@ -59,11 +60,18 @@ class RegisterInterestRequest(BaseModel):
 
 
 class RegisterInterestResponse(BaseModel):
-    """Returned after successful registration. No email exposed."""
+    """Returned after successful registration. No email exposed — but
+    contributor_id is, so the client can persist it locally and
+    restore the session on any device via claim-by-identity."""
     id: str
     name: str
     resonant_roles: list[str]
     message: str
+    # The contributor node that carries this identity across devices.
+    # Same email → same contributor_id on every device the visitor
+    # opens the app on. Stored in localStorage by the client so the
+    # 'You' page remembers them on next visit.
+    contributor_id: str | None = None
 
 
 class CommunityMember(BaseModel):
@@ -107,7 +115,13 @@ ROLES = [
     summary="Express interest in The Living Collective",
 )
 async def register_interest(body: RegisterInterestRequest) -> RegisterInterestResponse:
-    """Create an interested-person node. Email is stored but never exposed via API."""
+    """Create an interested-person node AND graduate to a contributor
+    node keyed by email. Same email on a second device resolves to
+    the same contributor, so the visitor's full profile carries
+    across devices without duplication.
+
+    Email is stored on the contributor but never exposed via API —
+    the community directory uses explicit consent flags."""
     try:
         node = interest_service.register_interest(
             name=body.name,
@@ -124,9 +138,41 @@ async def register_interest(body: RegisterInterestRequest) -> RegisterInterestRe
             consent_findable=body.consent_findable,
             consent_email_updates=body.consent_email_updates,
         )
-    except Exception as exc:
+    except Exception:
         logger.exception("Registration failed")
         raise HTTPException(status_code=500, detail="Registration failed — please try again")
+
+    # Graduate (or re-graduate, merging the latest profile fields)
+    # a contributor node keyed by email. This is the node the
+    # visitor's identity lives on for every future device + every
+    # future action. The interested-person node above stays for the
+    # existing community directory; when we migrate the directory
+    # to read contributors with consent_findable=True, the
+    # interested-person nodes decompose.
+    contributor_id: str | None = None
+    try:
+        graduated = graduate_contributor(GraduateIn(
+            author_name=body.name,
+            email=body.email,
+            locale=body.locale,
+            location=body.location,
+            skills=body.skills,
+            offering=body.offering,
+            resonant_roles=body.resonant_roles,
+            message=body.message,
+            consent_share_name=body.consent_share_name,
+            consent_share_location=body.consent_share_location,
+            consent_share_skills=body.consent_share_skills,
+            consent_findable=body.consent_findable,
+            consent_email_updates=body.consent_email_updates,
+        ))
+        contributor_id = graduated.contributor_id
+    except Exception:
+        # Soft failure — the interest is still registered, but the
+        # cross-device contributor couldn't be created. The visitor
+        # will graduate on their next action (reaction/voice) the
+        # hard way, and a future re-submit of the form recovers.
+        logger.exception("Contributor graduation from interest failed")
 
     props = node.get("properties", {})
     return RegisterInterestResponse(
@@ -134,6 +180,7 @@ async def register_interest(body: RegisterInterestRequest) -> RegisterInterestRe
         name=node.get("name", body.name),
         resonant_roles=props.get("resonant_roles", body.resonant_roles),
         message=props.get("message", ""),
+        contributor_id=contributor_id,
     )
 
 
