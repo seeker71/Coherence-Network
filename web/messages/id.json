@@ -59,7 +59,31 @@
     "explore": "Jelajahi",
     "primary": "Navigasi utama",
     "mobile": "Navigasi seluler",
-    "openMore": "Buka navigasi lainnya"
+    "openMore": "Buka navigasi lainnya",
+    "people": "Orang",
+    "layer": {
+      "vision": "Visi",
+      "presences": "Kehadiran",
+      "work": "Kerja",
+      "pulse": "Denyut"
+    },
+    "sub": {
+      "all": "Semua",
+      "people": "Orang",
+      "communities": "Komunitas",
+      "scenes": "Tempat",
+      "gatherings": "Pertemuan",
+      "practices": "Praktik",
+      "works": "Karya",
+      "ideas": "Ide",
+      "contribute": "Kontribusi",
+      "pipeline": "Pipeline",
+      "contributors": "Kontributor",
+      "assets": "Aset",
+      "resonance": "Resonansi",
+      "nodes": "Node"
+    },
+    "secondary": "Navigasi lapisan"
   },
   "autoRefresh": {
     "label": "Pembaruan otomatis",
@@ -170,12 +194,30 @@
     "errorGeneric": "Terjadi kesalahan. Silakan coba lagi.",
     "errorNetwork": "Kesalahan koneksi. Silakan coba lagi.",
     "roles": {
-      "livingStructureWeaver": { "name": "Penenun struktur hidup", "desc": "Arsitek, pembangun, penggemar earthship, praktisi cob, penanam bambu" },
-      "nourishmentAlchemist": { "name": "Alkemis pangan", "desc": "Praktisi permakultur, fermentator, hutan pangan, juru masak komunal" },
-      "frequencyHolder": { "name": "Pembawa frekuensi", "desc": "Musisi, penyembuh suara, praktisi suara, penjaga hening" },
-      "vitalityKeeper": { "name": "Penjaga daya hidup", "desc": "Pekerja tubuh, fasilitator gerak, pemandu pendalaman alam, praktisi napas" },
-      "transmissionSource": { "name": "Sumber transmisi", "desc": "Pembangun komunitas berpengalaman, fasilitator, sesepuh dari tradisi mana pun yang beresonansi" },
-      "formGrower": { "name": "Penumbuh bentuk", "desc": "Pekerja tanah, tukang kayu, pemahat batu, tangan yang membentuk ruang yang bernapas" }
+      "livingStructureWeaver": {
+        "name": "Penenun struktur hidup",
+        "desc": "Arsitek, pembangun, penggemar earthship, praktisi cob, penanam bambu"
+      },
+      "nourishmentAlchemist": {
+        "name": "Alkemis pangan",
+        "desc": "Praktisi permakultur, fermentator, hutan pangan, juru masak komunal"
+      },
+      "frequencyHolder": {
+        "name": "Pembawa frekuensi",
+        "desc": "Musisi, penyembuh suara, praktisi suara, penjaga hening"
+      },
+      "vitalityKeeper": {
+        "name": "Penjaga daya hidup",
+        "desc": "Pekerja tubuh, fasilitator gerak, pemandu pendalaman alam, praktisi napas"
+      },
+      "transmissionSource": {
+        "name": "Sumber transmisi",
+        "desc": "Pembangun komunitas berpengalaman, fasilitator, sesepuh dari tradisi mana pun yang beresonansi"
+      },
+      "formGrower": {
+        "name": "Penumbuh bentuk",
+        "desc": "Pekerja tanah, tukang kayu, pemahat batu, tangan yang membentuk ruang yang bernapas"
+      }
     }
   },
   "bottomNav": {
@@ -201,13 +243,58 @@
     "stepIn": "Masuk",
     "you": "Kamu",
     "menuLabel": "Sudutmu",
-    "heading": "Sudutmu",
+    "heading": "Kehadiranmu",
     "viewProfile": "Profilmu",
     "myCorner": "Arusmu",
     "hereNow": "Di sini kini",
     "portfolio": "Portofoliomu",
     "beliefs": "Keyakinanmu",
-    "inviteFriend": "Undang teman"
+    "inviteFriend": "Undang teman",
+    "lede": "Bagaimana medan mengenalmu, apa yang telah kamu tawarkan, dan cara memulai lagi jika itu terasa benar.",
+    "loading": "Membaca sudutmu…",
+    "knownAsEyebrow": "Dikenal sebagai",
+    "unnamedHeading": "Kehadiran tanpa nama",
+    "unnamedLede": "Kamu telah muncul, medan memperhatikannya, dan kamu belum menamai dirimu. Itu diizinkan — membaca selalu cuma-cuma.",
+    "namedNotGraduated": "Ketika kamu menawarkan suara, hati, atau usulan untuk pertama kalinya, kamu menjadi penyumbang dengan halamanmu sendiri.",
+    "presenceSince": "Hadir selama {days} hari dari hidup medan.",
+    "footprintEyebrow": "Jejakmu",
+    "footprintError": "Medan sedang tenang. Coba lagi sebentar lagi.",
+    "footprintEmpty": "Kamu telah membaca. Ketika kamu menawarkan suara atau hati, akan muncul di sini.",
+    "footprintOfferedPrefix": "Kamu telah menawarkan",
+    "footprintReceivedPrefix": "Yang kembali:",
+    "footprintJoin": ", ",
+    "footprintVoice1": "satu suara",
+    "footprintVoicesN": "{n} suara",
+    "footprintHeartGiven1": "satu hati",
+    "footprintHeartsGivenN": "{n} hati",
+    "footprintProposal1": "satu usulan",
+    "footprintProposalsN": "{n} usulan",
+    "footprintHeartReceived1": "satu hati pada suaramu",
+    "footprintHeartsReceivedN": "{n} hati pada suara-suaramu",
+    "footprintReply1": "satu balasan",
+    "footprintRepliesN": "{n} balasan",
+    "invitedByEyebrow": "Diundang oleh",
+    "invitedByBody": "Seorang penyumbang ({who}) membukakan pintu untukmu. Ketika kamu menyumbang, kehangatan mengalir kembali kepadanya melalui rantai.",
+    "notYetGraduated": "Begitu kamu menawarkan suara atau hati, jejakmu akan mulai muncul di sini.",
+    "technicalSummary": "Tampilan teknis (bentuk kunci-kuncimu)",
+    "contributorIdLabel": "contributor_id:",
+    "fingerprintLabel": "device_fingerprint:",
+    "clearEyebrow": "Mulai lagi",
+    "clearLede": "Hapus ingatan perangkat ini tentang siapa dirimu. Sumbanganmu di medan tetap — hanya peramban ini yang lupa. Kunjungan berikutnya dimulai segar.",
+    "clearCta": "Hapus identitas di perangkat ini",
+    "clearConfirm": "Ya, mulai lagi",
+    "clearCancel": "Batal",
+    "linkFromFeed": "Lihat kehadiranmu",
+    "menuHeading": "Sudutmu",
+    "stepInCount1": "masuk · 1 terbuka",
+    "stepInCountN": "masuk · {n} terbuka",
+    "signInEyebrow": "Kembali di perangkat baru?",
+    "signInLede": "Kehadiranmu hidup di jejaring, bukan di peramban ini. Ketik email yang kamu pakai mendaftar dan sudutmu terbuka di sini juga.",
+    "signInPlaceholder": "kamu@contoh.com",
+    "signInCta": "Buka di perangkat ini",
+    "signInWorking": "Membuka…",
+    "signInNotFound": "Email itu belum terdaftar. Masuk ke Kolektif Hidup untuk bergabung.",
+    "signInError": "Jejaring sedang hening. Coba lagi sebentar."
   },
   "invite": {
     "eyebrow": "Ajak seseorang",
@@ -249,44 +336,6 @@
     "iosHeading": "Tambahkan ini ke layar utama dulu",
     "iosLede": "Di iPhone, pemberitahuan pagi memerlukan aplikasi yang terpasang. Tekan ikon bagikan di bawah, lalu 'Tambah ke Layar Utama', lalu buka dari sana.",
     "error": "Sesuatu menghalangi perubahan. Coba lagi sebentar lagi."
-  },
-  "me": {
-    "heading": "Kehadiranmu",
-    "lede": "Bagaimana medan mengenalmu, apa yang telah kamu tawarkan, dan cara memulai lagi jika itu terasa benar.",
-    "loading": "Membaca sudutmu…",
-    "knownAsEyebrow": "Dikenal sebagai",
-    "unnamedHeading": "Kehadiran tanpa nama",
-    "unnamedLede": "Kamu telah muncul, medan memperhatikannya, dan kamu belum menamai dirimu. Itu diizinkan — membaca selalu cuma-cuma.",
-    "namedNotGraduated": "Ketika kamu menawarkan suara, hati, atau usulan untuk pertama kalinya, kamu menjadi penyumbang dengan halamanmu sendiri.",
-    "presenceSince": "Hadir selama {days} hari dari hidup medan.",
-    "footprintEyebrow": "Jejakmu",
-    "footprintError": "Medan sedang tenang. Coba lagi sebentar lagi.",
-    "footprintEmpty": "Kamu telah membaca. Ketika kamu menawarkan suara atau hati, akan muncul di sini.",
-    "footprintOfferedPrefix": "Kamu telah menawarkan",
-    "footprintReceivedPrefix": "Yang kembali:",
-    "footprintJoin": ", ",
-    "footprintVoice1": "satu suara",
-    "footprintVoicesN": "{n} suara",
-    "footprintHeartGiven1": "satu hati",
-    "footprintHeartsGivenN": "{n} hati",
-    "footprintProposal1": "satu usulan",
-    "footprintProposalsN": "{n} usulan",
-    "footprintHeartReceived1": "satu hati pada suaramu",
-    "footprintHeartsReceivedN": "{n} hati pada suara-suaramu",
-    "footprintReply1": "satu balasan",
-    "footprintRepliesN": "{n} balasan",
-    "invitedByEyebrow": "Diundang oleh",
-    "invitedByBody": "Seorang penyumbang ({who}) membukakan pintu untukmu. Ketika kamu menyumbang, kehangatan mengalir kembali kepadanya melalui rantai.",
-    "notYetGraduated": "Begitu kamu menawarkan suara atau hati, jejakmu akan mulai muncul di sini.",
-    "technicalSummary": "Tampilan teknis (bentuk kunci-kuncimu)",
-    "contributorIdLabel": "contributor_id:",
-    "fingerprintLabel": "device_fingerprint:",
-    "clearEyebrow": "Mulai lagi",
-    "clearLede": "Hapus ingatan perangkat ini tentang siapa dirimu. Sumbanganmu di medan tetap — hanya peramban ini yang lupa. Kunjungan berikutnya dimulai segar.",
-    "clearCta": "Hapus identitas di perangkat ini",
-    "clearConfirm": "Ya, mulai lagi",
-    "clearCancel": "Batal",
-    "linkFromFeed": "Lihat kehadiranmu"
   },
   "people": {
     "eyebrow": "Sudut dari organisme",

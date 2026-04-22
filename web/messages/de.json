@@ -59,7 +59,31 @@
     "explore": "Erkunden",
     "primary": "Hauptnavigation",
     "mobile": "Mobile Navigation",
-    "openMore": "Weitere Navigation öffnen"
+    "openMore": "Weitere Navigation öffnen",
+    "people": "Menschen",
+    "layer": {
+      "vision": "Die Vision",
+      "presences": "Die Präsenzen",
+      "work": "Die Arbeit",
+      "pulse": "Der Puls"
+    },
+    "sub": {
+      "all": "Alle",
+      "people": "Menschen",
+      "communities": "Gemeinschaften",
+      "scenes": "Orte",
+      "gatherings": "Versammlungen",
+      "practices": "Praktiken",
+      "works": "Werke",
+      "ideas": "Ideen",
+      "contribute": "Beitragen",
+      "pipeline": "Pipeline",
+      "contributors": "Beitragende",
+      "assets": "Werte",
+      "resonance": "Resonanz",
+      "nodes": "Knoten"
+    },
+    "secondary": "Ebenen-Navigation"
   },
   "autoRefresh": {
     "label": "Selbst-Aktualisierung",
@@ -170,12 +194,30 @@
     "errorGeneric": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
     "errorNetwork": "Verbindungsfehler. Bitte versuche es erneut.",
     "roles": {
-      "livingStructureWeaver": { "name": "Lebendige-Struktur-Weber·in", "desc": "Architekt·innen, Bauende, Erdhaus-Begeisterte, Cob-Praktizierende, Bambus-Züchter·innen" },
-      "nourishmentAlchemist": { "name": "Nährungs-Alchemist·in", "desc": "Permakultur-Praktizierende, Fermentierende, Nahrungswälder, Gemeinschafts-Köch·innen" },
-      "frequencyHolder": { "name": "Frequenz-Haltende", "desc": "Musizierende, Klangheiler·innen, Stimm-Praktizierende, Stille-Haltende" },
-      "vitalityKeeper": { "name": "Lebendigkeits-Hüter·in", "desc": "Körperarbeitende, Bewegungs-Begleitende, Natur-Führende, Atempraktizierende" },
-      "transmissionSource": { "name": "Übertragungs-Quelle", "desc": "Erfahrene Gemeinschaftsbauer·innen, Moderierende, Älteste jeder resonierenden Tradition" },
-      "formGrower": { "name": "Form-Gärtner·in", "desc": "Erdarbeitende, Holzbauende, Steinmetz·innen, Hände, die atmenden Raum gestalten" }
+      "livingStructureWeaver": {
+        "name": "Lebendige-Struktur-Weber·in",
+        "desc": "Architekt·innen, Bauende, Erdhaus-Begeisterte, Cob-Praktizierende, Bambus-Züchter·innen"
+      },
+      "nourishmentAlchemist": {
+        "name": "Nährungs-Alchemist·in",
+        "desc": "Permakultur-Praktizierende, Fermentierende, Nahrungswälder, Gemeinschafts-Köch·innen"
+      },
+      "frequencyHolder": {
+        "name": "Frequenz-Haltende",
+        "desc": "Musizierende, Klangheiler·innen, Stimm-Praktizierende, Stille-Haltende"
+      },
+      "vitalityKeeper": {
+        "name": "Lebendigkeits-Hüter·in",
+        "desc": "Körperarbeitende, Bewegungs-Begleitende, Natur-Führende, Atempraktizierende"
+      },
+      "transmissionSource": {
+        "name": "Übertragungs-Quelle",
+        "desc": "Erfahrene Gemeinschaftsbauer·innen, Moderierende, Älteste jeder resonierenden Tradition"
+      },
+      "formGrower": {
+        "name": "Form-Gärtner·in",
+        "desc": "Erdarbeitende, Holzbauende, Steinmetz·innen, Hände, die atmenden Raum gestalten"
+      }
     }
   },
   "bottomNav": {
@@ -201,13 +243,58 @@
     "stepIn": "Eintreten",
     "you": "Du",
     "menuLabel": "Deine Ecke",
-    "heading": "Deine Ecke",
+    "heading": "Deine Gegenwart",
     "viewProfile": "Dein Profil",
     "myCorner": "Dein Strom",
     "hereNow": "Jetzt hier",
     "portfolio": "Dein Portfolio",
     "beliefs": "Deine Überzeugungen",
-    "inviteFriend": "Freund·in einladen"
+    "inviteFriend": "Freund·in einladen",
+    "lede": "Wie das Feld dich kennt, was du geteilt hast, und wie du neu beginnen kannst, falls sich das richtig anfühlt.",
+    "loading": "Lese deine Ecke …",
+    "knownAsEyebrow": "Bekannt als",
+    "unnamedHeading": "Eine unbenannte Gegenwart",
+    "unnamedLede": "Du bist aufgetaucht, das Feld hat es bemerkt, und du hast dich noch nicht benannt. Das ist gestattet — Lesen ist immer frei.",
+    "namedNotGraduated": "Wenn du zum ersten Mal eine Stimme, ein Herz oder einen Vorschlag teilst, wirst du zu einer Mitwirkenden mit eigener Seite.",
+    "presenceSince": "Seit {days} Tagen Teil des Felds.",
+    "footprintEyebrow": "Dein Spurenbild",
+    "footprintError": "Das Feld ist gerade still. Versuch es gleich noch einmal.",
+    "footprintEmpty": "Du hast gelesen. Sobald du eine Stimme oder ein Herz teilst, erscheint es hier.",
+    "footprintOfferedPrefix": "Du hast geteilt:",
+    "footprintReceivedPrefix": "Was zurückkam:",
+    "footprintJoin": ", ",
+    "footprintVoice1": "eine Stimme",
+    "footprintVoicesN": "{n} Stimmen",
+    "footprintHeartGiven1": "ein Herz",
+    "footprintHeartsGivenN": "{n} Herzen",
+    "footprintProposal1": "einen Vorschlag",
+    "footprintProposalsN": "{n} Vorschläge",
+    "footprintHeartReceived1": "ein Herz auf deiner Stimme",
+    "footprintHeartsReceivedN": "{n} Herzen auf deinen Stimmen",
+    "footprintReply1": "eine Antwort",
+    "footprintRepliesN": "{n} Antworten",
+    "invitedByEyebrow": "Eingeladen von",
+    "invitedByBody": "Eine Mitwirkende ({who}) hat dir die Tür geöffnet. Wenn du beiträgst, fließt Wärme die Kette entlang zu ihr zurück.",
+    "notYetGraduated": "Sobald du eine Stimme oder ein Herz teilst, beginnt dein Spurenbild hier zu erscheinen.",
+    "technicalSummary": "Technische Sicht (die Form deiner Schlüssel)",
+    "contributorIdLabel": "contributor_id:",
+    "fingerprintLabel": "device_fingerprint:",
+    "clearEyebrow": "Neu beginnen",
+    "clearLede": "Lösche die Erinnerung dieses Geräts daran, wer du bist. Deine Beiträge im Feld bleiben — nur dieser Browser vergisst. Der nächste Besuch beginnt frisch.",
+    "clearCta": "Identität auf diesem Gerät löschen",
+    "clearConfirm": "Ja, neu beginnen",
+    "clearCancel": "Abbrechen",
+    "linkFromFeed": "Deine Gegenwart ansehen",
+    "menuHeading": "Dein Platz",
+    "stepInCount1": "eintreten · 1 offen gehalten",
+    "stepInCountN": "eintreten · {n} offen gehalten",
+    "signInEyebrow": "Auf einem neuen Gerät?",
+    "signInLede": "Deine Präsenz lebt im Feld, nicht in diesem Browser. Gib die E-Mail an, mit der du dich angemeldet hast, und dein ganzer Platz öffnet sich auch hier.",
+    "signInPlaceholder": "du@beispiel.de",
+    "signInCta": "Auf diesem Gerät öffnen",
+    "signInWorking": "Öffnet…",
+    "signInNotFound": "Diese E-Mail ist noch nicht angemeldet. Tritt in das Lebendige Kollektiv ein, um mitzumachen.",
+    "signInError": "Das Feld ist gerade still. Versuch es gleich nochmal."
   },
   "invite": {
     "eyebrow": "Jemanden einladen",
@@ -249,44 +336,6 @@
     "iosHeading": "Füge das erst zum Startbildschirm hinzu",
     "iosLede": "Auf dem iPhone brauchen Morgennachrichten eine installierte App. Tippe auf das Teilen-Symbol unten, dann „Zum Home-Bildschirm hinzufügen“, und öffne sie von dort.",
     "error": "Etwas hat die Änderung aufgehalten. Versuch es gleich noch einmal."
-  },
-  "me": {
-    "heading": "Deine Gegenwart",
-    "lede": "Wie das Feld dich kennt, was du geteilt hast, und wie du neu beginnen kannst, falls sich das richtig anfühlt.",
-    "loading": "Lese deine Ecke …",
-    "knownAsEyebrow": "Bekannt als",
-    "unnamedHeading": "Eine unbenannte Gegenwart",
-    "unnamedLede": "Du bist aufgetaucht, das Feld hat es bemerkt, und du hast dich noch nicht benannt. Das ist gestattet — Lesen ist immer frei.",
-    "namedNotGraduated": "Wenn du zum ersten Mal eine Stimme, ein Herz oder einen Vorschlag teilst, wirst du zu einer Mitwirkenden mit eigener Seite.",
-    "presenceSince": "Seit {days} Tagen Teil des Felds.",
-    "footprintEyebrow": "Dein Spurenbild",
-    "footprintError": "Das Feld ist gerade still. Versuch es gleich noch einmal.",
-    "footprintEmpty": "Du hast gelesen. Sobald du eine Stimme oder ein Herz teilst, erscheint es hier.",
-    "footprintOfferedPrefix": "Du hast geteilt:",
-    "footprintReceivedPrefix": "Was zurückkam:",
-    "footprintJoin": ", ",
-    "footprintVoice1": "eine Stimme",
-    "footprintVoicesN": "{n} Stimmen",
-    "footprintHeartGiven1": "ein Herz",
-    "footprintHeartsGivenN": "{n} Herzen",
-    "footprintProposal1": "einen Vorschlag",
-    "footprintProposalsN": "{n} Vorschläge",
-    "footprintHeartReceived1": "ein Herz auf deiner Stimme",
-    "footprintHeartsReceivedN": "{n} Herzen auf deinen Stimmen",
-    "footprintReply1": "eine Antwort",
-    "footprintRepliesN": "{n} Antworten",
-    "invitedByEyebrow": "Eingeladen von",
-    "invitedByBody": "Eine Mitwirkende ({who}) hat dir die Tür geöffnet. Wenn du beiträgst, fließt Wärme die Kette entlang zu ihr zurück.",
-    "notYetGraduated": "Sobald du eine Stimme oder ein Herz teilst, beginnt dein Spurenbild hier zu erscheinen.",
-    "technicalSummary": "Technische Sicht (die Form deiner Schlüssel)",
-    "contributorIdLabel": "contributor_id:",
-    "fingerprintLabel": "device_fingerprint:",
-    "clearEyebrow": "Neu beginnen",
-    "clearLede": "Lösche die Erinnerung dieses Geräts daran, wer du bist. Deine Beiträge im Feld bleiben — nur dieser Browser vergisst. Der nächste Besuch beginnt frisch.",
-    "clearCta": "Identität auf diesem Gerät löschen",
-    "clearConfirm": "Ja, neu beginnen",
-    "clearCancel": "Abbrechen",
-    "linkFromFeed": "Deine Gegenwart ansehen"
   },
   "people": {
     "eyebrow": "Eine Ecke des Organismus",

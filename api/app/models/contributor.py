@@ -47,5 +47,26 @@ class ContributorCreate(ContributorBase):
 class Contributor(ContributorBase):
     id: UUID = Field(default_factory=uuid4)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # Claim signals. A contributor created directly (graduate, register)
+    # is claimed by the person who made them. A contributor minted as
+    # a placeholder (e.g. by the inspired-by resolver so a door stays
+    # open for an artist or teacher named here) is unclaimed until the
+    # real person walks through it.
+    claimed: bool = Field(
+        default=True,
+        description=(
+            "True when the node represents a person or group who themselves "
+            "walked in. False on placeholder nodes held open for someone else "
+            "to claim."
+        ),
+    )
+    canonical_url: Optional[str] = Field(
+        default=None,
+        description=(
+            "Primary outward-facing URL for this identity. Filled on "
+            "placeholder nodes created by the inspired-by resolver; "
+            "optional for self-registered contributors."
+        ),
+    )
 
     model_config = ConfigDict(from_attributes=True)

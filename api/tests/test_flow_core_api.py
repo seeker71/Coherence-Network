@@ -685,3 +685,182 @@ async def test_spec_delete_not_found_returns_404():
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         r = await c.delete("/api/spec-registry/nonexistent-spec", headers=AUTH)
         assert r.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_assets_handles_non_pipeline_asset_types():
+    """Regression: /api/assets crashed 500 when graph had nodes with
+    asset_type values outside the CODE|MODEL|CONTENT|DATA pipeline
+    enum (e.g. BLUEPRINT, VIDEO, AUDIO from the Living Collective KB
+    seed + resolver-minted album/track nodes). The listing model
+    accepts any string; the POST contract (AssetCreate) keeps the
+    enum tight."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # Seed an asset node directly in the graph with a non-pipeline
+        # asset_type — the exact shape the resolver + KB seed produce.
+        node_id = f"asset-regression-{uuid4().hex[:8]}"
+        r = await c.post(
+            "/api/graph/nodes",
+            json={
+                "id": node_id,
+                "type": "asset",
+                "name": "Regression blueprint",
+                "description": "Non-pipeline asset_type that used to crash list",
+                "properties": {"asset_type": "BLUEPRINT"},
+            },
+        )
+        assert r.status_code in (200, 201), r.text
+
+        # The listing must succeed and include the node we just seeded.
+        r = await c.get("/api/assets?limit=500")
+        assert r.status_code == 200, r.text
+        items = r.json().get("items", [])
+        types_seen = {item.get("type") for item in items}
+        # At minimum, our seeded type must flow through the response
+        # unchanged — not coerced to CONTENT or dropped.
+        assert "BLUEPRINT" in types_seen, (
+            f"expected BLUEPRINT in {types_seen}; the read model must "
+            "accept any asset_type string from the graph"
+        )
+
+
+@pytest.mark.asyncio
+async def test_graduate_email_keyed_is_idempotent_across_devices():
+    """Same email on two different device fingerprints must resolve
+    to the same contributor — that's the core of cross-device
+    identity. A duplicate here means a visitor's presence shatters
+    when they open the app on their phone."""
+    email = f"alice+{uuid4().hex[:6]}@example.com"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r1 = await c.post("/api/contributors/graduate", json={
+            "author_name": "Alice",
+            "email": email,
+            "device_fingerprint": "laptop-fp",
+        })
+        assert r1.status_code == 200, r1.text
+        d1 = r1.json()
+        assert d1["created"] is True
+        assert d1["email"] == email
+        first_id = d1["contributor_id"]
+
+        # Second device, same email — must return the SAME id.
+        r2 = await c.post("/api/contributors/graduate", json={
+            "author_name": "Alice",
+            "email": email,
+            "device_fingerprint": "phone-fp",
+        })
+        assert r2.status_code == 200, r2.text
+        d2 = r2.json()
+        assert d2["created"] is False
+        assert d2["contributor_id"] == first_id
+
+
+@pytest.mark.asyncio
+async def test_graduate_merges_profile_without_clobbering():
+    """A second graduate call should merge newly-provided fields
+    without wiping the ones set on the first call. Consent flags
+    and invited_by especially — these get set once and must not
+    get silently reset on a name update."""
+    email = f"merge+{uuid4().hex[:6]}@example.com"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r1 = await c.post("/api/contributors/graduate", json={
+            "author_name": "Initial Name",
+            "email": email,
+            "consent_findable": True,
+            "consent_email_updates": True,
+            "resonant_roles": ["frequency-holder"],
+        })
+        assert r1.status_code == 200
+        cid = r1.json()["contributor_id"]
+
+        # Second call updates only the name — consent flags + roles
+        # must survive.
+        r2 = await c.post("/api/contributors/graduate", json={
+            "author_name": "Updated Name",
+            "email": email,
+        })
+        assert r2.status_code == 200
+        assert r2.json()["contributor_id"] == cid
+
+        # Verify on the graph that consent flags + roles are intact.
+        r3 = await c.get(f"/api/graph/nodes/contributor:{cid}")
+        assert r3.status_code == 200
+        node = r3.json()
+        assert node.get("consent_findable") is True
+        assert node.get("consent_email_updates") is True
+        assert node.get("resonant_roles") == ["frequency-holder"]
+
+
+@pytest.mark.asyncio
+async def test_claim_by_identity_restores_contributor_across_devices():
+    """Opening the app on a new device with nothing in localStorage,
+    asserting the email the visitor registered with must return
+    their full contributor profile so the UI can rehydrate."""
+    email = f"claim+{uuid4().hex[:6]}@example.com"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r1 = await c.post("/api/contributors/graduate", json={
+            "author_name": "Recoverable",
+            "email": email,
+            "locale": "de",
+            "resonant_roles": ["vitality-keeper"],
+        })
+        cid = r1.json()["contributor_id"]
+
+        # New device — just the email.
+        r2 = await c.post("/api/contributors/claim-by-identity", json={
+            "email": email,
+        })
+        assert r2.status_code == 200, r2.text
+        d2 = r2.json()
+        assert d2["contributor_id"] == cid
+        assert d2["author_display_name"] == "Recoverable"
+        assert d2["locale"] == "de"
+        assert d2["matched_provider"] == "email"
+        assert "vitality-keeper" in d2["resonant_roles"]
+
+        # Unknown email → 404 (not 500, so the UI can show a clean
+        # 'not registered yet' message).
+        r3 = await c.post("/api/contributors/claim-by-identity", json={
+            "email": f"ghost+{uuid4().hex[:6]}@nowhere.test",
+        })
+        assert r3.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_claim_by_identity_requires_at_least_one_provider():
+    """Empty claim → 400, not 500 — the client sent an invalid
+    request and should see a clean error."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.post("/api/contributors/claim-by-identity", json={})
+        assert r.status_code == 400
+        assert "identity" in r.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_register_interest_returns_contributor_id():
+    """The /vision/join form submits here. The response must carry
+    the contributor_id so the client can persist it in localStorage
+    — without this the 'You' page forgets the visitor on the next
+    page load."""
+    email = f"joiner+{uuid4().hex[:6]}@example.com"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        r = await c.post("/api/interest/register", json={
+            "name": "Joiner Testcase",
+            "email": email,
+            "resonant_roles": ["transmission-source"],
+            "locale": "en",
+            "consent_findable": True,
+        })
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["contributor_id"], "register must return contributor_id"
+
+        # Re-submit with the same email — must resolve to the same
+        # contributor (the backend merged rather than duplicated).
+        r2 = await c.post("/api/interest/register", json={
+            "name": "Joiner Testcase",
+            "email": email,
+            "resonant_roles": ["transmission-source"],
+            "locale": "en",
+        })
+        assert r2.json()["contributor_id"] == data["contributor_id"]
