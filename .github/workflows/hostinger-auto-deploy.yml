@@ -6,6 +6,7 @@ on:
     paths:
       - 'api/**'
       - 'web/**'
+      - 'pulse/**'
       - 'deploy/hostinger/**'
       - 'scripts/verify_web_api_deploy.sh'
       - '.github/workflows/hostinger-auto-deploy.yml'

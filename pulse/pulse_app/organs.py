@@ -72,10 +72,17 @@ UPSTREAM_WEB_PULSE = "web_pulse"       # {WEB_BASE}/pulse
 UPSTREAM_WEB_VITALITY = "web_vitality"  # {WEB_BASE}/vitality
 
 
-# Error boundary marker rendered by the Next.js root error.tsx. When this
-# string appears in an HTML response body we know the page crashed during
-# SSR or client hydration — regardless of the 200 status code.
-_NEXT_ERROR_MARKER = "Something went wrong"
+# Error boundary marker rendered by the Next.js root error.tsx
+# (web/app/error.tsx). The error page wraps its main element in
+# `role="alert" aria-live="assertive"` — a combination that only
+# appears when the error boundary actually rendered. The previous
+# marker ("Something went wrong") produced false positives once the
+# locale messages JSON started embedding the same string inline
+# (`"error":"Something went wrong"` in every page's data), which
+# silenced web/page_pulse/page_vitality for days even though the
+# pages rendered fine. This attribute pair is narrower — it's not
+# a user-facing string that any other surface can legitimately carry.
+_NEXT_ERROR_MARKER = 'role="alert" aria-live="assertive"'
 
 
 # --- helpers --------------------------------------------------------------

@@ -99,8 +99,15 @@ env_path.write_text("\n".join(out) + "\n")
 PY
 
 cd "$COMPOSE_ROOT"
-docker compose build api web >> "$LOG_FILE" 2>&1
-docker compose up -d api web >> "$LOG_FILE" 2>&1
+# api + web + pulse share the same repo and SHA. Rebuilding all three
+# on every push keeps the witness in step with what it's probing —
+# when the web page's marker vocabulary drifts (as it did when locale
+# messages started embedding "Something went wrong" inline), the
+# pulse probe that reads those pages needs to redeploy alongside to
+# pick up the updated marker, otherwise it silences real organs on
+# false positives.
+docker compose build api web pulse >> "$LOG_FILE" 2>&1
+docker compose up -d api web pulse >> "$LOG_FILE" 2>&1
 
 # Wait for both containers to reach the "running" state in docker compose.
 # The deeper health check is left to the workflow's Verify Public Deployment

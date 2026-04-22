@@ -152,6 +152,59 @@ check_url() {
   return 1
 }
 
+check_pulse_witness() {
+  # The witness at pulse.coherencycoin.com probes every organ every
+  # 30s. When it reports overall != "breathing" or has ongoing
+  # silences, a surface is broken — and the deploy that just landed
+  # probably caused it (or the deploy before this one, if we weren't
+  # looking). Previously the verifier only checked /api/health,
+  # which missed silent page-level breakage for days. This check
+  # closes the loop: a deploy that breaks a probed surface fails
+  # verification here, not five days later when a human notices.
+  local pulse_url="${PULSE_URL:-https://pulse.coherencycoin.com}/pulse/now"
+  echo
+  echo "==> Pulse witness: ${pulse_url}"
+  local body_file="$TMP_DIR/pulse_now.json"
+  if ! run_with_retries "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -o "$body_file" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$pulse_url" >/dev/null; then
+    echo "WARN: pulse witness unreachable — skipping (treat as soft signal when the witness itself is down)"
+    return 0
+  fi
+  local overall silences_count silent_organs
+  overall="$(python3 -c 'import sys, json
+try:
+    print(json.load(open(sys.argv[1])).get("overall", ""))
+except Exception:
+    print("")' "$body_file" 2>/dev/null)"
+  silences_count="$(python3 -c 'import sys, json
+try:
+    print(len(json.load(open(sys.argv[1])).get("ongoing_silences", []) or []))
+except Exception:
+    print(0)' "$body_file" 2>/dev/null)"
+  silent_organs="$(python3 -c 'import sys, json
+try:
+    data = json.load(open(sys.argv[1]))
+    names = [s.get("organ", "?") for s in (data.get("ongoing_silences") or [])]
+    print(", ".join(names))
+except Exception:
+    print("")' "$body_file" 2>/dev/null)"
+
+  echo "overall=${overall:-unknown} ongoing_silences=${silences_count}"
+  if [[ "$overall" == "breathing" && "${silences_count:-0}" -eq 0 ]]; then
+    echo "OK: every organ breathing"
+    return 0
+  fi
+
+  echo "FAIL: pulse reports unhealthy state"
+  if [[ -n "$silent_organs" ]]; then
+    echo "Silent organs: $silent_organs"
+  fi
+  echo "Hint: hit $pulse_url for the full organ list + silence ids"
+  return 1
+}
+
 check_web_css_assets() {
   local web_root_url="$1"
   local html_file="$TMP_DIR/web_root.body.html"
@@ -567,6 +620,7 @@ check_web_runtime_sha \
   "${API_URL%/}/api/gates/main-head" \
   "$VERIFY_REQUIRE_WEB_HEALTH_PROXY_SHA" || fail=1
 check_cors "${API_URL%/}/api/health" "${WEB_URL%/}" || fail=1
+check_pulse_witness || fail=1
 if [[ "$VERIFY_REQUIRE_TELEGRAM_ALERTS" == "1" ]]; then
   check_telegram_alert_config "${API_URL%/}/api/agent/telegram/diagnostics" || fail=1
 else
