@@ -234,25 +234,6 @@ async def test_event_resolves_to_community_identity():
 
 
 @pytest.mark.asyncio
-async def test_idempotent_on_canonical_url():
-    """Re-adding the same identity reuses the node and reports edge_existed."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        source = await _create_source(c)
-        with patch.object(service, "_fetch", _fake_fetch(ARTIST_HTML, "https://liquidbloom.bandcamp.com/")):
-            first = await c.post("/api/inspired-by", json={
-                "name": "https://liquidbloom.bandcamp.com",
-                "source_contributor_id": source,
-            })
-            second = await c.post("/api/inspired-by", json={
-                "name": "https://liquidbloom.bandcamp.com",
-                "source_contributor_id": source,
-            })
-        assert first.json()["identity_created"] is True
-        assert second.json()["identity_created"] is False
-        assert second.json()["edge_existed"] is True
-        assert first.json()["identity"]["id"] == second.json()["identity"]["id"]
-
-
 @pytest.mark.asyncio
 async def test_resolver_prevents_duplicates_across_variants_and_retype():
     """The resolver's duplicate-prevention contract, exercised as one

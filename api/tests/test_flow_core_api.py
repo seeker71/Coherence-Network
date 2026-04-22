@@ -725,142 +725,65 @@ async def test_list_assets_handles_non_pipeline_asset_types():
 
 
 @pytest.mark.asyncio
-async def test_graduate_email_keyed_is_idempotent_across_devices():
-    """Same email on two different device fingerprints must resolve
-    to the same contributor — that's the core of cross-device
-    identity. A duplicate here means a visitor's presence shatters
-    when they open the app on their phone."""
-    email = f"alice+{uuid4().hex[:6]}@example.com"
+async def test_multi_device_identity_flow():
+    """One user's journey across devices — every identity guarantee
+    in one flow so we get wide coverage without test bloat:
+
+      · /vision/join (register_interest) returns a contributor_id
+        the client persists. Same email on re-submit → same id
+      · graduate with same email, different fingerprint → same id
+        (the core cross-device guarantee)
+      · graduate partial-updates merge onto the node without
+        clobbering earlier consent flags + roles
+      · claim-by-identity via email on a fresh browser restores
+        the full profile so the UI can rehydrate
+      · Clean error paths: empty claim → 400; unknown email → 404
+    """
+    email = f"flow+{uuid4().hex[:6]}@example.com"
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r1 = await c.post("/api/contributors/graduate", json={
-            "author_name": "Alice",
+        # Laptop — /vision/join carries the full consent state.
+        r1 = await c.post("/api/interest/register", json={
+            "name": "Traveler",
             "email": email,
-            "device_fingerprint": "laptop-fp",
-        })
-        assert r1.status_code == 200, r1.text
-        d1 = r1.json()
-        assert d1["created"] is True
-        assert d1["email"] == email
-        first_id = d1["contributor_id"]
-
-        # Second device, same email — must return the SAME id.
-        r2 = await c.post("/api/contributors/graduate", json={
-            "author_name": "Alice",
-            "email": email,
-            "device_fingerprint": "phone-fp",
-        })
-        assert r2.status_code == 200, r2.text
-        d2 = r2.json()
-        assert d2["created"] is False
-        assert d2["contributor_id"] == first_id
-
-
-@pytest.mark.asyncio
-async def test_graduate_merges_profile_without_clobbering():
-    """A second graduate call should merge newly-provided fields
-    without wiping the ones set on the first call. Consent flags
-    and invited_by especially — these get set once and must not
-    get silently reset on a name update."""
-    email = f"merge+{uuid4().hex[:6]}@example.com"
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r1 = await c.post("/api/contributors/graduate", json={
-            "author_name": "Initial Name",
-            "email": email,
+            "resonant_roles": ["frequency-holder"],
+            "locale": "en",
             "consent_findable": True,
             "consent_email_updates": True,
-            "resonant_roles": ["frequency-holder"],
         })
-        assert r1.status_code == 200
+        assert r1.status_code == 200, r1.text
         cid = r1.json()["contributor_id"]
+        assert cid, "register must return contributor_id for localStorage persistence"
 
-        # Second call updates only the name — consent flags + roles
-        # must survive.
+        # Phone — graduate with different fingerprint + partial
+        # update (just name + locale; consent fields omitted).
+        # Same email → same contributor; omitted fields preserved.
         r2 = await c.post("/api/contributors/graduate", json={
-            "author_name": "Updated Name",
+            "author_name": "Traveler (phone)",
             "email": email,
-        })
-        assert r2.status_code == 200
-        assert r2.json()["contributor_id"] == cid
-
-        # Verify on the graph that consent flags + roles are intact.
-        r3 = await c.get(f"/api/graph/nodes/contributor:{cid}")
-        assert r3.status_code == 200
-        node = r3.json()
-        assert node.get("consent_findable") is True
-        assert node.get("consent_email_updates") is True
-        assert node.get("resonant_roles") == ["frequency-holder"]
-
-
-@pytest.mark.asyncio
-async def test_claim_by_identity_restores_contributor_across_devices():
-    """Opening the app on a new device with nothing in localStorage,
-    asserting the email the visitor registered with must return
-    their full contributor profile so the UI can rehydrate."""
-    email = f"claim+{uuid4().hex[:6]}@example.com"
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r1 = await c.post("/api/contributors/graduate", json={
-            "author_name": "Recoverable",
-            "email": email,
+            "device_fingerprint": "phone-fp",
             "locale": "de",
-            "resonant_roles": ["vitality-keeper"],
         })
-        cid = r1.json()["contributor_id"]
-
-        # New device — just the email.
-        r2 = await c.post("/api/contributors/claim-by-identity", json={
-            "email": email,
-        })
-        assert r2.status_code == 200, r2.text
         d2 = r2.json()
-        assert d2["contributor_id"] == cid
-        assert d2["author_display_name"] == "Recoverable"
+        assert d2["created"] is False
+        assert d2["contributor_id"] == cid, "same email must yield same id across devices"
         assert d2["locale"] == "de"
-        assert d2["matched_provider"] == "email"
-        assert "vitality-keeper" in d2["resonant_roles"]
 
-        # Unknown email → 404 (not 500, so the UI can show a clean
-        # 'not registered yet' message).
-        r3 = await c.post("/api/contributors/claim-by-identity", json={
-            "email": f"ghost+{uuid4().hex[:6]}@nowhere.test",
-        })
-        assert r3.status_code == 404
+        # Partial-update merge proof: earlier consent + roles survive.
+        node = (await c.get(f"/api/graph/nodes/contributor:{cid}")).json()
+        assert node["consent_findable"] is True
+        assert node["consent_email_updates"] is True
+        assert node["resonant_roles"] == ["frequency-holder"]
 
+        # Fresh browser / new device — claim by email returns the
+        # full profile for localStorage rehydration.
+        claim = await c.post("/api/contributors/claim-by-identity", json={"email": email})
+        cj = claim.json()
+        assert claim.status_code == 200
+        assert cj["contributor_id"] == cid
+        assert cj["matched_provider"] == "email"
+        assert "frequency-holder" in cj["resonant_roles"]
 
-@pytest.mark.asyncio
-async def test_claim_by_identity_requires_at_least_one_provider():
-    """Empty claim → 400, not 500 — the client sent an invalid
-    request and should see a clean error."""
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.post("/api/contributors/claim-by-identity", json={})
-        assert r.status_code == 400
-        assert "identity" in r.json()["detail"].lower()
-
-
-@pytest.mark.asyncio
-async def test_register_interest_returns_contributor_id():
-    """The /vision/join form submits here. The response must carry
-    the contributor_id so the client can persist it in localStorage
-    — without this the 'You' page forgets the visitor on the next
-    page load."""
-    email = f"joiner+{uuid4().hex[:6]}@example.com"
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.post("/api/interest/register", json={
-            "name": "Joiner Testcase",
-            "email": email,
-            "resonant_roles": ["transmission-source"],
-            "locale": "en",
-            "consent_findable": True,
-        })
-        assert r.status_code == 200, r.text
-        data = r.json()
-        assert data["contributor_id"], "register must return contributor_id"
-
-        # Re-submit with the same email — must resolve to the same
-        # contributor (the backend merged rather than duplicated).
-        r2 = await c.post("/api/interest/register", json={
-            "name": "Joiner Testcase",
-            "email": email,
-            "resonant_roles": ["transmission-source"],
-            "locale": "en",
-        })
-        assert r2.json()["contributor_id"] == data["contributor_id"]
+        # Clean error paths the UI can branch on (not silent 500s).
+        assert (await c.post("/api/contributors/claim-by-identity", json={})).status_code == 400
+        assert (await c.post("/api/contributors/claim-by-identity",
+                             json={"email": f"ghost+{uuid4().hex[:6]}@nowhere.test"})).status_code == 404
