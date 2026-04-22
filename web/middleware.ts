@@ -30,6 +30,21 @@ function bestFromAcceptLanguage(header: string | null): string | null {
 }
 
 export function middleware(req: NextRequest) {
+  // Route-level redirect: /vision/visual-* ids are asset nodes (images
+  // generated for a concept), served on /assets/[id] where the
+  // file_path actually renders. The server-component redirect inside
+  // the page was getting swallowed by something in Next 15.5's error
+  // handling (the error boundary returned 200 instead of Next picking
+  // up NEXT_REDIRECT), so middleware handles the classification
+  // instead. Runs before any page code, so no error-boundary interference.
+  const { pathname } = req.nextUrl;
+  if (pathname.startsWith("/vision/")) {
+    const id = pathname.slice("/vision/".length);
+    if (id.startsWith("visual-lc-") || id.startsWith("visual-")) {
+      return NextResponse.redirect(new URL(`/assets/${id}`, req.url), 307);
+    }
+  }
+
   const qs = req.nextUrl.searchParams.get("lang");
   const existing = req.cookies.get(COOKIE_NAME)?.value;
 
