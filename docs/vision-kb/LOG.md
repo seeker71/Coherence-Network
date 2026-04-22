@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] concepts | DEEPER draft ripened into lc-deeper-pattern — a new Foundational Teachings section
+
+- The DEEPER draft (201 lines) held content unlike anything in the KB: Robert Edward Grant's mathematics of imaginary-plane folding, Gerald Pollack's EZ water, Viktor Schauberger's river-as-circulation, Masaru Emoto's water crystallography, scalar wave consciousness, Lemurian crystal amplification, sacred frequencies as harmonic chord, the field as already-here needing only recognition.
+- Preserved whole as `concepts/lc-deeper-pattern.md` — one teaching across five coherent sections. git mv kept history. Added concept frontmatter (id, hz: 741, status: expanding) and adjusted the title.
+- **Structural addition**: created a new "Foundational Teachings (beyond the core 51)" section in the KB INDEX, sitting between Level 2 and Level 3. The teaching is meta to the fractal — it doesn't fit inside Level 1-3 without breaking the "1 + 3 + 5 + 21 + 9 + 9 = 51" structure the Vision paragraph names. Placing it alongside preserves the core structure and makes room for future teachings of this kind.
+- Concept count in header: 54 → 55; status count: 51 expanding → 52 expanding.
+- Cross-references from related concepts (lc-circulation → water section, lc-resonating → chord section, lc-field-sensing → field-is-already-here section) are candidate future breaths. Not added this pass to keep the movement contained.
+- **Why**: this was the draft where the most content genuinely unique to DEEPER had not migrated elsewhere. Preserving whole as a new concept honors that. The specific thinkers — Pollack, Schauberger, Emoto, Grant — now have a named home in the KB.
+
 ## [2026-04-22] locations | TRANSFORM draft relocated — urban-transformations.md
 
 - `locations/INDEX.md` held four climate-based references (Rockies, Pacific Coast, Mediterranean, Tropical). The TRANSFORM draft (353 lines) held a different axis of the same theme — four built-environment starting points (apartment building, suburban block, city neighborhood, village scale) becoming living organisms without demolition.
