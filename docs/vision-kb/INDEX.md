@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-15 | **Concepts**: 54 | **Status**: 51 expanding, 3 seed
+> **Last maintained**: 2026-04-22 | **Concepts**: 55 | **Status**: 52 expanding, 3 seed
 
 ## How to use this KB
 
@@ -74,6 +74,12 @@ A community of 50-200 people living as a single organism. What amplifies alivene
 - [Inclusion & Diversity](concepts/lc-v-inclusion-diversity.md) — 639 Hz
 - [Play & Expansion](concepts/lc-v-play-expansion.md) — 396 Hz
 - [Comfort, Joy, Softness](concepts/lc-v-comfort-joy.md) — 528 Hz
+
+### Foundational Teachings (beyond the core 51)
+
+Teachings that sit alongside the fractal rather than inside it — the physics and metaphysics the core concepts emerge from.
+
+- **[The Deeper Pattern](concepts/lc-deeper-pattern.md)** — 741 Hz — imagination becomes real through attention, water as planetary consciousness, crystal structure of community, resonance as creative force, the field as already-here (Pollack, Schauberger, Emoto, Grant)
 
 ### Level 3 — Vocabulary (9)
 - [Coherence](concepts/lc-w-coherence.md) — 432 Hz — frequencies align as one
