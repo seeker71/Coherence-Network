@@ -145,6 +145,19 @@ export default async function VisionConceptPage({
 
   const languageMeta = concept.language_meta;
 
+  // Wrong-type guard: the concepts API used to return any node with a
+  // matching id, so an asset like `visual-lc-beauty-1` (type=asset,
+  // domains=[living-collective]) rendered here with an empty hero.
+  // The service now enforces type=concept, and this page redirects to
+  // the right surface if a caller still lands here with a different
+  // type — defence in depth. Gives visitors a page that actually
+  // shows the image instead of an empty concept skeleton.
+  const conceptType = (concept as { type?: string }).type;
+  if (conceptType && conceptType !== "concept") {
+    if (conceptType === "asset") redirect(`/assets/${conceptId}`);
+    redirect(`/nodes/${conceptId}`);
+  }
+
   const isLC = concept.domains?.includes("living-collective");
   if (!isLC) redirect(`/concepts/${conceptId}`);
 

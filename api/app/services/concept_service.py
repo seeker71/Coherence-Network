@@ -70,7 +70,22 @@ def list_concepts(limit: int = 50, offset: int = 0) -> dict[str, Any]:
 
 
 def get_concept(concept_id: str) -> dict[str, Any] | None:
-    return _gs().get_node(concept_id)
+    """Fetch a concept node by id. Returns None for non-concept nodes
+    (asset, contributor, event, etc.) so the concepts API doesn't
+    accidentally render an asset as if it were a concept. The bug
+    this guards against: an asset like ``visual-lc-beauty-1`` has
+    ``domains: [living-collective]`` because it was generated for a
+    living-collective concept, but it's type=asset — the vision page
+    was rendering it with an empty hero because the asset has
+    ``file_path`` not ``visual_path``, no ``story_content``, no
+    ``sacred_frequency``. Enforcing type=concept at the service
+    boundary keeps the concepts surface clean."""
+    node = _gs().get_node(concept_id)
+    if not node:
+        return None
+    if node.get("type") != "concept":
+        return None
+    return node
 
 
 def search_concepts(query: str, limit: int = 20) -> list[dict[str, Any]]:
