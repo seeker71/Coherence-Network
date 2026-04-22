@@ -1,5 +1,6 @@
-# The Living Collective — Scales of the Field
+# Organism Stages — From Seed to Network
 
+> The lived experience of each scale, as narrative companion to [INDEX.md](INDEX.md)'s practical numbers.
 > From a fire on bare ground to a living network spanning a bioregion.
 > How a field is born, grows, divides, and connects — at every scale.
 
