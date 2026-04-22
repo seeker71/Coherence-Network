@@ -249,6 +249,63 @@ class TestViewTracking:
         assert "unique_contributors" in data
         assert "assets_viewed" in data
 
+    def test_ping_records_attributed_view(self):
+        """POST /api/views/ping records a view tied to X-Contributor-Id."""
+        cid = _contributor_id()
+        concept_id = f"lc-test-{uuid.uuid4().hex[:6]}"
+        res = client.post(
+            "/api/views/ping",
+            json={"asset_id": concept_id, "source_page": f"/vision/{concept_id}"},
+            headers={
+                "X-Contributor-Id": cid,
+                "X-Session-Fingerprint": f"sess-{uuid.uuid4().hex[:8]}",
+            },
+        )
+        assert res.status_code == 200
+        assert res.json()["ok"] is True
+
+        # The ping attached the contributor — it should show in history
+        history = client.get(f"/api/views/contributor/{cid}").json()
+        assert any(h["asset_id"] == concept_id for h in history)
+
+    def test_ping_anonymous_still_tracks(self):
+        """A ping without X-Contributor-Id still records by session."""
+        concept_id = f"lc-anon-{uuid.uuid4().hex[:6]}"
+        res = client.post(
+            "/api/views/ping",
+            json={"asset_id": concept_id},
+            headers={"X-Session-Fingerprint": f"sess-{uuid.uuid4().hex[:8]}"},
+        )
+        assert res.status_code == 200
+        stats = client.get(f"/api/views/stats/{concept_id}").json()
+        assert stats["total_views"] >= 1
+
+    def test_trail_aggregates_per_concept(self):
+        """Trail groups a contributor's reads by concept, ranked by count."""
+        cid = _contributor_id()
+        a = f"lc-a-{uuid.uuid4().hex[:6]}"
+        b = f"lc-b-{uuid.uuid4().hex[:6]}"
+
+        # a read 3 times, b read once — a should rank first
+        for _ in range(3):
+            client.post(
+                "/api/views/ping",
+                json={"asset_id": a},
+                headers={"X-Contributor-Id": cid},
+            )
+        client.post(
+            "/api/views/ping",
+            json={"asset_id": b},
+            headers={"X-Contributor-Id": cid},
+        )
+
+        trail = client.get(f"/api/views/trail/{cid}").json()
+        assert trail["total_reads"] == 4
+        assert trail["concept_count"] == 2
+        ids = [c["concept_id"] for c in trail["concepts"]]
+        assert ids[0] == a  # highest count ranks first
+        assert b in ids
+
 
 # ---------------------------------------------------------------------------
 # Discovery rewards
