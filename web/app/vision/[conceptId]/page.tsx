@@ -138,13 +138,9 @@ export default async function VisionConceptPage({
   const t = createTranslator(lang);
 
   // Early route-level type classification — before any concept fetch.
-  // The /vision/[conceptId] route is for living-collective concepts.
-  // Visual asset ids ("visual-lc-*") are images generated for those
-  // concepts, served on /assets/[id] where the file_path actually
-  // renders. Classifying the id up-front keeps us from streaming a
-  // half-composed concept page and then trying to redirect mid-stream,
-  // which is where the previous attempt silently failed to escape.
+  console.log(`[vision-page] entered conceptId=${conceptId}`);
   if (conceptId.startsWith("visual-lc-") || conceptId.startsWith("visual-")) {
+    console.log(`[vision-page] redirecting visual id ${conceptId} to /assets/${conceptId}`);
     redirect(`/assets/${conceptId}`);
   }
 
