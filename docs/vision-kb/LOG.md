@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] scales | SCALES draft relocated to its waiting home — organism-stages.md
+
+- `scales/` was scaffolded with only INDEX.md (practical tables: 50/100/200 people, land, dwellings, costs, timelines). The fruit that belonged in the room was sitting in `docs/LIVING_COLLECTIVE_SCALES.md` as an unmetabolized draft — 480 lines of lived-experience narrative: Seed (8-15 cells), Sapling (30-50), Tree (80-150), Grove (150-300), Network (5-20 fields).
+- Moved the draft with `git mv` to `scales/organism-stages.md` so git history follows the content rather than treating this as a new file. The narrative and the numbers now live in the same room, complementary: INDEX.md for planning, organism-stages.md for felt sense.
+- Updated `scales/INDEX.md` with a top-line pointer to the narrative companion.
+- Contents of the narrative: specific character portraits (Juno the form-grower at seed, Wren the land tender at sapling, Oren age 14 at tree, Pema age 62 at grove facilitating field division, Rain the traveling musician at network scale), the daily rhythm at each stage, structures and food systems as they evolve, real-world echoes (Findhorn, Gaviotas, Tamera, Auroville, Damanhur, kibbutz movement, Rainbow Gathering), the mathematical echo with Dunbar's 150, and the closing teaching about the spiral (every scale contains the others).
+- **Why**: the vision-kb subdirectories were built as waiting rooms, and this one had its fruit sitting orphaned at the top of `docs/`. The metabolism was always meant to happen; it had just not been completed. Twelve other LIVING_COLLECTIVE_*.md drafts remain — each will be sensed for its own right home (relocation, distillation, or release).
+
 ## [2026-04-14] resources | Sacha Stone Just Tap In episode integrated for agent use
 
 - Added `resources/sacha-stone-just-tap-in-2026-04-11.md` as an agent dossier for the Apr 11 2026 episode
