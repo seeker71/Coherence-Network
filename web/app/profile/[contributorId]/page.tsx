@@ -373,7 +373,7 @@ export default async function ContributorProfilePage({
                     </span>
                   ) : null}
                   <Link
-                    href={`/nodes/${encodeURIComponent(asset.id)}`}
+                    href={`/assets/${encodeURIComponent(asset.id)}`}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                   >
                     View
