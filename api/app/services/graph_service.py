@@ -12,13 +12,13 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import and_, func, or_, text
+from sqlalchemy import and_, func, or_
 from sqlalchemy.exc import IntegrityError
 
 from app.models.graph import (
     Edge, Node,
     CANONICAL_EDGE_TYPE_SET, CANONICAL_NODE_TYPE_SET, NODE_TYPE_SET,
-    LIFECYCLE_DEFAULTS, SYMMETRIC_EDGE_TYPES,
+    LIFECYCLE_DEFAULTS,
 )
 from app.services.unified_db import session
 from app.config.edge_types import CANONICAL_EDGE_TYPES
@@ -30,6 +30,14 @@ _VALID_EDGE_TYPES_MSG = (
 )
 
 _VALID_LIFECYCLE_STATES = frozenset({"gas", "ice", "water"})
+_SOURCE_PROVENANCE_REQUIRED_KEYS = (
+    "source_artifact_id",
+    "sensing_id",
+    "extraction_method",
+    "confidence",
+    "ingestion_policy",
+    "rationale",
+)
 
 
 # ── Spec 169: Semantic validation helpers ────────────────────────────
@@ -58,6 +66,40 @@ def validate_no_self_loop(from_id: str, to_id: str) -> None:
         raise ValueError(
             "Self-loop edges are not allowed: from_node_id and to_node_id must be different."
         )
+
+
+def validate_source_edge_provenance(provenance: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize source-artifact provenance for inferred edges."""
+    if not isinstance(provenance, dict):
+        raise ValueError("provenance must be an object")
+
+    missing = [
+        key
+        for key in _SOURCE_PROVENANCE_REQUIRED_KEYS
+        if key not in provenance or provenance.get(key) in (None, "")
+    ]
+    if missing:
+        raise ValueError(f"provenance missing required keys: {', '.join(missing)}")
+
+    try:
+        confidence = float(provenance["confidence"])
+    except (TypeError, ValueError) as exc:
+        raise ValueError("provenance confidence must be a number") from exc
+    if confidence < 0.0 or confidence > 1.0:
+        raise ValueError("provenance confidence must be between 0.0 and 1.0")
+
+    normalized = dict(provenance)
+    normalized["confidence"] = confidence
+    for key in (
+        "source_artifact_id",
+        "sensing_id",
+        "extraction_method",
+        "ingestion_policy",
+        "rationale",
+    ):
+        normalized[key] = str(normalized[key]).strip()
+    normalized.setdefault("provenance_kind", "source_artifact_sensing")
+    return normalized
 
 
 def validate_lifecycle_state(state: str) -> None:
@@ -323,6 +365,61 @@ def update_edge(edge_id: str, **updates) -> dict[str, Any] | None:
         s.commit()
         s.refresh(edge)
         return edge.to_dict()
+
+
+def create_provenance_edge(
+    *,
+    from_id: str,
+    to_id: str,
+    type: str,
+    provenance: dict[str, Any],
+    strength: float = 1.0,
+    created_by: str = "system",
+) -> dict[str, Any]:
+    """Create or update an inferred edge with complete source provenance."""
+    if type not in CANONICAL_EDGE_TYPES and type not in CANONICAL_EDGE_TYPE_SET:
+        raise ValueError(f"edge_type '{type}' is not a recognized edge type")
+    validate_no_self_loop(from_id, to_id)
+    properties = validate_source_edge_provenance(provenance)
+
+    with session() as s:
+        existing = s.query(Edge).filter(
+            and_(Edge.from_id == from_id, Edge.to_id == to_id, Edge.type == type)
+        ).first()
+        if existing:
+            merged = dict(existing.properties or {})
+            merged.update(properties)
+            existing.properties = merged
+            existing.strength = strength
+            s.commit()
+            s.refresh(existing)
+            _invalidate_profiles(from_id, to_id)
+            return existing.to_dict()
+
+        edge = Edge(
+            id=str(uuid.uuid4())[:12],
+            from_id=from_id,
+            to_id=to_id,
+            type=type,
+            properties=properties,
+            strength=strength,
+            created_by=created_by,
+        )
+        s.add(edge)
+        s.commit()
+        s.refresh(edge)
+        _invalidate_profiles(from_id, to_id)
+        return edge.to_dict()
+
+
+def _invalidate_profiles(*entity_ids: str) -> None:
+    """Best-effort profile cache invalidation after graph writes."""
+    try:
+        from app.services import frequency_profile_service
+        for entity_id in entity_ids:
+            frequency_profile_service.invalidate(entity_id)
+    except Exception:
+        pass
 
 
 # ── Graph queries ────────────────────────────────────────────────────
