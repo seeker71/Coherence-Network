@@ -88,6 +88,20 @@ def _profile_from_properties(node: dict) -> dict[str, float]:
         elif isinstance(tag, str):
             profile[tag] = 0.5
 
+    # Source-backed sensing dimensions
+    source_artifact_id = node.get("source_artifact_id")
+    if source_artifact_id:
+        profile[str(source_artifact_id)] = max(profile.get(str(source_artifact_id), 0), 0.45)
+        profile["_source_backed"] = max(profile.get("_source_backed", 0), 0.35)
+
+    extraction_method = node.get("extraction_method")
+    if extraction_method:
+        profile[f"_extraction:{extraction_method}"] = 0.2
+
+    ingestion_policy = node.get("ingestion_policy")
+    if ingestion_policy:
+        profile[f"_ingestion_policy:{ingestion_policy}"] = 0.25
+
     # Sacred frequency (Hz family)
     hz = node.get("sacred_frequency", {}).get("hz") if isinstance(node.get("sacred_frequency"), dict) else None
     if hz:
@@ -131,10 +145,44 @@ def _profile_from_neighborhood(entity_id: str, node_type: str) -> dict[str, floa
                 profile.get(f"_edge:{edge_type}", 0), 0.2
             )
 
+        for edge in graph_service.get_edges(entity_id, direction="both"):
+            edge_properties = edge.get("properties") or {}
+            if not isinstance(edge_properties, dict):
+                continue
+            strength = float(edge.get("strength", 0.5) or 0.5)
+            confidence = _safe_float(edge_properties.get("confidence"), 0.5)
+            source_artifact_id = edge_properties.get("source_artifact_id")
+            if source_artifact_id:
+                source_key = str(source_artifact_id)
+                source_strength = max(0.1, min(1.0, strength * confidence))
+                profile[source_key] = max(profile.get(source_key, 0), source_strength)
+                profile["_source_backed"] = max(profile.get("_source_backed", 0), source_strength * 0.7)
+
+            ingestion_policy = edge_properties.get("ingestion_policy")
+            if ingestion_policy:
+                profile[f"_ingestion_policy:{ingestion_policy}"] = max(
+                    profile.get(f"_ingestion_policy:{ingestion_policy}", 0),
+                    0.25,
+                )
+
+            extraction_method = edge_properties.get("extraction_method")
+            if extraction_method:
+                profile[f"_extraction:{extraction_method}"] = max(
+                    profile.get(f"_extraction:{extraction_method}", 0),
+                    0.2,
+                )
+
     except Exception:
         pass
 
     return profile
+
+
+def _safe_float(value: Any, default: float) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
 
 
 def _profile_from_content(node: dict) -> dict[str, float]:

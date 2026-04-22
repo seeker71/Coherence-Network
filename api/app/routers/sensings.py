@@ -94,6 +94,30 @@ def _is_sensing(node: dict) -> bool:
     return node.get("type") == "event" and bool(node.get(_SENSING_MARKER_KEY))
 
 
+def _source_provenance_for_target(
+    *,
+    metadata: dict[str, Any],
+    sensing_id: str,
+    target_id: str,
+) -> dict[str, Any]:
+    rationales = metadata.get("edge_rationales") or {}
+    rationale = ""
+    if isinstance(rationales, dict):
+        rationale = str(rationales.get(target_id) or "").strip()
+    if not rationale:
+        rationale = str(metadata.get("rationale") or "").strip()
+
+    return {
+        "source_artifact_id": metadata.get("source_artifact_id"),
+        "sensing_id": sensing_id,
+        "extraction_method": metadata.get("extraction_method"),
+        "confidence": metadata.get("confidence"),
+        "ingestion_policy": metadata.get("ingestion_policy"),
+        "rationale": rationale,
+        "quote_policy": metadata.get("quote_policy"),
+    }
+
+
 @router.post(
     "/sensings",
     response_model=SensingResponse,
@@ -118,6 +142,21 @@ async def create_sensing(body: SensingCreate) -> SensingResponse:
 
     sensing_id = f"sensing-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S')}-{uuid.uuid4().hex[:6]}"
     observed_at = datetime.now(timezone.utc).isoformat()
+    metadata = dict(body.metadata or {})
+
+    source_artifact_id = metadata.get("source_artifact_id")
+    if source_artifact_id:
+        for target in body.related_to:
+            try:
+                graph_service.validate_source_edge_provenance(
+                    _source_provenance_for_target(
+                        metadata=metadata,
+                        sensing_id=sensing_id,
+                        target_id=target,
+                    )
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     properties = {
         _SENSING_MARKER_KEY: body.kind,
@@ -126,8 +165,11 @@ async def create_sensing(body: SensingCreate) -> SensingResponse:
         "source": body.source,
         "observed_at": observed_at,
         "related_to": body.related_to,
-        "metadata": body.metadata,
+        "metadata": metadata,
     }
+    for key in ("source_artifact_id", "extraction_method", "ingestion_policy", "quote_policy"):
+        if metadata.get(key):
+            properties[key] = metadata[key]
 
     node = graph_service.create_node(
         id=sensing_id,
@@ -141,12 +183,24 @@ async def create_sensing(body: SensingCreate) -> SensingResponse:
     # field holds the connection rather than forcing the caller to remember it.
     for target in body.related_to:
         try:
-            graph_service.create_edge(
-                from_id=sensing_id,
-                to_id=target,
-                type="analogous-to",
-                properties={"provenance": f"sensing:{body.kind}"},
-            )
+            if source_artifact_id:
+                graph_service.create_provenance_edge(
+                    from_id=sensing_id,
+                    to_id=target,
+                    type="analogous-to",
+                    provenance=_source_provenance_for_target(
+                        metadata=metadata,
+                        sensing_id=sensing_id,
+                        target_id=target,
+                    ),
+                )
+            else:
+                graph_service.create_edge(
+                    from_id=sensing_id,
+                    to_id=target,
+                    type="analogous-to",
+                    properties={"provenance": f"sensing:{body.kind}"},
+                )
         except Exception:
             # A target that does not exist is a soft signal, not a failure.
             pass
