@@ -83,9 +83,14 @@ def sense_proprioception() -> list[str]:
         findings.append(f"  ideas/INDEX.md — drift: INDEX claims {claimed_i}, body has {actual_i}")
 
     # vision-kb/INDEX.md concept count
+    # Exclude language variants (lc-name.lang.md) from the concept tally —
+    # translations are the same concept in another voice, not separate concepts.
     vkb_concepts_dir = ROOT / "docs" / "vision-kb" / "concepts"
     if vkb_concepts_dir.is_dir():
-        actual_c = sum(1 for p in vkb_concepts_dir.glob("*.md"))
+        actual_c = sum(
+            1 for p in vkb_concepts_dir.glob("*.md")
+            if p.name.count(".") == 1  # lc-foo.md has one dot; lc-foo.de.md has two
+        )
         claimed_c = read_first_match(
             ROOT / "docs" / "vision-kb" / "INDEX.md",
             r"\*\*Concepts\*\*:\s*(\d+)",
