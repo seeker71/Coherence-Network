@@ -143,10 +143,19 @@ export default async function VisionConceptPage({
 
   // When /api/concepts/{id} returns null, the id might still exist as
   // a different node type (asset, contributor, etc.). Check the graph
-  // node directly and redirect to the right surface rather than
-  // 404ing a valid id — /vision/visual-lc-beauty-1 is an asset, and
-  // the visitor expects to see the image, not a 'not found' page.
+  // node and redirect to the right surface rather than 404ing a valid
+  // id — /vision/visual-lc-beauty-1 is an asset, and the visitor
+  // expects to see the image, not a "not found" page.
+  //
+  // Critical: redirect() throws NEXT_REDIRECT as the mechanism Next
+  // uses to turn a server-component redirect into a 307. If redirect()
+  // ran inside a try/catch, the catch would swallow that marker and
+  // the browser would never see the redirect. So the fetch lives in
+  // its own try (to tolerate a transient api failure), and redirect()
+  // is invoked *outside* the try on the resolved type — any
+  // NEXT_REDIRECT propagates freely.
   if (!concept) {
+    let fallbackType: string | null = null;
     try {
       const base = getApiBase();
       const nodeRes = await fetch(
@@ -154,13 +163,14 @@ export default async function VisionConceptPage({
         { next: { revalidate: 30 } },
       );
       if (nodeRes.ok) {
-        const node = await nodeRes.json() as { type?: string };
-        if (node.type === "asset") redirect(`/assets/${conceptId}`);
-        if (node.type) redirect(`/nodes/${conceptId}`);
+        const node = (await nodeRes.json()) as { type?: string };
+        fallbackType = node.type ?? null;
       }
     } catch {
-      /* fall through to notFound below */
+      /* no fallback type — fall through to notFound below */
     }
+    if (fallbackType === "asset") redirect(`/assets/${conceptId}`);
+    if (fallbackType) redirect(`/nodes/${conceptId}`);
     notFound();
   }
 
