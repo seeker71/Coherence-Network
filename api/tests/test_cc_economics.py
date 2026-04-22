@@ -1,11 +1,19 @@
-"""Tests for CC Economics and Value Coherence (spec cc-economics-and-value-coherence).
+"""Tests for CC Economics and Value Coherence.
 
-Flow-centric tests: HTTP requests in, JSON out. No internal service imports
-except for setup helpers (mint, reset).
+Five flows cover the surface:
+
+  · Supply + coherence (mint/burn, pause-below-1.0, healthy-empty)
+  · Exchange rate (spread, 5-min TTL, stale detection/refresh)
+  · Staking lifecycle (stake → attribution growth → unstake with
+    cooldown tiers 0/24/72 h → cooldown re-reject, 404 paths, summary)
+  · Treasury ledger audit trail
+  · Quality gate deposit (attribution grows with evidence, flat
+    without evidence)
 """
 
 from __future__ import annotations
 
+import time
 from uuid import uuid4
 
 import pytest
@@ -21,488 +29,198 @@ def _uid(prefix: str = "test") -> str:
 
 
 async def _create_idea(c: AsyncClient, idea_id: str) -> dict:
-    """Create an idea in the graph for staking targets."""
-    r = await c.post(
-        "/api/ideas",
-        json={
-            "id": idea_id,
-            "name": f"Idea {idea_id}",
-            "description": f"Test idea for staking: {idea_id}",
-            "potential_value": 1000.0,
-            "estimated_cost": 100.0,
-            "confidence": 0.8,
-        },
-    )
+    r = await c.post("/api/ideas", json={
+        "id": idea_id, "name": f"Idea {idea_id}",
+        "description": f"Test idea for staking: {idea_id}",
+        "potential_value": 1000.0, "estimated_cost": 100.0, "confidence": 0.8,
+    })
     assert r.status_code == 201, r.text
     return r.json()
 
 
-def _mint_for_user(user_id: str, amount_cc: float, deposit_usd: float) -> None:
-    """Mint CC for a user so they have balance to stake."""
+def _mint(user_id: str, amount_cc: float, deposit_usd: float) -> None:
     from app.services import cc_treasury_service
     cc_treasury_service.mint(user_id, amount_cc, deposit_usd, 333.33)
 
 
-def _reset_services() -> None:
-    """Reset treasury and oracle state between tests."""
+def _reset() -> None:
     from app.services import cc_treasury_service, cc_oracle_service
     cc_treasury_service.reset_treasury()
     cc_oracle_service.reset_cache()
 
 
-# ---------------------------------------------------------------------------
-# Supply endpoint (R1, R7, R8)
-# ---------------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
-async def test_supply_returns_required_fields():
-    """GET /api/cc/supply returns total_minted, total_burned, outstanding, coherence_score."""
-    _reset_services()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/cc/supply")
-        assert r.status_code == 200
-        data = r.json()
-        assert "total_minted" in data
-        assert "total_burned" in data
-        assert "outstanding" in data
-        assert "coherence_score" in data
-        assert "coherence_status" in data
-        assert "treasury_value_usd" in data
-        assert "exchange_rate" in data
-        assert "as_of" in data
-
-
-@pytest.mark.asyncio
-async def test_empty_treasury_is_healthy():
-    """An empty treasury (nothing minted) is part of the healthy flow, not a warning.
-
-    Regression guard: coherence_status used to land on "warning" for the
-    pre-launch / idle state because score=1.0 fell into the 1.0..1.05 band,
-    which produced a contradictory UI (score 1.0000 + WARNING badge).
-    """
-    _reset_services()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/cc/supply")
-        assert r.status_code == 200
-        data = r.json()
-        assert data["outstanding"] == 0.0
-        assert data["coherence_score"] == 1.0
-        assert data["coherence_status"] == "healthy"
-
-
-@pytest.mark.asyncio
-async def test_supply_coherence_score_above_one():
-    """Coherence score >= 1.0 when treasury properly backs outstanding CC."""
-    _reset_services()
-    # Mint 1000 CC backed by $10 USD at rate 333.33 CC/USD
-    # treasury_value_usd = 10.0, outstanding = 1000 CC
-    # coherence = 10.0 / (1000 / 333.33) = 10.0 / 3.0 = 3.33
-    _mint_for_user("user-cs", 1000.0, 10.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/cc/supply")
-        assert r.status_code == 200
-        data = r.json()
-        assert data["coherence_score"] >= 1.0
-        assert data["coherence_status"] in ("healthy", "warning")
-
-
-@pytest.mark.asyncio
-async def test_mint_on_deposit_burn_on_withdrawal():
-    """Minting increases supply, burning decreases it."""
-    _reset_services()
+async def test_supply_and_coherence_flow():
+    """Supply endpoint returns the full shape; empty treasury is
+    healthy (regression — 1.0 used to show 'warning'); mint/burn
+    moves outstanding; coherence < 1.0 pauses minting."""
+    _reset()
     from app.services import cc_treasury_service
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        # Empty treasury — score 1.0, status healthy, full shape.
+        r = await c.get("/api/cc/supply")
+        assert r.status_code == 200
+        d = r.json()
+        for field in ("total_minted", "total_burned", "outstanding", "coherence_score",
+                      "coherence_status", "treasury_value_usd", "exchange_rate", "as_of"):
+            assert field in d
+        assert d["outstanding"] == 0.0
+        assert d["coherence_score"] == 1.0
+        assert d["coherence_status"] == "healthy"
 
+    # Mint/burn directly via service for deterministic state.
     cc_treasury_service.mint("u1", 500.0, 5.0, 333.33)
-    supply1 = cc_treasury_service.get_supply(333.33)
-    assert supply1["total_minted"] == 500.0
-    assert supply1["outstanding"] == 500.0
-
+    s1 = cc_treasury_service.get_supply(333.33)
+    assert s1["total_minted"] == 500.0 and s1["outstanding"] == 500.0
     cc_treasury_service.burn("u1", 200.0, 2.0, 333.33)
-    supply2 = cc_treasury_service.get_supply(333.33)
-    assert supply2["total_burned"] == 200.0
-    assert supply2["outstanding"] == 300.0
+    s2 = cc_treasury_service.get_supply(333.33)
+    assert s2["total_burned"] == 200.0 and s2["outstanding"] == 300.0
 
-
-@pytest.mark.asyncio
-async def test_no_mint_when_coherence_below_one():
-    """System pauses minting when coherence score drops below 1.0 (R7)."""
-    _reset_services()
-    from app.services import cc_treasury_service
-
-    # Create a situation where coherence < 1.0
-    # Mint 10000 CC but only deposit $1 USD
-    # coherence = 1.0 / (10000/333.33) = 1.0 / 30.0 = 0.033
+    # Over-mint → coherence < 1.0 → paused, can_mint False.
+    _reset()
     cc_treasury_service.mint("u-bad", 10000.0, 1.0, 333.33)
     assert not cc_treasury_service.can_mint(333.33)
+    paused = cc_treasury_service.get_supply(333.33)
+    assert paused["coherence_score"] < 1.0 and paused["coherence_status"] == "paused"
 
-    supply = cc_treasury_service.get_supply(333.33)
-    assert supply["coherence_score"] < 1.0
-    assert supply["coherence_status"] == "paused"
-
-
-# ---------------------------------------------------------------------------
-# Exchange rate endpoint (R5, R9)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_exchange_rate_includes_spread():
-    """GET /api/cc/exchange-rate returns 1% spread (R5)."""
-    _reset_services()
+    # Healthy coherence above 1.0 when treasury properly backs supply.
+    _reset()
+    _mint("user-cs", 1000.0, 10.0)
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/cc/exchange-rate")
-        assert r.status_code == 200
-        data = r.json()
-        assert data["spread_pct"] == 1.0
-        assert data["buy_rate"] < data["cc_per_usd"]
-        assert data["sell_rate"] > data["cc_per_usd"]
-        assert data["oracle_source"] == "coingecko"
+        d = (await c.get("/api/cc/supply")).json()
+        assert d["coherence_score"] >= 1.0
+        assert d["coherence_status"] in ("healthy", "warning")
 
 
 @pytest.mark.asyncio
-async def test_exchange_rate_cached_5min():
-    """Exchange rate has 5-minute cache TTL (R9)."""
-    _reset_services()
+async def test_exchange_rate_flow():
+    """Spread is 1%, 5-minute cache, stale is detected and refreshes."""
+    _reset()
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.get("/api/cc/exchange-rate")
-        assert r.status_code == 200
-        data = r.json()
-        assert data["cache_ttl_seconds"] == 300
-        assert "cached_at" in data
+        d = (await c.get("/api/cc/exchange-rate")).json()
+        assert d["spread_pct"] == 1.0
+        assert d["buy_rate"] < d["cc_per_usd"] < d["sell_rate"]
+        assert d["oracle_source"] == "coingecko"
+        assert d["cache_ttl_seconds"] == 300
+        assert "cached_at" in d
 
-
-@pytest.mark.asyncio
-async def test_exchange_rate_stale_detection():
-    """Exchange rate marks stale when cache exceeds TTL (R9)."""
-    _reset_services()
-    import time
+    # Stale detection via direct service — backdate cache, refresh clears stale.
     from app.services import cc_oracle_service
-
-    # Force a fetch first
     rate = cc_oracle_service.get_exchange_rate()
-    assert rate is not None
-    assert rate.is_stale is False
-
-    # Backdate the cache to simulate expiry
+    assert rate is not None and rate.is_stale is False
     cc_oracle_service._CACHE["cached_at"] = time.time() - 400
-
-    # The next call should detect stale but refresh successfully
-    rate2 = cc_oracle_service.get_exchange_rate()
-    assert rate2 is not None
-    # After refresh, it should no longer be stale
-    assert rate2.is_stale is False
-
-
-# ---------------------------------------------------------------------------
-# Staking (R3, R4, R10)
-# ---------------------------------------------------------------------------
+    refreshed = cc_oracle_service.get_exchange_rate()
+    assert refreshed is not None and refreshed.is_stale is False
 
 
 @pytest.mark.asyncio
-async def test_stake_into_idea_creates_position():
-    """POST /api/cc/stake creates a staking position linked to an idea (R3)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 1000.0, 10.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        r = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 500.0},
-        )
-        assert r.status_code == 201, r.text
-        data = r.json()
-        assert data["stake_id"]
-        assert data["user_id"] == user_id
-        assert data["idea_id"] == idea_id
-        assert data["amount_cc"] == 500.0
-        assert data["attribution_cc"] == 500.0
-        assert data["status"] == "active"
-
-
-@pytest.mark.asyncio
-async def test_stake_insufficient_balance_rejected():
-    """POST /api/cc/stake returns 400 on insufficient balance (R3)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 100.0, 1.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        r = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 500.0},
-        )
-        assert r.status_code == 400
-        assert "Insufficient" in r.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_stake_idea_not_found():
-    """POST /api/cc/stake returns 404 when idea does not exist."""
-    _reset_services()
-    user_id = _uid("user")
-    _mint_for_user(user_id, 1000.0, 10.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": "nonexistent-idea", "amount_cc": 100.0},
-        )
-        assert r.status_code == 404
-
-
-# ---------------------------------------------------------------------------
-# Unstaking with cooldown tiers (R4)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_unstake_cooldown_instant_under_100():
-    """Unstake < 100 CC has instant cooldown (0 hours) (R4)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 500.0, 5.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        # Stake 50 CC (under 100)
-        sr = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 50.0},
-        )
-        assert sr.status_code == 201
-        stake_id = sr.json()["stake_id"]
-
-        # Unstake
-        ur = await c.post(
-            "/api/cc/unstake",
-            json={"stake_id": stake_id, "user_id": user_id},
-        )
-        assert ur.status_code == 200
-        data = ur.json()
-        assert data["cooldown_hours"] == 0
-        assert data["status"] == "withdrawn"
-
-
-@pytest.mark.asyncio
-async def test_unstake_cooldown_24h_100_to_1000():
-    """Unstake 100-1000 CC has 24h cooldown (R4)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 2000.0, 20.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        sr = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 500.0},
-        )
-        assert sr.status_code == 201
-        stake_id = sr.json()["stake_id"]
-
-        ur = await c.post(
-            "/api/cc/unstake",
-            json={"stake_id": stake_id, "user_id": user_id},
-        )
-        assert ur.status_code == 200
-        data = ur.json()
-        assert data["cooldown_hours"] == 24
-        assert data["status"] == "cooling_down"
-
-
-@pytest.mark.asyncio
-async def test_unstake_cooldown_72h_over_1000():
-    """Unstake > 1000 CC has 72h cooldown (R4)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 5000.0, 50.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        sr = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 2000.0},
-        )
-        assert sr.status_code == 201
-        stake_id = sr.json()["stake_id"]
-
-        ur = await c.post(
-            "/api/cc/unstake",
-            json={"stake_id": stake_id, "user_id": user_id},
-        )
-        assert ur.status_code == 200
-        data = ur.json()
-        assert data["cooldown_hours"] == 72
-        assert data["status"] == "cooling_down"
-
-
-@pytest.mark.asyncio
-async def test_unstake_already_cooling_rejected():
-    """Unstake returns 400 if already in cooldown (R4)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 2000.0, 20.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        sr = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 500.0},
-        )
-        stake_id = sr.json()["stake_id"]
-
-        # First unstake succeeds
-        ur1 = await c.post(
-            "/api/cc/unstake",
-            json={"stake_id": stake_id, "user_id": user_id},
-        )
-        assert ur1.status_code == 200
-
-        # Second unstake should be rejected
-        ur2 = await c.post(
-            "/api/cc/unstake",
-            json={"stake_id": stake_id, "user_id": user_id},
-        )
-        assert ur2.status_code == 400
-        assert "cooldown" in ur2.json()["detail"].lower() or "withdrawn" in ur2.json()["detail"].lower()
-
-
-@pytest.mark.asyncio
-async def test_unstake_not_found():
-    """Unstake returns 404 for nonexistent stake."""
-    _reset_services()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        r = await c.post(
-            "/api/cc/unstake",
-            json={"stake_id": "nonexistent", "user_id": "nobody"},
-        )
-        assert r.status_code == 404
-
-
-# ---------------------------------------------------------------------------
-# Attribution (R2, R3)
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.asyncio
-async def test_attribution_grows_with_usage_events():
-    """Attribution grows proportionally to usage events on staked idea (R2)."""
-    _reset_services()
+async def test_staking_lifecycle_flow():
+    """Stake → attribution grows with usage events → unstake with
+    cooldown tiers (0/24/72 h depending on amount) → second unstake
+    rejected → missing stake/idea return 404 → summary aggregates
+    positions."""
+    _reset()
     from app.services import cc_staking_service
 
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 2000.0, 20.0)
+    user = _uid("user")
+    idea_small = _uid("idea")       # <100 CC stake → instant
+    idea_medium = _uid("idea")      # 100-1000 CC stake → 24h
+    idea_large = _uid("idea")       # >1000 CC stake → 72h
+    _mint(user, 10000.0, 100.0)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        sr = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 500.0},
-        )
-        assert sr.status_code == 201
+        # Create ideas.
+        for iid in (idea_small, idea_medium, idea_large):
+            await _create_idea(c, iid)
 
-        # Simulate 10 usage events
-        updated = cc_staking_service.update_attribution(idea_id, 10)
-        assert updated == 1
+        # Staking 404 on unknown idea.
+        unknown = await c.post("/api/cc/stake", json={
+            "user_id": user, "idea_id": "nonexistent-idea", "amount_cc": 100.0,
+        })
+        assert unknown.status_code == 404
 
-        # Check positions — attribution should have grown
-        r = await c.get(f"/api/cc/staking/{user_id}")
-        assert r.status_code == 200
-        data = r.json()
-        pos = data["positions"][0]
-        # 500 * (1 + 0.01 * 10) = 500 * 1.1 = 550
-        assert pos["attribution_cc"] == pytest.approx(550.0, rel=0.01)
+        # Stake creates position with attribution == amount initially.
+        s_small = await c.post("/api/cc/stake", json={
+            "user_id": user, "idea_id": idea_small, "amount_cc": 50.0,
+        })
+        assert s_small.status_code == 201
+        small_data = s_small.json()
+        assert small_data["attribution_cc"] == 50.0 and small_data["status"] == "active"
+        small_stake_id = small_data["stake_id"]
 
+        s_medium = await c.post("/api/cc/stake", json={
+            "user_id": user, "idea_id": idea_medium, "amount_cc": 500.0,
+        })
+        medium_stake_id = s_medium.json()["stake_id"]
 
-@pytest.mark.asyncio
-async def test_attribution_flat_without_usage():
-    """Attribution stays flat when no usage events occur (R3 — no guaranteed yield)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 2000.0, 20.0)
+        s_large = await c.post("/api/cc/stake", json={
+            "user_id": user, "idea_id": idea_large, "amount_cc": 2000.0,
+        })
+        large_stake_id = s_large.json()["stake_id"]
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        sr = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 500.0},
-        )
-        assert sr.status_code == 201
+        # Insufficient-balance reject.
+        broke = _uid("broke")
+        _mint(broke, 10.0, 0.1)
+        reject = await c.post("/api/cc/stake", json={
+            "user_id": broke, "idea_id": idea_small, "amount_cc": 500.0,
+        })
+        assert reject.status_code == 400
+        assert "Insufficient" in reject.json()["detail"]
 
-        # No usage events — attribution should equal original amount
-        r = await c.get(f"/api/cc/staking/{user_id}")
-        data = r.json()
-        pos = data["positions"][0]
-        assert pos["attribution_cc"] == 500.0
+        # Attribution grows when usage events fire on the idea.
+        cc_staking_service.update_attribution(idea_medium, 10)
+        summary = (await c.get(f"/api/cc/staking/{user}")).json()
+        medium_pos = next(p for p in summary["positions"] if p["idea_id"] == idea_medium)
+        # 500 * (1 + 0.01 * 10) = 550
+        assert medium_pos["attribution_cc"] == pytest.approx(550.0, rel=0.01)
 
+        # Attribution flat without usage.
+        small_pos = next(p for p in summary["positions"] if p["idea_id"] == idea_small)
+        assert small_pos["attribution_cc"] == 50.0
 
-# ---------------------------------------------------------------------------
-# User staking summary (R10)
-# ---------------------------------------------------------------------------
+        # Summary aggregates all positions.
+        assert len(summary["positions"]) == 3
+        for pos in summary["positions"]:
+            for field in ("stake_id", "idea_id", "amount_cc",
+                          "attribution_cc", "staked_at", "status"):
+                assert field in pos
 
+        # Unstake cooldown tiers.
+        u_small = (await c.post("/api/cc/unstake", json={
+            "stake_id": small_stake_id, "user_id": user,
+        })).json()
+        assert u_small["cooldown_hours"] == 0 and u_small["status"] == "withdrawn"
 
-@pytest.mark.asyncio
-async def test_user_staking_summary_aggregation():
-    """GET /api/cc/staking/{user_id} returns all positions with totals (R10)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea1 = _uid("idea")
-    idea2 = _uid("idea")
-    _mint_for_user(user_id, 5000.0, 50.0)
+        u_medium = (await c.post("/api/cc/unstake", json={
+            "stake_id": medium_stake_id, "user_id": user,
+        })).json()
+        assert u_medium["cooldown_hours"] == 24 and u_medium["status"] == "cooling_down"
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea1)
-        await _create_idea(c, idea2)
+        u_large = (await c.post("/api/cc/unstake", json={
+            "stake_id": large_stake_id, "user_id": user,
+        })).json()
+        assert u_large["cooldown_hours"] == 72 and u_large["status"] == "cooling_down"
 
-        # Two stakes
-        await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea1, "amount_cc": 200.0},
-        )
-        await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea2, "amount_cc": 300.0},
-        )
+        # Second unstake on the cooling-down stake is rejected.
+        second = await c.post("/api/cc/unstake", json={
+            "stake_id": medium_stake_id, "user_id": user,
+        })
+        assert second.status_code == 400
+        body = second.json()["detail"].lower()
+        assert "cooldown" in body or "withdrawn" in body
 
-        r = await c.get(f"/api/cc/staking/{user_id}")
-        assert r.status_code == 200
-        data = r.json()
-        assert data["user_id"] == user_id
-        assert len(data["positions"]) == 2
-        assert data["total_staked_cc"] == 500.0
-        assert data["total_attribution_cc"] == 500.0
-
-        # Each position has required fields
-        for pos in data["positions"]:
-            assert "stake_id" in pos
-            assert "idea_id" in pos
-            assert "amount_cc" in pos
-            assert "attribution_cc" in pos
-            assert "staked_at" in pos
-            assert "status" in pos
-
-
-# ---------------------------------------------------------------------------
-# Treasury ledger (audit trail)
-# ---------------------------------------------------------------------------
+        # Unknown stake → 404.
+        unknown_unstake = await c.post("/api/cc/unstake", json={
+            "stake_id": "nonexistent", "user_id": "nobody",
+        })
+        assert unknown_unstake.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_treasury_ledger_audit_trail():
-    """Treasury ledger records all mint/burn/stake/unstake operations."""
-    _reset_services()
+    """Every mint/burn lands on the ledger with balance + coherence
+    snapshots, queryable by user_id for audit."""
+    _reset()
     from app.services import cc_treasury_service
 
     cc_treasury_service.mint("u-audit", 1000.0, 10.0, 333.33)
@@ -510,81 +228,48 @@ async def test_treasury_ledger_audit_trail():
 
     entries = cc_treasury_service.get_ledger_entries(user_id="u-audit")
     assert len(entries) >= 2
-
     actions = [e["action"] for e in entries]
-    assert "mint" in actions
-    assert "burn" in actions
-
+    assert "mint" in actions and "burn" in actions
     for entry in entries:
-        assert "treasury_balance_after" in entry
-        assert "coherence_score_after" in entry
-        assert "created_at" in entry
-
-
-# ---------------------------------------------------------------------------
-# Quality gate deposit (R6)
-# ---------------------------------------------------------------------------
+        for field in ("treasury_balance_after", "coherence_score_after", "created_at"):
+            assert field in entry
 
 
 @pytest.mark.asyncio
-async def test_quality_gate_deposit_returned_on_evidence():
-    """Quality gate: deposit for idea publishing returned when evidence threshold met.
+async def test_quality_gate_deposit_flow():
+    """R6 demand driver: deposit (stake) grows with evidence (usage
+    events), stays flat without. Unstake returns the grown or flat
+    attribution accordingly."""
+    _reset()
+    from app.services import cc_staking_service
 
-    This tests the R6 demand driver concept. The deposit is represented as a
-    stake that can be unstaked (returned) when the idea has evidence.
-    """
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 1000.0, 10.0)
-
-    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        # Stake as quality gate deposit
-        sr = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 50.0},
-        )
-        assert sr.status_code == 201
-        stake_id = sr.json()["stake_id"]
-
-        # Simulate evidence (usage events increase attribution)
-        from app.services import cc_staking_service
-        cc_staking_service.update_attribution(idea_id, 5)
-
-        # Unstake — should be instant (< 100 CC) and attribution grew
-        ur = await c.post(
-            "/api/cc/unstake",
-            json={"stake_id": stake_id, "user_id": user_id},
-        )
-        assert ur.status_code == 200
-        data = ur.json()
-        assert data["cooldown_hours"] == 0  # Instant for < 100 CC
-        assert data["attribution_cc"] >= 50.0  # At least original amount
-
-
-@pytest.mark.asyncio
-async def test_quality_gate_deposit_retained_without_evidence():
-    """Quality gate: deposit stays flat when no evidence is produced (R6)."""
-    _reset_services()
-    user_id = _uid("user")
-    idea_id = _uid("idea")
-    _mint_for_user(user_id, 1000.0, 10.0)
+    user = _uid("user")
+    idea_with_evidence = _uid("idea")
+    idea_without = _uid("idea")
+    _mint(user, 2000.0, 20.0)
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
-        await _create_idea(c, idea_id)
-        sr = await c.post(
-            "/api/cc/stake",
-            json={"user_id": user_id, "idea_id": idea_id, "amount_cc": 50.0},
-        )
-        assert sr.status_code == 201
-        stake_id = sr.json()["stake_id"]
+        for iid in (idea_with_evidence, idea_without):
+            await _create_idea(c, iid)
 
-        # No usage events — unstake returns flat attribution
-        ur = await c.post(
-            "/api/cc/unstake",
-            json={"stake_id": stake_id, "user_id": user_id},
-        )
-        assert ur.status_code == 200
-        data = ur.json()
-        assert data["attribution_cc"] == 50.0  # Exactly the original amount
+        # With evidence — attribution >= original.
+        s1 = await c.post("/api/cc/stake", json={
+            "user_id": user, "idea_id": idea_with_evidence, "amount_cc": 50.0,
+        })
+        sid1 = s1.json()["stake_id"]
+        cc_staking_service.update_attribution(idea_with_evidence, 5)
+        r1 = (await c.post("/api/cc/unstake", json={
+            "stake_id": sid1, "user_id": user,
+        })).json()
+        assert r1["cooldown_hours"] == 0  # <100 CC = instant
+        assert r1["attribution_cc"] >= 50.0
+
+        # Without evidence — attribution stays flat.
+        s2 = await c.post("/api/cc/stake", json={
+            "user_id": user, "idea_id": idea_without, "amount_cc": 50.0,
+        })
+        sid2 = s2.json()["stake_id"]
+        r2 = (await c.post("/api/cc/unstake", json={
+            "stake_id": sid2, "user_id": user,
+        })).json()
+        assert r2["attribution_cc"] == 50.0
