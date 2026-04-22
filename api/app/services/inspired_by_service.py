@@ -128,9 +128,18 @@ class ResolvedIdentity:
     creations: list[Creation] = field(default_factory=list)
 
     def node_id(self) -> str:
-        digest = hashlib.sha256(self.canonical_url.encode("utf-8")).hexdigest()[:12]
-        slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")[:40] or "inspiration"
-        return f"{self.node_type}:{slug}-{digest}"
+        """Deterministic id from the canonical URL alone.
+
+        The id used to include the name slug: `contributor:{slug}-{hash}`.
+        That was the source of a class of duplicates — the same URL
+        re-resolved at different times could parse to slightly
+        different names (trailing space, case change, OG vs
+        json-ld disagreement) and each variant produced a new id.
+        Now the URL hash is the whole suffix, so the same URL → the
+        same id forever, regardless of what name the page happens to
+        parse as this time."""
+        digest = canonical_url_hash(self.canonical_url)
+        return f"{self.node_type}:{digest}"
 
 
 # ── HTML parsing ──────────────────────────────────────────────────────
@@ -198,11 +207,97 @@ def _is_url(s: str) -> bool:
     return bool(parsed.netloc) and "." in parsed.netloc
 
 
+# Query parameters we preserve during canonicalization — everything
+# else (tracking, sharing, session) is dropped because it changes the
+# URL without changing the identity. Kept tight on purpose: YouTube's
+# `v=` is the video id, Spotify's embed link uses it too. Extend only
+# when a new provider demonstrably needs a param to address content.
+_CANONICAL_PRESERVE_QUERY_PARAMS = {
+    "v",          # youtube.com/watch?v=ID
+    "list",       # youtube.com playlists
+    "id",         # a few SaaS platforms use this as the entity id
+}
+
+# Query parameters that are always noise — strip aggressively. This is
+# a denylist of known tracking and share-tool params so we don't miss
+# one even if _CANONICAL_PRESERVE_QUERY_PARAMS is widened later.
+_TRACKING_QUERY_PARAMS = frozenset({
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "fbclid", "gclid", "mc_cid", "mc_eid", "_hsenc", "_hsmi", "yclid",
+    "ref", "ref_src", "ref_url", "share", "sharing", "shared", "source",
+    "from", "src",
+})
+
+
+def canonicalize_url(url: str) -> str:
+    """Return the single canonical form of a URL.
+
+    The resolver used to keep the query string and host case, which
+    meant `?utm_source=1471` and `www.example.com` produced a
+    different 'canonical_url' than `example.com` — and every one of
+    those variants minted a new graph node. This is the single
+    function every write path now uses to key nodes by URL. Same
+    content on the same host → same string, every time.
+
+    Transformations:
+      · Scheme lowercased, defaults to `https` when missing
+      · Host lowercased, leading `www.` stripped (site and its www
+        alias are one identity)
+      · Path with trailing slashes collapsed to a single non-trailing
+        form
+      · Fragment dropped (same page)
+      · Query string rebuilt: tracking/share params dropped, the
+        remaining params sorted, only allowlisted params kept when
+        the host uses them to address content (YouTube's `v=`,
+        etc.). Most sites have no meaningful query — one canonical
+        form wins.
+    """
+    raw = (url or "").strip()
+    if not raw:
+        return ""
+    p = urlparse(raw if "://" in raw else f"https://{raw}")
+    # Force https for canonical identity. http and https pointing to
+    # the same host + path are the same thing — a resource is defined
+    # by where it lives, not by how this particular link to it was
+    # typed. Allows an old `http://` link in someone's email to
+    # resolve to the same identity as the current `https://` variant.
+    scheme = "https"
+    host = (p.netloc or "").lower()
+    # Strip leading www. — the identity is the site, not the subdomain
+    # alias. Keep any other subdomain (music.example.com stays).
+    if host.startswith("www."):
+        host = host[4:]
+    # Collapse //segments and trailing slashes on the path.
+    path = re.sub(r"/{2,}", "/", p.path or "")
+    path = path.rstrip("/") or ""
+    # Query canonicalization: keep only allowlisted params (and only
+    # when they carry a value); drop the rest.
+    query = ""
+    if p.query:
+        from urllib.parse import parse_qsl, urlencode
+        kept = [
+            (k, v) for k, v in parse_qsl(p.query, keep_blank_values=False)
+            if k.lower() in _CANONICAL_PRESERVE_QUERY_PARAMS
+            and k.lower() not in _TRACKING_QUERY_PARAMS
+        ]
+        # Deterministic order so two callers who send the same params
+        # in different orders still produce the same canonical.
+        kept.sort()
+        query = urlencode(kept) if kept else ""
+    return urlunparse((scheme, host, path, "", query, ""))
+
+
+# Backwards-compatible alias — callers still import _normalize_url.
+# Every write path now flows through the strict canonicalizer.
 def _normalize_url(url: str) -> str:
-    """Drop fragments and trailing slashes; keep query."""
-    p = urlparse(url if "://" in url else f"https://{url}")
-    path = p.path.rstrip("/")
-    return urlunparse((p.scheme or "https", p.netloc.lower(), path, "", p.query, ""))
+    return canonicalize_url(url)
+
+
+def canonical_url_hash(url: str) -> str:
+    """Stable 16-char hash of a URL's canonical form. Used as the
+    deterministic id suffix so the same identity always lands on the
+    same node, no matter which code path creates it."""
+    return hashlib.sha256(canonicalize_url(url).encode("utf-8")).hexdigest()[:16]
 
 
 def _host_match(host: str, path: str, suffix: str) -> bool:
@@ -890,20 +985,65 @@ def _normalize_contributor_id(contributor_id: str) -> str:
 
 
 def find_existing_identity(canonical_url: str) -> dict[str, Any] | None:
-    """Look up an already-imported identity by its canonical URL."""
-    for node_type in ("contributor", "community", "network-org"):
+    """Look up an already-imported identity by its canonical URL.
+
+    The previous implementation only scanned three node types
+    (contributor, community, network-org). The moment a presence was
+    retyped to `scene` (a venue), `asset` (a work), `event`,
+    `practice`, or `skill`, the next resolve of the same URL missed
+    the existing node and minted a fresh one. Scanning every
+    presence type closes that gap: once a URL has a home, every
+    future resolve finds it regardless of what type the graph has
+    sorted it into.
+
+    The comparison is tolerant: it matches the caller's canonical
+    against both the stored `canonical_url` property and the
+    re-canonicalized form of whatever's stored. That way pre-fix
+    nodes whose stored URL still has `?utm_source=...` still get
+    found when a caller sends the clean form.
+    """
+    canonical = canonicalize_url(canonical_url)
+    if not canonical:
+        return None
+    # Also compute the id under the deterministic scheme — if the
+    # create ever landed one, get_node is O(1) versus a type-by-type
+    # scan. Try all presence types so retype doesn't orphan lookups.
+    target_hash = canonical_url_hash(canonical)
+    for node_type in CROSS_REF_NODE_TYPES:
+        direct = graph_service.get_node(f"{node_type}:{target_hash}")
+        if direct:
+            return direct
+    # Slow path: the node pre-dates the deterministic id scheme.
+    # Walk each presence type and match on the stored canonical_url
+    # (re-canonicalized on the fly so legacy nodes with tracking
+    # params still resolve).
+    for node_type in CROSS_REF_NODE_TYPES:
         result = graph_service.list_nodes(type=node_type, limit=500)
         for node in result.get("items", []):
-            if node.get("canonical_url") == canonical_url:
+            stored = node.get("canonical_url")
+            if not stored:
+                continue
+            if canonicalize_url(stored) == canonical:
                 return node
     return None
 
 
 def _creation_node_id(creation: Creation, identity_id: str) -> str:
-    seed = (creation.url or f"{identity_id}:{creation.name}").lower()
-    digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:12]
-    slug = re.sub(r"[^a-z0-9]+", "-", creation.name.lower()).strip("-")[:40] or "work"
-    return f"asset:{slug}-{digest}"
+    """Deterministic id for an asset node — URL-derived when we have
+    one, name+owner-derived as a fallback.
+
+    Same URL → same asset id, same name-under-same-owner → same id.
+    Historically the id carried a name slug too, which meant the
+    same URL (re)resolving to a slightly-different name spawned
+    fresh asset nodes every time. Now the suffix is pure hash: one
+    URL, one asset."""
+    if creation.url:
+        return f"asset:{canonical_url_hash(creation.url)}"
+    # No URL — fall back to owner+name so the same album listed
+    # under the same artist collapses even without a link.
+    seed = f"{identity_id}|{(creation.name or '').strip().lower()}"
+    digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
+    return f"asset:{digest}"
 
 
 def _ensure_creation_nodes(
