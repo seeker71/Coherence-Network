@@ -137,16 +137,11 @@ export default async function VisionConceptPage({
   const lang: LocaleCode = isSupportedLocale(rawLang) ? rawLang : DEFAULT_LOCALE;
   const t = createTranslator(lang);
 
-  // Early route-level type classification — before any concept fetch.
-  // The /vision/[conceptId] route is for living-collective concepts.
-  // Visual asset ids ("visual-lc-*") are images generated for those
-  // concepts, served on /assets/[id] where the file_path actually
-  // renders. Classifying the id up-front keeps us from streaming a
-  // half-composed concept page and then trying to redirect mid-stream,
-  // which is where the previous attempt silently failed to escape.
-  if (conceptId.startsWith("visual-lc-") || conceptId.startsWith("visual-")) {
-    redirect(`/assets/${conceptId}`);
-  }
+  // Visual asset ids are redirected at the middleware layer (see
+  // web/middleware.ts) — the server-component redirect() was being
+  // swallowed by Next 15.5's error boundary. Middleware runs before
+  // any page code and returns a real 307, so /vision/visual-lc-*
+  // lands on /assets/[id] where the image actually renders.
 
   const [concept, edges, related, allLC] = await Promise.all([
     fetchConcept(conceptId, lang),
