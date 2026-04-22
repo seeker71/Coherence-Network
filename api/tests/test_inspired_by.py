@@ -234,8 +234,64 @@ async def test_event_resolves_to_community_identity():
 
 
 @pytest.mark.asyncio
-async def test_idempotent_on_canonical_url():
-    """Re-adding the same identity reuses the node and reports edge_existed."""
+@pytest.mark.asyncio
+async def test_resolver_prevents_duplicates_across_variants_and_retype():
+    """The resolver's duplicate-prevention contract, exercised as one
+    flow. Every duplicate pattern we've watched appear in prod is
+    captured in the assertions below:
+
+      · URL variants (utm / www / http / trailing slash / fragment)
+        must collapse to one canonical form → one id
+      · Same canonical URL with wildly different parsed names must
+        produce the SAME node id (name is out of the slug)
+      · Retyping a resolved node (contributor → scene via the
+        reclassification pass) must not orphan it — a later resolve
+        of the same URL must find the retyped node, not mint a new
+        contributor
+
+    One test, one story, no subtests — matching the test-weight
+    discipline: each flow covers the whole contract."""
+    # 1. Canonicalization collapses every noisy variant we've seen.
+    variants = [
+        "https://liquidbloom.bandcamp.com/",
+        "https://www.liquidbloom.bandcamp.com",
+        "http://Liquidbloom.bandcamp.com/?utm_source=1471&fbclid=abc",
+        "https://liquidbloom.bandcamp.com/#fragment",
+        "https://www.liquidbloom.bandcamp.com//",
+        "Liquidbloom.bandcamp.com",
+    ]
+    canonicals = {service.canonicalize_url(v) for v in variants}
+    assert len(canonicals) == 1, f"variants must collapse: {canonicals}"
+    # YouTube `v=` survives (content-addressing); utm dropped.
+    assert (
+        service.canonicalize_url("https://youtube.com/watch?v=abc&utm_source=share")
+        == service.canonicalize_url("https://www.youtube.com/watch?v=abc")
+    )
+
+    # 2. node_id is pure canonical-URL hash — name parse variance
+    #    doesn't change the id.
+    r_variants = [
+        service.ResolvedIdentity(
+            input="x", name=nm, description="", canonical_url=u,
+            provider="bandcamp", provider_id="liquidbloom", node_type="contributor",
+        )
+        for nm, u in [
+            ("Liquid Bloom", "https://liquidbloom.bandcamp.com"),
+            ("liquidbloom", "https://www.liquidbloom.bandcamp.com/?utm_source=x"),
+            ("Liquid  Bloom  ", "http://liquidbloom.bandcamp.com#frag"),
+        ]
+    ]
+    ids = {r.node_id() for r in r_variants}
+    assert len(ids) == 1, f"same canonical URL must yield one id, got {ids}"
+    only_id = ids.pop()
+    assert only_id.startswith("contributor:")
+    suffix = only_id.split(":", 1)[1]
+    assert len(suffix) == 16 and all(c in "0123456789abcdef" for c in suffix), suffix
+
+    # 3. Full resolve → retype → resolve-again flow. The bug this
+    #    replaces had `find_existing_identity` only scanning three
+    #    types; retyping the node to `scene` left it orphaned, and
+    #    the next resolve minted a duplicate contributor.
     async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
         source = await _create_source(c)
         with patch.object(service, "_fetch", _fake_fetch(ARTIST_HTML, "https://liquidbloom.bandcamp.com/")):
@@ -243,14 +299,21 @@ async def test_idempotent_on_canonical_url():
                 "name": "https://liquidbloom.bandcamp.com",
                 "source_contributor_id": source,
             })
+        identity_id = first.json()["identity"]["id"]
+
+        rt = await c.patch(f"/api/graph/nodes/{identity_id}", json={"type": "scene"})
+        assert rt.status_code == 200 and rt.json()["type"] == "scene", rt.text
+
+        # Same URL, wildly different cosmetic (utm, www, case).
+        with patch.object(service, "_fetch", _fake_fetch(ARTIST_HTML, "https://liquidbloom.bandcamp.com/")):
             second = await c.post("/api/inspired-by", json={
-                "name": "https://liquidbloom.bandcamp.com",
+                "name": "http://www.Liquidbloom.bandcamp.com/?utm_source=x",
                 "source_contributor_id": source,
             })
-        assert first.json()["identity_created"] is True
-        assert second.json()["identity_created"] is False
-        assert second.json()["edge_existed"] is True
-        assert first.json()["identity"]["id"] == second.json()["identity"]["id"]
+        body = second.json()
+        assert body["identity_created"] is False, "retyped node must be found, not re-created"
+        assert body["identity"]["id"] == identity_id
+        assert body["identity"]["type"] == "scene"
 
 
 def test_fetch_refuses_internal_addresses():

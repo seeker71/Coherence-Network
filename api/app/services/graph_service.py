@@ -179,8 +179,24 @@ def get_node(node_id: str) -> dict[str, Any] | None:
         return node.to_dict() if node else None
 
 
+# Types a PATCH may move a node between — the presence bucket. This
+# guards against a visitor rewriting their own contributor node as a
+# concept, idea, spec, or system identity via a rogue PATCH.
+_RETYPEABLE_TYPES = frozenset({
+    "contributor", "community", "network-org", "scene",
+    "event", "asset", "practice", "skill",
+})
+
+
 def update_node(node_id: str, **updates: Any) -> dict[str, Any] | None:
-    """Update a node. Supports updating name, description, phase, and properties."""
+    """Update a node. Supports name, description, phase, properties,
+    and — within the presence bucket — type.
+
+    Type changes are how reclassification moves 'Pyramids of Chi'
+    from the default contributor bucket (where the resolver first
+    dropped it) into `scene` where it belongs. Cross-bucket moves
+    (contributor → concept, or scene → system) are refused so a
+    rogue PATCH can't reshape an identity."""
     with session() as s:
         node = s.get(Node, node_id)
         if not node:
@@ -189,6 +205,15 @@ def update_node(node_id: str, **updates: Any) -> dict[str, Any] | None:
         for key in ("name", "description", "phase"):
             if key in updates and updates[key] is not None:
                 setattr(node, key, updates[key])
+
+        # Type change — only within the presence bucket, and only if
+        # the node currently lives there too. Arbitrary retypes
+        # (contributor → concept) are refused silently; the caller
+        # gets the node back unchanged and can inspect the result.
+        new_type = updates.get("type")
+        if new_type is not None and new_type != node.type:
+            if node.type in _RETYPEABLE_TYPES and new_type in _RETYPEABLE_TYPES:
+                node.type = new_type
 
         if "properties" in updates and isinstance(updates["properties"], dict):
             # Merge properties (don't replace — merge new keys into existing)

@@ -44,7 +44,43 @@ type AssetListResponse = {
   total: number;
 };
 
+type ContributorNode = {
+  id: string;
+  name?: string;
+  description?: string;
+  author_display_name?: string;
+  email?: string;
+  location?: string;
+  skills?: string;
+  offering?: string;
+  resonant_roles?: string[];
+  locale?: string;
+  [key: string]: unknown;
+};
+
 /* ── Data fetching ────────────────────────────────────────────────── */
+
+async function fetchContributorNode(contributorId: string): Promise<ContributorNode | null> {
+  // Check the graph node itself — this is the source of truth for
+  // "does this contributor exist". The public-key and frequency-
+  // profile endpoints 404 for any contributor who registered
+  // without a keypair (most humans) or hasn't built up enough graph
+  // activity to derive a frequency fingerprint yet. The profile page
+  // should still render for them — that's most visitors on day one.
+  const base = getApiBase();
+  const nodeId = contributorId.startsWith("contributor:")
+    ? contributorId
+    : `contributor:${contributorId}`;
+  try {
+    const res = await fetch(`${base}/api/graph/nodes/${encodeURIComponent(nodeId)}`, {
+      next: { revalidate: 30 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
 
 async function fetchPublicKey(contributorId: string): Promise<PublicKeyResponse | null> {
   const base = getApiBase();
@@ -123,9 +159,13 @@ export async function generateMetadata({
   params: Promise<{ contributorId: string }>;
 }): Promise<Metadata> {
   const { contributorId } = await params;
+  const contributor = await fetchContributorNode(contributorId);
+  const name = contributor?.author_display_name || contributor?.name || contributorId;
+  const lede = contributor?.offering || contributor?.skills
+    || `Public profile and frequency fingerprint for contributor ${name} on the Coherence Network.`;
   return {
-    title: `${contributorId} — Contributor Profile`,
-    description: `Public profile and frequency fingerprint for contributor ${contributorId} on the Coherence Network.`,
+    title: `${name} — Contributor Profile`,
+    description: lede.slice(0, 200),
   };
 }
 
@@ -138,19 +178,24 @@ export default async function ContributorProfilePage({
 }) {
   const { contributorId } = await params;
 
-  const [publicKeyData, profile, assets] = await Promise.all([
+  const [contributor, publicKeyData, profile, assets] = await Promise.all([
+    fetchContributorNode(contributorId),
     fetchPublicKey(contributorId),
     fetchFrequencyProfile(contributorId),
     fetchAssets(contributorId),
   ]);
 
-  // If there is no profile AND no public key, this contributor does not exist
-  if (!profile && !publicKeyData) {
+  // A contributor exists when any of three signals land: the graph
+  // node (source of truth), a registered public key, or a built-up
+  // frequency profile. 404 only when ALL three are missing — a real
+  // 'nobody's here' case, not just 'hasn't generated keys yet'.
+  if (!contributor && !profile && !publicKeyData) {
     notFound();
   }
 
   const pubKeyHex = publicKeyData?.public_key_hex;
   const fp = pubKeyHex ? fingerprint(pubKeyHex) : null;
+  const displayName = contributor?.author_display_name || contributor?.name || contributorId;
 
   return (
     <main className="min-h-screen px-4 sm:px-6 lg:px-8 py-8 max-w-4xl mx-auto space-y-8">
@@ -160,8 +205,33 @@ export default async function ContributorProfilePage({
           Contributor Profile
         </p>
         <h1 className="text-3xl md:text-4xl font-light tracking-tight">
-          {contributorId}
+          {displayName}
         </h1>
+        {contributor?.location && (
+          <p className="text-sm text-muted-foreground">{contributor.location}</p>
+        )}
+        {contributor?.skills && (
+          <p className="text-sm text-foreground/85 leading-relaxed max-w-2xl">
+            {contributor.skills}
+          </p>
+        )}
+        {contributor?.offering && (
+          <p className="text-sm text-foreground/85 leading-relaxed max-w-2xl italic">
+            {contributor.offering}
+          </p>
+        )}
+        {contributor?.resonant_roles && contributor.resonant_roles.length > 0 && (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {contributor.resonant_roles.map((role) => (
+              <span
+                key={role}
+                className="inline-flex items-center rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-400 border border-amber-500/20"
+              >
+                {role.replace(/-/g, " ")}
+              </span>
+            ))}
+          </div>
+        )}
 
         {pubKeyHex ? (
           <div className="space-y-2">

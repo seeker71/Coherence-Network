@@ -37,6 +37,10 @@ class NodeUpdate(BaseModel):
     description: str | None = None
     phase: str | None = None
     properties: dict[str, Any] | None = None
+    # Type changes — only movement between presence types is allowed,
+    # so a visitor can't hijack a system/agent account or rewrite
+    # themselves as a concept. The service enforces the allowed set.
+    type: str | None = None
 
 
 class EdgeCreate(BaseModel):
