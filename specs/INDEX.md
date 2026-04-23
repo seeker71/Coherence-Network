@@ -1,6 +1,6 @@
 # Spec Index
 
-> 74 specs (69 done, 5 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 74 specs (70 done, 4 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
 ## By Idea (18 ideas → 74 specs)
 
@@ -86,7 +86,7 @@
 - [unified-agent-cli-flow-patch-on-fail](unified-agent-cli-flow-patch-on-fail.md) — CLI flow + patch-on-fail
 
 ### knowledge-and-resonance (4 specs)
-- [agent-memory-system](agent-memory-system.md) — write/manage/read memory loop: moments of aliveness, consolidation at rest, retrieval as composition (draft)
+- [agent-memory-system](agent-memory-system.md) — write/manage/read memory loop: moments of aliveness, consolidation at rest, retrieval as composition
 - [knowledge-resonance-engine](knowledge-resonance-engine.md) — concept layer, belief resonance, discovery feed
 - [living-signal-layer](living-signal-layer.md) — sense signals as a changing field, not fixed categories
 - [source-artifact-sensing-graph-integration](source-artifact-sensing-graph-integration.md) — source artifacts as first-class graph nodes with provenance
