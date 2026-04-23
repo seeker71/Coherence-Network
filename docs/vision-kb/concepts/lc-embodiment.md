@@ -1,10 +1,19 @@
-# The Living Collective — Embodiment Practices
+---
+id: lc-embodiment
+hz: 432
+status: expanding
+updated: 2026-04-22
+---
+
+# Embodiment — The Body as the Vehicle of Manifestation
 
 > The vision doesn't manifest through thinking. It manifests through
 > the body. Through breath, movement, sound, stillness, and the
 > deliberate activation of the internal pharmacy that every human
 > carries. These are the field's daily practices — how cells tune
 > themselves and amplify the collective frequency.
+>
+> *Companion to [lc-deeper-pattern](lc-deeper-pattern.md): where that teaching names the physics beneath the field, this one names the body that lives the physics. The two are one teaching — why and how — across two doors.*
 
 ---
 
