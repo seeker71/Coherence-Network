@@ -1,6 +1,6 @@
 # Spec Index
 
-> 74 specs (68 done, 6 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 74 specs (69 done, 5 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
 ## By Idea (18 ideas → 74 specs)
 
@@ -60,7 +60,7 @@
 - [portfolio-governance-effectiveness](portfolio-governance-effectiveness.md) — governance effectiveness scoring
 
 ### value-attribution (9 specs)
-- [asset-renderer-plugin](asset-renderer-plugin.md) — pluggable renderers per MIME type (draft)
+- [asset-renderer-plugin](asset-renderer-plugin.md) — pluggable renderers per MIME type
 - [assets-api](assets-api.md) — asset CRUD + lineage
 - [contributions-api](contributions-api.md) — contribution tracking API
 - [contributor-onboarding-and-governed-change-flow](contributor-onboarding-and-governed-change-flow.md) — governed change flow
