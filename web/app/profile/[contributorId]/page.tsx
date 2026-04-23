@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getApiBase } from "@/lib/api";
 import { FrequencySpectrum } from "./_components/FrequencySpectrum";
+import { PresenceStory } from "./_components/PresenceStory";
 
 export const dynamic = "force-dynamic";
 
@@ -158,7 +159,7 @@ export async function generateMetadata({
 }: {
   params: Promise<{ contributorId: string }>;
 }): Promise<Metadata> {
-  const { contributorId } = await params;
+  const contributorId = decodeURIComponent((await params).contributorId);
   const contributor = await fetchContributorNode(contributorId);
   const name = contributor?.author_display_name || contributor?.name || contributorId;
   const lede = contributor?.offering || contributor?.skills
@@ -176,7 +177,13 @@ export default async function ContributorProfilePage({
 }: {
   params: Promise<{ contributorId: string }>;
 }) {
-  const { contributorId } = await params;
+  const rawContributorId = (await params).contributorId;
+  // Next.js delivers dynamic params still URL-encoded. Node ids here
+  // commonly contain a colon (contributor:liquid-bloom-xxx), which
+  // arrives as contributor%3A... — failing the "starts with
+  // contributor:" check and cascading into a 404. Decode once, up
+  // front, so every downstream fetch and comparison sees the real id.
+  const contributorId = decodeURIComponent(rawContributorId);
 
   const [contributor, publicKeyData, profile, assets] = await Promise.all([
     fetchContributorNode(contributorId),
@@ -258,6 +265,14 @@ export default async function ContributorProfilePage({
           </p>
         )}
       </section>
+
+      {/* ── Presence — their voice, first. The markdown story saved to the
+         contributor's description; rendered as warm prose before any
+         metrics or keys so a visitor meets the person before the profile. */}
+      <PresenceStory
+        content={contributor?.description as string | undefined}
+        displayName={displayName}
+      />
 
       {/* ── Living Frequency Spectrum — shaped by attention ──── */}
       <FrequencySpectrum contributorId={contributorId} />
