@@ -9,6 +9,7 @@ These three documents carry the practical lessons of community-building through 
 - **[How the Field Governs Itself](governance.md)** — "There is no government. There is attention." Decisions that emerge from circle sensing rather than votes, conflict as compost rather than problem, callings rather than roles, the practice of speaking directly to whoever is present.
 - **[Abundance — How the Field Sustains Itself](economics.md)** — "A forest doesn't have a business model. It has sunlight, water, soil, and ten thousand species expressing their nature." Natural overflow from land, knowledge, and beauty rather than revenue streams; CC as the internal circulation of vitality.
 - **[Joining the Field](membership.md)** — "A bird doesn't apply to join a flock." Time together as the only selection, arrival as welcome with nothing to prove, deepening as the shape of belonging, no gates, no fees, no applications.
+- **[Practical Detail](practical-detail.md)** — the wider texture: new vocabulary for aspects/spaces/roles, a day's rhythm through the field (dawn through night), and detailed expressions for each of the nine emerging visions with skills called for and research needs.
 - **[Reality Check](../resources/reality-check.md)** — What history teaches about intentional community: the five failure modes, what survivors do, five hundred years of patterns held as lessons rather than prescriptions.
 
 ## Emergent Phases
