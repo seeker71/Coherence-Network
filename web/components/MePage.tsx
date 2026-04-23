@@ -311,10 +311,10 @@ export function MePage() {
                   {m.when ? `, ${m.when}` : ""}
                   .
                 </p>
-                {m.hosts.length > 0 && (
+                {(m.hosts?.length ?? 0) > 0 && (
                   <p className="text-muted-foreground">
                     {t("me.metAtHosts")}{" "}
-                    {m.hosts.map((h, i) => (
+                    {(m.hosts ?? []).map((h, i) => (
                       <span key={h.id}>
                         {h.canonical_url ? (
                           <a
@@ -328,7 +328,7 @@ export function MePage() {
                         ) : (
                           <span className="text-foreground">{h.name}</span>
                         )}
-                        {i < m.hosts.length - 1 ? ", " : "."}
+                        {i < (m.hosts?.length ?? 0) - 1 ? ", " : "."}
                       </span>
                     ))}
                   </p>
@@ -336,10 +336,10 @@ export function MePage() {
                 {m.teaching_note && (
                   <p className="text-muted-foreground italic">{m.teaching_note}</p>
                 )}
-                {m.resonates_with.length > 0 && (
+                {(m.resonates_with?.length ?? 0) > 0 && (
                   <p className="text-muted-foreground">
                     {t("me.metAtResonance")}{" "}
-                    {m.resonates_with.map((r, i) => (
+                    {(m.resonates_with ?? []).map((r, i) => (
                       <span key={r.concept_id}>
                         <a
                           href={`/vision/${encodeURIComponent(r.concept_id)}`}
@@ -347,7 +347,7 @@ export function MePage() {
                         >
                           {r.name || humanizeConceptId(r.concept_id)}
                         </a>
-                        {i < m.resonates_with.length - 1 ? ", " : "."}
+                        {i < (m.resonates_with?.length ?? 0) - 1 ? ", " : "."}
                       </span>
                     ))}
                   </p>
