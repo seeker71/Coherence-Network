@@ -34,6 +34,13 @@ def test_autonomous_sidecar_worktree_detects_claude_worktree_path() -> None:
     ) is False
 
 
+def test_dirty_only_risk_is_guidance_not_blocking() -> None:
+    mod = _load_module()
+    assert mod._is_blocking_risk(["dirty_integration_candidate"]) is False
+    assert mod._is_blocking_risk(["dirty_integration_candidate", "detached_head"]) is True
+    assert mod._is_blocking_risk(["ahead_without_upstream"]) is True
+
+
 def test_collect_risks_skips_autonomous_claude_sidecars(monkeypatch, tmp_path: Path) -> None:
     mod = _load_module()
     repo_root = tmp_path / "repo"

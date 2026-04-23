@@ -16,7 +16,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import httpx
 
@@ -403,6 +403,10 @@ def _is_maintainability_scoped_change(path: str) -> bool:
 
 
 def _worktree_has_maintainability_scoped_changes(base_ref: str) -> bool:
+    return _worktree_has_scoped_changes(base_ref, _is_maintainability_scoped_change)
+
+
+def _worktree_has_scoped_changes(base_ref: str, predicate: Callable[[str], bool]) -> bool:
     changed, err = _changed_paths_range(base_ref)
     worktree_changed = _changed_paths_worktree()
     if err:
@@ -410,7 +414,45 @@ def _worktree_has_maintainability_scoped_changes(base_ref: str) -> bool:
         return True
     all_changed = set(changed)
     all_changed.update(worktree_changed)
-    return any(_is_maintainability_scoped_change(path) for path in all_changed)
+    return any(predicate(path) for path in all_changed)
+
+
+def _is_api_test_scoped_change(path: str) -> bool:
+    prefixes = (
+        "api/app/",
+        "api/scripts/",
+        "api/alembic/",
+    )
+    exact = {
+        "api/pyproject.toml",
+        "api/pytest.ini",
+        "api/requirements.txt",
+    }
+    return path.startswith(prefixes) or path in exact
+
+
+def _is_web_build_scoped_change(path: str) -> bool:
+    prefixes = ("web/",)
+    exact = {
+        "package.json",
+        "package-lock.json",
+    }
+    return path.startswith(prefixes) or path in exact
+
+
+def _is_runtime_web_scoped_change(path: str) -> bool:
+    prefixes = (
+        "api/app/",
+        "api/config/",
+        "web/",
+    )
+    exact = {
+        "api/pyproject.toml",
+        "api/requirements.txt",
+        "package.json",
+        "package-lock.json",
+    }
+    return path.startswith(prefixes) or path in exact
 
 
 def _run_commit_evidence_guard(base_ref: str) -> StepResult:
@@ -566,6 +608,9 @@ def _local_steps(
     base_ref: str,
     skip_api_tests: bool,
     skip_web_build: bool,
+    force_api_tests: bool,
+    force_web_build: bool,
+    force_runtime_web: bool,
     require_gh_auth: bool,
     maintainability_output: str,
 ) -> list[tuple[str, str]]:
@@ -599,11 +644,15 @@ def _local_steps(
         steps = [s for s in steps if s[0] != "maintainability-regression-guard"]
     if require_gh_auth:
         steps.insert(0, ("dev-auth-preflight", "python3 scripts/check_dev_auth.py --json"))
-    if not skip_api_tests:
+    api_scoped = force_api_tests or _worktree_has_scoped_changes(base_ref, _is_api_test_scoped_change)
+    web_scoped = force_web_build or _worktree_has_scoped_changes(base_ref, _is_web_build_scoped_change)
+    runtime_scoped = force_runtime_web or _worktree_has_scoped_changes(base_ref, _is_runtime_web_scoped_change)
+    if not skip_api_tests and api_scoped:
         steps.append(("api-tests", "cd api && pytest -q"))
-    if not skip_web_build:
+    if not skip_web_build and web_scoped:
         steps.append(("web-build", "cd web && npm ci --allow-git=none && npm run build"))
-    steps.append(("worktree-runtime-web-guard", "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"))
+    if runtime_scoped:
+        steps.append(("worktree-runtime-web-guard", "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh"))
     return steps
 
 
@@ -904,6 +953,9 @@ def main() -> int:
     parser.add_argument("--mode", choices=("local", "remote", "all"), default="all")
     parser.add_argument("--skip-api-tests", action="store_true")
     parser.add_argument("--skip-web-build", action="store_true")
+    parser.add_argument("--force-api-tests", action="store_true")
+    parser.add_argument("--force-web-build", action="store_true")
+    parser.add_argument("--force-runtime-web", action="store_true")
     parser.add_argument(
         "--require-gh-auth",
         action="store_true",
@@ -1014,6 +1066,9 @@ def main() -> int:
                 args.base_ref,
                 args.skip_api_tests,
                 args.skip_web_build,
+                args.force_api_tests,
+                args.force_web_build,
+                args.force_runtime_web,
                 args.require_gh_auth,
                 maintainability_output,
             ):

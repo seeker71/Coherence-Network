@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import BaseModel, Field, field_validator
 
 from app.models.belief import BeliefAxis
@@ -30,20 +28,3 @@ class WorldviewLensCreate(BaseModel):
 class TranslationRegenerateBody(BaseModel):
     force_regenerate: bool = True
     contributor_id: str | None = None
-
-
-def lens_public_dict(lens_id: str, meta: dict[str, Any]) -> dict[str, Any]:
-    """Shape for GET /api/lenses and GET /api/lenses/{id}."""
-    from app.services import translate_service
-
-    axes = meta.get("archetype_axes")
-    if not axes:
-        axes = translate_service.get_lens_belief_vector(lens_id)
-    return {
-        "lens_id": lens_id,
-        "name": meta.get("display_name") or lens_id.replace("_", " ").title(),
-        "description": meta.get("description", ""),
-        "archetype_axes": axes,
-        "is_builtin": meta.get("category") != "custom",
-        "created_at": meta.get("created_at") or "2026-01-01T00:00:00Z",
-    }

@@ -8,14 +8,15 @@ usage() {
   cat <<'USAGE'
 Usage: prompt_entry_gate.sh [--force-full]
 
-Safe prompt-entry guard for Codex follow-up turns.
+Cheap prompt-entry guard for Codex follow-up turns.
 
 Behavior:
-  - clean worktree: runs full preflight via auto_heal_start_gate.sh --with-pr-gate --with-rebase
-  - dirty worktree: continuation mode (skip start-gate/rebase) and print required pre-commit gates
+  - default: orient from CLAUDE.md, verify branch/worktree safety, and print next proof gates
+  - full proof: use --force-full to run start-gate + rebase + local PR guard
+  - sibling dirty worktrees: print guidance by default; block only detached or unpushed-ahead siblings
 
 Options:
-  --force-full   run full preflight even when worktree is dirty (stashes/restores changes).
+  --force-full   run full preflight now (stashes/restores changes if needed).
   -h, --help     show this help text.
 USAGE
 }
@@ -40,6 +41,17 @@ while [[ $# -gt 0 ]]; do
 done
 
 cd "$REPO_ROOT"
+
+print_claude_orientation() {
+  if [[ ! -f "CLAUDE.md" ]]; then
+    return
+  fi
+  echo "prompt-entry-gate: CLAUDE.md orientation:"
+  echo "  - every file is memory in tissue; sense supple/tight before edits."
+  echo "  - update the living form where it already exists before adding siblings."
+  echo "  - compost superseded forms; keep counts where they are naturally tended."
+  echo "  - ship reversible own-branch work through proof; pause for irreversible effects."
+}
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "prompt-entry-gate: not inside a git worktree."
@@ -66,11 +78,17 @@ if [[ "$branch" == "HEAD" ]]; then
   exit 1
 fi
 
+print_claude_orientation
+
 if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
-  if ! python3 scripts/worktree_continuity_guard.py --fail-on-risk; then
-    echo "prompt-entry-gate: sibling worktree integration risk detected."
-    echo "Sibling dirty branches/worktrees are treated as in-flight changes to integrate, not abandon."
-    echo "Continue from that worktree or merge/cherry-pick its branch before starting a new thread."
+  continuity_args=(--fail-on-blocking-risk)
+  if [[ "${PROMPT_GATE_CONTINUITY_STRICT:-0}" == "1" ]]; then
+    continuity_args=(--fail-on-risk)
+  fi
+  if ! python3 scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
+    echo "prompt-entry-gate: blocking sibling worktree continuity risk detected."
+    echo "Dirty siblings are guidance, but detached or unpushed-ahead siblings can strand history."
+    echo "Continue from that worktree, attach/push it, or merge/cherry-pick its branch before starting new work."
     echo "Temporary override (not recommended): PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate"
     exit 1
   fi
@@ -83,13 +101,17 @@ if [[ "$force_full" == "1" ]]; then
   exec ./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
 fi
 
-if [[ -z "$(git status --short --untracked-files=all)" ]]; then
-  echo "prompt-entry-gate: clean worktree; running full preflight."
-  exec ./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
+if ! make start-gate; then
+  exit 1
 fi
 
-echo "prompt-entry-gate: dirty worktree detected; continuation mode (skip start-gate/rebase)."
-echo "prompt-entry-gate: continue implementation in this thread and run required gates before commit:"
+if [[ -z "$(git status --short --untracked-files=all)" ]]; then
+  echo "prompt-entry-gate: clean worktree; cheap entry complete."
+else
+  echo "prompt-entry-gate: dirty worktree detected; cheap continuation entry complete."
+fi
+
+echo "prompt-entry-gate: full proof is deferred until commit/push readiness:"
 echo "  git fetch origin main && git rebase origin/main"
 echo "  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
 echo "  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
