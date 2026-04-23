@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] vision-kb | VISUALS relocated as visual-language.md
+
+- Ninth draft metabolism. VISUALS (95 lines) held the aesthetic grammar of the Living Collective: unified visual language (warm gold + living teal + soft rose + deep violet + luminous white palette; organic fractal textures; no hard edges; bioluminescent self-illumination), plus eleven DALL-E prompts applying the palette to core concepts (the Pulse, Sensing, Attunement, Vitality, Nourishing, Resonating, Expressing, Spiraling, Field Sensing, Living Space, The Network).
+- Relocated as `docs/vision-kb/visual-language.md` — root-level reference companion to BLUEPRINT, INDEX, LOG, SCHEMA. git mv kept history. Title adjusted from "Visual Prompts" to "Visual Language — The Field's Aesthetic" (the broader scope fits the content).
+- INDEX.md "How to use this KB" now includes `visual-language.md` as step 3 (after BLUEPRINT): read when you want the aesthetic, distinct from the narrative (BLUEPRINT) and the concept map (INDEX).
+- `docs/visuals/` already holds rendered images at 9.7MB; `visual-language.md` is the recipe that could regenerate or extend them.
+- **Why this room**: the visual grammar is orientation material — a reference anyone building something in this field needs. Not a concept (it doesn't teach), not a guide (it doesn't instruct action). It's a vocabulary. Root-level reference files are where vocabularies belong in this KB.
+- Four drafts remain: LANGUAGE_GUIDE, LIVED, REALIZATION, RESOURCES.
+
 ## [2026-04-22] resources | ALIGNED relocated — aligned-communities.md in resources/
 
 - Eighth draft metabolism. ALIGNED (163 lines) cataloged six living communities (Tamera, Auroville, Findhorn, Damanhur, Gaviotas, Earthship Biotecture), two networks (Global Ecovillage Network, Transition Towns), and four practice traditions (Vipassana, Permaculture, Natural Building, Sound Healing) — the mycorrhizal web the field is kin with.
