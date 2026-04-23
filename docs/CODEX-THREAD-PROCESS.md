@@ -50,7 +50,8 @@ Gate status:
 - PASS only when thread context is valid: linked worktree OR `codex/*` branch.
 
 Start command:
-- `make prompt-gate` is the required prompt-entry command (clean tree runs start-gate + rebase + local guard; dirty tree enters continuation mode).
+- `make prompt-gate` is the required prompt-entry command. It is intentionally cheap: CLAUDE.md orientation, branch/worktree safety, and sibling continuity guidance.
+- `./scripts/prompt_entry_gate.sh --force-full` runs the heavier start-gate + rebase + local guard proof when a thread explicitly needs it before commit/push.
 - `make start-gate` is intentionally minimal and only validates branch/worktree safety.
 
 ### Phase A: Local Validation (required before commit)
@@ -84,6 +85,8 @@ Optional runtime smoke (only when runtime-surface files under `api/` or `web/` c
 
 Worktree notes:
 - This command is the default local PR failure-prevention guard for Codex threads.
+- Expensive API, web build, and runtime web checks are scope-aware; docs/scripts-only work should not pay runtime validation cost unless forced.
+- The hosted Thread Gates workflow uses the same surface-aware shape for API, maintainability, and web build steps on PRs.
 - `./scripts/verify_worktree_local_web.sh` is readiness-first by default (it validates existing local API/web services).
 - Start services intentionally with `THREAD_RUNTIME_START_SERVERS=1` only when needed.
 - `./scripts/verify_worktree_local_web.sh --thread-ports` prints current thread-runtime port usage across active threads.

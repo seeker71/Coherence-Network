@@ -1,0 +1,90 @@
+{
+  "date": "2026-04-24",
+  "thread_branch": "codex/full-code-audit-health",
+  "commit_scope": "Reduce prompt entry from CI-class full preflight to cheap orientation and safety checks, and make local plus hosted PR proof skip expensive runtime gates when changes do not touch runtime surfaces.",
+  "files_owned": [
+    ".github/workflows/thread-gates.yml",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/worktree_pr_guard.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/WORKTREE-QUICKSTART.md",
+    "docs/system_audit/commit_evidence_2026-04-24_prompt-gate-cheap-entry.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "bash -n scripts/prompt_entry_gate.sh",
+      "make prompt-gate",
+      "cd api && .venv/bin/pytest -q tests/test_edge_cases_regression.py::test_pr_guard_expensive_steps_are_scope_aware tests/test_edge_cases_regression.py::test_pr_guard_runtime_steps_run_for_runtime_changes",
+      "cd api && ruff check ../scripts/worktree_pr_guard.py tests/test_edge_cases_regression.py",
+      "python3 scripts/validate_workflow_references.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_prompt-gate-cheap-entry.json",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Local cheap-entry validation is recorded; branch still needs normal pre-commit gates and CI after push."
+  },
+  "idea_ids": [
+    "agent-pipeline",
+    "repository-health"
+  ],
+  "spec_ids": [
+    "repository-workflow-health"
+  ],
+  "task_ids": [
+    "prompt-gate-cheap-entry-2026-04-24"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "process-pressure-sensing"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "CLAUDE.md",
+    ".github/workflows/thread-gates.yml",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/worktree_pr_guard.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/WORKTREE-QUICKSTART.md"
+  ],
+  "change_files": [
+    ".github/workflows/thread-gates.yml",
+    "scripts/prompt_entry_gate.sh",
+    "scripts/worktree_pr_guard.py",
+    "api/tests/test_edge_cases_regression.py",
+    "docs/CODEX-THREAD-PROCESS.md",
+    "docs/WORKTREE-QUICKSTART.md"
+  ],
+  "change_intent": "process_only"
+}

@@ -12,8 +12,6 @@ import importlib.util
 import json
 import subprocess
 import sys
-import threading
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -524,6 +522,58 @@ def test_pr_guard_skippable_artifacts() -> None:
     assert mod._is_skippable_local_artifact("data/coherence.db") is True
     assert mod._is_skippable_local_artifact("api/data/coherence.db-wal") is True
     assert mod._is_skippable_local_artifact("api/app/main.py") is False
+
+
+def test_pr_guard_expensive_steps_are_scope_aware(monkeypatch) -> None:
+    """Docs/scripts/test-only changes should not trigger full API, web, or runtime checks."""
+    mod = _load_script_module("worktree_pr_guard")
+
+    monkeypatch.setattr(
+        mod,
+        "_changed_paths_range",
+        lambda base_ref: (["docs/WORKTREE-QUICKSTART.md", "api/tests/test_edge_cases_regression.py"], None),
+    )
+    monkeypatch.setattr(mod, "_changed_paths_worktree", lambda: ["scripts/prompt_entry_gate.sh"])
+
+    steps = mod._local_steps(
+        "origin/main",
+        skip_api_tests=False,
+        skip_web_build=False,
+        force_api_tests=False,
+        force_web_build=False,
+        force_runtime_web=False,
+        require_gh_auth=False,
+        maintainability_output="report.json",
+    )
+
+    names = {name for name, _command in steps}
+    assert "api-tests" not in names
+    assert "web-build" not in names
+    assert "worktree-runtime-web-guard" not in names
+
+
+def test_pr_guard_runtime_steps_run_for_runtime_changes(monkeypatch) -> None:
+    """Runtime surface changes still get the heavier proof gates."""
+    mod = _load_script_module("worktree_pr_guard")
+
+    monkeypatch.setattr(mod, "_changed_paths_range", lambda base_ref: (["api/app/main.py", "web/app/page.tsx"], None))
+    monkeypatch.setattr(mod, "_changed_paths_worktree", lambda: [])
+
+    steps = mod._local_steps(
+        "origin/main",
+        skip_api_tests=False,
+        skip_web_build=False,
+        force_api_tests=False,
+        force_web_build=False,
+        force_runtime_web=False,
+        require_gh_auth=False,
+        maintainability_output="report.json",
+    )
+
+    names = {name for name, _command in steps}
+    assert "api-tests" in names
+    assert "web-build" in names
+    assert "worktree-runtime-web-guard" in names
 
 
 def test_pr_guard_detached_head_blocked(monkeypatch) -> None:
