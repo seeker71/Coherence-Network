@@ -8,15 +8,15 @@ usage() {
   cat <<'USAGE'
 Usage: prompt_entry_gate.sh [--force-full]
 
-Safe prompt-entry guard for Codex follow-up turns.
+Cheap prompt-entry guard for Codex follow-up turns.
 
 Behavior:
-  - clean worktree: runs full preflight via auto_heal_start_gate.sh --with-pr-gate --with-rebase
-  - dirty worktree: continuation mode (skip start-gate/rebase) and print required pre-commit gates
+  - default: orient from CLAUDE.md, verify branch/worktree safety, and print next proof gates
+  - full proof: use --force-full to run start-gate + rebase + local PR guard
   - sibling dirty worktrees: print guidance by default; block only detached or unpushed-ahead siblings
 
 Options:
-  --force-full   run full preflight even when worktree is dirty (stashes/restores changes).
+  --force-full   run full preflight now (stashes/restores changes if needed).
   -h, --help     show this help text.
 USAGE
 }
@@ -101,13 +101,17 @@ if [[ "$force_full" == "1" ]]; then
   exec ./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
 fi
 
-if [[ -z "$(git status --short --untracked-files=all)" ]]; then
-  echo "prompt-entry-gate: clean worktree; running full preflight."
-  exec ./scripts/auto_heal_start_gate.sh --with-pr-gate --with-rebase
+if ! make start-gate; then
+  exit 1
 fi
 
-echo "prompt-entry-gate: dirty worktree detected; continuation mode (skip start-gate/rebase)."
-echo "prompt-entry-gate: continue implementation in this thread and run required gates before commit:"
+if [[ -z "$(git status --short --untracked-files=all)" ]]; then
+  echo "prompt-entry-gate: clean worktree; cheap entry complete."
+else
+  echo "prompt-entry-gate: dirty worktree detected; cheap continuation entry complete."
+fi
+
+echo "prompt-entry-gate: full proof is deferred until commit/push readiness:"
 echo "  git fetch origin main && git rebase origin/main"
 echo "  python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
 echo "  python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
