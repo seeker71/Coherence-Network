@@ -66,6 +66,54 @@ def _evidence_files_from_changes(changed_files: list[str], repo_root: Path) -> l
     return out
 
 
+def _declared_change_files(data: dict[str, Any]) -> set[str]:
+    return {
+        str(x).strip()
+        for x in data.get("change_files", [])
+        if isinstance(x, str) and str(x).strip()
+    }
+
+
+def _expected_non_evidence_files(changed_files: list[str]) -> set[str]:
+    return {
+        path
+        for path in changed_files
+        if not (path.startswith(EVIDENCE_PREFIX) and path.endswith(EVIDENCE_SUFFIX))
+    }
+
+
+def _validate_aggregate_change_coverage(
+    records: list[tuple[Path, dict[str, Any]]],
+    changed_files: list[str],
+) -> list[str]:
+    """Validate branch diff coverage across all changed evidence files.
+
+    Each evidence record owns its own cell of work. The branch-level contract is
+    that those cells collectively cover the full diff.
+    """
+    errors: list[str] = []
+    expected = _expected_non_evidence_files(changed_files)
+    declared_all: set[str] = set()
+    for _path, data in records:
+        declared_all.update(_declared_change_files(data))
+
+    missing_coverage = sorted(path for path in expected if path not in declared_all)
+    if missing_coverage:
+        errors.append(f"aggregate change_files missing changed paths: {missing_coverage}")
+
+    for path, data in records:
+        declared = _declared_change_files(data)
+        declared_runtime = any(item.startswith(RUNTIME_PATH_PREFIXES) for item in declared)
+        change_intent = str(data.get("change_intent") or "").strip().lower()
+        runtime_intent = change_intent in {"runtime_feature", "runtime_fix"}
+        if runtime_intent and not declared_runtime:
+            errors.append(f"{path}: change_intent requires declared runtime changes")
+        if (not runtime_intent) and declared_runtime:
+            errors.append(f"{path}: runtime files declared but change_intent is not runtime_feature/runtime_fix")
+
+    return errors
+
+
 def validate(data: dict[str, Any], *, changed_files: list[str] | None = None) -> list[str]:
     errors: list[str] = []
 
@@ -139,11 +187,7 @@ def validate(data: dict[str, Any], *, changed_files: list[str] | None = None) ->
             for x in data.get("change_files", [])
             if isinstance(x, str) and str(x).strip()
         }
-        expected = {
-            path
-            for path in changed_files
-            if not (path.startswith(EVIDENCE_PREFIX) and path.endswith(EVIDENCE_SUFFIX))
-        }
+        expected = _expected_non_evidence_files(changed_files)
         missing_coverage = sorted(path for path in expected if path not in declared)
         if missing_coverage:
             errors.append(f"change_files missing changed paths: {missing_coverage}")
@@ -228,13 +272,16 @@ def main() -> int:
         evidence_paths = [latest]
 
     had_error = False
+    loaded_records: list[tuple[Path, dict[str, Any]]] = []
+    aggregate_coverage = bool(args.base and not args.file and len(evidence_paths) > 1)
     for path in evidence_paths:
         if not path.is_file():
             print(f"ERROR: evidence file does not exist: {path}")
             had_error = True
             continue
         data = _load_json(path)
-        errors = validate(data, changed_files=changed_files)
+        loaded_records.append((path, data))
+        errors = validate(data, changed_files=None if aggregate_coverage else changed_files)
         if errors:
             print(f"ERROR: evidence validation failed for {path}")
             for e in errors:
@@ -242,6 +289,16 @@ def main() -> int:
             had_error = True
             continue
         print(f"OK: evidence validation passed for {path}")
+
+    if aggregate_coverage and changed_files is not None and not had_error:
+        errors = _validate_aggregate_change_coverage(loaded_records, changed_files)
+        if errors:
+            print("ERROR: aggregate evidence validation failed")
+            for e in errors:
+                print(f"- {e}")
+            had_error = True
+        else:
+            print("OK: aggregate evidence coverage passed")
 
     if had_error:
         return 1
