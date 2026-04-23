@@ -17,15 +17,12 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Generator
 
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, event
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
-
-class Base(DeclarativeBase):
-    """Shared declarative base for ALL Coherence Network ORM models."""
-    pass
+from app.db.base import Base
 
 
 # ---------------------------------------------------------------------------

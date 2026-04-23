@@ -18,14 +18,14 @@ Edge types: the 46 relationship types from Living Codex ontology,
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import os as _os
+from datetime import datetime
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel
 
 from sqlalchemy import (
-    Column,
     DateTime,
     Float,
     Index,
@@ -34,6 +34,9 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy import JSON as _JSON
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db.base import Base
 
 try:
     from sqlalchemy.dialects.postgresql import JSONB
@@ -41,12 +44,7 @@ except ImportError:
     JSONB = _JSON  # type: ignore[misc,assignment]
 
 # Use JSONB on PostgreSQL (indexable), plain JSON on SQLite (tests)
-import os as _os
-
 _PortableJSON = JSONB if "postgresql" in _os.environ.get("DATABASE_URL", "") else _JSON
-from sqlalchemy.orm import Mapped, mapped_column
-
-from app.services.unified_db import Base
 
 
 class NodeType(str, Enum):
