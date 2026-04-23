@@ -3,9 +3,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AssetType(str, Enum):
@@ -44,3 +45,37 @@ class Asset(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ConceptTag(BaseModel):
+    """A weighted link from an asset to a Living Collective concept."""
+
+    concept_id: str
+    weight: float = Field(ge=0.0, le=1.0)
+
+
+class AssetRegistrationCreate(BaseModel):
+    """Payload for POST /api/assets/register — MIME-aware asset registration
+    that extends the legacy AssetCreate taxonomy (CODE/MODEL/CONTENT/DATA)
+    with free-form MIME types, content provenance, and concept tags.
+
+    See specs/asset-renderer-plugin.md (R1).
+    """
+
+    type: str = Field(description="MIME type or custom type identifier")
+    name: str
+    description: str
+    content_hash: str = Field(description="SHA-256 of raw content")
+    arweave_tx: Optional[str] = None
+    ipfs_cid: Optional[str] = None
+    concept_tags: List[ConceptTag] = Field(default_factory=list)
+    creator_id: str
+    creation_cost_cc: Decimal
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AssetRegistration(AssetRegistrationCreate):
+    """Registered asset with server-assigned id and timestamp."""
+
+    id: str = Field(description="asset:<uuid> identifier")
+    created_at: datetime
