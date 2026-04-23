@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] concepts | EMBODIMENT ripened into lc-embodiment — the body paired with the physics
+
+- Fourth draft metabolism in the trail. The EMBODIMENT draft (482 lines) held a coherent teaching about the body as vehicle of manifestation: Dispenza's internal pharmacy, HeartMath's heart-electromagnetic field, breath as master key, three energy centers as one flow (not separate systems), elevated emotion as chemistry, collective practices — walking meditation, toning, gratitude rounds, joy practice, reverence, the complete 65-minute morning practice — and what three months of this produces in a community (sleep deepens, vitality sustains, conflict dissolves, field becomes palpable).
+- Preserved whole as `concepts/lc-embodiment.md`. git mv kept history. Added concept frontmatter (hz: 432 — the natural harmony frequency, since the teaching is about integrating all the centers into one flow). Title adjusted to "Embodiment — The Body as the Vehicle of Manifestation" with a bridging blockquote pointing to lc-deeper-pattern.
+- Added to the **Foundational Teachings** section under lc-deeper-pattern. The two sit as paired doors: DEEPER names the physics (why), EMBODIMENT names the body that lives the physics (how). Together they form the foundation beneath the concept fractal.
+- Concept count: 57 → 58; status: 55 expanding, 3 seed.
+- **Why**: this teaching needed to stay whole. Splitting it into lc-breath + lc-internal-pharmacy + lc-energy-centers would have lost the wholeness the teaching itself insists on. The body isn't a set of separate systems; the concept file isn't either.
+
 ## [2026-04-22] concepts | DEEPER draft ripened into lc-deeper-pattern — a new Foundational Teachings section
 
 - The DEEPER draft (201 lines) held content unlike anything in the KB: Robert Edward Grant's mathematics of imaginary-plane folding, Gerald Pollack's EZ water, Viktor Schauberger's river-as-circulation, Masaru Emoto's water crystallography, scalar wave consciousness, Lemurian crystal amplification, sacred frequencies as harmonic chord, the field as already-here needing only recognition.
