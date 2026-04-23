@@ -633,4 +633,21 @@ python3 scripts/validate_spec_quality.py specs/financial-integration.md
 
 ## Known Gaps and Follow-up Tasks
 
-- None yet — follow-up gaps will be recorded here as implementation proceeds.
+**Landed in this session (pure logic, external-system-free):**
+- Rate computation with spread + staleness detection (R3): `compute_rate()`, `is_rate_stale()` in `api/app/services/cc_fiat_bridge.py`
+- Swap math in both directions (R1 math half): `compute_swap()`
+- Treasury backing invariant (R2 enforcement half): `check_treasury_invariant()`
+- KYC threshold check (R6 policy half): `check_kyc_threshold()`
+- Tax report aggregation (R7): `aggregate_tax_report()` + `TaxReport`, `TaxConversionEntry`, `TaxReportSummary` models
+- 24 unit tests covering each of the above; `api/tests/test_financial_integration.py`
+
+**Still to build (external systems required):**
+- Base L2 USDC transfer execution (R1 on-chain half) — Web3 client, treasury multi-sig wallet setup
+- On-ramp partner integration (R4) — Coinbase Onramp / MoonPay / Transak SDK + webhook handler + partner selection gate
+- Off-ramp partner integration (R5) — USDC-to-fiat provider + bank transfer rails
+- KYC provider integration (R6 provider half) — Persona / Jumio / Onfido SDK + webhook + verification state machine
+- Arweave proof-of-reserves publishing (R2 transparency half) — snapshot job + Arweave client
+- Treasury audit trail router (R8) — `GET /api/cc/exchange/audit-trail` + event append store
+- Router endpoints (swap, onramp, withdraw, tax-report, rate) wiring the pure logic into `cc_exchange.py`
+
+Each "still to build" item is its own focused PR once partner selection gates are resolved. The pure-logic foundation now tested means partner integrations plug into verified invariants rather than building on top of speculative math.
