@@ -137,6 +137,62 @@ def patch_belief_profile(contributor_id: str, patch: BeliefPatch) -> BeliefProfi
     return _node_to_belief_profile(updated_node)
 
 
+def _score_concept_overlap(
+    profile: BeliefProfile,
+    idea_concepts: List[str],
+) -> tuple[float, List[str]]:
+    contributor_concept_ids = [r.concept_id for r in profile.concept_resonances]
+    contributor_weights = {r.concept_id: r.weight for r in profile.concept_resonances}
+    if not idea_concepts or not contributor_concept_ids:
+        return 0.5, []
+
+    matched_concepts = [c for c in contributor_concept_ids if c in idea_concepts]
+    if not matched_concepts:
+        return 0.0, []
+
+    union = list(set(contributor_concept_ids + idea_concepts))
+    weighted_overlap = sum(contributor_weights.get(c, 1.0) for c in matched_concepts)
+    weighted_union = sum(contributor_weights.get(c, 1.0) for c in union)
+    score = weighted_overlap / weighted_union if weighted_union > 0 else 0.5
+    return score, matched_concepts
+
+
+def _score_worldview_alignment(
+    profile: BeliefProfile,
+    idea_props: dict[str, Any],
+) -> tuple[float, List[str]]:
+    raw_idea_axes = idea_props.get("worldview_axes") or {}
+    idea_axes = {k: float(v) for k, v in raw_idea_axes.items() if k in _DEFAULT_AXES}
+    if not idea_axes:
+        return 0.5, []
+
+    dot = 0.0
+    norm_contributor = 0.0
+    norm_idea = 0.0
+    matched_axes: List[str] = []
+    for axis in BeliefAxis:
+        cv = profile.worldview_axes.get(axis.value, 0.0)
+        iv = idea_axes.get(axis.value, 0.0)
+        dot += cv * iv
+        norm_contributor += cv * cv
+        norm_idea += iv * iv
+        if cv > 0.3 and iv > 0.3:
+            matched_axes.append(axis.value)
+
+    denom = (norm_contributor ** 0.5) * (norm_idea ** 0.5)
+    score = dot / denom if denom > 0 else 0.5
+    return max(0.0, min(1.0, score)), matched_axes
+
+
+def _score_tag_match(profile: BeliefProfile, idea_tags: List[str]) -> float:
+    contributor_tags = set(profile.interest_tags)
+    idea_tag_set = set(idea_tags)
+    if not contributor_tags or not idea_tag_set:
+        return 0.5
+    matched = contributor_tags & idea_tag_set
+    return max(0.0, min(1.0, len(matched) / len(contributor_tags)))
+
+
 def compute_resonance(contributor_id: str, idea_id: str) -> ResonanceResult:
     """Compute resonance between a contributor's beliefs and an idea."""
     node = _get_contributor_node(contributor_id)
@@ -152,63 +208,11 @@ def compute_resonance(contributor_id: str, idea_id: str) -> ResonanceResult:
     idea_props = idea_node.get("properties") or {}
     idea_tags: List[str] = list(idea_props.get("tags") or idea_props.get("interest_tags") or [])
     idea_concept_ids: List[str] = list(idea_props.get("concept_ids") or idea_props.get("concepts") or [])
-    # Also treat idea's tags as concept ids for overlap calc
     all_idea_concepts = list(set(idea_concept_ids + idea_tags))
 
-    contributor_concept_ids = [r.concept_id for r in profile.concept_resonances]
-    contributor_weights = {r.concept_id: r.weight for r in profile.concept_resonances}
-
-    # --- concept_overlap (Jaccard-weighted) ---
-    matched_concepts: List[str] = []
-    if not all_idea_concepts or not contributor_concept_ids:
-        concept_overlap = 0.5  # neutral when no data
-    else:
-        overlap = [c for c in contributor_concept_ids if c in all_idea_concepts]
-        matched_concepts = overlap
-        if not overlap:
-            concept_overlap = 0.0
-        else:
-            union = list(set(contributor_concept_ids + all_idea_concepts))
-            weighted_overlap = sum(contributor_weights.get(c, 1.0) for c in overlap)
-            weighted_union = sum(contributor_weights.get(c, 1.0) for c in union)
-            concept_overlap = weighted_overlap / weighted_union if weighted_union > 0 else 0.5
-
-    # --- worldview_alignment (dot-product normalized) ---
-    idea_axes: Dict[str, float] = {}
-    raw_idea_axes = idea_props.get("worldview_axes") or {}
-    if raw_idea_axes:
-        idea_axes = {k: float(v) for k, v in raw_idea_axes.items() if k in _DEFAULT_AXES}
-
-    matched_axes: List[str] = []
-    if not idea_axes:
-        worldview_alignment = 0.5  # neutral
-    else:
-        dot = 0.0
-        norm_contributor = 0.0
-        norm_idea = 0.0
-        for axis in BeliefAxis:
-            cv = profile.worldview_axes.get(axis.value, 0.0)
-            iv = idea_axes.get(axis.value, 0.0)
-            dot += cv * iv
-            norm_contributor += cv * cv
-            norm_idea += iv * iv
-            if cv > 0.3 and iv > 0.3:
-                matched_axes.append(axis.value)
-        denom = (norm_contributor ** 0.5) * (norm_idea ** 0.5)
-        worldview_alignment = dot / denom if denom > 0 else 0.5
-        worldview_alignment = max(0.0, min(1.0, worldview_alignment))
-
-    # --- tag_match ---
-    contributor_tags = set(profile.interest_tags)
-    idea_tag_set = set(idea_tags)
-    if not contributor_tags or not idea_tag_set:
-        tag_match = 0.5  # neutral
-    else:
-        matched = contributor_tags & idea_tag_set
-        tag_match = len(matched) / len(contributor_tags)
-        tag_match = max(0.0, min(1.0, tag_match))
-
-    # --- final score ---
+    concept_overlap, matched_concepts = _score_concept_overlap(profile, all_idea_concepts)
+    worldview_alignment, matched_axes = _score_worldview_alignment(profile, idea_props)
+    tag_match = _score_tag_match(profile, idea_tags)
     resonance_score = (
         _CONCEPT_WEIGHT * concept_overlap
         + _WORLDVIEW_WEIGHT * worldview_alignment
