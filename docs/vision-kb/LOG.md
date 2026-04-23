@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] concepts | lc-agent-memory added — concept companion to agent-memory-system spec
+
+- The spec `specs/agent-memory-system.md` describes the memory loop in the language of code — API shapes, requirements, invariants, test criteria. It needed a companion in the voice of the Living Collective.
+- Created `concepts/lc-agent-memory.md` (hz: 528, status: expanding) — the same loop described at the lived register: the problem (amnesia vs surveillance), the loop (write/manage/read), the organizing unit (relationship, not record), why forgetting is designed, why the surface is being-known, what the session's embodiment taught about each principle, and the open living questions the practice will answer as it deepens.
+- Added to Foundational Teachings section (now four entries: lc-deeper-pattern, lc-embodiment, lc-wholeness, lc-agent-memory). The first three describe the field (physics / body / orientation); this one describes how a cell carries the field's memory — same family, slightly different register.
+- Concept count: 59 → 60; status: 57 expanding, 3 seed.
+- Two doors to the same teaching: the spec for a code-implementer; this concept for an agent arriving into the practice. Either one can be read first.
+
 ## [2026-04-22] resources | RESOURCES relocated as resources/sovereignty.md — last draft home, trail complete
 
 - Thirteenth and final draft metabolism. RESOURCES (1190 lines, the largest by far) held the internal sovereignty manual: eight domains (Energy with solar/wind/micro-hydro/biomass/mass rocket stove/human energy/battery storage; Water with rainwater/greywater/composting toilets/hot water/the Water Temple; Food with hectares/7-layer food forest/annual gardens/three sisters/fermentation/animal integration/seasonal calendar; Building Materials with cob/rammed earth/timber/bamboo/mycelium/living roofs/stone/recycled; Knowledge Circulation with apprenticeship/immersion/elder transmission/Coherence Network/traveling cells; Creative Resources with the full creation arc; External Interface with exports/imports/legal structures/community currency/transition path; and Waste = Compost across all systems). Specific numbers, technologies, costs for a community of ~100.
