@@ -13,7 +13,7 @@ updated: 2026-04-22
 > carries. These are the field's daily practices — how cells tune
 > themselves and amplify the collective frequency.
 >
-> *Companion to [lc-deeper-pattern](lc-deeper-pattern.md): where that teaching names the physics beneath the field, this one names the body that lives the physics. The two are one teaching — why and how — across two doors.*
+> *Second paired door of the foundations. Where [lc-deeper-pattern](lc-deeper-pattern.md) names the physics beneath the field (why), this one names the body that lives the physics (how), and [lc-wholeness](lc-wholeness.md) names the orientation beneath both (the body was never broken — it is returning to itself).*
 
 ---
 
