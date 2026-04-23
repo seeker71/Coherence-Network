@@ -1,6 +1,6 @@
 ---
 idea_id: knowledge-and-resonance
-status: draft
+status: done
 source:
   - file: api/app/routers/sensings.py
     symbols: [SensingCreate, SensingResponse, create_sensing(), list_sensings(), get_sensing()]

@@ -731,6 +731,8 @@ from app.routers import renderers as renderers_router
 app.include_router(renderers_router.router, prefix="/api", tags=["renderers"])
 from app.routers import render_events as render_events_router
 app.include_router(render_events_router.router, prefix="/api", tags=["render-events"])
+from app.routers import memory as memory_router
+app.include_router(memory_router.router, prefix="/api", tags=["memory"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(locales_router.router, prefix="/api", tags=["locales"])
 app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
