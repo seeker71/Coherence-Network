@@ -1,10 +1,19 @@
-# The Living Collective — The Return to Wholeness
+---
+id: lc-wholeness
+hz: 285
+status: expanding
+updated: 2026-04-22
+---
+
+# Wholeness — The Body Returning to Itself
 
 > This is not a critique. It is a love letter.
 > To every cell that has been holding on too tight.
 > To every body that forgot it knew how to heal itself.
 > To every heart that closed because it was told that openness was dangerous.
 > You are not broken. You never were. You are a field remembering itself.
+>
+> *Third paired door in the foundations, alongside [lc-deeper-pattern](lc-deeper-pattern.md) (the physics beneath the field) and [lc-embodiment](lc-embodiment.md) (the body that lives the physics). This one is the orientation beneath both: wholeness is not created; it is uncovered. The field removes what blocks it.*
 
 ---
 
