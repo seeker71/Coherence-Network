@@ -4,8 +4,10 @@
   "commit_scope": "Turn prompt-entry continuity checks from dirty-sibling blockage into guidance by default, while surfacing CLAUDE.md orientation at each session entry.",
   "files_owned": [
     "scripts/worktree_continuity_guard.py",
+    "scripts/validate_commit_evidence.py",
     "scripts/prompt_entry_gate.sh",
     "scripts/auto_heal_start_gate.sh",
+    "api/tests/test_commit_evidence_validator.py",
     "api/tests/test_worktree_continuity_guard.py",
     "docs/system_audit/commit_evidence_2026-04-24_prompt-gate-guidance.json"
   ],
@@ -13,14 +15,17 @@
     "status": "pass",
     "commands": [
       "cd api && .venv/bin/pytest -q tests/test_worktree_continuity_guard.py",
+      "cd api && .venv/bin/pytest -q tests/test_commit_evidence_validator.py tests/test_worktree_continuity_guard.py",
       "cd api && ruff check ../scripts/worktree_continuity_guard.py tests/test_worktree_continuity_guard.py",
+      "cd api && ruff check ../scripts/worktree_continuity_guard.py ../scripts/validate_commit_evidence.py tests/test_commit_evidence_validator.py tests/test_worktree_continuity_guard.py",
       "bash -n scripts/prompt_entry_gate.sh && bash -n scripts/auto_heal_start_gate.sh",
       "python3 scripts/worktree_continuity_guard.py --fail-on-blocking-risk",
       "make prompt-gate",
       "git fetch origin main && git rebase origin/main",
       "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
       "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict",
-      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_prompt-gate-guidance.json"
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_prompt-gate-guidance.json",
+      "python3 scripts/validate_commit_evidence.py --base origin/main --head HEAD --require-changed-evidence"
     ]
   },
   "ci_validation": {
@@ -73,12 +78,16 @@
     "scripts/prompt_entry_gate.sh",
     "scripts/auto_heal_start_gate.sh",
     "scripts/worktree_continuity_guard.py",
+    "scripts/validate_commit_evidence.py",
+    "api/tests/test_commit_evidence_validator.py",
     "api/tests/test_worktree_continuity_guard.py"
   ],
   "change_files": [
     "scripts/worktree_continuity_guard.py",
+    "scripts/validate_commit_evidence.py",
     "scripts/prompt_entry_gate.sh",
     "scripts/auto_heal_start_gate.sh",
+    "api/tests/test_commit_evidence_validator.py",
     "api/tests/test_worktree_continuity_guard.py"
   ],
   "change_intent": "process_only"
