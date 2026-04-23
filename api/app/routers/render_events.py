@@ -1,23 +1,24 @@
-"""Render Events Router — log a render and attribute CC.
+"""Render Events Router — log a render, attribute CC, aggregate analytics.
 
 Endpoints:
-  POST /api/render-events               - Log a render event, attribute CC
-  GET  /api/render-events/{event_id}    - Fetch a single event
+  POST /api/render-events                         - Log a render event, attribute CC
+  GET  /api/render-events/{event_id}              - Fetch a single event
+  GET  /api/render-events/analytics/{asset_id}    - Aggregate per-asset analytics
 
-See specs/asset-renderer-plugin.md (R4). Closes the economic loop: a
-render event comes in with (asset_id, renderer_id, reader_id,
+See specs/asset-renderer-plugin.md (R4, R11). Closes the economic loop:
+a render event comes in with (asset_id, renderer_id, reader_id,
 duration_ms); the service computes the CC pool from engagement and
 splits it per the renderer's cc_split (or the platform default if
-none is registered).
+none is registered). Analytics aggregates events per asset.
 
-Storage is an in-process list for this first slice, matching the
+Storage is an in-process dict for this first slice, matching the
 renderer registry. Graph-backed persistence is a follow-up.
 """
 
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Dict
+from typing import Dict, List
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
@@ -87,6 +88,72 @@ async def log_render_event(body: RenderEventCreate) -> RenderEvent:
     )
     _EVENTS[event.id] = event
     return event
+
+
+class AssetAnalytics(BaseModel):
+    """Aggregated analytics for a single asset across all render events."""
+
+    asset_id: str
+    total_renders: int
+    unique_readers: int
+    avg_duration_ms: int
+    total_cc_earned: Decimal
+    cc_to_asset_creator: Decimal
+    cc_to_renderer_creators: Decimal
+    cc_to_host_nodes: Decimal
+
+
+@router.get(
+    "/analytics/{asset_id:path}",
+    response_model=AssetAnalytics,
+    summary="Aggregate analytics for a single asset",
+)
+async def get_asset_analytics(asset_id: str) -> AssetAnalytics:
+    """Return aggregated render count, CC earned per role, unique readers,
+    and average engagement duration for a single asset.
+
+    Returns zero-valued analytics (not 404) for an asset with no events —
+    every asset has an analytics surface; the answer is just "nothing yet"
+    until a render happens.
+
+    Note on scope: the spec's `top_concepts` field (concept tags weighted
+    by render count) requires concept-tag integration at the asset
+    registration layer. Not yet wired here — belongs in a follow-up once
+    POST /api/assets/register is implemented.
+    """
+    events: List[RenderEvent] = [e for e in _EVENTS.values() if e.asset_id == asset_id]
+
+    if not events:
+        zero = Decimal("0")
+        return AssetAnalytics(
+            asset_id=asset_id,
+            total_renders=0,
+            unique_readers=0,
+            avg_duration_ms=0,
+            total_cc_earned=zero,
+            cc_to_asset_creator=zero,
+            cc_to_renderer_creators=zero,
+            cc_to_host_nodes=zero,
+        )
+
+    unique_readers = len({e.reader_id for e in events})
+    avg_duration = sum(e.duration_ms for e in events) // len(events)
+
+    total_pool = sum((e.cc_pool for e in events), Decimal("0"))
+    total_asset = sum((e.cc_asset_creator for e in events), Decimal("0"))
+    total_renderer = sum((e.cc_renderer_creator for e in events), Decimal("0"))
+    total_host = sum((e.cc_host_node for e in events), Decimal("0"))
+
+    return AssetAnalytics(
+        asset_id=asset_id,
+        total_renders=len(events),
+        unique_readers=unique_readers,
+        avg_duration_ms=avg_duration,
+        total_cc_earned=total_pool,
+        cc_to_asset_creator=total_asset,
+        cc_to_renderer_creators=total_renderer,
+        cc_to_host_nodes=total_host,
+    )
 
 
 @router.get(
