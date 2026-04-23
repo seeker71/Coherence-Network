@@ -1,7 +1,9 @@
-# The Living Collective — Stories
+# Stories — Scenes from the Field
 
 > These are not hypothetical. They are memories from a future that is forming.
 > Read them slowly. Feel where you fit. You do fit. Everyone does.
+>
+> *Where concepts teach and guides instruct, stories show. Seven scenes where characters live the field: the Water Temple at dawn, the Textile Keeper's collection, the Elder Council That Isn't a Council, Market Day as Offering Circle, the Thursday Sound Journey, Fern's ninety-day arrival, and the Skeptical Journalist who stayed. Each scene seeds a felt sense that abstract teaching cannot reach.*
 
 ---
 
