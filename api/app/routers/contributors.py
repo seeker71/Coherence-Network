@@ -491,15 +491,20 @@ def _node_to_contributor(node: dict) -> Contributor:
     except (ValueError, AttributeError):
         cid = uuid4()
     email = node.get("email") or ""
-    # Contributor model requires a valid email — use a placeholder if missing.
-    # Sanitize the local-part: names with spaces or unicode (e.g. "Dr Joe
-    # Dispenza") would otherwise make an invalid EmailStr and 500 the
-    # endpoint for every caller paging through a list that includes the node.
-    if not email or "@" not in email:
-        import re
-        raw_name = node.get("name", "unknown") or "unknown"
-        safe_local = re.sub(r"[^a-zA-Z0-9._-]+", "-", raw_name).strip("-").lower()
-        email = f"{safe_local or 'unknown'}@coherence.network"
+    # Contributor model requires a valid EmailStr. Any stored email that
+    # doesn't validate — whitespace/unicode in the local-part, reserved
+    # TLDs like .local, malformed — would 500 the list endpoint for every
+    # caller paging through. Use pydantic's own validator as source of
+    # truth and fall back to a sanitized placeholder when it rejects.
+    import re
+    def _safe_local(s: str) -> str:
+        slug = re.sub(r"[^a-zA-Z0-9._-]+", "-", s or "").strip("-").lower()
+        return slug or "unknown"
+    try:
+        from pydantic import TypeAdapter, EmailStr
+        TypeAdapter(EmailStr).validate_python(email)
+    except Exception:
+        email = f"{_safe_local(node.get('name', 'unknown'))}@coherence.network"
     # Coerce unknown contributor_type values to SYSTEM so a stray label in
     # the graph never blows up the endpoint for every caller.
     raw_type = str(node.get("contributor_type") or "HUMAN").strip().upper()
