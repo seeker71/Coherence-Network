@@ -1,6 +1,6 @@
 ---
 idea_id: value-attribution
-status: draft
+status: done
 priority: high
 source:
   - file: api/app/routers/assets.py
@@ -435,4 +435,20 @@ python3 -m pytest api/tests/test_asset_renderer.py -x -v
 
 ## Known Gaps and Follow-up Tasks
 
-- None yet — follow-up gaps will be recorded here as implementation proceeds.
+- **Dynamic import of remote renderer bundles.** The resolver returns a `RemoteRendererDescriptor` with a `component_url`, and `AssetRenderer.tsx` renders a transparent "bundle pending dynamic load" notice for remote descriptors. The final bootstrap that actually `import()`s a remote URL is intentionally deferred: it needs a dedicated security design (bundle signing, CSP policy, sandbox isolation strategy). Follow-up spec to own that.
+- **Graph-backed storage of renderers and render events.** The current slice uses an in-process registry for `/api/renderers` and an in-process event log for `/api/render-events`. Persistence through `graph_service` is straightforward but was kept out of the first implementation to land the attribution chain cleanly. Follow-up PR.
+- **Assets analytics top_concepts.** The analytics endpoint returns everything the spec names *except* `top_concepts` (requires reading `concept_tags` back off each asset registration and weighting by render count). Wire-up after the graph-backed event storage lands.
+- **Integration tests for the full chain.** A browser-level test that registers an asset, registers a renderer, renders, and confirms the CC event was attributed end-to-end. Vitest is node-env here; needs a playwright or happy-dom swap.
+
+## Implementation Trail (merged as this spec landed)
+
+- PR #1102 — models + attribution service + unit tests (R4, R5, R9)
+- PR #1103 — POST /api/renderers/register and lookup endpoints (R2, R3)
+- PR #1104 — POST /api/render-events (R4 HTTP surface)
+- PR #1105 — GET /api/render-events/analytics/{asset_id} (R11)
+- PR #1106 — POST /api/assets/register (R1)
+- PR #1110 — web/lib/renderer-sdk.ts (R7)
+- PR #1111 — built-in renderers for markdown/image/html/pdf (R6)
+- PR #1112 — web/lib/renderer-resolver.ts (R3 resolution)
+- PR #1113 — render-session + postRenderEvent (R10, R4 client)
+- PR landing this status change — AssetRenderer wrapper + status→done
