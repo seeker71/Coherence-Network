@@ -1,7 +1,7 @@
 # The Living Collective — Knowledge Base
 
 > AI-maintained markdown wiki. Read this file first. Drill into linked files for detail.
-> **Last maintained**: 2026-04-22 | **Concepts**: 57 | **Status**: 54 expanding, 3 seed
+> **Last maintained**: 2026-04-22 | **Concepts**: 58 | **Status**: 55 expanding, 3 seed
 
 ## How to use this KB
 
@@ -79,9 +79,10 @@ A community of 50-200 people living as a single organism. What amplifies alivene
 
 ### Foundational Teachings (beyond the core 51)
 
-Teachings that sit alongside the fractal rather than inside it — the physics and metaphysics the core concepts emerge from.
+Teachings that sit alongside the fractal rather than inside it — the physics, metaphysics, and body-practice the core concepts emerge from.
 
 - **[The Deeper Pattern](concepts/lc-deeper-pattern.md)** — 741 Hz — imagination becomes real through attention, water as planetary consciousness, crystal structure of community, resonance as creative force, the field as already-here (Pollack, Schauberger, Emoto, Grant)
+- **[Embodiment](concepts/lc-embodiment.md)** — 432 Hz — the body as vehicle of manifestation: internal pharmacy, breath as master key, energy centers as one flow, elevated emotion as chemistry, the complete morning practice (Dispenza, HeartMath, Wim Hof)
 
 ### Level 3 — Vocabulary (9)
 - [Coherence](concepts/lc-w-coherence.md) — 432 Hz — frequencies align as one
