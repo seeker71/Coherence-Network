@@ -1,7 +1,11 @@
-# The Living Collective — Realization
+# Practical Detail — Vocabulary, Day, Nine Visions, Beginning
 
 > From vision to lived experience. Every aspect of shared life reimagined
 > through the frequency of wholeness, resonance, and vitality.
+>
+> *Companion to [INDEX.md](INDEX.md) (the emergent phases and cost data), [governance.md](governance.md) (decision as attention), [economics.md](economics.md) (abundance as overflow), and [membership.md](membership.md) (joining as time together). Where those name specific systems, this file holds the wider practical texture: the new vocabulary that carries the frequency, a day's rhythm through the field, and detailed expressions for each of the nine emerging visions with skills and research needs.*
+>
+> *Cross-references: [language-guide.md](../language-guide.md) for the fuller word-pair treatment; individual `lc-v-*` concept files in [concepts/](../concepts/) for each emerging vision's core teaching.*
 
 ---
 

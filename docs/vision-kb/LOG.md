@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] realization | REALIZATION relocated as realization/practical-detail.md
+
+- Eleventh draft metabolism. REALIZATION (339 lines) held four interwoven layers of practical texture: a New Vocabulary (aspects/spaces/roles as field expressions — overlapping language-guide partially), A Day in the Field (dawn through night narrative rhythm — adjacent to but distinct from LIVED and STORIES), the Nine Visions in Practical Detail (each vision with building types, skills called for, research needed — content that could enrich individual `lc-v-*` concept files), and What the Field Needs to Begin (starting resources, skills, questions).
+- Relocated whole as `realization/practical-detail.md` — new fourth living document in the `realization/` room alongside governance, economics, membership. git mv kept history. Title adjusted to "Practical Detail — Vocabulary, Day, Nine Visions, Beginning" with a bridging blockquote explaining relationship to the other realization files and cross-references to `language-guide.md` and the `lc-v-*` concepts.
+- `realization/INDEX.md` updated to list practical-detail alongside governance/economics/membership/reality-check.
+- Held the whole rather than scattering: the four layers cohere into one reading. Future tending may distribute — e.g., the Nine Visions detail enriching individual lc-v-* concept files, the vocabulary folding into language-guide. But that's distillation work best done after LIVED is also home, so the full realization picture is visible first.
+- Two drafts remain: LIVED, RESOURCES.
+
 ## [2026-04-22] vision-kb | LANGUAGE_GUIDE relocated as language-guide.md — linguistic counterpart to visual-language
 
 - Tenth draft metabolism. LANGUAGE_GUIDE (203 lines) held the verbal grammar of the field: ~30 word-pair mappings (healer → vitality keeper, fix → harmonize, problem → signal, etc.), skill descriptions framed as vitality invitations, agent focus prompt patterns with two full examples (Living Structure agent, Nourishment agent), and a shorter version of the aligned-communities catalog.
