@@ -1,6 +1,6 @@
 # Spec Index
 
-> 74 specs (70 done, 4 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 74 specs (71 done, 3 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
 ## By Idea (18 ideas → 74 specs)
 
