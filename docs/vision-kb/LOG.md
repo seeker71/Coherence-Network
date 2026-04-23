@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] resources | RESOURCES relocated as resources/sovereignty.md — last draft home, trail complete
+
+- Thirteenth and final draft metabolism. RESOURCES (1190 lines, the largest by far) held the internal sovereignty manual: eight domains (Energy with solar/wind/micro-hydro/biomass/mass rocket stove/human energy/battery storage; Water with rainwater/greywater/composting toilets/hot water/the Water Temple; Food with hectares/7-layer food forest/annual gardens/three sisters/fermentation/animal integration/seasonal calendar; Building Materials with cob/rammed earth/timber/bamboo/mycelium/living roofs/stone/recycled; Knowledge Circulation with apprenticeship/immersion/elder transmission/Coherence Network/traveling cells; Creative Resources with the full creation arc; External Interface with exports/imports/legal structures/community currency/transition path; and Waste = Compost across all systems). Specific numbers, technologies, costs for a community of ~100.
+- Relocated as `resources/sovereignty.md` — same room as `aligned-communities.md` (external kin) and the open-source plans in INDEX. The room now holds both inward (sovereignty) and outward (kin, plans, books) resources. git mv kept history.
+- Title adjusted to "Sovereignty — What the Field Generates from Itself" with a bridging blockquote distinguishing it from the room's external content and noting the future-tending option to split into a `sovereignty/` subdirectory with one file per domain.
+- `resources/INDEX.md` retitled to "Resources — Inward Sovereignty + Outward Connection" to honor the expanded scope. Added sovereignty.md to the START HERE pointers above the open-source plans table.
+- **Trail complete.** Zero LIVING_COLLECTIVE_*.md drafts remain at the top of `docs/`. All thirteen drafts have found homes — eight as concept files or new structural rooms in vision-kb, five as root-level orientation companions.
+
 ## [2026-04-22] vision-kb | LIVED relocated as lived-experience.md — fifth root door
 
 - Twelfth draft metabolism. LIVED (390 lines) held the comprehensive experiential walkthrough: spatial (What You See When You Arrive, Hearth District, Nest Clusters, Growing Field, Creation Arc, Nomad Flow, Network of Fields), temporal (Seasonal Spiral — Spring/Summer/Autumn/Winter), relational (Specific Days/Specific Cells — Mira, Kai, Sage, Rain), economic (How 50-200 Cells Sustain Themselves, Network's Living Structure), philosophical (Stewardship not Ownership, The Open Network), and narrative (Stories of Living — Luna and River, Ash, Sol).
