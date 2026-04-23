@@ -796,4 +796,22 @@ Manual verification:
 
 ## Known Gaps and Follow-up Tasks
 
-- None yet — follow-up gaps will be recorded here as implementation proceeds.
+**Landed in this session (pure logic, external-system-free):**
+- `api/app/services/story_protocol_bridge.py`
+- `compute_concept_weighted_cc_flow()` — R6 (creators earn proportional to reader-concept-resonance overlap)
+- `compute_derivative_royalty()` — R7 math (default 15%/85% split, configurable)
+- `verify_evidence()` — R9 threshold logic (2-of-3 factors: photo, GPS within 50km of a known community, ≥3 attestations) with the 5× multiplier applied on verification
+- `compute_content_hash()` + `verify_content_integrity()` — R10 tamper detection via SHA-256
+- `build_x402_payment_required_headers()` — R4 header formation
+- 22 unit tests in `api/tests/test_story_protocol.py`
+
+**Still to build** (each a focused follow-up with external-system gate):
+- Story Protocol SDK on-chain registration (R1) — async job + queue worker
+- Arweave/Irys + IPFS upload (R3) — permanent storage service with bundler integration
+- x402 payment verification in content router (R4 auth half)
+- Read usage event emission to value lineage (R5) — hook into `add_usage_event()`
+- Daily settlement batch job (R8) — Merkle-aggregated counter rollups
+- Router endpoints wiring the pure logic: `/api/assets/{id}/content` (with x402 headers), `/api/assets/{id}/verification`, `/api/evidence`, `/api/settlement/run`
+- Web surfaces: `IPStatusBadge`, `StorageLinks`, `SettlementDashboard`
+
+The pure-logic foundation lands first so partner integrations build on verified invariants rather than inventing math in flight.
