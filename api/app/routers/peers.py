@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import math
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Query
 
-from app.models.contributor import Contributor
-from app.models.belief import BeliefProfile
 from app.services import graph_service, belief_service, geolocation_service
+from app.services.peer_resonance_service import compute_peer_resonance
 
 router = APIRouter()
 
@@ -24,48 +22,6 @@ class PeerMatch(BaseModel):
 class PeerDiscoveryResponse(BaseModel):
     peers: List[PeerMatch]
     total: int
-
-def _compute_peer_resonance(profile_a: BeliefProfile, profile_b: BeliefProfile) -> float:
-    """Compute structural resonance score between two contributor profiles."""
-    # 1. Tag overlap (Jaccard)
-    tags_a = set(profile_a.interest_tags)
-    tags_b = set(profile_b.interest_tags)
-    tag_score = 0.5
-    if tags_a or tags_b:
-        union = tags_a | tags_b
-        intersection = tags_a & tags_b
-        tag_score = len(intersection) / len(union) if union else 0.5
-
-    # 2. Worldview alignment (Dot product)
-    dot = 0.0
-    norm_a = 0.0
-    norm_b = 0.0
-    axes = ["scientific", "spiritual", "pragmatic", "holistic", "relational", "systemic"]
-    for axis in axes:
-        va = profile_a.worldview_axes.get(axis, 0.0)
-        vb = profile_b.worldview_axes.get(axis, 0.0)
-        dot += va * vb
-        norm_a += va * va
-        norm_b += vb * vb
-    
-    denom = (norm_a ** 0.5) * (norm_b ** 0.5)
-    worldview_score = dot / denom if denom > 0 else 0.5
-
-    # 3. Concept resonance overlap
-    concepts_a = {r.concept_id: r.weight for r in profile_a.concept_resonances}
-    concepts_b = {r.concept_id: r.weight for r in profile_b.concept_resonances}
-    concept_score = 0.5
-    if concepts_a and concepts_b:
-        shared = set(concepts_a.keys()) & set(concepts_b.keys())
-        if shared:
-            weighted_intersection = sum(min(concepts_a[c], concepts_b[c]) for c in shared)
-            weighted_union = sum(max(concepts_a.get(c, 0), concepts_b.get(c, 0)) for c in (set(concepts_a.keys()) | set(concepts_b.keys())))
-            concept_score = weighted_intersection / weighted_union if weighted_union > 0 else 0.0
-        else:
-            concept_score = 0.0
-
-    # Final weighted average
-    return round((tag_score * 0.2) + (worldview_score * 0.4) + (concept_score * 0.4), 4)
 
 @router.get(
     "/peers/resonant",
@@ -94,7 +50,7 @@ async def get_resonant_peers(
         
         try:
             peer_profile = belief_service._node_to_belief_profile(node)
-            score = _compute_peer_resonance(source_profile, peer_profile)
+            score = compute_peer_resonance(source_profile, peer_profile)
             
             if score > 0.1:  # Only include if there's some resonance
                 shared_tags = list(set(source_profile.interest_tags) & set(peer_profile.interest_tags))
