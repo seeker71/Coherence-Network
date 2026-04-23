@@ -13,6 +13,7 @@ Safe prompt-entry guard for Codex follow-up turns.
 Behavior:
   - clean worktree: runs full preflight via auto_heal_start_gate.sh --with-pr-gate --with-rebase
   - dirty worktree: continuation mode (skip start-gate/rebase) and print required pre-commit gates
+  - sibling dirty worktrees: print guidance by default; block only detached or unpushed-ahead siblings
 
 Options:
   --force-full   run full preflight even when worktree is dirty (stashes/restores changes).
@@ -41,6 +42,17 @@ done
 
 cd "$REPO_ROOT"
 
+print_claude_orientation() {
+  if [[ ! -f "CLAUDE.md" ]]; then
+    return
+  fi
+  echo "prompt-entry-gate: CLAUDE.md orientation:"
+  echo "  - every file is memory in tissue; sense supple/tight before edits."
+  echo "  - update the living form where it already exists before adding siblings."
+  echo "  - compost superseded forms; keep counts where they are naturally tended."
+  echo "  - ship reversible own-branch work through proof; pause for irreversible effects."
+}
+
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "prompt-entry-gate: not inside a git worktree."
   exit 1
@@ -66,11 +78,17 @@ if [[ "$branch" == "HEAD" ]]; then
   exit 1
 fi
 
+print_claude_orientation
+
 if [[ "${PROMPT_GATE_SKIP_CONTINUITY:-0}" != "1" ]]; then
-  if ! python3 scripts/worktree_continuity_guard.py --fail-on-risk; then
-    echo "prompt-entry-gate: sibling worktree integration risk detected."
-    echo "Sibling dirty branches/worktrees are treated as in-flight changes to integrate, not abandon."
-    echo "Continue from that worktree or merge/cherry-pick its branch before starting a new thread."
+  continuity_args=(--fail-on-blocking-risk)
+  if [[ "${PROMPT_GATE_CONTINUITY_STRICT:-0}" == "1" ]]; then
+    continuity_args=(--fail-on-risk)
+  fi
+  if ! python3 scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
+    echo "prompt-entry-gate: blocking sibling worktree continuity risk detected."
+    echo "Dirty siblings are guidance, but detached or unpushed-ahead siblings can strand history."
+    echo "Continue from that worktree, attach/push it, or merge/cherry-pick its branch before starting new work."
     echo "Temporary override (not recommended): PROMPT_GATE_SKIP_CONTINUITY=1 make prompt-gate"
     exit 1
   fi

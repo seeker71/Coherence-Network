@@ -87,9 +87,13 @@ if [[ "$current_branch" == "HEAD" ]]; then
 fi
 
 if [[ "${AUTO_HEAL_SKIP_CONTINUITY:-0}" != "1" ]]; then
-  if ! python3 scripts/worktree_continuity_guard.py --fail-on-risk; then
-    echo "auto-heal-start-gate: sibling worktree continuity risk detected."
-    echo "Resolve sibling dirty/detached/unpushed-ahead worktrees before auto-heal runs."
+  continuity_args=(--fail-on-blocking-risk)
+  if [[ "${AUTO_HEAL_CONTINUITY_STRICT:-0}" == "1" ]]; then
+    continuity_args=(--fail-on-risk)
+  fi
+  if ! python3 scripts/worktree_continuity_guard.py "${continuity_args[@]}"; then
+    echo "auto-heal-start-gate: blocking sibling worktree continuity risk detected."
+    echo "Dirty siblings are guidance, but detached or unpushed-ahead siblings can strand history."
     echo "Temporary override (not recommended): AUTO_HEAL_SKIP_CONTINUITY=1 ./scripts/auto_heal_start_gate.sh ..."
     exit 1
   fi
