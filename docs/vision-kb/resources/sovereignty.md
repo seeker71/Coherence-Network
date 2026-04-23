@@ -1,8 +1,12 @@
-# The Living Collective — Resources
+# Sovereignty — What the Field Generates from Itself
 
 > Everything the field needs, the field can generate, harvest, grow, build, ferment,
 > weave, share, or compost. What it cannot generate, it circulates with the world
 > around it. There is no scarcity in a living system — only flow.
+>
+> *The internal-resources companion to this room's external resources. Where [aligned-communities.md](aligned-communities.md), [new-earth-integration.md](new-earth-integration.md), and the open-source plans in [INDEX.md](INDEX.md) hold what we connect to outside, this file holds what the field produces from within: eight domains of sovereignty (Energy, Water, Food, Building Materials, Knowledge Circulation, Creative, External Interface, Waste-as-Compost) with specific quantities, technologies, and costs for a community of ~100 cells. A practical manual someone building a field could study end-to-end.*
+>
+> *Future tending may split this into a `sovereignty/` subdirectory with one file per domain — for now held whole so the eight layers can be felt as one integrated system.*
 
 ---
 
