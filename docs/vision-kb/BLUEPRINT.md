@@ -1,6 +1,8 @@
-# The Living Collective
+# The Living Collective — Blueprint
 
 > Alive. Changing. Nothing fixed.
+>
+> *Narrative companion to [INDEX.md](INDEX.md). Where INDEX gives the map of concepts with frequencies and one-line hooks, BLUEPRINT gives the whole fractal in one continuous reading — the Pulse, the three Living Systems, the five Flows, the twenty-one Living Expressions, the nine Emerging Visions, the Seed — tied together with analogies (mycelial networks, dolphin pods, elephant matriarchs, coral reefs, redwood groves) and the Pleiadian/Lemurian/Arcturian framings that live beneath the concept layer. Read this to feel the whole field; read INDEX to navigate it.*
 
 ---
 

@@ -6,9 +6,10 @@
 ## How to use this KB
 
 1. Read THIS file to orient (~300 tokens)
-2. Read the concept file you need (~500-1500 tokens each)
-3. After making changes to any concept, update the file AND this index
-4. Append changes to LOG.md
+2. Read [BLUEPRINT.md](BLUEPRINT.md) when you want the whole fractal in one continuous narrative — the Pulse through the Seed, tied together with living analogies
+3. Read the concept file you need (~500-1500 tokens each)
+4. After making changes to any concept, update the file AND this index
+5. Append changes to LOG.md
 
 ## The Vision in One Paragraph
 
