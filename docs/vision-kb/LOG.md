@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] vision-kb | BLUEPRINT relocated as narrative companion to INDEX
+
+- Sixth draft metabolism. BLUEPRINT (231 lines) wasn't ripened into INDEX.md and wasn't a concept. It is the **synoptic narrative** of the whole fractal — the Pulse, the three Living Systems, the five Flows, the twenty-one Living Expressions, the nine Emerging Visions, the Seed — tied together with living analogies (mycelial networks, dolphin pods, elephant matriarchs, coral reefs, redwood groves) and the Pleiadian/Lemurian/Arcturian framings that live beneath the concept layer.
+- Relocated as `docs/vision-kb/BLUEPRINT.md` — a root-level companion to INDEX.md, LOG.md, SCHEMA.md. git mv preserved history. Title adjusted to "The Living Collective — Blueprint" with a bridging blockquote explaining the division of labor.
+- INDEX.md "How to use this KB" updated to include BLUEPRINT as step 2: read it when you want the whole fractal in one continuous narrative, as opposed to navigating concepts via INDEX.
+- No concept count change (BLUEPRINT is not itself a concept — it's orientation material).
+- **Why not release**: much of BLUEPRINT's content IS in the individual concept files, but the synoptic reading experience is its own contribution. An outsider arriving wants to feel the whole vision before navigating its parts. INDEX fits on one screen; BLUEPRINT immerses. Both serve; neither replaces the other.
+
 ## [2026-04-22] concepts | WHOLENESS ripened into lc-wholeness — third paired door in the foundations
 
 - Fifth draft metabolism. WHOLENESS (313 lines) was the teaching beneath the teachings: "You are not broken. You never were. You are a field remembering itself." A love letter tracing how restriction froze life force (the fence, the rule, the attachment, the commitment, the schedule) — each a response to real pain that also calcified life — and how the body returns when blockages are removed (touch, rest, voice, creativity, play, the gentleness of transformation).
