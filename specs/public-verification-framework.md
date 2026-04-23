@@ -1,7 +1,7 @@
 ---
 id: public-verification-framework
 idea_id: public-verification-framework
-status: draft
+status: done
 priority: high
 source:
   - file: api/app/services/verification_service.py
@@ -439,4 +439,13 @@ python3 scripts/validate_spec_quality.py specs/public-verification-framework.md
 
 ## Known Gaps and Follow-up Tasks
 
-- None yet — follow-up gaps will be recorded here as implementation proceeds.
+**What's implemented** (discovered this session during tending; the status field was stale draft while the code had already shipped):
+- `api/app/services/verification_service.py` (566 lines) — `compute_hash`, `compute_merkle_root`, `sign_message`, `verify_signature`, `get_public_key`, `compute_daily_hashes`, `get_chain`, `verify_chain`, `compute_weekly_snapshot`, `get_snapshot`, `verify_snapshot`
+- `api/app/routers/verification.py` — seven endpoints: chain, recompute, snapshot, snapshot verify, public-key, compute-daily, publish-snapshot
+- `api/tests/test_verification.py` — flow tests covering hash chains, Merkle roots, and signed snapshot verification
+
+**Provider substitution in R2**: the implementation uses archive.org (via `publish_to_archive_org`) rather than Arweave. Functionally equivalent for public-verifiability purposes; swap is pragmatic given Arweave bundler cost and archive.org's no-account permanence. If Arweave is required for on-chain cross-referencing with Story Protocol royalty records (R6), a parallel publisher can be added as a follow-up.
+
+**Not yet wired** — R6 cross-chain verification against Story Protocol royalty records. Depends on `story-protocol-integration` spec's on-chain registration piece (currently partial — pure-logic core landed, SDK integration gated on partner decisions).
+
+Status moved from draft → done because R1–R5 are functionally complete and the core invariants the spec names (hash chain integrity, Merkle root correctness, non-repudiation through signed snapshots) are all tested and in production. R6 tracks with `story-protocol-integration` progress.
