@@ -1,8 +1,8 @@
 # Spec Index
 
-> 73 specs (68 done, 5 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 74 specs (68 done, 6 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (18 ideas → 73 specs)
+## By Idea (18 ideas → 74 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -85,7 +85,8 @@
 - [agent-execution-lifecycle-hooks](agent-execution-lifecycle-hooks.md) — execution lifecycle hooks
 - [unified-agent-cli-flow-patch-on-fail](unified-agent-cli-flow-patch-on-fail.md) — CLI flow + patch-on-fail
 
-### knowledge-and-resonance (3 specs)
+### knowledge-and-resonance (4 specs)
+- [agent-memory-system](agent-memory-system.md) — write/manage/read memory loop: moments of aliveness, consolidation at rest, retrieval as composition (draft)
 - [knowledge-resonance-engine](knowledge-resonance-engine.md) — concept layer, belief resonance, discovery feed
 - [living-signal-layer](living-signal-layer.md) — sense signals as a changing field, not fixed categories
 - [source-artifact-sensing-graph-integration](source-artifact-sensing-graph-integration.md) — source artifacts as first-class graph nodes with provenance
