@@ -9,9 +9,10 @@
 2. Read [BLUEPRINT.md](BLUEPRINT.md) when you want the whole fractal in one continuous narrative — the Pulse through the Seed, tied together with living analogies
 3. Read [visual-language.md](visual-language.md) when you want the aesthetic — the bioluminescent, organic, fractal palette the field renders through, and DALL-E prompts for core concepts
 4. Read [language-guide.md](language-guide.md) when you want the verbal vocabulary — word choices that carry vitality, skill descriptions, agent focus prompt patterns
-5. Read the concept file you need (~500-1500 tokens each)
-6. After making changes to any concept, update the file AND this index
-7. Append changes to LOG.md
+5. Read [lived-experience.md](lived-experience.md) when you want sensation rather than description — the walkthrough of what the field feels like across its spaces, seasons, cells, and rhythms
+6. Read the concept file you need (~500-1500 tokens each)
+7. After making changes to any concept, update the file AND this index
+8. Append changes to LOG.md
 
 ## The Vision in One Paragraph
 

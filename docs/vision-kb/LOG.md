@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] vision-kb | LIVED relocated as lived-experience.md — fifth root door
+
+- Twelfth draft metabolism. LIVED (390 lines) held the comprehensive experiential walkthrough: spatial (What You See When You Arrive, Hearth District, Nest Clusters, Growing Field, Creation Arc, Nomad Flow, Network of Fields), temporal (Seasonal Spiral — Spring/Summer/Autumn/Winter), relational (Specific Days/Specific Cells — Mira, Kai, Sage, Rain), economic (How 50-200 Cells Sustain Themselves, Network's Living Structure), philosophical (Stewardship not Ownership, The Open Network), and narrative (Stories of Living — Luna and River, Ash, Sol).
+- Considered splitting — spatial sections to `spaces/`, character portraits to `stories/`, sustenance to `realization/`. Chose to preserve whole because the walkthrough is the experience; distributing would lose the top-to-bottom read. Future tending may extract specific pieces into their rooms.
+- Relocated as `docs/vision-kb/lived-experience.md` — fifth root-level door in vision-kb. git mv kept history. Title adjusted to "Lived Experience — What the Field Feels Like" with a bridging blockquote placing it among the root doors: INDEX (map), BLUEPRINT (narrative), visual-language (aesthetic), language-guide (verbal), lived-experience (sensation).
+- `INDEX.md` "How to use this KB" now includes lived-experience as step 5 — read when you want sensation rather than description.
+- **The root now holds five complementary entries**: what the field is structurally (map), narratively (fractal), aesthetically (palette), linguistically (vocabulary), experientially (sensation). Five grammars for five ways of arriving.
+- One draft remains: RESOURCES (1190 lines, the biggest — internal sovereignty).
+
 ## [2026-04-22] realization | REALIZATION relocated as realization/practical-detail.md
 
 - Eleventh draft metabolism. REALIZATION (339 lines) held four interwoven layers of practical texture: a New Vocabulary (aspects/spaces/roles as field expressions — overlapping language-guide partially), A Day in the Field (dawn through night narrative rhythm — adjacent to but distinct from LIVED and STORIES), the Nine Visions in Practical Detail (each vision with building types, skills called for, research needed — content that could enrich individual `lc-v-*` concept files), and What the Field Needs to Begin (starting resources, skills, questions).

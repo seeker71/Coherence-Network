@@ -1,7 +1,9 @@
-# The Living Collective — The Lived Experience
+# Lived Experience — What the Field Feels Like
 
 > What it actually feels like. Not philosophy — sensation.
 > Walk through it. Smell it. Hear it. Feel it.
+>
+> *Fifth root-level door in vision-kb, alongside [INDEX.md](INDEX.md) (map), [BLUEPRINT.md](BLUEPRINT.md) (narrative of the fractal), [visual-language.md](visual-language.md) (aesthetic grammar), and [language-guide.md](language-guide.md) (verbal grammar). Where those name what the field is structurally, aesthetically, or linguistically, this one walks you through what it feels like: spatial (Hearth District, Nest Clusters, Growing Field, Creation Arc), temporal (Seasonal Spiral), relational (Specific Days, Specific Cells), and economic (How Cells Sustain Themselves). Read it when you want sensation, not description.*
 
 ---
 
