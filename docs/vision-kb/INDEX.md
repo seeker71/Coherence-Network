@@ -105,6 +105,7 @@ Teachings that sit alongside the fractal rather than inside it — the physics, 
 - **[scales/INDEX.md](scales/INDEX.md)** — 50 / 100 / 200 people configurations
 - **[realization/INDEX.md](realization/INDEX.md)** — governance as attention, economics as overflow, membership as time together, emergent phases from gathering to fruiting
 - **[resources/INDEX.md](resources/INDEX.md)** — open-source plans, reference communities, books
+- **[stories/INDEX.md](stories/INDEX.md)** — scenes from the field: seven vignettes (Water Temple, Textile Keeper, Elders, Market Day, Sound Journey, Fern's arrival, the Skeptic) where the vision is lived rather than described
 
 ## ★ Priority Concepts (Tier 1)
 

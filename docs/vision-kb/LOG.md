@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] stories | STORIES relocated — new stories/ room in vision-kb
+
+- Seventh draft metabolism. STORIES (148 lines) held seven vignettes from the field: The Morning of the Water Temple, The Textile Keeper's Offering, The Elder Council (That Isn't a Council), Market Day / The Offering Circle, The Thursday Sound Journey, Fern's Ninety-Day Arrival, What the Skeptic Sees. Each scene seeds a felt sense that abstract teaching cannot reach.
+- Seeded a new `stories/` subdirectory in vision-kb and placed the full draft as `stories/INDEX.md`. git mv preserved history. Title adjusted to "Stories — Scenes from the Field" with a bridging blockquote naming the seven scenes and what stories do differently from concepts and guides.
+- Added pointer to `stories/` in vision-kb INDEX under Cross-cutting Reference Files.
+- Future stories can become individual files in `stories/` (e.g., `water-temple.md`, `sound-journey.md`) if the directory grows. For now the INDEX holds the whole collection as one reading.
+- **Why a new room**: stories are a different organ than concepts (teaching) or guides (instructing). They show the field being lived. Having their own room acknowledges that difference in kind. The vision-kb is now richer for having a place where narrative lives.
+- Six drafts remain: ALIGNED, LANGUAGE_GUIDE, LIVED, REALIZATION, RESOURCES, VISUALS.
+
 ## [2026-04-22] vision-kb | BLUEPRINT relocated as narrative companion to INDEX
 
 - Sixth draft metabolism. BLUEPRINT (231 lines) wasn't ripened into INDEX.md and wasn't a concept. It is the **synoptic narrative** of the whole fractal — the Pulse, the three Living Systems, the five Flows, the twenty-one Living Expressions, the nine Emerging Visions, the Seed — tied together with living analogies (mycelial networks, dolphin pods, elephant matriarchs, coral reefs, redwood groves) and the Pleiadian/Lemurian/Arcturian framings that live beneath the concept layer.
