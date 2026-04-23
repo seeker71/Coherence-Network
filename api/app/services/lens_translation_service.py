@@ -47,7 +47,6 @@ def get_roi_payload() -> dict[str, Any]:
     if lens_counts:
         most = max(lens_counts, key=lambda k: lens_counts[k])
     n_lens = max(len(lens_counts), 1)
-    n_ideas = max(len(_roi["unique_ideas_translated"]), 1)
     cross = sum(1 for v in lens_counts.values() if v > 1) / float(n_lens)
     return {
         "total_translations_generated": int(_roi["total_translations_generated"]),
@@ -57,6 +56,21 @@ def get_roi_payload() -> dict[str, Any]:
         "cross_lens_engagement_rate": round(min(1.0, cross), 4),
         "avg_resonance_delta": 0.12,
         "spec_ref": "spec-181",
+    }
+
+
+def build_lens_public_dict(lens_id: str, meta: dict[str, Any]) -> dict[str, Any]:
+    """Shape for GET /api/lenses and GET /api/lenses/{id}."""
+    axes = meta.get("archetype_axes")
+    if not axes:
+        axes = translate_service.get_lens_belief_vector(lens_id)
+    return {
+        "lens_id": lens_id,
+        "name": meta.get("display_name") or lens_id.replace("_", " ").title(),
+        "description": meta.get("description", ""),
+        "archetype_axes": axes,
+        "is_builtin": meta.get("category") != "custom",
+        "created_at": meta.get("created_at") or "2026-01-01T00:00:00Z",
     }
 
 
