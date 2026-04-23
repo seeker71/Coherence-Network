@@ -1,9 +1,11 @@
-# Living Collective — Language Guide
+# Language Guide — The Field's Vocabulary
 
 > Every word carries frequency. Words rooted in separation, brokenness, or lack
 > introduce that frequency into the field. This guide ensures all language in the
 > system — concept descriptions, UI labels, agent prompts, contributor invitations
 > — vibrates with vitality, wholeness, and joy.
+>
+> *Linguistic counterpart to [visual-language.md](visual-language.md). Where that one holds the aesthetic grammar, this one holds the verbal one. Together with [SCHEMA.md](SCHEMA.md)'s Frequency Sensing section (which has the short living-vs-institutional table and the "by the fire" test), they form the field's vocabulary discipline.*
 
 ## The Principle
 
@@ -155,6 +157,8 @@ YOUR FREQUENCY: How the field feeds itself
 ```
 
 ## Real-World Aligned Examples
+
+*Short illustrative catalog. For the fuller treatment — with what resonates, what we can learn, and how to connect — see [resources/aligned-communities.md](resources/aligned-communities.md).*
 
 Places and practices that already embody aspects of the vision:
 
