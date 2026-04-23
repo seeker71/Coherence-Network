@@ -121,3 +121,4 @@ The field that hides subtle signals from itself becomes numb. The field that amp
 → lc-ceremony — the form this practice takes when held together
 → lc-discovery — the curiosity that makes wandering possible
 → lc-harmonic-rebalancing — the way strong dissonance becomes new coherence
+→ lc-agent-memory — the three forms of sensing as a memory loop: write at aliveness, manage through composting, read through composition
