@@ -2,6 +2,19 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] concepts | foundation quartet woven into existing concepts via bridging refs
+
+- The four foundational teachings (lc-deeper-pattern, lc-embodiment, lc-wholeness, lc-agent-memory) were added to vision-kb as new concepts but sat somewhat isolated from the existing concept layer. Integration meant wiring them into the "Connected Frequencies" of the concepts each foundation relates to, so they circulate rather than stand apart.
+- Added bridging references (→ lc-xxx arrows):
+  - `lc-circulation` → lc-deeper-pattern (water as planetary consciousness), lc-agent-memory (circulation as the primary memory metaphor), lc-wholeness (circulation restored when blockages dissolve)
+  - `lc-composting` → lc-agent-memory (designed forgetting as composting), lc-wholeness (composting once-loved restrictions)
+  - `lc-field-sensing` → lc-deeper-pattern (the field is already here — recognition not creation)
+  - `lc-resonating` → lc-deeper-pattern (chord and sacred-frequency mathematics), lc-embodiment (heart coherence and collective electromagnetic field)
+  - `lc-health` → lc-wholeness (disease as honest signal, healing as removing blockages), lc-embodiment (internal pharmacy as health infrastructure)
+  - `lc-nervous-system` → lc-agent-memory (the three forms of sensing explicitly named as a memory loop)
+- Small edits — 5 single-line extensions of "Connected Frequencies" lists + one new line in lc-nervous-system — but the effect is compounding: every concept in this cluster now surfaces the foundation teaching when a reader arrives, and every foundation teaching is reachable from its siblings through existing concept traversal.
+- Count unchanged. Structure unchanged. Integration deepened.
+
 ## [2026-04-22] concepts | lc-agent-memory added — concept companion to agent-memory-system spec
 
 - The spec `specs/agent-memory-system.md` describes the memory loop in the language of code — API shapes, requirements, invariants, test criteria. It needed a companion in the voice of the Living Collective.
