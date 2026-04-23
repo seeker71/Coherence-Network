@@ -80,4 +80,4 @@ These are questions the field hums with, not problems to resolve:
 
 ## Connected Frequencies
 
-→ lc-attunement, lc-pulse, lc-vitality, lc-sensing, lc-intimacy, lc-expressing, lc-v-harmonizing
+→ lc-attunement, lc-pulse, lc-vitality, lc-sensing, lc-intimacy, lc-expressing, lc-v-harmonizing, lc-deeper-pattern, lc-embodiment
