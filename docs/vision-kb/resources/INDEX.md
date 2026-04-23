@@ -2,6 +2,8 @@
 
 > **START HERE**: Read [composted-wisdom.md](composted-wisdom.md) — 10 seeds that survived the fire. Then [reality-check.md](reality-check.md) for what works and what fails.
 
+> See [aligned-communities.md](aligned-communities.md) for six living communities (Tamera, Auroville, Findhorn, Damanhur, Gaviotas, Earthship), two networks (GEN, Transition Towns), and four practice traditions (Vipassana, Permaculture, Natural Building, Sound Healing) the field is kin with.
+
 > Real things you can download, visit, read, and build from today.
 
 ## Open Source Building Plans (CC / Free)

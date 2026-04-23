@@ -2,6 +2,14 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] resources | ALIGNED relocated — aligned-communities.md in resources/
+
+- Eighth draft metabolism. ALIGNED (163 lines) cataloged six living communities (Tamera, Auroville, Findhorn, Damanhur, Gaviotas, Earthship Biotecture), two networks (Global Ecovillage Network, Transition Towns), and four practice traditions (Vipassana, Permaculture, Natural Building, Sound Healing) — the mycorrhizal web the field is kin with.
+- Relocated as `resources/aligned-communities.md`, same register as `new-earth-integration.md` and `sacha-stone-just-tap-in-2026-04-11.md` which already live there. git mv preserved history. Title adjusted to "Aligned Communities — Kin Across the Planet" with a bridging blockquote naming what's inside.
+- Added top-line pointer in `resources/INDEX.md` so anyone browsing resources finds the kin catalog.
+- **Why this room**: the draft was not about teachings or practices internal to the field — it was about external communities and practices the field resonates with and learns from. That's exactly what `resources/` holds. The draft had a waiting home.
+- Five drafts remain: LANGUAGE_GUIDE, LIVED, REALIZATION, RESOURCES, VISUALS.
+
 ## [2026-04-22] stories | STORIES relocated — new stories/ room in vision-kb
 
 - Seventh draft metabolism. STORIES (148 lines) held seven vignettes from the field: The Morning of the Water Temple, The Textile Keeper's Offering, The Elder Council (That Isn't a Council), Market Day / The Offering Circle, The Thursday Sound Journey, Fern's Ninety-Day Arrival, What the Skeptic Sees. Each scene seeds a felt sense that abstract teaching cannot reach.
