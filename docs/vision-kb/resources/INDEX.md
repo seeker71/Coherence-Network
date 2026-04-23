@@ -1,6 +1,8 @@
-# Resources — Open Source Plans, Communities, Books
+# Resources — Inward Sovereignty + Outward Connection
 
 > **START HERE**: Read [composted-wisdom.md](composted-wisdom.md) — 10 seeds that survived the fire. Then [reality-check.md](reality-check.md) for what works and what fails.
+
+> See [sovereignty.md](sovereignty.md) for the internal-resources manual: eight domains the field generates from itself (Energy, Water, Food, Building Materials, Knowledge, Creative, External Interface, Waste) with specific quantities, technologies, and costs.
 
 > See [aligned-communities.md](aligned-communities.md) for six living communities (Tamera, Auroville, Findhorn, Damanhur, Gaviotas, Earthship), two networks (GEN, Transition Towns), and four practice traditions (Vipassana, Permaculture, Natural Building, Sound Healing) the field is kin with.
 
