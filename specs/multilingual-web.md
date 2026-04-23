@@ -266,3 +266,21 @@ Manual: visit `/de/vision/lc-water-as-living-body`, confirm German chrome and tr
 - **Assumption — trust by default**: anyone signed in can replace a translation, and history is the correction surface rather than an approval gate. If a bad translation lands, the next contributor to notice can replace it, and the superseded row remains visible. This is aligned with the vision: tending comes from relationship, not from moderation.
 - **Assumption — Indonesian (`id`) for Bali**: Balinese (`ban`) is a distinct language with ~3.3M speakers; starting with Indonesian is pragmatic reach. Bali-based contributors should be asked which they'd rather have. The data model supports adding `ban` without schema change.
 - **Assumption — single-language per submission**: most contributors will write in one language per submission (not code-switching mid-paragraph). Code-switched contributions translate awkwardly; we'll see what actually arrives and adapt.
+
+## Known Gaps and Follow-up Tasks
+
+**What's implemented** (discovered this session during tending; the filenames differ slightly from the spec's source map — the backend shipped with slightly renamed services):
+- Backend translation pipeline — `api/app/services/translation_cache_service.py` (329 lines), `concept_translation_service.py` (266), `lens_translation_service.py` (158), `locale_projection.py`
+- Models — `api/app/models/translation.py`, `api/app/models/lens_translation.py`
+- Locale router — `api/app/routers/locales.py`
+- Four locale message bundles at `web/messages/{en,de,es,id}.json`
+- Web middleware — `web/middleware.ts`
+- Integration tests — `api/tests/test_flow_multilingual.py`, `test_on_demand_attunement.py`
+
+**Not confirmed / may still be pending** (would require deeper inspection to close out as done):
+- Full URL-based `/{locale}/...` routing with cookie-backed language picker in the header
+- `cc stories --lang` and `cc translate submit` CLI commands
+- `/settings/translations` coverage dashboard
+- Glossary seeding for anchor terms (tending, ripening, wholeness, coherence)
+
+Status stays `draft` pending the UX verification. The backend core is functionally live — the inverse of the `public-verification-framework` situation where the backend was done and the status lagged; here the UX pieces are the outstanding gate.
