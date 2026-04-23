@@ -71,4 +71,4 @@ The daily rhythm is the prescription: wake with light, move before eating, eat w
 
 ## Connected Frequencies
 
-→ lc-nourishment, lc-nourishing, lc-space, lc-land, lc-elders, lc-ceremony, lc-rest, lc-energy, lc-intimacy, lc-composting
+→ lc-nourishment, lc-nourishing, lc-space, lc-land, lc-elders, lc-ceremony, lc-rest, lc-energy, lc-intimacy, lc-composting, lc-wholeness, lc-embodiment

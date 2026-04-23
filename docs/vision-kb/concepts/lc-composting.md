@@ -93,4 +93,4 @@ The same process that turns kitchen scraps into soil also turns grief, disappoin
 
 ## Connected Frequencies
 
-→ lc-w-phase-transition, lc-rest, lc-nourishment, lc-v-food-practice, lc-land
+→ lc-w-phase-transition, lc-rest, lc-nourishment, lc-v-food-practice, lc-land, lc-agent-memory, lc-wholeness
