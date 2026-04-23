@@ -152,3 +152,72 @@ def test_get_render_event_by_id(client):
 def test_get_render_event_404(client):
     response = client.get("/api/render-events/00000000-0000-0000-0000-000000000000")
     assert response.status_code == 404
+
+
+# ---------- GET /api/render-events/analytics/{asset_id} (R11) ----------
+
+
+def test_analytics_empty_asset_returns_zeros(client):
+    response = client.get("/api/render-events/analytics/asset:never-rendered")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["asset_id"] == "asset:never-rendered"
+    assert body["total_renders"] == 0
+    assert body["unique_readers"] == 0
+    assert body["avg_duration_ms"] == 0
+    assert Decimal(body["total_cc_earned"]) == Decimal("0")
+
+
+def test_analytics_aggregates_single_asset(client):
+    _register_renderer(client)
+    # Three renders, same asset, two unique readers
+    _render(client, asset_id="asset:a1", reader_id="u1", duration_ms=10000)
+    _render(client, asset_id="asset:a1", reader_id="u2", duration_ms=20000)
+    _render(client, asset_id="asset:a1", reader_id="u1", duration_ms=30000)
+
+    response = client.get("/api/render-events/analytics/asset:a1")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total_renders"] == 3
+    assert body["unique_readers"] == 2
+    assert body["avg_duration_ms"] == 20000  # (10k+20k+30k)/3
+    # cc_pool = (10000+20000+30000) * 0.00001 = 0.60
+    assert Decimal(body["total_cc_earned"]) == Decimal("0.60000")
+    # default 80/15/5 → asset creator = 0.60 * 0.80 = 0.48
+    assert Decimal(body["cc_to_asset_creator"]) == Decimal("0.480000")
+    assert Decimal(body["cc_to_renderer_creators"]) == Decimal("0.090000")
+    assert Decimal(body["cc_to_host_nodes"]) == Decimal("0.030000")
+
+
+def test_analytics_does_not_cross_assets(client):
+    _register_renderer(client)
+    _render(client, asset_id="asset:a1", reader_id="u1", duration_ms=10000)
+    _render(client, asset_id="asset:a2", reader_id="u1", duration_ms=50000)
+
+    a1 = client.get("/api/render-events/analytics/asset:a1").json()
+    a2 = client.get("/api/render-events/analytics/asset:a2").json()
+    assert a1["total_renders"] == 1
+    assert a2["total_renders"] == 1
+    assert Decimal(a1["total_cc_earned"]) == Decimal("0.10000")
+    assert Decimal(a2["total_cc_earned"]) == Decimal("0.50000")
+
+
+def test_analytics_sums_reconcile_to_total(client):
+    _register_renderer(
+        client,
+        cc_split={
+            "asset_creator": "0.70",
+            "renderer_creator": "0.25",
+            "host_node": "0.05",
+        },
+    )
+    _render(client, asset_id="asset:a1", reader_id="u1", duration_ms=13579)
+    _render(client, asset_id="asset:a1", reader_id="u2", duration_ms=24680)
+
+    body = client.get("/api/render-events/analytics/asset:a1").json()
+    total_shares = (
+        Decimal(body["cc_to_asset_creator"])
+        + Decimal(body["cc_to_renderer_creators"])
+        + Decimal(body["cc_to_host_nodes"])
+    )
+    assert total_shares == Decimal(body["total_cc_earned"])
