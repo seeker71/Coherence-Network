@@ -2,6 +2,15 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] vision-kb | LANGUAGE_GUIDE relocated as language-guide.md — linguistic counterpart to visual-language
+
+- Tenth draft metabolism. LANGUAGE_GUIDE (203 lines) held the verbal grammar of the field: ~30 word-pair mappings (healer → vitality keeper, fix → harmonize, problem → signal, etc.), skill descriptions framed as vitality invitations, agent focus prompt patterns with two full examples (Living Structure agent, Nourishment agent), and a shorter version of the aligned-communities catalog.
+- Considered release (overlap with SCHEMA.md's Frequency Sensing section), but SCHEMA has only 8 word-pairs and no skill descriptions or agent-prompt patterns. LANGUAGE_GUIDE has substantial unique content. Relocated rather than released.
+- Relocated as `docs/vision-kb/language-guide.md` — root-level reference, linguistic counterpart to `visual-language.md`. git mv kept history. Title adjusted to "Language Guide — The Field's Vocabulary" with a bridging blockquote naming the relationship to both `visual-language.md` and `SCHEMA.md`'s Frequency Sensing section.
+- Added cross-ref from the "Real-World Aligned Examples" section to `resources/aligned-communities.md` for the fuller catalog, since that section overlaps what now lives in resources/.
+- INDEX.md "How to use this KB" now includes `language-guide.md` as step 4 (after INDEX, BLUEPRINT, visual-language). Four doors at root: map, narrative, aesthetic, verbal.
+- Three drafts remain: LIVED, REALIZATION, RESOURCES.
+
 ## [2026-04-22] vision-kb | VISUALS relocated as visual-language.md
 
 - Ninth draft metabolism. VISUALS (95 lines) held the aesthetic grammar of the Living Collective: unified visual language (warm gold + living teal + soft rose + deep violet + luminous white palette; organic fractal textures; no hard edges; bioluminescent self-illumination), plus eleven DALL-E prompts applying the palette to core concepts (the Pulse, Sensing, Attunement, Vitality, Nourishing, Resonating, Expressing, Spiraling, Field Sensing, Living Space, The Network).
