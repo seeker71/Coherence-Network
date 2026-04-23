@@ -223,3 +223,282 @@ async def add_gathering(identity_id: str, body: GatheringCreate) -> dict[str, An
         "co_hosts": co_hosts,
         "hosting_collective": hosting_collective,
     }
+
+
+# ---------------------------------------------------------------------------
+# Meeting-context — "I was met at this gathering"
+#
+# Where hosting a gathering is the identity's offering, meeting-at is the
+# inverse: the gathering is where someone was *found*. The first humans
+# arriving to this network are meeting us at retreats, workshops, land-based
+# ceremonies. Encoding the meeting-context lets the body remember the
+# threshold a person crossed to get here — and lets the person themselves
+# see that context reflected back. The teaching that happened in that room
+# often explains why their first reads landed where they did.
+# ---------------------------------------------------------------------------
+
+
+class HostInput(BaseModel):
+    """A teacher or presence who held the gathering.
+
+    Name is required — pulling OG titles from websites gives strings like
+    'The Official Website of Dr Joe Dispenza' instead of a person's name.
+    The caller knows who they met; we respect that by taking the name
+    directly. URL is optional and becomes canonical_url on the node —
+    clicking links the reader to the person's own presence on the web.
+    """
+    name: str = Field(..., min_length=1, max_length=120, description="Human name as it should appear, e.g. 'Dr Joe Dispenza'")
+    url: str | None = Field(None, max_length=500, description="Canonical URL — the teacher's own site — used for the outbound link")
+
+
+class MetAtCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200, description="Name of the gathering, e.g. 'Joe Dispenza April 2026 Retreat'")
+    when: str | None = Field(None, max_length=120, description="Free-text date/range — 'April 2026', '2026-04-18 to 2026-04-25'")
+    where: str | None = Field(None, max_length=200, description="Free-text location — 'Aurora, Colorado'")
+    url: str | None = Field(None, max_length=500, description="Canonical URL for the gathering, if any")
+    teaching_note: str | None = Field(None, max_length=500, description="What was being taught or held — shapes why this meeting mattered")
+    hosts: list[HostInput] = Field(
+        default_factory=list,
+        max_length=8,
+        description="Teachers who held the gathering. Each has name + optional URL.",
+    )
+    resonates_with: list[str] = Field(
+        default_factory=list,
+        max_length=16,
+        description="Concept ids (e.g. lc-sensing) whose frequency the gathering's teaching carries",
+    )
+    added_by: str | None = Field(None, max_length=255, description="Who recorded the meeting (usually the one who was present)")
+
+
+def _event_id_for_meeting(title: str, when: str | None, where: str | None) -> str:
+    """Stable id for a gathering, independent of who attended. Two people
+    met at the same retreat should resolve to the same event node so the
+    cohort emerges naturally from the graph."""
+    seed = f"{title}|{when or ''}|{where or ''}".lower()
+    digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()[:12]
+    return f"event:{_slugify(title)}-{digest}"
+
+
+@router.post(
+    "/contributors/{contributor_id}/met-at",
+    status_code=201,
+    summary="Record that a contributor was met at a gathering",
+    description=(
+        "Creates (or finds) an event node for the gathering and links the "
+        "contributor to it with role='attended'. If `resonates_with` is "
+        "provided, the event picks up `resonates-with` edges to those "
+        "concepts, making visible *why* the gathering's teaching explains "
+        "the person's field-trail."
+    ),
+)
+async def contributor_met_at(contributor_id: str, body: MetAtCreate) -> dict[str, Any]:
+    contributor = graph_service.get_node(contributor_id)
+    if not contributor:
+        # Allow contributor-slug forms without the prefix too
+        fallback = graph_service.get_node(f"contributor:{contributor_id}")
+        if fallback:
+            contributor = fallback
+            contributor_id = fallback["id"]
+        else:
+            raise HTTPException(status_code=404, detail=f"Contributor '{contributor_id}' not found")
+
+    title = body.title.strip()
+    event_id = _event_id_for_meeting(title, body.when, body.where)
+    existing_event = graph_service.get_node(event_id)
+    if existing_event:
+        event_node = existing_event
+        created = False
+    else:
+        properties: dict[str, Any] = {
+            "when": body.when.strip() if body.when else None,
+            "where": body.where.strip() if body.where else None,
+            "url": body.url.strip() if body.url else None,
+            "teaching_note": body.teaching_note.strip() if body.teaching_note else None,
+            "added_at": datetime.now(timezone.utc).isoformat(),
+        }
+        properties = {k: v for k, v in properties.items() if v}
+        event_node = graph_service.create_node(
+            id=event_id,
+            type="event",
+            name=title,
+            description=body.teaching_note or title,
+            properties=properties,
+        )
+        created = True
+
+    created_by = body.added_by or "met_at_endpoint"
+
+    # The contributor's met-at edge — role="attended" keeps this distinct
+    # from hosting roles ("primary", "co-leading", "hosting", "added-by")
+    # that the main gathering endpoint uses.
+    graph_service.create_edge_strict(
+        from_id=contributor_id,
+        to_id=event_id,
+        type="contributes-to",
+        properties={"kind": "event", "role": "attended"},
+        strength=1.0,
+        created_by=created_by,
+    )
+
+    # Hosts — teachers who held the gathering. We honor the explicit
+    # name the caller provided (OG-scraping gives marketing titles, not
+    # person names). URL, when present, becomes canonical_url so
+    # clicking the host on /me takes the reader to the teacher's own
+    # presence on the web — not a thin internal profile page we don't
+    # actively tend.
+    hosts: list[dict[str, Any]] = []
+    for h in body.hosts:
+        name = h.name.strip()
+        url = h.url.strip() if h.url else None
+        host_id = _placeholder_person_id(name)
+        host_node = graph_service.get_node(host_id)
+        if host_node:
+            # Existing node — if the caller supplies a URL and we didn't
+            # have one, add it. Name stays authoritative to what's stored.
+            if url and not host_node.get("canonical_url"):
+                # Lightweight patch: re-create with merged properties.
+                # (The graph_service.create_node path is idempotent by id
+                # and updates description/properties on hit.)
+                graph_service.create_node(
+                    id=host_id,
+                    type="contributor",
+                    name=host_node.get("name") or name,
+                    description=host_node.get("description") or f"Held open for {name} — awaiting a claim.",
+                    properties={
+                        "claimed": False,
+                        "contributor_type": "HUMAN",
+                        "author_display_name": host_node.get("name") or name,
+                        "canonical_url": url,
+                    },
+                )
+                host_node["canonical_url"] = url
+        else:
+            host_node = graph_service.create_node(
+                id=host_id,
+                type="contributor",
+                name=name,
+                description=f"Held open for {name} — awaiting a claim.",
+                properties={
+                    "claimed": False,
+                    "contributor_type": "HUMAN",
+                    "author_display_name": name,
+                    **({"canonical_url": url} if url else {}),
+                },
+            )
+        _link_host(event_id, host_node, role="primary", created_by=created_by)
+        hosts.append({
+            "id": host_node.get("id"),
+            "name": host_node.get("name"),
+            "canonical_url": host_node.get("canonical_url") or url,
+        })
+
+    # Teaching resonance — each concept the gathering's frequency carries.
+    # When the person sees the list on /me, they recognise the territory.
+    resonances: list[dict[str, Any]] = []
+    for cid in body.resonates_with:
+        concept_id = cid.strip()
+        if not concept_id:
+            continue
+        concept_node = graph_service.get_node(concept_id)
+        if not concept_node:
+            continue
+        graph_service.create_edge_strict(
+            from_id=event_id,
+            to_id=concept_id,
+            type="resonates-with",
+            properties={"kind": "teaching"},
+            strength=1.0,
+            created_by=created_by,
+        )
+        resonances.append({"concept_id": concept_id, "name": concept_node.get("name")})
+
+    return {
+        "event": event_node,
+        "created": created,
+        "attendee": {"id": contributor_id, "name": contributor.get("name")},
+        "hosts": hosts,
+        "resonates_with": resonances,
+    }
+
+
+@router.get(
+    "/contributors/{contributor_id}/met-at",
+    summary="List the gatherings a contributor was met at",
+    description=(
+        "Returns each gathering the contributor has an 'attended' edge to, "
+        "plus the concepts the gathering's teaching resonates with. This is "
+        "what /me and /profile render as 'You arrived via…' / 'Met at…'."
+    ),
+)
+async def contributor_meetings(contributor_id: str) -> dict[str, Any]:
+    contributor = graph_service.get_node(contributor_id)
+    if not contributor:
+        fallback = graph_service.get_node(f"contributor:{contributor_id}")
+        if fallback:
+            contributor = fallback
+            contributor_id = fallback["id"]
+        else:
+            return {"contributor_id": contributor_id, "meetings": []}
+
+    # Fetch all outgoing contributes-to edges, filter to role=attended,
+    # and pull the event node + its resonates-with concepts.
+    edges = graph_service.list_edges(from_id=contributor_id, edge_type="contributes-to", limit=100) or {}
+    rows = edges.get("items", []) if isinstance(edges, dict) else edges
+    meetings: list[dict[str, Any]] = []
+    for edge in rows:
+        props = edge.get("properties") or {}
+        if props.get("role") != "attended":
+            continue
+        event_id = edge.get("to_id")
+        if not event_id:
+            continue
+        event_node = graph_service.get_node(event_id)
+        if not event_node or event_node.get("type") != "event":
+            continue
+        resonance_edges = graph_service.list_edges(from_id=event_id, edge_type="resonates-with", limit=50) or {}
+        resonance_rows = resonance_edges.get("items", []) if isinstance(resonance_edges, dict) else resonance_edges
+        resonances: list[dict[str, Any]] = []
+        for rn in resonance_rows:
+            concept_id = rn.get("to_id")
+            if not concept_id:
+                continue
+            concept_node = graph_service.get_node(concept_id)
+            if not concept_node:
+                continue
+            resonances.append({
+                "concept_id": concept_id,
+                "name": concept_node.get("name"),
+            })
+        # Hosts — all inbound contributes-to edges with role=primary.
+        host_edges = graph_service.list_edges(to_id=event_id, edge_type="contributes-to", limit=50) or {}
+        host_rows = host_edges.get("items", []) if isinstance(host_edges, dict) else host_edges
+        hosts: list[dict[str, Any]] = []
+        for he in host_rows:
+            props = he.get("properties") or {}
+            if props.get("role") != "primary":
+                continue
+            host_id = he.get("from_id")
+            if not host_id:
+                continue
+            host_node = graph_service.get_node(host_id)
+            if not host_node:
+                continue
+            hosts.append({
+                "id": host_id,
+                "name": host_node.get("name"),
+                "canonical_url": host_node.get("canonical_url"),
+            })
+        # graph_service.get_node spreads properties at top-level, not
+        # nested — read directly from the node dict.
+        meetings.append({
+            "event_id": event_id,
+            "title": event_node.get("name"),
+            "when": event_node.get("when"),
+            "where": event_node.get("where"),
+            "url": event_node.get("url"),
+            "teaching_note": event_node.get("teaching_note"),
+            "hosts": hosts,
+            "resonates_with": resonances,
+        })
+
+    return {"contributor_id": contributor_id, "meetings": meetings}

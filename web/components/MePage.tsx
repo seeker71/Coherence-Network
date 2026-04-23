@@ -42,6 +42,28 @@ interface Trail {
   concepts: TrailConcept[];
 }
 
+interface MeetingResonance {
+  concept_id: string;
+  name: string | null;
+}
+
+interface MeetingHost {
+  id: string;
+  name: string | null;
+  canonical_url: string | null;
+}
+
+interface Meeting {
+  event_id: string;
+  title: string | null;
+  when: string | null;
+  where: string | null;
+  url: string | null;
+  teaching_note: string | null;
+  hosts: MeetingHost[];
+  resonates_with: MeetingResonance[];
+}
+
 interface Footprint {
   voices: number;
   heartsGiven: number;
@@ -122,6 +144,7 @@ export function MePage() {
   const [identity, setIdentity] = useState<ReturnType<typeof readIdentity> | null>(null);
   const [footprint, setFootprint] = useState<Footprint>(emptyFootprint());
   const [trail, setTrail] = useState<Trail | null>(null);
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [confirming, setConfirming] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   // Cross-device sign-in state — a visitor landing here from a new
@@ -139,7 +162,7 @@ export function MePage() {
           return;
         }
         const base = getApiBase();
-        const [feedRes, trailRes] = await Promise.all([
+        const [feedRes, trailRes, meetingsRes] = await Promise.all([
           fetch(
             `${base}/api/feed/personal?contributor_id=${encodeURIComponent(
               ident.contributorId,
@@ -147,6 +170,9 @@ export function MePage() {
           ),
           fetch(
             `${base}/api/views/trail/${encodeURIComponent(ident.contributorId)}?limit=8&days=180`,
+          ).catch(() => null),
+          fetch(
+            `${base}/api/contributors/${encodeURIComponent(ident.contributorId)}/met-at`,
           ).catch(() => null),
         ]);
         if (!feedRes.ok) {
@@ -164,6 +190,12 @@ export function MePage() {
             concept_count: Number(trailData.concept_count) || 0,
             concepts: Array.isArray(trailData.concepts) ? trailData.concepts : [],
           });
+        }
+        if (meetingsRes && meetingsRes.ok) {
+          const meetingsData = await meetingsRes.json();
+          setMeetings(
+            Array.isArray(meetingsData.meetings) ? meetingsData.meetings : [],
+          );
         }
         setLoading(false);
       } catch (e) {
@@ -246,9 +278,91 @@ export function MePage() {
         )}
       </section>
 
+      {/* Meeting-context — "You arrived via…". The gatherings where this
+         contributor was met. Teaches the reader their own origin-thread
+         and shows why their first reads may land where they do. */}
+      {meetings.length > 0 && (
+        <section className="px-5 py-4 rounded-2xl border border-border bg-card">
+          <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-muted-foreground mb-2">
+            {t("me.metAtEyebrow")}
+          </p>
+          {meetings.map((m) => {
+            // Host links go to the teacher's own web presence (their
+            // canonical_url), never to a thin internal page we don't
+            // actively tend. The graph holds the relationship; the
+            // person lives on their own site.
+            const titleInner = m.url ? (
+              <a
+                href={m.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="font-medium text-foreground underline decoration-dotted underline-offset-4 hover:decoration-solid"
+              >
+                {m.title}
+              </a>
+            ) : (
+              <span className="font-medium">{m.title}</span>
+            );
+            return (
+              <div key={m.event_id} className="text-sm text-foreground leading-relaxed space-y-1.5">
+                <p>
+                  {t("me.metAtPrefix")} {titleInner}
+                  {m.where ? ` — ${m.where}` : ""}
+                  {m.when ? `, ${m.when}` : ""}
+                  .
+                </p>
+                {m.hosts.length > 0 && (
+                  <p className="text-muted-foreground">
+                    {t("me.metAtHosts")}{" "}
+                    {m.hosts.map((h, i) => (
+                      <span key={h.id}>
+                        {h.canonical_url ? (
+                          <a
+                            href={h.canonical_url}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="text-foreground underline decoration-dotted underline-offset-4 hover:decoration-solid"
+                          >
+                            {h.name}
+                          </a>
+                        ) : (
+                          <span className="text-foreground">{h.name}</span>
+                        )}
+                        {i < m.hosts.length - 1 ? ", " : "."}
+                      </span>
+                    ))}
+                  </p>
+                )}
+                {m.teaching_note && (
+                  <p className="text-muted-foreground italic">{m.teaching_note}</p>
+                )}
+                {m.resonates_with.length > 0 && (
+                  <p className="text-muted-foreground">
+                    {t("me.metAtResonance")}{" "}
+                    {m.resonates_with.map((r, i) => (
+                      <span key={r.concept_id}>
+                        <a
+                          href={`/vision/${encodeURIComponent(r.concept_id)}`}
+                          className="text-foreground underline decoration-dotted underline-offset-4 hover:decoration-solid"
+                        >
+                          {r.name || humanizeConceptId(r.concept_id)}
+                        </a>
+                        {i < m.resonates_with.length - 1 ? ", " : "."}
+                      </span>
+                    ))}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      )}
+
       {/* First-arrival warmth — a graduated contributor with no trail yet.
-         The body says hello before any dashboard-like surface appears. */}
-      {hasContributor && !fetchError && isFirstArrival(footprint, trail) && (
+         Suppressed when a meeting-context is present, because "How we
+         met" already carries the welcome; stacking two warmths reads as
+         the same note sung twice. */}
+      {hasContributor && !fetchError && meetings.length === 0 && isFirstArrival(footprint, trail) && (
         <section className="px-5 py-4 rounded-2xl border border-[hsl(var(--primary)/0.35)] bg-[hsl(var(--primary)/0.06)]">
           <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-[hsl(var(--primary))] mb-1.5">
             {t("me.arrivalEyebrow")}
@@ -356,7 +470,10 @@ export function MePage() {
         </section>
       )}
 
-      {/* Technical view — folded away by default */}
+      {/* Technical view — folded away by default. The "begin again"
+         affordance lives inside this fold now: it's a shared-device /
+         start-over tool, used rarely, and doesn't want equal weight
+         with the warm identity + meeting + footprint cards above. */}
       {hasAny && (
         <details className="px-5 py-3 rounded-2xl border border-border bg-card">
           <summary className="text-sm text-muted-foreground cursor-pointer select-none">
@@ -376,44 +493,40 @@ export function MePage() {
               </div>
             )}
           </dl>
+
+          <div className="mt-4 pt-4 border-t border-border/60">
+            <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+              {t("me.clearLede")}
+            </p>
+            {!confirming ? (
+              <button
+                type="button"
+                onClick={() => setConfirming(true)}
+                className="inline-flex items-center rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                {t("me.clearCta")}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearIdentity}
+                  className="inline-flex items-center rounded-full bg-[hsl(var(--destructive,0_84%_60%))] text-white px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity"
+                >
+                  {t("me.clearConfirm")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirming(false)}
+                  className="inline-flex items-center rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  {t("me.clearCancel")}
+                </button>
+              </div>
+            )}
+          </div>
         </details>
       )}
-
-      {/* Clear identity — always offered */}
-      <section className="px-5 py-4 rounded-2xl border border-border bg-card">
-        <p className="text-[11px] uppercase tracking-[0.18em] font-semibold text-muted-foreground mb-1.5">
-          {t("me.clearEyebrow")}
-        </p>
-        <p className="text-sm text-muted-foreground leading-relaxed mb-3">
-          {t("me.clearLede")}
-        </p>
-        {!confirming ? (
-          <button
-            type="button"
-            onClick={() => setConfirming(true)}
-            className="inline-flex items-center rounded-full border border-border px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
-          >
-            {t("me.clearCta")}
-          </button>
-        ) : (
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={clearIdentity}
-              className="inline-flex items-center rounded-full bg-[hsl(var(--destructive,0_84%_60%))] text-white px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
-            >
-              {t("me.clearConfirm")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirming(false)}
-              className="inline-flex items-center rounded-full border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted transition-colors"
-            >
-              {t("me.clearCancel")}
-            </button>
-          </div>
-        )}
-      </section>
     </div>
   );
 }
