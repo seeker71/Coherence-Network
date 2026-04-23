@@ -1,8 +1,10 @@
-# The Living Collective — Aligned Communities & Projects
+# Aligned Communities — Kin Across the Planet
 
 > The field doesn't exist in isolation. Across the planet, communities are
 > already living pieces of this vision. Each carries a frequency we resonate
 > with. We celebrate them, learn from them, and invite connection.
+>
+> *Six communities (Tamera, Auroville, Findhorn, Damanhur, Gaviotas, Earthship), two networks (GEN, Transition Towns), and four practice traditions (Vipassana, Permaculture, Natural Building, Sound Healing) that the field is kin with. Not a competitive map — an honoring of the mycorrhizal web that already holds this work.*
 
 ---
 
