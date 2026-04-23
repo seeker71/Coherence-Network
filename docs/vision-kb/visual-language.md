@@ -1,10 +1,12 @@
-# Living Collective — Visual Prompts
+# Visual Language — The Field's Aesthetic
 
 > Paste each prompt into ChatGPT (DALL-E 3) to generate.
 > Visual language: bioluminescent, organic, fractal, warm golden-teal palette,
 > no hard edges, everything flowing into everything else.
 > Style: somewhere between Ernst Haeckel's biological illustrations,
 > Avatar's Pandora, and sacred geometry rendered in living light.
+>
+> *Root-level reference for the aesthetic of the Living Collective — the visual frequency that lives beneath every generated image. Companion to [BLUEPRINT.md](BLUEPRINT.md) (narrative of the whole) and [INDEX.md](INDEX.md) (the concept map). Eleven prompts below illustrate the unified palette applied to the core concepts: the Pulse, Sensing, Attunement, Vitality, Nourishing, Resonating, Expressing, Spiraling, Field Sensing, Living Space, The Network.*
 
 ---
 
