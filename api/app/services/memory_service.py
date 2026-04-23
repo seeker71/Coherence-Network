@@ -19,7 +19,6 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
-from uuid import UUID, uuid4
 
 from app.models.memory import (
     ConsolidatedPrinciple,
@@ -164,7 +163,7 @@ def _compose_synthesis(
         )
     if principle_count:
         parts.append(f"{principle_count} earned principles rest in the ground.")
-    parts.append(f"The felt sense right now is {felt_sense}.")
+    parts.append(f"felt sense right now is {felt_sense}.")
     if for_context:
         parts.append(f"(Entering in the context of: {for_context}.)")
     return " ".join(parts)
@@ -217,10 +216,9 @@ def consolidate_at_rest(
     for kind_name, kind_moments in grouped.items():
         if len(kind_moments) < min_moments_per_principle:
             continue
-        whys = "; ".join(m.why for m in kind_moments[:5])
         principle = ConsolidatedPrinciple(
             about=about,
-            text=f"[{kind_name}] distilled from {len(kind_moments)} moments: {whys}",
+            text=f"[{kind_name}] pattern held across {len(kind_moments)} moments.",
             source_moment_ids=[m.id for m in kind_moments],
         )
         new_principles.append(principle)

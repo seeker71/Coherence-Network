@@ -27,6 +27,12 @@ class WorktreeRisk:
     has_upstream: bool
     risks: list[str]
 
+
+BLOCKING_RISK_LABELS = {
+    "detached_head",
+    "ahead_without_upstream",
+}
+
 SKIPPABLE_LOCAL_ARTIFACT_PATTERNS = (
     "api/data/*.db",
     "api/data/*.db-*",
@@ -143,6 +149,10 @@ def _is_autonomous_sidecar_worktree(worktree_path: Path) -> bool:
     return _has_path_segment_sequence(worktree_path, AUTONOMOUS_WORKTREE_PATH_SEGMENTS)
 
 
+def _is_blocking_risk(risk_labels: list[str]) -> bool:
+    return any(label in BLOCKING_RISK_LABELS for label in risk_labels)
+
+
 def _upstream_exists(worktree_path: Path) -> bool:
     proc = _run_git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], worktree_path)
     return proc.returncode == 0 and bool(proc.stdout.strip())
@@ -206,6 +216,11 @@ def collect_risks(repo_root: Path, current_path: Path) -> list[WorktreeRisk]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Detect sibling worktree continuity risks.")
     parser.add_argument("--fail-on-risk", action="store_true")
+    parser.add_argument(
+        "--fail-on-blocking-risk",
+        action="store_true",
+        help="Fail only for risks that can strand history, while printing dirty siblings as guidance.",
+    )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
@@ -217,6 +232,7 @@ def main() -> int:
         "repo_root": str(repo_root),
         "current_worktree": str(current_path),
         "risk_count": len(risks),
+        "blocking_risk_count": sum(1 for item in risks if _is_blocking_risk(item.risks)),
         "risks": [
             {
                 "path": item.path,
@@ -227,6 +243,7 @@ def main() -> int:
                 "behind_main": item.behind_main,
                 "has_upstream": item.has_upstream,
                 "risks": item.risks,
+                "blocking": _is_blocking_risk(item.risks),
             }
             for item in risks
         ],
@@ -238,17 +255,21 @@ def main() -> int:
         print(f"worktree-continuity: repo={payload['repo_root']}")
         print(f"worktree-continuity: current={payload['current_worktree']}")
         print(f"worktree-continuity: risk_count={payload['risk_count']}")
+        print(f"worktree-continuity: blocking_risk_count={payload['blocking_risk_count']}")
         for item in payload["risks"]:
             labels = ",".join(item["risks"])
+            severity = "blocking" if item["blocking"] else "guidance"
             print(
                 " - "
                 f"{item['path']} branch={item['branch']} "
                 f"ahead={item['ahead_of_main']} behind={item['behind_main']} "
                 f"upstream={'yes' if item['has_upstream'] else 'no'} "
-                f"risks={labels}"
+                f"severity={severity} risks={labels}"
             )
 
     if args.fail_on_risk and risks:
+        return 2
+    if args.fail_on_blocking_risk and any(_is_blocking_risk(item.risks) for item in risks):
         return 2
     return 0
 

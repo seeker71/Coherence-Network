@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.middleware.auth import require_api_key
-from app.models.lens_translation import WorldviewLensCreate, lens_public_dict
+from app.models.lens_translation import WorldviewLensCreate
 from app.services import translate_service
 from app.services import lens_translation_service
 
@@ -26,7 +26,7 @@ def list_lenses() -> dict:
         meta = translate_service.get_lens_meta(lid)
         if not meta:
             continue
-        lenses.append(lens_public_dict(lid, meta))
+        lenses.append(lens_translation_service.build_lens_public_dict(lid, meta))
     return {"lenses": lenses, "total": len(lenses)}
 
 
@@ -35,7 +35,7 @@ def get_lens(lens_id: str) -> dict:
     meta = translate_service.get_lens_meta(lens_id)
     if not meta:
         raise HTTPException(status_code=404, detail=f"Lens '{lens_id}' not found")
-    return lens_public_dict(lens_id, meta)
+    return lens_translation_service.build_lens_public_dict(lens_id, meta)
 
 
 @router.post("/lenses", status_code=201, summary="Create Lens")
@@ -50,4 +50,4 @@ def create_lens(body: WorldviewLensCreate, _key: str = Depends(require_api_key))
     )
     merged = translate_service.get_lens_meta(body.lens_id)
     assert merged is not None
-    return lens_public_dict(body.lens_id, merged)
+    return lens_translation_service.build_lens_public_dict(body.lens_id, merged)

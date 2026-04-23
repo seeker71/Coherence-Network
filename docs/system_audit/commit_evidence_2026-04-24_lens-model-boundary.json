@@ -1,0 +1,93 @@
+{
+  "date": "2026-04-24",
+  "thread_branch": "codex/full-code-audit-health",
+  "commit_scope": "Move public lens response shaping out of the lens model into the lens translation service so model tissue stays schema-only.",
+  "files_owned": [
+    "api/app/models/lens_translation.py",
+    "api/app/services/lens_translation_service.py",
+    "api/app/routers/lenses.py",
+    "api/tests/test_lens_translation_boundaries.py",
+    "docs/system_audit/commit_evidence_2026-04-24_lens-model-boundary.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && .venv/bin/pytest -q tests/test_lens_translation_boundaries.py",
+      "cd api && ruff check app/models/lens_translation.py app/services/lens_translation_service.py app/routers/lenses.py tests/test_lens_translation_boundaries.py",
+      "! rg -n \"from app\\.services|import app\\.services\" api/app/models/lens_translation.py",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-24_lens-model-boundary.json"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Lens registry responses keep the same shape, but the model module no longer reaches into service behavior.",
+    "public_endpoints": [
+      "/api/lenses",
+      "/api/lenses/{lens_id}",
+      "/api/lenses"
+    ],
+    "test_flows": [
+      "Lens boundary test confirms the model imports no app.services modules",
+      "Lens public payload builder fills archetype axes from registered lens belief vectors",
+      "Lenses router delegates response shaping to lens_translation_service"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Lens boundary repair is locally validated; branch still needs standard pre-commit gates and CI after push."
+  },
+  "idea_ids": [
+    "repository-health",
+    "lens-translation"
+  ],
+  "spec_ids": [
+    "repository-architecture-health",
+    "spec-181"
+  ],
+  "task_ids": [
+    "lens-model-boundary-2026-04-24"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-attunement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/models/lens_translation.py",
+    "api/app/services/lens_translation_service.py",
+    "api/app/routers/lenses.py",
+    "api/tests/test_lens_translation_boundaries.py"
+  ],
+  "change_files": [
+    "api/app/models/lens_translation.py",
+    "api/app/services/lens_translation_service.py",
+    "api/app/routers/lenses.py",
+    "api/tests/test_lens_translation_boundaries.py"
+  ],
+  "change_intent": "runtime_fix"
+}

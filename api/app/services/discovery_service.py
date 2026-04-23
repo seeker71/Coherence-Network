@@ -77,7 +77,7 @@ def _collect_resonant_peers(
 ) -> list[DiscoveryItem]:
     """Contributors with similar worldview / concept resonance."""
     from app.services import belief_service, graph_service
-    from app.routers.peers import _compute_peer_resonance
+    from app.services.peer_resonance_service import compute_peer_resonance
 
     items: list[DiscoveryItem] = []
     try:
@@ -92,7 +92,7 @@ def _collect_resonant_peers(
                 continue
             try:
                 peer_profile = belief_service._node_to_belief_profile(node)
-                score = _compute_peer_resonance(source_profile, peer_profile)
+                score = compute_peer_resonance(source_profile, peer_profile)
                 if score <= 0.1:
                     continue
 

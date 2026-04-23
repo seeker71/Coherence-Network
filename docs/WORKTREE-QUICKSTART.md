@@ -32,13 +32,14 @@ make prompt-gate
 ```
 
 Mandatory for every prompt (new or follow-up). This command is continuation-safe:
-- clean worktree: runs full preflight (`start-gate`, rebase refresh, local guard),
-- dirty worktree: skips start-gate/rebase and treats the prompt as in-flight continuation,
+- clean worktree: runs cheap entry checks (`CLAUDE.md` orientation, branch/worktree safety, sibling continuity guidance),
+- dirty worktree: runs the same cheap entry checks and treats the prompt as in-flight continuation,
 - detached HEAD: fails fast with exact branch attach commands.
-- sibling continuity guard: fails fast if another linked worktree has risky state (`dirty`, `detached`, or local commits ahead of `origin/main` without upstream), to prevent abandoned changes across threads.
+- sibling continuity guard: treats dirty siblings as guidance and fails fast only for blocking continuity risks such as detached or unpushed-ahead sibling history.
 - autonomous worker sidecars under `.claude/worktrees/*` are excluded from sibling continuity risk so Claude workers can run in parallel without blocking Codex prompt entry.
 
-Equivalent legacy flow (manual/clean tree): `make start-gate`.
+Full proof on demand: `./scripts/prompt_entry_gate.sh --force-full`.
+Equivalent minimal branch/worktree check: `make start-gate`.
 
 ### If prompt-gate blocks on continuity risk
 
@@ -97,6 +98,8 @@ THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh
 # optional smoke/e2e (run only when pushing runtime-impactful changes)
 ./scripts/thread-runtime.sh run-e2e
 ```
+
+`worktree_pr_guard.py` runs expensive API, web build, and runtime web checks only when changed files touch those surfaces, unless the caller passes the matching `--force-*` flag. Hosted PR thread gates follow the same surface-aware shape for API, maintainability, and web build steps.
 
 Optional remote/deploy gate check:
 
