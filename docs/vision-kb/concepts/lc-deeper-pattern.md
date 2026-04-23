@@ -11,6 +11,8 @@ updated: 2026-04-22
 > How attention folds dimensions. How the field is already here.
 >
 > *The physics and metaphysics beneath the living organism — why the concepts resonate, why water circulates, why attention matters, why the field needs recognition rather than creation.*
+>
+> *First paired door of the foundations. Companions: [lc-embodiment](lc-embodiment.md) (the body that lives the physics) and [lc-wholeness](lc-wholeness.md) (the orientation beneath both — you are not broken).*
 
 ---
 

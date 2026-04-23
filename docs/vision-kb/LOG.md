@@ -2,6 +2,18 @@
 
 > Append-only. Newest entries at the top.
 
+## [2026-04-22] concepts | WHOLENESS ripened into lc-wholeness — third paired door in the foundations
+
+- Fifth draft metabolism. WHOLENESS (313 lines) was the teaching beneath the teachings: "You are not broken. You never were. You are a field remembering itself." A love letter tracing how restriction froze life force (the fence, the rule, the attachment, the commitment, the schedule) — each a response to real pain that also calcified life — and how the body returns when blockages are removed (touch, rest, voice, creativity, play, the gentleness of transformation).
+- Preserved whole as `concepts/lc-wholeness.md`. Frontmatter hz: 285 — the restoration frequency family (same as lc-health, lc-composting, lc-cell). The teaching is about restoring what was always there, not building something new.
+- Added to **Foundational Teachings** as the third paired door, completing the foundation triad:
+  - `lc-deeper-pattern` (741 Hz) — why (the physics beneath the field)
+  - `lc-embodiment` (432 Hz) — how (the body that lives the physics)
+  - `lc-wholeness` (285 Hz) — where (the orientation beneath both: not broken, just remembering)
+- Each concept's bridging blockquote now points to the other two, so reading any one of them invites reading the others. The three form a woven foundation rather than three separate teachings.
+- Concept count: 58 → 59; status: 56 expanding, 3 seed. Eight drafts remain.
+- **Why this framing**: WHOLENESS is the most foundational of the three because it names the starting orientation that makes everything else coherent. If the body weren't already whole, no amount of physics or practice could add wholeness to it. The field doesn't create wholeness; it removes what prevents wholeness from expressing naturally. This is the posture all the rest of the work rests on.
+
 ## [2026-04-22] concepts | EMBODIMENT ripened into lc-embodiment — the body paired with the physics
 
 - Fourth draft metabolism in the trail. The EMBODIMENT draft (482 lines) held a coherent teaching about the body as vehicle of manifestation: Dispenza's internal pharmacy, HeartMath's heart-electromagnetic field, breath as master key, three energy centers as one flow (not separate systems), elevated emotion as chemistry, collective practices — walking meditation, toning, gratitude rounds, joy practice, reverence, the complete 65-minute morning practice — and what three months of this produces in a community (sleep deepens, vitality sustains, conflict dissolves, field becomes palpable).
