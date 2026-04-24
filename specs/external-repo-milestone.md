@@ -3,7 +3,9 @@ idea_id: developer-experience
 status: active
 source:
   - file: scripts/external_proof_demo.py
-    symbols: [run_idea_lifecycle, record_contribution, check_coherence_score]
+    symbols: [_idea_create_payload, run_idea_lifecycle, record_contribution, check_coherence_score]
+  - file: api/tests/test_external_proof_demo.py
+    symbols: [test_external_proof_idea_payload_matches_public_contract]
   - file: api/app/routers/ideas.py
     symbols: [create_idea, get_idea, update_idea_stage, list_ideas]
   - file: api/app/routers/contributions.py
@@ -44,6 +46,10 @@ constraints:
 
 Coherence Network claims to be an idea realization platform for *any* project. This spec closes the loop: a standalone script exercises the full idea lifecycle using only the public API, with no internal imports. If the script passes, the platform has proven it works outside its own codebase. If it fails, the failure is now visible and actionable rather than assumed.
 
+## Purpose
+
+Keep the external proof workflow aligned with the deployed public API contract so schema drift is caught by CI before operators need to debug live workflow failures manually.
+
 ## PLAN
 
 **Optimizing for**: Trust — operators and prospective adopters need a reproducible, externally-visible proof that the platform's public API is complete and stable.
@@ -67,13 +73,19 @@ Coherence Network claims to be an idea realization platform for *any* project. T
 
 ## Requirements
 
-- [ ] **R1**: Script at `scripts/external_proof_demo.py` creates a test idea via `POST /api/ideas`, verifies the response contains `id` and `stage`, then advances the stage via `PATCH /api/ideas/{id}/stage`.
+- [ ] **R1**: Script at `scripts/external_proof_demo.py` creates a test idea via `POST /api/ideas` using the current public `IdeaCreate` fields (`name`, `description`, `potential_value`, `estimated_cost`, `confidence`, `workspace_id`, `tags`), verifies the response contains `id` and `stage`, then advances the stage via `PATCH /api/ideas/{id}/stage`.
 - [ ] **R2**: Script records a contribution for the test idea via `POST /api/contributions` and reads back the contribution list via `GET /api/contributions?idea_id={id}`, verifying the contribution appears.
 - [ ] **R3**: Script reads the coherence score via `GET /api/coherence/{id}` (or equivalent endpoint) and asserts the score is a float in [0.0, 1.0].
 - [ ] **R4**: Script closes/archives the test idea via the lifecycle endpoint so it does not pollute the live portfolio.
 - [ ] **R5**: `--dry-run` flag prints each intended API call (method + URL + body summary) without executing, for safe local preview.
 - [ ] **R6**: `docs/EXTERNAL_ENABLEMENT_TRACKING.md` is updated after each passing run (manually or via script flag `--update-tracking`) with: date, API base URL, list of endpoints exercised, pass/fail status.
 - [ ] **R7**: `.github/workflows/external-proof.yml` runs `python3 scripts/external_proof_demo.py` on push to `main`, using `COHERENCE_API_KEY` from GitHub Secrets.
+
+## Acceptance Criteria
+
+- `cd api && .venv/bin/pytest -q tests/test_external_proof_demo.py` passes and proves the script's idea-create payload uses the current public schema.
+- `python3 scripts/external_proof_demo.py --dry-run` exits 0 and prints the intended external proof lifecycle without making HTTP requests.
+- `python3 scripts/validate_spec_quality.py --file specs/external-repo-milestone.md` passes.
 
 ## API Contract
 
@@ -83,9 +95,13 @@ The script exercises these existing endpoints. No new endpoints are added by thi
 **Request body**
 ```json
 {
-  "title": "External Proof Test Idea [auto-cleanup]",
-  "description": "Created by external_proof_demo.py — will be archived.",
-  "workspace": "coherence-network"
+  "name": "External Proof Test Idea [auto-cleanup]",
+  "description": "Created by external_proof_demo.py - will be archived.",
+  "potential_value": 1.0,
+  "estimated_cost": 0.1,
+  "confidence": 0.8,
+  "workspace_id": "coherence-network",
+  "tags": ["external-proof", "auto-cleanup"]
 }
 ```
 **Response 200** — must contain `id` (string), `stage` (string).
@@ -114,13 +130,26 @@ The script exercises these existing endpoints. No new endpoints are added by thi
 
 No new data models. The script uses existing Pydantic models already served by the API.
 
-## Files
+## Files to Modify
+
+- `scripts/external_proof_demo.py`
+- `api/tests/test_external_proof_demo.py`
+- `specs/external-repo-milestone.md`
+- `docs/EXTERNAL_ENABLEMENT_TRACKING.md`
+- `.github/workflows/external-proof.yml`
 
 | File | Action | What changes |
 |------|--------|-------------|
 | `scripts/external_proof_demo.py` | **Create** | Standalone proof script; exercises idea lifecycle, contributions, coherence score |
+| `api/tests/test_external_proof_demo.py` | **Create** | Contract test that keeps the standalone proof script aligned with the public idea create schema |
 | `docs/EXTERNAL_ENABLEMENT_TRACKING.md` | **Update** | Add last-run metadata: date, endpoints, status |
 | `.github/workflows/external-proof.yml` | **Create** | CI workflow: runs proof script on push to main using secret API key |
+
+## Out of Scope
+
+- Replacing the public API idea model or changing the `/api/ideas` endpoint behavior.
+- Adding a separate external repository for this proof script.
+- Storing or rotating the production `COHERENCE_API_KEY`.
 
 ## Verification Scenarios
 
@@ -153,6 +182,10 @@ Push a commit to `main`. **Expected**: GitHub Actions workflow `external-proof` 
 
 ## Risks and Assumptions
 
+- Live API availability can fail independently of this payload contract; CI should surface that as an operational failure, not hide it.
+- Production API keys are managed outside this spec and must remain in GitHub Secrets, never in committed files.
+- The local unit test only verifies request shape; the live workflow still verifies deployed behavior.
+
 | Risk | Likelihood | Mitigation |
 |------|-----------|------------|
 | Live API is temporarily unavailable during CI run | Low | CI workflow retries once on network error; failure is surfaced as a CI alert, not silently skipped |
@@ -160,6 +193,11 @@ Push a commit to `main`. **Expected**: GitHub Actions workflow `external-proof` 
 | `GET /api/coherence/{id}` endpoint path differs from spec assumption | Medium | Verify exact path against `api/app/routers/coherence.py` before implementation; update spec if needed |
 | API key secret expires in CI | Low | Document key rotation procedure in `docs/EXTERNAL_ENABLEMENT_TRACKING.md` |
 | Script added tokens inflate context budget | Low | Script is ~150 lines; well within context budget tooling thresholds |
+
+## Known Gaps
+
+- Follow-up task: split operational live API availability failures from schema-contract failures in the external proof workflow output.
+- Follow-up task: add a tracking update mode once `docs/EXTERNAL_ENABLEMENT_TRACKING.md` should be updated automatically by CI.
 
 ## Unblock Guidance
 

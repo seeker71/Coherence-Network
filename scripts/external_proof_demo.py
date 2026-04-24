@@ -37,6 +37,18 @@ from contextlib import contextmanager
 from typing import Any, Dict, Optional
 
 
+def _idea_create_payload() -> Dict[str, Any]:
+    return {
+        "name": "External Proof Test Idea [auto-cleanup]",
+        "description": "Created by external_proof_demo.py - will be archived.",
+        "potential_value": 1.0,
+        "estimated_cost": 0.1,
+        "confidence": 0.8,
+        "workspace_id": "coherence-network",
+        "tags": ["external-proof", "auto-cleanup"],
+    }
+
+
 def _import_requests():
     try:
         import requests  # type: ignore[import-not-found]
@@ -112,11 +124,7 @@ class ProofRunner:
         result = self._call(
             "POST",
             "/api/ideas",
-            {
-                "title": "External Proof Test Idea [auto-cleanup]",
-                "description": "Created by external_proof_demo.py — will be archived.",
-                "workspace": "coherence-network",
-            },
+            _idea_create_payload(),
         )
         if not self.dry_run:
             if "id" not in result:
