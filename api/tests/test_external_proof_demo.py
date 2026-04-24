@@ -51,6 +51,16 @@ def test_external_proof_contribution_uses_open_record_endpoint() -> None:
     assert runner.endpoints_exercised == ["POST /api/contributions/record"]
 
 
+def test_external_proof_reads_global_coherence_score_endpoint() -> None:
+    module = _load_external_proof_module()
+    runner = module.ProofRunner("https://api.example.test", "dev-key", dry_run=True)
+    runner.idea_id = "idea-123"
+
+    runner.check_coherence_score()
+
+    assert runner.endpoints_exercised == ["GET /api/coherence/score"]
+
+
 def test_external_proof_headers_include_public_api_key_header() -> None:
     module = _load_external_proof_module()
     runner = module.ProofRunner("https://api.example.test", "dev-key", dry_run=True)
