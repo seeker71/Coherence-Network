@@ -136,6 +136,55 @@ def sense_metabolism() -> list[str]:
     return findings
 
 
+def sense_spec_sources() -> list[str]:
+    """Do the paths spec frontmatter 'source:' points at actually exist?
+
+    Missing paths are signal, not failure. Some specs name future targets
+    (scripts to be written, services-to-be-built); those show as drift
+    here but are acknowledged in the spec's Known Gaps section. This
+    reading exists so surprise drift can't hide.
+    """
+    findings: list[dict[str, str]] = []
+    specs_dir = ROOT / "specs"
+    if not specs_dir.is_dir():
+        return ["  specs/ directory not found"]
+
+    for spec in sorted(specs_dir.glob("*.md")):
+        if spec.name in ("INDEX.md", "TEMPLATE.md"):
+            continue
+        text = spec.read_text()
+        # Truncate scan to the frontmatter section (between first two '---' lines)
+        head, *rest = text.split("---", 2)
+        if not rest:
+            continue
+        frontmatter = rest[0] if len(rest) == 1 else rest[0]
+        for m in re.finditer(r"^\s*-\s*file:\s*(\S+)", frontmatter, re.MULTILINE):
+            path = m.group(1).strip()
+            if path.startswith("..") or "://" in path or path.startswith("specs/"):
+                continue
+            if not (ROOT / path).exists():
+                findings.append({"spec": spec.name, "path": path})
+
+    if not findings:
+        return ["  every spec's source: paths point at files that exist"]
+
+    by_spec: dict[str, list[str]] = {}
+    for f in findings:
+        by_spec.setdefault(f["spec"], []).append(f["path"])
+
+    lines = [
+        f"  {len(findings)} source paths missing across {len(by_spec)} spec(s)"
+    ]
+    for spec_name in sorted(by_spec):
+        paths = by_spec[spec_name]
+        lines.append(f"    · {spec_name} — {len(paths)} missing")
+        for p in paths[:3]:
+            lines.append(f"      → {p}")
+        if len(paths) > 3:
+            lines.append(f"      → (+{len(paths) - 3} more)")
+    return lines
+
+
 def main() -> int:
     print("# Wellness check\n")
     print("A gentle sensing. Not an audit. Drift is the signal,")
@@ -153,6 +202,11 @@ def main() -> int:
 
     print("## Metabolism — composting-in-progress\n")
     for line in sense_metabolism():
+        print(line)
+    print()
+
+    print("## Source maps — do specs point at files that exist?\n")
+    for line in sense_spec_sources():
         print(line)
     print()
 
