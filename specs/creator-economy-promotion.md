@@ -1,6 +1,6 @@
 ---
 idea_id: creator-economy-promotion
-status: active
+status: done
 source:
   - file: api/app/routers/creator_economy.py
     symbols: [get_creator_stats(), get_asset_proof_card(), list_featured_assets()]
