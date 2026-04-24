@@ -106,3 +106,7 @@ web/test-results/
 __pycache__/
 .task-*
 data/coherence.db
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db

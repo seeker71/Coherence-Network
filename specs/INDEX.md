@@ -1,6 +1,6 @@
 # Spec Index
 
-> 75 specs (71 done, 4 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 76 specs (71 done, 5 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
 ## By Idea (18 ideas → 74 specs)
 
@@ -114,6 +114,9 @@
 
 ### financial-integration-fiat-bridge (1 spec)
 - [financial-integration](financial-integration.md) — CC fiat bridge, USDC exchange, KYC, tax reporting
+
+### creator-economy-promotion (1 spec)
+- [creator-economy-promotion](creator-economy-promotion.md) — creator landing page, proof card API, featured assets + community tag filtering
 
 ## Lookup
 
