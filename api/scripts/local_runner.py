@@ -1384,9 +1384,11 @@ def _block_impl_without_active_spec(task_id: str, task: dict[str, Any]) -> bool:
     import re as _re_gate
 
     _ctx = task.get("context") or {}
-    _gate_idea_id = _ctx.get("idea_id", "")
+    _gate_idea_id = str(_ctx.get("idea_id", "") or "").strip()
+    _gate_spec_id = str(_ctx.get("spec_id", "") or "").strip()
+    _gate_label = _gate_idea_id or _gate_spec_id
     _gate_spec_path = _ctx.get("spec_path", "none") or "none"
-    if not _gate_idea_id or _gate_idea_id in ("unknown",):
+    if not _gate_label or _gate_label in ("unknown",):
         return False
 
     _repo_s = str(_get_repo_dir())
@@ -1396,12 +1398,12 @@ def _block_impl_without_active_spec(task_id: str, task: dict[str, Any]) -> bool:
         if _cand.exists():
             _resolved_spec = _cand
     if _resolved_spec is None:
-        _found = _glob_mod.glob(f"{_repo_s}/specs/*{_gate_idea_id}*.md")
+        _found = _glob_mod.glob(f"{_repo_s}/specs/*{_gate_label}*.md")
         _resolved_spec = Path(_found[0]) if _found else None
 
     if _resolved_spec is None:
         _msg = (
-            f"NO_SPEC_GATE: impl for '{_gate_idea_id}' has no spec "
+            f"NO_SPEC_GATE: impl for '{_gate_label}' has no spec "
             f"(spec_path={_gate_spec_path!r}). Seed a spec task first."
         )
         log.warning(_msg)
@@ -1424,7 +1426,7 @@ def _block_impl_without_active_spec(task_id: str, task: dict[str, Any]) -> bool:
         _sm = _re_gate.search(r"^status:\s*(\S+)", _spec_text, _re_gate.MULTILINE)
         if _sm and _sm.group(1).lower() == "done":
             _msg = (
-                f"DONE_SPEC_GATE: impl for '{_gate_idea_id}' targets "
+                f"DONE_SPEC_GATE: impl for '{_gate_label}' targets "
                 f"'{_resolved_spec.name}' (status=done). Nothing to implement."
             )
             log.warning(_msg)
