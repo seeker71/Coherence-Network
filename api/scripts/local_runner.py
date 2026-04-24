@@ -2168,10 +2168,11 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             spec_ref = ""
             resolved_spec_path = ""
             spec_status = ""
+            task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+            context_spec_path = ""
             try:
                 import glob as _glob
                 spec_files = []
-                task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
                 context_spec = task_context.get("spec_file") or task_context.get("spec_path")
                 if context_spec:
                     exact_context = (
@@ -2197,7 +2198,13 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                         spec_content = spec_text[:600]
                     status_match = re.search(r"^status:\s*(\S+)", spec_text, re.MULTILINE)
                     spec_status = status_match.group(1).strip().lower() if status_match else ""
-                    spec_ref = f"\n\nSpec ({resolved_spec_path}):\n```\n{spec_content}\n```\n(Full spec at {resolved_spec_path})\n"
+                    try:
+                        context_spec_path = str(
+                            Path(resolved_spec_path).resolve().relative_to(_get_repo_dir().resolve())
+                        )
+                    except ValueError:
+                        context_spec_path = resolved_spec_path
+                    spec_ref = f"\n\nSpec ({context_spec_path}):\n```\n{spec_content}\n```\n(Full spec at {context_spec_path})\n"
             except Exception as exc:
                 log.warning("AUTO_PHASE spec resolve failed idea=%s error=%s", idea_id, exc)
             if not resolved_spec_path:
@@ -2217,7 +2224,9 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                     "spec_path": resolved_spec_path,
                 })
                 return
-            extra_context["spec_path"] = resolved_spec_path or "none"
+            extra_context["spec_path"] = context_spec_path or resolved_spec_path or "none"
+            if task_context.get("spec_branch"):
+                extra_context["spec_branch"] = task_context["spec_branch"]
 
             direction = (
                 f"Implement '{idea_name}' ({idea_id}).\n\n"
@@ -4116,10 +4125,10 @@ def run_one(task: dict, dry_run: bool = False, provider_override: str | None = N
     if success and reported:
         # Only advance phases if the task produced meaningful output
         if len(output_stripped) >= min_chars:
-            # Fix 4: impl/test phase advance is deferred to _worker_loop (after push confirmation).
+            # Fix 4: file-producing phase advance is deferred to _worker_loop (after push confirmation).
             # _worker_loop calls _run_phase_auto_advance_hook only after _push_branch_to_origin
             # returns True, preventing phantom phase advance when the push subsequently fails.
-            if task_type not in ("impl", "test"):
+            if task_type not in ("spec", "impl", "test"):
                 _run_phase_auto_advance_hook(task)
             _auto_record_contribution(task, provider, duration)
         else:
@@ -6436,6 +6445,7 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
             # Create worktree — for test/review phases, checkout the impl PR branch
             task_type = task.get("task_type", "spec")
             impl_branch = ctx.get("impl_branch", "")
+            spec_branch = ctx.get("spec_branch", "")
             workspace_git_url = ctx.get("workspace_git_url", "")
 
             # HARD GATE: test/code-review/review REQUIRE impl_branch.
@@ -6463,7 +6473,12 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                 # (DG-010): counting seeder mistakes as provider failures trips the breaker unfairly.
                 continue
 
-            base_branch = impl_branch if task_type in ("test", "code-review", "review") else None
+            if task_type in ("test", "code-review", "review"):
+                base_branch = impl_branch
+            elif task_type == "impl" and spec_branch:
+                base_branch = spec_branch
+            else:
+                base_branch = None
             wt = _create_worktree(task_id, base_branch=base_branch, idea_id=idea_id,
                                   workspace_git_url=workspace_git_url)
             pushed = False
@@ -6526,11 +6541,23 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                                     ctx = {**ctx, "impl_branch": impl_branch_name}
                                     if isinstance(task.get("context"), dict):
                                         task["context"]["impl_branch"] = impl_branch_name
+                            elif task_type == "spec":
+                                spec_branch_name = f"task/{task_id[:16]}"
+                                branch_patch_result = api("PATCH", f"/api/agent/tasks/{task_id}", {
+                                    "context": {**ctx, "spec_branch": spec_branch_name},
+                                })
+                                if branch_patch_result:
+                                    log.info("SPEC_BRANCH_SET task=%s branch=%s", task_id[:16], spec_branch_name)
+                                else:
+                                    log.warning("SPEC_BRANCH_PATCH_FAILED task=%s branch=%s", task_id[:16], spec_branch_name)
+                                ctx = {**ctx, "spec_branch": spec_branch_name}
+                                if isinstance(task.get("context"), dict):
+                                    task["context"]["spec_branch"] = spec_branch_name
                             # Create PR after successful branch push for impl tasks
                             if task_type == "impl":
                                 _create_pr_for_branch(task_id, task, wt)
-                            # Fix 4: phase advance only fires after push is confirmed for impl/test
-                            if task_type in ("impl", "test"):
+                            # Fix 4: phase advance only fires after push is confirmed for file-producing phases
+                            if task_type in ("spec", "impl", "test"):
                                 _run_phase_auto_advance_hook(task)
                     elif not ok and diff and task_type in ("impl", "test"):
                         # Timed out but produced real code — save the work, push branch

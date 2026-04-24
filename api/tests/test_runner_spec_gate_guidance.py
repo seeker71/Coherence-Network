@@ -171,3 +171,43 @@ def test_spec_phase_does_not_enqueue_impl_for_done_spec(monkeypatch, tmp_path: P
     )
 
     assert not [call for call in calls if call[0] == "POST" and call[1] == "/api/agent/tasks"]
+
+
+def test_spec_phase_enqueues_impl_with_durable_spec_branch(monkeypatch, tmp_path: Path) -> None:
+    spec_dir = tmp_path / "specs"
+    spec_dir.mkdir()
+    (spec_dir / "active-idea.md").write_text("---\nstatus: active\n---\n", encoding="utf-8")
+    calls: list[tuple[str, str, dict | None]] = []
+    monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
+    monkeypatch.setattr(local_runner, "_append_idea_event", lambda *args, **kwargs: None)
+
+    def fake_api(method: str, path: str, body: dict | None = None):
+        calls.append((method, path, body))
+        if path == "/api/ideas/active-idea/tasks":
+            return {
+                "groups": [
+                    {"task_type": "spec", "count": 1, "status_counts": {"completed": 1}},
+                ],
+                "tasks": [],
+            }
+        if path == "/api/ideas/active-idea":
+            return {"id": "active-idea", "name": "Active Idea", "description": ""}
+        return {}
+
+    monkeypatch.setattr(local_runner, "api", fake_api)
+
+    local_runner._run_phase_auto_advance_hook(
+        {
+            "task_type": "spec",
+            "context": {
+                "idea_id": "active-idea",
+                "spec_branch": "task/spec-task-id",
+            },
+        }
+    )
+
+    created = [call for call in calls if call[0] == "POST" and call[1] == "/api/agent/tasks"]
+    assert len(created) == 1
+    context = created[0][2]["context"]
+    assert context["spec_path"] == "specs/active-idea.md"
+    assert context["spec_branch"] == "task/spec-task-id"
