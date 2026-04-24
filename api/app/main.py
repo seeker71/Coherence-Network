@@ -735,6 +735,8 @@ from app.routers import memory as memory_router
 app.include_router(memory_router.router, prefix="/api", tags=["memory"])
 from app.routers import translations as translations_router
 app.include_router(translations_router.router, prefix="/api", tags=["translations"])
+from app.routers import evidence as evidence_router
+app.include_router(evidence_router.router, prefix="/api", tags=["evidence"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(locales_router.router, prefix="/api", tags=["locales"])
 app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
