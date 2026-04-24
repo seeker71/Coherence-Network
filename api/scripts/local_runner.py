@@ -4688,12 +4688,19 @@ def _seed_task_from_open_idea(_attempt: int = 0, _lock_held: bool = False) -> bo
             _SEEDER_SKIP_CACHE.add(idea_id)
             return _try_next()
 
-        # R2c: replaced hardcoded >= 10 with MAX_TASKS_PER_PHASE
+        # Runaway guard: skip only when a phase has ballooned far beyond the
+        # normal cap (4× MAX_TASKS_PER_PHASE). The candidate-phase guard at
+        # line 4685 already handles the common "current phase full" case; the
+        # prior blanket check at MAX_TASKS_PER_PHASE punished ideas that had
+        # legitimately retried earlier phases (e.g. spec completed 3× then
+        # moved to impl is progress, not stuckness) and blocked every
+        # progressed idea in the fleet from re-seeding.
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
         total_tasks = sum(phase_counts.values())
-        if max_phase_tasks >= MAX_TASKS_PER_PHASE:
-            log.info("SEED: idea '%s' truly stuck (%d tasks in one phase, limit %d) — skipping this session",
-                     idea_name[:30], max_phase_tasks, MAX_TASKS_PER_PHASE)
+        _RUNAWAY_THRESHOLD = MAX_TASKS_PER_PHASE * 4
+        if max_phase_tasks >= _RUNAWAY_THRESHOLD:
+            log.info("SEED: idea '%s' runaway (%d tasks in one phase, threshold %d) — skipping this session",
+                     idea_name[:30], max_phase_tasks, _RUNAWAY_THRESHOLD)
             _SEEDER_SKIP_CACHE.add(idea_id)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
             return _try_next()
