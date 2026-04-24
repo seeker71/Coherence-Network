@@ -80,9 +80,9 @@ def _vitality_multiplier(asset_id: str) -> float:
     multiplier = 1.0
     try:
         from app.services import frequency_profile_service
-        profile = frequency_profile_service.get_profile(asset_id)
-        if profile:
-            mag = frequency_profile_service.magnitude(profile)
+        views = frequency_profile_service.get_profile(asset_id)
+        if any(views.values()):
+            mag = frequency_profile_service.magnitude(views)
             # Normalize magnitude to multiplier range [1.0, 4.0]
             multiplier = max(1.0, min(4.0, mag))
     except Exception:

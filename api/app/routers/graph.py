@@ -10,6 +10,7 @@ Spec 169 additions:
   GET /api/graph/nodes/{id}/neighbors — extended with lifecycle_state, rel_type, direction
 """
 
+import math
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Any
@@ -312,26 +313,39 @@ async def get_graph_proof():
 
 @router.get("/profile/{entity_id}", summary="Get the frequency profile for any entity")
 async def get_entity_profile(entity_id: str):
-    """Returns the multi-dimensional frequency profile for any graph entity.
+    """Returns the multi-view frequency profile for any graph entity.
 
     Works for ideas, specs, assets, concepts, contributors, providers —
-    anything in the graph. The profile is a vector across all dimensions
-    (concept connections, keywords, domains, content frequency, edge types).
+    anything in the graph. The profile has three sub-views:
+
+    - **structural** — Personalized PageRank over the graph (multi-hop)
+    - **categorical** — IDF-weighted properties (domain, keyword, type, phase, provenance)
+    - **semantic** — frequency-scoring markers from content
+
+    Resonance between two entities = cosine per view, fused via inverse
+    variance weighting. No hand-tuned constants; every weight emerges
+    from the graph's own statistics.
 
     No auth required — profiles are transparent and verifiable.
     """
     from app.services import frequency_profile_service
-    profile = frequency_profile_service.get_profile(entity_id)
-    if not profile:
+    views = frequency_profile_service.get_profile(entity_id)
+    total_dims = sum(len(v) for v in views.values())
+    if total_dims == 0:
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found or has no profile")
     return {
         "entity_id": entity_id,
-        "dimensions": len(profile),
-        "magnitude": round(frequency_profile_service.magnitude(profile), 4),
+        "dimensions": total_dims,
+        "magnitude": round(frequency_profile_service.magnitude(views), 4),
         "hash": frequency_profile_service.profile_hash(entity_id),
-        "top": [{"dimension": d, "strength": round(s, 4)}
-                for d, s in frequency_profile_service.top_dimensions(profile, n=15)],
-        "profile": {k: round(v, 4) for k, v in sorted(profile.items(), key=lambda x: -x[1])},
+        "top": frequency_profile_service.top_dimensions(views, n=15),
+        "views": {
+            name: {
+                "dimensions": len(view),
+                "magnitude": round(math.sqrt(sum(v * v for v in view.values())), 4) if view else 0.0,
+            }
+            for name, view in views.items()
+        },
     }
 
 
@@ -342,7 +356,7 @@ async def verify_entity_profile(entity_id: str, expected_hash: str = Query(..., 
     No auth required. This is the public verification endpoint for profiles.
     """
     from app.services import frequency_profile_service
-    frequency_profile_service.invalidate(entity_id)  # force recompute
+    frequency_profile_service.invalidate(entity_id)
     actual_hash = frequency_profile_service.profile_hash(entity_id)
     return {
         "entity_id": entity_id,
@@ -354,20 +368,16 @@ async def verify_entity_profile(entity_id: str, expected_hash: str = Query(..., 
 
 @router.post("/resonance", summary="Compute resonance between any two entities")
 async def compute_resonance(body: dict):
-    """Cosine similarity between two entities' frequency profiles.
+    """Multi-view resonance between two entities' frequency profiles.
 
-    Pass {a: entity_id, b: entity_id}. Works across entity types:
+    Pass ``{a, b}`` as entity ids. Works across entity types:
     idea-to-concept, contributor-to-asset, spec-to-spec, anything.
     """
     from app.services import frequency_profile_service
     a_id = body.get("a", "")
     b_id = body.get("b", "")
     score = frequency_profile_service.resonance(a_id, b_id)
-    return {
-        "a": a_id,
-        "b": b_id,
-        "resonance": round(score, 4),
-    }
+    return {"a": a_id, "b": b_id, "resonance": round(score, 4)}
 
 
 @router.post("/profile/{entity_id}/sign", summary="Cryptographically sign an entity's frequency profile")
@@ -379,8 +389,8 @@ async def sign_entity_profile(entity_id: str):
     against the public key. Proves "this entity had this profile at this time."
     """
     from app.services import frequency_profile_service
-    profile = frequency_profile_service.get_profile(entity_id)
-    if not profile:
+    views = frequency_profile_service.get_profile(entity_id)
+    if not any(views.values()):
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found")
     return frequency_profile_service.sign_profile(entity_id)
 
@@ -389,7 +399,8 @@ async def sign_entity_profile(entity_id: str):
 async def find_resonant(entity_id: str, top: int = Query(10, ge=1, le=50)):
     """Find the most resonant entities to a given entity.
 
-    Searches the living-collective concept space by default.
+    Searches the living-collective concept space by default. Fuses
+    structural + categorical + semantic views via inverse-variance weights.
     """
     from app.services import frequency_profile_service
     return frequency_profile_service.find_resonant(entity_id, top_n=top)
