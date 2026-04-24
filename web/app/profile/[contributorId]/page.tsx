@@ -135,21 +135,74 @@ function fingerprint(hex: string): string {
   return segments.join(":").toUpperCase();
 }
 
-/* ── Dimension color mapping ──────────────────────────────────────── */
+/* ── Dimension resolution ─────────────────────────────────────────── */
 
-const DIMENSION_COLORS: Record<string, { bg: string; text: string }> = {
-  concept: { bg: "bg-amber-500/15", text: "text-amber-400" },
-  keyword: { bg: "bg-blue-500/15", text: "text-blue-400" },
-  domain: { bg: "bg-purple-500/15", text: "text-purple-400" },
-  edge: { bg: "bg-emerald-500/15", text: "text-emerald-400" },
-  content: { bg: "bg-pink-500/15", text: "text-pink-400" },
-};
+type ResolvedDim = { label: string; href: string | null; nodeType: string | null };
 
-function dimensionColor(dim: string): { bg: string; text: string } {
-  const prefix = dim.split(":")[0]?.toLowerCase() || "";
-  return (
-    DIMENSION_COLORS[prefix] ?? { bg: "bg-stone-500/15", text: "text-stone-400" }
-  );
+function hrefForNode(id: string, nodeType: string | null): string | null {
+  if (id.startsWith("contributor:")) return `/profile/${encodeURIComponent(id)}`;
+  if (id.startsWith("asset:")) return `/assets/${encodeURIComponent(id)}`;
+  if (id.startsWith("idea:")) return `/ideas/${encodeURIComponent(id)}`;
+  if (id.startsWith("spec:")) return `/specs/${encodeURIComponent(id)}`;
+  if (id.startsWith("lc-") || nodeType === "concept") return `/vision/${encodeURIComponent(id)}`;
+  return `/nodes/${encodeURIComponent(id)}`;
+}
+
+function humanizeSynthetic(dim: string): string {
+  if (dim === "_living") return "Living text";
+  if (dim === "_source_backed") return "Source-backed";
+  const rest = dim.slice(1);
+  const colonIdx = rest.indexOf(":");
+  const prefix = colonIdx === -1 ? rest : rest.slice(0, colonIdx);
+  const value = colonIdx === -1 ? "" : rest.slice(colonIdx + 1);
+  const labels: Record<string, string> = {
+    domain: "Domain",
+    kw: "Keyword",
+    edge: "Edge",
+    type: "Type",
+    phase: "Phase",
+    hz: "Hz",
+    marker: "Marker",
+    extraction: "Extraction",
+    ingestion_policy: "Policy",
+  };
+  const label = labels[prefix] ?? prefix;
+  return value ? `${label}: ${value}` : label;
+}
+
+async function resolveDimension(dim: string): Promise<ResolvedDim> {
+  if (dim.startsWith("_")) {
+    return { label: humanizeSynthetic(dim), href: null, nodeType: null };
+  }
+  const base = getApiBase();
+  try {
+    const res = await fetch(`${base}/api/graph/nodes/${encodeURIComponent(dim)}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) {
+      return { label: dim, href: hrefForNode(dim, null), nodeType: null };
+    }
+    const node = await res.json();
+    const name = node?.name || node?.author_display_name || dim;
+    return { label: name, href: hrefForNode(dim, node?.type ?? null), nodeType: node?.type ?? null };
+  } catch {
+    return { label: dim, href: hrefForNode(dim, null), nodeType: null };
+  }
+}
+
+function dimensionColor(dim: string, nodeType: string | null): { bg: string; text: string } {
+  if (dim === "_living") return { bg: "bg-pink-500/15", text: "text-pink-400" };
+  if (dim === "_source_backed") return { bg: "bg-teal-500/15", text: "text-teal-400" };
+  if (dim.startsWith("_")) return { bg: "bg-stone-500/15", text: "text-stone-400" };
+  if (dim.startsWith("contributor:")) return { bg: "bg-rose-500/15", text: "text-rose-400" };
+  if (dim.startsWith("asset:")) return { bg: "bg-blue-500/15", text: "text-blue-400" };
+  if (dim.startsWith("idea:")) return { bg: "bg-emerald-500/15", text: "text-emerald-400" };
+  if (dim.startsWith("spec:")) return { bg: "bg-cyan-500/15", text: "text-cyan-400" };
+  if (dim.startsWith("community:") || dim.startsWith("event:") || dim.startsWith("gathering:")) {
+    return { bg: "bg-purple-500/15", text: "text-purple-400" };
+  }
+  if (dim.startsWith("lc-") || nodeType === "concept") return { bg: "bg-amber-500/15", text: "text-amber-400" };
+  return { bg: "bg-stone-500/15", text: "text-stone-400" };
 }
 
 /* ── Metadata ─────────────────────────────────────────────────────── */
@@ -191,6 +244,14 @@ export default async function ContributorProfilePage({
     fetchFrequencyProfile(contributorId),
     fetchAssets(contributorId),
   ]);
+
+  // Resolve each top dimension to a human label + href. Node-id dims
+  // (lc-sensing, contributor:xxx, asset:xxx, community:xxx) get a name
+  // fetched from /api/graph/nodes. Synthetic dims (_living, _domain:X)
+  // get a readable label. Done in parallel so 15 dims resolve together.
+  const resolvedDims = profile
+    ? await Promise.all(profile.top.map((d) => resolveDimension(d.dimension)))
+    : [];
 
   // A contributor exists when any of three signals land: the graph
   // node (source of truth), a registered public key, or a built-up
@@ -300,23 +361,36 @@ export default async function ContributorProfilePage({
 
         {profile ? (
           <>
-            {/* Dimension pills */}
+            {/* Dimension pills — resolved names, linked where a page exists */}
             <div className="flex flex-wrap gap-2">
-              {profile.top.map((dim) => {
-                const color = dimensionColor(dim.dimension);
-                return (
-                  <span
+              {profile.top.map((dim, i) => {
+                const resolved = resolvedDims[i] ?? { label: dim.dimension, href: null, nodeType: null };
+                const color = dimensionColor(dim.dimension, resolved.nodeType);
+                const chipClass = `inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${color.bg} ${color.text}`;
+                const inner = (
+                  <>
+                    <span>{resolved.label}</span>
+                    <span className="opacity-60 font-mono">{dim.strength.toFixed(2)}</span>
+                  </>
+                );
+                return resolved.href ? (
+                  <Link
                     key={dim.dimension}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${color.bg} ${color.text}`}
+                    href={resolved.href}
+                    className={`${chipClass} hover:opacity-80 transition-opacity`}
                   >
-                    <span>{dim.dimension}</span>
-                    <span className="opacity-60">
-                      {(dim.strength * 100).toFixed(0)}%
-                    </span>
+                    {inner}
+                  </Link>
+                ) : (
+                  <span key={dim.dimension} className={chipClass}>
+                    {inner}
                   </span>
                 );
               })}
             </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Each dimension is a raw vector weight (0–1), not a share of the whole. Concept and entity weights come from graph neighbors — how strongly this contributor connects to each one. Domain, keyword, and type weights come from node properties. "Living text" and "source-backed" come from content analysis. Total magnitude is the L2 norm of the full vector.
+            </p>
 
             {/* Stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">

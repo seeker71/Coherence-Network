@@ -389,7 +389,7 @@ export function MePage() {
           ) : (
             <>
               <FootprintProse fp={footprint} t={t} />
-              {trail && trail.concepts.length > 0 && (
+              {trail && (trail.concepts?.length ?? 0) > 0 && (
                 <TrailProse trail={trail} t={t} />
               )}
             </>
@@ -630,9 +630,9 @@ function TrailProse({
   trail: Trail;
   t: ReturnType<typeof useT>;
 }) {
-  if (trail.concepts.length === 0) return null;
+  if ((trail.concepts?.length ?? 0) === 0) return null;
 
-  const top = trail.concepts.slice(0, 5);
+  const top = (trail.concepts ?? []).slice(0, 5);
   const hasMore = trail.concept_count > top.length;
 
   return (

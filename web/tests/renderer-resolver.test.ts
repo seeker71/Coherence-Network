@@ -18,7 +18,6 @@ describe("resolveRendererForMime", () => {
     registerRenderer({
       id: "local-md-v1",
       mimeTypes: ["text/markdown"],
-      // @ts-expect-error stub
       component: () => null,
     });
     const descriptor = await resolveRendererForMime("text/markdown");
@@ -53,7 +52,6 @@ describe("resolveRendererForMime", () => {
     registerRenderer({
       id: "local-png",
       mimeTypes: ["image/png"],
-      // @ts-expect-error stub
       component: () => null,
     });
     const fetcher = vi.fn().mockResolvedValue(null);

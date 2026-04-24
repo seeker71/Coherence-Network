@@ -174,7 +174,6 @@ describe("postRenderEvent", () => {
       ok: true,
       json: async () => ({ id: "evt-1", cc_pool: "0.15" }),
     });
-    // @ts-expect-error test stub
     globalThis.fetch = fetchMock;
     const result = await postRenderEvent({
       asset_id: "a",
@@ -186,7 +185,6 @@ describe("postRenderEvent", () => {
   });
 
   it("returns null on network failure", async () => {
-    // @ts-expect-error test stub
     globalThis.fetch = vi.fn().mockRejectedValue(new Error("network"));
     const result = await postRenderEvent({
       asset_id: "a",
@@ -198,7 +196,6 @@ describe("postRenderEvent", () => {
   });
 
   it("returns null on non-2xx response", async () => {
-    // @ts-expect-error test stub
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: false, status: 500 });
     const result = await postRenderEvent({
       asset_id: "a",
