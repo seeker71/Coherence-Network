@@ -135,6 +135,11 @@ def get_config() -> dict[str, Any]:
         "status_report_max_age_seconds",
         900,
     )
+    config["pipeline_pending_actionable_window_seconds"] = config_loader.get_int(
+        "pipeline",
+        "pending_actionable_window_seconds",
+        86400,
+    )
     config["task_log_dir"] = config_loader.get_str("agent_tasks", "task_log_dir", "data/task_logs")
     _CACHE = config
     logger.info(
@@ -147,12 +152,6 @@ def get_config() -> dict[str, Any]:
         config.get("cors_origins"),
     )
     return config
-
-
-def reset_config_cache() -> None:
-    """Clear cached config so next get_config() re-reads from disk."""
-    global _CACHE
-    _CACHE = None
 
 
 def get_editable_config() -> dict[str, Any]:
