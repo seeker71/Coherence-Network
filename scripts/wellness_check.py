@@ -30,7 +30,6 @@ ROOT_EXEMPT = {
     "README.md",
     "README.template.md",
     "CONTRIBUTING.md",
-    "CHANGELOG.md",
 }
 
 
