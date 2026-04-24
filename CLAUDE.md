@@ -6,9 +6,9 @@
 
 | What | Where | CLI |
 |------|-------|-----|
-| Ideas | `ideas/INDEX.md` → `ideas/{slug}.md` | `cc idea {slug}` (DB has raw ideas, not consolidated) |
-| Specs | `specs/INDEX.md` → `specs/{slug}.md` | `cc spec {slug}` |
-| Pipeline tasks | — | `cc tasks --status pending` |
+| Ideas | `ideas/INDEX.md` → `ideas/{slug}.md` | `coh idea {slug}` (DB has raw ideas, not consolidated) |
+| Specs | `specs/INDEX.md` → `specs/{slug}.md` | `coh spec {slug}` |
+| Pipeline tasks | — | `coh tasks --status pending` |
 | Tracking | `docs/EXTERNAL_ENABLEMENT_TRACKING.md` | — |
 | **Living Collective KB** | `docs/vision-kb/INDEX.md` → `concepts/{id}.md` | — |
 
@@ -108,11 +108,11 @@ The graph DB is the sole source of truth. The KB is the working draft where cont
 
 | Action | API | CLI | Web |
 |--------|-----|-----|-----|
-| View story | `GET /api/concepts/{id}` | `cc story {id}` | `/vision/{id}` |
-| List stories | `GET /api/concepts/domain/living-collective` | `cc stories` | `/vision` |
-| Update story | `PATCH /api/concepts/{id}/story` | `cc story-update {id} -f file.md` | `/vision/{id}/edit` |
-| Regenerate images | `POST /api/concepts/{id}/visuals/regenerate` | `cc visuals-generate {id}` | Edit page button |
-| View/edit config | `GET/PATCH /api/config` | `cc config` / `cc config-set key val` | `/settings` |
+| View story | `GET /api/concepts/{id}` | `coh story {id}` | `/vision/{id}` |
+| List stories | `GET /api/concepts/domain/living-collective` | `coh stories` | `/vision` |
+| Update story | `PATCH /api/concepts/{id}/story` | `coh story-update {id} -f file.md` | `/vision/{id}/edit` |
+| Regenerate images | `POST /api/concepts/{id}/visuals/regenerate` | `coh visuals-generate {id}` | Edit page button |
+| View/edit config | `GET/PATCH /api/config` | `coh config` / `coh config-set key val` | `/settings` |
 
 ## Navigation
 
@@ -123,7 +123,7 @@ All paths converge: **idea → specs → source files**
 | Keyword | `Grep` → source file → spec frontmatter `idea_id:` → `ideas/{id}.md` |
 | Idea | `ideas/{slug}.md` spec links → `specs/{slug}.md` `source:` map |
 | Code | `Grep` specs/ for filename → spec frontmatter `idea_id:` |
-| Task | `cc task {id}` → `context.idea_id` → `ideas/{id}.md` |
+| Task | `coh task {id}` → `context.idea_id` → `ideas/{id}.md` |
 
 ## MCP Tools
 
@@ -131,17 +131,17 @@ All paths converge: **idea → specs → source files**
 
 | Verb | MCP tool | CLI equivalent |
 |------|----------|---------------|
-| Navigate | `coherence_trace` | `cc trace idea {slug}` |
+| Navigate | `coherence_trace` | `coh trace idea {slug}` |
 | Advance | `coherence_advance_idea` | — |
-| Spec CRUD | `coherence_create_spec`, `coherence_update_spec` | `cc rest POST /api/spec-registry` |
-| Task flow | `coherence_task_seed` → `coherence_task_report` | `cc task seed {idea}` → `cc task report` |
-| Select work | `coherence_select_idea` | `cc idea select` |
+| Spec CRUD | `coherence_create_spec`, `coherence_update_spec` | `coh rest POST /api/spec-registry` |
+| Task flow | `coherence_task_seed` → `coherence_task_report` | `coh task seed {idea}` → `coh task report` |
+| Select work | `coherence_select_idea` | `coh idea select` |
 
 ## Context Budget
 
 1. **Spec frontmatter** (25 lines avg) — `Read specs/{slug}.md limit=30` gets source, requirements, done_when, test, constraints. Body (200 lines avg) is human reference — skip unless you need API contract or data model detail.
 2. **Idea .md files** (35-52 lines) — problem, capabilities, spec links, absorbed ideas. Always worth reading in full.
-3. **CLI** for pipeline operations — `cc tasks`, `cc task {id}`, `cc status`, `cc idea {slug}`
+3. **CLI** for pipeline operations — `coh tasks`, `coh task {id}`, `coh status`, `coh idea {slug}` (or `npx coherence-cli <cmd>` zero-install)
 4. For large source files: use targeted line ranges from the `source:` symbols
 
 ## Code Isolation

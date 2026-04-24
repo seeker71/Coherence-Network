@@ -1,11 +1,11 @@
 ---
 idea_id: agent-cli
-status: active
+status: done
 source:
   - file: cli/package.json
     symbols: [bin]
-  - file: cli/bin/cc.mjs
-    symbols: [file rename → coh.mjs]
+  - file: cli/bin/coh.mjs
+    symbols: [CLI entry point with macOS conflict-detection warning]
   - file: cli/README.md
     symbols: [installation instructions, usage examples]
   - file: CLAUDE.md
