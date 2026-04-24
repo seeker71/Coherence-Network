@@ -2,6 +2,47 @@
 
 What needs work, what's done, what's next.
 
+## External Proof — Public API Lifecycle
+
+`scripts/external_proof_demo.py` exercises the full idea lifecycle from outside the monorepo using only `requests`, `COHERENCE_API_URL`, and `COHERENCE_API_KEY`. The script is the living proof; this section is the human-readable audit trail. Update after each manual run or via CI.
+
+| Field | Value |
+|-------|-------|
+| Last passing run | 2026-04-24 — initial landing, dry-run verified |
+| API base URL | https://api.coherencycoin.com |
+| CI workflow | [`.github/workflows/external-proof.yml`](../.github/workflows/external-proof.yml) |
+| Script | [`scripts/external_proof_demo.py`](../scripts/external_proof_demo.py) |
+
+Endpoints exercised per run:
+
+- `POST /api/ideas` — create the test idea, expect `id` + `stage`
+- `PATCH /api/ideas/{id}/stage` — advance to `spec`
+- `POST /api/contributions` — record a minimal contribution
+- `GET /api/coherence/{id}` — read score, assert float in `[0, 1]`
+- `PATCH /api/ideas/{id}/stage` — archive the test idea (cleanup)
+
+### Running locally
+
+```bash
+# Dry run (no HTTP, safe default)
+python3 scripts/external_proof_demo.py --dry-run
+
+# Real run against prod
+export COHERENCE_API_URL=https://api.coherencycoin.com
+export COHERENCE_API_KEY=<real-key>
+python3 scripts/external_proof_demo.py
+
+# Against local dev
+COHERENCE_API_URL=http://localhost:8000 COHERENCE_API_KEY=dev-key python3 scripts/external_proof_demo.py
+```
+
+### Key rotation procedure
+
+1. Generate new key via the deployment's key provisioning path
+2. Update `COHERENCE_API_KEY` in **GitHub → Settings → Secrets and variables → Actions**
+3. Revoke the old key
+4. Manually trigger the `External proof` workflow to verify the new key works
+
 ## Open Work
 
 ### Credential Routing (enables multi-contributor task execution)
