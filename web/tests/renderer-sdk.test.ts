@@ -12,7 +12,6 @@ function makeConfig(overrides: Partial<RendererConfig> = {}): RendererConfig {
   return {
     id: "test-renderer",
     mimeTypes: ["text/plain"],
-    // @ts-expect-error — test stub, not a real component
     component: (_props: RendererProps) => null,
     ...overrides,
   };
