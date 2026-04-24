@@ -39,3 +39,14 @@ def test_external_proof_stage_calls_use_public_post_contract() -> None:
         "POST /api/ideas/idea-123/stage",
         "POST /api/ideas/idea-123/stage",
     ]
+
+
+def test_external_proof_headers_include_public_api_key_header() -> None:
+    module = _load_external_proof_module()
+    runner = module.ProofRunner("https://api.example.test", "dev-key", dry_run=True)
+
+    headers = runner._headers()
+
+    assert headers["X-API-Key"] == "dev-key"
+    assert headers["Authorization"] == "Bearer dev-key"
+    assert headers["Content-Type"] == "application/json"
