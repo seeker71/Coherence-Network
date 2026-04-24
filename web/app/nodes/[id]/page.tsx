@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 import { getApiBase } from "@/lib/api";
 
 /**
- * /nodes/[id] — a universal viewer for any graph node.
+ * /nodes/[id] — the universal node viewer.
  *
- * Concepts, assets, contributors, communities, events — every node
- * type shows up here with its properties flattened and rendered. Typed
- * surfaces (ideas, concepts, people, assets) have richer dedicated
- * pages; this one is the "just show me what's in the graph" fallback
- * so links like `/nodes/visual-lc-v-shelter-organism-2` from the
- * profile page resolve instead of 404ing.
+ * Any graph node id — concept, contributor, asset, idea, spec, scene,
+ * event, community, practice — resolves here and renders in the viewer
+ * best suited to its kind. A caller never has to know a node's shape
+ * to link to it: `/nodes/{id}` always works and always picks the right
+ * view.
  *
- * When the node is a canonical type with a better home, redirect
- * there instead of rendering the raw view — the dedicated page is
- * always a nicer experience.
+ * The viewer picker reads the node type (and for concepts, the domain)
+ * and composes the appropriate typed page as a server component. The
+ * typed URLs (/vision, /concepts, /assets, /ideas, /specs, /people)
+ * stay available for direct access; /nodes/ is the one surface that
+ * unifies them.
  */
 
 export const dynamic = "force-dynamic";
@@ -35,6 +36,7 @@ type GraphNode = {
   image_url?: string;
   visual_path?: string;
   canonical_url?: string;
+  domains?: string[];
   [key: string]: unknown;
 };
 
@@ -52,29 +54,15 @@ async function fetchNode(id: string): Promise<GraphNode | null> {
   }
 }
 
-function preferredHome(node: GraphNode): string | null {
-  // Typed surfaces have richer dedicated pages. Redirect when the
-  // caller landed on /nodes/ for a node that has a better home.
-  const t = node.type;
-  if (t === "asset") return `/assets/${encodeURIComponent(node.id)}`;
-  if (t === "concept") {
-    const domains = (node as { domains?: string[] }).domains;
-    if (Array.isArray(domains) && domains.includes("living-collective")) {
-      return `/vision/${encodeURIComponent(node.id)}`;
-    }
-    return `/concepts/${encodeURIComponent(node.id)}`;
-  }
-  if (t === "idea") return `/ideas/${encodeURIComponent(node.id)}`;
-  if (t === "spec") return `/specs/${encodeURIComponent(node.id)}`;
-  // Contributors, communities, scenes, events, practices, skills all
-  // live under /people (the presence directory).
-  const presenceTypes = new Set([
-    "contributor", "community", "network-org", "scene",
-    "event", "practice", "skill",
-  ]);
-  if (presenceTypes.has(t)) return `/people/${encodeURIComponent(node.id)}`;
-  return null;
-}
+const PRESENCE_TYPES = new Set([
+  "contributor",
+  "community",
+  "network-org",
+  "scene",
+  "event",
+  "practice",
+  "skill",
+]);
 
 export async function generateMetadata({
   params,
@@ -94,37 +82,37 @@ function formatDate(iso: string | undefined): string {
   if (!iso) return "";
   try {
     return new Date(iso).toLocaleDateString("en-US", {
-      year: "numeric", month: "short", day: "numeric",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   } catch {
     return iso;
   }
 }
 
-// Fields we render out of the structured hero; everything else
-// falls into the properties table so no data silently disappears.
 const HERO_FIELDS = new Set([
-  "id", "type", "name", "description", "phase",
-  "created_at", "updated_at", "file_path", "visual_path",
-  "image_url", "asset_type", "canonical_url",
+  "id",
+  "type",
+  "name",
+  "description",
+  "phase",
+  "created_at",
+  "updated_at",
+  "file_path",
+  "visual_path",
+  "image_url",
+  "asset_type",
+  "canonical_url",
 ]);
 
-export default async function NodePage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const decoded = decodeURIComponent(id);
-  const node = await fetchNode(decoded);
-  if (!node) notFound();
-
-  // Redirect to the dedicated surface when one exists.
-  const home = preferredHome(node);
-  if (home && home !== `/nodes/${encodeURIComponent(decoded)}`) {
-    redirect(home);
-  }
-
+/**
+ * Generic fallback viewer — renders whatever properties a node carries
+ * when its type doesn't match a specialized viewer. Every known type
+ * composes a richer viewer above; this one ensures a caller never hits
+ * a 404 on an id the graph already recognizes.
+ */
+function GenericNodeViewer({ node }: { node: GraphNode }) {
   const image = (node.visual_path || node.image_url || node.file_path) as
     | string
     | undefined;
@@ -201,10 +189,13 @@ export default async function NodePage({
                   {key}
                 </dt>
                 <dd className="text-foreground/90 break-all">
-                  {typeof value === "string" ? value :
-                   typeof value === "number" || typeof value === "boolean" ? String(value) :
-                   Array.isArray(value) ? value.join(", ") :
-                   JSON.stringify(value)}
+                  {typeof value === "string"
+                    ? value
+                    : typeof value === "number" || typeof value === "boolean"
+                    ? String(value)
+                    : Array.isArray(value)
+                    ? value.join(", ")
+                    : JSON.stringify(value)}
                 </dd>
               </div>
             ))}
@@ -233,4 +224,69 @@ export default async function NodePage({
       </nav>
     </main>
   );
+}
+
+export default async function NodePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id: rawId } = await params;
+  const decoded = decodeURIComponent(rawId);
+  const node = await fetchNode(decoded);
+  if (!node) notFound();
+
+  const t = node.type;
+  const emptySearchParams = Promise.resolve(
+    {} as Record<string, string | string[] | undefined>,
+  );
+
+  // Concepts fork by domain: living-collective concepts render as the
+  // rich vision page; other concepts render the terser concept browser.
+  if (t === "concept") {
+    const domains = node.domains;
+    const isLiving =
+      Array.isArray(domains) && domains.includes("living-collective");
+    if (isLiving) {
+      const VisionPage = (await import("@/app/vision/[conceptId]/page")).default;
+      return (
+        <VisionPage
+          params={Promise.resolve({ conceptId: rawId })}
+          searchParams={emptySearchParams}
+        />
+      );
+    }
+    const ConceptPage = (await import("@/app/concepts/[id]/page")).default;
+    return <ConceptPage params={Promise.resolve({ id: rawId })} />;
+  }
+
+  if (t === "asset") {
+    const AssetPage = (await import("@/app/assets/[asset_id]/page")).default;
+    return <AssetPage params={Promise.resolve({ asset_id: rawId })} />;
+  }
+
+  if (t === "idea") {
+    const IdeaPage = (await import("@/app/ideas/[idea_id]/page")).default;
+    return <IdeaPage params={Promise.resolve({ idea_id: rawId })} />;
+  }
+
+  if (t === "spec") {
+    const SpecPage = (await import("@/app/specs/[spec_id]/page")).default;
+    return <SpecPage params={Promise.resolve({ spec_id: rawId })} />;
+  }
+
+  // Contributors, communities, scenes, events, practices, skills all
+  // land on the presence garden. /people itself picks the richer
+  // PresencePage when the node carries a canonical_url, or the warm
+  // voices view otherwise; either way it's the welcoming surface a
+  // visitor wants for any person or place.
+  if (PRESENCE_TYPES.has(t)) {
+    const PeoplePage = (await import("@/app/people/[id]/page")).default;
+    return <PeoplePage params={Promise.resolve({ id: rawId })} />;
+  }
+
+  // Unknown type — fall back to the generic properties renderer so no
+  // recognized graph node ever 404s just because its shape hasn't been
+  // specialized.
+  return <GenericNodeViewer node={node} />;
 }
