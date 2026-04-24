@@ -134,7 +134,16 @@
   "automation_usage": {
     "_doc": "Automation usage service configuration.",
     "endpoint_cache_max_workers": 4,
-    "quality_awareness_ttl_seconds": 300.0
+    "quality_awareness_ttl_seconds": 300.0,
+    "snapshots_path": null,
+    "use_db": true,
+    "purge_imported_files": true,
+    "max_snapshots": 800
+  },
+
+  "persistence_contract": {
+    "_doc": "Global persistence enforcement. true/false force behavior; auto enforces only when a non-SQLite primary database is configured.",
+    "required": "auto"
   },
 
   "route_registry": {
