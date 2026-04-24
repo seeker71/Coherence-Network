@@ -182,7 +182,13 @@ class ProofRunner:
         self.pass_("contribution recorded")
 
     def check_coherence_score(self) -> None:
-        result = self._call("GET", f"/api/coherence/{self.idea_id}")
+        # The live endpoint is the aggregate system coherence at
+        # `/api/coherence/score` — there's no per-idea coherence endpoint,
+        # since coherence in this system is a network-level signal, not
+        # an idea-level one. The proof verifies the score is readable
+        # and in range; the idea-specific score travels on the idea
+        # response itself (`free_energy_score`, `selection_weight`).
+        result = self._call("GET", "/api/coherence/score")
         if not self.dry_run:
             score = result.get("score")
             if not isinstance(score, (int, float)) or not (0.0 <= score <= 1.0):
