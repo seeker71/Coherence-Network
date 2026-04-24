@@ -460,6 +460,61 @@ class TestAutoAdvanceFingerprint:
         ctx = created_tasks[0]["context"]
         assert ctx["task_fingerprint"] == "idea-fp:impl:auto"
 
+    def test_retry_caps_oversized_direction(self, monkeypatch):
+        """maybe_retry truncates direction+partial_work so the new task stays
+        under the 3000-char OVERSIZED_DIRECTION gate (DG-002).
+
+        Regression: before this cap, a 2900-char original direction + 5000-char
+        git-diff partial + 800-char failure memory produced ~8700-char retry
+        directions that the API rejected to needs_decision, piling up sediment.
+        """
+        from app.services import pipeline_advance_service as pas
+        from app.services.task_dedup_service import IdeaPhaseHistory
+
+        # Original direction at the seed-time cap (2900 chars)
+        original = "x" * 2900
+        # Partial work from huge git diff (up to 5000 chars)
+        huge_diff = "diff --git a/f\n" + ("+line\n" * 1000)
+        task = _task(
+            task_type="impl",
+            status="timed_out",
+            idea_id="idea-oversized",
+            extra_context={"diff_content": huge_diff},
+        )
+        task["direction"] = original
+
+        monkeypatch.setattr(
+            "app.services.task_dedup_service.check_idea_phase_history",
+            lambda idea_id, phase: IdeaPhaseHistory(failed_count=1),
+        )
+        # Max-size failure memory to stress the budget
+        monkeypatch.setattr(pas, "_build_failure_memory", lambda *_a, **_k: "f" * 800)
+
+        captured: list[dict] = []
+
+        def fake_create(data):
+            captured.append({"direction": data.direction, "context": data.context})
+            return {"id": "t-capped", "task_type": "impl", "status": "pending",
+                    "context": data.context}
+
+        from app.services import agent_service as _as
+        monkeypatch.setattr(_as, "create_task", fake_create)
+        monkeypatch.setattr(_as, "list_tasks", lambda **_k: ([], 0, 0))
+
+        result = pas.maybe_retry(task)
+        assert result is not None
+        assert len(captured) == 1
+        retry_direction = captured[0]["direction"]
+        # Must stay under the API gate
+        assert len(retry_direction) <= 3000, (
+            f"retry direction is {len(retry_direction)} chars — "
+            f"OVERSIZED_DIRECTION gate would reject it"
+        )
+        # Partial-work framing must survive the truncation
+        assert "PARTIAL WORK FROM PREVIOUS ATTEMPT" in retry_direction
+        # Failure memory must survive (it's smallest, highest-signal)
+        assert "f" * 100 in retry_direction
+
     def test_retry_sets_fingerprint(self, monkeypatch):
         """maybe_retry creates task with deterministic fingerprint (R8)."""
         from app.services import pipeline_advance_service as pas
