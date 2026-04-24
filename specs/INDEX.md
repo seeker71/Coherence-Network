@@ -81,8 +81,9 @@
 ### portfolio-governance (1 spec)
 - [portfolio-governance-health](portfolio-governance-health.md) — governance health scoring
 
-### agent-cli (2 specs)
+### agent-cli (3 specs)
 - [agent-execution-lifecycle-hooks](agent-execution-lifecycle-hooks.md) — execution lifecycle hooks
+- [cli-binary-name-conflict](cli-binary-name-conflict.md) — rename `cc` → `coh`, remove macOS clang conflict
 - [unified-agent-cli-flow-patch-on-fail](unified-agent-cli-flow-patch-on-fail.md) — CLI flow + patch-on-fail
 
 ### knowledge-and-resonance (4 specs)
