@@ -92,6 +92,15 @@ def test_low_success_rate_issue_digests_metrics(monkeypatch) -> None:
         "running": [{"id": "task_running", "running_seconds": 1}],
         "pending": [],
         "attention": {"low_success_rate": True},
+        "diagnostics": {
+            "recent_failed_reasons": [
+                {"reason": "spec_gate", "count": 6},
+                {"reason": "no_code", "count": 2},
+            ],
+            "recent_failed_signatures": [
+                {"signature": "impl_without_active_spec", "count": 6},
+            ],
+        },
     }
 
     issues = agent_monitor_helpers.derive_monitor_issues_from_pipeline_status(
@@ -103,4 +112,6 @@ def test_low_success_rate_issue_digests_metrics(monkeypatch) -> None:
     assert "65%" in issues[0]["message"]
     assert "22 completed / 12 failed / 34 resolved" in issues[0]["message"]
     assert "impl 42% (8/11)" in issues[0]["message"]
+    assert "Recent failure buckets: spec_gate x6, no_code x2" in issues[0]["message"]
+    assert "Top signatures: impl_without_active_spec x6" in issues[0]["message"]
     assert "Digest recent impl failures first" in issues[0]["suggested_action"]
