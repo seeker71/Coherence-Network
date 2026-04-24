@@ -160,6 +160,11 @@ jobs:
         run: |
           cd web && npm ci --allow-git=none && npm run build
 
+      - name: Install PR triage dependencies
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 -m pip install "httpx>=0.28.0"
+
       - name: Check open PR failures (PRs only)
         if: github.event_name == 'pull_request'
         env:
