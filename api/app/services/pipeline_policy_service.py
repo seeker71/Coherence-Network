@@ -221,6 +221,20 @@ _CODE_DEFAULTS: dict[str, Any] = {
             "action": "Reject the hollow completion and retry with an exact file scope and verification command.",
         },
         {
+            "regex": "compact[_ -]?summary[_ -]?original[_ -]?chars|original_chars_start|context compact(?:ed|ion)",
+            "bucket": "context_compaction",
+            "signature": "context_compaction_summary_leaked",
+            "summary": "Failure output is a compacted context summary instead of task evidence.",
+            "action": "Retry from the persisted task card with a fresh context budget and require concrete artifact/test evidence.",
+        },
+        {
+            "regex": "now[_ -]?researching[_ -]?the[_ -]?idea|will[_ -]?start[_ -]?searching|i(?:'|’)?ll[_ -]?start[_ -]?searching|starting[_ -]?research",
+            "bucket": "no_code",
+            "signature": "progress_only_no_artifact",
+            "summary": "Provider returned progress narration without a concrete artifact, diff, or verification result.",
+            "action": "Reject the run as no-artifact output and retry with exact files_allowed plus done_when evidence.",
+        },
+        {
             "regex": "merge conflict|rebase|conflict \\(content\\)",
             "bucket": "git_conflict",
             "signature": "git_conflict_or_rebase",
