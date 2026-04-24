@@ -20,6 +20,7 @@ Usage:
 Exit codes:
     0  — all checkpoints passed
     1  — any API call failed or env vars missing
+    2  — configured API key was rejected by a protected endpoint
 
 Dependencies: requests (or any HTTP client). Stdlib-only if possible
 by keeping requests usage minimal.
@@ -34,6 +35,9 @@ import json
 import os
 import sys
 from typing import Any, Dict, Optional
+
+
+AUTH_FAILED_EXIT = 2
 
 
 def _idea_create_payload() -> Dict[str, Any]:
@@ -105,6 +109,17 @@ class ProofRunner:
             method, url, headers=self._headers(), json=body, timeout=30
         )
         if not response.ok:
+            if response.status_code == 401:
+                print(
+                    "[AUTH-FAILED] COHERENCE_API_KEY was rejected by the live API. "
+                    "Rotate the GitHub Actions secret or run with --dry-run.",
+                    file=sys.stderr,
+                )
+                print(
+                    f"[FAIL] HTTP {response.status_code} — {response.text[:500]}",
+                    file=sys.stderr,
+                )
+                raise SystemExit(AUTH_FAILED_EXIT)
             print(
                 f"[FAIL] HTTP {response.status_code} — {response.text[:500]}",
                 file=sys.stderr,
