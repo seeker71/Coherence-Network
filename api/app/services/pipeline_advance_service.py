@@ -151,6 +151,40 @@ _PHASE_TASK_TYPE: dict[str, TaskType] = {
     "reflect": TaskType.REFLECT,         # Hermes Learning Loop: reflect phase task type
 }
 
+_TASK_CARD_CONTEXT_KEYS = (
+    "goal",
+    "files_allowed",
+    "done_when",
+    "commands",
+    "constraints",
+    "task_card",
+    "spec_path",
+    "spec_file",
+    "spec_id",
+    "idea_name",
+)
+
+
+def _with_task_card_context(
+    *,
+    source_task: dict[str, Any],
+    task_type: TaskType,
+    direction: str,
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    """Carry source task-card shape and fill configured defaults for follow-up tasks."""
+    next_context = dict(context)
+    source_context = source_task.get("context") if isinstance(source_task.get("context"), dict) else {}
+    for key in _TASK_CARD_CONTEXT_KEYS:
+        value = source_context.get(key)
+        if value and not next_context.get(key):
+            next_context[key] = value
+    try:
+        from app.services.agent_routing.prompt_templates_loader import build_default_task_card_context
+        return build_default_task_card_context(task_type, direction, next_context)
+    except Exception:
+        return next_context
+
 # Minimum output length to consider a task genuinely completed.
 # Text-only providers (openrouter/free) often claim completion with 0 output.
 def _min_output_chars_map() -> dict[str, int]:
@@ -852,6 +886,12 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
             retry_context["executor"] = phase_pref
     except Exception:
         pass
+    retry_context = _with_task_card_context(
+        source_task=task,
+        task_type=task_type_enum,
+        direction=direction,
+        context=retry_context,
+    )
 
     try:
         created = agent_service.create_task(AgentTaskCreate(
@@ -980,20 +1020,28 @@ def _escalate_or_autofix(
             original_direction = task.get("direction", "")
             # Take just the first paragraph as the focused direction
             simplified = original_direction.split("\n\n")[0][:500]
+            followup_direction = (
+                f"{simplified}\n\n"
+                f"Keep the scope minimal — implement only the core requirement. "
+                f"Skip optional features. This is a simplified retry after timeout."
+            )
+            followup_task_type = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
+            followup_context = _with_task_card_context(
+                source_task=task,
+                task_type=followup_task_type,
+                direction=followup_direction,
+                context={
+                    "idea_id": idea_id,
+                    "auto_fix": "split",
+                    "original_task_id": task.get("id", ""),
+                    "retry_count": 0,  # Fresh retry count for the simplified version
+                },
+            )
             try:
                 created = agent_service.create_task(AgentTaskCreate(
-                    direction=(
-                        f"{simplified}\n\n"
-                        f"Keep the scope minimal — implement only the core requirement. "
-                        f"Skip optional features. This is a simplified retry after timeout."
-                    ),
-                    task_type=_PHASE_TASK_TYPE.get(task_type, TaskType.IMPL),
-                    context={
-                        "idea_id": idea_id,
-                        "auto_fix": "split",
-                        "original_task_id": task.get("id", ""),
-                        "retry_count": 0,  # Fresh retry count for the simplified version
-                    },
+                    direction=followup_direction,
+                    task_type=followup_task_type,
+                    context=followup_context,
                 ))
                 log.info("AUTO_FIX split task=%s → simplified task=%s", task.get("id", "?"), created.get("id", "?"))
                 return
@@ -1002,23 +1050,30 @@ def _escalate_or_autofix(
 
         elif action == "respec":
             # Create a new spec task that's more specific
+            followup_direction = (
+                f"Write a more detailed spec for '{idea_name}' ({idea_id}).\n\n"
+                f"A previous implementation attempt failed because the spec was unclear.\n"
+                f"This spec MUST include:\n"
+                f"1. Concrete acceptance criteria (what 'done' looks like)\n"
+                f"2. Specific files to create or modify\n"
+                f"3. At least one test scenario with expected input/output\n"
+                f"4. Verification command to prove it works"
+            )
+            followup_context = _with_task_card_context(
+                source_task=task,
+                task_type=TaskType.SPEC,
+                direction=followup_direction,
+                context={
+                    "idea_id": idea_id,
+                    "auto_fix": "respec",
+                    "original_task_id": task.get("id", ""),
+                },
+            )
             try:
                 created = agent_service.create_task(AgentTaskCreate(
-                    direction=(
-                        f"Write a more detailed spec for '{idea_name}' ({idea_id}).\n\n"
-                        f"A previous implementation attempt failed because the spec was unclear.\n"
-                        f"This spec MUST include:\n"
-                        f"1. Concrete acceptance criteria (what 'done' looks like)\n"
-                        f"2. Specific files to create or modify\n"
-                        f"3. At least one test scenario with expected input/output\n"
-                        f"4. Verification command to prove it works"
-                    ),
+                    direction=followup_direction,
                     task_type=TaskType.SPEC,
-                    context={
-                        "idea_id": idea_id,
-                        "auto_fix": "respec",
-                        "original_task_id": task.get("id", ""),
-                    },
+                    context=followup_context,
                 ))
                 log.info("AUTO_FIX respec for idea=%s → task=%s", idea_id, created.get("id", "?"))
                 return
@@ -1028,19 +1083,26 @@ def _escalate_or_autofix(
         elif action == "heal":
             # Create a heal task to fix the specific issue
             error_snippet = (task.get("output") or task.get("error_summary") or "")[:500]
+            followup_direction = (
+                f"Fix the failing code for '{idea_name}' ({idea_id}).\n\n"
+                f"Error from previous run:\n{error_snippet}\n\n"
+                f"Find the root cause, fix it, and verify the fix with tests."
+            )
+            followup_context = _with_task_card_context(
+                source_task=task,
+                task_type=TaskType.IMPL,
+                direction=followup_direction,
+                context={
+                    "idea_id": idea_id,
+                    "auto_fix": "heal",
+                    "original_task_id": task.get("id", ""),
+                },
+            )
             try:
                 created = agent_service.create_task(AgentTaskCreate(
-                    direction=(
-                        f"Fix the failing code for '{idea_name}' ({idea_id}).\n\n"
-                        f"Error from previous run:\n{error_snippet}\n\n"
-                        f"Find the root cause, fix it, and verify the fix with tests."
-                    ),
+                    direction=followup_direction,
                     task_type=TaskType.IMPL,
-                    context={
-                        "idea_id": idea_id,
-                        "auto_fix": "heal",
-                        "original_task_id": task.get("id", ""),
-                    },
+                    context=followup_context,
                 ))
                 log.info("AUTO_FIX heal for idea=%s → task=%s", idea_id, created.get("id", "?"))
                 return
@@ -1106,28 +1168,43 @@ def handle_decision(task: dict[str, Any], decision: str) -> dict[str, Any] | Non
         # Retry with simplified scope
         original = task.get("direction", "")
         simplified = original.split("\n\n")[0][:500]
+        followup_direction = (
+            f"{simplified}\n\n"
+            f"Keep scope minimal — core requirement only. Skip optional features."
+        )
+        followup_task_type = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
+        followup_context = _with_task_card_context(
+            source_task=task,
+            task_type=followup_task_type,
+            direction=followup_direction,
+            context={"idea_id": idea_id, "decision_action": "simplified_retry", "retry_count": 0},
+        )
         try:
             return agent_service.create_task(AgentTaskCreate(
-                direction=(
-                    f"{simplified}\n\n"
-                    f"Keep scope minimal — core requirement only. Skip optional features."
-                ),
-                task_type=_PHASE_TASK_TYPE.get(task_type, TaskType.IMPL),
-                context={"idea_id": idea_id, "decision_action": "simplified_retry", "retry_count": 0},
+                direction=followup_direction,
+                task_type=followup_task_type,
+                context=followup_context,
             ))
         except Exception:
             log.warning("DECISION A failed for %s", idea_id, exc_info=True)
 
     elif choice == "B":
         # Rewrite spec
+        followup_direction = (
+            f"Rewrite the spec for '{idea_name}' ({idea_id}) with concrete acceptance criteria.\n"
+            f"Include: specific files, test scenarios, verification commands."
+        )
+        followup_context = _with_task_card_context(
+            source_task=task,
+            task_type=TaskType.SPEC,
+            direction=followup_direction,
+            context={"idea_id": idea_id, "decision_action": "respec"},
+        )
         try:
             return agent_service.create_task(AgentTaskCreate(
-                direction=(
-                    f"Rewrite the spec for '{idea_name}' ({idea_id}) with concrete acceptance criteria.\n"
-                    f"Include: specific files, test scenarios, verification commands."
-                ),
+                direction=followup_direction,
                 task_type=TaskType.SPEC,
-                context={"idea_id": idea_id, "decision_action": "respec"},
+                context=followup_context,
             ))
         except Exception:
             log.warning("DECISION B failed for %s", idea_id, exc_info=True)
