@@ -264,6 +264,68 @@ check_web_css_assets() {
   return 0
 }
 
+check_web_public_asset() {
+  local name="$1"
+  local path="$2"
+  local expected_kind="$3"
+  local url="${WEB_URL%/}${path}"
+  local slug
+  slug="$(echo "public_asset_${name}" | tr "[:upper:]" "[:lower:]" | tr -cs "a-z0-9" "_")"
+  local headers_file="$TMP_DIR/${slug}.headers.txt"
+  local body_file="$TMP_DIR/${slug}.body"
+
+  echo
+  echo "==> Web public asset (${name}): ${url}"
+
+  local status
+  status="$(run_with_retries_capture "$CURL_RETRIES" "$CURL_RETRY_SLEEP_SECONDS" curl -sS -L -D "$headers_file" -o "$body_file" -w "%{http_code}" \
+    --max-time "$CURL_MAX_TIME" \
+    --connect-timeout "$CURL_CONNECT_TIMEOUT" \
+    "$url" || true)"
+  local content_type
+  content_type="$(awk 'tolower($1) == "content-type:" { print $2 }' "$headers_file" | tail -n 1 | tr -d '\r')"
+  echo "HTTP status: ${status:-unknown}"
+  echo "Content-Type: ${content_type:-<missing>}"
+
+  if [[ -z "$status" || "$status" -lt 200 || "$status" -ge 400 ]]; then
+    echo "FAIL: public asset is not reachable"
+    head -c 120 "$body_file" || true
+    echo
+    return 1
+  fi
+
+  if python3 - "$body_file" "$expected_kind" <<'PY'
+import sys
+from pathlib import Path
+
+body = Path(sys.argv[1]).read_bytes()
+kind = sys.argv[2]
+
+if kind == "svg":
+    probe = body[:256].lstrip()
+    ok = probe.startswith(b"<svg") or probe.startswith(b"<?xml")
+elif kind == "jpeg":
+    ok = body.startswith(b"\xff\xd8\xff")
+else:
+    ok = False
+
+if not ok:
+    text_probe = body[:256].lower()
+    if b"<!doctype html" in text_probe or b"<html" in text_probe:
+        print("body looks like HTML fallback, not a public asset")
+    else:
+        print(f"body did not match expected {kind} signature")
+    raise SystemExit(1)
+PY
+  then
+    echo "PASS"
+    return 0
+  fi
+
+  echo "FAIL: public asset response bytes are not ${expected_kind}"
+  return 1
+}
+
 check_cors() {
   local api_health_url="$1"
   local web_origin="$2"
@@ -624,6 +686,8 @@ fi
 check_provider_readiness "${API_URL%/}/api/automation/usage/readiness" "$VERIFY_REQUIRE_PROVIDER_READINESS" || fail=1
 check_url "Public web root" "${WEB_URL%/}/" || fail=1
 check_web_css_assets "${WEB_URL%/}/" || fail=1
+check_web_public_asset "logo" "/assets/logo.svg" "svg" || fail=1
+check_web_public_asset "generated vision image" "/visuals/generated/lc-space-0.jpg" "jpeg" || fail=1
 check_url "Public web gates page" "${WEB_URL%/}/gates" || fail=1
 check_url "Public web API health page" "${WEB_URL%/}/api-health" || fail=1
 check_url "Public web API health proxy" "${WEB_URL%/}/api/health-proxy" || fail=1
