@@ -16,6 +16,18 @@ export default function SettingsPage() {
 
       <h1 className="text-3xl font-extralight text-white mb-8">Settings</h1>
 
+      <div className="mb-8">
+        <Link
+          href="/settings/translations"
+          className="block rounded border border-stone-800 bg-stone-950/40 p-4 hover:border-amber-500/40 transition-colors"
+        >
+          <div className="text-lg font-light text-white">Translations</div>
+          <div className="text-sm text-stone-400 mt-1">
+            Per-locale coverage across concepts — original, human, machine, stale.
+          </div>
+        </Link>
+      </div>
+
       <ConfigEditor />
     </main>
   );
