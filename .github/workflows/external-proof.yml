@@ -1,0 +1,44 @@
+name: External proof
+
+# Runs scripts/external_proof_demo.py against the live API on every
+# push to main. If the public API regresses, this job fails — an
+# independent, outside-the-monorepo verification of the lifecycle.
+#
+# Auth via COHERENCE_API_KEY GitHub Secret. The workflow will skip
+# (not fail) if the secret is absent, so forks can merge without
+# the secret configured.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install requests
+        run: pip install requests
+
+      - name: Run proof script
+        env:
+          COHERENCE_API_URL: https://api.coherencycoin.com
+          COHERENCE_API_KEY: ${{ secrets.COHERENCE_API_KEY }}
+        run: |
+          if [ -z "${COHERENCE_API_KEY}" ]; then
+            echo "::warning::COHERENCE_API_KEY secret not set; running dry-run instead"
+            python3 scripts/external_proof_demo.py --dry-run
+          else
+            python3 scripts/external_proof_demo.py
+          fi
