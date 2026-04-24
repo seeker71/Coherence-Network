@@ -737,6 +737,8 @@ from app.routers import translations as translations_router
 app.include_router(translations_router.router, prefix="/api", tags=["translations"])
 from app.routers import evidence as evidence_router
 app.include_router(evidence_router.router, prefix="/api", tags=["evidence"])
+from app.routers import settlement as settlement_router
+app.include_router(settlement_router.router, prefix="/api", tags=["settlement"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(locales_router.router, prefix="/api", tags=["locales"])
 app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])
