@@ -21,6 +21,82 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+_CORE_SUITE_FILE = Path(__file__).with_name("core_suite.txt")
+_SUITE_NAMES = {"core", "full"}
+
+
+def _read_core_suite_files() -> set[str]:
+    suite_files: set[str] = set()
+    for raw_line in _CORE_SUITE_FILE.read_text(encoding="utf-8").splitlines():
+        line = raw_line.split("#", 1)[0].strip()
+        if line:
+            suite_files.add(line)
+    return suite_files
+
+
+def _requested_suite(config: pytest.Config) -> str:
+    selected = config.getoption("--suite") or os.environ.get("COHERENCE_TEST_SUITE") or "core"
+    selected = selected.strip().lower()
+    if selected not in _SUITE_NAMES:
+        raise pytest.UsageError(
+            f"Unknown pytest suite {selected!r}; expected one of {sorted(_SUITE_NAMES)}"
+        )
+    return selected
+
+
+def _explicit_test_paths(config: pytest.Config) -> list[Path]:
+    explicit_paths: list[Path] = []
+    for arg in config.invocation_params.args:
+        if arg.startswith("-"):
+            continue
+        candidate = arg.split("::", 1)[0]
+        if not candidate or candidate.startswith("-"):
+            continue
+        path = Path(candidate)
+        if not path.is_absolute():
+            path = ROOT / path
+        path = path.resolve()
+        if "tests" in path.parts:
+            explicit_paths.append(path)
+    return explicit_paths
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    parser.addoption(
+        "--suite",
+        choices=sorted(_SUITE_NAMES),
+        default=None,
+        help="Select pytest suite: core is the default local/agent suite; full collects all tests.",
+    )
+
+
+def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool:
+    if _requested_suite(config) == "full":
+        return False
+
+    path = Path(str(collection_path)).resolve()
+    tests_dir = (ROOT / "tests").resolve()
+    try:
+        rel_to_tests = path.relative_to(tests_dir)
+    except ValueError:
+        return False
+
+    explicit_paths = _explicit_test_paths(config)
+    if explicit_paths and any(
+        path == explicit or explicit in path.parents or path in explicit.parents
+        for explicit in explicit_paths
+    ):
+        return False
+
+    if rel_to_tests.parts and rel_to_tests.parts[0] == "holdout":
+        return True
+
+    if path.name.startswith("test_") and path.suffix == ".py":
+        rel_to_api = path.relative_to(ROOT).as_posix()
+        return rel_to_api not in _read_core_suite_files()
+
+    return False
+
 _ENV_CONFIG_MAP: dict[str, str] = {
     "AGENT_CONTINUOUS_AUTOFILL": "agent_executor.continuous_autofill",
     "AGENT_CONTINUOUS_AUTOFILL_AUTORUN": "agent_executor.continuous_autofill_autorun",

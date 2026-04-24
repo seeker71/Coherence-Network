@@ -10,6 +10,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -44,10 +45,10 @@ def test_flow_tests_run_under_10_seconds():
     This is a meta-test: it invokes pytest on the core flow tests in a
     subprocess and asserts wall-clock time stays under 10s.
     """
-    test_file = "api/tests/test_flow_core_api.py"
+    test_file = Path(__file__).with_name("test_flow_core_api.py")
     t0 = time.perf_counter()
     result = subprocess.run(
-        [sys.executable, "-m", "pytest", test_file, "-x", "-q", "--tb=no"],
+        [sys.executable, "-m", "pytest", str(test_file), "-x", "-q", "--tb=no"],
         capture_output=True,
         text=True,
         timeout=30,
