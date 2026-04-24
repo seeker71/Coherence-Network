@@ -110,6 +110,13 @@ def _default_runtime_config() -> dict[str, Any]:
         "automation_usage": {
             "endpoint_cache_max_workers": 4,
             "quality_awareness_ttl_seconds": 300.0,
+            "snapshots_path": None,
+            "use_db": True,
+            "purge_imported_files": True,
+            "max_snapshots": 800,
+        },
+        "persistence_contract": {
+            "required": "auto",
         },
         "metrics": {
             "file_path": None,

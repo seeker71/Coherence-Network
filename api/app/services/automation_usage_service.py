@@ -214,9 +214,6 @@ def _dedupe_preserve_order(items: list[str]) -> list[str]:
 
 
 def _snapshots_path() -> Path:
-    explicit = str(os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", "")).strip()
-    if explicit:
-        return Path(explicit)
     configured = get_str("automation_usage", "snapshots_path")
     if configured:
         return Path(configured)
@@ -224,9 +221,6 @@ def _snapshots_path() -> Path:
 
 
 def _use_db_snapshots() -> bool:
-    explicit = os.getenv("AUTOMATION_USAGE_USE_DB")
-    if explicit is not None:
-        return explicit.strip().lower() in {"1", "true", "yes", "on"}
     if get_str("automation_usage", "snapshots_path"):
         return False
     return get_bool("automation_usage", "use_db", True)
@@ -358,7 +352,7 @@ def _endpoint_cache_meta_key(endpoint: str, params: dict[str, Any] | None = None
         database_url("telemetry") or "",
         database_url(None) or "",
         get_str("runtime", "events_path") or "",
-        str(os.getenv("PYTEST_CURRENT_TEST") or ""),
+        get_str("api", "test_context_id", ""),
     ]
     scope_digest = hashlib.sha1("||".join(scope_parts).encode("utf-8")).hexdigest()[:12]
     canonical = json.dumps(params or {}, sort_keys=True, separators=(",", ":"), default=str)

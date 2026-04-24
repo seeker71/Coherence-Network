@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from typing import Any
 
 from app.adapters.postgres_store import PostgresGraphStore
+from app.config_loader import database_url, get_str
 from app.services import (
     commit_evidence_service,
     idea_registry_service,
@@ -17,17 +17,15 @@ from app.services import (
 
 
 def contract_required() -> bool:
-    raw = (
-        os.getenv("GLOBAL_PERSISTENCE_REQUIRED")
-        or os.getenv("PERSISTENCE_CONTRACT_REQUIRED")
-        or "auto"
-    ).strip().lower()
+    raw = get_str("persistence_contract", "required", "auto").strip().lower()
     if raw in {"1", "true", "yes", "on"}:
         return True
     if raw in {"0", "false", "no", "off"}:
         return False
-    # Auto-mode: enforce whenever a primary database is configured (typical production path).
-    return bool(os.getenv("DATABASE_URL", "").strip())
+    # Auto-mode: enforce whenever the primary persistence spine is a real
+    # service database. The checked-in SQLite default keeps local dev relaxed.
+    configured = database_url(None).strip().lower()
+    return bool(configured and not configured.startswith(("sqlite:", "sqlite+")))
 
 
 def evaluate(app: Any) -> dict[str, Any]:
@@ -77,7 +75,7 @@ def evaluate(app: Any) -> dict[str, Any]:
     usage_provider_info = {
         "ok": telemetry_info.get("backend") == "postgresql",
         "backend": telemetry_info.get("backend"),
-        "snapshots_path_override": bool(os.getenv("AUTOMATION_USAGE_SNAPSHOTS_PATH", "").strip()),
+        "snapshots_path_override": bool(get_str("automation_usage", "snapshots_path", "").strip()),
         "note": "provider usage snapshots + friction telemetry backend",
     }
     if required and not usage_provider_info["ok"]:
