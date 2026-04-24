@@ -212,7 +212,7 @@ def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureR
     """Reset unified DB engine and service caches between tests.
 
     Each test gets a clean engine and a unique, isolated SQLite database
-    in tmp_path so env-var changes take effect and state never leaks.
+    in tmp_path through config_loader so state never leaks.
     """
     from app import config_loader
     import app.services.config_service as cs_module
@@ -225,9 +225,8 @@ def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureR
     )
     from app.services.agent_routing import model_routing_loader
 
-    # Use an isolated DB for each test
+    # Use an isolated DB for each test through the config spine.
     db_file = tmp_path / "test_coherence.db"
-    os.environ["DATABASE_URL"] = f"sqlite+pysqlite:///{db_file}"
     # Ideas now live in graph_nodes (unified DB) — don't set file-based portfolio path
     os.environ.pop("IDEA_PORTFOLIO_PATH", None)
     os.environ["AGENT_TASKS_USE_DB"] = "0"
@@ -239,9 +238,11 @@ def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureR
     # Reset config to its baseline first, then apply per-test overrides to the
     # loaded config so later cache invalidations preserve those defaults.
     cs_module.reset_config_cache()
+    config_loader._CONFIG.setdefault("database", {})["url"] = f"sqlite+pysqlite:///{db_file}"
     config_loader._CONFIG.setdefault("api", {})["testing"] = True
     config_loader._CONFIG.setdefault("api", {})["test_context_id"] = request.node.nodeid
     config_loader._CONFIG.setdefault("agent_tasks", {})["persist"] = False
+    config_loader._CONFIG.setdefault("agent_tasks", {})["use_db"] = False
     config_loader._CONFIG.setdefault("agent_executor", {})["execute_token_allow_unauth"] = True
     config_loader._CONFIG.setdefault("agent_executor", {})["execute_token"] = None
     config_loader._CONFIG.setdefault("agent_executor", {})["policy_enabled"] = True
@@ -256,6 +257,7 @@ def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureR
     cs_module._CACHE.update(
         {
             "agent_tasks_persist": False,
+            "agent_tasks_use_db": False,
             "agent_executor_execute_token_allow_unauth": True,
             "agent_execute_token_allow_unauth": True,
             "agent_executor_execute_token": None,
