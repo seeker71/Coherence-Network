@@ -1271,34 +1271,36 @@ def list_pending() -> list[dict]:
 def claim_task(task_id: str) -> dict | None:
     # 1. Budget Check
     try:
+        from urllib.parse import quote as _url_quote
         from app.services.config_service import resolve_cli_contributor_id
         cid, _ = resolve_cli_contributor_id()
         if cid:
-            profile = api("GET", f"/api/contributors/{encodeURIComponent(cid)}")
+            cid_enc = _url_quote(str(cid), safe="")
+            profile = api("GET", f"/api/contributors/{cid_enc}")
             if profile:
                 daily_limit = float(profile.get("daily_cc_budget") or 0)
                 monthly_limit = float(profile.get("monthly_cc_budget") or 0)
-                
+
                 if daily_limit > 0 or monthly_limit > 0:
-                    spend = api("GET", f"/api/contributors/{encodeURIComponent(cid)}/spend")
+                    spend = api("GET", f"/api/contributors/{cid_enc}/spend")
                     if spend:
                         daily_spend = float(spend.get("daily_spend") or 0)
                         monthly_spend = float(spend.get("monthly_spend") or 0)
-                        
+
                         # Fetch task to check its estimated cost
                         task = api("GET", f"/api/agent/tasks/{task_id}")
                         idea_id = _idea_id_from_task(task) if task else None
                         estimated_cost = 0.0
                         if idea_id:
-                            idea = api("GET", f"/api/ideas/{encodeURIComponent(idea_id)}")
+                            idea = api("GET", f"/api/ideas/{_url_quote(str(idea_id), safe='')}")
                             estimated_cost = float(idea.get("estimated_cost") or 0) if idea else 0.0
-                        
+
                         if daily_limit > 0 and (daily_spend + estimated_cost) > daily_limit:
-                            log.warning("BUDGET_EXCEEDED: daily limit %.1f CC reached (spend=%.1f, task=%.1f)", 
+                            log.warning("BUDGET_EXCEEDED: daily limit %.1f CC reached (spend=%.1f, task=%.1f)",
                                         daily_limit, daily_spend, estimated_cost)
                             return None
                         if monthly_limit > 0 and (monthly_spend + estimated_cost) > monthly_limit:
-                            log.warning("BUDGET_EXCEEDED: monthly limit %.1f CC reached (spend=%.1f, task=%.1f)", 
+                            log.warning("BUDGET_EXCEEDED: monthly limit %.1f CC reached (spend=%.1f, task=%.1f)",
                                         monthly_limit, monthly_spend, estimated_cost)
                             return None
     except Exception as e:
