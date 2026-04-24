@@ -5984,6 +5984,15 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
 
     Returns the full diff content (up to 10KB) — this is the actual code
     that was written, suitable for carrying forward to a retry task.
+
+    Detects TWO states:
+    1. Uncommitted staged/unstaged changes (provider ran but runner hasn't
+       committed yet — older flow).
+    2. Committed changes ahead of origin/main (run_one already committed —
+       current flow for all task types including spec). Without this second
+       check, spec tasks commit internally but report diff="" to _worker_loop,
+       which then skips _push_branch_to_origin and silently drops the commit
+       when the worktree is cleaned.
     """
     slug = task_id[:16]
     try:
@@ -6002,6 +6011,22 @@ def _capture_worktree_diff(task_id: str, wt_path: Path) -> str:
         if diff.stdout.strip():
             log.info("WORKTREE_DIFF task=%s files_changed:\n%s", slug, diff.stdout.strip()[:500])
             return full_diff.stdout[:10000]
+
+        # No staged/unstaged diff — check for committed-ahead-of-origin changes.
+        # run_one commits internally, so by the time we reach here the diff
+        # has moved from the index to local commits. We still need to signal
+        # "code exists, push it" to _worker_loop.
+        committed_stat = _run_git_command(
+            ["git", "diff", "origin/main...HEAD", "--stat"],
+            capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+        )
+        if committed_stat.stdout.strip():
+            committed_full = _run_git_command(
+                ["git", "diff", "origin/main...HEAD"],
+                capture_output=True, text=True, timeout=10, cwd=str(wt_path),
+            )
+            log.info("WORKTREE_DIFF_COMMITTED task=%s files_changed:\n%s", slug, committed_stat.stdout.strip()[:500])
+            return committed_full.stdout[:10000]
     except Exception as e:
         log.warning("WORKTREE_DIFF_FAILED task=%s error=%s", slug, e)
     return ""
