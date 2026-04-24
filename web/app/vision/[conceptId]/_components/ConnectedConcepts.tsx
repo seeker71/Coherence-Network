@@ -61,17 +61,10 @@ function groupFor(id: string): GroupKey {
 }
 
 function hrefFor(id: string): string {
-  const p = idPrefix(id);
-  if (p === "lc") return `/vision/${id}`;
-  if (p === "contributor") return `/profile/${encodeURIComponent(id)}`;
-  if (p === "asset") return `/assets/${encodeURIComponent(id)}`;
-  if (p === "idea") return `/ideas/${encodeURIComponent(id)}`;
-  if (p === "spec") return `/specs/${encodeURIComponent(id)}`;
-  // Bare-id Codex concepts (e.g. "consciousness", "memory", "social-justice")
-  // live at /concepts/{id}. They land here only when no known type prefix
-  // matched above — routing by group keeps scenes/communities/events/etc.
-  // on the universal /nodes/ page where they belong.
-  if (groupFor(id) === "concepts") return `/concepts/${encodeURIComponent(id)}`;
+  // Every node id — lc concept, bare Codex concept, contributor, asset,
+  // scene, event, idea, spec — routes through the universal /nodes/[id]
+  // viewer, which picks the right typed page inline. Callers don't need
+  // to know a node's shape to link to it.
   return `/nodes/${encodeURIComponent(id)}`;
 }
 
