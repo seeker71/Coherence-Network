@@ -129,6 +129,7 @@ def _default_runtime_config() -> dict[str, Any]:
             "stale_running_seconds": 1800,
             "monitor_max_age_seconds": 900,
             "status_report_max_age_seconds": 900,
+            "pending_actionable_window_seconds": 86400,
             "poll_interval_seconds": 60,
             "concurrency": 1,
         },
