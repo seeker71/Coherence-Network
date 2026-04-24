@@ -27,14 +27,14 @@ logger = logging.getLogger(__name__)
 # Source configuration — loaded from config file, editable via API
 # ---------------------------------------------------------------------------
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-_DEFAULT_CONFIG_PATH = _REPO_ROOT / "config" / "news-sources.json"
+_API_ROOT = Path(__file__).resolve().parents[2]
+_DEFAULT_CONFIG_PATH = _API_ROOT / "config" / "news-sources.json"
 
 
 def _config_path() -> Path:
     configured = get_str("news", "sources_path", default=str(_DEFAULT_CONFIG_PATH)).strip()
     path = Path(configured or str(_DEFAULT_CONFIG_PATH))
-    return path if path.is_absolute() else _REPO_ROOT / path
+    return path if path.is_absolute() else _API_ROOT / path
 
 
 def _load_sources() -> list[dict]:

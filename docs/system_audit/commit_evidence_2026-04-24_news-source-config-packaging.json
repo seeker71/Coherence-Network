@@ -1,0 +1,97 @@
+{
+  "date": "2026-04-24",
+  "thread_branch": "codex/news-source-config-packaging",
+  "commit_scope": "Package news source configuration with the API and resolve the default source path relative to the API package so deployed containers can load configured feeds without hard-coded service defaults.",
+  "files_owned": [
+    "api/app/services/news_ingestion_service.py",
+    "api/config/news-sources.json",
+    "api/tests/test_external_presence.py",
+    "docs/system_audit/commit_evidence_2026-04-24_news-source-config-packaging.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && ruff check app/services/news_ingestion_service.py tests/test_external_presence.py",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -q tests/test_external_presence.py",
+      "python3 -m json.tool api/config/news-sources.json >/dev/null",
+      "python3 - <<'PY'\nfrom pathlib import Path\nprint(len(__import__('json').loads(Path('api/config/news-sources.json').read_text())))\nPY",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "observations": {
+      "packaged_news_source_count": 56,
+      "targeted_tests": "9 passed",
+      "local_pr_guard": "pass",
+      "followthrough_guard": "pass"
+    }
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public /api/news/sources should load configured packaged feeds instead of returning an empty list after the hard-coded defaults were removed.",
+    "public_endpoints": [
+      "/api/health",
+      "/api/news/sources"
+    ],
+    "test_flows": [
+      "Default news source config resolves inside api/config",
+      "Packaged news source JSON parses and contains configured feeds"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Packaging fix is locally validated through full local PR guard and follow-through guard; branch still needs PR checks, deployment, and public sensing."
+  },
+  "idea_ids": [
+    "external-presence",
+    "repository-health"
+  ],
+  "spec_ids": [
+    "external-presence-bots-and-news",
+    "repository-architecture-health"
+  ],
+  "task_ids": [
+    "news-source-config-packaging-2026-04-24"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-attunement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/news_ingestion_service.py",
+    "api/config/news-sources.json",
+    "api/tests/test_external_presence.py"
+  ],
+  "change_files": [
+    "api/app/services/news_ingestion_service.py",
+    "api/config/news-sources.json",
+    "api/tests/test_external_presence.py"
+  ],
+  "change_intent": "runtime_fix"
+}
