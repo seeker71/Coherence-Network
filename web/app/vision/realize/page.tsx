@@ -1,146 +1,165 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { getApiBase } from "@/lib/api";
 
 export const metadata: Metadata = {
   title: "Living It — The Living Collective",
   description: "What a day feels like. How the field governs itself. How abundance flows. How people arrive and stay. The living experience of this vision.",
 };
 
-/* ── Vocabulary ───────────────────────────────────────────────────── */
+type VocabularyItem = {
+  old: string;
+  field: string;
+  meaning: string;
+};
 
-const VOCAB = [
-  ["Work", "Offering", "What flows from your natural frequency"],
-  ["Property", "Custodianship", "Mutual stewardship — the land holds you as you hold it"],
-  ["Planning", "Attunement", "Vision gives direction; the now gives instruction"],
-  ["Budget", "Circulation", "Resources flowing like blood — visible, trusted, alive"],
-  ["Money", "Visible flow", "Tracking what moved and what needs replenishment, not who gets denied"],
-  ["Leadership", "Calling", "Not assigned. The garden finds the gardener."],
-  ["Meeting", "Circle", "The field sensing itself. One voice at a time."],
-  ["Decision", "Emergence", "What crystallizes when the circle is fully present"],
-  ["School", "Participation", "Children learn by doing real things alongside real people"],
-  ["Store", "Provision house", "Receiving, repair, borrowing, exchange"],
-  ["Restaurant", "Nourishment hall", "Meal as ritual, regulation, and shared presence"],
-  ["Salary", "(dissolves)", "The field nourishes. Expression IS nourishment."],
-  ["Complaint", "Honest speech", "What's felt is spoken. Directly. Today."],
-  ["Retirement", "Deepening", "Elders at the center, not the edge"],
-];
+type RealizeHostSpace = {
+  id?: string;
+  title: string;
+  image: string;
+  context: string;
+  energy: string;
+  body: string;
+  first_move: string;
+};
 
-const HOST_SPACES = [
-  {
-    title: "City apartment band",
-    image: "/visuals/transform-apartment.png",
-    context: "city",
-    energy: "light-touch",
-    body:
-      "A private corridor becomes a quiet band of cells with shared meals, rooftop tending, child support, and rooms that can host stillness, listening, and making.",
-    firstMove: "Open one floor, roof, or shared landing to nourishment, welcome, and rest before changing walls.",
-  },
-  {
-    title: "Urban block host",
-    image: "/visuals/transform-neighborhood.png",
-    context: "urban",
-    energy: "light-touch",
-    body:
-      "A storefront, studio, or hall becomes a visible local host for nourishment, repair, workshops, and gatherings that let new cells participate through presence or offering.",
-    firstMove: "Retune one front-facing room so the commons is visible from the street.",
-  },
-  {
-    title: "Suburban commons lane",
-    image: "/visuals/generated/lc-attuned-spaces-1.jpg",
-    context: "suburban",
-    energy: "light-touch",
-    body:
-      "A cul-de-sac, porch line, shared side yard, or underused garage becomes a connected commons where food, child support, craft, and neighborhood presence start moving between houses.",
-    firstMove: "Link two porches, one pantry shelf, and one shared table before touching the larger plan.",
-  },
-  {
-    title: "Rural anchor house",
-    image: "/visuals/community-earthship.png",
-    context: "rural edge",
-    energy: "medium-touch",
-    body:
-      "One existing home or stewarded building becomes the shared kitchen, bath, greenhouse, tool room, and welcome point for a growing field.",
-    firstMove: "Let one house become the commons before any larger site plan appears.",
-  },
-  {
-    title: "Land-rooted cluster",
-    image: "/visuals/community-findhorn.png",
-    context: "rural",
-    energy: "medium-touch",
-    body:
-      "When enough coherence accumulates, paths, gardens, bathing, and gathering start reading as one organism rather than separated holdings.",
-    firstMove: "Connect paths, food, bathing, and gathering first so the land feels shared before new structures multiply.",
-  },
-];
+type ContextPair = {
+  id?: string;
+  context: string;
+  transformed_image: string;
+  transformed_title: string;
+  transformed_body: string;
+  envisioned_image: string;
+  envisioned_title: string;
+  envisioned_body: string;
+};
 
-const CONTEXT_PAIRS = [
-  {
-    context: "City",
-    transformedImage: "/visuals/transform-apartment.png",
-    transformedTitle: "Transform what is here",
-    transformedBody:
-      "Apartment floors, rooftops, lobbies, and tower commons are the fastest city-scale shifts because the shell already exists and the main move is relational.",
-    envisionedImage: "/visuals/generated/lc-space-0.jpg",
-    envisionedTitle: "Build what follows",
-    envisionedBody:
-      "Dense city embodiment can still feel warm, earth-held, and communal: shared kitchens, civic hearths, and vertical commons built from coherence instead of isolation.",
-  },
-  {
-    context: "Urban",
-    transformedImage: "/visuals/transform-neighborhood.png",
-    transformedTitle: "Transform what is here",
-    transformedBody:
-      "A streetfront, studio, workshop, or underused hall becomes a provision house, creation room, or neighborhood threshold with relatively little physical energy.",
-    envisionedImage: "/visuals/generated/lc-space-story-0.jpg",
-    envisionedTitle: "Build what follows",
-    envisionedBody:
-      "Over time, the urban fabric can hold deeper forms: nourishment halls, courtyards, and shared civic interiors designed from belonging rather than throughput.",
-  },
-  {
-    context: "Suburban",
-    transformedImage: "/visuals/transform-suburb.png",
-    transformedTitle: "Transform what is here",
-    transformedBody:
-      "Connected lanes, shared porches, common gardens, repurposed garages, and slow streets let a suburban pattern become one field without waiting for large capital.",
-    envisionedImage: "/visuals/generated/lc-v-living-spaces-0.jpg",
-    envisionedTitle: "Build what follows",
-    envisionedBody:
-      "If the pattern matures, a suburban field can become a clustered village body with shared fires, circular paths, and structures designed for gathering from the start.",
-  },
-  {
-    context: "Rural",
-    transformedImage: "/visuals/transform-village.png",
-    transformedTitle: "Transform what is here",
-    transformedBody:
-      "A house, greenhouse, barn, or stewarded structure becomes the anchor for food, tools, bathing, and hospitality before the wider land build-out arrives.",
-    envisionedImage: "/visuals/generated/lc-v-shelter-organism-story-0.jpg",
-    envisionedTitle: "Build what follows",
-    envisionedBody:
-      "Brand-new rural embodiment can grow as a land-rooted cluster: shared paths, curved shelter, open commons, and structures that feel more grown than imposed.",
-  },
-];
+type DualPath = {
+  id?: string;
+  label: string;
+  title: string;
+  image: string;
+  body: string;
+};
 
-const DUAL_PATHS = [
-  {
-    label: "Repurposed now",
-    title: "Keep the shell, change the field",
-    image: "/visuals/transform-neighborhood.png",
-    body:
-      "Existing apartments, storefronts, towers, churches, schools, garages, barns, and civic rooms can be retuned today. The fastest move is often relational, not structural.",
+type RealizeCard = {
+  id?: string;
+  title: string;
+  body: string;
+};
+
+type Season = {
+  id?: string;
+  name: string;
+  body: string;
+};
+
+type Seed = {
+  id?: string;
+  body: string;
+};
+
+type RealizeContent = {
+  source: "graph";
+  domain: string;
+  vocabulary: VocabularyItem[];
+  host_spaces: RealizeHostSpace[];
+  context_pairs: ContextPair[];
+  dual_paths: DualPath[];
+  fastest_opportunities: RealizeCard[];
+  shell_transformations: RealizeCard[];
+  seasons: Season[];
+  abundance_flows: RealizeCard[];
+  existing_structures: RealizeCard[];
+  seeds: Seed[];
+  counts: {
+    vocabulary: number;
+    host_spaces: number;
+    context_pairs: number;
+    dual_paths: number;
+    fastest_opportunities: number;
+    shell_transformations: number;
+    seasons: number;
+    abundance_flows: number;
+    existing_structures: number;
+    seeds: number;
+  };
+};
+
+const EMPTY_REALIZE: RealizeContent = {
+  source: "graph",
+  domain: "living-collective",
+  vocabulary: [],
+  host_spaces: [],
+  context_pairs: [],
+  dual_paths: [],
+  fastest_opportunities: [],
+  shell_transformations: [],
+  seasons: [],
+  abundance_flows: [],
+  existing_structures: [],
+  seeds: [],
+  counts: {
+    vocabulary: 0,
+    host_spaces: 0,
+    context_pairs: 0,
+    dual_paths: 0,
+    fastest_opportunities: 0,
+    shell_transformations: 0,
+    seasons: 0,
+    abundance_flows: 0,
+    existing_structures: 0,
+    seeds: 0,
   },
-  {
-    label: "Pure imagination",
-    title: "Let the form start from coherence",
-    image: "/visuals/generated/lc-v-living-spaces-3.jpg",
-    body:
-      "The unconstrained image still matters. It shows what the organism chooses when beauty, circulation, and belonging shape the structure from the first line.",
-  },
-];
+};
+
+async function fetchRealizeContent(): Promise<RealizeContent> {
+  try {
+    const res = await fetch(`${getApiBase()}/api/vision/living-collective/realize`, { cache: "no-store" });
+    if (!res.ok) return EMPTY_REALIZE;
+    const data = await res.json();
+    return {
+      ...EMPTY_REALIZE,
+      ...data,
+      counts: {
+        ...EMPTY_REALIZE.counts,
+        ...(data?.counts || {}),
+      },
+    };
+  } catch {
+    return EMPTY_REALIZE;
+  }
+}
+
+function EmptyRealizeGroup({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-stone-800/60 bg-stone-900/10 p-5 text-sm text-stone-600">
+      No {label} records are published in the graph yet.
+    </div>
+  );
+}
+
+function RealizeImage({
+  src,
+  alt,
+  sizes,
+}: {
+  src: string;
+  alt: string;
+  sizes: string;
+}) {
+  if (!src) {
+    return <div className="absolute inset-0 bg-stone-900" />;
+  }
+  return <Image src={src} alt={alt} fill className="object-cover" sizes={sizes} />;
+}
 
 /* ── Page ──────────────────────────────────────────────────────────── */
 
-export default function RealizePage() {
+export default async function RealizePage() {
+  const realize = await fetchRealizeContent();
+
   return (
     <main className="max-w-4xl mx-auto px-6 py-16 space-y-24">
       {/* Hero */}
@@ -173,17 +192,17 @@ export default function RealizePage() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          {DUAL_PATHS.map((path) => (
+          {realize.dual_paths.length === 0 ? (
+            <EmptyRealizeGroup label="dual path" />
+          ) : realize.dual_paths.map((path) => (
             <article
-              key={path.label}
+              key={path.id || path.label}
               className="overflow-hidden rounded-[1.75rem] border border-stone-800/30 bg-stone-900/20"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
-                <Image
+                <RealizeImage
                   src={path.image}
                   alt={path.title}
-                  fill
-                  className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent" />
@@ -212,17 +231,17 @@ export default function RealizePage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-4">
-          {HOST_SPACES.map((space) => (
+          {realize.host_spaces.length === 0 ? (
+            <EmptyRealizeGroup label="host space" />
+          ) : realize.host_spaces.map((space) => (
             <article
-              key={space.title}
+              key={space.id || space.title}
               className="overflow-hidden rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20"
             >
               <div className="relative aspect-[16/10] overflow-hidden">
-                <Image
+                <RealizeImage
                   src={space.image}
                   alt={space.title}
-                  fill
-                  className="object-cover"
                   sizes="(max-width: 768px) 100vw, 50vw"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent" />
@@ -237,7 +256,7 @@ export default function RealizePage() {
                 <p className="text-sm text-stone-400 leading-relaxed">{space.body}</p>
                 <div className="rounded-xl border border-stone-800/30 bg-stone-950/30 p-3">
                   <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">First move</p>
-                  <p className="mt-1 text-xs leading-relaxed text-stone-400">{space.firstMove}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-stone-400">{space.first_move}</p>
                 </div>
               </div>
             </article>
@@ -256,25 +275,10 @@ export default function RealizePage() {
         </p>
 
         <div className="grid md:grid-cols-4 gap-4">
-          {[
-            {
-              title: "Open one commons room",
-              body: "Start with one room that can hold tea, circle, rest, food, or making. The field needs one honest host before it needs a campus.",
-            },
-            {
-              title: "Make nourishment visible",
-              body: "A visible kitchen, shared table, pantry wall, or bread oven changes trust faster than branding or mission language ever will.",
-            },
-            {
-              title: "Retune circulation zones",
-              body: "Hallways, lobbies, rooftops, and laundry rooms become the first commons because they are already shared and need little structural energy.",
-            },
-            {
-              title: "Link hosts together",
-              body: "When one apartment, one storefront, and one outdoor gathering rhythm start reinforcing each other, a neighborhood begins behaving like a field.",
-            },
-          ].map((item) => (
-            <div key={item.title} className="p-5 rounded-2xl border border-teal-800/20 bg-teal-900/5 space-y-2">
+          {realize.fastest_opportunities.length === 0 ? (
+            <EmptyRealizeGroup label="fastest opportunity" />
+          ) : realize.fastest_opportunities.map((item) => (
+            <div key={item.id || item.title} className="p-5 rounded-2xl border border-teal-800/20 bg-teal-900/5 space-y-2">
               <h3 className="text-sm font-medium text-teal-300/80">{item.title}</h3>
               <p className="text-xs text-stone-500 leading-relaxed">{item.body}</p>
             </div>
@@ -296,34 +300,11 @@ export default function RealizePage() {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[
-            {
-              title: "Office floor → vertical neighborhood",
-              body: "Private desks give way to commons bands, nourishment rooms, stillness pockets, child support, maker space, and slower transitions between layers of life.",
-            },
-            {
-              title: "Strip mall → civic organism",
-              body: "Vacant units become a provision house, repair atelier, clinic, kitchen, and gathering room that make a block feel metabolically alive again.",
-            },
-            {
-              title: "Church hall → neighborhood hearth",
-              body: "A ceremonial shell widens into meals, grief tending, elder circles, children’s making, rest, and seasonal gatherings without losing its sacred quality.",
-            },
-            {
-              title: "Schoolyard → learning commons",
-              body: "The timetable loosens, gardens and workshops become visible, mixed ages participate together, and the grounds begin teaching as much as the classrooms.",
-            },
-            {
-              title: "Warehouse → creation and recovery hall",
-              body: "Large spans of empty volume become music, fabrication, movement, bathing, fermentation, storage, and public hospitality under one roof.",
-            },
-            {
-              title: "Barn or garage → anchor membrane",
-              body: "Tool flow, pantry flow, repair, care, seed starts, guest welcome, and local exchange gather in one honest room before any larger build-out begins.",
-            },
-          ].map((item) => (
+          {realize.shell_transformations.length === 0 ? (
+            <EmptyRealizeGroup label="shell transformation" />
+          ) : realize.shell_transformations.map((item) => (
             <div
-              key={item.title}
+              key={item.id || item.title}
               className="rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20 p-5 space-y-2"
             >
               <h3 className="text-lg font-light text-amber-200">{item.title}</h3>
@@ -346,9 +327,11 @@ export default function RealizePage() {
         </div>
 
         <div className="grid gap-6">
-          {CONTEXT_PAIRS.map((pair) => (
+          {realize.context_pairs.length === 0 ? (
+            <EmptyRealizeGroup label="context pair" />
+          ) : realize.context_pairs.map((pair) => (
             <article
-              key={pair.context}
+              key={pair.id || pair.context}
               className="overflow-hidden rounded-[1.75rem] border border-stone-800/30 bg-stone-900/20"
             >
               <div className="border-b border-stone-800/30 px-6 py-4">
@@ -357,37 +340,33 @@ export default function RealizePage() {
               <div className="grid gap-0 md:grid-cols-2">
                 <div className="border-b border-stone-800/20 md:border-b-0 md:border-r md:border-stone-800/20">
                   <div className="relative aspect-[16/10] overflow-hidden">
-                    <Image
-                      src={pair.transformedImage}
+                    <RealizeImage
+                      src={pair.transformed_image}
                       alt={`${pair.context} transformed existing structure`}
-                      fill
-                      className="object-cover"
                       sizes="(max-width: 768px) 100vw, 50vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/10 to-transparent" />
                   </div>
                   <div className="space-y-3 p-5">
                     <p className="text-[11px] uppercase tracking-[0.22em] text-teal-300/70">Repurpose now</p>
-                    <h3 className="text-lg font-light text-white">{pair.transformedTitle}</h3>
-                    <p className="text-sm text-stone-400 leading-relaxed">{pair.transformedBody}</p>
+                    <h3 className="text-lg font-light text-white">{pair.transformed_title}</h3>
+                    <p className="text-sm text-stone-400 leading-relaxed">{pair.transformed_body}</p>
                   </div>
                 </div>
 
                 <div>
                   <div className="relative aspect-[16/10] overflow-hidden">
-                    <Image
-                      src={pair.envisionedImage}
+                    <RealizeImage
+                      src={pair.envisioned_image}
                       alt={`${pair.context} brand-new embodiment`}
-                      fill
-                      className="object-cover"
                       sizes="(max-width: 768px) 100vw, 50vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/10 to-transparent" />
                   </div>
                   <div className="space-y-3 p-5">
                     <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300/70">Imagine freely</p>
-                    <h3 className="text-lg font-light text-white">{pair.envisionedTitle}</h3>
-                    <p className="text-sm text-stone-400 leading-relaxed">{pair.envisionedBody}</p>
+                    <h3 className="text-lg font-light text-white">{pair.envisioned_title}</h3>
+                    <p className="text-sm text-stone-400 leading-relaxed">{pair.envisioned_body}</p>
                   </div>
                 </div>
               </div>
@@ -433,14 +412,11 @@ export default function RealizePage() {
       <section className="space-y-8">
         <h2 className="text-3xl font-extralight text-stone-300">The Seasons</h2>
         <div className="grid md:grid-cols-2 gap-4">
-          {[
-            { name: "Spring", color: "border-emerald-800/30 bg-emerald-900/5", text: "text-emerald-300/70", body: "Everything wakes. Seeds saved from last autumn are planted. The food forest leafs out. Visitors begin arriving — the winter was quiet, and now the field opens. New hands in the soil. New faces at the table." },
-            { name: "Summer", color: "border-amber-800/30 bg-amber-900/5", text: "text-amber-300/70", body: "Abundance. More food than anyone can eat. Preservation begins — ferments, drying, canning. The long evenings are for music, swimming, lying in the grass. The overflow of food, knowledge, beauty, and healing radiates outward." },
-            { name: "Autumn", color: "border-orange-800/30 bg-orange-900/5", text: "text-orange-300/70", body: "Harvest. Gratitude. The equinox ceremony: a fire, a feast, an accounting of what the year brought. Shelves fill with jars that will carry the community through winter. The field begins drawing inward." },
-            { name: "Winter", color: "border-indigo-800/30 bg-indigo-900/5", text: "text-indigo-300/70", body: "The quiet season. Fewer projects. Longer evenings. More fire circles, more storytelling, more rest. The elders teach by firelight — the stories of the land, the first year, the births, the deaths. Skills transmitted hand to hand." },
-          ].map((s) => (
-            <div key={s.name} className={`p-6 rounded-2xl border ${s.color} space-y-2`}>
-              <h3 className={`text-lg font-light ${s.text}`}>{s.name}</h3>
+          {realize.seasons.length === 0 ? (
+            <EmptyRealizeGroup label="season" />
+          ) : realize.seasons.map((s) => (
+            <div key={s.id || s.name} className="p-6 rounded-2xl border border-emerald-800/20 bg-emerald-900/5 space-y-2">
+              <h3 className="text-lg font-light text-emerald-300/70">{s.name}</h3>
               <p className="text-sm text-stone-400 leading-relaxed">{s.body}</p>
             </div>
           ))}
@@ -474,12 +450,10 @@ export default function RealizePage() {
         <p className="text-stone-400 leading-relaxed">A forest doesn't have a business model. It has sunlight, water, soil, and ten thousand species expressing their nature. The abundance is so vast that it feeds everything around it.</p>
 
         <div className="grid md:grid-cols-3 gap-4">
-          {[
-            { title: "The land overflows", body: "A mature food forest produces exponentially more than 50 people can eat. This overflow flows to neighbors, to anyone hungry. Not as a business — as a tree dropping fruit." },
-            { title: "Knowledge overflows", body: "People come to see how the field lives. They learn by being present, not by paying for a course. They leave carrying the frequency to their own lives." },
-            { title: "Beauty overflows", body: "Hands that build walls, throw pottery, weave baskets — they produce beauty because that's their nature. Beautiful things naturally find people who want them." },
-          ].map((item) => (
-            <div key={item.title} className="p-5 rounded-2xl border border-stone-800/30 bg-stone-900/20 space-y-2">
+          {realize.abundance_flows.length === 0 ? (
+            <EmptyRealizeGroup label="abundance flow" />
+          ) : realize.abundance_flows.map((item) => (
+            <div key={item.id || item.title} className="p-5 rounded-2xl border border-stone-800/30 bg-stone-900/20 space-y-2">
               <h3 className="text-sm font-medium text-amber-300/70">{item.title}</h3>
               <p className="text-xs text-stone-500 leading-relaxed">{item.body}</p>
             </div>
@@ -493,29 +467,10 @@ export default function RealizePage() {
         <p className="text-stone-400 leading-relaxed">This vision does not wait for a blank slate. It moves through the shells we already built and retunes them for aliveness. The frontier is no longer only new villages on open land. It is attuned apartments, connected streets, metabolized strip malls, shared civic rooms, and towers that learn how to behave like vertical neighborhoods.</p>
 
         <div className="grid md:grid-cols-2 gap-4">
-          {[
-            {
-              title: "Apartment → Coherent cell",
-              body: "A small room stops being storage for a private life and becomes a quiet cell in a larger organism: less clutter, more presence, stronger links to pantry, rooftop, stairwell, workshop, and commons."
-            },
-            {
-              title: "Skyscraper → Vertical village",
-              body: "Floors become distinct communities and gathering bands: quiet nests, nourishment halls, maker floors, child commons, healing rooms, roof gardens. Elevators become circulation organs, not commute machinery."
-            },
-            {
-              title: "Store → Provision house",
-              body: "What used to push inventory becomes a place for receiving, repair, borrowing, fitting, and exchange. The checkout dissolves. What matters is whether the thing increases vitality."
-            },
-            {
-              title: "Restaurant → Nourishment hall",
-              body: "The meal is no longer purchased performance. It is a visible kitchen, a long table, fermentation, gratitude, and the regulation of bodies through shared presence."
-            },
-            {
-              title: "Lobby → Threshold chamber",
-              body: "Arrival is tuned instead of accelerated. Sound softens, breath slows, the field of the day becomes legible, and people choose where to go by resonance instead of habit."
-            },
-          ].map((item) => (
-            <div key={item.title} className="p-5 rounded-2xl border border-stone-800/30 bg-stone-900/20 space-y-2">
+          {realize.existing_structures.length === 0 ? (
+            <EmptyRealizeGroup label="existing structure" />
+          ) : realize.existing_structures.map((item) => (
+            <div key={item.id || item.title} className="p-5 rounded-2xl border border-stone-800/30 bg-stone-900/20 space-y-2">
               <h3 className="text-sm font-medium text-amber-300/70">{item.title}</h3>
               <p className="text-xs text-stone-500 leading-relaxed">{item.body}</p>
             </div>
@@ -567,11 +522,13 @@ export default function RealizePage() {
         <h2 className="text-3xl font-extralight text-stone-300">New Vocabulary</h2>
         <p className="text-stone-500 text-sm">Not replacements for old words — expressions of a different frequency.</p>
         <div className="grid gap-1">
-          {VOCAB.map(([old, field, meaning]) => (
-            <div key={old} className="grid grid-cols-12 gap-4 py-2 border-b border-stone-800/20 text-sm">
-              <span className="col-span-2 text-stone-600 line-through decoration-stone-800">{old}</span>
-              <span className="col-span-3 text-amber-300/80 font-medium">{field}</span>
-              <span className="col-span-7 text-stone-500">{meaning}</span>
+          {realize.vocabulary.length === 0 ? (
+            <EmptyRealizeGroup label="vocabulary" />
+          ) : realize.vocabulary.map((item) => (
+            <div key={`${item.old}-${item.field}`} className="grid grid-cols-12 gap-4 py-2 border-b border-stone-800/20 text-sm">
+              <span className="col-span-2 text-stone-600 line-through decoration-stone-800">{item.old}</span>
+              <span className="col-span-3 text-amber-300/80 font-medium">{item.field}</span>
+              <span className="col-span-7 text-stone-500">{item.meaning}</span>
             </div>
           ))}
         </div>
@@ -582,22 +539,13 @@ export default function RealizePage() {
         <h2 className="text-3xl font-extralight text-stone-300">The 10 Seeds</h2>
         <p className="text-stone-500 text-sm">Composted wisdom from 500 years of community experiments. The packaging released. The living seeds.</p>
         <div className="grid md:grid-cols-2 gap-3">
-          {[
-            "Do no harm. Live in accordance with nature. Help each other grow.",
-            "Sovereignty is inner first — not a posture, an inner state.",
-            "Interbeing is the operating system. Generosity is the transmission vector.",
-            "Food is the first sovereignty. Grow it together. Eat it together.",
-            "Daily rhythm creates coherence. Fire at dawn. Shared meals. Evening song.",
-            "Build with the land, not on it. Natural materials. Proportions from nature.",
-            "Education is participation. The community IS the classroom.",
-            "Sufficiency precedes exchange. Start from what's here.",
-            "Co-create, never impose. Living agreements that evolve with the field.",
-            "Transparency is the immune system. Everything visible.",
-          ].map((seed, i) => (
-            <div key={i} className="p-4 rounded-xl border border-stone-800/20 bg-stone-900/10">
+          {realize.seeds.length === 0 ? (
+            <EmptyRealizeGroup label="seed" />
+          ) : realize.seeds.map((seed, i) => (
+            <div key={seed.id || i} className="p-4 rounded-xl border border-stone-800/20 bg-stone-900/10">
               <p className="text-sm text-stone-400 leading-relaxed">
                 <span className="text-amber-400/50 font-medium">{i + 1}. </span>
-                {seed}
+                {seed.body}
               </p>
             </div>
           ))}

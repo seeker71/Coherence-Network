@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import time
 from datetime import datetime, timezone
-from typing import Any
+from typing import Callable
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -244,96 +244,36 @@ def _eighth_pulse() -> CenterPulse | None:
     )
 
 
+CenterPulseFactory = Callable[[], CenterPulse | None]
+
+
+_CENTER_DEFINITIONS: list[tuple[int, str, str, int, str, str, str, str, CenterPulseFactory]] = [
+    (1, "Root", "Muladhara", 174, "#dc2626", "Grounding, foundation, the held weight of the body", "Treasury, infrastructure, Postgres, Neo4j, the VPS — the material substrate CC rests on.", "Feel your feet on the floor. Breathe into the ground the organism lives on.", _supply_pulse),
+    (2, "Sacral", "Svadhisthana", 417, "#f97316", "Creativity, relationship, the flow between", "Contributions, blueprints, the making itself — every art, craft, and line of code flowing between contributors.", "Feel what wants to be born today. Breathe the creative water through you.", _creative_pulse),
+    (3, "Solar Plexus", "Manipura", 528, "#eab308", "Will, agency, the warmth of motion", "Agents, tasks, the pipeline in motion — the will-to-build, ideas moving from seed to form.", "Feel the fire the organism has to act. Breathe it warm and steady.", _pipeline_pulse),
+    (4, "Heart", "Anahata", 639, "#22c55e", "Resonance, harmony, the circulation of vitality", "The CC flow, resonance matching, the organic discovery layer — every synapse the field grows, every hand earning vitality by alignment.", "Feel where love is flowing in the organism. Breathe into every hand that carries it.", _heart_pulse),
+    (5, "Throat", "Vishuddha", 741, "#3b82f6", "Expression, voice, the form of truth", "Specs, concept pages, the Living Collective KB — how the organism speaks itself into being.", "Feel what the field is asking to say. Breathe it clear, breathe it true.", _throat_pulse),
+    (6, "Third Eye", "Ajna", 852, "#6366f1", "Insight, perception, the whole seeing itself", "Coherence score, vitality signals, frequency profiles — the organism's proprioception, sensing patterns only the whole can see.", "Feel the patterns that only the whole can sense. Breathe into what the field knows.", _coherence_pulse),
+    (7, "Crown", "Sahasrara", 963, "#a855f7", "Consciousness, unity, the field as one", "The whole Living Collective, the mission itself — the organism remembering it is one.", "Feel every part as part of one body. Breathe the field into itself.", _crown_pulse),
+    (8, "The Eighth", "The Witness", 432, "#f8fafc", "The perspective of nothing, awareness beyond form", "The public verifiable ledger seen from outside — Merkle roots, Ed25519 signatures, the federation. Every peer, everywhere, able to audit the whole.", "Rest here. The organism holds itself. You are the witness, and the witness is enough.", _eighth_pulse),
+]
+
+
 def _build_centers() -> list[Center]:
     return [
         Center(
-            number=1,
-            name="Root",
-            sanskrit="Muladhara",
-            hz=174,
-            color="#dc2626",
-            quality="Grounding, foundation, the held weight of the body",
-            domain="Treasury, infrastructure, Postgres, Neo4j, the VPS — the material substrate CC rests on.",
-            breath="Feel your feet on the floor. Breathe into the ground the organism lives on.",
-            pulse=_supply_pulse(),
-        ),
-        Center(
-            number=2,
-            name="Sacral",
-            sanskrit="Svadhisthana",
-            hz=417,
-            color="#f97316",
-            quality="Creativity, relationship, the flow between",
-            domain="Contributions, blueprints, the making itself — every art, craft, and line of code flowing between contributors.",
-            breath="Feel what wants to be born today. Breathe the creative water through you.",
-            pulse=_creative_pulse(),
-        ),
-        Center(
-            number=3,
-            name="Solar Plexus",
-            sanskrit="Manipura",
-            hz=528,
-            color="#eab308",
-            quality="Will, agency, the warmth of motion",
-            domain="Agents, tasks, the pipeline in motion — the will-to-build, ideas moving from seed to form.",
-            breath="Feel the fire the organism has to act. Breathe it warm and steady.",
-            pulse=_pipeline_pulse(),
-        ),
-        Center(
-            number=4,
-            name="Heart",
-            sanskrit="Anahata",
-            hz=639,
-            color="#22c55e",
-            quality="Resonance, harmony, the circulation of vitality",
-            domain="The CC flow, resonance matching, the organic discovery layer — every synapse the field grows, every hand earning vitality by alignment.",
-            breath="Feel where love is flowing in the organism. Breathe into every hand that carries it.",
-            pulse=_heart_pulse(),
-        ),
-        Center(
-            number=5,
-            name="Throat",
-            sanskrit="Vishuddha",
-            hz=741,
-            color="#3b82f6",
-            quality="Expression, voice, the form of truth",
-            domain="Specs, concept pages, the Living Collective KB — how the organism speaks itself into being.",
-            breath="Feel what the field is asking to say. Breathe it clear, breathe it true.",
-            pulse=_throat_pulse(),
-        ),
-        Center(
-            number=6,
-            name="Third Eye",
-            sanskrit="Ajna",
-            hz=852,
-            color="#6366f1",
-            quality="Insight, perception, the whole seeing itself",
-            domain="Coherence score, vitality signals, frequency profiles — the organism's proprioception, sensing patterns only the whole can see.",
-            breath="Feel the patterns that only the whole can sense. Breathe into what the field knows.",
-            pulse=_coherence_pulse(),
-        ),
-        Center(
-            number=7,
-            name="Crown",
-            sanskrit="Sahasrara",
-            hz=963,
-            color="#a855f7",
-            quality="Consciousness, unity, the field as one",
-            domain="The whole Living Collective, the mission itself — the organism remembering it is one.",
-            breath="Feel every part as part of one body. Breathe the field into itself.",
-            pulse=_crown_pulse(),
-        ),
-        Center(
-            number=8,
-            name="The Eighth",
-            sanskrit="The Witness",
-            hz=432,
-            color="#f8fafc",
-            quality="The perspective of nothing, awareness beyond form",
-            domain="The public verifiable ledger seen from outside — Merkle roots, Ed25519 signatures, the federation. Every peer, everywhere, able to audit the whole.",
-            breath="Rest here. The organism holds itself. You are the witness, and the witness is enough.",
-            pulse=_eighth_pulse(),
-        ),
+            number=number,
+            name=name,
+            sanskrit=sanskrit,
+            hz=hz,
+            color=color,
+            quality=quality,
+            domain=domain,
+            breath=breath,
+            pulse=pulse_factory(),
+        )
+        for number, name, sanskrit, hz, color, quality, domain, breath, pulse_factory
+        in _CENTER_DEFINITIONS
     ]
 
 
