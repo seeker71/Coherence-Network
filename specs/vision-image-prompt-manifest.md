@@ -8,11 +8,14 @@ source:
     symbols: [dynamic prompt profiles]
   - file: scripts/generate_visuals.py
     symbols: [generate_from_manifest(), compose_manifest_prompt()]
+  - file: scripts/audit_vision_image_candidates.py
+    symbols: [audit_records()]
 requirements:
   - "Every current Living Collective vision image has a persistent prompt record."
   - "Prompt validation fails when an image lacks a prompt record or has an empty prompt."
   - "Regeneration can target one stable image path or deterministic prompt batch."
   - "Regeneration can write review candidates under a separate output directory before production assets are replaced."
+  - "Candidate image batches can be audited for existence, size, dimensions, and prompt/profile provenance before promotion."
 done_when:
   - "Prompt manifest covers all current vision images."
   - "Asset validation includes prompt-record coverage."
@@ -43,6 +46,7 @@ Living Collective vision images must be regenerable from source-controlled promp
 - `scripts/export_vision_image_prompts.py` — migration/audit exporter for prompt records.
 - `scripts/check_generated_vision_assets.py` — asset and prompt-record validation.
 - `scripts/generate_visuals.py` — manifest-driven regeneration mode.
+- `scripts/audit_vision_image_candidates.py` — candidate-output audit before production promotion.
 - `scripts/plan_vision_image_regeneration.py` — deterministic batch planner.
 - `specs/vision-image-prompt-manifest.md` — this spec.
 
@@ -52,6 +56,7 @@ Living Collective vision images must be regenerable from source-controlled promp
 - `python3 scripts/check_generated_vision_assets.py --allow-untracked` passes and reports prompt-record validation.
 - `python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --dry-run --force` targets one stable image from the manifest.
 - `python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --profile fast-sample-v1 --out-dir output/vision-quality/candidates --dry-run --force` targets one stable candidate path with a dynamic profile.
+- `python3 scripts/audit_vision_image_candidates.py --only-path web/public/visuals/generated/lc-space-0.jpg --profile fast-sample-v1 --allow-missing` writes a candidate audit report.
 - `python3 scripts/plan_vision_image_regeneration.py --batch-size 50 --out-dir output/vision-quality/batches` writes deterministic batch files.
 
 ## Verification
@@ -61,8 +66,9 @@ python3 scripts/export_vision_image_prompts.py
 python3 scripts/check_generated_vision_assets.py --allow-untracked
 python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --dry-run --force
 python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --profile fast-sample-v1 --out-dir output/vision-quality/candidates --dry-run --force
+python3 scripts/audit_vision_image_candidates.py --only-path web/public/visuals/generated/lc-space-0.jpg --profile fast-sample-v1 --allow-missing
 python3 scripts/plan_vision_image_regeneration.py --batch-size 50 --out-dir output/vision-quality/batches
-python3 -m py_compile scripts/export_vision_image_prompts.py scripts/plan_vision_image_regeneration.py scripts/generate_visuals.py scripts/check_generated_vision_assets.py
+python3 -m py_compile scripts/export_vision_image_prompts.py scripts/plan_vision_image_regeneration.py scripts/generate_visuals.py scripts/check_generated_vision_assets.py scripts/audit_vision_image_candidates.py
 ```
 
 ## Out of Scope
