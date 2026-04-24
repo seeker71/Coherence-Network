@@ -40,13 +40,13 @@
     --card-foreground: 24 26% 16%;
     --popover: 42 30% 97%;
     --popover-foreground: 24 26% 16%;
-    /* Darker gold so primary text passes AA on light bg (≥4.5:1) */
-    --primary: 36 72% 42%;
+    /* Darker gold so primary text passes AA on light bg (~4.78:1 on hsl(42 40% 96%)) */
+    --primary: 36 72% 34%;
     --primary-foreground: 42 40% 97%;
     --secondary: 36 22% 88%;
     --secondary-foreground: 24 22% 18%;
     --muted: 36 20% 90%;
-    /* muted-foreground: 28 18% 38% ≈ #6b5d4a — passes AA on card/bg */
+    /* muted-foreground: 28 18% 38% ≈ #6b5d4a — passes AA on card/bg (~5.58:1) */
     --muted-foreground: 28 18% 38%;
     --accent: 36 28% 85%;
     --accent-foreground: 24 22% 18%;
@@ -54,8 +54,8 @@
     --destructive-foreground: 0 0% 98%;
     --border: 36 20% 82%;
     --input: 36 20% 82%;
-    --ring: 36 72% 42%;
-    --chart-1: 36 72% 42%;
+    --ring: 36 72% 34%;
+    --chart-1: 36 72% 34%;
     --chart-2: 158 38% 32%;
     --chart-3: 45 65% 38%;
     --chart-4: 12 60% 48%;
