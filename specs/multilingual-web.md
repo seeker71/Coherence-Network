@@ -5,23 +5,39 @@ source:
   - file: web/app/layout.tsx
     symbols: [RootLayout]
   - file: web/middleware.ts
-    symbols: [middleware (new)]
+    symbols: [middleware]
   - file: web/next.config.ts
     symbols: [nextConfig]
-  - file: api/app/models/locale.py
-    symbols: [SupportedLocale, ContentTranslation, GlossaryEntry (new)]
-  - file: api/app/services/translation_cache.py
-    symbols: [get_or_translate(), invalidate_for_entity(), select_canonical() (new)]
-  - file: api/app/services/translator.py
-    symbols: [translate_markdown(), build_glossary_prompt() (new)]
-  - file: api/app/routers/locale.py
-    symbols: [list_locales, get_glossary, upsert_glossary_entry (new)]
+  - file: api/app/models/translation.py
+    symbols: [EntityView, GlossaryEntry]
+  - file: api/app/models/lens_translation.py
+    symbols: [LensTranslation]
+  - file: api/app/services/translation_cache_service.py
+    symbols: [write_view, canonical_view, all_canonical_views, find_anchor, is_stale, list_history, glossary_for, upsert_glossary_entry]
+  - file: api/app/services/translator_service.py
+    symbols: [translate_markdown, build_glossary_prompt, SUPPORTED_LOCALES]
+  - file: api/app/services/concept_translation_service.py
+    symbols: [translate_concept, get_cached_translation]
+  - file: api/app/services/lens_translation_service.py
+    symbols: [translate_via_lens]
+  - file: api/app/routers/locales.py
+    symbols: [list_locales, get_glossary, patch_glossary]
   - file: api/app/routers/translations.py
-    symbols: [submit_translation, list_translations_for_entity (new)]
+    symbols: [submit_translation, list_translations_for_entity]
   - file: api/app/routers/concepts.py
-    symbols: [get_concept — extend with lang param, support non-English source_lang]
+    symbols: [get_concept]
   - file: api/app/routers/contributions.py
-    symbols: [create_contribution — accept source_lang; get_contribution — accept lang]
+    symbols: [create_contribution, get_contribution]
+  - file: cli/lib/commands/translate.mjs
+    symbols: [handleTranslate, submitTranslation, showHistory]
+  - file: web/app/settings/translations/page.tsx
+    symbols: [TranslationsCoveragePage]
+  - file: docs/vision-kb/glossary/de.md
+    symbols: [anchor terms for German]
+  - file: docs/vision-kb/glossary/es.md
+    symbols: [anchor terms for Spanish]
+  - file: docs/vision-kb/glossary/id.md
+    symbols: [anchor terms for Indonesian]
 requirements:
   - "Web supports locales: en (default), de, es, id — URL-based /{locale}/... routing"
   - "next-intl drives UI chrome strings from web/messages/{locale}.json"
