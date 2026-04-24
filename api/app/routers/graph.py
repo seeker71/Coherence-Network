@@ -10,6 +10,7 @@ Spec 169 additions:
   GET /api/graph/nodes/{id}/neighbors — extended with lifecycle_state, rel_type, direction
 """
 
+import math
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import Any
@@ -311,27 +312,56 @@ async def get_graph_proof():
 
 
 @router.get("/profile/{entity_id}", summary="Get the frequency profile for any entity")
-async def get_entity_profile(entity_id: str):
+async def get_entity_profile(
+    entity_id: str,
+    version: str = Query("v2", description="Algorithm version: 'v2' (default, dynamic multi-view) or 'v1' (legacy)"),
+):
     """Returns the multi-dimensional frequency profile for any graph entity.
 
-    Works for ideas, specs, assets, concepts, contributors, providers —
-    anything in the graph. The profile is a vector across all dimensions
-    (concept connections, keywords, domains, content frequency, edge types).
+    Works for ideas, specs, assets, concepts, contributors, providers — anything
+    in the graph. v2 (default) is a multi-view profile with structural
+    (personalized PageRank), categorical (IDF-weighted), and semantic (content
+    signal) sub-vectors, fused via inverse-variance weighting for resonance
+    matching. v1 is the legacy flat vector, kept callable so profiles signed
+    under v1 remain verifiable.
 
     No auth required — profiles are transparent and verifiable.
     """
-    from app.services import frequency_profile_service
-    profile = frequency_profile_service.get_profile(entity_id)
-    if not profile:
+    if version == "v1":
+        from app.services import frequency_profile_service
+        profile = frequency_profile_service.get_profile(entity_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found or has no profile")
+        return {
+            "version": "v1",
+            "entity_id": entity_id,
+            "dimensions": len(profile),
+            "magnitude": round(frequency_profile_service.magnitude(profile), 4),
+            "hash": frequency_profile_service.profile_hash(entity_id),
+            "top": [{"dimension": d, "strength": round(s, 4)}
+                    for d, s in frequency_profile_service.top_dimensions(profile, n=15)],
+            "profile": {k: round(v, 4) for k, v in sorted(profile.items(), key=lambda x: -x[1])},
+        }
+
+    from app.services import frequency_profile_v2
+    views = frequency_profile_v2.get_profile_v2(entity_id)
+    total_dims = sum(len(v) for v in views.values())
+    if total_dims == 0:
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found or has no profile")
     return {
+        "version": "v2",
         "entity_id": entity_id,
-        "dimensions": len(profile),
-        "magnitude": round(frequency_profile_service.magnitude(profile), 4),
-        "hash": frequency_profile_service.profile_hash(entity_id),
-        "top": [{"dimension": d, "strength": round(s, 4)}
-                for d, s in frequency_profile_service.top_dimensions(profile, n=15)],
-        "profile": {k: round(v, 4) for k, v in sorted(profile.items(), key=lambda x: -x[1])},
+        "dimensions": total_dims,
+        "magnitude": round(frequency_profile_v2.magnitude_v2(views), 4),
+        "hash": frequency_profile_v2.profile_hash_v2(entity_id),
+        "top": frequency_profile_v2.top_dimensions_v2(views, n=15),
+        "views": {
+            name: {
+                "dimensions": len(view),
+                "magnitude": round(math.sqrt(sum(v * v for v in view.values())), 4) if view else 0.0,
+            }
+            for name, view in views.items()
+        },
     }
 
 
@@ -339,16 +369,35 @@ async def get_entity_profile(entity_id: str):
 async def verify_entity_profile(entity_id: str, expected_hash: str = Query(..., alias="hash")):
     """Recompute a profile from graph data and verify it matches the expected hash.
 
+    Version is inferred from the hash prefix: ``v2:...`` routes to v2,
+    anything else (bare hex, or explicit ``v1:``) routes to v1. This lets
+    signed-v1 profiles stay verifiable after v2 becomes the default.
+
     No auth required. This is the public verification endpoint for profiles.
     """
+    if expected_hash.startswith("v2:"):
+        from app.services import frequency_profile_v2
+        frequency_profile_v2.invalidate(entity_id)
+        actual_hash = frequency_profile_v2.profile_hash_v2(entity_id)
+        return {
+            "version": "v2",
+            "entity_id": entity_id,
+            "expected_hash": expected_hash,
+            "actual_hash": actual_hash,
+            "valid": expected_hash == actual_hash,
+        }
+
     from app.services import frequency_profile_service
-    frequency_profile_service.invalidate(entity_id)  # force recompute
+    frequency_profile_service.invalidate(entity_id)
     actual_hash = frequency_profile_service.profile_hash(entity_id)
+    # Strip optional "v1:" prefix from expected for comparison tolerance
+    expected_bare = expected_hash[3:] if expected_hash.startswith("v1:") else expected_hash
     return {
+        "version": "v1",
         "entity_id": entity_id,
         "expected_hash": expected_hash,
         "actual_hash": actual_hash,
-        "valid": expected_hash == actual_hash,
+        "valid": expected_bare == actual_hash,
     }
 
 
@@ -356,18 +405,21 @@ async def verify_entity_profile(entity_id: str, expected_hash: str = Query(..., 
 async def compute_resonance(body: dict):
     """Cosine similarity between two entities' frequency profiles.
 
-    Pass {a: entity_id, b: entity_id}. Works across entity types:
-    idea-to-concept, contributor-to-asset, spec-to-spec, anything.
+    Pass ``{a, b, version?}``. Default version is v2 (multi-view fusion).
+    v1 kept callable via ``version: "v1"`` for legacy compatibility.
+    Works across entity types: idea-to-concept, contributor-to-asset,
+    spec-to-spec, anything.
     """
-    from app.services import frequency_profile_service
     a_id = body.get("a", "")
     b_id = body.get("b", "")
-    score = frequency_profile_service.resonance(a_id, b_id)
-    return {
-        "a": a_id,
-        "b": b_id,
-        "resonance": round(score, 4),
-    }
+    version = body.get("version", "v2")
+    if version == "v1":
+        from app.services import frequency_profile_service
+        score = frequency_profile_service.resonance(a_id, b_id)
+    else:
+        from app.services import frequency_profile_v2
+        score = frequency_profile_v2.resonance_v2(a_id, b_id)
+    return {"version": version, "a": a_id, "b": b_id, "resonance": round(score, 4)}
 
 
 @router.post("/profile/{entity_id}/sign", summary="Cryptographically sign an entity's frequency profile")
@@ -386,13 +438,21 @@ async def sign_entity_profile(entity_id: str):
 
 
 @router.get("/profile/{entity_id}/resonant", summary="Find entities that resonate with this one")
-async def find_resonant(entity_id: str, top: int = Query(10, ge=1, le=50)):
+async def find_resonant(
+    entity_id: str,
+    top: int = Query(10, ge=1, le=50),
+    version: str = Query("v2", description="Algorithm version: 'v2' (default) or 'v1' (legacy)"),
+):
     """Find the most resonant entities to a given entity.
 
-    Searches the living-collective concept space by default.
+    Searches the living-collective concept space by default. v2 fuses
+    structural + categorical + semantic views; v1 uses the flat legacy vector.
     """
-    from app.services import frequency_profile_service
-    return frequency_profile_service.find_resonant(entity_id, top_n=top)
+    if version == "v1":
+        from app.services import frequency_profile_service
+        return frequency_profile_service.find_resonant(entity_id, top_n=top)
+    from app.services import frequency_profile_v2
+    return frequency_profile_v2.find_resonant_v2(entity_id, top_n=top)
 
 
 # ── Contributor identity endpoints ────────────────────────────────────

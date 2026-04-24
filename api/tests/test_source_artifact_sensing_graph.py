@@ -95,12 +95,28 @@ async def test_source_artifact_sensing_creates_provenance_edge_and_profile():
         assert provenance["ingestion_policy"] == "summary_and_extracted_concepts_only"
         assert "held field" in provenance["rationale"]
 
-        profile = await c.get(f"/api/profile/{sensing_body['id']}")
-        assert profile.status_code == 200, profile.text
-        dimensions = profile.json()["profile"]
+        # v1 flat-vector shape — legacy contract kept for verifiability of
+        # profiles signed under v1. Sensing provenance surfaces the artifact
+        # id, the source-backed flag, and the ingestion policy as weighted
+        # dimensions in the flat vector.
+        profile_v1 = await c.get(f"/api/profile/{sensing_body['id']}?version=v1")
+        assert profile_v1.status_code == 200, profile_v1.text
+        dimensions = profile_v1.json()["profile"]
         assert dimensions[artifact_id] > 0
         assert dimensions["_source_backed"] > 0
         assert dimensions["_ingestion_policy:summary_and_extracted_concepts_only"] > 0
+
+        # v2 multi-view shape — categorical view carries the same provenance
+        # via IDF-weighted features (source_artifact, provenance, ingestion_policy).
+        profile_v2 = await c.get(f"/api/profile/{sensing_body['id']}")
+        assert profile_v2.status_code == 200, profile_v2.text
+        body_v2 = profile_v2.json()
+        assert body_v2["version"] == "v2"
+        assert body_v2["hash"].startswith("v2:")
+        dim_keys = {d["dimension"] for d in body_v2["top"]}
+        assert f"_source_artifact:{artifact_id}" in dim_keys
+        assert "_provenance:source_backed" in dim_keys
+        assert "_ingestion_policy:summary_and_extracted_concepts_only" in dim_keys
 
 
 def test_provenance_edge_helper_rejects_incomplete_metadata():
