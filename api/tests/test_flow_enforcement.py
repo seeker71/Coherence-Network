@@ -103,6 +103,22 @@ def test_create_task_enforcement_gates(monkeypatch: pytest.MonkeyPatch):
     assert bare.get("decision_prompt") is None
 
     _reset(monkeypatch)
+    spec_task = agent_service.create_task(AgentTaskCreate(
+        direction="Spec: Shared asset tracking",
+        task_type=TaskType.SPEC,
+        context={"idea_id": "shared-asset-tracking"},
+    ))
+    assert spec_task["status"] == TaskStatus.PENDING
+    spec_ctx = spec_task["context"]
+    assert spec_ctx["task_card_validation"]["score"] == 1.0
+    assert spec_ctx["task_card"]["files_allowed"] == ["specs/shared-asset-tracking.md"]
+    assert spec_ctx["files_allowed"] == ["specs/shared-asset-tracking.md"]
+    assert all(
+        flag["id"] != "weak_task_card"
+        for flag in spec_ctx["context_hygiene"]["flags"]
+    )
+
+    _reset(monkeypatch)
     one_file = ["api/app/main.py"]
     complete = agent_service.create_task(AgentTaskCreate(
         direction="Add health check endpoint", task_type=TaskType.IMPL,

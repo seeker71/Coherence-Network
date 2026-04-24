@@ -32,6 +32,26 @@
       "heal": ["Required output: ROOT_CAUSE, FIX, FILES_CHANGED, VERIFICATION"]
     }
   },
+  "task_card_path_templates": {
+    "spec": "specs/{spec_slug}.md"
+  },
+  "task_card_defaults": {
+    "spec": {
+      "goal": "Create one valid spec for {direction_summary}.",
+      "files_allowed": ["{spec_path}"],
+      "done_when": [
+        "python3 scripts/validate_spec_quality.py --file {spec_path} exits 0"
+      ],
+      "commands": [
+        "python3 scripts/validate_spec_quality.py --file {spec_path}"
+      ],
+      "constraints": [
+        "Edit only the generated spec file.",
+        "Follow specs/TEMPLATE.md section names.",
+        "Include measurable requirements, verification, risks, and known gaps."
+      ]
+    }
+  },
   "unblock_direction": {
     "spec": "Unblock '{idea_id}' ({idea_name}): missing spec blocks {blocked_text}.\n\n1. Create one spec file with testable requirements and acceptance commands.\n2. Run: python3 scripts/validate_spec_quality.py --file <path>\n3. Fix until PASS.\n\nSPEC_PATH: [path]\nJUDGE: [python3 scripts/validate_spec_quality.py --file <path>]\nVALIDATION: [PASS|FAIL]",
     "process": "Unblock '{idea_id}' ({idea_name}): missing process blocks {blocked_text}.\n\n1. Read linked spec(s): {spec_hint}.\n2. Produce minimal step plan mapped to requirement IDs.\n3. Include exact verification command per step.\n\nPROCESS_STEPS: [count]\nSPEC_COVERAGE: [requirement IDs]\nVERIFICATION_COMMANDS: [commands]",

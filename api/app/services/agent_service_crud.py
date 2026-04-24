@@ -3,8 +3,6 @@
 import logging
 from typing import Any, Optional
 
-log = logging.getLogger(__name__)
-
 from app.config_loader import get_bool
 from app.models.agent import AgentTaskCreate, TaskStatus, TaskType
 
@@ -24,6 +22,7 @@ from app.services.agent_service_executor import (
     task_card_validation,
     _with_agent_roles,
 )
+from app.services.agent_routing.prompt_templates_loader import build_default_task_card_context
 from app.services.agent_service_store import (
     TaskClaimConflictError,
     _ensure_store_loaded,
@@ -44,6 +43,8 @@ from app.services.agent_service_task_derive import (
 from app.services.agent_service_completion_tracking import record_completion_tracking_event
 from app.services.agent_service_friction import record_task_failure_friction
 from app.services.context_hygiene_service import annotate_task_context
+
+log = logging.getLogger(__name__)
 
 _TARGET_STATE_DEFAULT_WINDOW_SEC = 900
 _TARGET_STATE_MAX_TEXT = 600
@@ -212,6 +213,7 @@ def create_task(data: AgentTaskCreate) -> dict[str, Any]:
     """Create task and return full task dict. Reuses existing active task when context has task_fingerprint."""
     _ensure_store_loaded(include_output=False)
     ctx = dict(data.context or {}) if isinstance(data.context, dict) else {}
+    ctx = build_default_task_card_context(data.task_type, data.direction, ctx)
     fingerprint = (ctx.get("task_fingerprint") or "").strip()
     if fingerprint:
         from app.services.agent_service_active_task import find_active_task_by_fingerprint

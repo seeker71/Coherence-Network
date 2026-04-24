@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import random
+import re
 from pathlib import Path
 from typing import Any
 
@@ -120,6 +121,10 @@ def _load(variant: str | None = None) -> dict[str, Any]:
     role_wrapper = data.get("role_wrapper") if isinstance(data.get("role_wrapper"), dict) else {}
     unblock = data.get("unblock_direction") if isinstance(data.get("unblock_direction"), dict) else {}
     cli_flow = data.get("cli_flow_directions") if isinstance(data.get("cli_flow_directions"), dict) else {}
+    task_card_defaults = data.get("task_card_defaults") if isinstance(data.get("task_card_defaults"), dict) else {}
+    task_card_path_templates = (
+        data.get("task_card_path_templates") if isinstance(data.get("task_card_path_templates"), dict) else {}
+    )
     _CACHE[vid] = {
         "variant_id": vid,
         "config_version": str(data.get("version", "")),
@@ -130,6 +135,8 @@ def _load(variant: str | None = None) -> dict[str, Any]:
         "idea_progress_gap_hint": (data.get("idea_progress_gap_hint") or "").strip(),
         "spec_progress_direction": (data.get("spec_progress_direction") or "").strip(),
         "cli_flow_directions": cli_flow,
+        "task_card_defaults": task_card_defaults,
+        "task_card_path_templates": task_card_path_templates,
     }
     return _CACHE[vid]
 
@@ -145,6 +152,8 @@ def _empty_cache(variant_id: str = "a") -> dict[str, Any]:
         "idea_progress_gap_hint": "",
         "spec_progress_direction": "",
         "cli_flow_directions": {},
+        "task_card_defaults": {},
+        "task_card_path_templates": {},
     }
 
 
@@ -206,6 +215,85 @@ def build_direction(phase: str, item: str, iteration: int = 1, last_output: str 
         iteration=iteration,
         last_output=snippet,
     )
+
+
+def _task_type_key(task_type: TaskType | str) -> str:
+    return task_type.value if hasattr(task_type, "value") else str(task_type)
+
+
+def _compact_text(value: Any, *, max_chars: int = 220) -> str:
+    text = " ".join(str(value or "").split())
+    if len(text) <= max_chars:
+        return text
+    return text[: max(0, max_chars - 3)].rstrip() + "..."
+
+
+def _safe_slug(value: Any, *, fallback: str = "task") -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-")
+    return slug[:80].strip("-") or fallback
+
+
+def _format_config_value(value: Any, tokens: dict[str, str]) -> Any:
+    if isinstance(value, str):
+        return value.format_map(tokens)
+    if isinstance(value, list):
+        return [_format_config_value(item, tokens) for item in value]
+    if isinstance(value, dict):
+        return {str(k): _format_config_value(v, tokens) for k, v in value.items()}
+    return value
+
+
+def build_default_task_card_context(
+    task_type: TaskType,
+    direction: str,
+    context: dict[str, Any],
+) -> dict[str, Any]:
+    """Fill missing task-card fields from prompt config while preserving caller-provided values."""
+    ctx = dict(context or {})
+    card = dict(ctx.get("task_card") or {}) if isinstance(ctx.get("task_card"), dict) else {}
+    key = _task_type_key(task_type)
+    data = _load()
+    defaults_by_type = data.get("task_card_defaults") if isinstance(data.get("task_card_defaults"), dict) else {}
+    defaults = defaults_by_type.get(key)
+    if not isinstance(defaults, dict):
+        return ctx
+
+    direction_summary = _compact_text(direction)
+    idea_id = str(ctx.get("idea_id") or "").strip()
+    spec_id = str(ctx.get("spec_id") or "").strip()
+    slug_seed = idea_id or spec_id or direction_summary
+    spec_slug = _safe_slug(slug_seed)
+    path_templates = data.get("task_card_path_templates") if isinstance(data.get("task_card_path_templates"), dict) else {}
+    spec_path = str(ctx.get("spec_path") or ctx.get("spec_file") or "").strip()
+    if not spec_path:
+        path_template = str(path_templates.get(key) or "").strip()
+        if path_template:
+            spec_path = path_template.format_map({"spec_slug": spec_slug})
+
+    tokens = {
+        "task_type": key,
+        "direction_summary": direction_summary,
+        "idea_id": idea_id,
+        "idea_name": str(ctx.get("idea_name") or "").strip(),
+        "spec_id": spec_id,
+        "spec_title": str(ctx.get("spec_title") or "").strip(),
+        "spec_slug": spec_slug,
+        "spec_path": spec_path,
+    }
+    for field, value in defaults.items():
+        if field in ctx and ctx.get(field):
+            continue
+        if field in card and card.get(field):
+            continue
+        formatted = _format_config_value(value, tokens)
+        card[field] = formatted
+        if field == "files_allowed":
+            ctx[field] = formatted
+
+    if card:
+        ctx["task_card"] = card
+        ctx.setdefault("task_card_autofill", {"source": "prompt_templates", "version": data.get("config_version", "")})
+    return ctx
 
 
 def get_role_wrapper_common() -> list[str]:
