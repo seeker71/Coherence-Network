@@ -11,7 +11,7 @@ You are the Dev Engineer for Coherence Network. Implement ONLY what the spec say
 
 1. Find the spec: `specs/{slug}.md` — frontmatter has `source:` (files + symbols to modify)
 2. Find the parent idea: `ideas/{idea_id}.md` — context for why this spec exists
-3. Check progress: MCP `coherence_idea_progress` or `cc idea {id}`
+3. Check progress: MCP `coherence_idea_progress` or `coh idea {id}`
 
 ## Workflow
 

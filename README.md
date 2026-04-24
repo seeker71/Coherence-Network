@@ -40,9 +40,9 @@ curl -s https://api.coherencycoin.com/api/health | python3 -m json.tool
 
 ```bash
 npm i -g coherence-cli
-cc status                    # network health, idea count, your identity
-cc ideas                     # browse the portfolio ranked by ROI
-cc idea <id>                 # deep-dive: scores, open questions, value gaps
+coh status                    # network health, idea count, your identity
+coh ideas                     # browse the portfolio ranked by ROI
+coh idea <id>                 # deep-dive: scores, open questions, value gaps
 ```
 
 **Option C — give your AI agent access:**
@@ -68,14 +68,14 @@ Every contribution — code, docs, review, design, community — is tracked and 
 
 ```bash
 # Link your identity (37 providers: GitHub, Discord, Ethereum, Solana, ORCID, ...)
-cc identity setup
-cc identity link github your-handle
+coh identity setup
+coh identity link github your-handle
 
 # Submit a new idea
-cc share
+coh share
 
 # Record any contribution
-cc contribute
+coh contribute
 
 # Or contribute via the API
 curl -s https://api.coherencycoin.com/api/contributions/record \
@@ -99,8 +99,8 @@ The workflow is: **Spec → Test → Implement → CI → Review → Merge**. Sp
 **Stake** on ideas you believe in. **Fork** ideas to take them new directions. **Trace** the full value chain from spark to payout.
 
 ```bash
-cc stake <idea-id> 10       # stake 10 CC on an idea
-cc fork <idea-id>           # fork and evolve it
+coh stake <idea-id> 10       # stake 10 CC on an idea
+coh fork <idea-id>           # fork and evolve it
 
 # View the full value chain
 curl -s https://api.coherencycoin.com/api/value-lineage/links?limit=5 | python3 -m json.tool
@@ -141,7 +141,7 @@ Every part of the network links to every other. Jump in wherever makes sense.
 |---------|-----------|------|
 | **Web** | Browse ideas, specs, contributors, and value chains visually | [coherencycoin.com](https://coherencycoin.com) |
 | **API** | 100+ endpoints with full OpenAPI docs — the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
-| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
+| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `coh help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
 | **MCP Server** | 84 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | Auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **skills.sh** | Portable agent skill directory (same `SKILL.md` as ClawHub) | [skills.sh](https://skills.sh/) — submit `skills/coherence-network/` |

@@ -31,7 +31,7 @@ export async function showTreasury() {
 export async function showDeposits(args) {
   const contributor = args[0];
   if (!contributor) {
-    console.log("Usage: cc treasury deposits <contributor-id>");
+    console.log("Usage: coh treasury deposits <contributor-id>");
     return;
   }
   const data = await get(`/api/treasury/deposits/${encodeURIComponent(contributor)}`);
@@ -57,7 +57,7 @@ export async function makeDeposit(args) {
   const amount = parseFloat(args[0]);
   const asset = args[1];
   if (isNaN(amount) || !asset) {
-    console.log("Usage: cc treasury deposit <amount> <asset>");
+    console.log("Usage: coh treasury deposit <amount> <asset>");
     return;
   }
   const result = await post("/api/treasury/deposit", { amount, asset });

@@ -1,5 +1,5 @@
 /**
- * Guide commands: cc guide
+ * Guide commands: coh guide
  * A guided experience for new contributors.
  */
 
@@ -44,7 +44,7 @@ async function welcome(nonInteractive) {
   console.log(`  4. Track the ${B}Flow${R} from idea to merged PR`);
   console.log();
   if (!nonInteractive) {
-    console.log(`  To start, run: ${G}cc guide register --handle <your-name>${R}`);
+    console.log(`  To start, run: ${G}coh guide register --handle <your-name>${R}`);
   } else {
     console.log(`  Non-interactive mode: Use the subcommands with required flags.`);
   }
@@ -60,7 +60,7 @@ async function registerStep(args, nonInteractive) {
   await onboardingRegister(args);
   
   console.log(`  Next, setup your repo credentials:`);
-  console.log(`  ${G}cc guide credentials --contributor-id <id> --repo <url> --token <token>${R}`);
+  console.log(`  ${G}coh guide credentials --contributor-id <id> --repo <url> --token <token>${R}`);
   console.log();
 }
 
@@ -71,7 +71,7 @@ async function credentialsStep(args, nonInteractive) {
   await credentialsAdd(args);
   
   console.log(`  Next, share your first idea:`);
-  console.log(`  ${G}cc guide ideate --name "My Feature" --desc "Description"${R}`);
+  console.log(`  ${G}coh guide ideate --name "My Feature" --desc "Description"${R}`);
   console.log();
 }
 
@@ -87,7 +87,7 @@ async function ideateStep(args, nonInteractive) {
         if (args[i] === "--desc" && args[i+1]) desc = args[++i];
     }
     if (!name) {
-        console.log("Usage: cc guide ideate --name <n> --desc <d>");
+        console.log("Usage: coh guide ideate --name <n> --desc <d>");
         return;
     }
     const res = await post("/api/ideas", { 
@@ -105,7 +105,7 @@ async function ideateStep(args, nonInteractive) {
   }
   
   console.log(`  Next, watch the flow of your idea into tasks and PRs:`);
-  console.log(`  ${G}cc guide flow --idea-id <id>${R}`);
+  console.log(`  ${G}coh guide flow --idea-id <id>${R}`);
   console.log();
 }
 
@@ -119,7 +119,7 @@ async function flowStep(args, nonInteractive) {
   }
   
   if (!ideaId) {
-    console.log("Usage: cc guide flow --idea-id <id>");
+    console.log("Usage: coh guide flow --idea-id <id>");
     return;
   }
   

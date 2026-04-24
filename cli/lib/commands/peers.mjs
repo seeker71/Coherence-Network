@@ -1,9 +1,9 @@
 /**
  * Peers command — discover other contributors
  * 
- * cc peers             — Interactive discovery (resonant + nearby)
- * cc peers --nearby    — Focus on geographic proximity
- * cc peers --resonance — Focus on interest matching
+ * coh peers             — Interactive discovery (resonant + nearby)
+ * coh peers --nearby    — Focus on geographic proximity
+ * coh peers --resonance — Focus on interest matching
  */
 
 import inquirer from "inquirer";
@@ -15,7 +15,7 @@ import { getContributorId } from "../config.mjs";
 export async function runPeersCommand(args = []) {
   const contributorId = getContributorId();
   if (!contributorId) {
-    console.log(chalk.yellow("⚠ You must set an identity first: cc identity link <provider> <handle>"));
+    console.log(chalk.yellow("⚠ You must set an identity first: coh identity link <provider> <handle>"));
     return;
   }
 

@@ -43,7 +43,7 @@ export async function listAssets(args) {
 export async function showAsset(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc asset <id>");
+    console.log("Usage: coh asset <id>");
     return;
   }
   const data = await get(`/api/assets/${encodeURIComponent(id)}`);
@@ -65,7 +65,7 @@ export async function createAsset(args) {
   const type = args[0];
   const desc = args.slice(1).join(" ");
   if (!type || !desc) {
-    console.log("Usage: cc asset create <type> <description>");
+    console.log("Usage: coh asset create <type> <description>");
     return;
   }
   const result = await post("/api/assets", {

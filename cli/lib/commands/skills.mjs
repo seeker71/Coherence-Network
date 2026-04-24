@@ -1,7 +1,7 @@
 /**
  * Skills command — procedural memory from the Hermes Learning Loop
  * 
- * cc skills             — Interactive skills browser
+ * coh skills             — Interactive skills browser
  */
 
 import inquirer from "inquirer";

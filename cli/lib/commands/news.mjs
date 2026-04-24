@@ -92,7 +92,7 @@ export async function addSource(args) {
   const url = args[0];
   const name = args.slice(1).join(" ");
   if (!url || !name) {
-    console.log("Usage: cc news source add <url> <name>");
+    console.log("Usage: coh news source add <url> <name>");
     return;
   }
   const result = await post("/api/news/sources", { url, name });

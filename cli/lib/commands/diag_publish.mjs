@@ -1,13 +1,13 @@
 /**
- * cc diag publish <event> [message] — emit a diagnostic event from this node
+ * coh diag publish <event> [message] — emit a diagnostic event from this node
  *
  * Used by agents in diagnostic mode to broadcast activity:
- *   cc diag publish heartbeat
- *   cc diag publish tool_call "running git status"
- *   cc diag publish reasoning "analyzing the API response schema"
- *   cc diag publish cc_cmd "cc ideas 5"
- *   cc diag publish error "failed to connect to API"
- *   cc diag publish checkpoint "saving progress"
+ *   coh diag publish heartbeat
+ *   coh diag publish tool_call "running git status"
+ *   coh diag publish reasoning "analyzing the API response schema"
+ *   coh diag publish cc_cmd "coh ideas 5"
+ *   coh diag publish error "failed to connect to API"
+ *   coh diag publish checkpoint "saving progress"
  */
 
 import { post, get } from "../api.mjs";
@@ -15,7 +15,7 @@ import { hostname } from "node:os";
 
 export async function publishDiag(args) {
   if (args.length < 1) {
-    console.log("Usage: cc diag publish <event> [message]");
+    console.log("Usage: coh diag publish <event> [message]");
     console.log("Events: heartbeat, tool_call, tool_result, reasoning, cc_cmd, cc_msg, error, checkpoint, started, finished");
     return;
   }
@@ -41,9 +41,9 @@ export async function publishDiag(args) {
 }
 
 /**
- * Start diagnostic mode — emit heartbeats and wrap cc commands with diagnostic events.
+ * Start diagnostic mode — emit heartbeats and wrap coh commands with diagnostic events.
  *
- * cc diag mode — starts emitting heartbeat every 10s + wraps future cc calls
+ * coh diag mode — starts emitting heartbeat every 10s + wraps future coh calls
  */
 export async function startDiagMode(args) {
   const nodes = await get("/api/federation/nodes");
@@ -54,7 +54,7 @@ export async function startDiagMode(args) {
   console.log(`  ${"─".repeat(50)}`);
   console.log(`  Node: ${myNode?.hostname || "?"} (${nodeId.slice(0, 12)})`);
   console.log(`  Publishing to: /api/federation/nodes/${nodeId}/diag`);
-  console.log(`  Subscribe with: cc diag live ${nodeId.slice(0, 12)}`);
+  console.log(`  Subscribe with: coh diag live ${nodeId.slice(0, 12)}`);
   console.log(`  Press Ctrl+C to stop`);
   console.log();
 

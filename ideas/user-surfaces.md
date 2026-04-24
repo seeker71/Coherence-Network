@@ -24,10 +24,10 @@ The platform has rich data (ideas, specs, tasks, contributions, coherence scores
 ## Key Capabilities
 
 - **Web pages**: Browsable ideas list with free-energy scores, spec viewer with status indicators, usage dashboard with provider metrics, diagnostics page with failure breakdowns, pipeline view with task status. All pages use real data from the API, not placeholder content.
-- **CLI (35+ commands)**: Full API surface coverage -- `cc ideas` (list/create/advance), `cc tasks` (list/detail/claim), `cc ops` (pipeline status, metrics), `cc nodes` (runner status), `cc diagnostics` (failure analysis), `cc stake` (invest CC), `cc fork` (branch ideas).
+- **CLI (35+ commands)**: Full API surface coverage -- `coh ideas` (list/create/advance), `coh tasks` (list/detail/claim), `coh ops` (pipeline status, metrics), `coh nodes` (runner status), `coh diagnostics` (failure analysis), `coh stake` (invest CC), `coh fork` (branch ideas).
 - **Homepage readability**: WCAG AA contrast compliance. The current warm amber palette is beautiful but the hero text is nearly invisible on the dark background. Fix contrast ratios to meet 4.5:1 minimum for normal text, 3:1 for large text, while preserving the visual identity.
 - **MCP skill registry**: Submit the MCP server to Smithery, Glama, PulseMCP, and other discovery platforms. AI agents searching for "idea management" or "coherence scoring" tools should find Coherence Network's MCP server.
-- **Node and task visibility**: See what runner nodes are active, what tasks each node is executing, drill into task details including execution time, provider, status, and error info. Both CLI (`cc tasks`, `cc task <id>`) and web (`/pipeline`) surfaces.
+- **Node and task visibility**: See what runner nodes are active, what tasks each node is executing, drill into task details including execution time, provider, status, and error info. Both CLI (`coh tasks`, `coh task <id>`) and web (`/pipeline`) surfaces.
 - **Metadata self-discovery**: The system describes its own capabilities. Every API endpoint links back to the idea and spec that defined it. New users and agents can explore the platform's capabilities without reading documentation.
 
 ## What Success Looks Like

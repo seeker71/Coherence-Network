@@ -59,8 +59,8 @@ chmod +x deploy/worker/install-macos.sh
 
 ### Check status
 ```bash
-cc status                    # network + node health
-cc nodes                     # federation nodes
+coh status                    # network + node health
+coh nodes                     # federation nodes
 tail -f api/logs/worker_service.log  # live logs (from worker worktree)
 ```
 
@@ -85,8 +85,8 @@ launchctl load ~/Library/LaunchAgents/com.coherence-network.worker.plist     # s
 
 ### Update to latest code
 ```bash
-# Option 1: Send update command via cc
-cc msg windows "Update to latest main"
+# Option 1: Send update command via coh
+coh msg windows "Update to latest main"
 
 # Option 2: Manual
 cd C:\source\Coherence-Network\.claude\worktrees\worker
@@ -98,9 +98,9 @@ The runner has self-update built in (`--self-update` flag, on by default unless 
 
 ### Send commands to the worker
 ```bash
-cc msg windows "Update to latest main"     # trigger self-update
-cc msg mac "Update to latest main"         # same for mac node
-cc msg windows "restart"                   # restart worker
+coh msg windows "Update to latest main"     # trigger self-update
+coh msg mac "Update to latest main"         # same for mac node
+coh msg windows "restart"                   # restart worker
 ```
 
 ## What survives restarts

@@ -2,11 +2,11 @@
  * Ontology command — accessible ontology for non-technical contributors.
  *
  * Usage:
- *   cc ontology contribute --text "Water seeks balance" --domains ecology,physics
- *   cc ontology list [--domain ecology] [--status placed]
- *   cc ontology garden
- *   cc ontology stats
- *   cc ontology get <id>
+ *   coh ontology contribute --text "Water seeks balance" --domains ecology,physics
+ *   coh ontology list [--domain ecology] [--status placed]
+ *   coh ontology garden
+ *   coh ontology stats
+ *   coh ontology get <id>
  */
 
 import { get, post, patch, del } from "../api.mjs";
@@ -240,13 +240,13 @@ export async function ontology(args = []) {
       return stats(flags);
     case "get":
       if (!flags._positional) {
-        console.error("Usage: cc ontology get <id>");
+        console.error("Usage: coh ontology get <id>");
         process.exit(1);
       }
       return getOne(flags._positional, flags);
     default:
       console.log();
-      console.log(`${BOLD}cc ontology${RESET} — accessible ontology for everyone`);
+      console.log(`${BOLD}coh ontology${RESET} — accessible ontology for everyone`);
       console.log();
       console.log("  contribute --text <description> [--domains d1,d2] [--title title]");
       console.log("  list       [--domain d] [--status placed|pending|orphan]");

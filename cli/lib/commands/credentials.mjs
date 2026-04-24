@@ -1,5 +1,5 @@
 /**
- * Credentials commands: cc credentials add, cc credentials list, cc credentials remove
+ * Credentials commands: coh credentials add, coh credentials list, coh credentials remove
  */
 
 import { get, post, del } from "../api.mjs";
@@ -21,8 +21,8 @@ export async function credentialsAdd(args) {
   }
 
   if (!contributorId || !repoUrl || !raw) {
-    console.log("Usage: cc credentials add --contributor-id <id> --repo <url> --token <token> [--type <type>] [--scopes s1,s2]");
-    console.log("Example: cc credentials add -c cont_123 -r github.com/user/repo -k ghp_XYZ123");
+    console.log("Usage: coh credentials add --contributor-id <id> --repo <url> --token <token> [--type <type>] [--scopes s1,s2]");
+    console.log("Example: coh credentials add -c cont_123 -r github.com/user/repo -k ghp_XYZ123");
     return;
   }
 
@@ -95,7 +95,7 @@ export async function credentialsRemove(args) {
   if (args[0] && !args[0].startsWith("-")) id = args[0];
 
   if (!id) {
-    console.log("Usage: cc credentials remove <id>");
+    console.log("Usage: coh credentials remove <id>");
     return;
   }
 

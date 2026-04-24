@@ -1,5 +1,5 @@
 /**
- * Portfolio command: cc portfolio
+ * Portfolio command: coh portfolio
  *
  * Single-query overview of all ideas by category showing:
  *   - idea count, gap (CC), value capture %

@@ -1,8 +1,8 @@
 /**
  * Deploy command: deploy latest main to VPS (coherencycoin.com)
  *
- * cc deploy         — deploy now (directly if SSH key available, otherwise via node message)
- * cc deploy status  — check what SHA is deployed vs origin/main
+ * coh deploy         — deploy now (directly if SSH key available, otherwise via node message)
+ * coh deploy status  — check what SHA is deployed vs origin/main
  */
 
 import { get, post } from "../api.mjs";
@@ -115,7 +115,7 @@ async function deployViaMessage() {
 
   if (result?.id) {
     console.log(`  \x1b[32m✓\x1b[0m Deploy command sent to ${target.hostname}`);
-    console.log("  Node will deploy on next poll (~2 min). Check: cc deploy status");
+    console.log("  Node will deploy on next poll (~2 min). Check: coh deploy status");
   } else {
     console.log("  \x1b[31m✗\x1b[0m Failed to send deploy command");
   }

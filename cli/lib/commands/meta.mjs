@@ -1,9 +1,9 @@
 /**
  * meta — system self-discovery commands
  *
- * cc meta endpoints   — list all API endpoints as concept nodes
- * cc meta modules     — list all code modules with spec/idea links
- * cc meta             — summary overview
+ * coh meta endpoints   — list all API endpoints as concept nodes
+ * coh meta modules     — list all code modules with spec/idea links
+ * coh meta             — summary overview
  */
 
 import { get } from "../api.mjs";
@@ -39,7 +39,7 @@ export async function showMetaSummary() {
   console.log(`  Traced:       ${B}${data.traced_count}${R} endpoints linked to spec/idea`);
   console.log(`  Coverage:     ${coverageColor}${pct}%${R} of endpoints have traceability`);
   console.log();
-  console.log(`  ${D}Use 'cc meta endpoints' or 'cc meta modules' for details${R}`);
+  console.log(`  ${D}Use 'coh meta endpoints' or 'coh meta modules' for details${R}`);
   console.log();
 }
 

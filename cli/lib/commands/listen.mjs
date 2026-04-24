@@ -1,12 +1,12 @@
 /**
- * cc listen — real-time event stream from the network
+ * coh listen — real-time event stream from the network
  *
  * Connects to the SSE endpoint and prints events as they arrive.
  * Messages, deploys, task completions, status changes — all pushed in real-time.
  *
  * Usage:
- *   cc listen              # Listen for events for this node
- *   cc listen --all        # Listen for all events (broadcast)
+ *   coh listen              # Listen for events for this node
+ *   coh listen --all        # Listen for all events (broadcast)
  */
 
 import { hostname } from "node:os";

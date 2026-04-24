@@ -6,9 +6,9 @@
  * the prior canonical is preserved as superseded.
  *
  * Commands:
- *   cc translate submit <entity_type> <entity_id> --lang <lang> --file <path> [--title <t>] [--description <d>] [--from-lang <source>] [--by <author_id>] [--notes <notes>]
- *   cc translate history <entity_type> <entity_id> [--lang <lang>]
- *   cc translate list <entity_type> <entity_id>
+ *   coh translate submit <entity_type> <entity_id> --lang <lang> --file <path> [--title <t>] [--description <d>] [--from-lang <source>] [--by <author_id>] [--notes <notes>]
+ *   coh translate history <entity_type> <entity_id> [--lang <lang>]
+ *   coh translate list <entity_type> <entity_id>
  */
 
 import { readFileSync } from "node:fs";
@@ -38,7 +38,7 @@ function parseKvFlags(args, flags) {
   return { opts, positional };
 }
 
-/** cc translate submit <entity_type> <entity_id> --lang de --file path [--title ...] [--description ...] */
+/** coh translate submit <entity_type> <entity_id> --lang de --file path [--title ...] [--description ...] */
 async function submitTranslation(args) {
   const { opts, positional } = parseKvFlags(args, {
     "--lang": "lang",
@@ -54,7 +54,7 @@ async function submitTranslation(args) {
   });
   const [entity_type, entity_id] = positional;
   if (!entity_type || !entity_id) {
-    console.log(`${DIM}Usage:${RESET} cc translate submit <entity_type> <entity_id> --lang <lang> --file <path> [--title <t>] [--description <d>] [--from-lang <source>] [--by <author_id>]`);
+    console.log(`${DIM}Usage:${RESET} coh translate submit <entity_type> <entity_id> --lang <lang> --file <path> [--title <t>] [--description <d>] [--from-lang <source>] [--by <author_id>]`);
     return;
   }
   if (!opts.lang) {
@@ -100,7 +100,7 @@ async function submitTranslation(args) {
   console.log(`  ${DIM}status:${RESET}     ${GREEN}${resp.status}${RESET}`);
 }
 
-/** cc translate history <entity_type> <entity_id> [--lang <lang>] */
+/** coh translate history <entity_type> <entity_id> [--lang <lang>] */
 async function showHistory(args) {
   const { opts, positional } = parseKvFlags(args, {
     "--lang": "lang",
@@ -108,7 +108,7 @@ async function showHistory(args) {
   });
   const [entity_type, entity_id] = positional;
   if (!entity_type || !entity_id) {
-    console.log(`${DIM}Usage:${RESET} cc translate history <entity_type> <entity_id> [--lang <lang>]`);
+    console.log(`${DIM}Usage:${RESET} coh translate history <entity_type> <entity_id> [--lang <lang>]`);
     return;
   }
   const qs = opts.lang ? `?lang=${encodeURIComponent(opts.lang)}` : "";
@@ -134,7 +134,7 @@ async function showHistory(args) {
   }
 }
 
-/** cc translate list <entity_type> <entity_id> — alias for history without lang filter */
+/** coh translate list <entity_type> <entity_id> — alias for history without lang filter */
 async function listTranslations(args) {
   return showHistory(args);
 }
@@ -146,12 +146,12 @@ export async function handleTranslate(args) {
     case "history": return showHistory(args.slice(1));
     case "list":    return listTranslations(args.slice(1));
     default:
-      console.log(`${DIM}Usage:${RESET} cc translate <submit|history|list> …`);
+      console.log(`${DIM}Usage:${RESET} coh translate <submit|history|list> …`);
       console.log(``);
-      console.log(`  ${BOLD}cc translate submit${RESET} <entity_type> <entity_id> --lang <lang> --file <path> [--title <t>]`);
+      console.log(`  ${BOLD}coh translate submit${RESET} <entity_type> <entity_id> --lang <lang> --file <path> [--title <t>]`);
       console.log(`    Submit a translation. Supersedes prior canonical for (entity, lang); history preserved.`);
       console.log(``);
-      console.log(`  ${BOLD}cc translate history${RESET} <entity_type> <entity_id> [--lang <lang>]`);
+      console.log(`  ${BOLD}coh translate history${RESET} <entity_type> <entity_id> [--lang <lang>]`);
       console.log(`    List all views (canonical + superseded) for an entity, optionally filtered by language.`);
   }
 }
