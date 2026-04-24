@@ -33,7 +33,6 @@ import argparse
 import json
 import os
 import sys
-from contextlib import contextmanager
 from typing import Any, Dict, Optional
 
 
@@ -143,20 +142,20 @@ class ProofRunner:
         self._call(
             "POST",
             f"/api/ideas/{self.idea_id}/stage",
-            {"stage": "spec"},
+            {"stage": "specced"},
         )
         self.pass_("stage advanced")
 
     def record_contribution(self) -> None:
         result = self._call(
             "POST",
-            "/api/contributions",
+            "/api/contributions/record",
             {
                 "idea_id": self.idea_id,
                 "contributor_id": "external-proof-bot",
                 "type": "code",
-                "description": "Proof contribution",
-                "cc_amount": 1,
+                "amount_cc": 1,
+                "metadata": {"description": "Proof contribution"},
             },
         )
         if not self.dry_run and "id" not in result:
@@ -182,12 +181,10 @@ class ProofRunner:
     def archive_idea(self) -> None:
         if self.idea_id is None:
             return
-        # Close/archive the test idea. The lifecycle endpoint varies
-        # across deployments; use the public stage setter for cleanup.
         self._call(
-            "POST",
-            f"/api/ideas/{self.idea_id}/stage",
-            {"stage": "archived"},
+            "PATCH",
+            f"/api/ideas/{self.idea_id}",
+            {"lifecycle": "archived"},
         )
         self.pass_("idea archived")
 
