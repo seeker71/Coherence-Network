@@ -330,6 +330,10 @@ class InMemoryGraphStore:
         coherence_score: float,
         metadata: dict,
     ) -> Contribution:
+        if contributor_id not in self._contributors:
+            raise ValueError(f"contributor {contributor_id} not found in store")
+        if asset_id not in self._assets:
+            raise ValueError(f"asset {asset_id} not found in store")
         contrib = Contribution(
             contributor_id=contributor_id,
             asset_id=asset_id,
