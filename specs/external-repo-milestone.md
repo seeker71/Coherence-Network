@@ -75,7 +75,7 @@ Keep the external proof workflow aligned with the deployed public API contract s
 
 - [ ] **R1**: Script at `scripts/external_proof_demo.py` creates a test idea via `POST /api/ideas` using the current public `IdeaCreate` fields (`name`, `description`, `potential_value`, `estimated_cost`, `confidence`, `workspace_id`, `tags`), verifies the response contains `id` and `stage`, then advances the stage via `POST /api/ideas/{id}/stage`.
 - [ ] **R2**: Script sends `COHERENCE_API_KEY` as `X-API-Key` for authenticated public routes, records a contribution for the test idea via `POST /api/contributions/record`, and verifies the ledger record response contains `id`.
-- [ ] **R3**: Script reads the coherence score via `GET /api/coherence/{id}` (or equivalent endpoint) and asserts the score is a float in [0.0, 1.0].
+- [ ] **R3**: Script reads the global coherence score via `GET /api/coherence/score` and asserts the score is a float in [0.0, 1.0].
 - [ ] **R4**: Script closes/archives the test idea via the lifecycle endpoint so it does not pollute the live portfolio.
 - [ ] **R5**: `--dry-run` flag prints each intended API call (method + URL + body summary) without executing, for safe local preview.
 - [ ] **R6**: `docs/EXTERNAL_ENABLEMENT_TRACKING.md` is updated after each passing run (manually or via script flag `--update-tracking`) with: date, API base URL, list of endpoints exercised, pass/fail status.
@@ -135,7 +135,7 @@ Content-Type: application/json
 ```
 **Response 200** — must contain `id`.
 
-### `GET /api/coherence/{id}`
+### `GET /api/coherence/score`
 **Response 200** — must contain `score` (float, 0.0–1.0).
 
 ## Data Model
@@ -202,7 +202,7 @@ Push a commit to `main`. **Expected**: GitHub Actions workflow `external-proof` 
 |------|-----------|------------|
 | Live API is temporarily unavailable during CI run | Low | CI workflow retries once on network error; failure is surfaced as a CI alert, not silently skipped |
 | Test ideas accumulate if script crashes before cleanup | Medium | Script uses a try/finally block to archive the test idea even on error |
-| `GET /api/coherence/{id}` endpoint path differs from spec assumption | Medium | Verify exact path against `api/app/routers/coherence.py` before implementation; update spec if needed |
+| `GET /api/coherence/score` endpoint path differs from spec assumption | Medium | Verify exact path against `api/app/routers/coherence.py` before implementation; update spec if needed |
 | API key secret expires in CI | Low | Document key rotation procedure in `docs/EXTERNAL_ENABLEMENT_TRACKING.md` |
 | Script added tokens inflate context budget | Low | Script is ~150 lines; well within context budget tooling thresholds |
 
