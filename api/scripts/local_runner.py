@@ -1353,6 +1353,99 @@ def _complete_task_with_status(
     return False
 
 
+def _report_task_needs_decision(
+    task_id: str,
+    message: str,
+    *,
+    decision_prompt: str,
+    context_patch: dict | None = None,
+    error_category: str = "validation",
+) -> bool:
+    body: dict[str, Any] = {
+        "status": "needs_decision",
+        "output": message[:50000],
+        "decision_prompt": decision_prompt[:2000],
+        "error_summary": message[:500],
+        "error_category": error_category,
+    }
+    if context_patch:
+        body["context"] = context_patch
+    result = api("PATCH", f"/api/agent/tasks/{task_id}", body)
+    if result:
+        log.info("REPORTED task=%s status=needs_decision", task_id)
+        return True
+    log.error("REPORT FAILED task=%s status=needs_decision", task_id)
+    return False
+
+
+def _block_impl_without_active_spec(task_id: str, task: dict[str, Any]) -> bool:
+    """Return True when an impl task is blocked before execution by spec state."""
+    import glob as _glob_mod
+    import re as _re_gate
+
+    _ctx = task.get("context") or {}
+    _gate_idea_id = _ctx.get("idea_id", "")
+    _gate_spec_path = _ctx.get("spec_path", "none") or "none"
+    if not _gate_idea_id or _gate_idea_id in ("unknown",):
+        return False
+
+    _repo_s = str(_get_repo_dir())
+    _resolved_spec: "Path | None" = None
+    if _gate_spec_path != "none":
+        _cand = Path(_gate_spec_path) if Path(_gate_spec_path).is_absolute() else Path(_repo_s) / _gate_spec_path
+        if _cand.exists():
+            _resolved_spec = _cand
+    if _resolved_spec is None:
+        _found = _glob_mod.glob(f"{_repo_s}/specs/*{_gate_idea_id}*.md")
+        _resolved_spec = Path(_found[0]) if _found else None
+
+    if _resolved_spec is None:
+        _msg = (
+            f"NO_SPEC_GATE: impl for '{_gate_idea_id}' has no spec "
+            f"(spec_path={_gate_spec_path!r}). Seed a spec task first."
+        )
+        log.warning(_msg)
+        _report_task_needs_decision(
+            task_id,
+            _msg,
+            decision_prompt=(
+                "NO_SPEC_GATE: This impl task has no active spec. "
+                "Create/activate a spec for this idea, then requeue implementation."
+            ),
+            context_patch={
+                "failure_reason_bucket": "spec_gate",
+                "failure_signature": "impl_without_active_spec",
+            },
+        )
+        return True
+
+    try:
+        _spec_text = _resolved_spec.read_text(encoding="utf-8", errors="replace")
+        _sm = _re_gate.search(r"^status:\s*(\S+)", _spec_text, _re_gate.MULTILINE)
+        if _sm and _sm.group(1).lower() == "done":
+            _msg = (
+                f"DONE_SPEC_GATE: impl for '{_gate_idea_id}' targets "
+                f"'{_resolved_spec.name}' (status=done). Nothing to implement."
+            )
+            log.warning(_msg)
+            _report_task_needs_decision(
+                task_id,
+                _msg,
+                decision_prompt=(
+                    "DONE_SPEC_GATE: This impl task targets a spec already marked done. "
+                    "Verify the existing work, reopen the spec, or choose a different active spec."
+                ),
+                context_patch={
+                    "failure_reason_bucket": "done_spec_gate",
+                    "failure_signature": "impl_for_done_spec",
+                },
+            )
+            return True
+    except Exception as _ge:
+        log.debug("SPEC_GATE read error (continuing): %s", _ge)
+    return False
+
+
 _contribution_retry_queue: list[dict[str, Any]] = []
 _contribution_retry_lock = threading.Lock()
 _CONTRIBUTION_RETRY_CAP = 100
@@ -3677,46 +3770,10 @@ def run_one(task: dict, dry_run: bool = False, provider_override: str | None = N
         )
         return True
 
-    # Fast-fail gate: impl tasks without a spec, or against a 'done' spec, produce hollow output.
+    # Guidance gate: impl tasks without an active spec produce hollow output.
     # Must run here (not in build_prompt) because build_prompt() must return str, not bool.
-    if task_type == "impl":
-        import glob as _glob_mod, re as _re_gate
-        _ctx = task.get("context") or {}
-        _gate_idea_id = _ctx.get("idea_id", "")
-        _gate_spec_path = _ctx.get("spec_path", "none") or "none"
-        if _gate_idea_id and _gate_idea_id not in ("unknown",):
-            _repo_s = str(_get_repo_dir())
-            _resolved_spec: "Path | None" = None
-            if _gate_spec_path != "none":
-                _cand = Path(_gate_spec_path) if Path(_gate_spec_path).is_absolute() else Path(_repo_s) / _gate_spec_path
-                if _cand.exists():
-                    _resolved_spec = _cand
-            if _resolved_spec is None:
-                _found = _glob_mod.glob(f"{_repo_s}/specs/*{_gate_idea_id}*.md")
-                _resolved_spec = Path(_found[0]) if _found else None
-
-            if _resolved_spec is None:
-                _msg = (
-                    f"NO_SPEC_GATE: impl for '{_gate_idea_id}' has no spec "
-                    f"(spec_path={_gate_spec_path!r}). Seed a spec task first."
-                )
-                log.warning(_msg)
-                complete_task(task_id, _msg, False, {"failure_reason_bucket": "no_spec"})
-                return False
-
-            try:
-                _spec_text = _resolved_spec.read_text(encoding="utf-8", errors="replace")
-                _sm = _re_gate.search(r"^status:\s*(\S+)", _spec_text, _re_gate.MULTILINE)
-                if _sm and _sm.group(1).lower() == "done":
-                    _msg = (
-                        f"DONE_SPEC_GATE: impl for '{_gate_idea_id}' targets "
-                        f"'{_resolved_spec.name}' (status=done). Nothing to implement."
-                    )
-                    log.warning(_msg)
-                    complete_task(task_id, _msg, False, {"failure_reason_bucket": "spec_already_done"})
-                    return False
-            except Exception as _ge:
-                log.debug("SPEC_GATE read error (continuing): %s", _ge)
+    if task_type == "impl" and _block_impl_without_active_spec(task_id, task):
+        return False
 
     # Execute
     prompt = build_prompt(task)
