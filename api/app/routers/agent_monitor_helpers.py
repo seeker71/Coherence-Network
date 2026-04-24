@@ -155,7 +155,30 @@ def dormant_pending_tasks(pending: list[Any]) -> list[dict[str, Any]]:
     return dormant
 
 
-def low_success_rate_context() -> tuple[str, str]:
+def _diagnostic_count_fragments(
+    diagnostics: dict[str, Any],
+    key: str,
+    label_key: str,
+    *,
+    limit: int = 3,
+) -> list[str]:
+    rows = diagnostics.get(key) if isinstance(diagnostics.get(key), list) else []
+    fragments: list[str] = []
+    for row in rows[:limit]:
+        if not isinstance(row, dict):
+            continue
+        label = str(row.get(label_key) or "").strip()
+        count = row.get("count")
+        try:
+            normalized_count = int(count)
+        except (TypeError, ValueError):
+            normalized_count = 0
+        if label and normalized_count > 0:
+            fragments.append(f"{label} x{normalized_count}")
+    return fragments
+
+
+def low_success_rate_context(status: dict[str, Any] | None = None) -> tuple[str, str]:
     """Summarize current task-metric failure shape for monitor issue text."""
     try:
         from app.services.metrics_service import get_aggregates
@@ -204,6 +227,15 @@ def low_success_rate_context() -> tuple[str, str]:
         )
     else:
         suggested = "Run targeted prompt/model diagnostics and capture remediation in the meta pipeline."
+
+    diagnostics = status.get("diagnostics") if isinstance(status, dict) and isinstance(status.get("diagnostics"), dict) else {}
+    if diagnostics:
+        reason_fragments = _diagnostic_count_fragments(diagnostics, "recent_failed_reasons", "reason")
+        signature_fragments = _diagnostic_count_fragments(diagnostics, "recent_failed_signatures", "signature", limit=2)
+        if reason_fragments:
+            message = f"{message} Recent failure buckets: {', '.join(reason_fragments)}."
+        if signature_fragments:
+            message = f"{message} Top signatures: {', '.join(signature_fragments)}."
     return message, suggested
 
 
@@ -286,7 +318,7 @@ def derive_monitor_issues_from_pipeline_status(status: dict[str, Any], *, now: d
             )
         )
     if bool(att.get("low_success_rate")):
-        message, suggested_action = low_success_rate_context()
+        message, suggested_action = low_success_rate_context(status)
         issues.append(
             derived_issue(
                 "low_success_rate",
@@ -469,6 +501,7 @@ def build_fallback_status_report(
         "status": "needs_attention" if execution_needs_attention else "ok",
         "running": running,
         "pending": pending,
+        "diagnostics": status.get("diagnostics") if isinstance(status.get("diagnostics"), dict) else {},
         "actionable_pending_count": len(active_pending),
         "dormant_pending_count": dormant_pending_count,
         "recent_completed": recent_completed,
