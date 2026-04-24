@@ -141,7 +141,7 @@ jobs:
       - name: Run API tests
         if: steps.changed_surfaces.outputs.api == 'true'
         run: |
-          cd api && pytest -q
+          cd api && COHERENCE_TEST_SUITE=full pytest -q
 
       - name: Set up Node.js
         if: steps.changed_surfaces.outputs.web == 'true'
