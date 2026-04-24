@@ -155,6 +155,58 @@ def dormant_pending_tasks(pending: list[Any]) -> list[dict[str, Any]]:
     return dormant
 
 
+def low_success_rate_context() -> tuple[str, str]:
+    """Summarize current task-metric failure shape for monitor issue text."""
+    try:
+        from app.services.metrics_service import get_aggregates
+
+        metrics = get_aggregates()
+    except Exception:
+        logger.warning("Failed to load metrics for low_success_rate context", exc_info=True)
+        return (
+            "7d success rate is below target (<80%).",
+            "Run targeted prompt/model diagnostics and capture remediation in the meta pipeline.",
+        )
+
+    success = metrics.get("success_rate") if isinstance(metrics.get("success_rate"), dict) else {}
+    completed = int(success.get("completed") or 0)
+    failed = int(success.get("failed") or 0)
+    total = int(success.get("total") or 0)
+    rate = float(success.get("rate") or 0.0)
+    message = (
+        f"7d success rate is {int(round(rate * 100))}% "
+        f"({completed} completed / {failed} failed / {total} resolved), below target (<80%)."
+    )
+
+    by_task_type = metrics.get("by_task_type") if isinstance(metrics.get("by_task_type"), dict) else {}
+    weak_types: list[tuple[str, int, int, float]] = []
+    for task_type, row in by_task_type.items():
+        if not isinstance(row, dict):
+            continue
+        type_completed = int(row.get("completed") or 0)
+        type_failed = int(row.get("failed") or 0)
+        type_total = type_completed + type_failed
+        if type_total <= 0 or type_failed <= 0:
+            continue
+        type_rate = float(row.get("success_rate") or 0.0)
+        if type_rate < 0.8:
+            weak_types.append((str(task_type), type_completed, type_failed, type_rate))
+    weak_types.sort(key=lambda item: (-item[2], item[3], item[0]))
+    if weak_types:
+        fragments = [
+            f"{task_type} {int(round(type_rate * 100))}% ({type_completed}/{type_failed})"
+            for task_type, type_completed, type_failed, type_rate in weak_types[:3]
+        ]
+        message = f"{message} Weak task types: {', '.join(fragments)}."
+        suggested = (
+            f"Digest recent {weak_types[0][0]} failures first: inspect failure signatures, "
+            "then tighten routing/task-card gates or requeue only scoped work with evidence."
+        )
+    else:
+        suggested = "Run targeted prompt/model diagnostics and capture remediation in the meta pipeline."
+    return message, suggested
+
+
 def derive_monitor_issues_from_pipeline_status(status: dict[str, Any], *, now: datetime) -> list[dict[str, Any]]:
     running = status.get("running") if isinstance(status.get("running"), list) else []
     pending = status.get("pending") if isinstance(status.get("pending"), list) else []
@@ -234,12 +286,13 @@ def derive_monitor_issues_from_pipeline_status(status: dict[str, Any], *, now: d
             )
         )
     if bool(att.get("low_success_rate")):
+        message, suggested_action = low_success_rate_context()
         issues.append(
             derived_issue(
                 "low_success_rate",
                 "medium",
-                "7d success rate is below target (<80%).",
-                "Run targeted prompt/model diagnostics and capture remediation in the meta pipeline.",
+                message,
+                suggested_action,
                 now=now,
             )
         )
