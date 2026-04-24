@@ -654,6 +654,7 @@ def _extract_creations(
     found: list[Creation] = []
     seen_keys: set[tuple[str, str]] = set()
 
+    from html import unescape as _html_unescape
     for item in _iter_jsonld_items(parsed.json_ld_chunks):
         if not isinstance(item, dict):
             continue
@@ -663,7 +664,10 @@ def _extract_creations(
         kind = _JSON_LD_CREATION_TYPES.get(str(raw_type).lower())
         if not kind:
             continue
-        name = (item.get("name") or item.get("headline") or "").strip()
+        # WordPress sites (and others) emit titles with HTML entities
+        # ("Hatha Flow &#038; Sound"). Decode once at the boundary so they
+        # never reach the graph as literal "&#038;".
+        name = _html_unescape((item.get("name") or item.get("headline") or "")).strip()
         if not name:
             continue
         url = item.get("url") or item.get("@id")
@@ -688,8 +692,9 @@ def _extract_creations(
             return found
 
     if not found:
+        from html import unescape as _html_unescape
         og_type = parsed.og.get("og:type", "").lower()
-        og_title = parsed.og.get("og:title", "").strip()
+        og_title = _html_unescape(parsed.og.get("og:title", "")).strip()
         og_kind: str | None = None
         if og_title:
             if "music.album" in og_type:
