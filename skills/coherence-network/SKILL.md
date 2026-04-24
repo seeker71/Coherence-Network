@@ -1,3 +1,4 @@
+<!-- AUTO-GENERATED from SKILL.template.md. Edit the template, not this file. -->
 ---
 name: coherence-network
 description: "Coherence Network: an open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust. Works out of the box with the public API at api.coherencycoin.com (no local node required). Install the CLI with `npm i -g coherence-cli` for the fastest path. Use this skill to: browse and rank ideas by ROI and free-energy score, search feature specs with implementation summaries, trace full value lineage (idea→spec→implementation→usage→payout), inspect contributor ledgers and coherence-weighted payouts, fork and stake on ideas, explore cross-instance federation and governance voting, surface friction signals and runtime telemetry, track idea progress and showcase validated work, or pick the next highest-ROI task automatically. Triggers on: coherence network, ideas, specs, lineage, contributions, assets, traceability, trust, freedom, uniqueness, collaboration, portfolio, ROI, coherence score, fair attribution, value chain, payout, governance, federation, friction, staking, forking, resonance, showcase, cc cli, coherence cli."
@@ -98,7 +99,13 @@ Both approaches hit the same API. Use whichever fits your context.
 
 ## How it works
 
-<!-- include: docs/shared/lifecycle-diagram.md -->
+```
+Idea → Research → Spec → Implementation → Review → Usage → Payout
+       ↑                                                    ↓
+       └────────── coherence scores at every stage ─────────┘
+```
+
+Every stage is scored for **coherence** (0.0–1.0) — measuring test coverage, documentation quality, and implementation simplicity. Contributors are paid proportionally to the energy they invested and the coherence they achieved.
 
 ## Ideas — the portfolio engine
 
@@ -318,7 +325,7 @@ Every part of the network links to every other. Jump in wherever makes sense.
 | **Web** | Browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
 | **API** | 100+ endpoints, full OpenAPI docs, the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
 | **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | 52 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **MCP Server** | 84 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | This skill — auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |
 
