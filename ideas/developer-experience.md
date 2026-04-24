@@ -6,6 +6,7 @@ work_type: enhancement
 pillar: surfaces
 specs:
   - [developer-quick-start](../specs/developer-quick-start.md)
+  - [external-repo-milestone](../specs/external-repo-milestone.md)
 ---
 
 # Developer Experience
