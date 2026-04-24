@@ -277,15 +277,14 @@ Manual: visit `/de/vision/lc-water-as-living-body`, confirm German chrome and tr
 - Web middleware — `web/middleware.ts`
 - Integration tests — `api/tests/test_flow_multilingual.py`, `test_on_demand_attunement.py`
 
-**Not confirmed / may still be pending** (would require deeper inspection to close out as done):
-- Full URL-based `/{locale}/...` routing with cookie-backed language picker in the header
-- `cc stories --lang` — `cc concept --lang` already exists; the `stories` alias is minor
-- Full-fidelity translation round-trip through the render pipeline
-
-**Landed in this session** (progress on the UX gate):
+**Confirmed during this session** (each a discrete commit in the trail):
 - `POST /api/translations` endpoint + `GET` history — human/machine supersede semantics exposed
-- `cc translate submit <entity_type> <entity_id> --lang <l> --file <path>` and `cc translate history` CLI commands
+- `cc translate submit <entity_type> <entity_id> --lang <l> --file <path>` and `cc translate history` CLI
 - Anchor glossary seeded for `es` and `id` (matching the existing `de` pattern); 15 anchor terms per language
-- `/settings/translations` coverage dashboard — renders per-locale original/human/machine/stale tallies from `GET /api/locales`; linked from `/settings`
+- `/settings/translations` coverage dashboard — per-locale `original/human/machine/stale` tallies from `GET /api/locales`, linked from `/settings`
+- Language picker in site header — `LocaleSwitcherCompact` wired at `web/components/site_header.tsx` (desktop and mobile menu); cookie-backed, ?lang= override, Accept-Language auto-detection all in `web/middleware.ts`
 
-Status stays `draft` pending URL-locale-routing verification end-to-end; UX plumbing for translation submission and coverage is now in place.
+**Deferred to its own restructure PR**:
+- Full URL-based `/{locale}/...` routing. Currently language is cookie-driven on the same URLs (`/vision/xxx`); the spec asks for a prefix (`/de/vision/xxx`). That requires moving every route under `app/[locale]/` — a whole-tree restructure that deserves its own PR, its own review, and its own migration plan for existing bookmarks. The cookie path serves the intent (users switch languages, the choice persists), and the structural upgrade can land without schema change.
+
+Status stays `draft` until the URL-prefix routing lands; the UX plumbing is otherwise complete.
