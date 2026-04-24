@@ -77,6 +77,20 @@ def test_seed_attempt_budget_stops_recursive_capped_scan(monkeypatch) -> None:
     assert "capped-idea" in local_runner._SEEDER_SKIP_CACHE
 
 
+def test_seed_skips_when_another_worker_holds_lock(monkeypatch) -> None:
+    calls: list[tuple[str, str, dict | None]] = []
+    monkeypatch.setattr(local_runner, "api", lambda method, path, body=None: calls.append((method, path, body)) or {})
+
+    acquired = local_runner._SEEDER_LOCK.acquire(blocking=False)
+    assert acquired is True
+    try:
+        assert local_runner._seed_task_from_open_idea() is False
+    finally:
+        local_runner._SEEDER_LOCK.release()
+
+    assert calls == []
+
+
 def test_impl_without_spec_becomes_needs_decision(monkeypatch, tmp_path: Path) -> None:
     calls: list[tuple[str, str, dict]] = []
     monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
