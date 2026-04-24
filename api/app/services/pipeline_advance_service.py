@@ -781,7 +781,27 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
     failed_provider = task.get("model", "") or context.get("provider", "")
     partial_work = _extract_partial_work(task)
 
+    # DG-002 cap: API rejects directions >3000 chars (OVERSIZED_DIRECTION gate
+    # in agent_service_crud.py). Budget the retry direction so the sum of
+    # original + partial_work + failure_memory stays under 2900, leaving
+    # margin for safety. Keep failure_memory intact (it's small, ≤800, and
+    # highest signal), then truncate partial_work, then original direction.
+    _MAX_RETRY_DIRECTION = 2900
+    failure_memory = _build_failure_memory(idea_id, task_type)
+
     if partial_work:
+        # Reserve space: original direction + framing overhead + failure_memory
+        framing_overhead = 200  # "--- PARTIAL WORK ---" blocks + newlines
+        failure_budget = len(failure_memory) + 2 if failure_memory else 0
+        original_budget = min(len(direction), 1400)
+        partial_budget = max(
+            200,
+            _MAX_RETRY_DIRECTION - original_budget - framing_overhead - failure_budget,
+        )
+        if len(direction) > original_budget:
+            direction = direction[:original_budget] + "\n…[direction truncated]"
+        if len(partial_work) > partial_budget:
+            partial_work = partial_work[:partial_budget] + "\n…[partial work truncated]"
         direction = (
             f"{direction}\n\n"
             f"--- PARTIAL WORK FROM PREVIOUS ATTEMPT ---\n"
@@ -793,9 +813,16 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
 
     # AutoAgent-inspired: inject failure pattern memory so retries learn
     # from past mistakes instead of blindly repeating them.
-    failure_memory = _build_failure_memory(idea_id, task_type)
     if failure_memory:
         direction = f"{direction}\n\n{failure_memory}"
+
+    # Final safety cap — any path above must still respect the gate.
+    if len(direction) > _MAX_RETRY_DIRECTION:
+        log.warning(
+            "AUTO_RETRY direction %d chars exceeds cap %d for idea=%s phase=%s — hard truncating",
+            len(direction), _MAX_RETRY_DIRECTION, idea_id, task_type,
+        )
+        direction = direction[:_MAX_RETRY_DIRECTION] + "\n…[retry direction truncated]"
 
     task_type_enum = _PHASE_TASK_TYPE.get(task_type, TaskType.IMPL)
 
