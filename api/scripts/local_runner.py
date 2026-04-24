@@ -63,6 +63,54 @@ def _get_repo_dir() -> Path:
 _REPO_DIR = _ORIGINAL_REPO_DIR
 _LOG_DIR = _API_DIR / "logs"
 
+
+def _task_card_context(
+    *,
+    goal: str,
+    files_allowed: list[str],
+    done_when: list[str],
+    commands: list[str],
+    constraints: list[str],
+) -> dict[str, Any]:
+    """Return task-card fields both nested and top-level for API validation."""
+    card = {
+        "goal": goal,
+        "files_allowed": files_allowed,
+        "done_when": done_when,
+        "commands": commands,
+        "constraints": constraints,
+    }
+    return {**card, "task_card": dict(card)}
+
+
+def _extract_spec_task_files(spec_text: str, fallback_spec_path: str) -> list[str]:
+    """Extract exact-ish implementation file paths from spec source/files_allowed blocks."""
+    files: list[str] = []
+    in_files_allowed = False
+    for raw_line in spec_text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_-]*:", line) and not line.startswith(("file:", "files_allowed:")):
+            in_files_allowed = False
+        if line.startswith("files_allowed:"):
+            in_files_allowed = True
+            continue
+        candidate = ""
+        if line.startswith("- file:"):
+            candidate = line.split(":", 1)[1].strip()
+        elif line.startswith("file:"):
+            candidate = line.split(":", 1)[1].strip()
+        elif in_files_allowed and line.startswith("- "):
+            candidate = line[2:].strip()
+        if candidate:
+            candidate = candidate.strip("'\"")
+            if candidate and not candidate.startswith(("#", "http://", "https://")) and candidate not in files:
+                files.append(candidate)
+        if len(files) >= 20:
+            break
+    return files or ([fallback_spec_path] if fallback_spec_path else [])
+
 # ── Runner config — single source of truth, no env vars ──────────────
 _RUNNER_CONFIG: dict[str, Any] = {}
 
@@ -2199,6 +2247,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             spec_ref = ""
             resolved_spec_path = ""
             spec_status = ""
+            spec_text = ""
             task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
             context_spec_path = ""
             try:
@@ -2258,6 +2307,24 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             extra_context["spec_path"] = context_spec_path or resolved_spec_path or "none"
             if task_context.get("spec_branch"):
                 extra_context["spec_branch"] = task_context["spec_branch"]
+            impl_spec_path = str(extra_context["spec_path"])
+            extra_context.update(_task_card_context(
+                goal=f"Implement {idea_name} according to {impl_spec_path}",
+                files_allowed=_extract_spec_task_files(spec_text, impl_spec_path),
+                done_when=[
+                    "Implementation matches the active spec acceptance criteria",
+                    "Changed code is committed with focused verification output",
+                    "No files outside the spec source/files_allowed scope are modified",
+                ],
+                commands=[
+                    "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+                ],
+                constraints=[
+                    "Use the active spec as the implementation contract",
+                    "Do not advance when the spec is missing, stale, or marked done",
+                    "Keep changes limited to the spec-listed implementation files",
+                ],
+            ))
 
             direction = (
                 f"Implement '{idea_name}' ({idea_id}).\n\n"
@@ -4830,6 +4897,44 @@ def _seed_task_from_open_idea() -> bool:
         "seed_generated": True,
         "seed_source": "local_runner_smart_seed",
     }
+    if task_type == "spec":
+        spec_path = f"specs/{idea_id}.md"
+        seed_ctx.update(_task_card_context(
+            goal=f"Write an executable spec for {idea_name}",
+            files_allowed=[spec_path],
+            done_when=[
+                f"{spec_path} exists",
+                "Spec includes goal, source files, requirements, done_when, verification scenarios, and constraints",
+                "Verification scenarios include exact commands or requests with expected output",
+            ],
+            commands=[
+                "python3 scripts/validate_spec_quality.py --base origin/main --head HEAD",
+            ],
+            constraints=[
+                f"Only create or edit {spec_path}",
+                "Keep the spec concrete enough for implementation without extra discovery",
+                "Follow CLAUDE.md",
+            ],
+        ))
+    elif task_type == "impl":
+        spec_path = f"specs/{idea_id}.md"
+        seed_ctx.update(_task_card_context(
+            goal=f"Implement {idea_name} from {spec_path}",
+            files_allowed=[spec_path],
+            done_when=[
+                "Implementation satisfies the spec done_when criteria",
+                "Relevant tests or verification commands pass",
+                "Changes are committed for runner push/PR handling",
+            ],
+            commands=[
+                "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+            ],
+            constraints=[
+                "Read the spec before editing implementation files",
+                "Only modify files allowed by the spec",
+                "Stop with IMPL_BLOCKED if the spec is missing or too vague",
+            ],
+        ))
     if workspace_git_url_seed:
         seed_ctx["workspace_git_url"] = workspace_git_url_seed
 

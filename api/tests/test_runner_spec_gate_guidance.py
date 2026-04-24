@@ -5,6 +5,37 @@ from pathlib import Path
 from scripts import local_runner
 
 
+def test_task_card_context_populates_nested_and_top_level_fields() -> None:
+    context = local_runner._task_card_context(
+        goal="Write an executable spec",
+        files_allowed=["specs/example.md"],
+        done_when=["spec exists"],
+        commands=["python3 scripts/validate_spec_quality.py --base origin/main --head HEAD"],
+        constraints=["only edit specs/example.md"],
+    )
+
+    assert context["goal"] == "Write an executable spec"
+    assert context["files_allowed"] == ["specs/example.md"]
+    assert context["task_card"]["goal"] == context["goal"]
+    assert context["task_card"]["files_allowed"] == context["files_allowed"]
+
+
+def test_extract_spec_task_files_prefers_spec_source_files() -> None:
+    spec_text = """---
+source:
+  - file: api/app/routers/assets.py
+    symbols: [router]
+files_allowed:
+  - api/app/services/assets.py
+---
+"""
+
+    assert local_runner._extract_spec_task_files(spec_text, "specs/assets.md") == [
+        "api/app/routers/assets.py",
+        "api/app/services/assets.py",
+    ]
+
+
 def test_impl_without_spec_becomes_needs_decision(monkeypatch, tmp_path: Path) -> None:
     calls: list[tuple[str, str, dict]] = []
     monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
@@ -176,7 +207,10 @@ def test_spec_phase_does_not_enqueue_impl_for_done_spec(monkeypatch, tmp_path: P
 def test_spec_phase_enqueues_impl_with_durable_spec_branch(monkeypatch, tmp_path: Path) -> None:
     spec_dir = tmp_path / "specs"
     spec_dir.mkdir()
-    (spec_dir / "active-idea.md").write_text("---\nstatus: active\n---\n", encoding="utf-8")
+    (spec_dir / "active-idea.md").write_text(
+        "---\nstatus: active\nsource:\n  - file: api/app/routers/active.py\n---\n",
+        encoding="utf-8",
+    )
     calls: list[tuple[str, str, dict | None]] = []
     monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
     monkeypatch.setattr(local_runner, "_append_idea_event", lambda *args, **kwargs: None)
@@ -211,3 +245,9 @@ def test_spec_phase_enqueues_impl_with_durable_spec_branch(monkeypatch, tmp_path
     context = created[0][2]["context"]
     assert context["spec_path"] == "specs/active-idea.md"
     assert context["spec_branch"] == "task/spec-task-id"
+    assert context["goal"] == "Implement Active Idea according to specs/active-idea.md"
+    assert context["files_allowed"] == ["api/app/routers/active.py"]
+    assert context["task_card"]["done_when"]
+    assert context["task_card"]["commands"] == [
+        "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main"
+    ]
