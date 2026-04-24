@@ -142,8 +142,7 @@ class ProofRunner:
     def advance_stage(self) -> None:
         self._call(
             "POST",
-            f"/api/ideas/{self.idea_id}/stage",
-            {"stage": "spec"},
+            f"/api/ideas/{self.idea_id}/advance",
         )
         self.pass_("stage advanced")
 
@@ -182,12 +181,13 @@ class ProofRunner:
     def archive_idea(self) -> None:
         if self.idea_id is None:
             return
-        # Close/archive the test idea. The lifecycle endpoint varies
-        # across deployments; use the public stage setter for cleanup.
+        # "archived" is an IdeaLifecycle value, not an IdeaStage — the
+        # stage endpoint would reject it. Lifecycle lives on the idea
+        # object itself and is mutated via PATCH.
         self._call(
-            "POST",
-            f"/api/ideas/{self.idea_id}/stage",
-            {"stage": "archived"},
+            "PATCH",
+            f"/api/ideas/{self.idea_id}",
+            {"lifecycle": "archived"},
         )
         self.pass_("idea archived")
 
