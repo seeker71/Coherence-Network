@@ -2651,6 +2651,22 @@ Output a summary: files created/modified, validation results, errors encountered
     spec_path = context.get("spec_path", "none") if isinstance(context, dict) else "none"
     workspace_git_url = context.get("workspace_git_url", "") if isinstance(context, dict) else ""
 
+    # Fast-fail gate: impl tasks without a spec produce hollow output after 4-5 min of provider time.
+    # If spec_path is missing AND no spec file exists for this idea, reject immediately.
+    if task_type == "impl" and (not spec_path or spec_path == "none") and idea_id not in ("unknown", ""):
+        import glob as _glob_mod
+        repo_dir_str = str(_get_repo_dir())
+        idea_specs = _glob_mod.glob(f"{repo_dir_str}/specs/*{idea_id}*.md")
+        if not idea_specs:
+            msg = (
+                f"NO_SPEC_GATE: impl task for idea '{idea_id}' has no spec (spec_path=none) "
+                f"and no spec file found in specs/. Seed a spec task first. "
+                f"Failing fast to avoid hollow provider execution."
+            )
+            log.warning(msg)
+            complete_task(task.get("id", ""), msg, False, {"failure_reason_bucket": "no_spec"})
+            return False
+
     # Build rich context block — spec content, CLAUDE.md, runbook, related files, module map
     context_block = _build_context_block(
         task_type=task_type,
