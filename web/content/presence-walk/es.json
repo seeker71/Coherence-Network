@@ -1,0 +1,73 @@
+{
+  "presenceWalk": {
+    "index": {
+      "metadataTitle": "Recorrido de presencia | Coherence Network",
+      "metadataDescription": "Entra en cada persona, lugar, práctica, comunidad y evento desde su propio punto de vista."
+    },
+    "page": {
+      "metadataFallbackTitle": "Recorrido de presencia | Coherence Network",
+      "metadataTitleTemplate": "Recorrido de presencia de {label} | Coherence Network",
+      "navAriaLabel": "Recorridos de presencia",
+      "presenceEyebrowTemplate": "Presencia {label}",
+      "nodeTypeTemplate": "nodo del grafo: {nodeType}",
+      "directoryCta": "Recorrer el directorio",
+      "conceptCta": "Ver el concepto fuente",
+      "visualWhyLabel": "Por qué esta visual",
+      "namedPresencesLabelTemplate": "Presencias {labelLower} nombradas",
+      "namedPresencesHeading": "Entra en los nodos reales desde dentro de su campo.",
+      "namedPresencesDescription": "Cada tarjeta abre una página de punto de vista con historia, estilo, mensaje, presencia y alineación visual.",
+      "nodeCardMetaTemplate": "{nodeType} · {role}"
+    },
+    "supportingSections": [
+      {
+        "key": "story",
+        "label": "Historia",
+        "field": "story",
+        "icon": "story",
+        "color": "accent"
+      },
+      {
+        "key": "path",
+        "label": "Camino",
+        "field": "path",
+        "icon": "path",
+        "color": "secondary"
+      },
+      {
+        "key": "vision",
+        "label": "Visión",
+        "field": "vision",
+        "icon": "vision",
+        "color": "neutral"
+      }
+    ]
+  },
+  "people": {
+    "page": {
+      "metadataTitle": "Presencias — Coherence Network",
+      "metadataDescription": "Cada persona, lugar, comunidad, encuentro y práctica que sostiene la red.",
+      "eyebrow": "Presencias",
+      "title": "Todo lo que el campo recuerda",
+      "totalDescriptionTemplate": "{total} presencias en la red. Escribe lo que está vivo en ti — el grafo muestra la red que resuena.",
+      "presenceWalkCta": "Recorrer cada punto de vista"
+    }
+  },
+  "nodePage": {
+    "copy": {
+      "metadataFallbackTitle": "Nodo de presencia | Coherence Network",
+      "metadataTitleTemplate": "Presencia {name} | Coherence Network",
+      "navigationAriaLabel": "Navegación del nodo de presencia",
+      "lensBackTemplate": "Lente {label}",
+      "presenceEyebrowTemplate": "Presencia {label} · {role}",
+      "sourceFallbackLabel": "Fuente",
+      "walkMoreTemplate": "Recorrer más nodos {labelLower}",
+      "brandMarkAltTemplate": "Marca de {name}",
+      "lineageLabel": "Linaje",
+      "visualAlignmentLabel": "Alineación visual",
+      "naturalSiblingsLabel": "Hermanos naturales",
+      "storyAfterEntryLabel": "Historia después de entrar",
+      "storyAfterEntryHeading": "La explicación queda debajo de la presencia.",
+      "sourceNavigationAriaTemplate": "Navegación estilo fuente de {name}"
+    }
+  }
+}

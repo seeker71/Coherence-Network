@@ -11,9 +11,8 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-type DBItem = { id: string; name: string; description?: string; [key: string]: unknown };
-
 type CuratedCommunity = {
+  id?: string;
   name: string;
   slug: string;
   location: string;
@@ -23,20 +22,22 @@ type CuratedCommunity = {
   resonates: string;
   learn: string;
   concepts: string[];
-  conceptLabels: string[];
+  concept_labels: string[];
 };
 
 type HostSpace = {
+  id?: string;
   title: string;
   image: string;
   context: string;
   energy: string;
   body: string;
-  firstMove: string;
+  first_move: string;
   note: string;
 };
 
 type Gathering = {
+  id?: string;
   title: string;
   image: string;
   body: string;
@@ -44,6 +45,7 @@ type Gathering = {
 };
 
 type Practice = {
+  id?: string;
   name: string;
   image: string;
   url: string;
@@ -51,272 +53,105 @@ type Practice = {
   concepts: string[];
 };
 
-async function fetchItems(type: string): Promise<DBItem[]> {
+type Network = {
+  id?: string;
+  name: string;
+  url: string;
+  scope: string;
+  resonates: string;
+};
+
+type AlignedContent = {
+  source: "graph";
+  communities: CuratedCommunity[];
+  host_spaces: HostSpace[];
+  gatherings: Gathering[];
+  practices: Practice[];
+  networks: Network[];
+  counts: {
+    communities: number;
+    host_spaces: number;
+    gatherings: number;
+    practices: number;
+    networks: number;
+  };
+};
+
+const EMPTY_ALIGNED_CONTENT: AlignedContent = {
+  source: "graph",
+  communities: [],
+  host_spaces: [],
+  gatherings: [],
+  practices: [],
+  networks: [],
+  counts: {
+    communities: 0,
+    host_spaces: 0,
+    gatherings: 0,
+    practices: 0,
+    networks: 0,
+  },
+};
+
+async function fetchAlignedContent(): Promise<AlignedContent> {
   const base = getApiBase();
   try {
-    const res = await fetch(`${base}/api/concepts/${type}?limit=50`, { next: { revalidate: 60 } });
-    if (!res.ok) return [];
+    const res = await fetch(`${base}/api/vision/aligned`, { cache: "no-store" });
+    if (!res.ok) return EMPTY_ALIGNED_CONTENT;
     const data = await res.json();
-    return data?.items || [];
+    return {
+      ...EMPTY_ALIGNED_CONTENT,
+      ...data,
+      counts: {
+        ...EMPTY_ALIGNED_CONTENT.counts,
+        ...(data?.counts || {}),
+      },
+    };
   } catch {
-    return [];
+    return EMPTY_ALIGNED_CONTENT;
   }
 }
 
-const COMMUNITIES: CuratedCommunity[] = [
-  {
-    name: "Tamera",
-    slug: "tamera",
-    location: "Alentejo, Portugal",
-    size: "~250 people",
-    image: "/visuals/community-tamera.png",
-    url: "https://www.tamera.org/",
-    resonates:
-      "Building a healing biotope through water retention, trust practices, and community-scale solar infrastructure.",
-    learn:
-      "Water retention landscapes, solar village systems, transparent communication, and relationship as field practice.",
-    concepts: ["lc-sensing", "lc-v-harmonizing", "lc-energy", "lc-land"],
-    conceptLabels: ["Sensing", "Harmonizing", "Energy", "Land"],
-  },
-  {
-    name: "Auroville",
-    slug: "auroville",
-    location: "Tamil Nadu, India",
-    size: "~3,000 people, 60+ nations",
-    image: "/visuals/community-auroville.png",
-    url: "https://auroville.org/",
-    resonates:
-      "A long experiment in human unity with reforestation, earth building, renewable energy, and forms of stewardship beyond private property.",
-    learn:
-      "Governance without rigid government, land regeneration, compressed earth building, and community at civilizational scale.",
-    concepts: ["lc-pulse", "lc-circulation", "lc-v-freedom-expression", "lc-land"],
-    conceptLabels: ["The Pulse", "Circulation", "Freedom", "Land"],
-  },
-  {
-    name: "Findhorn Ecovillage",
-    slug: "findhorn",
-    location: "Moray, Scotland",
-    size: "~350 people",
-    image: "/visuals/community-findhorn.png",
-    url: "https://www.ecovillagefindhorn.com/",
-    resonates:
-      "Listening to land, low ecological footprint, spiritual practice without doctrine, and community-built spaces for meditation and performance.",
-    learn:
-      "Immersion as education, living wastewater systems, community-built halls, and hosting thousands of visitors without losing atmosphere.",
-    concepts: ["lc-land", "lc-v-living-spaces", "lc-v-harmonizing", "lc-attunement-joining"],
-    conceptLabels: ["Land", "Living Spaces", "Harmonizing", "Joining"],
-  },
-  {
-    name: "Damanhur",
-    slug: "damanhur",
-    location: "Piedmont, Italy",
-    size: "~600 people in 30 communities",
-    image: "/visuals/community-damanhur.png",
-    url: "https://damanhur.org/",
-    resonates:
-      "A federation of communities where sacred architecture, local currency, and artistic expression shape daily life.",
-    learn:
-      "Federated structure, community currency, and art as a primary civic organ rather than decoration.",
-    concepts: ["lc-network", "lc-v-ceremony", "lc-beauty", "lc-circulation"],
-    conceptLabels: ["The Network", "Ceremony", "Beauty", "Circulation"],
-  },
-  {
-    name: "Gaviotas",
-    slug: "gaviotas",
-    location: "Los Llanos, Colombia",
-    size: "~200 people",
-    image: "/visuals/community-gaviotas.png",
-    url: "https://en.wikipedia.org/wiki/Gaviotas",
-    resonates:
-      "A community that regenerated what looked impossible through open invention, care for land, and practical beauty.",
-    learn:
-      "Land restoration on degraded soil, appropriate technology, and the civic force of persistent regenerative practice.",
-    concepts: ["lc-land", "lc-vitality", "lc-instruments", "lc-v-shelter-organism"],
-    conceptLabels: ["Land", "Vitality", "Instruments", "Shelter"],
-  },
-  {
-    name: "Earthship Biotecture",
-    slug: "earthship",
-    location: "Taos, New Mexico, USA",
-    size: "~130 residents",
-    image: "/visuals/community-earthship.png",
-    url: "https://earthship.com/",
-    resonates:
-      "Buildings that gather water, regulate climate, grow food, and generate energy as part of their own body.",
-    learn:
-      "Passive solar design, water harvesting, greywater systems, food-producing buildings, and practical off-grid education.",
-    concepts: ["lc-v-shelter-organism", "lc-v-living-spaces", "lc-energy", "lc-nourishment"],
-    conceptLabels: ["Shelter as Skin", "Living Spaces", "Energy", "Nourishment"],
-  },
-  {
-    name: "New Earth MicroNation",
-    slug: "new-earth",
-    location: "Africa",
-    size: "Founding phase",
-    image: "/visuals/nature-architecture-blend.png",
-    url: "https://newearthhorizon.com/",
-    resonates:
-      "A sovereignty-first experiment tying jurisdiction, technology, and fellowship to a different civilizational operating system.",
-    learn:
-      "Alternative exchange, sovereignty structures, free-energy imagination, and beauty as a design premise.",
-    concepts: ["lc-v-freedom-expression", "lc-energy", "lc-circulation", "lc-beauty"],
-    conceptLabels: ["Freedom", "Energy", "Circulation", "Beauty"],
-  },
-];
+function EmptyAlignedGroup({ label }: { label: string }) {
+  return (
+    <div className="rounded-[1.5rem] border border-dashed border-stone-800/50 bg-stone-900/10 p-6 text-sm leading-relaxed text-stone-500">
+      No {label} records are published in the graph yet.
+    </div>
+  );
+}
 
-const HOST_SPACES: HostSpace[] = [
-  {
-    title: "City apartment band",
-    image: "/visuals/transform-apartment.png",
-    context: "city",
-    energy: "light-touch",
-    body:
-      "A residential stack becomes a quiet band of cells with shared meals, child care, rooftop gardens, listening rooms, and a commons strong enough to change how the whole building feels.",
-    firstMove:
-      "Open one floor, corridor, or rooftop to shared nourishment, a guest room, and a stillness space before changing anything structural.",
-    note: "The shell stays. The social metabolism changes first.",
-  },
-  {
-    title: "Urban block host",
-    image: "/visuals/transform-neighborhood.png",
-    context: "urban",
-    energy: "light-touch",
-    body:
-      "A storefront, foyer, hall, or studio shifts from throughput into repair, borrowing, nourishment, and visible welcome. One block starts to breathe differently.",
-    firstMove:
-      "Retune one underused front-facing room into a provision house, listening circle, or repair table that anyone nearby can understand at a glance.",
-    note: "The fastest shifts often happen on the ground floor.",
-  },
-  {
-    title: "Suburban commons lane",
-    image: "/visuals/generated/lc-attuned-spaces-1.jpg",
-    context: "suburban",
-    energy: "light-touch",
-    body:
-      "A porch line, cul-de-sac, garage bay, or side-yard seam becomes a connected lane of meals, tools, child support, and slow social rhythm without waiting for a full redevelopment cycle.",
-    firstMove:
-      "Open one shared table, one visible pantry shelf, and one garage workshop so neighboring homes start reading as one field.",
-    note: "Connection can arrive before new architecture does.",
-  },
-  {
-    title: "Rural anchor house",
-    image: "/visuals/community-earthship.png",
-    context: "rural edge",
-    energy: "medium-touch",
-    body:
-      "One existing home or stewarded structure becomes the place where tools, meals, bathing, greenhouse warmth, and visiting cells start to gather.",
-    firstMove:
-      "Let one house become the commons before new buildings appear: shared kitchen, shared bath, shared workshop, shared welcome.",
-    note: "Connection grows faster than construction.",
-  },
-  {
-    title: "Land-rooted cluster",
-    image: "/visuals/community-findhorn.png",
-    context: "rural",
-    energy: "medium-touch",
-    body:
-      "Paths, gardens, small structures, and a shared hall start reading as one organism. The land no longer feels divided into isolated holdings but into living gradients.",
-    firstMove:
-      "Connect paths, shared food, bathing, and gathering first so the land feels one body before any big buildout begins.",
-    note: "Permeable thresholds replace decorative separation.",
-  },
-];
-
-const GATHERINGS: Gathering[] = [
-  {
-    title: "Listening supper",
-    image: "/visuals/life-shared-meal.png",
-    body:
-      "A long table lets strangers arrive as bodies rather than profiles. Presence, nourishment, and direct conversation make a field legible faster than explanation.",
-    energy: "Presence becomes belonging.",
-  },
-  {
-    title: "Traveling workshop",
-    image: "/visuals/life-creation-workshop.png",
-    body:
-      "Builders, musicians, healers, and facilitators move between nodes carrying know-how, rhythm, and fresh pattern memory into each new host.",
-    energy: "Creative energy becomes transmissible.",
-  },
-  {
-    title: "Seasonal convergence",
-    image: "/visuals/network-midsummer-gathering.png",
-    body:
-      "Periodic gatherings let communities compare practices, share beauty, meet new cells, and tune the larger network without central control.",
-    energy: "Wisdom becomes circulation.",
-  },
-];
-
-const PRACTICES: Practice[] = [
-  {
-    name: "Vipassana Meditation",
-    image: "/visuals/space-stillness-sanctuary.png",
-    url: "https://www.dhamma.org/",
-    what:
-      "A volunteer-run, generosity-based container for stillness. Useful when a field needs strong attention without performance.",
-    concepts: ["lc-stillness", "lc-v-harmonizing"],
-  },
-  {
-    name: "Permaculture Design",
-    image: "/visuals/life-garden-planting.png",
-    url: "https://www.permaculturenews.org/",
-    what:
-      "A design language for food, water, land repair, and nested systems. Useful anywhere a place wants to feed more life than it currently does.",
-    concepts: ["lc-land", "lc-v-food-practice", "lc-nourishment"],
-  },
-  {
-    name: "Natural Building",
-    image: "/visuals/space-creation-arc-overview.png",
-    url: "https://www.cobcottage.com/",
-    what:
-      "Cob, rammed earth, straw bale, bamboo, and other methods that let shelter act more like body and climate partner than sealed product.",
-    concepts: ["lc-v-shelter-organism", "lc-v-living-spaces", "lc-space"],
-  },
-  {
-    name: "Sound Healing",
-    image: "/visuals/practice-sound-healing.png",
-    url: "https://www.taize.fr/",
-    what:
-      "Chant, bowls, overtone work, kirtan, and shared sound as a practical attunement tool for groups, rooms, and transitions.",
-    concepts: ["lc-transmission", "lc-v-harmonizing", "lc-ceremony"],
-  },
-];
-
-const NETWORKS = [
-  {
-    name: "New Earth Horizon",
-    url: "https://newearthhorizon.com/",
-    scope: "Global — territory, exchange, initiatives",
-    resonates:
-      "A sovereignty-oriented network linking jurisdiction, technology, and fellowship as mutually reinforcing conditions.",
-  },
-  {
-    name: "Global Ecovillage Network",
-    url: "https://ecovillage.org/",
-    scope: "6,000+ communities in 114 countries",
-    resonates:
-      "An existing mycorrhizal layer for communities sharing methods, people, and regenerative education across continents.",
-  },
-  {
-    name: "Transition Towns",
-    url: "https://transitionnetwork.org/",
-    scope: "1,000+ initiatives in 50+ countries",
-    resonates:
-      "A civic-scale network for local food, local energy, and local resilience where neighborhoods become practical living laboratories.",
-  },
-];
+function CardImage({
+  src,
+  alt,
+  aspectClass,
+  sizes,
+}: {
+  src: string;
+  alt: string;
+  aspectClass: string;
+  sizes: string;
+}) {
+  return (
+    <div className={`relative ${aspectClass} overflow-hidden`}>
+      {src ? (
+        <Image
+          src={src}
+          alt={alt}
+          fill
+          className="object-cover transition-transform duration-700 group-hover:scale-105"
+          sizes={sizes}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-stone-900" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/20 to-transparent" />
+    </div>
+  );
+}
 
 export default async function AlignedPage() {
-  const [dbCommunities, dbNetworks, dbPractices] = await Promise.all([
-    fetchItems("communities"),
-    fetchItems("networks"),
-    fetchItems("practices"),
-  ]);
-
-  const counts = {
-    communities: dbCommunities.length || COMMUNITIES.length,
-    networks: dbNetworks.length || NETWORKS.length,
-    practices: dbPractices.length || PRACTICES.length,
-  };
+  const alignedContent = await fetchAlignedContent();
+  const { communities, host_spaces: hostSpaces, gatherings, practices, networks, counts } = alignedContent;
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-16 space-y-24">
@@ -491,21 +326,17 @@ export default async function AlignedPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          {COMMUNITIES.map((community) => (
+          {communities.map((community) => (
             <article
-              key={community.name}
+              key={community.id || community.name}
               className="overflow-hidden rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20"
             >
-              <div className="relative aspect-[16/9] overflow-hidden">
-                <Image
-                  src={community.image}
-                  alt={community.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent" />
-              </div>
+              <CardImage
+                src={community.image}
+                alt={community.name}
+                aspectClass="aspect-[16/9]"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
               <div className="space-y-4 p-6">
                 <div className="flex flex-wrap items-baseline gap-3">
                   <Link
@@ -532,7 +363,7 @@ export default async function AlignedPage() {
                       href={`/vision/${conceptId}`}
                       className="rounded-full border border-stone-700/40 px-3 py-1 text-xs text-stone-400 transition-colors hover:border-teal-500/30 hover:text-teal-300/90"
                     >
-                      {community.conceptLabels[index]}
+                      {community.concept_labels[index] || conceptId.replace("lc-v-", "").replace("lc-", "").replace(/-/g, " ")}
                     </Link>
                   ))}
                 </div>
@@ -547,6 +378,7 @@ export default async function AlignedPage() {
               </div>
             </article>
           ))}
+          {communities.length === 0 && <EmptyAlignedGroup label="community" />}
         </div>
       </section>
 
@@ -563,21 +395,17 @@ export default async function AlignedPage() {
         </div>
 
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {HOST_SPACES.map((space) => (
+          {hostSpaces.map((space) => (
             <article
-              key={space.title}
+              key={space.id || space.title}
               className="overflow-hidden rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20"
             >
-              <div className="relative aspect-[4/5] overflow-hidden">
-                <Image
-                  src={space.image}
-                  alt={space.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1280px) 50vw, 25vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/20 to-transparent" />
-              </div>
+              <CardImage
+                src={space.image}
+                alt={space.title}
+                aspectClass="aspect-[4/5]"
+                sizes="(max-width: 1280px) 50vw, 25vw"
+              />
               <div className="space-y-3 p-5">
                 <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-stone-500">
                   <span>{space.context}</span>
@@ -588,12 +416,13 @@ export default async function AlignedPage() {
                 <p className="text-sm leading-relaxed text-stone-400">{space.body}</p>
                 <div className="rounded-xl border border-stone-800/30 bg-stone-950/30 p-3">
                   <p className="text-[11px] uppercase tracking-[0.22em] text-stone-500">First move</p>
-                  <p className="mt-1 text-xs leading-relaxed text-stone-400">{space.firstMove}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-stone-400">{space.first_move}</p>
                 </div>
                 <p className="text-xs uppercase tracking-[0.24em] text-stone-500">{space.note}</p>
               </div>
             </article>
           ))}
+          {hostSpaces.length === 0 && <EmptyAlignedGroup label="host-space" />}
         </div>
 
         <div className="rounded-[1.5rem] border border-teal-500/20 bg-teal-500/5 p-6">
@@ -616,21 +445,17 @@ export default async function AlignedPage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
-          {GATHERINGS.map((gathering) => (
+          {gatherings.map((gathering) => (
             <article
-              key={gathering.title}
+              key={gathering.id || gathering.title}
               className="overflow-hidden rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20"
             >
-              <div className="relative aspect-[5/4] overflow-hidden">
-                <Image
-                  src={gathering.image}
-                  alt={gathering.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 33vw"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/20 to-transparent" />
-              </div>
+              <CardImage
+                src={gathering.image}
+                alt={gathering.title}
+                aspectClass="aspect-[5/4]"
+                sizes="(max-width: 1024px) 100vw, 33vw"
+              />
               <div className="space-y-3 p-6">
                 <h3 className="text-xl font-light text-violet-200">{gathering.title}</h3>
                 <p className="text-sm leading-relaxed text-stone-400">{gathering.body}</p>
@@ -638,6 +463,7 @@ export default async function AlignedPage() {
               </div>
             </article>
           ))}
+          {gatherings.length === 0 && <EmptyAlignedGroup label="gathering" />}
         </div>
       </section>
 
@@ -645,9 +471,9 @@ export default async function AlignedPage() {
         <div className="rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20 p-6">
           <h2 className="text-2xl font-extralight text-stone-200">Networks already doing the linking</h2>
           <div className="mt-6 space-y-5">
-            {NETWORKS.map((network) => (
+            {networks.map((network) => (
               <a
-                key={network.name}
+                key={network.id || network.name}
                 href={network.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -658,27 +484,24 @@ export default async function AlignedPage() {
                 <p className="mt-3 text-sm leading-relaxed text-stone-400">{network.resonates}</p>
               </a>
             ))}
+            {networks.length === 0 && <EmptyAlignedGroup label="network" />}
           </div>
         </div>
 
         <div className="rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20 p-6">
           <h2 className="text-2xl font-extralight text-stone-200">Practices that help a place tune itself</h2>
           <div className="mt-6 grid gap-4 md:grid-cols-2">
-            {PRACTICES.map((practice) => (
+            {practices.map((practice) => (
               <div
-                key={practice.name}
+                key={practice.id || practice.name}
                 className="overflow-hidden rounded-2xl border border-stone-800/30 bg-stone-950/30 transition-colors hover:border-stone-700/40"
               >
-                <div className="relative aspect-[16/10] overflow-hidden">
-                  <Image
-                    src={practice.image}
-                    alt={practice.name}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent" />
-                </div>
+                <CardImage
+                  src={practice.image}
+                  alt={practice.name}
+                  aspectClass="aspect-[16/10]"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                />
                 <div className="space-y-3 p-5">
                   <a
                     href={practice.url}
@@ -703,11 +526,12 @@ export default async function AlignedPage() {
                 </div>
               </div>
             ))}
+            {practices.length === 0 && <EmptyAlignedGroup label="practice" />}
           </div>
         </div>
       </section>
 
-      {(dbCommunities.length > 0 || dbNetworks.length > 0 || dbPractices.length > 0) && (
+      {(communities.length > 0 || networks.length > 0 || practices.length > 0) && (
         <section className="rounded-[1.5rem] border border-stone-800/30 bg-stone-900/20 p-6 text-center">
           <p className="text-sm uppercase tracking-[0.26em] text-stone-500">Live graph signal</p>
           <p className="mx-auto mt-3 max-w-3xl leading-relaxed text-stone-400">
