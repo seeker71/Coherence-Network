@@ -72,7 +72,7 @@ jobs:
 
       - name: Install CLI dependencies
         if: steps.changed_surfaces.outputs.api == 'true'
-        # test_flow_cli.py spawns `node cli/bin/cc.mjs`, which imports chalk/boxen/etc.
+        # test_flow_cli.py spawns `node cli/bin/coh.mjs`, which imports chalk/boxen/etc.
         # at runtime — without these on disk the smoke tests can never pass.
         run: |
           cd cli && npm ci --no-audit --no-fund

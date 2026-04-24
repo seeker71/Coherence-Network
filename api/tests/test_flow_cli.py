@@ -1,6 +1,6 @@
 """Flow-centric CLI tests: command registration, API coverage, API contract, and smoke tests.
 
-Tests CLI command registration via static source analysis of cli/bin/cc.mjs,
+Tests CLI command registration via static source analysis of cli/bin/coh.mjs,
 verifies CLI files reference critical API endpoints, confirms API endpoint
 response shapes via httpx AsyncClient, and runs end-to-end subprocess smoke
 tests against a real uvicorn server.
@@ -30,7 +30,7 @@ from app.main import app
 # ---------------------------------------------------------------------------
 
 CLI_DIR = Path(__file__).resolve().parent.parent.parent / "cli"
-CLI_BIN = CLI_DIR / "bin" / "cc.mjs"
+CLI_BIN = CLI_DIR / "bin" / "coh.mjs"
 CLI_COMMANDS_DIR = CLI_DIR / "lib" / "commands"
 CLI_PACKAGE_JSON = CLI_DIR / "package.json"
 
@@ -43,12 +43,12 @@ ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
 class TestCommandRegistration:
-    """Static analysis of cli/bin/cc.mjs to verify command registration."""
+    """Static analysis of cli/bin/coh.mjs to verify command registration."""
 
     def test_cli_entrypoint_exists(self) -> None:
-        """cc.mjs file exists and is executable."""
+        """coh.mjs file exists and is executable."""
         assert CLI_BIN.exists(), f"Missing CLI entry point: {CLI_BIN}"
-        assert os.access(CLI_BIN, os.X_OK), f"cc.mjs is not executable: {CLI_BIN}"
+        assert os.access(CLI_BIN, os.X_OK), f"coh.mjs is not executable: {CLI_BIN}"
 
     def test_core_commands_registered(self) -> None:
         """COMMANDS map includes: ideas, identity, nodes, status, tasks, stake, fork, specs, help."""
@@ -59,32 +59,32 @@ class TestCommandRegistration:
         ]
         for cmd in required_commands:
             assert f"{cmd}:" in source or f"'{cmd}'" in source or f'"{cmd}"' in source, (
-                f"Command '{cmd}' not found in COMMANDS map in cc.mjs"
+                f"Command '{cmd}' not found in COMMANDS map in coh.mjs"
             )
 
     def test_command_files_exist(self) -> None:
         """Each command name in the COMMANDS map references a .mjs file in cli/lib/commands/."""
         source = CLI_BIN.read_text(encoding="utf-8")
-        # Extract import paths from cc.mjs that reference ../lib/commands/*.mjs
+        # Extract import paths from coh.mjs that reference ../lib/commands/*.mjs
         import_pattern = re.compile(r'from\s+"\.\.\/lib\/commands\/([^"]+\.mjs)"')
         imported_files = set(import_pattern.findall(source))
-        assert imported_files, "No command imports found in cc.mjs"
+        assert imported_files, "No command imports found in coh.mjs"
         for filename in imported_files:
             cmd_path = CLI_COMMANDS_DIR / filename
             assert cmd_path.exists(), f"Imported command file missing: {cmd_path}"
 
     def test_no_orphan_command_files(self) -> None:
-        """Every .mjs file in commands/ is referenced in cc.mjs imports (known legacy orphans excluded)."""
+        """Every .mjs file in commands/ is referenced in coh.mjs imports (known legacy orphans excluded)."""
         source = CLI_BIN.read_text(encoding="utf-8")
         import_pattern = re.compile(r'from\s+"\.\.\/lib\/commands\/([^"]+\.mjs)"')
         imported_files = set(import_pattern.findall(source))
 
         actual_files = {f.name for f in CLI_COMMANDS_DIR.glob("*.mjs")}
-        # Legacy command files that exist but are not wired into cc.mjs
+        # Legacy command files that exist but are not wired into coh.mjs
         known_orphans = {"federation.mjs", "inventory.mjs", "runtime.mjs"}
         orphans = actual_files - imported_files - known_orphans
         assert not orphans, (
-            f"Orphan command files not imported in cc.mjs: {sorted(orphans)}"
+            f"Orphan command files not imported in coh.mjs: {sorted(orphans)}"
         )
 
     def test_package_json_valid(self) -> None:
@@ -95,7 +95,10 @@ class TestCommandRegistration:
         assert "version" in pkg, "package.json missing 'version' field"
         assert "bin" in pkg, "package.json missing 'bin' field"
         assert isinstance(pkg["bin"], dict), "package.json 'bin' must be a dict"
-        assert "cc" in pkg["bin"], "'cc' not found in package.json bin field"
+        assert "coh" in pkg["bin"], "'coh' not found in package.json bin field"
+        assert "cc" not in pkg["bin"], (
+            "'cc' must not be registered (shadows Apple clang on macOS)"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -326,45 +329,45 @@ class TestSmokeTests:
     """Run actual CLI binary via subprocess against a real uvicorn server."""
 
     def test_cli_help_exits_zero(self) -> None:
-        """cc help exits 0."""
+        """coh help exits 0."""
         with _serve_app() as api_base:
             result = _run_cli(api_base, "help")
         assert result.returncode == 0, (
-            f"cc help exited {result.returncode}: {result.stderr}"
+            f"coh help exited {result.returncode}: {result.stderr}"
         )
 
     def test_cli_status_runs(self) -> None:
-        """cc status exits 0 and outputs something."""
+        """coh status exits 0 and outputs something."""
         with _serve_app() as api_base:
             result = _run_cli(api_base, "status")
         assert result.returncode == 0, (
-            f"cc status exited {result.returncode}: {result.stderr}"
+            f"coh status exited {result.returncode}: {result.stderr}"
         )
         output = ANSI_RE.sub("", result.stdout)
-        assert len(output.strip()) > 0, "cc status produced no output"
+        assert len(output.strip()) > 0, "coh status produced no output"
 
     def test_cli_ideas_list(self) -> None:
-        """cc ideas hits the API and returns formatted output."""
+        """coh ideas hits the API and returns formatted output."""
         with _serve_app() as api_base:
             result = _run_cli(api_base, "ideas")
         assert result.returncode == 0, (
-            f"cc ideas exited {result.returncode}: {result.stderr}"
+            f"coh ideas exited {result.returncode}: {result.stderr}"
         )
         output = ANSI_RE.sub("", result.stdout)
-        assert len(output.strip()) > 0, "cc ideas produced no output"
+        assert len(output.strip()) > 0, "coh ideas produced no output"
 
     def test_cli_nodes_list(self) -> None:
-        """cc nodes hits the API."""
+        """coh nodes hits the API."""
         with _serve_app() as api_base:
             result = _run_cli(api_base, "nodes")
         assert result.returncode == 0, (
-            f"cc nodes exited {result.returncode}: {result.stderr}"
+            f"coh nodes exited {result.returncode}: {result.stderr}"
         )
 
     def test_cli_identity_runs(self) -> None:
-        """cc identity exits 0."""
+        """coh identity exits 0."""
         with _serve_app() as api_base:
             result = _run_cli(api_base, "identity")
         assert result.returncode == 0, (
-            f"cc identity exited {result.returncode}: {result.stderr}"
+            f"coh identity exited {result.returncode}: {result.stderr}"
         )

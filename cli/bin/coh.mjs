@@ -1,13 +1,54 @@
 #!/usr/bin/env node
 
 /**
- * cc — Coherence Network CLI
+ * coh — Coherence Network CLI
  *
  * Identity-first contributions, idea staking, and value traceability.
  * Zero dependencies. Node 18+ required.
+ *
+ * Previously shipped as `cc`; renamed in v0.13.0 to avoid shadowing
+ * Apple's C compiler on macOS. See specs/cli-binary-name-conflict.md.
  */
 
-import { appendFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { execFileSync } from "node:child_process";
+
+// macOS conflict-detection — fires at most once per machine.
+// If the user's PATH still resolves `cc` to Apple clang, we remind them
+// the old binary name was retired. Advisory only — never blocks execution.
+(() => {
+  if (process.platform !== "darwin") return;
+  try {
+    const markerDir = join(homedir(), ".coherence-network");
+    const marker = join(markerDir, ".cc-conflict-warned");
+    if (existsSync(marker)) return;
+    let resolvedCc = "";
+    try {
+      resolvedCc = execFileSync("/usr/bin/which", ["cc"], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      }).trim();
+    } catch {
+      return;
+    }
+    if (!resolvedCc || resolvedCc.includes("coherence")) return;
+    process.stderr.write(
+      "[coherence-cli] Tip: the old 'cc' binary has been retired. " +
+        "Use 'coh' or 'npx coherence-cli'.\n",
+    );
+    try {
+      mkdirSync(markerDir, { recursive: true, mode: 0o700 });
+      writeFileSync(marker, new Date().toISOString(), { mode: 0o600 });
+    } catch {
+      // Non-fatal; we simply warn again next run.
+    }
+  } catch {
+    // Any failure in detection must not block the CLI.
+  }
+})();
+
 import { resolveLocale, createT } from "../lib/i18n.mjs";
 const _locale = resolveLocale(process.argv);
 const t = createT(_locale);

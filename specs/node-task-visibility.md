@@ -9,10 +9,10 @@ source:
   - file: web/app/tasks/[task_id]/page.tsx
     symbols: [task detail]
 done_when:
-  - "cc tasks shows idea names (not IDs) and clean provider labels"
-  - "cc tasks shows a \"recently completed\" section"
-  - "cc task <id> shows full (untruncated) output and activity timeline"
-  - "cc task <id> shows error_summary when present"
+  - "coh tasks shows idea names (not IDs) and clean provider labels"
+  - "coh tasks shows a \"recently completed\" section"
+  - "coh task <id> shows full (untruncated) output and activity timeline"
+  - "coh task <id> shows error_summary when present"
   - "coherencycoin.com/pipeline loads and shows live task flow"
   - "/pipeline shows per-provider success rates"
   - "/pipeline shows active node names and task counts"
@@ -26,7 +26,7 @@ constraints:
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
 > **Source**: [`web/app/nodes/page.tsx`](../web/app/nodes/page.tsx) | [`web/app/tasks/page.tsx`](../web/app/tasks/page.tsx) | [`web/app/tasks/[task_id]/page.tsx`](../web/app/tasks/[task_id]/page.tsx)
 
-# Node and Task Visibility — `cc tasks`, `cc task <id>`, Web Pipeline Dashboard
+# Node and Task Visibility — `coh tasks`, `coh task <id>`, Web Pipeline Dashboard
 
 **Idea ID**: `node-task-visibility`
 **Status**: Draft — 2026-03-28
@@ -38,14 +38,14 @@ constraints:
 
 | Surface | Current state | Gap |
 |---------|--------------|-----|
-| `cc tasks` | Lists running/pending/needs_decision. Shows `idea_id` (e.g. `node-task-visibility`) and raw model string (`openrouter/free`). | Idea **name** not resolved; no "recent completions"; provider label unclear |
-| `cc task <id>` | Shows status, type, direction (200 chars), idea_id, worker, result (200 chars). | Output truncated; activity/events not shown; errors not formatted; no timing |
+| `coh tasks` | Lists running/pending/needs_decision. Shows `idea_id` (e.g. `node-task-visibility`) and raw model string (`openrouter/free`). | Idea **name** not resolved; no "recent completions"; provider label unclear |
+| `coh task <id>` | Shows status, type, direction (200 chars), idea_id, worker, result (200 chars). | Output truncated; activity/events not shown; errors not formatted; no timing |
 | Web `/tasks` page | Exists at `coherencycoin.com/tasks`. Shows task list with paginated rows. | Not a real-time pipeline view; no per-node status; no provider success rates; no routing signal |
 | API | Endpoints exist for tasks, active, activity. | No single aggregated `/pipeline/summary` endpoint; `result` field is raw JSON, not rendered |
 
 ### Who This Affects
 
-- **Human contributors** running `cc` locally: need to know what's running, which ideas are advancing, if their node is processing tasks.
+- **Human contributors** running `coh` locally: need to know what's running, which ideas are advancing, if their node is processing tasks.
 - **Operators** monitoring pipeline health: need provider success rates and routing decisions visible.
 - **New visitors** to the web app: the homepage says the network is alive — the `/pipeline` page must prove it.
 
@@ -54,7 +54,7 @@ constraints:
 ```yaml
 goal: >
   Make pipeline activity visible to human contributors via CLI and web without
-  requiring curl. cc tasks and cc task <id> must resolve idea names and show
+  requiring curl. coh tasks and coh task <id> must resolve idea names and show
   clean output. /pipeline web page must show live task flow, node status,
   and provider success rates.
 files_allowed:
@@ -65,16 +65,16 @@ files_allowed:
   - api/app/routers/pipeline.py
   - api/app/main.py
 done_when:
-  - cc tasks shows idea names (not IDs) and clean provider labels
-  - cc tasks shows a "recently completed" section
-  - cc task <id> shows full (untruncated) output and activity timeline
-  - cc task <id> shows error_summary when present
+  - coh tasks shows idea names (not IDs) and clean provider labels
+  - coh tasks shows a "recently completed" section
+  - coh task <id> shows full (untruncated) output and activity timeline
+  - coh task <id> shows error_summary when present
   - coherencycoin.com/pipeline loads and shows live task flow
   - /pipeline shows per-provider success rates
   - /pipeline shows active node names and task counts
 commands:
-  - node cli/bin/cc.mjs tasks
-  - node cli/bin/cc.mjs task task_d73edbae8000792b
+  - node cli/bin/coh.mjs tasks
+  - node cli/bin/coh.mjs task task_d73edbae8000792b
   - curl -s https://api.coherencycoin.com/api/pipeline/summary
   - curl -sI https://coherencycoin.com/pipeline
 constraints:
@@ -94,7 +94,7 @@ No new tables. All data is derived from:
 
 ### CLI Name Resolution Strategy
 
-`cc tasks` must resolve idea names without N+1 API calls. Strategy:
+`coh tasks` must resolve idea names without N+1 API calls. Strategy:
 1. Collect all unique `idea_id` values from the task batch.
 2. Issue one `GET /api/ideas?ids=id1,id2,...` (if supported) OR fall back to individual `GET /api/ideas/{id}` calls in parallel (Promise.all).
 3. Cache resolved names in-process for the duration of the command.
@@ -103,13 +103,13 @@ If the API does not support `?ids=...` filtering, the CLI falls back to parallel
 
 ## Verification Scenarios
 
-### Scenario 1 — `cc tasks` shows idea names, not IDs
+### Scenario 1 — `coh tasks` shows idea names, not IDs
 
 **Setup**: At least 1 pending or running task exists with an `idea_id` (e.g. `node-task-visibility`).
 
 **Action**:
 ```bash
-node cli/bin/cc.mjs tasks
+node cli/bin/coh.mjs tasks
 ```
 
 **Expected**:
@@ -165,7 +165,7 @@ Open `https://coherencycoin.com` in a browser. Navigate to the pipeline page.
 
 ## Known Gaps and Follow-up Tasks
 
-1. **`cc tasks watch`** — a live terminal refresh mode (like `watch -n2 cc tasks`) is not in scope here but would complement this spec. Track as separate idea.
+1. **`coh tasks watch`** — a live terminal refresh mode (like `watch -n2 coh tasks`) is not in scope here but would complement this spec. Track as separate idea.
 2. **Thompson Sampling visibility** — provider routing decisions (which executor is winning, exploration vs exploitation ratio) are not exposed in this spec. The pipeline page shows success rates but not the internal sampling state. Track as `spec-thompson-visibility`.
 3. **Task output storage** — currently `result` is a plain string. A follow-up should store structured output with sections (files changed, DIF score, commit SHA) as JSON. This spec only improves display of the existing field.
 4. **`GET /api/ideas?ids=id1,id2`** bulk endpoint — not confirmed to exist. If missing, the CLI falls back to parallel individual fetches. A follow-up spec should add this endpoint.
@@ -177,8 +177,8 @@ Open `https://coherencycoin.com` in a browser. Navigate to the pipeline page.
 
 This spec is realized when ALL of the following are independently verifiable:
 
-1. `node cli/bin/cc.mjs tasks` output contains a full idea name (not a raw ID) for any running task.
-2. `node cli/bin/cc.mjs task <any-completed-task-id>` output contains the full untruncated result.
+1. `node cli/bin/coh.mjs tasks` output contains a full idea name (not a raw ID) for any running task.
+2. `node cli/bin/coh.mjs task <any-completed-task-id>` output contains the full untruncated result.
 3. `curl -s https://api.coherencycoin.com/api/pipeline/summary | jq .queue_depth` returns a JSON object with integer values.
 4. `curl -sI https://coherencycoin.com/pipeline` returns `HTTP/2 200`.
 5. A screenshot of `coherencycoin.com/pipeline` showing at least one active task with an idea name is posted to the project's contributor record.

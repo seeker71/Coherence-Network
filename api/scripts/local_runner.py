@@ -2336,7 +2336,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"- Services: api/app/services/<name>.py\n"
                 f"- Models: api/app/models/<name>.py\n"
                 f"- Web pages: web/app/<route>/page.tsx\n"
-                f"- CLI: cli/bin/cc.mjs\n"
+                f"- CLI: cli/bin/coh.mjs\n"
                 f"- Specs: specs/<id>.md\n\n"
                 f"MANDATORY: After writing each code file, verify it with DIF:\n"
                 f"  curl -s -X POST https://dif.merly.ai/api/v2/dif/verify \\\n"
@@ -2853,7 +2853,7 @@ Where to put code:
 - Services: api/app/services/<name>.py
 - Models: api/app/models/<name>.py
 - Web pages: web/app/<route>/page.tsx
-- CLI: cli/bin/cc.mjs
+- CLI: cli/bin/coh.mjs
 
 BEFORE FINISHING — you MUST run these commands:
   echo "*.pyc\\n__pycache__/\\n.task-*\\ndata/coherence.db\\n.codex*" >> .gitignore
