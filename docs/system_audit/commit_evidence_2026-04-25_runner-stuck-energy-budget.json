@@ -1,0 +1,85 @@
+{
+  "date": "2026-04-25",
+  "thread_branch": "codex/health-runner-stuck-energy",
+  "commit_scope": "Bound runner smart-seed retry attempts so empty-queue cycles do not spend unbounded energy recursively scanning capped or stuck ideas.",
+  "files_owned": [
+    "api/scripts/local_runner.py",
+    "api/tests/test_runner_spec_gate_guidance.py",
+    "docs/system_audit/commit_evidence_2026-04-25_runner-stuck-energy-budget.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_runner_spec_gate_guidance.py -q",
+      "python3 -m py_compile api/scripts/local_runner.py",
+      "git fetch origin main && git rebase --autostash origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "11 runner spec-gate tests passed; local_runner.py compiled successfully. Branch rebased with autostash, PR guard local_preflight=pass ready_for_push=True, follow-through stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks after push"
+    ],
+    "summary": "Pending PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "summary": "Pending merge and public deploy verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused validation passed; pre-push guard, PR CI, merge, deploy, and live runner sensing remain pending."
+  },
+  "idea_ids": [
+    "pipeline-low-success-rate",
+    "runner-energy-efficiency"
+  ],
+  "spec_ids": [
+    "runner-stuck-energy-budget"
+  ],
+  "task_ids": [
+    "health-runner-stuck-energy"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "live runner log showed repeated capped/truly-stuck idea scans while pending=0 and running=0",
+    "focused pytest run: 11 passed",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260424T212144Z_codex-health-runner-stuck-energy.json"
+  ],
+  "change_files": [
+    "api/scripts/local_runner.py",
+    "api/tests/test_runner_spec_gate_guidance.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "When many ideas are capped or stuck, a single empty-queue seed cycle should stop after a bounded number of skip attempts and wait for the next cycle.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/agent/tasks",
+      "https://api.coherencycoin.com/api/agent/monitor-issues"
+    ],
+    "test_flows": [
+      "Restart local runner after deploy and confirm NODE_REGISTERED uses deployed SHA.",
+      "Observe local_runner.out for SEED attempt budget exhaustion instead of long repeated capped/stuck scans in one cycle."
+    ]
+  }
+}
