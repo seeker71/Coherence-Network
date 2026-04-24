@@ -40,6 +40,7 @@ def _pipeline_task_status_item(task: dict[str, Any], now: datetime) -> tuple[str
 
     item = {
         "id": task.get("id"),
+        "status": st_val,
         "task_type": task.get("task_type"),
         "model": task.get("model"),
         "direction": (task.get("direction") or "")[:100],
