@@ -460,6 +460,34 @@ class TestAutoAdvanceFingerprint:
         ctx = created_tasks[0]["context"]
         assert ctx["task_fingerprint"] == "idea-fp:impl:auto"
 
+    def test_retry_skips_composted_tasks(self, monkeypatch):
+        """maybe_retry returns None without creating any task when error_category
+        ends in `_composted`. Composting is a manual operator action to release
+        sediment; re-escalating would immediately refuel the pile being cleared.
+        """
+        from app.services import pipeline_advance_service as pas
+
+        task = _task(task_type="impl", status="timed_out", idea_id="idea-composted")
+        task["error_category"] = "retry_exhausted_composted"
+
+        created: list[dict] = []
+
+        def fake_create(data):
+            created.append(data)
+            return {"id": "should-not-happen"}
+
+        from app.services import agent_service as _as
+        monkeypatch.setattr(_as, "create_task", fake_create)
+        # Escalation path would also call these — ensure neither fires.
+        escalated: list = []
+        monkeypatch.setattr(pas, "_escalate_or_autofix",
+                            lambda *a, **k: escalated.append(a))
+
+        result = pas.maybe_retry(task)
+        assert result is None
+        assert created == []
+        assert escalated == []
+
     def test_retry_caps_oversized_direction(self, monkeypatch):
         """maybe_retry truncates direction+partial_work so the new task stays
         under the 3000-char OVERSIZED_DIRECTION gate (DG-002).
