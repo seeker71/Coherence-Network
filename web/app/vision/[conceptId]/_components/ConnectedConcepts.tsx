@@ -49,7 +49,14 @@ function groupFor(id: string): GroupKey {
     case "asset": return "works";
     case "idea": return "ideas";
     case "spec": return "specs";
-    default: return "other";
+    default:
+      // Living Codex concepts arrive as bare lowercase ids (e.g. "wisdom",
+      // "consciousness", "memory") with no colon or hyphen prefix. They're
+      // the same kind of thing as lc-* concepts — same ontology layer, same
+      // kind of entity to a visitor — so they fold into the "concepts"
+      // group rather than splitting into a separate "other" bucket.
+      if (/^[a-z][a-z0-9-]*$/.test(id) && !id.includes(":")) return "concepts";
+      return "other";
   }
 }
 
@@ -60,6 +67,11 @@ function hrefFor(id: string): string {
   if (p === "asset") return `/assets/${encodeURIComponent(id)}`;
   if (p === "idea") return `/ideas/${encodeURIComponent(id)}`;
   if (p === "spec") return `/specs/${encodeURIComponent(id)}`;
+  // Bare-id Codex concepts (e.g. "consciousness", "memory", "social-justice")
+  // live at /concepts/{id}. They land here only when no known type prefix
+  // matched above — routing by group keeps scenes/communities/events/etc.
+  // on the universal /nodes/ page where they belong.
+  if (groupFor(id) === "concepts") return `/concepts/${encodeURIComponent(id)}`;
   return `/nodes/${encodeURIComponent(id)}`;
 }
 
