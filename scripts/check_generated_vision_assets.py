@@ -13,9 +13,11 @@ deploys cannot silently depend on local-only generated files.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from kb_common import parse_frontmatter
 
@@ -23,6 +25,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CONCEPT_DIR = REPO_ROOT / "docs" / "vision-kb" / "concepts"
 VISION_WEB_DIR = REPO_ROOT / "web" / "app" / "vision"
 GENERATED_DIR = REPO_ROOT / "web" / "public" / "visuals" / "generated"
+DOCS_VISUALS_DIR = REPO_ROOT / "docs" / "visuals"
+WEB_VISUALS_DIR = REPO_ROOT / "web" / "public" / "visuals"
+PROMPT_MANIFEST = DOCS_VISUALS_DIR / "prompts.json"
 
 INLINE_VISUAL_RE = re.compile(r"!\[[^\]]*\]\(visuals:[^)]+\)")
 GENERATED_REF_RE = re.compile(r'["\'](/visuals/generated/([^"\']+))["\']')
@@ -44,6 +49,39 @@ def display_path(path: Path) -> str:
         return str(path.relative_to(REPO_ROOT))
     except ValueError:
         return str(path)
+
+
+def load_prompt_manifest() -> dict[str, dict[str, Any]]:
+    if not PROMPT_MANIFEST.exists():
+        raise FileNotFoundError(f"missing prompt manifest: {display_path(PROMPT_MANIFEST)}")
+    data = json.loads(PROMPT_MANIFEST.read_text(encoding="utf-8"))
+    records = data.get("records")
+    if not isinstance(records, list):
+        raise ValueError(f"prompt manifest has no records list: {display_path(PROMPT_MANIFEST)}")
+
+    by_path: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        path = record.get("path")
+        if isinstance(path, str):
+            by_path[path] = record
+        for mirror in record.get("mirror_paths") or []:
+            if isinstance(mirror, str):
+                by_path[mirror] = record
+    return by_path
+
+
+def all_manifest_required_assets() -> list[tuple[str, Path, Path]]:
+    requirements: list[tuple[str, Path, Path]] = []
+    for asset_path in sorted(GENERATED_DIR.glob("*.jpg")):
+        requirements.append(("generated visual file", asset_path, PROMPT_MANIFEST))
+    for asset_path in sorted(DOCS_VISUALS_DIR.glob("*.png")):
+        requirements.append(("docs visual file", asset_path, PROMPT_MANIFEST))
+    for asset_path in sorted(WEB_VISUALS_DIR.glob("*.png")):
+        if asset_path.parent == WEB_VISUALS_DIR:
+            requirements.append(("web visual mirror file", asset_path, PROMPT_MANIFEST))
+    return requirements
 
 
 def concept_story_requirements() -> list[tuple[str, Path, Path]]:
@@ -97,9 +135,18 @@ def main() -> int:
     args = parser.parse_args()
 
     requirements = concept_story_requirements() + explicit_generated_requirements()
+    manifest_requirements = all_manifest_required_assets()
 
     missing: list[str] = []
     untracked: list[str] = []
+    missing_prompt_records: list[str] = []
+    empty_prompt_records: list[str] = []
+
+    try:
+        prompt_records = load_prompt_manifest()
+    except (FileNotFoundError, json.JSONDecodeError, ValueError) as exc:
+        print(f"Generated vision prompt manifest check failed: {exc}")
+        return 1
 
     for source_label, asset_path, _source_path in requirements:
         if not asset_path.exists():
@@ -108,7 +155,16 @@ def main() -> int:
         if not args.allow_untracked and not is_git_tracked(asset_path):
             untracked.append(f"{source_label}: untracked {asset_path.relative_to(REPO_ROOT)}")
 
-    if missing or untracked:
+    for source_label, asset_path, _source_path in manifest_requirements:
+        rel_path = str(asset_path.relative_to(REPO_ROOT))
+        record = prompt_records.get(rel_path)
+        if record is None:
+            missing_prompt_records.append(f"{source_label}: missing prompt record for {rel_path}")
+            continue
+        if not str(record.get("prompt") or "").strip():
+            empty_prompt_records.append(f"{source_label}: empty prompt for {rel_path}")
+
+    if missing or untracked or missing_prompt_records or empty_prompt_records:
         if missing:
             print("Missing generated vision assets:")
             for item in missing:
@@ -117,10 +173,22 @@ def main() -> int:
             print("Generated vision assets must be git-tracked before verification:")
             for item in untracked:
                 print(f"  - {item}")
+        if missing_prompt_records:
+            print("Generated vision assets must have persistent prompt records:")
+            for item in missing_prompt_records:
+                print(f"  - {item}")
+        if empty_prompt_records:
+            print("Generated vision prompt records must not be empty:")
+            for item in empty_prompt_records:
+                print(f"  - {item}")
         return 1
 
     tracked_mode = "exist + tracked" if not args.allow_untracked else "exist"
-    print(f"Generated vision asset check passed ({len(requirements)} references checked, mode={tracked_mode}).")
+    print(
+        "Generated vision asset check passed "
+        f"({len(requirements)} references checked, "
+        f"{len(manifest_requirements)} prompt records checked, mode={tracked_mode})."
+    )
     return 0
 
 
