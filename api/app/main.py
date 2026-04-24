@@ -741,6 +741,9 @@ from app.routers import evidence as evidence_router
 app.include_router(evidence_router.router, prefix="/api", tags=["evidence"])
 from app.routers import settlement as settlement_router
 app.include_router(settlement_router.router, prefix="/api", tags=["settlement"])
+from app.routers import creator_economy as creator_economy_router
+app.include_router(creator_economy_router.router, prefix="/api", tags=["creator-economy"])
+app.include_router(creator_economy_router.proof_router, prefix="/api", tags=["creator-economy"])
 app.include_router(concepts.router, prefix="/api", tags=["concepts"])
 app.include_router(locales_router.router, prefix="/api", tags=["locales"])
 app.include_router(entity_views_router.router, prefix="/api", tags=["locales"])

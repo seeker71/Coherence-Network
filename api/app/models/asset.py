@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class AssetType(str, Enum):
     """Pipeline-tracked asset categories. New code contributions
-    must pick one of these four. The resolver + KB seed produce
+    must pick one of these seven. The resolver + KB seed produce
     nodes with richer asset_type strings (BLUEPRINT, VIDEO, AUDIO,
     album, track, book, etc.); those are read-only on the listing
     side and flow through Asset.type as free strings."""
@@ -19,6 +19,9 @@ class AssetType(str, Enum):
     MODEL = "MODEL"
     CONTENT = "CONTENT"
     DATA = "DATA"
+    BLUEPRINT = "BLUEPRINT"
+    DESIGN = "DESIGN"
+    RESEARCH = "RESEARCH"
 
 
 class AssetBase(BaseModel):
