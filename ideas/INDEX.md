@@ -1,8 +1,8 @@
 # Ideas Index
 
-> 16 super-ideas across 6 pillars. 338 raw ideas in DB absorbed as children. Drill into any idea file for problem, capabilities, specs, absorbed children.
+> 17 super-ideas across 6 pillars. 338 raw ideas in DB absorbed as children. Drill into any idea file for problem, capabilities, specs, absorbed children.
 
-## All Ideas (16)
+## All Ideas (17)
 
 | Idea | Pillar | Stage | Specs | Key capability |
 |------|--------|-------|-------|----------------|

@@ -1,8 +1,8 @@
 # Spec Index
 
-> 76 specs (71 done, 5 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 82 specs (71 done, 3 draft, 8 active). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
-## By Idea (18 ideas → 74 specs)
+## By Idea (19 ideas → 82 specs)
 
 ### idea-realization-engine (8 specs)
 - [idea-dual-identity](idea-dual-identity.md) — curated + raw dual identity
@@ -118,6 +118,13 @@
 
 ### creator-economy-promotion (1 spec)
 - [creator-economy-promotion](creator-economy-promotion.md) — creator landing page, proof card API, featured assets + community tag filtering
+
+### living-collective-vision (5 specs)
+- [db-backed-vision-aligned-content](db-backed-vision-aligned-content.md) — vision-aligned concept content backed by DB
+- [db-backed-vision-hub-content](db-backed-vision-hub-content.md) — vision hub content backed by DB
+- [db-backed-vision-realize-content](db-backed-vision-realize-content.md) — vision realize-page content backed by DB
+- [db-backed-vision-realize-expansion-content](db-backed-vision-realize-expansion-content.md) — vision realize expansion content backed by DB
+- [vision-image-prompt-manifest](vision-image-prompt-manifest.md) — vision image prompt manifest
 
 ## Lookup
 
