@@ -4667,34 +4667,29 @@ def _seed_task_from_open_idea() -> bool:
             f"- The evidence must be independently verifiable by any party\n"
         )
 
+    # Compact direction — keep under 3000 chars (API gate rejects OVERSIZED_DIRECTION).
+    # build_prompt() wraps with full type instructions; direction is the lean task core.
+    _spec_req = (
+        f"REQUIREMENTS: Write specs/{idea_id}.md — goal, source files, requirements, "
+        f"done_when criteria, verification scenarios (3-5 concrete curl/command tests "
+        f"with exact expected output), constraints. Follow CLAUDE.md."
+    ) if task_type == "spec" else (
+        f"REQUIREMENTS: Implement the feature per specs/{idea_id}.md. "
+        f"Write real code, follow CLAUDE.md, commit changes."
+    ) if task_type == "impl" else (
+        f"REQUIREMENTS: Output MUST be substantial. Follow CLAUDE.md conventions."
+    )
     direction = (
         f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}{failure_context}\n\n"
-        f"REQUIREMENTS:\n"
-        f"- Your output MUST be substantial (not empty or trivially short)\n"
-        f"- For spec: write a detailed specification with goal, files, acceptance criteria\n"
-        f"- For impl: write actual code that implements the feature\n"
-        f"- For test: write runnable pytest tests\n"
-        f"- For review: verify the feature exists, works, and is deployed\n"
-        f"- Follow the project's CLAUDE.md conventions. Work in the repository.\n"
-        f"- If you cannot complete the task, explain WHY in detail (don't return empty).\n"
-        f"\n"
-        f"CODE QUALITY — DIF (Deep Inspection Framework):\n"
-        f"- After writing any code file, verify it with DIF via curl:\n"
-        f"    curl -s -X POST https://dif.merly.ai/api/v2/dif/verify \\\n"
-        f"      -H 'Content-Type: application/json' \\\n"
-        f"      -d '{{\"language\": \"python\", \"code\": \"'\"$(cat <your_file.py>)\"'\"}}'\n"
-        f"- Or if cc CLI is available: cc dif verify --language python --file <your_file.py> --json\n"
-        f"- Check response: trust_signal (positive/review=ok, concern=fix), verification (>40=ok, <30=fix)\n"
-        f"- Fix any DIF-flagged issues before finishing. Include final DIF scores in your output.\n"
-        f"- Include the DIF event_id in your output for traceability.\n"
-        f"\n"
-        f"COMMUNICATION:\n"
-        f"- Check `cc inbox` every 5-7 minutes for messages from other nodes\n"
-        f"- Send status updates: `cc msg broadcast \"Working on X: progress...\"`\n"
-        f"- When done: `cc contribute --type code --cc 5 --desc \"what you did\"`\n"
-        f"- If blocked: `cc msg broadcast \"Blocked: reason\"`"
-        f"{validation_guidance}"
+        f"{_spec_req}"
     )
+    # Safety trim: if still over 2800, truncate failure_context
+    if len(direction) > 2800:
+        _base = f"Write a {task_type} for: {idea_name}.\n\n{desc}{q_text}\n\n{_spec_req}"
+        if len(_base) <= 2800:
+            direction = _base
+        else:
+            direction = _base[:2790] + "…"
 
     workspace_git_url_seed = idea.get("workspace_git_url") or ""
     seed_ctx: dict = {
