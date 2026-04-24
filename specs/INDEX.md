@@ -1,6 +1,6 @@
 # Spec Index
 
-> 74 specs (71 done, 3 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
+> 75 specs (71 done, 4 draft). Grouped by parent idea. Read frontmatter (`limit=30`) for source files, requirements, done_when.
 
 ## By Idea (18 ideas → 74 specs)
 
@@ -98,8 +98,9 @@
 ### contributor-experience (1 spec)
 - [contributor-journey](contributor-journey.md) — contributor orientation + journey
 
-### developer-experience (1 spec)
+### developer-experience (2 specs)
 - [developer-quick-start](developer-quick-start.md) — developer quick start guide
+- [external-repo-milestone](external-repo-milestone.md) — standalone proof script + CI workflow demonstrating full API lifecycle from outside the monorepo
 
 ### federation-and-nodes (1 spec)
 - [federation-network-layer](federation-network-layer.md) — multi-node federation protocol

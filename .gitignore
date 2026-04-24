@@ -102,3 +102,7 @@ api/data/*.db
 test-results/
 web/test-results/
 .claude/plans/
+*.pyc
+__pycache__/
+.task-*
+data/coherence.db
