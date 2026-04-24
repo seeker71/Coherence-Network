@@ -1174,10 +1174,41 @@ def _get_repo_token(repo_url: str) -> str | None:
     return None
 
 
+_RESOLVED_API_KEY: str | None = None
+
+
+def _resolve_api_key() -> str:
+    """Resolve the hub API key. Order: config.json → keystore → env → 'dev-key'.
+
+    Keystore (`~/.coherence-network/keys.json`, mode 600) is the normal home for
+    the real key — config.json is world-readable and shouldn't hold secrets.
+    Result is cached for the life of the process.
+    """
+    global _RESOLVED_API_KEY
+    if _RESOLVED_API_KEY is not None:
+        return _RESOLVED_API_KEY
+    key = rc("api", "api_key", "") or ""
+    if not key or key == "dev-key":
+        ks_path = os.path.join(os.path.expanduser("~"), ".coherence-network", "keys.json")
+        if os.path.exists(ks_path):
+            try:
+                with open(ks_path) as _kf:
+                    _ks = json.load(_kf)
+                ks_key = _ks.get("api_key")
+                if isinstance(ks_key, str) and ks_key:
+                    key = ks_key
+            except Exception:
+                pass
+    if not key:
+        key = os.environ.get("AUTH_API_KEY") or os.environ.get("COHERENCE_API_KEY") or "dev-key"
+    _RESOLVED_API_KEY = key
+    return key
+
+
 def api(method: str, path: str, body: dict | None = None, _retries: int = 0) -> dict | list | None:
     """Call the API via httpx. Auto-retries on 429 with backoff."""
     url = f"{API_BASE}{path}"
-    headers = {"X-Api-Key": rc("api", "api_key", "dev-key")}
+    headers = {"X-API-Key": _resolve_api_key()}
     try:
         if method == "GET":
             resp = _HTTP_CLIENT.get(url, headers=headers)
