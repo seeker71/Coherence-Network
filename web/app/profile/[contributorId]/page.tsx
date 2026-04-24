@@ -15,7 +15,7 @@ type PublicKeyResponse = {
 };
 
 type ProfileDimension = {
-  view?: string; // 'structural' | 'categorical' | 'semantic' (v2)
+  view: string; // 'structural' | 'categorical' | 'semantic'
   dimension: string;
   strength: number;
 };
@@ -23,14 +23,12 @@ type ProfileDimension = {
 type ViewSummary = { dimensions: number; magnitude: number };
 
 type FrequencyProfile = {
-  version?: string;
   entity_id: string;
   dimensions: number;
   magnitude: number;
   hash: string;
   top: ProfileDimension[];
-  profile?: Record<string, number>; // v1
-  views?: Record<string, ViewSummary>; // v2
+  views: Record<string, ViewSummary>;
 };
 
 type AssetNode = {
@@ -380,48 +378,40 @@ export default async function ContributorProfilePage({
                 );
                 return resolved.href ? (
                   <Link
-                    key={`${dim.view ?? "v1"}:${dim.dimension}`}
+                    key={`${dim.view}:${dim.dimension}`}
                     href={resolved.href}
                     className={`${chipClass} hover:opacity-80 transition-opacity`}
                   >
                     {inner}
                   </Link>
                 ) : (
-                  <span key={`${dim.view ?? "v1"}:${dim.dimension}`} className={chipClass}>
+                  <span key={`${dim.view}:${dim.dimension}`} className={chipClass}>
                     {inner}
                   </span>
                 );
               })}
             </div>
-            {profile.views ? (
-              <div className="grid grid-cols-3 gap-3">
-                {(["structural", "categorical", "semantic"] as const).map((name) => {
-                  const v = profile.views?.[name];
-                  if (!v) return null;
-                  return (
-                    <div key={name} className="rounded-xl border border-border/20 bg-background/40 p-3">
-                      <p className="text-xs text-muted-foreground capitalize">{name}</p>
-                      <p className="text-sm font-light mt-1">
-                        <span className="font-mono">{v.magnitude.toFixed(2)}</span>
-                        <span className="text-xs text-muted-foreground ml-1">· {v.dimensions} dims</span>
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
+            <div className="grid grid-cols-3 gap-3">
+              {(["structural", "categorical", "semantic"] as const).map((name) => {
+                const v = profile.views?.[name];
+                if (!v) return null;
+                return (
+                  <div key={name} className="rounded-xl border border-border/20 bg-background/40 p-3">
+                    <p className="text-xs text-muted-foreground capitalize">{name}</p>
+                    <p className="text-sm font-light mt-1">
+                      <span className="font-mono">{v.magnitude.toFixed(2)}</span>
+                      <span className="text-xs text-muted-foreground ml-1">· {v.dimensions} dims</span>
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {profile.version === "v2" ? (
-                <>
-                  <strong>v2 (dynamic):</strong> The profile is three views fused for resonance matching.
-                  <em> Structural</em> weights come from personalized PageRank across the graph — multi-hop resonance with natural attenuation, not just direct edges.
-                  <em> Categorical</em> weights come from IDF (rare domain/keyword/type values carry more signal; values on every node carry near-zero signal).
-                  <em> Semantic</em> weights come from text frequency-scoring markers. Every constant you see was derived from the graph's own statistics, not hand-tuned.
-                  Resonance between two entities = cosine per view, fused by inverse-variance so no view dominates by scale alone.
-                </>
-              ) : (
-                <>Each dimension is a raw vector weight (0–1). Concept and entity weights come from graph neighbors; domain/keyword/type weights come from node properties; &quot;Living text&quot; comes from content analysis. Magnitude is the L2 norm of the full vector.</>
-              )}
+              The profile is three views fused for resonance matching.
+              <em> Structural</em> weights come from personalized PageRank across the graph — multi-hop resonance with natural attenuation, not just direct edges.
+              <em> Categorical</em> weights come from IDF (rare domain/keyword/type values carry more signal; values on every node carry near-zero signal).
+              <em> Semantic</em> weights come from text frequency-scoring markers. Every weight emerges from the graph&apos;s own statistics, not hand-tuned constants.
+              Resonance between two entities = cosine per view, fused by inverse-variance so no view dominates by scale alone.
             </p>
 
             {/* Stats row */}

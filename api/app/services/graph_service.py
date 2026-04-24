@@ -438,21 +438,11 @@ def create_provenance_edge(
 
 
 def _invalidate_profiles(*entity_ids: str) -> None:
-    """Best-effort profile cache invalidation after graph writes.
-
-    Invalidates both v1 and v2 caches so live resonance calls pick up the
-    new edge on next read.
-    """
+    """Best-effort profile cache invalidation after graph writes."""
     try:
         from app.services import frequency_profile_service
         for entity_id in entity_ids:
             frequency_profile_service.invalidate(entity_id)
-    except Exception:
-        pass
-    try:
-        from app.services import frequency_profile_v2
-        for entity_id in entity_ids:
-            frequency_profile_v2.invalidate(entity_id)
     except Exception:
         pass
 

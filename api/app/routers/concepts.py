@@ -170,16 +170,22 @@ class PlainConceptSubmit(BaseModel):
     contributor: str = "anonymous"
 
 
-def _format_profile(entity_id: str, profile: dict) -> dict:
+def _format_profile(entity_id: str, views: dict) -> dict:
+    import math as _m
     from app.services import frequency_profile_service
     return {
         "entity_id": entity_id,
-        "dimensions": len(profile),
-        "magnitude": round(frequency_profile_service.magnitude(profile), 4),
+        "dimensions": sum(len(v) for v in views.values()),
+        "magnitude": round(frequency_profile_service.magnitude(views), 4),
         "hash": frequency_profile_service.profile_hash(entity_id),
-        "top": [{"dimension": d, "strength": round(s, 4)}
-                for d, s in frequency_profile_service.top_dimensions(profile, n=15)],
-        "profile": {k: round(v, 4) for k, v in sorted(profile.items(), key=lambda x: -x[1])},
+        "top": frequency_profile_service.top_dimensions(views, n=15),
+        "views": {
+            name: {
+                "dimensions": len(view),
+                "magnitude": round(_m.sqrt(sum(v * v for v in view.values())), 4) if view else 0.0,
+            }
+            for name, view in views.items()
+        },
     }
 
 
@@ -212,10 +218,10 @@ async def get_concept_frequency_profile(concept_id: str):
     for the universal version that works with any entity type.
     """
     from app.services import frequency_profile_service
-    profile = frequency_profile_service.get_profile(concept_id)
-    if not profile:
+    views = frequency_profile_service.get_profile(concept_id)
+    if not any(views.values()):
         raise HTTPException(status_code=404, detail=f"No profile for '{concept_id}'")
-    return _format_profile(concept_id, profile)
+    return _format_profile(concept_id, views)
 
 
 @router.post("/concepts/frequency-field", summary="Token-level frequency field analysis")
