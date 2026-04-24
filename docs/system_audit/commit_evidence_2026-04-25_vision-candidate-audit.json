@@ -1,0 +1,103 @@
+{
+  "date": "2026-04-25",
+  "thread_branch": "codex/vision-candidate-audit-20260425",
+  "commit_scope": "Add an audit step for regenerated vision image candidates before production promotion.",
+  "files_owned": [
+    "api/tests/test_audit_vision_image_candidates.py",
+    "docs/system_audit/commit_evidence_2026-04-25_vision-candidate-audit.json",
+    "scripts/audit_vision_image_candidates.py",
+    "specs/vision-image-prompt-manifest.md"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "make prompt-gate",
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -v tests/test_audit_vision_image_candidates.py tests/test_generate_visuals_manifest.py tests/test_check_generated_vision_assets.py",
+      "ruff check scripts/audit_vision_image_candidates.py api/tests/test_audit_vision_image_candidates.py",
+      "python3 -m py_compile scripts/audit_vision_image_candidates.py",
+      "python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --profile fast-sample-v1 --out-dir output/vision-quality/candidates --force",
+      "python3 scripts/audit_vision_image_candidates.py --only-path web/public/visuals/generated/lc-space-0.jpg --profile fast-sample-v1 --min-bytes 1000",
+      "python3 scripts/check_generated_vision_assets.py --allow-untracked",
+      "python3 -m py_compile scripts/audit_vision_image_candidates.py scripts/generate_visuals.py scripts/plan_vision_image_regeneration.py scripts/check_generated_vision_assets.py scripts/export_vision_image_prompts.py",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Focused tests: 7 passed, 1 pytest config warning. Sample candidate generated at output/vision-quality/candidates/web/public/visuals/generated/lc-space-0.jpg, 73892 bytes, 512x512. Candidate audit passed with present=1, missing=0, too_small=0, unreadable_dimensions=0. Local PR guard passed with ready_for_push=True. Follow-through check passed with stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks after push"
+    ],
+    "summary": "Pending PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "summary": "Pending merge and public deploy verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local candidate generation, audit validation, and pre-push guard pass; PR CI and public deploy validation pending."
+  },
+  "idea_ids": [
+    "living-collective-vision",
+    "vision-image-regeneration"
+  ],
+  "spec_ids": [
+    "vision-image-prompt-manifest"
+  ],
+  "task_ids": [
+    "vision-candidate-audit-20260425"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "quality-bar"
+      ]
+    },
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "sample candidate generation: OK (72KB)",
+    "candidate audit summary: pass=True, present=1, missing=0",
+    "candidate dimensions: 512x512",
+    "candidate output removed before commit to keep production assets unchanged",
+    "local guard report: docs/system_audit/pr_check_failures/pr_check_guard_20260424T215708Z_codex-vision-candidate-audit-20260425.json",
+    "follow-through check: codex_open_prs=0, stale_codex_prs=0"
+  ],
+  "change_files": [
+    "api/tests/test_audit_vision_image_candidates.py",
+    "scripts/audit_vision_image_candidates.py",
+    "specs/vision-image-prompt-manifest.md"
+  ],
+  "change_intent": "process_only",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Operators can ingest regenerated candidate images into an audit report with existence, size, dimensions, hashes, and prompt/profile provenance before promotion.",
+    "public_endpoints": [
+      "https://coherencycoin.com/vision"
+    ],
+    "test_flows": [
+      "Run public deploy verifier after merge.",
+      "Sense pulse and pipeline status after deploy."
+    ]
+  }
+}
