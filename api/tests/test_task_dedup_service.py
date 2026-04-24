@@ -584,6 +584,68 @@ class TestAutoAdvanceFingerprint:
         ctx = created_tasks[0]["context"]
         assert ctx["task_fingerprint"] == "idea-fp-retry:impl:auto"
 
+    def test_retry_spec_hydrates_task_card_context(self, monkeypatch):
+        """Spec retries carry a full task card before create_task persists them."""
+        from app.services import pipeline_advance_service as pas
+        from app.services.agent_service_executor import task_card_validation
+        from app.services.agent_routing.prompt_templates_loader import reset_prompt_templates_cache
+        from app.services.task_dedup_service import IdeaPhaseHistory
+
+        monkeypatch.setenv("PROMPT_VARIANT", "a")
+        reset_prompt_templates_cache()
+        task = _task(task_type="spec", status="failed", idea_id="openclaw-node-bridge")
+
+        monkeypatch.setattr(
+            "app.services.task_dedup_service.check_idea_phase_history",
+            lambda idea_id, phase: IdeaPhaseHistory(failed_count=1),
+        )
+        monkeypatch.setattr(pas, "_build_failure_memory", lambda *_a, **_k: "")
+
+        captured: list[dict] = []
+
+        def fake_create(data):
+            captured.append({"direction": data.direction, "context": data.context})
+            return {"id": "t-retry-spec", "task_type": "spec", "status": "pending", "context": data.context}
+
+        from app.services import agent_service as _as
+        monkeypatch.setattr(_as, "create_task", fake_create)
+
+        result = pas.maybe_retry(task)
+        assert result is not None
+        ctx = captured[0]["context"]
+        assert ctx["task_card"]["files_allowed"] == ["specs/openclaw-node-bridge.md"]
+        for field in ("goal", "files_allowed", "done_when", "commands", "constraints"):
+            assert ctx[field] == ctx["task_card"][field]
+        assert task_card_validation(ctx)["score"] == 1.0
+
+    def test_autofix_split_spec_hydrates_task_card_context(self, monkeypatch):
+        """Timeout split follow-ups do not become weak-card dormant work."""
+        from app.services import pipeline_advance_service as pas
+        from app.services.agent_service_executor import task_card_validation
+        from app.services.agent_routing.prompt_templates_loader import reset_prompt_templates_cache
+
+        monkeypatch.setenv("PROMPT_VARIANT", "a")
+        reset_prompt_templates_cache()
+        task = _task(task_type="spec", status="timed_out", idea_id="node-message-bus")
+        task["direction"] = "x" * 2200
+        task["output"] = "timeout while creating the spec"
+
+        captured: list[dict] = []
+
+        def fake_create(data):
+            captured.append({"task_type": data.task_type, "context": data.context})
+            return {"id": "t-split-spec", "task_type": "spec", "status": "pending", "context": data.context}
+
+        from app.services import agent_service as _as
+        monkeypatch.setattr(_as, "create_task", fake_create)
+
+        pas._escalate_or_autofix(task, "spec", "node-message-bus", 2)
+        assert len(captured) == 1
+        ctx = captured[0]["context"]
+        assert ctx["auto_fix"] == "split"
+        assert ctx["task_card"]["files_allowed"] == ["specs/node-message-bus.md"]
+        assert task_card_validation(ctx)["score"] == 1.0
+
 
 # ── Scenario 2: Skip-ahead in auto-advance ───────────────────────────────
 
