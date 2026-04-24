@@ -1,0 +1,85 @@
+{
+  "date": "2026-04-24",
+  "thread_branch": "codex/low-success-guidance-20260425",
+  "commit_scope": "Make low-success-rate monitor guidance follow the dominant recent failure reason instead of always naming the weakest 7-day task type.",
+  "files_owned": [
+    "api/app/routers/agent_monitor_helpers.py",
+    "api/app/services/agent_monitor_guidance_service.py",
+    "api/tests/test_agent_monitor_helpers.py",
+    "docs/system_audit/commit_evidence_2026-04-24_low_success_guidance.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -v tests/test_agent_monitor_helpers.py tests/test_failure_taxonomy_service.py",
+      "python3 api/scripts/run_maintainability_audit.py --output api/logs/maintainability_audit_report.worktree_guard.json --fail-on-regression",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "10 passed, 1 pytest config warning. Initial PR guard detected maintainability regression after router helper growth; logic was moved into a small service module and maintainability audit then reported regression=no. Final PR guard local_preflight=pass, ready_for_push=True; follow-through stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks after push"
+    ],
+    "summary": "Pending PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh https://api.coherencycoin.com https://coherencycoin.com"
+    ],
+    "summary": "Pending merge and public deploy verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Focused local tests pass; pre-push guard, PR CI, and public deploy validation pending."
+  },
+  "idea_ids": [
+    "pipeline-low-success-rate"
+  ],
+  "spec_ids": [
+    "monitor-guidance-diagnostics"
+  ],
+  "task_ids": [
+    "low-success-guidance-20260425"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "live monitor issue derived-low_success_rate: recent_failed_reasons spec_gate x5, context_compaction x4, no_code x2",
+    "focused pytest run: 10 passed",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260424T204017Z_codex-low-success-guidance-20260425.json"
+  ],
+  "change_files": [
+    "api/app/routers/agent_monitor_helpers.py",
+    "api/app/services/agent_monitor_guidance_service.py",
+    "api/tests/test_agent_monitor_helpers.py"
+  ],
+  "change_intent": "runtime_fix",
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Public low_success_rate suggested_action should prioritize the dominant recent diagnostic reason, such as context_compaction, instead of only the weakest 7-day task type.",
+    "public_endpoints": [
+      "https://api.coherencycoin.com/api/agent/monitor-issues",
+      "https://api.coherencycoin.com/api/agent/status-report"
+    ],
+    "test_flows": [
+      "Run public deploy verifier after merge.",
+      "Sense monitor/status-report diagnostics after deploy."
+    ]
+  }
+}

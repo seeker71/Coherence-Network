@@ -8,6 +8,7 @@ from typing import Any
 
 from app.routers.agent_helpers import issue_priority_map
 from app.services import agent_service
+from app.services.agent_monitor_guidance_service import low_success_rate_suggested_action
 from app.services.config_service import get_config
 
 logger = logging.getLogger(__name__)
@@ -215,20 +216,17 @@ def low_success_rate_context(status: dict[str, Any] | None = None) -> tuple[str,
         if type_rate < 0.8:
             weak_types.append((str(task_type), type_completed, type_failed, type_rate))
     weak_types.sort(key=lambda item: (-item[2], item[3], item[0]))
+    diagnostics = status.get("diagnostics") if isinstance(status, dict) and isinstance(status.get("diagnostics"), dict) else {}
     if weak_types:
         fragments = [
             f"{task_type} {int(round(type_rate * 100))}% ({type_completed}/{type_failed})"
             for task_type, type_completed, type_failed, type_rate in weak_types[:3]
         ]
         message = f"{message} Weak task types: {', '.join(fragments)}."
-        suggested = (
-            f"Digest recent {weak_types[0][0]} failures first: inspect failure signatures, "
-            "then tighten routing/task-card gates or requeue only scoped work with evidence."
-        )
+        suggested = low_success_rate_suggested_action(diagnostics, weak_types[0][0])
     else:
-        suggested = "Run targeted prompt/model diagnostics and capture remediation in the meta pipeline."
+        suggested = low_success_rate_suggested_action(diagnostics, "prompt/model")
 
-    diagnostics = status.get("diagnostics") if isinstance(status, dict) and isinstance(status.get("diagnostics"), dict) else {}
     if diagnostics:
         reason_fragments = _diagnostic_count_fragments(diagnostics, "recent_failed_reasons", "reason")
         signature_fragments = _diagnostic_count_fragments(diagnostics, "recent_failed_signatures", "signature", limit=2)
