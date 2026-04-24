@@ -1,0 +1,91 @@
+{
+  "date": "2026-04-24",
+  "thread_branch": "codex/root-telemetry-persistence-spine",
+  "commit_scope": "Make telemetry_persistence_service use the unified database spine instead of its duplicate env-backed SQLite fallback.",
+  "files_owned": [
+    "api/app/services/telemetry_persistence_service/db.py",
+    "api/tests/test_persistence_contract_config.py",
+    "docs/system_audit/commit_evidence_2026-04-24_telemetry-persistence-unified-spine.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_persistence_contract_config.py -q",
+      "cd api && python3 -m ruff check app/services/telemetry_persistence_service/db.py tests/test_persistence_contract_config.py",
+      "git diff --check",
+      "rg -n \"os\\.getenv|os\\.environ\\.get|environ\\[|getenv\\(\" api/app/services/telemetry_persistence_service/db.py api/tests/test_persistence_contract_config.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "The persistence contract should report provider usage telemetry on the same PostgreSQL spine as the rest of production persistence.",
+    "public_endpoints": [
+      "/api/health/persistence",
+      "/api/automation/usage/readiness",
+      "/api/friction/report"
+    ],
+    "test_flows": [
+      "Old TELEMETRY_DATABASE_URL no longer routes telemetry_persistence_service away from the unified database URL",
+      "Focused persistence config tests pass",
+      "Public persistence contract will be rechecked after deployment"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Local targeted validation is complete; PR guard, CI, deployment, and live sensing still need to pass."
+  },
+  "idea_ids": [
+    "repository-health",
+    "root-config-integrity"
+  ],
+  "spec_ids": [
+    "repository-architecture-health",
+    "root-config-spine"
+  ],
+  "task_ids": [
+    "telemetry-persistence-unified-spine-2026-04-24"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "live-sensing"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "live /api/health/persistence reported provider_usage_not_postgresql on deployed d0df22c1",
+    "api/tests/test_persistence_contract_config.py",
+    "targeted pytest and ruff outputs in thread",
+    "PR guard report docs/system_audit/pr_check_failures/pr_check_guard_20260424T100609Z_codex-root-telemetry-persistence-spine.json"
+  ],
+  "change_files": [
+    "api/app/services/telemetry_persistence_service/db.py",
+    "api/tests/test_persistence_contract_config.py"
+  ],
+  "change_intent": "runtime_fix"
+}
