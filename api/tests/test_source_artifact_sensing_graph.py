@@ -95,12 +95,16 @@ async def test_source_artifact_sensing_creates_provenance_edge_and_profile():
         assert provenance["ingestion_policy"] == "summary_and_extracted_concepts_only"
         assert "held field" in provenance["rationale"]
 
+        # Multi-view profile — categorical view carries sensing provenance
+        # as IDF-weighted features (source_artifact, provenance, ingestion_policy).
         profile = await c.get(f"/api/profile/{sensing_body['id']}")
         assert profile.status_code == 200, profile.text
-        dimensions = profile.json()["profile"]
-        assert dimensions[artifact_id] > 0
-        assert dimensions["_source_backed"] > 0
-        assert dimensions["_ingestion_policy:summary_and_extracted_concepts_only"] > 0
+        body = profile.json()
+        assert "views" in body
+        dim_keys = {d["dimension"] for d in body["top"]}
+        assert f"_source_artifact:{artifact_id}" in dim_keys
+        assert "_provenance:source_backed" in dim_keys
+        assert "_ingestion_policy:summary_and_extracted_concepts_only" in dim_keys
 
 
 def test_provenance_edge_helper_rejects_incomplete_metadata():
