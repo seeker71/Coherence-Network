@@ -228,7 +228,13 @@ def failure_classification(task: dict[str, Any], *, output_text: str | None = No
             if maybe:
                 detail = maybe
                 break
-    failure_class = str((context or {}).get("last_failure_class") or (context or {}).get("failure_class") or "")
+    class_parts = [
+        str((context or {}).get("last_failure_class") or "").strip(),
+        str((context or {}).get("failure_class") or "").strip(),
+        str((context or {}).get("failure_signature") or "").strip(),
+        str((context or {}).get("failure_summary") or "").strip(),
+    ]
+    failure_class = "\n".join(part for part in class_parts if part)
     return failure_taxonomy_service.classify_failure(
         output_text=output_value,
         result_error=detail,

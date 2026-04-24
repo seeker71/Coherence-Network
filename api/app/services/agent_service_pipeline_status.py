@@ -6,7 +6,6 @@ from typing import Any
 from app.services.agent_service_store import _ensure_store_loaded, _store
 from app.services.agent_service_task_derive import (
     failure_classification,
-    failure_reason_bucket,
     status_value,
     task_output_text,
     task_type_name,
@@ -172,24 +171,32 @@ def _pipeline_queue_diagnostics(
     for item in running:
         key = task_type_name(item.get("task_type")) or "unknown"
         running_by_task_type[key] = running_by_task_type.get(key, 0) + 1
-    reason_counts = {}
-    recent_failed = []
+    reason_counts: dict[str, int] = {}
+    signature_counts: dict[str, int] = {}
+    recent_failed: list[dict[str, Any]] = []
     for completed_item in completed[:12]:
         task = _store.get(completed_item["id"]) or {}
         if status_value(task.get("status")) != "failed":
             continue
-        reason = failure_reason_bucket(task)
+        classified = failure_classification(task)
+        reason = classified["bucket"]
         reason_counts[reason] = reason_counts.get(reason, 0) + 1
         ctx = task.get("context") or {}
         failure_signature = str(ctx.get("failure_signature") or "").strip() if isinstance(ctx, dict) else ""
+        signature = classified.get("signature") or failure_signature
+        if signature:
+            signature_counts[signature] = signature_counts.get(signature, 0) + 1
         recent_failed.append({
             "task_id": task.get("id"),
             "task_type": task_type_name(task.get("task_type")) or "unknown",
             "reason": reason,
-            "signature": failure_signature or failure_classification(task).get("signature", ""),
+            "signature": signature,
         })
     recent_failed_reasons = [
         {"reason": r, "count": c} for r, c in sorted(reason_counts.items(), key=lambda row: (-row[1], row[0]))
+    ]
+    recent_failed_signatures = [
+        {"signature": r, "count": c} for r, c in sorted(signature_counts.items(), key=lambda row: (-row[1], row[0]))
     ]
     total_pending = sum(pending_by_task_type.values())
     dominant_pending_type = ""
@@ -202,7 +209,9 @@ def _pipeline_queue_diagnostics(
         "pending_by_task_type": pending_by_task_type,
         "running_by_task_type": running_by_task_type,
         "recent_failed_count": len(recent_failed),
+        "recent_failed": recent_failed[:5],
         "recent_failed_reasons": recent_failed_reasons,
+        "recent_failed_signatures": recent_failed_signatures,
         "queue_mix_warning": queue_mix_warning,
         "dominant_pending_task_type": dominant_pending_type,
         "dominant_pending_share": dominant_pending_share,
