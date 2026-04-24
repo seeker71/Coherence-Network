@@ -99,3 +99,15 @@ Fixing only dark mode contrast leaves the second problem unaddressed and is a pa
 | WCAG AA failures (axe-core, homepage) | 3 | 0 |
 | Bounce rate (anecdotal) | high for day/bright-env users | –15% est. |
 | Theme preference pct (localStorage) | N/A | tracked after launch |
+
+## Outcome
+
+Lowered light-mode `--primary`, `--ring`, and `--chart-1` from L=42% to L=34%, giving a measured contrast of **~4.78:1** on the warm off-white background — above the 4.5:1 threshold. Dark mode was already compliant (primary at L=58% gives 7.7:1 on `hsl(24 22% 11%)`).
+
+| Token | Before | After | Contrast (on bg) |
+|-------|--------|-------|-----------------|
+| `--primary` (light) | `36 72% 42%` | `36 72% 34%` | 3.33 → 4.78 |
+| `--ring` (light) | `36 72% 42%` | `36 72% 34%` | 3.33 → 4.78 |
+| `--chart-1` (light) | `36 72% 42%` | `36 72% 34%` | 3.33 → 4.78 |
+
+Regression coverage: `api/tests/test_homepage_contrast.py` — 14 WCAG AA assertions covering dark + light palettes. All pass.
