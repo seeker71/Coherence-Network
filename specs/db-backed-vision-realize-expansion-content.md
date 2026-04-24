@@ -1,6 +1,6 @@
 ---
 idea_id: db-backed-vision-realize-expansion-content
-status: active
+status: done
 source:
   - file: api/app/services/vision_content_service.py
     symbols: [get_realize_content()]

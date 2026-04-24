@@ -1,6 +1,6 @@
 ---
 idea_id: living-collective-vision
-status: active
+status: done
 source:
   - file: docs/visuals/prompts.json
     symbols: [vision image prompt records]

@@ -1,6 +1,6 @@
 ---
 idea_id: developer-experience
-status: active
+status: done
 source:
   - file: scripts/external_proof_demo.py
     symbols: [_idea_create_payload, run_idea_lifecycle, record_contribution, check_coherence_score]

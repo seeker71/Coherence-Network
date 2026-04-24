@@ -1,6 +1,6 @@
 ---
 idea_id: db-backed-vision-aligned-content
-status: active
+status: done
 source:
   - file: api/app/services/vision_content_service.py
     symbols: [get_aligned_content()]

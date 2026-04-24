@@ -1,6 +1,6 @@
 ---
 idea_id: db-backed-vision-hub-content
-status: active
+status: done
 source:
   - file: api/app/services/vision_content_service.py
     symbols: [get_hub_content()]
