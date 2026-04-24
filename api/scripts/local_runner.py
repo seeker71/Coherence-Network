@@ -2165,23 +2165,56 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             # Read the spec content directly to give the provider full context
             spec_ref = ""
             resolved_spec_path = ""
+            spec_status = ""
             try:
                 import glob as _glob
-                # Exact match first, then glob fallback
-                exact = _get_repo_dir() / "specs" / f"{idea_id}.md"
-                if exact.exists():
-                    spec_files = [str(exact)]
-                else:
-                    spec_files = _glob.glob(str(_get_repo_dir() / "specs" / f"*{idea_id}*"))
+                spec_files = []
+                task_context = task.get("context") if isinstance(task.get("context"), dict) else {}
+                context_spec = task_context.get("spec_file") or task_context.get("spec_path")
+                if context_spec:
+                    exact_context = (
+                        Path(context_spec)
+                        if Path(context_spec).is_absolute()
+                        else _get_repo_dir() / str(context_spec)
+                    )
+                    if exact_context.exists():
+                        spec_files = [str(exact_context)]
+                if not spec_files:
+                    # Exact match first, then glob fallback
+                    exact = _get_repo_dir() / "specs" / f"{idea_id}.md"
+                    if exact.exists():
+                        spec_files = [str(exact)]
+                    else:
+                        spec_files = _glob.glob(str(_get_repo_dir() / "specs" / f"*{idea_id}*"))
                 if spec_files:
                     resolved_spec_path = spec_files[0]
                     with open(resolved_spec_path, "r", encoding="utf-8", errors="replace") as sf:
+                        spec_text = sf.read()
                         # DG-002 fix: cap spec content to keep total direction < 3000 chars.
                         # Spec path is stored in context so the provider can read the full file.
-                        spec_content = sf.read()[:600]
+                        spec_content = spec_text[:600]
+                    status_match = re.search(r"^status:\s*(\S+)", spec_text, re.MULTILINE)
+                    spec_status = status_match.group(1).strip().lower() if status_match else ""
                     spec_ref = f"\n\nSpec ({resolved_spec_path}):\n```\n{spec_content}\n```\n(Full spec at {resolved_spec_path})\n"
-            except Exception:
-                pass
+            except Exception as exc:
+                log.warning("AUTO_PHASE spec resolve failed idea=%s error=%s", idea_id, exc)
+            if not resolved_spec_path:
+                log.warning("AUTO_PHASE skip impl — no active spec found for %s", idea_id)
+                _append_idea_event(idea_id, "phase_advance_blocked", {
+                    "from_phase": task_type,
+                    "to_phase": next_phase,
+                    "reason": "missing_active_spec",
+                })
+                return
+            if spec_status == "done":
+                log.warning("AUTO_PHASE skip impl — spec already done for %s path=%s", idea_id, resolved_spec_path)
+                _append_idea_event(idea_id, "phase_advance_blocked", {
+                    "from_phase": task_type,
+                    "to_phase": next_phase,
+                    "reason": "done_spec",
+                    "spec_path": resolved_spec_path,
+                })
+                return
             extra_context["spec_path"] = resolved_spec_path or "none"
 
             direction = (

@@ -66,3 +66,60 @@ def test_impl_with_active_spec_continues(monkeypatch, tmp_path: Path) -> None:
     )
 
     assert blocked is False
+
+
+def test_spec_phase_does_not_enqueue_impl_without_spec(monkeypatch, tmp_path: Path) -> None:
+    calls: list[tuple[str, str, dict | None]] = []
+    monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
+    monkeypatch.setattr(local_runner, "_append_idea_event", lambda *args, **kwargs: None)
+
+    def fake_api(method: str, path: str, body: dict | None = None):
+        calls.append((method, path, body))
+        if path == "/api/ideas/missing-spec/tasks":
+            return {
+                "groups": [
+                    {"task_type": "spec", "count": 1, "status_counts": {"completed": 1}},
+                ],
+                "tasks": [],
+            }
+        if path == "/api/ideas/missing-spec":
+            return {"id": "missing-spec", "name": "Missing Spec", "description": ""}
+        return {}
+
+    monkeypatch.setattr(local_runner, "api", fake_api)
+
+    local_runner._run_phase_auto_advance_hook(
+        {"task_type": "spec", "context": {"idea_id": "missing-spec"}}
+    )
+
+    assert not [call for call in calls if call[0] == "POST" and call[1] == "/api/agent/tasks"]
+
+
+def test_spec_phase_does_not_enqueue_impl_for_done_spec(monkeypatch, tmp_path: Path) -> None:
+    spec_dir = tmp_path / "specs"
+    spec_dir.mkdir()
+    (spec_dir / "done-idea.md").write_text("---\nstatus: done\n---\n", encoding="utf-8")
+    calls: list[tuple[str, str, dict | None]] = []
+    monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
+    monkeypatch.setattr(local_runner, "_append_idea_event", lambda *args, **kwargs: None)
+
+    def fake_api(method: str, path: str, body: dict | None = None):
+        calls.append((method, path, body))
+        if path == "/api/ideas/done-idea/tasks":
+            return {
+                "groups": [
+                    {"task_type": "spec", "count": 1, "status_counts": {"completed": 1}},
+                ],
+                "tasks": [],
+            }
+        if path == "/api/ideas/done-idea":
+            return {"id": "done-idea", "name": "Done Idea", "description": ""}
+        return {}
+
+    monkeypatch.setattr(local_runner, "api", fake_api)
+
+    local_runner._run_phase_auto_advance_hook(
+        {"task_type": "spec", "context": {"idea_id": "done-idea"}}
+    )
+
+    assert not [call for call in calls if call[0] == "POST" and call[1] == "/api/agent/tasks"]
