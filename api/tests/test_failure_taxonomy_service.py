@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 from app.services import failure_taxonomy_service
 from app.services import pipeline_policy_service
-from app.services.agent_service_pipeline_status import _pipeline_queue_diagnostics
+from app.services.agent_service_pipeline_status import (
+    _pipeline_queue_diagnostics,
+    _pipeline_task_status_item,
+)
 from app.services.agent_service_store import _store
 from app.services.agent_service_task_derive import failure_classification
 
@@ -169,3 +174,23 @@ def test_pipeline_diagnostics_reports_zero_output_resolved_tasks() -> None:
         {"task_id": "task_hollow_completed", "task_type": "impl", "status": "completed"},
         {"task_id": "task_hollow_failed", "task_type": "spec", "status": "failed"},
     ]
+
+
+def test_pipeline_task_status_item_includes_status() -> None:
+    status, item = _pipeline_task_status_item(
+        {
+            "id": "task_needs_decision",
+            "status": "needs_decision",
+            "task_type": "impl",
+            "model": "claude/claude-sonnet-4-6",
+            "direction": "Needs operator decision",
+            "created_at": None,
+            "updated_at": None,
+            "started_at": None,
+            "claimed_by": None,
+        },
+        now=datetime.now(timezone.utc),
+    )
+
+    assert status == "needs_decision"
+    assert item["status"] == "needs_decision"
