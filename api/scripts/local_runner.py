@@ -4427,7 +4427,9 @@ def _seed_task_from_open_idea() -> bool:
             phase = g.get("task_type", "")
             status_counts = g.get("status_counts", {})
             completed = int(status_counts.get("completed", 0))
-            total_for_phase = int(status_counts.get("pending", 0)) + int(status_counts.get("running", 0)) + completed + int(status_counts.get("failed", 0))
+            total_for_phase = (int(status_counts.get("pending", 0)) + int(status_counts.get("running", 0))
+                               + completed + int(status_counts.get("failed", 0))
+                               + int(status_counts.get("needs_decision", 0)))
             phase_counts[phase] = total_for_phase
             if completed > 0:
                 completed_phases.add(phase)
