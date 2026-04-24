@@ -8,12 +8,10 @@ when LibreTranslate rendered them as something else.
 
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.services.translator_backends import (
+    AnthropicAttunementBackend,
     LibreTranslateBackend,
     _apply_glossary,
     register_default_backend,
@@ -86,15 +84,41 @@ def test_preserves_image_syntax():
     assert "hüten" in out
 
 
-def test_register_default_prefers_libretranslate_without_key(monkeypatch):
-    """With no COHERENCE_TRANSLATOR set and no anthropic key, installs LibreTranslate."""
+def test_register_default_prefers_libretranslate_without_key():
+    """With default translator config and no Anthropic key, installs LibreTranslate."""
     # Clean slate
     translator_service.set_backend(None)
-    monkeypatch.delenv("COHERENCE_TRANSLATOR", raising=False)
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     # Avoid picking up a real keystore by faking Path.home()
     with patch("app.services.translator_backends._read_keystore_key", return_value=None):
         name = register_default_backend()
     assert name == "libretranslate"
     assert translator_service.has_backend() is True
+    translator_service.set_backend(None)
+
+
+def test_register_default_uses_translator_config_for_anthropic():
+    translator_service.set_backend(None)
+
+    values = {
+        ("translator", "backend"): "anthropic",
+        ("translator", "anthropic_model"): "claude-test",
+        ("translator", "anthropic_api_url"): "https://anthropic.test/messages",
+    }
+
+    def fake_get_str(section: str, key: str, default: str = "") -> str:
+        return values.get((section, key), default)
+
+    with (
+        patch("app.services.translator_backends.get_str", side_effect=fake_get_str),
+        patch("app.services.translator_backends.get_int", return_value=17),
+        patch("app.services.translator_backends._read_keystore_key", return_value="key-test"),
+    ):
+        name = register_default_backend()
+
+    assert name == "anthropic"
+    backend = translator_service._BACKEND  # type: ignore[attr-defined]
+    assert isinstance(backend, AnthropicAttunementBackend)
+    assert backend.model == "claude-test"
+    assert backend.api_url == "https://anthropic.test/messages"
+    assert backend.timeout_seconds == 17
     translator_service.set_backend(None)

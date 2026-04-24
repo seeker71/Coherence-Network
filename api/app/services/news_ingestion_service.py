@@ -1,23 +1,25 @@
 """News ingestion service: fetches RSS feeds and caches results.
 
-Sources are loaded from config/news-sources.json (configurable via API).
-Falls back to a minimal default set if the config file is missing.
+Sources are loaded from the configured JSON source list and are editable via
+the API. If the source file is missing or unreadable, the service returns an
+empty source list rather than carrying hidden feed data in code.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 import xml.etree.ElementTree as ET
-from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from dataclasses import asdict, dataclass
+from datetime import timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Optional
 
 import httpx
+
+from app.config_loader import get_float, get_int, get_str
 
 logger = logging.getLogger(__name__)
 
@@ -25,27 +27,18 @@ logger = logging.getLogger(__name__)
 # Source configuration — loaded from config file, editable via API
 # ---------------------------------------------------------------------------
 
-# Default location of the on-disk source list. Resolved lazily so that tests
-# (and any other consumer that wants isolation) can point NEWS_SOURCES_CONFIG
-# at a temp file at runtime — the previous module-level constant captured the
-# value at import time, so per-test env-var overrides were silently ignored
-# and the in-tree config/news-sources.json got polluted on every test run.
-_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent.parent / "config" / "news-sources.json"
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+_DEFAULT_CONFIG_PATH = _REPO_ROOT / "config" / "news-sources.json"
 
 
 def _config_path() -> Path:
-    return Path(os.environ.get("NEWS_SOURCES_CONFIG", str(_DEFAULT_CONFIG_PATH)))
-
-
-_DEFAULT_SOURCES: list[dict] = [
-    {"id": "hackernews", "name": "Hacker News", "type": "rss", "url": "https://news.ycombinator.com/rss", "categories": ["technology", "programming"], "is_active": True, "update_interval_minutes": 60, "priority": 1},
-    {"id": "techcrunch", "name": "TechCrunch", "type": "rss", "url": "https://techcrunch.com/feed/", "categories": ["technology", "startups"], "is_active": True, "update_interval_minutes": 60, "priority": 2},
-    {"id": "arstechnica", "name": "Ars Technica", "type": "rss", "url": "https://feeds.arstechnica.com/arstechnica/index", "categories": ["technology", "science"], "is_active": True, "update_interval_minutes": 60, "priority": 3},
-]
+    configured = get_str("news", "sources_path", default=str(_DEFAULT_CONFIG_PATH)).strip()
+    path = Path(configured or str(_DEFAULT_CONFIG_PATH))
+    return path if path.is_absolute() else _REPO_ROOT / path
 
 
 def _load_sources() -> list[dict]:
-    """Load news sources from config file, falling back to defaults."""
+    """Load news sources from config file."""
     cfg = _config_path()
     if cfg.exists():
         try:
@@ -54,8 +47,10 @@ def _load_sources() -> list[dict]:
             logger.info("Loaded %d news sources (%d active) from %s", len(sources), len(active), cfg)
             return sources
         except Exception as e:
-            logger.warning("Failed to load %s: %s — using defaults", cfg, e)
-    return list(_DEFAULT_SOURCES)
+            logger.warning("Failed to load %s: %s — using empty source list", cfg, e)
+    else:
+        logger.info("News source config %s not found — using empty source list", cfg)
+    return []
 
 
 def _save_sources(sources: list[dict]) -> None:
@@ -69,7 +64,7 @@ def _save_sources(sources: list[dict]) -> None:
 # Module-level source list — reloaded on mutation
 _sources: list[dict] = _load_sources()
 
-CACHE_TTL_SECONDS = 900  # 15 minutes
+CACHE_TTL_SECONDS = get_int("news", "cache_ttl_seconds", default=900)
 
 
 # ---------------------------------------------------------------------------
@@ -227,10 +222,12 @@ async def fetch_feeds(force_refresh: bool = False) -> list[NewsItem]:
 
     active_sources = [s for s in _sources if s.get("is_active", True) and s.get("type") == "rss"]
     all_items: list[NewsItem] = []
-    async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+    timeout = get_float("news", "fetch_timeout_seconds", default=15.0)
+    user_agent = get_str("news", "user_agent", default="CoherenceNetwork/1.0")
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
         for source in active_sources:
             try:
-                resp = await client.get(source["url"], headers={"User-Agent": "CoherenceNetwork/1.0"})
+                resp = await client.get(source["url"], headers={"User-Agent": user_agent})
                 resp.raise_for_status()
                 parsed = _parse_rss(resp.text, source.get("name", source["id"]))
                 all_items.extend(parsed)

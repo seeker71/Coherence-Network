@@ -10,11 +10,14 @@ Covers done_when criteria:
 from __future__ import annotations
 
 from uuid import uuid4
+import json
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from app import config_loader
 from app.main import app
+from app.services import news_ingestion_service
 
 AUTH = {"X-API-Key": "dev-key"}
 BASE = "http://test"
@@ -53,6 +56,35 @@ async def test_news_sources_returns_list():
         body = r.json()
         assert "count" in body
         assert isinstance(body["sources"], list)
+
+
+def test_news_sources_load_from_config_path(tmp_path):
+    """News source data lives in configured JSON, not hidden service defaults."""
+    source_path = tmp_path / "news_sources.json"
+    source_path.write_text(
+        json.dumps([
+            {
+                "id": "configured-feed",
+                "name": "Configured Feed",
+                "type": "rss",
+                "url": "https://example.com/feed.xml",
+                "is_active": True,
+            }
+        ]),
+        encoding="utf-8",
+    )
+    config_loader.set_config_value("news", "sources_path", str(source_path))
+
+    loaded = news_ingestion_service._load_sources()
+
+    assert [row["id"] for row in loaded] == ["configured-feed"]
+
+
+def test_missing_news_sources_config_returns_empty_list(tmp_path):
+    """Missing source config should be visible as empty, not a hard-coded feed list."""
+    config_loader.set_config_value("news", "sources_path", str(tmp_path / "missing.json"))
+
+    assert news_ingestion_service._load_sources() == []
 
 
 # ---------------------------------------------------------------------------

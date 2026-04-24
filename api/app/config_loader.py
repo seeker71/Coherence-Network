@@ -356,6 +356,21 @@ def _default_config() -> dict[str, Any]:
             "failed_alert_max_per_window": 5,
             "failed_alert_window_seconds": 3600,
         },
+        "translator": {
+            "backend": "libretranslate",
+            "libretranslate_url": "https://libretranslate.com",
+            "libretranslate_key": None,
+            "anthropic_api_key": None,
+            "anthropic_api_url": "https://api.anthropic.com/v1/messages",
+            "anthropic_model": "claude-haiku-4-5-20251001",
+            "timeout_seconds": 120,
+        },
+        "news": {
+            "sources_path": "config/news-sources.json",
+            "cache_ttl_seconds": 900,
+            "fetch_timeout_seconds": 15.0,
+            "user_agent": "CoherenceNetwork/1.0",
+        },
         "storage": {
             "graph_store_path": None,
             "idea_portfolio_path": None,

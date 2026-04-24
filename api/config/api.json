@@ -45,6 +45,25 @@
     "failed_alert_window_seconds": 3600
   },
 
+  "translator": {
+    "_doc": "View attunement backend selection. Secrets belong in ~/.coherence-network/config.json or keys.json.",
+    "backend": "libretranslate",
+    "libretranslate_url": "https://libretranslate.com",
+    "libretranslate_key": null,
+    "anthropic_api_key": null,
+    "anthropic_api_url": "https://api.anthropic.com/v1/messages",
+    "anthropic_model": "claude-haiku-4-5-20251001",
+    "timeout_seconds": 120
+  },
+
+  "news": {
+    "_doc": "News ingestion source list and fetch behavior.",
+    "sources_path": "config/news-sources.json",
+    "cache_ttl_seconds": 900,
+    "fetch_timeout_seconds": 15.0,
+    "user_agent": "CoherenceNetwork/1.0"
+  },
+
   "storage": {
     "_doc": "File paths for local storage (dev mode). Production uses database.url.",
     "graph_store_path": null,
