@@ -25,3 +25,17 @@ def test_external_proof_idea_payload_matches_public_contract() -> None:
     assert payload["estimated_cost"] >= 0
     assert 0 <= payload["confidence"] <= 1
     assert payload["workspace_id"] == "coherence-network"
+
+
+def test_external_proof_stage_calls_use_public_post_contract() -> None:
+    module = _load_external_proof_module()
+    runner = module.ProofRunner("https://api.example.test", "dev-key", dry_run=True)
+    runner.idea_id = "idea-123"
+
+    runner.advance_stage()
+    runner.archive_idea()
+
+    assert runner.endpoints_exercised == [
+        "POST /api/ideas/idea-123/stage",
+        "POST /api/ideas/idea-123/stage",
+    ]
