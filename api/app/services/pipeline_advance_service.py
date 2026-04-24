@@ -971,8 +971,22 @@ def _classify_failure(task: dict[str, Any]) -> dict[str, Any]:
         analysis["fix_action"] = "respec"
         analysis["fix_description"] = "Create a new spec task with more specific requirements."
 
+    # Pattern: spec failed validation; repair the spec, do not create impl/heal work.
+    elif task_type == "spec" and (
+        "fail" in combined
+        or "error" in combined
+        or "validation" in combined
+        or "missing" in combined
+        or "not found" in combined
+    ):
+        analysis["failure_type"] = "spec_validation_failed"
+        analysis["reason"] = "Spec task failed before producing an active implementation contract."
+        analysis["auto_fixable"] = True
+        analysis["fix_action"] = "respec"
+        analysis["fix_description"] = "Create a new spec task with clearer acceptance criteria and verification."
+
     # Pattern: test failures in impl or test phase
-    elif "test" in combined and ("fail" in combined or "error" in combined or "assert" in combined):
+    elif task_type != "spec" and "test" in combined and ("fail" in combined or "error" in combined or "assert" in combined):
         analysis["failure_type"] = "test_failure"
         analysis["reason"] = "Tests are failing — likely a bug in the implementation."
         analysis["auto_fixable"] = True
@@ -980,7 +994,7 @@ def _classify_failure(task: dict[str, Any]) -> dict[str, Any]:
         analysis["fix_description"] = "Create a heal task to fix the failing tests."
 
     # Pattern: import/dependency error
-    elif "import" in combined and "error" in combined or "modulenotfounderror" in combined:
+    elif task_type != "spec" and (("import" in combined and "error" in combined) or "modulenotfounderror" in combined):
         analysis["failure_type"] = "missing_dependency"
         analysis["reason"] = "Missing import or dependency."
         analysis["auto_fixable"] = True

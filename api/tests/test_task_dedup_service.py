@@ -646,6 +646,54 @@ class TestAutoAdvanceFingerprint:
         assert ctx["task_card"]["files_allowed"] == ["specs/node-message-bus.md"]
         assert task_card_validation(ctx)["score"] == 1.0
 
+    def test_failed_spec_with_test_words_respecs_instead_of_heal(self):
+        """Spec-phase validation failures must not create impl heal tasks."""
+        from app.services import pipeline_advance_service as pas
+
+        task = _task(
+            task_type="spec",
+            status="failed",
+            idea_id="spec-validation",
+            output="Acceptance Tests section missing; validation failed with expected test command not found.",
+        )
+
+        analysis = pas._classify_failure(task)
+        assert analysis["failure_type"] == "spec_validation_failed"
+        assert analysis["fix_action"] == "respec"
+
+    def test_autofix_failed_spec_creates_respec_task_not_impl_heal(self, monkeypatch):
+        """Spec failures that mention tests stay in the spec lane."""
+        from app.models.agent import TaskType
+        from app.services import pipeline_advance_service as pas
+        from app.services.agent_service_executor import task_card_validation
+        from app.services.agent_routing.prompt_templates_loader import reset_prompt_templates_cache
+
+        monkeypatch.setenv("PROMPT_VARIANT", "a")
+        reset_prompt_templates_cache()
+        task = _task(
+            task_type="spec",
+            status="failed",
+            idea_id="spec-validation",
+            output="Acceptance Tests section missing; validation failed with expected test command not found.",
+        )
+
+        captured: list[dict] = []
+
+        def fake_create(data):
+            captured.append({"task_type": data.task_type, "context": data.context})
+            return {"id": "t-respec", "task_type": "spec", "status": "pending", "context": data.context}
+
+        from app.services import agent_service as _as
+        monkeypatch.setattr(_as, "create_task", fake_create)
+
+        pas._escalate_or_autofix(task, "spec", "spec-validation", 2)
+        assert len(captured) == 1
+        assert captured[0]["task_type"] == TaskType.SPEC
+        ctx = captured[0]["context"]
+        assert ctx["auto_fix"] == "respec"
+        assert ctx["task_card"]["files_allowed"] == ["specs/spec-validation.md"]
+        assert task_card_validation(ctx)["score"] == 1.0
+
 
 # ── Scenario 2: Skip-ahead in auto-advance ───────────────────────────────
 
