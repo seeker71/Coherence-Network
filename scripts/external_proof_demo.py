@@ -140,7 +140,7 @@ class ProofRunner:
 
     def advance_stage(self) -> None:
         self._call(
-            "PATCH",
+            "POST",
             f"/api/ideas/{self.idea_id}/stage",
             {"stage": "spec"},
         )
@@ -182,10 +182,9 @@ class ProofRunner:
         if self.idea_id is None:
             return
         # Close/archive the test idea. The lifecycle endpoint varies
-        # across deployments; try PATCH /ideas/{id} with stage=archived
-        # first, fall back to DELETE if unsupported.
+        # across deployments; use the public stage setter for cleanup.
         self._call(
-            "PATCH",
+            "POST",
             f"/api/ideas/{self.idea_id}/stage",
             {"stage": "archived"},
         )

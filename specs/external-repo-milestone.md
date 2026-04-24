@@ -73,7 +73,7 @@ Keep the external proof workflow aligned with the deployed public API contract s
 
 ## Requirements
 
-- [ ] **R1**: Script at `scripts/external_proof_demo.py` creates a test idea via `POST /api/ideas` using the current public `IdeaCreate` fields (`name`, `description`, `potential_value`, `estimated_cost`, `confidence`, `workspace_id`, `tags`), verifies the response contains `id` and `stage`, then advances the stage via `PATCH /api/ideas/{id}/stage`.
+- [ ] **R1**: Script at `scripts/external_proof_demo.py` creates a test idea via `POST /api/ideas` using the current public `IdeaCreate` fields (`name`, `description`, `potential_value`, `estimated_cost`, `confidence`, `workspace_id`, `tags`), verifies the response contains `id` and `stage`, then advances the stage via `POST /api/ideas/{id}/stage`.
 - [ ] **R2**: Script records a contribution for the test idea via `POST /api/contributions` and reads back the contribution list via `GET /api/contributions?idea_id={id}`, verifying the contribution appears.
 - [ ] **R3**: Script reads the coherence score via `GET /api/coherence/{id}` (or equivalent endpoint) and asserts the score is a float in [0.0, 1.0].
 - [ ] **R4**: Script closes/archives the test idea via the lifecycle endpoint so it does not pollute the live portfolio.
@@ -106,7 +106,7 @@ The script exercises these existing endpoints. No new endpoints are added by thi
 ```
 **Response 200** — must contain `id` (string), `stage` (string).
 
-### `PATCH /api/ideas/{id}/stage`
+### `POST /api/ideas/{id}/stage`
 **Request body** `{"stage": "spec"}`
 **Response 200** — must contain updated `stage`.
 
