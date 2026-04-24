@@ -2083,9 +2083,9 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 if spec_files:
                     resolved_spec_path = spec_files[0]
                     with open(resolved_spec_path, "r", encoding="utf-8", errors="replace") as sf:
-                        # DG-002 fix: cap spec content to keep total direction < 5000 chars.
+                        # DG-002 fix: cap spec content to keep total direction < 3000 chars.
                         # Spec path is stored in context so the provider can read the full file.
-                        spec_content = sf.read()[:1200]
+                        spec_content = sf.read()[:600]
                     spec_ref = f"\n\nSpec ({resolved_spec_path}):\n```\n{spec_content}\n```\n(Full spec at {resolved_spec_path})\n"
             except Exception:
                 pass
@@ -2151,9 +2151,9 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
         # Prepend idea scope header so every provider prompt starts with clear context
         direction = _idea_scope_header + direction
 
-        # DG-002 hard cap: API enforces 5000 char limit on direction.
-        # Truncate with notice so providers know there's more context in the spec file.
-        _MAX_DIRECTION = 4900
+        # DG-002 hard cap: API enforces 3000 char OVERSIZED_DIRECTION gate.
+        # Truncate to 2900 (100-char buffer) so tasks reach pending, not needs_decision.
+        _MAX_DIRECTION = 2900
         if len(direction) > _MAX_DIRECTION:
             log.warning(
                 "AUTO_PHASE direction overflow idea=%s phase=%s len=%d — truncating to %d",
