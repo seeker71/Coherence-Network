@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from app.services import automation_usage_service, friction_service, persistence_contract_service
+from app.services import (
+    agent_task_store_service,
+    automation_usage_service,
+    friction_service,
+    persistence_contract_service,
+    unified_db,
+)
 from app.services.telemetry_persistence_service import db as telemetry_service_db
 
 
@@ -69,3 +75,32 @@ def test_telemetry_persistence_service_uses_unified_database_url(set_config, mon
     set_config("database", "url", "postgresql://user:pass@example.test/coherence")
 
     assert telemetry_service_db.database_url() == "postgresql://user:pass@example.test/coherence"
+
+
+def test_unified_database_url_comes_from_config_not_env(set_config, monkeypatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///tmp/legacy-unified.db")
+    monkeypatch.setenv("IDEA_PORTFOLIO_PATH", "/tmp/legacy-ideas.json")
+    set_config("database", "url", "postgresql://user:pass@example.test/coherence")
+
+    assert unified_db.database_url() == "postgresql://user:pass@example.test/coherence"
+
+
+def test_agent_task_store_uses_config_database_url_not_env(set_config, monkeypatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_DATABASE_URL", "sqlite+pysqlite:///tmp/legacy-agent-tasks.db")
+    monkeypatch.setenv("DATABASE_URL", "sqlite+pysqlite:///tmp/legacy-main.db")
+    set_config("agent_tasks", "database_url", "postgresql://user:pass@example.test/agent_tasks")
+    set_config("agent_tasks", "persist", True)
+    set_config("agent_tasks", "use_db", True)
+
+    assert agent_task_store_service._database_url() == "postgresql://user:pass@example.test/agent_tasks"
+    assert agent_task_store_service.enabled() is True
+
+
+def test_agent_task_store_enablement_comes_from_config(set_config, monkeypatch) -> None:
+    monkeypatch.setenv("AGENT_TASKS_PERSIST", "1")
+    monkeypatch.setenv("AGENT_TASKS_USE_DB", "1")
+    set_config("agent_tasks", "database_url", "postgresql://user:pass@example.test/agent_tasks")
+    set_config("agent_tasks", "persist", False)
+    set_config("agent_tasks", "use_db", True)
+
+    assert agent_task_store_service.enabled() is False

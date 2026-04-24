@@ -1,0 +1,99 @@
+{
+  "date": "2026-04-24",
+  "thread_branch": "codex/root-unified-db-config-spine",
+  "commit_scope": "Move unified DB and agent task store database discovery from app env fallbacks to the config spine.",
+  "files_owned": [
+    "api/app/services/agent_task_store_service.py",
+    "api/app/services/unified_db.py",
+    "api/tests/conftest.py",
+    "api/tests/test_persistence_contract_config.py",
+    "docs/system_audit/commit_evidence_2026-04-24_unified-db-agent-task-config-spine.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_persistence_contract_config.py -q",
+      "cd api && python3 -m pytest tests/test_flow_agent_lifecycle.py tests/test_agent_task_claims.py tests/test_flow_workspaces.py -q",
+      "cd api && python3 -m pytest tests/test_persistence_contract_config.py tests/test_runtime_mode_and_events.py -q",
+      "cd api && python3 -m ruff check app/services/unified_db.py app/services/agent_task_store_service.py tests/conftest.py tests/test_persistence_contract_config.py",
+      "rg -n \"os\\.getenv|os\\.environ\\.get|environ\\[|getenv\\(\" api/app/services/unified_db.py api/app/services/agent_task_store_service.py",
+      "git diff --check",
+      "THREAD_RUNTIME_START_SERVERS=1 ./scripts/verify_worktree_local_web.sh",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "e2e_validation": {
+    "status": "pending",
+    "expected_behavior_delta": "Unified DB and agent task store use config-backed database URLs and ignore legacy env fallbacks while preserving task API behavior.",
+    "public_endpoints": [
+      "/api/health/persistence",
+      "/api/agent/tasks",
+      "/api/runtime/endpoints/summary"
+    ],
+    "test_flows": [
+      "Unified database URL ignores DATABASE_URL and IDEA_PORTFOLIO_PATH env when config is set",
+      "Agent task store URL and enablement ignore legacy env toggles when config is set",
+      "Agent task lifecycle, claims, workspace, and runtime mode tests pass"
+    ]
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Targeted validation is complete; standard PR guard, CI, deployment, and live sensing still need to pass."
+  },
+  "idea_ids": [
+    "repository-health",
+    "root-config-integrity"
+  ],
+  "spec_ids": [
+    "repository-architecture-health",
+    "root-config-spine"
+  ],
+  "task_ids": [
+    "unified-db-agent-task-config-spine-2026-04-24"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "architecture-attunement"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "api/app/services/unified_db.py",
+    "api/app/services/agent_task_store_service.py",
+    "api/tests/test_persistence_contract_config.py",
+    "PR guard report docs/system_audit/pr_check_failures/pr_check_guard_20260424T104501Z_codex-root-unified-db-config-spine.json",
+    "app env-read scan: 129 to 123 matches"
+  ],
+  "change_files": [
+    "api/app/services/agent_task_store_service.py",
+    "api/app/services/unified_db.py",
+    "api/tests/conftest.py",
+    "api/tests/test_persistence_contract_config.py"
+  ],
+  "change_intent": "runtime_fix"
+}
