@@ -4097,7 +4097,7 @@ def _reap_stale_tasks(max_age_minutes: int = 15) -> int:
     # Fetch recent timed_out tasks for per-idea history (R6)
     timed_out_tasks: list[dict] = []
     try:
-        to_data = api("GET", "/api/agent/tasks?status=timed_out&limit=200")
+        to_data = api("GET", "/api/agent/tasks?status=timed_out&limit=100")
         if to_data:
             timed_out_tasks = to_data if isinstance(to_data, list) else to_data.get("tasks", [])
     except Exception:
@@ -6814,7 +6814,7 @@ def main():
         # last_seen_at > 30 min old (dead nodes that never restarted)
         try:
             _ORPHAN_THRESHOLD_SECONDS = 1800  # 30 minutes
-            all_running = api("GET", "/api/agent/tasks?status=running&limit=200")
+            all_running = api("GET", "/api/agent/tasks?status=running&limit=100")
             if isinstance(all_running, dict):
                 all_running_tasks = all_running.get("tasks", [])
             elif isinstance(all_running, list):
