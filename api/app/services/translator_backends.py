@@ -9,13 +9,13 @@ Two backends ship:
 
 - **LibreTranslateBackend** (default) — free, open-source, no API key.
   Calls a LibreTranslate instance (public ``libretranslate.com`` by default,
-  self-hosted if ``COHERENCE_LIBRETRANSLATE_URL`` is set). Post-processes the
+  self-hosted if ``config.translator.libretranslate_url`` is set). Post-processes the
   translation to substitute the per-language glossary's felt-sense equivalents
   for anchor terms ("tending" → "hüten"), so the frequency carries through
   even though LibreTranslate is not prompt-aware.
 
 - **AnthropicAttunementBackend** (optional) — Claude via httpx. Used when
-  ``ANTHROPIC_API_KEY`` is present in the keystore or env; higher translation
+  the Anthropic key is present in the keystore or config; higher translation
   quality and native prompt steering, but requires a paid key.
 
 ``register_default_backend()`` prefers LibreTranslate (zero-config, free) and
@@ -27,13 +27,14 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import httpx
+
+from app.config_loader import get_int, get_str
 
 # ---------------------------------------------------------------------------
 # Anthropic (optional, paid)
@@ -79,9 +80,9 @@ def resolve_anthropic_key() -> str | None:
     key = _read_keystore_key()
     if key:
         return key
-    env = os.getenv("ANTHROPIC_API_KEY")
-    if env and env.strip():
-        return env.strip()
+    configured = get_str("translator", "anthropic_api_key", default="").strip()
+    if configured:
+        return configured
     return None
 
 
@@ -100,7 +101,7 @@ class LibreTranslateBackend:
 
     The public endpoint ``libretranslate.com`` rate-limits anonymous callers
     but works for the gentle pace of on-demand view attunement. For heavier
-    use, self-host LibreTranslate and set ``COHERENCE_LIBRETRANSLATE_URL``.
+    use, set ``config.translator.libretranslate_url`` to a self-hosted instance.
     """
 
     base_url: str = DEFAULT_LIBRETRANSLATE_URL
@@ -217,13 +218,14 @@ def _apply_glossary(text: str, glossary: list[tuple[str, str]]) -> str:
 class AnthropicAttunementBackend:
     """Calls Anthropic Messages API to attune source text into a target lang.
 
-    Requires ``ANTHROPIC_API_KEY``. Higher translation quality and glossary
+    Requires an Anthropic key from the keystore or config. Higher translation quality and glossary
     is carried via the system prompt (not post-substitution), so terms land
     in grammatical context rather than as raw replacements.
     """
 
     api_key: str
     model: str = DEFAULT_ANTHROPIC_MODEL
+    api_url: str = ANTHROPIC_API_URL
     timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS
     max_output_tokens: int = 8000
 
@@ -271,7 +273,7 @@ class AnthropicAttunementBackend:
             "content-type": "application/json",
         }
         with httpx.Client(timeout=self.timeout_seconds) as client:
-            resp = client.post(ANTHROPIC_API_URL, headers=headers, json=body)
+            resp = client.post(self.api_url, headers=headers, json=body)
             resp.raise_for_status()
             data: Any = resp.json()
         parts = data.get("content") if isinstance(data, dict) else None
@@ -315,8 +317,8 @@ def register_default_backend() -> str | None:
     """Install the best available backend. Returns the backend name or None.
 
     Resolution order:
-      1. ``COHERENCE_TRANSLATOR=anthropic`` (explicit) + key present → Anthropic
-      2. ``COHERENCE_TRANSLATOR=libretranslate`` (explicit) → LibreTranslate
+      1. ``config.translator.backend=anthropic`` (explicit) + key present → Anthropic
+      2. ``config.translator.backend=libretranslate`` (explicit) → LibreTranslate
       3. Default: LibreTranslate (free, no key)
 
     Called at app startup; safe to call multiple times (no-op when set).
@@ -326,21 +328,38 @@ def register_default_backend() -> str | None:
     if translator_service.has_backend():
         return None
 
-    choice = (os.getenv("COHERENCE_TRANSLATOR") or "").strip().lower()
+    choice = get_str("translator", "backend", default="libretranslate").strip().lower()
 
     if choice == "anthropic":
         key = resolve_anthropic_key()
         if key:
-            model = os.getenv("COHERENCE_TRANSLATOR_MODEL") or DEFAULT_ANTHROPIC_MODEL
-            translator_service.set_backend(AnthropicAttunementBackend(api_key=key, model=model))
+            model = get_str("translator", "anthropic_model", default=DEFAULT_ANTHROPIC_MODEL).strip()
+            api_url = get_str("translator", "anthropic_api_url", default=ANTHROPIC_API_URL).strip()
+            timeout = get_int("translator", "timeout_seconds", default=DEFAULT_TIMEOUT_SECONDS)
+            translator_service.set_backend(
+                AnthropicAttunementBackend(
+                    api_key=key,
+                    model=model or DEFAULT_ANTHROPIC_MODEL,
+                    api_url=api_url or ANTHROPIC_API_URL,
+                    timeout_seconds=timeout,
+                )
+            )
             return "anthropic"
-        _logger.warning("COHERENCE_TRANSLATOR=anthropic but no key found — falling back to LibreTranslate")
+        _logger.warning("translator backend is anthropic but no key found — falling back to LibreTranslate")
+        choice = "libretranslate"
 
     if choice == "libretranslate" or choice == "":
-        url = os.getenv("COHERENCE_LIBRETRANSLATE_URL") or DEFAULT_LIBRETRANSLATE_URL
-        api_key = os.getenv("COHERENCE_LIBRETRANSLATE_KEY") or None
-        translator_service.set_backend(LibreTranslateBackend(base_url=url, api_key=api_key))
+        url = get_str("translator", "libretranslate_url", default=DEFAULT_LIBRETRANSLATE_URL).strip()
+        api_key = get_str("translator", "libretranslate_key", default="").strip() or None
+        timeout = get_int("translator", "timeout_seconds", default=DEFAULT_TIMEOUT_SECONDS)
+        translator_service.set_backend(
+            LibreTranslateBackend(
+                base_url=url or DEFAULT_LIBRETRANSLATE_URL,
+                api_key=api_key,
+                timeout_seconds=timeout,
+            )
+        )
         return "libretranslate"
 
-    _logger.warning("Unknown COHERENCE_TRANSLATOR=%r; no backend installed", choice)
+    _logger.warning("Unknown translator backend=%r; no backend installed", choice)
     return None

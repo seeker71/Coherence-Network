@@ -231,16 +231,6 @@ def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureR
     # Ideas now live in graph_nodes (unified DB) — don't set file-based portfolio path
     os.environ.pop("IDEA_PORTFOLIO_PATH", None)
     os.environ["AGENT_TASKS_USE_DB"] = "0"
-    # Point news ingestion at a per-test config file. The service used to
-    # cache the path at import time, so this env var was silently ignored
-    # and tests dirtied the in-tree config/news-sources.json.
-    os.environ["NEWS_SOURCES_CONFIG"] = str(tmp_path / "news_sources.json")
-    try:
-        from app.services import news_ingestion_service
-        news_ingestion_service._sources = news_ingestion_service._load_sources()
-    except Exception:
-        pass
-
     # Disable the in-process TTL cache (app.core.ttl_cache.ttl_cached)
     # so tests always see fresh computation. Without this, a stale flow
     # aggregation from test A can leak into test B.
@@ -257,6 +247,7 @@ def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureR
     config_loader._CONFIG.setdefault("agent_executor", {})["policy_enabled"] = True
     config_loader._CONFIG.setdefault("runtime", {})["events_path"] = str(tmp_path / "runtime_events.json")
     config_loader._CONFIG.setdefault("runtime", {})["idea_map_path"] = str(tmp_path / "runtime_idea_map.json")
+    config_loader._CONFIG.setdefault("news", {})["sources_path"] = str(tmp_path / "news_sources.json")
     config_loader._CONFIG.setdefault("agent_lifecycle", {})["telemetry_enabled"] = True
     config_loader._CONFIG.setdefault("agent_lifecycle", {})["jsonl_enabled"] = True
     config_loader._CONFIG.setdefault("agent_lifecycle", {})["subscribers"] = "runtime"
@@ -271,11 +262,18 @@ def _reset_service_caches_between_tests(tmp_path: Path, request: pytest.FixtureR
             "agent_execute_token": None,
             "runtime_events_path": str(tmp_path / "runtime_events.json"),
             "runtime_idea_map_path": str(tmp_path / "runtime_idea_map.json"),
+            "news_sources_path": str(tmp_path / "news_sources.json"),
             "agent_lifecycle_telemetry_enabled": True,
             "agent_lifecycle_jsonl_enabled": True,
             "agent_lifecycle_subscribers": "runtime",
         }
     )
+
+    try:
+        from app.services import news_ingestion_service
+        news_ingestion_service._sources = news_ingestion_service._load_sources()
+    except Exception:
+        pass
 
     # Reset the unified engine — all services delegate to this
     unified_db.reset_engine()
