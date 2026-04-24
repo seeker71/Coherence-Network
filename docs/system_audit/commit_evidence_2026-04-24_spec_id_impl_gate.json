@@ -1,0 +1,70 @@
+{
+  "date": "2026-04-24",
+  "thread_branch": "codex/digest-low-success-20260425",
+  "commit_scope": "Tighten local runner spec-state gate for inventory-created implementation tasks that carry spec_id without idea_id.",
+  "files_owned": [
+    "api/scripts/local_runner.py",
+    "api/tests/test_runner_spec_gate_guidance.py",
+    "docs/system_audit/commit_evidence_2026-04-24_spec_id_impl_gate.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && /Users/ursmuff/source/Coherence-Network/api/.venv/bin/python -m pytest -v tests/test_runner_spec_gate_guidance.py tests/test_failure_taxonomy_service.py tests/test_agent_monitor_helpers.py",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ],
+    "summary": "Focused tests: 13 passed, 1 pytest config warning. PR guard local_preflight=pass, ready_for_push=True. Follow-through check reported stale_codex_prs=0."
+  },
+  "ci_validation": {
+    "status": "pending",
+    "commands": [
+      "PR checks after push"
+    ],
+    "summary": "Pending PR creation."
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "commands": [
+      "./scripts/verify_web_api_deploy.sh"
+    ],
+    "summary": "Pending merge and public deploy verification."
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "reason": "Local focused tests pass; PR CI and public deploy validation pending."
+  },
+  "idea_ids": [
+    "pipeline-low-success-rate"
+  ],
+  "spec_ids": [
+    "agent-pipeline-spec-gate"
+  ],
+  "task_ids": [
+    "digest-low-success-20260425"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "live monitor issue derived-low_success_rate reported impl_without_active_spec and impl_for_done_spec signatures",
+    "focused pytest run: 13 passed",
+    "docs/system_audit/pr_check_failures/pr_check_guard_20260424T200816Z_codex-digest-low-success-20260425.json"
+  ],
+  "change_files": [
+    "api/scripts/local_runner.py",
+    "api/tests/test_runner_spec_gate_guidance.py"
+  ],
+  "change_intent": "process_only"
+}
