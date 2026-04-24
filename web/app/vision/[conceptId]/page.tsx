@@ -189,12 +189,6 @@ export default async function VisionConceptPage({
   const isLC = concept.domains?.includes("living-collective");
   if (!isLC) redirect(`/concepts/${conceptId}`);
 
-  // Name map for all LC concepts
-  const nameMap: Record<string, string> = {};
-  for (const c of allLC) {
-    if (c.id && c.name) nameMap[c.id] = c.name;
-  }
-
   // Frequency siblings (other concepts at the same Hz)
   const myHz = concept.sacred_frequency?.hz;
   const frequencySiblings = myHz
@@ -202,10 +196,55 @@ export default async function VisionConceptPage({
     : [];
 
   const visual = concept.visual_path;
-  const lcEdges = edges.filter((e) => e.from.startsWith("lc-") || e.to.startsWith("lc-"));
-  const outgoing = lcEdges.filter((e) => e.from === conceptId);
-  const incoming = lcEdges.filter((e) => e.to === conceptId);
+  // Keep every edge whose target is a real presence — drop the KB auto-
+  // generated visuals and the platform renderer components that just
+  // add noise to the Connected Frequencies directory.
+  const relevantEdges = edges.filter((e) => {
+    if (e.from.startsWith("visual-lc-") || e.to.startsWith("visual-lc-")) return false;
+    if (e.from.startsWith("renderer-") || e.to.startsWith("renderer-")) return false;
+    return true;
+  });
+  const outgoing = relevantEdges.filter((e) => e.from === conceptId);
+  const incoming = relevantEdges.filter((e) => e.to === conceptId);
   const hasStory = !!concept.story_content;
+
+  // Build a nameMap that covers every touch. Start with the LC concept
+  // map (cheap — one list endpoint), then resolve every non-concept
+  // target (contributors, assets, communities, events) in parallel so
+  // Connected Frequencies can render real names instead of raw ids.
+  const nameMap: Record<string, string> = {};
+  for (const c of allLC) {
+    if (c.id && c.name) nameMap[c.id] = c.name;
+  }
+  const unresolvedTargets = new Set<string>();
+  for (const e of relevantEdges) {
+    for (const target of [e.from, e.to]) {
+      if (target !== conceptId && !nameMap[target] && !target.startsWith("lc-")) {
+        unresolvedTargets.add(target);
+      }
+    }
+  }
+  if (unresolvedTargets.size > 0) {
+    const base = getApiBase();
+    const resolved = await Promise.all(
+      Array.from(unresolvedTargets).map(async (id) => {
+        try {
+          const r = await fetch(
+            `${base}/api/graph/nodes/${encodeURIComponent(id)}`,
+            { next: { revalidate: 60 } },
+          );
+          if (!r.ok) return null;
+          const n = await r.json();
+          return { id, name: n?.name || n?.author_display_name || null };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    for (const entry of resolved) {
+      if (entry?.name) nameMap[entry.id] = entry.name;
+    }
+  }
 
   return (
     <main>
