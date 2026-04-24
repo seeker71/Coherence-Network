@@ -36,7 +36,7 @@ curl -s https://api.coherencycoin.com/api/ideas?limit=5 | python3 -m json.tool
 curl -s https://api.coherencycoin.com/api/health | python3 -m json.tool
 ```
 
-**Option B — install the CLI (v0.8.0 — 54 commands across 22 modules):**
+**Option B — install the CLI:**
 
 ```bash
 npm i -g coherence-cli
@@ -44,31 +44,6 @@ cc status                    # network health, idea count, your identity
 cc ideas                     # browse the portfolio ranked by ROI
 cc idea <id>                 # deep-dive: scores, open questions, value gaps
 ```
-
-<details>
-<summary>Full CLI command list (54 commands)</summary>
-
-| Category | Commands |
-|----------|----------|
-| **Core** | `cc status`, `cc help`, `cc inbox`, `cc resonance` |
-| **Ideas** | `cc ideas`, `cc idea <id>`, `cc share`, `cc stake <id> <cc>`, `cc fork <id>` |
-| **Specs** | `cc specs`, `cc spec <id>` |
-| **Identity** | `cc identity`, `cc identity setup`, `cc identity link <provider> <handle>`, `cc identity unlink <provider>`, `cc identity lookup <provider> <handle>` |
-| **Contributors** | `cc contributors`, `cc contributor <id>`, `cc contributor <id> contributions` |
-| **Contributions** | `cc contribute` |
-| **Assets** | `cc assets`, `cc asset <id>`, `cc asset create <type> <desc>` |
-| **News** | `cc news`, `cc news trending`, `cc news sources`, `cc news source add <url> <name>`, `cc news resonance [contributor]` |
-| **Treasury** | `cc treasury`, `cc treasury deposits [contributor]`, `cc treasury deposit <amount> <asset>` |
-| **Value lineage** | `cc lineage`, `cc lineage <id>`, `cc lineage <id> valuation`, `cc lineage <id> payout <amount>` |
-| **Governance** | `cc governance`, `cc governance <id>`, `cc governance vote <id> <yes\|no>`, `cc governance propose <title> <desc>` |
-| **Nodes** | `cc nodes`, `cc msg <node> <text>`, `cc cmd <node> update\|status\|diagnose\|restart\|ping` |
-| **Services** | `cc services`, `cc service <id>`, `cc services health`, `cc services deps` |
-| **Friction** | `cc friction`, `cc friction events`, `cc friction categories` |
-| **Providers** | `cc providers`, `cc providers stats` |
-| **Traceability** | `cc trace`, `cc trace coverage`, `cc trace idea <id>`, `cc trace spec <id>` |
-| **Diagnostics** | `cc diag`, `cc diag health`, `cc diag issues`, `cc diag runners`, `cc diag visibility` |
-
-</details>
 
 **Option C — give your AI agent access:**
 
@@ -167,8 +142,10 @@ Every part of the network links to every other. Jump in wherever makes sense.
 | **Web** | Browse ideas, specs, contributors, and value chains visually | [coherencycoin.com](https://coherencycoin.com) |
 | **API** | 100+ endpoints with full OpenAPI docs — the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
 | **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
-| **MCP Server** | 20 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
+| **MCP Server** | 84 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | Auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
+| **skills.sh** | Portable agent skill directory (same `SKILL.md` as ClawHub) | [skills.sh](https://skills.sh/) — submit `skills/coherence-network/` |
+| **askill.sh** | Secondary skill index for discovery | [askill.sh](https://askill.sh/) — submit `skills/coherence-network/` |
 | **Join the Network** | Run a node and contribute compute | [JOIN-NETWORK.md](docs/JOIN-NETWORK.md) |
 
 ## Tech stack
