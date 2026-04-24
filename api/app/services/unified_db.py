@@ -4,14 +4,12 @@ Spec 118: Replaces 4 separate SQLite DBs and 5 JSON stores with one DB.
 All services import from here instead of managing their own connections.
 
 Configuration:
-  - DATABASE_URL env var overrides for production (e.g. PostgreSQL).
+  - api/config/api.json and ~/.coherence-network/config.json provide database.url.
   - Otherwise defaults to sqlite:///data/coherence.db (works out of the box).
-  - IDEA_PORTFOLIO_PATH is honored for test isolation (derives .db path from it).
 """
 
 from __future__ import annotations
 
-import os
 import threading
 from contextlib import contextmanager
 from pathlib import Path
@@ -58,33 +56,18 @@ def database_url() -> str:
 
     Priority:
       1. api/config/api.json → database.url
-      2. DATABASE_URL env var (legacy — Docker/CI override)
-      3. IDEA_PORTFOLIO_PATH → derived .db path (test isolation)
-      4. sqlite:///data/coherence.db (default)
+      2. ~/.coherence-network/config.json overlay
+      3. sqlite:///data/coherence.db (default)
     """
-    # Config file first
     try:
-        from app.config_loader import api_config
-        config_url = api_config("database", "url")
-        if config_url and config_url != "sqlite:///data/coherence.db":
-            return str(config_url).strip()
-    except ImportError:
-        pass
+        from app.config_loader import database_url as configured_database_url
 
-    # Legacy env var (Docker/CI)
-    configured = os.getenv("DATABASE_URL")
-    if configured:
-        return str(configured).strip()
-    # Test isolation via IDEA_PORTFOLIO_PATH
-    portfolio_path = os.getenv("IDEA_PORTFOLIO_PATH")
-    if portfolio_path:
-        p = Path(portfolio_path)
-        sqlite_path = p.with_suffix(".db") if p.suffix.lower() == ".json" else Path(f"{p}.db")
+        return configured_database_url().strip()
+    except ImportError:
+        sqlite_path = _default_sqlite_path()
         sqlite_path.parent.mkdir(parents=True, exist_ok=True)
         return f"sqlite+pysqlite:///{sqlite_path}"
-    sqlite_path = _default_sqlite_path()
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-    return f"sqlite+pysqlite:///{sqlite_path}"
+
 
 
 def _create_engine(url: str):

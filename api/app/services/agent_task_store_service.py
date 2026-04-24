@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
@@ -12,7 +11,7 @@ from sqlalchemy import DateTime, Integer, String, Text, create_engine, func, ins
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, load_only, mapped_column, sessionmaker
 from sqlalchemy.pool import NullPool
 
-from app.config_loader import get_bool, get_str
+from app.config_loader import database_url, get_bool, get_str
 
 
 class Base(DeclarativeBase):
@@ -51,34 +50,19 @@ _SCHEMA_INITIALIZED = False
 _SCHEMA_INITIALIZED_URL = ""
 
 
-def _truthy(raw: str | None) -> bool:
-    if raw is None:
-        return False
-    return raw.strip().lower() in {"1", "true", "yes", "on"}
-
-
 def _database_url() -> str:
-    url = (
-        os.getenv("AGENT_TASKS_DATABASE_URL")
-        or os.getenv("DATABASE_URL")
-        or get_str("agent_tasks", "database_url")
-        or ""
-    ).strip()
-    return url
+    explicit = get_str("agent_tasks", "database_url", "").strip()
+    return explicit or database_url("agent_tasks").strip()
 
 
 def enabled() -> bool:
-    persist_override = os.getenv("AGENT_TASKS_PERSIST", "").strip().lower()
-    if persist_override in {"0", "false", "no", "off"}:
+    if not get_bool("agent_tasks", "persist", default=True):
         return False
-    use_db_override = os.getenv("AGENT_TASKS_USE_DB", "").strip().lower()
-    if use_db_override in {"0", "false", "no", "off"}:
+    if not get_bool("agent_tasks", "use_db", default=True):
         return False
     if not _database_url():
         return False
-    if use_db_override in {"1", "true", "yes", "on"}:
-        return True
-    return get_bool("agent_tasks", "use_db", default=True)
+    return True
 
 
 def _create_engine(url: str):
