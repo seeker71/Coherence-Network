@@ -166,14 +166,47 @@ async function fetchAllLC(): Promise<LCConcept[]> {
 export default async function EconomyPage() {
   const [concept, edges, allLC] = await Promise.all([fetchConcept(), fetchEdges(), fetchAllLC()]);
 
+  const relevantEdges = edges.filter((e) => {
+    if (e.from.startsWith("visual-lc-") || e.to.startsWith("visual-lc-")) return false;
+    if (e.from.startsWith("renderer-") || e.to.startsWith("renderer-")) return false;
+    return true;
+  });
+  const outgoing = relevantEdges.filter((e) => e.from === CONCEPT_ID);
+  const incoming = relevantEdges.filter((e) => e.to === CONCEPT_ID);
+
   const nameMap: Record<string, string> = {};
   for (const c of allLC) {
     if (c.id && c.name) nameMap[c.id] = c.name;
   }
-
-  const lcEdges = edges.filter((e) => e.from.startsWith("lc-") || e.to.startsWith("lc-"));
-  const outgoing = lcEdges.filter((e) => e.from === CONCEPT_ID);
-  const incoming = lcEdges.filter((e) => e.to === CONCEPT_ID);
+  const unresolvedTargets = new Set<string>();
+  for (const e of relevantEdges) {
+    for (const target of [e.from, e.to]) {
+      if (target !== CONCEPT_ID && !nameMap[target] && !target.startsWith("lc-")) {
+        unresolvedTargets.add(target);
+      }
+    }
+  }
+  if (unresolvedTargets.size > 0) {
+    const base = getApiBase();
+    const resolved = await Promise.all(
+      Array.from(unresolvedTargets).map(async (id) => {
+        try {
+          const r = await fetch(
+            `${base}/api/graph/nodes/${encodeURIComponent(id)}`,
+            { next: { revalidate: 60 } },
+          );
+          if (!r.ok) return null;
+          const n = await r.json();
+          return { id, name: n?.name || n?.author_display_name || null };
+        } catch {
+          return null;
+        }
+      }),
+    );
+    for (const entry of resolved) {
+      if (entry?.name) nameMap[entry.id] = entry.name;
+    }
+  }
   const pageTitle = concept?.name || "The Living Economy";
 
   return (
