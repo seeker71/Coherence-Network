@@ -86,6 +86,7 @@ import { runGuidesCommand } from "../lib/commands/guides.mjs";
 import { debugCommand } from "../lib/commands/debug.mjs";
 import { modelsCommand, usageCommand } from "../lib/commands/models.mjs";
 import { handleWorkspace } from "../lib/commands/workspaces.mjs";
+import { handleTranslate } from "../lib/commands/translate.mjs";
 import {
   setActiveWorkspaceOverride,
   setApiUrlOverride,
@@ -229,6 +230,7 @@ const COMMANDS = {
   portfolio:     () => showPortfolio(),
   workspace:     () => handleWorkspace(args),
   workspaces:    () => handleWorkspace(["list", ...args]),
+  translate:     () => handleTranslate(args),
   help:          () => showHelp(),
 };
 
