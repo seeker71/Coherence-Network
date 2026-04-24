@@ -37,8 +37,18 @@ def test_external_proof_stage_calls_use_public_post_contract() -> None:
 
     assert runner.endpoints_exercised == [
         "POST /api/ideas/idea-123/stage",
-        "POST /api/ideas/idea-123/stage",
+        "PATCH /api/ideas/idea-123",
     ]
+
+
+def test_external_proof_contribution_uses_open_record_endpoint() -> None:
+    module = _load_external_proof_module()
+    runner = module.ProofRunner("https://api.example.test", "dev-key", dry_run=True)
+    runner.idea_id = "idea-123"
+
+    runner.record_contribution()
+
+    assert runner.endpoints_exercised == ["POST /api/contributions/record"]
 
 
 def test_external_proof_headers_include_public_api_key_header() -> None:

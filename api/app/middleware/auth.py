@@ -14,6 +14,7 @@ api/config/api.json.
 from fastapi import Header, HTTPException
 
 from app.config_loader import auth_admin_key, auth_api_key
+from app.services import contributor_key_store
 from app.services.config_service import is_production
 
 def _current_api_key() -> str:
@@ -50,9 +51,13 @@ def require_api_key(x_api_key: str = Header(None, alias="X-API-Key")) -> str:
     api_key = _current_api_key()
     if _in_production() and api_key == "dev-key":
         raise HTTPException(500, "API key not configured for production")
-    if not x_api_key or x_api_key != api_key:
+    if not x_api_key:
         raise HTTPException(401, "Invalid or missing X-API-Key header")
-    return x_api_key
+    if x_api_key == api_key:
+        return x_api_key
+    if contributor_key_store.verify(x_api_key) is not None:
+        return x_api_key
+    raise HTTPException(401, "Invalid or missing X-API-Key header")
 
 
 def require_admin_key(x_admin_key: str = Header(None, alias="X-Admin-Key")) -> str:
