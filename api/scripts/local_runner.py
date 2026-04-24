@@ -4537,13 +4537,14 @@ def _legacy_reap_stale_tasks(max_age_minutes: int = 15) -> int:
 # Session-level skip cache: ideas we already marked stuck/partial this session.
 # Prevents thrashing the API every 15s on the same stuck ideas.
 _SEEDER_SKIP_CACHE: set[str] = set()
+_SEEDER_LOCK = threading.Lock()
 
 # R2: maximum tasks allowed per idea+phase before capping (task dedup spec)
 MAX_TASKS_PER_PHASE: int = 3
 MAX_SEED_ATTEMPTS_PER_CYCLE: int = 12
 
 
-def _seed_task_from_open_idea(_attempt: int = 0) -> bool:
+def _seed_task_from_open_idea(_attempt: int = 0, _lock_held: bool = False) -> bool:
     """Generate a task from an open idea when the queue is empty.
 
     Smart seeding:
@@ -4556,6 +4557,15 @@ def _seed_task_from_open_idea(_attempt: int = 0) -> bool:
     """
     import random as _random
 
+    if not _lock_held:
+        if not _SEEDER_LOCK.acquire(blocking=False):
+            log.info("SEED: another worker is already seeding — skipping this worker cycle")
+            return False
+        try:
+            return _seed_task_from_open_idea(_attempt=_attempt, _lock_held=True)
+        finally:
+            _SEEDER_LOCK.release()
+
     if _attempt >= MAX_SEED_ATTEMPTS_PER_CYCLE:
         log.info(
             "SEED: attempt budget exhausted (%d) — pausing until next cycle",
@@ -4564,7 +4574,7 @@ def _seed_task_from_open_idea(_attempt: int = 0) -> bool:
         return False
 
     def _try_next() -> bool:
-        return _seed_task_from_open_idea(_attempt + 1)
+        return _seed_task_from_open_idea(_attempt=_attempt + 1, _lock_held=True)
 
     # Capacity check
     active = _count_active_tasks()
