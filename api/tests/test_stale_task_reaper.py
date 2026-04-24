@@ -23,6 +23,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.services import agent_service
 
 AUTH = {"X-API-Key": "dev-key"}
 BASE = "http://test"
@@ -85,6 +86,11 @@ async def _trigger_reap(c: AsyncClient, max_age_minutes: int = 0) -> dict:
     return r.json()
 
 
+async def _clear_tasks(c: AsyncClient) -> None:
+    r = await c.delete("/api/agent/tasks?confirm=clear", headers=AUTH)
+    assert r.status_code == 204, f"Clear tasks failed: {r.text}"
+
+
 # ---------------------------------------------------------------------------
 # Scenario 1: Reaped task receives timed_out status
 # ---------------------------------------------------------------------------
@@ -102,13 +108,51 @@ async def test_reap_marks_timed_out():
         await _claim_task(c, task_id)
 
         # Trigger reap with max_age_minutes=0 to reap immediately
-        reap_result = await _trigger_reap(c, max_age_minutes=0)
+        await _trigger_reap(c, max_age_minutes=0)
 
         # Verify the task was reaped
         updated = await _get_task(c, task_id)
         assert updated["status"] == "timed_out", (
             f"Expected timed_out, got {updated['status']}"
         )
+
+
+@pytest.mark.asyncio
+async def test_pending_quarantine_moves_dormant_weak_task_to_needs_decision():
+    """Dormant malformed pending work is quarantined instead of staying runnable."""
+    agent_service._store.clear()
+    async with AsyncClient(transport=ASGITransport(app=app), base_url=BASE) as c:
+        await _clear_tasks(c)
+        task = await _create_task(
+            c,
+            idea_id=_uid("idea"),
+            task_type="impl",
+            extra_context={"source": "implementation_request_question"},
+        )
+        task_id = task["id"]
+        agent_service._store[task_id]["created_at"] = datetime.now(timezone.utc) - timedelta(days=3)
+
+        preview = await c.get(
+            "/api/agent/smart-reap/pending-preview?max_age_minutes=1440",
+            headers=AUTH,
+        )
+        assert preview.status_code == 200, preview.text
+        assert preview.json()["checked"] == 1
+        assert preview.json()["quarantined"] == 0
+
+        run = await c.post(
+            "/api/agent/smart-reap/pending-quarantine?max_age_minutes=1440",
+            headers=AUTH,
+        )
+        assert run.status_code == 200, run.text
+        assert run.json()["quarantined"] == 1
+
+        updated = await _get_task(c, task_id)
+        assert updated["status"] == "needs_decision"
+        assert "DORMANT_PENDING_QUARANTINE" in updated["decision_prompt"]
+        assert updated["current_step"] == "quarantined_dormant_pending"
+        quarantine = updated["context"]["dormant_pending_quarantine"]
+        assert "goal" in quarantine["reason"]
 
 
 # ---------------------------------------------------------------------------
@@ -136,9 +180,6 @@ async def test_reap_creates_retry_with_seed_source():
         # Look for a pending task that is a retry
         r = await c.get("/api/agent/tasks?status=pending&limit=50", headers=AUTH)
         assert r.status_code == 200
-        data = r.json()
-        tasks_list = data.get("tasks", data) if isinstance(data, dict) else data
-
         # The smart_reap_service creates resume tasks with seed_source="smart_reap_resume"
         # when partial output >= 20%. Since we have no partial output, the reaper
         # via the API route (_apply_reap_result) does not create retries directly.
@@ -240,7 +281,7 @@ async def test_no_double_reap_on_timed_out():
         await _claim_task(c, task_id)
 
         # First reap
-        result1 = await _trigger_reap(c, max_age_minutes=0)
+        await _trigger_reap(c, max_age_minutes=0)
         task_after_first = await _get_task(c, task_id)
         assert task_after_first["status"] == "timed_out"
         first_updated_at = task_after_first.get("updated_at")
@@ -292,9 +333,6 @@ def test_tasks_reaped_total_counter():
     This tests the existence of the counter variable in local_runner.
     Integration testing of push_measurements payload requires a running API.
     """
-    import importlib
-    import sys
-
     # Ensure local_runner can be partially introspected
     # We import the variable declarations, not the full module (which requires httpx etc.)
     # Instead, just verify the source contains the declaration
