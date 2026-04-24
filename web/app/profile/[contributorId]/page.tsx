@@ -142,12 +142,9 @@ function fingerprint(hex: string): string {
 
 type ResolvedDim = { label: string; href: string | null; nodeType: string | null };
 
-function hrefForNode(id: string, nodeType: string | null): string | null {
-  if (id.startsWith("contributor:")) return `/profile/${encodeURIComponent(id)}`;
-  if (id.startsWith("asset:")) return `/assets/${encodeURIComponent(id)}`;
-  if (id.startsWith("idea:")) return `/ideas/${encodeURIComponent(id)}`;
-  if (id.startsWith("spec:")) return `/specs/${encodeURIComponent(id)}`;
-  if (id.startsWith("lc-") || nodeType === "concept") return `/vision/${encodeURIComponent(id)}`;
+function hrefForNode(id: string): string {
+  // Every node id routes through the universal /nodes/[id] viewer,
+  // which picks the right typed page inline.
   return `/nodes/${encodeURIComponent(id)}`;
 }
 
@@ -183,13 +180,13 @@ async function resolveDimension(dim: string): Promise<ResolvedDim> {
       next: { revalidate: 60 },
     });
     if (!res.ok) {
-      return { label: dim, href: hrefForNode(dim, null), nodeType: null };
+      return { label: dim, href: hrefForNode(dim), nodeType: null };
     }
     const node = await res.json();
     const name = node?.name || node?.author_display_name || dim;
-    return { label: name, href: hrefForNode(dim, node?.type ?? null), nodeType: node?.type ?? null };
+    return { label: name, href: hrefForNode(dim), nodeType: node?.type ?? null };
   } catch {
-    return { label: dim, href: hrefForNode(dim, null), nodeType: null };
+    return { label: dim, href: hrefForNode(dim), nodeType: null };
   }
 }
 
