@@ -80,6 +80,18 @@ def test_news_sources_load_from_config_path(tmp_path):
     assert [row["id"] for row in loaded] == ["configured-feed"]
 
 
+def test_news_default_source_config_is_packaged_with_api():
+    """Default relative source path resolves inside api/config for deployment."""
+    config_loader.set_config_value("news", "sources_path", "config/news-sources.json")
+
+    path = news_ingestion_service._config_path()
+
+    assert path.name == "news-sources.json"
+    assert path.parent.name == "config"
+    assert path.parent.parent.name == "api"
+    assert path.exists()
+
+
 def test_missing_news_sources_config_returns_empty_list(tmp_path):
     """Missing source config should be visible as empty, not a hard-coded feed list."""
     config_loader.set_config_value("news", "sources_path", str(tmp_path / "missing.json"))
