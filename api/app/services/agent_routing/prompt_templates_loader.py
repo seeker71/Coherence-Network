@@ -291,6 +291,9 @@ def build_default_task_card_context(
             ctx[field] = formatted
 
     if card:
+        for field in ("goal", "files_allowed", "done_when", "commands", "constraints"):
+            if field in card and card.get(field) and not ctx.get(field):
+                ctx[field] = card[field]
         ctx["task_card"] = card
         ctx.setdefault("task_card_autofill", {"source": "prompt_templates", "version": data.get("config_version", "")})
     return ctx
