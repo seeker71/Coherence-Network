@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.services import automation_usage_service, friction_service, persistence_contract_service
+from app.services.telemetry_persistence_service import db as telemetry_service_db
 
 
 def test_persistence_contract_auto_ignores_dev_sqlite(set_config) -> None:
@@ -61,3 +62,10 @@ def test_friction_use_db_comes_from_config(set_config) -> None:
     set_config("friction", "use_db", False)
 
     assert friction_service._use_db_events() is False
+
+
+def test_telemetry_persistence_service_uses_unified_database_url(set_config, monkeypatch) -> None:
+    monkeypatch.setenv("TELEMETRY_DATABASE_URL", "sqlite+pysqlite:///tmp/legacy-telemetry.db")
+    set_config("database", "url", "postgresql://user:pass@example.test/coherence")
+
+    assert telemetry_service_db.database_url() == "postgresql://user:pass@example.test/coherence"
