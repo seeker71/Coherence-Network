@@ -11,7 +11,7 @@ import { hasJsonFlag, printJson, printJsonError, stripJsonFlag } from "../ui/jso
 
 export async function listSpecs(args) {
   const jsonMode = hasJsonFlag(args);
-  // Strip --json before parsing positional so `cc specs --json` still
+  // Strip --json before parsing positional so `coh specs --json` still
   // defaults to the right limit instead of trying to parseInt("--json").
   const clean = stripJsonFlag(args);
   const limit = parseInt(clean[0]) || 20;
@@ -58,7 +58,7 @@ export async function showSpec(args) {
   const id = clean[0];
   if (!id) {
     if (jsonMode) printJsonError("missing_spec_id");
-    else console.log("Usage: cc spec <spec-id>");
+    else console.log("Usage: coh spec <spec-id>");
     return;
   }
   const data = await get(`/api/spec-registry/${encodeURIComponent(id)}`);

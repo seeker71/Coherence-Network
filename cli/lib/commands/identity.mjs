@@ -20,7 +20,7 @@ export async function showIdentity() {
       console.log("Configured identity is invalid.");
     }
     console.log("No identity configured.");
-    console.log("  Fix: cc identity set <your_id>");
+    console.log("  Fix: coh identity set <your_id>");
     return;
   }
   const data = await get(`/api/identity/${encodeURIComponent(id)}`);
@@ -39,7 +39,7 @@ export async function showIdentity() {
     }
   }
   console.log();
-  console.log("  Link more: cc identity link <provider> <id>");
+  console.log("  Link more: coh identity link <provider> <id>");
   console.log();
 }
 
@@ -47,7 +47,7 @@ export async function linkIdentity(args) {
   const [provider, ...rest] = args;
   const providerId = rest.join(" ");
   if (!provider || !providerId) {
-    console.log("Usage: cc identity link <provider> <id>");
+    console.log("Usage: coh identity link <provider> <id>");
     console.log("Providers: github, x, discord, telegram, ethereum, bitcoin, solana, email, gitlab, linkedin, ...");
     return;
   }
@@ -68,7 +68,7 @@ export async function linkIdentity(args) {
 export async function unlinkIdentity(args) {
   const provider = args[0];
   if (!provider) {
-    console.log("Usage: cc identity unlink <provider>");
+    console.log("Usage: coh identity unlink <provider>");
     return;
   }
   const contributor = parseContributorId(getContributorId());
@@ -87,7 +87,7 @@ export async function unlinkIdentity(args) {
 export async function lookupIdentity(args) {
   const [provider, providerId] = args;
   if (!provider || !providerId) {
-    console.log("Usage: cc identity lookup <provider> <id>");
+    console.log("Usage: coh identity lookup <provider> <id>");
     return;
   }
   const data = await get(`/api/identity/lookup/${encodeURIComponent(provider)}/${encodeURIComponent(providerId)}`);
@@ -100,7 +100,7 @@ export async function lookupIdentity(args) {
 
 export async function setIdentity(args) {
   if (args.length !== 1) {
-    console.error("Usage: cc identity set <contributor_id>");
+    console.error("Usage: coh identity set <contributor_id>");
     process.exitCode = 1;
     return;
   }

@@ -1,5 +1,5 @@
 /**
- * cc workspace — workspace (tenant) CRUD.
+ * coh workspace — workspace (tenant) CRUD.
  *
  * Workspaces own their own ideas, specs, pillars, and agent personas.
  * Every idea/spec belongs to exactly one workspace.
@@ -44,7 +44,7 @@ export async function listWorkspaces() {
 export async function showWorkspace(args) {
   const id = args[0];
   if (!id) {
-    console.error("Usage: cc workspace show <workspace_id>");
+    console.error("Usage: coh workspace show <workspace_id>");
     process.exit(1);
   }
   const ws = await get(`/api/workspaces/${encodeURIComponent(id)}`);
@@ -56,11 +56,11 @@ export async function showWorkspace(args) {
 }
 
 export async function createWorkspace(args) {
-  // Usage: cc workspace create <id> <name> [--desc "..."] [--pillars "a,b,c"] [--visibility public]
+  // Usage: coh workspace create <id> <name> [--desc "..."] [--pillars "a,b,c"] [--visibility public]
   const id = args[0];
   const name = args[1];
   if (!id || !name) {
-    console.error("Usage: cc workspace create <id> <name> [--desc \"...\"] [--pillars \"a,b,c\"] [--visibility public]");
+    console.error("Usage: coh workspace create <id> <name> [--desc \"...\"] [--pillars \"a,b,c\"] [--visibility public]");
     process.exit(1);
   }
   let description = "";
@@ -97,8 +97,8 @@ export async function showWorkspacePillars(args) {
 export function useWorkspace(args) {
   const id = args[0];
   if (!id) {
-    console.error("Usage: cc workspace use <workspace_id>");
-    console.error("       cc workspace use --clear");
+    console.error("Usage: coh workspace use <workspace_id>");
+    console.error("       coh workspace use --clear");
     process.exit(1);
   }
   if (id === "--clear" || id === "default") {
@@ -127,7 +127,7 @@ export async function handleWorkspace(args) {
     case "current": return currentWorkspace();
     default:
       if (!sub) return listWorkspaces();
-      // cc workspace <id> → show
+      // coh workspace <id> → show
       return showWorkspace(args);
   }
 }

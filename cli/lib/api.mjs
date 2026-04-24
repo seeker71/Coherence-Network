@@ -12,7 +12,7 @@ function timeoutSignal() {
   return AbortSignal.timeout(getTimeoutMs());
 }
 
-/** Normalized API origin (no trailing slash). Used by SSE watchers and `cc rest`. */
+/** Normalized API origin (no trailing slash). Used by SSE watchers and `coh rest`. */
 export function getApiBase() {
   return getHubUrl().replace(/\/$/, "");
 }
@@ -113,7 +113,7 @@ export async function del(path) {
 }
 
 /**
- * Low-level HTTP for `cc rest` — any method, optional JSON body and extra headers.
+ * Low-level HTTP for `coh rest` — any method, optional JSON body and extra headers.
  * @returns {{ ok: boolean, status: number, path: string, text: string, json: any | null }}
  */
 export async function request(method, path, options = {}) {

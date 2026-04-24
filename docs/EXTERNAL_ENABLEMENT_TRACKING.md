@@ -53,7 +53,7 @@ COHERENCE_API_URL=http://localhost:8000 COHERENCE_API_KEY=dev-key python3 script
 | 2 | Auto-filter: skip tasks for repos without credentials in `keys.json` (no flag needed) | **done** | `api/scripts/local_runner.py` |
 | 3 | Write credential routing tests | **done** | `api/tests/test_flow_enforcement.py` |
 
-**Context**: DB schema + CRUD endpoints + CLI `cc credentials` already exist. Runner now filters tasks by repo credentials (both explicit `--repo` flag and automatic credential check).
+**Context**: DB schema + CRUD endpoints + CLI `coh credentials` already exist. Runner now filters tasks by repo credentials (both explicit `--repo` flag and automatic credential check).
 
 ### Planned Features (priority order)
 
@@ -64,7 +64,7 @@ COHERENCE_API_URL=http://localhost:8000 COHERENCE_API_KEY=dev-key python3 script
 | 3 | **Approvals & budget board** | Single board for governance requests, deploy gates, needs_decision tasks, spend pressure. | Medium |
 | 4 | **Adapters catalog** | First-class surface for providers, federation nodes, Discord/Telegram, deploy gates. | Medium |
 | 5 | **Guided onboarding** | Beginner-friendly setup flow with deployment presets (local/private/public). | Medium |
-| 6 | **CLI mission control parity** | `cc mission-control`, `cc approvals`, `cc budgets`, `cc adapters`. | Medium |
+| 6 | **CLI mission control parity** | `coh mission-control`, `coh approvals`, `coh budgets`, `coh adapters`. | Medium |
 | 7 | **Anomaly self-heal policies** | Orphaned tasks, stale runners, deploy drift → automatic recovery policies. | Large |
 
 ### Coverage Gaps
@@ -83,12 +83,12 @@ COHERENCE_API_URL=http://localhost:8000 COHERENCE_API_KEY=dev-key python3 script
 
 | Command | Spec | Priority |
 |---------|------|----------|
-| cc marketplace | 121 | High |
-| cc graph | 166 | Medium |
-| cc onboarding | 168 | Medium |
-| cc invest | 157 | Low |
-| cc measurements | 131 | Low |
-| cc strategies | 134 | Low |
+| coh marketplace | 121 | High |
+| coh graph | 166 | Medium |
+| coh onboarding | 168 | Medium |
+| coh invest | 157 | Low |
+| coh measurements | 131 | Low |
+| coh strategies | 134 | Low |
 
 ## Completed
 
@@ -120,15 +120,15 @@ COHERENCE_API_URL=http://localhost:8000 COHERENCE_API_KEY=dev-key python3 script
 | Compact summaries | Summarize large outputs; fetch raw on drilldown | done |
 | Tool overhead controls | Auto-prune guard_agents for simple tasks | done |
 | Blueprint royalties | Contributors earn CC on blueprint use | done |
-| Guide discovery | `cc guides` surfaces top creators | done |
+| Guide discovery | `coh guides` surfaces top creators | done |
 | Skill synthesis | Completed tasks → procedural Skill nodes | done |
 | Procedural memory API | Query previous successes before starting work | done |
 | Diagnostics console | `/diagnostics` with config editor, workbench, context budget | done |
-| CLI ops surface | `cc ops`, `cc config`, task-log drilldown, runner control | done |
+| CLI ops surface | `coh ops`, `coh config`, task-log drilldown, runner control | done |
 | JSON-backed settings | Replaced env-driven config with shared JSON config | done |
 | Auto-deploy | GitHub Actions → Hostinger VPS deployment | done |
 | Test suite overhaul | 3,244 → 163 flow-centric tests (7s runtime) | done |
-| Credential CRUD | DB schema, API endpoints, `cc credentials` CLI | done |
+| Credential CRUD | DB schema, API endpoints, `coh credentials` CLI | done |
 
 ### Per-Contributor Credential Model
 

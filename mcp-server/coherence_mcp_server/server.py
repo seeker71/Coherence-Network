@@ -1484,7 +1484,7 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                         "navigation": {"idea_file": f"ideas/{entity_id}.md",
                                        "spec_files": [f"specs/{s}.md" for s in spec_ids],
                                        "api": f"/api/ideas/{entity_id}",
-                                       "cli": f"cc idea {entity_id}"}}
+                                       "cli": f"coh idea {entity_id}"}}
             elif entity_type == "spec":
                 spec = api_get(f"/api/spec-registry/{entity_id}")
                 spec_file = api_get("/api/content/file", {"path": f"specs/{entity_id}.md"})
@@ -1492,7 +1492,7 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 parent_idea = api_get(f"/api/ideas/{idea_id}") if idea_id else None
                 nav: dict[str, Any] = {"spec_file": f"specs/{entity_id}.md",
                                        "api": f"/api/spec-registry/{entity_id}",
-                                       "cli": f"cc spec {entity_id}"}
+                                       "cli": f"coh spec {entity_id}"}
                 if idea_id:
                     nav["idea_file"] = f"ideas/{idea_id}.md"
                 return {"entity_type": "spec", "spec": spec, "spec_file_content": spec_file,
@@ -1506,7 +1506,7 @@ def dispatch(name: str, args: dict[str, Any]) -> Any:
                 return {"entity_type": "task", "task": task, "events": events,
                         "parent_idea": parent_idea,
                         "navigation": {"api": f"/api/agent/tasks/{entity_id}",
-                                       "cli": f"cc task {entity_id}"}}
+                                       "cli": f"coh task {entity_id}"}}
             else:
                 return {"error": f"Unknown entity_type: {entity_type}. Use 'idea', 'spec', or 'task'."}
         # Pipeline Policies

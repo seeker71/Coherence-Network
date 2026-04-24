@@ -1,18 +1,18 @@
 /**
  * Runtime commands
  *
- *   cc runtime                      — show change token + events summary
- *   cc runtime events               — list recent runtime events
- *   cc runtime event <type> <data>  — post a runtime event
- *   cc runtime ideas                — runtime ideas summary
- *   cc runtime endpoints            — endpoints summary
- *   cc runtime web                  — web views performance
- *   cc runtime attention            — endpoints needing attention
- *   cc runtime exerciser            — run exerciser
- *   cc runtime usage                — verification usage
- *   cc runtime mvp                  — MVP acceptance summary
- *   cc runtime mvp judge            — MVP acceptance judge result
- *   cc runtime mvp baselines        — local baselines
+ *   coh runtime                      — show change token + events summary
+ *   coh runtime events               — list recent runtime events
+ *   coh runtime event <type> <data>  — post a runtime event
+ *   coh runtime ideas                — runtime ideas summary
+ *   coh runtime endpoints            — endpoints summary
+ *   coh runtime web                  — web views performance
+ *   coh runtime attention            — endpoints needing attention
+ *   coh runtime exerciser            — run exerciser
+ *   coh runtime usage                — verification usage
+ *   coh runtime mvp                  — MVP acceptance summary
+ *   coh runtime mvp judge            — MVP acceptance judge result
+ *   coh runtime mvp baselines        — local baselines
  */
 
 import { get, post } from "../api.mjs";
@@ -70,7 +70,7 @@ export async function postRuntimeEvent(args) {
   const eventType = args[0];
   const rest = args.slice(1).join(" ");
   if (!eventType) {
-    console.log("Usage: cc runtime event <type> [data...]");
+    console.log("Usage: coh runtime event <type> [data...]");
     return;
   }
   let data = {};

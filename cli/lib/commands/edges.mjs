@@ -2,10 +2,10 @@
  * Edge navigation commands — browse the graph through 46 typed relationships.
  *
  * Commands:
- *   cc edges <entity-id> [--type <type>] [--direction both|outgoing|incoming]
- *   cc edge create <from-id> <type> <to-id> [--strength 0.9]
- *   cc edge delete <edge-id>
- *   cc edge types
+ *   coh edges <entity-id> [--type <type>] [--direction both|outgoing|incoming]
+ *   coh edge create <from-id> <type> <to-id> [--strength 0.9]
+ *   coh edge delete <edge-id>
+ *   coh edge types
  */
 
 import { get, post, del } from "../api.mjs";
@@ -45,12 +45,12 @@ function parseArgs(args) {
   return { opts, positional };
 }
 
-/** cc edges <entity-id> [--type X] [--direction both|outgoing|incoming] */
+/** coh edges <entity-id> [--type X] [--direction both|outgoing|incoming] */
 export async function listEntityEdges(args) {
   const { opts, positional } = parseArgs(args);
   const entityId = positional[0];
   if (!entityId) {
-    console.error("Usage: cc edges <entity-id> [--type <type>] [--direction both|outgoing|incoming]");
+    console.error("Usage: coh edges <entity-id> [--type <type>] [--direction both|outgoing|incoming]");
     process.exit(1);
   }
 
@@ -101,7 +101,7 @@ export async function listEntityEdges(args) {
   }
 }
 
-/** cc edge types */
+/** coh edge types */
 export async function listEdgeTypes() {
   const data = await get("/api/edges/types");
   const families = data?.families ?? [];
@@ -119,13 +119,13 @@ export async function listEdgeTypes() {
   }
 }
 
-/** cc edge create <from-id> <type> <to-id> [--strength 0.9] */
+/** coh edge create <from-id> <type> <to-id> [--strength 0.9] */
 export async function createEdge(args) {
   const { opts, positional } = parseArgs(args);
   const [fromId, type, toId] = positional;
 
   if (!fromId || !type || !toId) {
-    console.error("Usage: cc edge create <from-id> <type> <to-id> [--strength 0.9]");
+    console.error("Usage: coh edge create <from-id> <type> <to-id> [--strength 0.9]");
     process.exit(1);
   }
 
@@ -145,7 +145,7 @@ export async function createEdge(args) {
       process.exit(1);
     }
     if (err.status === 400) {
-      console.error(`Unknown edge type '${type}'. Run 'cc edge types' to see valid types.`);
+      console.error(`Unknown edge type '${type}'. Run 'coh edge types' to see valid types.`);
       process.exit(1);
     }
     throw err;
@@ -158,11 +158,11 @@ export async function createEdge(args) {
   console.log(JSON.stringify(result, null, 2));
 }
 
-/** cc edge delete <edge-id> */
+/** coh edge delete <edge-id> */
 export async function deleteEdge(args) {
   const edgeId = args[0];
   if (!edgeId) {
-    console.error("Usage: cc edge delete <edge-id>");
+    console.error("Usage: coh edge delete <edge-id>");
     process.exit(1);
   }
 

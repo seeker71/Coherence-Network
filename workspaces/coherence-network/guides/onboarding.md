@@ -12,12 +12,12 @@ Welcome. This workspace runs the Coherence Network platform itself.
 ## CLI tour
 
 ```bash
-cc idea list                 # 16 curated super-ideas
-cc idea list --all           # every idea (325+)
-cc idea agent-pipeline       # a specific idea
-cc spec list                 # all specs
-cc tasks --status pending    # work waiting for an agent
-cc status                    # pipeline health
+coh idea list                 # 16 curated super-ideas
+coh idea list --all           # every idea (325+)
+coh idea agent-pipeline       # a specific idea
+coh spec list                 # all specs
+coh tasks --status pending    # work waiting for an agent
+coh status                    # pipeline health
 ```
 
 ## Anatomy of a spec

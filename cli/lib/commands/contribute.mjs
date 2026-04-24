@@ -1,9 +1,9 @@
 /**
  * Contribute command — record any contribution.
  *
- * Interactive:  cc contribute
+ * Interactive:  coh contribute
  * Non-interactive (for agents):
- *   cc contribute --type code --cc 5 --idea <id> --desc "what I did"
+ *   coh contribute --type code --cc 5 --idea <id> --desc "what I did"
  */
 
 import { post } from "../api.mjs";

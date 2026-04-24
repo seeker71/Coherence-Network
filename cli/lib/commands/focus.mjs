@@ -41,7 +41,7 @@ export async function runFocusCommand(args = []) {
     // Show current focus if not TTY and no args
     const focus = getFocus();
     if (!focus.idea_id && !focus.task_id) {
-      console.log("No active focus. Use 'cc focus <id>' to set one.");
+      console.log("No active focus. Use 'coh focus <id>' to set one.");
     } else {
       if (focus.idea_id) console.log(`Active Idea: ${focus.idea_id}`);
       if (focus.task_id) console.log(`Active Task: ${focus.task_id}`);

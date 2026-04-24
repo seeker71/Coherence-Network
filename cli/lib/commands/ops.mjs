@@ -298,7 +298,7 @@ export async function showOpsSnapshot(args = []) {
 export async function showOpsEvents(args = []) {
   const taskId = args.find((value) => !value.startsWith("--")) || "";
   if (!taskId) {
-    console.log("Usage: cc ops events <task_id> [--json] [--follow]");
+    console.log("Usage: coh ops events <task_id> [--json] [--follow]");
     return;
   }
   if (args.includes("--follow")) {
@@ -369,7 +369,7 @@ async function followTaskEvents(taskId, { verbose = false } = {}) {
 export async function sendOpsRunnerCommand(args = []) {
   const [target, command, ...extra] = args;
   if (!target || !command) {
-    console.log("Usage: cc ops runner <runner|host|node> <status|pause|resume|restart> [args...]");
+    console.log("Usage: coh ops runner <runner|host|node> <status|pause|resume|restart> [args...]");
     return;
   }
   const resolution = await resolveRunnerCommandTarget(target);

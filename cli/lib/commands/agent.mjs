@@ -1,24 +1,24 @@
 /**
  * Agent pipeline commands
  *
- *   cc agent                          — show pipeline status
- *   cc agent status                   — full status report
- *   cc agent pipeline                 — pipeline-status
- *   cc agent runners                  — list runners
- *   cc agent lifecycle                — lifecycle summary
- *   cc agent usage                    — agent usage stats
- *   cc agent visibility               — agent visibility
- *   cc agent guidance                 — orchestration guidance
- *   cc agent integration              — integration report
- *   cc agent issues                   — fatal and monitor issues
- *   cc agent metrics                  — task metrics
- *   cc agent effectiveness            — agent effectiveness report
- *   cc agent health                   — collective health
- *   cc agent diagnostics              — diagnostics completeness
- *   cc agent reap-history             — reap history
- *   cc agent attention                — tasks needing attention
- *   cc agent run-state <task_id>      — run state for a task
- *   cc agent execute <task_id>        — execute a task (agent use)
+ *   coh agent                          — show pipeline status
+ *   coh agent status                   — full status report
+ *   coh agent pipeline                 — pipeline-status
+ *   coh agent runners                  — list runners
+ *   coh agent lifecycle                — lifecycle summary
+ *   coh agent usage                    — agent usage stats
+ *   coh agent visibility               — agent visibility
+ *   coh agent guidance                 — orchestration guidance
+ *   coh agent integration              — integration report
+ *   coh agent issues                   — fatal and monitor issues
+ *   coh agent metrics                  — task metrics
+ *   coh agent effectiveness            — agent effectiveness report
+ *   coh agent health                   — collective health
+ *   coh agent diagnostics              — diagnostics completeness
+ *   coh agent reap-history             — reap history
+ *   coh agent attention                — tasks needing attention
+ *   coh agent run-state <task_id>      — run state for a task
+ *   coh agent execute <task_id>        — execute a task (agent use)
  */
 
 import { get, post, patch, request } from "../api.mjs";
@@ -523,7 +523,7 @@ export async function showAttentionTasks() {
 
 export async function showRunState(args) {
   const taskId = args[0];
-  if (!taskId) { console.log("Usage: cc agent run-state <task_id>"); return; }
+  if (!taskId) { console.log("Usage: coh agent run-state <task_id>"); return; }
 
   const data = await get(`/api/agent/run-state/${encodeURIComponent(taskId)}`);
   if (!data) { console.log(`No run state for task '${taskId}'.`); return; }
@@ -569,7 +569,7 @@ export async function showAgentRoute(args) {
 export async function executeAgentTask(args) {
   const taskId = args[0];
   if (!taskId) {
-    console.log("Usage: cc agent execute <task_id>");
+    console.log("Usage: coh agent execute <task_id>");
     console.log("  Requires agent_executor.execute_token in ~/.coherence-network/config.json for server-side execute.");
     return;
   }

@@ -38,7 +38,7 @@ export async function listServices() {
 export async function showService(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc service <id>");
+    console.log("Usage: coh service <id>");
     return;
   }
   const data = await get(`/api/services/${encodeURIComponent(id)}`);

@@ -97,14 +97,14 @@ export function getContributorId() {
   return null;
 }
 
-/** Resolution source label for `cc identity` (R4). */
+/** Resolution source label for `coh identity` (R4). */
 export function getContributorSource() {
   const fromFile = loadConfig().contributor_id;
   if (fromFile && String(fromFile).trim()) return "config.json";
   return "none";
 }
 
-/** R2 — contributor_id for `cc identity set` (letters, digits, underscore, period, hyphen; max 64). */
+/** R2 — contributor_id for `coh identity set` (letters, digits, underscore, period, hyphen; max 64). */
 export const CONTRIBUTOR_ID_PATTERN = /^[\w.\-]{1,64}$/;
 
 export function normalizeContributorId(value) {

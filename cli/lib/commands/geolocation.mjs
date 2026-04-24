@@ -1,10 +1,10 @@
 /**
  * Geolocation commands: nearby, location
  *
- * cc nearby [--lat <lat>] [--lon <lon>] [--radius <km>]
- * cc location set <contributor-id> <city> <country> <lat> <lon>
- * cc location get <contributor-id>
- * cc location clear <contributor-id>
+ * coh nearby [--lat <lat>] [--lon <lon>] [--radius <km>]
+ * coh location set <contributor-id> <city> <country> <lat> <lon>
+ * coh location get <contributor-id>
+ * coh location clear <contributor-id>
  */
 
 import { get, patch, del } from "../api.mjs";
@@ -25,7 +25,7 @@ export async function showNearby(args) {
   const radius = parseFloat(parseFlag(args, "--radius") ?? "100");
 
   if (isNaN(lat) || isNaN(lon)) {
-    console.error("Usage: cc nearby --lat <lat> --lon <lon> [--radius <km>]");
+    console.error("Usage: coh nearby --lat <lat> --lon <lon> [--radius <km>]");
     process.exit(1);
   }
 
@@ -87,9 +87,9 @@ export async function handleLocation(args) {
     default:
       console.error(
         "Usage:\n" +
-          "  cc location set <contributor-id> <city> <country> <lat> <lon> [public|contributors_only|private]\n" +
-          "  cc location get <contributor-id>\n" +
-          "  cc location clear <contributor-id>",
+          "  coh location set <contributor-id> <city> <country> <lat> <lon> [public|contributors_only|private]\n" +
+          "  coh location get <contributor-id>\n" +
+          "  coh location clear <contributor-id>",
       );
       process.exit(1);
   }
@@ -99,7 +99,7 @@ async function setLocation(args) {
   const [contributorId, city, country, latStr, lonStr, visibility = "contributors_only"] = args;
   if (!contributorId || !city || !country || !latStr || !lonStr) {
     console.error(
-      "Usage: cc location set <contributor-id> <city> <country> <lat> <lon> [public|contributors_only|private]",
+      "Usage: coh location set <contributor-id> <city> <country> <lat> <lon> [public|contributors_only|private]",
     );
     process.exit(1);
   }
@@ -130,7 +130,7 @@ async function setLocation(args) {
 async function getLocation(args) {
   const [contributorId] = args;
   if (!contributorId) {
-    console.error("Usage: cc location get <contributor-id>");
+    console.error("Usage: coh location get <contributor-id>");
     process.exit(1);
   }
 
@@ -148,7 +148,7 @@ async function getLocation(args) {
 async function clearLocation(args) {
   const [contributorId] = args;
   if (!contributorId) {
-    console.error("Usage: cc location clear <contributor-id>");
+    console.error("Usage: coh location clear <contributor-id>");
     process.exit(1);
   }
 

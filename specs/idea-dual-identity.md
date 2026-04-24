@@ -105,12 +105,12 @@ The API accepts any namespace depth. Clients and the CLI display the full slug.
    via history (301-style lookup), new slug resolves directly.
 4. Rename does not break any FK: parent/child relationships still resolve.
 5. All existing `test_ideas.py` tests pass without modification.
-6. `cc idea triage` lists ideas with both UUID and slug visible.
+6. `coh idea triage` lists ideas with both UUID and slug visible.
 
 ## Known Gaps and Follow-up Tasks
 
 - **Slug search**: `GET /api/ideas?slug_prefix=finance/` — filtered listing by namespace.
-- **Slug autocomplete** in CLI: `cc idea <TAB>` resolves slugs.
+- **Slug autocomplete** in CLI: `coh idea <TAB>` resolves slugs.
 - **Structured slug enforcement**: optional future constraint that all slugs
   under a pillar super-idea share its namespace prefix.
 - **Slug registry**: a dedicated `GET /api/ideas/slugs` catalog endpoint for

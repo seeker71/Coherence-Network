@@ -206,38 +206,38 @@ class TaskControlChannel:
 def inject_control_instructions(prompt: str, task_dir: Path) -> str:
     """Add control channel instructions to the agent's prompt.
 
-    Uses cc CLI for communication — agents are network participants.
+    Uses coh CLI for communication — agents are network participants.
     """
     instructions = """
 
 ## Real-time network communication
 
-You are a node in the Coherence Network. Use `cc` to communicate:
+You are a node in the Coherence Network. Use `coh` to communicate:
 
 ### Check for messages (do this every 5-7 minutes)
 ```bash
-cc inbox
+coh inbox
 ```
 
 If you see a command, act on it:
-- `checkpoint` — Write your current progress to `.task-checkpoint.md` and reply with `cc msg <sender> "checkpoint saved"`
-- `steer` — Adjust your approach as directed and reply with `cc msg <sender> "acknowledged, adjusting"`
-- `abort` — Stop work, save progress to `.task-checkpoint.md`, reply with `cc msg <sender> "aborting, progress saved"`, then exit
-- `ask` — Answer the question via `cc msg <sender> "<your answer>"`
+- `checkpoint` — Write your current progress to `.task-checkpoint.md` and reply with `coh msg <sender> "checkpoint saved"`
+- `steer` — Adjust your approach as directed and reply with `coh msg <sender> "acknowledged, adjusting"`
+- `abort` — Stop work, save progress to `.task-checkpoint.md`, reply with `coh msg <sender> "aborting, progress saved"`, then exit
+- `ask` — Answer the question via `coh msg <sender> "<your answer>"`
 
 ### Send status updates
 ```bash
-cc msg broadcast "Working on <idea>: 60% complete, implementing API endpoints"
+coh msg broadcast "Working on <idea>: 60% complete, implementing API endpoints"
 ```
 
 ### Report issues
 ```bash
-cc msg broadcast "Blocked: missing dependency X, need guidance"
+coh msg broadcast "Blocked: missing dependency X, need guidance"
 ```
 
 ### When done
 ```bash
-cc contribute --type code --cc 5 --desc "Implemented <feature>"
+coh contribute --type code --cc 5 --desc "Implemented <feature>"
 ```
 """
     return prompt + instructions

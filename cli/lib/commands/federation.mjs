@@ -1,22 +1,22 @@
 /**
  * Federation commands
  *
- *   cc federation                     — list federation nodes
- *   cc federation nodes               — list nodes
- *   cc federation node <id>           — (alias for nodes detail)
- *   cc federation instances           — list federated instances
- *   cc federation instance <id>       — show a specific instance
- *   cc federation register <url>      — register a new node
- *   cc federation heartbeat <id>      — send heartbeat for a node
- *   cc federation capabilities        — fleet capability summary
- *   cc federation stats               — federation node stats
- *   cc federation sync                — trigger federation sync
- *   cc federation sync history        — sync history
- *   cc federation aggregates          — list federated aggregations
- *   cc federation strategies          — compute strategies
- *   cc federation msg <node_id> <msg> — send message to a node
- *   cc federation msgs <node_id>      — read messages from a node
- *   cc federation broadcast <msg>     — broadcast to all nodes
+ *   coh federation                     — list federation nodes
+ *   coh federation nodes               — list nodes
+ *   coh federation node <id>           — (alias for nodes detail)
+ *   coh federation instances           — list federated instances
+ *   coh federation instance <id>       — show a specific instance
+ *   coh federation register <url>      — register a new node
+ *   coh federation heartbeat <id>      — send heartbeat for a node
+ *   coh federation capabilities        — fleet capability summary
+ *   coh federation stats               — federation node stats
+ *   coh federation sync                — trigger federation sync
+ *   coh federation sync history        — sync history
+ *   coh federation aggregates          — list federated aggregations
+ *   coh federation strategies          — compute strategies
+ *   coh federation msg <node_id> <msg> — send message to a node
+ *   coh federation msgs <node_id>      — read messages from a node
+ *   coh federation broadcast <msg>     — broadcast to all nodes
  */
 
 import { get, post, del as apiDel } from "../api.mjs";
@@ -80,7 +80,7 @@ export async function listFederationInstances() {
 
 export async function showFederationInstance(args) {
   const id = args[0];
-  if (!id) { console.log("Usage: cc federation instance <id>"); return; }
+  if (!id) { console.log("Usage: coh federation instance <id>"); return; }
 
   const data = await get(`/api/federation/instances/${encodeURIComponent(id)}`);
   if (!data) { console.log(`Instance '${id}' not found.`); return; }
@@ -98,7 +98,7 @@ export async function showFederationInstance(args) {
 export async function registerFederationNode(args) {
   const url = args[0];
   const capabilities = args.slice(1);
-  if (!url) { console.log("Usage: cc federation register <url> [capability...]"); return; }
+  if (!url) { console.log("Usage: coh federation register <url> [capability...]"); return; }
 
   const body = { url };
   if (capabilities.length) body.capabilities = capabilities;
@@ -114,7 +114,7 @@ export async function registerFederationNode(args) {
 
 export async function federationHeartbeat(args) {
   const nodeId = args[0];
-  if (!nodeId) { console.log("Usage: cc federation heartbeat <node_id>"); return; }
+  if (!nodeId) { console.log("Usage: coh federation heartbeat <node_id>"); return; }
 
   const result = await post(`/api/federation/nodes/${encodeURIComponent(nodeId)}/heartbeat`, {});
   if (result) {
@@ -236,7 +236,7 @@ export async function sendFederationMessage(args) {
   const nodeId = args[0];
   const message = args.slice(1).join(" ");
   if (!nodeId || !message) {
-    console.log("Usage: cc federation msg <node_id> <message>");
+    console.log("Usage: coh federation msg <node_id> <message>");
     return;
   }
   const result = await post(`/api/federation/nodes/${encodeURIComponent(nodeId)}/messages`, {
@@ -251,7 +251,7 @@ export async function sendFederationMessage(args) {
 
 export async function readFederationMessages(args) {
   const nodeId = args[0];
-  if (!nodeId) { console.log("Usage: cc federation msgs <node_id>"); return; }
+  if (!nodeId) { console.log("Usage: coh federation msgs <node_id>"); return; }
 
   const data = await get(`/api/federation/nodes/${encodeURIComponent(nodeId)}/messages`);
   const messages = Array.isArray(data) ? data : data?.messages || [];
@@ -278,7 +278,7 @@ export async function readFederationMessages(args) {
 
 export async function broadcastFederation(args) {
   const message = args.join(" ");
-  if (!message) { console.log("Usage: cc federation broadcast <message>"); return; }
+  if (!message) { console.log("Usage: coh federation broadcast <message>"); return; }
 
   const result = await post("/api/federation/broadcast", { message });
   if (result) {

@@ -127,9 +127,9 @@ export async function showDiagVisibility() {
 }
 
 /**
- * cc diag live [node_id] — subscribe to real-time diagnostic events from agents.
+ * coh diag live [node_id] — subscribe to real-time diagnostic events from agents.
  *
- * Shows: heartbeat, tool usage, reasoning steps, cc ingress/egress, messages.
+ * Shows: heartbeat, tool usage, reasoning steps, coh ingress/egress, messages.
  * Use node_id='*' or omit to see all nodes.
  */
 export async function showDiagLive(args) {

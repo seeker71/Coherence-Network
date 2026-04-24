@@ -77,7 +77,7 @@ export async function ensureIdentity() {
     } catch {}
 
     console.error(`Registered as: ${detected.id} (from ${detected.source})`);
-    console.error(`Link identity: cc identity link github <handle>`);
+    console.error(`Link identity: coh identity link github <handle>`);
     return detected.id;
   }
 
@@ -123,7 +123,7 @@ export async function ensureIdentity() {
       if (result) {
         console.log(`  \x1b[32m✓\x1b[0m Linked ${provider}:${handle}`);
       } else {
-        console.log(`  \x1b[33m!\x1b[0m Could not link. Try later: cc identity link ${provider} ${handle}`);
+        console.log(`  \x1b[33m!\x1b[0m Could not link. Try later: coh identity link ${provider} ${handle}`);
       }
     }
   }
@@ -144,7 +144,7 @@ export async function ensureIdentity() {
         if (result) {
           console.log(`  \x1b[32m✓\x1b[0m Linked ${provider}:${value}`);
         } else {
-          console.log(`  \x1b[33m!\x1b[0m Could not link. Try later: cc identity link ${provider} ${value}`);
+          console.log(`  \x1b[33m!\x1b[0m Could not link. Try later: coh identity link ${provider} ${value}`);
         }
       }
     }
@@ -176,14 +176,14 @@ export async function ensureIdentity() {
       });
       console.log(`\x1b[32m✓\x1b[0m API key generated and saved to ~/.coherence-network/keys.json`);
     } else {
-      console.log(`\x1b[33m!\x1b[0m Could not generate API key now. Run: cc setup`);
+      console.log(`\x1b[33m!\x1b[0m Could not generate API key now. Run: coh setup`);
     }
   }
 
   console.log();
   console.log(`\x1b[32m✓\x1b[0m Registered as: ${name}`);
   console.log(`Config saved to ~/.coherence-network/config.json`);
-  console.log(`Link more anytime: cc identity link <provider> <handle>`);
+  console.log(`Link more anytime: coh identity link <provider> <handle>`);
   console.log();
 
   rl.close();

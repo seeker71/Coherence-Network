@@ -513,7 +513,7 @@ Ideas are the atomic unit of the Coherence Network. If an idea isn't in the syst
 
 ```bash
 # Via CLI
-cc share
+coh share
 
 # Via API
 curl -s https://api.coherencycoin.com/api/ideas -X POST \
@@ -541,7 +541,7 @@ curl -s https://api.coherencycoin.com/api/ideas -X POST \
 1. Were any new ideas discussed? → Record them via `POST /api/ideas`
 2. Were any existing ideas implemented? → Update status via `PATCH /api/ideas/{id}`
 3. Do new ideas have parent relationships? → Set `parent_idea_id`
-4. Are all ideas discoverable via `cc ideas`? → Verify
+4. Are all ideas discoverable via `coh ideas`? → Verify
 
 ### API key requirement
 

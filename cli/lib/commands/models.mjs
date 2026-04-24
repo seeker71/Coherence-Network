@@ -1,17 +1,17 @@
 /**
- * cc models — Model listing and routing management.
+ * coh models — Model listing and routing management.
  *
  * Usage:
- *   cc models                              List all models by executor
- *   cc models routing                      Show task-type → tier mapping
- *   cc models set <executor> <type> <model> Override model for executor + task type
- *   cc usage                               Show automation usage overview
- *   cc usage alerts                        Show active usage alerts
+ *   coh models                              List all models by executor
+ *   coh models routing                      Show task-type → tier mapping
+ *   coh models set <executor> <type> <model> Override model for executor + task type
+ *   coh usage                               Show automation usage overview
+ *   coh usage alerts                        Show active usage alerts
  */
 
 import { get, patch } from "../api.mjs";
 
-// ── cc models ──────────────────────────────────────────────────────
+// ── coh models ──────────────────────────────────────────────────────
 
 export async function modelsCommand(args) {
   const sub = (args[0] || "").toLowerCase();
@@ -29,13 +29,13 @@ export async function modelsCommand(args) {
     const taskType = args[2];
     const model = args[3];
     if (!executor || !taskType || !model) {
-      console.log("\x1b[33m⚠\x1b[0m Usage: cc models set <executor> <task_type> <model>");
+      console.log("\x1b[33m⚠\x1b[0m Usage: coh models set <executor> <task_type> <model>");
       return;
     }
     return setModelOverride(executor, taskType, model);
   }
 
-  console.log("\x1b[33m⚠\x1b[0m Unknown subcommand. Use: cc models [list|routing|set]");
+  console.log("\x1b[33m⚠\x1b[0m Unknown subcommand. Use: coh models [list|routing|set]");
 }
 
 async function listModels() {
@@ -130,7 +130,7 @@ async function setModelOverride(executor, taskType, model) {
   console.log(`  \x1b[32m✓\x1b[0m Model routing updated: ${executor}/${taskType} → ${model}`);
 }
 
-// ── cc usage ───────────────────────────────────────────────────────
+// ── coh usage ───────────────────────────────────────────────────────
 
 export async function usageCommand(args) {
   const sub = (args[0] || "").toLowerCase();

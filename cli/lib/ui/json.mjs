@@ -1,5 +1,5 @@
 /**
- * Shared --json output helpers for cc commands.
+ * Shared --json output helpers for coh commands.
  *
  * Before this module, each command re-invented its own JSON handling:
  *   - ops.mjs did `args.includes("--json")`
@@ -21,7 +21,7 @@
  * All functions honor the precedence:
  *   explicit flag > stdout non-TTY (piped to jq/less) > default human mode
  *
- * Auto-detecting non-TTY means `cc ideas | jq '.[0]'` just works without
+ * Auto-detecting non-TTY means `coh ideas | jq '.[0]'` just works without
  * the user having to remember `--json`.
  */
 

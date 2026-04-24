@@ -1,8 +1,8 @@
 /**
- * Interactive onboarding: cc setup
+ * Interactive onboarding: coh setup
  *
  * Guides a new contributor through identity + API key setup.
- * Non-interactive mode: cc setup --name <name> --provider <p> --id <id>
+ * Non-interactive mode: coh setup --name <name> --provider <p> --id <id>
  */
 
 import { post } from "../api.mjs";
@@ -26,7 +26,7 @@ export async function setup(args) {
     console.log(`\n\x1b[32m✓\x1b[0m Already set up as \x1b[1m${keys.contributor_id}\x1b[0m`);
     console.log(`  API key: ${keys.api_key.slice(0, 12)}...`);
     if (keys.provider) console.log(`  Provider: ${keys.provider}:${keys.provider_id}`);
-    console.log(`\n  To reconfigure: cc setup --reset`);
+    console.log(`\n  To reconfigure: coh setup --reset`);
     return;
   }
 
@@ -113,10 +113,10 @@ async function completeSetup(name, provider, providerId) {
   Saved to:    ${KEYS_FILE}
 
   You can now:
-    cc ideas              Browse ideas
-    cc share              Submit a new idea
-    cc contribute         Record a contribution
-    cc stake <id> <cc>    Invest in an idea
-    cc status             Check network health
+    coh ideas              Browse ideas
+    coh share              Submit a new idea
+    coh contribute         Record a contribution
+    coh stake <id> <cc>    Invest in an idea
+    coh status             Check network health
 `);
 }

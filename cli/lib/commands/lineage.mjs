@@ -37,7 +37,7 @@ export async function listLinks(args) {
 export async function showLink(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc lineage <id>");
+    console.log("Usage: coh lineage <id>");
     return;
   }
   const data = await get(`/api/value-lineage/links/${encodeURIComponent(id)}`);
@@ -60,7 +60,7 @@ export async function showLink(args) {
 export async function showValuation(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc lineage <id> valuation");
+    console.log("Usage: coh lineage <id> valuation");
     return;
   }
   const data = await get(`/api/value-lineage/links/${encodeURIComponent(id)}/valuation`);
@@ -82,7 +82,7 @@ export async function payoutPreview(args) {
   const id = args[0];
   const amount = parseFloat(args[1]);
   if (!id || isNaN(amount)) {
-    console.log("Usage: cc lineage <id> payout <amount>");
+    console.log("Usage: coh lineage <id> payout <amount>");
     return;
   }
   const data = await post(`/api/value-lineage/links/${encodeURIComponent(id)}/payout-preview`, { amount });

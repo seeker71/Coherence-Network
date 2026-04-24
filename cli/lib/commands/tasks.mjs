@@ -3,12 +3,12 @@
  *
  * This is the agent-to-agent work protocol. An AI agent (Claude, Codex,
  * Cursor, Gemini) can:
- *   cc tasks              — see what's pending/running
- *   cc task next          — claim the highest-priority pending task
- *   cc task <id>          — view task detail
- *   cc task claim <id>    — claim a specific task
- *   cc task report <id> <status> [output] — report result
- *   cc task seed <idea>   — create a task from an idea
+ *   coh tasks              — see what's pending/running
+ *   coh task next          — claim the highest-priority pending task
+ *   coh task <id>          — view task detail
+ *   coh task claim <id>    — claim a specific task
+ *   coh task report <id> <status> [output] — report result
+ *   coh task seed <idea>   — create a task from an idea
  */
 
 import { get, post, patch } from "../api.mjs";
@@ -99,7 +99,7 @@ export async function listTasks(args) {
     return;
   }
 
-  // Explicit status filter: cc tasks running, cc tasks failed, etc.
+  // Explicit status filter: coh tasks running, coh tasks failed, etc.
   const data = await get("/api/agent/tasks", { status: explicit, limit, ...workspaceQuery() });
   const tasks = data?.tasks || (Array.isArray(data) ? data : []);
 
@@ -132,7 +132,7 @@ export async function listTasks(args) {
 export async function showTask(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc task <id>");
+    console.log("Usage: coh task <id>");
     return;
   }
   const t = await get(`/api/agent/tasks/${id}`);
@@ -210,7 +210,7 @@ export async function reportTask(args) {
   const output = outputParts.join(" ");
 
   if (!id || !status) {
-    console.log("Usage: cc task report <id> <completed|failed> [output text]");
+    console.log("Usage: coh task report <id> <completed|failed> [output text]");
     return;
   }
 
@@ -237,7 +237,7 @@ export async function seedTask(args) {
   const taskType = type || "spec";
 
   if (!ideaId) {
-    console.log("Usage: cc task seed <idea_id> [spec|test|impl|review]");
+    console.log("Usage: coh task seed <idea_id> [spec|test|impl|review]");
     return;
   }
 
@@ -278,7 +278,7 @@ export async function showTaskCount() {
 export async function showTaskEvents(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc task events <task_id>");
+    console.log("Usage: coh task events <task_id>");
     console.log("  Fetches stored event list from GET /api/agent/tasks/<id>/stream (not the SSE /events endpoint).");
     return;
   }
@@ -302,7 +302,7 @@ function timeSince(iso) {
 
 export async function postProgress(args) {
   const message = args.join(" ").trim();
-  if (!message) { console.log("Usage: cc progress \"what you just did\""); return; }
+  if (!message) { console.log("Usage: coh progress \"what you just did\""); return; }
   let taskId = getCliActiveTaskId() || "";
   if (!taskId) {
     try { const { readFileSync } = await import("node:fs"); const ctrl = readFileSync(".task-control", "utf-8").trim(); const m = ctrl.match(/task[_-]([a-f0-9]+)/i); if (m) taskId = `task_${m[1]}`; } catch {}

@@ -3,23 +3,23 @@
 
 | Category | Commands |
 |----------|----------|
-| **Core** | `cc status`, `cc help`, `cc setup`, `cc inbox`, `cc resonance` |
-| **Ideas** | `cc ideas`, `cc idea <id>`, `cc idea create`, `cc share`, `cc stake <id> <cc>`, `cc fork <id>` |
-| **Specs** | `cc specs`, `cc spec <id>` |
-| **Identity** | `cc identity`, `cc identity setup`, `cc identity set <id>`, `cc identity link <p> <id>`, `cc identity unlink <p>`, `cc identity lookup <p> <id>` |
-| **Contributors** | `cc contributors`, `cc contributor <id>`, `cc contributor <id> contributions` |
-| **Contributions** | `cc contribute` |
-| **Tasks** | `cc tasks`, `cc task <id>`, `cc task next`, `cc task claim <id>`, `cc task report <id>`, `cc task seed <idea>` |
-| **Assets** | `cc assets`, `cc asset <id>`, `cc asset create <type> <desc>` |
-| **News** | `cc news`, `cc news trending`, `cc news sources`, `cc news source add <url> <name>`, `cc news resonance [contributor]` |
-| **Treasury** | `cc treasury`, `cc treasury deposits [contributor]`, `cc treasury deposit <amount> <asset>` |
-| **Value lineage** | `cc lineage`, `cc lineage <id>`, `cc lineage <id> valuation`, `cc lineage <id> payout <amount>` |
-| **Governance** | `cc governance`, `cc governance <id>`, `cc governance vote <id> <yes\|no>`, `cc governance propose <title> <desc>` |
-| **Nodes** | `cc nodes`, `cc msg <node> <text>`, `cc cmd <node> update\|status\|diagnose\|restart\|ping` |
-| **Services** | `cc services`, `cc service <id>`, `cc services health`, `cc services deps` |
-| **Friction** | `cc friction`, `cc friction events`, `cc friction categories` |
-| **Providers** | `cc providers`, `cc providers stats` |
-| **Traceability** | `cc trace`, `cc trace coverage`, `cc trace idea <id>`, `cc trace spec <id>` |
-| **Diagnostics** | `cc diag`, `cc diag health`, `cc diag issues`, `cc diag runners`, `cc diag visibility` |
+| **Core** | `coh status`, `coh help`, `coh setup`, `coh inbox`, `coh resonance` |
+| **Ideas** | `coh ideas`, `coh idea <id>`, `coh idea create`, `coh share`, `coh stake <id> <cc>`, `coh fork <id>` |
+| **Specs** | `coh specs`, `coh spec <id>` |
+| **Identity** | `coh identity`, `coh identity setup`, `coh identity set <id>`, `coh identity link <p> <id>`, `coh identity unlink <p>`, `coh identity lookup <p> <id>` |
+| **Contributors** | `coh contributors`, `coh contributor <id>`, `coh contributor <id> contributions` |
+| **Contributions** | `coh contribute` |
+| **Tasks** | `coh tasks`, `coh task <id>`, `coh task next`, `coh task claim <id>`, `coh task report <id>`, `coh task seed <idea>` |
+| **Assets** | `coh assets`, `coh asset <id>`, `coh asset create <type> <desc>` |
+| **News** | `coh news`, `coh news trending`, `coh news sources`, `coh news source add <url> <name>`, `coh news resonance [contributor]` |
+| **Treasury** | `coh treasury`, `coh treasury deposits [contributor]`, `coh treasury deposit <amount> <asset>` |
+| **Value lineage** | `coh lineage`, `coh lineage <id>`, `coh lineage <id> valuation`, `coh lineage <id> payout <amount>` |
+| **Governance** | `coh governance`, `coh governance <id>`, `coh governance vote <id> <yes\|no>`, `coh governance propose <title> <desc>` |
+| **Nodes** | `coh nodes`, `coh msg <node> <text>`, `coh cmd <node> update\|status\|diagnose\|restart\|ping` |
+| **Services** | `coh services`, `coh service <id>`, `coh services health`, `coh services deps` |
+| **Friction** | `coh friction`, `coh friction events`, `coh friction categories` |
+| **Providers** | `coh providers`, `coh providers stats` |
+| **Traceability** | `coh trace`, `coh trace coverage`, `coh trace idea <id>`, `coh trace spec <id>` |
+| **Diagnostics** | `coh diag`, `coh diag health`, `coh diag issues`, `coh diag runners`, `coh diag visibility` |
 
 </details>

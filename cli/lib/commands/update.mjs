@@ -1,5 +1,5 @@
 /**
- * cc update — universal update for all agent surfaces
+ * coh update — universal update for all agent surfaces
  *
  * Updates: CLI, MCP server, OpenClaw skill, and agent config files
  * (.claude/settings.json, .cursorrules, .windsurfrules, AGENTS.md)
@@ -168,7 +168,7 @@ async function updateAgentConfigs() {
   }
 
   const agentInstructions = skillContent
-    ? `# Coherence Network\n\nThis project uses the Coherence Network. Run \`cc status\` to check health.\nRun \`cc inbox\` to check messages. Run \`cc help\` for all commands.\n\nFull documentation: https://api.coherencycoin.com/docs\nCLI: npm i -g coherence-cli\nMCP: npx coherence-mcp-server\n`
+    ? `# Coherence Network\n\nThis project uses the Coherence Network. Run \`coh status\` to check health.\nRun \`coh inbox\` to check messages. Run \`coh help\` for all commands.\n\nFull documentation: https://api.coherencycoin.com/docs\nCLI: npm i -g coherence-cli\nMCP: npx coherence-mcp-server\n`
     : null;
 
   // Claude Code: .claude/settings.json MCP config

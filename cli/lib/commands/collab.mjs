@@ -1,9 +1,9 @@
 /**
  * Collaboration command — work together on ideas
  * 
- * cc collab             — Interactive collab dashboard for focused idea
- * cc collab broadcast   — Signal interest in the focused idea
- * cc collab list        — List active collaborators for focused idea
+ * coh collab             — Interactive collab dashboard for focused idea
+ * coh collab broadcast   — Signal interest in the focused idea
+ * coh collab list        — List active collaborators for focused idea
  */
 
 import inquirer from "inquirer";
@@ -17,7 +17,7 @@ export async function runCollabCommand(args = []) {
   const contributorId = getContributorId();
 
   if (!focus.idea_id) {
-    console.log(chalk.yellow("⚠ No focused idea. Use 'cc focus' to pick one first."));
+    console.log(chalk.yellow("⚠ No focused idea. Use 'coh focus' to pick one first."));
     return;
   }
 

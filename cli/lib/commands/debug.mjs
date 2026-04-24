@@ -1,13 +1,13 @@
 /**
- * cc debug — Runtime debug mode toggle and diagnostics.
+ * coh debug — Runtime debug mode toggle and diagnostics.
  *
  * Usage:
- *   cc debug            Show current debug status
- *   cc debug on         Enable debug mode (log level → DEBUG)
- *   cc debug off        Disable debug mode (log level → INFO)
- *   cc debug level <l>  Set log level (debug/info/warning/error)
- *   cc debug trace <ep> Add endpoint to trace list
- *   cc debug untrace <ep> Remove endpoint from trace list
+ *   coh debug            Show current debug status
+ *   coh debug on         Enable debug mode (log level → DEBUG)
+ *   coh debug off        Disable debug mode (log level → INFO)
+ *   coh debug level <l>  Set log level (debug/info/warning/error)
+ *   coh debug trace <ep> Add endpoint to trace list
+ *   coh debug untrace <ep> Remove endpoint from trace list
  */
 
 import { get, patch } from "../api.mjs";
@@ -30,7 +30,7 @@ export async function debugCommand(args) {
   if (sub === "level") {
     const level = (args[1] || "").toUpperCase();
     if (!level) {
-      console.log("\x1b[33m⚠\x1b[0m Usage: cc debug level <debug|info|warning|error>");
+      console.log("\x1b[33m⚠\x1b[0m Usage: coh debug level <debug|info|warning|error>");
       return;
     }
     return setLevel(level);
@@ -39,7 +39,7 @@ export async function debugCommand(args) {
   if (sub === "trace") {
     const ep = args[1];
     if (!ep) {
-      console.log("\x1b[33m⚠\x1b[0m Usage: cc debug trace <endpoint>");
+      console.log("\x1b[33m⚠\x1b[0m Usage: coh debug trace <endpoint>");
       return;
     }
     return addTrace(ep);
@@ -48,13 +48,13 @@ export async function debugCommand(args) {
   if (sub === "untrace") {
     const ep = args[1];
     if (!ep) {
-      console.log("\x1b[33m⚠\x1b[0m Usage: cc debug untrace <endpoint>");
+      console.log("\x1b[33m⚠\x1b[0m Usage: coh debug untrace <endpoint>");
       return;
     }
     return removeTrace(ep);
   }
 
-  console.log("\x1b[33m⚠\x1b[0m Unknown subcommand. Use: cc debug [on|off|level|trace|untrace|status]");
+  console.log("\x1b[33m⚠\x1b[0m Unknown subcommand. Use: coh debug [on|off|level|trace|untrace|status]");
 }
 
 async function showStatus() {

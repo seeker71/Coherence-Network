@@ -2,16 +2,16 @@
  * Inventory commands: inventory, pipeline
  *
  * Covers the gap analysis, process completeness, flow, and pipeline endpoints.
- *   cc inventory                    — show pipeline pulse / overall flow
- *   cc inventory flow               — full flow details
- *   cc inventory gaps               — list traceability gaps
- *   cc inventory routes             — canonical routes
- *   cc inventory completeness       — process completeness report
- *   cc inventory endpoints          — endpoint traceability
- *   cc inventory evidence           — route evidence
- *   cc inventory assets             — asset modularity report
- *   cc pipeline pulse               — pipeline pulse (alias)
- *   cc pipeline fix-hollow          — fix hollow completions
+ *   coh inventory                    — show pipeline pulse / overall flow
+ *   coh inventory flow               — full flow details
+ *   coh inventory gaps               — list traceability gaps
+ *   coh inventory routes             — canonical routes
+ *   coh inventory completeness       — process completeness report
+ *   coh inventory endpoints          — endpoint traceability
+ *   coh inventory evidence           — route evidence
+ *   coh inventory assets             — asset modularity report
+ *   coh pipeline pulse               — pipeline pulse (alias)
+ *   coh pipeline fix-hollow          — fix hollow completions
  */
 
 import { get, post } from "../api.mjs";
@@ -114,7 +114,7 @@ export async function showInventoryGaps() {
       console.log(`  \x1b[33m▲\x1b[0m ${truncate(g.description || g.id || String(g), 70)}`);
     }
   } else {
-    console.log(`  \x1b[2mNo gap data in flow response. Try: cc inventory endpoints\x1b[0m`);
+    console.log(`  \x1b[2mNo gap data in flow response. Try: coh inventory endpoints\x1b[0m`);
   }
   console.log();
 }

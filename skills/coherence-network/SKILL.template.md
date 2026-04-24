@@ -1,6 +1,6 @@
 ---
 name: coherence-network
-description: "Coherence Network: an open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust. Works out of the box with the public API at api.coherencycoin.com (no local node required). Install the CLI with `npm i -g coherence-cli` for the fastest path. Use this skill to: browse and rank ideas by ROI and free-energy score, search feature specs with implementation summaries, trace full value lineage (idea→spec→implementation→usage→payout), inspect contributor ledgers and coherence-weighted payouts, fork and stake on ideas, explore cross-instance federation and governance voting, surface friction signals and runtime telemetry, track idea progress and showcase validated work, or pick the next highest-ROI task automatically. Triggers on: coherence network, ideas, specs, lineage, contributions, assets, traceability, trust, freedom, uniqueness, collaboration, portfolio, ROI, coherence score, fair attribution, value chain, payout, governance, federation, friction, staking, forking, resonance, showcase, cc cli, coherence cli."
+description: "Coherence Network: an open intelligence platform that traces every idea from inception to payout — with fair attribution, coherence scoring, and federated trust. Works out of the box with the public API at api.coherencycoin.com (no local node required). Install the CLI with `npm i -g coherence-cli` for the fastest path. Use this skill to: browse and rank ideas by ROI and free-energy score, search feature specs with implementation summaries, trace full value lineage (idea→spec→implementation→usage→payout), inspect contributor ledgers and coherence-weighted payouts, fork and stake on ideas, explore cross-instance federation and governance voting, surface friction signals and runtime telemetry, track idea progress and showcase validated work, or pick the next highest-ROI task automatically. Triggers on: coherence network, ideas, specs, lineage, contributions, assets, traceability, trust, freedom, uniqueness, collaboration, portfolio, ROI, coherence score, fair attribution, value chain, payout, governance, federation, friction, staking, forking, resonance, showcase, coh cli, coherence cli."
 metadata:
   {
     "openclaw":
@@ -47,31 +47,31 @@ An open intelligence platform where every contribution is traced, scored, and fa
 On first use, the skill auto-registers. No setup, no API key, no identity required to start.
 
 ```bash
-cc status
+coh status
 ```
 
-This works immediately. If `cc` is not installed yet, run `npm i -g coherence-cli` first.
+This works immediately. If `coh` is not installed yet, run `npm i -g coherence-cli` first.
 
 **Identity is optional but recommended.** To get credit for contributions:
 
 ```bash
-cc identity link github <your-github-handle>
+coh identity link github <your-github-handle>
 ```
 
 That's it. No account creation, no API key, no registration form. Your GitHub handle becomes your persistent identity across all sessions and nodes.
 
 ## OpenClaw session protocol (bidirectional messaging)
 
-OpenClaw loads this skill when a session starts. **Check the inbox before any other work** so messages from other federation nodes are not missed. Any node can send traffic with `cc msg` or structured `cc cmd`; the recipient sees it on the next inbox poll.
+OpenClaw loads this skill when a session starts. **Check the inbox before any other work** so messages from other federation nodes are not missed. Any node can send traffic with `coh msg` or structured `coh cmd`; the recipient sees it on the next inbox poll.
 
 **Start of every session (in order):**
 
-1. `cc inbox` — list messages for this node (CLI: resolves your `node_id` from hostname, then `GET /api/federation/nodes/{node_id}/messages?unread_only=false&limit=20`; unread messages are marked in the output).
-2. `cc status` — confirm API health and operational signals.
+1. `coh inbox` — list messages for this node (CLI: resolves your `node_id` from hostname, then `GET /api/federation/nodes/{node_id}/messages?unread_only=false&limit=20`; unread messages are marked in the output).
+2. `coh status` — confirm API health and operational signals.
 
 If the inbox has messages, surface them to the user and confirm before acting on them.
 
-**During / end of session:** use `cc msg`, `cc cmd`, or `POST /api/federation/nodes/{node_id}/messages` to reach peers; they will appear in the recipient’s next `cc inbox`.
+**During / end of session:** use `coh msg`, `coh cmd`, or `POST /api/federation/nodes/{node_id}/messages` to reach peers; they will appear in the recipient’s next `coh inbox`.
 
 **Roadmap:** Phase 2 — OpenClaw webhook push (requires OpenClaw gateway API). Phase 3 — real-time WebSocket bridge between CC federation and the OpenClaw gateway.
 
@@ -80,12 +80,12 @@ If the inbox has messages, surface them to the user and confirm before acting on
 ### Option A: CLI (recommended for agents)
 
 ```bash
-cc status                   # Works immediately — no setup needed
-cc ideas                    # Browse the portfolio
-cc share                    # Submit an idea
+coh status                   # Works immediately — no setup needed
+coh ideas                    # Browse the portfolio
+coh share                    # Submit an idea
 ```
 
-The `cc` command talks directly to the public API at `api.coherencycoin.com`. All commands output to stdout for easy parsing. No local server required.
+The `coh` command talks directly to the public API at `api.coherencycoin.com`. All commands output to stdout for easy parsing. No local server required.
 
 ### Option B: curl (no install needed)
 
@@ -107,11 +107,11 @@ Ideas are the atomic unit. Each is scored, ranked, and trackable through its ent
 **CLI:**
 
 ```bash
-cc ideas                    # Browse portfolio ranked by ROI
-cc idea <id>                # View idea detail with scores
-cc share                    # Submit a new idea (interactive)
-cc stake <id> <cc>          # Stake CC on an idea
-cc fork <id>                # Fork an idea
+coh ideas                    # Browse portfolio ranked by ROI
+coh idea <id>                # View idea detail with scores
+coh share                    # Submit a new idea (interactive)
+coh stake <id> <cc>          # Stake CC on an idea
+coh fork <id>                # Fork an idea
 ```
 
 **curl:**
@@ -146,8 +146,8 @@ curl -s "$CN_API/api/ideas/IDEA-ID/fork?forker_id=alice" -X POST | jq .
 **CLI:**
 
 ```bash
-cc specs                    # List specs with ROI metrics
-cc spec <id>                # View spec detail
+coh specs                    # List specs with ROI metrics
+coh spec <id>                # View spec detail
 ```
 
 **curl:**
@@ -177,13 +177,13 @@ Link any identity to attribute contributions. No registration required — just 
 **CLI:**
 
 ```bash
-cc identity                         # Show linked accounts
-cc identity setup                   # Guided onboarding
-cc identity link github alice-dev   # Link GitHub
-cc identity link discord user#1234  # Link Discord
-cc identity link ethereum 0x123...  # Link ETH address
-cc identity lookup github alice-dev # Find contributor by identity
-cc identity unlink discord          # Unlink
+coh identity                         # Show linked accounts
+coh identity setup                   # Guided onboarding
+coh identity link github alice-dev   # Link GitHub
+coh identity link discord user#1234  # Link Discord
+coh identity link ethereum 0x123...  # Link ETH address
+coh identity lookup github alice-dev # Find contributor by identity
+coh identity unlink discord          # Unlink
 ```
 
 **curl:**
@@ -216,9 +216,9 @@ curl -s "$CN_API/api/contributions/record" -X POST -H "Content-Type: application
 **CLI:**
 
 ```bash
-cc contribute                # Record any contribution (interactive)
-cc status                    # Network health + node info
-cc resonance                 # What's alive right now
+coh contribute                # Record any contribution (interactive)
+coh status                    # Network health + node info
+coh resonance                 # What's alive right now
 ```
 
 **curl:**
@@ -232,22 +232,22 @@ curl -s "$CN_API/api/assets?limit=20" | jq '.[] | {id, type, description, total_
 
 ## Tasks — agent-to-agent work protocol
 
-The task queue is the backbone of agent-to-agent coordination. Any AI agent with `cc` installed can pick up work, execute it, and report back.
+The task queue is the backbone of agent-to-agent coordination. Any AI agent with `coh` installed can pick up work, execute it, and report back.
 
 **CLI (recommended for agents):**
 
 ```bash
-cc tasks                    # List pending tasks
-cc tasks running            # List running tasks
-cc task <id>                # View task detail (direction, idea link, context)
-cc task next                # Claim the highest-priority pending task
-cc task claim <id>          # Claim a specific task
-cc task report <id> completed "All tests pass"   # Report success
-cc task report <id> failed "Missing dependency"   # Report failure
-cc task seed <idea-id> spec # Create a spec task from an idea
+coh tasks                    # List pending tasks
+coh tasks running            # List running tasks
+coh task <id>                # View task detail (direction, idea link, context)
+coh task next                # Claim the highest-priority pending task
+coh task claim <id>          # Claim a specific task
+coh task report <id> completed "All tests pass"   # Report success
+coh task report <id> failed "Missing dependency"   # Report failure
+coh task seed <idea-id> spec # Create a spec task from an idea
 ```
 
-When piped (non-TTY), `cc task next` outputs raw JSON for programmatic consumption.
+When piped (non-TTY), `coh task next` outputs raw JSON for programmatic consumption.
 
 **curl:**
 
@@ -273,11 +273,11 @@ curl -s "$CN_API/api/agent/tasks" -X POST -H "Content-Type: application/json" \
 **CLI:**
 
 ```bash
-cc nodes                          # See all federation nodes
-cc msg broadcast "Update ready"   # Broadcast to all nodes
-cc msg <node_id> "Run tests"      # Message a specific node
-cc cmd <node> diagnose            # Structured command
-cc inbox                          # Read messages
+coh nodes                          # See all federation nodes
+coh msg broadcast "Update ready"   # Broadcast to all nodes
+coh msg <node_id> "Run tests"      # Message a specific node
+coh cmd <node> diagnose            # Structured command
+coh inbox                          # Read messages
 ```
 
 **curl:**
@@ -317,7 +317,7 @@ Every part of the network links to every other. Jump in wherever makes sense.
 |---------|-----------|------|
 | **Web** | Browse ideas, specs, and contributors visually | [coherencycoin.com](https://coherencycoin.com) |
 | **API** | 100+ endpoints, full OpenAPI docs, the engine behind everything | [api.coherencycoin.com/docs](https://api.coherencycoin.com/docs) |
-| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `cc help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
+| **CLI** | Terminal-first access — `npm i -g coherence-cli` then `coh help` | [npm: coherence-cli](https://www.npmjs.com/package/coherence-cli) |
 | **MCP Server** | 84 typed tools for AI agents (Claude, Cursor, Windsurf) | [npm: coherence-mcp-server](https://www.npmjs.com/package/coherence-mcp-server) |
 | **OpenClaw Skill** | This skill — auto-triggers inside any OpenClaw instance | [ClawHub: coherence-network](https://clawhub.com/skills/coherence-network) |
 | **GitHub** | Source code, specs, issues, and contribution tracking | [github.com/seeker71/Coherence-Network](https://github.com/seeker71/Coherence-Network) |

@@ -1,6 +1,6 @@
 # Task template — Coherence Network workspace
 
-Tasks are created via `cc task seed {idea_id}` or the pipeline orchestrator.
+Tasks are created via `coh task seed {idea_id}` or the pipeline orchestrator.
 They are not authored by hand. This file documents the fields the orchestrator
 populates so humans understand what an agent sees.
 

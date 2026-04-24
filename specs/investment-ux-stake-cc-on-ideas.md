@@ -17,7 +17,7 @@ requirements:
   - Web invest modal shows ROI data before confirmation
   - Portfolio page renders positions with gain/loss and ROI percent
 done_when:
-  - cc invest --dry-run returns ROI projection against live API
+  - coh invest --dry-run returns ROI projection against live API
   - Web /ideas shows Invest button opening modal with ROI data
   - /portfolio/investments page renders without errors
   - pytest api/tests/test_investments.py passes
@@ -36,7 +36,7 @@ done_when:
 
 ## Problem Statement
 
-The current `cc stake <idea-id> <amount-cc>` command:
+The current `coh stake <idea-id> <amount-cc>` command:
 - Accepts a stake and creates tasks, but shows no confirmation of projected return
 - Provides no way to see what happened to staked CC after the fact
 - Has no portfolio-level view aggregating all positions
@@ -149,7 +149,7 @@ Existing stake endpoint gains:
 ```json
 { "dry_run": true }
 ```
-When `dry_run: true`, returns the same projection as `invest-preview` without recording the stake. Enables `cc invest --dry-run`.
+When `dry_run: true`, returns the same projection as `invest-preview` without recording the stake. Enables `coh invest --dry-run`.
 
 ## Files to Create/Modify
 
@@ -226,7 +226,7 @@ curl -s -X POST https://api.coherencycoin.com/api/contributors/carol/pledges/<pl
 
 The feature is considered realized when all five items below can be independently verified:
 
-1. **CLI dry-run** — `cc invest <any-idea-id> 1 --dry-run` returns a ROI projection (not an error) against the live API at `https://api.coherencycoin.com`
+1. **CLI dry-run** — `coh invest <any-idea-id> 1 --dry-run` returns a ROI projection (not an error) against the live API at `https://api.coherencycoin.com`
 2. **Web modal** — `https://coherencycoin.com/ideas` shows an "Invest" button on at least one idea card; clicking it opens a modal with ROI data
 3. **Portfolio page** — `https://coherencycoin.com/portfolio/investments` renders without 404/500 for any signed-in contributor
 4. **History API** — `GET https://api.coherencycoin.com/api/contributors/{id}/investment-history` returns valid JSON with `events` array

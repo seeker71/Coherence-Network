@@ -45,7 +45,7 @@ export async function showCoverage() {
 export async function traceIdea(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc trace idea <id>");
+    console.log("Usage: coh trace idea <id>");
     return;
   }
   const data = await get(`/api/traceability/idea/${encodeURIComponent(id)}`);
@@ -77,7 +77,7 @@ export async function traceIdea(args) {
 export async function traceSpec(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc trace spec <id>");
+    console.log("Usage: coh trace spec <id>");
     return;
   }
   const data = await get(`/api/traceability/spec/${encodeURIComponent(id)}`);
