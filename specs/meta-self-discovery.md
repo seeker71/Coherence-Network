@@ -130,7 +130,7 @@ Summary of traceability coverage across the entire system.
 
 ## CLI Commands
 
-### `cc meta endpoints`
+### `coh meta endpoints`
 
 Lists all endpoints in table format:
 
@@ -143,7 +143,7 @@ GET     /api/audit                   -        -                 ✗
 Total: 142 endpoints, 38 traced (26.8%)
 ```
 
-### `cc meta module <name>`
+### `coh meta module <name>`
 
 Shows a single module's endpoints and their trace status:
 
@@ -183,7 +183,7 @@ CLI commands are implemented as MCP tool handlers in `api/mcp_server.py` using t
 
 ### Phase 3 — CLI (follow-up spec)
 
-9. CLI `cc meta` commands via MCP or standalone handler.
+9. CLI `coh meta` commands via MCP or standalone handler.
 
 ## Verification Scenarios
 
@@ -258,7 +258,7 @@ Returns `0` — untraced endpoints must have `null` for spec_id and idea_id.
 1. **Test registry integration** — `has_test` field requires a test-coverage registry. Spec TBD.
 2. **Usage telemetry wiring** — `recent_calls` per endpoint requires API request logging. Spec TBD.
 3. **Web `/meta` page** — Phase 2 follow-up spec (interactive system map).
-4. **CLI `cc meta` commands** — Phase 3 follow-up spec.
+4. **CLI `coh meta` commands** — Phase 3 follow-up spec.
 5. **Neo4j graph projection** — Store `MetaEndpointNode` as graph nodes for traversal. Phase 4.
 6. **Contributor attribution** — Wire endpoint authorship from git blame / contribution records. Phase 4.
 7. **Periodic coverage report** — Emit coverage snapshot to `runtime_events` table nightly. Phase 3.

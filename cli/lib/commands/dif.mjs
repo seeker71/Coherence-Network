@@ -1,5 +1,5 @@
 /**
- * DIF commands — cc dif verify, cc dif key, cc dif config, etc.
+ * DIF commands — coh dif verify, coh dif key, coh dif config, etc.
  */
 
 import { readFileSync } from "node:fs";
@@ -27,7 +27,7 @@ function errorMsg(status, data, retryAfter) {
   else console.log(`  ${RED}✗${R} ${status} ${typeof data === "string" ? data : JSON.stringify(data)}`);
 }
 
-// ── cc dif config ───────────────────────────────────────────────────
+// ── coh dif config ───────────────────────────────────────────────────
 
 export function showConfig() {
   const cfg = getDifConfig();
@@ -46,12 +46,12 @@ export function showConfig() {
 
 export function setBaseUrl(args) {
   const url = args[0];
-  if (!url) { console.log("Usage: cc dif config set-base-url <url>"); return; }
+  if (!url) { console.log("Usage: coh dif config set-base-url <url>"); return; }
   setDifConfig({ base_url: url });
   console.log(`  ${G}✓${R} Base URL set to ${url}`);
 }
 
-// ── cc dif whoami ───────────────────────────────────────────────────
+// ── coh dif whoami ───────────────────────────────────────────────────
 
 export async function whoami() {
   const { status, data } = await difFetch("GET", "/api/v2/dif/me");
@@ -68,7 +68,7 @@ export async function whoami() {
   console.log();
 }
 
-// ── cc dif key ──────────────────────────────────────────────────────
+// ── coh dif key ──────────────────────────────────────────────────────
 
 export async function keyList() {
   const { status, data } = await difFetch("GET", "/api/v2/dif/me/api-keys");
@@ -106,7 +106,7 @@ export async function keyCreate(args) {
 
 export async function keyRevoke(args) {
   const keyId = args[0];
-  if (!keyId) { console.log("Usage: cc dif key revoke <key-id>"); return; }
+  if (!keyId) { console.log("Usage: coh dif key revoke <key-id>"); return; }
   const { status, data } = await difFetch("DELETE", `/api/v2/dif/me/api-keys/${keyId}`);
   if (status !== 200 && status !== 204) { errorMsg(status, data); return; }
   console.log(`  ${G}✓${R} Key ${keyId} revoked`);
@@ -114,7 +114,7 @@ export async function keyRevoke(args) {
 
 export async function keyRotate(args) {
   const keyId = args[0];
-  if (!keyId) { console.log("Usage: cc dif key rotate <key-id>"); return; }
+  if (!keyId) { console.log("Usage: coh dif key rotate <key-id>"); return; }
   const { status, data } = await difFetch("POST", `/api/v2/dif/me/api-keys/${keyId}/rotate`);
   if (status !== 200) { errorMsg(status, data); return; }
 
@@ -128,7 +128,7 @@ export async function keyRotate(args) {
 
 export async function keyUpdate(args) {
   const keyId = args[0];
-  if (!keyId) { console.log("Usage: cc dif key update <key-id> [--name ...] [--expires ...]"); return; }
+  if (!keyId) { console.log("Usage: coh dif key update <key-id> [--name ...] [--expires ...]"); return; }
   const body = {};
   for (let i = 1; i < args.length; i++) {
     if (args[i] === "--name" && args[i + 1]) body.name = args[++i];
@@ -141,7 +141,7 @@ export async function keyUpdate(args) {
 
 export async function keyUse(args) {
   const keyId = args[0];
-  if (!keyId) { console.log("Usage: cc dif key use <key-id>"); return; }
+  if (!keyId) { console.log("Usage: coh dif key use <key-id>"); return; }
   setDifConfig({ selected_key_id: keyId });
   console.log(`  ${G}✓${R} Selected key: ${keyId}`);
 }
@@ -155,7 +155,7 @@ export function keyShow() {
   console.log(`  Expires:   ${key.expires_at || "never"}`);
 }
 
-// ── cc dif usage / limits / funding ─────────────────────────────────
+// ── coh dif usage / limits / funding ─────────────────────────────────
 
 export async function showUsage(args) {
   const days = args.find(a => a.startsWith("--days"))?.split("=")[1] || "30";
@@ -197,7 +197,7 @@ export async function showFunding() {
   console.log();
 }
 
-// ── cc dif verify ───────────────────────────────────────────────────
+// ── coh dif verify ───────────────────────────────────────────────────
 
 export async function verify(args) {
   let language = "", code = "", filePath = "", jsonMode = false;
@@ -208,7 +208,7 @@ export async function verify(args) {
     else if (args[i] === "--json") jsonMode = true;
   }
 
-  if (!language) { console.log("Usage: cc dif verify --language <lang> --code <code> | --file <path>"); return; }
+  if (!language) { console.log("Usage: coh dif verify --language <lang> --code <code> | --file <path>"); return; }
   if (filePath) {
     try { code = readFileSync(filePath, "utf-8"); }
     catch (e) { console.log(`  ${RED}✗${R} Cannot read file: ${filePath}`); return; }
@@ -250,7 +250,7 @@ export async function verify(args) {
   console.log();
 }
 
-// ── cc dif smoke ────────────────────────────────────────────────────
+// ── coh dif smoke ────────────────────────────────────────────────────
 
 export async function smoke() {
   console.log(`\n${B}  DIF SMOKE TEST${R}`);
@@ -299,7 +299,7 @@ export async function smoke() {
 }
 
 
-// ── cc dif key ensure ──────────────────────────────────────────────
+// ── coh dif key ensure ──────────────────────────────────────────────
 
 export async function keyEnsure() {
   const { getMerlySession, getAccessToken, merlyAuthedPost } = await import("../merly_auth.mjs");
@@ -313,7 +313,7 @@ export async function keyEnsure() {
   // Step 1: Check Merly login
   const token = await getAccessToken();
   if (!token) {
-    console.log(`  ${RED}✗${R} Not logged into Merly. Run: cc login merly`);
+    console.log(`  ${RED}✗${R} Not logged into Merly. Run: coh login merly`);
     return;
   }
   console.log(`  ${G}✓${R} Merly session active`);
@@ -391,7 +391,7 @@ export async function keyEnsure() {
 }
 
 
-// ── cc dif key status ──────────────────────────────────────────────
+// ── coh dif key status ──────────────────────────────────────────────
 
 export async function keyStatus() {
   const { getMerlySession, isLoggedIn } = await import("../merly_auth.mjs");
@@ -443,7 +443,7 @@ export async function keyStatus() {
 }
 
 
-// ── cc dif feedback ────────────────────────────────────────────────
+// ── coh dif feedback ────────────────────────────────────────────────
 
 export async function showFeedback(args) {
   const { get } = await import("../api.mjs");

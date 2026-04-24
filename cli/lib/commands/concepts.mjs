@@ -2,9 +2,9 @@
  * Concept commands — browse and extend the Living Codex ontology (184 concepts, 46 rel types, 53 axes).
  *
  * Commands:
- *   cc concepts [--limit N] [--search <query>]
- *   cc concept <id>
- *   cc concept link <from-id> <rel-type> <to-id> [--by <author>]
+ *   coh concepts [--limit N] [--search <query>]
+ *   coh concept <id>
+ *   coh concept link <from-id> <rel-type> <to-id> [--by <author>]
  */
 
 import { get, post } from "../api.mjs";
@@ -50,7 +50,7 @@ function parseArgs(args) {
   return { opts, positional };
 }
 
-/** cc concepts [--limit N] [--search <query>] */
+/** coh concepts [--limit N] [--search <query>] */
 export async function listConcepts(args) {
   const { opts } = parseArgs(args);
 
@@ -108,12 +108,12 @@ export async function listConcepts(args) {
   console.log();
 }
 
-/** cc concept <id> */
+/** coh concept <id> */
 export async function showConcept(args) {
   const { positional } = parseArgs(args);
   const id = positional[0];
   if (!id) {
-    console.error("Usage: cc concept <id>");
+    console.error("Usage: coh concept <id>");
     process.exit(1);
   }
 
@@ -174,14 +174,14 @@ export async function showConcept(args) {
   console.log();
 }
 
-/** cc concept link <from-id> <rel-type> <to-id> [--by <author>] */
+/** coh concept link <from-id> <rel-type> <to-id> [--by <author>] */
 export async function linkConcepts(args) {
   const { opts, positional } = parseArgs(args);
   const [fromId, relType, toId] = positional;
 
   if (!fromId || !relType || !toId) {
-    console.error("Usage: cc concept link <from-id> <rel-type> <to-id> [--by <author>]");
-    console.error("Example: cc concept link activity transforms knowledge");
+    console.error("Usage: coh concept link <from-id> <rel-type> <to-id> [--by <author>]");
+    console.error("Example: coh concept link activity transforms knowledge");
     process.exit(1);
   }
 

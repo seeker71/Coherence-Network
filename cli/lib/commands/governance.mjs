@@ -50,7 +50,7 @@ export async function listChangeRequests() {
 export async function showChangeRequest(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc governance <id>");
+    console.log("Usage: coh governance <id>");
     return;
   }
   const data = await get(`/api/governance/change-requests/${encodeURIComponent(id)}`);
@@ -75,7 +75,7 @@ export async function vote(args) {
   const id = args[0];
   const choice = args[1];
   if (!id || !choice || !["yes", "no"].includes(choice)) {
-    console.log("Usage: cc governance vote <id> <yes|no>");
+    console.log("Usage: coh governance vote <id> <yes|no>");
     return;
   }
   const result = await post(`/api/governance/change-requests/${encodeURIComponent(id)}/votes`, {
@@ -92,7 +92,7 @@ export async function propose(args) {
   const title = args[0];
   const desc = args.slice(1).join(" ");
   if (!title || !desc) {
-    console.log("Usage: cc governance propose <title> <description>");
+    console.log("Usage: coh governance propose <title> <description>");
     return;
   }
   const result = await post("/api/governance/change-requests", { title, description: desc });

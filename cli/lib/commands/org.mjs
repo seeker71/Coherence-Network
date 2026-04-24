@@ -1,8 +1,8 @@
 /**
  * Org command — view agent hierarchy and roles
  * 
- * cc org                — Show your reporting lines
- * cc org <contributor>  — Show org for specific contributor
+ * coh org                — Show your reporting lines
+ * coh org <contributor>  — Show org for specific contributor
  */
 
 import inquirer from "inquirer";

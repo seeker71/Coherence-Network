@@ -129,8 +129,8 @@ export default async function GraphPage({
           <code className="bg-gray-800 px-1 rounded">/api/edges</code>,{" "}
           <code className="bg-gray-800 px-1 rounded">/api/edges/types</code>, or{" "}
           <code className="bg-gray-800 px-1 rounded">/api/entities/&#123;id&#125;/edges</code>.
-          CLI: <code className="bg-gray-800 px-1 rounded">cc edges &lt;id&gt;</code>{" "}
-          (alias: <code className="bg-gray-800 px-1 rounded">cc edg &lt;id&gt;</code>)
+          CLI: <code className="bg-gray-800 px-1 rounded">coh edges &lt;id&gt;</code>{" "}
+          (alias: <code className="bg-gray-800 px-1 rounded">coh edg &lt;id&gt;</code>)
         </p>
       </div>
 

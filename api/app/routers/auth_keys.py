@@ -259,7 +259,7 @@ class OnboardRequest(BaseModel):
 async def onboard_contributor(body: OnboardRequest) -> dict:
     """One-shot onboarding: create contributor + link identity + generate API key.
 
-    This is the primary entry point for `cc setup`.
+    This is the primary entry point for `coh setup`.
     Returns the API key — save it to ~/.coherence-network/keys.json.
     """
     from app.services import contributor_identity_service, contributor_service
@@ -319,7 +319,7 @@ async def onboard_contributor(body: OnboardRequest) -> dict:
         "provider_id": body.provider_id,
         "created_at": minted.row.created_at,
         "scopes": list(minted.row.scopes),
-        "message": f"Welcome to Coherence Network, {body.name}! Key saved — run: cc status",
+        "message": f"Welcome to Coherence Network, {body.name}! Key saved — run: coh status",
     }
 
 
@@ -348,7 +348,7 @@ async def whoami(
     # Legacy compatibility: callers sending X-API-Key (or ?api_key_query=).
     key = x_api_key or api_key_query
     if not key:
-        return {"authenticated": False, "message": "No API key provided. Run: cc setup"}
+        return {"authenticated": False, "message": "No API key provided. Run: coh setup"}
 
     info = verify_contributor_key(key)
     if info:

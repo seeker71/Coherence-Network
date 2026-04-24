@@ -1,7 +1,7 @@
 /**
  * Guides command — discover creators and thought leaders
  * 
- * cc guides             — Show top guides who package knowledge
+ * coh guides             — Show top guides who package knowledge
  */
 
 import chalk from "chalk";

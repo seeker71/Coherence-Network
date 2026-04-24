@@ -61,8 +61,8 @@ done_when:
   - "A contributor can submit a contribution in Spanish; an English viewer sees it translated; a Bahasa viewer sees it in Bahasa"
   - "Any signed-in contributor can submit a human translation via POST /api/translations; it replaces the machine version immediately"
   - "Editing a source story flags every language row for that entity as stale (machine AND human preserved — never silently discarded)"
-  - "cc stories --lang de returns stories with translated titles and summaries"
-  - "cc translate submit {entity-id} --lang es --file translation.md posts a human translation"
+  - "coh stories --lang de returns stories with translated titles and summaries"
+  - "coh translate submit {entity-id} --lang es --file translation.md posts a human translation"
   - "Locale coverage visible on /settings/translations: per-locale counts of machine vs. human vs. stale"
   - "All new and existing tests pass (api and web)"
 test: "cd api && python -m pytest tests/test_locale.py tests/test_translation_cache.py -q && cd ../web && npm run test"
@@ -98,7 +98,7 @@ The platform's mission names "every idea tracked, for humanity" — but a single
 - [ ] **R11**: "Needs native review" banner appears on any machine-translated surface for users whose profile locale matches. A "Propose a better translation" action opens an inline editor that submits via R9. No approval gate.
 - [ ] **R12**: `GET /api/locales` returns supported locales with coverage stats per locale: total entities, machine-translated, human-translated, stale.
 - [ ] **R13**: Per-entity translation history: `GET /api/translations?entity_type=concept&entity_id=lc-xxx&lang=es` lists every translation row for that entity+lang, newest first. The edit page shows this so a new translator sees prior attempts.
-- [ ] **R14**: CLI additions: `cc stories --lang de`, `cc translate show {id} --lang es`, `cc translate submit {id} --lang es --file t.md`, `cc glossary --lang id`.
+- [ ] **R14**: CLI additions: `coh stories --lang de`, `coh translate show {id} --lang es`, `coh translate submit {id} --lang es --file t.md`, `coh glossary --lang id`.
 
 ## Research Inputs
 
@@ -295,7 +295,7 @@ Manual: visit `/de/vision/lc-water-as-living-body`, confirm German chrome and tr
 
 **Confirmed during this session** (each a discrete commit in the trail):
 - `POST /api/translations` endpoint + `GET` history — human/machine supersede semantics exposed
-- `cc translate submit <entity_type> <entity_id> --lang <l> --file <path>` and `cc translate history` CLI
+- `coh translate submit <entity_type> <entity_id> --lang <l> --file <path>` and `coh translate history` CLI
 - Anchor glossary seeded for `es` and `id` (matching the existing `de` pattern); 15 anchor terms per language
 - `/settings/translations` coverage dashboard — per-locale `original/human/machine/stale` tallies from `GET /api/locales`, linked from `/settings`
 - Language picker in site header — `LocaleSwitcherCompact` wired at `web/components/site_header.tsx` (desktop and mobile menu); cookie-backed, ?lang= override, Accept-Language auto-detection all in `web/middleware.ts`

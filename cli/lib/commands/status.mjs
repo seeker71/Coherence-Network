@@ -113,7 +113,7 @@ export async function showStatus(args = []) {
       if (focus.idea_id) focusContent += `${chalk.cyan.bold("FOCUS IDEA:")} ${focus.idea_id}\n`;
       if (focus.task_id) focusContent += `${chalk.magenta.bold("FOCUS TASK:")} ${focus.task_id}`;
     } else {
-      focusContent = chalk.dim("No active focus. Use 'cc focus' to pick an idea.");
+      focusContent = chalk.dim("No active focus. Use 'coh focus' to pick an idea.");
     }
 
     console.log(boxen(focusContent, {

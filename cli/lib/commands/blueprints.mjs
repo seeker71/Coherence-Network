@@ -1,8 +1,8 @@
 /**
  * Blueprints command — template-based roadmap seeding
  * 
- * cc blueprints          — List available blueprints
- * cc blueprint apply <id> — Apply a blueprint roadmap
+ * coh blueprints          — List available blueprints
+ * coh blueprint apply <id> — Apply a blueprint roadmap
  */
 
 import inquirer from "inquirer";
@@ -38,13 +38,13 @@ export async function runBlueprintsCommand(args = []) {
       console.log(`- ${chalk.bold(b.id.padEnd(20))} [${price}] ${author}`);
       console.log(`  ${chalk.dim(b.name + ' — ' + b.description)}\n`);
     });
-    console.log(chalk.dim("Use 'cc blueprint apply <id>' to seed a roadmap."));
+    console.log(chalk.dim("Use 'coh blueprint apply <id>' to seed a roadmap."));
   }
 }
 
 async function applyBlueprint(id, prefix = "") {
   if (!id) {
-    console.log("Usage: cc blueprint apply <id> [prefix]");
+    console.log("Usage: coh blueprint apply <id> [prefix]");
     return;
   }
 

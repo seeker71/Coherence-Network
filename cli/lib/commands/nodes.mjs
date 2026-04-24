@@ -194,11 +194,11 @@ export async function sendMessage(args) {
   const text = textParts.join(" ");
 
   if (!targetOrBroadcast || !text) {
-    console.log("Usage: cc msg <node|broadcast> <message text>");
-    console.log("  cc msg broadcast Hello all nodes!");
-    console.log("  cc msg mac Hello Mac node!");
-    console.log("  cc msg windows Check status please");
-    console.log("  cc msg seeker Hello by hostname match");
+    console.log("Usage: coh msg <node|broadcast> <message text>");
+    console.log("  coh msg broadcast Hello all nodes!");
+    console.log("  coh msg mac Hello Mac node!");
+    console.log("  coh msg windows Check status please");
+    console.log("  coh msg seeker Hello by hostname match");
     return;
   }
 
@@ -239,21 +239,21 @@ export async function sendMessage(args) {
 
 /**
  * Send a command to a node (not a text message).
- * Usage: cc cmd <node> <command> [args...]
+ * Usage: coh cmd <node> <command> [args...]
  * Examples:
- *   cc cmd mac update
- *   cc cmd windows status
- *   cc cmd all update
+ *   coh cmd mac update
+ *   coh cmd windows status
+ *   coh cmd all update
  */
 export async function sendCommand(args) {
   const [target, command, ...extra] = args;
 
   if (!target || !command) {
-    console.log("Usage: cc cmd <node|all> <command> [args...]");
-    console.log("  cc cmd mac update          Tell Mac node to git pull");
-    console.log("  cc cmd windows status      Request status from Windows");
-    console.log("  cc cmd all update          Update all nodes");
-    console.log("  cc cmd seeker restart      Restart by hostname match");
+    console.log("Usage: coh cmd <node|all> <command> [args...]");
+    console.log("  coh cmd mac update          Tell Mac node to git pull");
+    console.log("  coh cmd windows status      Request status from Windows");
+    console.log("  coh cmd all update          Update all nodes");
+    console.log("  coh cmd seeker restart      Restart by hostname match");
     console.log();
     console.log("Commands: update, status, restart, pause, resume");
     return;

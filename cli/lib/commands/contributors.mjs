@@ -55,7 +55,7 @@ export async function showContributor(args) {
   const id = clean[0];
   if (!id) {
     if (jsonMode) printJsonError("missing_contributor_id");
-    else console.log("Usage: cc contributor <id>");
+    else console.log("Usage: coh contributor <id>");
     return;
   }
   const data = await get(`/api/contributors/${encodeURIComponent(id)}`);
@@ -81,7 +81,7 @@ export async function showContributor(args) {
 export async function showContributions(args) {
   const id = args[0];
   if (!id) {
-    console.log("Usage: cc contributor <id> contributions");
+    console.log("Usage: coh contributor <id> contributions");
     return;
   }
   const data = await get(`/api/contributors/${encodeURIComponent(id)}/contributions`);

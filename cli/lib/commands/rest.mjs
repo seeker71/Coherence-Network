@@ -1,11 +1,11 @@
 /**
- * Universal API access — `cc rest` reaches any HTTP route on the configured hub.
+ * Universal API access — `coh rest` reaches any HTTP route on the configured hub.
  *
- *   cc rest coverage              — canonical route manifest + accessibility proof
- *   cc rest GET /api/health
- *   cc rest POST /api/foo --body '{"a":1}'
- *   cc rest PATCH /api/agent/tasks/x --body '{"status":"running"}'
- *   cc rest GET /api/ideas -H "X-Custom: 1"
+ *   coh rest coverage              — canonical route manifest + accessibility proof
+ *   coh rest GET /api/health
+ *   coh rest POST /api/foo --body '{"a":1}'
+ *   coh rest PATCH /api/agent/tasks/x --body '{"status":"running"}'
+ *   coh rest GET /api/ideas -H "X-Custom: 1"
  */
 
 import { getApiBase, request, get } from "../api.mjs";
@@ -95,7 +95,7 @@ export async function showRestCoverage() {
     milestone: String(milestone),
     generated_at: String(generated),
     proof:
-      "Every path in api_routes can be invoked via: cc rest <METHOD> <path> [--body JSON] [-H 'Name: value']. "
+      "Every path in api_routes can be invoked via: coh rest <METHOD> <path> [--body JSON] [-H 'Name: value']. "
       + "First-class `cc` subcommands remain recommended for common workflows.",
   };
 
@@ -103,7 +103,7 @@ export async function showRestCoverage() {
   console.log();
   console.log(
     `\x1b[2m${count} canonical API routes · registry v${version} · ` +
-      "full terminal access = `cc rest` + manifest above\x1b[0m",
+      "full terminal access = `coh rest` + manifest above\x1b[0m",
   );
 }
 
@@ -126,11 +126,11 @@ export async function handleRest(argv) {
 \x1b[1mcc rest\x1b[0m — call any API path on the configured hub
 
 \x1b[1mUsage:\x1b[0m
-  cc rest coverage              Show canonical route count + accessibility proof
-  cc rest GET /api/health
-  cc rest POST /api/path --body '{"key":"value"}'
-  cc rest PATCH /api/resource/x --body '{"a":1}' -H "X-Custom: yes"
-  cc rest GET /api/ideas -q limit=5
+  coh rest coverage              Show canonical route count + accessibility proof
+  coh rest GET /api/health
+  coh rest POST /api/path --body '{"key":"value"}'
+  coh rest PATCH /api/resource/x --body '{"a":1}' -H "X-Custom: yes"
+  coh rest GET /api/ideas -q limit=5
 
 \x1b[1mEnv vars:\x1b[0m COHERENCE_API_URL, COHERENCE_API_KEY, COHERENCE_TIMEOUT_MS
 \x1b[1mFlags:\x1b[0m --api-url <url>, --api-key <key>, --timeout <ms>, --workspace <id>

@@ -8,7 +8,7 @@ import { get, post } from "../api.mjs";
 export async function marketplacePublish(args) {
   const ideaId = args[0];
   if (!ideaId) {
-    console.log("Usage: cc marketplace publish <idea-id> [--tags tag1,tag2] [--author \"Name\"]");
+    console.log("Usage: coh marketplace publish <idea-id> [--tags tag1,tag2] [--author \"Name\"]");
     return;
   }
   const body = { idea_id: ideaId };
@@ -69,12 +69,12 @@ export async function marketplaceBrowse(args) {
 export async function marketplaceFork(args) {
   const listingId = args[0];
   if (!listingId) {
-    console.log("Usage: cc marketplace fork <listing-id> <forker-id> [--notes \"why\"]");
+    console.log("Usage: coh marketplace fork <listing-id> <forker-id> [--notes \"why\"]");
     return;
   }
   const forkerId = args[1];
   if (!forkerId) {
-    console.log("Usage: cc marketplace fork <listing-id> <forker-id> [--notes \"why\"]");
+    console.log("Usage: coh marketplace fork <listing-id> <forker-id> [--notes \"why\"]");
     return;
   }
   const body = { forker_id: forkerId, notes: "" };

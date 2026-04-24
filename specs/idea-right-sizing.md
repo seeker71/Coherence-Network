@@ -271,7 +271,7 @@ curl -s "https://api.coherencycoin.com/api/ideas/right-sizing/history?days=7" | 
 
 - **Follow-up**: Replace TF-IDF overlap with sentence-embedding similarity (e.g., via `sentence-transformers` or OpenAI embeddings) once the overlap false-positive rate is measured.
 - **Follow-up**: Surface the portfolio health badge (`82% healthy`) on the web `/ideas` page (requires web changes outside this spec's scope).
-- **Follow-up**: Add `cc ideas --right-size` CLI subcommand (requires `cc` CLI changes; this spec defines the API contract only).
+- **Follow-up**: Add `coh ideas --right-size` CLI subcommand (requires `coh` CLI changes; this spec defines the API contract only).
 - **Follow-up**: Alerting when `healthy_pct` drops > 5% week-over-week (spec 159 candidate).
 
 ## Decision Gates

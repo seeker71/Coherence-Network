@@ -136,7 +136,7 @@ import {
 } from "../lib/config.mjs";
 import { basename } from 'path';
 
-// Deprecation warning when invoked as `cc` (shadows /usr/bin/cc on macOS/Linux)
+// Deprecation warning when invoked as `cc` (shadows /usr/bin/coh on macOS/Linux)
 const _invokedAs = basename(process.argv[1] || '');
 if (_invokedAs === 'cc') {
   process.stderr.write(
@@ -149,7 +149,7 @@ if (_invokedAs === 'cc') {
 // override; per-invocation env vars (COHERENCE_API_URL, COHERENCE_API_KEY,
 // COHERENCE_TIMEOUT_MS) are honored by the resolvers in config.mjs when no
 // override is set. The persistent workspace default lives in config.json
-// under the `workspace` key (set via `cc workspace use <id>`).
+// under the `workspace` key (set via `coh workspace use <id>`).
 //
 //   --workspace <id>    Scope commands to a specific workspace for this run.
 //   --api-url <url>     Override the API origin (alternative: COHERENCE_API_URL).
@@ -313,10 +313,10 @@ async function handleEdge(args) {
     case "delete": return deleteEdge(subArgs);
     case "types":  return listEdgeTypes();
     default:
-      console.log("Usage: cc edge <create|delete|types>");
-      console.log("  cc edge create <from-id> <type> <to-id>");
-      console.log("  cc edge delete <edge-id>");
-      console.log("  cc edge types");
+      console.log("Usage: coh edge <create|delete|types>");
+      console.log("  coh edge create <from-id> <type> <to-id>");
+      console.log("  coh edge delete <edge-id>");
+      console.log("  coh edge types");
   }
 }
 
@@ -443,7 +443,7 @@ async function showWhoami() {
       console.log(`  Network:     ${Y}key not recognized by server${R}`);
     }
   } else {
-    console.log(`  ${Y}Not set up yet.${R} Run: cc setup`);
+    console.log(`  ${Y}Not set up yet.${R} Run: coh setup`);
   }
   console.log();
 }
@@ -522,10 +522,10 @@ async function handleMarketplace(args) {
       case "browse":  return marketplaceBrowse(args.slice(1));
       case "fork":    return marketplaceFork(args.slice(1));
       default:
-         console.log("Usage: cc marketplace <publish|browse|fork>");
-         console.log("  cc marketplace publish --idea-id <id> --tags <tags> --author <name>");
-         console.log("  cc marketplace browse --page <n> --sort <recent|popular|value>");
-         console.log("  cc marketplace fork --listing-id <id> --forker-id <id>");
+         console.log("Usage: coh marketplace <publish|browse|fork>");
+         console.log("  coh marketplace publish --idea-id <id> --tags <tags> --author <name>");
+         console.log("  coh marketplace browse --page <n> --sort <recent|popular|value>");
+         console.log("  coh marketplace fork --listing-id <id> --forker-id <id>");
    }
 }
 
@@ -536,10 +536,10 @@ async function handleGraph(args) {
       case "edges":   return listGraphEdges(args.slice(1));
       case "neighbors": return getGraphNeighbors(args.slice(1));
       default:
-         console.log("Usage: cc graph <nodes|edges|neighbors>");
-         console.log("  cc graph nodes list|create");
-         console.log("  cc graph edges list|create|neighbors");
-         console.log("  cc graph neighbors --node-id <id>");
+         console.log("Usage: coh graph <nodes|edges|neighbors>");
+         console.log("  coh graph nodes list|create");
+         console.log("  coh graph edges list|create|neighbors");
+         console.log("  coh graph neighbors --node-id <id>");
    }
 }
 
@@ -550,7 +550,7 @@ async function handleOnboarding(args) {
       case "session":  return onboardingSession(args.slice(1));
       case "upgrade":  return onboardingUpgrade(args.slice(1));
       default:
-         console.log("Usage: cc onboarding <register|session|upgrade>");
+         console.log("Usage: coh onboarding <register|session|upgrade>");
   }
 }
 
@@ -561,7 +561,7 @@ async function handleCredentials(args) {
     case "list":   return credentialsList(args.slice(1));
     case "remove": return credentialsRemove(args.slice(1));
     default:
-      console.log("Usage: cc credentials <add|list|remove>");
+      console.log("Usage: coh credentials <add|list|remove>");
   }
 }
 
@@ -759,7 +759,7 @@ function showHelp() {
 
 \x1b[1m${t("help.sectionEdge")}\x1b[0m
   edges <id>              List all edges for an entity (alias: edg)
-  edg <id>                Shorthand alias for cc edges
+  edg <id>                Shorthand alias for coh edges
   edges <id> --type <t>  Filter edges by relationship type
   edge types              Print all 46 canonical edge types
   edge create <from> <type> <to>  Create a typed edge
@@ -856,7 +856,7 @@ async function main() {
   }
   debugPytest(`unknown-command=${String(command)}`);
   console.log(`Unknown command: ${command}`);
-  console.log("Run 'cc help' for available commands.");
+  console.log("Run 'coh help' for available commands.");
   process.exit(1);
 }
 

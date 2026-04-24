@@ -130,7 +130,7 @@ export async function createGraphEdge(args) {
   }
 
   if (!fromId || !toId) {
-    console.log("Usage: cc graph edges create --from-id <id> --to-id <id> [--type <type>]");
+    console.log("Usage: coh graph edges create --from-id <id> --to-id <id> [--type <type>]");
     return;
   }
 
@@ -164,7 +164,7 @@ export async function getGraphNeighbors(args) {
     if (args[i] === "--node-id" && args[i + 1]) nodeId = args[++i];
   }
   if (!nodeId) {
-    console.log("Usage: cc graph neighbors --node-id <id>");
+    console.log("Usage: coh graph neighbors --node-id <id>");
     return;
   }
 

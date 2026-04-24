@@ -226,7 +226,7 @@ export async function setConfigCommand(args = []) {
   const [path, ...valueParts] = positional;
   const value = valueParts.join(" ");
   if (!path || !valueParts.length) {
-    console.log("Usage: cc config set <path> <value> [--local] [--admin-key <key>]");
+    console.log("Usage: coh config set <path> <value> [--local] [--admin-key <key>]");
     return;
   }
 
@@ -256,7 +256,7 @@ export async function unsetConfigCommand(args = []) {
   const { positional, local, adminKey } = parseFlags(args);
   const [path] = positional;
   if (!path) {
-    console.log("Usage: cc config unset <path> [--local] [--admin-key <key>]");
+    console.log("Usage: coh config unset <path> [--local] [--admin-key <key>]");
     return;
   }
 
@@ -280,7 +280,7 @@ export async function unsetConfigCommand(args = []) {
   } else if (mapping.type === "string" && path !== "database.url" && path !== "server.environment") {
     payload[mapping.field] = "";
   } else {
-    console.log(`Remote unset is not supported for ${path}. Use cc config set instead.`);
+    console.log(`Remote unset is not supported for ${path}. Use coh config set instead.`);
     return;
   }
 
@@ -397,6 +397,6 @@ export async function handleConfig(args = []) {
     case "edit":
       return editConfigCommand(subArgs);
     default:
-      console.log("Usage: cc config <show|set|unset|edit> [args]");
+      console.log("Usage: coh config <show|set|unset|edit> [args]");
   }
 }

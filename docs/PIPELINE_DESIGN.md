@@ -122,7 +122,7 @@ _CircuitBreaker(window_size=20, trip_threshold=10, cooldown_seconds=600)
 
 - Trips when: 10 consecutive failures OR >80% failure rate in last 20 tasks
 - When tripped: `allow_seeding()` returns `False` — no new tasks are seeded
-- Reset: `cc cmd mac resume` sends a message to the runner to reset the breaker
+- Reset: `coh cmd mac resume` sends a message to the runner to reset the breaker
 - Cooldown: 10 minutes, then auto-resets
 
 **Gap identified 2026-03-30:** The circuit breaker correctly tripped on `impl_branch_missing` failures

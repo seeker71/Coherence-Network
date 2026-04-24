@@ -709,7 +709,7 @@ class _CircuitBreaker:
     - Trips when: ≥ `trip_threshold` consecutive failures OR failure rate > 80% over the window
     - When tripped: blocks _seed_task_from_open_idea() and logs clearly
     - Resets after `cooldown_seconds` to allow a probe attempt
-    - Manual reset via `cc cmd mac resume` (processed in _process_node_messages)
+    - Manual reset via `coh cmd mac resume` (processed in _process_node_messages)
     """
 
     def __init__(self, window_size: int = 20, trip_threshold: int = 10, cooldown_seconds: int = 600):
@@ -750,7 +750,7 @@ class _CircuitBreaker:
             self._trip_time = time.time()
             self._trip_reason = reason
             log.error("CIRCUIT_BREAKER TRIPPED: %s — pipeline seeding paused for %ds. "
-                      "Fix the root cause, then send 'cc cmd mac resume' to reset.",
+                      "Fix the root cause, then send 'coh cmd mac resume' to reset.",
                       reason, self.cooldown_seconds)
 
     def allow_seeding(self) -> bool:
@@ -2156,7 +2156,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
             direction = (
                 f"Deploy '{idea_name}' ({idea_id}) to production.\n\n"
                 f"1. Verify code is committed and pushed to main\n"
-                f"2. Run: cc deploy (or SSH deploy if cc deploy unavailable)\n"
+                f"2. Run: coh deploy (or SSH deploy if coh deploy unavailable)\n"
                 f"3. Verify health check passes: curl https://api.coherencycoin.com/api/health\n"
                 f"4. If deploy fails, report DEPLOY_FAILED with the error\n"
                 f"5. If health check fails after deploy, report DEPLOY_FAILED — rollback needed\n\n"
@@ -2169,7 +2169,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"Run the spec's verification scenarios against PRODUCTION:\n"
                 f"  - API: curl https://api.coherencycoin.com/...\n"
                 f"  - Web: check https://coherencycoin.com/...\n"
-                f"  - CLI: run cc <command>\n\n"
+                f"  - CLI: run coh <command>\n\n"
                 f"For EACH scenario report PASS or FAIL with actual output.\n"
                 f"If ANY scenario fails, output VERIFY_FAILED with details.\n"
                 f"If ALL pass, output VERIFY_PASSED with evidence.\n\n"
@@ -2371,7 +2371,7 @@ def _run_phase_auto_advance_hook(task: dict[str, Any]) -> None:
                 f"1. Check what was built: git log --oneline -10 | grep '{idea_id}'\n"
                 f"2. Verify it's on production: curl -s https://api.coherencycoin.com/api/health\n"
                 f"3. Record a contribution:\n"
-                f"   cc contribute --type code --idea {idea_id} --desc 'Full lifecycle: spec→impl→test→review→merge→deploy→verify'\n"
+                f"   coh contribute --type code --idea {idea_id} --desc 'Full lifecycle: spec→impl→test→review→merge→deploy→verify'\n"
                 f"4. Update the idea's coherence score if possible\n"
                 f"5. Check if there are follow-up tasks or gaps identified during review\n\n"
                 f"Output: REFLECT_COMPLETE with summary of what was delivered, coherence impact, "
@@ -4842,7 +4842,7 @@ def _seed_task_from_open_idea(_attempt: int = 0) -> bool:
         f"concrete test scenarios that PROVE the feature works as described.\n\n"
         f"Each scenario must have:\n"
         f"- Setup: what state exists before the test\n"
-        f"- Action: exact command or request (curl, cc command, browser action)\n"
+        f"- Action: exact command or request (curl, coh command, browser action)\n"
         f"- Expected result: specific output, not vague ('returns data')\n"
         f"- Edge case: what happens with bad input, missing data, or duplicate request\n\n"
         f"Example of a GOOD verification scenario:\n"
@@ -4865,7 +4865,7 @@ def _seed_task_from_open_idea(_attempt: int = 0) -> bool:
             f"\nNETWORK-SPECIFIC:\n"
             f"- Include the exact API endpoints that must exist (e.g., GET /api/concepts)\n"
             f"- Include the exact web pages (e.g., /concepts) if web-facing\n"
-            f"- Include the exact CLI commands (e.g., cc concepts) if CLI-facing\n"
+            f"- Include the exact CLI commands (e.g., coh concepts) if CLI-facing\n"
             f"- At least one scenario must test the full create-read-update cycle\n"
             f"- At least one scenario must test error handling (bad input, missing resource)\n"
         )
@@ -7094,7 +7094,7 @@ def main():
                 "[runner] WARNING: no contributor identity configured — all contributions will be anonymous",
             )
             log.warning(
-                "[runner] Fix: cc identity set <your_id>  or  export COHERENCE_CONTRIBUTOR_ID=<your_id>",
+                "[runner] Fix: coh identity set <your_id>  or  export COHERENCE_CONTRIBUTOR_ID=<your_id>",
             )
     except Exception as exc:
         log.debug("Runner identity resolution skipped: %s", exc)

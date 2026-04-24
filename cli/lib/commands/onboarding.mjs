@@ -19,7 +19,7 @@ export async function onboardingRegister(args) {
   }
 
   if (!handle) {
-    console.log("Usage: cc onboarding register --handle <name> [--email e] [--hint-github gh] [--hint-wallet addr]");
+    console.log("Usage: coh onboarding register --handle <name> [--email e] [--hint-github gh] [--hint-wallet addr]");
     return;
   }
 
@@ -52,7 +52,7 @@ export async function onboardingSession(args) {
   }
 
   if (!token) {
-    console.log("Usage: cc onboarding session --token <token>");
+    console.log("Usage: coh onboarding session --token <token>");
     return;
   }
 

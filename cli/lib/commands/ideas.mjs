@@ -2,22 +2,22 @@
  * Ideas commands: ideas, idea, share, stake, fork, and extended coverage
  *
  * Extended commands:
- *   cc idea tags                       — list idea tags catalog
- *   cc idea health                     — governance health
- *   cc idea showcase                   — featured ideas showcase
- *   cc idea resonance                  — ideas resonance overview
- *   cc idea progress                   — pipeline progress dashboard
- *   cc idea count                      — ideas count summary
- *   cc idea cards                      — idea cards view
- *   cc idea <id> activity              — idea activity log
- *   cc idea <id> tasks                 — tasks for an idea
- *   cc idea <id> progress              — progress for an idea
- *   cc idea <id> resonance             — concept resonance for an idea
- *   cc idea <id> advance               — advance idea to next stage
- *   cc idea <id> stage <stage>         — set idea stage
- *   cc idea <id> tag <tag1> [tag2...]  — update idea tags
- *   cc idea <id> question <text>       — add question to idea
- *   cc idea <id> answer <text>         — answer open question
+ *   coh idea tags                       — list idea tags catalog
+ *   coh idea health                     — governance health
+ *   coh idea showcase                   — featured ideas showcase
+ *   coh idea resonance                  — ideas resonance overview
+ *   coh idea progress                   — pipeline progress dashboard
+ *   coh idea count                      — ideas count summary
+ *   coh idea cards                      — idea cards view
+ *   coh idea <id> activity              — idea activity log
+ *   coh idea <id> tasks                 — tasks for an idea
+ *   coh idea <id> progress              — progress for an idea
+ *   coh idea <id> resonance             — concept resonance for an idea
+ *   coh idea <id> advance               — advance idea to next stage
+ *   coh idea <id> stage <stage>         — set idea stage
+ *   coh idea <id> tag <tag1> [tag2...]  — update idea tags
+ *   coh idea <id> question <text>       — add question to idea
+ *   coh idea <id> answer <text>         — answer open question
  */
 
 import { get, post, patch, put } from "../api.mjs";
@@ -44,7 +44,7 @@ export async function listIdeas(args) {
   const isTTY = process.stdout.isTTY;
 
   // Interactive picker only when TTY AND not JSON mode AND no other args.
-  // When piping (`cc ideas | jq`) or passing `--json`, we always return
+  // When piping (`coh ideas | jq`) or passing `--json`, we always return
   // structured data instead of opening a picker.
   if (isTTY && !jsonMode && args.length === 0) {
     return runInteractivePicker();
@@ -153,7 +153,7 @@ export async function listIdeas(args) {
     for (const idea of data) renderRow(idea);
   }
   console.log(`  ${"─".repeat(92)}`);
-  if (!flags.all) console.log(`  ${D}Use 'cc idea list --all' to see the full fractal.${R}`);
+  if (!flags.all) console.log(`  ${D}Use 'coh idea list --all' to see the full fractal.${R}`);
   console.log();
 }
 
@@ -193,7 +193,7 @@ async function runInteractivePicker() {
 }
 
 export async function showIdea(args) {
-  // Route subcommands: cc idea <id> <subcommand>
+  // Route subcommands: coh idea <id> <subcommand>
   let id = args[0];
   const focus = getFocus();
 
@@ -203,8 +203,8 @@ export async function showIdea(args) {
   }
 
   if (!id) {
-    console.log("Usage: cc idea <id> [tasks|translate|children|...]");
-    console.log(chalk.dim("Hint: Use 'cc focus' to pick an idea once and skip the ID."));
+    console.log("Usage: coh idea <id> [tasks|translate|children|...]");
+    console.log(chalk.dim("Hint: Use 'coh focus' to pick an idea once and skip the ID."));
     return;
   }
 
@@ -288,12 +288,12 @@ export async function showIdea(args) {
   console.log();
 }
 
-/** Point-of-view translation: cc idea <id> translate [lens_id] */
+/** Point-of-view translation: coh idea <id> translate [lens_id] */
 export async function showIdeaTranslate(args) {
   const id = args[0];
   const lens = args[1] || "libertarian";
   if (!id) {
-    console.log("Usage: cc idea <id> translate [lens_id]");
+    console.log("Usage: coh idea <id> translate [lens_id]");
     return;
   }
   const data = await get(
@@ -349,7 +349,7 @@ export async function stakeOnIdea(args) {
   const ideaId = args[0];
   const amount = parseFloat(args[1]);
   if (!ideaId || isNaN(amount)) {
-    console.log("Usage: cc stake <idea-id> <amount-cc>");
+    console.log("Usage: coh stake <idea-id> <amount-cc>");
     return;
   }
   const contributor = await ensureIdentity();
@@ -367,7 +367,7 @@ export async function stakeOnIdea(args) {
 export async function forkIdea(args) {
   const ideaId = args[0];
   if (!ideaId) {
-    console.log("Usage: cc fork <idea-id>");
+    console.log("Usage: coh fork <idea-id>");
     return;
   }
   const contributor = await ensureIdentity();
@@ -385,11 +385,11 @@ export async function forkIdea(args) {
 /**
  * Non-interactive idea creation for agents and scripts.
  *
- * Usage: cc idea create <id> <name> [--desc "..."] [--value N] [--cost N] [--parent <id>]
+ * Usage: coh idea create <id> <name> [--desc "..."] [--value N] [--cost N] [--parent <id>]
  */
 export async function createIdea(args) {
   if (args.length < 2) {
-    console.log("Usage: cc idea create <id> <name> [--desc \"...\"] [--value N] [--cost N] [--parent <id>]");
+    console.log("Usage: coh idea create <id> <name> [--desc \"...\"] [--value N] [--cost N] [--parent <id>]");
     return;
   }
 
@@ -462,7 +462,7 @@ export async function setIdeaWorkType(args) {
   const workType = args[1];
   const validTypes = ["exploration", "research", "prototype", "feature", "enhancement", "bug-fix", "mvp"];
   if (!id || !workType) {
-    console.log(`Usage: cc idea <id> type <work_type>`);
+    console.log(`Usage: coh idea <id> type <work_type>`);
     console.log(`  Valid types: ${validTypes.join(", ")}`);
     return;
   }
@@ -479,14 +479,14 @@ export async function setIdeaWorkType(args) {
 }
 
 export async function linkIdea(args) {
-  // cc idea <id> link <relation> <target-id>
+  // coh idea <id> link <relation> <target-id>
   // relation: blocks, enables, supersedes, depends-on, related-to
   const fromId = args[0];
   const rel = args[1];
   const toId = args[2];
   const validRels = ["blocks", "enables", "supersedes", "depends-on", "related-to"];
   if (!fromId || !rel || !toId) {
-    console.log("Usage: cc idea <id> link <relation> <target-id>");
+    console.log("Usage: coh idea <id> link <relation> <target-id>");
     console.log(`  Relations: ${validRels.join(", ")}`);
     return;
   }
@@ -511,7 +511,7 @@ export async function linkIdea(args) {
 
 export async function showIdeaChildren(args) {
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> children"); return; }
+  if (!id) { console.log("Usage: coh idea <id> children"); return; }
   const raw = await get("/api/ideas", { limit: 400 });
   const all = Array.isArray(raw) ? raw : raw?.ideas || [];
   const children = all.filter(i => i.parent_idea_id === id);
@@ -532,9 +532,9 @@ export async function showIdeaChildren(args) {
 }
 
 export async function showIdeaDeps(args) {
-  // cc idea <id> deps [--type blocks|enables|supersedes|depends-on|related-to]
+  // coh idea <id> deps [--type blocks|enables|supersedes|depends-on|related-to]
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> deps [--type <relation>]"); return; }
+  if (!id) { console.log("Usage: coh idea <id> deps [--type <relation>]"); return; }
 
   let edgeType = null;
   for (let i = 1; i < args.length; i++) {
@@ -564,7 +564,7 @@ export async function showIdeaDeps(args) {
 
   if (!edges.length) {
     console.log(`  ${D}No dependency edges found.${R}`);
-    console.log(`  ${D}Add one: cc idea ${id} link blocks|enables|supersedes <target-id>${R}`);
+    console.log(`  ${D}Add one: coh idea ${id} link blocks|enables|supersedes <target-id>${R}`);
     console.log();
     return;
   }
@@ -598,7 +598,7 @@ export async function showIdeaDeps(args) {
   }
 
   console.log();
-  console.log(`  ${D}Total edges: ${edges.length}  |  cc idea <id> link <rel> <target> to add more${R}`);
+  console.log(`  ${D}Total edges: ${edges.length}  |  coh idea <id> link <rel> <target> to add more${R}`);
   console.log();
 }
 
@@ -719,7 +719,7 @@ export async function showIdeasCount() {
 
 export async function showIdeaActivity(args) {
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> activity"); return; }
+  if (!id) { console.log("Usage: coh idea <id> activity"); return; }
   const data = await get(`/api/ideas/${encodeURIComponent(id)}/activity`);
   if (!data) { console.log(`No activity for idea '${id}'.`); return; }
   const events = Array.isArray(data) ? data : data?.events || data?.activity || [];
@@ -738,7 +738,7 @@ export async function showIdeaActivity(args) {
 
 export async function showIdeaTasks(args) {
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> tasks"); return; }
+  if (!id) { console.log("Usage: coh idea <id> tasks"); return; }
   const data = await get(`/api/ideas/${encodeURIComponent(id)}/tasks`);
   if (!data) { console.log(`No tasks for idea '${id}'.`); return; }
   const groups = Array.isArray(data?.groups) ? data.groups : [];
@@ -765,7 +765,7 @@ export async function showIdeaTasks(args) {
 
 export async function showIdeaItemProgress(args) {
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> progress"); return; }
+  if (!id) { console.log("Usage: coh idea <id> progress"); return; }
   const data = await get(`/api/ideas/${encodeURIComponent(id)}/progress`);
   if (!data) { console.log(`No progress data for idea '${id}'.`); return; }
   const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m", G = "\x1b[32m";
@@ -787,7 +787,7 @@ export async function showIdeaItemProgress(args) {
 
 export async function showIdeaConceptResonance(args) {
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> resonance"); return; }
+  if (!id) { console.log("Usage: coh idea <id> resonance"); return; }
   const data = await get(`/api/ideas/${encodeURIComponent(id)}/concept-resonance`);
   if (!data) { console.log(`No concept resonance data for idea '${id}'.`); return; }
   const B = "\x1b[1m", D = "\x1b[2m", R = "\x1b[0m";
@@ -809,7 +809,7 @@ export async function showIdeaConceptResonance(args) {
 
 export async function advanceIdea(args) {
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> advance"); return; }
+  if (!id) { console.log("Usage: coh idea <id> advance"); return; }
   const result = await post(`/api/ideas/${encodeURIComponent(id)}/advance`, {});
   if (result) {
     console.log(`\x1b[32m✓\x1b[0m Idea '${id}' advanced`);
@@ -822,7 +822,7 @@ export async function advanceIdea(args) {
 export async function setIdeaStage(args) {
   const id = args[0];
   const stage = args[1];
-  if (!id || !stage) { console.log("Usage: cc idea <id> stage <stage>"); return; }
+  if (!id || !stage) { console.log("Usage: coh idea <id> stage <stage>"); return; }
   const result = await post(`/api/ideas/${encodeURIComponent(id)}/stage`, { stage });
   if (result) {
     console.log(`\x1b[32m✓\x1b[0m Idea '${id}' stage set to '${stage}'`);
@@ -834,7 +834,7 @@ export async function setIdeaStage(args) {
 export async function updateIdeaTags(args) {
   const id = args[0];
   const tags = args.slice(1);
-  if (!id || !tags.length) { console.log("Usage: cc idea <id> tag <tag1> [tag2...]"); return; }
+  if (!id || !tags.length) { console.log("Usage: coh idea <id> tag <tag1> [tag2...]"); return; }
   const result = await put(`/api/ideas/${encodeURIComponent(id)}/tags`, { tags });
   if (result) {
     console.log(`\x1b[32m✓\x1b[0m Tags updated for '${id}': ${tags.join(", ")}`);
@@ -846,7 +846,7 @@ export async function updateIdeaTags(args) {
 export async function addIdeaQuestion(args) {
   const id = args[0];
   const question = args.slice(1).join(" ");
-  if (!id || !question) { console.log("Usage: cc idea <id> question <text>"); return; }
+  if (!id || !question) { console.log("Usage: coh idea <id> question <text>"); return; }
   const result = await post(`/api/ideas/${encodeURIComponent(id)}/questions`, { question });
   if (result) {
     console.log(`\x1b[32m✓\x1b[0m Question added to '${id}'`);
@@ -858,7 +858,7 @@ export async function addIdeaQuestion(args) {
 export async function answerIdeaQuestion(args) {
   const id = args[0];
   const answer = args.slice(1).join(" ");
-  if (!id || !answer) { console.log("Usage: cc idea <id> answer <text>"); return; }
+  if (!id || !answer) { console.log("Usage: coh idea <id> answer <text>"); return; }
   const result = await post(`/api/ideas/${encodeURIComponent(id)}/questions/answer`, { answer });
   if (result) {
     console.log(`\x1b[32m✓\x1b[0m Answer recorded for '${id}'`);
@@ -868,9 +868,9 @@ export async function answerIdeaQuestion(args) {
 }
 
 export async function archiveIdea(args) {
-  // cc idea <id> archive [--reason "..."] [--duplicate-of <id>]
+  // coh idea <id> archive [--reason "..."] [--duplicate-of <id>]
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> archive [--reason \"...\"] [--duplicate-of <id>]"); return; }
+  if (!id) { console.log("Usage: coh idea <id> archive [--reason \"...\"] [--duplicate-of <id>]"); return; }
   const flags = {};
   for (let i = 1; i < args.length; i++) {
     if ((args[i] === "--reason" || args[i] === "-r") && args[i+1]) flags.reason = args[++i];
@@ -890,9 +890,9 @@ export async function archiveIdea(args) {
 }
 
 export async function retireIdea(args) {
-  // cc idea <id> retire [--duplicate-of <id>]
+  // coh idea <id> retire [--duplicate-of <id>]
   const id = args[0];
-  if (!id) { console.log("Usage: cc idea <id> retire [--duplicate-of <id>]"); return; }
+  if (!id) { console.log("Usage: coh idea <id> retire [--duplicate-of <id>]"); return; }
   const flags = {};
   for (let i = 1; i < args.length; i++) {
     if (args[i] === "--duplicate-of" && args[i+1]) flags.duplicateOf = args[++i];
@@ -908,7 +908,7 @@ export async function retireIdea(args) {
 }
 
 export async function showStaleIdeas(args) {
-  // cc idea stale [--days N]   — ideas with lifecycle=active not touched in N days (default 30)
+  // coh idea stale [--days N]   — ideas with lifecycle=active not touched in N days (default 30)
   let days = 30;
   for (let i = 0; i < args.length; i++) {
     if ((args[i] === "--days" || args[i] === "-d") && args[i+1]) days = parseInt(args[++i]);
@@ -946,6 +946,6 @@ export async function showStaleIdeas(args) {
     console.log(`  ${Y}⚠${R}  ${name} ${String(last).padEnd(14)} ${C}${wt}${R} ${D}${status}${R}`);
   }
   console.log(`  ${"─".repeat(76)}`);
-  console.log(`  ${D}Archive: cc idea <id> archive | Retire duplicate: cc idea <id> retire --duplicate-of <id>${R}`);
+  console.log(`  ${D}Archive: coh idea <id> archive | Retire duplicate: coh idea <id> retire --duplicate-of <id>${R}`);
   console.log();
 }
