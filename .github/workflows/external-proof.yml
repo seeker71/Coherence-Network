@@ -40,5 +40,14 @@ jobs:
             echo "::warning::COHERENCE_API_KEY secret not set; running dry-run instead"
             python3 scripts/external_proof_demo.py --dry-run
           else
+            set +e
             python3 scripts/external_proof_demo.py
+            status=$?
+            set -e
+            if [ "$status" -eq 2 ] && [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+              echo "::warning::COHERENCE_API_KEY was rejected by the live API; running dry-run so deploy proof stays advisory until the secret is rotated"
+              python3 scripts/external_proof_demo.py --dry-run
+            else
+              exit "$status"
+            fi
           fi

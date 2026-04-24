@@ -1,0 +1,79 @@
+{
+  "date": "2026-04-25",
+  "thread_branch": "codex/health-external-proof-guidance",
+  "commit_scope": "Make External proof distinguish stale API-key auth from product regressions and keep push deployments advisory when the GitHub secret is rejected.",
+  "files_owned": [
+    ".github/workflows/external-proof.yml",
+    "scripts/external_proof_demo.py",
+    "api/tests/test_external_proof_demo.py",
+    "docs/system_audit/commit_evidence_2026-04-25_external-proof-auth-guidance.json"
+  ],
+  "local_validation": {
+    "status": "pass",
+    "commands": [
+      "cd api && python3 -m pytest tests/test_external_proof_demo.py -q",
+      "python3 scripts/external_proof_demo.py --dry-run",
+      "python3 scripts/validate_commit_evidence.py --file docs/system_audit/commit_evidence_2026-04-25_external-proof-auth-guidance.json",
+      "git diff --check",
+      "git fetch origin main && git rebase origin/main",
+      "python3 scripts/worktree_pr_guard.py --mode local --base-ref origin/main",
+      "python3 scripts/check_pr_followthrough.py --stale-minutes 90 --fail-on-stale --strict"
+    ]
+  },
+  "ci_validation": {
+    "status": "pending",
+    "run_url": ""
+  },
+  "deploy_validation": {
+    "status": "pending",
+    "environment": "not-deployed"
+  },
+  "phase_gate": {
+    "can_move_next_phase": false,
+    "blocked_reason": "Focused validation is passing; full local gate, CI, deployment, and live sensing still need to complete."
+  },
+  "idea_ids": [
+    "repository-health",
+    "pipeline-proprioception"
+  ],
+  "spec_ids": [
+    "external-repo-milestone"
+  ],
+  "task_ids": [
+    "external-proof-auth-guidance-2026-04-25"
+  ],
+  "contributors": [
+    {
+      "contributor_id": "urs-muff",
+      "contributor_type": "human",
+      "roles": [
+        "direction",
+        "live-sensing"
+      ]
+    },
+    {
+      "contributor_id": "openai-codex",
+      "contributor_type": "machine",
+      "roles": [
+        "implementation",
+        "validation"
+      ]
+    }
+  ],
+  "agent": {
+    "name": "OpenAI Codex",
+    "version": "gpt-5"
+  },
+  "evidence_refs": [
+    "External proof run 24910877082 failed with HTTP 401 Invalid or missing X-API-Key header after public idea creation",
+    ".github/workflows/external-proof.yml previously only downgraded missing secrets, not rejected stale secrets",
+    "api/tests/test_external_proof_demo.py",
+    "PR guard report docs/system_audit/pr_check_failures/pr_check_guard_20260424T204404Z_codex-health-external-proof-guidance.json"
+  ],
+  "change_files": [
+    ".github/workflows/external-proof.yml",
+    "scripts/external_proof_demo.py",
+    "api/tests/test_external_proof_demo.py"
+  ],
+  "change_intent": "process_only"
+}

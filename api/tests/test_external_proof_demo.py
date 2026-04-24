@@ -60,3 +60,27 @@ def test_external_proof_headers_include_public_api_key_header() -> None:
     assert headers["X-API-Key"] == "dev-key"
     assert headers["Authorization"] == "Bearer dev-key"
     assert headers["Content-Type"] == "application/json"
+
+
+def test_external_proof_auth_failure_has_distinct_exit_code() -> None:
+    module = _load_external_proof_module()
+
+    class Response:
+        ok = False
+        status_code = 401
+        text = '{"detail":"Invalid or missing X-API-Key header"}'
+
+    class Requests:
+        @staticmethod
+        def request(*args, **kwargs):
+            return Response()
+
+    runner = module.ProofRunner("https://api.example.test", "stale-key", dry_run=False)
+    runner.requests = Requests()
+
+    try:
+        runner._call("POST", "/api/ideas/idea-123/stage", {"stage": "spec"})
+    except SystemExit as exc:
+        assert exc.code == module.AUTH_FAILED_EXIT
+    else:
+        raise AssertionError("expected auth failure to exit distinctly")
