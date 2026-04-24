@@ -6153,6 +6153,7 @@ def _run_task_in_worktree(task: dict, wt_path: Path) -> tuple[bool, str]:
 
 
 _active_idea_ids: set[str] = set()
+_active_task_ids: set[str] = set()   # all in-flight task IDs regardless of idea_id
 _active_lock = threading.Lock()
 _shutdown_event = threading.Event()
 _update_pending = threading.Event()  # Set when origin/main has new commits
@@ -6246,8 +6247,9 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                 continue
 
             # Respect parallel cap: don't claim if at capacity
+            # Use _active_task_ids (not _active_idea_ids) so tasks without idea_id are counted.
             with _active_lock:
-                if len(_active_idea_ids) >= _MAX_PARALLEL:
+                if len(_active_task_ids) >= _MAX_PARALLEL:
                     _shutdown_event.wait(15)
                     continue
 
@@ -6272,15 +6274,18 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                     continue
 
                 with _active_lock:
-                    if len(_active_idea_ids) >= _MAX_PARALLEL:
+                    if len(_active_task_ids) >= _MAX_PARALLEL:
                         break  # At capacity
+                    if candidate["id"] in _active_task_ids:
+                        continue  # already claimed by another worker (covers no-idea-id tasks)
                     if idea_id and idea_id in _active_idea_ids:
-                        continue
+                        continue  # already working this idea
                     # Try to claim
                     result = api("PATCH", f"/api/agent/tasks/{candidate['id']}", {
                         "status": "running", "worker_id": WORKER_ID,
                     })
                     if result and result.get("status") == "running":
+                        _active_task_ids.add(candidate["id"])  # track regardless of idea_id
                         if idea_id:
                             _active_idea_ids.add(idea_id)
                         task = result
@@ -6320,6 +6325,7 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                     error_category="impl_branch_missing",
                 )
                 with _active_lock:
+                    _active_task_ids.discard(task_id)
                     _active_idea_ids.discard(idea_id)
                 # Intentionally NOT recording to circuit breaker — this is a seeder logic error
                 # (DG-010): counting seeder mistakes as provider failures trips the breaker unfairly.
@@ -6463,6 +6469,7 @@ def _worker_loop(worker_id: int, dry_run: bool = False) -> None:
                 elif wt and not pushed:
                     log.warning("WORKER[%d] KEEPING_WORKTREE task=%s (push failed)", worker_id, task_id[:16])
                 with _active_lock:
+                    _active_task_ids.discard(task_id)
                     _active_idea_ids.discard(idea_id)
 
         except Exception as e:
@@ -6493,6 +6500,7 @@ def _recover_in_flight_tasks() -> int:
             ctx = t.get("context") if isinstance(t.get("context"), dict) else {}
             idea_id = ctx.get("idea_id", "")
             with _active_lock:
+                _active_task_ids.add(t["id"])
                 if idea_id:
                     _active_idea_ids.add(idea_id)
             recovered += 1
@@ -6961,7 +6969,7 @@ def main():
                 # 3. Self-update: check for new commits, but only restart when idle
                 if not args.no_self_update:
                     with _active_lock:
-                        active = len(_active_idea_ids)
+                        active = len(_active_task_ids)  # count all in-flight tasks
                     if active == 0:
                         if _update_pending.is_set():
                             log.info("SELF-UPDATE: workers drained, proceeding with update")
