@@ -31,6 +31,7 @@ type PresenceNode = {
   image_url?: string | null;
   provider?: string;
   contributor_type?: string;
+  asset_type?: string;
 };
 
 async function fetchType(type: string, limit = 200): Promise<PresenceNode[]> {
@@ -48,11 +49,11 @@ async function fetchType(type: string, limit = 200): Promise<PresenceNode[]> {
 }
 
 function filterScannable(items: PresenceNode[]): PresenceNode[] {
-  // Skip test/system/visitor contributors — keep only real presences.
-  // SYSTEM + AGENT contributor_types are work-ledger identities
-  // (runners, pipeline bots, Claude agents); they live under
-  // /contributors where the ledger lens fits. Presences are humans +
-  // communities + places + gatherings + practices + works only.
+  // Skip test/system/visitor identities and KB-system assets. A
+  // visitor in /people wants to find humans, communities, places,
+  // gatherings, and the works people put into the world — not
+  // runner pipelines, auto-generated concept imagery, or platform
+  // renderer components.
   return items.filter((n) => {
     if (!n.name) return false;
     if (n.id.includes(":wanderer-")) return false;
@@ -60,6 +61,12 @@ function filterScannable(items: PresenceNode[]): PresenceNode[] {
     if (n.id.includes(":test-")) return false;
     const ct = (n.contributor_type || "").toUpperCase();
     if (ct === "SYSTEM" || ct === "AGENT") return false;
+
+    // Asset filters: hide platform tissue that clutters the Works directory
+    const at = (n.asset_type || "").toUpperCase();
+    if (at === "RENDERER") return false; // Image Viewer v1, Audio Player v1, ...
+    if (n.id.startsWith("visual-lc-")) return false; // KB auto-generated concept visuals
+
     return true;
   });
 }
