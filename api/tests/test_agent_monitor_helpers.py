@@ -114,4 +114,44 @@ def test_low_success_rate_issue_digests_metrics(monkeypatch) -> None:
     assert "impl 42% (8/11)" in issues[0]["message"]
     assert "Recent failure buckets: spec_gate x6, no_code x2" in issues[0]["message"]
     assert "Top signatures: impl_without_active_spec x6" in issues[0]["message"]
-    assert "Digest recent impl failures first" in issues[0]["suggested_action"]
+    assert "Fix recent spec_gate failures first" in issues[0]["suggested_action"]
+
+
+def test_low_success_rate_issue_prioritizes_context_compaction_guidance(monkeypatch) -> None:
+    def fake_aggregates() -> dict:
+        return {
+            "success_rate": {"completed": 184, "failed": 70, "total": 254, "rate": 0.72},
+            "by_task_type": {
+                "impl": {"completed": 8, "failed": 55, "success_rate": 0.13},
+                "spec": {"completed": 176, "failed": 14, "success_rate": 0.93},
+            },
+        }
+
+    import app.services.metrics_service as metrics_service
+
+    monkeypatch.setattr(metrics_service, "get_aggregates", fake_aggregates)
+    status = {
+        "running": [{"id": "task_running", "running_seconds": 1}],
+        "pending": [],
+        "attention": {"low_success_rate": True},
+        "diagnostics": {
+            "recent_failed_reasons": [
+                {"reason": "context_compaction", "count": 4},
+                {"reason": "no_code", "count": 2},
+            ],
+            "recent_failed_signatures": [
+                {"signature": "context_compaction_summary_leaked", "count": 4},
+                {"signature": "progress_only_no_artifact", "count": 2},
+            ],
+        },
+    }
+
+    issues = agent_monitor_helpers.derive_monitor_issues_from_pipeline_status(
+        status,
+        now=datetime.now(timezone.utc),
+    )
+
+    assert [issue["condition"] for issue in issues] == ["low_success_rate"]
+    assert "Recent failure buckets: context_compaction x4, no_code x2" in issues[0]["message"]
+    assert "Top signatures: context_compaction_summary_leaked x4" in issues[0]["message"]
+    assert "Fix recent context_compaction failures first" in issues[0]["suggested_action"]
