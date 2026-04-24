@@ -279,8 +279,13 @@ Manual: visit `/de/vision/lc-water-as-living-body`, confirm German chrome and tr
 
 **Not confirmed / may still be pending** (would require deeper inspection to close out as done):
 - Full URL-based `/{locale}/...` routing with cookie-backed language picker in the header
-- `cc stories --lang` and `cc translate submit` CLI commands
-- `/settings/translations` coverage dashboard
-- Glossary seeding for anchor terms (tending, ripening, wholeness, coherence)
+- `cc stories --lang` — `cc concept --lang` already exists; the `stories` alias is minor
+- Full-fidelity translation round-trip through the render pipeline
 
-Status stays `draft` pending the UX verification. The backend core is functionally live — the inverse of the `public-verification-framework` situation where the backend was done and the status lagged; here the UX pieces are the outstanding gate.
+**Landed in this session** (progress on the UX gate):
+- `POST /api/translations` endpoint + `GET` history — human/machine supersede semantics exposed
+- `cc translate submit <entity_type> <entity_id> --lang <l> --file <path>` and `cc translate history` CLI commands
+- Anchor glossary seeded for `es` and `id` (matching the existing `de` pattern); 15 anchor terms per language
+- `/settings/translations` coverage dashboard — renders per-locale original/human/machine/stale tallies from `GET /api/locales`; linked from `/settings`
+
+Status stays `draft` pending URL-locale-routing verification end-to-end; UX plumbing for translation submission and coverage is now in place.
