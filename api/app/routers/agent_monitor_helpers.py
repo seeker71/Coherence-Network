@@ -32,56 +32,22 @@ def _get_config_int(key: str, default: int) -> int:
 
 def orphan_threshold_seconds() -> int:
     """Get orphan threshold seconds from config."""
-    explicit = os.getenv("PIPELINE_ORPHAN_RUNNING_SECONDS")
-    if explicit is not None:
-        try:
-            return max(60, int(explicit))
-        except (TypeError, ValueError):
-            pass
-    config = get_config()
-    threshold = config.get("pipeline_orphan_running_seconds")
-    if threshold is not None:
-        try:
-            return max(60, int(threshold))
-        except (TypeError, ValueError):
-            pass
-    return 1800
+    return _get_config_int("pipeline_orphan_running_seconds", 1800)
 
 
 def monitor_max_age_seconds() -> int:
     """Get monitor max age seconds from config."""
-    explicit = os.getenv("MONITOR_ISSUES_MAX_AGE_SECONDS")
-    if explicit is not None:
-        try:
-            return max(60, int(explicit))
-        except (TypeError, ValueError):
-            pass
-    config = get_config()
-    age = config.get("monitor_issues_max_age_seconds")
-    if age is not None:
-        try:
-            return max(60, int(age))
-        except (TypeError, ValueError):
-            pass
-    return 900
+    return _get_config_int("monitor_issues_max_age_seconds", 900)
 
 
 def status_report_max_age_seconds() -> int:
     """Get status report max age seconds from config."""
-    explicit = os.getenv("PIPELINE_STATUS_REPORT_MAX_AGE_SECONDS")
-    if explicit is not None:
-        try:
-            return max(60, int(explicit))
-        except (TypeError, ValueError):
-            pass
-    config = get_config()
-    age = config.get("pipeline_status_report_max_age_seconds")
-    if age is not None:
-        try:
-            return max(60, int(age))
-        except (TypeError, ValueError):
-            pass
-    return 900
+    return _get_config_int("pipeline_status_report_max_age_seconds", 900)
+
+
+def pending_actionable_window_seconds() -> int:
+    """Window where pending tasks imply an active runner should be moving."""
+    return _get_config_int("pipeline_pending_actionable_window_seconds", 86400)
 
 
 def parse_iso_datetime(value: Any) -> datetime | None:
@@ -165,22 +131,37 @@ def wait_seconds(value: Any) -> int | None:
         return None
 
 
+def actionable_pending_tasks(pending: list[Any]) -> list[dict[str, Any]]:
+    window = pending_actionable_window_seconds()
+    active: list[dict[str, Any]] = []
+    for item in pending:
+        if not isinstance(item, dict):
+            continue
+        wait = wait_seconds(item.get("wait_seconds"))
+        if wait is None or 0 <= wait <= window:
+            active.append(item)
+    return active
+
+
 def derive_monitor_issues_from_pipeline_status(status: dict[str, Any], *, now: datetime) -> list[dict[str, Any]]:
     running = status.get("running") if isinstance(status.get("running"), list) else []
     pending = status.get("pending") if isinstance(status.get("pending"), list) else []
     att = status.get("attention") if isinstance(status.get("attention"), dict) else {}
     issues: list[dict[str, Any]] = []
 
-    wait_values = [wait_seconds(item.get("wait_seconds")) for item in pending if isinstance(item, dict)]
+    active_pending = actionable_pending_tasks(pending)
+    wait_values = [wait_seconds(item.get("wait_seconds")) for item in active_pending]
     wait_seconds_list = [value for value in wait_values if value is not None]
     max_wait = max(wait_seconds_list) if wait_seconds_list else 0
-    stuck = bool(att.get("stuck")) or (bool(pending) and not bool(running) and max_wait > 600)
+    stuck = (bool(att.get("stuck")) and bool(active_pending)) or (
+        bool(active_pending) and not bool(running) and max_wait > 600
+    )
     if stuck:
         issues.append(
             derived_issue(
                 "no_task_running",
                 "high",
-                f"No task running for {max_wait}s despite {len(pending)} pending.",
+                f"No task running for {max_wait}s despite {len(active_pending)} actionable pending.",
                 "Restart agent runner and verify task claims progress.",
                 now=now,
             )
@@ -330,6 +311,8 @@ def build_fallback_status_report(
     )
     running = status.get("running") if isinstance(status.get("running"), list) else []
     pending = status.get("pending") if isinstance(status.get("pending"), list) else []
+    active_pending = actionable_pending_tasks(pending)
+    dormant_pending_count = max(0, len(pending) - len(active_pending))
     recent_completed = (
         status.get("recent_completed")
         if isinstance(status.get("recent_completed"), list)
@@ -371,14 +354,15 @@ def build_fallback_status_report(
     )
     runner_seen = bool(running)
     layer1 = {
-        "status": "ok" if (pm_seen or runner_seen or not pending) else "needs_attention",
+        "status": "ok" if (pm_seen or runner_seen or not active_pending) else "needs_attention",
         "project_manager": "running" if pm_seen else ("idle" if pm else "unknown"),
         "pm_in_flight": len(pm.get("in_flight") or []) if isinstance(pm.get("in_flight"), list) else 0,
-        "agent_runner": "running" if runner_seen else ("unknown" if not pending else "not_seen"),
+        "agent_runner": "running" if runner_seen else ("unknown" if not active_pending else "not_seen"),
         "runner_workers": None,
         "pm_parallel": None,
         "summary": (
-            f"running={len(running)}, pending={len(pending)}, "
+            f"running={len(running)}, actionable_pending={len(active_pending)}, "
+            f"dormant_pending={dormant_pending_count}, "
             f"pm_phase={pm.get('phase', '?') if isinstance(pm, dict) else '?'}"
         ),
     }
@@ -396,9 +380,12 @@ def build_fallback_status_report(
         "status": "needs_attention" if execution_needs_attention else "ok",
         "running": running,
         "pending": pending,
+        "actionable_pending_count": len(active_pending),
+        "dormant_pending_count": dormant_pending_count,
         "recent_completed": recent_completed,
         "summary": (
-            f"running={len(running)}, pending={len(pending)}, recent_completed={len(recent_completed)}"
+            f"running={len(running)}, actionable_pending={len(active_pending)}, "
+            f"dormant_pending={dormant_pending_count}, recent_completed={len(recent_completed)}"
         ),
     }
 
