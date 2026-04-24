@@ -9,7 +9,6 @@ GET  /agent/smart-reap/preview — Preview which tasks would be reaped without a
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -80,6 +79,115 @@ def _load_stuck_tasks(max_age_minutes: int) -> list[dict[str, Any]]:
             except Exception:
                 continue
     return stuck
+
+
+def _parse_task_datetime(raw: Any) -> datetime | None:
+    if not raw:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except Exception:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _weak_task_card_reason(task: dict[str, Any]) -> str | None:
+    ctx = task.get("context") if isinstance(task.get("context"), dict) else {}
+    validation = ctx.get("task_card_validation") if isinstance(ctx.get("task_card_validation"), dict) else {}
+    try:
+        score = float(validation.get("score", 1.0))
+    except (TypeError, ValueError):
+        score = 1.0
+    missing = validation.get("missing_fields") or validation.get("missing") or []
+    missing_fields = [str(item).strip() for item in missing if str(item).strip()] if isinstance(missing, list) else []
+    if score >= 0.4:
+        return None
+    if not missing_fields:
+        return f"weak task card score={score:.2f}"
+    return f"weak task card score={score:.2f}; missing {', '.join(missing_fields)}"
+
+
+def _load_dormant_weak_pending_tasks(max_age_minutes: int) -> list[dict[str, Any]]:
+    items, _total, _extra = agent_service.list_tasks(
+        status=TaskStatus.PENDING,
+        limit=200,
+        offset=0,
+    )
+    now = datetime.now(timezone.utc)
+    dormant = []
+    for task in items:
+        created = _parse_task_datetime(task.get("created_at"))
+        if created is None:
+            continue
+        age_min = (now - created).total_seconds() / 60
+        reason = _weak_task_card_reason(task)
+        if age_min >= max_age_minutes and reason:
+            next_task = dict(task)
+            next_task["_quarantine_age_minutes"] = round(age_min, 1)
+            next_task["_quarantine_reason"] = reason
+            dormant.append(next_task)
+    return dormant
+
+
+def _apply_pending_quarantine(task: dict[str, Any]) -> dict[str, Any]:
+    task_id = str(task.get("id") or "")
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    reason = str(task.get("_quarantine_reason") or "dormant malformed pending task")
+    age_minutes = task.get("_quarantine_age_minutes")
+    prompt = (
+        "DORMANT_PENDING_QUARANTINE: This pending task is old and not executable as-is: "
+        f"{reason}. Release it if obsolete, or requeue with a complete task card "
+        "(goal, files_allowed, done_when, commands, constraints)."
+    )
+    context_patch = {
+        "dormant_pending_quarantine": {
+            "quarantined_at": now,
+            "age_minutes": age_minutes,
+            "reason": reason,
+        }
+    }
+    updated = agent_service.update_task(
+        task_id,
+        status=TaskStatus.NEEDS_DECISION,
+        decision_prompt=prompt,
+        current_step="quarantined_dormant_pending",
+        context=context_patch,
+    )
+    return updated or task
+
+
+def _run_pending_quarantine(
+    max_age_minutes: int | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    if max_age_minutes is None:
+        max_age_minutes = 24 * 60
+    now = datetime.now(timezone.utc)
+    candidates = _load_dormant_weak_pending_tasks(max_age_minutes)
+    results: list[dict[str, Any]] = []
+    quarantined = 0
+    for task in candidates:
+        task_id = str(task.get("id") or "")
+        result = {
+            "task_id": task_id,
+            "action": "quarantine",
+            "reason": task.get("_quarantine_reason"),
+            "age_minutes": task.get("_quarantine_age_minutes"),
+        }
+        if not dry_run:
+            _apply_pending_quarantine(task)
+            quarantined += 1
+        results.append(result)
+    return {
+        "checked": len(candidates),
+        "quarantined": quarantined,
+        "skipped": 0,
+        "results": results,
+        "dry_run": dry_run,
+        "ts": now.isoformat().replace("+00:00", "Z"),
+    }
 
 
 def _apply_reap_result(task: dict[str, Any], diag: dict[str, Any]) -> dict[str, Any]:
@@ -229,3 +337,19 @@ async def smart_reap_run(
     - Partial output >20% captured → checkpoint flag in context
     """
     return _run_smart_reap(max_age_minutes=max_age_minutes, dry_run=False)
+
+
+@router.get("/smart-reap/pending-preview", summary="Preview dormant malformed pending tasks — no state changes")
+async def pending_quarantine_preview(
+    max_age_minutes: int | None = Query(None, ge=0, le=43200),
+) -> dict:
+    """Preview dormant malformed pending tasks that should move to needs_decision."""
+    return _run_pending_quarantine(max_age_minutes=max_age_minutes, dry_run=True)
+
+
+@router.post("/smart-reap/pending-quarantine", summary="Move dormant malformed pending tasks to needs_decision")
+async def pending_quarantine_run(
+    max_age_minutes: int | None = Query(None, ge=0, le=43200),
+) -> dict:
+    """Move stale, weak-task-card pending tasks out of runner circulation."""
+    return _run_pending_quarantine(max_age_minutes=max_age_minutes, dry_run=False)
