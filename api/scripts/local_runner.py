@@ -2651,21 +2651,47 @@ Output a summary: files created/modified, validation results, errors encountered
     spec_path = context.get("spec_path", "none") if isinstance(context, dict) else "none"
     workspace_git_url = context.get("workspace_git_url", "") if isinstance(context, dict) else ""
 
-    # Fast-fail gate: impl tasks without a spec produce hollow output after 4-5 min of provider time.
-    # If spec_path is missing AND no spec file exists for this idea, reject immediately.
-    if task_type == "impl" and (not spec_path or spec_path == "none") and idea_id not in ("unknown", ""):
+    # Fast-fail gate: impl tasks without a spec, or against a 'done' spec, produce hollow output.
+    # Check 1: no spec file → reject immediately (seed a spec task first).
+    # Check 2: spec status=done → reject immediately (implementation already complete).
+    if task_type == "impl" and idea_id not in ("unknown", ""):
         import glob as _glob_mod
         repo_dir_str = str(_get_repo_dir())
-        idea_specs = _glob_mod.glob(f"{repo_dir_str}/specs/*{idea_id}*.md")
-        if not idea_specs:
+        # Resolve spec file — from context spec_path or by scanning specs/
+        resolved_for_gate = None
+        if spec_path and spec_path != "none":
+            candidate = Path(spec_path) if Path(spec_path).is_absolute() else Path(repo_dir_str) / spec_path
+            if candidate.exists():
+                resolved_for_gate = candidate
+        if resolved_for_gate is None:
+            found = _glob_mod.glob(f"{repo_dir_str}/specs/*{idea_id}*.md")
+            resolved_for_gate = Path(found[0]) if found else None
+
+        if resolved_for_gate is None:
             msg = (
-                f"NO_SPEC_GATE: impl task for idea '{idea_id}' has no spec (spec_path=none) "
-                f"and no spec file found in specs/. Seed a spec task first. "
-                f"Failing fast to avoid hollow provider execution."
+                f"NO_SPEC_GATE: impl task for idea '{idea_id}' has no spec (spec_path={spec_path!r}) "
+                f"and no spec file found in specs/. Seed a spec task first."
             )
             log.warning(msg)
             complete_task(task.get("id", ""), msg, False, {"failure_reason_bucket": "no_spec"})
             return False
+
+        # Check 2: spec already done — implementation complete, nothing to write.
+        try:
+            spec_text = resolved_for_gate.read_text(encoding="utf-8", errors="replace")
+            import re as _re
+            m = _re.search(r"^status:\s*(\S+)", spec_text, _re.MULTILINE)
+            if m and m.group(1).lower() == "done":
+                msg = (
+                    f"DONE_SPEC_GATE: impl task for idea '{idea_id}' targets spec "
+                    f"'{resolved_for_gate.name}' which is already status=done. "
+                    f"Nothing to implement — skipping provider execution."
+                )
+                log.warning(msg)
+                complete_task(task.get("id", ""), msg, False, {"failure_reason_bucket": "spec_already_done"})
+                return False
+        except Exception as _gate_err:
+            log.debug("SPEC_GATE read error (continuing): %s", _gate_err)
 
     # Build rich context block — spec content, CLAUDE.md, runbook, related files, module map
     context_block = _build_context_block(
