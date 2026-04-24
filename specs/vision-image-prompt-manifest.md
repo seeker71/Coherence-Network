@@ -4,12 +4,15 @@ status: done
 source:
   - file: docs/visuals/prompts.json
     symbols: [vision image prompt records]
+  - file: docs/visuals/regeneration_profiles.json
+    symbols: [dynamic prompt profiles]
   - file: scripts/generate_visuals.py
-    symbols: [generate_from_manifest()]
+    symbols: [generate_from_manifest(), compose_manifest_prompt()]
 requirements:
   - "Every current Living Collective vision image has a persistent prompt record."
   - "Prompt validation fails when an image lacks a prompt record or has an empty prompt."
   - "Regeneration can target one stable image path or deterministic prompt batch."
+  - "Regeneration can write review candidates under a separate output directory before production assets are replaced."
 done_when:
   - "Prompt manifest covers all current vision images."
   - "Asset validation includes prompt-record coverage."
@@ -36,6 +39,7 @@ Living Collective vision images must be regenerable from source-controlled promp
 ## Files to Create/Modify
 
 - `docs/visuals/prompts.json` — persistent prompt records for current vision images.
+- `docs/visuals/regeneration_profiles.json` — dynamic prompt overlays for quality/sample regeneration.
 - `scripts/export_vision_image_prompts.py` — migration/audit exporter for prompt records.
 - `scripts/check_generated_vision_assets.py` — asset and prompt-record validation.
 - `scripts/generate_visuals.py` — manifest-driven regeneration mode.
@@ -47,6 +51,7 @@ Living Collective vision images must be regenerable from source-controlled promp
 - `python3 scripts/export_vision_image_prompts.py` exports prompt records for all current vision images.
 - `python3 scripts/check_generated_vision_assets.py --allow-untracked` passes and reports prompt-record validation.
 - `python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --dry-run --force` targets one stable image from the manifest.
+- `python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --profile fast-sample-v1 --out-dir output/vision-quality/candidates --dry-run --force` targets one stable candidate path with a dynamic profile.
 - `python3 scripts/plan_vision_image_regeneration.py --batch-size 50 --out-dir output/vision-quality/batches` writes deterministic batch files.
 
 ## Verification
@@ -55,6 +60,7 @@ Living Collective vision images must be regenerable from source-controlled promp
 python3 scripts/export_vision_image_prompts.py
 python3 scripts/check_generated_vision_assets.py --allow-untracked
 python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --dry-run --force
+python3 scripts/generate_visuals.py --from-manifest --only-path web/public/visuals/generated/lc-space-0.jpg --profile fast-sample-v1 --out-dir output/vision-quality/candidates --dry-run --force
 python3 scripts/plan_vision_image_regeneration.py --batch-size 50 --out-dir output/vision-quality/batches
 python3 -m py_compile scripts/export_vision_image_prompts.py scripts/plan_vision_image_regeneration.py scripts/generate_visuals.py scripts/check_generated_vision_assets.py
 ```
@@ -74,5 +80,5 @@ python3 -m py_compile scripts/export_vision_image_prompts.py scripts/plan_vision
 
 ## Known Gaps and Follow-up Tasks
 
-- Follow-up: add a reviewed replacement workflow for Codex-generated or GPT-image-generated candidates before overwriting production assets.
+- Follow-up: connect the reviewed candidate-output workflow to Codex app image generation or a configured image API provider when a repository-owned binary replacement policy is chosen.
 - Follow-up: decide whether future generated image binaries should be committed, uploaded, or produced by a release-time artifact pipeline.
