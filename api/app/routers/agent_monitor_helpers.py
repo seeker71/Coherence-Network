@@ -143,6 +143,18 @@ def actionable_pending_tasks(pending: list[Any]) -> list[dict[str, Any]]:
     return active
 
 
+def dormant_pending_tasks(pending: list[Any]) -> list[dict[str, Any]]:
+    window = pending_actionable_window_seconds()
+    dormant: list[dict[str, Any]] = []
+    for item in pending:
+        if not isinstance(item, dict):
+            continue
+        wait = wait_seconds(item.get("wait_seconds"))
+        if wait is not None and wait > window:
+            dormant.append(item)
+    return dormant
+
+
 def derive_monitor_issues_from_pipeline_status(status: dict[str, Any], *, now: datetime) -> list[dict[str, Any]]:
     running = status.get("running") if isinstance(status.get("running"), list) else []
     pending = status.get("pending") if isinstance(status.get("pending"), list) else []
@@ -150,6 +162,7 @@ def derive_monitor_issues_from_pipeline_status(status: dict[str, Any], *, now: d
     issues: list[dict[str, Any]] = []
 
     active_pending = actionable_pending_tasks(pending)
+    dormant_pending = dormant_pending_tasks(pending)
     wait_values = [wait_seconds(item.get("wait_seconds")) for item in active_pending]
     wait_seconds_list = [value for value in wait_values if value is not None]
     max_wait = max(wait_seconds_list) if wait_seconds_list else 0
@@ -163,6 +176,29 @@ def derive_monitor_issues_from_pipeline_status(status: dict[str, Any], *, now: d
                 "high",
                 f"No task running for {max_wait}s despite {len(active_pending)} actionable pending.",
                 "Restart agent runner and verify task claims progress.",
+                now=now,
+            )
+        )
+
+    if dormant_pending:
+        dormant_waits = [
+            value
+            for value in (wait_seconds(item.get("wait_seconds")) for item in dormant_pending)
+            if value is not None
+        ]
+        oldest_wait = max(dormant_waits) if dormant_waits else 0
+        issues.append(
+            derived_issue(
+                "dormant_pending_backlog",
+                "medium",
+                (
+                    f"{len(dormant_pending)} pending task(s) are dormant beyond "
+                    f"{pending_actionable_window_seconds()}s; oldest_wait={oldest_wait}s."
+                ),
+                (
+                    "Review dormant pending tasks, then release completed/obsolete rows, "
+                    "requeue still-valid work with fresh context, or restart a runner intentionally."
+                ),
                 now=now,
             )
         )
@@ -312,7 +348,7 @@ def build_fallback_status_report(
     running = status.get("running") if isinstance(status.get("running"), list) else []
     pending = status.get("pending") if isinstance(status.get("pending"), list) else []
     active_pending = actionable_pending_tasks(pending)
-    dormant_pending_count = max(0, len(pending) - len(active_pending))
+    dormant_pending_count = len(dormant_pending_tasks(pending))
     recent_completed = (
         status.get("recent_completed")
         if isinstance(status.get("recent_completed"), list)
