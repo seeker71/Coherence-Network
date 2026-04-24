@@ -174,10 +174,7 @@ def _pipeline_queue_diagnostics(
     reason_counts: dict[str, int] = {}
     signature_counts: dict[str, int] = {}
     recent_failed: list[dict[str, Any]] = []
-    for completed_item in completed[:12]:
-        task = _store.get(completed_item["id"]) or {}
-        if status_value(task.get("status")) != "failed":
-            continue
+    for task in _recent_failed_tasks(limit=12):
         classified = failure_classification(task)
         reason = classified["bucket"]
         reason_counts[reason] = reason_counts.get(reason, 0) + 1
@@ -216,6 +213,22 @@ def _pipeline_queue_diagnostics(
         "dominant_pending_task_type": dominant_pending_type,
         "dominant_pending_share": dominant_pending_share,
     }
+
+
+def _task_updated_timestamp(task: dict[str, Any]) -> float:
+    value = task.get("updated_at") or task.get("created_at")
+    if hasattr(value, "timestamp"):
+        try:
+            return float(value.timestamp())
+        except Exception:
+            return 0.0
+    return 0.0
+
+
+def _recent_failed_tasks(*, limit: int) -> list[dict[str, Any]]:
+    failed = [task for task in _store.values() if status_value(task.get("status")) == "failed"]
+    failed.sort(key=_task_updated_timestamp, reverse=True)
+    return failed[:limit]
 
 
 def get_pipeline_status(now_utc=None) -> dict[str, Any]:
