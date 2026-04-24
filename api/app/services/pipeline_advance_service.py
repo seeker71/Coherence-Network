@@ -750,6 +750,17 @@ def maybe_retry(task: dict[str, Any]) -> dict[str, Any] | None:
         )
         return None
 
+    # Manual compost: operators release sediment to timed_out with an
+    # error_category ending in `_composted`. Do not retry or escalate —
+    # the whole point of composting is to let the phase clear without
+    # spawning a fresh needs_decision entry to replace what we just cleared.
+    if error_category.endswith("_composted"):
+        log.info(
+            "AUTO_RETRY skip — %s for %s manually composted (category=%s)",
+            task_type, idea_id, error_category,
+        )
+        return None
+
     # R4: dedup gate — check phase history before retrying
     from app.services.task_dedup_service import check_idea_phase_history
     history = check_idea_phase_history(idea_id, task_type)
