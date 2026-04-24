@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from app.routers import agent_monitor_helpers
 
 
-def test_stale_pending_backlog_does_not_emit_runner_down_issue(set_config) -> None:
+def test_stale_pending_backlog_emits_dormant_tending_issue(set_config) -> None:
     set_config("pipeline", "pending_actionable_window_seconds", 86400)
     status = {
         "running": [],
@@ -20,7 +20,8 @@ def test_stale_pending_backlog_does_not_emit_runner_down_issue(set_config) -> No
         now=datetime.now(timezone.utc),
     )
 
-    assert [issue["condition"] for issue in issues] == []
+    assert [issue["condition"] for issue in issues] == ["dormant_pending_backlog"]
+    assert issues[0]["severity"] == "medium"
 
 
 def test_recent_pending_without_runner_still_emits_runner_down_issue(set_config) -> None:
@@ -42,7 +43,7 @@ def test_recent_pending_without_runner_still_emits_runner_down_issue(set_config)
     assert "1 actionable pending" in issues[0]["message"]
 
 
-def test_fallback_status_marks_dormant_pending_without_attention(set_config, monkeypatch) -> None:
+def test_fallback_status_marks_dormant_pending_as_attention(set_config, monkeypatch) -> None:
     set_config("pipeline", "pending_actionable_window_seconds", 86400)
     status = {
         "running": [],
@@ -58,10 +59,16 @@ def test_fallback_status_marks_dormant_pending_without_attention(set_config, mon
     payload = agent_monitor_helpers.build_fallback_status_report(
         now=datetime.now(timezone.utc),
         fallback_reason="missing_status_report_file",
-        monitor_payload={"issues": []},
+        monitor_payload={
+            "issues": agent_monitor_helpers.derive_monitor_issues_from_pipeline_status(
+                status,
+                now=datetime.now(timezone.utc),
+            )
+        },
         effectiveness=None,
     )
 
     assert payload["layer_1_orchestration"]["status"] == "ok"
     assert payload["layer_2_execution"]["dormant_pending_count"] == 1
     assert payload["layer_2_execution"]["actionable_pending_count"] == 0
+    assert payload["overall"]["needs_attention"] == ["dormant_pending_backlog"]
