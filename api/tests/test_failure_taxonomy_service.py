@@ -117,3 +117,55 @@ def test_pipeline_diagnostics_reads_recent_failed_tasks_outside_activity_window(
     assert diagnostics["recent_failed_signatures"] == [
         {"signature": "impl_without_active_spec", "count": 1}
     ]
+
+
+def test_pipeline_diagnostics_reports_zero_output_resolved_tasks() -> None:
+    original_store = dict(_store)
+    try:
+        _store.clear()
+        _store["task_hollow_completed"] = {
+            "id": "task_hollow_completed",
+            "status": "completed",
+            "task_type": "impl",
+            "created_at": None,
+            "updated_at": None,
+            "output": "",
+            "context": {},
+        }
+        _store["task_hollow_failed"] = {
+            "id": "task_hollow_failed",
+            "status": "failed",
+            "task_type": "spec",
+            "created_at": None,
+            "updated_at": None,
+            "output": "",
+            "context": {},
+        }
+        _store["task_non_hollow"] = {
+            "id": "task_non_hollow",
+            "status": "completed",
+            "task_type": "spec",
+            "created_at": None,
+            "updated_at": None,
+            "output": "Wrote specs/123-example.md",
+            "context": {},
+        }
+
+        diagnostics = _pipeline_queue_diagnostics(
+            running=[],
+            pending=[],
+            completed=[
+                {"id": "task_hollow_completed"},
+                {"id": "task_hollow_failed"},
+                {"id": "task_non_hollow"},
+            ],
+        )
+    finally:
+        _store.clear()
+        _store.update(original_store)
+
+    assert diagnostics["recent_zero_output_resolved_count"] == 2
+    assert diagnostics["recent_zero_output_resolved"] == [
+        {"task_id": "task_hollow_completed", "task_type": "impl", "status": "completed"},
+        {"task_id": "task_hollow_failed", "task_type": "spec", "status": "failed"},
+    ]

@@ -174,6 +174,21 @@ def _pipeline_queue_diagnostics(
     reason_counts: dict[str, int] = {}
     signature_counts: dict[str, int] = {}
     recent_failed: list[dict[str, Any]] = []
+    recent_zero_output_resolved: list[dict[str, Any]] = []
+    for item in completed[:20]:
+        task = _store.get(item.get("id")) or {}
+        st = status_value(task.get("status"))
+        if st not in {"completed", "failed"}:
+            continue
+        if len(task_output_text(task).strip()) > 0:
+            continue
+        recent_zero_output_resolved.append(
+            {
+                "task_id": task.get("id"),
+                "task_type": task_type_name(task.get("task_type")) or "unknown",
+                "status": st,
+            }
+        )
     for task in _recent_failed_tasks(limit=12):
         classified = failure_classification(task)
         reason = classified["bucket"]
@@ -209,6 +224,8 @@ def _pipeline_queue_diagnostics(
         "recent_failed": recent_failed[:5],
         "recent_failed_reasons": recent_failed_reasons,
         "recent_failed_signatures": recent_failed_signatures,
+        "recent_zero_output_resolved_count": len(recent_zero_output_resolved),
+        "recent_zero_output_resolved": recent_zero_output_resolved[:5],
         "queue_mix_warning": queue_mix_warning,
         "dominant_pending_task_type": dominant_pending_type,
         "dominant_pending_share": dominant_pending_share,
