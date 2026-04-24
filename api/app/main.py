@@ -46,6 +46,7 @@ from app.routers import (
     auth_keys,
     blueprints,
     content,
+    vision,
     traceability,
     treasury,
     value_lineage,
@@ -683,6 +684,7 @@ app.include_router(news.router, prefix="/api", tags=["news"])
 app.include_router(peers.router, prefix="/api", tags=["peers"])
 app.include_router(blueprints.router, prefix="/api", tags=["blueprints"])
 app.include_router(content.router, prefix="/api", tags=["content"])
+app.include_router(vision.router, prefix="/api", tags=["vision"])
 app.include_router(traceability.router, prefix="/api", tags=["traceability"])
 app.include_router(inspired_by_router.router, prefix="/api", tags=["inspired-by"])
 app.include_router(gatherings_router.router, prefix="/api", tags=["gatherings"])

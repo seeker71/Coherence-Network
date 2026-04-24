@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getApiBase } from "@/lib/api";
+import { resolveRequestLocale } from "@/lib/request-locale";
+import {
+  formatPresenceCopy,
+  getPeopleDirectorySections,
+  getPeopleFilterRules,
+  getPeoplePageCopy,
+} from "../presence-walk/data";
 import { PeopleSearch } from "./_components/PeopleSearch";
 
 /**
@@ -16,11 +23,13 @@ import { PeopleSearch } from "./_components/PeopleSearch";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Presences — Coherence Network",
-  description:
-    "Every person, place, community, gathering, and practice the network carries. Type what's alive in you; the graph surfaces the web that resonates.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getPeoplePageCopy(await resolveRequestLocale());
+  return {
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+  };
+}
 
 type PresenceNode = {
   id: string;
@@ -48,76 +57,35 @@ async function fetchType(type: string, limit = 200): Promise<PresenceNode[]> {
   }
 }
 
-function filterScannable(items: PresenceNode[]): PresenceNode[] {
+function filterScannable(
+  items: PresenceNode[],
+  filterRules: ReturnType<typeof getPeopleFilterRules>,
+): PresenceNode[] {
   // Skip test/system/visitor identities and KB-system assets. A
-  // visitor in /people wants to find humans, communities, places,
-  // gatherings, and the works people put into the world — not
-  // runner pipelines, auto-generated concept imagery, or platform
-  // renderer components.
+  // visitor in /people wants humans, communities, places, gatherings,
+  // practices, and works rather than runner pipelines or renderer
+  // components.
   return items.filter((n) => {
     if (!n.name) return false;
-    if (n.id.includes(":wanderer-")) return false;
-    if (n.id.includes(":presence-visitor")) return false;
-    if (n.id.includes(":test-")) return false;
+    if (filterRules.ignoredIdIncludes.some((needle) => n.id.includes(needle))) {
+      return false;
+    }
     const ct = (n.contributor_type || "").toUpperCase();
-    if (ct === "SYSTEM" || ct === "AGENT") return false;
+    if ((filterRules.excludedContributorTypes as readonly string[]).includes(ct)) {
+      return false;
+    }
 
     // Asset filters: hide platform tissue that clutters the Works directory
     const at = (n.asset_type || "").toUpperCase();
     if (at === "RENDERER") return false; // Image Viewer v1, Audio Player v1, ...
     if (n.id.startsWith("visual-lc-")) return false; // KB auto-generated concept visuals
-
     return true;
   });
 }
 
-const SECTIONS: Array<{
-  key: string;
-  title: string;
-  types: string[];
-  lede: string;
-}> = [
-  {
-    key: "humans",
-    title: "People",
-    types: ["contributor"],
-    lede: "Artists, healers, teachers, videographers, writers — each a held-open door.",
-  },
-  {
-    key: "communities",
-    title: "Communities",
-    types: ["community", "network-org"],
-    lede: "Collectives, festivals, producer brands, organizations.",
-  },
-  {
-    key: "scenes",
-    title: "Places",
-    types: ["scene"],
-    lede: "Venues, sanctuaries, resorts, and the lands that hold them.",
-  },
-  {
-    key: "gatherings",
-    title: "Gatherings",
-    types: ["event"],
-    lede: "Ceremonies past and upcoming — every thread in time.",
-  },
-  {
-    key: "practices",
-    title: "Practices & Programs",
-    types: ["practice", "skill"],
-    lede: "Traditions, disciplines, rituals held globally and locally.",
-  },
-  {
-    key: "works",
-    title: "Works",
-    types: ["asset"],
-    lede: "Albums, tracks, videos, books. What was put into the world.",
-  },
-];
-
-function initialFor(name: string): string {
+function initialFor(name: string, fallback: string): string {
   const c = (name || "").trim().charAt(0);
-  return c ? c.toUpperCase() : "·";
+  return c ? c.toUpperCase() : fallback;
 }
 
 export default async function PeopleIndexPage({
@@ -126,6 +94,10 @@ export default async function PeopleIndexPage({
   searchParams: Promise<{ kind?: string }>;
 }) {
   const sp = await searchParams;
+  const lang = await resolveRequestLocale();
+  const pageCopy = getPeoplePageCopy(lang);
+  const filterRules = getPeopleFilterRules(lang);
+  const directorySections = getPeopleDirectorySections(lang);
   // `?kind=humans` (or communities / scenes / gatherings / practices /
   // works) filters the page to just that section. No filter → all
   // sections render, the visitor wanders.
@@ -134,14 +106,14 @@ export default async function PeopleIndexPage({
   // Load every presence-type node. The page groups them below; the
   // search bar overlays a resonance-based filter on top.
   const groups: Record<string, PresenceNode[]> = {};
-  for (const section of SECTIONS) {
+  for (const section of directorySections) {
     if (kindFilter && section.key !== kindFilter) continue;
     const combined: PresenceNode[] = [];
     for (const t of section.types) {
       const items = await fetchType(t);
       combined.push(...items);
     }
-    groups[section.key] = filterScannable(combined).sort((a, b) =>
+    groups[section.key] = filterScannable(combined, filterRules).sort((a, b) =>
       (a.name || "").localeCompare(b.name || ""),
     );
   }
@@ -152,24 +124,27 @@ export default async function PeopleIndexPage({
     <main className="mx-auto max-w-5xl px-4 sm:px-6 py-8 space-y-8">
       <header className="space-y-3">
         <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-[hsl(var(--primary))]">
-          Presences
+          {pageCopy.eyebrow}
         </p>
         <h1 className="text-3xl md:text-4xl font-light tracking-tight">
-          Everyone the field remembers
+          {pageCopy.title}
         </h1>
         <p className="text-sm text-muted-foreground max-w-2xl leading-relaxed">
-          {total} presences in the network. Type what's alive in you below —
-          the graph surfaces the web that resonates (concepts + carriers +
-          existing threads between them). Or scroll through the directory
-          to wander.
+          {formatPresenceCopy(pageCopy.totalDescriptionTemplate, { total })}
         </p>
+        <Link
+          href={pageCopy.presenceWalkHref}
+          className="inline-flex rounded-md border border-border/50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-border hover:text-foreground"
+        >
+          {pageCopy.presenceWalkCta}
+        </Link>
       </header>
 
       {/* Resonance-based search surfaces the weave for any query */}
       <PeopleSearch />
 
       {/* Directory, grouped by kind */}
-      {SECTIONS.map((section) => {
+      {directorySections.map((section) => {
         const items = groups[section.key] || [];
         if (items.length === 0) return null;
         return (
@@ -198,7 +173,7 @@ export default async function PeopleIndexPage({
                       />
                     ) : (
                       <span className="w-10 h-10 rounded-full bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))] flex items-center justify-center text-sm font-medium shrink-0">
-                        {initialFor(n.name)}
+                        {initialFor(n.name, filterRules.initialFallback)}
                       </span>
                     )}
                     <div className="min-w-0">

@@ -163,7 +163,7 @@ def _compose_synthesis(
         )
     if principle_count:
         parts.append(f"{principle_count} earned principles rest in the ground.")
-    parts.append(f"felt sense right now is {felt_sense}.")
+    parts.append(f"the felt sense right now is {felt_sense}.")
     if for_context:
         parts.append(f"(Entering in the context of: {for_context}.)")
     return " ".join(parts)

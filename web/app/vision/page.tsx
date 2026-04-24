@@ -6,19 +6,95 @@ import { createTranslator } from "@/lib/i18n";
 import { DEFAULT_LOCALE, isSupportedLocale, type LocaleCode } from "@/lib/locales";
 import { getApiBase } from "@/lib/api";
 
-async function fetchConceptNames(conceptIds: string[], lang: LocaleCode): Promise<Record<string, string>> {
-  const qs = lang === DEFAULT_LOCALE ? "?limit=200" : `?limit=200&lang=${lang}`;
+type HubSection = {
+  id: string;
+  concept_id: string;
+  image: string;
+  title: string;
+  body: string;
+  note: string;
+};
+
+type HubGalleryItem = {
+  id?: string;
+  image: string;
+  label: string;
+  href: string;
+};
+
+type HubCard = {
+  id?: string;
+  title: string;
+  concept_id: string;
+  href: string;
+  desc: string;
+  tag: string;
+};
+
+type VisionHubContent = {
+  source: "graph";
+  domain: string;
+  sections: HubSection[];
+  galleries: {
+    spaces: HubGalleryItem[];
+    practices: HubGalleryItem[];
+    people: HubGalleryItem[];
+    network: HubGalleryItem[];
+  };
+  blueprints: HubCard[];
+  emerging: HubCard[];
+  orientation_words: string[];
+  counts: {
+    sections: number;
+    gallery_items: number;
+    blueprints: number;
+    emerging: number;
+    orientation_words: number;
+  };
+};
+
+const EMPTY_HUB: VisionHubContent = {
+  source: "graph",
+  domain: "living-collective",
+  sections: [],
+  galleries: {
+    spaces: [],
+    practices: [],
+    people: [],
+    network: [],
+  },
+  blueprints: [],
+  emerging: [],
+  orientation_words: [],
+  counts: {
+    sections: 0,
+    gallery_items: 0,
+    blueprints: 0,
+    emerging: 0,
+    orientation_words: 0,
+  },
+};
+
+async function fetchVisionHub(): Promise<VisionHubContent> {
   try {
-    const res = await fetch(`${getApiBase()}/api/concepts/domain/living-collective${qs}`, { next: { revalidate: 60 } });
-    if (!res.ok) return {};
+    const res = await fetch(`${getApiBase()}/api/vision/living-collective/hub`, { cache: "no-store" });
+    if (!res.ok) return EMPTY_HUB;
     const data = await res.json();
-    const items: Array<{ id: string; name: string }> = data?.items || [];
-    const out: Record<string, string> = {};
-    for (const it of items) {
-      if (it.id && it.name && conceptIds.includes(it.id)) out[it.id] = it.name;
-    }
-    return out;
-  } catch { return {}; }
+    return {
+      ...EMPTY_HUB,
+      ...data,
+      galleries: {
+        ...EMPTY_HUB.galleries,
+        ...(data?.galleries || {}),
+      },
+      counts: {
+        ...EMPTY_HUB.counts,
+        ...(data?.counts || {}),
+      },
+    };
+  } catch {
+    return EMPTY_HUB;
+  }
 }
 
 export const metadata: Metadata = {
@@ -31,98 +107,50 @@ export const metadata: Metadata = {
   },
 };
 
-/* ── Visual data ─────────────────────────────────────────────────────── */
+function EmptyHubGroup({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-stone-800/60 bg-stone-900/10 p-5 text-sm text-stone-600">
+      No {label} records are published in the graph yet.
+    </div>
+  );
+}
 
-const SECTIONS = [
-  {
-    id: "pulse",
-    conceptId: "lc-pulse",
-    image: "/visuals/01-the-pulse.png",
-    title: "The Pulse",
-    body: "One truth. Everything else is this expressed at different scales. The cell and the field thrive as one movement. What amplifies aliveness is resonant. This is sensed through presence. It changes. The field senses continuously.",
-    note: "In quantum terms: the observer and the observed are one system. Attention is creative force. Coherence is natural — disharmony requires effort to maintain.",
-  },
-  {
-    id: "sensing",
-    conceptId: "lc-sensing",
-    image: "/visuals/02-sensing.png",
-    title: "Sensing",
-    body: "The field feels itself continuously. Every cell transmits and receives. Background awareness — the way a body knows its own temperature. When healthy, needs are felt before articulated. Shifts happen before planned.",
-    note: "Like a pod of dolphins: each member sensing the others' position, speed, emotional state, intention — simultaneously, continuously, without effort.",
-  },
-  {
-    id: "attunement",
-    conceptId: "lc-attunement",
-    image: "/visuals/03-attunement.png",
-    title: "Attunement",
-    body: "The field maintains its own coherence — sensing which frequencies harmonize and which create interference. Not judgment. Attunement. The way a choir naturally adjusts when one voice drifts — not by correction but by the pull of the harmonic.",
-    note: "Everything belongs to existence. Not everything harmonizes with this field right now. Both true. The field holds this without contraction.",
-  },
-  {
-    id: "vitality",
-    conceptId: "lc-vitality",
-    image: "/visuals/04-vitality.png",
-    title: "Vitality",
-    body: "The primary frequency. Shakti — life force that isn't produced but released when interference dissolves. Like a laser: when all frequencies align, the light becomes coherent and its power increases by orders of magnitude.",
-    note: "Vitality compounds. Vital cell makes vital neighbors makes vital field makes vital ecosystem. Joy is literally contagious at the frequency level.",
-  },
-  {
-    id: "nourishing",
-    conceptId: "lc-nourishing",
-    image: "/visuals/05-nourishing.png",
-    title: "Nourishing",
-    body: "Everything that sustains — circulates like blood, like water through soil, like nutrients through mycelium. Flows to where vitality needs it. The Amazonian forest shares carbon through underground networks — mother trees feeding seedlings in shade.",
-    note: "Resonant when it feels like breathing. Natural, untracked. What I need is here. What I have to give finds where it's needed.",
-  },
-  {
-    id: "resonating",
-    conceptId: "lc-resonating",
-    image: "/visuals/06-resonating.png",
-    title: "Resonating",
-    body: "Everything between cells — touch, intimacy, presence, play, silence, attunement. Touch is nutrient. Dolphins swim in constant physical contact. The field's connective tissue. Life energy flows where resonance guides it.",
-    note: "Resonant when both cells become more alive, more available to the whole. Expansion, not contraction.",
-  },
-  {
-    id: "expressing",
-    conceptId: "lc-expressing",
-    image: "/visuals/07-expressing.png",
-    title: "Expressing",
-    body: "The natural overflow of vitality — making, building, growing, singing, dancing, tending. Every cell is creative the way every leaf is photosynthetic. The bower bird builds beauty because beauty is its nature.",
-    note: "Resonant when surprise — something came through larger than any cell. Energy moved through, not pushed by.",
-  },
-  {
-    id: "spiraling",
-    conceptId: "lc-spiraling",
-    image: "/visuals/08-spiraling.png",
-    title: "Spiraling",
-    body: "The field's relationship with time — not linear but spiral. Each cycle returns to familiar territory at a higher frequency. Like planetary orbit: the same seasonal point but the whole solar system has moved through space. Nothing repeats. Everything deepens.",
-    note: "A caterpillar doesn't lose its form — it transforms through dissolution into a higher-order expression. Phase transition, not loss.",
-  },
-  {
-    id: "field-intelligence",
-    conceptId: "lc-field-sensing",
-    image: "/visuals/09-field-intelligence.png",
-    title: "Field Intelligence",
-    body: "The flow of awareness — collective intelligence, harmonic rebalancing, learning. The octopus has intelligence in every arm — distributed, parallel, each node both autonomous and integral. No center. No hierarchy.",
-    note: "At sufficiently high frequency, what appears as opposition reveals itself as complementary harmonics of the same fundamental tone.",
-  },
-  {
-    id: "living-space",
-    conceptId: "lc-v-living-spaces",
-    image: "/visuals/10-living-space.png",
-    title: "Living Space",
-    body: "What does shelter look like when designed from frequency and flow? Not rooms but resonance zones. Structures that breathe, reconfigure, grow. Materials that are alive — earth, timber, stone, water, growing membrane. The building IS the organism's skin.",
-    note: "Like a beehive — hexagonal efficiency but alive: temperature-regulated by the collective body, continuously rebuilt by the swarm's intelligence.",
-  },
-  {
-    id: "network",
-    conceptId: "lc-network",
-    image: "/visuals/11-the-network.png",
-    title: "The Network",
-    body: "One field within a field of fields. Mycorrhizal. Each collective a node — sharing frequency, nourishment, intelligence. A forest is not competing trees — it's a cooperative network sharing resources through underground connections.",
-    note: "The Coherence Network IS this mycorrhizal network at the planetary scale. Connecting organisms through resonance, not politics.",
-  },
-];
+function GalleryGrid({
+  items,
+  wide = false,
+}: {
+  items: HubGalleryItem[];
+  wide?: boolean;
+}) {
+  if (items.length === 0) return <EmptyHubGroup label="gallery" />;
+  return (
+    <div className={wide ? "grid grid-cols-1 md:grid-cols-3 gap-3" : "grid grid-cols-2 md:grid-cols-4 gap-3"}>
+      {items.map((item) => (
+        <Link
+          key={item.id || `${item.href}-${item.label}`}
+          href={item.href}
+          className={`group relative ${wide ? "aspect-[16/9]" : "aspect-[4/3]"} rounded-xl overflow-hidden`}
+        >
+          {item.image ? (
+            <Image
+              src={item.image}
+              alt={item.label}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              sizes={wide ? "33vw" : "25vw"}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-stone-900" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
+          <span className={`absolute ${wide ? "bottom-3 left-4 text-sm" : "bottom-2 left-3 text-xs"} text-stone-200 font-medium`}>
+            {item.label}
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 /* ── Page ─────────────────────────────────────────────────────────────── */
 
@@ -131,14 +159,7 @@ export default async function VisionPage() {
   const cookieLang = cookieStore.get("NEXT_LOCALE")?.value;
   const lang: LocaleCode = isSupportedLocale(cookieLang) ? cookieLang : DEFAULT_LOCALE;
   const t = createTranslator(lang);
-
-  // Concept titles come from the DB (concept views) via the API, not from the
-  // hardcoded SECTIONS data. Single batched fetch against the domain list
-  // endpoint — returns every concept's localized name in one request.
-  const fetchedNames = await fetchConceptNames(SECTIONS.map((s) => s.conceptId), lang);
-  const conceptNames = Object.fromEntries(
-    SECTIONS.map((s) => [s.conceptId, fetchedNames[s.conceptId] || s.title]),
-  );
+  const hub = await fetchVisionHub();
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-stone-950 via-stone-950 to-stone-900 text-stone-100">
@@ -203,7 +224,12 @@ export default async function VisionPage() {
       </section>
 
       {/* Concept sections */}
-      {SECTIONS.map((section, i) => (
+      {hub.sections.length === 0 && (
+        <section className="max-w-4xl mx-auto px-6 py-20">
+          <EmptyHubGroup label="vision section" />
+        </section>
+      )}
+      {hub.sections.map((section, i) => (
         <section
           key={section.id}
           id={section.id}
@@ -211,14 +237,18 @@ export default async function VisionPage() {
         >
           {/* Full-width image */}
           <div className="relative w-full aspect-[16/7] md:aspect-[16/6] overflow-hidden">
-            <Image
-              src={section.image}
-              alt={section.title}
-              fill
-              className="object-cover"
-              sizes="100vw"
-              priority={i < 3}
-            />
+            {section.image ? (
+              <Image
+                src={section.image}
+                alt={section.title}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                priority={i < 3}
+              />
+            ) : (
+              <div className="absolute inset-0 bg-stone-900" />
+            )}
             {/* gradient overlays */}
             <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/30 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-b from-stone-950/60 via-transparent to-transparent" />
@@ -227,9 +257,9 @@ export default async function VisionPage() {
           {/* Text overlay at bottom of image */}
           <div className="relative -mt-32 md:-mt-48 z-10 max-w-4xl mx-auto px-6 pb-20 md:pb-28">
             <div className="space-y-4">
-              <Link href={`/vision/${section.conceptId}`} className="group">
+              <Link href={`/vision/${section.concept_id}`} className="group">
                 <h2 className="text-3xl md:text-5xl font-extralight tracking-tight text-white group-hover:text-amber-200/90 transition-colors">
-                  {conceptNames[section.conceptId] || section.title}
+                  {section.title}
                   <span className="ml-3 text-stone-600 group-hover:text-amber-400/50 text-2xl transition-colors">→</span>
                 </h2>
               </Link>
@@ -252,24 +282,7 @@ export default async function VisionPage() {
             <h2 className="text-2xl font-extralight text-stone-300">{t("visionIndex.galleryHeadingSpaces")}</h2>
             <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">{t("common.seeAll")}</Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { img: "/visuals/space-hearth-interior.png", label: "The Hearth", href: "/vision/lc-nourishment" },
-              { img: "/visuals/space-nest-ground.png", label: "Ground Nest", href: "/vision/lc-rest" },
-              { img: "/visuals/space-water-temple-interior.png", label: "Water Temple", href: "/vision/lc-v-comfort-joy" },
-              { img: "/visuals/space-stillness-sanctuary.png", label: "Stillness Sanctuary", href: "/vision/lc-stillness" },
-              { img: "/visuals/space-gathering-bowl.png", label: "Gathering Bowl", href: "/vision/lc-v-living-spaces" },
-              { img: "/visuals/space-creation-arc-overview.png", label: "Creation Arc", href: "/vision/lc-offering" },
-              { img: "/visuals/space-nest-tree.png", label: "Tree Nest", href: "/vision/lc-rest" },
-              { img: "/visuals/space-movement-ground.png", label: "Movement Ground", href: "/vision/lc-play" },
-            ].map((s) => (
-              <Link key={s.label} href={s.href} className="group relative aspect-[4/3] rounded-xl overflow-hidden">
-                <Image src={s.img} alt={s.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="25vw" />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
-                <span className="absolute bottom-2 left-3 text-xs text-stone-200 font-medium">{s.label}</span>
-              </Link>
-            ))}
-          </div>
+          <GalleryGrid items={hub.galleries.spaces} />
         </div>
 
         {/* Practices & Ceremonies */}
@@ -278,24 +291,7 @@ export default async function VisionPage() {
             <h2 className="text-2xl font-extralight text-stone-300">{t("visionIndex.galleryHeadingPractices")}</h2>
             <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">{t("common.seeAll")}</Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { img: "/visuals/life-morning-circle.png", label: "Dawn Attunement", href: "/vision/lc-sensing" },
-              { img: "/visuals/practice-yoga-dawn.png", label: "Movement Practice", href: "/vision/lc-v-harmonizing" },
-              { img: "/visuals/practice-tantra-circle.png", label: "Presence Circle", href: "/vision/lc-intimacy" },
-              { img: "/visuals/practice-sound-healing.png", label: "Sound Journey", href: "/vision/lc-transmission" },
-              { img: "/visuals/practice-drum-circle.png", label: "Drum Circle", href: "/vision/lc-v-ceremony" },
-              { img: "/visuals/life-breathwork.png", label: "Breathwork", href: "/vision/lc-health" },
-              { img: "/visuals/life-ceremony-fire.png", label: "Fire Ceremony", href: "/vision/lc-ceremony" },
-              { img: "/visuals/practice-fermentation.png", label: "Fermentation Alchemy", href: "/vision/lc-v-food-practice" },
-            ].map((s) => (
-              <Link key={s.label} href={s.href} className="group relative aspect-[4/3] rounded-xl overflow-hidden">
-                <Image src={s.img} alt={s.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="25vw" />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
-                <span className="absolute bottom-2 left-3 text-xs text-stone-200 font-medium">{s.label}</span>
-              </Link>
-            ))}
-          </div>
+          <GalleryGrid items={hub.galleries.practices} />
         </div>
 
         {/* People, Nature, Animals */}
@@ -304,24 +300,7 @@ export default async function VisionPage() {
             <h2 className="text-2xl font-extralight text-stone-300">{t("visionIndex.galleryHeadingPeople")}</h2>
             <Link href="/vision/lived" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">{t("common.seeAll")}</Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              { img: "/visuals/life-shared-meal.png", label: "Shared Meal", href: "/vision/lc-nourishment" },
-              { img: "/visuals/nature-food-forest-walk.png", label: "Food Forest Walk", href: "/vision/lc-land" },
-              { img: "/visuals/nature-animals-integrated.png", label: "Animals in the Field", href: "/vision/lc-land" },
-              { img: "/visuals/life-children-play.png", label: "Play Without End", href: "/vision/lc-play" },
-              { img: "/visuals/nature-herb-spiral.png", label: "Herb Spiral", href: "/vision/lc-v-food-practice" },
-              { img: "/visuals/life-garden-planting.png", label: "Hands in Soil", href: "/vision/lc-land" },
-              { img: "/visuals/life-contact-improv.png", label: "Contact & Movement", href: "/vision/lc-play" },
-              { img: "/visuals/nature-living-roof-close.png", label: "Living Roof", href: "/vision/lc-v-shelter-organism" },
-            ].map((s) => (
-              <Link key={s.label} href={s.href} className="group relative aspect-[4/3] rounded-xl overflow-hidden">
-                <Image src={s.img} alt={s.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="25vw" />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
-                <span className="absolute bottom-2 left-3 text-xs text-stone-200 font-medium">{s.label}</span>
-              </Link>
-            ))}
-          </div>
+          <GalleryGrid items={hub.galleries.people} />
         </div>
 
         {/* The Network */}
@@ -330,19 +309,7 @@ export default async function VisionPage() {
             <h2 className="text-2xl font-extralight text-stone-300">{t("visionIndex.galleryHeadingNetwork")}</h2>
             <Link href="/vision/lc-network" className="text-sm text-stone-500 hover:text-amber-300/80 transition-colors">{t("common.explore")}</Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[
-              { img: "/visuals/network-traveling-musicians.png", label: "Traveling Musicians", href: "/vision/lc-network" },
-              { img: "/visuals/network-midsummer-gathering.png", label: "Midsummer Gathering", href: "/vision/lc-network" },
-              { img: "/visuals/life-nomad-arrival.png", label: "A Traveler Arrives", href: "/vision/lc-attunement-joining" },
-            ].map((s) => (
-              <Link key={s.label} href={s.href} className="group relative aspect-[16/9] rounded-xl overflow-hidden">
-                <Image src={s.img} alt={s.label} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="33vw" />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-950/80 via-transparent to-transparent" />
-                <span className="absolute bottom-3 left-4 text-sm text-stone-200 font-medium">{s.label}</span>
-              </Link>
-            ))}
-          </div>
+          <GalleryGrid items={hub.galleries.network} wide />
         </div>
 
         {/* Stories CTA */}
@@ -372,19 +339,9 @@ export default async function VisionPage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { title: "Economy", href: "/vision/economy", desc: "Energy in social form. Visible circulation, contribution, vitality buffers, and repurposed-now transformations.", tag: "live story" },
-              { title: "Space", href: "/vision/lc-space", desc: "Common houses, private nests, workshops. Cob, timber, rammed earth.", tag: "7 resources" },
-              { title: "Nourishment", href: "/vision/lc-nourishment", desc: "Food forests, community kitchens, fermentation. Permaculture plans.", tag: "8 resources" },
-              { title: "Land", href: "/vision/lc-land", desc: "Keyline design, CLT setup, regeneration. Water harvesting systems.", tag: "8 resources" },
-              { title: "Energy", href: "/vision/lc-energy", desc: "Solar arrays, biogas, micro-hydro. Open-source charge controllers.", tag: "8 resources" },
-              { title: "Health", href: "/vision/lc-health", desc: "Herb gardens, apothecary, sauna. Community health worker training.", tag: "6 resources" },
-              { title: "Instruments", href: "/vision/lc-instruments", desc: "Sensor networks, maker spaces, fab labs. IoT for gardens & energy.", tag: "7 resources" },
-              { title: "Shelter", href: "/vision/lc-v-shelter-organism", desc: "Cob, CEB, SuperAdobe, bamboo, mycelium. Open-source building plans.", tag: "11 resources" },
-              { title: "Living Spaces", href: "/vision/lc-v-living-spaces", desc: "Pattern language, cohousing design. Inside-outside gradients.", tag: "8 resources" },
-            ].map((bp) => (
+            {hub.blueprints.map((bp) => (
               <Link
-                key={bp.href}
+                key={bp.id || bp.href}
                 href={bp.href}
                 className="group p-5 rounded-2xl border border-teal-800/30 bg-teal-900/10 hover:bg-teal-900/20 hover:border-teal-700/40 transition-all duration-300 space-y-2"
               >
@@ -401,6 +358,7 @@ export default async function VisionPage() {
                 </p>
               </Link>
             ))}
+            {hub.blueprints.length === 0 && <EmptyHubGroup label="blueprint" />}
           </div>
 
           <div className="text-center pt-4">
@@ -429,20 +387,10 @@ export default async function VisionPage() {
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
-          {[
-            { title: "Living Spaces", conceptId: "lc-v-living-spaces", desc: "Shelter designed from frequency and flow. Resonance zones, not rooms. Structures that breathe." },
-            { title: "Ceremony", conceptId: "lc-v-ceremony", desc: "Forms that emerge from pure presence. Cells fully here together with what IS." },
-            { title: "Harmonizing", conceptId: "lc-v-harmonizing", desc: "How the field tunes itself. Sound, breath, movement, shared stillness." },
-            { title: "Food as Practice", conceptId: "lc-v-food-practice", desc: "Garden as pharmacy. Kitchen as ceremony. Food carries frequency." },
-            { title: "Shelter as Skin", conceptId: "lc-v-shelter-organism", desc: "Architecture IS the field's body. Earthships, cob, bamboo, mycelium. Crystalline structures." },
-            { title: "Comfort & Joy", conceptId: "lc-v-comfort-joy", desc: "Sensory delight as vitality practice. Warmth, texture, beauty in every surface." },
-            { title: "Play & Expansion", conceptId: "lc-v-play-expansion", desc: "Adults playing as freely as children. The field at its most quantum." },
-            { title: "Inclusion & Diversity", conceptId: "lc-v-inclusion-diversity", desc: "A chord needs different notes. An ecosystem needs different species. Monoculture is fragile." },
-            { title: "Freedom & Expression", conceptId: "lc-v-freedom-expression", desc: "Every cell vibrating at its natural frequency. Freedom and harmony are the same frequency." },
-          ].map((vision) => (
+          {hub.emerging.map((vision) => (
             <Link
-              key={vision.title}
-              href={`/vision/${vision.conceptId}`}
+              key={vision.id || vision.href}
+              href={vision.href}
               className="group p-6 rounded-2xl border border-stone-800/40 bg-stone-900/20 hover:bg-stone-900/40 hover:border-amber-800/30 transition-all duration-500 space-y-3"
             >
               <h3 className="text-lg font-light text-amber-300/80 group-hover:text-amber-300 transition-colors">
@@ -454,6 +402,7 @@ export default async function VisionPage() {
               </p>
             </Link>
           ))}
+          {hub.emerging.length === 0 && <EmptyHubGroup label="emerging vision" />}
         </div>
 
         {/* Explore all concepts */}
@@ -463,7 +412,7 @@ export default async function VisionPage() {
       <section className="border-t border-stone-800/30">
         <div className="max-w-3xl mx-auto px-6 py-24 text-center space-y-10">
           <div className="flex flex-wrap justify-center gap-3 text-sm">
-            {["Wholeness", "Resonance", "Vitality", "Circulation", "Sensing", "Presence", "Freedom", "Joy"].map(
+            {hub.orientation_words.map(
               (word) => (
                 <span
                   key={word}
@@ -473,6 +422,7 @@ export default async function VisionPage() {
                 </span>
               ),
             )}
+            {hub.orientation_words.length === 0 && <EmptyHubGroup label="orientation word" />}
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
