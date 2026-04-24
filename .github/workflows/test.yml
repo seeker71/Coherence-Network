@@ -56,7 +56,7 @@ jobs:
 
       - name: Run API tests
         run: |
-          cd api && pytest -v
+          cd api && COHERENCE_TEST_SUITE=full pytest -v
         # Includes spec 027 contract tests: tests/test_update_spec_coverage.py
 
       - name: Audit automation readiness contract
