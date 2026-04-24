@@ -4540,9 +4540,10 @@ _SEEDER_SKIP_CACHE: set[str] = set()
 
 # R2: maximum tasks allowed per idea+phase before capping (task dedup spec)
 MAX_TASKS_PER_PHASE: int = 3
+MAX_SEED_ATTEMPTS_PER_CYCLE: int = 12
 
 
-def _seed_task_from_open_idea() -> bool:
+def _seed_task_from_open_idea(_attempt: int = 0) -> bool:
     """Generate a task from an open idea when the queue is empty.
 
     Smart seeding:
@@ -4554,6 +4555,16 @@ def _seed_task_from_open_idea() -> bool:
     6. Always link idea_id for phase advancement
     """
     import random as _random
+
+    if _attempt >= MAX_SEED_ATTEMPTS_PER_CYCLE:
+        log.info(
+            "SEED: attempt budget exhausted (%d) — pausing until next cycle",
+            MAX_SEED_ATTEMPTS_PER_CYCLE,
+        )
+        return False
+
+    def _try_next() -> bool:
+        return _seed_task_from_open_idea(_attempt + 1)
 
     # Capacity check
     active = _count_active_tasks()
@@ -4610,7 +4621,7 @@ def _seed_task_from_open_idea() -> bool:
         log.info("SEED_SKIP_IMPLEMENTED idea=%s already on main (%s PR #%s) — marked validated",
                  idea_id, evidence_type, pr_num)
         _SEEDER_SKIP_CACHE.add(idea_id)
-        return _seed_task_from_open_idea()  # try next idea
+        return _try_next()
 
     # Check existing task history for this idea to determine next phase
     task_type = "spec"  # default
@@ -4654,7 +4665,7 @@ def _seed_task_from_open_idea() -> bool:
                     # All phases completed
                     log.info("SEED: all phases completed for %s — skipping", idea_id)
                     _SEEDER_SKIP_CACHE.add(idea_id)
-                    return _seed_task_from_open_idea()
+                    return _try_next()
                 continue
             _candidate_phase = _cp
             break
@@ -4665,7 +4676,7 @@ def _seed_task_from_open_idea() -> bool:
             log.info("SEED: capping %s for %s (%d tasks exist, limit %d)",
                      _candidate_phase, idea_id, candidate_count, MAX_TASKS_PER_PHASE)
             _SEEDER_SKIP_CACHE.add(idea_id)
-            return _seed_task_from_open_idea()
+            return _try_next()
 
         # R2c: replaced hardcoded >= 10 with MAX_TASKS_PER_PHASE
         max_phase_tasks = max(phase_counts.values()) if phase_counts else 0
@@ -4675,7 +4686,7 @@ def _seed_task_from_open_idea() -> bool:
                      idea_name[:30], max_phase_tasks, MAX_TASKS_PER_PHASE)
             _SEEDER_SKIP_CACHE.add(idea_id)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
-            return _seed_task_from_open_idea()  # retry with next idea
+            return _try_next()
 
         # ── Exponential backoff: delay re-seeding ideas with high failure rates ──
         failed_for_phase = 0
@@ -4705,7 +4716,7 @@ def _seed_task_from_open_idea() -> bool:
                         # NOTE: do NOT add to _SEEDER_SKIP_CACHE here — cooldown is temporary.
                         # The skip cache is session-scoped and would permanently blacklist the idea.
                         # Instead, just try the next candidate this cycle.
-                        return _seed_task_from_open_idea()
+                        return _try_next()
                 except (ValueError, TypeError):
                     pass
 
@@ -4714,7 +4725,7 @@ def _seed_task_from_open_idea() -> bool:
                         idea_name[:30], failed_for_phase)
             _SEEDER_SKIP_CACHE.add(idea_id)
             api("PATCH", f"/api/ideas/{idea_id}", {"manifestation_status": "partial"})
-            return _seed_task_from_open_idea()
+            return _try_next()
 
         if total_tasks == 0 and idea.get("manifestation_status") == "partial":
             # Orphaned: marked partial but no tasks exist — reset to none

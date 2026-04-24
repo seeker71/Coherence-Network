@@ -36,6 +36,47 @@ files_allowed:
     ]
 
 
+def test_seed_attempt_budget_stops_recursive_capped_scan(monkeypatch) -> None:
+    calls: list[tuple[str, str, dict | None]] = []
+    monkeypatch.setattr(local_runner, "MAX_SEED_ATTEMPTS_PER_CYCLE", 1)
+    monkeypatch.setattr(local_runner, "_count_active_tasks", lambda: 0)
+    monkeypatch.setattr(local_runner, "_check_existing_evidence", lambda idea_id: None)
+    local_runner._SEEDER_SKIP_CACHE.clear()
+
+    def fake_api(method: str, path: str, body: dict | None = None):
+        calls.append((method, path, body))
+        if path == "/api/ideas?limit=200":
+            return {
+                "ideas": [
+                    {
+                        "id": "capped-idea",
+                        "name": "Capped Idea",
+                        "manifestation_status": "none",
+                        "free_energy_score": 10,
+                    }
+                ]
+            }
+        if path in (
+            "/api/agent/tasks?status=pending&limit=100",
+            "/api/agent/tasks?status=running&limit=100",
+        ):
+            return {"tasks": []}
+        if path == "/api/ideas/capped-idea/tasks":
+            return {
+                "total": 3,
+                "groups": [
+                    {"task_type": "spec", "status_counts": {"failed": 3}},
+                ],
+            }
+        return {}
+
+    monkeypatch.setattr(local_runner, "api", fake_api)
+
+    assert local_runner._seed_task_from_open_idea() is False
+    assert [path for _, path, _ in calls].count("/api/ideas?limit=200") == 1
+    assert "capped-idea" in local_runner._SEEDER_SKIP_CACHE
+
+
 def test_impl_without_spec_becomes_needs_decision(monkeypatch, tmp_path: Path) -> None:
     calls: list[tuple[str, str, dict]] = []
     monkeypatch.setattr(local_runner, "_get_repo_dir", lambda: tmp_path)
