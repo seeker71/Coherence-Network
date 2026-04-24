@@ -2,7 +2,7 @@
 idea_id: user-surfaces
 status: done
 source:
-  - file: cli/bin/cc.mjs
+  - file: cli/bin/coh.mjs
     symbols: [CLI entry point]
   - file: cli/lib/commands/ideas.mjs
     symbols: [ideas commands]
@@ -30,7 +30,7 @@ constraints:
 ---
 
 > **Parent idea**: [user-surfaces](../ideas/user-surfaces.md)
-> **Source**: [`cli/bin/cc.mjs`](../cli/bin/cc.mjs) | [`cli/lib/commands/ideas.mjs`](../cli/lib/commands/ideas.mjs) | [`cli/lib/commands/tasks.mjs`](../cli/lib/commands/tasks.mjs) | [`cli/lib/commands/nodes.mjs`](../cli/lib/commands/nodes.mjs)
+> **Source**: [`cli/bin/coh.mjs`](../cli/bin/coh.mjs) | [`cli/lib/commands/ideas.mjs`](../cli/lib/commands/ideas.mjs) | [`cli/lib/commands/tasks.mjs`](../cli/lib/commands/tasks.mjs) | [`cli/lib/commands/nodes.mjs`](../cli/lib/commands/nodes.mjs)
 
 # Coherence Network CLI (coherence-cli) Comprehensive Feature Spec
 
@@ -61,7 +61,7 @@ The `coherence-cli` (published as `npm i -g coherence-cli`) is the primary termi
 goal: Formalize the coherence-cli with 15 core commands, zero dependencies, and identity-first onboarding.
 files_allowed:
   - cli/package.json
-  - cli/bin/cc.mjs
+  - cli/bin/coh.mjs
   - cli/lib/commands/*.mjs
   - cli/README.md
   - cli/README.template.md
@@ -71,7 +71,7 @@ done_when:
   - `identity setup` successfully guides a new user to a valid local identity.
 commands:
   - cd cli && npm pack --dry-run
-  - node cli/bin/cc.mjs help
+  - node cli/bin/coh.mjs help
 constraints:
   - No external runtime dependencies allowed.
   - Must support Node.js >= 18.0.0.
@@ -115,7 +115,7 @@ Local configuration stored in `~/.coherence-network/config.json`:
 
 - `specs/coherence-cli-comprehensive.md` — this spec.
 - `cli/package.json` — metadata and versioning.
-- `cli/bin/cc.mjs` — main entry point and command router.
+- `cli/bin/coh.mjs` — main entry point and command router.
 - `cli/lib/commands/ideas.mjs` — implementation of idea commands.
 - `cli/lib/commands/identity.mjs` — implementation of identity commands.
 - `cli/lib/commands/contribute.mjs` — contribution recording.
@@ -129,23 +129,23 @@ Manual Validation Flow:
 
 - **Identity Flow**:
   ```bash
-  node cli/bin/cc.mjs identity setup
+  node cli/bin/coh.mjs identity setup
   # Follow prompts to link a mock provider
-  node cli/bin/cc.mjs identity
+  node cli/bin/coh.mjs identity
   # Confirm identity is persisted in ~/.coherence-network/config.json
   ```
 - **Browsing Flow**:
   ```bash
-  node cli/bin/cc.mjs ideas
+  node cli/bin/coh.mjs ideas
   # Confirm a table of ideas is displayed
-  node cli/bin/cc.mjs idea <valid_id>
+  node cli/bin/coh.mjs idea <valid_id>
   # Confirm detailed scores and gaps are shown
   ```
 - **Contribution Flow**:
   ```bash
-  node cli/bin/cc.mjs share --name "Spec Validation Test"
+  node cli/bin/coh.mjs share --name "Spec Validation Test"
   # Confirm idea is created
-  node cli/bin/cc.mjs contribute --idea <id> --desc "Test contribution"
+  node cli/bin/coh.mjs contribute --idea <id> --desc "Test contribution"
   # Confirm success
   ```
 - **Zero-Dependency Check**:
@@ -165,7 +165,7 @@ N/A — CLI is a single-user process. Local config file is updated using atomic 
 cd cli && (grep "dependencies" package.json -A 5 | grep -v "devDependencies" || true)
 
 # Verify help output contains the 15 core commands
-node cli/bin/cc.mjs help
+node cli/bin/coh.mjs help
 ```
 
 ## Out of Scope
