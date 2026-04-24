@@ -59,6 +59,8 @@ _CACHE_TTL_SECONDS = 60.0
 _cache: dict[str, Any] = {}
 _cache_loaded_at: float = 0.0
 _cache_lock = threading.Lock()
+_failure_patterns_cache_source_id: int | None = None
+_failure_patterns_cache: list[dict[str, str]] | None = None
 
 
 def _now() -> datetime:
@@ -66,10 +68,12 @@ def _now() -> datetime:
 
 
 def invalidate_cache() -> None:
-    global _cache_loaded_at
+    global _cache_loaded_at, _failure_patterns_cache_source_id, _failure_patterns_cache
     with _cache_lock:
         _cache.clear()
         _cache_loaded_at = 0.0
+        _failure_patterns_cache_source_id = None
+        _failure_patterns_cache = None
 
 
 def _refresh_cache_if_stale() -> dict[str, Any]:
@@ -194,6 +198,27 @@ _CODE_DEFAULTS: dict[str, Any] = {
             "signature": "timeout_runtime_or_dependency",
             "summary": "Execution timed out before completion.",
             "action": "Reduce task scope, keep one concrete goal, and rerun targeted verification commands.",
+        },
+        {
+            "regex": "done[_ -]?spec[_ -]?gate|done_spec_gate|impl_for_done_spec",
+            "bucket": "done_spec_gate",
+            "signature": "impl_for_done_spec",
+            "summary": "Implementation task targeted a spec that is already done.",
+            "action": "Do not retry as implementation; verify the existing artifact or select unfinished work.",
+        },
+        {
+            "regex": "no[_ -]?spec[_ -]?gate|spec[_ -]?gate|impl_without_active_spec",
+            "bucket": "spec_gate",
+            "signature": "impl_without_active_spec",
+            "summary": "Implementation task was blocked because the active-spec gate was not satisfied.",
+            "action": "Create or activate the required spec before requeueing implementation work.",
+        },
+        {
+            "regex": "provider claimed success but produced no code changes|claimed success.*no code changes|produced no meaningful output",
+            "bucket": "no_code",
+            "signature": "provider_claimed_success_no_diff",
+            "summary": "Provider claimed success without producing a meaningful code diff.",
+            "action": "Reject the hollow completion and retry with an exact file scope and verification command.",
         },
         {
             "regex": "merge conflict|rebase|conflict \\(content\\)",
@@ -327,7 +352,7 @@ def delete_policy(key: str) -> bool:
 
 def list_policies() -> list[dict[str, Any]]:
     """List all policies (DB + code defaults merged)."""
-    cache = _refresh_cache_if_stale()
+    _refresh_cache_if_stale()
     # Start with code defaults
     merged: dict[str, dict[str, Any]] = {}
     for key, value in _CODE_DEFAULTS.items():
@@ -381,7 +406,7 @@ def seed_defaults() -> int:
                 session.add(PipelinePolicyRecord(
                     key=key,
                     value_json=json.dumps(value, default=str),
-                    description=f"Auto-seeded from code default",
+                    description="Auto-seeded from code default",
                     updated_by="system:seed",
                     created_at=now,
                     updated_at=now,
@@ -422,7 +447,26 @@ def get_pass_gate_tokens() -> dict[str, str]:
 
 def get_failure_patterns() -> list[dict[str, str]]:
     """Get failure classification patterns."""
-    return get_policy("failure_patterns", _CODE_DEFAULTS["failure_patterns"])
+    global _failure_patterns_cache_source_id, _failure_patterns_cache
+    active = get_policy("failure_patterns", _CODE_DEFAULTS["failure_patterns"])
+    if not isinstance(active, list):
+        active = []
+    active_id = id(active)
+    if _failure_patterns_cache is not None and _failure_patterns_cache_source_id == active_id:
+        return _failure_patterns_cache
+    merged: list[dict[str, str]] = []
+    seen_signatures: set[str] = set()
+    for entry in active + _CODE_DEFAULTS["failure_patterns"]:
+        if not isinstance(entry, dict):
+            continue
+        signature = str(entry.get("signature") or "").strip()
+        if not signature or signature in seen_signatures:
+            continue
+        merged.append(entry)
+        seen_signatures.add(signature)
+    _failure_patterns_cache_source_id = active_id
+    _failure_patterns_cache = merged
+    return merged
 
 
 def get_no_retry_categories() -> list[str]:
