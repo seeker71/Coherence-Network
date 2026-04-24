@@ -148,6 +148,38 @@ async def test_mint_endpoint_accepts_label():
     assert row.label == "my-laptop"
 
 
+# --- Contributor keys can authorize protected public actions ----------------
+
+
+@pytest.mark.asyncio
+async def test_contributor_key_authorizes_protected_idea_stage_endpoint():
+    _reset_table()
+    minted = store.mint("external-proof-bot", label="ci-proof")
+    idea_payload = {
+        "id": "external-proof-auth-test",
+        "name": "External proof auth test",
+        "description": "Verifies contributor API keys can drive protected lifecycle actions.",
+        "potential_value": 1.0,
+        "estimated_cost": 0.1,
+        "confidence": 0.8,
+        "workspace_id": "coherence-network",
+        "tags": ["external-proof"],
+    }
+
+    async with await _client() as c:
+        created = await c.post("/api/ideas", json=idea_payload)
+        assert created.status_code in (200, 201), created.text
+
+        staged = await c.post(
+            "/api/ideas/external-proof-auth-test/stage",
+            json={"stage": "specced"},
+            headers={"X-API-Key": minted.raw_key},
+        )
+
+    assert staged.status_code == 200, staged.text
+    assert staged.json()["stage"] == "specced"
+
+
 # --- /api/auth/whoami uses middleware attribution --------------------------
 
 

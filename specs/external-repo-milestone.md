@@ -74,7 +74,7 @@ Keep the external proof workflow aligned with the deployed public API contract s
 ## Requirements
 
 - [ ] **R1**: Script at `scripts/external_proof_demo.py` creates a test idea via `POST /api/ideas` using the current public `IdeaCreate` fields (`name`, `description`, `potential_value`, `estimated_cost`, `confidence`, `workspace_id`, `tags`), verifies the response contains `id` and `stage`, then advances the stage via `POST /api/ideas/{id}/stage`.
-- [ ] **R2**: Script sends `COHERENCE_API_KEY` as `X-API-Key` for authenticated public routes, records a contribution for the test idea via `POST /api/contributions`, and reads back the contribution list via `GET /api/contributions?idea_id={id}`, verifying the contribution appears.
+- [ ] **R2**: Script sends `COHERENCE_API_KEY` as `X-API-Key` for authenticated public routes, records a contribution for the test idea via `POST /api/contributions/record`, and verifies the ledger record response contains `id`.
 - [ ] **R3**: Script reads the coherence score via `GET /api/coherence/{id}` (or equivalent endpoint) and asserts the score is a float in [0.0, 1.0].
 - [ ] **R4**: Script closes/archives the test idea via the lifecycle endpoint so it does not pollute the live portfolio.
 - [ ] **R5**: `--dry-run` flag prints each intended API call (method + URL + body summary) without executing, for safe local preview.
@@ -115,18 +115,22 @@ Content-Type: application/json
 **Response 200** — must contain `id` (string), `stage` (string).
 
 ### `POST /api/ideas/{id}/stage`
-**Request body** `{"stage": "spec"}`
+**Request body** `{"stage": "specced"}`
 **Response 200** — must contain updated `stage`.
 
-### `POST /api/contributions`
+### `PATCH /api/ideas/{id}`
+**Request body** `{"lifecycle": "archived"}`
+**Response 200** — must contain updated `lifecycle`.
+
+### `POST /api/contributions/record`
 **Request body**
 ```json
 {
   "idea_id": "{id}",
   "contributor_id": "external-proof-bot",
   "type": "code",
-  "description": "Proof contribution",
-  "cc_amount": 1
+  "amount_cc": 1,
+  "metadata": {"description": "Proof contribution"}
 }
 ```
 **Response 200** — must contain `id`.
