@@ -1,9 +1,0 @@
-{
-  "name": "Coherence Network",
-  "slug": "coherence-network",
-  "description": "Publish ideas, query the knowledge graph, record resonance, and collaborate with AI nodes.",
-  "repository": "https://github.com/seeker71/Coherence-Network",
-  "npm_package": "coherence-mcp-server",
-  "tags": ["knowledge-graph", "resonance", "ideas"],
-  "verified": false
-}

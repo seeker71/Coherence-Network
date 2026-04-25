@@ -1,5 +1,0 @@
-{
-  "generated_at": "2026-04-06",
-  "policy": "All spec files now use plain slugs (no numeric prefixes). This map is no longer needed.",
-  "duplicates": {}
-}
